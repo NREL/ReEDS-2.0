@@ -1,0 +1,14 @@
+var_name,i,v,r,h,t,obj_type,new_old
+inv,0,1,2,,3,fix_cost,new
+inv_refurb,0,1,2,,3,fix_cost,new
+inv_rsc,0,1,2,,4,fix_cost,new
+gen,0,1,2,3,4,var_cost,mixed
+cap,0,1,2,,3,fix_cost,mixed
+opres,1,2,3,4,5,reserve_cost,mixed
+storage_in,0,1,2,3,4,var_cost,mixed
+captran,trans,,0,,3,fix_cost,mixed
+invtran,trans,,0,,2,fix_cost,new
+invsubstation,trans,,0,,2,fix_cost,new
+flow,trans,,0,2,3,var_cost,mixed
+opres_flow,trans,,1,3,4,reserve_cost,mixed
+prmtrade,trans,,0,,4,reserve_cost,mixed

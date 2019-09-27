@@ -1,0 +1,23 @@
+    BIOUSED.fx(bioclass,r,tfix)$[rfeas(r)$biofeas(r)] = BIOUSED.l(bioclass,r,tfix) ;
+    CAP.fx(i,v,r,tfix)$[valcap(i,v,r,tfix)] = CAP.l(i,v,r,tfix) ;
+    CAPTran.fx(r,rr,trtype,tfix)$[rfeas(r)$routes(r,rr,trtype,tfix)] = CAPTran.l(r,rr,trtype,tfix) ;
+    CURT.fx(r,h,tfix)$rfeas(r) = CURT.l(r,h,tfix) ;
+    EMIT.fx(e,r,tfix) = EMIT.l(e,r,tfix) ;
+    EXTRA_PRESCRIP.fx(pcat,r,tfix) = EXTRA_PRESCRIP.l(pcat,r,tfix) ;
+    FLOW.fx(r,rr,h,tfix,trtype)$[rfeas(r)$rfeas(rr)] = FLOW.l(r,rr,h,tfix,trtype) ;
+    GASUSED.fx(cendiv,gb,h,tfix)$[Sw_GasCurve=0] = GASUSED.l(cendiv,gb,h,tfix) ;
+    GEN.fx(i,v,r,h,tfix)$valgen(i,v,r,tfix) = GEN.l(i,v,r,h,tfix) ;
+    INV.fx(i,v,r,tfix)$[newv(v)] = INV.l(i,v,r,tfix) ;
+    INV_RSC.fx(i,v,r,rscbin,tfix)$[newv(v)$rsc_i(i)$m_rscfeas(r,i,rscbin)] = INV_RSC.l(i,v,r,rscbin,tfix) ;
+    INV_REFURB.fx(i,v,r,tfix) = INV_REFURB.l(i,v,r,tfix) ;
+    INVSubstation.fx(r,vc,tfix)$[rfeas(r)$tscfeas(r,vc)] = INVSubstation.l(r,vc,tfix) ;
+    INVTran.fx(r,rr,tfix,trtype)$[rfeas(r)$rfeas(rr)] = INVTran.l(r,rr,tfix,trtype) ;
+    MINGEN.fx(r,szn,tfix)$rfeas(r) = MINGEN.l(r,szn,tfix) ;
+    OpRes.fx(ortype,i,v,r,h,tfix)$[Sw_OpRes$valgen(i,v,r,tfix)$(reserve_frac(i,ortype) or hydro_d(i) or storage(i))] = OpRes.l(ortype,i,v,r,h,tfix) ;
+    OpRes_Flow.fx(ortype,r,rr,h,tfix)$[rfeas(r)$rfeas(rr)] = OpRes_Flow.l(ortype,r,rr,h,tfix) ;
+    PRMTrade.fx(r,rr,trtype,szn,tfix)$rfeas(r) = PRMTrade.l(r,rr,trtype,szn,tfix) ;
+    RECS.fx(RPSCat,i,st,ast,tfix)$[stfeas(st)$RecMap(i,RPSCat,st,ast,tfix)$stfeas(ast)] = RECS.l(RPSCat,i,st,ast,tfix) ;
+    STORAGE_IN.fx(i,v,r,h,tfix)$[valgen(i,v,r,tfix)$storage_no_csp(i)] = STORAGE_IN.l(i,v,r,h,tfix) ;
+    VGASBINQ_NATIONAL.fx(fuelbin,tfix)$[Sw_GasCurve=1] = VGASBINQ_NATIONAL.l(fuelbin,tfix) ;
+    VGASBINQ_REGIONAL.fx(fuelbin,cendiv,tfix)$[(Sw_GasCurve=1)$cdfeas(cendiv)] = VGASBINQ_REGIONAL.l(fuelbin,cendiv,tfix) ;
+

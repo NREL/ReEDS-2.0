@@ -1,0 +1,22 @@
+#Ignore files in runs folder:
+runs/*
+inout/variabilitycalculations/ldcfiles/
+inout/gdxfiles/*.gdx
+
+#Ignore temporary GAMS files
+*.~gm
+225*/
+
+#Ignore pyc files
+*.pyc
+
+#Ignore lst and g00 files
+*.lst
+*.g00
+
+#Ignore distPV csv input files
+inout/dSolar_Inputs/*.csv
+inputs/capacitydata/distpv/*.csv
+
+*.Rhistory
+*.RData

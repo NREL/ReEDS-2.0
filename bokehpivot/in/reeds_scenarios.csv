@@ -1,0 +1,7 @@
+name,color,path
+Base,#1f77b4,\\nrelqnap01d\ReEDS\FY17-ValueStreams-MRM-value\runs\2018-02-12 Scenarios\unconstantized\Base
+Wind30,#ff7f0e,\\nrelqnap01d\ReEDS\FY17-ValueStreams-MRM-value\runs\2018-02-12 Scenarios\unconstantized\Wind30
+PV30,#ff7f0e,\\nrelqnap01d\ReEDS\FY17-ValueStreams-MRM-value\runs\2018-02-12 Scenarios\unconstantized\PV30
+c_Base,#d62728,\\nrelqnap01d\ReEDS\FY17-ValueStreams-MRM-value\runs\2018-02-12 Scenarios\constantized\Base
+c_Wind30,#9467bd,\\nrelqnap01d\ReEDS\FY17-ValueStreams-MRM-value\runs\2018-02-12 Scenarios\constantized\Wind30
+c_PV30,#9467bd,\\nrelqnap01d\ReEDS\FY17-ValueStreams-MRM-value\runs\2018-02-12 Scenarios\constantized\PV30

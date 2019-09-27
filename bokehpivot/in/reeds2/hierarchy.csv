@@ -1,0 +1,455 @@
+rs,rb,st,rto,nercr,nercr_new,cendiv,nems,interconnect,country,custreg
+s1,p2,wa,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s2,p1,wa,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s3,p1,wa,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s4,p1,wa,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s5,p2,wa,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s6,p3,wa,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s7,p4,wa,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s8,p3,wa,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s9,p2,wa,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s10,p5,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s11,p5,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s12,p5,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s14,p6,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s15,p6,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s16,p5,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s17,p5,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s18,p7,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s19,p7,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s20,p9,ca,rto4,nr13,nr4new,pa,nems20,wscc,usa,Pacific
+s21,p8,ca,rto2,nr13,nr1new,pa,nems21,wscc,usa,Pacific
+s22,p9,ca,rto4,nr13,nr4new,pa,nems20,wscc,usa,Pacific
+s23,p9,ca,rto4,nr13,nr4new,pa,nems20,wscc,usa,Pacific
+s24,p9,ca,rto4,nr13,nr4new,pa,nems20,wscc,usa,Pacific
+s25,p9,ca,rto4,nr13,nr4new,pa,nems20,wscc,usa,Pacific
+s26,p9,ca,rto4,nr13,nr4new,pa,nems20,wscc,usa,Pacific
+s27,p9,ca,rto4,nr13,nr4new,pa,nems20,wscc,usa,Pacific
+s28,p10,ca,rto4,nr13,nr5new,pa,nems20,wscc,usa,Pacific
+s29,p9,ca,rto4,nr13,nr4new,pa,nems20,wscc,usa,Pacific
+s30,p10,ca,rto4,nr13,nr5new,pa,nems20,wscc,usa,Pacific
+s31,p10,ca,rto4,nr13,nr5new,pa,nems20,wscc,usa,Pacific
+s32,p11,ca,rto4,nr13,nr5new,pa,nems20,wscc,usa,Pacific
+s33,p10,ca,rto4,nr13,nr5new,pa,nems20,wscc,usa,Pacific
+s34,p12,nv,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s35,p12,nv,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s36,p12,nv,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s37,p12,nv,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s38,p12,nv,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s39,p12,nv,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s40,p13,nv,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s41,p14,id,rto1,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s42,p15,id,rto1,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s43,p15,id,rto1,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s44,p15,id,rto1,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s45,p15,id,rto1,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s46,p16,id,rto1,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s47,p16,id,rto1,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s48,p25,ut,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s49,p25,ut,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s50,p26,ut,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s51,p25,ut,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s52,p25,ut,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s53,p27,az,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s54,p28,az,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s55,p29,az,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s56,p28,az,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s57,p28,az,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s58,p30,az,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s59,p28,az,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s60,p17,mt,rto1,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s61,p17,mt,rto1,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s62,p17,mt,rto1,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s63,p17,mt,rto1,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s64,p18,mt,rto2,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s65,p18,mt,rto2,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s66,p20,mt,rto2,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s67,p18,mt,rto2,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s68,p19,mt,rto2,nr11,nr9new,mtn,nems21,wscc,usa,Mountain
+s69,p20,mt,rto2,nr11,nr1new,mtn,nems21,wscc,usa,Mountain
+s70,p21,wy,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s71,p21,wy,rto2,nr11,nr2new,mtn,nems21,wscc,usa,Mountain
+s72,p22,wy,rto2,nr11,nr3new,mtn,nems22,wscc,usa,Mountain
+s73,p23,wy,rto5,nr11,nr3new,mtn,nems22,wscc,usa,Mountain
+s74,p24,wy,rto5,nr11,nr3new,mtn,nems22,wscc,usa,Mountain
+s75,p33,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s76,p33,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s77,p34,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s78,p34,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s79,p33,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s80,p33,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s81,p33,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s82,p33,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s83,p34,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s84,p34,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s85,p33,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s86,p34,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s87,p34,co,rto5,nr12,nr3new,mtn,nems22,wscc,usa,Mountain
+s88,p31,nm,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s89,p31,nm,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s90,p31,nm,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s91,p31,nm,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s92,p31,nm,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s93,p31,nm,rto3,nr12,nr7new,mtn,nems19,wscc,usa,Mountain
+s94,p59,tx,rto3,nr12,nr7new,mtn,nems19,wscc,usa,West South Central
+s95,p32,sd,rto5,nr11,nr3new,mtn,nems22,wscc,usa,West North Central
+s96,p35,mt,rto11,nr5,nr9new,wnc,nems4,eastern,usa,Mountain
+s97,p36,nd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s98,p36,nd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s99,p37,nd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s100,p36,nd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s101,p36,nd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s102,p37,nd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s103,p37,nd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s104,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s105,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s106,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s107,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s108,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s109,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s110,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s111,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s112,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s113,p38,sd,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s114,p39,ne,rto8,nr5,nr10new,wnc,nems4,eastern,usa,West North Central
+s115,p39,ne,rto8,nr5,nr10new,wnc,nems4,eastern,usa,West North Central
+s116,p40,ne,rto8,nr5,nr10new,wnc,nems4,eastern,usa,West North Central
+s117,p40,ne,rto8,nr5,nr10new,wnc,nems4,eastern,usa,West North Central
+s118,p40,ne,rto8,nr5,nr10new,wnc,nems4,eastern,usa,West North Central
+s119,p41,ne,rto8,nr5,nr10new,wnc,nems4,eastern,usa,West North Central
+s120,p42,mn,rto11,nr5,nr9new,wnc,nems4,eastern,usa,West North Central
+s121,p43,mn,rto11,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s122,p44,mn,rto11,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s123,p44,mn,rto11,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s124,p43,mn,rto11,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s125,p43,mn,rto11,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s126,p43,mn,rto11,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s127,p43,mn,rto11,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s128,p43,mn,rto11,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s129,p46,wi,rto11,nr5,nr11new,enc,nems4,eastern,usa,Great Lakes
+s130,p46,wi,rto11,nr5,nr11new,enc,nems4,eastern,usa,Great Lakes
+s131,p46,wi,rto11,nr5,nr11new,enc,nems4,eastern,usa,Great Lakes
+s132,p45,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s133,p69,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s134,p45,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s13,p5,or,rto1,nr11,nr1new,pa,nems21,wscc,usa,Pacific
+s135,p52,ks,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s136,p53,ks,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s137,p53,ks,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s138,p53,ks,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s139,p53,ks,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s140,p53,ks,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s141,p53,ks,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s142,p53,ks,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s143,p53,ks,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s144,p54,mo,rto8,nr10,nr11new,wnc,nems17,eastern,usa,West North Central
+s145,p54,mo,rto8,nr10,nr11new,wnc,nems17,eastern,usa,West North Central
+s146,p55,mo,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s147,p55,mo,rto8,nr10,nr10new,wnc,nems17,eastern,usa,West North Central
+s148,p47,nm,rto8,nr10,nr10new,wsc,nems18,eastern,usa,Mountain
+s149,p48,tx,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s150,p48,tx,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s151,p57,tx,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s152,p49,ok,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s153,p50,ok,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s154,p50,ok,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s155,p50,ok,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s156,p50,ok,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s157,p51,ok,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s158,p50,ok,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s159,p56,ar,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s160,p56,ar,rto8,nr10,nr10new,wsc,nems18,eastern,usa,West South Central
+s161,p58,la,rto13,nr9,nr10new,wsc,nems12,eastern,usa,West South Central
+s162,p58,la,rto13,nr9,nr10new,wsc,nems12,eastern,usa,West South Central
+s163,p61,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s164,p62,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s165,p60,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s166,p61,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s167,p63,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s168,p63,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s169,p63,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s170,p63,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s171,p64,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s172,p65,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s173,p65,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s174,p65,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s175,p67,tx,rto10,nr2,nr8new,wsc,nems1,texas,usa,West South Central
+s176,p68,mn,rto11,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s177,p69,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s178,p70,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s179,p70,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s180,p70,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s181,p70,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s182,p70,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s183,p70,ia,rto6,nr5,nr11new,wnc,nems4,eastern,usa,West North Central
+s184,p71,mo,rto6,nr4,nr11new,wnc,nems13,eastern,usa,West North Central
+s185,p72,mo,rto6,nr4,nr11new,wnc,nems13,eastern,usa,West North Central
+s186,p73,mo,rto13,nr4,nr11new,wnc,nems13,eastern,usa,West North Central
+s187,p84,mo,rto13,nr9,nr11new,wnc,nems13,eastern,usa,West North Central
+s188,p84,mo,rto13,nr9,nr11new,wnc,nems13,eastern,usa,West North Central
+s189,p72,mo,rto6,nr4,nr11new,wnc,nems13,eastern,usa,West North Central
+s190,p72,mo,rto6,nr4,nr11new,wnc,nems13,eastern,usa,West North Central
+s191,p74,mi,rto6,nr4,nr11new,enc,nems3,eastern,usa,Great Lakes
+s192,p75,wi,rto6,nr4,nr11new,enc,nems3,eastern,usa,Great Lakes
+s193,p76,wi,rto6,nr4,nr11new,enc,nems3,eastern,usa,Great Lakes
+s194,p77,wi,rto11,nr4,nr11new,enc,nems3,eastern,usa,Great Lakes
+s195,p78,wi,rto6,nr4,nr11new,enc,nems3,eastern,usa,Great Lakes
+s196,p76,wi,rto6,nr4,nr11new,enc,nems3,eastern,usa,Great Lakes
+s197,p75,wi,rto6,nr4,nr11new,enc,nems3,eastern,usa,Great Lakes
+s198,p79,wi,rto6,nr4,nr11new,enc,nems11,eastern,usa,Great Lakes
+s199,p80,il,rto7,nr4,nr17new,enc,nems11,eastern,usa,Great Lakes
+s200,p81,il,rto6,nr4,nr11new,enc,nems13,eastern,usa,Great Lakes
+s201,p81,il,rto6,nr4,nr11new,enc,nems13,eastern,usa,Great Lakes
+s202,p81,il,rto6,nr4,nr11new,enc,nems13,eastern,usa,Great Lakes
+s203,p82,il,rto6,nr4,nr11new,enc,nems13,eastern,usa,Great Lakes
+s204,p81,il,rto6,nr4,nr11new,enc,nems13,eastern,usa,Great Lakes
+s205,p81,il,rto6,nr4,nr11new,enc,nems13,eastern,usa,Great Lakes
+s206,p80,il,rto7,nr4,nr17new,enc,nems11,eastern,usa,Great Lakes
+s207,p80,il,rto7,nr4,nr17new,enc,nems11,eastern,usa,Great Lakes
+s208,p83,il,rto6,nr4,nr11new,enc,nems13,eastern,usa,Great Lakes
+s209,p83,il,rto6,nr4,nr11new,enc,nems13,eastern,usa,Great Lakes
+s210,p83,il,rto6,nr4,nr11new,enc,nems13,eastern,usa,Great Lakes
+s211,p103,mi,rto6,nr1,nr11new,enc,nems10,eastern,usa,Great Lakes
+s212,p103,mi,rto6,nr1,nr11new,enc,nems10,eastern,usa,Great Lakes
+s213,p104,mi,rto7,nr1,nr17new,enc,nems11,eastern,usa,Great Lakes
+s214,p103,mi,rto6,nr1,nr11new,enc,nems10,eastern,usa,Great Lakes
+s215,p103,mi,rto6,nr1,nr11new,enc,nems10,eastern,usa,Great Lakes
+s216,p103,mi,rto6,nr1,nr11new,enc,nems10,eastern,usa,Great Lakes
+s217,p103,mi,rto6,nr1,nr11new,enc,nems10,eastern,usa,Great Lakes
+s218,p103,mi,rto6,nr1,nr11new,enc,nems10,eastern,usa,Great Lakes
+s219,p105,in,rto6,nr1,nr11new,enc,nems11,eastern,usa,Great Lakes
+s220,p105,in,rto6,nr1,nr11new,enc,nems11,eastern,usa,Great Lakes
+s221,p105,in,rto6,nr1,nr11new,enc,nems11,eastern,usa,Great Lakes
+s222,p105,in,rto6,nr1,nr11new,enc,nems11,eastern,usa,Great Lakes
+s223,p106,in,rto6,nr1,nr11new,enc,nems11,eastern,usa,Great Lakes
+s224,p107,in,rto6,nr1,nr11new,enc,nems11,eastern,usa,Great Lakes
+s225,p105,in,rto6,nr1,nr11new,enc,nems11,eastern,usa,Great Lakes
+s226,p105,in,rto6,nr1,nr11new,enc,nems11,eastern,usa,Great Lakes
+s227,p111,oh,rto7,nr1,nr17new,enc,nems11,eastern,usa,Great Lakes
+s228,p112,oh,rto7,nr1,nr17new,enc,nems11,eastern,usa,Great Lakes
+s229,p112,oh,rto7,nr1,nr17new,enc,nems11,eastern,usa,Great Lakes
+s230,p113,oh,rto7,nr1,nr17new,enc,nems11,eastern,usa,Great Lakes
+s231,p114,oh,rto7,nr1,nr11new,enc,nems11,eastern,usa,Great Lakes
+s232,p112,oh,rto7,nr1,nr17new,enc,nems11,eastern,usa,Great Lakes
+s233,p112,oh,rto7,nr1,nr17new,enc,nems11,eastern,usa,Great Lakes
+s234,p111,oh,rto7,nr1,nr17new,enc,nems11,eastern,usa,Great Lakes
+s235,p112,oh,rto7,nr1,nr17new,enc,nems11,eastern,usa,Great Lakes
+s236,p108,ky,rto6,nr1,nr16new,esc,nems15,eastern,usa,Southeast
+s237,p109,ky,rto7,nr1,nr16new,esc,nems15,eastern,usa,Southeast
+s238,p109,ky,rto7,nr1,nr16new,esc,nems15,eastern,usa,Southeast
+s239,p109,ky,rto7,nr1,nr16new,esc,nems15,eastern,usa,Southeast
+s240,p109,ky,rto7,nr1,nr16new,esc,nems15,eastern,usa,Southeast
+s241,p109,ky,rto7,nr1,nr16new,esc,nems15,eastern,usa,Southeast
+s242,p110,ky,rto7,nr1,nr17new,esc,nems11,eastern,usa,Southeast
+s243,p118,va,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s244,p118,va,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s245,p118,va,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s246,p117,wv,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s247,p117,wv,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s248,p117,wv,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s249,p116,wv,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s250,p116,wv,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s251,p115,pa,rto7,nr1,nr17new,ma,nems11,eastern,usa,Northeast
+s252,p115,pa,rto7,nr1,nr17new,ma,nems11,eastern,usa,Northeast
+s253,p121,md,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s254,p120,pa,rto7,nr1,nr17new,ma,nems11,eastern,usa,Northeast
+s255,p119,pa,rto12,nr1,nr17new,ma,nems9,eastern,usa,Northeast
+s256,p66,tx,rto13,nr9,nr10new,wsc,nems12,eastern,usa,West South Central
+s257,p85,ar,rto13,nr9,nr12new,wsc,nems12,eastern,usa,West South Central
+s258,p85,ar,rto13,nr9,nr12new,wsc,nems12,eastern,usa,West South Central
+s259,p85,ar,rto13,nr9,nr12new,wsc,nems12,eastern,usa,West South Central
+s260,p86,la,rto13,nr9,nr12new,wsc,nems12,eastern,usa,West South Central
+s261,p58,la,rto13,nr9,nr10new,wsc,nems12,eastern,usa,West South Central
+s262,p87,ms,rto13,nr9,nr12new,esc,nems12,eastern,usa,Southeast
+s263,p88,ms,rto14,nr9,nr12new,esc,nems15,eastern,usa,Southeast
+s264,p87,ms,rto13,nr9,nr12new,esc,nems12,eastern,usa,Southeast
+s265,p89,al,rto14,nr9,nr13new,esc,nems14,eastern,usa,Southeast
+s266,p89,al,rto14,nr9,nr13new,esc,nems14,eastern,usa,Southeast
+s267,p90,al,rto9,nr9,nr13new,esc,nems14,eastern,usa,Southeast
+s268,p90,al,rto9,nr9,nr13new,esc,nems14,eastern,usa,Southeast
+s269,p91,fl,rto9,nr9,nr13new,sa,nems14,eastern,usa,Southeast
+s270,p91,fl,rto9,nr9,nr13new,sa,nems14,eastern,usa,Southeast
+s271,p91,fl,rto9,nr9,nr13new,sa,nems14,eastern,usa,Southeast
+s272,p94,ga,rto9,nr9,nr13new,sa,nems14,eastern,usa,Southeast
+s273,p94,ga,rto9,nr9,nr13new,sa,nems14,eastern,usa,Southeast
+s274,p94,ga,rto9,nr9,nr13new,sa,nems14,eastern,usa,Southeast
+s275,p94,ga,rto9,nr9,nr13new,sa,nems14,eastern,usa,Southeast
+s276,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s277,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s278,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s279,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s280,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s281,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s282,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s283,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s284,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s285,p92,tn,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s286,p93,ky,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s287,p93,ky,rto14,nr9,nr16new,esc,nems15,eastern,usa,Southeast
+s288,p97,nc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s289,p97,nc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s290,p97,nc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s291,p98,nc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s292,p98,nc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s293,p98,nc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s294,p98,nc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s295,p95,sc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s296,p96,sc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s297,p96,sc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s298,p96,sc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s299,p96,sc,rto15,nr9,nr15new,sa,nems16,eastern,usa,Southeast
+s300,p99,va,rto7,nr9,nr17new,sa,nems16,eastern,usa,Southeast
+s301,p100,va,rto7,nr9,nr17new,sa,nems11,eastern,usa,Southeast
+s302,p99,va,rto7,nr9,nr17new,sa,nems16,eastern,usa,Southeast
+s303,p99,va,rto7,nr9,nr17new,sa,nems16,eastern,usa,Southeast
+s304,p99,va,rto7,nr9,nr17new,sa,nems16,eastern,usa,Southeast
+s305,p99,va,rto7,nr9,nr17new,sa,nems16,eastern,usa,Southeast
+s306,p99,va,rto7,nr9,nr17new,sa,nems16,eastern,usa,Southeast
+s307,p99,va,rto7,nr9,nr17new,sa,nems16,eastern,usa,Southeast
+s308,p116,wv,rto7,nr1,nr17new,sa,nems11,eastern,usa,Southeast
+s309,p101,fl,rto16,nr8,nr14new,sa,nems2,eastern,usa,Southeast
+s310,p101,fl,rto16,nr8,nr14new,sa,nems2,eastern,usa,Southeast
+s311,p101,fl,rto16,nr8,nr14new,sa,nems2,eastern,usa,Southeast
+s312,p101,fl,rto16,nr8,nr14new,sa,nems2,eastern,usa,Southeast
+s313,p102,fl,rto16,nr8,nr14new,sa,nems2,eastern,usa,Southeast
+s314,p124,va,rto12,nr3,nr17new,sa,nems9,eastern,usa,Southeast
+s315,p123,md,rto12,nr3,nr17new,sa,nems9,eastern,usa,Southeast
+s316,p123,md,rto12,nr3,nr17new,sa,nems9,eastern,usa,Southeast
+s317,p123,md,rto12,nr3,nr17new,sa,nems9,eastern,usa,Southeast
+s318,p125,de,rto12,nr3,nr17new,sa,nems9,eastern,usa,Southeast
+s319,p125,de,rto12,nr3,nr17new,sa,nems9,eastern,usa,Southeast
+s320,p122,pa,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s321,p122,pa,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s322,p122,pa,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s323,p122,pa,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s324,p122,pa,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s325,p122,pa,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s326,p122,pa,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s327,p122,pa,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s328,p126,nj,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s329,p126,nj,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s330,p126,nj,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s331,p126,nj,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s332,p126,nj,rto12,nr3,nr17new,ma,nems9,eastern,usa,Northeast
+s333,p127,ny,rto17,nr6,nr18new,ma,nems8,eastern,usa,Northeast
+s334,p127,ny,rto17,nr6,nr18new,ma,nems8,eastern,usa,Northeast
+s335,p127,ny,rto17,nr6,nr18new,ma,nems8,eastern,usa,Northeast
+s336,p127,ny,rto17,nr6,nr18new,ma,nems8,eastern,usa,Northeast
+s337,p127,ny,rto17,nr6,nr18new,ma,nems8,eastern,usa,Northeast
+s338,p127,ny,rto17,nr6,nr18new,ma,nems8,eastern,usa,Northeast
+s339,p127,ny,rto17,nr6,nr18new,ma,nems8,eastern,usa,Northeast
+s340,p127,ny,rto17,nr6,nr18new,ma,nems8,eastern,usa,Northeast
+s341,p127,ny,rto17,nr6,nr18new,ma,nems8,eastern,usa,Northeast
+s342,p128,ny,rto17,nr6,nr18new,ma,nems7,eastern,usa,Northeast
+s343,p132,ct,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s344,p132,ct,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s345,p133,ri,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s346,p133,ri,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s347,p131,ma,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s348,p131,ma,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s349,p131,ma,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s350,p129,vt,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s351,p129,vt,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s352,p129,vt,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s353,p130,nh,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s354,p130,nh,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s355,p134,me,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s356,p134,me,rto18,nr7,nr19new,ne,nems5,eastern,usa,Northeast
+s357,p135,mex,rto4,nr13,nr5new,pa,nems4,wscc,mex,Pacific
+s358,p136,mex,rto4,nr13,nr5new,pa,nems1,wscc,mex,Pacific
+s359,p137,bc,rto33,nr11,nr20new,pa,can,wscc,can,Pacific
+s360,p137,bc,rto33,nr11,nr20new,pa,can,wscc,can,Pacific
+s361,p137,bc,rto33,nr11,nr20new,pa,can,wscc,can,Pacific
+s362,p138,bc,rto33,nr11,nr20new,pa,can,wscc,can,Pacific
+s363,p139,bc,rto33,nr11,nr20new,pa,can,wscc,can,Pacific
+s364,p139,bc,rto33,nr11,nr20new,pa,can,wscc,can,Pacific
+s365,p139,bc,rto33,nr11,nr20new,pa,can,wscc,can,Pacific
+s366,p139,bc,rto33,nr11,nr20new,pa,can,wscc,can,Pacific
+s367,p140,ab,rto34,nr11,nr21new,mtn,can,wscc,can,Mountain
+s368,p141,ab,rto34,nr11,nr21new,mtn,can,wscc,can,Mountain
+s369,p142,sk,rto35,nr5,nr22new,wnc,can,eastern,can,West North Central
+s370,p143,mb,rto36,nr5,nr23new,wnc,can,eastern,can,West North Central
+s371,p144,on,rto37,nr6,nr24new,ma,can,eastern,can,Northeast
+s372,p145,on,rto37,nr6,nr24new,ma,can,eastern,can,Northeast
+s373,p146,on,rto37,nr6,nr24new,ma,can,eastern,can,Northeast
+s374,p147,on,rto37,nr6,nr24new,ma,can,eastern,can,Northeast
+s375,p148,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s376,p149,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s377,p150,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s378,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s379,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s380,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s381,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s382,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s383,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s384,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s385,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s386,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s387,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s388,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s389,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s390,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s391,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s392,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s393,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s394,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s395,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s396,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s397,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s398,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s399,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s400,p151,qc,rto38,nr14,nr25new,ne,can,quebec,can,Northeast
+s401,p152,nb,rto39,nr7,nr26new,ne,can,eastern,can,Northeast
+s402,p153,ns,rto39,nr7,nr26new,ne,can,eastern,can,Northeast
+s403,p154,nl,rto38,nr14,nr24new,ne,can,quebec,can,Northeast
+s404,p155,nfi,rto38,nr14,nr24new,ne,can,quebec,can,Northeast
+s405,p156,pei,rto39,nr7,nr26new,ne,can,eastern,can,Northeast
+s406,p157,sin_son,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s407,p158,sin_son,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s408,p159,sin_son,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s409,p160,sin_son,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s410,p161,sin_son,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s411,p162,sin_son,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s412,p163,chh,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s413,p164,chh,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s414,p165,chh,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s415,p166,coa_dgo_nle,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s416,p167,coa_dgo_nle,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s417,p168,coa_dgo_nle,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s418,p169,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s419,p170,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s420,p171,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s421,p172,coa_dgo_nle,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s422,p173,coa_dgo_nle,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s423,p174,slp,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s424,p175,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s425,p176,slp,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s426,p177,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s427,p178,agu_gua_jal_nay_que_zac,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s428,p179,agu_gua_jal_nay_que_zac,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s429,p180,agu_gua_jal_nay_que_zac,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s430,p181,slp,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s431,p182,agu_gua_jal_nay_que_zac,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s432,p183,col,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s433,p184,gro_mic,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s434,p185,gro_mic,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s435,p186,agu_gua_jal_nay_que_zac,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s436,p187,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s437,p188,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s438,p189,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s439,p190,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s440,p191,gro_mic,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s441,p192,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s442,p193,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s443,p194,cam_chp_tab,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s444,p195,cam_chp_tab,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s445,p196,dif_hid_mex_mor_oax_pue_tam_tla_ver,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s446,p197,cam_chp_tab,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s447,p198,yuc,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s448,p199,roo,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s449,p200,roo,rto40,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s450,p201,bcn,rto41,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s451,p202,bcn,rto41,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s452,p203,bcn,rto41,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s453,p204,bcn,rto41,nr15,nr27new,mex,mex,mexico,mex,Mexico
+s454,p205,bcs,rto41,nr15,nr27new,mex,mex,mexico,mex,Mexico

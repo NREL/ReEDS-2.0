@@ -1,0 +1,21 @@
+raw,display
+inv_investment_capacity_costs,Capital
+inv_investment_refurbishment_capacity,Capital
+inv_investment_capacity_costs_noitc,Capital no ITC
+inv_investment_refurbishment_capacity_noitc,Capital no ITC
+inv_ptc_payments_negative,PTC
+inv_investment_spurline_costs_rsc_technologies,Trans
+inv_ptc_payments_negative_refurbishments,PTC
+inv_transmission_line_investment,Trans
+inv_substation_investment_costs,Trans
+inv_interconnection_costs,Trans
+inv_pumpedhydro_investment,Other
+inv_geothermal_investment,Other
+op_vom_costs,O&M
+op_operating_reserve_costs,O&M
+op_fuelcosts_objfn,Fuel
+op_fom_costs,O&M
+op_international_hurdle_rate,Trans
+op_acp_compliance_costs,Other
+op_emissions_taxes,Emissions Tax
+op_gen_pol_costs,Other
