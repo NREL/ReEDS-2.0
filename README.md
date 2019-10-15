@@ -27,6 +27,7 @@ This GitHub repository contains the source code for NREL&#39;s ReEDS model. User
   * [How much are the GAMS licensing fees?](#Fees)
   * [Is there a trial version of the GAMS license so I can test ReEDS?](#Trail)
   * [What computer hardware is necessary to run ReEDS?](#Hardware)
+  * [Can I configure a ReEDS case to run as an isolated interconnect?](#Interconnect)
 * [Contact Us](#Contact)
 * [Appendix](#Appendix)
   * [ReEDS Model Switches](#Switches)
@@ -500,6 +501,22 @@ Table Notes:
 * Default solve window configuration: 11 windows and 5 iterations per window (see &quot;\inputs\userinput\windows.csv&quot;). The problem size is taken from last iteration. The problem size varies by about 5% across iterations.
 * Intertemporal: 8-12 hours per iteration, 5-7 iterations total
 
+<a name="Interconnect"></a>
+## Can I configure a ReEDS case to run as an isolated interconnect?
+Yes, you can configure ReEDS as a single interconnect. Limiting the spatial extent may be beneficial for modeling more difficult instances. 
+
+**WARNING!:** The default case configurations were designed for modeling the lower 48 United States. Therefore, the user should be aware of possible issues with executing an interconnect in isolation, including but not limited to the following:
+
+* Natural gas prices are based on either national or census division supply curves. The natural gas prices are computed as a function of the quantity consumed relative to a reference quantity. Consuming less than the reference quanity drives the price downward; consuming more drives the price upward. When modeling a single interconnection, the user should either modify the reference gas quantity to account for a smaller spatial extent or use fixed gas prices in every census division (i.e., case configuration option [GSw\_GasCurve](#SwOther) = 2). For example, if we execute ERCOT in isolation using census division supply curves, we may want to reduce the reference gas quantity for the West South Central (WSC) census division which includes Texas, Oklahoma, Arkansas, and Louisiana. Or we could assume the gas price in the WSC region is fixed.
+
+* Infeasibilities may arise in state-level constraints when only part of a state is represented in an interconnect. For exammple, the Western interconnection includes a small portion of Texas (El Paso). State-level constraints will be enforced for Texas, but El Paso may not be able to meet the requirement for all of Texas.
+
+* Certain constraints may not apply in every interconnect. Some examples include: 
+  * California State RPS REC trading constraints only apply to the West
+  * CAIR and CSAPR only apply to certain states, so the emission limits may need to be adjusted
+  * RGGI only applies to a subset of states in the northeast 
+  * California policies (e.g., SB32, California Storage Mandate) only apply to California
+
 <a name="Contact"></a>
 # Contact Us:
 
@@ -700,15 +717,11 @@ The following three switches are interrelated and are used together to gather th
 
 Select all rows in &quot;\inputs\regions\regions\_{region\_suffix}.csv&quot; where the entry for column &quot;{region\_type}&quot; is equal to &quot;{GSw\_region}.&quot;
 
-Example for the lower 48 US:
-
+**Example for the lower 48 US:**
 Select all rows in &quot;\inputs\regions\regions\_default.csv&quot; where the entry for column &quot;country&quot; is equal to &quot;usa.&quot;
 
-Example for ERCOT:
-
-Select all rows in &quot;\inputs\regions\regions\_ercot.csv&quot; where the entry for column &quot;interconnect&quot; is equal to &quot;Texas.&quot;
-
-An example for ERCOT is shown in &quot;cases\_test.csv&quot;
+**Example for ERCOT:**
+Select all rows in &quot;\inputs\regions\regions\_ercot.csv&quot; where the entry for column &quot;interconnect&quot; is equal to &quot;Texas.&quot; An example for ERCOT is shown in &quot;cases\_test.csv&quot;
 
 **regions\_suffix** [string] – file pointer suffix for regional hierarchy file
 
@@ -994,6 +1007,11 @@ Default value: 1
 ### Other model constraint switches
 
 **GSw\_GasCurve** [integer] – Select natural gas supply curve
+
+- 0: census division supply curves
+- 1: national and census division supply curves
+- 2: static natural gas prices in each census division
+- 3: national supply curves with census division multipliers
 
 Default value: 0
 
