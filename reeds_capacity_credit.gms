@@ -54,9 +54,6 @@ cap_export(i,r,t)$[(vre(i) or storage(i))$valcap_irt(i,r,t)$(t.val=%cur_year%)] 
 $endif
 ;
 
-*Create the directory for the capacity credit input and output files
-$if not exist outputs%ds%variabilityFiles $call 'mkdir outputs%ds%variabilityFiles'
-
 execute_unload 'outputs%ds%variabilityFiles%ds%cc_in_%case%_%next_year%.gdx' cap_export, csp_sm, hierarchy, load_multiplier, r_rs, rfeas,
                                                                              storage_duration, storage_eff, windcfin ;
 

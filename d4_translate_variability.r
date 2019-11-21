@@ -1,6 +1,7 @@
 sink("gamslog.txt",append=TRUE)
 
 library(gdxrrw)
+
 print("")
 print("Beginning calculation of d4_Translate_Variability.R")
 print("Purpose of this file is to translate outputs from heritage ReEDS variability scripts")
@@ -13,8 +14,8 @@ setwd(paste(Args[1]))
 igdx(paste(Args[2]))
 nextyear = paste(Args[3])
 case = paste(Args[4])
-infile = paste("outputs\\variabilityfiles\\rawvariability_",case,"_",nextyear,".gdx",sep="")
-outfile = paste("outputs\\variabilityfiles\\curt_out_",case,"_",nextyear,".gdx",sep="")
+infile = file.path("outputs","variabilityfiles",paste0("rawvariability_",case,"_",nextyear,".gdx"))
+outfile = file.path("outputs","variabilityfiles",paste0("curt_out_",case,"_",nextyear,".gdx"))
 
 
 print("")
@@ -26,7 +27,7 @@ print("")
 
 
 #all we need from the supply side solve is the r_rs mapping set
-solfile = paste(".\\inputs_case\\r_rs.gdx",sep="")
+solfile = file.path("inputs_case","r_rs.gdx")
 r_rs = rgdx.param(solfile,"r_rs",names=c(colid[1:(length(colnames(rgdx.param(solfile,"r_rs")))-1)],"value"))
 r_rs = r_rs[,c("i","j")]
 colnames(r_rs) = c("r","rs")

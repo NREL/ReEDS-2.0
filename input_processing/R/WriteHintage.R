@@ -33,7 +33,7 @@ inflate_87_04 = 1.69
 
 
 if(!exists("Args")) Args=commandArgs(TRUE)
-setwd(paste((Args[1]),"inputs\\capacitydata",sep=""))
+setwd(file.path(Args[1],"inputs","capacitydata"))
 if(Args[2]!='unit'){
   MaxBins = as.numeric(as.character(Args[2]))
 }
@@ -450,7 +450,7 @@ zout = zout[,c("yr","TECH","ba","bin","wHR","wFOM","wVOM","cap")]
 #hintages are the only capacity indexed by time
 #strange, I know, but fits better than any other
 #exogenous parameter preparation script
-DPV = as.data.frame(read.csv(paste0(Args[1],"inputs\\dGen_Model_Inputs\\",distpvscen,"\\distPVcap_", distpvscen, ".csv")))
+DPV = as.data.frame(read.csv(file.path(Args[1],"inputs","dGen_Model_Inputs",distpvscen,paste0("distPVcap_", distpvscen, ".csv"))))
 DPV = melt(DPV,id=c("X"))
 colnames(DPV) = c("ba","yr","cap")
 #DPV$rs = "sk"

@@ -4,7 +4,7 @@ $ifthen.unix %system.filesys% == UNIX
 $setglobal ds /
 $endif.unix
 
-$set gmszip "%gams.sysdir%\gmszip"
+$set gmszip "%gams.sysdir%%ds%gmszip"
 
 * Set path for where the output files will be stored
 $setglobal outputsPath 'outputs%ds%'
@@ -96,8 +96,3 @@ $call 'rm outputs%ds%variabilityFiles%ds%*%fname%*.gdx'
 $call 'gdxmerge outputs%ds%variabilityFiles%ds%*%fname%*.gdx'
 $call '"%gmszip%" %outputsPath%gdxFiles.zip merged.gdx'
 $call 'rm outputs%ds%variabilityFiles%ds%*%fname%*.gdx'
-
-*Generate HTML report of outputs:
-$setglobal bokehpivotreportdir '%gams.curdir%\..\..\bokehpivot\reports\'
-$call 'python %bokehpivotreportdir%interface_report.py "ReEDS 2.0" %gams.curdir% all No none %bokehpivotreportdir%templates\reeds2\standard_report_reduced.py one outputs\reeds-report-reduced no'
-$call 'python %bokehpivotreportdir%interface_report.py "ReEDS 2.0" %gams.curdir% all No none %bokehpivotreportdir%templates\reeds2\standard_report_expanded.py one outputs\reeds-report no'

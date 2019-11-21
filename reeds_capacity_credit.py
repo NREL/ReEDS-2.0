@@ -557,8 +557,8 @@ def do_a_year(input_gdx_file, output_gdx_file, scenario, year, next_year, annual
     for rto in hierarchy['rto'].drop_duplicates():
         
 #%%  RTO DATA
-        
-        print("Calculating capacity credit for {}".format(rto))
+        if os.name!="posix":
+            print("Calculating capacity credit for {}".format(rto))
         # ------- Get load profile, RECF profiles, VG capacity, storage capacity, and storage RTE for this RTO -------
         
         # Select the load profiles of the BAs in this RTO and merge in columns for season, hour, and timeslice

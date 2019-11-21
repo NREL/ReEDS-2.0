@@ -7,11 +7,12 @@ import time
 import shutil
 import csv
 import pandas as pd
+import subprocess
 
 from builtins import input
 
-
 sys.path.insert(0, 'input_processing') # add the dir to the path for importing modules
+
 import calc_financial_inputs as cFuncs
 
 
@@ -21,7 +22,28 @@ def setupEnvironment():
     InputDir = os.getcwd()
 
     print(" ")
+    print("------------- ")
+    print(" ")
+    print("WINDOWS USERS - This script will open multiple command prompts, the number of which")
+    print("is based on the number of simultaneous runs you've chosen")
+    print(" ")
+    print("MAC/LINUX USERS - Your cases will run in the background. All console output")
+    print("is written to the cases' appropriate gamslog.txt file in the cases' runs folders")
+    print(" ")
+    print("------------- ")
+    print(" ")
+    print(" ")
+    
     GAMSDir = r"C:\Program Files\GAMS24.7"  # full path to GAMS executables, replaced in next steps
+    
+    if os.name =='posix':
+        #need to use os.path.join here or the unicode separation characters
+        #will be included in the call to d5_mergevariability.r when writing to call_'case'.sh
+        GAMSDir = os.path.join("/Applications","GAMS24.7","GAMS24.7","sysdir")
+
+    print("The GAMS directory is required to be specified for the intertemporal and window cases")
+    print("The assignment is done in the setupEnvironment() function in runbatch.py")
+    print(" ")
     print("GAMS directory: " + str(GAMSDir) )
     print(" ")
 
@@ -152,7 +174,8 @@ def createmodelthreads(envVar):
             ThreadInit = q.get()
             if ThreadInit is None:
                 break
-            runModel(ThreadInit['scen'],
+            runModel(ThreadInit['GAMSDir'],
+                     ThreadInit['scen'],
                      ThreadInit['caseSwitches'],
                      ThreadInit['lstfile'],
                      ThreadInit['niter'],
@@ -180,7 +203,8 @@ def createmodelthreads(envVar):
         threads.append(t)
 
     for i in range(len(envVar['caseList'])):
-        q.put({'scen': envVar['caseList'][i],
+        q.put({'GAMSDir' : envVar['GAMSDir'],
+               'scen': envVar['caseList'][i],
                'caseSwitches': envVar['caseSwitches'][i],
                'lstfile':envVar['BatchName']+'_'+envVar['casenames'][i],
                'niter':envVar['niter'],
@@ -210,34 +234,44 @@ def createmodelthreads(envVar):
 
 
 def writeerrorcheck(checkfile):
-    return '\nif not exist '+ checkfile + ' (\n echo file ' + checkfile + ' missing \n goto:eof \n) \n \n'
+    if os.name!='posix':
+        return '\nif not exist '+ checkfile + ' (\n echo file ' + checkfile + ' missing \n goto:eof \n) \n \n'
+    else:
+        return '\nif [ ! -f ' + checkfile + ' ]; then \n      exit 0\nfi\n\n'
 
-
-def runModel(options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir,endyear,ccworkers,startiter,demandsetting,ldcgdx,distpv,csp,
-             batch,case):
+def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir,endyear,
+             ccworkers,startiter,demandsetting,ldcgdx,distpv,csp,batch,case):
     
     
-    casedir = os.path.join(InputDir,"runs\\",lstfile)
+    casedir = os.path.join(InputDir,"runs",lstfile)
     caseinputs = os.path.join(casedir,"inputs_case")
 
-    if os.path.exists("runs\\" + lstfile): print("Caution, case " + lstfile + " already exists in runs \n")
+    if os.path.exists(os.path.join("runs",lstfile)): print("Caution, case " + lstfile + " already exists in runs \n")
 
-    if not os.path.exists("runs\\" + lstfile): os.mkdir("runs\\" + lstfile)
-    if not os.path.exists("runs\\" + lstfile + "\\g00files"): os.mkdir("runs\\" + lstfile + "\\g00files")
-    if not os.path.exists("runs\\" + lstfile + "\\lstfiles"): os.mkdir("runs\\" + lstfile + "\\lstfiles")
-    if not os.path.exists("runs\\" + lstfile + "\\outputs"): os.mkdir("runs\\" + lstfile + "\\outputs")
-    if not os.path.exists("runs\\" + lstfile + "\\outputs\\variabilityFiles"): os.mkdir("runs\\" + lstfile + "\\outputs\\variabilityFiles")
+    #set up case-specific directory structure
+    if not os.path.exists(os.path.join("runs",lstfile)): os.mkdir(os.path.join("runs",lstfile))
+    if not os.path.exists(os.path.join("runs",lstfile,"g00files")): os.mkdir(os.path.join("runs",lstfile,"g00files"))
+    if not os.path.exists(os.path.join("runs",lstfile,"lstfiles")): os.mkdir(os.path.join("runs",lstfile,"lstfiles"))
+    if not os.path.exists(os.path.join("runs",lstfile,"outputs")): os.mkdir(os.path.join("runs",lstfile,"outputs"))
+    if not os.path.exists(os.path.join("runs",lstfile,"outputs","variabilityFiles")): os.mkdir(os.path.join("runs",lstfile,"outputs","variabilityFiles"))
     if not os.path.exists(caseinputs): os.mkdir(caseinputs)
 
     cFuncs.calc_financial_inputs(batch,case,caseSwitches)
     
-    OutputDir = os.path.join(InputDir, "runs\\" + lstfile)
+    OutputDir = os.path.join(InputDir, "runs", lstfile)
     yearset_path = os.path.join('inputs','userinput','modeledyears_%s.csv' % yearset_suffix)
     yearset_reflow = os.path.join('inputs_case','modeledyears_%s.csv' % yearset_suffix)
     solveyears=list(csv.reader(open(os.path.join(InputDir,yearset_path), 'r'), delimiter=","))[0]
     solveyears = [y for y in solveyears if y <= endyear]
     toLogGamsString = ' logOption=4 logFile=gamslog.txt appendLog=1 '
-    options += ' --basedir=' + InputDir + '\\ --casedir=' + casedir + ' --yearset=modeledyears_%s.csv' % yearset_suffix
+
+    ds = "\\"
+    
+    if os.name=="posix":
+        ds="/"
+    
+    options += ' --basedir=' + InputDir + ds + ' --casedir=' + casedir + ' --yearset=modeledyears_%s.csv' % yearset_suffix
+    
     dir_src = InputDir
 
     with open('filesforbatch.csv', 'r') as f:
@@ -263,11 +297,18 @@ def runModel(options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir
         if (os.path.isfile(full_file_name)):
             shutil.copy(full_file_name, caseinputs)
 
-    with open(os.path.join(OutputDir, 'call_' + lstfile + '.bat'), 'w') as OPATH:
+    ext = '.bat'
+    comment = "::"
+
+    if os.name=='posix':
+        ext = '.sh'
+        comment = "#"
+
+    with open(os.path.join(OutputDir, 'call_' + lstfile + ext), 'w+') as OPATH:
         OPATH.writelines("cd " + casedir + '\n' + '\n')
-        OPATH.writelines("gams createmodel.gms gdxcompress=1 xs=g00files\\" + lstfile + " o=lstfiles\\1_Inputs.lst" + options + " " + toLogGamsString + '\n')
+        OPATH.writelines("gams createmodel.gms gdxcompress=1 xs="+os.path.join("g00files",lstfile) + " o="+os.path.join("lstfiles","1_Inputs.lst") + options + " " + toLogGamsString + '\n')
         restartfile = lstfile
-        OPATH.writelines(writeerrorcheck('g00files\\'+restartfile+'.g*'))
+        OPATH.writelines(writeerrorcheck(os.path.join('g00files',restartfile + '.g*')))
 
 
     #############################
@@ -281,9 +322,10 @@ def runModel(options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir
                 #current year is the value in solveyears
                 cur_year = solveyears[i]
                 #make an indicator in the batch file for what year is being solved
-                OPATH.writelines('\n' + "::"  + ' \n')
-                OPATH.writelines(":: Year: " + str(cur_year)  + ' \n')
-                OPATH.writelines("::"  + ' \n')
+                if os.name!='posix':
+                    OPATH.writelines('\n' + comment  + ' \n')
+                    OPATH.writelines(comment + " Year: " + str(cur_year)  + ' \n')
+                    OPATH.writelines(comment  + ' \n')
 
                 #savefile is the lstfile plus the current name
                 savefile = lstfile+"_"+str(cur_year)
@@ -291,34 +333,34 @@ def runModel(options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir
                 #the gdx files from reflow (curt_out... and cc_out...) are 
                 #created - note that the g00 file check is written below (before the call to reflow) 			
                 if cur_year > min(solveyears):
-                	OPATH.writelines(writeerrorcheck("outputs\\variabilityFiles\\curt_out_" + lstfile + "_" + str(cur_year) + ".gdx"))
-                	OPATH.writelines(writeerrorcheck("outputs\\variabilityFiles\\cc_out_" + lstfile + "_" + str(cur_year) + ".gdx"))
+                	OPATH.writelines(writeerrorcheck(os.path.join("outputs","variabilityFiles","curt_out_" + lstfile + "_" + str(cur_year) + ".gdx")))
+                	OPATH.writelines(writeerrorcheck(os.path.join("outputs","variabilityFiles","cc_out_" + lstfile + "_" + str(cur_year) + ".gdx")))
 
                 #solve one year
-                OPATH.writelines("gams d_solveoneyear.gms o=lstfiles\\" + savefile + ".lst r=g00files\\" + restartfile + " gdxcompress=1 xs=g00files\\" + savefile + toLogGamsString + " --case=" + lstfile + " --cur_year=" + str(cur_year)+'\n')
+                OPATH.writelines("gams d_solveoneyear.gms o="+os.path.join("lstfiles",savefile+".lst") + " r="+os.path.join("g00files",restartfile) + " gdxcompress=1 xs=" + os.path.join("g00files",savefile) + toLogGamsString + " --case=" + lstfile + " --cur_year=" + str(cur_year)+'\n')
                 #since we are done with the previous solve file delete it
                 if cur_year > min(solveyears):
                     #check to see if the most recent save file exists and if so, delete the previous restart file
-                    OPATH.writelines("if exist g00files\\"+savefile+ ".g00 (del g00files\\"+ restartfile + '.g00)\n' )
+                    if os.name!='posix':                   
+                        OPATH.writelines("if exist "+os.path.join("g00files",savefile+ ".g00") + "(del "+os.path.join("g00files", restartfile + '.g00')+')\n' )
+                    if os.name=='posix':
+                        #'\nif [ ! -f ' + checkfile + ' ]; then \n      exit 0\nfi\n\n'
+                        OPATH.writelines("if [ -f " + os.path.join("g00files",savefile+ ".g00") + " ]; then \n   rm "+os.path.join("g00files", restartfile + '.g00') +'\nfi\n\n' )
                 #after solving, the restart file is now the save file
                 restartfile=savefile
                 if caseSwitches['GSw_ValStr'] != '0':
-                    OPATH.writelines('gams valuestreams.gms o=lstfiles\\valuestreams_' + savefile + '.lst r=g00files\\' + restartfile + toLogGamsString +' --case=' + lstfile + '\n')
+                    OPATH.writelines('gams valuestreams.gms o='+os.path.join("lstfiles",'valuestreams_' + savefile + '.lst')+ ' r='+os.path.join("g00files",restartfile) + toLogGamsString +' --case=' + lstfile + '\n')
                 
                 #check to see if the restart file exists
-                OPATH.writelines(writeerrorcheck("g00files\\" + restartfile + ".g*"))
+                OPATH.writelines(writeerrorcheck(os.path.join("g00files",restartfile + ".g*")))
 
                 #if it not the final solve year
                 if cur_year < max(solveyears):
                     #next year becomes the next item in the solveyears vector
                     next_year = solveyears[i+1]
                     #call reflow for that save file
-                    OPATH.writelines("gams d_callreflow.gms " + toLogGamsString + " --restartfile=g00files\\" + restartfile + " --case=" + lstfile + " --cur_year=" + str(cur_year) + " --next_year="+str(next_year)+' --HourlyStaticFileSwitch='+str(ldcgdx) + ' --DistPVSwitch='+ str(distpv) + ' --calc_csp_cc='+ str(csp) + ' --timetype=' + str(timetype) + '\n')
-            
-            #create reporting files
-            OPATH.writelines("gams e_report.gms o=lstfiles\\report_" + lstfile + ".lst r=g00files\\" + restartfile + toLogGamsString + " --fname=" + lstfile + '\n')
-            OPATH.writelines("gams e_report_dump.gms " + toLogGamsString + " --fname=" + lstfile)
-
+                    OPATH.writelines("gams d_callreflow.gms " + toLogGamsString + " --restartfile="+os.path.join("g00files",restartfile) + " --case=" + lstfile + " --cur_year=" + str(cur_year) + " --next_year="+str(next_year)+' --HourlyStaticFileSwitch='+ str(ldcgdx) + ' --DistPVSwitch='+ str(distpv) + ' --calc_csp_cc='+ str(csp) + ' --timetype=' + str(timetype) + '\n')
+        
     #############################
     # -- INTERTEMPORAL SETUP -- 
     #############################
@@ -344,9 +386,9 @@ def runModel(options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir
             #for the number of iterations we have...
             for i in range(startiter,niter):
                 #make an indicator in the batch file for what iteration is being solved
-                OPATH.writelines('\n' + "::"  + ' \n')
-                OPATH.writelines(":: Iteration: " + str(i)  + ' \n')
-                OPATH.writelines("::"  + ' \n \n')
+                OPATH.writelines('\n' + comment  + ' \n')
+                OPATH.writelines(comment + " Iteration: " + str(i)  + ' \n')
+                OPATH.writelines(comment + ' \n \n')
                 #call the intertemporal solve
                 savefile = lstfile+"_"+str(i)
 
@@ -354,12 +396,12 @@ def runModel(options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir
                     #check to see if the restart file exists
                     #only need to do this with the zeroth iteration
                     #as the other checks will all be after the solves
-                    OPATH.writelines(writeerrorcheck("g00files\\" + restartfile + ".g*"))
+                    OPATH.writelines(writeerrorcheck(os.path.join("g00files",restartfile + ".g*")))
 
-                OPATH.writelines("gams d_solveallyears.gms o=lstfiles\\" + lstfile + "_" + str(i) + ".lst r=g00files\\" + restartfile+ " gdxcompress=1 xs=g00files\\"+savefile + toLogGamsString + " --niter=" + str(i) + " --case=" + lstfile + " --demand=" + demandsetting  + ' \n')
+                OPATH.writelines("gams d_solveallyears.gms o="+os.path.join("lstfiles",lstfile + "_" + str(i) + ".lst")+" r="+os.path.join("g00files",restartfile) + " gdxcompress=1 xs="+os.path.join("g00files",savefile) + toLogGamsString + " --niter=" + str(i) + " --case=" + lstfile + " --demand=" + demandsetting  + ' \n')
 
                 #check to see if the save file exists
-                OPATH.writelines(writeerrorcheck("g00files\\" + savefile + ".g*"))
+                OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
 
                 #start threads for cc/curt
                 #no need to run cc curt scripts for final iteration
@@ -370,25 +412,22 @@ def runModel(options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir
                     #the output file will be for the next iteration
                     nextiter = i+1
                     #give names to the cc and curtailment gdx files that will then be merged
-                    curt_gdxmergedfile = "outputs\\variabilityFiles\\mergedcurt_" + lstfile + "_" + str(nextiter)            
-                    cc_gdxmergedfile = "outputs\\variabilityFiles\\mergedcc_" + lstfile + "_" + str(nextiter)            
-                    OPATH.writelines("gdxmerge.exe outputs\\variabilityFiles\\cc_out_"+lstfile+"* output=" + cc_gdxmergedfile  + ' \n')
-                    OPATH.writelines("gdxmerge.exe outputs\\variabilityFiles\\curt_out_"+lstfile+"* output=" + curt_gdxmergedfile  + ' \n')
+                    curt_gdxmergedfile = os.path.join("outputs","variabilityFiles","mergedcurt_" + lstfile + "_" + str(nextiter))            
+                    cc_gdxmergedfile = os.path.join("outputs","variabilityFiles","mergedcc_" + lstfile + "_" + str(nextiter))            
+                    OPATH.writelines("gdxmerge "+os.path.join("outputs","variabilityFiles","cc_out_"+lstfile+"*")+ " output=" + cc_gdxmergedfile  + ' \n')
+                    OPATH.writelines("gdxmerge "+os.path.join("outputs","variabilityFiles","curt_out_"+lstfile+"*")+" output=" + curt_gdxmergedfile  + ' \n')
                     #check to make sure previous calls were successful
                     OPATH.writelines(writeerrorcheck(curt_gdxmergedfile+".gdx"))
                     OPATH.writelines(writeerrorcheck(cc_gdxmergedfile+".gdx"))
 
                     #do necessary conversions to make the merged gdx file readable into GAMS
-                    OPATH.writelines("Rscript " + os.path.join(InputDir,"d5_mergevariability.r") + " " + casedir + " c:\\gams\\win64\\24.7\\ " + curt_gdxmergedfile + ' ' + cc_gdxmergedfile + ' \n')
+                    OPATH.writelines("Rscript " + os.path.join(InputDir,"runs",lstfile,"d5_mergevariability.r") + " " + casedir + " " + GAMSDir + " " + curt_gdxmergedfile + ' ' + cc_gdxmergedfile + ' \n')
 
                 #restart file becomes the previous save file
                 restartfile=savefile
     
             if caseSwitches['GSw_ValStr'] != '0':
-                OPATH.writelines('gams valuestreams.gms o=lstfiles\\valuestreams_' + lstfile + '.lst r=runs\\' + lstfile + '\\g00files\\' + restartfile + toLogGamsString +' --case=' + lstfile + '\n')
-            #create reporting files        
-            OPATH.writelines("gams e_report.gms o=lstfiles\\report_" + lstfile + ".lst r=g00files\\" + restartfile + toLogGamsString + " --fname=" + lstfile + ' \n')
-            OPATH.writelines("gams e_report_dump.gms " + toLogGamsString + " --fname=" + lstfile + ' \n')
+                OPATH.writelines('gams valuestreams.gms o='+os.path.join("lstfiles",'valuestreams_' + lstfile + '.lst') + " r=" + os.path.join("runs",lstfile,'g00files',restartfile) + toLogGamsString +' --case=' + lstfile + '\n')
 
 
     #####################
@@ -397,7 +436,7 @@ def runModel(options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir
 
         if timetype=='win':
             #load in the windows
-            win_in = list(csv.reader(open(os.path.join(InputDir,"inputs\\userinput\\windows.csv"), 'r'), delimiter=","))
+            win_in = list(csv.reader(open(os.path.join(InputDir,"inputs","userinput","windows.csv"), 'r'), delimiter=","))
         
             restartfile=lstfile
 
@@ -410,47 +449,61 @@ def runModel(options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir
                 endyear = win[2]
                 #for the number of iterations we have...
                 for i in range(startiter,niter):
-                    OPATH.writelines(' \n' + "::"  + ' \n')
-                    OPATH.writelines(":: Window: " + str(win)  + ' \n')
-                    OPATH.writelines(":: Iteration: " + str(i)  + ' \n')
-                    OPATH.writelines("::"  + ' \n')
+                    OPATH.writelines(' \n' + comment + ' \n')
+                    OPATH.writelines(comment + " Window: " + str(win)  + ' \n')
+                    OPATH.writelines(comment + " Iteration: " + str(i)  + ' \n')
+                    OPATH.writelines(comment  + ' \n')
 
                     #call the window solve
                     savefile = lstfile+"_"+str(i)
                     #check to see if the save file exists
-                    OPATH.writelines(writeerrorcheck("g00files\\" + restartfile + ".g*"))
+                    OPATH.writelines(writeerrorcheck(os.path.join("g00files",restartfile + ".g*")))
                     #solve via the window solve file
-                    OPATH.writelines("gams d_solvewindow.gms o=lstfiles/" + lstfile + "_" + str(i) + ".lst r=g00files\\" + restartfile+ " gdxcompress=1 xs=g00files\\"+savefile + toLogGamsString + " --niter=" + str(i) + " --maxiter=" + str(niter) + " --case=" + lstfile + " --window=" + win[0] + ' \n')
+                    OPATH.writelines("gams d_solvewindow.gms o="+os.path.join("lstfiles",lstfile + "_" + str(i) + ".lst")+" r="+os.path.join("g00files",restartfile) + " gdxcompress=1 xs=g00files\\"+savefile + toLogGamsString + " --niter=" + str(i) + " --maxiter=" + str(niter) + " --case=" + lstfile + " --window=" + win[0] + ' \n')
                     #start threads for cc/curt
-                    OPATH.writelines(writeerrorcheck("g00files\\" + savefile + ".g*"))
+                    OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
                     OPATH.writelines("python reflowbatch.py " + lstfile + " " + str(ccworkers) + " " + yearset_reflow + " " + savefile + " " + str(begyear) + " " + str(endyear)  + " " + ldcgdx + " " + distpv + " " + str(csp) + " " + str(timetype) + ' \n')
                     #merge all the resulting r2_in gdx files
                     #the output file will be for the next iteration
                     nextiter = i+1
                     #create names for then merge the curt and cc gdx files
-                    curt_gdxmergedfile = "outputs\\variabilityFiles\\mergedcurt_" + lstfile + "_" + str(nextiter)            
-                    cc_gdxmergedfile = "outputs\\variabilityFiles\\mergedcc_" + lstfile + "_" + str(nextiter)            
-                    OPATH.writelines("gdxmerge.exe outputs\\variabilityFiles\\cc_out_"+lstfile+"* output=" + cc_gdxmergedfile  + ' \n')
-                    OPATH.writelines("gdxmerge.exe outputs\\variabilityFiles\\curt_out_"+lstfile+"* output=" + curt_gdxmergedfile  + ' \n')
+                    curt_gdxmergedfile = os.path.join("outputs","variabilityFiles","mergedcurt_" + lstfile + "_" + str(nextiter))            
+                    cc_gdxmergedfile = os.path.join("outputs","variabilityFiles","mergedcc_" + lstfile + "_" + str(nextiter))
+                    OPATH.writelines("gdxmerge " + os.path.join("outputs","variabilityFiles","cc_out_"+lstfile+"*")+ " output=" + cc_gdxmergedfile  + ' \n')
+                    OPATH.writelines("gdxmerge " + os.path.join("outputs","variabilityFiles","curt_out_"+lstfile+"*") + " output=" + curt_gdxmergedfile  + ' \n')
                     #check to make sure previous calls were successful
                     OPATH.writelines(writeerrorcheck(curt_gdxmergedfile+".gdx"))
                     OPATH.writelines(writeerrorcheck(cc_gdxmergedfile+".gdx"))
                     #do necessary conversions to make the merged gdx file readable into GAMS
-                    OPATH.writelines("Rscript " + os.path.join(InputDir,"d5_mergevariability.r") + " " + casedir + " c:\\gams\\win64\\24.7\\ " + curt_gdxmergedfile + ' ' + cc_gdxmergedfile + ' \n')
+                    OPATH.writelines("Rscript " + os.path.join(InputDir,"d5_mergevariability.r") + " " + casedir + " " + GAMSDir + " " + curt_gdxmergedfile + ' ' + cc_gdxmergedfile + ' \n')
                     restartfile=savefile
                 if caseSwitches['GSw_ValStr'] != '0':
-                    OPATH.writelines('gams valuestreams.gms o=lstfiles\\valuestreams_' + lstfile + '_' + str(begyear) + '.lst r=g00files\\' + restartfile + toLogGamsString +' --case=' + lstfile + '\n')
-            #create reporting files
-            OPATH.writelines("gams e_report.gms o=lstfiles\\report_" + lstfile + ".lst r=g00files\\" + restartfile + toLogGamsString + " --fname=" + lstfile + ' \n')
-            OPATH.writelines("gams e_report_dump.gms " + toLogGamsString + " --fname=" + lstfile + ' \n')
+                    OPATH.writelines('gams valuestreams.gms o=' + os.path.join("lstfiles",'valuestreams_' + lstfile + '_' + str(begyear) + '.lst')+ ' r=' + os.path.join('g00files',restartfile) + toLogGamsString +' --case=' + lstfile + '\n')
 
+        #create reporting files
+        OPATH.writelines("gams e_report.gms o="+os.path.join("lstfiles","report_" + lstfile + ".lst") + ' r=' +os.path.join("g00files",restartfile) + toLogGamsString + " --fname=" + lstfile + ' \n')
+        OPATH.writelines("gams e_report_dump.gms " + toLogGamsString + " --fname=" + lstfile + ' \n\n')
+
+        bokehdir = os.path.join(os.getcwd(),"bokehpivot","reports")
+        OPATH.writelines('python ' + os.path.join(bokehdir,"interface_report.py") + " 'ReEDS 2.0' " + os.path.join(os.getcwd(),"runs",lstfile) + " all No none " + os.path.join(bokehdir,"templates","reeds2","standard_report_reduced.py") + " one " + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report-reduced") + ' no\n')
+        OPATH.writelines('python ' + os.path.join(bokehdir,"interface_report.py") + " 'ReEDS 2.0' " + os.path.join(os.getcwd(),"runs",lstfile) + " all No none " + os.path.join(bokehdir,"templates","reeds2","standard_report_expanded.py") + " one " + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report") + ' no\n')
 
         ##############################
         # Call the Created Batch File
         ##############################
+
         OPATH.close()
         #start the command prompt similar to the sequential solve - waiting for it to finish before starting a new thread
-        os.system('start /wait cmd /c ' + os.path.join(OutputDir, 'call_' + lstfile + '.bat'))
+        if os.name!='posix':
+            os.system('start /wait cmd /c ' + os.path.join(OutputDir, 'call_' + lstfile + ext))
+        if os.name=='posix':
+            print("Starting the run for case " + lstfile)
+            #give execution rights to the shell script
+            os.chmod(os.path.join(OutputDir, 'call_' + lstfile + ext), 0o777)
+            #open it up - note the in/out/err will be written to the shellscript parameter
+            shellscript = subprocess.Popen([os.path.join(OutputDir, 'call_' + lstfile + ext) + " >/dev/null"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,shell=True)
+            #wait for it to finish before killing the thread
+            shellscript.wait()
 
 def addMPSToOpt(optFileNum, case_dir, case_name):
     #Modify the optfile to create an mps file.

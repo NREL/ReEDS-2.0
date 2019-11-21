@@ -13,7 +13,7 @@ if(!exists("Args")) Args=commandArgs(TRUE)
 # Args[1]="C:\\Git\\ReEDS-2.0\\"
 # Args[3]="AEO_2018_reference"
 
-setwd(paste0(Args[1],"inputs\\loaddata"))
+setwd(file.path(Args[1],"inputs","loaddata"))
 
 demandscen = Args[2]
 outdir = Args[3]

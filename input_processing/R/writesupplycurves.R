@@ -17,14 +17,14 @@ if(!exists("Args")) Args=commandArgs(TRUE)
 # Args[7]='BAU'
 
 igdx(paste(Args[2]))
-gdxin = paste(Args[1],"inputs\\capacitydata\\",Args[3],sep="")
-setwd(paste(Args[1],"inputs\\",sep=""))
+gdxin = file.path(Args[1],"inputs","capacitydata",Args[3])
+setwd(file.path(Args[1],"inputs",sep=""))
 deduct = Args[4]
 supplycurvefile = as.numeric(as.character(Args[5]))
 outdir = Args[6]
 geoscen = Args[7]
-gdxPHS = paste(Args[1],"inputs\\supplycurvedata\\PHSsupplycurvedata.gdx",sep="")
-gdxBio = paste(Args[1],"inputs\\supplycurvedata\\Biosupplycurvedata.gdx",sep="")
+gdxPHS = file.path(Args[1],"inputs","supplycurvedata","PHSsupplycurvedata.gdx")
+gdxBio = file.path(Args[1],"inputs","supplycurvedata","Biosupplycurvedata.gdx")
 
 #windfile = 1
 #deduct = 0
@@ -44,7 +44,7 @@ rsout[is.na(rsout)] = 0
 
 ##reminder: upv and dupv by ba whereas csp and wnd are by rsc
 
-setwd(".\\supplycurvedata")
+setwd(file.path(".","supplycurvedata"))
 
 colid = c("i","j","k","l","m","n","o","p")
 
@@ -408,10 +408,10 @@ bio_ramp = dcast(bio_ramp,j~i,value.var="value")
 #geothermal supply curve
 ########################
 
-setwd('..\\')
-geo_disc = read.csv(paste0("geothermal\\geo_discovery_",geoscen,".csv"), check.names = F)
-geo_fom = read.csv(paste0("geothermal\\geo_fom_",geoscen,".csv"), check.names = F)
-geo_rsc = read.csv(paste0("geothermal\\geo_rsc_",geoscen,".csv"), check.names = F)
+setwd(file.path('..'))
+geo_disc = read.csv(file.path("geothermal",paste0("geo_discovery_",geoscen,".csv")), check.names = F)
+geo_fom = read.csv(file.path("geothermal",paste0("geo_fom_",geoscen,".csv")), check.names = F)
+geo_rsc = read.csv(file.path("geothermal",paste0("geo_rsc_",geoscen,".csv")), check.names = F)
 
 write.table(alloutf,paste0(outdir,"rsc_combined.txt"),row.names=FALSE,col.names=FALSE,quote=FALSE)
 write.csv(rsout,paste0(outdir,"rsout.csv"),row.names=FALSE,quote=FALSE)

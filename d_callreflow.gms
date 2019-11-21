@@ -1,8 +1,10 @@
 
 $setglobal ds \
+$setglobal logopt 4
 
 $ifthen.unix %system.filesys% == UNIX
 $setglobal ds /
+$setglobal logopt 2
 $endif.unix
 
 
@@ -30,18 +32,18 @@ $log ' timetype == %timetype%'
 
 * --- Call ReEDS_capacity_credit.py with ReEDS-2.0 outputs ---
 
-$call 'GAMS reeds_capacity_credit.gms o=lstfiles%ds%cc_%cur_year%.lst r=%restartfile% --case=%case% --cur_year=%cur_year% --next_year=%next_year% --calc_csp_cc=%calc_csp_cc% --timetype=%timetype%'
+$call 'GAMS reeds_capacity_credit.gms logOption=%logopt% al=1 logFile=gamslog.txt o=lstfiles%ds%cc_%cur_year%.lst r=%restartfile% --case=%case% --cur_year=%cur_year% --next_year=%next_year% --calc_csp_cc=%calc_csp_cc% --timetype=%timetype%'
 
 $if not exist outputs%ds%variabilityFiles%ds%cc_out_%case%_%next_year%.gdx $abort 'error in ReEDS_capacity_credit.py for %case% in %cur_year%: check ErrorFile'
 
 * --- Translate R2 outputs to be used in REFLOW ----
 
-$call 'GAMS reflow_rto_2_params.gms o=.%ds%lstfiles%ds%reflow-params_%case%_%next_year%.lst r=%restartfile% --case=%case% --cur_year=%cur_year% --next_year=%next_year% --timetype=%timetype%'
+$call 'GAMS reflow_rto_2_params.gms logOption=%logopt% al=1 logFile=gamslog.txt o=.%ds%lstfiles%ds%reflow-params_%case%_%next_year%.lst r=%restartfile% --case=%case% --cur_year=%cur_year% --next_year=%next_year% --timetype=%timetype%'
 $if errorlevel 1 $abort 'error in parameters for %case% in %next_year%'
 
 * --- RUN REFLOW ---
 
-$call 'GAMS reflow_rto_3.gms o=.%ds%lstfiles%ds%reflow_%case%_%next_year%.lst u1=%next_year% u2=%REflowSwitch% --case=%case%'
+$call 'GAMS reflow_rto_3.gms logOption=%logopt% al=1 logFile=gamslog.txt o=.%ds%lstfiles%ds%reflow_%case%_%next_year%.lst u1=%next_year% u2=%REflowSwitch% --case=%case%'
 $if errorlevel 1 $abort 'error in reflow for %case% in %next_year%'
 
 * --- Translate REFLOW outputs to be used in R2

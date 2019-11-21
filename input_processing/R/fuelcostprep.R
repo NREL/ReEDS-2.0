@@ -14,7 +14,7 @@ if(!exists("Args")) Args=commandArgs(TRUE)
 # Args[4]="AEO_2018_reference"
 
 
-setwd(paste0(Args[1],"inputs\\fuelprices"))
+setwd(file.path(Args[1],"inputs","fuelprices"))
 
 # Remove files that will be created as outputs
 files = c("fprice.csv","ng_price_cendiv.csv","ng_demand_elec.csv","ng_demand_tot.csv","alpha.csv")
@@ -30,7 +30,7 @@ uraniumscen = Args[3]
 ngscen = Args[4]
 outdir = paste(Args[5])
 
-r_cendiv = read.csv("..\\r_cendiv.csv")
+r_cendiv = read.csv(file.path("..","r_cendiv.csv"))
 
 dollaryear = as.data.frame(read.csv("dollaryear.csv"))
 deflator = as.data.frame(read.csv("../deflator.csv"))

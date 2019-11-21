@@ -3140,7 +3140,7 @@ $offdelim
 
 * set the carbon tax based on switch arguments
 if(Sw_CarbTax = 1,
-emit_tax("CO2",r,t) = co2_tax(t) ;
+emit_tax("CO2",r,t) = co2_tax(t) * emit_scale;
 ) ;
 
 *=========================================

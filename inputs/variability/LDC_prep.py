@@ -91,7 +91,7 @@ if __name__ == '__main__':
     upv = pd.read_pickle(os.path.join(path_variability,'{}_upv.pkl'.format(static_inputs)))
     cspcf = pd.read_pickle(os.path.join(path_variability,'{}_csp.pkl'.format(static_inputs)))
     recf = pd.concat([wind1,wind2,wind3,wind4,upv],sort=False,axis=1)
-    resources = pd.read_pickle(os.path.join(path_variability,'{}_resources.pkl.'.format(static_inputs)))
+    resources = pd.read_pickle(os.path.join(path_variability,'{}_resources.pkl'.format(static_inputs)))
     distPVCF = pd.read_csv(os.path.join('inputs_case','distPVCF_hourly.csv')).rename(columns={'Unnamed: 0':'resource'})
     
     

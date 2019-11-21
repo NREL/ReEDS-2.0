@@ -2,6 +2,7 @@ case,Description,Default Value,Mid_Case,Low_RE_Cost,High_RE_Cost,Low_NG_Price,Hi
 timetype,Sequential or Intertemporal,seq,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,int,,
 yearset_suffix,Set of years that are modeled,biennial,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,default,,
 endyear,Last year to be modeled,2050,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+solver,Solver for GAMS to use,CPLEX,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 batteryscen,Battery cost and performance characteristics,battery_ATB_2019_mid,,,,,,,,,,battery_ATB_2019_low,battery_ATB_2019_high,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 calc_csp_cc,Switch to turn on/off endogenous calculation of capacity credit for CSP-TES,0,,,,,,,,,,,,,,,,,,,,,,,,,1,,,,,,,,,,,,,,,,,
 csp_configs,Number of csp configurations for hourly calculations,2,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

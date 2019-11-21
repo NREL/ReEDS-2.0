@@ -19,7 +19,7 @@ print("Beginning calculation of inputs\\capacitydata\\writecapdat.R")
 if(!exists("Args")) Args=commandArgs(TRUE)
 
 
-curwd = paste0(Args[1],"inputs\\capacitydata\\")
+curwd = file.path(Args[1],"inputs","capacitydata")
 igdx(paste(Args[2]))
 
 setwd(curwd)
@@ -29,7 +29,7 @@ gdxnamePRES = paste(Args[4])
 gdxnameRET = paste(Args[5])
 nukescen = paste(Args[6])
 outdir = paste(Args[7])
-gdxhydro = paste0(Args[1],"inputs\\capacitydata\\hydrounitdata.gdx")
+gdxhydro = file.path(Args[1],"inputs","capacitydata","hydrounitdata.gdx")
 
 
 rs = as.data.frame(read.csv("rsmap.csv"))

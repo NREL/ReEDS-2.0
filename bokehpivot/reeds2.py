@@ -15,7 +15,7 @@ import numpy as np
 import collections
 import core
 
-rb_globs = {'output_subdir':'\\outputs\\', 'test_file':'cap.csv', 'report_subdir':'/reeds2'}
+rb_globs = {'output_subdir':'/outputs/', 'test_file':'cap.csv', 'report_subdir':'/reeds2'}
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
 CRF_reeds = 0.077
 df_deflator = pd.read_csv(this_dir_path + '/in/inflation.csv', index_col=0)

@@ -21,12 +21,12 @@ indir = paste(Args[1])
 setwd(indir)
 
 igdx(paste(Args[2]))
-gdxfile = "inputs\\cf\\cfdata.gdx"
+gdxfile = file.path("inputs","cf","cfdata.gdx")
 distpvscen = as.character(Args[3])
 outdir = paste0(Args[4])
 
 
-rs = as.data.frame(read.csv(paste(indir,"\\inputs\\rsmap.csv",sep="")))
+rs = as.data.frame(read.csv(file.path(indir,"inputs","rsmap.csv")))
 colnames(rs) = c("r","s")
 
 
@@ -72,7 +72,7 @@ dupv = dupv[,c("r","s","i","h","value")]
 ####################
 
 
-distpv = as.data.frame(read.csv(paste0(indir,"inputs\\dGen_Model_Inputs\\",distpvscen,"\\distPVCF_", distpvscen, ".csv")))
+distpv = as.data.frame(read.csv(file.path(indir,"inputs","dGen_Model_Inputs",distpvscen,paste0("distPVCF_", distpvscen, ".csv"))))
 colnames(distpv)[1] = "ba"
 distpv = melt(distpv,id=c("ba"))
 colnames(distpv) = c("r","h","value")

@@ -13,25 +13,15 @@ Model %case% /all/ ;
 * -- MODEL AND SOLVER OPTIONS --
 *=================================
 
-OPTION lp = cplex
+OPTION lp = %solver% ;
+%case%.optfile = %GSw_gopt% ;
 OPTION RESLIM = 50000 ;
-OPTION NLP = pathNLP ;
+*treat fixed variables as parameters
 %case%.holdfixed = 1 ;
 
-*quick check for the HPC
-*if so, have to use gurobi
-*currently no option file for unix systems. optfile remains at default
-$ifthen.os %system.filesys% == UNIX
-OPTION  lp = gurobi
-$endif.os
-
-*If this is not UNIX, use the specfied optfile.
-$ifthen.os not %system.filesys% == UNIX
-%case%.optfile = %GSw_gopt% ;
 $ifthen.valstr %GSw_ValStr% == 1
 OPTION savepoint = 1 ;
 $endif.valstr
-$endif.os
 
 $if not set loadgdx $setglobal loadgdx 0
 

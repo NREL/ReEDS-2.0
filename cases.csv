@@ -2,6 +2,7 @@
 timetype,Sequential or Intertemporal,seq,seq,int,win
 yearset_suffix,Set of years that are modeled,default,,,
 endyear,Last year to be modeled,2050,,,
+solver,Solver for GAMS to use,CPLEX,,,
 demand,Switch to turn on demand side,0,,,
 HourlyStaticFileSwitch,File for capacity credit and curtailment load duration curve data,LDC_static_inputs_06_27_2019,,,
 distpvscen,Setting for distPV scenario,StScen2019_Mid_Case,,,

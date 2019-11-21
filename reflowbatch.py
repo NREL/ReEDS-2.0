@@ -5,6 +5,7 @@ import sys
 import queue
 import threading
 import csv
+import subprocess
 
 
 def createCurtCCThreads(case,ccworkers,yearset,restartfile,startyear,endyear,ldcgdx,distpv,csp,timetype):
@@ -21,8 +22,12 @@ def createCurtCCThreads(case,ccworkers,yearset,restartfile,startyear,endyear,ldc
             cur_year = ThreadInit['cur_year']
             restartfile = ThreadInit['restartfile']
             #call the reflow script with appropriate options
-            os.system("start /wait cmd /c  gams d_callreflow.gms --restartfile=g00files\\"+restartfile+" --case=" + case + " --cur_year=" + str(cur_year) + " --next_year="+str(cur_year) + ' --DistPVSwitch='+ str(distpv) + ' --calc_csp_cc='+ str(csp) + ' --timetype=' + str(timetype))
-
+            if os.name!='posix':
+                os.system("start /wait cmd /c  gams d_callreflow.gms --restartfile=" + os.path.join("g00files",restartfile)+" --case=" + case + " --cur_year=" + str(cur_year) + " --next_year="+str(cur_year) + ' --DistPVSwitch='+ str(distpv) + ' --calc_csp_cc='+ str(csp) + ' --timetype=' + str(timetype))
+            if os.name=="posix":
+                shellscript = subprocess.Popen(["gams d_callreflow.gms logOption=2 al=1 logFile=gamslog.txt --restartfile=" + os.path.join("g00files",restartfile)+" --case=" + case + " --cur_year=" + str(cur_year) + " --next_year="+str(cur_year) + ' --DistPVSwitch='+ str(distpv) + ' --calc_csp_cc='+ str(csp) + ' --timetype=' + str(timetype) + ' >/dev/null'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,shell=True)
+                #wait for it to finish before killing the thread
+                shellscript.wait()
             q.task_done()
 
     threads = []

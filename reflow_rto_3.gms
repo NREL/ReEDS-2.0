@@ -40,6 +40,13 @@ $offuellist
 $offuelxref
 $eolcom //
 
+$setglobal ds \
+
+$ifthen.unix %system.filesys% == UNIX
+$setglobal ds /
+$endif.unix
+
+
 Option PROFILE = 2
 * THIS STATEMENT LIMITS PROFILE output to items taking more than 2 seconds
 Option PROFILETOL = 2
@@ -49,7 +56,7 @@ $setglobal projectfolder '%gams.curdir%'
 $setglobal outputfolder '%projectfolder%/outputs/variabilityFiles'
 $setglobal REflowSwitch %gams.user2%
 
-$gdxin ".\outputs\variabilityFiles\REflow_%case%_%next_year%.gdx"
+$gdxin "outputs%ds%variabilityFiles%ds%REflow_%case%_%next_year%.gdx"
 * load sets and parameters from .gdx file
 * 06-13-13 SMC Added mhkwaveclass
 * 12-04-14 BAF add pvclass, nwithupv, nwithdupv
@@ -474,7 +481,7 @@ Parameters WO(v,windtype,i),  UPVO(n,pvclass), DUPVO(n,pvclass), STORold(n,st),
          Wind_Sigma(i,v,m) Standard deviation for each onshore wind class in each wind region i and timeslice m
 ;
 
-$gdxin ".\outputs\variabilityFiles\REflow_%case%_%next_year%.gdx"
+$gdxin "outputs%ds%variabilityFiles%ds%REflow_%case%_%next_year%.gdx"
 $load WO, UPVO, DUPVO, STORold, lk2n, lk2FactorRto, nomsize
 $load CSPOct, CONVOLDqctn
 $load FOq, POq, FOst, POst, CF, CFO, CFcsp
@@ -934,7 +941,7 @@ $endif
 Sets canadan(n) ;
 Variables CONVqctmn(q,ct,m,n), CONVOLDqctmn(q,ct,m,n)  ;
 Parameters minplantload(q), minplantloadqn(q,n) ;
-$gdxin ".\outputs\variabilityFiles\REflow_%case%_%next_year%.gdx"
+$gdxin "outputs%ds%variabilityFiles%ds%REflow_%case%_%next_year%.gdx"
 $loaddc minplantload, CONVqctmn, CONVOLDqctmn, canadan
 $gdxin
 

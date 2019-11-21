@@ -29,7 +29,7 @@ caescase = "caes_reference"
 outdir = Args[9]
 
 
-setwd(paste0(Args[1],"inputs\\plant_characteristics"))
+setwd(file.path(Args[1],"inputs","plant_characteristics"))
 
 # Remove files that will be created as outputs
 files = c("plantcharout.txt","windcfout.txt")

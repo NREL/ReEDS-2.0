@@ -3,6 +3,13 @@
 
 $eolcom //
 
+$setglobal ds \
+
+$ifthen.unix %system.filesys% == UNIX
+$setglobal ds /
+$endif.unix
+
+
 *option profile=1 ;
 *option profiletol=1 ;
 
@@ -17,7 +24,7 @@ $offtext
 * ===================================================================
 
 * call gdxin for the .gdx file created at the end of A_readinputs.gms
-$gdxin .\inputs_case\REflow_static_inputs.gdx
+$gdxin inputs_case%ds%REflow_static_inputs.gdx
 
 * --- time sets ---
 
@@ -314,7 +321,7 @@ gen_reflow(h,r)$rfeas(r) = sum{(i,v,t,tt)$[not sameas(i,"distPV") and not storag
 set cw_resreg(r,resregfull) crosswalk: resource regions
 /
 $ondelim
-$include .\inputs_case\cw_resreg.csv
+$include inputs_case%ds%cw_resreg.csv
 $offdelim
 /
 ;
@@ -635,7 +642,7 @@ $gdxin
 
 * using aliases (GAMS param = .gdx param)
 
-Execute_unload ".\outputs\variabilityFiles\REflow_%case%_%next_year%.gdx",
+Execute_unload "outputs%ds%variabilityFiles%ds%REflow_%case%_%next_year%.gdx",
 
 * sets
          prev_year,
