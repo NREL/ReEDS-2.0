@@ -145,20 +145,20 @@ def get_wdg_reeds(path, init_load, wdg_config, wdg_defaults, custom_sorts, custo
 
     #Model Variables
     topwdg['reeds_vars'] = bmw.Div(text='Model Variables', css_classes=['reeds-vars-dropdown'])
-    topwdg['var_dollar_year'] = bmw.TextInput(title='Dollar Year', value=str(DEFAULT_DOLLAR_YEAR), css_classes=['wdgkey-dollar_year', 'reeds-vars-drop'])
-    topwdg['var_discount_rate'] = bmw.TextInput(title='Discount Rate', value=str(DEFAULT_DISCOUNT_RATE), css_classes=['wdgkey-discount_rate', 'reeds-vars-drop'])
-    topwdg['var_pv_year'] = bmw.TextInput(title='Present Value Reference Year', value=str(DEFAULT_PV_YEAR), css_classes=['wdgkey-pv_year', 'reeds-vars-drop'])
-    topwdg['var_end_year'] = bmw.TextInput(title='Present Value End Year', value=str(DEFAULT_END_YEAR), css_classes=['wdgkey-end_year', 'reeds-vars-drop'])
+    topwdg['var_dollar_year'] = bmw.TextInput(title='Dollar Year', value=str(DEFAULT_DOLLAR_YEAR), css_classes=['wdgkey-dollar_year', 'reeds-vars-drop'], visible=False)
+    topwdg['var_discount_rate'] = bmw.TextInput(title='Discount Rate', value=str(DEFAULT_DISCOUNT_RATE), css_classes=['wdgkey-discount_rate', 'reeds-vars-drop'], visible=False)
+    topwdg['var_pv_year'] = bmw.TextInput(title='Present Value Reference Year', value=str(DEFAULT_PV_YEAR), css_classes=['wdgkey-pv_year', 'reeds-vars-drop'], visible=False)
+    topwdg['var_end_year'] = bmw.TextInput(title='Present Value End Year', value=str(DEFAULT_END_YEAR), css_classes=['wdgkey-end_year', 'reeds-vars-drop'], visible=False)
 
     #Meta widgets
     topwdg['meta'] = bmw.Div(text='Meta', css_classes=['meta-dropdown'])
     for col in reeds.columns_meta:
         if 'map' in reeds.columns_meta[col]:
-            topwdg['meta_map_'+col] = bmw.TextInput(title='"'+col+ '" Map', value=reeds.columns_meta[col]['map'], css_classes=['wdgkey-meta_map_'+col, 'meta-drop'])
+            topwdg['meta_map_'+col] = bmw.TextInput(title='"'+col+ '" Map', value=reeds.columns_meta[col]['map'], css_classes=['wdgkey-meta_map_'+col, 'meta-drop'], visible=False)
         if 'join' in reeds.columns_meta[col]:
-            topwdg['meta_join_'+col] = bmw.TextInput(title='"'+col+ '" Join', value=reeds.columns_meta[col]['join'], css_classes=['wdgkey-meta_join_'+col, 'meta-drop'])
+            topwdg['meta_join_'+col] = bmw.TextInput(title='"'+col+ '" Join', value=reeds.columns_meta[col]['join'], css_classes=['wdgkey-meta_join_'+col, 'meta-drop'], visible=False)
         if 'style' in reeds.columns_meta[col]:
-            topwdg['meta_style_'+col] = bmw.TextInput(title='"'+col+ '" Style', value=reeds.columns_meta[col]['style'], css_classes=['wdgkey-meta_style_'+col, 'meta-drop'])
+            topwdg['meta_style_'+col] = bmw.TextInput(title='"'+col+ '" Style', value=reeds.columns_meta[col]['style'], css_classes=['wdgkey-meta_style_'+col, 'meta-drop'], visible=False)
 
     #Filter Scenarios widgets and Result widget
     scenarios = []
@@ -200,19 +200,21 @@ def get_wdg_reeds(path, init_load, wdg_config, wdg_defaults, custom_sorts, custo
     if scenarios:
         labels = [a['name'] for a in scenarios]
         topwdg['scenario_filter_dropdown'] = bmw.Div(text='Filter Scenarios', css_classes=['scenario-filter-dropdown'])
-        topwdg['scenario_filter'] = bmw.CheckboxGroup(labels=labels, active=list(range(len(labels))), css_classes=['wdgkey-scenario_filter'])
+        topwdg['scenario_filter_sel_all'] = bmw.Button(label='Select All', button_type='success', css_classes=['scenario-filter-drop','select-all-none'], visible=False)
+        topwdg['scenario_filter_sel_none'] = bmw.Button(label='Select None', button_type='success', css_classes=['scenario-filter-drop','select-all-none'], visible=False)
+        topwdg['scenario_filter'] = bmw.CheckboxGroup(labels=labels, active=list(range(len(labels))), css_classes=['scenario-filter-drop'], visible=False)
         #Add code to build report
         options = [o for o in os.listdir(this_dir_path+'/reports/templates'+GLRD['report_subdir']) if o.endswith(".py")]
         options = ['custom'] + options
         scenario_names = [i['name'] for i in scenarios]
         topwdg['report_dropdown'] = bmw.Div(text='Build Report', css_classes=['report-dropdown'])
-        topwdg['report_options'] = bmw.Select(title='Report', value=options[0], options=options, css_classes=['report-drop'])
-        topwdg['report_custom'] = bmw.TextInput(title='If custom, enter path to file', value='', css_classes=['report-drop'])
-        topwdg['report_diff'] = bmw.Select(title='Add Differences', value='No', options=['No','Yes','Base + Diff','Diff Only'], css_classes=['report-drop'])
-        topwdg['report_base'] = bmw.Select(title='Base Case For Differences', value=scenario_names[0], options=scenario_names, css_classes=['report-drop'])
-        topwdg['report_debug'] = bmw.Select(title='Debug Mode', value='No', options=['Yes','No'], css_classes=['report-drop'])
-        topwdg['report_build'] = bmw.Button(label='Build Report', button_type='success', css_classes=['report-drop'])
-        topwdg['report_build_separate'] = bmw.Button(label='Build Separate Reports', button_type='success', css_classes=['report-drop'])
+        topwdg['report_options'] = bmw.Select(title='Report', value=options[0], options=options, css_classes=['report-drop'], visible=False)
+        topwdg['report_custom'] = bmw.TextInput(title='If custom, enter path to file', value='', css_classes=['report-drop'], visible=False)
+        topwdg['report_diff'] = bmw.Select(title='Add Differences', value='No', options=['No','Yes','Base + Diff','Diff Only'], css_classes=['report-drop'], visible=False)
+        topwdg['report_base'] = bmw.Select(title='Base Case For Differences', value=scenario_names[0], options=scenario_names, css_classes=['report-drop'], visible=False)
+        topwdg['report_debug'] = bmw.Select(title='Debug Mode', value='No', options=['Yes','No'], css_classes=['report-drop'], visible=False)
+        topwdg['report_build'] = bmw.Button(label='Build Report', button_type='success', css_classes=['report-drop'], visible=False)
+        topwdg['report_build_separate'] = bmw.Button(label='Build Separate Reports', button_type='success', css_classes=['report-drop'], visible=False)
 
         topwdg['result'] = bmw.Select(title='Result', value='None', options=['None']+list(reeds.results_meta.keys()), css_classes=['wdgkey-result'])
     #save defaults
@@ -226,11 +228,19 @@ def get_wdg_reeds(path, init_load, wdg_config, wdg_defaults, custom_sorts, custo
             topwdg[key].on_change('value', update_reeds_meta)
         elif key.startswith('var_'):
             topwdg[key].on_change('value', update_reeds_var)
+    topwdg['scenario_filter_sel_all'].on_click(scenario_filter_select_all)
+    topwdg['scenario_filter_sel_none'].on_click(scenario_filter_select_none)
     topwdg['report_build'].on_click(build_reeds_report)
     topwdg['report_build_separate'].on_click(build_reeds_report_separate)
     topwdg['result'].on_change('value', update_reeds_result)
     print('***Done fetching ReEDS scenarios.')
     return (topwdg, scenarios)
+
+def scenario_filter_select_all():
+    core.GL['widgets']['scenario_filter'].active = list(range(len(core.GL['widgets']['scenario_filter'].labels)))
+
+def scenario_filter_select_none():
+    core.GL['widgets']['scenario_filter'].active = []
 
 def get_reeds_data(topwdg, scenarios, result_dfs):
     '''
