@@ -13,12 +13,14 @@ import getpass
 import numpy as np
 import pandas as pd
 import collections
+import bokeh as bk
 import bokeh.io as bio
 import bokeh.layouts as bl
 import bokeh.models as bm
 import bokeh.models.widgets as bmw
 import bokeh.models.sources as bms
 import bokeh.models.tools as bmt
+import bokeh.models.callbacks as bmc
 import bokeh.plotting as bp
 import bokeh.palettes as bpa
 import bokeh.resources as br
@@ -75,7 +77,7 @@ WDG_NON_COL = ['chart_type', 'range', 'y_agg', 'y_weight', 'y_weight_denom', 'ad
     'x_title_size', 'x_major_label_size', 'x_major_label_orientation',
     'y_min', 'y_max', 'y_scale', 'y_title', 'y_title_size', 'y_major_label_size',
     'circle_size', 'bar_width', 'cum_sort', 'line_width', 'range_show_glyphs', 'net_levels', 'bokeh_tools', 'map_bin', 'map_num', 'map_nozeros', 'map_min', 'map_max', 'map_manual',
-    'map_arrows','map_arrow_size','map_width', 'map_font_size', 'map_boundary_width', 'map_line_width', 'map_opacity', 'map_palette', 'map_palette_2', 'map_palette_break']
+    'map_arrows','map_arrow_size','map_arrow_loc','map_width', 'map_font_size', 'map_boundary_width', 'map_line_width', 'map_opacity', 'map_palette', 'map_palette_2', 'map_palette_break']
 
 #initialize globals dict for variables that are modified within update functions.
 #custom_sorts: keys are column names. Values are lists of values in the desired sort order
@@ -167,6 +169,8 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
         elif vwc['type'] == 'value':
             GL['widgets'][vwc['name']].value = vwc['val']
     time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    if os.path.exists(output_dir):
+        os.rename(output_dir, output_dir + '-archive-'+time)
     output_dir = output_dir + '/'
     os.makedirs(output_dir)
     #copy report file to output_dir
@@ -406,100 +410,114 @@ def build_widgets(df_source, cols, init_load=False, init_config={}, wdg_defaults
     '''
     #Add widgets
     print('***Build main widgets...')
+
     wdg = collections.OrderedDict()
     wdg['chart_type_dropdown'] = bmw.Div(text='Chart', css_classes=['chart-dropdown'])
-    wdg['chart_type'] = bmw.Select(title='Chart Type', value='Dot', options=CHARTTYPES, css_classes=['wdgkey-chart_type', 'chart-drop'])
-    wdg['range'] = bmw.Select(title='Add Ranges (Line and Dot only)', value='No', options=['No', 'Within Series', 'Between Series', 'Boxplot'], css_classes=['wdgkey-range', 'chart-drop'])
+    wdg['chart_type'] = bmw.Select(title='Chart Type', value='Dot', options=CHARTTYPES, css_classes=['wdgkey-chart_type', 'chart-drop'], visible=False)
+    wdg['range'] = bmw.Select(title='Add Ranges (Line and Dot only)', value='No', options=['No', 'Within Series', 'Between Series', 'Boxplot'], css_classes=['wdgkey-range', 'chart-drop'], visible=False)
     wdg['x_dropdown'] = bmw.Div(text='X-Axis (required)', css_classes=['x-dropdown'])
-    wdg['x'] = bmw.Select(title='X-Axis (required)', value='None', options=['None'] + cols['x-axis'], css_classes=['wdgkey-x', 'x-drop'])
-    wdg['x_group'] = bmw.Select(title='Group X-Axis By', value='None', options=['None'] + cols['seriesable'], css_classes=['wdgkey-x_group', 'x-drop'])
+    wdg['x'] = bmw.Select(title='X-Axis (required)', value='None', options=['None'] + cols['x-axis'], css_classes=['wdgkey-x', 'x-drop'], visible=False)
+    wdg['x_group'] = bmw.Select(title='Group X-Axis By', value='None', options=['None'] + cols['seriesable'], css_classes=['wdgkey-x_group', 'x-drop'], visible=False)
     wdg['y_dropdown'] = bmw.Div(text='Y-Axis (required)', css_classes=['y-dropdown'])
-    wdg['y'] = bmw.Select(title='Y-Axis (required)', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y', 'y-drop'])
-    wdg['y_agg'] = bmw.Select(title='Y-Axis Aggregation', value='Sum', options=AGGREGATIONS, css_classes=['wdgkey-y_agg', 'y-drop'])
-    wdg['y_weight'] = bmw.Select(title='Weighting Factor', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y_weight', 'y-drop'])
-    wdg['y_weight_denom'] = bmw.Select(title='Denominator Weighting Factor', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y_weight_denom', 'y-drop'])
+    wdg['y'] = bmw.Select(title='Y-Axis (required)', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y', 'y-drop'], visible=False)
+    wdg['y_agg'] = bmw.Select(title='Y-Axis Aggregation', value='Sum', options=AGGREGATIONS, css_classes=['wdgkey-y_agg', 'y-drop'], visible=False)
+    wdg['y_weight'] = bmw.Select(title='Weighting Factor', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y_weight', 'y-drop'], visible=False)
+    wdg['y_weight_denom'] = bmw.Select(title='Denominator Weighting Factor', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y_weight_denom', 'y-drop'], visible=False)
     wdg['series_dropdown'] = bmw.Div(text='Series', css_classes=['series-dropdown'])
     wdg['series'] = bmw.Select(title='Separate Series By', value='None', options=['None'] + cols['seriesable'],
-        css_classes=['wdgkey-series', 'series-drop'])
+        css_classes=['wdgkey-series', 'series-drop'], visible=False)
     wdg['explode_dropdown'] = bmw.Div(text='Explode', css_classes=['explode-dropdown'])
-    wdg['explode'] = bmw.Select(title='Explode By', value='None', options=['None'] + cols['seriesable'], css_classes=['wdgkey-explode', 'explode-drop'])
+    wdg['explode'] = bmw.Select(title='Explode By', value='None', options=['None'] + cols['seriesable'], css_classes=['wdgkey-explode', 'explode-drop'], visible=False)
     wdg['explode_group'] = bmw.Select(title='Group Exploded Charts By', value='None', options=['None'] + cols['seriesable'],
-        css_classes=['wdgkey-explode_group', 'explode-drop'])
+        css_classes=['wdgkey-explode_group', 'explode-drop'], visible=False)
     wdg['adv_dropdown'] = bmw.Div(text='Operations', css_classes=['adv-dropdown'])
-    wdg['adv_op'] = bmw.Select(title='First Operation', value='None', options=['None', 'Difference', 'Ratio'], css_classes=['wdgkey-adv_op', 'adv-drop'])
-    wdg['adv_col'] = bmw.Select(title='Operate Across', value='None', options=['None'] + cols['all'], css_classes=['wdgkey-adv_col', 'adv-drop'])
-    wdg['adv_col_base'] = bmw.Select(title='Base', value='None', options=['None'], css_classes=['wdgkey-adv_col_base', 'adv-drop'])
-    wdg['adv_op2'] = bmw.Select(title='Second Operation', value='None', options=['None', 'Difference', 'Ratio'], css_classes=['wdgkey-adv_op', 'adv-drop'])
-    wdg['adv_col2'] = bmw.Select(title='Operate Across', value='None', options=['None'] + cols['all'], css_classes=['wdgkey-adv_col', 'adv-drop'])
-    wdg['adv_col_base2'] = bmw.Select(title='Base', value='None', options=['None'], css_classes=['wdgkey-adv_col_base', 'adv-drop'])
+    wdg['adv_op'] = bmw.Select(title='First Operation', value='None', options=['None', 'Difference', 'Ratio'], css_classes=['wdgkey-adv_op', 'adv-drop'], visible=False)
+    wdg['adv_col'] = bmw.Select(title='Operate Across', value='None', options=['None'] + cols['all'], css_classes=['wdgkey-adv_col', 'adv-drop'], visible=False)
+    wdg['adv_col_base'] = bmw.Select(title='Base', value='None', options=['None'], css_classes=['wdgkey-adv_col_base', 'adv-drop'], visible=False)
+    wdg['adv_op2'] = bmw.Select(title='Second Operation', value='None', options=['None', 'Difference', 'Ratio'], css_classes=['wdgkey-adv_op', 'adv-drop'], visible=False)
+    wdg['adv_col2'] = bmw.Select(title='Operate Across', value='None', options=['None'] + cols['all'], css_classes=['wdgkey-adv_col', 'adv-drop'], visible=False)
+    wdg['adv_col_base2'] = bmw.Select(title='Base', value='None', options=['None'], css_classes=['wdgkey-adv_col_base', 'adv-drop'], visible=False)
     wdg['filters'] = bmw.Div(text='Filters', css_classes=['filters-dropdown'])
-    wdg['filters_update'] = bmw.Button(label='Update Filters', button_type='success', css_classes=['filters-update'])
+    wdg['filters_update'] = bmw.Button(label='Update Filters', button_type='success', css_classes=['filters-update'], visible=False)
     for j, col in enumerate(cols['filterable']):
         val_list = [str(i) for i in sorted(df_source[col].unique().tolist())]
-        wdg['heading_filter_'+str(j)] = bmw.Div(text=col, css_classes=['filter-head'])
-        wdg['filter_'+str(j)] = bmw.CheckboxGroup(labels=val_list, active=list(range(len(val_list))), css_classes=['wdgkey-filter_'+str(j), 'filter'])
+        wdg['heading_filter_'+str(j)] = bmw.Div(text=col, css_classes=['filter-head'], visible=False)
+        wdg['filter_sel_all_'+str(j)] = bmw.Button(label='Select All', button_type='success', css_classes=['filter-drop','select-all-none'], visible=False)
+        wdg['filter_sel_none_'+str(j)] = bmw.Button(label='Select None', button_type='success', css_classes=['filter-drop','select-all-none'], visible=False)
+        wdg['filter_'+str(j)] = bmw.CheckboxGroup(labels=val_list, active=list(range(len(val_list))), css_classes=['wdgkey-filter_'+str(j), 'filter-drop'], visible=False)
+        select_all_callback = bmc.CustomJS(args=dict(cb_wdg_fil=wdg['filter_'+str(j)]), code="""
+            cb_wdg_fil.active = Array.from(Array(cb_wdg_fil.labels.length).keys())
+            cb_wdg_fil.change.emit();
+        """)
+        select_none_callback = bmc.CustomJS(args=dict(cb_wdg_fil=wdg['filter_'+str(j)]), code="""
+            cb_wdg_fil.active = []
+            cb_wdg_fil.change.emit();
+        """)
+        wdg['filter_sel_all_'+str(j)].js_on_event(bk.events.ButtonClick, select_all_callback)
+        wdg['filter_sel_none_'+str(j)].js_on_event(bk.events.ButtonClick, select_none_callback)
     wdg['adjustments'] = bmw.Div(text='Plot Adjustments', css_classes=['adjust-dropdown'])
-    wdg['plot_width'] = bmw.TextInput(title='Plot Width (px)', value=str(PLOT_WIDTH), css_classes=['wdgkey-plot_width', 'adjust-drop'])
-    wdg['plot_height'] = bmw.TextInput(title='Plot Height (px)', value=str(PLOT_HEIGHT), css_classes=['wdgkey-plot_height', 'adjust-drop'])
-    wdg['plot_title'] = bmw.TextInput(title='Plot Title', value='', css_classes=['wdgkey-plot_title', 'adjust-drop'])
-    wdg['plot_title_size'] = bmw.TextInput(title='Plot Title Font Size', value=str(PLOT_FONT_SIZE), css_classes=['wdgkey-plot_title_size', 'adjust-drop'])
-    wdg['opacity'] = bmw.TextInput(title='Opacity (0-1)', value=str(OPACITY), css_classes=['wdgkey-opacity', 'adjust-drop'])
-    wdg['sync_axes'] = bmw.Select(title='Sync Axes', value='Yes', options=['Yes', 'No'], css_classes=['adjust-drop'])
-    wdg['x_scale'] = bmw.TextInput(title='X Scale', value=str(X_SCALE), css_classes=['wdgkey-x_scale', 'adjust-drop'])
-    wdg['x_min'] = bmw.TextInput(title='X Min', value='', css_classes=['wdgkey-x_min', 'adjust-drop'])
-    wdg['x_max'] = bmw.TextInput(title='X Max', value='', css_classes=['wdgkey-x_max', 'adjust-drop'])
-    wdg['x_title'] = bmw.TextInput(title='X Title', value='', css_classes=['wdgkey-x_title', 'adjust-drop'])
-    wdg['x_title_size'] = bmw.TextInput(title='X Title Font Size', value=str(PLOT_FONT_SIZE), css_classes=['wdgkey-x_title_size', 'adjust-drop'])
-    wdg['x_major_label_size'] = bmw.TextInput(title='X Labels Font Size', value=str(PLOT_AXIS_LABEL_SIZE), css_classes=['wdgkey-x_major_label_size', 'adjust-drop'])
+    wdg['plot_width'] = bmw.TextInput(title='Plot Width (px)', value=str(PLOT_WIDTH), css_classes=['wdgkey-plot_width', 'adjust-drop'], visible=False)
+    wdg['plot_height'] = bmw.TextInput(title='Plot Height (px)', value=str(PLOT_HEIGHT), css_classes=['wdgkey-plot_height', 'adjust-drop'], visible=False)
+    wdg['plot_title'] = bmw.TextInput(title='Plot Title', value='', css_classes=['wdgkey-plot_title', 'adjust-drop'], visible=False)
+    wdg['plot_title_size'] = bmw.TextInput(title='Plot Title Font Size', value=str(PLOT_FONT_SIZE), css_classes=['wdgkey-plot_title_size', 'adjust-drop'], visible=False)
+    wdg['opacity'] = bmw.TextInput(title='Opacity (0-1)', value=str(OPACITY), css_classes=['wdgkey-opacity', 'adjust-drop'], visible=False)
+    wdg['sync_axes'] = bmw.Select(title='Sync Axes', value='Yes', options=['Yes', 'No'], css_classes=['adjust-drop'], visible=False)
+    wdg['x_scale'] = bmw.TextInput(title='X Scale', value=str(X_SCALE), css_classes=['wdgkey-x_scale', 'adjust-drop'], visible=False)
+    wdg['x_min'] = bmw.TextInput(title='X Min', value='', css_classes=['wdgkey-x_min', 'adjust-drop'], visible=False)
+    wdg['x_max'] = bmw.TextInput(title='X Max', value='', css_classes=['wdgkey-x_max', 'adjust-drop'], visible=False)
+    wdg['x_title'] = bmw.TextInput(title='X Title', value='', css_classes=['wdgkey-x_title', 'adjust-drop'], visible=False)
+    wdg['x_title_size'] = bmw.TextInput(title='X Title Font Size', value=str(PLOT_FONT_SIZE), css_classes=['wdgkey-x_title_size', 'adjust-drop'], visible=False)
+    wdg['x_major_label_size'] = bmw.TextInput(title='X Labels Font Size', value=str(PLOT_AXIS_LABEL_SIZE), css_classes=['wdgkey-x_major_label_size', 'adjust-drop'], visible=False)
     wdg['x_major_label_orientation'] = bmw.TextInput(title='X Labels Degrees', value=str(PLOT_LABEL_ORIENTATION),
-        css_classes=['wdgkey-x_major_label_orientation', 'adjust-drop'])
-    wdg['y_scale'] = bmw.TextInput(title='Y Scale', value=str(Y_SCALE), css_classes=['wdgkey-y_scale', 'adjust-drop'])
-    wdg['y_min'] = bmw.TextInput(title='Y  Min', value='', css_classes=['wdgkey-y_min', 'adjust-drop'])
-    wdg['y_max'] = bmw.TextInput(title='Y Max', value='', css_classes=['wdgkey-y_max', 'adjust-drop'])
-    wdg['y_title'] = bmw.TextInput(title='Y Title', value='', css_classes=['wdgkey-y_title', 'adjust-drop'])
-    wdg['y_title_size'] = bmw.TextInput(title='Y Title Font Size', value=str(PLOT_FONT_SIZE), css_classes=['wdgkey-y_title_size', 'adjust-drop'])
-    wdg['y_major_label_size'] = bmw.TextInput(title='Y Labels Font Size', value=str(PLOT_AXIS_LABEL_SIZE), css_classes=['wdgkey-y_major_label_size', 'adjust-drop'])
-    wdg['circle_size'] = bmw.TextInput(title='Circle Size (Dot Only)', value=str(CIRCLE_SIZE), css_classes=['wdgkey-circle_size', 'adjust-drop'])
-    wdg['bar_width'] = bmw.TextInput(title='Bar Width (Bar Only)', value=str(BAR_WIDTH), css_classes=['wdgkey-bar_width', 'adjust-drop'])
-    wdg['bar_width_desc'] = bmw.Div(text='<strong>Flags</strong> <em>w</em>: use csv file for widths, <em>c</em>: convert x axis to quantitative based on widths in csv file', css_classes=['adjust-drop', 'description'])
-    wdg['cum_sort'] = bmw.Select(title='Cumulative Sort', value='None', options=['None', 'Ascending', 'Descending'], css_classes=['wdgkey-cum_sort','adjust-drop'])
-    wdg['line_width'] = bmw.TextInput(title='Line Width (Line Only)', value=str(LINE_WIDTH), css_classes=['wdgkey-line_width', 'adjust-drop'])
-    wdg['range_show_glyphs'] = bmw.Select(title='Show Line/Dot (Range Only)', value='Yes', options=['Yes','No'], css_classes=['wdgkey-range_show_glyphs', 'adjust-drop'])
-    wdg['net_levels'] = bmw.Select(title='Add Net Levels to Stacked', value='Yes', options=['Yes','No'], css_classes=['wdgkey-net_levels', 'adjust-drop'])
-    wdg['bokeh_tools'] = bmw.Select(title='Show Bokeh Tools', value='Yes', options=['Yes','No'], css_classes=['wdgkey-bokeh_tools', 'adjust-drop'])
+        css_classes=['wdgkey-x_major_label_orientation', 'adjust-drop'], visible=False)
+    wdg['y_scale'] = bmw.TextInput(title='Y Scale', value=str(Y_SCALE), css_classes=['wdgkey-y_scale', 'adjust-drop'], visible=False)
+    wdg['y_min'] = bmw.TextInput(title='Y  Min', value='', css_classes=['wdgkey-y_min', 'adjust-drop'], visible=False)
+    wdg['y_max'] = bmw.TextInput(title='Y Max', value='', css_classes=['wdgkey-y_max', 'adjust-drop'], visible=False)
+    wdg['y_title'] = bmw.TextInput(title='Y Title', value='', css_classes=['wdgkey-y_title', 'adjust-drop'], visible=False)
+    wdg['y_title_size'] = bmw.TextInput(title='Y Title Font Size', value=str(PLOT_FONT_SIZE), css_classes=['wdgkey-y_title_size', 'adjust-drop'], visible=False)
+    wdg['y_major_label_size'] = bmw.TextInput(title='Y Labels Font Size', value=str(PLOT_AXIS_LABEL_SIZE), css_classes=['wdgkey-y_major_label_size', 'adjust-drop'], visible=False)
+    wdg['circle_size'] = bmw.TextInput(title='Circle Size (Dot Only)', value=str(CIRCLE_SIZE), css_classes=['wdgkey-circle_size', 'adjust-drop'], visible=False)
+    wdg['bar_width'] = bmw.TextInput(title='Bar Width (Bar Only)', value=str(BAR_WIDTH), css_classes=['wdgkey-bar_width', 'adjust-drop'], visible=False)
+    wdg['bar_width_desc'] = bmw.Div(text='<strong>Flags</strong> <em>w</em>: use csv file for widths, <em>c</em>: convert x axis to quantitative based on widths in csv file', css_classes=['adjust-drop', 'description'], visible=False)
+    wdg['cum_sort'] = bmw.Select(title='Cumulative Sort', value='None', options=['None', 'Ascending', 'Descending'], css_classes=['wdgkey-cum_sort','adjust-drop'], visible=False)
+    wdg['line_width'] = bmw.TextInput(title='Line Width (Line Only)', value=str(LINE_WIDTH), css_classes=['wdgkey-line_width', 'adjust-drop'], visible=False)
+    wdg['range_show_glyphs'] = bmw.Select(title='Show Line/Dot (Range Only)', value='Yes', options=['Yes','No'], css_classes=['wdgkey-range_show_glyphs', 'adjust-drop'], visible=False)
+    wdg['net_levels'] = bmw.Select(title='Add Net Levels to Stacked', value='Yes', options=['Yes','No'], css_classes=['wdgkey-net_levels', 'adjust-drop'], visible=False)
+    wdg['bokeh_tools'] = bmw.Select(title='Show Bokeh Tools', value='Yes', options=['Yes','No'], css_classes=['wdgkey-bokeh_tools', 'adjust-drop'], visible=False)
     wdg['map_adjustments'] = bmw.Div(text='Map Adjustments', css_classes=['map-dropdown'])
-    wdg['map_bin'] = bmw.Select(title='Bin Type', value='Auto Equal Num', options=['Auto Equal Num', 'Auto Equal Width', 'Manual'], css_classes=['wdgkey-map_bin', 'map-drop'])
-    wdg['map_num'] = bmw.TextInput(title='# of bins (Auto Only)', value=str(MAP_NUM_BINS), css_classes=['wdgkey-map_num', 'map-drop'])
-    wdg['map_nozeros'] = bmw.Select(title='Ignore Zeros', value='Yes', options=['Yes', 'No'], css_classes=['wdgkey-map_nozeros', 'map-drop'])
-    wdg['map_palette'] = bmw.TextInput(title='Map Palette', value=MAP_PALETTE, css_classes=['wdgkey-map_palette', 'map-drop'])
-    wdg['map_palette_desc'] = bmw.Div(text='See <a href="https://bokeh.pydata.org/en/latest/docs/reference/palettes.html" target="_blank">palette options</a> or all_red, all_blue, all_green, all_gray. Palette must accommodate # of bins', css_classes=['map-drop', 'description'])
-    wdg['map_palette_2'] = bmw.TextInput(title='Map Palette 2 (Optional)', value='', css_classes=['wdgkey-map_palette_2', 'map-drop'])
-    wdg['map_palette_2_desc'] = bmw.Div(text='Bins will be split between palettes.', css_classes=['map-drop', 'description'])
-    wdg['map_palette_break'] = bmw.TextInput(title='Dual Palette Breakpoint (Optional)', value='', css_classes=['wdgkey-map_palette_break', 'map-drop'])
-    wdg['map_palette_break_desc'] = bmw.Div(text='The bin that contains this breakpoint will divide the palettes.', css_classes=['map-drop', 'description'])
-    wdg['map_min'] = bmw.TextInput(title='Minimum (Equal Width Only)', value='', css_classes=['wdgkey-map_min', 'map-drop'])
-    wdg['map_max'] = bmw.TextInput(title='Maximum (Equal Width Only)', value='', css_classes=['wdgkey-map_max', 'map-drop'])
-    wdg['map_manual'] = bmw.TextInput(title='Manual Breakpoints (Manual Only)', value='', css_classes=['wdgkey-map_manual', 'map-drop'])
-    wdg['map_manual_desc'] = bmw.Div(text='Comma separated list of values (e.g. -10,0,0.5,6), with one fewer value than # of bins', css_classes=['map-drop', 'description'])
-    wdg['map_arrows'] = bmw.Select(title='Add Arrows', value='No', options=['Yes','No'], css_classes=['wdgkey-map_arrows', 'map-drop'])
-    wdg['map_arrow_size'] = bmw.TextInput(title='Map Arrow Size (px)', value='7', css_classes=['wdgkey-map_arrow_size', 'map-drop'])
-    wdg['map_width'] = bmw.TextInput(title='Map Width (px)', value=str(MAP_WIDTH), css_classes=['wdgkey-map_width', 'map-drop'])
-    wdg['map_font_size'] = bmw.TextInput(title='Title Font Size', value=str(MAP_FONT_SIZE), css_classes=['wdgkey-map_font_size', 'map-drop'])
-    wdg['map_boundary_width'] = bmw.TextInput(title='Boundary Line Width', value=str(MAP_BOUNDARY_WIDTH), css_classes=['wdgkey-map_boundary_width', 'map-drop'])
-    wdg['map_line_width'] = bmw.TextInput(title='Line Width', value=str(MAP_LINE_WIDTH), css_classes=['wdgkey-map_line_width', 'map-drop'])
-    wdg['map_opacity'] = bmw.TextInput(title='Opacity (0-1)', value=str(MAP_OPACITY), css_classes=['wdgkey-map_opacity', 'map-drop'])
+    wdg['map_bin'] = bmw.Select(title='Bin Type', value='Auto Equal Num', options=['Auto Equal Num', 'Auto Equal Width', 'Manual'], css_classes=['wdgkey-map_bin', 'map-drop'], visible=False)
+    wdg['map_num'] = bmw.TextInput(title='# of bins (Auto Only)', value=str(MAP_NUM_BINS), css_classes=['wdgkey-map_num', 'map-drop'], visible=False)
+    wdg['map_nozeros'] = bmw.Select(title='Ignore Zeros', value='Yes', options=['Yes', 'No'], css_classes=['wdgkey-map_nozeros', 'map-drop'], visible=False)
+    wdg['map_palette'] = bmw.TextInput(title='Map Palette', value=MAP_PALETTE, css_classes=['wdgkey-map_palette', 'map-drop'], visible=False)
+    wdg['map_palette_desc'] = bmw.Div(text='See <a href="https://bokeh.pydata.org/en/latest/docs/reference/palettes.html" target="_blank">palette options</a> or all_red, all_blue, all_green, all_gray. Palette must accommodate # of bins', css_classes=['map-drop', 'description'], visible=False)
+    wdg['map_palette_2'] = bmw.TextInput(title='Map Palette 2 (Optional)', value='', css_classes=['wdgkey-map_palette_2', 'map-drop'], visible=False)
+    wdg['map_palette_2_desc'] = bmw.Div(text='Bins will be split between palettes.', css_classes=['map-drop', 'description'], visible=False)
+    wdg['map_palette_break'] = bmw.TextInput(title='Dual Palette Breakpoint (Optional)', value='', css_classes=['wdgkey-map_palette_break', 'map-drop'], visible=False)
+    wdg['map_palette_break_desc'] = bmw.Div(text='The bin that contains this breakpoint will divide the palettes.', css_classes=['map-drop', 'description'], visible=False)
+    wdg['map_min'] = bmw.TextInput(title='Minimum (Equal Width Only)', value='', css_classes=['wdgkey-map_min', 'map-drop'], visible=False)
+    wdg['map_max'] = bmw.TextInput(title='Maximum (Equal Width Only)', value='', css_classes=['wdgkey-map_max', 'map-drop'], visible=False)
+    wdg['map_manual'] = bmw.TextInput(title='Manual Breakpoints (Manual Only)', value='', css_classes=['wdgkey-map_manual', 'map-drop'], visible=False)
+    wdg['map_manual_desc'] = bmw.Div(text='Comma separated list of values (e.g. -10,0,0.5,6), with one fewer value than # of bins', css_classes=['map-drop', 'description'], visible=False)
+    wdg['map_width'] = bmw.TextInput(title='Map Width (px)', value=str(MAP_WIDTH), css_classes=['wdgkey-map_width', 'map-drop'], visible=False)
+    wdg['map_font_size'] = bmw.TextInput(title='Title Font Size', value=str(MAP_FONT_SIZE), css_classes=['wdgkey-map_font_size', 'map-drop'], visible=False)
+    wdg['map_boundary_width'] = bmw.TextInput(title='Boundary Line Width', value=str(MAP_BOUNDARY_WIDTH), css_classes=['wdgkey-map_boundary_width', 'map-drop'], visible=False)
+    wdg['map_line_width'] = bmw.TextInput(title='Line Width', value=str(MAP_LINE_WIDTH), css_classes=['wdgkey-map_line_width', 'map-drop'], visible=False)
+    wdg['map_opacity'] = bmw.TextInput(title='Opacity (0-1)', value=str(MAP_OPACITY), css_classes=['wdgkey-map_opacity', 'map-drop'], visible=False)
+    wdg['map_arrows'] = bmw.Select(title='Add Arrows', value='No', options=['Yes','No'], css_classes=['wdgkey-map_arrows', 'map-drop'], visible=False)
+    wdg['map_arrow_size'] = bmw.TextInput(title='Arrow Size (px)', value='7', css_classes=['wdgkey-map_arrow_size', 'map-drop'], visible=False)
+    wdg['map_arrow_loc'] = bmw.TextInput(title='Arrow Location (0=start, 1=end)', value='0.8', css_classes=['wdgkey-map_arrow_loc', 'map-drop'], visible=False)
     wdg['auto_update_dropdown'] = bmw.Div(text='Auto/Manual Update', css_classes=['update-dropdown'])
-    wdg['auto_update'] = bmw.Select(title='Auto Update (except filters)', value='Enable', options=['Enable', 'Disable'], css_classes=['update-drop'])
-    wdg['update'] = bmw.Button(label='Manual Update', button_type='success', css_classes=['update-drop'])
-    wdg['render_plots'] = bmw.Select(title='Render Plots', value='Yes', options=['Yes', 'No'], css_classes=['update-drop'])
+    wdg['auto_update'] = bmw.Select(title='Auto Update (except filters)', value='Enable', options=['Enable', 'Disable'], css_classes=['update-drop'], visible=False)
+    wdg['update'] = bmw.Button(label='Manual Update', button_type='success', css_classes=['update-drop'], visible=False)
+    wdg['render_plots'] = bmw.Select(title='Render Plots', value='Yes', options=['Yes', 'No'], css_classes=['update-drop'], visible=False)
     wdg['download_dropdown'] = bmw.Div(text='Download/Export', css_classes=['download-dropdown'])
-    wdg['download_all'] = bmw.Button(label='All Files of View', button_type='success', css_classes=['download-drop'])
-    wdg['download_csv'] = bmw.Button(label='CSV of View', button_type='success', css_classes=['download-drop'])
-    wdg['download_html'] = bmw.Button(label='HTML of View', button_type='success', css_classes=['download-drop'])
-    wdg['download_url'] = bmw.Button(label='URL of View', button_type='success', css_classes=['download-drop'])
-    wdg['download_report'] = bmw.Button(label='Python Report of View', button_type='success', css_classes=['download-drop'])
-    wdg['download_preset'] = bmw.Button(label='Preset of View', button_type='success', css_classes=['download-drop'])
-    wdg['download_source'] = bmw.Button(label='CSV of Full Data Source', button_type='success', css_classes=['download-drop'])
+    wdg['download_all'] = bmw.Button(label='All Files of View', button_type='success', css_classes=['download-drop'], visible=False)
+    wdg['download_csv'] = bmw.Button(label='CSV of View', button_type='success', css_classes=['download-drop'], visible=False)
+    wdg['download_html'] = bmw.Button(label='HTML of View', button_type='success', css_classes=['download-drop'], visible=False)
+    wdg['download_url'] = bmw.Button(label='URL of View', button_type='success', css_classes=['download-drop'], visible=False)
+    wdg['download_report'] = bmw.Button(label='Python Report of View', button_type='success', css_classes=['download-drop'], visible=False)
+    wdg['download_preset'] = bmw.Button(label='Preset of View', button_type='success', css_classes=['download-drop'], visible=False)
+    wdg['download_source'] = bmw.Button(label='CSV of Full Data Source', button_type='success', css_classes=['download-drop'], visible=False)
     wdg['legend_dropdown'] = bmw.Div(text='Legend', css_classes=['legend-dropdown'])
     wdg['legend'] = bmw.Div(text='', css_classes=['legend-drop'])
     wdg['display_config'] = bmw.Div(text='', css_classes=['display-config'])
@@ -1308,7 +1326,9 @@ def create_map(map_type, df, ranges, region_boundaries, centroids, wdg, colors_f
             #For arrow maps, negative values in the data are converted into positives in the
             #opposite direction (in set_df_plots()), so negative values should no longer exist.
             for i,x in enumerate(xs):
-                fig_map.add_layout(bm.Arrow(x_start=xs[i][0], y_start=ys[i][0], x_end=xs[i][1], y_end=ys[i][1], line_alpha=0,
+                x_end = xs[i][0] + float(wdg['map_arrow_loc'].value)*(xs[i][1] - xs[i][0])
+                y_end = ys[i][0] + float(wdg['map_arrow_loc'].value)*(ys[i][1] - ys[i][0])
+                fig_map.add_layout(bm.Arrow(x_start=xs[i][0], y_start=ys[i][0], x_end=x_end, y_end=y_end, line_alpha=0,
                     end=bm.OpenHead(size=float(wdg['map_arrow_size'].value),line_color=colors[i], line_width=float(wdg['map_line_width'].value), line_alpha=float(wdg['map_opacity'].value)),
                 ))
     return fig_map
@@ -1811,27 +1831,31 @@ def download_html(dir_path='', auto_open=True):
     with the current timestamp.
     '''
     print('***Downloading View...')
-    if dir_path == '':
-        html_path = user_out_path + '/view-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.html'
-    else:
-        html_path = dir_path + '/view.html'
-    static_plots = []
-    legend = bmw.Div(text=GL['widgets']['legend'].text)
-    display_config = bmw.Div(text=GL['widgets']['display_config'].text)
-    plots = GL['plots'].children
-    GL['plots'].children = []
-    static_plots.append(bl.row(plots + [legend] + [display_config]))
-    with open(this_dir_path + '/templates/static/index.html', 'r') as template_file:
-        template_string=template_file.read()
-    template = ji.Template(template_string)
-    resources = br.Resources()
-    html = be.file_html(static_plots, resources=resources, template=template)
-    with open(html_path, 'w') as f:
-        f.write(html)
-    if auto_open:
-        sp.Popen(os.path.abspath(html_path), shell=True)
-    GL['plots'].children = plots
+    try:
+        if dir_path == '':
+            html_path = user_out_path + '/view-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.html'
+        else:
+            html_path = dir_path + '/view.html'
+        static_plots = []
+        legend = bmw.Div(text=GL['widgets']['legend'].text)
+        display_config = bmw.Div(text=GL['widgets']['display_config'].text)
+        plots = GL['plots'].children
+        GL['plots'].children = []
+        static_plots.append(bl.row(plots + [legend] + [display_config]))
+        with open(this_dir_path + '/templates/static/index.html', 'r') as template_file:
+            template_string=template_file.read()
+        template = ji.Template(template_string)
+        resources = br.Resources()
+        html = be.file_html(static_plots, resources=resources, template=template)
+        with open(html_path, 'w') as f:
+            f.write(html)
+        if auto_open:
+            sp.Popen(os.path.abspath(html_path), shell=True)
+        GL['plots'].children = plots
+    except Exception as e:
+        print('***Warning: ' + str(e))
     print('***Done downloading View to ' + html_path)
+    update_plots()
 
 def download_all():
     '''
@@ -1839,11 +1863,11 @@ def download_all():
     '''
     dir_path = user_out_path + '/view-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")
     os.makedirs(dir_path, False)
-    download_html(dir_path, False)
     download_csv(dir_path, False)
     download_url(dir_path, False)
     download_report(dir_path, False)
     download_preset(dir_path, False)
+    download_html(dir_path, False)
 
 def download_source(dir_path='', auto_open=True):
     '''
