@@ -25,40 +25,38 @@ body {
     width: 225px !important;
     height: auto !important;
     overflow-y: scroll !important;
+    padding: 5px !important;
+}
+.widgets_section > div{
+    position: relative !important;
+    top: 0px !important;
+    right: 0px !important;
+    bottom: 0px !important;
+    left: 0px !important;
+    height: auto !important;
+    width: auto !important;
+    margin-top: 10px !important;
 }
 .plots_section{
+    position: static !important;
     margin-left: 250px !important;
     width: auto !important;
     height: auto !important;
     display: inline-block !important;
     flex-shrink: 1 !important;
 }
-.bk-plot-layout{
+.plots_section > div{
+    position: relative !important;
+    top: 0px !important;
+    right: 0px !important;
+    bottom: 0px !important;
+    left: 0px !important;
     display: inline-block !important;
-}
-.chart-drop,
-.reeds-vars-drop,
-.meta-drop,
-.report-drop,
-.x-drop,
-.y-drop,
-.series-drop,
-.explode-drop,
-.adv-drop,
-.filter,
-.filters-update,
-.adjust-drop,
-.map-drop,
-.wdgkey-scenario_filter,
-.update-drop,
-.download-drop{
-    display: none;
 }
 .filter-head{
     font-weight: bold;
     cursor: pointer;
     color: purple;
-    display: none;
 }
 .chart-dropdown,
 .data-dropdown,
@@ -90,12 +88,6 @@ body {
     cursor: pointer;
     text-decoration: underline;
 }
-.select-opt{
-    color: blue;
-    cursor: pointer;
-    margin-left: 5px;
-    margin-right: 5px;
-}
 .legend-drop{
     border: 1px solid lightgrey;
     padding: 10px;
@@ -115,4 +107,8 @@ body {
 }
 .config-display-key{
     font-weight: bold;
+}
+.bk.select-all-none{
+    display: inline-block;
+    margin-right:5px;
 }

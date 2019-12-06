@@ -12,7 +12,12 @@ $(document).ready(function(){
         $(this).next().toggle();
     });
     $('body').on('click', '.scenario-filter-dropdown', function(){
-        $('.wdgkey-scenario_filter').toggle();
+        $('.scenario-filter-drop').toggle();
+    });
+    $('body').on('click', '.filter-head', function(){
+        $(this).next().toggle();
+        $(this).next().next().toggle();
+        $(this).next().next().next().toggle();
     });
     $('body').on('click', '.report-dropdown', function(){
         $('.report-drop').toggle();
@@ -47,30 +52,13 @@ $(document).ready(function(){
     $('body').on('click', '.filters-dropdown', function(){
         $('.filter-head').toggle();
         $('.filters-update').toggle();
-        $('.select-all-none').hide();
-        $('.filter').hide();
-    });
-    $('body').on('click', '.filter-head, .scenario-filter-dropdown', function(){
-        if($(this).next('.select-all-none').length == 0){
-            $(this).after('<div class="select-all-none"><span class="select-all select-opt">All</span>|<span class="select-none select-opt">None</span>');
-        }else{
-            $(this).next(".select-all-none").toggle();
-        }
-    });
-    $('body').on('click', '.filter-head', function(){
-        $(this).next(".select-all-none").next(".filter").toggle();
+        $('.filter-drop').hide();
     });
     $('body').on('click', '.adjust-dropdown', function(){
         $('.adjust-drop').toggle();
     });
     $('body').on('click', '.map-dropdown', function(){
         $('.map-drop').toggle();
-    });
-    $('body').on('click', '.select-opt', function(){
-        var checked_bool = $(this).hasClass('select-all') ? true: false;
-        $(this).parent().next('.bk-widget').find('.bk-bs-checkbox input').prop( "checked", checked_bool);
-        $(this).parent().next('.bk-widget').find('.bk-bs-checkbox input').first().click();
-        $(this).parent().next('.bk-widget').find('.bk-bs-checkbox input').first().click();
     });
 });
 //pressing Alt key will collapse menus.
@@ -84,7 +72,7 @@ document.onkeydown = function(e) {
     $('.wdgkey-result select').hide();
     $('.wdgkey-presets select').hide();
     $('.chart-drop').hide();
-    $('.wdgkey-scenario_filter').hide();
+    $('.scenario-filter-drop').hide();
     $('.x-drop').hide();
     $('.y-drop').hide();
     $('.legend-drop').hide();
@@ -93,8 +81,7 @@ document.onkeydown = function(e) {
     $('.adv-drop').hide();
     $('.filter-head').hide();
     $('.filters-update').hide();
-    $('.select-all-none').hide();
-    $('.filter').hide();
+    $('.filter-drop').hide();
     $('.adjust-drop').hide();
     $('.map-drop').hide();
     $('.update-drop').hide();
