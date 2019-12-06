@@ -48,6 +48,7 @@ calcmethod = as.numeric(as.character(Args[5]))
 distpvscen = as.character(Args[6])
 genunitfile = as.character(Args[7])
 outdir = paste(Args[8])
+nukecoalfom = as.numeric(as.character(Args[9]))
 
 #load in the full unit data from genunitfile
 indat = as.data.frame(read.csv(genunitfile))
@@ -316,7 +317,7 @@ for(i in 2010:2100){
     #Note the "aging costs" which are mentioned at the top of each spreadsheet: 
     #$35/kW in every year after age 30 for nuclear, and $7/kW in every year after age 30 for coal. 
     #adder kicks in only after 30 years
-  zt[zt$TECH %in% coaltechs,]$wFOM = zt[zt$TECH %in% coaltechs,]$wFOM + zt[zt$TECH %in% coaltechs,]$agemod30 * 7
+  zt[zt$TECH %in% coaltechs,]$wFOM = zt[zt$TECH %in% coaltechs,]$wFOM + nukecoalfom * zt[zt$TECH %in% coaltechs,]$agemod30 * 7
     
   ztc = aggregate(zt$Summer.capacity,by=list(zt$id),FUN=sum)
   colnames(ztc) = c("id","cap")
@@ -403,7 +404,7 @@ if(MaxBins=="unit"){
       #Note the "aging costs" which are mentioned at the top of each spreadsheet: 
       #$35/kW in every year after age 30 for nuclear, and $7/kW in every year after age 30 for coal. 
       #adder kicks in only after 30 years
-      zt[zt$TECH %in% coaltechs,]$wFOM = zt[zt$TECH %in% coaltechs,]$wFOM + zt[zt$TECH %in% coaltechs,]$agemod30 * 7
+      zt[zt$TECH %in% coaltechs,]$wFOM = zt[zt$TECH %in% coaltechs,]$wFOM + nukecoalfom * zt[zt$TECH %in% coaltechs,]$agemod30 * 7
       
       ztc = aggregate(zt$Summer.capacity,by=list(zt$id),FUN=sum)
       colnames(ztc) = c("id","cap")

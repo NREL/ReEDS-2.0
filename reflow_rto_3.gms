@@ -1294,7 +1294,7 @@ WSurplusmar_annual(windtype,i)$(sum((v,m), CF(i,v,windtype,m) * Hm(m)) > 0) =
          sum((v,m), Hm(m) * WSurplusmar(v,windtype,i,m) * CF(i,v,windtype,m)) / sum((v,m), Hm(m) * CF(i,v,windtype,m)) ;
 
 * 11-07-12 SMC Added MHK Wave parameters
-Execute_Unload "./outputs/variabilityfiles/rawvariability_%case%_%next_year%.gdx",
+Execute_Unload "./outputs/variabilityFiles/rawvariability_%case%_%next_year%.gdx",
 
          SurpOld, WSurplusmar, CSPSurplusMar, UPVSurplusMar, DUPVSurplusMar,
          distPVSurplusMar, distPVSurplusMar_annual, UPVSurplusMar_annual, DUPVSurplusMar_annual, WSurplusmar_annual, MHKWSurplusMar, MRSurplusMar

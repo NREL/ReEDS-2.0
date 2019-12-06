@@ -84,6 +84,7 @@ Sw_MaxCFCon          "Switch for the maximum seasonal capacity factor constraint
 Sw_MinCFCon          "Switch for the minimum annual capacity factor constraint"           /%GSw_MinCFCon%/
 Sw_Mingen            "Switch to include or remove MINGEN variable"                        /%GSw_Mingen%/
 Sw_NearTermLimits    "Switch enforcing near term limits on capacity builds"               /%GSw_NearTermLimits%/
+Sw_NukeCoalFOMAdj    "Switch to adjust nuclear and coal FOM costs similar to NEMS"        /%GSw_NukeCoalFOM%/
 Sw_OpRes             "Switch for the operating reserves constraints"                      /%GSw_OpRes%/
 Sw_ReducedResource   "Switch to reduce the amount of RE resource available"               /%GSw_ReducedResource%/
 Sw_Refurb            "Switch allowing refurbishments"                                     /%GSw_Refurb%/
@@ -1215,7 +1216,7 @@ m_capacity_exog(i,v,rb,t) = capacity_exog(i,v,rb,"sk",t) ;
 m_capacity_exog(i,v,rs,t)$[not sameas(rs,"sk")] = sum{r$r_rs(r,rs), capacity_exog(i,v,r,rs,t) } ;
 m_capacity_exog(i,"init-1",r,t)$geo(i) = geo_cap_exog(i,r) ;
 *remove any tiny amounts of capacity
-m_capacity_exog(i,v,r,t) = round(m_capacity_exog(i,v,r,t),3);
+m_capacity_exog(i,v,r,t) = round(m_capacity_exog(i,v,r,t),3) ;
 
 
 
@@ -1475,7 +1476,7 @@ $offdelim
 $onlisting
 / ;
 
-*assuming 2016 value from:
+*assuming 2017 value from figure 9 of:
 *https://ww3.arb.ca.gov/cc/inventory/pubs/reports/2000_2016/ghg_inventory_trends_00-16.pdf
 Scalar AB32_Import_Emit "--metric ton CO2 / MWh-- emissions measured on AB32 Imports" /0.26/ ;
 
@@ -2087,7 +2088,7 @@ $onlisting
 FOM_Adj_Nuclear(allt) = deflator("2017") * FOM_Adj_Nuclear(allt) ;
 
 cost_fom("nuclear",initv,r,t)$[Sw_BinOM$valcap("nuclear",initv,r,t)] =
-  cost_fom("nuclear",initv,r,t) + sum{allt$att(allt,t),FOM_Adj_Nuclear(allt)} ;
+  cost_fom("nuclear",initv,r,t) + sum{allt$att(allt,t),FOM_Adj_Nuclear(allt)}$Sw_NukeCoalFOMAdj ;
 
 
 *note conditional here that will only replace fom
@@ -2982,8 +2983,6 @@ cost_fom("ICE",v,rb,t)$valcap("ICE",v,rb,t) = ice_fom(t) ;
 
 scalar bio_cofire_perc "--fraction-- fraction of total fuel that is biomass used in cofire plants" /0.15/ ;
 
-scalar emit_scale "scaling factor for emissions" /1e6/;
-
 emit_rate(e,i,v,r,t)$[emit_rate_fuel(i,e)$valcap(i,v,r,t)$rb(r)]
   = round(heat_rate(i,v,r,t) * emit_rate_fuel(i,e),6) ;
 
@@ -3137,6 +3136,7 @@ $offdelim
 /
 ;
 
+scalar emit_scale "scaling factor for emissions" /1e6/;
 
 * set the carbon tax based on switch arguments
 if(Sw_CarbTax = 1,

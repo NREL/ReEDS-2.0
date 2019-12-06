@@ -64,7 +64,7 @@ inputs/variability/hourly_load_adjustments.csv
 inputs/variability/LDC_prep.py
 inputs/variability/mhkwave_var_params.gdx
 inputs/variability/r_rs.gdx
-inputs/variability/Reflow_static_inputs.gdx
+inputs/variability/REflow_static_inputs.gdx
 inputs/variability/upv_upv_ts_corr.gdx
 inputs/variability/w_csp_corr.gdx
 inputs/variability/w_w_corr.gdx
@@ -83,8 +83,8 @@ d_solveoneyear.gms
 d_solveprep.gms
 d_solvewindow.gms
 d2_varfix.gms
-d4_translate_variability.R
-d5_mergevariability.R
+d4_translate_variability.r
+d5_mergevariability.r
 e_report.gms
 e_report_dump.gms
 gurobi.op*

@@ -40,7 +40,8 @@ osname = get_os()
 
 if(!("gdxrrw") %in% installed.packages()[,"Package"]){
 	if (osname=="win"){install.packages(file.path("input_processing","R","gdxrrw_0.4.0.zip"), repos = NULL)}
-	if (osname=="mac" | osname=="unix"){install.packages(file.path("input_processing","R","gdxrrw_1.0.5.tgz"), repos = NULL)}
+	if (osname=="mac"){install.packages(file.path("input_processing","R","gdxrrw_1.0.5.tgz"), repos = NULL)}
+	if (osname=="unix"){install.packages(file.path("input_processing","R","gdxrrw_1.0.5_r_x86_64-redhat-linux-gnu.tar.gz"), repos = NULL)}
 }
 
 ######################################################

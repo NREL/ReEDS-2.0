@@ -335,7 +335,7 @@ gen_icrt_uncurt(i,v,r,t)$vre(i) = sum{(rr,h)$[cap_agg(r,rr)$valcap(i,v,rr,t)], m
 stor_inout(i,v,r,t,"in")$storage(i) = sum{h, STORAGE_IN.l(i,v,r,h,t) * hours(h) } ;
 stor_inout(i,v,r,t,"out")$storage(i) = gen_icrt(i,v,r,t) ;
 stor_in(i,v,r,h,t)$storage(i) = STORAGE_IN.l(i,v,r,h,t) ;
-stor_out(i,v,r,h,t)$storage(i) = Gen.l(i,v,r,h,t)$storage(i) ;
+stor_out(i,v,r,h,t)$storage(i) = GEN.l(i,v,r,h,t)$storage(i) ;
 stor_level(i,v,r,h,t)$storage(i) = STORAGE_LEVEL.l(i,v,r,h,t) ;
 
 *=========================
@@ -725,7 +725,7 @@ reduced_cost(i,v,r,t,rscbin,"INV_RSC")$(rsc_i(i)$valinv(i,v,r,t)$m_rscfeas(r,i,r
 objfn_raw = z.l;
 
 execute_unload "outputs%ds%rep_%fname%.gdx"
-  reqt_price, reqt_quant, load_rt,
+  reqt_price, reqt_quant, load_rt, RecTech, prm,
   emit_r, emit_nat, repgasprice, repgasprice_r, repgasprice_nat, repgasquant_nat, repgasquant, repbioprice,
   gen_out, gen_out_ann, gen_icrt, gen_icrt_uncurt, cap_out, cap_new_ann_out, cap_new_bin_out, cap_new_icrt, cap_avail, cap_firm, ret_ann_out,
   m_capacity_exog, cap_icrt, cap_deg_icrt, ret_out, cap_new_out, cap_iter, gen_iter, cap_firm_iter, curt_tot_iter,

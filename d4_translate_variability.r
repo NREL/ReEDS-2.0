@@ -14,8 +14,8 @@ setwd(paste(Args[1]))
 igdx(paste(Args[2]))
 nextyear = paste(Args[3])
 case = paste(Args[4])
-infile = file.path("outputs","variabilityfiles",paste0("rawvariability_",case,"_",nextyear,".gdx"))
-outfile = file.path("outputs","variabilityfiles",paste0("curt_out_",case,"_",nextyear,".gdx"))
+infile = file.path("outputs","variabilityFiles",paste0("rawvariability_",case,"_",nextyear,".gdx"))
+outfile = file.path("outputs","variabilityFiles",paste0("curt_out_",case,"_",nextyear,".gdx"))
 
 
 print("")

@@ -34,23 +34,11 @@ def setupEnvironment():
     print(" ")
     print(" ")
     
-    GAMSDir = r"C:\Program Files\GAMS24.7"  # full path to GAMS executables, replaced in next steps
     
-    if os.name =='posix':
-        #need to use os.path.join here or the unicode separation characters
-        #will be included in the call to d5_mergevariability.r when writing to call_'case'.sh
-        GAMSDir = os.path.join("/Applications","GAMS24.7","GAMS24.7","sysdir")
-
-    print("The GAMS directory is required to be specified for the intertemporal and window cases")
-    print("The assignment is done in the setupEnvironment() function in runbatch.py")
-    print(" ")
-    print("GAMS directory: " + str(GAMSDir) )
-    print(" ")
-
-
     print("-- Specify the batch prefix --")
     print(" ")
     print("The batch prefix is attached to the beginning of all cases' outputs files")
+    print("Note - it must start with a letter and not a number or symbol")
     print(" ")
     print("A value of 0 will assign the date and time as the batch name (e.g. v20190520_072310)")
     print(" ")
@@ -88,11 +76,8 @@ def setupEnvironment():
     caseList = []
     caseSwitches = [] #list of dicts, one dict for each case
     casenames = df_cases.columns[2:].tolist()
-    print("Cases being run:")
-    print(" ")
 
     for case in casenames:
-        print(case)
         #Fill any missing switches with the defaults in cases.csv
         df_cases[case] = df_cases[case].fillna(df_cases['Default Value'])
         shcom = ' --case=' + BatchName + "_" + case
@@ -101,7 +86,6 @@ def setupEnvironment():
         caseList.append(shcom)
         caseSwitches.append(df_cases[case].to_dict())
 
-    print(" ")
 
     df_cases.drop(['Description','Default Value'], axis='columns',inplace=True)
     timetype = df_cases.loc['timetype'].tolist()
@@ -111,10 +95,21 @@ def setupEnvironment():
     ldcgdxset = df_cases.loc['HourlyStaticFileSwitch'].tolist()
     distpvset = df_cases.loc['distpvscen'].tolist()
     cspset = df_cases.loc['calc_csp_cc'].tolist()
+    GAMSDIR = df_cases.loc['GAMSDIR'].tolist()
 
-    # this function returns a dictionary of the various environment settings
-    # needed to run the model through threading
-    print("")
+
+    print(" ")
+    print(" ")
+    print("The GAMS directory is required to be specified for the intertemporal and window cases")
+    print("The assignment is in the cases.csv file as the GAMSDIR option")
+    print("GAMS directory: " + str(GAMSDIR[0]))
+    print(" ")
+    print(" ")
+
+    print("Cases being run:")
+    for case in casenames:
+        print(case)
+    print(" ")
     
     reschoice = 0
     startiter = 0
@@ -146,7 +141,7 @@ def setupEnvironment():
             'ccworkers': ccworkers,
             'casenames': casenames,
             'BatchName': BatchName,
-            'GAMSDir': GAMSDir,
+            'GAMSDIR': GAMSDIR,
             'caseList': caseList,
             'caseSwitches': caseSwitches,
             'timetype' : timetype,
@@ -174,7 +169,7 @@ def createmodelthreads(envVar):
             ThreadInit = q.get()
             if ThreadInit is None:
                 break
-            runModel(ThreadInit['GAMSDir'],
+            runModel(ThreadInit['GAMSDIR'],
                      ThreadInit['scen'],
                      ThreadInit['caseSwitches'],
                      ThreadInit['lstfile'],
@@ -203,7 +198,7 @@ def createmodelthreads(envVar):
         threads.append(t)
 
     for i in range(len(envVar['caseList'])):
-        q.put({'GAMSDir' : envVar['GAMSDir'],
+        q.put({'GAMSDIR' : envVar['GAMSDIR'][i],
                'scen': envVar['caseList'][i],
                'caseSwitches': envVar['caseSwitches'][i],
                'lstfile':envVar['BatchName']+'_'+envVar['casenames'][i],
@@ -305,7 +300,8 @@ def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,
         comment = "#"
 
     with open(os.path.join(OutputDir, 'call_' + lstfile + ext), 'w+') as OPATH:
-        OPATH.writelines("cd " + casedir + '\n' + '\n')
+        OPATH.writelines("cd " + casedir + '\n' + '\n' + '\n')
+
         OPATH.writelines("gams createmodel.gms gdxcompress=1 xs="+os.path.join("g00files",lstfile) + " o="+os.path.join("lstfiles","1_Inputs.lst") + options + " " + toLogGamsString + '\n')
         restartfile = lstfile
         OPATH.writelines(writeerrorcheck(os.path.join('g00files',restartfile + '.g*')))
@@ -421,7 +417,7 @@ def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,
                     OPATH.writelines(writeerrorcheck(cc_gdxmergedfile+".gdx"))
 
                     #do necessary conversions to make the merged gdx file readable into GAMS
-                    OPATH.writelines("Rscript " + os.path.join(InputDir,"runs",lstfile,"d5_mergevariability.r") + " " + casedir + " " + GAMSDir + " " + curt_gdxmergedfile + ' ' + cc_gdxmergedfile + ' \n')
+                    OPATH.writelines("Rscript " + os.path.join(InputDir,"runs",lstfile,"d5_mergevariability.r") + " " + casedir + " '" + GAMSDir + "' " + curt_gdxmergedfile + ' ' + cc_gdxmergedfile + ' \n')
 
                 #restart file becomes the previous save file
                 restartfile=savefile
@@ -475,7 +471,7 @@ def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,
                     OPATH.writelines(writeerrorcheck(curt_gdxmergedfile+".gdx"))
                     OPATH.writelines(writeerrorcheck(cc_gdxmergedfile+".gdx"))
                     #do necessary conversions to make the merged gdx file readable into GAMS
-                    OPATH.writelines("Rscript " + os.path.join(InputDir,"d5_mergevariability.r") + " " + casedir + " " + GAMSDir + " " + curt_gdxmergedfile + ' ' + cc_gdxmergedfile + ' \n')
+                    OPATH.writelines("Rscript " + os.path.join(InputDir,"d5_mergevariability.r") + " " + casedir + " '" + GAMSDir + "' " + curt_gdxmergedfile + ' ' + cc_gdxmergedfile + ' \n')
                     restartfile=savefile
                 if caseSwitches['GSw_ValStr'] != '0':
                     OPATH.writelines('gams valuestreams.gms o=' + os.path.join("lstfiles",'valuestreams_' + lstfile + '_' + str(begyear) + '.lst')+ ' r=' + os.path.join('g00files',restartfile) + toLogGamsString +' --case=' + lstfile + '\n')
@@ -485,8 +481,8 @@ def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,
         OPATH.writelines("gams e_report_dump.gms " + toLogGamsString + " --fname=" + lstfile + ' \n\n')
 
         bokehdir = os.path.join(os.getcwd(),"bokehpivot","reports")
-        OPATH.writelines('python ' + os.path.join(bokehdir,"interface_report.py") + " 'ReEDS 2.0' " + os.path.join(os.getcwd(),"runs",lstfile) + " all No none " + os.path.join(bokehdir,"templates","reeds2","standard_report_reduced.py") + " one " + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report-reduced") + ' no\n')
-        OPATH.writelines('python ' + os.path.join(bokehdir,"interface_report.py") + " 'ReEDS 2.0' " + os.path.join(os.getcwd(),"runs",lstfile) + " all No none " + os.path.join(bokehdir,"templates","reeds2","standard_report_expanded.py") + " one " + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report") + ' no\n')
+        OPATH.writelines('python ' + os.path.join(bokehdir,"interface_report.py") + ' "ReEDS 2.0" ' + os.path.join(os.getcwd(),"runs",lstfile) + " all No none " + os.path.join(bokehdir,"templates","reeds2","standard_report_reduced.py") + " one " + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report-reduced") + ' no\n')
+        OPATH.writelines('python ' + os.path.join(bokehdir,"interface_report.py") + ' "ReEDS 2.0" ' + os.path.join(os.getcwd(),"runs",lstfile) + " all No none " + os.path.join(bokehdir,"templates","reeds2","standard_report_expanded.py") + " one " + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report") + ' no\n')
 
         ##############################
         # Call the Created Batch File

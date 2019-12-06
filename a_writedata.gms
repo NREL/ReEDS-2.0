@@ -43,7 +43,7 @@ $log
 $call 'Rscript %basedir%%ds%input_processing%ds%R%ds%fuelcostprep.R %basedir% %coalscen% %uraniumscen% %ngscen% %casedir%%ds%inputs_case%ds%'
 $log
 $log
-$call 'Rscript %basedir%%ds%input_processing%ds%R%ds%writecapdat.R %basedir% "%gams.sysdir%" ExistingUnits_%unitdata%.gdx PrescriptiveBuilds_%unitdata%.gdx PrescriptiveRetirements_%unitdata%.gdx %retscen% %casedir%%ds%inputs_case%ds%'
+$call 'Rscript %basedir%%ds%input_processing%ds%R%ds%writecapdat.R %basedir% "%gams.sysdir%" ExistingUnits_%unitdata%.gdx PrescriptiveBuilds_%unitdata%.gdx PrescriptiveRetirements_%unitdata%.gdx %retscen% %casedir%%ds%inputs_case%ds%  '
 $log
 $log
 $call 'Rscript %basedir%%ds%input_processing%ds%R%ds%writesupplycurves.R %basedir% "%gams.sysdir%" ExistingUnits_%unitdata%.gdx 0 %supplycurvefile% %casedir%%ds%inputs_case%ds% %geosupplycurve%'
@@ -58,7 +58,7 @@ $log
 $call 'Rscript %basedir%%ds%input_processing%ds%R%ds%WriteHintage.R %basedir% %numhintage% %retscen% %mindev% %hintage_calcmethod% %distpvscen% "%generatorfile%" %casedir%%ds%inputs_case%ds%'
 $log
 $log
-$call 'Rscript %basedir%%ds%input_processing%ds%R%ds%cfgather.R %basedir% "%gams.sysdir%" %distpvscen% %casedir%%ds%inputs_case%ds%'
+$call 'Rscript %basedir%%ds%input_processing%ds%R%ds%cfgather.R %basedir% "%gams.sysdir%" %distpvscen% %casedir%%ds%inputs_case%ds%  '
 $log
 $log
 $call 'Rscript %basedir%%ds%input_processing%ds%R%ds%plantcostprep.R %basedir% %convscen% %windscen% %upvscen% %cspscen% %batteryscen% %geoscen% %hydroscen% %casedir%%ds%inputs_case%ds%'

@@ -1,5 +1,6 @@
 ,Description,Default Value,ref_seq,ref_int,ref_win
 timetype,Sequential or Intertemporal,seq,seq,int,win
+GAMSDIR,Directory for GAMS to be passed as an argument to d5_mergevariability.r,c:\gams\gams24.7,,,
 yearset_suffix,Set of years that are modeled,default,,,
 endyear,Last year to be modeled,2050,,,
 solver,Solver for GAMS to use,CPLEX,,,
@@ -70,6 +71,7 @@ GSw_MCS,Select countries to apply the mid-century strategy,no,,,
 GSw_MinCFCon,Turn on/off min CF constraint,0,,,
 GSw_Mingen,Turn on/off Mingen variable,1,,,
 GSw_NearTermLimits,Turn on/off near term capacity investment decisions,1,,,
+GSw_NukeCoalFOM,Turn on or off nuclear and coal FOM adders similar to NEMS,1,,,
 GSw_OpRes,Turn on/off operating reserve constraints,1,,,
 GSw_PTC,Switch to turn on/off wind PTC,1,,,
 GSw_PTCCont,Extend PTC for wind,0,,,

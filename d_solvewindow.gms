@@ -28,22 +28,22 @@ tmodel(t)$[tmodel_new(t)$(yeart(t)>=solvewindows("%window%","start"))
 
 *reset tlast to the final modeled period for this window
 *then re-compute the financial multiplier for pv
-tlast(t) = no;
-tlast(t)$[ord(t)=smax(tt$tmodel(tt),ord(tt))] = yes;
+tlast(t) = no ;
+tlast(t)$[ord(t)=smax(tt$tmodel(tt),ord(tt))] = yes ;
 
 *reset the age residual fraction
-pv_age_residual_fraction(i,t) = 0;
+pv_age_residual_fraction(i,t) = 0 ;
 
-pv_age_residual_fraction(i,t)$[tmodel(t)$pv(i)] = max(0, maxage(i) - (sum(tt$tlast(tt),yeart(tt)) - yeart(t))) / maxage(i);
+pv_age_residual_fraction(i,t)$[tmodel(t)$pv(i)] = max(0, maxage(i) - (sum(tt$tlast(tt),yeart(tt)) - yeart(t))) / maxage(i) ;
 
-*need to increase the financial multiplier for PV to account for the future capacity degradation 
+*need to increase the financial multiplier for PV to account for the future capacity degradation
 *should avoid hardcoding in the future -- for the intertemporal case, using a portion
 *of the degradation multiplier based on fraction of life beyond the solve period
 
-cost_cap_fin_mult(i,r,t)$[tmodel(t)$pv(i)] = 
+cost_cap_fin_mult(i,r,t)$[tmodel(t)$pv(i)] =
       round((1 + 0.052 * pv_age_residual_fraction(i,t)) * cost_cap_fin_mult(i,r,t), 4) ;
 
-cost_cap_fin_mult_noITC(i,r,t)$[tmodel(t)$pv(i)] = 
+cost_cap_fin_mult_noITC(i,r,t)$[tmodel(t)$pv(i)] =
       round((1 + 0.052 * pv_age_residual_fraction(i,t)) * cost_cap_fin_mult_noITC(i,r,t), 4) ;
 
 
@@ -88,7 +88,7 @@ oldVREgen(r,h,t)$(tload(t)$rfeas(r)) =
     sum{(i,v,rr)$[cap_agg(r,rr)$vre(i)$valcap(i,v,rr,t)],
           m_cf(i,v,rr,h,t) * CAP.l(i,v,rr,t)
        } ;
-oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) };
+oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) } ;
 
 *Sw_Int_Curt=0 means use average curtailment, and don't differentiate techs
 if(Sw_Int_Curt=0,

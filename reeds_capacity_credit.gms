@@ -57,4 +57,4 @@ $endif
 execute_unload 'outputs%ds%variabilityFiles%ds%cc_in_%case%_%next_year%.gdx' cap_export, csp_sm, hierarchy, load_multiplier, r_rs, rfeas,
                                                                              storage_duration, storage_eff, windcfin ;
 
-execute 'python ReEDS_capacity_credit.py "outputs%ds%variabilityFiles%ds%cc_in_%case%_%next_year%.gdx" "outputs%ds%variabilityFiles%ds%cc_out_%case%_%next_year%.gdx" "%case%" "%cur_year%" "%next_year%" "%calc_csp_cc%"'
+execute 'python reeds_capacity_credit.py "outputs%ds%variabilityFiles%ds%cc_in_%case%_%next_year%.gdx" "outputs%ds%variabilityFiles%ds%cc_out_%case%_%next_year%.gdx" "%case%" "%cur_year%" "%next_year%" "%calc_csp_cc%"'
