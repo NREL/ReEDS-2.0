@@ -1,8 +1,0 @@
-threads = 8
-lpmethod = 4
-advind 0
-*reslim 100000
-scaind 1
-aggind 7
-barepcomp = 1e-10
-

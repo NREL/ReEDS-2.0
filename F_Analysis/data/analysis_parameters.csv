@@ -1,0 +1,35 @@
+reeds.category,Type,Gen.Type,Plot.Color,Gen.Order,Focus.Regions
+CCGT-GAS,Gas CC,Curtailment,red,Curtailment,Andhra_Pradesh
+CCGT-LNG,Gas CC,Diesel,lightpink,BESS,Arunachal_Pradesh
+CCGT-NAPTHA,Naptha,Naptha,chartreuse2,Solar PV,Assam
+COGENERATION-BAGASSE,Other,Gas CC,darkolivegreen4,Wind,Bihar
+CT-GAS,Gas CT,Gas CT,violetred2,Other,Chandigarh
+DIESEL,Diesel,Hydro,lightblue,Pumped hydro,Chhattisgarh
+DUPV,Solar PV,Nuclear,mediumpurple3,Hydro,Dadra_Nagar_Haveli
+HYDRO-PONDAGE,Hydro,Other,peru,Gas CT,Daman_Diu
+HYDRO-PUMPED,Pumped hydro,Pumped hydro,darkblue,Diesel,Delhi
+HYDRO-ROR,Hydro,Solar PV,orange,Naptha,Goa
+HYDRO-STORAGE,Hydro,Sub-Coal,gray20,Gas CC,Gujarat
+NUCLEAR,Nuclear,Super-Coal,gray50,Super-Coal,Haryana
+SUBCRITICAL-COAL,Sub-Coal,Wind,steelblue3,Sub-Coal,Himachal_Pradesh
+SUBCRITICAL-LIGNITE,Sub-Coal,BESS,coral1,Nuclear,Jammu_Kashmir
+SUBCRITICAL-OIL,Other,,,,Jharkhand
+SUPERCRITICAL-COAL,Super-Coal,,,,Karnataka
+UPV,Solar PV,,,,Kerala
+WHR,Other,,,,Madhya_Pradesh
+WIND,Wind,,,,Maharashtra
+BATTERY,BESS,,,,Manipur
+,,,,,Meghalaya
+,,,,,Mizoram
+,,,,,Nagaland
+,,,,,Odisha
+,,,,,Puducherry
+,,,,,Punjab
+,,,,,Rajasthan
+,,,,,Sikkim
+,,,,,Tamil_Nadu
+,,,,,Telangana
+,,,,,Tripura
+,,,,,Uttar_Pradesh
+,,,,,Uttarakhand
+,,,,,West_Bengal
