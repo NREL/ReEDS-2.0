@@ -150,7 +150,9 @@ Install the gdxpds package from the command line by typing &quot;pip install gdx
 <a name="ConfigGAMS"></a>
 ## GAMS Configuration
 
-Install GAMS: [https://www.gams.com/download-old/](https://www.gams.com/download-old/). NREL uses GAMS version 24.7 but has not tested the compatibility of ReEDS with newer versions of GAMS. A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
+Install GAMS: [https://www.gams.com/download-old/](https://www.gams.com/download-old/). NREL uses GAMS version 30.3. Older versions might also work, and newer versions have not been tested. A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
+
+If you are using GAMS 24.9 or newer, then GAMS will default to using the Python version that is included with GAMS. This GAMS version of Python needs some packages to be installed in order to work with ReEDS. To install those packages, navigate to the GMSPython directory in the GAMS folder (e.g., C:\GAMS\win64\30.3\GMSPython) in the terminal window. Install the packages using &quot;python -m pip install [package name]&quot;. The packages to install are gdxpds, xlrd, jinja2, and bokeh.
 
 Add GAMS to the &quot;path&quot; environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _gams.exe_ application (e.g., C:\GAMS\win64\24.7).
 
