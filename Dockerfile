@@ -15,14 +15,16 @@ RUN mkdir /usr/src/reeds
 WORKDIR /usr/src/reeds
 
 # copy directory contents to the container
-COPY . .
+COPY src/. .
 
 # -- install gams --
 
 #make a directory to store GAMS
 RUN mkdir /opt/gams
-#copy the file over
-RUN cp linux_x64_64_sfx.exe /opt/gams/gams_linux.exe
+#download gams source code
+# RUN wget https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/linux/linux_x64_64_sfx.exe -O /opt/gams/gams_linux.exe
+#copy gams
+COPY linux_x64_64_sfx.exe /opt/gams/gams_linux.exe
 #change to that directory
 WORKDIR /opt/gams
 #set permissions accordingly
@@ -30,23 +32,16 @@ RUN chmod u+x /opt/gams/gams_linux.exe
 #run the install process
 RUN /opt/gams/gams_linux.exe
 #copy over the user's gams license
-RUN cp /usr/src/reeds/gamslice.txt /opt/gams/gams29.1_linux_x64_64_sfx/gamslice.txt
+COPY gamslice.txt /opt/gams/gams29.1_linux_x64_64_sfx/gamslice.txt
 
 # -- End GAMS Install --
 
 #change back to the ReEDS directory
 WORKDIR /usr/src/reeds
 
-#install the reeds-specific r packages
-RUN Rscript input_processing/R/packagesetup.R
-
 #install VIM
 RUN apt-get -y install vim
 
-
-#environment variables cannot be exported in Dockerfile
-#therefore, after starting this container, need to call:
-#
-#  . enviro_export.sh
-#
-#this will export gams_dir for gdxpds and update path to include the gams path
+# set env path 
+ENV PATH "$PATH:/opt/gams/gams29.1_linux_x64_64_sfx"
+ENV GAMS_DIR=/opt/gams/gams29.1_linux_x64_64_sfx
