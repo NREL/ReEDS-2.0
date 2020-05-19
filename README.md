@@ -52,3 +52,7 @@ docker run -it -v $PWD/src/:/usr/src/reeds reeds
 This command runs an interactive session (i.e. you will be taken to the command prompt within the container) and sets up a docker `volume` between the `src/` directory on your local machine, and the `usr/src/reeds` directory on the virtual machine. This way, any changes made on either side, appear magically in the other! This allows the user to edit scenarios or code on their local machine, have the updated model run within the docker container, and then view results back on the local machine. Yay Docker!
 
 From this point, you should find yourself on a command line within the container. You can proceed to edit any files as you would on your local machine (i.e. server or laptop) and run ReEDS according to the instructions provided within that branches' `README.md`
+
+Other notes:
+------------
+You should have a little whale icon on your task bar, indicating that Docker is running. There is a 'preferences' option within this menu that will allow you to determine the resources allocated to docker. 
