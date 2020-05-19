@@ -57,3 +57,4 @@ Other notes:
 ------------
 - You should have a little whale icon on your task bar, indicating that Docker is running. There is a 'preferences' option within this menu that will allow you to determine the resources allocated to docker. 
 - The gamslice.txt folder in this directory is an expired GAMS license available to NREL. You should replace this file (either within the repo, or within your container at `/opt/gams/gams291._linux_x64_64_sfc/gamslice.txt` with a valid license.
+- If you want to run ReEDS in the background, you can replace `-it` with `-d` in the `docker run` command, which will allow you to detatch from the container with the `cntrl-D` command.
