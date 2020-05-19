@@ -9,7 +9,7 @@ Docker has “images” and “containers”, images serve as the starting point
 
 You can [download docker](https://docs.docker.com/get-docker/) here for your operating system. For most operating systems, you should be installing Docker Desktop, which includes the command line version of docker along with “docker dashboard” which provides a graphical interface to monitor running containers. 
 
-Once installed, we’re going to our handy dandy command line and run `docker run hello-world`. After a second, docker should print to the command line a detailed message explaining what it did in order to print “Hello from Docker!”. The gist, is that docker created a container with its own self contained operating system on your computer and instructed that operating system to send a “hello world” message back to your command line. Pretty neat! 
+Once installed, open your command line of choice and run `docker run hello-world`. After a second, docker should print to the command line a detailed message explaining what it did in order to print “Hello from Docker!”. The gist, is that docker created a container with its own self contained operating system on your computer and instructed that operating system to send a “hello world” message back to your command line. Pretty neat! 
 
 Finally, I encourage you to run `docker run -it ubuntu bash`. This will download an ubuntu image from docker hub (an online repository of secure docker image), which will be around 30 MBs, it will then set up a new container using the image. The `-it` flag indicates that you want an ‘interactive’ mode that will let you enter the command line within this operating system, which you are specifying that you want the commonly used `bash` shell. 
 
