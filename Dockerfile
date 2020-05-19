@@ -10,19 +10,16 @@ RUN conda install r-base
 RUN pip install gdxpds
 #RUN pip install bokeh
 
-#make a directory called reeds and make that the working directory
+#make a volume called reeds and make that the working directory
 RUN mkdir /usr/src/reeds
 VOLUME /usr/src/reeds
 WORKDIR /usr/src/reeds
 
-# copy directory contents to the container
-# COPY src/. .
-
 #make a directory to store GAMS
 RUN mkdir /opt/gams
 #download gams source code
-# RUN wget https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/linux/linux_x64_64_sfx.exe -O /opt/gams/gams_linux.exe
-COPY linux_x64_64_sfx.exe /opt/gams/gams_linux.exe
+RUN wget https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/linux/linux_x64_64_sfx.exe -O /opt/gams/gams_linux.exe
+# COPY linux_x64_64_sfx.exe /opt/gams/gams_linux.exe
 #change to that directory
 WORKDIR /opt/gams
 #set permissions accordingly
