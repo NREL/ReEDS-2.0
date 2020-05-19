@@ -12,18 +12,16 @@ RUN pip install gdxpds
 
 #make a directory called reeds and make that the working directory
 RUN mkdir /usr/src/reeds
+VOLUME /usr/src/reeds
 WORKDIR /usr/src/reeds
 
 # copy directory contents to the container
-COPY src/. .
-
-# -- install gams --
+# COPY src/. .
 
 #make a directory to store GAMS
 RUN mkdir /opt/gams
 #download gams source code
 # RUN wget https://d37drm4t2jghv5.cloudfront.net/distributions/29.1.0/linux/linux_x64_64_sfx.exe -O /opt/gams/gams_linux.exe
-#copy gams
 COPY linux_x64_64_sfx.exe /opt/gams/gams_linux.exe
 #change to that directory
 WORKDIR /opt/gams
@@ -34,7 +32,6 @@ RUN /opt/gams/gams_linux.exe
 #copy over the user's gams license
 COPY gamslice.txt /opt/gams/gams29.1_linux_x64_64_sfx/gamslice.txt
 
-# -- End GAMS Install --
 
 #change back to the ReEDS directory
 WORKDIR /usr/src/reeds
