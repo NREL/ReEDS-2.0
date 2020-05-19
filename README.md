@@ -7,7 +7,7 @@ Docker has “images” and “containers”, images serve as the starting point
 
 ### So, how do we get started:
 
-You can install docker for free here https://docs.docker.com/get-docker/ for your operating system. For most operating systems, you should be installing Docker Desktop, which includes the command line version of docker along with “docker dashboard” which provides a graphical interface to monitor running containers. 
+You can [download docker](https://docs.docker.com/get-docker/) here for your operating system. For most operating systems, you should be installing Docker Desktop, which includes the command line version of docker along with “docker dashboard” which provides a graphical interface to monitor running containers. 
 
 Once installed, we’re going to our handy dandy command line and run `docker run hello-world`. After a second, docker should print to the command line a detailed message explaining what it did in order to print “Hello from Docker!”. The gist, is that docker created a container with its own self contained operating system on your computer and instructed that operating system to send a “hello world” message back to your command line. Pretty neat! 
 
