@@ -12,3 +12,4 @@ slurm-*
 /D_8760/gdxfiles/
 /E_Outputs/runs/*
 linux_x64_64_sfx.exe
+.DS_Store
