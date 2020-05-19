@@ -1,4 +1,4 @@
-# ### What is Docker anyways? 
+### What is Docker anyways? 
 
 Docker is a tool which allows us to create “containers” in which we can run software. Think of containers as a self-contained virtual machine, with its own operating system (linux), software installations, and user preferences already preconfigured. This virtual machine is command line only (no graphical user interface) and it is running on your computer, using an amount of resources (CPU cores, RAM) that you can configure. Although this concept can be confusing, the big benefit of using docker is that everyone who uses this container should have an identical environment, complete with all software dependencies installed. That way, when anyone runs ReEDS within that container, they will have the exact same experience as anyone else doing the same. 
 
@@ -13,7 +13,7 @@ Once installed, we’re going to our handy dandy command line and run `docker ru
 
 Finally, I encourage you to run `docker run -it ubuntu bash`. This will download an ubuntu image from docker hub (an online repository of secure docker image), which will be around 30 MBs, it will then set up a new container using the image. The `-it` flag indicates that you want an ‘interactive’ mode that will let you enter the command line within this operating system, which you are specifying that you want the commonly used `bash` shell. 
 
-### Using docker with ReEDS
+### Using docker with ReEDS India:
 
 The ReEDS model has several dependencies including gams, R, and python which can sometimes be complicated to install and configure for users. The following commands will create a new docker image (from which you can create docker containers) to easily install and run ReEDS. 
 
