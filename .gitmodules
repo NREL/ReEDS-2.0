@@ -1,4 +1,4 @@
-[submodule "src"]
-	path = src
+[submodule "reeds"]
+	path = reeds
 	url = https://github.com/NREL/ReEDS_OpenAccess
 	branch = India

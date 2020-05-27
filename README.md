@@ -46,15 +46,21 @@ This will take some time, as we are:
 When this completes, we can create a ‘container’ from our image. To do so, we use the `docker run` command, and can specify that we want to run a container using the reeds image that we named with `--tag` earlier.
 
 ```
-docker run -it -v $PWD/src/:/usr/src/reeds reeds
+docker run -it -v $PWD/reeds/:/usr/src/reeds reeds
 ```
 
 This command runs an interactive session (i.e. you will be taken to the command prompt within the container) and sets up a docker `volume` between the `src/` directory on your local machine, and the `usr/src/reeds` directory on the virtual machine. This way, any changes made on either side, appear magically in the other! This allows the user to edit scenarios or code on their local machine, have the updated model run within the docker container, and then view results back on the local machine. Yay Docker!
 
 From this point, you should find yourself on a command line within the container. You can proceed to edit any files as you would on your local machine (i.e. server or laptop) and run ReEDS according to the instructions provided within that branches' `README.md`
 
+For instance:
+```
+conda activate reeds #activate reeds environment
+python run_model.py
+```
+
 Other notes:
 ------------
 - You should have a little whale icon on your task bar, indicating that Docker is running. There is a 'preferences' option within this menu that will allow you to determine the resources allocated to docker. 
 - The gamslice.txt folder in this directory is an expired GAMS license available to NREL. You should replace this file (either within the repo, or within your container at `/opt/gams/gams291._linux_x64_64_sfc/gamslice.txt` with a valid license.
-- If you want to run ReEDS in the background, you can replace `-it` with `-d` in the `docker run` command, which will allow you to detatch from the container with the `cntrl-D` command.
+- If you want to run ReEDS in the background, you can replace `-it` with `-d` in the `docker run` command, which will allow you to detach from the container with the `cntrl-D` command.
