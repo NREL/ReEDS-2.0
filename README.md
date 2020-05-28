@@ -45,7 +45,7 @@ This will take some time, as we are:
 
 When this completes, we can create a ‘container’ from our image. To do so, we use the `docker run` command, and can specify that we want to run a container using the reeds image that we named with `--tag` earlier. We also need to 'mount' the  `reeds/` directory (containing the ReEDS India source code) as a volume within the container. That way, we can see model results on our local drive. To do this we provide docker with a 'map' of the absolute path to the `reeds/` directory on our local computer, and where we want it within the linux container (`/usr/src/reeds`). 
 
-Where this folder is on your local computer will vary. For instance, on __Mac, _Linux, and Windows Powershell__ you can run:
+Where this folder is on your local computer will vary. For instance, on __Mac, Linux, and Windows Powershell__ you can run:
 
 ```
 docker run -it -v ${PWD}/reeds/:/usr/src/reeds reeds
