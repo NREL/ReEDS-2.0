@@ -37,7 +37,7 @@ if(!require("pacman")){
 }
 
 pacman::p_load(gdxrrw, ggplot2, data.table, maptools, mapproj, RColorBrewer, 
-               rgdal, rgeos, scales, stringr, rmarkdown, gdata, zoo, viridis)
+               scales, stringr, rmarkdown, gdata, zoo, viridis)
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!! PROCESSING COMMAND LINE ARGUMENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
