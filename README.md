@@ -43,10 +43,18 @@ This will take some time, as we are:
 - downloading anaconda, python, r, and gams within the operating system
 - configuring some environmental variables
 
-When this completes, we can create a ‘container’ from our image. To do so, we use the `docker run` command, and can specify that we want to run a container using the reeds image that we named with `--tag` earlier.
+When this completes, we can create a ‘container’ from our image. To do so, we use the `docker run` command, and can specify that we want to run a container using the reeds image that we named with `--tag` earlier. We also need to 'mount' the  `reeds/` directory (containing the ReEDS India source code) as a volume within the container. That way, we can see model results on our local drive. To do this we provide docker with a 'map' of the absolute path to the `reeds/` directory on our local computer, and where we want it within the linux container (`/usr/src/reeds`). 
+
+Where this folder is on your local computer will vary. For instance, on __Mac, _Linux, and Windows Powershell__ you can run:
 
 ```
-docker run -it -v $PWD/reeds/:/usr/src/reeds reeds
+docker run -it -v ${PWD}/reeds/:/usr/src/reeds reeds
+```
+
+But in other console emulators (such as __ConEmu__ on windows), we may need to change this to:
+
+```
+docker run -it -v `pwd -W`/reeds/:/usr/src/reeds reeds
 ```
 
 This command runs an interactive session (i.e. you will be taken to the command prompt within the container) and sets up a docker `volume` between the `src/` directory on your local machine, and the `usr/src/reeds` directory on the virtual machine. This way, any changes made on either side, appear magically in the other! This allows the user to edit scenarios or code on their local machine, have the updated model run within the docker container, and then view results back on the local machine. Yay Docker!
