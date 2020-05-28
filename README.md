@@ -54,7 +54,7 @@ docker run -it -v ${PWD}/reeds/:/usr/src/reeds reeds
 But in other console emulators (such as __ConEmu__ on windows), we may need to change this to:
 
 ```
-docker run -it -v `pwd -W`/reeds/:/usr/src/reeds reeds
+docker run -it -v %CD%/reeds/:/usr/src/reeds reeds
 ```
 
 This command runs an interactive session (i.e. you will be taken to the command prompt within the container) and sets up a docker `volume` between the `src/` directory on your local machine, and the `usr/src/reeds` directory on the virtual machine. This way, any changes made on either side, appear magically in the other! This allows the user to edit scenarios or code on their local machine, have the updated model run within the docker container, and then view results back on the local machine. Yay Docker!
