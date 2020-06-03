@@ -1,0 +1,4 @@
+[submodule "reeds"]
+	path = reeds
+	url = https://github.com/skoeb/ReEDS_OpenAccess
+	branch = India

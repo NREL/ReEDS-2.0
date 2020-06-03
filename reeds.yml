@@ -1,0 +1,17 @@
+name: reeds
+channels:
+  - r
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.7
+  - pandas
+  - numpy
+  - r
+  - pandoc
+  - pip
+  - pip:
+    - future==0.18.2
+    - gdxcc==7.28.20
+    - gdxpds==1.1.0
+
