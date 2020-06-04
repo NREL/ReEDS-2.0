@@ -7,11 +7,21 @@ dependencies:
   - python=3.7
   - pandas
   - numpy
-  - r
-  - pandoc
+  - r-base
+  - r-pacman
+  - r-reshape2
+  - r-gdata
+  - r-mapproj
+  - r-rmarkdown
+  - r-ggplot2
+  - r-data.table
+  - r-scales
+  - r-zoo
+  - r-rcolorbrewer
+  - r-viridis
+  - rstudio
   - pip
   - pip:
     - future==0.18.2
     - gdxcc==7.28.20
     - gdxpds==1.1.0
-
