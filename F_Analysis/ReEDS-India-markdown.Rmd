@@ -36,8 +36,8 @@ if(!require("pacman")){
   install_version("pacman", version = "0.4.6", repos = "http://cran.us.r-project.org")
 }
 
-pacman::p_load(gdxrrw, ggplot2, data.table, maptools, mapproj, RColorBrewer, 
-               scales, stringr, rmarkdown, gdata, zoo, viridis)
+pacman::p_load(gdxrrw, ggplot2, data.table, RColorBrewer, 
+               scales, rmarkdown, mapproj, gdata, zoo, viridis)
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!! PROCESSING COMMAND LINE ARGUMENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
