@@ -12,7 +12,8 @@ SHELL ["conda", "run", "-n", "reeds", "/bin/bash", "-c"]
 # install additional R dependencies
 COPY gdxrrw_1.0.5.tar.gz /usr/src/gdxrrw_1.0.5.tar.gz
 COPY packagesetup.R /usr/src/packagesetup.R
-RUN Rscript /usr/src/packagesetup.R
+#RUN conda activate reeds
+#RUN Rscript /usr/src/packagesetup.R
 
 #make a volume called reeds and make that the working directory
 RUN mkdir /usr/src/reeds

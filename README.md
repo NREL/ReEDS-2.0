@@ -61,9 +61,19 @@ This command runs an interactive session (i.e. you will be taken to the command 
 
 From this point, you should find yourself on a command line within the container. You can proceed to edit any files as you would on your local machine (i.e. server or laptop) and run ReEDS according to the instructions provided within that branches' `README.md`
 
-For instance:
+There is one more package that we need to install. To do this, run the following lines from within the docker container:
 ```
 conda activate reeds #activate reeds environment
+Rscript ../packagesetup.R $this will install the gdxrrw package, which is not currently available on CRAN
+```
+
+To run the model, first make sure that you have activated the 'reeds' conda environment. Run this line:
+```
+conda activate reeds
+```
+
+Proceed to run the model with the instructions provided within `README.md`
+```
 python run_model.py
 ```
 
