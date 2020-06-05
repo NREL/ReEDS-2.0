@@ -36,8 +36,8 @@ if(!require("pacman")){
   install_version("pacman", version = "0.4.6", repos = "http://cran.us.r-project.org")
 }
 
-pacman::p_load(gdxrrw, ggplot2, data.table, maptools, mapproj, RColorBrewer, 
-               rgdal, rgeos, scales, stringr, rmarkdown, gdata, zoo, viridis)
+pacman::p_load(gdxrrw, ggplot2, data.table, RColorBrewer, 
+               scales, rmarkdown, mapproj, gdata, zoo, viridis)
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!! PROCESSING COMMAND LINE ARGUMENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
@@ -275,9 +275,11 @@ p$plot + ggtitle(paste('Snapshot in',final.year) ) +
 ```{r curtailment-iter, echo=FALSE, fig.height = 3, fig.width = 6}
 
 if(curt.switch == 1 ){
+ if('season' %in% names(curt_iter)){
   curt_plots = plot_curt_iter()
   
   curt_plots
+  }
 }
 
 ```
@@ -286,17 +288,21 @@ if(curt.switch == 1 ){
 ```{r cc-iter, echo=FALSE, fig.height = 3, fig.width = 6}
 
 if(curt.switch == 1 ){
+ if('season' %in% names(cc_iter)){
   cc_plots = plot_cc_iter()
   
   cc_plots[1]
   cc_plots[2]
+  }
 }
 ```
 
 ## CC by region
 ```{r cc-region, echo=FALSE, fig.height = 6, fig.width = 12}
 if(curt.switch == 1 ){
+ if('season' %in% names(cc_iter)){
  cc_plots[3]
+ }
 }
 ```
 
@@ -394,11 +400,13 @@ dupv.cap.map = map_capacity(category = 'DUPV', palette = 'Reds', years = final.y
 dupv.cap.map + ggtitle(paste('DUPV capacity in',final.year) )
 
 if(curt.switch == 1){
+  if('Timeslice' %in% names(curt)){
   curt.map = map_curtailment(palette = 'YlOrRd', year = final.year)
   
-  if("ggplot" %in% class(curt.map)){
-    curt.map + ggtitle(paste('Curtailment capacity in', final.year) )
-  }else{curt.map}
+    if("ggplot" %in% class(curt.map)){
+      curt.map + ggtitle(paste('Curtailment capacity in', final.year) )
+    }else{curt.map}
+  }
 }
 
 cap.map = map_capacity(category = 'SUPERCRITICAL-COAL', palette = 'Greys', years = final.year)
