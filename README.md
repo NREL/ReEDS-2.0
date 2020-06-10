@@ -688,6 +688,8 @@ path: \inputs\fuelprices\ng\_{ngscen}.csv
 
 default value: AEO\_2019\_reference
 
+note: HOG refers to the EIA AEO high oil & gas resource scenario, and LOG refers to the EIA AEO low oil & gas resource scenario. Thus, HOG will be a low natural gas price scenario, while LOG will be a high natural gas price scenario.
+
 **retscen** [string] – generator retirement schedule
 
 path to generator database: \inputs\capacitydata\ReEDS\_generator\_database\_final\_EIA-NEMS.csv
