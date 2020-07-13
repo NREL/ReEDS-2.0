@@ -1792,7 +1792,7 @@ trancap_exog(r,rr,trtype,t) =
 *initial transmission capacity
     + trancap_init(r,rr,trtype)
 *plus all "certain" future transmission project capacity through the current year t
-    + sum{(tt,trancap_fut_cat)$[(tt.val<=t.val)], trancap_fut(r,rr,"certain",tt,trtype)}
+    + sum{tt$[(tt.val<=t.val)], trancap_fut(r,rr,"certain",tt,trtype)}
 ;
 
 * --- valid transmission routes ---
@@ -3194,7 +3194,7 @@ rsc_dat(r,rs,i,rscbin,"cost")$[hydro(i)$rsc_dat(r,rs,i,rscbin,"cost")] = rsc_dat
 
   m_cf(i,v,rb,h,t)$(cf_tech(i)$valcap(i,v,rb,t)) = cf_modeled(i,v,rb,"sk",h,t) ;
 
-  m_cf(i,v,rs,h,t)$[(not sameas(rs,"sk"))$cf_tech(i)$valcap(i,v,rs,t)] = 
+  m_cf(i,v,rs,h,t)$[(not sameas(rs,"sk"))$cf_tech(i)$valcap(i,v,rs,t)] =
             sum{r$r_rs(r,rs), cf_modeled(i,v,r,rs,h,t) } ;
 
   m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ict(i,newv,tt )}$valcap(i,newv,r,t)] = 0 ;
