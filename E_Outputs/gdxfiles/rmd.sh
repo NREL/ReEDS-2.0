@@ -1,0 +1,2 @@
+Rscript -e "Sys.setenv(RSTUDIO_PANDOC='Program Files/RStudio/bin/pandoc')" -e "rmarkdown::render('F_Analysis/ReEDS-India-markdown.Rmd', output_file='ReEDS-India-results_20200528_200429.html', params = list('gdxlist' = 'toy#output_test_toy.gdx##', 'gamsdir' = '/opt/gams/gams29.1_linux_x64_64_sfx', 'final.year' = '2030', 'curt.switch' = 1))" 
+start F_Analysis/ReEDS-India-results_20200528_200429.html 
