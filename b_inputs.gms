@@ -1038,13 +1038,13 @@ set ivt(i,v,t) "mapping set between i v and t - for new technologies" ;
 ivt(i,newv,t)$[ord(newv) = ivt_num(i,t)] = yes ;
 
 ivt(i,v,t)$[i_water_cooling(i)$Sw_WaterMain] =
-  sum{ii$ctt_i_ii(i,ii), ivt(i,v,t) } ;
+  sum{ii$ctt_i_ii(i,ii), ivt(ii,v,t) } ;
 
 *important assumption here that upgrade technologies
 *receive the same binning assumptions as the technologies
 *that they are upgraded to - this allows for easier translation
 *and mapping of plant characteristics (cost_vom, cost_fom, heat_rate)
-ivt(i,newv,t)$[(yeart(t)>=upgradeyear)$upgrade(i)] = sum{ii$upgrade_to(i,ii), ivt(i,newv,t) } ;
+ivt(i,newv,t)$[(yeart(t)>=upgradeyear)$upgrade(i)] = sum{ii$upgrade_to(i,ii), ivt(ii,newv,t) } ;
 
 
 parameter countnc(i,newv) "number of years in each newv set" ;

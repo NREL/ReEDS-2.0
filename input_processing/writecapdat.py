@@ -25,7 +25,7 @@ gdxnameRET = args.gdxnameRET
 nukescen = args.nukescen
 outdir = args.outdir
 gdxhydro = 'hydrounitdata.gdx'
-waterconstraints = args.waterconstraints
+waterconstraints = int(args.waterconstraints)
 
 #%%
 #Testing inputs
@@ -316,8 +316,8 @@ if waterconstraints == 1:
     retdat = retdat.groupby(['t','r','i','coolingwatertech','ctt','wst'],as_index = False).agg('sum')
     retdat.columns = ['t','r','i','coolingwatertech','ctt','wst','value']
 
-    nonrsc = nonrsc.groupby(['t','r','i','coolingwatertech','ctt','wst'],as_index = False).agg('sum')
-    nonrsc.columns = ['i','coolingwatertech','r','ctt','wst','value']
+    nonrsc = nonrsc.groupby(['r','i','coolingwatertech','ctt','wst'],as_index = False).agg('sum')
+    nonrsc.columns = ['r','i','coolingwatertech','ctt','wst','value']
 
     pnonrsc['i'] = pnonrsc['coolingwatertech']
     pnonrsc = pnonrsc.groupby(['t','r','i'],as_index = False).agg('sum')

@@ -810,16 +810,20 @@ def cc_storage(storage, pr, re, sdb):
         min_e = np.linspace(lower_bound_e, upper_bound_e, (rel_step**2) + 1)
         min_dur = min_e / min_p
         min_dur_temp = min_dur[min_dur <= min_bin].copy()
-        # Find the max addition that could be made without exceeding the
-        # marginal duration limit.
-        dur_marg_test = min(min(ds), dur_marg[len(dur_temp)])
-        max_interp = ((p_step * (min(ds) - dur_marg_test))
-                      / (min(ds) - min_bin)) + lower_bound_p
-        # Set the peaking potential for the lowest bin to be the minimum
-        # between the crossover point and the maximum allowed interpolated
-        # value (limited by the marg duration and p_step size).
-        peak_stor.loc[min_bin, 'peaking potential'] = min(
-            max_interp, min_p[len(min_dur_temp) - 1])
+        # If the duration is already the min duration, don't interpolate
+        if len(min_dur_temp) == 0:
+            peak_stor.loc[min_bin,'peaking potential'] = lower_bound_p
+        else:
+            # Find the max addition that could be made without exceeding the
+            # marginal duration limit.
+            dur_marg_test = min(min(ds), dur_marg[len(dur_temp)])
+            max_interp = ((p_step * (min(ds) - dur_marg_test))
+                          / (min(ds) - min_bin)) + lower_bound_p
+            # Set the peaking potential for the lowest bin to be the minimum
+            # between the crossover point and the maximum allowed interpolated
+            # value (limited by the marg duration and p_step size).
+            peak_stor.loc[min_bin, 'peaking potential'] = min(
+                max_interp, min_p[len(min_dur_temp) - 1])
     # If there is not storage potential for lowest duration bin, set it to 0.
     elif len(dur_temp) == 1:
         peak_stor.loc[min_bin, 'peaking potential'] = 0

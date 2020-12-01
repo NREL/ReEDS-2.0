@@ -1559,7 +1559,7 @@ eq_storage_duration(i,v,r,h,t)$[valgen(i,v,r,t)$(battery(i) or CSP_Storage(i))
 *lower bound on storage charging
 eq_storage_in_min(r,h,t)$[sum{(i,v)$storage_no_csp(i),valgen(i,v,r,t)}$tmodel(t)]..
 
-    sum{(i,v)$storage_no_csp(i),STORAGE_IN(i,v,r,h,"other",t)}
+    sum{(i,v)$[storage_no_csp(i)$valgen(i,v,r,t)], STORAGE_IN(i,v,r,h,"other",t) }
 
     =g=
 
