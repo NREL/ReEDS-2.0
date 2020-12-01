@@ -24,7 +24,9 @@ switches = dict({'region_type':'country',
                  'construction_schedules_suffix':'default',
                  'financials_sys_suffix':'ATB2019',
                  'sys_eval_years':20, 
-                 'endyear':2050})
+                 'endyear':2050,
+                 'timetype':'seq',
+                 'degrade_suffix':'default'})
 
 # Create a runs directory, if it doesn't exist
 if os.path.isdir('runs') == False:

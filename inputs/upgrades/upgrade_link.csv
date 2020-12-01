@@ -1,0 +1,12 @@
+*TO,FROM,DELTA
+CoalOldUns_CoalOldScr,CoalOldUns,CoalOldScr
+CoalOldUns_CofireOld,CoalOldUns,CofireOld
+CoalOldScr_CofireOld,CoalOldScr,CofireOld
+Coal-new_CofireNew,Coal-new,CofireNew
+Coal-IGCC_coal-CCS,Coal-IGCC,coal-CCS
+coal-new_coal-CCS,coal-new,coal-CCS
+CoalOldScr_coal-CCS,CoalOldScr,coal-CCS
+CoalOldUns_coal-CCS,CoalOldUns,coal-CCS
+CofireNew_coal-CCS,CofireNew,coal-CCS
+CofireOld_coal-CCS,CofireOld,coal-CCS
+Gas-CT_RE-CT,Gas-CT,RE-CT

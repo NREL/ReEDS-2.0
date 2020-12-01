@@ -24,8 +24,24 @@ list.of.packages <- c(	"plyr","lazyeval","colorspace","data.table",
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages,repos = "http://cran.rstudio.com/", dep = TRUE)
 
+get_os <- function() {
+  if (.Platform$OS.type == "windows") { 
+    "win"
+  } else if (Sys.info()["sysname"] == "Darwin") {
+    "mac" 
+  } else if (.Platform$OS.type == "unix") { 
+    "unix"
+  } else {
+    stop("Unknown OS")
+  }
+}
+
+osname = get_os()
+
 if(!("gdxrrw") %in% installed.packages()[,"Package"]){
-	install.packages("input_processing\\R\\gdxrrw_0.4.0.zip", repos = NULL)
+	if (osname=="win"){install.packages(file.path("input_processing","R","gdxrrw_0.4.0.zip"), repos = NULL)}
+	if (osname=="mac"){install.packages(file.path("input_processing","R","gdxrrw_1.0.5.tgz"), repos = NULL)}
+	if (osname=="unix"){install.packages(file.path("input_processing","R","gdxrrw_1.0.5_r_x86_64-redhat-linux-gnu.tar.gz"), repos = NULL)}
 }
 
 ######################################################

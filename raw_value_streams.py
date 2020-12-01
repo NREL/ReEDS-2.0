@@ -6,6 +6,8 @@ from GAMS gdx solution file to produce value streams for the variables of the mo
 import gdxpds
 import pandas as pd
 from datetime import datetime
+import logging
+logger = logging.getLogger('')
 
 def get_value_streams(solution_file, mps_file, var_list=None, con_list=None):
     '''
@@ -120,7 +122,7 @@ def get_df_mps(mps_file, var_list=None, con_list=None):
     df_mps.columns = ['var_name','var_set','con_name','con_set', 'coeff']
     for col in ['var_name','var_set','con_name','con_set']:
         df_mps[col] = df_mps[col].str.lower()
-    print('mps read: ' + str(datetime.now() - start))
+    logger.info('mps read: ' + str(datetime.now() - start))
     return df_mps
 
 def get_df_solution(solution_file, var_list_mps, con_list_mps):
@@ -146,14 +148,14 @@ def get_df_solution(solution_file, var_list_mps, con_list_mps):
     '''
     start = datetime.now()
     dfs = gdxpds.to_dataframes(solution_file)
-    print('solution read: ' + str(datetime.now() - start))
+    logger.info('solution read: ' + str(datetime.now() - start))
     start = datetime.now()
     dfs = {k.lower(): v for k, v in list(dfs.items())}
     df_vars = get_df_symbols(dfs, var_list_mps)
     df_vars = df_vars.rename(columns={"Level": "var_level", "Marginal": "var_marginal", 'sym_name':'var_name', 'sym_set': 'var_set'})
     df_cons = get_df_symbols(dfs, con_list_mps)
     df_cons = df_cons.rename(columns={"Level": "con_level", "Marginal": "con_marginal", 'sym_name':'con_name', 'sym_set': 'con_set'})
-    print('solution reformatted: ' + str(datetime.now() - start))
+    logger.info('solution reformatted: ' + str(datetime.now() - start))
     return {'vars':df_vars, 'cons':df_cons}
 
 def get_df_symbols(dfs, symbols):
@@ -184,7 +186,7 @@ def get_df_symbols(dfs, symbols):
         for s in range(level_col):
             set_col = df_sym.iloc[:,s]
             if set_col.str.contains(r'[.\'"()]|  ').any():
-                print('Warning: Invalid character (dot, quote, parens, double space) found in column #' + str(s) + ' of ' + sym_name)
+                logger.info('Warning: Invalid character (dot, quote, parens, double space) found in column #' + str(s) + ' of ' + sym_name)
             df_sym['sym_set'] = df_sym['sym_set'] + set_col
             if s < level_col - 1:
                 df_sym['sym_set'] = df_sym['sym_set'] + '.'

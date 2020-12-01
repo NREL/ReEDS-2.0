@@ -104,7 +104,7 @@ def build_dfs(years, techs, regions, ivt_df, year_map, reg_switch):
     
     Notes:
      - available_for_build means that that [i,v] combo is specified as the vintage available for investment in
-       the given year, per the ict file. 
+       the given year, per the ivt file. 
      
     '''
     
@@ -321,7 +321,9 @@ def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix, 
     '''
     
     # Import construction times
-    construction_times = import_data('construction_times', construction_times_suffix, ['i'], scen_settings=scen_settings, adjust_units=False)
+    construction_times = import_data('construction_times', construction_times_suffix, ['i', 't_online'], scen_settings=scen_settings, adjust_units=False)
+    construction_times['t_start_construction'] = construction_times['t_online'].astype(int) - construction_times['construction_time'].astype(int)
+    construction_times = construction_times.rename(columns={'t_online':'t'})
     
     # Expand for subtechs, melt
     ivt_df = ivt_df.rename(columns={'Unnamed: 0':'i'})
@@ -331,22 +333,37 @@ def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix, 
     
     # Import incentives, determine the year the tech would be built based on construction times
     incentive_df = import_data('incentives', incentive_file_suffix, ['i','country','t_start_construction'], inflation_df=inflation_df, scen_settings=scen_settings)
-    incentive_df = incentive_df.merge(construction_times, on='i', how='left')
-    incentive_df['t'] = incentive_df['t_start_construction'] + incentive_df['construction_time']
+    incentive_df = incentive_df.merge(construction_times, on=['i', 't_start_construction'], how='left')
+
+    # Because of changing construction durations, some incentives don't apply to any online years. Drop those rows. 
+    incentive_df = incentive_df[incentive_df['t'].isnull()==False]
     
     # Apply a penalty for monetizing the tax credits through tax equity (or waiting to internally monetize them)
     # The simple reduction of credit value is a simple implementation - more sophisticated estimates of lost
     # value should be made for future analysis that is focused on tax credits. pgagnon 5-7-19
     incentive_df['ptc_value_monetized'] = incentive_df['ptc_value'] * (1 - incentive_df['ptc_tax_equity_penalty'])
     incentive_df['itc_frac_monetized'] = incentive_df['itc_frac'] * (1 - incentive_df['itc_tax_equity_penalty'])
+    
+    
+    return incentive_df[['i', 't', 'country', 'ptc_value', 'ptc_value_monetized', 'ptc_dur', 'itc_frac',
+                         'itc_frac_monetized', 'ptc_tax_equity_penalty', 'itc_tax_equity_penalty']]
 
     
-    return incentive_df[['i', 't', 'country', 'ptc_value_monetized', 'ptc_dur', 'itc_frac_monetized', 'ptc_tax_equity_penalty', 'itc_tax_equity_penalty']]
-
-    
+def calc_degradation_adj(d_real,eval_period,annual_degradation):
+    if(annual_degradation==0):   
+        return 1.0
+    else:
+        pv_year = 0
+        pv = 0
+        pv_degraded= 0
+        for i in range(0,int(eval_period)+1):
+            pv_year = 1/(d_real)**i
+            pv = pv + pv_year
+            pv_degraded = pv_degraded+ pv_year*(1-annual_degradation)**i
+        return pv/pv_degraded
     
 #%%
-def calc_financial_multipliers(df_inv, construction_schedules, depreciation_schedules):
+def calc_financial_multipliers(df_inv, construction_schedules, depreciation_schedules, timetype):
     '''
 
     
@@ -372,10 +389,16 @@ def calc_financial_multipliers(df_inv, construction_schedules, depreciation_sche
 
     # Calculate the (fractional) present value of depreciation 
     df_inv['PV_fraction_of_depreciation'] = np.array(np.sum(depreciation_schedules[df_inv['depreciation_sch'].astype(str)].T / np.power.outer(df_inv['d_nom'].values, scipy.arange(1,22)), axis=1))
+    
+    # Calculate the Degradation_Adjustment
+    if(timetype == 'seq'):
+        df_inv['Degradation_Adj'] = df_inv.apply(lambda x: calc_degradation_adj(x['d_real'],x['eval_period'],x['annual_degradation']),axis=1)    
+    else:
+        df_inv['Degradation_Adj'] = 1.0
 
     # Calculate the financial multiplier
-    df_inv['finMult'] = df_inv['CCmult'] / (1 - df_inv['tax_rate']) * (1 - df_inv['tax_rate'] * (1-df_inv['itc_frac_monetized']/2)*df_inv['PV_fraction_of_depreciation'] - df_inv['itc_frac_monetized'])
-    df_inv['finMult_noITC'] = df_inv['CCmult'] / (1 - df_inv['tax_rate']) * (1 - df_inv['tax_rate'] *df_inv['PV_fraction_of_depreciation'] )
+    df_inv['finMult'] = df_inv['CCmult'] / (1 - df_inv['tax_rate']) * (1 - df_inv['tax_rate'] * (1-df_inv['itc_frac_monetized']/2)*df_inv['PV_fraction_of_depreciation'] - df_inv['itc_frac_monetized'])*df_inv['Degradation_Adj'] 
+    df_inv['finMult_noITC'] = df_inv['CCmult'] / (1 - df_inv['tax_rate']) * (1 - df_inv['tax_rate'] *df_inv['PV_fraction_of_depreciation'] )*df_inv['Degradation_Adj'] 
     
         
     return df_inv
@@ -388,18 +411,20 @@ def calc_ptc_unit_value(df_inv):
     
     '''
 
-    # Adjust PTC to "effective pre-tax value"
-    #   Since the accounting in ReEDS is done in pre-tax terms, the PTC value is 
-    #   increased by 1/(1-taxRate). ITC's impact is also increased when financial
-    #   multipliers are calculated. These adjustments should be remembered when
-    #   accounting is done -- e.g. expenditures are not the sum of these values. 
-    df_inv[['ptc_value_monetized', 'ptc_dur']] = df_inv[['ptc_value_monetized', 'ptc_dur']].fillna(0)
-    df_inv['ptc_value_monetized_pretax'] = df_inv['ptc_value_monetized']*(1/(1-df_inv['tax_rate']))
+    # Calculate the PTC's tax value
+    #   Since the PTC reduces income taxes (which are levied on a utility's 
+    #   return on their rate base), the actual value of the PTC higher than its
+    #   nominal value by 1/(1-taxRate). This component is the grossup value. 
+    #   Note that this effect is already included for the ITC when financial
+    #   multipliers are calculated.
+    df_inv[['ptc_value_monetized', 'ptc_dur', 'ptc_value']] = df_inv[['ptc_value_monetized', 'ptc_dur', 'ptc_value']].fillna(0)
+    df_inv['ptc_value_monetized_posttax'] = df_inv['ptc_value_monetized']*(1/(1-df_inv['tax_rate']))
+    df_inv['ptc_grossup_value'] = df_inv['ptc_value']*(1/(1-df_inv['tax_rate']) - 1.0)
 
     
     # ptc_unit_value is the full present-value of the PTC over its duration (in pretax terms, after penalty of monetization is applied),
     # expressed in "unit" terms, in this case meaning this would be the value if a 1 MW generator was operated at CF=1 for one hour with no curtailment. 
-    df_inv['ptc_unit_value'] = df_inv['ptc_value_monetized_pretax'] * ((1-(1/df_inv['d_real']**df_inv['ptc_dur']))/(df_inv['d_real']-1.0))
+    df_inv['ptc_unit_value'] = df_inv['ptc_value_monetized_posttax'] * ((1-(1/df_inv['d_real']**df_inv['ptc_dur']))/(df_inv['d_real']-1.0))
             
     return df_inv
 

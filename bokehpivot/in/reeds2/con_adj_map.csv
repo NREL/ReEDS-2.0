@@ -4,6 +4,7 @@ raw,display
 "inv, _obj",Capital
 "inv_refurb, _obj",Capital
 "inv_rsc, _obj",Supply Curve
+"upgrades, _obj",Capital
 "invsubstation, _obj","invsubstation, _obj"
 "invtran, _obj","invtran, _obj"
 "opres, _obj",Operating Reserves
@@ -35,6 +36,7 @@ eq_rec_generation,State RPS
 eq_rec_launder,eq_rec_launder
 eq_refurblim,eq_refurblim
 eq_reserve_margin,Reserve Margin
+eq_cap_sdbin_balance,Reserve Margin
 eq_rps_ofswind,State RPS
 eq_rsc_inv_account,eq_rsc_inv_account
 eq_rsc_invlim,eq_rsc_invlim

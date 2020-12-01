@@ -4,6 +4,7 @@ Pivot chart maker core functionality and csv, gdx applications
 '''
 from __future__ import division
 import os
+import sys
 import traceback
 import shutil
 import re
@@ -30,8 +31,22 @@ import six.moves.urllib.parse as urlp
 import subprocess as sp
 import jinja2 as ji
 import reeds_bokeh as rb
+import logging
+from pdb import set_trace as pdbst
+
+#Setup logger
+logger = logging.getLogger('')
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(message)s')
+if not logger.hasHandlers():
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.DEBUG)
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
 
 #Defaults to configure:
+DEFAULT_CUSTOM_SORTS = {} #Keys are column names and values are lists of values in the desired sort order
+DEFAULT_CUSTOM_COLORS = {} #Keys are column names and values are dicts that map column values to colors (hex strings)
 DATA_TYPE_OPTIONS = rb.DATA_TYPE_OPTIONS + ['CSV']
 DEFAULT_DATA_TYPE = rb.DEFAULT_DATA_TYPE
 PLOT_WIDTH = 300
@@ -57,7 +72,7 @@ MAP_PALETTE = 'Blues' #See https://bokeh.pydata.org/en/latest/docs/reference/pal
 C_NORM = "#31AADE"
 CHARTTYPES = ['Dot', 'Line', 'Bar', 'Area', 'Area Map', 'Line Map']
 STACKEDTYPES = ['Bar', 'Area']
-AGGREGATIONS = ['None', 'Sum', 'Ave', 'Weighted Ave', 'Weighted Ave Ratio']
+AGGREGATIONS = ['None', 'sum(a)', 'ave(a)', 'sum(a)/sum(b)', 'sum(a*b)/sum(b)', '[sum(a*b)/sum(b)]/[sum(a*c)/sum(c)]']
 ADV_BASES = ['Consecutive', 'Total']
 MAP_FONT_SIZE = 10
 MAP_NUM_BINS = 9
@@ -72,19 +87,19 @@ RANGE_GLYPH_MAP = {'Line': 'Area', 'Dot': 'Bar'}
 WDG_COL = ['x', 'y', 'x_group', 'series', 'explode', 'explode_group']
 
 #List of widgets that don't use columns as selector and share general widget update function
-WDG_NON_COL = ['chart_type', 'range', 'y_agg', 'y_weight', 'y_weight_denom', 'adv_op', 'adv_col_base', 'adv_op2', 'adv_col_base2', 'plot_title', 'plot_title_size',
-    'plot_width', 'plot_height', 'opacity', 'sync_axes', 'x_min', 'x_max', 'x_scale', 'x_title',
+WDG_NON_COL = ['chart_type', 'range', 'y_agg', 'adv_op', 'explode_grid', 'adv_col_base', 'adv_op2', 'adv_col_base2', 'adv_op3', 'adv_col_base3', 'plot_title', 'plot_title_size',
+    'sort_data', 'plot_width', 'plot_height', 'opacity', 'sync_axes', 'x_min', 'x_max', 'x_scale', 'x_title', 'series_limit',
     'x_title_size', 'x_major_label_size', 'x_major_label_orientation',
     'y_min', 'y_max', 'y_scale', 'y_title', 'y_title_size', 'y_major_label_size',
     'circle_size', 'bar_width', 'cum_sort', 'line_width', 'range_show_glyphs', 'net_levels', 'bokeh_tools', 'map_bin', 'map_num', 'map_nozeros', 'map_min', 'map_max', 'map_manual',
     'map_arrows','map_arrow_size','map_arrow_loc','map_width', 'map_font_size', 'map_boundary_width', 'map_line_width', 'map_opacity', 'map_palette', 'map_palette_2', 'map_palette_break']
 
 #initialize globals dict for variables that are modified within update functions.
-#custom_sorts: keys are column names. Values are lists of values in the desired sort order
+#custom_sorts (dict): Keys are column names and values are lists of values in the desired sort order
 #custom_colors (dict): Keys are column names and values are dicts that map column values to colors (hex strings)
 GL = {'df_source':None, 'df_plots':None, 'columns':None, 'data_source_wdg':None, 'variant_wdg':{},
-      'widgets':None, 'wdg_defaults': collections.OrderedDict(), 'controls': None, 'plots':None, 'custom_sorts': {},
-      'custom_colors': {}}
+      'widgets':None, 'wdg_defaults': collections.OrderedDict(), 'controls': None, 'plots':None, 'custom_sorts': DEFAULT_CUSTOM_SORTS,
+      'custom_colors': DEFAULT_CUSTOM_COLORS}
 
 #os globals
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -99,7 +114,7 @@ def initialize():
     and widget configuration object (wdg_config). Initialize controls and plots areas of layout, and
     send data to opened browser.
     '''
-    print('***Initializing...')
+    logger.info('***Initializing...')
     wdg_config = {}
     args = bio.curdoc().session_context.request.arguments
     wdg_arr = args.get('widgets')
@@ -126,7 +141,7 @@ def initialize():
 
     bio.curdoc().add_root(layout)
     bio.curdoc().title = "Exploding Pivot Chart Maker"
-    print('***Done Initializing')
+    logger.info('***Done Initializing')
 
 def reset_wdg_defaults():
     '''
@@ -144,8 +159,9 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
         data_type (string): Type of data.
         data_source (string): Path to data for which a report will be made
         static_presets (list of dicts): List of presets for which to make report. Each preset has these keys:
-            'name': name of preset
-            'config': a dict of widget configurations, where keys are keys of GL['widgets'] and values are values of those widgets. See preset_wdg()
+            'name' (required): name of preset
+            'config' (required): a dict of widget configurations, where keys are keys of GL['widgets'] and values are values of those widgets. See preset_wdg()
+            'excel_sheet_name' (optional): If specified, this is used for the excel sheet name for this preset. Must be unique.
         report_path (string): The path to the report file.
         report_format (string): 'html', 'excel', or 'both', specifying which reports to make
         html_num (string): 'multiple' if we are building separate html reports for each section, and 'one' for one html report with all sections.
@@ -173,9 +189,16 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
         os.rename(output_dir, output_dir + '-archive-'+time)
     output_dir = output_dir + '/'
     os.makedirs(output_dir)
+    fh = logging.FileHandler(output_dir + 'report.log')
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
     #copy report file to output_dir
     if report_path != '':
         shutil.copy2(report_path, output_dir)
+    #copy csv data_source to output_dir
+    if data_source.endswith('.csv'):
+        shutil.copy2(data_source, output_dir)
     data_sources = data_source.split('|')
     if report_format in ['excel', 'both']:
         excel_report_path = output_dir + 'report.xlsx'
@@ -210,17 +233,19 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
                 header += '<li><a href="#section-' + str(sec_i) + '">' + static_preset['name'] + '</a></li>'
                 sec_i += 1
             header += '</ol>'
-        header_row = bl.row(bmw.Div(text=header))
+        header_row = bl.row(bmw.Div(text=header, css_classes=['header_section']))
         if html_num == 'one':
             static_plots = []
             static_plots.append(header_row)
+        elif html_num == 'multiple':
+            contents_str = '<h3>Contents:</h3><ul>'
     #for each preset, set the widgets in preset_wdg(). Gather plots into separate sections of the html report,
     #and gather data into separate sheets of excel report
     sec_i = 1
     for static_preset in static_presets:
         name = static_preset['name']
         try:
-            print('***Building report section: ' + name + '...')
+            logger.info('***Building report section: ' + name + '...')
             preset = static_preset['config']
             preset_wdg(preset)
             if report_format in ['html', 'both']:
@@ -233,33 +258,45 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
                     static_plots.append(title_row)
                     static_plots.append(content_row)
                 elif html_num == 'multiple':
-                    html = be.file_html([header_row, title_row, content_row], resources=resources, template=template)
+                    html = be.file_html([title_row, content_row], resources=resources, template=template)
                     html_file_name = str(sec_i) + '_' + name
                     html_file_name = re.sub(r'[\\/:"*?<>|]', '-', html_file_name) #replace disallowed file name characters with dash
                     html_path = output_dir + html_file_name + '.html'
                     with open(html_path, 'w') as f:
                         f.write(html)
-                    if auto_open == 'yes':
-                        sp.Popen(os.path.abspath(html_path), shell=True)
+                    contents_str += '<li><a href="' + html_file_name + '.html">' + str(sec_i) + '. ' + name + '</a></li>'
             if report_format in ['excel', 'both']:
-                excel_sheet_name = str(sec_i) + '_' + name
+                if 'excel_sheet_name' in static_preset:
+                    excel_sheet_name = static_preset['excel_sheet_name']
+                else:
+                    excel_sheet_name = str(sec_i) + '_' + name
                 excel_sheet_name = re.sub(r"[\\/*\[\]:?]", '-', excel_sheet_name) #replace disallowed sheet name characters with dash
                 excel_sheet_name = excel_sheet_name[:31] #excel sheet names can only be 31 characters long
                 GL['df_plots'].to_excel(excel_report, excel_sheet_name, index=False)
         except Exception as e:
-            print('***Error in section ' + str(sec_i) + '...\n' + traceback.format_exc())
-            static_plots.append(bl.row(bmw.Div(text='<h2 id="section-' + str(sec_i) + '" class="error">' + str(sec_i) + '. ' + name + '. ERROR!</h2>')))
+            logger.info('***Error in section ' + str(sec_i) + '...\n' + traceback.format_exc())
+            if html_num == 'one':
+                static_plots.append(bl.row(bmw.Div(text='<h2 id="section-' + str(sec_i) + '" class="error">' + str(sec_i) + '. ' + name + '. ERROR!</h2>')))
         sec_i += 1
     if report_format in ['excel', 'both']:
         excel_report.save()
-    if report_format in ['html', 'both'] and html_num == 'one':
-        html = be.file_html(static_plots, resources=resources, template=template)
-        html_path = output_dir + 'report.html'
-        with open(html_path, 'w') as f:
-            f.write(html)
-        if auto_open == 'yes':
-            sp.Popen(os.path.abspath(html_path), shell=True)
-    print('***Done building report')
+    if report_format in ['html', 'both']:
+        if html_num == 'one':
+            html = be.file_html(static_plots, resources=resources, template=template)
+            html_path = output_dir + 'report.html'
+            with open(html_path, 'w') as f:
+                f.write(html)
+            if auto_open == 'yes':
+                sp.Popen(os.path.abspath(html_path), shell=True)
+        elif html_num == 'multiple':
+            contents_str += '</ul>'
+            html = '<!DOCTYPE html><html><body>' + header + contents_str + '</body></html>'
+            html_path = output_dir + 'contents.html'
+            with open(html_path, 'w') as f:
+                f.write(html)
+            if auto_open == 'yes':
+                sp.Popen(os.path.abspath(html_path), shell=True)
+    logger.info('***Done building report')
 
 def preset_wdg(preset):
     '''
@@ -283,7 +320,7 @@ def preset_wdg(preset):
     #Now set x to none to prevent chart rerender
     wdg['x'].value = 'None'
     #gather widgets to reset
-    wdg_resets = [i for i in wdg_defaults if i not in list(wdg_variant.keys())+['x', 'data', 'render_plots', 'auto_update']]
+    wdg_resets = [i for i in wdg_defaults if i not in list(wdg_variant.keys())+['x', 'data', 'data_type', 'render_plots', 'auto_update']]
     #reset widgets if they are not default
     for key in wdg_resets:
         if isinstance(wdg[key], bmw.groups.Group) and wdg[key].active != wdg_defaults[key]:
@@ -354,20 +391,41 @@ def build_data_source_wdg(data_type=DEFAULT_DATA_TYPE, data_source=''):
 
 def get_df_csv(data_source):
     '''
-    Read a csv into a pandas dataframe, and determine which columns of the dataframe
+    Read csv(s) into a pandas dataframe, and determine which columns of the dataframe
     are discrete (strings), continuous (numbers), able to be filtered (aka filterable),
     and able to be used as a series (aka seriesable). NA values are filled based on the type of column,
     and the dataframe and columns are returned.
 
     Args:
-        data_source (string): Path to csv file.
+        data_source (string): Path to csv file or directory containing csv files with the same column structure
 
     Returns:
-        df_source (pandas dataframe): A dataframe of the csv source, with filled NA values.
+        df_source (pandas dataframe): A dataframe of the source, with filled NA values.
         cols (dict): Keys are categories of columns of df_source, and values are a list of columns of that category.
     '''
-    print('***Fetching csv...')
-    df_source = pd.read_csv(data_source, low_memory=False)
+
+    logger.info('***Fetching csv(s)...')
+    dfs = []
+    sources = data_source.split('|')
+    for src in sources:
+        src = src.strip()
+        if os.path.isdir(src):
+            #if this is a directory, get all csv within it, assuming they are structured the same way, and add a column for filename
+            for file in os.listdir(src):
+                if file.endswith(".csv"):
+                    filepath = os.path.join(src,file)
+                    df = pd.read_csv(filepath, low_memory=False)
+                    filename = os.path.splitext(file)[0]
+                    df['filename'] = filename
+                    dfs.append(df)
+        else:
+            #This is a csv file, or pd.read_csv will show error if it isn't
+            df = pd.read_csv(src, low_memory=False)
+            if len(sources) > 1:
+                filename = os.path.splitext(os.path.basename(src))[0]
+                df['filename'] = filename
+            dfs.append(df)
+    df_source = pd.concat(dfs,sort=False,ignore_index=True)
     cols = {}
     cols['all'] = df_source.columns.values.tolist()
     cols['discrete'] = [x for x in cols['all'] if df_source[x].dtype == object]
@@ -378,8 +436,53 @@ def get_df_csv(data_source):
     cols['seriesable'] = cols['filterable']
     df_source[cols['discrete']] = df_source[cols['discrete']].fillna('{BLANK}')
     df_source[cols['continuous']] = df_source[cols['continuous']].fillna(0)
-    print('***Done fetching csv.')
+    logger.info('***Done fetching csv(s).')
     return (df_source, cols)
+
+def get_wdg_csv():
+    '''
+    Create report widgets for csv file.
+
+    Returns:
+        topwdg (ordered dict): Dictionary of bokeh.model.widgets.
+    '''
+    topwdg = collections.OrderedDict()
+    topwdg['report_dropdown'] = bmw.Div(text='Build Report', css_classes=['report-dropdown'])
+    topwdg['report_custom'] = bmw.TextInput(title='Enter path to report file', value='', css_classes=['report-drop'], visible=False)
+    topwdg['report_debug'] = bmw.Select(title='Debug Mode', value='No', options=['Yes','No'], css_classes=['report-drop'], visible=False)
+    topwdg['report_build'] = bmw.Button(label='Build Report', button_type='success', css_classes=['report-drop'], visible=False)
+    topwdg['report_build_separate'] = bmw.Button(label='Build Separate Reports', button_type='success', css_classes=['report-drop'], visible=False)
+    topwdg['report_build'].on_click(build_report)
+    topwdg['report_build_separate'].on_click(build_report_separate)
+    return topwdg
+
+def build_report(html_num='one'):
+    '''
+    Build the chosen report.
+    Args:
+        html_num (string): 'multiple' if we are building separate html reports for each section, and 'one' for one html report with all sections.
+    '''
+    data_type = '"CSV"'
+    report_path = GL['widgets']['report_custom'].value
+    report_path = report_path.replace('"', '')
+    report_path = '"' + report_path + '"'
+    time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    output_dir = '"' + user_out_path + '/report-' + time + '"'
+    data_source = '"' + GL['widgets']['data'].value.replace('"', '') + '"'
+    if html_num == 'one':
+        auto_open = '"yes"'
+    else:
+        auto_open = '"no"'
+    start_str = 'start python'
+    if GL['widgets']['report_debug'].value == 'Yes':
+        start_str = 'start cmd /K python -m pdb '
+    sp.call(start_str + ' "' + this_dir_path + '/reports/interface_report.py" ' + data_type + ' ' + data_source + ' ' + report_path + ' "' + html_num + '" ' + output_dir + ' ' + auto_open, shell=True)
+
+def build_report_separate():
+    '''
+    Build the report with separate html files for each section of the report.
+    '''
+    build_report(html_num='multiple')
 
 def get_wdg_gdx(data_source):
     '''
@@ -409,7 +512,7 @@ def build_widgets(df_source, cols, init_load=False, init_config={}, wdg_defaults
         wdg (ordered dict): Dictionary of bokeh.model.widgets.
     '''
     #Add widgets
-    print('***Build main widgets...')
+    logger.info('***Build main widgets...')
 
     wdg = collections.OrderedDict()
     wdg['chart_type_dropdown'] = bmw.Div(text='Chart', css_classes=['chart-dropdown'])
@@ -419,17 +522,19 @@ def build_widgets(df_source, cols, init_load=False, init_config={}, wdg_defaults
     wdg['x'] = bmw.Select(title='X-Axis (required)', value='None', options=['None'] + cols['x-axis'], css_classes=['wdgkey-x', 'x-drop'], visible=False)
     wdg['x_group'] = bmw.Select(title='Group X-Axis By', value='None', options=['None'] + cols['seriesable'], css_classes=['wdgkey-x_group', 'x-drop'], visible=False)
     wdg['y_dropdown'] = bmw.Div(text='Y-Axis (required)', css_classes=['y-dropdown'])
-    wdg['y'] = bmw.Select(title='Y-Axis (required)', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y', 'y-drop'], visible=False)
-    wdg['y_agg'] = bmw.Select(title='Y-Axis Aggregation', value='Sum', options=AGGREGATIONS, css_classes=['wdgkey-y_agg', 'y-drop'], visible=False)
-    wdg['y_weight'] = bmw.Select(title='Weighting Factor', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y_weight', 'y-drop'], visible=False)
-    wdg['y_weight_denom'] = bmw.Select(title='Denominator Weighting Factor', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y_weight_denom', 'y-drop'], visible=False)
+    wdg['y'] = bmw.Select(title='a (required)', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y', 'y-drop'], visible=False)
+    wdg['y_b'] = bmw.Select(title='b (optional, no update)', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y_b', 'y-drop'], visible=False)
+    wdg['y_c'] = bmw.Select(title='c (optional, no update)', value='None', options=['None'] + cols['y-axis'], css_classes=['wdgkey-y_c', 'y-drop'], visible=False)
+    wdg['y_agg'] = bmw.Select(title='Y-Axis Aggregation', value='sum(a)', options=AGGREGATIONS, css_classes=['wdgkey-y_agg', 'y-drop'], visible=False)
     wdg['series_dropdown'] = bmw.Div(text='Series', css_classes=['series-dropdown'])
     wdg['series'] = bmw.Select(title='Separate Series By', value='None', options=['None'] + cols['seriesable'],
         css_classes=['wdgkey-series', 'series-drop'], visible=False)
+    wdg['series_limit'] = bmw.TextInput(title='Number of series to show', value='All', css_classes=['wdgkey-series', 'series-drop'], visible=False)
     wdg['explode_dropdown'] = bmw.Div(text='Explode', css_classes=['explode-dropdown'])
     wdg['explode'] = bmw.Select(title='Explode By', value='None', options=['None'] + cols['seriesable'], css_classes=['wdgkey-explode', 'explode-drop'], visible=False)
     wdg['explode_group'] = bmw.Select(title='Group Exploded Charts By', value='None', options=['None'] + cols['seriesable'],
         css_classes=['wdgkey-explode_group', 'explode-drop'], visible=False)
+    wdg['explode_grid'] = bmw.Select(title='Make Grid Plot', value='No', options=['Yes','No'], css_classes=['wdgkey-explode_grid', 'explode-drop'], visible=False)
     wdg['adv_dropdown'] = bmw.Div(text='Operations', css_classes=['adv-dropdown'])
     wdg['adv_op'] = bmw.Select(title='First Operation', value='None', options=['None', 'Difference', 'Ratio'], css_classes=['wdgkey-adv_op', 'adv-drop'], visible=False)
     wdg['adv_col'] = bmw.Select(title='Operate Across', value='None', options=['None'] + cols['all'], css_classes=['wdgkey-adv_col', 'adv-drop'], visible=False)
@@ -437,6 +542,9 @@ def build_widgets(df_source, cols, init_load=False, init_config={}, wdg_defaults
     wdg['adv_op2'] = bmw.Select(title='Second Operation', value='None', options=['None', 'Difference', 'Ratio'], css_classes=['wdgkey-adv_op', 'adv-drop'], visible=False)
     wdg['adv_col2'] = bmw.Select(title='Operate Across', value='None', options=['None'] + cols['all'], css_classes=['wdgkey-adv_col', 'adv-drop'], visible=False)
     wdg['adv_col_base2'] = bmw.Select(title='Base', value='None', options=['None'], css_classes=['wdgkey-adv_col_base', 'adv-drop'], visible=False)
+    wdg['adv_op3'] = bmw.Select(title='Third Operation', value='None', options=['None', 'Difference', 'Ratio'], css_classes=['wdgkey-adv_op', 'adv-drop'], visible=False)
+    wdg['adv_col3'] = bmw.Select(title='Operate Across', value='None', options=['None'] + cols['all'], css_classes=['wdgkey-adv_col', 'adv-drop'], visible=False)
+    wdg['adv_col_base3'] = bmw.Select(title='Base', value='None', options=['None'], css_classes=['wdgkey-adv_col_base', 'adv-drop'], visible=False)
     wdg['filters'] = bmw.Div(text='Filters', css_classes=['filters-dropdown'])
     wdg['filters_update'] = bmw.Button(label='Update Filters', button_type='success', css_classes=['filters-update'], visible=False)
     for j, col in enumerate(cols['filterable']):
@@ -479,11 +587,13 @@ def build_widgets(df_source, cols, init_load=False, init_config={}, wdg_defaults
     wdg['circle_size'] = bmw.TextInput(title='Circle Size (Dot Only)', value=str(CIRCLE_SIZE), css_classes=['wdgkey-circle_size', 'adjust-drop'], visible=False)
     wdg['bar_width'] = bmw.TextInput(title='Bar Width (Bar Only)', value=str(BAR_WIDTH), css_classes=['wdgkey-bar_width', 'adjust-drop'], visible=False)
     wdg['bar_width_desc'] = bmw.Div(text='<strong>Flags</strong> <em>w</em>: use csv file for widths, <em>c</em>: convert x axis to quantitative based on widths in csv file', css_classes=['adjust-drop', 'description'], visible=False)
+    wdg['sort_data'] = bmw.Select(title='Sort Data', value='Yes', options=['Yes', 'No'], css_classes=['wdgkey-sort_data', 'adjust-drop'], visible=False)
     wdg['cum_sort'] = bmw.Select(title='Cumulative Sort', value='None', options=['None', 'Ascending', 'Descending'], css_classes=['wdgkey-cum_sort','adjust-drop'], visible=False)
     wdg['line_width'] = bmw.TextInput(title='Line Width (Line Only)', value=str(LINE_WIDTH), css_classes=['wdgkey-line_width', 'adjust-drop'], visible=False)
     wdg['range_show_glyphs'] = bmw.Select(title='Show Line/Dot (Range Only)', value='Yes', options=['Yes','No'], css_classes=['wdgkey-range_show_glyphs', 'adjust-drop'], visible=False)
     wdg['net_levels'] = bmw.Select(title='Add Net Levels to Stacked', value='Yes', options=['Yes','No'], css_classes=['wdgkey-net_levels', 'adjust-drop'], visible=False)
     wdg['bokeh_tools'] = bmw.Select(title='Show Bokeh Tools', value='Yes', options=['Yes','No'], css_classes=['wdgkey-bokeh_tools', 'adjust-drop'], visible=False)
+    wdg['custom_styles'] = bmw.TextInput(title='Custom Styles CSV', value='', css_classes=['wdgkey-custom_styles', 'adjust-drop'], visible=False)
     wdg['map_adjustments'] = bmw.Div(text='Map Adjustments', css_classes=['map-dropdown'])
     wdg['map_bin'] = bmw.Select(title='Bin Type', value='Auto Equal Num', options=['Auto Equal Num', 'Auto Equal Width', 'Manual'], css_classes=['wdgkey-map_bin', 'map-drop'], visible=False)
     wdg['map_num'] = bmw.TextInput(title='# of bins (Auto Only)', value=str(MAP_NUM_BINS), css_classes=['wdgkey-map_num', 'map-drop'], visible=False)
@@ -540,11 +650,13 @@ def build_widgets(df_source, cols, init_load=False, init_config={}, wdg_defaults
     wdg['download_source'].on_click(download_source)
     wdg['adv_col'].on_change('value', update_adv_col)
     wdg['adv_col2'].on_change('value', update_adv_col2)
+    wdg['adv_col3'].on_change('value', update_adv_col3)
+    wdg['custom_styles'].on_change('value', update_custom_styles)
     for name in WDG_COL:
         wdg[name].on_change('value', update_wdg_col)
     for name in WDG_NON_COL:
         wdg[name].on_change('value', update_wdg)
-    print('***Done with main widgets.')
+    logger.info('***Done with main widgets.')
     return wdg
 
 def initialize_wdg(wdg, init_config):
@@ -595,7 +707,7 @@ def set_df_plots(df_source, cols, wdg, custom_sorts={}):
     Returns:
         df_plots (pandas dataframe): df_source after having been filtered, scaled, aggregated, and sorted.
     '''
-    print('***Filtering, Scaling, Aggregating, Adv Operations, Sorting...')
+    logger.info('***Filtering, Scaling, Aggregating, Adv Operations, Sorting...')
     startTime = datetime.datetime.now()
     df_plots = df_source.copy()
 
@@ -611,6 +723,15 @@ def set_df_plots(df_source, cols, wdg, custom_sorts={}):
     if df_plots.empty:
         return df_plots
 
+    #Limit number of series if indicated
+    if wdg['series'].value != 'None' and wdg['series_limit'].value.isdigit():
+        df_top = df_plots[[wdg['series'].value, wdg['y'].value]].copy()
+        df_top[wdg['y'].value] = df_top[wdg['y'].value].abs()
+        df_top = df_top.groupby([wdg['series'].value], sort=False, as_index=False).sum()
+        df_top = df_top.sort_values(by=[wdg['y'].value], ascending=False)
+        top_series = df_top.head(int(wdg['series_limit'].value))[wdg['series'].value].tolist()
+        df_plots.loc[~df_plots[wdg['series'].value].isin(top_series), wdg['series'].value] = 'Other'
+
     #Apply Aggregation
     if wdg['y'].value in cols['continuous'] and wdg['y_agg'].value != 'None':
         groupby_cols = [wdg['x'].value]
@@ -619,13 +740,7 @@ def set_df_plots(df_source, cols, wdg, custom_sorts={}):
         if wdg['explode'].value != 'None': groupby_cols = [wdg['explode'].value] + groupby_cols
         if wdg['explode_group'].value != 'None': groupby_cols = [wdg['explode_group'].value] + groupby_cols
         df_grouped = df_plots.groupby(groupby_cols, sort=False)
-        kwargs = {}
-        if wdg['y_agg'].value == 'Weighted Ave' and wdg['y_weight'].value in cols['continuous']:
-            kwargs['y_weight'] = wdg['y_weight'].value
-        elif wdg['y_agg'].value == 'Weighted Ave Ratio' and wdg['y_weight'].value in cols['continuous'] and wdg['y_weight_denom'].value in cols['continuous']:
-            kwargs['y_weight_numer'] = wdg['y_weight'].value
-            kwargs['y_weight_denom'] = wdg['y_weight_denom'].value
-        df_plots = df_grouped.apply(apply_aggregation, wdg['y_agg'].value, wdg['y'].value, wdg['range'].value, kwargs).reset_index()
+        df_plots = df_grouped.apply(apply_aggregation, wdg['y_agg'].value, wdg['y'].value, wdg['y_b'].value, wdg['y_c'].value, wdg['range'].value).reset_index()
         #The index of each group's dataframe is added as another column it seems. So we need to remove it:
         df_plots.drop(df_plots.columns[len(groupby_cols)], axis=1, inplace=True)
 
@@ -637,6 +752,7 @@ def set_df_plots(df_source, cols, wdg, custom_sorts={}):
     #Do Advanced Operations
     df_plots = do_op(df_plots, wdg, cols, '')
     df_plots = do_op(df_plots, wdg, cols, '2')
+    df_plots = do_op(df_plots, wdg, cols, '3')
 
     #For arrow maps, flip the x axis when there are negatives so that all values are positive in the correct direction.
     if wdg['chart_type'].value == 'Line Map' and wdg['map_arrows'].value == 'Yes':
@@ -676,35 +792,37 @@ def set_df_plots(df_source, cols, wdg, custom_sorts={}):
             df_plots = df_plots.merge(df_net_lev, how='left', on=net_group_cols, sort=False)
 
     #Sort Dataframe
-    sortby_cols = [wdg['x'].value]
-    if wdg['x_group'].value != 'None': sortby_cols = [wdg['x_group'].value] + sortby_cols
-    if wdg['series'].value != 'None': sortby_cols = [wdg['series'].value] + sortby_cols
-    if cum_sort_cond: sortby_cols = ['y_cumulative'] + sortby_cols
-    if wdg['explode'].value != 'None': sortby_cols = [wdg['explode'].value] + sortby_cols
-    if wdg['explode_group'].value != 'None': sortby_cols = [wdg['explode_group'].value] + sortby_cols
-    #Add custom sort columns
-    temp_sort_cols = sortby_cols[:]
-    for col in custom_sorts:
-        if col in sortby_cols:
-            df_plots[col + '__sort_col'] = df_plots[col].map(lambda x: custom_sorts[col].index(x))
-            temp_sort_cols[sortby_cols.index(col)] = col + '__sort_col'
-    #Do sorting
-    df_plots = df_plots.sort_values(temp_sort_cols).reset_index(drop=True)
-    #Remove custom sort columns
-    for col in custom_sorts:
-        if col in sortby_cols:
-            df_plots = df_plots.drop(col + '__sort_col', 1)
-    if cum_sort_cond:
-        df_plots = df_plots.drop('y_cumulative', 1)
-        sortby_cols.remove('y_cumulative')
+    sortby_cols = []
+    if wdg['sort_data'].value == 'Yes':
+        sortby_cols = [wdg['x'].value]
+        if wdg['x_group'].value != 'None': sortby_cols = [wdg['x_group'].value] + sortby_cols
+        if wdg['series'].value != 'None': sortby_cols = [wdg['series'].value] + sortby_cols
+        if cum_sort_cond: sortby_cols = ['y_cumulative'] + sortby_cols
+        if wdg['explode'].value != 'None': sortby_cols = [wdg['explode'].value] + sortby_cols
+        if wdg['explode_group'].value != 'None': sortby_cols = [wdg['explode_group'].value] + sortby_cols
+        #Add custom sort columns
+        temp_sort_cols = sortby_cols[:]
+        for col in custom_sorts:
+            if col in sortby_cols:
+                df_plots[col + '__sort_col'] = df_plots[col].map(lambda x: custom_sorts[col].index(x))
+                temp_sort_cols[sortby_cols.index(col)] = col + '__sort_col'
+        #Do sorting
+        df_plots = df_plots.sort_values(temp_sort_cols).reset_index(drop=True)
+        #Remove custom sort columns
+        for col in custom_sorts:
+            if col in sortby_cols:
+                df_plots = df_plots.drop(col + '__sort_col', 1)
+        if cum_sort_cond:
+            df_plots = df_plots.drop('y_cumulative', 1)
+            sortby_cols.remove('y_cumulative')
 
     #Rearrange column order for csv download
     sorted_cols = sortby_cols + [wdg['y'].value] + range_cols + net_level_col
     unsorted_columns = [col for col in df_plots.columns if col not in sorted_cols]
     df_plots = df_plots[unsorted_columns + sorted_cols]
-    print('***Done Filtering, Scaling, Aggregating, Adv Operations, Sorting: '+ str(datetime.datetime.now() - startTime))
+    logger.info('***Done Filtering, Scaling, Aggregating, Adv Operations, Sorting: '+ str(datetime.datetime.now() - startTime))
     if wdg['render_plots'].value == 'No':
-        print('***Ready for download!')
+        logger.info('***Ready for download!')
     return df_plots
 
 def do_op(df_plots, wdg, cols, sfx):
@@ -748,7 +866,7 @@ def create_figures(df_plots, wdg, cols, custom_colors):
     Returns:
         plot_list (list): List of bokeh.model.figures.
     '''
-    print('***Building Figures...')
+    logger.info('***Building Figures...')
     plot_list = []
     df_plots_cp = df_plots.copy()
     if wdg['explode'].value == 'None':
@@ -765,7 +883,10 @@ def create_figures(df_plots, wdg, cols, custom_colors):
                     df_exploded = df_exploded_group[df_exploded_group[wdg['explode'].value].isin([explode_val])].copy()
                     plot_list.append(create_figure(df_exploded, df_plots, wdg, cols, custom_colors, explode_val, explode_group))
     set_axis_bounds(df_plots, plot_list, wdg, cols)
-    print('***Done Building Figures.')
+    if wdg['explode_grid'].value == 'Yes':
+        ncols = len(df_plots_cp[wdg['explode'].value].unique())
+        plot_list = [bl.gridplot(plot_list, ncols=ncols)]
+    logger.info('***Done Building Figures.')
     return plot_list
 
 def set_axis_bounds(df, plots, wdg, cols):
@@ -1108,17 +1229,17 @@ def create_maps(df, wdg, cols):
         maps (list of bokeh.plotting.figure): These maps are created by the create_map function.
         breakpoints (list of float): Breakpoints that separate the color-shaded bins.
     '''
-    print('***Building Maps...')
+    logger.info('***Building Maps...')
     maps = []
     breakpoints = []
     x_axis = df.iloc[:,-2]
     y_axis = df.iloc[:,-1]
     if y_axis.dtype == object:
-        print('***Error, your y-axis is a string.')
+        logger.info('***Error, your y-axis is a string.')
         return (maps, breakpoints) #empty list
     if wdg['chart_type'].value == 'Area Map':
         if not os.path.isfile(this_dir_path + '/in/gis_' + x_axis.name + '.csv'):
-            print('***Error. X-axis is not a supported region type for area maps.')
+            logger.info('***Error. X-axis is not a supported region type for area maps.')
             return (maps, breakpoints) #empty list
         map_type = 'area'
         reg_name = x_axis.name
@@ -1127,7 +1248,7 @@ def create_maps(df, wdg, cols):
     elif wdg['chart_type'].value == 'Line Map':
         reg_arr = x_axis.name.split('-')
         if not (len(reg_arr) == 2 and reg_arr[0] == reg_arr[1] and os.path.isfile(this_dir_path + '/in/gis_' + reg_arr[0] + '.csv') and os.path.isfile(this_dir_path + '/in/gis_centroid_' + reg_arr[0] + '.csv')):
-            print('***Error. X-axis is not supported for line maps.')
+            logger.info('***Error. X-axis is not supported for line maps.')
             return (maps, breakpoints) #empty list
         reg_name = reg_arr[0]
         map_type = 'line'
@@ -1194,7 +1315,7 @@ def create_maps(df, wdg, cols):
     #If there are only 3 columns (x_axis, y_axis, and bin_index), that means we aren't exploding:
     if len(df_maps.columns) == 3:
         maps.append(create_map(map_type, df_maps, ranges, region_boundaries, centroids, wdg, colors_full))
-        print('***Done building map.')
+        logger.info('***Done building map.')
         return (maps, breakpoints) #single map
     #Otherwise we are exploding.
     #find all unique groups of the explode columns.
@@ -1215,7 +1336,7 @@ def create_maps(df, wdg, cols):
         #remove final comma of title
         title = title[:-2]
         maps.append(create_map(map_type, df_map, ranges, region_boundaries, centroids, wdg, colors_full, title))
-    print('***Done building maps.')
+    logger.info('***Done building maps.')
     return (maps, breakpoints) #multiple maps
 
 def create_map(map_type, df, ranges, region_boundaries, centroids, wdg, colors_full, title=''):
@@ -1447,19 +1568,20 @@ def get_palette(palette, num):
             pal[1] = [pal[3][0]]
         return list(reversed(pal[num]))
 
-def build_plot_legend(df_plots, series_val, custom_sorts, custom_colors):
+def build_plot_legend(df_plots, wdg, custom_sorts, custom_colors):
     '''
     Return html for series legend, based on values of column that was chosen for series, and global COLORS.
 
     Args:
         df_plots (pandas dataframe): Dataframe of all plots data.
-        series_val (string): Header for column chosen as series.
+        wdg (ordered dict): Dictionary of bokeh model widgets.
         custom_sorts (dict): Keys are column names. Values are lists of values in the desired sort order.
         custom_colors (dict): Keys are column names. Values are dicts that map column values to colors (hex strings)
 
     Returns:
         legend_string (string): html to be used as legend.
     '''
+    series_val = wdg['series'].value
     if series_val == 'None':
         return ''
     labels = df_plots[series_val].unique().tolist()
@@ -1469,7 +1591,7 @@ def build_plot_legend(df_plots, series_val, custom_sorts, custom_colors):
              if lab in custom_colors[series_val]:
                  colors[i] = custom_colors[series_val][lab]
     #resort to abide by series custom ordering. This may have been disrupted by x-axis bar height sorting or explode sorting.
-    if custom_sorts and series_val in custom_sorts:
+    if wdg['sort_data'].value == 'Yes' and custom_sorts and series_val in custom_sorts:
         label_color = dict(zip(labels, colors))
         labels_1 = [l for l in custom_sorts[series_val] if l in labels]
         labels_2 = [l for l in labels if l not in labels_1]
@@ -1528,42 +1650,47 @@ def display_config(wdg, wdg_defaults):
                 output += '<div class="config-display-item"><span class="config-display-key">' + label + ': </span>' + item_string + '</div>'
     return output
 
-def apply_aggregation(group, agg_method, y_col, wdg_range, kw):
+def apply_aggregation(group, agg_method, y_a, y_b, y_c, wdg_range):
     """
     Helper function for pandas dataframe groupby object with apply function.
 
     Args:
-        agg_method (string): The aggregation method to apply
-        group (pandas dataframe): This has columns required for weighted average
-        y_col (string): Name of the column for which an aggregation is calculated
-        chart_type (string): The type of chart to be built. If this is a Range chart, then we need to add the range_min and range_max data.
-        kw (dict): Keyword arguments
-            y_weight (string): Name of column that will be used as weighting factor for Weighted Ave
-            y_weight_numer (string): Name of column that will be used as weighting factor for numerator of Weighted Ave Ratio
-            y_weight_denom (string): Name of column that will be used as weighting factor for denominator of Weighted Ave Ratio
+        group (pandas dataframe): This has the data required for aggregations.
+        agg_method (string): The aggregation method to apply.
+        y_a (string): Name of the primary (a) column for which an aggregation is calculated.
+        y_b (string): Name of column used for b factor in aggregation method.
+        y_c (string): Name of column used for c factor in aggregation method.
+        wdg_range (string): If within-series ranges are to be added, this will be 'Within Series'.
     Returns:
-        weighted average (float): The weighted average using the two specified columns
+        (dataframe): The returned aggregation result, including series min and max if within-series range is to be added.
     """
-    d = group[y_col]
+    a = group[y_a]
     agg_result = None
     try:
-        if agg_method == 'Sum':
-            agg_result = d.sum()
-        elif agg_method == 'Ave':
-            agg_result = d.mean()
-        elif agg_method == 'Weighted Ave' and 'y_weight' in kw:
-            w = group[kw['y_weight']]
-            agg_result = (d * w).sum() / w.sum()
-        elif agg_method == 'Weighted Ave Ratio' and 'y_weight_numer' in kw and 'y_weight_denom' in kw:
-            wn = group[kw['y_weight_numer']]
-            wd = group[kw['y_weight_denom']]
-            agg_result = ((d * wn).sum() / wn.sum())/((d * wd).sum() / wd.sum())
+        if agg_method == 'sum(a)':
+            agg_result = a.sum()
+        elif agg_method == 'ave(a)':
+            agg_result = a.mean()
+        elif agg_method == 'sum(a)/sum(b)':
+            b = group[y_b]
+            agg_result = a.sum() / b.sum()
+        elif agg_method == 'sum(a*b)/sum(b)':
+            b = group[y_b]
+            agg_result = (a * b).sum() / b.sum()
+        elif agg_method == 'sum(a*b)/sum(c)':
+            b = group[y_b]
+            c = group[y_c]
+            agg_result = (a * b).sum() / c.sum()
+        elif agg_method == '[sum(a*b)/sum(b)]/[sum(a*c)/sum(c)]':
+            b = group[y_b]
+            c = group[y_c]
+            agg_result = ((a * b).sum() / b.sum())/((a * c).sum() / c.sum())
     except ZeroDivisionError:
-        return pd.DataFrame({y_col: [None]})
+        return pd.DataFrame({y_a: [None]})
     if wdg_range == 'Within Series':
-        return pd.DataFrame({y_col: [agg_result], 'range_min': [d.min()], 'range_max': [d.max()]})
+        return pd.DataFrame({y_a: [agg_result], 'range_min': [a.min()], 'range_max': [a.max()]})
     else:
-        return pd.DataFrame({y_col: [agg_result]})
+        return pd.DataFrame({y_a: [agg_result]})
 
 def op_with_base(group, op, col, col_base, y_val):
     """
@@ -1643,8 +1770,8 @@ def update_data_source(init_load=False, init_config={}):
         Nothing: All plots are cleared, and widgets are set to accept further configuration.
     '''
     GL['widgets'] = GL['data_source_wdg'].copy()
-    GL['custom_sorts'] = {}
-    GL['custom_colors'] = {}
+    GL['custom_sorts'] = DEFAULT_CUSTOM_SORTS
+    GL['custom_colors'] = DEFAULT_CUSTOM_COLORS
     reset_wdg_defaults()
     data_type = GL['data_source_wdg']['data_type'].value
     path = GL['data_source_wdg']['data'].value
@@ -1652,6 +1779,7 @@ def update_data_source(init_load=False, init_config={}):
     if path == '':
         pass
     elif data_type == 'CSV':
+        GL['widgets'].update(get_wdg_csv())
         GL['df_source'], GL['columns'] = get_df_csv(path)
         GL['widgets'].update(build_widgets(GL['df_source'], GL['columns'], init_load, init_config, wdg_defaults=GL['wdg_defaults']))
     elif data_type == 'GDX':
@@ -1683,6 +1811,9 @@ def update_adv_col(attr, old, new):
 def update_adv_col2(attr, old, new):
     update_adv_col_common('2')
 
+def update_adv_col3(attr, old, new):
+    update_adv_col_common('3')
+
 def update_adv_col_common(sfx):
     '''
     When adv_col is set, find unique values of adv_col in dataframe, and set adv_col_base with those values.
@@ -1691,6 +1822,21 @@ def update_adv_col_common(sfx):
     df = GL['df_source']
     if wdg['adv_col' + sfx].value != 'None':
         wdg['adv_col_base' + sfx].options = ['None'] + ADV_BASES + [str(i) for i in sorted(df[wdg['adv_col' + sfx].value].unique().tolist())]
+
+def update_custom_styles(attr, old, new):
+    #Apply custom styling sheet if it exists
+    custom_style_path = GL['widgets']['custom_styles'].value.replace('"', '').strip()
+    if custom_style_path != '':
+        df_custom_styles = pd.read_csv(custom_style_path, low_memory=False)
+        cols = [c for c in df_custom_styles if not c.endswith('_custom_colors')]
+        for col in cols:
+            cleaned_vals = [v for v in df_custom_styles[col].tolist() if str(v) != 'nan']
+            GL['custom_sorts'][col] = cleaned_vals
+            if col + '_custom_colors' in df_custom_styles:
+                cleaned_colors = [v for v in df_custom_styles[col + '_custom_colors'].tolist() if str(v) != 'nan']
+                GL['custom_colors'][col] = dict(zip(cleaned_vals, cleaned_colors))
+    if GL['widgets']['auto_update'].value == 'Enable':
+        update_plots()
 
 def set_wdg_col_options():
     '''
@@ -1718,10 +1864,12 @@ def update_plots():
     '''
     #show widget config
     GL['widgets']['display_config'].text = display_config(GL['widgets'], GL['wdg_defaults'])
-    
+
+    #Exit if we haven't set both x and y
     if GL['widgets']['x'].value == 'None' or GL['widgets']['y'].value == 'None':
         GL['plots'].children = []
         return
+
     GL['df_plots'] = set_df_plots(GL['df_source'], GL['columns'], GL['widgets'], GL['custom_sorts'])
     if GL['widgets']['render_plots'].value == 'Yes':
         if GL['widgets']['chart_type'].value in ['Line Map','Area Map']:
@@ -1729,7 +1877,7 @@ def update_plots():
             legend_text = build_map_legend(GL['widgets'], breakpoints)
         else:
             figs = create_figures(GL['df_plots'], GL['widgets'], GL['columns'], GL['custom_colors'])
-            legend_text = build_plot_legend(GL['df_plots'], GL['widgets']['series'].value, GL['custom_sorts'], GL['custom_colors'])
+            legend_text = build_plot_legend(GL['df_plots'], GL['widgets'], GL['custom_sorts'], GL['custom_colors'])
         GL['widgets']['legend'].text = legend_text
         GL['plots'].children = figs
 
@@ -1815,13 +1963,13 @@ def download_csv(dir_path='', auto_open=True):
     Download a csv file of the currently viewed data to the downloads/ directory,
     with the current timestamp.
     '''
-    print('***Downloading View...')
+    logger.info('***Downloading View...')
     if dir_path == '':
         path = user_out_path + '/view-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.csv'
     else:
         path = dir_path + '/view.csv'
     GL['df_plots'].to_csv(path, index=False)
-    print('***Done downloading View to ' + path)
+    logger.info('***Done downloading View to ' + path)
     if auto_open:
         sp.Popen(os.path.abspath(path), shell=True)
 
@@ -1830,7 +1978,7 @@ def download_html(dir_path='', auto_open=True):
     Download html file of the currently viewed data to the downloads/ directory,
     with the current timestamp.
     '''
-    print('***Downloading View...')
+    logger.info('***Downloading View...')
     try:
         if dir_path == '':
             html_path = user_out_path + '/view-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.html'
@@ -1853,8 +2001,8 @@ def download_html(dir_path='', auto_open=True):
             sp.Popen(os.path.abspath(html_path), shell=True)
         GL['plots'].children = plots
     except Exception as e:
-        print('***Warning: ' + str(e))
-    print('***Done downloading View to ' + html_path)
+        logger.info('***Warning: ' + str(e))
+    logger.info('***Done downloading View to ' + html_path)
     update_plots()
 
 def download_all():
@@ -1874,12 +2022,12 @@ def download_source(dir_path='', auto_open=True):
     Download a csv file of the full data source to the downloads/ directory,
     with the current timestamp.
     '''
-    print('***Downloading full source...')
+    logger.info('***Downloading full source...')
     if dir_path == '':
         path = user_out_path + '/source-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.csv'
     else:
         path = dir_path + '/source.csv'
     GL['df_source'].to_csv(path, index=False)
-    print('***Done downloading full source to ' + path)
+    logger.info('***Done downloading full source to ' + path)
     if auto_open:
         sp.Popen(os.path.abspath(path), shell=True)

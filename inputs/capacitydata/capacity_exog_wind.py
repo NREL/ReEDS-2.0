@@ -14,7 +14,6 @@ import argparse
 parser = argparse.ArgumentParser(description="""This file bins prescribed wind by TRG""")
 
 parser.add_argument("reeds_dir", help="ReEDS directory")
-parser.add_argument("curves", help="csv file with supply curve information")
 parser.add_argument("existing", help="gdx file with existing capacity")
 parser.add_argument("retires", help="gdx file with prescribed reitrements")
 parser.add_argument("outdir", help="output directory")
@@ -33,14 +32,10 @@ elif args.unitdata == 'EIA-NEMS':
     # existing_capacity_file = 'ExistingUnits_EIA-NEMS.gdx'
     prescribed_retire_file = args.retires
     # prescribed_retire_file = 'PrescriptiveRetirements_EIA-NEMS.gdx'
-    curves = args.curves
-    # curves = 2018
     outdir = args.outdir
     # outdir = os.path.join('C:/Git','reeds-2.0','runs','test_ref_seq','inputs_case')
 
-    supply_curve_file = 'wind_supply_curves_capacity_{}.csv'.format(str(curves))
-
-    raw_curves = pd.read_csv(os.path.join('inputs','supplycurvedata',supply_curve_file))
+    raw_curves = pd.read_csv(os.path.join(outdir,'wind_supply_curves_capacity.csv'))
     raw_curves.columns = ['resource_region','class','tech','bin1','bin2','bin3','bin4','bin5']
 
     existing_capacity = gdxpds.to_dataframes(os.path.join('inputs','capacitydata',existing_capacity_file))
@@ -131,7 +126,7 @@ elif args.unitdata == 'EIA-NEMS':
                 else:
                     total_installed = yearly_installed[year]
                     c = 0
-                    while cum_installed < total_installed:
+                    while round(cum_installed, 8) < round(total_installed, 8):
                         trg = wind_ons[c]
                         if trg not in temp.index:
                             c += 1
@@ -157,12 +152,15 @@ elif args.unitdata == 'EIA-NEMS':
             temp.loc[:,'resource_region'] = i
             wind_onshore = pd.concat([wind_onshore,temp],sort=False).reset_index(drop=True)
 
-    hierarchy = pd.read_csv(os.path.join('inputs','variability','hierarchy.csv'))
-    hierarchy = hierarchy[['rs','r']].drop_duplicates().reset_index(drop=True)
-    hierarchy.columns = ['resource_region','ba']
+    rsmap = pd.read_csv(os.path.join('inputs','rsmap.csv'))
+    rsmap = rsmap[['rs','r']].drop_duplicates().reset_index(drop=True)
+    rsmap.columns = ['resource_region','ba']
+    for i in range(0,len(rsmap)):
+        rsmap.loc[i,'resource_region'] = rsmap.loc[i,'resource_region'].split('s')[1]
+    rsmap.loc[:,'resource_region'] = rsmap.loc[:,'resource_region'].astype(int)
 
     wind_onshore.loc[:,'resource_region'] = pd.to_numeric(wind_onshore.loc[:,'resource_region'])
-    wind_onshore = pd.merge(left=wind_onshore, right=hierarchy, on='resource_region', how='left')
+    wind_onshore = pd.merge(left=wind_onshore, right=rsmap, on='resource_region', how='left')
 
     wind_onshore.loc[:,'class'] = 'init-1'
     wind_onshore.loc[:,'resource_region'] = 's' + wind_onshore.loc[:,'resource_region'].astype(str)

@@ -21,64 +21,49 @@ $ifthene.tcheck %cur_year%>2010
 *indicate we're loading data
 tload("%cur_year%") = yes ;
 
-*file written by d4_Translate_Variability.R
-$gdxin outputs%ds%variabilityFiles%ds%curt_out_%case%_%cur_year%.gdx
-$loadr surpold_ = surpold
-$loadr curt_mingen_load = MRsurplusmarginal
-$loadr surpmarg_ = surplusmarginal
-*end loading of data from curt script
+*file written by ReEDS_Augur.py
+$gdxin ReEDS_Augur%ds%augur_data%ds%ReEDS_augur_%case%_%cur_year%.gdx
+$loadr curt_old_load = curt_old
+$loadr curt_mingen_load = curt_mingen
+$loadr curt_marg_load = curt_marg
+$loadr cc_old_load = cc_old
+$loadr cc_mar_load = cc_mar
+$loadr sdbin_size_load = sdbin_size
+$loadr curt_stor_load = curt_stor
+$loadr curt_tran_load = curt_tran
+$loadr curt_reduct_tran_max_load = curt_reduct_tran_max
+$loadr storage_in_min_load = storage_in_min
+$loadr hourly_arbitrage_value_load = hourly_arbitrage_value
 $gdxin
 
-surpold(r,h,t)$tload(t) = surpold_(r,h,t) ;
+*Note: these values are rounded before they are written to the gdx file, so no need to round them here
+curt_old(r,h,t)$tload(t) = curt_old_load(r,h,t) ;
 curt_mingen(r,h,t)$tload(t) = curt_mingen_load(r,h,t) ;
-
-*file written by ReEDS_capacity_credit.py
-$gdxin outputs%ds%variabilityFiles%ds%cc_out_%case%_%cur_year%.gdx
-$loadr cc_old_load = season_all_cc
-$loadr cc_mar_load = season_all_cc_mar
-$gdxin
-
-m_cc_mar(i,r,szn,t)$[tload(t)$(vre(i) or storage(i))] = cc_mar_load(i,r,szn,t) ;
-cc_old(i,r,szn,t)$[tload(t)$(vre(i) or storage(i))] = cc_old_load(i,r,szn,t) ;
-
-
-*compute the average curtailment rate of the surplus from old capacity
-*divided by the total amount of old generation (note use of tprev here with the sequential solve)
-oldVREgen(r,h,t)$[tload(t)$rfeas(r)] = sum{(i,v,rr,tt)$[cap_agg(r,rr)$tprev(t,tt)
-                                                       $(wind(i) or pv(i) or csp_nostorage(i))$valcap(i,v,rr,tt)],
-                                           m_cf(i,v,rr,h,t) * CAP.l(i,v,rr,tt) } ;
-
-
-
-curt_old(r,h,t)$[tload(t)$rfeas(r)$oldVREgen(r,h,t)] =
-                                surpold_(r,h,t) / oldVREgen(r,h,t)
-;
-
-curt_marg(i,rb,h,t)$[tload(t)$rfeas(rb)] = surpmarg_(i,rb,"sk",h,t) ;
-curt_marg(i,rs,h,t)$[tload(t)$(rfeas_cap(rs)$(not sameas(rs,"sk")))] = sum{r$r_rs(r,rs), surpmarg_(i,r,rs,h,t) } ;
+curt_marg(i,r,h,t)$tload(t) = curt_marg_load(i,r,h,t) ;
+cc_old(i,r,szn,t)$[tload(t)$(vre(i) or csp_storage(i))] = cc_old_load(i,r,szn,t) ;
+m_cc_mar(i,r,szn,t)$[tload(t)$(vre(i) or csp_storage(i))] = cc_mar_load(i,r,szn,t) ;
+sdbin_size(ccreg,szn,sdbin,t)$tload(t) = sdbin_size_load(ccreg,szn,sdbin,t) ;
+curt_stor(i,v,r,h,src,t)$[tload(t)$valcap(i,v,r,t)$storage_no_csp(i)] = curt_stor_load(i,v,r,h,src,t) ;
+curt_tran(r,rr,h,t)$[tload(t)$(sum{trtype, routes(r,rr,trtype,t) } or sum{trtype, routes(rr,r,trtype,t) })] = curt_tran_load(r,rr,h,t) ;
+curt_reduct_tran_max(r,rr,h,t)$[tload(t)$(sum{trtype, routes(r,rr,trtype,t) } or sum{trtype, routes(rr,r,trtype,t) })] = curt_reduct_tran_max_load(r,rr,h,t) ;
+storage_in_min(r,h,t)$[tload(t)$sum{(i,v)$storage_no_csp(i),valcap(i,v,r,t)}] = storage_in_min_load(r,h,t) ;
+hourly_arbitrage_value(i,r,t)$[tload(t)$sum{v, valcap(i,v,r,t) }$storage_no_csp(i)] = hourly_arbitrage_value_load(i,r,t) ;
 
 *curt_int is only used in the intertemporal solve, so ensure it is set to zero
 curt_int(i,r,h,t) = 0 ;
 
-execute_unload 'outputs%ds%variabilityFiles%ds%cc_curt_%case%_%cur_year%.gdx' oldVREgen, curt_old, cc_mar, cc_old ;
-
-
-curt_old(r,h,t)$[curt_old(r,h,t) > 1] = 1 ;
-curt_marg(i,r,h,t)$[curt_marg(i,r,h,t) > 1] = 1 ;
-
-*Remove very small numbers to make it easier for the solver
-curt_old(r,h,t)$[curt_old(r,h,t) < 0.001] = 0 ;
-curt_marg(i,r,h,t)$[curt_marg(i,r,h,t) < 0.001] = 0 ;
-curt_mingen(r,h,t)$[curt_mingen(r,h,t) < 0.001] = 0 ;
-
 $endif.tcheck
-*$ontext
+
 
 tmodel(t) = no ;
 tmodel("%cur_year%") = yes ;
 solve %case% minimizing z using lp ;
 tfix("%cur_year%") = yes ;
 $include d2_varfix.gms
-*$offtext
+$include d3_augur_data_dump.gms
 
-
+*getting mingen level after accounting for retirements
+*this is included after the solve statement because retire_exog is in d3_augur_data_dump
+cap_fraction(i,v,r,t)$[valcap(i,v,r,t)$sum{tt$tprev(t,tt), CAP.l(i,v,r,tt) }$tload(t)$sum{h, minloadfrac(r,i,h) }] = (retire_exog(i,v,r,t) + ret_lifetime(i,v,r,t)) / sum{tt$tprev(t,tt), CAP.l(i,v,r,tt) } ;
+mingen_postret(r,szn,t)$[sum{tt$tprev(t,tt), MINGEN.l(r,szn,tt) }$tload(t)] = sum{tt$tprev(t,tt), MINGEN.l(r,szn,tt) }
+                                          - sum{(i,v)$[sum{tt$tprev(t,tt), valgen(i,v,r,tt) }], cap_fraction(i,v,r,t) * smax{h$h_szn(h,szn), sum{tt$tprev(t,tt), GEN.l(i,v,r,h,tt) }  * minloadfrac(r,i,h) } } ;

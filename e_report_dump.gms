@@ -4,7 +4,7 @@ $ifthen.unix %system.filesys% == UNIX
 $setglobal ds /
 $endif.unix
 
-$set gmszip "%gams.sysdir%\gmszip"
+$set gmszip "%gams.sysdir%%ds%gmszip"
 
 * Set path for where the output files will be stored
 $setglobal outputsPath 'outputs%ds%'
@@ -28,7 +28,10 @@ $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=cap_new_cc > %outputsPath%
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=cap_new_icrt > %outputsPath%cap_new_icrt.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=cap_new_out > %outputsPath%cap_new_out.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=cap_out > %outputsPath%cap.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=cap_sdbin_out > %outputsPath%cap_sdbin_out.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=capex_ivrt > %outputsPath%capex_ivrt.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=cc_new > %outputsPath%cc_new.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=cost_cap > %outputsPath%cost_cap.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=cost_scale > %outputsPath%cost_scale.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=curt_all_ann > %outputsPath%curt_all_ann.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=curt_new > %outputsPath%curt_new.csv'
@@ -39,6 +42,8 @@ $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=curt_tot_iter > %outputsPa
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=emit_nat > %outputsPath%emit_nat.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=emit_r > %outputsPath%emit_r.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=error_check > %outputsPath%error_check.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=expenditure_flow > %outputsPath%expenditure_flow.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=expenditure_flow_rps > %outputsPath%expenditure_flow_rps.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=gen_icrt > %outputsPath%gen_icrt.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=gen_icrt_uncurt > %outputsPath%gen_icrt_uncurt.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=gen_iter > %outputsPath%gen_iter.csv'
@@ -48,7 +53,6 @@ $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=gen_out_ann > %outputsPath
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=invtran_out > %outputsPath%invtran_out.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=lcoe > %outputsPath%lcoe.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=lcoe_cf_act > %outputsPath%lcoe_cf_act.csv'
-$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=lcoe_fullpol > %outputsPath%lcoe_fullpol.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=lcoe_nopol > %outputsPath%lcoe_nopol.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=load_rt > %outputsPath%load_rt.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=losses_ann > %outputsPath%losses_ann.csv'
@@ -57,10 +61,12 @@ $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=m_capacity_exog > %outputs
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=objfn_raw > %outputsPath%objfn_raw.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=opRes_supply > %outputsPath%opRes_supply.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=opRes_supply_h > %outputsPath%opRes_supply_h.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=prm > %outputsPath%prm.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=pvf_capital > %outputsPath%pvf_capital.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=pvf_onm > %outputsPath%pvf_onm.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=raw_inv_cost > %outputsPath%raw_inv_cost.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=raw_op_cost > %outputsPath%raw_op_cost.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=RecTech > %outputsPath%RecTech.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=reduced_cost > %outputsPath%reduced_cost.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=repbioprice > %outputsPath%repbioprice.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=repgasprice > %outputsPath%repgasprice.csv'
@@ -73,12 +79,30 @@ $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=reqt_price > %outputsPath%
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=reqt_quant > %outputsPath%reqt_quant.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=ret_ann_out > %outputsPath%ret_ann.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=ret_out > %outputsPath%ret_out.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=sdbin_size > %outputsPath%sdbin_size.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=stor_inout > %outputsPath%stor_inout.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=systemcost > %outputsPath%systemcost.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=systemcost_bulk > %outputsPath%systemcost_bulk.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=systemcost_bulk_ew > %outputsPath%systemcost_bulk_ew.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=tax_expenditure_itc > %outputsPath%tax_expenditure_itc.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=tax_expenditure_ptc > %outputsPath%tax_expenditure_ptc.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=systemcost_ba > %outputsPath%systemcost_ba.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=systemcost_ba_bulk > %outputsPath%systemcost_ba_bulk.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=systemcost_ba_bulk_ew > %outputsPath%systemcost_ba_bulk_ew.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=captrade > %outputsPath%captrade.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=powerfrac_downstream > %outputsPath%powerfrac_downstream.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=powerfrac_upstream > %outputsPath%powerfrac_upstream.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=tran_mi_out > %outputsPath%tran_mi_out.csv'
 $call 'gdxdump %gdxFileName% format=csv epsout=0 symb=tran_out > %outputsPath%tran_out.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=water_withdrawal_ivrt > %outputsPath%water_withdrawal_ivrt.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=water_consumption_ivrt > %outputsPath%water_consumption_ivrt.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=watcap_ivrt > %outputsPath%watcap_ivrt.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=watcap_out > %outputsPath%watcap_out.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=watcap_new_ivrt > %outputsPath%watcap_new_ivrt.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=watcap_new_out > %outputsPath%watcap_new_out.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=watcap_new_ann_out > %outputsPath%watcap_new_ann_out.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=watret_out > %outputsPath%watret_out.csv'
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=watret_ann_out > %outputsPath%watret_ann_out.csv'
 
 *The following files are used in the ReEDS-to-PLEXOS data translation
 $call 'gdxdump %inFile% format=csv epsout=0 symb=cost_vom > inputs_case%ds%cost_vom.csv'
@@ -86,18 +110,5 @@ $call 'gdxdump %inFile% format=csv epsout=0 symb=emit_rate > inputs_case%ds%emit
 $call 'gdxdump %inFile% format=csv epsout=0 symb=fuel_price > inputs_case%ds%fuel_price.csv'
 $call 'gdxdump %inFile% format=csv epsout=0 symb=heat_rate > inputs_case%ds%heat_rate.csv'
 
-*Move variability files
-*###* Replace with updated output files
-$call 'gdxmerge outputs%ds%variabilityFiles%ds%*%fname%*.gdx'
-$call '"%gmszip%" %outputsPath%variabilityFiles%ds%variability.zip merged.gdx'
-$call 'rm outputs%ds%variabilityFiles%ds%*%fname%*.gdx'
-
-*Move other outputs gdx files
-$call 'gdxmerge outputs%ds%variabilityFiles%ds%*%fname%*.gdx'
-$call '"%gmszip%" %outputsPath%gdxFiles.zip merged.gdx'
-$call 'rm outputs%ds%variabilityFiles%ds%*%fname%*.gdx'
-
-*Generate HTML report of outputs:
-$setglobal bokehpivotreportdir '%gams.curdir%\..\..\bokehpivot\reports\'
-$call 'python %bokehpivotreportdir%interface_report.py "ReEDS 2.0" %gams.curdir% all No none %bokehpivotreportdir%templates\reeds2\standard_report_reduced.py one outputs\reeds-report-reduced no'
-$call 'python %bokehpivotreportdir%interface_report.py "ReEDS 2.0" %gams.curdir% all No none %bokehpivotreportdir%templates\reeds2\standard_report_expanded.py one outputs\reeds-report no'
+* This file is needed for the retail rate calculation - PRB
+$call 'gdxdump %gdxFileName% format=csv epsout=0 symb=rsc_dat > %outputsPath%rsc_dat.csv'

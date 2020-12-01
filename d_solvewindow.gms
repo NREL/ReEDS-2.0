@@ -26,27 +26,15 @@ tmodel(t) = no ;
 tmodel(t)$[tmodel_new(t)$(yeart(t)>=solvewindows("%window%","start"))
                      $(yeart(t)<=solvewindows("%window%","stop"))] = yes ;
 
+
 *reset tlast to the final modeled period for this window
 *then re-compute the financial multiplier for pv
-tlast(t) = no;
-tlast(t)$[ord(t)=smax(tt$tmodel(tt),ord(tt))] = yes;
+tlast(t) = no ;
+tlast(t)$[ord(t)=smax(tt$tmodel(tt),ord(tt))] = yes ;
 
-*reset the age residual fraction
-pv_age_residual_fraction(i,t) = 0;
-
-pv_age_residual_fraction(i,t)$[tmodel(t)$pv(i)] = max(0, maxage(i) - (sum(tt$tlast(tt),yeart(tt)) - yeart(t))) / maxage(i);
-
-*need to increase the financial multiplier for PV to account for the future capacity degradation 
-*should avoid hardcoding in the future -- for the intertemporal case, using a portion
-*of the degradation multiplier based on fraction of life beyond the solve period
-
-cost_cap_fin_mult(i,r,t)$[tmodel(t)$pv(i)] = 
-      round((1 + 0.052 * pv_age_residual_fraction(i,t)) * cost_cap_fin_mult(i,r,t), 4) ;
-
-cost_cap_fin_mult_noITC(i,r,t)$[tmodel(t)$pv(i)] = 
-      round((1 + 0.052 * pv_age_residual_fraction(i,t)) * cost_cap_fin_mult_noITC(i,r,t), 4) ;
-
-
+pvf_capital(t)$tmodel(t) = pvf_capital0(t);
+pvf_onm(t) = pvf_onm0(t);
+pvf_onm(t)$tlast(t) = round(pvf_capital0(t) / crf(t), 6);
 
 *if this isn't the first iteration
 $ifthene.notfirstiter %niter%>0
@@ -58,17 +46,33 @@ $ifthene.notfirstiter %niter%>0
 *indicate we're loading data
 tload(t)$tmodel(t) = yes ;
 
-$gdxin outputs%ds%variabilityFiles%ds%mergedcurt_%case%_%niter%_out.gdx
-$loadr curt_mingen_load = MRsurplusmarginal
-$loadr surpmarg_ = surplusmarginal
-$loadr surpold_=surpold
-*end loading of data from curt script
+$gdxin ReEDS_Augur%ds%augur_data%ds%ReEDS_augur_merged_%case%_%niter%.gdx
+$loadr loadset = merged_set_1
+$loadr curt_old_load2 = curt_old
+$loadr curt_mingen_load2 = curt_mingen
+$loadr curt_marg_load2 = curt_marg
+$loadr cc_old_load2 = cc_old
+$loadr cc_mar_load2 = cc_mar
+$loadr sdbin_size_load2 = sdbin_size
+$loadr curt_stor_load2 = curt_stor
+$loadr curt_tran_load2 = curt_tran
+$loadr curt_reduct_tran_max_load2 = curt_reduct_tran_max
+$loadr storage_in_min_load2 = storage_in_min
+$loadr hourly_arbitrage_value_load2 = hourly_arbitrage_value
 $gdxin
 
-$gdxin outputs%ds%variabilityFiles%ds%mergedcc_%case%_%niter%_out.gdx
-$loadr cc_old_load = season_all_cc
-$loadr m_cc_mar = marginalcc
-$gdxin
+*collapse the set that came from merging the gdx files
+curt_old_load(r,h,t) = sum{loadset, curt_old_load2(loadset,r,h,t) } ;
+curt_mingen_load(r,h,t) = sum{loadset, curt_mingen_load2(loadset,r,h,t) } ;
+curt_marg_load(i,r,h,t) = sum{loadset, curt_marg_load2(loadset,i,r,h,t) } ;
+cc_old_load(i,r,szn,t) = sum{loadset, cc_old_load2(loadset,i,r,szn,t) } ;
+cc_mar_load(i,r,szn,t) = sum{loadset, cc_mar_load2(loadset,i,r,szn,t) } ;
+sdbin_size_load(ccreg,szn,sdbin,t) = sum{loadset, sdbin_size_load2(loadset,ccreg,szn,sdbin,t) } ;
+curt_stor_load(i,v,r,h,src,t) = sum{loadset, curt_stor_load2(loadset,i,v,r,h,src,t) } ;
+curt_tran_load(r,rr,h,t) = sum{loadset, curt_tran_load2(loadset,r,rr,h,t) } ;
+curt_reduct_tran_max_load(r,rr,h,t) = sum{loadset, curt_reduct_tran_max_load2(loadset,r,rr,h,t) } ;
+storage_in_min_load(r,h,t) = sum{loadset, storage_in_min_load2(loadset,r,h,t) } ;
+hourly_arbitrage_value_load(i,r,t) = sum{loadset, hourly_arbitrage_value_load2(loadset,i,r,t) } ;
 
 *===========================
 * --- Begin Curtailment ---
@@ -88,21 +92,22 @@ oldVREgen(r,h,t)$(tload(t)$rfeas(r)) =
     sum{(i,v,rr)$[cap_agg(r,rr)$vre(i)$valcap(i,v,rr,t)],
           m_cf(i,v,rr,h,t) * CAP.l(i,v,rr,t)
        } ;
-oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) };
+
+oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) } ;
 
 *Sw_Int_Curt=0 means use average curtailment, and don't differentiate techs
 if(Sw_Int_Curt=0,
     curt_int(i,rr,h,t)$[tload(t)$valcap_irt(i,rr,t)$vre(i)$sum{r$cap_agg(r,rr), oldVREgen(r,h,t) + oldMINGEN(r,h,t) }] =
-        sum{r$cap_agg(r,rr), surpold_(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) } ;
+        sum{r$cap_agg(r,rr), curt_old_load(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) } ;
     curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
-        surpold_(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) ;
+        curt_old_load(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) ;
 ) ;
 
 *For the remaining options we initially use marginal values for curt_int
 if(Sw_Int_Curt=1 or Sw_Int_Curt=2 or Sw_Int_Curt=3,
-    curt_int(i,rb,h,t)$[tload(t)$vre(i)$valcap_irt(i,rb,t)] = surpmarg_(i,rb,"sk",h,t) ;
+    curt_int(i,rb,h,t)$[tload(t)$vre(i)$valcap_irt(i,rb,t)] = curt_marg_load(i,rb,"sk",h,t) ;
     curt_int(i,rs,h,t)$[tload(t)$vre(i)$(valcap_irt(i,rs,t)$(not sameas(rs,"sk")))] =
-        sum{r$r_rs(r,rs), surpmarg_(i,r,rs,h,t) } ;
+        sum{r$r_rs(r,rs), curt_marg_load(i,r,rs,h,t) } ;
     curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = curt_mingen_load(r,h,t) ;
     curt_totmarg(r,h,t)$tload(t) =
         sum{(i,v,rr)$[cap_agg(r,rr)$valcap(i,v,rr,t)$vre(i)],
@@ -114,10 +119,10 @@ if(Sw_Int_Curt=1 or Sw_Int_Curt=2 or Sw_Int_Curt=3,
 
 *Sw_Int_Curt=1 means use average curtailment, but differentiate techs.
 *We start with marginal values for curtailment, but then scale these such that
-*total curtailment is equal to surpold. Marginals are just used to differentiate based on technology.
+*total curtailment is equal to curt_old. Marginals are just used to differentiate based on technology.
 if(Sw_Int_Curt=1,
     curt_scale(r,h,t)$tload(t) = 1 ;
-    curt_scale(r,h,t)$curt_totmarg(r,h,t) = surpold_(r,h,t) / curt_totmarg(r,h,t) ;
+    curt_scale(r,h,t)$curt_totmarg(r,h,t) = curt_old_load(r,h,t) / curt_totmarg(r,h,t) ;
     curt_int(i,rr,h,t)$curt_int(i,rr,h,t) = curt_int(i,rr,h,t) * sum{r$cap_agg(r,rr),curt_scale(r,h,t) } ;
     curt_mingen_int(r,h,t)$curt_mingen_int(r,h,t) = curt_mingen_int(r,h,t) * curt_scale(r,h,t) ;
 ) ;
@@ -128,21 +133,21 @@ if(Sw_Int_Curt=2,
         sum{r$cap_agg(r,rr), curt_totmarg(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) } ;
     curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
         curt_totmarg(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) ;
-    curt_excess(r,h,t)$curt_totmarg(r,h,t) = surpold_(r,h,t) - curt_totmarg(r,h,t) ;
+    curt_excess(r,h,t)$curt_totmarg(r,h,t) = curt_old_load(r,h,t) - curt_totmarg(r,h,t) ;
 ) ;
 
 *Sw_Int_Curt=3 means use marginal curtailment, but leave techs differentiated
 if(Sw_Int_Curt=3,
-    curt_excess(r,h,t)$curt_totmarg(r,h,t) = surpold_(r,h,t) - curt_totmarg(r,h,t) ;
+    curt_excess(r,h,t)$curt_totmarg(r,h,t) = curt_old_load(r,h,t) - curt_totmarg(r,h,t) ;
 ) ;
 
 curt_int(i,r,h,t)$[curt_int(i,r,h,t) > 1] = 1 ;
 
-*curt_marg, curt_old, curt_mingen, and surpold are only used in the sequential solve, so ensure they are set to zero
+*curt_marg, curt_old, curt_mingen, and curt_old are only used in the sequential solve, so ensure they are set to zero
 curt_marg(i,r,h,t) = 0 ;
 curt_old(r,h,t) = 0 ;
 curt_mingen(r,h,t) = 0 ;
-surpold(r,h,t) = 0 ;
+curt_old(r,h,t) = 0 ;
 
 *===============================
 * --- Begin Capacity Credit ---
@@ -153,6 +158,20 @@ cc_int(i,v,r,szn,t) = 0 ;
 cc_totmarg(i,r,szn,t) = 0 ;
 cc_excess(i,r,szn,t) = 0 ;
 cc_scale(i,r,szn,t) = 0 ;
+sdbin_size(ccreg,szn,sdbin,t)$tload(t) = 0 ;
+curt_stor(i,v,r,h,src,t)$tload(t) = 0 ;
+curt_tran(r,rr,h,t) = 0 ;
+curt_reduct_tran_max(r,rr,h,t) = 0 ;
+storage_in_min(r,h,t)$tload(t) = 0 ;
+hourly_arbitrage_value(i,r,t)$tload(t) = 0 ;
+
+*Storage duration bin sizes by year
+sdbin_size(ccreg,szn,sdbin,t)$tload(t) = sdbin_size_load(ccreg,szn,sdbin,t) ;
+curt_stor(i,v,r,h,src,t)$[tload(t)$valcap(i,v,r,t)$storage_no_csp(i)] = curt_stor_load(i,v,r,h,src,t) ;
+curt_tran(r,rr,h,t)$[tload(t)$(sum{trtype, routes(r,rr,trtype,t) } or sum{trtype, routes(rr,r,trtype,t) })] = curt_tran_load(r,rr,h,t) ;
+curt_reduct_tran_max(r,rr,h,t)$[tload(t)$(sum{trtype, routes(r,rr,trtype,t) } or sum{trtype, routes(rr,r,trtype,t) })] = curt_reduct_tran_max_load(r,rr,h,t) ;
+storage_in_min(r,h,t)$[tload(t)$(sum{(i,v)$storage_no_csp(i), valcap(i,v,r,t) })] = storage_in_min_load(r,h,t) ;
+hourly_arbitrage_value(i,r,t)$[tload(t)$sum{v, valcap(i,v,r,t) }$storage_no_csp(i)] = hourly_arbitrage_value_load(i,r,t) ;
 
 *Sw_Int_CC=0 means use average capacity credit for each tech, and don't differentiate vintages
 *If there is no existing capacity to calculate average, use marginal capacity credit instead.
@@ -164,8 +183,8 @@ if(Sw_Int_CC=0,
 
 *For the remaining options we initially use marginal values for cc_int, differentiated by vintage based on seasonal capacity factors.
 if(Sw_Int_CC=1 or Sw_Int_CC=2,
-    cc_int(i,v,r,szn,t)$[tload(t)$(vre(i) or storage(i))$valcap(i,v,r,t)$sum(vv$ict(i,vv,t),m_cf_szn(i,vv,r,szn,t))] =
-        m_cc_mar(i,r,szn,t) * m_cf_szn(i,v,r,szn,t) / sum{vv$ict(i,vv,t), m_cf_szn(i,vv,r,szn,t) } ;
+    cc_int(i,v,r,szn,t)$[tload(t)$(vre(i) or storage(i))$valcap(i,v,r,t)$sum{vv$ivt(i,vv,t), m_cf_szn(i,vv,r,szn,t) }] =
+        m_cc_mar(i,r,szn,t) * m_cf_szn(i,v,r,szn,t) / sum{vv$ivt(i,vv,t), m_cf_szn(i,vv,r,szn,t) } ;
     cc_totmarg(i,r,szn,t)$[tload(t)$(vre(i) or storage(i))] = sum{v$valcap(i,v,r,t), cc_int(i,v,r,szn,t) * CAP.l(i,v,r,t) } ;
 ) ;
 
@@ -213,7 +232,7 @@ cc_iter(i,v,r,szn,t,"%niter%")$cc_int(i,v,r,szn,t) = cc_int(i,v,r,szn,t) ;
 curt_iter(i,r,h,t,"%niter%")$curt_int(i,r,h,t) = curt_int(i,r,h,t) ;
 curt_mingen_iter(r,h,t,"%niter%")$curt_mingen_int(r,h,t) = curt_mingen_int(r,h,t) ;
 
-execute_unload 'outputs%ds%variabilityFiles%ds%curtout_%case%_%niter%.gdx' cc_int, curt_int, oldVREgen ;
+execute_unload 'ReEDS_Augur%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int, curt_int, oldVREgen ;
 
 *following line will load in the level values if the switch is enabled
 *note that this is still within the conditional that we are now past the first iteration

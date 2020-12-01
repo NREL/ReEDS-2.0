@@ -19,3 +19,7 @@ op_international_hurdle_rate,Trans
 op_acp_compliance_costs,Other
 op_emissions_taxes,Emissions Tax
 op_gen_pol_costs,Other
+cap_trade_import_cost,Capacity Import
+cap_trade_export_cost,Capacity Export
+energy_trade_import_cost,Energy Import
+energy_trade_export_cost,Energy Export

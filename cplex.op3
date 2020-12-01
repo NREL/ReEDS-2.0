@@ -1,0 +1,6 @@
+threads = 0
+lpmethod = 4
+advind 0
+*reslim 100000
+scaind 1
+aggind 5

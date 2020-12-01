@@ -1,6 +1,6 @@
 # ReEDS 2.0
 
-![Image of NREL Logo](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/nrel-logo.png)
+![Image of NREL Logo](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/nrel-logo.png)
 
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
@@ -46,6 +46,7 @@ A ReEDS training video (recorded in July 2020 and based on the 2019 version of R
     * [Technology inclusion switches](#SwTech)
     * [Other model constraint switches](#SwOther)
     * [Linear programming switches](#SwLP)
+    * [Cooling water formulation switches](#SwCoolingWater)
 
 <a name="Introduction"></a>
 # Introduction ([https://www.nrel.gov/analysis/reeds/](https://www.nrel.gov/analysis/reeds/)) 
@@ -75,7 +76,7 @@ Python is &quot;an object-oriented programming language, comparable to Perl, Rub
 The setup and execution of the ReEDS model can be accomplished using a command-line interpreter application and launching a command line interface (referred to as a &quot;terminal window&quot; in this document). For example, initiating the Windows Command Prompt application, i.e., cmd.exe, will launch a terminal window ([Figure 1](#Fig1)).
 
 <a name="Fig1"></a>
-![Image of Command Prompt](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/cmd-prompt.png)
+![Image of Command Prompt](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/cmd-prompt.png)
 
 *Figure 1. Screenshot of a Windows Command Prompt terminal window.*
 
@@ -84,12 +85,12 @@ The setup and execution of the ReEDS model can be accomplished using a command-l
 **IMPORTANT:** Users should exercise Administrative Privileges when installing software. For example, right click on the installer executable for one of the required software (e.g., Anaconda3-2019.07-Windows-x86\_64.exe) and click on &quot;Run as administrator&quot; ([Figure 2](#Fig2)). Alternatively, right click on the executable for the command line interface (e.g., Command Prompt) and click on &quot;Run as administrator&quot; ([Figure 3](#Fig3)). Then run the required software installer executables from the command line.
 
 <a name="Fig2"></a> 
-![Image of Run as Admin](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/run-as-admin.png)
+![Image of Run as Admin](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/run-as-admin.png)
 
 *Figure 2. Screenshot of running an installer executable using &quot;Run as administrator&quot;.*
 
 <a name="Fig3"></a>
-![Image of Run as Admin 2](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/run-as-admin-2.png)
+![Image of Run as Admin 2](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/run-as-admin-2.png)
  
 *Figure 3. Screenshot of running &quot;Command Prompt&quot; with &quot;Run as administrator&quot;.*
 
@@ -99,10 +100,14 @@ The setup and execution of the ReEDS model can be accomplished using a command-l
 The ReEDS source code is hosted on GitHub: https://github.com/NREL/ReEDS\_OpenAccess
 
 1. Request access to the ReEDS GitHub repository at [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
-2. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
+2. From the Git command line run the following command to enable large file storage.
+```
+git lfs install
+```
+3. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
 
 <a name="Fig4"></a>
-![Image of GitHub Download](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/github-download.png)
+![Image of GitHub Download](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/github-download.png)
  
 *Figure 4. Screenshot of GitHub links to clone the ReEDS repository or download ZIP of the ReEDS files.*
 
@@ -125,27 +130,27 @@ Add Python to the &quot;path&quot; environment variable
 Install the gdxpds package from the command line by typing &quot;pip install gdxpds&quot; (no quotes) in the terminal window ([Figure 10](#Fig10)).The gdxpds package is required for reading GAMS Data Exchange files (.gdx) into Python.
 
 <a name="Fig5"></a>
-![Image of Search Environment Variable](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/search-env-var.png)
+![Image of Search Environment Variable](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/search-env-var.png)
  
 *Figure 5. Screenshot of a search for &quot;environment variables&quot; in the Windows start menu.*
 
 <a name="Fig6"></a> 
-![Image of System Properties Window](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/sys-prop-win.png)
+![Image of System Properties Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/sys-prop-win.png)
  
 *Figure 6. Screenshot of the &quot;System Properties&quot; window.*
 
 <a name="Fig7"></a> 
-![Image of Environment Variables Window](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/env-var-win.png)
+![Image of Environment Variables Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/env-var-win.png)
  
 *Figure 7. Edit the Path environment variable.*
 
 <a name="Fig8"></a>
-![Image of Edit Environment Variables Window](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/edit-env-var-win.png)
+![Image of Edit Environment Variables Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/edit-env-var-win.png)
 
 *Figure 8. Append the Path environment.*
 
 <a name="Fig9"></a>
-![Image of Test Python](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/py-test.png)
+![Image of Test Python](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/py-test.png)
 
 *Figure 9. Screenshot of a test of Python in the terminal window.*
 
@@ -161,7 +166,7 @@ Add GAMS to the &quot;path&quot; environment variable. Follow the same instructi
 **IMPORTANT** : Test the GAMS installation from the command line by typing &quot;gams&quot; (no quotes) in the terminal window. The GAMS program should initiate (Figure 10).
 
 <a name="Fig10"></a>
-![Image of Test GAMS](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/gams-test.png)
+![Image of Test GAMS](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/gams-test.png)
 
 *Figure 10. Screenshot of a test of GAMS from the terminal window.*
 
@@ -177,12 +182,12 @@ Add R to the &quot;path&quot; environment variable. Follow the same instructions
 Install R packages necessary for ReEDS from the command line. Navigate to the ReEDS directory in the terminal window. Type &quot;rscript input\_processing\R\packagesetup.R&quot; and press &quot;Enter\Return&quot;. The Rscript.exe program will install a suite of R packages ([Figure 12](#Fig12)).
 
 <a name="Fig11"></a>
-![Image of Test R](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/r-test.png)
+![Image of Test R](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/r-test.png)
 
 *Figure 11. Screenshot of a test of R from the terminal window.*
 
 <a name="Fig12"></a>
-![Image of Install R Packages](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/install-r-pack.png)
+![Image of Install R Packages](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/install-r-pack.png)
  
 *Figure 12. Screenshot of installing R packages with packagesetup.R.*
 
@@ -198,7 +203,7 @@ A ReEDS case (also referred to as a &quot;run&quot;, &quot;scenario&quot; or &qu
 Within &quot;cases.csv&quot;, The data in Column A are the model &quot;switches&quot; (also referred to as &quot;options&quot;). The data in Column B are brief descriptions of the switches. The data in Column C are the default values of the switches. The case configuration (or set of switches that define a case) begin with Column D. Each case configuration is represented by a single column. The case name is specified in Row 1. The value for each switch is specified beginning in Row 2. If a switch value is left blank, default value from Column C is used. A complete list of switches is provided in the Appendix of this document.
 
 <a name="Fig13"></a>
-![Image of Cases.csv](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/cases-csv.png) 
+![Image of Cases.csv](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/cases-csv.png) 
 
 *Figure 13. Screenshot of cases.csv.*
 
@@ -213,22 +218,22 @@ Within &quot;cases.csv&quot;, The data in Column A are the model &quot;switches&
 **Step 3** : Wait for each case to finish, check for successful completion, and view outputs. Once a case has finish (either from successful completion or from an error), the case-specific terminal window will close and a message in the main terminal window (i.e., where &quot;runbatch.py&quot; was initiated) will appear stating that the case has completed ([Figure 17](#Fig17)).
 
  <a name="Fig14"></a>
-![Image of Execute RunBatch.py](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/exe-runbatch.png) 
+![Image of Execute RunBatch.py](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/exe-runbatch.png) 
 
 *Figure 14. Screenshot of initiating &quot;runbatch.py&quot; from the command line.*
 
  <a name="Fig15"></a>
-![Image of RunBatch.py Prompts](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/prompts.png)  
+![Image of RunBatch.py Prompts](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/prompts.png)  
 
 *Figure 15. Screenshot of prompts for user input during &quot;runbatch.py&quot;.*
 
  <a name="Fig16"></a>
-![Image of Case Window](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/case-win.png) 
+![Image of Case Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/case-win.png) 
 
 *Figure 16. Screenshot of a separate terminal window being launched for a case.*
 
  <a name="Fig17"></a>
-![Image of Case Finish Message](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/case-finish.png)  
+![Image of Case Finish Message](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/case-finish.png)  
 
 *Figure 17. Screenshot of a message in the main terminal window stating when a case has finished.*
 
@@ -252,12 +257,12 @@ Therefore, &quot;batch prefix&quot; CANNOT begin with a numeric and SHOULD begin
 - **WARNING! Avoid re-using a (batch prefix, case) pair**. If a directory &quot;\runs\{batch prefix}\_{case}&quot; already exists, a warning will be issued in the case-specific terminal window, but &quot;runbatch.py&quot; will overwrite data in the existing case directory ([Figure 18](#Fig18)). In some instances, the case execution will pause, and a message will appear in the case-specific terminal window &quot;mv: replace […] overriding mode 0666?&quot; ([Figure 19](#Fig19)). Pressing &quot;Enter/Return&quot; will continue the execution. NREL plans to address this overwriting issue in the future by requiring user approval to overwrite and existing case directory.
 
  <a name="Fig18"></a>
-![Image of Duplicate Case Warning](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/duplicate-case.png)  
+![Image of Duplicate Case Warning](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/duplicate-case.png)  
 
 *Figure 18. Screenshot of warning message that appears in the main terminal window when reusing a (batch prefix, case) pair.*
 
  <a name="Fig19"></a>
-![Image of Duplicate Case Warning 2](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/duplicate-case-2.png)  
+![Image of Duplicate Case Warning 2](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/duplicate-case-2.png)  
  
 *Figure 19. Screenshot of warning message that occurs in the case-specific terminal window when reusing a (batch prefix, case) pair.*
 
@@ -343,7 +348,7 @@ For every year in the model horizon, execute d\_solveoneyear.gms:
   4. Execute d4\_Translate\_Variability.R – Translate the values from REflow\_RTO\_3.gms (ReEDS Heritage) back to the syntax and structure used in ReEDS 2.0
 
  <a name="Fig20"></a>
-![Image of Sequential Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/seq-flow.png)  
+![Image of Sequential Flow](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/seq-flow.png)  
  
 *Figure 20. Depiction of execution sequence for the &quot;sequential&quot; solve.*
 
@@ -358,7 +363,7 @@ For each iteration (specified via the runbatch.py prompt),
 3. Execute d5\_mergevariability.R – The resulting file from the gdxmerge execution is restructured for use in GAMS during the next iteration of the intertemporal solve.
 
  <a name="Fig21"></a>
-![Image of Intertemporal Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/inter-flow.png)  
+![Image of Intertemporal Flow](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/inter-flow.png)  
  
 *Figure 21. Depiction of execution sequence for the &quot;intertemporal&quot; solve.*
 
@@ -410,17 +415,17 @@ The source code in this repository is the ReEDS Version 2019 model. Documentatio
 The ReEDS model is comprised of several modules with one and two-way data exchange between the modules. [Figure 22](#Fig22) depicts these modules, including linkages between the modules and directions of data exchange. The supply module is the core module for ReEDS. Within a ReEDS execution, the key data exchanges occur between (1) the Supply Module and the Variable Resource Renewable (VRR) Modules for estimating Capacity Credit and Curtailment; and (2) the Supply Module and the Demand Module. These module interactions are dictated by the model execution approach, i.e., _sequential_ solves, _sliding window_ solves, or _intertemporal_ solves. [Figure 23](#Fig23) illustrates the _sequential_ approach; [Figure 24](#Fig24) the sliding window and intertemporal approaches.
 
 <a name="Fig22"></a>
-![Image of ReEDS Modules](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/modules.png)  
+![Image of ReEDS Modules](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/modules.png)  
 
 *Figure 22. Depiction of ReEDS modules; arrows indicate directions of data exchange.*
 
 <a name="Fig23"></a>
-![Image of Sequential Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/seq-flow-2.png)   
+![Image of Sequential Flow](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/seq-flow-2.png)   
 
 *Figure 23. Schematic illustrating the model structure with a sequential solve.*
 
 <a name="Fig24"></a>
-![Image of Intertemporal Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/inter-flow-2.png)   
+![Image of Intertemporal Flow](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/inter-flow-2.png)   
 
 *Figure 24. Schematic illustrating the model structure with sliding window or intertemporal solves.*
 
@@ -430,23 +435,23 @@ The ReEDS model is comprised of several modules with one and two-way data exchan
 Because ReEDS is a long-term capacity planning model, electricity generation capacity (capital stock) must be tracked over time, including, initial capacity, new investments, refurbishment investments, lifetime retirements, and endogenous retirements. [Figure 25](#Fig25) depicts time resolution terminology and capital stock terminology. &quot;Historical&quot; years are 2010-2018, inclusive. &quot;Future&quot; years are 2019 and beyond. &quot;Pre-modeled&quot; years are years prior to 2010 and are not represented in the model decision making. &quot;Modeled&quot; years are years beginning in 2010, the first year of the model to the end of the model horizon. Users can specify the frequency of modeled years as depicted in [Figure 26](#Fig26) in &quot;\inputs\user\_input\modeledyears\_default.csv&quot; and the horizon is specified in &quot;cases.csv&quot;.
 
 <a name="Fig25"></a>
-![Image of Time and Stock](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/time-and-stock.jpg)   
+![Image of Time and Stock](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/time-and-stock.jpg)   
 
 *Figure 25. Depiction of time resolution terminology and capital stock terminology*
 
 <a name="Fig26"></a>
-![Image of Model Years](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/model-years.png)   
+![Image of Model Years](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/model-years.png)   
  
 *Figure 26. Depiction of user-specified model years.*
 
-Capital stock added during the model execution is tracked by a vintage classification based on the time frame when the capacity is installed (e.g., capacity installed between 2030 and 2035 could be defined as a vintage class). The user can specify the vintage class resolution by technology type to control the model size (see &quot;\inputs\userinput\ict.csv&quot;). All capacity of a technology type (e.g., nuclear) within the same vintage class has the same operating characteristics. Regardless of the vintage class, new investments incur capital cost associated with the year that the investment occurs.
+Capital stock added during the model execution is tracked by a vintage classification based on the time frame when the capacity is installed (e.g., capacity installed between 2030 and 2035 could be defined as a vintage class). The user can specify the vintage class resolution by technology type to control the model size (see &quot;\inputs\userinput\ivt.csv&quot;). All capacity of a technology type (e.g., nuclear) within the same vintage class has the same operating characteristics. Regardless of the vintage class, new investments incur capital cost associated with the year that the investment occurs.
 
 Distinction is made between vintage classes for capacity built during the _pre-modeled_ years---i.e., the _initial_ vintage classes---and vintage classes for capacity built during the _modeled_ years, i.e., the _added_ vintage classes, ([Figure 25](#Fig25)). The _initial_ vintage classes are categorized based on plant performance, specifically, heat rate ([Figure 27](#Fig27)). Whereas, _added_ vintage classes are categorized based on when the capacity is installed.
 
 _Initial_ capacity is track based on the capacity remaining in each model year after planned retirements have been removed. Planned capacity additions made during _historical modeled_ years, i.e., 2010-2018, are prescribed _exactly_, thus the model must build _exactly_ the prescribed amount. Planned capacity built during _future modeled years_, i.e.,  2019-2050, are prescribed as a _lower bound_ for new investments, thus the model must build _at least_ the prescribed amount ([Figure 25](#Fig25)).
 
 <a name="Fig27"></a>
-![Image of Historical Bins](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/historical-bins.png)   
+![Image of Historical Bins](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/historical-bins.png)   
 
 *Figure 27. Example of categorizing model plants for the existing fleet based on heat rate.*
 
@@ -846,12 +851,21 @@ Default value: 1
 
 Default value: 1
 
-**GSw\_Retire** [binary] – Turn on/off endogenous retirement
+**GSw\_Retire** [integer] – Turn on/off endogenous retirement
 
 - 0 – OFF
-- 1 – ON
+- 1 – ON for all existing (2010) capacity of any technology
+- 2 - ON for all existing (2010) coal and gas capacity
+- 3 - ON for all existing (2010) and new nuclear, coal, and gas capacity; retirements are not allowed before the minimum age is reached (only this setting uses the minimum age)
+- 4 - ON for all existing (2010) and new (optimally built) capacity of any technology. In sequential solves, this option can lead to poor retirement behavior because some existing technologies' value streams are not represented using the CAP variable.
 
-Default value: 0
+Default value: 3
+
+**GSw\_RetirePenalty** [percent] – Penalty value for retirements
+
+Applies a penalty (as the fraction of fixed O&M) for retirements
+
+Default value: 0.5
 
 **GSw\_RetireYear** [integer] – Year to begin retirements
 
@@ -973,6 +987,18 @@ Default value: 1
 
 Default value: 1
 
+**GSw\_Upgrades** [binary] - Switch to turn capacity upgrades on or off, needs specifics defined when GSw_WaterMain is turned on
+
+- 0 – OFF
+- 1 – ON
+
+Default value: 1
+
+**GSw\_UpgradeYear** [integer] - First year to allow for capacity upgrades
+
+Default value: 2022
+
+
 **GSw\_MCS** [string] – Select countries to apply the mid-century strategy
 
 Default value: no
@@ -1090,3 +1116,34 @@ Default value: 1
 - 1 – ON
 
 Default value: 0
+
+<a name="SwCoolingWater"></a>
+### Cooling water formulation switches
+
+**GSw\_WaterMain** [binary] – Turn on/off the representation of water use and source types
+
+- 0 – OFF
+- 1 – ON
+
+Default value: 0
+
+**GSw\_WaterCapacity** [binary] – Turn on/off the water capacity constraints
+
+- 0 – OFF
+- 1 – ON
+
+Default value: 0
+
+**GSw\_WaterUse** [binary] – 
+Turn on/off the water capacity and water use constraints
+- 0 – OFF
+- 1 – ON
+
+Default value: 0
+
+**GSw\_CoolingTechMults** [binary] – Turn on/off to enable cooling tech cost/performance multipliers; this is turned on when GSw\_WaterMain is ON
+
+- 0 – OFF
+- 1 – ON
+
+Default value: 1

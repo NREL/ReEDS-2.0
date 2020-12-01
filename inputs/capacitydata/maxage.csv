@@ -1,6 +1,10 @@
 TECH,maxage
 ice,100
-battery,100
+battery_2,15
+battery_4,15
+battery_6,15
+battery_8,15
+battery_10,15
 biopower,45
 caes,100
 coal-CCS,70
@@ -16,6 +20,7 @@ dupv_her,30
 Gas-CC,55
 Gas-CC-CCS,55
 Gas-CT,55
+RE-CT,55
 geothermal,30
 Hydro,200
 lfill-gas,100
@@ -85,6 +90,8 @@ csp_7,100
 csp_8,100
 csp_9,100
 csp_10,100
+csp_11,100
+csp_12,100
 Gas-CT-NSP,55
 Gas-CC-NSP,55
 Coal-CCS-NSP,70

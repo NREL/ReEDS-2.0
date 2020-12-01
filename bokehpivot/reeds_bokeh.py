@@ -18,12 +18,16 @@ import datetime
 import subprocess as sp
 if sys.version_info[0] == 2:
     import gdx2py
+import logging
+from pdb import set_trace as pdbst
+
+logger = logging.getLogger('')
 
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
 
 DEFAULT_DOLLAR_YEAR = 2018
-DEFAULT_PV_YEAR = 2018
-DEFAULT_DISCOUNT_RATE = .07
+DEFAULT_PV_YEAR = 2020
+DEFAULT_DISCOUNT_RATE = .05
 DEFAULT_END_YEAR = 2050
 
 #ReEDS globals
@@ -44,12 +48,13 @@ def reeds_static(data_type, data_source, scenario_filter, diff, base, static_pre
             E.g. 'Yes' means create additional sections for differences (for all results that lack the 'modify' key.)
         base (string): Identifier for base scenario, if making comparison charts
         static_presets (list of dicts): List of presets for which to make report. Each preset has these keys:
-            'name' (required): Displayed name of the result 
-            'result': ReEDS result name in reeds.py.
-            'preset': ReEDS result preset as defined in reeds.py
-            'modify': Preset modifications. 'base_only' will show only the base case results, 'diff' will show the difference
+            'name' (required): Displayed name of the result
+            'result' (optional): ReEDS result name in reeds.py.
+            'preset' (optional): ReEDS result preset as defined in reeds.py
+            'modify' (optional): Preset modifications. 'base_only' will show only the base case results, 'diff' will show the difference
                 between each case and the base case, and any other string will simply leave the result as is (ignoring the diff argument)
-            'config': Custom widget configuration. This configuration will be added on top of 'result', 'preset', 'modify', if they are present.
+            'config' (optional): Custom widget configuration. This configuration will be added on top of 'result', 'preset', 'modify', if they are present.
+            'excel_sheet_name' (optional): If specified, this is used for the excel sheet name for this preset. Must be unique.
         report_path (string): The path to the report file.
         report_format (string): 'html', 'excel', or 'both', specifying which reports to make
         html_num (string): 'multiple' if we are building separate html reports for each section, and 'one' for one html report with all sections.
@@ -70,19 +75,23 @@ def reeds_static(data_type, data_source, scenario_filter, diff, base, static_pre
                     diff_preset = copy.deepcopy(static_presets[i])
                     diff_preset['name'] = diff_preset['name'] + ' - difference from ' + base
                     diff_preset['modify'] = 'diff'
+                    if 'excel_sheet_name' in diff_preset: diff_preset['excel_sheet_name'] += '_diff'
                     static_presets.insert(i+1,diff_preset)
                     i = i + 2
                 elif diff == 'Base + Diff':
                     diff_preset = copy.deepcopy(static_presets[i])
                     static_presets[i]['name'] = static_presets[i]['name'] + ' - base'
                     static_presets[i]['modify'] = 'base_only'
+                    if 'excel_sheet_name' in static_presets[i]: static_presets[i]['excel_sheet_name'] += '_base'
                     diff_preset['name'] = diff_preset['name'] + ' - difference from ' + base
                     diff_preset['modify'] = 'diff'
+                    if 'excel_sheet_name' in diff_preset: diff_preset['excel_sheet_name'] += '_diff'
                     static_presets.insert(i+1,diff_preset)
                     i = i + 2
                 elif diff == 'Diff Only':
                     static_presets[i]['name'] = static_presets[i]['name'] + ' - difference from ' + base
                     static_presets[i]['modify'] = 'diff'
+                    if 'excel_sheet_name' in static_presets[i]: static_presets[i]['excel_sheet_name'] += '_diff'
                     i = i + 1
             else:
                 i = i + 1
@@ -103,14 +112,17 @@ def reeds_static(data_type, data_source, scenario_filter, diff, base, static_pre
                 config['filter'].update({'scenario': [base]})
             elif static_preset['modify'] == 'diff':
                 #find differences with base. First set x to 'None' to prevent updating, then reset x at the end of the widget updates.
-                config.update({'adv_op2': 'Difference', 'adv_col2': 'scenario', 'adv_col_base2': base})
+                config.update({'adv_op3': 'Difference', 'adv_col3': 'scenario', 'adv_col_base3': base})
         if 'config' in static_preset:
             for key in static_preset['config']:
                 if key == 'filter':
                     config['filter'].update(static_preset['config']['filter'])
                 else:
                     config.update({key: static_preset['config'][key]})
-        core_presets.append({'name': static_preset['name'], 'config': config})
+        core_preset = {'name': static_preset['name'], 'config': config}
+        if 'excel_sheet_name' in static_preset:
+            core_preset['excel_sheet_name'] = static_preset['excel_sheet_name']
+        core_presets.append(core_preset)
 
     #Now add variant wdg configurations:
     variant_wdg_config = []
@@ -140,7 +152,7 @@ def get_wdg_reeds(path, init_load, wdg_config, wdg_defaults, custom_sorts, custo
         topwdg (ordered dict): Dictionary of bokeh.model.widgets.
         scenarios (array of dicts): Each element is a dict with name of scenario and path to scenario.
     '''
-    print('***Fetching ReEDS scenarios...')
+    logger.info('***Fetching ReEDS scenarios...')
     topwdg = collections.OrderedDict()
 
     #Model Variables
@@ -233,7 +245,7 @@ def get_wdg_reeds(path, init_load, wdg_config, wdg_defaults, custom_sorts, custo
     topwdg['report_build'].on_click(build_reeds_report)
     topwdg['report_build_separate'].on_click(build_reeds_report_separate)
     topwdg['result'].on_change('value', update_reeds_result)
-    print('***Done fetching ReEDS scenarios.')
+    logger.info('***Done fetching ReEDS scenarios.')
     return (topwdg, scenarios)
 
 def scenario_filter_select_all():
@@ -257,7 +269,7 @@ def get_reeds_data(topwdg, scenarios, result_dfs):
         Nothing: result_dfs is modified
     '''
     result = topwdg['result'].value
-    print('***Fetching ' + str(result) + ' for selected scenarios...')
+    logger.info('***Fetching ' + str(result) + ' for selected scenarios...')
     startTime = datetime.datetime.now()
     #A result has been selected, so either we retrieve it from result_dfs,
     #which is a dict with one dataframe for each result, or we make a new key in the result_dfs
@@ -300,7 +312,7 @@ def get_reeds_data(topwdg, scenarios, result_dfs):
                 result_dfs[result] = df_scen_result
             else:
                 result_dfs[result] = pd.concat([result_dfs[result], df_scen_result]).reset_index(drop=True)
-        print('***Done fetching ' + str(result) + ' for ' + str(scenario_name) + '.')
+        logger.info('***Done fetching ' + str(result) + ' for ' + str(scenario_name) + '.')
 
     #fill missing values with 0:
     df = result_dfs[result]
@@ -309,7 +321,7 @@ def get_reeds_data(topwdg, scenarios, result_dfs):
         df =  df.groupby(idx_cols, sort=False, as_index =False).sum()
         full_idx = pd.MultiIndex.from_product([df[col].unique().tolist() for col in idx_cols], names=idx_cols)
         result_dfs[result] = df.set_index(idx_cols).reindex(full_idx).reset_index()
-    print('***Done fetching ' + str(result) + ': ' + str(datetime.datetime.now() - startTime))
+    logger.info('***Done fetching ' + str(result) + ': ' + str(datetime.datetime.now() - startTime))
 
 def get_src(scen, src):
     '''
@@ -358,7 +370,7 @@ def process_reeds_data(topwdg, custom_sorts, custom_colors, result_dfs):
         df (pandas dataframe): A dataframe of the ReEDS result, with filled NA values.
         cols (dict): Keys are categories of columns of df_source, and values are a list of columns of that category.
     '''
-    print('***Apply joins, maps, ordering to ReEDS data...')
+    logger.info('***Apply joins, maps, ordering to ReEDS data...')
     startTime = datetime.datetime.now()
     df = result_dfs[topwdg['result'].value].copy()
     #apply joins
@@ -425,7 +437,7 @@ def process_reeds_data(topwdg, custom_sorts, custom_colors, result_dfs):
     #fill NA depending on column type
     df[cols['discrete']] = df[cols['discrete']].fillna('{BLANK}')
     df[cols['continuous']] = df[cols['continuous']].fillna(0)
-    print('***Done with joins, maps, ordering: ' + str(datetime.datetime.now() - startTime))
+    logger.info('***Done with joins, maps, ordering: ' + str(datetime.datetime.now() - startTime))
     return (df, cols)
 
 def build_reeds_presets_wdg(preset_options):
@@ -526,7 +538,7 @@ def build_reeds_report(html_num='one'):
     start_str = 'start python'
     if core.GL['widgets']['report_debug'].value == 'Yes':
         start_str = 'start cmd /K python -m pdb '
-    sp.call(start_str + ' "' + this_dir_path + '/reports/interface_report.py" ' + data_type + ' ' + data_source + ' ' + scenario_filter_str + ' ' + diff + ' ' + base +' ' + report_path + ' "' + html_num + '" ' + output_dir + ' ' + auto_open, shell=True)
+    sp.call(start_str + ' "' + this_dir_path + '/reports/interface_report_model.py" ' + data_type + ' ' + data_source + ' ' + scenario_filter_str + ' ' + diff + ' ' + base +' ' + report_path + ' "' + html_num + '" ' + output_dir + ' ' + auto_open, shell=True)
 
 def build_reeds_report_separate():
     '''
