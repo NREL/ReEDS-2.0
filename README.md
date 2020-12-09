@@ -370,9 +370,11 @@ For each iteration (specified via the runbatch.py prompt),
 <a name="Documentation"></a>
 # Documentation
 
-The ReEDS Version 2018 Documentation is available at no cost from the National Renewable Energy Laboratory: [https://www.nrel.gov/docs/fy19osti/72023.pdf](https://www.nrel.gov/docs/fy19osti/72023.pdf)
+The ReEDS Version 2019 Documentation is available at no cost from the National Renewable Energy Laboratory: [https://www.nrel.gov/docs/fy20osti/74111.pdf](https://www.nrel.gov/docs/fy20osti/74111.pdf)
 
-The source code in this repository is the ReEDS Version 2019 model. Documentation for Version 2019 is forthcoming, but [Table 1](#Tab1) summarizes difference between Versions 2018 and 2019.
+The source code in this repository is the ReEDS Version 2020 model. Documentation for Version 2020 is forthcoming.
+
+[Table 1](#Tab1) summarizes difference between Versions 2018 and 2019.
 
 <a name="Tab1"></a>
 *Table 1. differences between ReEDS Versions 2018 and 2019.*
