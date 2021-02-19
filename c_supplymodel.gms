@@ -189,6 +189,23 @@ EQUATION
 * --- LOAD CONSTRAINTS ---
 *==========================
 
+* control the creation of the elastic demand case variable and constraint
+$ifthene.delaseq %GSw_DemElas% == 1
+
+positive variable   LOAD_DBIN(r,h,t,dbin) "--MWh-- demand binned by demand bin";
+equation            eq_load_dbin_limit(r,h,t,dbin)   "binned load cannot exceed binned load capacity";
+
+eq_load_dbin_limit(r,h,t,dbin)$[rfeas(r)$tmodel(t)$Sw_DemElas]..
+
+    ele_q(r,h,t,dbin) 
+
+    =g= 
+
+    LOAD_DBIN(r,h,t,dbin);
+
+$endif.delaseq
+
+
 *the marginal off of this constraint allows you to
 *determine the full price of electricity load
 *i.e. the price of load with consideration to operating
@@ -200,18 +217,26 @@ eq_loadcon(r,h,t)$[rfeas(r)$tmodel(t)]..
     =e=
 
 *[plus] the static, exogenous load
-    + load_exog_static(r,h,t)
+    + load_exog_static(r,h,t)$(not Sw_DemElas)
 
 *[plus] exogenously defined exports to Canada
-    + can_exports_h(r,h,t)
+    + can_exports_h(r,h,t)$(not Sw_DemElas)
+
+* control inclusion of elastic demand variable in the load equation
+$ifthene.delasvareq %GSw_DemElas%==1
+*   EVLOAD and FLEX are disabled by default but would need their own demand function via a new set akin to dbin
+*   or exogenous assumptions of demand curve reference p/q would need to be adjusted in e_export_ref_pq.gms
+
+    + sum(dbin,LOAD_DBIN(r,h,t,dbin))$Sw_DemElas
+
+$endif.delasvareq    
 
 *[plus] load from EV charging
-    + EVLOAD(r,h,t)$Sw_EV
+    + EVLOAD(r,h,t)$[Sw_EV]
 
 *[plus] load shifted from other timeslices
-    + sum{flex_type, FLEX(flex_type,r,h,t) }$Sw_EFS_flex
+    + sum{flex_type, FLEX(flex_type,r,h,t) }$[Sw_EFS_flex]
 ;
-
 
 eq_evloadcon(r,szn,t)$[rfeas(r)$tmodel(t)$Sw_EV]..
 

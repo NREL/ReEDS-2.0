@@ -66,6 +66,7 @@ Sw_CoalRetire        "Switch to retire coal plants early"                       
 Sw_CSPRelLim         "Annual relative growth limit for CSP technologies"                  /%GSw_CSPRelLim%/
 Sw_CurtFlow          "Switch to turn on curtailment trading between regions"              /%GSw_CurtFlow%/
 Sw_CurtMarket        "Switch to specify price (in 2004$/MWh) for curtailed VRE"           /%GSw_CurtMarket%/
+Sw_DemElas           "Switch to enable or disable elastic demand"                         /%GSw_DemElas%/
 Sw_EFS_Flex          "Switch indicating if EFS flexibility is available"                  /%GSw_EFS_Flex%/
 Sw_EV                "Switch to include electric vehicle load"                            /%GSw_EV%/
 Sw_ForcePrescription "Switch enforcing near term limits on capacity builds"               /%GSw_ForcePrescription%/
@@ -4234,3 +4235,75 @@ force_pcat("hydro",t) = no ;
 force_pcat("geothermal",t) = no ;
 
 force_pcat(pcat,t)$[sum{(ppcat,ii)$sameas(pcat,ii), prescriptivelink0(ppcat,ii) }] = no ;
+
+*==========================
+* -- Demand Curve Setup -- 
+*==========================
+
+$ifthene.delas %GSw_DemElas% == 1
+set dbin "demand bin" /1*100/,
+    sec "demand sectors" /res,com,ind/;
+
+alias(dbin,ddbin);
+
+*using a commonly-cited value for now
+scalar ele_delas "electricity demand elasticity" /-0.5/;
+
+parameter ele_p(r,h,t,dbin) "--$/MWh-- price for electricity",
+          ele_q0(r,h,t) "--MWh-- quantity of electricity from reference case"
+/
+$ondelim
+$include inputs_case%ds%ref_quantities.csv
+$offdelim
+/
+          ele_q(r,h,t,dbin) "--MWh-- quantity of electricity available in each dbin and used in the model"
+          ele_q_cumulative(r,h,t,dbin) "--MWh-- cumulative electricity demanded by current and previous demand bins"
+          ele_p0(r,h,t)     "--$/MWh-- reference price of electricity used to formulate demand curve"
+/
+$ondelim
+$include inputs_case%ds%ref_prices.csv
+$offdelim
+/
+          ele_priceadders(sec,r) "--$/MWh-- price adders for electricity consumption"
+/
+$ondelim
+$include inputs_case%ds%price-adders.csv
+$offdelim
+/
+          ele_priceadder_avg(r) "--$/MWh-- simple average of retail adders"
+;
+
+*!!!! only doing simple average of adders at this point
+*!!!! better approach would be to allocate region-specific adders
+*!!!! by sectoral portion of final demand
+ele_priceadder_avg(r)$rfeas(r) = sum{sec, ele_priceadders(sec,r) } / 3;
+
+*binned quantity will just be the exogenous demand split evenly over all elements in dbin set
+*  e.g. i create 100 bins, each bin contains (1/100) * ele_q0
+*could make this have more resolution around the reference quantity thorugh indexing a proportion
+*across all dbin such that sum == 1
+ele_q(r,h,t,dbin)$[rfeas(r)$tmodel_new(t)] = (1/smax(ddbin,ord(ddbin))) * (ele_q0(r,h,t));
+
+*calculate the cumulative amount of electricity from all previous demand bins
+ele_q_cumulative(r,h,t,dbin)$[rfeas(r)$tmodel_new(t)] = 
+    sum{ddbin$[ord(ddbin)<=ord(dbin)],ele_q(r,h,t,ddbin) } ;
+
+* given some exogenous price adders, A, constant elasticity of demand curve originally of the form..
+* q = q0 * (A+p / A+p0) ^ eta
+* With:
+*  q: endogenous quantity
+*  q0: reference quantity
+*  A: adder
+*  p: endogenous price
+*  p0: reference price
+*  eta: elasticity (eta < 0)
+* inverse demand curve thus..
+* => p = (A+p0) * (q/q0) ^ 1/eta - A
+
+ele_p(r,h,t,dbin)$[rfeas(r)$tmodel_new(t)] = (ele_p0(r,h,t) + ele_priceadder_avg(r)) * 
+    (ele_q_cumulative(r,h,t,dbin) / ele_q0(r,h,t)) ** (1/ele_delas) - ele_priceadder_avg(r);
+
+ele_p(r,h,t,dbin)$[rfeas(r)$tmodel(t)] = round(ele_p(r,h,t,dbin),4);
+ele_q(r,h,t,dbin)$[rfeas(r)$tmodel(t)] = round(ele_q(r,h,t,dbin),2);
+
+$endif.delas

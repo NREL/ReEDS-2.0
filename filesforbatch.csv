@@ -18,6 +18,9 @@ inputs/cccurt_defaults.gdx
 inputs/cf/cf_cspns.csv
 inputs/csapr/csapr_ozone_season.csv
 inputs/deflator.csv
+inputs/demand_elastic/price-adders.csv
+inputs/demand_elastic/ref_quantities.csv
+inputs/demand_elastic/ref_prices.csv
 inputs/fuelprices/cd_beta0.csv
 inputs/fuelprices/cd_beta0_allsector.csv
 inputs/fuelprices/cendivweights.csv

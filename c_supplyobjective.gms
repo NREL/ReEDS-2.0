@@ -75,8 +75,19 @@ eq_ObjFn_Supply.. Z =e=
 *===============
 
          + sum{t$tmodel(t), cost_scale * pvf_onm(t) * (
+
+*benefits of consumption
+* note here since we've linearly decomposed the demand curve
+* we can just take the product of price and binned quantity
+* to get the approximate/'blocky' integral
+* reminder that we'll always be minimizing but in this case we're minimizing 
+* the negative benefits (maximizing positive benefits) of ele consumption
+$ifthene.delasobj %GSw_DemElas%==1
+               - sum{(r,h,dbin)$[rfeas(r)],ele_p(r,h,t,dbin) * LOAD_DBIN(r,h,t,dbin) }
+$endif.delasobj
+
 *variable O&M costs
-              sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$cost_vom(i,v,r,t)],
+              + sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$cost_vom(i,v,r,t)],
                    hours(h) * cost_vom(i,v,r,t) * GEN(i,v,r,h,t) }
 
 *fixed O&M costs
