@@ -57,7 +57,8 @@ cost_cap_fin_mult_filt(i,r,t)      "--unitless-- capital cost financial multipli
 cost_cap_filt(i,t)                 "--2004$/MW-- technology capital costs"
 rsc_dat_filt(r,rs,i,rscbin,sc_cat) "--varies-- resource supply curve data"
 flex_load(r,h,t)                   "--MW-- total exogenously defined flexible load"
-flex_load_opt(r,h,t)              "--MW-- model results for optimizing flexible load"
+flex_load_opt(r,h,t)               "--MW-- model results for optimizing flexible load"
+elastic_load_ratio(r,h,t)          "--MW-- ratio of endogenous load to reference amount"
 ;
 
 *populate year sets
@@ -218,6 +219,15 @@ flex_load(r,h,"%cur_year%") = sum{flex_type, load_exog_flex(flex_type,r,h,"%cur_
 
 flex_load_opt(r,h,"%cur_year%") = sum{flex_type, FLEX.l(flex_type,r,h,"%cur_year%")} ;
 
+*============================
+* Elastic load data
+*============================
+
+elastic_load_ratio(r,h,"%cur_year%")$[rfeas(r)] = 
+* assumes load_exog_static and can_export_h are the same from reference to now-elastic case
+* this will not work with Sw_EV and/or Sw_EFSFlex enabled - see notes in c_supplymodel
+    load.l(r,h,"%cur_year%") / (load_exog_static(r,h,"%cur_year%") + can_exports_h(r,h,"%cur_year%") ) ;
+
 *=======================================
 * Unload all relevant data to a gdx file
 *=======================================
@@ -225,4 +235,4 @@ flex_load_opt(r,h,"%cur_year%") = sum{flex_type, FLEX.l(flex_type,r,h,"%cur_year
 execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%case%_%next_year%.gdx' avail_filt, canada, cap_csp, cap_cspns, cap_pv, cap_storage, cap_thermal, cap_trans, cap_wind_init, cap_wind_inv, cap_wind_ret, cf_hyd_filt,
                                                          cfhist_hyd_filt, coal, cost_vom_filt, csp_sm, fuel_price_filt, geo, h_szn, heat_rate_filt, cost_cap_fin_mult_filt, cost_cap_filt, rsc_dat_filt, flex_load_opt,
                                                          hierarchy, hours, hydmin, hydro_d, hydro_nd, i, load_multiplier, losses_trans_h, m_cf_filt, nuclear, r, r_cendiv, r_rs, repbioprice_filt, flex_load,
-                                                         rfeas, routes_filt, sdbin, storage, storage_duration, storage_eff, storage_no_csp, szn, tranloss, v, vom_hyd, cf_adj_t_filt, pvf_onm ;
+                                                         rfeas, routes_filt, sdbin, storage, storage_duration, storage_eff, storage_no_csp, szn, tranloss, v, vom_hyd, cf_adj_t_filt, pvf_onm , elastic_load_ratio, Sw_DemElas ;

@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import os
 from utilities import get_cap, tech_types, weighted_average, adjust_tz, \
-    get_cspns_frac, get_solar_cap, get_osprey_cap, print1, adjust_flex_load
+    get_cspns_frac, get_solar_cap, get_osprey_cap, print1, adjust_flex_load, adjust_elastic_load
 
 #%%
 
@@ -566,6 +566,15 @@ def prep_data(args):
         flex_load_opt = gdxin['flex_load_opt'].copy()
         flex_load_opt.columns = ['r', 'h', 't', 'opt']
         load = adjust_flex_load(load, flex_load, flex_load_opt, hdtmap)
+
+    # Adjust load for elastic demand changes
+    if gdxin['Sw_DemElas']['Value'][0] == 1.0:
+        #load in the ratio of endogenous to exogenous, benchmark load
+        load_ratio = gdxin['elastic_load_ratio']
+        load_ratio.columns = ['r','h','t','ratio']
+        load = adjust_elastic_load(load, load_ratio, hdtmap)
+
+
 
     # Adjust load for growth for both Osprey and reeds_cc
     load_mult = gdxin['load_multiplier'].copy()

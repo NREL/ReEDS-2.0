@@ -437,7 +437,7 @@ def get_remaining_cycles_per_day(stor_level,
 
     return df
 
-
+ 
 def adjust_flex_load(load_profiles, flex_load, flex_load_opt, dt8760):
 
     for r in load_profiles.columns:
@@ -464,6 +464,30 @@ def adjust_flex_load(load_profiles, flex_load, flex_load_opt, dt8760):
             - load_profiles_temp['exog']
 
     return load_profiles
+
+def adjust_elastic_load(load_profiles, load_ratio, dt8760):
+
+    for r in load_profiles.columns:
+
+        load_profiles_temp = load_profiles[[r]].reset_index()
+        load_profiles_temp = pd.concat([dt8760[['h']],
+                                        load_profiles_temp], axis=1)
+        flex_load_temp = load_ratio[load_ratio['r'] == r].reset_index(drop=True)
+        h3_load = load_profiles_temp[
+            load_profiles_temp['h'] == 'h3'].reset_index(drop=True)
+        temp = h3_load[['index', r]].sort_values(
+            r, ascending=False).reset_index(drop=True)
+        h17 = temp.loc[0:39, 'index']
+        load_profiles_temp.loc[h17, 'h'] = 'h17'
+
+        load_profiles_temp = pd.merge(left=load_profiles_temp,
+                                      right=flex_load_temp[['h', 'ratio']],
+                                      on='h', how='left').fillna(0)
+
+        load_profiles[r] = load_profiles[r] * load_profiles_temp['ratio']
+
+    return load_profiles
+
 
 
 # Delete extraneous csv files
