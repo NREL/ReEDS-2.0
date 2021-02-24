@@ -539,11 +539,11 @@ def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,
             if os.name=='posix':
                 print("Starting the run for case " + lstfile)
                 #give execution rights to the shell script
-                #os.chmod(os.path.join(OutputDir, 'call_' + lstfile + ext), 0o777)
+                os.chmod(os.path.join(OutputDir, 'call_' + lstfile + ext), 0o777)
                 #open it up - note the in/out/err will be written to the shellscript parameter
-                #shellscript = subprocess.Popen([os.path.join(OutputDir, 'call_' + lstfile + ext) + " >/dev/null"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,shell=True)
+                shellscript = subprocess.Popen([os.path.join(OutputDir, 'call_' + lstfile + ext) + " >/dev/null"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,shell=True)
                 #wait for it to finish before killing the thread
-                #shellscript.wait()
+                shellscript.wait()
         if hpc=="1":
                 # create a copy of srun_template to shfiles as lstfile.sh
                 if timetype!="int":
