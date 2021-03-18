@@ -14,9 +14,9 @@ do
 	echo '...Linking Directories'
 	break
 done
-
+clear
 # make a symbolic link to gams in the local repo's gams directory
-echo "The user selected " $GAMS >> testlog.txt
+echo "**** The user selected " $GAMS >> setuplog.txt
 ln -s $GAMS/ ./gams
 
 # setup the PATH environment variables
