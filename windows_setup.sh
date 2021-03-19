@@ -7,7 +7,7 @@ gamsparent=$(pwd)
 cd $basedir
 clear
 # ask the user which installation to use
-PS3="Select which gams installation to use: "
+PS3="Select which gams installation to use (Version must be later than 30.3): "
 select GAMS in $(find ${gamsparent//" "/"\ "} -wholename "*/gams.exe" -printf '%h ')
 do
 	echo 'You chose ' $GAMS 
@@ -17,11 +17,12 @@ done
 clear
 # make a symbolic link to gams in the local repo's gams directory
 echo "**** The user selected " $GAMS >> setuplog.txt
+echo '...Linking Directories, this could take several minutes'
 ln -s $GAMS/ ./gams
 
 # setup the PATH environment variables
 LOCALGAMS=$(find $(pwd) -wholename "/*/gams.exe" -printf '%h')
-PYTHON=${LOCALGAMS//" "/"\ "}"/GMSPython"
+PYTHON=$(find $(pwd) -wholename "*python.exe" -printf '%h')
 SCRIPTS=$PYTHON"/Scripts"
 #PATHVAR=(${!PATH@})
 
