@@ -45,16 +45,16 @@ $log
 $call 'python %basedir%%ds%input_processing%ds%writecapdat.py %basedir% ExistingUnits_%unitdata%.gdx PrescriptiveBuilds_%unitdata%.gdx PrescriptiveRetirements_%unitdata%.gdx %retscen% %casedir%%ds%inputs_case%ds% %GSw_WaterMain%'
 $log
 $log
-$call 'Rscript %basedir%%ds%input_processing%ds%R%ds%writesupplycurves.R %basedir% "%gams.sysdir%" %unitdata% 0 %supplycurve% %casedir%%ds%inputs_case%ds% %geosupplycurve% %geodiscov%'
+$call 'python %basedir%%ds%input_processing%ds%writesupplycurves.py -i %basedir% -u %unitdata% -d 0 -s %supplycurve% -o %casedir%%ds%inputs_case%ds% -g %geosupplycurve% -e %geodiscov%'
 $log
 $log
-$call 'python %basedir%%ds%inputs%ds%capacitydata%ds%capacity_exog_wind.py %basedir% ExistingUnits_%unitdata%.gdx PrescriptiveRetirements_%unitdata%.gdx %casedir%%ds%inputs_case%ds% %unitdata%'
+$call 'python %basedir%%ds%input_processing%ds%capacity_exog_wind.py %basedir% ExistingUnits_%unitdata%.gdx PrescriptiveRetirements_%unitdata%.gdx %casedir%%ds%inputs_case%ds% %unitdata%'
 $log
 $log
 $call 'python %basedir%%ds%input_processing%ds%writeload.py %basedir% %demandscen% %casedir%%ds%inputs_case%ds%'
 $log
 $log
-$call 'Rscript %basedir%%ds%input_processing%ds%R%ds%WriteHintage.R %basedir% %numhintage% %retscen% %mindev% %hintage_calcmethod% %distpvscen% "%generatorfile%" %casedir%%ds%inputs_case%ds% %GSw_WaterMain%'
+$call 'python %basedir%%ds%input_processing%ds%WriteHintage.py %basedir% %numhintage% %retscen% %mindev% %distpvscen% "%generatorfile%" %casedir%%ds%inputs_case%ds% %GSw_WaterMain%'
 $log
 $log
 $call 'python %basedir%%ds%input_processing%ds%cfgather.py %basedir% %distpvscen% %casedir%%ds%inputs_case%ds%'
