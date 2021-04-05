@@ -221,8 +221,7 @@ The Rscript.exe program will install a suite of R packages ([Figure 12](#Fig12))
 
 <a name="Execution"></a>
 # Executing the Model
-
-The execution of the ReEDS model can be accomplished by using a command-line interpreter application and launching a command line interface.
+If the ReEDS repository was set up using the Automatic Setup procedure above, then the ReEDS model must be launched by running `ReEDS.sh`. If the ReEDS repository was set up manually then the execution of the ReEDS model must be accomplished by navigating the command prompt to the repostiory and running `runbatch.py` in the python interpreter.
 
 A ReEDS case (also referred to as a &quot;run&quot;, &quot;scenario&quot; or &quot;instance&quot;) is executed through a python-based case batching program called &quot;runbatch.py&quot;. The user can execute a single case or a batch of cases using this program.
 
