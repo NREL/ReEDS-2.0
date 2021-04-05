@@ -45,7 +45,9 @@ python -m pip install gdxpds >> setuplog.txt 2>> setuperr.txt
 python -m pip install pandas==1.1.5 >> setuplog.txt 2>> setuperr.txt
 python -m pip install openpyxl==3.0.0 >> setuplog.txt 2>> setuperr.txt
 python -m pip install scipy==1.3.1 >> setuplog.txt 2>> setuperr.txt
-
+python -m pip install networkx >> setuplog.txt 2>> setuperr.txt
+python -m pip install bokeh >> setuplog.txt 2>> setuperr.txt
+python -m pip uninstall enum34 -y >> setuplog.txt 2>> setuperr.txt
 
 
 exit
