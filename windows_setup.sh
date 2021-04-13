@@ -1,5 +1,12 @@
 # gams installation directory
-firstgams=$(find /c/ -wholename "*/gams.exe" -printf '%h' -quit) 2>> setuperr.txt
+for DRIVE in c a b d e f g h i j k l m n o p q r s t u v w x y z
+do
+        firstgams=$(find /$DRIVE/ -wholename "*/gams.exe" -printf '%h' -quit) 2>> setuperr.txt
+        if (test -n $firstgams)
+        then
+                break
+        fi
+done
 basedir=$(pwd)
 cd $firstgams
 cd ..
@@ -7,7 +14,7 @@ gamsparent=$(pwd)
 cd $basedir
 clear
 # ask the user which installation to use
-PS3="Select which gams installation to use (Version must be later than 30.3): "
+PS3="Select which gams installation to use (Version must be version 30.3 or later): "
 select GAMS in $(find $gamsparent -wholename "*/gams.exe" -printf '%h ')
 do
 	echo 'You chose ' $GAMS 
@@ -18,6 +25,8 @@ clear
 # make a symbolic link to gams in the local repo's gams directory
 echo "**** The user selected " $GAMS >> setuplog.txt
 echo '...Linking Directories, this could take several minutes'
+mkdir gams 2>> setuplog.txt
+echo "The gams installation in this folder is a symbolic link to the original gams installation on this system" > ./gams/readme.txt
 ln -s $GAMS/ ./gams
 
 # setup the PATH environment variables
