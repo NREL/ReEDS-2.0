@@ -1,14 +1,24 @@
+
 # gams installation directory
-for DRIVE in c a b d e f g h i j k l m n o p q r s t u v w x y z
+basedir=$(pwd)
+firstgams=$(find /c -wholename "*/gams.exe" -printf '%h' -quit) 2>> setuperr.txt
+if (test -n $firstgams) then
+        gams=$firstgams
+fi
+clear
+for DRIVE in $(df --output=target | tail -n +3) /c
 do
-        firstgams=$(find /$DRIVE/ -wholename "*/gams.exe" -printf '%h' -quit) 2>> setuperr.txt
+        firstgams=$(find $DRIVE -wholename "*/gams.exe" -printf '%h' -quit) 2>> setuperr.txt
         if (test -n $firstgams)
         then
+                gams=$firstgams
                 break
+        else
+                continue
         fi
+	clear
 done
-basedir=$(pwd)
-cd $firstgams
+cd $gams
 cd ..
 gamsparent=$(pwd)
 cd $basedir
@@ -58,5 +68,6 @@ python -m pip install networkx >> setuplog.txt 2>> setuperr.txt
 python -m pip install bokeh >> setuplog.txt 2>> setuperr.txt
 python -m pip uninstall enum34 -y >> setuplog.txt 2>> setuperr.txt
 
-
+echo "Done!"
+echo -ne '\007'
 exit
