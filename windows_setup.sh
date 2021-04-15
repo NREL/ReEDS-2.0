@@ -23,21 +23,27 @@ cd ..
 gamsparent=$(pwd)
 cd $basedir
 clear
-# ask the user which installation to use
-PS3="Select which gams installation to use (Version must be version 30.3 or later): "
-select GAMS in $(find $gamsparent -wholename "*/gams.exe" -printf '%h ')
-do
-	echo 'You chose ' $GAMS 
-	echo '...Linking Directories'
-	break
-done
-clear
+
+gamses=$(find $gamsparent -wholename "*/gams.exe" -printf '%h ')
+if [ $(echo $gamses | wc -l) == 1 ]
+   then
+	GAMS=$gamses
+   else
+	# ask the user which installation to use
+	PS3="Select which gams installation to use (Version must be version 30.3 or later): "
+	select GAMS in $(find $gamsparent -wholename "*/gams.exe" -printf '%h ')
+	do
+		echo 'You chose ' $GAMS 
+		echo '...Linking Directories'
+		break
+	done
+fi
 # make a symbolic link to gams in the local repo's gams directory
 echo "**** The user selected " $GAMS >> setuplog.txt
 echo '...Linking Directories, this could take several minutes'
 mkdir gams 2>> setuplog.txt
 echo "The gams installation in this folder is a symbolic link to the original gams installation on this system" > ./gams/readme.txt
-ln -s $GAMS/ ./gams
+ln -s $GAMS ./gams
 
 # setup the PATH environment variables
 LOCALGAMS=$(find $(pwd) -wholename "/*/gams.exe" -printf '%h')
