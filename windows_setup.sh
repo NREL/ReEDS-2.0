@@ -6,7 +6,7 @@ if (test -n $firstgams) then
         gams=$firstgams
 fi
 clear
-for DRIVE in $(df --output=target | tail -n +3) /c
+for DRIVE in $(df -l --output=target | tail -n +3) /c
 do
         firstgams=$(find $DRIVE -wholename "*/gams.exe" -printf '%h' -quit) 2>> setuperr.txt
         if (test -n $firstgams)
