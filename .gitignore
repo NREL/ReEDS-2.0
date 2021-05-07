@@ -1,7 +1,8 @@
 ## Ignore:
 #setup files
 setuplog.txt
-gams/*
+setuperr.txt
+gams
 .bashrc
 
 # files in runs folder
