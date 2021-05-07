@@ -93,7 +93,7 @@ python -m pip install pdb >> setuplog.txt 2>> setuperr.txt
 python -m pip install six >> setuplog.txt 2>> setuperr.txt
 python -m pip install scipy >> setuplog.txt 2>> setuperr.txt
 python -m pip uninstall enum34 -y >> setuplog.txt 2>> setuperr.txt
-pytyon -m pip install enum
+python -m pip install enum
 
 echo "Done!"
 echo -ne '\007'
