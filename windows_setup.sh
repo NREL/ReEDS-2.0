@@ -2,48 +2,55 @@
 # gams installation directory
 basedir=$(pwd)
 firstgams=$(find /c -wholename "*/gams.exe" -printf '%h' -quit) 2>> setuperr.txt
-if (test -n $firstgams) then
+if ( test -n $firstgams ) then
         gams=$firstgams
-fi
-clear
-for DRIVE in $(df -l --output=target | tail -n +3) /c
-do
-        firstgams=$(find $DRIVE -wholename "*/gams.exe" -printf '%h' -quit) 2>> setuperr.txt
-        if (test -n $firstgams)
-        then
-                gams=$firstgams
-                break
-        else
-                continue
-        fi
 	clear
-done
+   else
+	for DRIVE in $(df -l --output=target | tail -n +3) /c
+	do
+	        firstgams=$(find $DRIVE -wholename "*/gams.exe" -printf '%h' -quit) 2>> setuperr.txt
+	        if (test -n $firstgams)
+	        then
+	                gams=$firstgams
+	                break
+	        else
+	                continue
+	        fi
+		clear
+	done
+fi
 cd $gams
 cd ..
 gamsparent=$(pwd)
 cd $basedir
 clear
 
-gamses=$(find $gamsparent -wholename "*/gams.exe" -printf '%h ')
-if [ $(echo $gamses | wc -l) == 1 ]
+# store all GAMS installation paths in an array
+read -ra gamses <<< $(find $gamsparent -wholename "*/gams.exe" -printf '%h ')
+if [ ${#gamses[@]} -eq 1 ] # if there is only one element in the array
    then
 	GAMS=$gamses
+   elif [ ${#gamses[@]} -eq 0 ]; then #if the array is empty
+   	clear
+   	echo Warning: No GAMS installation found
+	echo Press Enter to exit.
+   	read
+   	exit
    else
 	# ask the user which installation to use
-	PS3="Select which gams installation to use (Version must be version 30.3 or later): "
+	PS3="Select which gams installation to use (menu number, not version). Version must be version 30.3 or later: "
 	select GAMS in $(find $gamsparent -wholename "*/gams.exe" -printf '%h ')
 	do
 		echo 'You chose ' $GAMS 
-		echo '...Linking Directories'
 		break
 	done
 fi
 # make a symbolic link to gams in the local repo's gams directory
 echo "**** The user selected " $GAMS >> setuplog.txt
 echo '...Linking Directories, this could take several minutes'
-mkdir gams 2>> setuplog.txt
-echo "The gams installation in this folder is a symbolic link to the original gams installation on this system" > ./gams/readme.txt
+echo $GAMS
 ln -s $GAMS ./gams
+echo "The gams installation in this folder is a symbolic link to the original gams installation on this system" > ./gams/readme.txt
 
 # setup the PATH environment variables
 LOCALGAMS=$(find $(pwd) -wholename "/*/gams.exe" -printf '%h')
@@ -72,7 +79,21 @@ python -m pip install openpyxl==3.0.0 >> setuplog.txt 2>> setuperr.txt
 python -m pip install scipy==1.3.1 >> setuplog.txt 2>> setuperr.txt
 python -m pip install networkx >> setuplog.txt 2>> setuperr.txt
 python -m pip install bokeh >> setuplog.txt 2>> setuperr.txt
+python -m pip install traceback >> setuplog.txt 2>> setuperr.txt
+python -m pip install shutil >> setuplog.txt 2>> setuperr.txt
+python -m pip install re >> setuplog.txt 2>> setuperr.txt
+python -m pip install math >> setuplog.txt 2>> setuperr.txt
+python -m pip install json >> setuplog.txt 2>> setuperr.txt
+python -m pip install getpass >> setuplog.txt 2>> setuperr.txt
+python -m pip install collections >> setuplog.txt 2>> setuperr.txt
+python -m pip install datetime >> setuplog.txt 2>> setuperr.txt
+python -m pip install subprocess >> setuplog.txt 2>> setuperr.txt
+python -m pip install logging >> setuplog.txt 2>> setuperr.txt
+python -m pip install pdb >> setuplog.txt 2>> setuperr.txt
+python -m pip install six >> setuplog.txt 2>> setuperr.txt
+python -m pip install scipy >> setuplog.txt 2>> setuperr.txt
 python -m pip uninstall enum34 -y >> setuplog.txt 2>> setuperr.txt
+pytyon -m pip install enum
 
 echo "Done!"
 echo -ne '\007'
