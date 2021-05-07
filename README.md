@@ -70,6 +70,8 @@ Python is &quot;an object-oriented programming language, comparable to Perl, Rub
 
 &quot;R is a language and environment for statistical computing and graphics…R is available as Free Software under the terms of the Free Software Foundation&#39;s GNU General Public License in source code form.&quot; [[6](https://www.r-project.org/about.html)]
 
+Git is a version-control tool used to manage code repositories. Included in Git is a unix style command line emulator called Git Bash, which is used by ReEDS to perform some initial setup tasks.
+
 <a name="Setup"></a>
 # Setting up your computer to run ReEDS for the first time (for Microsoft Windows 10)
 
@@ -100,7 +102,7 @@ The setup and execution of the ReEDS model can be accomplished using a command-l
 This method automatically sets up the user's machine to run be able to run ReEDS via `ReEDS.sh`. 
 
 #### GAMS
-Download and install the latest version of GAMS anywhere on the `C:\` drive. This method is only compatible with GAMS version 30.3 and later. Refer to the manual setup instructions if you wish to use an older version of GAMS.
+Download and install the latest version of GAMS anywhere on the `C:\` drive. This method is only compatible with GAMS version 30.3 and later. Refer to the manual setup instructions if you wish to use an older version of GAMS. A valid GAMS liscence must be obtained to run ReEDS. ReEDS will not run on a trial liscence.
 
 #### ReEDS Code Repository
 The ReEDS source code is hosted on GitHub: https://github.com/NREL/ReEDS\_OpenAccess
@@ -115,7 +117,7 @@ git lfs install
 
 **Tip:** Once one ReEDS repository has been set up on a system, simply copy `.bashrc` from that repository into any other ReEDS repositories that exist on the system and presto! No more waiting for `windows_setup.sh` to run before using fresh repositories.
 
-5. `windows_setup.sh` will prompt the user to indicate which GAMS installation to use with ReEDS. The user **must** select a GAMS version later than 30.3.
+5. If there are more than one GAMS instalations on the machine, `windows_setup.sh` will prompt the user to indicate which GAMS installation to use with ReEDS. Be sure to indicate the menu number of the desired GAMS installation (not the version number itself). NREL has only confirmed compatibilty with GAMS version 30.3.
 
 Once `windows_setup.sh` completes, the ReEDS repository will contain a symbolic link to the GAMS installation with several python packages installed.
 
@@ -221,9 +223,7 @@ The Rscript.exe program will install a suite of R packages ([Figure 12](#Fig12))
 
 <a name="Execution"></a>
 # Executing the Model
-If the ReEDS repository was set up using the Automatic Setup procedure above, then the ReEDS model must be launched by running `ReEDS.sh`. If the ReEDS repository was set up manually then the execution of the ReEDS model must be accomplished by navigating the command prompt to the repostiory and running `runbatch.py` in the python interpreter.
-
-A ReEDS case (also referred to as a &quot;run&quot;, &quot;scenario&quot; or &quot;instance&quot;) is executed through a python-based case batching program called &quot;runbatch.py&quot;. The user can execute a single case or a batch of cases using this program.
+A ReEDS case (also referred to as a &quot;run&quot;, &quot;scenario&quot; or &quot;instance&quot;) is executed through `ReEDS.sh` if the repository was installed using the automatic setup procedure above, or a python-based case batching program called `runbatch.py` if the repository was setup manually. The user can execute a single case or a batch of cases using this program.
 
 **Step 1** : Specify the ReEDS case name(s) and configuration(s) in the case configuration file. ([Figure 13](#Fig13)). The default case configuration file name is called &quot;cases.csv&quot;, but the user may create custom case configuration files by using a suffix in the file name (e.g., &quot;cases\_test.csv&quot;). The file &quot;cases\_test.csv&quot; can be used to execute a &quot;test&quot; version of the model for the ERCOT system.
 
