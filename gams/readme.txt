@@ -1,1 +1,0 @@
-This directory is used to hold a symbolic link to GAMS if the repository was setup using windows_setup.sh. This is not actually a GAMS installation.
