@@ -78,7 +78,7 @@ python -m pip install pandas==1.1.5 >> setuplog.txt 2>> setuperr.txt
 python -m pip install openpyxl==3.0.0 >> setuplog.txt 2>> setuperr.txt
 python -m pip install scipy==1.3.1 >> setuplog.txt 2>> setuperr.txt
 python -m pip install networkx >> setuplog.txt 2>> setuperr.txt
-python -m pip install bokeh >> setuplog.txt 2>> setuperr.txt
+python -m pip install bokeh==1.3.4 >> setuplog.txt 2>> setuperr.txt
 python -m pip install traceback >> setuplog.txt 2>> setuperr.txt
 python -m pip install shutil >> setuplog.txt 2>> setuperr.txt
 python -m pip install re >> setuplog.txt 2>> setuperr.txt
@@ -92,8 +92,9 @@ python -m pip install logging >> setuplog.txt 2>> setuperr.txt
 python -m pip install pdb >> setuplog.txt 2>> setuperr.txt
 python -m pip install six >> setuplog.txt 2>> setuperr.txt
 python -m pip install scipy >> setuplog.txt 2>> setuperr.txt
+python -m pip uninstall jinja2 -y >> setuplog.txt 2>> setuperr.txt
+python -m pip install jinja2==2.10.3 >> setuplog.txt 2>> setuperr.txt
 python -m pip uninstall enum34 -y >> setuplog.txt 2>> setuperr.txt
-python -m pip install enum
 
 echo "Done!"
 echo -ne '\007'
