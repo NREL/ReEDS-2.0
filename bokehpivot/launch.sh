@@ -1,3 +1,3 @@
-cat ../.bashrc | echo
+$(cat ../.bashrc)
 bokeh serve . --sh --port 0
 
