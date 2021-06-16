@@ -1,0 +1,8 @@
+[1] "Beginning calculation of inputs\\capacitydata\\writecapdat.R"
+The GDX library has been loaded
+GDX library load path: C:\GAMS\win64\24.7\
+[1] "Writing capacity data in:  NULL"
+[1] "writecapdat.R completed successfully"
+[1] "Starting calculation of R\\plantcostprep.R"
+[1] "writing plant data to: D:/Danny_ReEDS/ReEDS-2.0/inputs/plant_characteristics"
+[1] "plantcostprep.R completed successfully"

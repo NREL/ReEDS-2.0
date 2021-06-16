@@ -1,5 +1,3 @@
-
-
 $setglobal ds \
 
 $ifthen.unix %system.filesys% == UNIX
@@ -8,6 +6,14 @@ $endif.unix
 
 Model %case% /all/ ;
 
+$if not set GSw_RenMandateScen $setglobal GSw_RenMandateScen 100
+national_rps_frac(t) = national_rps_frac_allScen(t,"%GSw_RenMandateScen%");
+$if not set GSw_RenMandateCapScen $setglobal GSw_RenMandateCapScen '100_cap1'
+national_rps_cap(t) = national_rps_cap_allScen(t,"%GSw_RenMandateCapScen%");
+
+*For any year where the national_rps_frac is greater than 0.99
+*set the minCF of gas-ct to zero
+*minCF(i,t)$[gas_ct(i)$(national_rps_frac(t) > 0.99)] = 0 ;
 
 *=================================
 * -- MODEL AND SOLVER OPTIONS --
@@ -375,3 +381,4 @@ execute 'python inputs_case%ds%LDC_prep.py %HourlyStaticFileSwitch% %case% %base
 *======================
 
 execute_unload 'inputs_case%ds%inputs.gdx' ;
+

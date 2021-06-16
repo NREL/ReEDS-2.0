@@ -86,7 +86,7 @@ def get_supply_curve_and_filter_and_add_reg(rev_case_path, rev_prefix, reg_col, 
         df_max_cap_reg = df_max_cap_reg[['force_keep']].copy()
         df = pd.merge(left=df, right=df_max_cap_reg, how='left', left_index=True, right_index=True, sort=False)
         df = df[(df['capacity'] >= df['min_cap']) | (df['force_keep'] == True)].copy()
-        df.loc[df['force_keep'] == True, 'capacity'] = .1234567 #This specific number is a signal that we'll convert to 0 in the outputs.
+        df.loc[df['force_keep'] == True, 'capacity'] = .001 #This is to make sure we get profiles. We'll convert to 0 in the outputs by rounding.
         df.drop(columns=['min_cap', 'force_keep'], inplace=True)
     if test_mode:
         #Test mode allows us to reduce the dataset further for speed
@@ -386,8 +386,10 @@ def save_sc_outputs(df_sc, df_sc_agg, out_dir, tech):
     #standard deviations, and corrections) and hourly profiles.
     logger.info('Saving supply curve outputs...')
     startTime = datetime.datetime.now()
-    df_sc.to_csv(out_dir + 'results/' + tech + '_supply_curve_raw.csv', index=False)
-    df_sc_agg['capacity'] = df_sc_agg['capacity'].replace(0.1234567,0) #This was a trick. Search for '.1234567' above.
+    df_sc_raw = df_sc.copy()
+    df_sc_raw['capacity'] = df_sc_raw['capacity'].round(2)
+    df_sc_raw.to_csv(out_dir + 'results/' + tech + '_supply_curve_raw.csv', index=False)
+    df_sc_agg[['capacity','trans_cap_cost','dist_mi']] = df_sc_agg[['capacity','trans_cap_cost','dist_mi']].round(2)
     df_sc_agg.to_csv(out_dir + 'results/' + tech + '_supply_curve.csv')
     logger.info('Done saving supply curve outputs: '+ str(datetime.datetime.now() - startTime))
 

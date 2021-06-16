@@ -3,6 +3,10 @@ import os
 import argparse
 import gdxpds
 import numpy as np
+# direct print and errors to log file
+import sys
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
 
 #%%
 # Model Inputs
@@ -25,7 +29,7 @@ gdxnameRET = args.gdxnameRET
 nukescen = args.nukescen
 outdir = args.outdir
 gdxhydro = 'hydrounitdata.gdx'
-waterconstraints = int(args.waterconstraints)
+waterconstraints = args.waterconstraints
 
 #%%
 #Testing inputs
@@ -316,8 +320,8 @@ if waterconstraints == 1:
     retdat = retdat.groupby(['t','r','i','coolingwatertech','ctt','wst'],as_index = False).agg('sum')
     retdat.columns = ['t','r','i','coolingwatertech','ctt','wst','value']
 
-    nonrsc = nonrsc.groupby(['r','i','coolingwatertech','ctt','wst'],as_index = False).agg('sum')
-    nonrsc.columns = ['r','i','coolingwatertech','ctt','wst','value']
+    nonrsc = nonrsc.groupby(['t','r','i','coolingwatertech','ctt','wst'],as_index = False).agg('sum')
+    nonrsc.columns = ['i','coolingwatertech','r','ctt','wst','value']
 
     pnonrsc['i'] = pnonrsc['coolingwatertech']
     pnonrsc = pnonrsc.groupby(['t','r','i'],as_index = False).agg('sum')

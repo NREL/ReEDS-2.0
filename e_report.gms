@@ -69,6 +69,7 @@ parameter
   cap_new_ann_out(i,r,t)         "--MW/yr-- new annual capacity by region"
   cap_new_bin_out                "--MW-- capacity of built techs"
   cap_new_icrt                   "--MW-- new capacity"
+  cap_new_icrt_refurb            "--MW-- new refurbished capacity (including tfirst year)"
   cap_new_out(i,r,t)             "--MW-- new capacity by region, which are investments from one solve year to the next"
   cap_out(i,r,t)                 "--MW-- capacity by region"
   capex_ivrt(i,v,r,t)            "--$-- capital expenditure for new capacity, no ITC/depreciation/PTC reductions"
@@ -102,6 +103,7 @@ parameter
   lcoe_built(i,r,t)              "--$/MWh-- levelized cost of electricity for technologies that were built"
   lcoe_built_nat(i,t)            "--$/MWh-- national average levelized cost of electricity for technologies that were built"
   lcoe_cf_act                    "--$/MWh-- LCOE using actual (instead of max) capacity factors"
+  lcoe_fullpol                   "--$/MWh-- LCOE considering full ITC and PTC value, whereas the LCOE parameter considers the annualized objective function"
   lcoe_nopol                     "--$/MWh-- LCOE without considering ITC and PTC adjustments"
   lcoe_pieces(lcoe_cat,i,r,t)    "--varies-- levelized cost of electricity elements for technologies that were built"
   lcoe_pieces_nat(lcoe_cat,i,t)  "--varies-- national average levelized cost of electricity elements for technologies that were built"
@@ -115,6 +117,9 @@ parameter
   raw_op_cost(t)                 "--2004$-- sum of operational costs from systemcost"
   rec_outputs(RPSCat,i,st,ast,t) "--MWh-- quantity of RECs served from state st to state ast"
   reduced_cost                   "--2004$/kW undiscounted-- the reduced cost of each investment option. All non-rsc are assigned to nobin"
+  RE_gen_price_nat(t)            "--2004$/MWh-- marginal cost of the national RE generation constraint"
+  RE_cap_price_r(r,szn,t)        "--2004$/MW-yr-- marginal cost of the RE capacity constraint by BA"
+  RE_cap_price_nat(szn,t)        "--2004$/MW-yr-- national average marginal cost of the RE capacity constraint"
   repbioprice(r,t)               "--2004$/MMBtu-- highest marginal bioprice of utilized bins for each region"
   repgasprice(cendiv,t)          "--2004$/MMBtu-- highest marginal gas price of utilized gas bins for each census division"
   repgasprice_r(r,t)             "--2004$/MMBtu-- highest marginal gas price of utilized gas bins for each region"
@@ -154,6 +159,7 @@ parameter
   tran_util_nat_out(t,trtype)    "--fraction-- national transmission utilization rate by trtype"
   tran_util_nat2_out(t)          "--fraction-- national transmission utilization rate"
   tran_util_out(r,rr,t,trtype)   "--fraction-- regional transmission utilization rate"
+  vre_cost_vom(i,v,r,t)          "--2004$/MWh-- vom cost where vre technologies subtracts RE gen price nat"
   captrade(r,rr,trtype,szn,t)    "--MW-- planning reserve margin capacity traded from r to rr"
   gasshare_ba(r,cendiv,t)        "--unitless-- share of natural gas consumption in BA relative to corresponding cendiv consumption"
   gasshare_cendiv(cendiv,t)      "--unitless-- share of natural gas consumption in cendiv relative to national consumption"
@@ -224,6 +230,16 @@ lcoe_nopol(i,v,r,t,rscbin)$(valcap(i,v,r,t)$ivt(i,v,t)$rsc_i(i)$m_rscfeas(r,i,rs
     + cost_vom_rr(i,v,r,t)
 ;
 
+lcoe_fullpol(i,v,r,t,rscbin) = lcoe(i,v,r,t,rscbin) ;
+lcoe_fullpol(i,v,r,t,rscbin)$(valcap(i,v,r,t)$ivt(i,v,t)$rsc_i(i)$m_rscfeas(r,i,rscbin)$gen_rsc(i,v,r,t)) =
+* cost of capacity divided by generation
+    (crf(t) * (cost_cap_fin_mult(i,r,t) * cost_cap(i,t) + m_rsc_dat(r,i,rscbin,"cost")$newv(v)) + cost_fom(i,v,r,t))
+    / gen_rsc(i,v,r,t)
+
+*plus ONM costs
+    + cost_vom_rr(i,v,r,t)
+;
+
 lcoe_built(i,r,t)$[sum{(v,h)$sum{rr$[valinv(i,v,rr,t)$cap_agg(r,rr)], INV.l(i,v,rr,t) }, GEN.l(i,v,r,h,t) * hours(h) }] =
         (crf(t) * (
          sum{(v,rr)$[valinv(i,v,rr,t)$cap_agg(r,rr)],
@@ -265,8 +281,10 @@ reqt_price('res_marg','na',r,szn,t)$[rfeas(r)$tmodel_new(t)] = (1 / cost_scale) 
 reqt_price('res_marg_ann','na',r,'ann',t) = sum{szn, reqt_price('res_marg','na',r,szn,t) } ;
 reqt_price('oper_res',ortype,r,h,t)$[rfeas(r)$tmodel_new(t)] = (1 / cost_scale) * (1 / pvf_onm(t)) * eq_OpRes_requirement.m(ortype,r,h,t) / hours(h) ;
 reqt_price('state_rps',RPSCat,r,'ann',t)$[rfeas(r)$tmodel_new(t)] = (1 / cost_scale) * (1 / pvf_onm(t)) * sum{st$r_st(r,st), eq_REC_Requirement.m(RPSCat,st,t) } ;
-reqt_price('nat_gen','na',r,'ann',t)$[rfeas(r)$tmodel_new(t)] = (1 / cost_scale) * (1 / pvf_onm(t)) * eq_national_gen.m(t) ;
 reqt_price('annual_cap',e,r,'ann',t)$[rfeas(r)$tmodel_new(t)] = (1 / cost_scale) * (1 / pvf_onm(t)) * eq_annual_cap.m(e,t) ;
+reqt_price('nat_rps','na',r,'ann',t)$(rfeas(r)$tmodel_new(t)) = (1 / cost_scale) * (1 / pvf_onm(t)) * eq_national_gen.m(t) ;
+reqt_price('nat_rps_res_marg','na',r,szn,t)$(rfeas(r)$tmodel_new(t)) = (1 / cost_scale) * (1 / pvf_onm(t)) * eq_national_rps_resmarg.m(r,szn,t) / 1000 ;
+reqt_price('nat_rps_res_marg_ann','na',r,'ann',t) = sum{szn, reqt_price('nat_rps_res_marg','na',r,szn,t) } ;
 
 *Load and operating reserve quantities are MWh, and reserve margin quantity is kW
 reqt_quant('load','na',r,h,t)$[rfeas(r)$tmodel_new(t)] = hours(h) * LOAD.l(r,h,t) ;
@@ -282,14 +300,25 @@ reqt_quant('oper_res',ortype,r,h,t)$[rfeas(r)$tmodel_new(t)] =
     ) ;
 reqt_quant('state_rps',RPSCat,r,'ann',t)$[rfeas(r)$tmodel_new(t)] =
     sum{st$r_st(r,st),RecPerc(RPSCat,st,t)} *sum{h,hours(h) *( (LOAD.l(r,h,t) - can_exports_h(r,h,t)) * (1.0 - distloss) - sum{v$valgen("distpv",v,r,t), GEN.l("distpv",v,r,h,t) })} ;
-reqt_quant('nat_gen','na',r,'ann',t)$[rfeas(r)$tmodel_new(t)] =
-    national_gen_frac(t) * (
-    sum{(h)$rfeas(r), LOAD.l(r,h,t) * hours(h) }
-    + sum{(rr,h,trtype)$[rfeas(rr)$rfeas(r)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW.l(rr,r,h,t,trtype) * hours(h)) }
+reqt_quant('nat_rps','na',r,'ann',t)$(rfeas(r)$tmodel_new(t)) =
+    national_rps_frac(t) * (
+* if Sw_GenMandate = 1, then apply the fraction to the bus bar load
+    (
+    sum{h, LOAD.l(r,h,t) * hours(h) }
+    + sum{(rr,h,trtype)$[rfeas(rr)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW.l(rr,r,h,t,trtype) * hours(h)) }
     + sum{(i,v,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN.l(i,v,r,h,src,t) * hours(h) }
     - sum{(i,v,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN.l(i,v,r,h,t) * hours(h) }
+    )$[Sw_GenMandate = 1]
+
+* if Sw_GenMandate = 2, then apply the fraction to the end use load
+    + (sum{h,
+        hours(h) *
+        ( (LOAD.l(r,h,t) - can_exports_h(r,h,t)) * (1.0 - distloss) - sum{v$valgen("distpv",v,r,t), GEN.l("distpv",v,r,h,t) })
+       })$[Sw_GenMandate = 2]
     ) ;
 reqt_quant('annual_cap',e,r,'ann',t)$[rfeas(r)$tmodel_new(t)] = emit_cap(e,t) * load_frac_rt(r,t) ;
+reqt_quant('nat_rps_res_marg','na',r,szn,t)$(rfeas(r)$tmodel_new(t)) = national_rps_frac(t) * peakdem_static_szn(r,szn,t) * (1+prm(r,t)) * 1000 ;
+reqt_quant('nat_rps_res_marg_ann','na',r,'ann',t) = sum{szn, reqt_quant('nat_rps_res_marg','na',r,szn,t) } ;
 
 load_rt(r,t)$[rfeas(r)$tmodel_new(t)] = sum{h, hours(h) * load_exog(r,h,t) } ;
 
@@ -329,7 +358,7 @@ repgasquant_nat(t)$tmodel_new(t) = sum{cendiv$cdfeas(cendiv), repgasquant(cendiv
 
 *for reported gasprice (not that used to compute system costs)
 *scale back to $ / mmbtu
-repgasprice(cendiv,t)$[(Sw_GasCurve = 0)$tmodel_new(t)$cdfeas(cendiv)] =
+repgasprice(cendiv,t)$[(Sw_GasCurve = 0)$tmodel_new(t)$cdfeas(cendiv)$repgasquant(cendiv,t)] =
     smax{gb$[sum{h, GASUSED.l(cendiv,gb,h,t) }], gasprice(cendiv,gb,t) } / gas_scale ;
 
 repgasprice(cendiv,t)$[(Sw_GasCurve = 2)$tmodel_new(t)$cdfeas(cendiv)$repgasquant(cendiv,t)] =
@@ -349,7 +378,7 @@ repgasprice_r(rb,t)$[(Sw_GasCurve = 1)$tmodel_new(t)$rfeas(rb)] =
               + smax(fuelbin$VGASBINQ_NATIONAL.l(fuelbin,t), gasbinp_national(fuelbin,t) )
               ) ;
 
-repgasprice(cendiv,t)$[(Sw_GasCurve = 1)$tmodel_new(t)$cdfeas(cendiv)] =
+repgasprice(cendiv,t)$[(Sw_GasCurve = 1)$tmodel_new(t)$cdfeas(cendiv)$repgasquant(cendiv,t)] =
     sum{rb$[rfeas(rb)$r_cendiv(rb,cendiv)], repgasprice_r(rb,t) * repgasquant_r(rb,t) } / repgasquant(cendiv,t) ;
 
 repgasprice_nat(t)$[tmodel_new(t)$sum{cendiv$cdfeas(cendiv), repgasquant(cendiv,t) }] =
@@ -475,9 +504,9 @@ ilr(i)$[upv(i) or dupv(i)] = 1.3 ;
 ilr(i)$[sameas(i,"distpv")] = 1.1 ;
 
 cap_deg_icrt(i,v,r,t)$valcap(i,v,r,t) = CAP.l(i,v,r,t) / ilr(i) ;
-cap_icrt(i,v,r,t)$[not (upv(i) or dupv(i))] = cap_deg_icrt(i,v,r,t) ;
-cap_icrt(i,v,r,t)$[upv(i) or dupv(i)] = sum{tt$[inv_cond(i,v,r,t,tt)$(tmodel(tt) or tfix(tt))],
-                                          INV.l(i,v,r,tt) + INV_REFURB.l(i,v,r,tt)$[refurbtech(i)$Sw_Refurb]} / ilr(i) ;
+cap_icrt(i,v,r,t)$[not (upv(i) or dupv(i) or wind(i))] = cap_deg_icrt(i,v,r,t) ;
+cap_icrt(i,v,r,t)$[upv(i) or dupv(i) or wind(i)] = (m_capacity_exog(i,v,r,t)$tmodel_new(t) + sum{tt$[inv_cond(i,v,r,t,tt)$(tmodel(tt) or tfix(tt))],
+                                          INV.l(i,v,r,tt) + INV_REFURB.l(i,v,r,tt)$[refurbtech(i)$Sw_Refurb]}) / ilr(i) ;
 cap_out(i,r,t)$tmodel_new(t) = sum{v$valcap(i,v,r,t), cap_icrt(i,v,r,t) } ;
 
 
@@ -491,6 +520,7 @@ cap_new_ann_out(i,r,t)$cap_new_out(i,r,t) = cap_new_out(i,r,t) / (yeart(t) - sum
 cap_new_bin_out(i,v,r,t,rscbin)$[rsc_i(i)$valinv(i,v,r,t)] = Inv_RSC.l(i,v,r,rscbin,t) / ilr(i) ;
 cap_new_bin_out(i,v,r,t,"bin1")$[(not rsc_i(i))$valinv(i,v,r,t)] = INV.l(i,v,r,t)  /ilr(i) ;
 cap_new_icrt(i,v,r,t)$[(not tfirst(t))$valinv(i,v,r,t)] = (INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)) / ilr(i) ;
+cap_new_icrt_refurb(i,v,r,t)$valinv(i,v,r,t) = INV_REFURB.l(i,v,r,t) / ilr(i) ;
 
 *=========================
 * AVAILABLE CAPACITY
@@ -606,14 +636,23 @@ emit_nat(t)$tmodel_new(t) = sum{r$rfeas(r), emit_r(r,t) } ;
 parameter emit_weighted;
 emit_weighted = sum{t$tmodel(t), emit_nat(t) * pvf_onm(t) } ;
 
+*==================================
+* National RE Constraint Marginals
+*==================================
+
+RE_gen_price_nat(t)$tmodel_new(t) = (1/cost_scale) * crf(t) * eq_national_gen.m(t);
+
+RE_cap_price_r(r,szn,t)$tmodel_new(t) = (1/cost_scale) * crf(t) * eq_national_rps_resmarg.m(r,szn,t) ;
+
+RE_cap_price_nat(szn,t)$tmodel_new(t) = (1/cost_scale) * crf(t) * sum(r,eq_national_rps_resmarg.m(r,szn,t) * peakdem_static_szn(r,szn,t)) /
+                                           sum(r,peakdem_static_szn(r,szn,t)) ;
+
 *=========================
 * [i,v,r,t]-level capital expenditures (for retail rate calculations)
 *=========================
 capex_ivrt(i,v,r,t) = INV.l(i,v,r,t) * (cost_cap_fin_mult_no_credits(i,r,t) * cost_cap(i,t) )
                       + sum{(rscbin),Inv_RSC.l(i,v,r,rscbin,t) * m_rsc_dat(r,i,rscbin,"cost") * cost_cap_fin_mult_no_credits(i,r,t) }
                       + INV_REFURB.l(i,v,r,t) * (cost_cap_fin_mult_no_credits(i,r,t) * cost_cap(i,t));
-
-
 
 *=========================
 * BA-Level SYSTEM COST: Capital
@@ -648,7 +687,7 @@ systemcost_ba("inv_ptc_payments_negative",r,t)$[rfeas_cap(r)$tmodel_new(t)] =
 *ptc payment costs
                   - sum{(i,v)$valinv(i,v,r,t),
                         INV.l(i,v,r,t) * (ptc_unit_value(i,v,r,t) * sum{h, hours(h)* m_cf(i,v,r,h,t)
-                         *(1-sum{rr$cap_agg(rr,r),curt_int(i,rr,h,t)+curt_marg(i,rr,h,t)}$(not hydro(i))) } ) }
+                         *(1 - sum{rr$cap_agg(rr,r), curt_int(i,rr,h,t) + curt_marg(i,rr,h,t) }$(not hydro(i))) } ) }
 ;
 
 systemcost_ba("inv_investment_spurline_costs_rsc_technologies",r,t)$[rfeas_cap(r)$tmodel_new(t)] =
@@ -677,7 +716,7 @@ systemcost_ba("inv_ptc_payments_negative_refurbishments",r,t)$[rfeas_cap(r)$tmod
 *costs of ptc for refurbished techs
               - sum{(i,v)$[Sw_Refurb$valinv(i,v,r,t)$refurbtech(i)],
                         ptc_unit_value(i,v,r,t) * sum{h, hours(h)* m_cf(i,v,r,h,t)
-                         *(1-sum{rr$cap_agg(rr,r),curt_int(i,rr,h,t)+curt_marg(i,rr,h,t)}$(not hydro(i))) } * INV_REFURB.l(i,v,r,t) }
+                         *(1 - sum{rr$cap_agg(rr,r), curt_int(i,rr,h,t) + curt_marg(i,rr,h,t) }$(not hydro(i))) } * INV_REFURB.l(i,v,r,t) }
 ;
 
 systemcost_ba("inv_transmission_line_investment",r,t)$[rfeas(r)$tmodel_new(t)]  =
@@ -804,14 +843,16 @@ raw_op_cost(t) = sum{sys_costs_op, systemcost(sys_costs_op,t) } ;
 
 error_check('z') = z.l - sum{t$tmodel(t), cost_scale *
                              (pvf_capital(t) * raw_inv_cost(t) + pvf_onm(t) * raw_op_cost(t))
+*minus small penalty to move storage into shorter duration bins
+                             - pvf_capital(t) * sum{(i,v,r,szn,sdbin)$[valcap(i,v,r,t)$storage_no_csp(i)], bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,szn,sdbin,t) }
 *minus hourly arbitrage value of storage
-                            - sum{(i,v,r)$[valinv(i,v,r,t)$storage_no_csp(i)],
+                             - pvf_onm(t) * sum{(i,v,r)$[valinv(i,v,r,t)$storage_no_csp(i)],
                                   hourly_arbitrage_value(i,r,t) * INV.l(i,v,r,t) }
 *minus retirement penalty
-                             - sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
-                                   cost_fom(i,v,r,t) * retire_penalty * (CAP.l(i,v,r,t) - INV.l(i,v,r,t) - INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb]) }
+                             - pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
+                                  cost_fom(i,v,r,t) * retire_penalty * (CAP.l(i,v,r,t) - INV.l(i,v,r,t) - INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb]) }
 *minus revenue from purchases of curtailed VRE
-                             - sum{(r,h), CURT.l(r,h,t) * hours(h) * cost_curt(t) }
+                             - pvf_onm(t) * sum{(r,h), CURT.l(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
                             } ;
 
 *Round error_check for z because of small number differences that always show up due to machine rounding and tolerances
@@ -873,20 +914,20 @@ execute_unload "outputs%ds%rep_%fname%.gdx"
   reqt_price, reqt_quant, load_rt, RecTech, prm, rec_outputs,
   emit_r, emit_nat, repgasprice, repgasprice_r, repgasprice_nat, repgasquant_nat, repgasquant, repgasquant_r, repbioprice,
   gen_out, gen_out_ann, gen_icrt, gen_icrt_uncurt, cap_out, cap_new_ann_out, cap_new_bin_out, cap_sdbin_out, cap_new_icrt, cap_avail, cap_firm, ret_ann_out, cap_upgrade,
-  m_capacity_exog, cap_icrt, cap_deg_icrt, ret_out, cap_new_out, cap_iter, gen_iter, cap_firm_iter, curt_tot_iter,
+  m_capacity_exog, cap_icrt, cap_deg_icrt, ret_out, cap_new_out, cap_new_icrt_refurb, cap_iter, gen_iter, cap_firm_iter, curt_tot_iter,
   cap_new_cc, cc_new, gen_new_uncurt, curt_new, cost_cap, capex_ivrt,
   objfn_raw, lcoe, lcoe_nopol, lcoe_cf_act, flex_load_out, peak_load_adj,
   raw_inv_cost, raw_op_cost, pvf_capital, pvf_onm,
   systemcost, systemcost_bulk, systemcost_bulk_ew, error_check, cost_scale,
   invtran_out, tran_out, tran_mi_out, tran_flow_out, tran_util_out, tran_util_nat_out, tran_util_nat2_out,
   curt_out, curt_out_ann, curt_all_ann, curt_all_out, cc_all_out
-  losses_tran_h, losses_ann, curt_rate, reduced_cost, emit_weighted,
+  losses_tran_h, losses_ann, curt_rate, reduced_cost, emit_weighted, RE_cap_price_r, RE_cap_price_nat, RE_gen_price_nat, vre_cost_vom
   opRes_supply_h, opRes_supply, stor_inout, stor_in, stor_out, stor_level,
   revenue, revenue_nat, revenue_en, revenue_en_nat, revenue_cap, revenue_cap_nat,
   lcoe_built, lcoe_built_nat, lcoe_pieces, lcoe_pieces_nat, gen_ann_nat, sdbin_size,
   tax_expenditure_itc, tax_expenditure_ptc, systemcost_ba, systemcost_ba_bulk, systemcost_ba_bulk_ew, expenditure_flow, expenditure_flow_rps,
   powerfrac_upstream, powerfrac_downstream, captrade,
-  rsc_dat,
+  rsc_dat, rsc_copy,
   water_withdrawal_ivrt, water_consumption_ivrt, watcap_ivrt, watcap_out, watcap_new_ivrt, watcap_new_out, watcap_new_ann_out, watret_out, watret_ann_out ;
 
 *This file is used in the ReEDS-to-PLEXOS data translation

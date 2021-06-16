@@ -75,6 +75,16 @@ def setupEnvironment():
     caseSwitches = [] #list of dicts, one dict for each case
     casenames = df_cases.columns[2:].tolist()
 
+    # GAMS limits identifier names to 63 characters.
+    # Check to make sure run names are within the limit, accounting for prefix.
+    # (The set "loadset" in d_solveprep.gms creates this constraint.)
+    checknames = [BatchName + '_' + c for c in casenames]
+    if any([len(c) > 46 for c in checknames]):
+        toolong = ['{} ({} characters)'.format(c, len(c)) for c in checknames if len(c) > 46]
+        error = ('Complete run name (batchname_casename) must be less than 47 characters.\n'
+                 'These run names are too long: \n>>> {}'.format('\n>>> '.join(toolong)))
+        raise ValueError(error)
+
     for case in casenames:
         #Fill any missing switches with the defaults in cases.csv
         df_cases[case] = df_cases[case].fillna(df_cases['Default Value'])
@@ -94,6 +104,8 @@ def setupEnvironment():
     demandset = df_cases.loc['demand'].tolist()
     distpvset = df_cases.loc['distpvscen'].tolist()
     cspset = df_cases.loc['calc_csp_cc'].tolist()
+    marg_vre_set = df_cases.loc['marg_vre_mw'].tolist()
+    marg_stor_set = df_cases.loc['marg_stor_mw'].tolist()
     hpcset = df_cases.loc['hpc'].tolist()
     GAMSDIR = df_cases.loc['GAMSDIR'].tolist()
 
@@ -159,6 +171,8 @@ def setupEnvironment():
             'demandset' : demandset,
             'distpvset' : distpvset,
             'cspset' : cspset,
+            'marg_vre_set' : marg_vre_set,
+            'marg_stor_set' : marg_stor_set,
             'hpcset' : hpcset
             }
 
@@ -189,6 +203,8 @@ def createmodelthreads(envVar):
                      ThreadInit['demandsetting'],
                      ThreadInit['distpv'],
                      ThreadInit['csp'],
+                     ThreadInit['marg_vre'],
+                     ThreadInit['marg_stor'],
                      ThreadInit['BatchName'],
                      ThreadInit['casename'],
                      ThreadInit['hpc'])
@@ -218,6 +234,8 @@ def createmodelthreads(envVar):
                'demandsetting':envVar['demandset'][i],
                'distpv':envVar['distpvset'][i],
                'csp':envVar['cspset'][i],
+               'marg_vre':envVar['marg_vre_set'][i],
+               'marg_stor':envVar['marg_stor_set'][i],
                'BatchName':envVar['BatchName'],
                'casename':envVar['casenames'][i],
                'hpc':envVar['hpcset'][i]
@@ -241,7 +259,7 @@ def writeerrorcheck(checkfile):
         return '\nif [ ! -f ' + checkfile + ' ]; then \n      exit 0\nfi\n\n'
 
 def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,InputDir,endyear,
-             ccworkers,startiter,demandsetting,distpv,csp,batch,case,hpc):
+             ccworkers,startiter,demandsetting,distpv,csp,marg_vre,marg_stor,batch,case,hpc):
     
     
     casedir = os.path.join(InputDir,"runs",lstfile)
@@ -395,7 +413,7 @@ def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,
                 #if it not the final solve year
                 if cur_year < max(solveyears):
                     #call Augur for that save file
-                    OPATH.writelines("python " + os.path.join('ReEDS_Augur','ReEDS_Augur.py') + " " + lstfile + " " + str(cur_year) + " " + str(next_year) + " " + timetype + " " + str(csp) + " " + waterswitch + " " + " 0\n")
+                    OPATH.writelines("python " + os.path.join('ReEDS_Augur','ReEDS_Augur.py') + " " + lstfile + " " + str(cur_year) + " " + str(next_year) + " " + timetype + " " + str(csp) + " " + waterswitch + " " + " 0 " + str(marg_vre) + " " + str(marg_stor) + "\n")
                     
         
     #############################
@@ -444,7 +462,7 @@ def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,
                 #no need to run cc curt scripts for final iteration
                 if i < niter-1:
                     #batch out calls to augurbatch
-                    OPATH.writelines("python augurbatch.py " + lstfile + " " + str(ccworkers) + " " + yearset_augur + " " + savefile + " " + str(begyear) + " " + str(endyear) + " " + distpv + " " + str(csp) + " " + str(timetype) + " " + str(waterswitch) + " " + str(i) + ' \n')
+                    OPATH.writelines("python augurbatch.py " + lstfile + " " + str(ccworkers) + " " + yearset_augur + " " + savefile + " " + str(begyear) + " " + str(endyear) + " " + distpv + " " + str(csp) + " " + str(timetype) + " " + str(waterswitch) + " " + str(i) + " " + str(marg_vre) + " " + str(marg_stor) + ' \n')
                     #merge all the resulting gdx files
                     #the output file will be for the next iteration
                     nextiter = i+1
@@ -492,7 +510,7 @@ def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,
                     OPATH.writelines("gams d_solvewindow.gms o="+os.path.join("lstfiles",lstfile + "_" + str(i) + ".lst")+" r="+os.path.join("g00files",restartfile) + " gdxcompress=1 xs=g00files\\"+savefile + toLogGamsString + " --niter=" + str(i) + " --maxiter=" + str(niter-1) + " --case=" + lstfile + " --window=" + win[0] + ' \n')
                     #start threads for cc/curt
                     OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
-                    OPATH.writelines("python augurbatch.py " + lstfile + " " + str(ccworkers) + " " + yearset_augur + " " + savefile + " " + str(begyear) + " " + str(endyear) + " " + distpv + " " + str(csp) + " " + str(timetype) + " " + str(waterswitch) + " " + str(i) + ' \n')
+                    OPATH.writelines("python augurbatch.py " + lstfile + " " + str(ccworkers) + " " + yearset_augur + " " + savefile + " " + str(begyear) + " " + str(endyear) + " " + distpv + " " + str(csp) + " " + str(timetype) + " " + str(waterswitch) + " " + str(i) + " " + str(marg_vre) + " " + str(marg_stor) + ' \n')
                     #merge all the resulting r2_in gdx files
                     #the output file will be for the next iteration
                     nextiter = i+1
@@ -510,12 +528,13 @@ def runModel(GAMSDir,options,caseSwitches,lstfile,niter,timetype,yearset_suffix,
         OPATH.writelines("gams e_report_dump.gms " + toLogGamsString + " --fname=" + lstfile + ' \n\n')
 
         bokehdir = os.path.join(os.getcwd(),"bokehpivot","reports")
-        OPATH.writelines('python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" ' + os.path.join(os.getcwd(),"runs",lstfile) + " all No none " + os.path.join(bokehdir,"templates","reeds2","standard_report_reduced.py") + " one " + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report-reduced") + ' no\n')
+        OPATH.writelines('python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" ' + os.path.join(os.getcwd(),"runs",lstfile) + " all No none " + os.path.join(bokehdir,"templates","reeds2","standard_report_RE100.py") + " one " + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report-reduced") + ' no\n')
         OPATH.writelines('python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" ' + os.path.join(os.getcwd(),"runs",lstfile) + " all No none " + os.path.join(bokehdir,"templates","reeds2","standard_report_expanded.py") + " one " + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report") + ' no\n')
         
         #convert large .pkl files to .csv.gz
         OPATH.writelines('python pickle_jar.py csp_profiles_{}_{} {} -r\n'.format(batch,case,caseinputs))
         OPATH.writelines('python pickle_jar.py recf_{}_{} {} -r\n'.format(batch,case,caseinputs))
+        OPATH.writelines('python pickle_jar.py load_{}_{} {} -r\n'.format(batch,case,caseinputs))
         
         #make .bat file to unload alldata to .gdx file
         with open(os.path.join(OutputDir,'dump_alldata.bat'),'w+') as datadumper:

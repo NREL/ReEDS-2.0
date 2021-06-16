@@ -1,4 +1,3 @@
-
 * global needed for this file:
 * case : name of case you're running
 * niter : current iteration
@@ -209,6 +208,9 @@ m_cc_mar(i,r,szn,t) = 0 ;
 cc_int(i,v,r,szn,t)$[cc_int(i,v,r,szn,t) > 1] = 1 ;
 cc_int(i,v,r,szn,t)$[tload(t)$csp_storage(i)$valcap(i,v,r,t)] = 1 ;
 
+* seasonal hydrogen storage receives full capacity credit
+cc_int(i,v,r,szn,t)$[tload(t)$storage_h2(i)$valcap(i,v,r,t)] = 1 ;
+
 *=======================================
 * --- Begin Averaging of CC/Curt ---
 *=======================================
@@ -258,4 +260,5 @@ tfix(t)$(tmodel(t)$(yeart(t)<solvewindows("%nextwindow%","start"))) = yes ;
 $include d2_varfix.gms
 
 $endif.lastiter
+
 

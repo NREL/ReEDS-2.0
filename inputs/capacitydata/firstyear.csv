@@ -92,7 +92,8 @@ dupv_9,2020
 Gas-CC,2022
 Gas-CC-CCS,2026
 Gas-CT,2010
-RE-CT,2026
+RE-CT,2024
+RE-CC,2024
 geohydro_pbinary_1,2024
 geohydro_pbinary_2,2024
 geohydro_pbinary_3,2024
@@ -145,6 +146,7 @@ Ocean,2100
 o-g-s,2100
 other,2100
 pumped-hydro,2024
+storage-h2,2030
 undisc_pbinary_1,2024
 undisc_pbinary_2,2024
 undisc_pbinary_3,2024

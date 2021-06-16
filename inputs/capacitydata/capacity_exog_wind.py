@@ -10,6 +10,10 @@ import pandas as pd
 import os
 import re
 import argparse
+# direct print and errors to log file
+import sys
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
 
 parser = argparse.ArgumentParser(description="""This file bins prescribed wind by TRG""")
 

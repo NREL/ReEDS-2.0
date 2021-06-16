@@ -37,11 +37,16 @@ positive variables
   STORAGE_IN(i,v,r,h,src,t)    "--MW-- storage entering in hour hthat is charging from a given source technology"
   STORAGE_LEVEL(i,v,r,h,t)     "--MWh per day-- storage level in hour h"
 
+* seasonal hydrogen storage
+  TES(i,v,r,szn,szn2,t)      "--MWh-- Total Energy Stored (TES) from season szn and used in season szn2"
+  TEH(i,v,r,szn,t)           "--MWh-- Total Energy Held (TEH) during season szn that is to be used in another season"
+
 * trade variables
   FLOW(r,rr,h,t,trtype)        "--MW-- electricity flow on transmission lines in hour h"
   OPRES_FLOW(ortype,r,rr,h,t)  "--MW-- interregional trade of operating reserves by operating reserve type"
   CURT_FLOW(r,rr,h,t)          "--MW-- interregional trade of curtailment"
   PRMTRADE(r,rr,trtype,szn,t)  "--MW-- planning reserve margin capacity traded from r to rr"
+  PRMTRADE_RE(r,rr,trtype,szn,t)        "--MW-- planning reserve margin RE capacity traded from r to rr"
 
 * operating reserve variables
   OPRES(ortype,i,v,r,h,t)      "--MW-- operating reserves by type"
@@ -111,6 +116,7 @@ EQUATION
  eq_supply_demand_balance(r,h,t)          "--MW-- supply demand balance"
  eq_dhyd_dispatch(i,v,r,szn,t)            "--MWh-- dispatchable hydro seasonal constraint"
  eq_capacity_limit(i,v,r,h,t)             "--MW-- generation limited to available capacity"
+ eq_capacity_limit_hydro_nd(i,v,r,h,t)    "--MW-- generation limited to available capacity for non-dispatchable hydro"
  eq_curt_gen_balance(r,h,t)               "--MW-- net generation and curtailment must equal gross generation"
  eq_curtailment(r,h,t)                    "--MW-- curtailment level"
  eq_mingen_lb(r,h,szn,t)                  "--MW-- lower bound on minimum generation level"
@@ -120,7 +126,7 @@ EQUATION
  eq_trans_reduct1(r,rr,h,t)               "--MW-- limit CURT_REDUCT_TRANS by transmission investment"
  eq_trans_reduct2(r,rr,h,t)               "--MW-- limit CURT_REDUCT_TRANS by maximum level found by Augur"
  eq_minloading(i,v,r,h,hh,t)              "--MW-- minimum loading across same-season hours"
- eq_min_cf(i,v,r,t)                       "--MWh-- minimum capacity factor constraint"
+ eq_min_cf(i,t)                           "--MWh-- minimum capacity factor constraint"
 
 * operating reserve constraints
  eq_OpRes_requirement(ortype,r,h,t)       "--MW-- operating reserve constraint"
@@ -146,6 +152,15 @@ EQUATION
  eq_REC_unbundledLimit(RPScat,st,t)       "--RECS-- unbundled RECS cannot exceed some percentage of total REC requirements"
  eq_RPS_OFSWind(st,t)                     "--MW-- MW of offshore wind capacity must be greater than or equal to RPS amount"
  eq_national_gen(t)                       "--MWh-- e.g. a national RPS or CES. require a certain amount of total generation to be from specified sources.",
+ eq_national_nucgen(t)                    "--MWh-- require a certain amount of total generation to be from nuclear"
+ eq_national_coalgen(t)                   "--MWh-- require a certain amount of total generation to be from coal"
+ eq_national_pvgen(t)                     "--MWh-- require a certain amount of total generation to be from PV"
+ eq_national_cspgen(t)                    "--MWh-- require a certain amount of total generation to be from CSP"
+ eq_national_windgen(t)                   "--MWh-- require a certain amount of total generation to be from wind"
+ eq_national_hydrogen(t)                  "--MWh-- require a certain amount of total generation to be from hydro"
+ eq_national_natgasgen(t)                 "--MWh-- require a certain amount of total generation to be from natural gas"
+ eq_national_ogsgen(t)                    "--MWh-- require a certain amount of total generation to be from o-g-s"
+ eq_national_rps_resmarg(r,szn,t)         "--MW-- require that a specified fraction of firm capacity be from renewable sources"
 
 * fuel supply curve equations
  eq_gasused(cendiv,h,t)                   "--MMBtu-- gas used must be from the sum of gas bins"
@@ -166,6 +181,7 @@ EQUATION
  eq_INVTRAN_VCLimit(r,vc)                    "--MW-- investment in transmission capacity cannot exceed that available in its VC bin"
  eq_PRMTRADELimit(r,rr,trtype,szn,t)         "--MW-- trading of PRM capacity cannot exceed the line's capacity"
  eq_SubStationAccounting(r,t)                "--Substations-- accounting for total investment in each substation"
+ eq_PRMTRADELimit_RE(r,rr,trtype,szn,t)             "--MW-- trading of RE PRM capacity cannot exceed the line's capacity"
 
 * storage-specific equations
  eq_storage_capacity(i,v,r,h,t)           "--MW-- Second storage capacity constraint in addition to eq_capacity_limit"
@@ -174,6 +190,14 @@ EQUATION
  eq_storage_level(i,v,r,h,t)              "--MWh per day-- Storage level inventory balance from one time-slice to the next"
  eq_storage_in_min(r,h,t)                 "--MW-- lower bound on STORAGE_IN"
  eq_storage_in_max(r,h,src,t)             "--MW-- upper bound on storage charging that can come from new sources"
+
+* hydrogen storage equations
+ eq_storage_h2_def_total_energy_held(i,v,r,szn,t)           "--MWh-- define the Total Energy Held in storage during season szn for use in another season"
+ eq_storage_h2_ub_start_energy_season(i,v,r,szn,t)          "--MWh-- upper bound of energy in storage at the START of season szn"
+ eq_storage_h2_ub_end_energy_season(i,v,r,szn,t)            "--MWh-- upper bound of energy in storage at the END of season szn"
+ eq_storage_h2_link_season_timeslice_charge(i,v,r,szn,t)    "--MWh-- link between season and time-slice for energy storage CHARGING"
+ eq_storage_h2_link_season_timeslice_discharge(i,vv,r,szn,t) "--MWh-- link between season and time-slice for energy storage DISCHARGING"
+ eq_storage_h2_balance_annual(i,v,r,t)                      "--MWh-- total energy charged = total energy discharged during the year"
 
 *Canadian imports balance
  eq_Canadian_Imports(r,szn,t)             "--MWh-- Balance of Canadian imports by season"
@@ -608,6 +632,22 @@ eq_capacity_limit(i,v,r,h,t)$[tmodel(t)$valgen(i,v,r,t)$(not storage_no_csp(i))]
           OPRES(ortype,i,v,r,h,t) }$Sw_OpRes
 ;
 
+eq_capacity_limit_hydro_nd(i,v,r,h,t)$[tmodel(t)$rfeas(r)$valgen(i,v,r,t)$(not storage(i))$hydro_nd(i)]..
+*sum of non-dispatchable hydro capacity multiplied by its rated capacity factor,
+    + sum{rr$[cap_agg(r,rr)$rfeas_cap(rr)$valcap(i,v,rr,t)],
+          (m_cf(i,v,rr,h,t)
+           * CAP(i,v,rr,t)) }
+
+    =e=
+
+*must exceed generation
+    GEN(i,v,r,h,t)
+
+*[plus] sum of operating reserves by type
+    + sum{ortype$reserve_frac(i,ortype),
+          OPRES(ortype,i,v,r,h,t) }$Sw_OpRes
+;
+
 
 eq_curt_gen_balance(r,h,t)$[tmodel(t)$rfeas(r)]..
 
@@ -666,7 +706,10 @@ eq_curtailment(r,h,t)$[tmodel(t)$rfeas(r)]..
            curt_stor(i,v,r,h,src,t) * STORAGE_IN(i,v,r,h,src,t)
          }
 
-* [plus] net flow of curtailment with no transmission losses (otherwise CURT can be turned into transmission losses)
+*[minus] curtailment reduction from building new transmission to rr
+    - sum{rr$sum{trtype, routes_inv(r,rr,trtype,t) }, CURT_REDUCT_TRANS(r,rr,h,t) }
+
+*[plus] net flow of curtailment with no transmission losses (otherwise CURT can be turned into transmission losses)
     + sum{(trtype,rr)$routes(rr,r,trtype,t), CURT_FLOW(r,rr,h,t) }$Sw_CurtFlow
     - sum{(trtype,rr)$routes(r,rr,trtype,t), CURT_FLOW(r,rr,h,t) }$Sw_CurtFlow
 ;
@@ -700,14 +743,13 @@ eq_mingen_ub(r,h,szn,t)$[h_szn(h,szn)$rfeas(r)$(yeart(t)>=mingen_firstyear)
 
 *requirement for techs to have a minimum annual capacity factor
 *disabled by default and rarely applied
-eq_min_cf(i,v,r,t)$[minCF(i,t)$tmodel(t)
-                   $rfeas(r)$valgen(i,v,r,t)$Sw_MinCFCon]..
+eq_min_cf(i,t)$[minCF(i,t)$tmodel(t)$sum{(v,r), valgen(i,v,r,t) }$Sw_MinCFCon]..
 
-    sum{h, hours(h) * GEN(i,v,r,h,t) }
+    sum{(v,r,h)$valgen(i,v,r,t), hours(h) * GEN(i,v,r,h,t) }
 
     =g=
 
-    sum{rr$[cap_agg(r,rr)$valcap(i,v,rr,t)], CAP(i,v,rr,t) } * sum{h, hours(h) } * minCF(i,t)
+    sum{(v,r), sum{rr$[cap_agg(r,rr)$valcap(i,v,rr,t)], CAP(i,v,rr,t) } } * sum{h, hours(h) } * minCF(i,t)
 ;
 
 
@@ -719,7 +761,7 @@ eq_dhyd_dispatch(i,v,r,szn,t)$[rfeas(r)$tmodel(t)$hydro_d(i)$valgen(i,v,r,t)]..
 *following parameter could be wrapped into one...
     * CAP(i,v,r,t)
     * cap_hyd_szn_adj(i,szn,r)
-    * cf_hyd(i,szn,r)
+    * cf_hyd(i,szn,r,t)
     * cfhist_hyd(r,t,szn,i)
 
     =g=
@@ -887,7 +929,7 @@ eq_reserve_margin(r,szn,t)$[tmodel(t)$rfeas(r)$(yeart(t)>=model_builds_start_yr)
          }
 
 *[plus] firm capacity contribution from all binned storage capacity
-*for now this is just battery, pumped-hydro, and CAES
+*for now this is just battery, pumped-hydro, CAES, and H2
     + sum{(i,v,rr,sdbin)$[cap_agg(r,rr)$storage_no_csp(i)$valcap(i,v,rr,t)],
           cc_storage(i,sdbin) * CAP_SDBIN(i,v,rr,szn,sdbin,t)
          }
@@ -1356,7 +1398,7 @@ eq_batterymandate(r,t)$[rfeas(r)$tmodel(t)$batterymandate(r,t)
 ;
 
 
-eq_national_gen(t)$[tmodel(t)$national_gen_frac(t)$Sw_GenMandate]..
+eq_national_gen(t)$[tmodel(t)$national_rps_frac(t)$Sw_GenMandate]..
 
 *generation from renewables (already post-curtailment)
     sum{(i,v,r,h)$[nat_gen_tech_frac(i)$valgen(i,v,r,t)],
@@ -1365,7 +1407,38 @@ eq_national_gen(t)$[tmodel(t)$national_gen_frac(t)$Sw_GenMandate]..
     =g=
 
 *must exceed the mandated percentage [times]
-    national_gen_frac(t) * (
+    national_rps_frac(t) * (
+
+* if Sw_GenMandate = 1, then apply the fraction to the bus bar load
+    (
+* load
+    sum{(r,h)$rfeas(r), LOAD(r,h,t) * hours(h) }
+* [plus] transmission losses
+    + sum{(rr,r,h,trtype)$[rfeas(rr)$rfeas(r)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW(rr,r,h,t,trtype) * hours(h)) }
+* [plus] storage losses
+    + sum{(i,v,r,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN(i,v,r,h,src,t) * hours(h) }
+    - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN(i,v,r,h,t) * hours(h) }
+    )$[Sw_GenMandate = 1]
+
+* if Sw_GenMandate = 2, then apply the fraction to the end use load
+    + (sum{(r,h)$rfeas(r),
+        hours(h) *
+        ( (LOAD(r,h,t) - can_exports_h(r,h,t)) * (1.0 - distloss) - sum{v$valgen("distpv",v,r,t), GEN("distpv",v,r,h,t) })
+       })$[Sw_GenMandate = 2]
+    )
+;
+
+
+eq_national_nucgen(t)$[tmodel(t)$(yeart(t) >= firstyear("nuclear"))$Sw_ConstantGenMandate]..
+
+*generation from renewables (already post-curtailment)
+    sum{(i,v,r,h)$[valgen(i,v,r,t)$nuclear(i)],
+        GEN(i,v,r,h,t) * hours(h)}
+
+    =e=
+
+*must equal the mandated percentage [times]
+    0.2 * (
 * load
     sum{(r,h)$rfeas(r), LOAD(r,h,t) * hours(h) }
 * [plus] transmission losses
@@ -1374,6 +1447,227 @@ eq_national_gen(t)$[tmodel(t)$national_gen_frac(t)$Sw_GenMandate]..
     + sum{(i,v,r,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN(i,v,r,h,src,t) * hours(h) }
     - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN(i,v,r,h,t) * hours(h) }
     )
+;
+
+eq_national_coalgen(t)$[tmodel(t)$(yeart(t) >= firstyear("coal-new"))$Sw_ConstantGenMandate]..
+
+*generation from renewables (already post-curtailment)
+    sum{(i,v,r,h)$[coal(i)$valgen(i,v,r,t)],
+        GEN(i,v,r,h,t) * hours(h)}
+
+    =e=
+
+*must equal the mandated percentage [times]
+    0.2 * (
+* load
+    sum{(r,h)$rfeas(r), LOAD(r,h,t) * hours(h) }
+* [plus] transmission losses
+    + sum{(rr,r,h,trtype)$[rfeas(rr)$rfeas(r)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW(rr,r,h,t,trtype) * hours(h)) }
+* [plus] storage losses
+    + sum{(i,v,r,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN(i,v,r,h,src,t) * hours(h) }
+    - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN(i,v,r,h,t) * hours(h) }
+    )
+;
+
+eq_national_pvgen(t)$[tmodel(t)$(yeart(t) >= firstyear("upv_1"))$Sw_ConstantGenMandate]..
+
+*generation from renewables (already post-curtailment)
+    sum{(i,v,r,h)$[pv(i)$valgen(i,v,r,t)],
+        GEN(i,v,r,h,t) * hours(h)}
+
+    =e=
+
+*must equal the mandated percentage [times]
+    0.03 * (
+* load
+    sum{(r,h)$rfeas(r), LOAD(r,h,t) * hours(h) }
+* [plus] transmission losses
+    + sum{(rr,r,h,trtype)$[rfeas(rr)$rfeas(r)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW(rr,r,h,t,trtype) * hours(h)) }
+* [plus] storage losses
+    + sum{(i,v,r,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN(i,v,r,h,src,t) * hours(h) }
+    - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN(i,v,r,h,t) * hours(h) }
+    )
+;
+
+eq_national_cspgen(t)$[tmodel(t)$(yeart(t) >= firstyear("csp1_1"))$Sw_ConstantGenMandate]..
+
+*generation from renewables (already post-curtailment)
+    sum{(i,v,r,h)$[csp(i)$valgen(i,v,r,t)],
+        GEN(i,v,r,h,t) * hours(h)}
+
+    =e=
+
+*must equal the mandated percentage [times]
+    0.001 * (
+* load
+    sum{(r,h)$rfeas(r), LOAD(r,h,t) * hours(h) }
+* [plus] transmission losses
+    + sum{(rr,r,h,trtype)$[rfeas(rr)$rfeas(r)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW(rr,r,h,t,trtype) * hours(h)) }
+* [plus] storage losses
+    + sum{(i,v,r,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN(i,v,r,h,src,t) * hours(h) }
+    - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN(i,v,r,h,t) * hours(h) }
+    )
+;
+
+eq_national_windgen(t)$[tmodel(t)$(yeart(t) >= firstyear("wind-ons_1"))$Sw_ConstantGenMandate]..
+
+*generation from renewables (already post-curtailment)
+    sum{(i,v,r,h)$[wind(i)$valgen(i,v,r,t)],
+        GEN(i,v,r,h,t) * hours(h)}
+
+    =e=
+
+*must equal the mandated percentage [times]
+    0.08 * (
+* load
+    sum{(r,h)$rfeas(r), LOAD(r,h,t) * hours(h) }
+* [plus] transmission losses
+    + sum{(rr,r,h,trtype)$[rfeas(rr)$rfeas(r)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW(rr,r,h,t,trtype) * hours(h)) }
+* [plus] storage losses
+    + sum{(i,v,r,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN(i,v,r,h,src,t) * hours(h) }
+    - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN(i,v,r,h,t) * hours(h) }
+    )
+;
+
+eq_national_hydrogen(t)$[tmodel(t)$(yeart(t) >= firstyear("Hydro"))$Sw_ConstantGenMandate]..
+
+*generation from renewables (already post-curtailment)
+    sum{(i,v,r,h)$[hydro(i)$valgen(i,v,r,t)],
+        GEN(i,v,r,h,t) * hours(h)}
+
+    =e=
+
+*must equal the mandated percentage [times]
+    0.066 * (
+* load
+    sum{(r,h)$rfeas(r), LOAD(r,h,t) * hours(h) }
+* [plus] transmission losses
+    + sum{(rr,r,h,trtype)$[rfeas(rr)$rfeas(r)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW(rr,r,h,t,trtype) * hours(h)) }
+* [plus] storage losses
+    + sum{(i,v,r,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN(i,v,r,h,src,t) * hours(h) }
+    - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN(i,v,r,h,t) * hours(h) }
+    )
+;
+
+eq_national_natgasgen(t)$[tmodel(t)$(yeart(t) >= firstyear("gas-cc"))$Sw_ConstantGenMandate]..
+
+*generation from renewables (already post-curtailment)
+    sum{(i,v,r,h)$[gas(i)$valgen(i,v,r,t)],
+        GEN(i,v,r,h,t) * hours(h)}
+
+    =e=
+
+*must equal the mandated percentage [times]
+    0.400 * (
+* load
+    sum{(r,h)$rfeas(r), LOAD(r,h,t) * hours(h) }
+* [plus] transmission losses
+    + sum{(rr,r,h,trtype)$[rfeas(rr)$rfeas(r)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW(rr,r,h,t,trtype) * hours(h)) }
+* [plus] storage losses
+    + sum{(i,v,r,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN(i,v,r,h,src,t) * hours(h) }
+    - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN(i,v,r,h,t) * hours(h) }
+    )
+;
+
+eq_national_ogsgen(t)$[tmodel(t)$(yeart(t) >= 2020)$Sw_ConstantGenMandate]..
+
+*generation from renewables (already post-curtailment)
+    sum{(i,v,r,h)$[sameas(i,'o-g-s')$valgen(i,v,r,t)],
+        GEN(i,v,r,h,t) * hours(h)}
+
+    =e=
+
+*must equal the mandated percentage [times]
+    0.005 * (
+* load
+    sum{(r,h)$rfeas(r), LOAD(r,h,t) * hours(h) }
+* [plus] transmission losses
+    + sum{(rr,r,h,trtype)$[rfeas(rr)$rfeas(r)$routes(rr,r,trtype,t)], (tranloss(rr,r,trtype) * FLOW(rr,r,h,t,trtype) * hours(h)) }
+* [plus] storage losses
+    + sum{(i,v,r,h,src)$[valcap(i,v,r,t)$storage_no_csp(i)], STORAGE_IN(i,v,r,h,src,t) * hours(h) }
+    - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_no_csp(i)], GEN(i,v,r,h,t) * hours(h) }
+    )
+;
+
+
+*trade of planning reserve margin capacity cannot exceed the transmission line's available capacity
+eq_PRMTRADELimit_RE(r,rr,trtype,szn,t)$[tmodel(t)$rfeas(r)$rfeas(rr)$national_rps_cap(t)
+                                     $routes(r,rr,trtype,t)$Sw_ReserveMargin$Sw_RenMandateCap]..
+
+*[plus] transmission capacity
+    + CAPTRAN(r,rr,trtype,t)
+
+    =g=
+
+*[plus] firm capacity traded between regions
+    + PRMTRADE_RE(r,rr,trtype,szn,t)
+;
+
+
+eq_national_rps_resmarg(r,szn,t)$[tmodel(t)$rfeas(r)$Sw_RenMandateCap$Sw_ReserveMargin$national_rps_cap(t)]..
+
+*[plus] sum of all non-rsc and non-storage capacity
+    + sum{(i,v)$[valcap(i,v,r,t)$clean_energy(i)$(not vre(i))$(not hydro(i))$(not storage(i))],
+          CAP(i,v,r,t)
+         }
+
+*[plus] firm capacity from existing VRE or CSP
+*only used in sequential solve case (otherwise cc_old = 0)
+    + sum{(i,rr)$[(vre(i) or csp(i))$cap_agg(r,rr)$rfeas_cap(rr)],
+          cc_old(i,rr,szn,t)
+         }
+
+*[plus] marginal capacity credit of VRE and csp times new investment
+*only used in sequential solve case (otherwise m_cc_mar = 0)
+*Note: new distpv is included with cc_old
+    + sum{(i,v,rr)$[cap_agg(r,rr)$(vre(i) or csp(i))$valinv(i,v,rr,t)],
+          m_cc_mar(i,rr,szn,t) * (INV(i,v,rr,t) + INV_REFURB(i,v,rr,t)$[refurbtech(i)$Sw_Refurb])
+         }
+
+*[plus] firm capacity contribution from all binned storage capacity
+*for now this is just battery, pumped-hydro, CAES, and H2
+    + sum{(i,v,rr,sdbin)$[cap_agg(r,rr)$storage_no_csp(i)$valcap(i,v,rr,t)],
+          cc_storage(i,sdbin) * CAP_SDBIN(i,v,rr,szn,sdbin,t)
+         }
+
+*[plus] average capacity credit times capacity of VRE and storage
+*used in rolling window and full intertemporal solve (otherwise cc_int = 0)
+    + sum{(i,v,rr)$[(vre(i) or storage(i))$valcap(i,v,rr,t)$cap_agg(r,rr)],
+          cc_int(i,v,rr,szn,t) * CAP(i,v,rr,t)
+         }
+
+*[plus] excess capacity credit
+*used in rolling window and full intertemporal solve when using marginals for cc_int (otherwise cc_excess = 0)
+    + sum{(i,rr)$[(vre(i) or storage(i))$cap_agg(r,rr)$rfeas_cap(rr)],
+          cc_excess(i,rr,szn,t)
+         }
+
+*[plus] firm capacity of non-dispatchable hydro
+* nb: hydro_nd generation does not fluctuate
+* within a seasons set of hours
+    + sum{(i,v,h)$[hydro_nd(i)$valgen(i,v,r,t)$h_szn_prm(h,szn)],
+          GEN(i,v,r,h,t)
+         }
+
+*[plus] dispatchable hydro firm capacity
+    + sum{(i,v)$[hydro_d(i)$valcap(i,v,r,t)],
+          CAP(i,v,r,t) * cap_hyd_szn_adj(i,szn,r)
+         }
+
+*[plus] imports of firm capacity
+    + sum{(rr,trtype)$[routes(rr,r,trtype,t)$rfeas(rr)],
+          (1 - tranloss(rr,r,trtype)) * PRMTRADE_RE(rr,r,trtype,szn,t)
+         }
+
+*[minus] exports of firm capacity
+    - sum{(rr,trtype)$[routes(r,rr,trtype,t)$rfeas(rr)],
+          PRMTRADE_RE(r,rr,trtype,szn,t)
+         }
+
+    =g=
+
+*[plus] the peak demand times the planning reserve margin
+    + (peakdem_static_szn(r,szn,t) + PEAK_FLEX(r,szn,t)$Sw_EFS_flex) * (1 + prm(r,t)) * national_rps_cap(t) * (1$[Sw_GenMandate = 1] + (1.0 - distloss)$[Sw_GenMandate = 2])
 ;
 
 *====================================
@@ -1512,7 +1806,7 @@ eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)$storage_no_csp(i)$tmodel(t)]..
 *  daily storage level in the current time-slice (h)
 *  plus daily net charging in the current time-slice (accounting for losses).
 *  CSP with storage energy accounting is also covered by this constraint.
-eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$tmodel(t)]..
+eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(not storage_h2(i))$tmodel(t)]..
 
     sum{(hh)$[nexth(h,hh)], STORAGE_LEVEL(i,v,r,hh,t) }
 
@@ -1559,7 +1853,7 @@ eq_storage_duration(i,v,r,h,t)$[valgen(i,v,r,t)$(battery(i) or CSP_Storage(i))
 *lower bound on storage charging
 eq_storage_in_min(r,h,t)$[sum{(i,v)$storage_no_csp(i),valgen(i,v,r,t)}$tmodel(t)]..
 
-    sum{(i,v)$[storage_no_csp(i)$valgen(i,v,r,t)], STORAGE_IN(i,v,r,h,"other",t) }
+    sum{(i,v)$storage_no_csp(i),STORAGE_IN(i,v,r,h,"other",t)}
 
     =g=
 
@@ -1585,9 +1879,79 @@ eq_storage_in_max(r,h,src,t)$[rfeas(r)$rb(r)$(not sameas(src,"other"))$tmodel(t)
 ;
 
 
+*============================================
+* --- Seasonal Hydrogen Storage Equations ---
+*============================================
 *===================================
 * --- CANADIAN IMPORTS EQUATIONS ---
 *===================================
+
+eq_storage_h2_def_total_energy_held(i,v,r,szn,t)$[valgen(i,v,r,t)$storage_h2(i)$tmodel(t)$Sw_Storage$Sw_SeasonalStorage]..
+* (+) Total energy held in storage during season 'szn'
+TEH(i,v,r,szn,t)
+=e=
+* (+) Total energy stored from season 'szn2' and used in 'szn3' that must pass through season 'szn'
+sum{(szn2,szn3)$held(szn,szn2,szn3), TES(i,v,r,szn2,szn3,t)} ;
+
+* ------------------------------------------------------------
+
+eq_storage_h2_ub_start_energy_season(i,v,r,szn,t)$[valgen(i,v,r,t)$storage_h2(i)$tmodel(t)$Sw_Storage$Sw_SeasonalStorage]..
+* (+) Total energy stored from all seasons 'szn2' and moved to season 'szn'
++ sum{szn2$[ord(szn2)<>ord(szn)], TES(i,v,r,szn2,szn,t)}
+* (+) Total energy held in storage during season 'szn'
++ TEH(i,v,r,szn,t)
+* (+) Daily energy stored and moved within the same season 'szn'
++ TES(i,v,r,szn,szn,t) / numdays(szn)
+=l=
+* storage energy capacity
++ storage_duration(i) * sum{rr$[valcap(i,v,rr,t)$rfeas_cap(rr)$cap_agg(r,rr)], CAP(i,v,rr,t)}
+;
+
+* ------------------------------------------------------------
+
+eq_storage_h2_ub_end_energy_season(i,v,r,szn,t)$[valgen(i,v,r,t)$storage_h2(i)$tmodel(t)$Sw_Storage$Sw_SeasonalStorage]..
+* (+) Total energy stored from season 'szn' and moved to a all seasons 'szn2'
++ sum{szn2$[ord(szn2)<>ord(szn)], TES(i,v,r,szn,szn2,t)}
+* (+) Total energy held in storage during season 'szn'
++ TEH(i,v,r,szn,t)
+* (+) Daily energy stored and moved within the same season 'szn'
++ TES(i,v,r,szn,szn,t) / numdays(szn)
+=l=
+* storage energy capacity
++ storage_duration(i) * sum{rr$[valcap(i,v,rr,t)$rfeas_cap(rr)$cap_agg(r,rr)], CAP(i,v,rr,t)}
+;
+
+* ------------------------------------------------------------
+
+eq_storage_h2_link_season_timeslice_charge(i,v,r,szn,t)$[valgen(i,v,r,t)$storage_h2(i)$tmodel(t)$Sw_Storage$Sw_SeasonalStorage]..
+* Total energy stored from season 'szn' and sent to all seasons 'szn2'
+sum{szn2, TES(i,v,r,szn,szn2,t)}
+=e=
+* total charge in all timeslices 'h' that are in 'szn'
+sum{(src,h)$h_szn(h,szn), STORAGE_IN(i,v,r,h,src,t) * hours(h)}
+;
+
+* ------------------------------------------------------------
+
+eq_storage_h2_link_season_timeslice_discharge(i,v,r,szn,t)$[valgen(i,v,r,t)$storage_h2(i)$tmodel(t)$Sw_Storage$Sw_SeasonalStorage]..
+* Total energy stored in all seasons 'szn2' and sent to season 'szn'
+storage_eff(i,t) * sum{szn2, TES(i,v,r,szn2,szn,t)}
+=e=
+* total daily discharge in all timeslices 'h' that are in 'szn'
+sum{h$h_szn(h,szn), GEN(i,v,r,h,t) * hours(h)}
+;
+
+* ------------------------------------------------------------
+
+* THIS EQUATION IS NOT NEEDED BECAUSE IT IS REDUNDANT, BUT INCLUDING IT FOR NOW
+
+eq_storage_h2_balance_annual(i,v,r,t)$[valgen(i,v,r,t)$storage_h2(i)$tmodel(t)$Sw_Storage$Sw_SeasonalStorage]..
+* Total energy charged (accounting for efficiency loss)
+    storage_eff(i,t) * sum{(h,src), hours(h) * STORAGE_IN(i,v,r,h,src,t) }
+    =e=
+* Total energy discharged
+    sum{h, hours(h) * GEN(i,v,r,h,t)}
+;
 
 eq_Canadian_Imports(r,szn,t)$[can_imports_szn(r,szn,t)$tmodel(t)]..
 
@@ -1644,3 +2008,4 @@ eq_water_use_limit(i,v,w,r,szn,t)$[i_water_cooling(i)$valgen(i,v,r,t)$tmodel(t)$
 
     sum{h$h_szn(h,szn), WAT(i,v,w,r,h,t) }
 ;
+

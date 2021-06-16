@@ -255,6 +255,14 @@ if __name__ == '__main__':
         'iteration',
         help='Iteration number for intertemporal and window solve',
         default='0', type=str)
+    parser.add_argument(
+        'reedscc_marg_vre_mw',
+        help='Marginal capacity of VRE (in MW) for marginal curt/cc calculations',
+        default=1000, type=int)
+    parser.add_argument(
+        'marg_curt_marg_stor_mw',
+        help='Marginal capacity of storage (in MW) for marginal curt calculations',
+        default=100, type=int)
 
     # Optional arguments: booleans to turn on/off scripts for debugging
     parser.add_argument(
@@ -325,6 +333,8 @@ if __name__ == '__main__':
         args['calc_csp_cc'] = '0'
         args['waterswitch'] = '0'
         args['iteration'] = '0'
+        args['reedscc_marg_vre_mw'] = 1000
+        args['marg_curt_marg_stor_mw'] = 100
         # Files to run
         args['data_dump'] = False
         args['prep_data'] = True

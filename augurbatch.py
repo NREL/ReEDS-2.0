@@ -28,13 +28,13 @@ def createCurtCCThreads(case, ccworkers, yearset, restartfile, startyear,
                     'ReEDS_Augur', 'ReEDS_Augur.py') + ' ' + case + ' '
                     + str(cur_year) + ' ' + str(cur_year) + ' ' + timetype
                     + ' ' + str(csp) + ' ' + str(waterswitch) + ' '
-                    + str(iteration))
+                    + str(iteration) + ' ' + str(marg_vre) + ' ' + str(marg_stor))
             if os.name == 'posix':
                 shellscript = subprocess.Popen(
                     ['python ' + os.path.join('ReEDS_Augur', 'ReEDS_Augur.py')
                      + ' ' + case + ' ' + str(cur_year) + ' ' + str(cur_year)
                      + ' ' + timetype + ' ' + str(csp) + ' ' + str(waterswitch)
-                     + ' ' + str(iteration) + ' >/dev/null'],
+                     + ' ' + str(iteration) + ' ' + str(marg_vre) + ' ' + str(marg_stor) + ' >/dev/null'],
                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL, shell=True)
                 # wait for it to finish before killing the thread
@@ -82,6 +82,8 @@ def main():
     timetype = sys.argv[9]
     waterswitch = sys.argv[10]
     iteration = sys.argv[11]
+    marg_vre = sys.argv[12]
+    marg_stor = sys.argv[13]
 
     print('Beginning batch run of Augur calls using options: ')
     print('Case: '+case)
@@ -95,9 +97,11 @@ def main():
     print('timetype: ' + timetype)
     print('waterswitch' + waterswitch)
     print('iteration: ' + str(iteration))
+    print('marg_vre: ' + str(marg_vre))
+    print('marg_stor: ' + str(marg_stor))
 
     createCurtCCThreads(case, ccworkers, yearset, restartfile, startyear,
-                        endyear, distpv, csp, timetype, waterswitch, iteration)
+                        endyear, distpv, csp, timetype, waterswitch, iteration, marg_vre, marg_stor)
 
 
 if __name__ == '__main__':

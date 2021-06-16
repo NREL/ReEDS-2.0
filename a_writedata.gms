@@ -39,28 +39,31 @@ $call 'mv %casedir%%ds%inputs_case%ds%distPVCF_%distpvscen%.csv %casedir%%ds%inp
 *log command here adds some spacing between calls to make it easier to read
 $log
 $log
-$call 'python %basedir%%ds%input_processing%ds%fuelcostprep.py %basedir% %coalscen% %uraniumscen% %ngscen% %GSw_EFS1_AllYearLoad% %GSw_GasSector% %casedir%%ds%inputs_case%ds%'
+$call.checkErrorLevel 'python %basedir%%ds%input_processing%ds%fuelcostprep.py %basedir% %coalscen% %uraniumscen% %ngscen% %GSw_EFS1_AllYearLoad% %GSw_GasSector% %casedir%%ds%inputs_case%ds%'
 $log
 $log
-$call 'python %basedir%%ds%input_processing%ds%writecapdat.py %basedir% ExistingUnits_%unitdata%.gdx PrescriptiveBuilds_%unitdata%.gdx PrescriptiveRetirements_%unitdata%.gdx %retscen% %casedir%%ds%inputs_case%ds% %GSw_WaterMain%'
+$call.checkErrorLevel 'python %basedir%%ds%input_processing%ds%writecapdat.py %basedir% ExistingUnits_%unitdata%.gdx PrescriptiveBuilds_%unitdata%.gdx PrescriptiveRetirements_%unitdata%.gdx %retscen% %casedir%%ds%inputs_case%ds% %GSw_WaterMain%'
 $log
 $log
-$call 'Rscript %basedir%%ds%input_processing%ds%R%ds%writesupplycurves.R %basedir% "%gams.sysdir%" %unitdata% 0 %supplycurve% %casedir%%ds%inputs_case%ds% %geosupplycurve% %geodiscov%'
+$call.checkErrorLevel 'Rscript %basedir%%ds%input_processing%ds%R%ds%writesupplycurves.R %basedir% "%gams.sysdir%" %unitdata% 0 %supplycurve% %casedir%%ds%inputs_case%ds% %geosupplycurve% %geodiscov%'
 $log
 $log
-$call 'python %basedir%%ds%inputs%ds%capacitydata%ds%capacity_exog_wind.py %basedir% ExistingUnits_%unitdata%.gdx PrescriptiveRetirements_%unitdata%.gdx %casedir%%ds%inputs_case%ds% %unitdata%'
+$call.checkErrorLevel 'python %basedir%%ds%inputs%ds%capacitydata%ds%capacity_exog_wind.py %basedir% ExistingUnits_%unitdata%.gdx PrescriptiveRetirements_%unitdata%.gdx %casedir%%ds%inputs_case%ds% %unitdata%'
 $log
 $log
-$call 'python %basedir%%ds%input_processing%ds%writeload.py %basedir% %demandscen% %casedir%%ds%inputs_case%ds%'
+$call.checkErrorLevel 'python %basedir%%ds%input_processing%ds%writeload.py %basedir% %demandscen% %casedir%%ds%inputs_case%ds%'
 $log
 $log
-$call 'Rscript %basedir%%ds%input_processing%ds%R%ds%WriteHintage.R %basedir% %numhintage% %retscen% %mindev% %hintage_calcmethod% %distpvscen% "%generatorfile%" %casedir%%ds%inputs_case%ds% %GSw_WaterMain%'
+$call.checkErrorLevel 'Rscript %basedir%%ds%input_processing%ds%R%ds%WriteHintage.R %basedir% %numhintage% %retscen% %mindev% %hintage_calcmethod% %distpvscen% "%generatorfile%" %casedir%%ds%inputs_case%ds% %GSw_WaterMain%'
 $log
 $log
-$call 'python %basedir%%ds%input_processing%ds%cfgather.py %basedir% %distpvscen% %casedir%%ds%inputs_case%ds%'
+$call.checkErrorLevel 'python %basedir%%ds%input_processing%ds%cfgather.py %basedir% %distpvscen% %casedir%%ds%inputs_case%ds%'
 $log
 $log
-$call 'python %basedir%%ds%input_processing%ds%plantcostprep.py %basedir% %convscen% %onswindscen% %ofswindscen% %upvscen% %cspscen% %batteryscen% %geoscen% %hydroscen% %degrade_suffix% %casedir%%ds%inputs_case%ds% '
+$call.checkErrorLevel 'python %basedir%%ds%input_processing%ds%plantcostprep.py %basedir% %convscen% %onswindscen% %ofswindscen% %upvscen% %cspscen% %batteryscen% %geoscen% %hydroscen% %degrade_suffix% %casedir%%ds%inputs_case%ds% '
 $log
 $log
-$call 'python %basedir%%ds%input_processing%ds%all_year_load.py %basedir% %GSw_EFS_Flex% %GSw_EFS1_AllYearLoad% %GSw_EFS2_FlexCase% %casedir%%ds%inputs_case%ds% '
+$call.checkErrorLevel 'python %basedir%%ds%input_processing%ds%all_year_load.py %basedir% %GSw_EFS_Flex% %GSw_EFS1_AllYearLoad% %GSw_EFS2_FlexCase% %casedir%%ds%inputs_case%ds% '
+$log
+$log
+$call.checkErrorLevel 'python %basedir%%ds%input_processing%ds%climateprep.py -i %basedir% -o %casedir%%ds%inputs_case%ds% -c %climatescen% -l %climateloc% -w %GSw_ClimateWater% -y %GSw_ClimateHydro% -e %endyear%'

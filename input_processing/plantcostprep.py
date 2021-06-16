@@ -1,7 +1,10 @@
 import pandas as pd
 import os
 import argparse
-
+# direct print and errors to log file
+import sys
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
 # Model Inputs
 parser = argparse.ArgumentParser(description="""This file processes plant cost data by tech""")
 
@@ -37,8 +40,7 @@ outdir = args.outdir
 #Testing inputs
 #reeds_dir = "d:\\Danny_ReEDS\\ReEDS-2.0\\"
 #convcase = "conv_ATB_2019"
-#onswindcase = "wind_ATB_2019_mid"
-#ofswindcase = "wind_ATB_2019_mid"
+#windcase = "wind_ATB_2019_mid"
 #upvcase = "upv_ATB_2019_mid"
 #cspcase = "csp_ATB_2019_mid"
 #batterycase = "battery_ATB_2019_mid"

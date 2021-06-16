@@ -493,6 +493,8 @@ def prep_data(args):
     # For marginal wind, use only the scaling factor for the next solve year
     wind_scaling_marginal = wind_scaling[
         wind_scaling['t'] == str(next_year)].reset_index(drop=True)
+    if next_year==2010:
+        wind_scaling_marginal = wind_scaling_marginal.loc[wind_scaling_marginal.v=='new1',:]
     pv_scaling_marginal = wind_scaling[
         wind_scaling['i'].isin(techs['PV'])].reset_index(drop=True)
     wind_scaling_marginal = pd.concat([pv_scaling_marginal,
@@ -553,7 +555,7 @@ def prep_data(args):
     # profiles
     if(len(load.index.names) == 2):
         YearIndexed = True
-        load = load.loc[int(next_year)]
+        load = load.loc[int(args['year'])]
         load = load.reset_index(drop=True)
     else:
         YearIndexed = False
@@ -574,7 +576,7 @@ def prep_data(args):
                                 values='Value').reset_index()
     load_mult = pd.merge(left=r_cendiv, right=load_mult, on='cendiv',
                          how='left')
-    load_mult = load_mult.sort_values('r')[str(next_year)].values
+    load_mult = load_mult.sort_values('r')[str(args['year'])].values
     load_mult = np.tile(load_mult.reshape(1, len(rfeas)), (len(load), 1))
 
     # Do not apply load multiplier for EFS load
@@ -584,7 +586,7 @@ def prep_data(args):
     # Get Canadian exports by region for the next year
     can_exports_mwh = pd.read_csv(
         os.path.join('inputs_case', 'can_exports.csv'), index_col=0)
-    can_exports_mwh = can_exports_mwh[[str(next_year)]].reset_index()
+    can_exports_mwh = can_exports_mwh[[str(args['year'])]].reset_index()
     can_exports_mwh.columns = ['r', 'exports']
     can_exports_mwh = can_exports_mwh[
         can_exports_mwh['r'].isin(rfeas['r'])].reset_index(drop=True)
@@ -766,6 +768,11 @@ def prep_data(args):
     durations = gdxin['storage_duration'].rename(
         columns={'Value': 'duration'})
     durations.i = durations.i.str.lower()
+    
+    durations_no_csp = durations.copy()
+    # Filter out CSP
+    durations_no_csp = durations_no_csp[durations_no_csp['i'].isin(
+        techs['STORAGE_NO_CSP'])].reset_index(drop=True)
 
     # Energy capacity
     energy_cap_osprey = pd.merge(left=cap_storage_osprey,
@@ -932,6 +939,7 @@ def prep_data(args):
                    'cap_trans': cap_trans,
                    'gen_cost': gen_cost,
                    'marg_stor_techs': marg_stor_techs,
+                   'storage_durations': durations_no_csp,
                    'rfeas': rfeas}
 
     curt_data = {'cap_storage_r': cap_storage_r,

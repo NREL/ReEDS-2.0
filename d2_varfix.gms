@@ -44,6 +44,7 @@
     CAPTRAN.fx(r,rr,trtype,tfix)$routes(r,rr,trtype,tfix) = CAPTRAN.l(r,rr,trtype,tfix) ;
     INVTRAN.fx(r,rr,tfix,trtype)$routes_inv(r,rr,trtype,tfix) = INVTRAN.l(r,rr,tfix,trtype) ;
     INVSUBSTATION.fx(r,vc,tfix)$[rfeas(r)$tscfeas(r,vc)] = INVSUBSTATION.l(r,vc,tfix) ;
+    CURT_REDUCT_TRANS.fx(r,rr,h,tfix)$sum{trtype, routes_inv(r,rr,trtype,tfix) } = CURT_REDUCT_TRANS.l(r,rr,h,tfix) ;
 
 * water climate variables
     WATCAP.fx(i,v,r,tfix)$[valcap(i,v,r,tfix)$Sw_WaterMain$Sw_WaterCapacity] = WATCAP.l(i,v,r,tfix) ;

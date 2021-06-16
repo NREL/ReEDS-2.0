@@ -51,7 +51,7 @@ eq_ObjFn_Supply.. Z =e=
 *subtract the present-value of any production tax credits. ptc_unit_value is
 *the present-value of all PTC payments for 1 hour of operation at CF=1
                   - ptc_unit_value(i,v,r,t) * sum{h, hours(h)* m_cf(i,v,r,h,t)
-                   *(1-sum{rr$cap_agg(rr,r), curt_int(i,rr,h,t) + curt_marg(i,rr,h,t)}$(not hydro(i))) } ) * INV_REFURB(i,v,r,t) }
+                   *(1 - sum{rr$cap_agg(rr,r), curt_int(i,rr,h,t) + curt_marg(i,rr,h,t)}$(not hydro(i))) } ) * INV_REFURB(i,v,r,t) }
 
 *costs of transmission lines
                   + sum{(r,rr,trtype)$routes_inv(r,rr,trtype,t),
@@ -65,6 +65,10 @@ eq_ObjFn_Supply.. Z =e=
 *conditional here that the interconnects must be different
                   + sum{(r,rr)$[routes_inv(r,rr,"DC",t)$(t.val>2020)$(INr(r) <> INr(rr))],
                         cost_trandctie * INVTRAN(r,rr,t,"DC") }
+
+*small cost penalty to incentivize solver to fill shorter-duration bins first
+                  + sum{(i,v,r,szn,sdbin)$[valcap(i,v,r,t)$storage_no_csp(i)], bin_penalty(sdbin) * CAP_SDBIN(i,v,r,szn,sdbin,t) }
+
 *end to multiplier by pvf_capital
             )
 *end of capital cost component of objective function

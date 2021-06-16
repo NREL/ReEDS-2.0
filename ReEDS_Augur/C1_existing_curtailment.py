@@ -54,6 +54,8 @@ def existing_curtailment(args, curt_data, osprey_results):
 
     # Get generation (raw osprey output)
     gen = osprey_results['gen'].copy()
+    gen = gen.reindex(range(args['osprey_ts_length']))
+    gen.fillna(0, inplace=True)
     gen_names = osprey_results['gen_names'].copy()
     # Filter for generators with and without storage
     gen_names_stor = gen_names[gen_names['i'].isin(

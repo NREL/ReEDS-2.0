@@ -7,6 +7,7 @@ Created on Wed Aug 14 15:53:24 2019
 This file contains helpful functions used throughout the Augur module.
 """
 
+import gdxpds
 import os
 import numpy as np
 import pandas as pd
@@ -55,57 +56,16 @@ def adjust_tz(df, tz_map, option='local_to_ET'):
     return df_return
 
 
-# Grabs all the tech subsets from the tech_subset_table.csv file
+# Grabs all the tech subsets from the i_subsets parameter
 def tech_types(args):
-
-    # Read from tech-subset-table.csv
-    tech_table = pd.read_csv(
-        os.path.join('inputs_case', 'tech-subset-table.csv'), index_col=0)
-
-    # If the climate-water switch is on, expand the tech_table to include these
-    if args['waterswitch'] == '1':
-        # merge in watertechs with tech_table
-        tech_table.reset_index(inplace=True)
-        tech_table['index'] = tech_table['index'].str.lower()
-        watertechs = pd.read_csv(
-            os.path.join('inputs_case', 'i_coolingtech_watersource_link.csv'))
-        watertechs.columns = ['watertechs', 'index', 'ctt', 'wst']
-        watertechs = watertechs[['watertechs', 'index']]
-        watertechs['index'] = watertechs['index'].str.lower()
-        tech_table = pd.merge(left=watertechs, right=tech_table, on='index',
-                              how='outer')
-        tech_table['watertechs'].fillna(tech_table['index'], inplace=True)
-        # Use watertechs as the index
-        tech_table.drop('index', axis=1, inplace=True)
-        tech_table.set_index('watertechs', inplace=True)
-
-    techs = {tech: list() for tech in list(tech_table)}
-    for tech in techs.keys():
-        techs[tech] = tech_table[
-            tech_table[tech] == 'YES'].index.values.tolist()
-        techs[tech] = [x.lower() for x in techs[tech]]
-        temp_save = []
-        temp_remove = []
-        # Interpreting GAMS syntax in tech-subset-table.csv
-        for subset in techs[tech]:
-            if '*' in subset:
-                temp_remove.append(subset)
-                temp = subset.split('*')
-                temp2 = temp[0].split('_')
-                temp_low = pd.to_numeric(temp[0].split('_')[-1])
-                temp_high = pd.to_numeric(temp[1].split('_')[-1])
-                temp_tech = ''
-                for n in range(0, len(temp2)-1):
-                    temp_tech += temp2[n]
-                    if not n == len(temp2)-2:
-                        temp_tech += '_'
-                for c in range(temp_low, temp_high+1):
-                    temp_save.append('{}_{}'.format(temp_tech, str(c)))
-        for subset in temp_remove:
-            techs[tech].remove(subset)
-        techs[tech].extend(temp_save)
-
-    return techs
+    gdx_file = os.path.join(args['data_dir'], 'reeds_data_{}.gdx'.format(args['tag']))
+    df_subsets = gdxpds.to_dataframe(gdx_file, 'i_subsets')['i_subsets']
+    df_subsets['i'] = df_subsets['i'].str.lower()
+    df_subsets['i_subtech'] = df_subsets['i_subtech'].str.upper()
+    subsets = {}
+    for subset in df_subsets['i_subtech'].unique():
+        subsets[subset] = df_subsets[df_subsets['i_subtech'] == subset]['i'].str.lower().unique().tolist()
+    return subsets
 
 
 # Gets wind capacity by build year

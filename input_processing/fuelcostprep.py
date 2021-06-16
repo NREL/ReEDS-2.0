@@ -1,7 +1,10 @@
 import pandas as pd
 import os
 import argparse
-
+# direct print and errors to log file
+import sys
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
 print("Starting calculation of fuelcostprep.R")
 
 # Model Inputs
@@ -29,9 +32,9 @@ outdir = args.outdir
 #%%
 # Inputs for testing
 # reeds_dir = 'd:\\Danny_ReEDS\\ReEDS-2.0'
-# coalscen = "AEO_2019_reference"
-# uraniumscen = "AEO_2019_reference"
-# ngscen = "AEO_2019_reference"
+# coalscen = "AEO_2020_reference"
+# uraniumscen = "AEO_2020_reference"
+# ngscen = "AEO_2020_reference"
 # rectscen = 'reference'
 # outdir = os.getcwd()
 

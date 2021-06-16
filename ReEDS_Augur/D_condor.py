@@ -37,8 +37,6 @@ def get_marginal_storage_value(args, condor_data, osprey_results,
 #%%
     print1('reading in data for Condor...')
 
-    # This number determines the resolution of Condor
-    e_level_n = args['condor_res']
     # Default efficiency value for Condor
     eta_discharge = args['condor_discharge_eff']
     # List of technology types that are considered when adjusting price
@@ -177,6 +175,37 @@ def get_marginal_storage_value(args, condor_data, osprey_results,
     # These are the storage technologies to compute the marginal arbitrage
     #   revenue of
     marg_stor_techs = condor_data['marg_stor_techs'].copy()
+    
+    # This number determines the resolution of Condor
+    condor_res = args['condor_res']
+    
+    # Add appropriate resolution ('res') column and values to the dataframe
+    if marg_stor_techs.empty:
+        marg_stor_techs['res'] = None # Needs this column still
+    else:
+        # Modify marg_stor_techs to have the appropriate 'res' column
+        #   Can add in A_prep_data.py so it's in condor_inputs...
+        condor_res_method = args['condor_res_method']
+        if condor_res_method == 'equal':
+            # equal: condor_res is the resolution for all storage techs
+            marg_stor_techs['res'] = int(condor_res)
+        elif condor_res_method == 'scaled':
+            # scaled: condor_res is the resolution for battery_2; get the
+            #   resolution for remaining techs by scaling up using duration
+            #   relative to battery_2
+            i_duration = condor_data['storage_durations'].copy()
+            i_duration = i_duration.sort_values(by='duration').set_index('i')
+            i_duration.duration -= (args['reedscc_stor_buffer']/60)
+            res = i_duration.copy()
+            res['scale'] = i_duration.divide(i_duration.duration.iloc[0], 
+               axis=0)
+            res['res'] = res.scale * condor_res
+            res.res = res.res.astype(int) # Condor resolution must be an integer
+            res = res.reset_index()
+            i_res_map = dict(zip(res.i, res.res))
+            marg_stor_techs['res'] = marg_stor_techs.i.map(i_res_map)
+        else:
+            print('ERROR: options for condor_res_method are equal or scaled')
 
     # If we are interpolating data for the remaining durations:
     if not args['condor_stor_techs'] == 'all':
@@ -195,23 +224,27 @@ def get_marginal_storage_value(args, condor_data, osprey_results,
             # condor_data['marg_stor_techs']
         else:  # Otherwise compute the values manually for each duration
             missing_techs = True
-    marg_stor_props = marg_stor_techs[['i', 'rte', 'duration']]
+    marg_stor_props = marg_stor_techs[['i', 'rte', 'duration', 'res']]
     marg_stor_props = marg_stor_props.drop_duplicates().set_index('i')
 
+    stor_MW = args['condor_stor_MW']
+    
     # Loop through each storage technology
-    for i in marg_stor_props.index:
-        stor_MW = args['condor_stor_MW']
+    for i, row in marg_stor_props.iterrows():
+        e_level_n = int(row.res)
         # Note that we subtract an hour off of the storage duration to account
-        # for the inevitable overestimation of storage revenue using a pirce-\
+        # for the inevitable overestimation of storage revenue using a price-\
         # taking model with perfect foresight.
-        stor_MWh = stor_MW * (marg_stor_props.loc[i, 'duration'] - \
-            (args['reedscc_stor_buffer']/60))
-        eta_charge = marg_stor_props.loc[i, 'rte']
+        stor_MWh = stor_MW * (row.duration - (args['reedscc_stor_buffer']/60))
+        eta_charge = row.rte
         print1('calculating storage energy revenue for {}...'.format(i))
-        for ba in marg_stor_techs.loc[marg_stor_techs['i'] == i, 'r'].tolist():
+        ba_list = marg_stor_techs.loc[marg_stor_techs.i == i, 'r'].tolist()
+#            ba_list = marg_stor_techs_new.loc[marg_stor_techs_new.i == i, 'r'].tolist()
+        for ba in ba_list:
             df_temp = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
 
-            ba_prices_startup = np.array(prices_pivot[ba])
+            ba_prices_startup = prices_pivot[ba].values
+
 
             # Dispatch against the startup-modified LP prices
             dispatch_results = dispatch_storage(
@@ -241,7 +274,7 @@ def get_marginal_storage_value(args, condor_data, osprey_results,
             # Adjust the total revenue by this fraction to remove the revenue
             #   from charging during curtailment
             df_temp['revenue'] *= stor_rev_fraction
-
+            
             # Store results
             df_results.loc[len(df_results), :] = df_temp.loc[0, :]
 

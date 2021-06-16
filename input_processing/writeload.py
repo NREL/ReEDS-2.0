@@ -1,6 +1,10 @@
 import pandas as pd
 import os
 import argparse
+# direct print and errors to log file
+import sys
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
 
 print('Beginning calcultion of inputs\\writeload.py')
 

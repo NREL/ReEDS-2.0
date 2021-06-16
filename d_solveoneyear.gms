@@ -49,6 +49,10 @@ curt_reduct_tran_max(r,rr,h,t)$[tload(t)$(sum{trtype, routes(r,rr,trtype,t) } or
 storage_in_min(r,h,t)$[tload(t)$sum{(i,v)$storage_no_csp(i),valcap(i,v,r,t)}] = storage_in_min_load(r,h,t) ;
 hourly_arbitrage_value(i,r,t)$[tload(t)$sum{v, valcap(i,v,r,t) }$storage_no_csp(i)] = hourly_arbitrage_value_load(i,r,t) ;
 
+* seasonal hydrogen storage recieves full capacity credit
+m_cc_mar(i,r,szn,t)$[tload(t)$storage_h2(i)] = 1 ;
+cc_old(i,r,szn,t)$[tload(t)$storage_h2(i)] = sum{v$valcap(i,v,r,t), CAP.l(i,v,r,t)} ;
+
 *curt_int is only used in the intertemporal solve, so ensure it is set to zero
 curt_int(i,r,h,t) = 0 ;
 

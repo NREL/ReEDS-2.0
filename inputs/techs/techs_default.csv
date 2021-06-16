@@ -21,6 +21,7 @@ Gas-CC,p
 Gas-CC-CCS,p
 Gas-CT,p
 RE-CT,p
+RE-CC,p
 geothermal,p
 Hydro,p
 lfill-gas,p
@@ -30,6 +31,7 @@ Ocean,p
 o-g-s,p
 other,p
 pumped-hydro,p
+storage-h2,p
 unknown,p
 hydD,p
 hydND,p

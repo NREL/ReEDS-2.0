@@ -14,6 +14,7 @@
   lfill-gas ,4
   o-g-s ,4
   pumped-hydro  ,2
+storage-h2,2
   hydD  ,2
   hydND ,2
   hydSD ,2
@@ -25,3 +26,4 @@
   hydED ,2
   hydEND ,2
   RE-CT,4
+  RE-CC,4

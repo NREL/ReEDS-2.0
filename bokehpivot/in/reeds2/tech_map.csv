@@ -1251,6 +1251,7 @@ csp4_10_d_ww,csp
 csp4_11_d_ww,csp
 csp4_12_d_ww,csp
 re-ct,re-ct
+re-cc,re-cc
 coalolduns_coaloldscr,coal
 coalolduns_cofireold,coal
 coaloldscr_cofireold,cofire
@@ -1262,3 +1263,4 @@ coalolduns_coal-ccs,coal-ccs
 cofirenew_coal-ccs,coal-ccs
 cofireold_coal-ccs,coal-ccs
 gas-ct_re-ct,re-ct
+gas-cc_re-cc,re-cc

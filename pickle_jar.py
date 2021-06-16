@@ -26,9 +26,9 @@ def pkl_to_csv(file,path,outdir=False, remove=False):
     #write out .csv.gz file
     if outdir:
         if not os.path.exists(outdir): os.mkdir(outdir)
-        df.to_csv(os.path.join(outdir,outfile))
+        df.to_csv(os.path.join(outdir,outfile),index=False)
     else:
-        df.to_csv(os.path.join(path,outfile))
+        df.to_csv(os.path.join(path,outfile),index=False)
     
     #remove original pickle file if requested    
     if remove:

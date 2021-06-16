@@ -186,7 +186,8 @@ fuel_price_filt(i,r) = sum{t$[valcap_irt(i,r,t)$tcur(t)], fuel_price(i,r,t)} ;
 
 avail_filt(i,v,szn)$[valcap_iv(i,v)$(not vre(i))] = smax{h$h_szn(h,szn), avail(i,v,h)} ;
 
-cf_hyd_filt(i,szn,r)$valcap_ir(i,r) = cf_hyd(i,szn,r) ;
+* cf_hyd depends on t for climate impacts, so only pull for the NEXT year to be consistent with m_cf_filt
+cf_hyd_filt(i,szn,r)$valcap_ir(i,r) = sum{t$tnext(t), cf_hyd(i,szn,r,t)} ;
 
 cfhist_hyd_filt(r,szn,i) = sum{t$[valcap_irt(i,r,t)$tcur(t)], cfhist_hyd(r,t,szn,i)} ;
 
@@ -225,4 +226,4 @@ flex_load_opt(r,h,"%cur_year%") = sum{flex_type, FLEX.l(flex_type,r,h,"%cur_year
 execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%case%_%next_year%.gdx' avail_filt, canada, cap_csp, cap_cspns, cap_pv, cap_storage, cap_thermal, cap_trans, cap_wind_init, cap_wind_inv, cap_wind_ret, cf_hyd_filt,
                                                          cfhist_hyd_filt, coal, cost_vom_filt, csp_sm, fuel_price_filt, geo, h_szn, heat_rate_filt, cost_cap_fin_mult_filt, cost_cap_filt, rsc_dat_filt, flex_load_opt,
                                                          hierarchy, hours, hydmin, hydro_d, hydro_nd, i, load_multiplier, losses_trans_h, m_cf_filt, nuclear, r, r_cendiv, r_rs, repbioprice_filt, flex_load,
-                                                         rfeas, routes_filt, sdbin, storage, storage_duration, storage_eff, storage_no_csp, szn, tranloss, v, vom_hyd, cf_adj_t_filt, pvf_onm ;
+                                                         rfeas, routes_filt, sdbin, storage, storage_duration, storage_eff, storage_no_csp, szn, tranloss, v, vom_hyd, cf_adj_t_filt, pvf_onm, i_subsets;
