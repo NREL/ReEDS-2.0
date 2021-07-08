@@ -4,7 +4,7 @@
 
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
-This GitHub repository contains the source code for NREL&#39;s ReEDS model. Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS model can be downloaded or cloned from [https://github.nrel.gov/NREL/ReEDS\_OpenAccess](https://github.nrel.gov/NREL/ReEDS_OpenAccess). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
+This GitHub repository contains the source code for NREL&#39;s ReEDS model. Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS model can be downloaded or cloned from [https://github.com/NREL/ReEDS\_OpenAccess](https://github.com/NREL/ReEDS_OpenAccess). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
 
 A ReEDS training video (recorded in July 2020 and based on the 2019 version of ReEDS) is available on the NREL YouTube channel at https://youtu.be/Cdo27F18AZA. In addition, the Open-Access ReEDS Webinar from October 2019 gives an overview of the 2019 ReEDS model and how it works (https://www.youtube.com/watch?v=QpRtvs_0kkA).
 
@@ -99,47 +99,24 @@ The setup and execution of the ReEDS model can be accomplished using a command-l
 *Figure 3. Screenshot of running &quot;Command Prompt&quot; with &quot;Run as administrator&quot;.*
 
 <a name="ConfigRepo"></a>
+## ReEDS Repository Configuration
 
-## Automatic ReEDS Repository Setup
-This method automatically sets up the user's machine to run be able to run ReEDS via `ReEDS.sh`.  It has only been tested in a Windows environment.
+The ReEDS source code is hosted on [GitHub](https://github.com/NREL/ReEDS_OpenAccess)
 
-#### GAMS
-Download and install the latest version of GAMS anywhere on the `C:\` drive. This method has only been tested with GAMS version 30.3 and later. Refer to the manual setup instructions if this method does not work with your version of GAMS. A valid GAMS licence is necessary for running the full ReEDS model.
-
-#### ReEDS Code Repository
-The ReEDS source code is hosted on GitHub: https://github.com/NREL/ReEDS_OpenAccess
-1. Request access to the ReEDS GitHub repository at [https://www.nrel.gov/analysis/reeds/request-access.html](https://www.nrel.gov/analysis/reeds/request-access.html).
-2. From the Git command line run the following command to enable large file storage.
-```
-git lfs install
-```
-3. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop ([Figure 4](#Fig4)).
-
-4. Run `windows_setup.sh`. This can be done by either double-clicking on it from the file explorer or opening a gitbash window in root directory of your ReEDS repository and running `./windows_setup.sh`
-
-**Tip:** Once one ReEDS repository has been set up on a system, simply copy `.bashrc` from that repository into any other ReEDS repositories that exists on the system and presto! No more waiting for `windows_setup.sh` to run before using fresh repositories.
-
-5. If there are more than one GAMS instalations on the machine, `windows_setup.sh` will prompt the user to indicate which GAMS installation to use with ReEDS. Be sure to indicate the menu number of the desired GAMS installation (not the version number itself). NREL has only confirmed compatibilty with GAMS version 30.3 though newer versions are expected to also function without issue.
-
-Once `windows_setup.sh` completes, the ReEDS repository will contain a symbolic link to the GAMS installation with several python packages installed.
-
-<a name="Fig4"></a>
-![Image of GitHub Download](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/github-download.png)
- 
-*Figure 4. Screenshot of GitHub links to clone the ReEDS repository or download ZIP of the ReEDS files.*
-
-## Manual ReEDS Repository Setup
-The ReEDS source code is hosted on GitHub: https://github.com/NREL/ReEDS_OpenAccess
-
-1. Request access to the ReEDS GitHub repository at [https://www.nrel.gov/analysis/reeds/request-access.html](https://www.nrel.gov/analysis/reeds/request-access.html).
+1. Request access to the ReEDS GitHub repository at [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
 2. From the Git command line run the following command to enable large file storage.
 ```
 git lfs install
 ```
 3. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
 
+<a name="Fig4"></a>
+![Image of GitHub Download](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/github-download.png)
+ 
+*Figure 4. Screenshot of GitHub links to clone the ReEDS repository or download ZIP of the ReEDS files.*
+
 <a name="ConfigPy"></a>
-### Python Configuration
+## Python Configuration
 
 Install Anaconda: [https://www.anaconda.com/distribution/#download-section](https://www.anaconda.com/distribution/#download-section). NREL recommends Python 3.7, but has also used Python 3.6.5 and 3.7.1 successfully.
 
@@ -147,7 +124,7 @@ Install Anaconda: [https://www.anaconda.com/distribution/#download-section](http
 
 Add Python to the &quot;path&quot; environment variable
 
-1. In the Windows start menu, search for &quot;environment variables&quot; and click &quot;Edit the system environment variables&quot; ([Figure 5](#Fig5)). This will open the &quot;System Properties&quot; window ([Figure 6](#Fig6)).
+1. In the Windows start menu, search for &quot;environment variables&#quot; and click &quot;Edit the system environment variables&quot; ([Figure 5](#Fig5)). This will open the &quot;System Properties&quot; window ([Figure 6](#Fig6)).
 2. Click the &quot;Environment Variables&quot; button on the bottom right of the window ([Figure 6](#Fig6)). This will open the &quot;Environment Variables&quot; window ([Figure 7](#Fig7)).
 3. Highlight the Path variable and click &quot;Edit&quot; ([Figure 7](#Fig7)). This will open the &quot;Edit environment variable&quot; window ([Figure 8](#Fig8)).
 4. Click &quot;New&quot; ([Figure 8](#Fig8)) and add the directory locations for \Anaconda\ and \Anaconda\Scripts to the environment path.
@@ -182,13 +159,13 @@ Install the gdxpds package from the command line by typing &quot;pip install gdx
 *Figure 9. Screenshot of a test of Python in the terminal window.*
 
 <a name="ConfigGAMS"></a>
-### GAMS Configuration
+## GAMS Configuration
 
 Install GAMS: [https://www.gams.com/download-old/](https://www.gams.com/download-old/). NREL uses GAMS version 30.3. Older versions might also work, and newer versions have not been tested. A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
 
 If you are using GAMS 24.9 or newer, then GAMS will default to using the Python version that is included with GAMS. This GAMS version of Python needs some packages to be installed in order to work with ReEDS. To install those packages, navigate to the GMSPython directory in the GAMS folder (e.g., C:\GAMS\win64\30.3\GMSPython) in the terminal window. Install the packages using &quot;python -m pip install [package name]&quot;. The packages to install are gdxpds, xlrd, jinja2, and bokeh.
 
-Add GAMS to the &quot;path&quot; environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _gams.exe_ application (e.g., C:\GAMS\win64\30.3).
+Add GAMS to the &quot;path&quot; environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _gams.exe_ application (e.g., C:\GAMS\win64\24.7).
 
 **IMPORTANT** : Test the GAMS installation from the command line by typing &quot;gams&quot; (no quotes) in the terminal window. The GAMS program should initiate (Figure 10).
 
@@ -198,20 +175,17 @@ Add GAMS to the &quot;path&quot; environment variable. Follow the same instructi
 *Figure 10. Screenshot of a test of GAMS from the terminal window.*
 
 <a name="ConfigR"></a>
-### R Configuration
-**Note: R is only necessary for the ReEDS demand module. It is reccomended that this section be skipped unless that module is needed for your intended application of ReEDS**
+## R Configuration
+
+**Note: R is only necessary for the optional ReEDS demand module. It is reccomended that this section be skipped unless that module is needed for your intended application of ReEDS.**
 
 Install R 3.4.4: [https://cran.r-project.org/bin/windows/base/old/3.4.4/](https://cran.r-project.org/bin/windows/base/old/3.4.4/). NREL has observed compatibility issues with other versions of R. NREL has not tested R versions more recent than 3.4.4. Optionally, install RStudio: [https://www.rstudio.com/products/rstudio/download/#download](https://www.rstudio.com/products/rstudio/download/#download).
 
 Add R to the &quot;path&quot; environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _R.exe_ and _Rscript.exe_ applications (e.g., C:\Program Files\R\R-3.4.4\bin\).
 
-**IMPORTANT** : Test the R installation from the command line by typing "r" (no quotes) in the terminal window. The R program should initiate ([Figure 11](#Fig11)).
+**IMPORTANT** : Test the R installation from the command line by typing &quot;r&quot; (no quotes) in the terminal window. The R program should initiate ([Figure 11](#Fig11)).
 
-Install R packages necessary for ReEDS from the command line. Navigate to the ReEDS directory in the terminal window and enter:
-```
-rscript demand\packagesetup.R
-``` 
-The Rscript.exe program will install a suite of R packages ([Figure 12](#Fig12)).
+Install R packages necessary for ReEDS from the command line. Navigate to the ReEDS directory in the terminal window. Type &quot;rscript input\_processing\R\packagesetup.R&quot; and press &quot;Enter\Return&quot;. The Rscript.exe program will install a suite of R packages ([Figure 12](#Fig12)).
 
 <a name="Fig11"></a>
 ![Image of Test R](https://github.com/NREL/ReEDS_OpenAccess/blob/master/images/r-test.png)
@@ -601,6 +575,10 @@ Default value: 0
 <a name="SwRE"></a>
 ### Renewable energy capacity credit and curtailment switches
 
+**HourlyStaticFileSwitch** [string] – file pointer for hourly data used for capacity credit calculations
+path: \inputs\variability\{HourlyStaticFileSwitch}.csv
+default value: LDC\_static\_inputs\_06\_27\_2019
+
 **calc\_csp\_cc** [binary] –Turn on/off CSP capacity credit calculations
 
 - 0 – OFF
@@ -730,14 +708,6 @@ default value: AEO\_2019\_refernce
 path: \inputs\plant\_characteristics\{windscen}.csv
 
 default value: wind\_ATB\_2019\_mid
-
-**numbins_wind** [int] – Number of interconnection supply curve bins for wind
-
-default value: 5
-
-**GSw\_TransCostMult** [fraction] – Multiplier for bulk BA-BA transmission costs
-
-default value: 1
 
 <a name="SwRegion"></a>
 ### Region switches
@@ -1056,19 +1026,19 @@ Default value: 1
 <a name="SwOther"></a>
 ### Other model constraint switches
 
-**GSw\_CapTranMax** [integer] – Upper bound on the capacity of individual BA-BA transmission corridors
-
-- 0: Constraint is turned off; no upper bound on transmission corridor capacity
-- Other numeric value [MW]: Each transmission corridor is limited to the value of GSw\_CapTranMax in MW
-
-Default value: 0 (constraint turned off)
-
 **GSw\_GasCurve** [integer] – Select natural gas supply curve
 
 - 0: census division supply curves
 - 1: national and census division supply curves
 - 2: static natural gas prices in each census division
 - 3: national supply curves with census division multipliers
+
+Default value: 0
+
+**GSw\_HighCostTrans** [binary] – Turn on higher cost and higher losses transmission
+
+- 0 – OFF
+- 1 – ON
 
 Default value: 0
 
@@ -1113,40 +1083,6 @@ Default value: 0
 - 1 – ON
 
 Default value: 1
-
-**GSw\_TransExtent** [string] – Specify the extent of multi-link transmission paths, chosen from levels in the hierarchy file [country, interconnect, rto, st]
-
-Default value: country
-
-**GSw\_TransMultiLink** [binary] – Turn on/off assessment of marginal transmission reduction through multi-link transmission
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_TranRestrict** [integer] – Specify the types of transmission expansion that are allowed
-
-- 0 – New lines allowed between adjacent BA's within interconnects, but no AC-DC-AC interties allowed across interconnects
-- 1 – New lines only allowed between BA's within the same state
-- 2 – No new transmission
-- 3 – New lines allowed between adjacent BA's, including AC-DC-AC interties across interconnects
-
-Default value: 3
-
-**GSw\_VSC** [binary] – Turn on/off multi-terminal VSC HVDC macrogrid as an investment option
-- 0 - OFF
-- 1 - ON
-
-Default value: 0
-
-**GSw\_VSC_BAlist** [string] – Suffix of file with list of candidate BAs for VSC AC/DC converter stations
-
-Default value: all
-
-**GSw\_VSC_LinkList** [string] – Suffix of file with list of candidate BA-BA links for VSC DC lines
-
-Default value: all
 
 <a name="SwLP"></a>
 ### Linear programming switches
@@ -1199,33 +1135,3 @@ Default value: 0
 - 1 – ON
 
 Default value: 1
-
-<a name="SwClimate"></a>
-### Climate-change modifier switches
-
-**GSw\_ClimateWater** [binary] – Turn on/off climate impacts on cooling water
-- 0 - OFF
-- 1 - ON
-
-Default value: 0
-
-**GSw\_ClimateHydro** [binary] – Turn on/off climate impacts on hydropower
-- 0 - OFF
-- 1 - ON
-
-Default value: 0
-
-**GSw\_ClimateDemand** [binary] – Turn on/off climate impacts on demand
-- 0 - OFF
-- 1 - ON
-
-Default value: 0
-
-**GSw\_ClimateStartYear** [integer] – Year in which to start applying climate impacts
-Default value: 2020
-
-**climatescen** [string] – Climate scenario for climate impacts
-Default value: HadGEM2-ES_rcp45_AT
-
-**climateloc** [string] – Directory for climate scenarios (change to `qnap/CIRA_Inputs_R2` to use scenarios not included in `inputs/climate`)
-Default value: inputs/climate
