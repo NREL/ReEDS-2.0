@@ -1139,7 +1139,7 @@ def add_glyph(glyph_type, wdg, p, xs, ys, c, y_bases=None, series=None, opacity_
     ser = ['None']*len(xs) if series is None else [series]*len(xs)
     if glyph_type == 'Dot':
         source = bms.ColumnDataSource({'x': xs, 'y': ys, 'x_legend': xs, 'y_legend': y_unstacked, 'ser_legend': ser})
-        p.circle('x', 'y', source=source, color=c, size=int(wdg['circle_size'].value), fill_alpha=alpha, line_color=None, line_width=None)
+        p.circle('x', 'y', source=source, color=c, size=int(wdg['circle_size'].value), fill_alpha=alpha, line_color=None, line_width=0)
     elif glyph_type == 'Line':
         source = bms.ColumnDataSource({'x': xs, 'y': ys, 'x_legend': xs, 'y_legend': y_unstacked, 'ser_legend': ser})
         p.line('x', 'y', source=source, color=c, alpha=alpha, line_width=float(wdg['line_width'].value))
@@ -1174,13 +1174,13 @@ def add_glyph(glyph_type, wdg, p, xs, ys, c, y_bases=None, series=None, opacity_
             if abs(h) <= 1e-13:
                 del xs_cp[i], centers[i], heights[i], y_unstacked[i], ser[i], widths[i], x_legend[i]
         source = bms.ColumnDataSource({'x': xs_cp, 'y': centers, 'x_legend': x_legend, 'y_legend': y_unstacked, 'h': heights, 'w': widths, 'ser_legend': ser})
-        p.rect('x', 'y', source=source, height='h', color=c, fill_alpha=alpha, width='w', line_color=None, line_width=None)
+        p.rect('x', 'y', source=source, height='h', color=c, fill_alpha=alpha, width='w', line_color=None, line_width=0)
     elif glyph_type =='Area' and y_unstacked != [0]*len(y_unstacked):
         if y_bases is None: y_bases = [0]*len(ys)
         xs_around = xs + xs[::-1]
         ys_around = y_bases + ys[::-1]
         source = bms.ColumnDataSource({'x': [xs_around], 'y': [ys_around], 'x_legend': [wdg['x'].value], 'y_legend': [wdg['y'].value], 'ser_legend': [series]})
-        p.patches('x', 'y', source=source, alpha=alpha, fill_color=c, line_color=None, line_width=None)
+        p.patches('x', 'y', source=source, alpha=alpha, fill_color=c, line_color=None, line_width=0)
 
     #Add boxplots
     if wdg['range'].value == 'Boxplot':
@@ -1200,14 +1200,14 @@ def add_glyph(glyph_type, wdg, p, xs, ys, c, y_bases=None, series=None, opacity_
         ser_box = ['None']*len(x_range) if series is None else [series]*len(x_range)
         #boxes
         src_q2 = bms.ColumnDataSource({'x': x_range, 'y': q2['y'].tolist(), 'x_legend': x_range, 'y_legend': q2['y'].tolist(), 'ser_legend': ser_box})
-        p.rect('x', 'y', source=src_q2, height=lw, width=width, color=c, fill_alpha=alpha, line_color=None, line_width=None, height_units="screen")
+        p.rect('x', 'y', source=src_q2, height=lw, width=width, color=c, fill_alpha=alpha, line_color=None, line_width=0, height_units="screen")
         src_box = bms.ColumnDataSource({'x': x_range, 'y': box_centers['y'].tolist(), 'h': iqr['y'].tolist(), 'x_legend': x_range, 'y_legend': quartile_legend, 'ser_legend': ser_box})
         p.rect('x', 'y', source=src_box, height='h', width=width, color=None, line_alpha=alpha, line_color=c, line_width=lw)
         #whiskers
         src_lo = bms.ColumnDataSource({'x': x_range, 'y': lo['y'].tolist(), 'x_legend': x_range, 'y_legend': lo['y'].tolist(), 'ser_legend': ser_box})
-        p.rect('x', 'y', source=src_lo, height=lw, width=0.9*width, color=c, fill_alpha=alpha, line_color=None, line_width=None, height_units="screen")
+        p.rect('x', 'y', source=src_lo, height=lw, width=0.9*width, color=c, fill_alpha=alpha, line_color=None, line_width=0, height_units="screen")
         src_up = bms.ColumnDataSource({'x': x_range, 'y': up['y'].tolist(), 'x_legend': x_range, 'y_legend': up['y'].tolist(), 'ser_legend': ser_box})
-        p.rect('x', 'y', source=src_up, height=lw, width=0.9*width, color=c, fill_alpha=alpha, line_color=None, line_width=None, height_units="screen")
+        p.rect('x', 'y', source=src_up, height=lw, width=0.9*width, color=c, fill_alpha=alpha, line_color=None, line_width=0, height_units="screen")
         #stems
         src_upstem = bms.ColumnDataSource({'x0': x_range, 'y0': up['y'].tolist(), 'x1': x_range, 'y1': q3['y'].tolist(), 'x_legend': x_range, 'y_legend': quartile_legend, 'ser_legend': ser_box})
         src_lostem = bms.ColumnDataSource({'x0': x_range, 'y0': lo['y'].tolist(), 'x1': x_range, 'y1': q1['y'].tolist(), 'x_legend': x_range, 'y_legend': quartile_legend, 'ser_legend': ser_box})
