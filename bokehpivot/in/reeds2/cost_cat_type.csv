@@ -8,9 +8,10 @@ inv_investment_spurline_costs_rsc_technologies,Capital
 inv_ptc_payments_negative_refurbishments,Capital
 inv_transmission_line_investment,Capital
 inv_substation_investment_costs,Capital
-inv_interconnection_costs,Capital
+inv_converter_costs,Capital
 inv_pumpedhydro_investment,Capital
 inv_geothermal_investment,Capital
+inv_h2_network,Capital
 op_vom_costs,Operation
 op_operating_reserve_costs,Operation
 op_fuelcosts_objfn,Operation
@@ -19,3 +20,8 @@ op_international_hurdle_rate,Operation
 op_acp_compliance_costs,Operation
 op_emissions_taxes,Operation
 op_gen_pol_costs,Operation
+op_transmission_fom,Operation
+op_co2_transport_storage,Operation
+op_h2_transport_storage,Operation
+op_h2_fuel_costs,Operation
+op_h2_vom,Operation

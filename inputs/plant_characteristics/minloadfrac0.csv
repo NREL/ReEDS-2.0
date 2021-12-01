@@ -6,9 +6,11 @@
   coal-IGCC,0.5
   coal-CCS  ,0.5
   o-g-s ,0.5
-  nuclear ,1
+  nuclear ,0.7
+  nuclear-SMR ,0.2
   geothermal  ,0.9
   biopower  ,0.4
+  beccs,0.4
   CofireOld ,0.4
   CofireNew ,0.4
   lfill-gas ,0.4

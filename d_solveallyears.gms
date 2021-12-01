@@ -39,29 +39,35 @@ $endif.loadref
 *indicate we're loading data
 tload(t)$tmodel(t) = yes ;
 
-$gdxin ReEDS_Augur%ds%augur_data%ds%ReEDS_augur_merged_%case%_%niter%.gdx
-$loadr curt_old_load2 = curt_old
-$loadr curt_mingen_load2 = curt_mingen
-$loadr curt_marg_load2 = curt_marg
-$loadr cc_old_load2 = cc_old
-$loadr cc_mar_load2 = cc_mar
-$loadr sdbin_size_load2 = sdbin_size
-$loadr curt_stor_load2 = curt_stor
-$loadr curt_tran_load2 = curt_tran
-$loadr curt_reduct_tran_max_load2 = curt_reduct_tran_max
-$loadr storage_in_min_load2 = storage_in_min
-$loadr hourly_arbitrage_value_load2 = hourly_arbitrage_value
+$gdxin ReEDS_Augur%ds%augur_data%ds%ReEDS_Augur_merged_%niter%.gdx
+$loaddcr curt_old_load2 = curt_old
+$loaddcr curt_mingen_load2 = curt_mingen
+$loaddcr curt_marg_load2 = curt_marg
+$loaddcr cc_old_load2 = cc_old
+$loaddcr cc_mar_load2 = cc_mar
+$loaddcr cc_dr_load2 = cc_dr
+$loaddcr sdbin_size_load2 = sdbin_size
+$loaddcr curt_stor_load2 = curt_stor
+$loaddcr curt_tran_load2 = curt_tran
+$loaddcr storage_in_min_load2 = storage_in_min
+$loaddcr hourly_arbitrage_value_load2 = hourly_arbitrage_value
 $gdxin
 
 curt_old_load(r,h,t) = sum{loadset, curt_old_load2(loadset,r,h,t) } ;
 curt_mingen_load(r,h,t) = sum{loadset, curt_mingen_load2(loadset,r,h,t) } ;
 curt_marg_load(i,r,h,t) = sum{loadset, curt_marg_load2(loadset,i,r,h,t) } ;
-cc_old_load(i,r,szn,t) = sum{loadset, cc_old_load2(loadset,i,r,szn,t) } ;
-cc_mar_load(i,r,szn,t) = sum{loadset, cc_mar_load2(loadset,i,r,szn,t) } ;
+
+cc_old_load(i,rb,szn,t) = sum{loadset, sum{ccreg$r_ccreg(rb,ccreg), cc_old_load2(loadset,i,rb,ccreg,szn,t) } } ;
+cc_mar_load(i,rb,szn,t) = sum{loadset, sum{ccreg$r_ccreg(rb,ccreg), cc_mar_load2(loadset,i,rb,ccreg,szn,t) } } ;
+
+cc_old_load(i,rs,szn,t) = sum{loadset, sum{ccreg$rs_ccreg(rs,ccreg), cc_old_load2(loadset,i,rs,ccreg,szn,t) } } ;
+cc_mar_load(i,rs,szn,t) = sum{loadset, sum{ccreg$rs_ccreg(rs,ccreg), cc_mar_load2(loadset,i,rs,ccreg,szn,t) } } ;
+
+cc_dr_load(i,r,szn,t) = sum{loadset, cc_dr_load2(loadset,i,r,szn,t) } ;
+
 sdbin_size_load(ccreg,szn,sdbin,t) = sum{loadset, sdbin_size_load2(loadset,ccreg,szn,sdbin,t) } ;
 curt_stor_load(i,v,r,h,src,t) = sum{loadset, curt_stor_load2(loadset,i,v,r,h,src,t) } ;
 curt_tran_load(r,rr,h,t) = sum{loadset, curt_tran_load2(loadset,r,rr,h,t) } ;
-curt_reduct_tran_max_load(r,rr,h,t) = sum{loadset, curt_reduct_tran_max_load2(loadset,r,rr,h,t) } ;
 storage_in_min_load(r,h,t) = sum{loadset, storage_in_min_load2(loadset,r,h,t) } ;
 hourly_arbitrage_value_load(i,r,t) = sum{loadset, hourly_arbitrage_value_load2(loadset,i,r,t) } ;
 
@@ -148,17 +154,42 @@ cc_scale(i,r,szn,t) = 0 ;
 sdbin_size(ccreg,szn,sdbin,t) = 0 ;
 curt_stor(i,v,r,h,src,t) = 0 ;
 curt_tran(r,rr,h,t) = 0 ;
-curt_reduct_tran_max(r,rr,h,t) = 0 ;
 storage_in_min(r,h,t) = 0 ;
 hourly_arbitrage_value(i,r,t) = 0 ;
 
 *Storage duration bin sizes by year
 sdbin_size(ccreg,szn,sdbin,t)$tload(t) = sdbin_size_load(ccreg,szn,sdbin,t) ;
-curt_stor(i,v,r,h,src,t)$[tload(t)$valcap(i,v,r,t)$storage_no_csp(i)] = curt_stor_load(i,v,r,h,src,t) ;
-curt_tran(r,rr,h,t)$[tload(t)$(sum{trtype, routes(r,rr,trtype,t) } or sum{trtype, routes(rr,r,trtype,t) })] = curt_tran_load(r,rr,h,t) ;
-curt_reduct_tran_max(r,rr,h,t)$[tload(t)$(sum{trtype, routes(r,rr,trtype,t) } or sum{trtype, routes(rr,r,trtype,t) })] = curt_reduct_tran_max_load(r,rr,h,t) ;
-storage_in_min(r,h,t)$[tload(t)$(sum{(i,v)$storage_no_csp(i), valcap(i,v,r,t) })] = storage_in_min_load(r,h,t) ;
-hourly_arbitrage_value(i,r,t)$[tload(t)$sum{v, valcap(i,v,r,t) }$storage_no_csp(i)] = hourly_arbitrage_value_load(i,r,t) ;
+curt_stor(i,v,r,h,src,t)$[tload(t)$valcap(i,v,r,t)$storage_standalone(i)] = curt_stor_load(i,v,r,h,src,t) ;
+curt_tran(r,rr,h,t)$[tload(t)$rfeas(r)$rfeas(rr)$rb(r)$rb(rr)$(not sameas(r,rr))
+                     $sum{(n,nn,trtype)$routes_inv(n,nn,trtype,t), translinkage(r,rr,n,nn,trtype)}
+                    ] = curt_tran_load(r,rr,h,t) ;
+
+storage_in_min(r,h,t)$[tload(t)$(sum{(i,v)$storage_standalone(i), valcap(i,v,r,t) })] = storage_in_min_load(r,h,t) ;
+* Ensure storage_in_min doesn't exceed max input capacity when input capacity < generation capacity
+* and when storage_duration_m < storage_duration. Multiple terms are necessary to allow for alternative
+* swich settings and cases when input capacity > generation capacity and/or storage_duration_m > storage_duration
+* TODO: Pass plant-specific input capacity and duration to Augur and use there
+storage_in_min(r,h,t)$storage_in_min(r,h,t) =
+    min(storage_in_min(r,h,t),
+* scaling by plant-specific pump capacity and storage duration
+        sum{(i,v) , ( (storage_duration_m(i,v,r) / storage_duration(i))$storage_duration(i) + 1$(not storage_duration(i)) )
+                    * avail(i,v,h) * sum{rr$cap_agg(r,rr), storinmaxfrac(i,v,rr) * sum{tt$tprev(t,tt), CAP.l(i,v,rr,tt)} } } ,
+* scaling by plant-specific storage duration
+        sum{(i,v) , ( (storage_duration_m(i,v,r) / storage_duration(i))$storage_duration(i) + 1$(not storage_duration(i)) )
+                    * avail(i,v,h) * sum{(rr,tt)$[tprev(t,tt)$cap_agg(r,rr)], CAP.l(i,v,rr,tt)} } ,
+* scaling by plant-specific pump capacity
+        sum{(i,v) , avail(i,v,h) * sum{rr$cap_agg(r,rr), storinmaxfrac(i,v,rr) * sum{tt$tprev(t,tt), CAP.l(i,v,rr,tt)} } }
+    ) ;
+hourly_arbitrage_value(i,r,t)$[tload(t)$valcap_irt(i,r,t)$storage_standalone(i)] = hourly_arbitrage_value_load(i,r,t) ;
+*PV+Battery arbitrage value can be restricted by the ITC charging requirement
+hourly_arbitrage_value(i,r,t)$[tload(t)$valcap_irt(i,r,t)$pvb(i)] = hourly_arbitrage_value_load("battery_%GSw_pvb_dur%",r,t) * (1 - pvb_itc_qual_frac) ;
+
+*Upgrades - used for hydropower upgraded to add pumping
+curt_stor(i,v,r,h,src,t)$[tload(t)$upgrade(i)$storage_standalone(i)$valcap(i,v,r,t)] = smax(vv, sum{ii$upgrade_to(i,ii), curt_stor(ii,vv,r,h,src,t) } );
+hourly_arbitrage_value(i,r,t)$[tload(t)$upgrade(i)$(storage_standalone(i) or hyd_add_pump(i))$valcap_irt(i,r,t)] = sum{ii$upgrade_to(i,ii), hourly_arbitrage_value(ii,r,t) } ;
+
+* --- Assign hybrid PV+battery capacity credit derate factor ---
+hybrid_cc_derate(i,r,szn,sdbin,t)$[tload(t)$valcap_irt(i,r,t)$storage_hybrid(i)] = 1 ;
 
 *Sw_Int_CC=0 means use average capacity credit for each tech, and don't differentiate vintages
 *If there is no existing capacity to calculate average, use marginal capacity credit instead.
@@ -231,7 +262,7 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int,
 *and thus a loadpoint is enabled
 if(Sw_Loadpoint = 1,
 execute_loadpoint 'gdxfiles%ds%%case%_load.gdx' ;
-%case%.optfile = 8 ;
+ReEDSmodel.optfile = 8 ;
 ) ;
 
 $endif.notfirstiter
@@ -255,7 +286,7 @@ curt_mingen_int(r,h,t) = round(curt_mingen_int(r,h,t), 4) ;
 * --- Solve Supply Side ---
 *==============================
 
-solve %case% using lp minimizing z ;
+solve ReEDSmodel using lp minimizing z ;
 
 if(Sw_Loadpoint = 1,
 execute_unload 'gdxfiles%ds%%case%_load.gdx' ;
@@ -387,5 +418,3 @@ $endif.demitercheck
   execute_unload 'gdxfiles%ds%demand_%case%_%niter%.gdx' load_exog, load_exog0, psupply, psupply0, rep ;
 
 $endif.demrun
-
-

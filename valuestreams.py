@@ -22,8 +22,11 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 
 df_var_map = pd.read_csv(vs_path+'/var_map.csv', dtype=object)
-df_hier = pd.read_csv(vs_path + '/region_map.csv')
-dict_hier = dict(zip(df_hier['r'], df_hier['ba']))
+df_hier = pd.read_csv(vs_path + '/rsmap.csv').rename(columns={'*r':'r'})
+df_rb2 = df_hier.drop_duplicates('r').copy()
+df_rb2['rs'] = df_rb2['r']
+df_hier = pd.concat([df_hier, df_rb2],sort=False,ignore_index=True)
+dict_hier = dict(zip(df_hier['rs'], df_hier['r']))
 var_list = df_var_map['var_name'].values.tolist()
 
 #common function for outputting to csv
@@ -36,12 +39,12 @@ def add_concat_csv(df_in, csv_file):
         df_out = pd.concat([df_csv, df_in], ignore_index=True, sort=False)
         df_out.to_csv(csv_file,index=False)
 
-def createValueStreams(case):
+def createValueStreams():
     very_start = datetime.now()
     logger.info('Starting valuestreams.py')
     output_dir = 'outputs'
-    solution_file = case + '_p.gdx'
-    mps_file = case + '.mps'
+    solution_file = 'ReEDSmodel_p.gdx'
+    mps_file = 'ReEDSmodel.mps'
     df = rvs.get_value_streams(solution_file, mps_file, var_list)
     logger.info('Raw value streams completed: ' + str(datetime.now() - very_start))
 
@@ -82,4 +85,4 @@ def createValueStreams(case):
     logger.info('Finished valuestreams.py. Total time: ' + str(datetime.now() - very_start))
 
 if __name__ == '__main__':
-    createValueStreams(sys.argv[1])
+    createValueStreams()

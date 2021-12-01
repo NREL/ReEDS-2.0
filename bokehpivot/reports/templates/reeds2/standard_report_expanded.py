@@ -6,6 +6,7 @@ static_presets = [
     {'name': 'New Annual Capacity (GW)', 'result': 'New Annual Capacity National (GW)', 'preset': 'Stacked Bars'},
     {'name': 'Annual Retirements (GW)', 'result': 'Annual Retirements National (GW)', 'preset': 'Stacked Bars'},
     {'name': 'Final Gen by timeslice (GW)', 'result': 'Gen by timeslice national (GW)', 'preset': 'Stacked Bars Final'},
+    {'name': 'Regional Gen Final (TWh)', 'result': 'Generation BA (TWh) [no-index]', 'preset': 'Regional Gen Final'},
     {'name': 'Operating Reserves (TW-h)', 'result': 'Operating Reserves (TW-h)', 'preset': 'Stacked Bars'},
     {'name': 'Final OpRes by timeslice (GW)', 'result': 'Operating Reserves by Timeslice National (GW)', 'preset': 'Stacked Bars Final'},
     {'name': 'Firm Capacity (GW)', 'result': 'Firm Capacity National (GW)', 'preset': 'Stacked Bars'},
@@ -29,6 +30,8 @@ static_presets = [
     {'name': 'Biopower Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['biopower','lfill-gas']}}},
     {'name': 'Geothermal Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['geothermal']}}},
     {'name': 'Hydro and Canadian Import Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['hydro','Canada']}}},
-    {'name': 'Pumped-hydro Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['pumped-hydro']}}},
+    {'name': 'Pumped-hydro Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['pumped-hydro','pumped-hydro-flex']}}},
     {'name': 'Battery Storage Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10']}}},
+    {'name': 'Retail rate (¢/kWh)', 'result': 'Retail rate (¢/kWh)', 'preset': 'Lines'},
+    {'name': 'Runtime (hours)', 'result': 'Runtime', 'preset': 'Stacked Bars'},
 ]

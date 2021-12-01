@@ -16,60 +16,70 @@ $if not set start_year $setglobal start_year 2010
 * Set and parameter definitions
 *===============================
 
-set tcheckret(t) "set of all years to check for retiring capacity"
-    tcheckretwind(t)  "set of all years to consider for retiring wind capacity"
-    tcur(t)   "current year"
-    tnext(t)  "next year"
-    valcap_iv(i,v)
-    valcap_i(i)
-    valcap_ir(i,r)
-    routes_filt(r,rr) "set of transmission connections"
+set trange(t)         "range from first year to current year"
+    tcur(t)           "current year"
+    tnext(t)          "next year"
+    valcap_i(i)       "subset of valcap"
+    valcap_ir(i,r)    "subset of valcap"
+    valcap_iv(i,v)    "subset of valcap"
+    valcap_ivr(i,v,r) "subset of valcap"
+    routes_filt(r,rr,trtype) "set of transmission connections"
 ;
 
-parameter cap_trans(r,rr,trtype)   "--MW-- transmission capacity"
-losses_trans_h(rr,r,h,trtype)      "--MW-- transmission losses by timeslice"
-inv_tmp(i,v,r,t,tt)                "--MW-- relevant capacities along with their build year and retire year"
-retire_exog_init(i,v,r,rs,t)       "--MW-- exogenous retired capacity"
-retire_exog_tmp(i,v,r,t)           "--MW-- exogenous retired capacity"
-retire_exog(i,v,r,t)               "--MW-- exogenous retired capacity"
-ret_lifetime(i,v,r,t)              "--MW-- capacity that will be retired before the end of the next solve year due to its age"
-cap_export(i,v,r)                  "--MW-- relavent capacities for capacity credit calculations"
-cap_csp(i,v,r)                     "--MW-- CSP-TES capacity"
-cap_cspns(i,v,r)                   "--MW-- CSP-NS capacity"
-cap_pv(i,v,r)                      "--MW-- PV capacity"
-cap_storage(i,v,r)                 "--MW-- storage capacity"
-cap_thermal(i,v,r)                 "--MW-- thermal capacity"
-retire_exog_wind(i,v,r,t)          "--MW-- total exogenously retired wind capacity"
-ret_lifetime_wind(i,v,r,t)         "--MW-- capacity that will be retired before the end of the next solve year due to its age"
-cap_wind_init(i,v,r,t)             "--MW-- initial wind capacity"
-cap_wind_inv(i,v,r,t)              "--MW-- wind investments by year"
-cap_wind_ret(i,v,r)                "--MW-- total wind capacity retirements"
-heat_rate_filt(i,v,r)              "--MMBtu/MWh-- heat rate"
-repbioprice_filt(r)                "--2004$/MWh-- marginal price for biofuel in regiond where biofuel was used"
-cost_vom_filt(i,v,r)               "--2004$/MWh-- variable OM"
-fuel_price_filt(i,r)               "--2004$/MMbtu-- fuel prices by technology"
-avail_filt(i,v,szn)                "--fraction-- fraction of capacity available for generation by season"
-cf_hyd_filt(i,szn,r)               "--fraction--unadjusted hydro capacity factors by season"
-cfhist_hyd_filt(r,szn,i)           "--unitless--seasonal adjustment for capacity factors in historical years"
-m_cf_filt(i,v,r,h,t)               "--fraction-- capacity factor used in the model"
+parameter  
+avail_filt(i,v,allszn)             "--fraction-- fraction of capacity available for generation by season"
+can_exports_h_filt(r,allh)         "--MWh-- Canada exports by region and timeslice filtered for the previous solve year"
+can_imports_cap(i,v,r)             "--MW-- Canadian import max capacity"
+can_imports_szn_filt(r,allszn)     "--MWh-- Canada imports by region and season filtered for the previous solve year"
+cap_converter_filt(r)              "--MW-- VSC AC/DC converter capacity"
+cap_exist_i(i)                     "--MW-- technologies with existing capacity in the current solve year"
+cap_exist_ir(i,r)                  "--MW-- technology-region combinations with existing capacity in the current solve year"
+cap_exist_iv(i,v)                  "--MW-- technology-vintage combinations with existing capacity in the current solve year"
+cap_exist(i,v,r)                   "--MW-- capacity that exists in the current solve year"
+cap_exog_filt(i,v,r)               "--MW-- exogenous capacity"
+cap_hyd_szn_adj_filt(i,allszn,r)   "--fraction-- seasonal hydro CF adjustment filtered for the previous solve year"
+cap_init(i,v,r)                    "--MW-- initial capacity"
+cap_ivrt(i,v,r,t)                  "--MW-- generation capacity"
+cap_pvb(i,v,r)                     "--MW-- Hybrid PV+battery capacity (PV)"
+cap_trans(r,rr,trtype)             "--MW-- transmission capacity"
 cf_adj_t_filt(i,v,t)               "--fraction-- capacity factor adjustment for wind"
-cost_cap_fin_mult_filt(i,r,t)      "--unitless-- capital cost financial multipliers"
 cost_cap_filt(i,t)                 "--2004$/MW-- technology capital costs"
-rsc_dat_filt(r,rs,i,rscbin,sc_cat) "--varies-- resource supply curve data"
-flex_load(r,h,t)                   "--MW-- total exogenously defined flexible load"
-flex_load_opt(r,h,t)              "--MW-- model results for optimizing flexible load"
+cost_cap_fin_mult_filt(i,r,t)      "--unitless-- capital cost financial multipliers"
+cost_vom_filt(i,v,r)               "--$/MWh-- VO&M costs filtered for the previous solve year and existing capacity"
+ctt_i_ii_filt(i,ii)                "--set-- set linking watercooling techs i to numeraire techs ii filtered for existing watercooling techs"
+emissions_price(e,r)               "--2004$/ton-- combined emissions taxes and marginal prices for emissions caps"
+emit_rate_filt(e,i,v,r)            "--ton/MWh-- emission rate for the previous solve year"
+energy_price(r,allh)               "--2004$/MWh-- energy price from the previous solve year"
+flex_load_opt(r,allh)              "--MW-- model results for optimizing flexible load"
+flex_load(r,allh)                  "--MW-- total exogenously defined flexible load"
+fuel_price_filt(i,r)               "--$/mmBTU-- fuel prices filtered for the previous solve year and existing capacity"
+heat_rate_filt(i,v,r)              "--MMBtu/MWh-- heat rate"
+inv_cond_filt(i,v,t)               "--set-- vintage-year mapping for investments by technology"
+inv_ivrt(i,v,r,t)                  "--MW-- investments in generation capacity"
+load_multiplier_filt(cendiv)       "--fraction-- scalars used to scale load for growth filtered for previous solve year"
+m_cf_filt(i,v,r,allh)              "--fraction-- capacity factor used in the model"
+m_cf_szn_filt(i,v,r,allszn)        "--fraction-- modelled capacity factors filtered for hydro resources to set seasonal energy constraints"
+minloadfrac_filt(r,i,allszn)       "--fraction-- modelled mingen fraction filtered for hydro resources to set mingen constraints"
+prod_filt(i,v,r,allh)              "--MW-- power consumed for PRODUCE.l"
+repbioprice_filt(r)                "--2004$/MWh-- marginal price for biofuel in region where biofuel was used"
+repgasprice_filt(r)                "--$/mmBTU-- NG prices in ReEDS filtered for the previous solve year"
+repgasprice_r(r,t)                 "--$/mmBTU-- NG prices in ReEDS, switch-dependent, at the BA level"
+repgasprice(cendiv,t)              "--$/mmBTU-- NG prices in ReEDS, the calculation of which depends on what switch is used"
+repgasquant(cendiv,t)              "--mmBTU-- NG fuel usage in ReEDS - used to determine NG price"
+ret_ivrt(i,v,r,t)                  "--MW-- retirements of generation capacity"
+ret(i,v,r)                         "--MW-- retirements of generation capacity"
+rsc_dat_dr(r,rs,i,rscbin,sc_cat)   "--varies-- resource supply curve data"
+rsc_dat_filt(r,rs,i,rscbin,sc_cat) "--$/MW-- capital costs filtered for pumped-hydro so arbitrage value doesn't exceed capital costs"
+storage_eff_filt(i)                "--fraction-- storage efficiency filtered for the next solve year"
+upgrade_to_filt(i,ii)              "--set-- set linking upgrade techs to the tech the upgraded from filtered for existing upgrades"
 ;
 
-*populate year sets
-tcheckret(t) = no ;
-loop(t$[(yeart(t)>%cur_year%)$(yeart(t)<=%next_year%)],
-tcheckret(t) = yes ;
+trange(t) = no ;
+loop(t$[(yeart(t)>%start_year%)$(yeart(t)<=%next_year%)],
+trange(t) = yes ;
 ) ;
-
-tcheckretwind(t) = no ;
-loop(t$[(yeart(t)>=%start_year%)$(yeart(t)<=%next_year%)],
-tcheckretwind(t) = yes ;
-) ;
+trange("%next_year%") = no ;
+trange("%cur_year%") = yes ;
 
 tcur(t) = no ;
 tcur("%cur_year%") = yes ;
@@ -78,6 +88,7 @@ tnext(t) = no ;
 tnext("%next_year%") = yes ;
 
 *populate reduced-form sets
+valcap_ivr(i,v,r) = sum{t, valcap(i,v,r,t) } ;
 valcap_iv(i,v) = sum{(r,t)$tcur(t), valcap(i,v,r,t)} ;
 valcap_i(i) = sum{v, valcap_iv(i,v)} ;
 valcap_ir(i,r) = sum{t$tcur(t), valcap_irt(i,r,t)} ;
@@ -86,119 +97,150 @@ valcap_ir(i,r) = sum{t$tcur(t), valcap_irt(i,r,t)} ;
 * Removing banned technologies from sets
 *=======================================
 
-canada(i) = canada(i)$(not ban(i)) ;
-coal(i) = coal(i)$(not ban(i)) ;
 csp_sm(i) = csp_sm(i)$(not ban(i)) ;
 geo(i) = geo(i)$(not ban(i)) ;
 hydro_d(i) = hydro_d(i)$(not ban(i)) ;
 hydro_nd(i) = hydro_nd(i)$(not ban(i)) ;
 nuclear(i) = nuclear(i)$(not ban(i)) ;
-storage(i) = storage(i)$(not ban(i)) ;
+dr1(i) = dr1(i)$(not ban(i)) ;
+dr2(i) = dr2(i)$(not ban(i)) ;
 storage_duration(i) = storage_duration(i)$(not ban(i)) ;
 storage_eff(i,t) = storage_eff(i,t)$(not ban(i)) ;
-storage_no_csp(i) = storage_no_csp(i)$(not ban(i)) ;
+storage_standalone(i) = storage_standalone(i)$(not ban(i)) ;
 
 *==============================
 * Get ReEDS generation capacity
 *==============================
 
-* get the build year and retire year for all investments
-* NOTE the variable CAP holds degraded capacity, so when we retire capacity we need to account for degredation
-inv_tmp(i,v,r,t,tt)$[t.val+maxage(i)=tt.val] = [INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)] * degrade(i,t,tt) ;
+cap_exist(i,v,r)$valcap_ivr(i,v,r) = sum{t$tcur(t), CAP.l(i,v,r,t) } ;
+cap_exist_ir(i,r)$valcap_ir(i,r) = sum{v, cap_exist(i,v,r) } ;
+cap_exist_iv(i,v)$valcap_iv(i,v) = sum{r, cap_exist(i,v,r) } ;
+cap_exist_i(i)$valcap_i(i) = sum{(r,v), cap_exist(i,v,r) } ;
 
-* determine exogenous retirements by year
-retire_exog_init(i,v,r,rs,t)$(capacity_exog(i,v,r,rs,t-1) > capacity_exog(i,v,r,rs,t)) =
-        [capacity_exog(i,v,r,rs,t-1) - capacity_exog(i,v,r,rs,t)]$initv(v) ;
+cap_ivrt(i,v,r,t)$([not (upv(i) or dupv(i) or wind(i))]$valcap(i,v,r,t)$trange(t)) = CAP.l(i,v,r,t) ;
+cap_ivrt(i,v,r,t)$([upv(i) or dupv(i) or wind(i)]$valcap(i,v,r,t)) = (m_capacity_exog(i,v,r,t)$trange(t) + sum{tt$[inv_cond(i,v,r,t,tt)$trange(tt)],
+                                          INV.l(i,v,r,tt) + INV_REFURB.l(i,v,r,tt)$[refurbtech(i)$Sw_Refurb]}) ;
+cap_init(i,v,r)$([not distpv(i)]$valcap_ivr(i,v,r)) = sum{t$tcur(t), cap_ivrt(i,v,r,t)$initv(v) } ;
+cap_init(i,v,r)$(distpv(i)$valcap_ivr(i,v,r)) = sum{t$tfirst(t), cap_ivrt(i,v,r,t) } ;
+inv_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)] = [INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)]$valinv(i,v,r,t) + UPGRADES.l(i,v,r,t)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades] ;
+inv_ivrt("distPV",v,r,t)$([trange(t)$(not tfirst(t))]$valcap("distPV",v,r,t)) = cap_ivrt("distPV",v,r,t) - sum{tt$tprev(t,tt), cap_ivrt("distPV",v,r,tt) } ;
+inv_ivrt("distPV","init-1",r,"%next_year%")$rfeas(r) = inv_distpv(r,"%next_year%") ;
 
-* ignore exogenous retirements for any vintage classes that are not "initial"
-retire_exog_init(i,v,r,rs,t)$[not initv(v)] = 0 ;
+ret_ivrt(i,v,r,t)$([trange(t)$(not tfirst(t))$newv(v)]$valcap(i,v,r,t)) = sum{tt$tprev(t,tt), cap_ivrt(i,v,r,tt)} - cap_ivrt(i,v,r,t) + inv_ivrt(i,v,r,t) ;
+ret_ivrt(i,v,r,t)$([abs(ret_ivrt(i,v,r,t) < 1e-6)]$valcap(i,v,r,t)) = 0 ;
 
-* fix the r & rs indices for exogenous retirements
+ret(i,v,r)$valcap_ivr(i,v,r) = sum{t, ret_ivrt(i,v,r,t) } ;
 
-retire_exog_tmp(i,v,rb,t) = retire_exog_init(i,v,rb,"sk",t) ;
-retire_exog_tmp(i,v,rs,t)$[not sameas(rs,"sk")] = sum{r$r_rs(r,rs), retire_exog_init(i,v,r,rs,t)} ;
+cap_exog_filt(i,v,r)$([not canada(i)]$valcap_ivr(i,v,r)) = sum{t$tnext(t), m_capacity_exog(i,v,r,t) } ;
 
-* determine the total exogenous retirements that occur within the tcheckret set
-* this represents the retirements of all exogenous capacity between the end of the previous solve year and the end of the next solve year
-* note that wind capacity will be handled seperately because the vintage is tied to the build year
-retire_exog(i,v,r,"%cur_year%") = sum{tcheckret(tt)$(not wind(i)), retire_exog_tmp(i,v,r,tt)} ;
+*============================
+* Fuel prices
+*============================
 
-* determine the capacity that will retire due to age within the tcheckret set
-* determine the lifetime retirements between the end of the last solve year and the end of the next solve year
-* note that wind capacity will be handled seperately because the vintage is tied to the build year
-ret_lifetime(i,v,r,"%cur_year%") = sum{(t,tt)$[tcheckret(tt)$(not wind(i))], inv_tmp(i,v,r,t,tt)} ;
+fuel_price_filt(i,r)$cap_exist_ir(i,r) = sum{t$tcur(t), fuel_price(i,r,t) } ;
 
-* get the installed capacity minus upcoming retirements for all technologies except wind
-if(Sw_Timetype("seq") = 1,
-* For a sequential solve: use capacity for the NEXT solve year when calculating capacity credit for the NEXT solve year
-cap_export(i,v,r) = sum{t$[tcur(t)$valcap(i,v,r,t)$(not wind(i))], CAP.l(i,v,r,t) - retire_exog(i,v,r,t) - ret_lifetime(i,v,r,t)} ;
-* distributed PV is defined exogenously so just defining it here
-cap_export("distpv",v,r) = 0 ;
-cap_export("distpv","init-1",r)$rfeas(r) = CAP.l("distpv","init-1",r,"%cur_year%") + inv_distpv(r,"%next_year%") ;
-else
-* For intertemporal or window solves: use the capacity from the PRIOR iteration of the CURRENT solve year for capacity credit for the NEXT iteration of the CURRENT solve year
-cap_export(i,v,r) = sum{t$[tcur(t)$valcap(i,v,r,t)$(not wind(i))], CAP.l(i,v,r,t)} ;
-) ;
+* populate the fuel price for RE-CT techs as the marginal off the
+* hydrogen demand constraint (in $/tonne) times h2_rect_intensity 
+* (tonne / mmbtu) to get $ / mmbtu -- note there should always be
+* a positive value here since if an RE-CT is built it consumes hydrogen 
+* the equation from which we extract the marginal depends on whether
+* we have the national (Sw_H2 = 1) or regional (Sw_H2 = 2) constraint
+fuel_price_filt(i,r)$[rfeas(r)$Sw_H2$re_ct(i)$(sum{t$tcur(t),yeart(t) } >= Sw_H2_Start)$cap_exist_ir(i,r)] = 
+            sum{t$tcur(t),
+                (1 / cost_scale) * (1 / pvf_onm(t)) * h2_rect_intensity
+                * ( eq_h2_demand.m("h2_green",t)$[Sw_H2 = 1] 
+                +   eq_h2_demand_regional.m(r,"h2_green",t)$[Sw_H2 = 2] ) 
+               } ;
 
-*cap_export can be less than zero if an exogenous retirement was taken early
-cap_export(i,v,r)$[cap_export(i,v,r) < 0] = 0 ;
+* for regions that consumed biomass, use the cost of the last supply curve bin consumed
+repbioprice_filt(r)$[sum{(t, bioclass), bioused.l(bioclass,r,t) }] =
+    sum{t$tcur(t), smax{bioclass$[bioused.l(bioclass,r,t)],
+      sum{usda_region$r_usda(r, usda_region), biosupply(usda_region,bioclass,"price")} } + bio_transport_cost } ;
 
-* grouping capacity by technologies
-cap_csp(i,v,r) = cap_export(i,v,r)$[csp(i)$(not csp_nostorage(i))] ;
+* for regions with no biomass, assign biomass price as the cost of the cheapest available supply curve bin for that region
+* also safeguard against outlying values (for some reason smax sometimes returns -INF for regions w/o biomass consumption)
+repbioprice_filt(r)$[rfeas(r)$(repbioprice_filt(r) <= 0)] = rep_bio_price_unused(r) ;
 
-cap_cspns(i,v,r) = cap_export(i,v,r)$csp_nostorage(i) ;
+repgasquant(cendiv,t)$[(Sw_GasCurve = 0 or Sw_GasCurve = 3)$tcur(t)$cdfeas(cendiv)] =
+    sum{(gb,h), GASUSED.l(cendiv,gb,h,t) * hours(h) } ;
 
-cap_pv(i,v,r) = cap_export(i,v,r)$pv(i) ;
+repgasquant(cendiv,t)$[(Sw_GasCurve = 1 or Sw_GasCurve = 2)$tcur(t)$cdfeas(cendiv)] =
+    sum{(i,v,r,h)$[rfeas(r)$r_cendiv(r,cendiv)$valgen(i,v,r,t)$gas(i)$heat_rate(i,v,r,t)],
+          hours(h) * heat_rate(i,v,r,t) * GEN.l(i,v,r,h,t)
+       } ;
 
-cap_storage(i,v,r) = cap_export(i,v,r)$storage_no_csp(i) ;
+repgasprice(cendiv,t)$[(Sw_GasCurve = 0)$tcur(t)$cdfeas(cendiv)] =
+    smax{gb$[sum{h, GASUSED.l(cendiv,gb,h,t) }], gasprice(cendiv,gb,t) } ;
 
-cap_thermal(i,v,r) = cap_export(i,v,r)$[not (pv(i) or storage(i) or csp_nostorage(i))] ;
+repgasprice(cendiv,t)$[(Sw_GasCurve = 2)$tcur(t)$cdfeas(cendiv)$repgasquant(cendiv,t)] =
+    sum{(i,v,r,h)$[r_cendiv(r,cendiv)$valgen(i,v,r,t)$gas(i)$heat_rate(i,v,r,t)],
+          hours(h)*heat_rate(i,v,r,t)*fuel_price(i,r,t)*GEN.l(i,v,r,h,t)
+       } / (repgasquant(cendiv,t)) ;
 
-* Wind capacity is treated separately because wind CFs depend on the build year as well as the vintage.
-* It is the only technology where this information matters.
+repgasprice_r(r,t)$[(Sw_GasCurve = 0 or Sw_GasCurve = 2)$tcur(t)$rfeas(r)] = sum{cendiv$r_cendiv(r,cendiv), repgasprice(cendiv,t) } ;
 
-* determine the total exogenous retirements of wind capacity through the end of the next solve year
-retire_exog_wind(i,v,r,"%cur_year%")$wind(i) = sum{tcheckretwind(tt), retire_exog_tmp(i,v,r,tt)} ;
+repgasprice_r(r,t)$[(Sw_GasCurve = 1)$tcur(t)$rfeas(r)] =
+              ( sum{(h,cendiv)$r_cendiv(r,cendiv),
+                   gasmultterm(cendiv,t) * szn_adj_gas(h) * cendiv_weights(r,cendiv) *
+                   hours(h) } / sum{h, hours(h) }
 
-* determine the total lifetime retirements of wind capacity through the end of the next solve
-ret_lifetime_wind(i,v,r,"%cur_year%")$wind(i) = sum{(t,tt)$tcheckretwind(tt), inv_tmp(i,v,r,t,tt)} ;
+              + smax((fuelbin,cendiv)$VGASBINQ_REGIONAL.l(fuelbin,cendiv,t), gasbinp_regional(fuelbin,cendiv,t) )
 
-* get the initial starting capacity of wind
-cap_wind_init(i,v,r,t)$[wind(i)$tfirst(t)$valcap(i,v,r,t)] = CAP.l(i,v,r,t);
+              + smax(fuelbin$VGASBINQ_NATIONAL.l(fuelbin,t), gasbinp_national(fuelbin,t) )
+              ) ;
 
-* get wind capacity investements by build year
-cap_wind_inv(i,v,r,t)$[wind(i)$tcheckretwind(t)$(not tfirst(t))$valinv(i,v,r,t)] = INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t) ;
-
-* get the total wind capacity retirements throught the end of the next solve year
-cap_wind_ret(i,v,r)$wind(i) = sum{(t)$tcur(t), retire_exog_wind(i,v,r,t) + ret_lifetime_wind(i,v,r,t)} ;
+repgasprice_filt(r)$rfeas(r) = sum{t$tcur(t), repgasprice_r(r,t) } ;
 
 *============================
 * Filter necessary input data
 *============================
 
-heat_rate_filt(i,v,r) = sum{t$[valcap(i,v,r,t)$tcur(t)], heat_rate(i,v,r,t)} ;
+avail_filt(i,v,szn)$[cap_exist_iv(i,v)$(not vre(i))] = smax{h$h_szn(h,szn), avail(i,v,h) } ;
 
-repbioprice_filt(r)$rfeas(r) = sum{t$tcur(t), smax{bioclass$bioused.l(bioclass,r,t), biosupply(r,"cost",bioclass) }} ;
+can_exports_h_filt(r,h)$rfeas(r) = sum{t$tcur(t), can_exports_h(r,h,t)} ;
 
-cost_vom_filt(i,v,r) = sum{t$[tcur(t)$valgen(i,v,r,t)], cost_vom(i,v,r,t)} ;
+can_imports_cap(i,v,r)$canada(i) = sum{t$tcur(t), m_capacity_exog(i,v,r,t) } ;
 
-fuel_price_filt(i,r) = sum{t$[valcap_irt(i,r,t)$tcur(t)], fuel_price(i,r,t)} ;
+can_imports_szn_filt(r,szn)$rfeas(r) = sum{t$tcur(t), can_imports_szn(r,szn,t)} ;
 
-avail_filt(i,v,szn)$[valcap_iv(i,v)$(not vre(i))] = smax{h$h_szn(h,szn), avail(i,v,h)} ;
+*can_exports_h_filt(r,h)$[Sw_Canada = 2] = 0 ;
+*can_imports_cap(i,v,r)$[Sw_Canada = 2] = 0 ;
+*can_imports_szn_filt(r,szn)$[Sw_Canada = 2] = 0 ;
 
-cf_hyd_filt(i,szn,r)$valcap_ir(i,r) = cf_hyd(i,szn,r) ;
+cap_hyd_szn_adj_filt(i,szn,r)$[cap_exist_ir(i,r)$hydro_d(i)] = cap_hyd_szn_adj(i,szn,r) ;
 
-cfhist_hyd_filt(r,szn,i) = sum{t$[valcap_irt(i,r,t)$tcur(t)], cfhist_hyd(r,t,szn,i)} ;
+cost_cap_filt(i,t)$[storage_standalone(i) or dr(i)] = cost_cap(i,t)$tnext(t) ;
 
-m_cf_filt(i,v,r,h,t) = m_cf(i,v,r,h,t)$[vre(i)$tnext(t)] ;
+cost_cap_fin_mult_filt(i,r,t)$([storage_standalone(i) or dr(i)]$rfeas(r)) = cost_cap_fin_mult(i,r,t)$tnext(t) ;
 
-cf_adj_t_filt(i,v,t) = cf_adj_t(i,v,t)$[tcheckretwind(t)$wind(i)] ;
+cost_vom_filt(i,v,r)$cap_exist(i,v,r) = sum{t$tcur(t), cost_vom(i,v,r,t) } ;
 
-cost_cap_fin_mult_filt(i,r,t) = cost_cap_fin_mult(i,r,t)$[storage_no_csp(i)$tnext(t)] ;
+cf_adj_t_filt(i,v,t)$[cap_exist_iv(i,v)$trange(t)] = cf_adj_t(i,v,t) ;
+cf_adj_t_filt(i,v,"%next_year%") = cf_adj_t(i,v,"%next_year%")$(vre(i) or pvb(i)) ;
 
-cost_cap_filt(i,t) = cost_cap(i,t)$[storage_no_csp(i)$tnext(t)] ;
+ctt_i_ii_filt(i,ii) = ctt_i_ii(i,ii)$cap_exist_i(i) ;
 
-rsc_dat_filt(r,rs,i,rscbin,"cost") = rsc_dat(r,rs,i,rscbin,"cost")$[rfeas(r)$storage_no_csp(i)] ;
+emit_rate_filt(e,i,v,r)$cap_exist(i,v,r) = sum{t$tcur(t), emit_rate(e,i,v,r,t) } ;
+
+heat_rate_filt(i,v,r)$cap_exist(i,v,r) = sum{t$tcur(t), heat_rate(i,v,r,t) } ;
+
+inv_cond_filt(i,v,t)$[(vre(i) or pvb(i))$tnext(t)] = sum{(tt,r)$rfeas_cap(r), inv_cond(i,v,r,tt,t)} ;
+
+load_multiplier_filt(cendiv) = sum{t$tcur(t), load_multiplier(cendiv,t)} ;
+
+m_cf_filt(i,v,r,h)$[(vre(i) or pvb(i))$cap_exist(i,v,r)] = sum{t$tnext(t), m_cf(i,v,r,h,t) } ;
+
+m_cf_szn_filt(i,v,r,szn)$[hydro(i)$cap_exist(i,v,r)] = sum{t$tcur(t), m_cf_szn(i,v,r,szn,t) } ;
+
+minloadfrac_filt(r,i,szn)$[hydro(i)$cap_exist_ir(i,r)] = sum{h$h_szn(h,szn), minloadfrac(r,i,h) * hours(h) } / sum{h$h_szn(h,szn), hours(h) } ;
+
+rsc_dat_filt(r,rs,i,rscbin,"cost")$[rfeas(r)$storage_standalone(i)$cap_exist_ir(i,r)]  = sum{t$tnext(t), rsc_dat(r,rs,i,t,rscbin,"cost")};
+
+rsc_dat_dr(r,rs,i,rscbin,"cost")$[rfeas(r)$dr(i)]  = sum{t$tnext(t), rsc_dat(r,rs,i,t,rscbin,"cost")};
+
+storage_eff_filt(i)$storage(i) = sum{t$tnext(t), storage_eff(i,t) } ;
+
+upgrade_to_filt(i,ii) = upgrade_to(i,ii)$cap_exist_i(i) ;
 
 *============================
 * Get ReEDS transmission data
@@ -206,23 +248,128 @@ rsc_dat_filt(r,rs,i,rscbin,"cost") = rsc_dat(r,rs,i,rscbin,"cost")$[rfeas(r)$sto
 
 cap_trans(r,rr,trtype)$[rfeas(r)$rfeas(rr)] = sum{t$tcur(t), CAPTRAN.l(r,rr,trtype,t)} ;
 
-losses_trans_h(rr,r,h,trtype)$[rfeas(r)$rfeas(rr)] = sum{t$tcur(t), tranloss(rr,r,trtype) * FLOW.l(rr,r,h,t,trtype)} ;
+cap_converter_filt(r)$rfeas(r) = sum{t$tcur(t), CAP_CONVERTER.l(r,t)} ;
 
-routes_filt(r,rr)$[rfeas(r)$rfeas(rr)] = sum{(trtype,t)$tcur(t), routes(r,rr,trtype,t)} ;
+* In Osprey, trtype="AC" includes both AC and LCC DC lines; VSC DC lines are treated differently
+routes_filt(r,rr,"AC")$[rfeas(r)$rfeas(rr)] = sum{(trtype,t)$[tcur(t)$aclike(trtype)], routes(r,rr,trtype,t)} ;
+routes_filt(r,rr,"VSC")$[rfeas(r)$rfeas(rr)] = sum{t$tcur(t), routes(r,rr,"VSC",t)} ;
 
 *============================
 * Flexible load data
 *============================
 
-flex_load(r,h,"%cur_year%") = sum{flex_type, load_exog_flex(flex_type,r,h,"%cur_year%")} ;
+flex_load(r,h)$rfeas(r) = sum{(flex_type,t)$tcur(t), load_exog_flex(flex_type,r,h,t)} ;
 
-flex_load_opt(r,h,"%cur_year%") = sum{flex_type, FLEX.l(flex_type,r,h,"%cur_year%")} ;
+flex_load_opt(r,h)$rfeas(r) = sum{(flex_type,t)$tcur(t), FLEX.l(flex_type,r,h,t)} ;
+
+*============================
+* Extra consumption data
+*============================
+
+prod_filt(i,v,r,h)$[sum{t$tcur(t), valcap(i,v,r,t)}$consume(i)] = 
+                sum{(p,t)$[i_p(i,p)$tcur(t)], PRODUCE.l(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) } ;
+
+*============================
+* Get ReEDS emissions prices [$/ton]
+*============================
+* NOT included: eq_emit_rate_limit (disabled by default), eq_CSAPR_Budget, eq_CSAPR_Assurance
+emissions_price(e,r)$rfeas(r) =
+    (1 / cost_scale / emit_scale(e))
+    * sum{t$tcur(t),
+        (1 / pvf_onm(t)) * eq_annual_cap.m(e,t)
+        + emit_tax(e,r,t)
+    } ;
+
+* Add marginal prices from CO2-specific constraints
+emissions_price("CO2",r)$rfeas(r) =
+    emissions_price("CO2",r)
+    + (1 / cost_scale / emit_scale("CO2"))
+        * sum{t$tcur(t),
+            (1 / pvf_onm(t)) * [eq_RGGI_cap.m(t)$RGGI_R(r) + eq_state_cap.m(t)$state_cap_r(r)]
+        } ;
+
+*===================================
+* Get ReEDS energy prices ($/MWh)
+*===================================
+
+energy_price(r,h)$rfeas(r) = sum{t$tcur(t), (1 / cost_scale) * (1 / pvf_onm(t)) * eq_supply_demand_balance.m(r,h,t) / hours(h) } ;
 
 *=======================================
 * Unload all relevant data to a gdx file
 *=======================================
 
-execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%case%_%next_year%.gdx' avail_filt, canada, cap_csp, cap_cspns, cap_pv, cap_storage, cap_thermal, cap_trans, cap_wind_init, cap_wind_inv, cap_wind_ret, cf_hyd_filt,
-                                                         cfhist_hyd_filt, coal, cost_vom_filt, csp_sm, fuel_price_filt, geo, h_szn, heat_rate_filt, cost_cap_fin_mult_filt, cost_cap_filt, rsc_dat_filt, flex_load_opt,
-                                                         hierarchy, hours, hydmin, hydro_d, hydro_nd, i, load_multiplier, losses_trans_h, m_cf_filt, nuclear, r, r_cendiv, r_rs, repbioprice_filt, flex_load,
-                                                         rfeas, routes_filt, sdbin, storage, storage_duration, storage_eff, storage_no_csp, szn, tranloss, v, vom_hyd, cf_adj_t_filt, pvf_onm ;
+execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%next_year%.gdx'
+    allowed_shed
+    avail_filt
+    bcr
+    bcr_pvb_config
+    can_exports_h_filt
+    can_imports_cap
+    can_imports_szn_filt
+    cap_converter_filt
+    cap_exog_filt
+    cap_hyd_szn_adj_filt
+    cap_init
+    cap_ivrt
+    cap_trans
+    cf_adj_t_filt
+    converter_efficiency_vsc
+    cost_cap_filt
+    cost_cap_fin_mult_filt
+    cost_vom_filt
+    csp_sm
+    ctt_i_ii_filt
+    degrade_annual
+    dr1
+    dr2
+    emissions_price
+    emit_rate_filt
+    energy_price
+    flex_load
+    flex_load_opt
+    fuel_price_filt
+    geo
+    h_szn
+    heat_rate_filt
+    hierarchy
+    hydro_d
+    hydro_nd
+    hours
+    hydmin
+    i
+    ilr
+    ilr_pvb_config
+    i_subsets
+    inv_cond_filt
+    inv_ivrt
+    load_multiplier_filt
+    m_cf_filt
+    m_cf_szn_filt
+    maxage
+    minloadfrac_filt
+    nuclear
+    prod_filt
+    pvf_onm
+    r
+    r_cendiv
+    r_rs
+    repbioprice_filt
+    repgasprice_filt
+    ret
+    ret_ivrt
+    rfeas
+    routes_filt
+    rsc_dat_dr
+    rsc_dat_filt
+    sdbin
+    storage_duration
+    storage_eff_filt
+    storage_standalone
+    szn
+    tfirst
+    tmodel_new
+    tranloss
+    upgrade_to_filt
+    v
+    vom_hyd
+;

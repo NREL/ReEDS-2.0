@@ -3,14 +3,14 @@
 
 #EDIT THE FOLLOWING FIELDS
 data_type = 'ReEDS 1.0'
-bokehpivot_dir = r'\\nrelqnap02\ReEDS\bokehpivot' #path to the desired bokehpivot repo.
-data_source = r'\\nrelqnap02\ReEDS\Some Project\runs\Some Runs Folder' #data_source allows all the same inputs as in the interface
+bokehpivot_dir = r'\\nrelnas01\ReEDS\bokehpivot' #path to the desired bokehpivot repo.
+data_source = r'\\nrelnas01\ReEDS\Some Project\runs\Some Runs Folder' #data_source allows all the same inputs as in the interface
 scenario_filter = 'all' #'all' or string of comma-separated names.
 diff = 'No' #'Yes' if adding difference sections
 base = 'Master' #Base case, if applicable. If base case is not needed for this report, simply leave as is.
-report_path = r'\\nrelqnap02\ReEDS\Some Location\some_report.py' #Path to report that is to be run
+report_path = r'\\nrelnas01\ReEDS\Some Location\some_report.py' #Path to report that is to be run
 html_num = 'one' #'one' or 'multiple'. 'one' will create one html file with all sections, and 'multiple' will create a separate html file for each section
-output_dir = r'\\nrelqnap02\ReEDS\Some Location' #This is the directory that will be created to contain the report. It cannot already exist.
+output_dir = r'\\nrelnas01\ReEDS\Some Location' #This is the directory that will be created to contain the report. It cannot already exist.
 report_format = 'both' #'html', 'excel', or 'both'
 auto_open = 'yes' #'yes' or 'no'. Automatically open the resulting report excel and html files when they are created.
 

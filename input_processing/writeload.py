@@ -1,11 +1,19 @@
 import pandas as pd
 import os
 import argparse
+# direct print and errors to log file
+import sys
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
+# Time the operation of this script
+from ticker import toc
+import datetime
+tic = datetime.datetime.now()
 
-print('Beginning calcultion of inputs\\writeload.py')
+print('Beginning calculation of inputs\\writeload.py')
 
 # Model Inputs
-parser = argparse.ArgumentParser(description="""This file organizes fuel cost data by techonology""")
+parser = argparse.ArgumentParser(description="""This file processes and writes out load data.""")
 
 parser.add_argument("reeds_dir", help="ReEDS directory")
 parser.add_argument("demandscen", help="demand scenarion")
@@ -44,3 +52,6 @@ prm_ann = prm_ann.round(4)
 print('Writing load and prm parameter to: ' + outdir)
 demand.to_csv(os.path.join(outdir,'load_multiplier.csv'),index=False)
 prm_ann.to_csv(os.path.join(outdir,'prm_annual.csv'),index=False)
+
+toc(tic=tic, year=0, process='input_processing/writeload.py', 
+    path=os.path.join(outdir,'..'))

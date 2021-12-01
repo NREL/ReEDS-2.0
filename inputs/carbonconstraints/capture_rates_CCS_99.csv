@@ -1,0 +1,10 @@
+i,SO2,NOx,Hg,CO2
+beccs,0,0,0,0.9
+coal-CCS,0,0,0,0.99
+Coal-IGCC_coal-CCS,0,0,0,0.99
+coal-new_coal-CCS,0,0,0,0.99
+CoalOldScr_coal-CCS,0,0,0,0.99
+CoalOldUns_coal-CCS,0,0,0,0.99
+CofireNew_coal-CCS,0,0,0,0.99
+CofireOld_coal-CCS,0,0,0,0.99
+gas-CC-CCS,0,0,0,0.99

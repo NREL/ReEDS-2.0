@@ -25,7 +25,7 @@ logger = logging.getLogger('')
 
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
 
-DEFAULT_DOLLAR_YEAR = 2018
+DEFAULT_DOLLAR_YEAR = 2020
 DEFAULT_PV_YEAR = 2020
 DEFAULT_DISCOUNT_RATE = .05
 DEFAULT_END_YEAR = 2050
@@ -350,6 +350,7 @@ def get_src(scen, src):
         if 'columns' in src:
             df_src.columns = src['columns']
     df_src.replace('Eps',0, inplace=True)
+    df_src.replace('Undf',0, inplace=True)
     df_src = df_src.apply(pd.to_numeric, errors='ignore')
     df_src = df_to_lowercase(df_src)
     return df_src
@@ -527,7 +528,7 @@ def build_reeds_report(html_num='one'):
         report_path = this_dir_path + '/reports/templates'+GLRD['report_subdir']+'/'+ core.GL['widgets']['report_options'].value
     report_path = '"' + report_path + '"'
     time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    output_dir = '"' + core.user_out_path + '/report-' + time + '"'
+    output_dir = '"' + core.out_path + '/report-' + time + '"'
     data_source = '"' + core.GL['widgets']['data'].value.replace('"', '') + '"'
     scenario_filter_str = ','.join(str(e) for e in core.GL['widgets']['scenario_filter'].active)
     scenario_filter_str = '"' + scenario_filter_str + '"'

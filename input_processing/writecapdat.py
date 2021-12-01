@@ -3,18 +3,28 @@ import os
 import argparse
 import gdxpds
 import numpy as np
+# direct print and errors to log file
+import sys
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
+# Time the operation of this script
+from ticker import toc
+import datetime
+tic = datetime.datetime.now()
 
 #%%
 # Model Inputs
 parser = argparse.ArgumentParser(description="""This file processes plant cost data by tech""")
 
 parser.add_argument("reeds_dir", help="ReEDS directory")
-parser.add_argument("gdxname", help="wind characteristics")
-parser.add_argument("gdxnamePRES", help="wind characteristics")
-parser.add_argument("gdxnameRET", help="upv characteristics")
-parser.add_argument("nukescen", help="csp characteristics")
-parser.add_argument("outdir", help="battery characteristics")
-parser.add_argument("waterconstraints", help="hydro characteristics")
+parser.add_argument("gdxname", help="existing capacity")
+parser.add_argument("gdxnamePRES", help="prescribed capacity")
+parser.add_argument("gdxnameRET", help="prescriptive retirements")
+parser.add_argument("nukescen", help="retirement scenario")
+parser.add_argument("outdir", help="output directory")
+parser.add_argument("waterconstraints", help="water constraints")
+parser.add_argument('-d', '--GSw_DemonstrationPlants', type=int, default=0,
+                    help='Switch to include demonstration plants in prescriptive builds')
 
 args = parser.parse_args()
 
@@ -26,16 +36,18 @@ nukescen = args.nukescen
 outdir = args.outdir
 gdxhydro = 'hydrounitdata.gdx'
 waterconstraints = int(args.waterconstraints)
+GSw_DemonstrationPlants = args.GSw_DemonstrationPlants
 
 #%%
 #Testing inputs
-#reeds_dir = "D:\\Danny_ReEDS\\ReEDS-2.0"
+#reeds_dir = "C:\ReEDS\ReEDS-2.0"
 #gdxname = "ExistingUnits_EIA-NEMS.gdx"
 #gdxnamePRES = "PrescriptiveBuilds_EIA-NEMS.gdx"
 #gdxnameRET = "PrescriptiveRetirements_EIA-NEMS.gdx"
 #nukescen = "NukeRefRetireYear"
 #gdxhydro = 'hydrounitdata.gdx'
 #waterconstraints = 0
+# GSw_DemonstrationPlants = 0
 #outdir = os.path.join(reeds_dir,'inputs','capacitydata')
 
 def season_names(df,col):
@@ -59,8 +71,8 @@ rsnew = rsm[['r','rs']]
 #capacitydata gdx files, ExistingUnits_EIA-NEMS.gdx, PrescriptiveBuilds_EIA-NEMS.gdx, and
 #PrescriptiveRetirements_EIA-NEMS.gdx, have been updated with cooling and water data
 #created by processing scripts located in 
-#"\\nrelqnap02\ReEDS\_ReEDS Documentation\Public unit database_cooling water". This is 
-#the modified version of "\\nrelqnap02\ReEDS\_ReEDS Documentation\Public unit database" 
+#"\\nrelnas01\ReEDS\_ReEDS Documentation\Public unit database_cooling water". This is 
+#the modified version of "\\nrelnas01\ReEDS\_ReEDS Documentation\Public unit database" 
 #that was previously used to create those gdx files.
 
 #=================================
@@ -101,6 +113,11 @@ nonrsc = pd.concat([nonrsc,stor],sort=False)
 pnonrsc = gdxpds.to_dataframe(gdxnamePRES,'PrescriptiveBuildsnqct')
 pnonrsc = pd.DataFrame(pnonrsc['PrescriptiveBuildsnqct'])
 pnonrsc.columns = ['t','r','i','coolingwatertech','ctt','wst','value']
+### Append demonstration plants if desired
+if GSw_DemonstrationPlants:
+    demo = pd.read_csv(os.path.join(reeds_dir,'inputs','capacitydata','demonstration_plants.csv'))
+else:
+    demo = pd.DataFrame(columns=['t','r','i','coolingwatertech','ctt','wst','value'])
 
 pnonrsc_storage = gdxpds.to_dataframe(gdxnamePRES,'PrescriptiveBuildsStorage')
 pnonrsc_storage = pd.DataFrame(pnonrsc_storage['PrescriptiveBuildsStorage'])
@@ -109,7 +126,7 @@ pnonrsc_storage['ctt'] = 'n'
 pnonrsc_storage['coolingwatertech'] = pnonrsc_storage['i'].copy()
 pnonrsc_storage['wst'] = 'n'
 pnonrsc_storage = pnonrsc_storage[['t','r','i','coolingwatertech','ctt','wst','value']]
-pnonrsc = pd.concat([pnonrsc,pnonrsc_storage],sort=False)
+pnonrsc = pd.concat([pnonrsc,demo,pnonrsc_storage],sort=False)
 
 #===============================
 # --- RSC EXISTING CAPACITY ---
@@ -125,31 +142,34 @@ csp = pd.DataFrame(csp['tmpCSPOct'])
 
 dupv.columns = ['r','value']
 upv.columns = ['r','value']
-csp.columns = ['rs','ctt','wst','value']
+csp.columns = ['r','ctt','wst','value']
+csp['r'] = (csp
+             .r
+             .astype(float)
+             .round()
+             .astype(int)
+             .astype(str)
+             )
 
 #add cooling tech
 dupv['ctt'] = 'n'
 upv['ctt'] = 'n'
 
-#DUPV AND UPV both have the same resource region
-dupv['rs'] = 'sk'
-upv['rs'] = 'sk'
-
 #lables need to match
-csp['rs'] = 's'+csp['rs']
-csp = csp.merge(rsnew,on = 'rs',how='left',sort=False)
+csp['r'] = 's' + csp['r']
+csp = csp.merge(rsnew, on='r', how='left', sort=False)
 
 #data for hydro
 hyd = pd.read_csv('hydrocap.csv')
 hyd = hyd.melt(['tech','class'])
 hyd = hyd.dropna()
-hyd['rs'] = 'sk'
+#hyd['rs'] = 'sk'
 hyd['n'] = 'n'
 hyd['i'] = hyd['tech'].copy()
-hyd.columns = ['tech','class','r','value','rs','ctt','i']
+hyd.columns = ['tech','class','r','value','ctt','i']
 
 #we can drop the class column as only has one place (HYDclass1)
-hyd = hyd[['rs','ctt','value','r','i']]
+hyd = hyd[['ctt','value','r','i']]
 
 #assign tech labels
 dupv['i'] = 'dupv_her'
@@ -176,11 +196,23 @@ elif 'ABB' in gdxnameRET:
     wnew = pd.DataFrame(wnew['WindRetire'])
     wnew.columns = ['rs','c','i','t','value']
     wnew['i'] = wnew['i'] + wnew.c.str.replace("class","_")
-wnew['rs'] = 's' + wnew['rs']
+    
+wnew['r'] = (wnew
+              .rs
+              .astype(float)
+              .round()
+              .astype(int)
+              .astype(str)
+              )
+wnew['r'] = 's' + wnew['r']
 wnew['c'] = 'init-1'
 wnew['value'] = wnew['value'].round(6)
 
-wnew = wnew.pivot_table(index = ['i','c','rs'],columns = 't',values='value').reset_index().fillna(0)
+wnew = (wnew
+        .pivot_table(index = ['i','c','r'],columns = 't',values='value')
+        .reset_index()
+        .fillna(0)
+        )
 
 #=================================
 # --- RSC PRESCRIBED CAPACITY ---
@@ -203,24 +235,37 @@ if waterconstraints == 1:
 #load in wind builds
 pwind = gdxpds.to_dataframe(gdxnamePRES,'PrescriptiveBuildsWind')
 pwind = pd.DataFrame(pwind["PrescriptiveBuildsWind"])
-pwind.columns = ['t','rs','i','value']
-pwind['rs'] = 's' + pwind['rs']
-pwind = pwind.merge(rsnew,on='rs',how='left',sort=False)
+pwind.columns = ['t','r','i','value']
+pwind.drop(pwind[pwind.r == 'Invalid Coordinates'].index, inplace=True)
+pwind['r'] = (pwind
+               .r
+               .astype(float)
+               .round()
+               .astype(int)
+               .astype(str)
+               )
+pwind['r'] = 's' + pwind['r']
 
 phyd = gdxpds.to_dataframe(gdxhydro,'PrescriptiveBuildshydcats')
 phyd = pd.DataFrame(phyd["PrescriptiveBuildshydcats"])
 phyd.columns = ['t','r','i','value']
-phyd['rs'] = 'sk'
+#phyd['rs'] = 'sk'
 
 pcsp = pd.read_csv('prescribed_csp.csv')
-pcsp['rs'] = 's' + pcsp['rs'].astype(str)
-pcsp = pcsp.merge(rsnew,on='rs',how='left',sort=False).dropna()
+pcsp['r'] = (pcsp
+              .rs
+              .astype(float)
+              .round()
+              .astype(int)
+              .astype(str)
+              )
+pcsp['r'] = 's' + pcsp['r'].astype(str)
 #replace numeraire CSPs (i.e., csp-ns and csp-ws) by its non-numeraire techs if it is csp-ns, 
 #but keep as it is for csp-ws because csp-ws is handled differently in model with sets csp1_1*csp1_12...
 if waterconstraints == 1:
     pcsp['i'] = np.where(pcsp['i']=='csp-ns',pcsp['i']+'_'+pcsp['ctt']+'_'+pcsp['wst'],'csp-ws')
 
-pcsp = pcsp[['t','r','i','value','rs']]
+pcsp = pcsp[['t','r','i','value']]
 prsc = pd.concat([pupv,pwind,phyd,pcsp],sort=False)
 
 #=================================
@@ -341,15 +386,37 @@ else:
 nonrsc['value'] = nonrsc['value'].round(6)
 retdat['value'] = retdat['value'].round(6)
 pnonrsc['value'] = pnonrsc['value'].round(6)
-allout_RSC['value'] = allout_RSC['value'].round(6)
+pnonrsc['t']=(pnonrsc
+              .t
+              .astype(float)
+              .round()
+              .astype(int)
+              )
+prsc = (prsc
+        .groupby(['t','i','r'])
+        .sum()
+        .reset_index()
+        )
 prsc['value'] = prsc['value'].round(6)
+prsc['t'] = (prsc
+             .t
+             .astype(float)
+             .round()
+             .astype(int)
+             )
+allout_RSC = (allout_RSC
+              .groupby(['i','r'])
+              .sum()
+              .reset_index()
+              )
+allout_RSC['value'] = allout_RSC.value.round()
 
 print('Writing capacity data in: '+outdir)
 nonrsc[['i','r','value']].to_csv(os.path.join(outdir,'allout_nonRSC.csv'),index=False)
 retdat[['t','r','i','value']].to_csv(os.path.join(outdir,'retirements.csv'),index=False)
 pnonrsc[['t','i','r','value']].to_csv(os.path.join(outdir,'prescribed_nonRSC.csv'),index=False)
-allout_RSC[['i','r','rs','value']].to_csv(os.path.join(outdir,'allout_RSC.csv'),index=False)
-prsc[['t','i','r','rs','value']].to_csv(os.path.join(outdir,'prescribed_rsc.csv'),index=False)
+allout_RSC[['i','r','value']].to_csv(os.path.join(outdir,'allout_RSC.csv'),index=False)
+prsc[['t','i','r','value']].to_csv(os.path.join(outdir,'prescribed_rsc.csv'),index=False)
 wnew.to_csv(os.path.join(outdir,'wind_retirements.csv'),index=False)
 with open(os.path.join(outdir,'hydcf.txt'), 'w') as filehandle:
     filehandle.writelines("%s\n" % i for i in hydcf['id'])
@@ -357,4 +424,7 @@ with open(os.path.join(outdir,'hydcfadj.txt'), 'w') as filehandle:
     filehandle.writelines("%s\n" % i for i in hydcfadj['id'])
 with open(os.path.join(outdir,'hydcfhist.txt'), 'w') as filehandle:
     filehandle.writelines("%s\n" % i for i in hydcfhist['id'])
+
+toc(tic=tic, year=0, process='input_processing/writecapdat.py', 
+    path=os.path.join(outdir,'..'))
 print('Finished writing capacity data')

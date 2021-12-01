@@ -1,7 +1,9 @@
 Geothermal,1
 Hydro,1
 Biopower,1
+beccs,1
 Nuclear,1
+Nuclear-SMR,1
 gas-CT ,1.1502
 gas-CC ,1.0545
 gas-CC-CCS,1.0545
@@ -17,3 +19,4 @@ lfill-gas,1
 ocean,1
 distPV,1
 RE-CT,1.1502
+RE-CC ,1.1502

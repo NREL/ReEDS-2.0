@@ -8,7 +8,8 @@ inv_investment_spurline_costs_rsc_technologies,Trans
 inv_ptc_payments_negative_refurbishments,PTC
 inv_transmission_line_investment,Trans
 inv_substation_investment_costs,Trans
-inv_interconnection_costs,Trans
+inv_converter_costs,Trans
+op_transmission_fom,Trans
 inv_pumpedhydro_investment,Other
 inv_geothermal_investment,Other
 op_vom_costs,O&M
@@ -23,3 +24,8 @@ cap_trade_import_cost,Capacity Import
 cap_trade_export_cost,Capacity Export
 energy_trade_import_cost,Energy Import
 energy_trade_export_cost,Energy Export
+op_co2_transport_storage,CO2 Capture
+op_h2_transport_storage,H2 Stor & Trans
+op_h2_fuel_costs,H2 Fuel 
+op_h2_vom,H2 VOM
+inv_h2_network,H2 Network

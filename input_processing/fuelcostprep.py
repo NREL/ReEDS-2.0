@@ -1,7 +1,14 @@
 import pandas as pd
 import os
 import argparse
-
+# direct print and errors to log file
+import sys
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
+# Time the operation of this script
+from ticker import toc
+import datetime
+tic = datetime.datetime.now()
 print("Starting calculation of fuelcostprep.R")
 
 # Model Inputs
@@ -11,6 +18,7 @@ parser.add_argument("reeds_dir", help="ReEDS directory")
 parser.add_argument("coalscen", help="thermal plant characteristics")
 parser.add_argument("uraniumscen", help="wind charecteristics")
 parser.add_argument("ngscen", help="upv charecteristics")
+parser.add_argument("rectscen", help="rect charecteristics")
 parser.add_argument("load_type", help="loadtype")
 parser.add_argument("ng_sector", help="natural gas sector")
 parser.add_argument("outdir", help="output directory")
@@ -22,16 +30,16 @@ coalscen = args.coalscen
 uraniumscen = args.uraniumscen
 ngscen = args.ngscen
 ng_sector = args.ng_sector
-rectscen = 'reference'
+rectscen = args.rectscen
 load_type = args.load_type
 outdir = args.outdir
 
 #%%
 # Inputs for testing
 # reeds_dir = 'd:\\Danny_ReEDS\\ReEDS-2.0'
-# coalscen = "AEO_2019_reference"
-# uraniumscen = "AEO_2019_reference"
-# ngscen = "AEO_2019_reference"
+# coalscen = "AEO_2020_reference"
+# uraniumscen = "AEO_2020_reference"
+# ngscen = "AEO_2020_reference"
 # rectscen = 'reference'
 # outdir = os.getcwd()
 
@@ -141,5 +149,6 @@ ngdemand.to_csv(os.path.join(outdir,'ng_demand_elec.csv'))
 ngtotdemand.to_csv(os.path.join(outdir,'ng_demand_tot.csv'))
 alpha.to_csv(os.path.join(outdir,'alpha.csv'),index=False)
 
+toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
+    path=os.path.join(outdir,'..'))
 print('fuelcostprep.py completed succesfully')
-

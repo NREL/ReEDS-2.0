@@ -21,6 +21,7 @@ scenario,scenario_custom_colors,tech,tech_custom_colors
 ,,dupv,#FFAB02
 ,,distpv,#FEE603
 ,,pumped-hydro,#CC0079
+,,pumped-hydro-flex,#CC0079
 ,,caes,#FF4741
 ,,battery,#FF4A88
 ,,battery_2,#FF7F9D

@@ -106,56 +106,56 @@ parameter
          base_stock(y,r,t,u,d,obase) "initial stock remaining in t"
 /
 $ondelim offlisting
-$include '\\nrelqnap02\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%base-stock-counts.csv'
+$include '\\nrelnas01\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%base-stock-counts.csv'
 $offdelim onlisting
 /
 
          tot_devices(y,r,t,u,d) "total number of devices"
 /
 $ondelim offlisting
-$include '\\nrelqnap02\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%total-device-counts.csv'
+$include '\\nrelnas01\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%total-device-counts.csv'
 $offdelim onlisting
 /
 
          ref_serv_demand(y,r,t,h,u,d) "baseline service consumption"
 /
 $ondelim offlisting
-$include '\\nrelqnap02\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%service-cons.csv'
+$include '\\nrelnas01\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%service-cons.csv'
 $offdelim onlisting
 /
 
          ref_eff(y,r,t,u,d) "reference efficiency level"
 /
 $ondelim offlisting
-$include '\\nrelqnap02\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%ref-eff.csv'
+$include '\\nrelnas01\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%ref-eff.csv'
 $offdelim onlisting
 /
 
          lambda(r,t,u,d,o) "device efficiency"
 /
 $ondelim offlisting
-$include '\\nrelqnap02\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%device-efficiency.csv'
+$include '\\nrelnas01\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%device-efficiency.csv'
 $offdelim onlisting
 /
 
          cap_cost(r,t,u,d,o) "cost of investment capital"
 /
 $ondelim offlisting
-$include '\\nrelqnap02\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%device-capital-cost.csv'
+$include '\\nrelnas01\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%device-capital-cost.csv'
 $offdelim onlisting
 /
 
          ref_price(r,t,h) "reference price from the BAU solve of the supply side"
 /
 $ondelim offlisting
-$include '\\nrelqnap02\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%ref-price-temp.csv'
+$include '\\nrelnas01\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%ref-price-temp.csv'
 $offdelim onlisting
 /
 
          ref_cons(r,t,h) "reference consumption level"
 /
 $ondelim offlisting
-$include '\\nrelqnap02\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%ref-consumption.csv'
+$include '\\nrelnas01\ReEDS\%ds%FY18-ReEDS-2.0%ds%DemandData%ds%ref-consumption.csv'
 $offdelim onlisting
 /
 

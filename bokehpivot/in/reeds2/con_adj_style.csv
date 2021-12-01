@@ -37,8 +37,10 @@ eq_rsc_invlim,#c5b0d5
 eq_storage_capacity,#c49c94
 eq_storage_duration,#f7b6d2
 eq_storage_level,#c7c7c7
-eq_substationaccounting,#dbdb8d
-eq_transmission_limit,#9edae5
-kW,#1f77b4
-MWh,#ff7f0e
-Other,#ff69b4
+eq_storage_in_min,#dbdb8d
+eq_storage_in_max,#9edae5
+eq_substationaccounting,#1f77b4
+eq_transmission_limit,#ff7f0e
+kW,#2ca02c
+MWh,#d62728
+Other,#9467bd

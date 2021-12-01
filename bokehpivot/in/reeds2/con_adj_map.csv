@@ -43,6 +43,8 @@ eq_rsc_invlim,eq_rsc_invlim
 eq_storage_capacity,eq_storage_capacity
 eq_storage_duration,eq_storage_duration
 eq_storage_level,eq_storage_level
+eq_storage_in_min,eq_storage_in_min
+eq_storage_in_max,eq_storage_in_max
 eq_substationaccounting,eq_substationaccounting
 eq_supply_demand_balance,Energy
 eq_transmission_limit,eq_transmission_limit

@@ -5,28 +5,7 @@ This python bokeh app creates multiple pivot charts from data, similar to Tablea
 Currently, gdx and csv results are supported from heritage ReEDS, ReEDS 2.0, and RPM models.
 Bokehpivot is compatible with Python 2.7+ and 3+, but gdx output support is currently restricted to Python 2.7+.
 
-A more simplified version of this app has been contributed as an example to the main Bokeh repo:
-https://github.com/bokeh/bokeh/tree/master/examples/app/pivot
-
-There are two different ways to use this app: On Scorpio or Orion (easiest way), and locally. See the following sections for details on each:
-
-## Running on Scorpio/Orion (easiest)
-There should be two .bat files on your desktop on both Orion and Scorpio. One is called *Launch Common Bokeh Pivot.bat* and the other is called *Launch Local Bokeh Pivot.bat*. *Launch Common Bokeh Pivot.bat* launches the common bokehpivot repo at //nrelqnap02/ReEDS/bokehpivot, and *Launch Local Bokeh Pivot.bat* can be used to launch from own bokehpivot repo.
-1. If running from your own bokehpivot repo, make sure that *Launch Local Bokeh Pivot.bat* is located in the directory above your bokehpivot repo. This step is not necessary when using the common repo.
-1. Simply double click on one of the .bat files to launch the tool. This will start a bokeh server in a terminal window and a browser window with an interactive interface.
-1. After the tool is launched, go to the *Loading Model data* section below.
-1. When done, simply close the terminal window that is running the server.
-* If you're curious about the contents of the .bat files, you can open the *Launch Common Bokeh Pivot.bat* in a text editor. The contents will look like:
-  ```
-  bokeh serve \\nrelqnap02/ReEDS/bokehpivot --show --allow-websocket-origin 1wp11rdori02.nrel.gov:<port> --allow-websocket-origin localhost:<port> --port <port>
-  ```
-* Here is a breakdown of the contents of *Launch Common Bokeh Pivot.bat*:
-    * `bokeh serve`: Launch bokeh server. See http://bokeh.pydata.org/en/latest/docs/user_guide/server.html for more info.
-    * `\\nrelqnap02/ReEDS/bokehpivot`: Path to common bokehpivot app. Note that this app will be updated frequently. If you want to launch from your own bokehpivot repo, simply enter that path in the .bat file instead.
-    * `--port <port>`: Jonathan has assigned you a unique port on Scorpio/Orion to run your bokeh server. We can't all use the same port number because each port can only be used once.
-    * `--allow-websocket-origin 1wp11rdori01.nrel.gov:<port> --allow-websocket-origin localhost:<port>`: The first address allows requests that are external to Scorpio/Orion (but on the NREL network) to access the bokeh server that you have launched. The Second allows internal requests to localhost, which is the default request when you run the .bat file.
-
-## Running Locally
+## Installing Bokeh to run locally
 1. If you don't already have Python/Bokeh, Easiest way is to get Anaconda for python (version 2 or 3) at:
     https://www.continuum.io/downloads
 
@@ -49,12 +28,18 @@ There should be two .bat files on your desktop on both Orion and Scorpio. One is
     ```
     python setup.py install
     ```
-1. Finally, git clone this repo to your computer, and on command line (or git bash) enter
-    ```
-    bokeh serve --show \path\to\this\repo
-    ```
-    This will launch the bokeh server and a browser window to view the app.
-1. Go to the *Loading Model data* section below
+
+## Running Bokehpivot (Windows)
+1. In the ReEDS repo, simply double click on bokehpivot/launch.bat to launch the tool. This will start a bokeh server in a terminal window and a browser window with an interactive interface.
+1. After the tool is launched, go to the *Loading Model data* section below.
+1. When done, simply close the terminal window that is running the server.
+* If you're curious about the contents of the .bat files, you can open the *Launch.bat* in a text editor. The contents will look like:
+  ```
+  call bokeh serve . --sh --port 0
+  ```
+* Here is a breakdown of the contents of *Launch.bat*:
+    * `bokeh serve . --sh`: Launch bokeh server and open browser window with the app. See http://bokeh.pydata.org/en/latest/docs/user_guide/server.html for more info.
+    * `--port 0`: This will allow bokehpivot to use an available port, and allows multiple simultaneous bokehpivot sessions (by launching multiple times).
 
 ## Loading data
 After starting up the app in a browser window, you must enter a path in the *Data Source* field, either to a CSV file or to a Model run or set of runs:
@@ -128,7 +113,7 @@ http://bokeh.pydata.org/en/latest/.
 The site has good documentation in the User Guide and Reference.
 
 There is also an active google group for issues:
-https://groups.google.com/a/continuum.io/forum/#!forum/bokeh
+https://discourse.bokeh.org
 
 And of course, python has good documentation too:
 https://docs.python.org/2.7/tutorial/

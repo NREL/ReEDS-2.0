@@ -1,25 +1,47 @@
-#Ignore files in runs folder:
+## Ignore:
+#setup files
+setuplog.txt
+setuperr.txt
+errors.log
+gams
+.bashrc
+
+# files in runs folder
 runs/*
 inout/variabilitycalculations/ldcfiles/
 inout/gdxfiles/*.gdx
 
-#Ignore temporary GAMS files
+# temporary GAMS files
 *.~gm
 225*/
 
-#Ignore pyc files
+# pyc files
 *.pyc
+*__pycache__
 
-#Ignore lst and g00 files
+# lst and g00 files
 *.lst
 *.g00
 
-#ignore ds_store files
+# ds_store files
 *.DS_Store
 
-#Ignore distPV csv input files
+# distPV csv input files
 inout/dSolar_Inputs/*.csv
 inputs/capacitydata/distpv/*.csv
 
+# R stuff
 *.Rhistory
 *.RData
+
+# raw input files for retail rates
+retail_rate_module/inputs/EIA861
+
+# IDE stuff
+*.vscode
+
+# GAMS project files
+*.gpr
+
+# IDE files
+*.vscode

@@ -80,10 +80,10 @@ new.dvc.vec = fread("inputs/demand/processed data/new-device-set.csv", header = 
 disc.rate = fread("inputs/demand/processed data/discount-rates.csv", header = F, 
                   col.names = c("inc.lvl", "disc.rate"))
 
-surv.rates = fread("//nrelqnap02/ReEDS/FY18-ReEDS-2.0/DemandData/surv-rates.csv", header = F, 
+surv.rates = fread("//nrelnas01/ReEDS/FY18-ReEDS-2.0/DemandData/surv-rates.csv", header = F, 
                    col.names = c("ba", "vint", "year", "end.use","dvc.cls","dvc.opt", "surv.rate", "exp.life"))
 
-cap.cost = fread("//nrelqnap02/ReEDS/FY18-ReEDS-2.0/DemandData/device-capital-cost.csv", header = F, 
+cap.cost = fread("//nrelnas01/ReEDS/FY18-ReEDS-2.0/DemandData/device-capital-cost.csv", header = F, 
                  col.names = c("ba", "vint", "end.use", "dvc.cls", "dvc.opt", "cap.cost"))
 cap.cost = cap.cost[dvc.opt %in% new.dvc.vec]
 

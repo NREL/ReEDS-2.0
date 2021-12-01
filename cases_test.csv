@@ -1,6 +1,9 @@
-,ercot_seq
-timetype,seq
-endyear,2020
-region_type,interconnect
-GSw_region,texas
-regions_suffix,ercot
+,ercot_seq,natnl_seq
+timetype,seq,seq
+endyear,2030,2030
+region_type,interconnect,
+GSw_region,texas,
+regions_suffix,ercot,
+ldcProfiles,test,standard
+GSw_TransExtent,rto,interconnect
+ignore,,1

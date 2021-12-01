@@ -10,3 +10,7 @@ CoalOldUns_coal-CCS,CoalOldUns,coal-CCS
 CofireNew_coal-CCS,CofireNew,coal-CCS
 CofireOld_coal-CCS,CofireOld,coal-CCS
 Gas-CT_RE-CT,Gas-CT,RE-CT
+Gas-CC_RE-CC,Gas-CC,RE-CC
+hydEND_hydED,hydEND,hydED
+hydED_pumped-hydro,hydED,pumped-hydro
+hydED_pumped-hydro-flex,hydED,pumped-hydro-flex

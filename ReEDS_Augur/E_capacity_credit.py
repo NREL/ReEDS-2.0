@@ -1,13 +1,20 @@
-
-import os
+#%% IMPORTS
 import numpy as np
+import os
 import pandas as pd
-from utilities import tech_types, print1
+# import numba
+
+from ReEDS_Augur.utility.functions import get_prop, agg_r_to_ccreg, agg_profiles, \
+    dr_capacity_credit, get_storage_eff, dr_dispatch
+from ReEDS_Augur.utility.generatordata import GEN_DATA, GEN_TECHS
+from ReEDS_Augur.utility.hourlyprofiles import HOURLY_PROFILES
+from ReEDS_Augur.utility.inputs import INPUTS
+from ReEDS_Augur.utility.switchsettings import SwitchSettings
 
 #%%
 
 
-def reeds_cc(args, reeds_cc_data):
+def reeds_cc():
     '''
     This function directs all of the capacity credit calculations for ReEDS
     It writes out a gdx file which is then read back in to ReEDS during the
@@ -15,390 +22,387 @@ def reeds_cc(args, reeds_cc_data):
     '''
     #%%
     # Collect arguments
-    scenario =              args['scenario']
-    next_year =             args['next_year']
-    calc_csp =              args['calc_csp_cc']
-    annual_hours =          args['reedscc_ann_hours']
-    season_hours =          args['reedscc_szn_hours']
-    demand_percentage =     args['reedscc_max_stor_pen']
-    stor_eff =              args['reedscc_default_rte']
-    demand_step_size =      args['reedscc_stor_stepsize']
-    stor_buffer_minutes =   args['reedscc_stor_buffer']
-    cc_csp_default =        args['reedscc_csp_cc_default']
-    marg_CSP_step_MW =      args['reedscc_marg_csp_mw']
-    marg_VG_step_MW =       args['reedscc_marg_vre_mw']
-    calc_annual =           args['reedscc_calc_annual']
-    calc_seasonal =         args['reedscc_calc_seasonal']
-    safety_bin_size =       args['reedscc_safety_bin_size']
-    csp_step_size =         args['reedscc_csp_step_size']
+    scenario =              SwitchSettings.scen
+    next_year =             SwitchSettings.next_year
+    calc_csp =              SwitchSettings.switches['calc_csp_cc']
+    calc_dr =               SwitchSettings.switches['gsw_dr']
+    annual_hours =          SwitchSettings.switches['reedscc_ann_hours']
+    season_hours =          SwitchSettings.switches['reedscc_szn_hours']
+    demand_percentage =     SwitchSettings.switches['reedscc_max_stor_pen']
+    stor_eff =              SwitchSettings.switches['reedscc_default_rte']
+    demand_step_size =      SwitchSettings.switches['reedscc_stor_stepsize']
+    stor_buffer_minutes =   SwitchSettings.switches['reedscc_stor_buffer']
+    cc_csp_default =        SwitchSettings.switches['reedscc_csp_cc_default']
+    marg_CSP_step_MW =      SwitchSettings.switches['reedscc_marg_csp_mw']
+    marg_VG_step_MW =       SwitchSettings.switches['marg_vre_mw']
+    marg_DR_step_MW =       SwitchSettings.switches['marg_dr_mw']
+    calc_annual =           SwitchSettings.switches['reedscc_calc_annual']
+    calc_seasonal =         SwitchSettings.switches['reedscc_calc_seasonal']
+    safety_bin_size =       SwitchSettings.switches['reedscc_safety_bin_size']
+    csp_step_size =         SwitchSettings.switches['reedscc_csp_step_size']
+    cc_all_resources =      SwitchSettings.switches['cc_all_resources']
 
     # Unpack input data
-    cap_csp =           reeds_cc_data['cap_csp'].copy()
-    cap_frac_cspns =    reeds_cc_data['cap_frac_cspns'].copy()
-    cap_stor =          reeds_cc_data['cap_storage'].copy()
-    cap_stor_agg =      reeds_cc_data['cap_storage_agg'].copy()
-    csp_resources =     reeds_cc_data['csp_resources'].copy()
-    hierarchy =         reeds_cc_data['hierarchy'].copy()
-    sdb =               reeds_cc_data['sdbin'].copy()
-    resources =         reeds_cc_data['resources'].copy()
-
-    # Get tech subsets
-    techs = tech_types(args)
+    techs = INPUTS['i_subsets'].get_data()
+    hierarchy = INPUTS['hierarchy'].get_data()
+    r = INPUTS['rfeas'].get_data()
+    r_rs = INPUTS['r_rs'].get_data()
+    r_rs = r_rs[r_rs['r'].isin(r['r'])]
+    r_rs = r_rs.loc[(r_rs['rs'] != 'sk') & r_rs.rs.str.startswith('s')]
+    cap = GEN_DATA['max_cap'].copy()
+    cap_csp = GEN_TECHS['csp'].max_cap_orig.copy()
+    cap_stor = cap[cap['i'].isin(techs['storage_standalone'])]
+    cap_stor = get_prop(cap_stor, 'storage_duration', merge_cols = ['i'])
+    cap_stor['MWh'] = cap_stor['MW'] * cap_stor['duration']
+    cap_stor_agg = cap_stor.merge(hierarchy[['r','ccreg']], on = 'r')
+    cap_stor_agg = cap_stor_agg.groupby('ccreg', as_index = False).sum()
+    cap_stor_agg.drop('duration', axis = 1, inplace = True)
+    cap_dr = cap[cap['i'].isin(techs['dr1'])]
+    cap_dr_agg = cap_dr.merge(hierarchy[['r','ccreg']], on = 'r')
+    cap_dr_agg = cap_dr_agg.groupby('ccreg', as_index = False).sum()
+    cap_shed = cap[cap['i'].isin(techs['dr2'])]
+    cap_shed_agg = cap_shed.merge(hierarchy[['r','ccreg']], on = 'r')
+    cap_shed_agg = cap_shed_agg.groupby('ccreg', as_index = False).sum()
+    csp_resources = INPUTS['csp_resources'].get_data()
+    sdb = INPUTS['sdbin'].get_data()
+    resources = INPUTS['resources'].get_data()
+    ### Get the number of sites per resource profile (for individual sites)
+    resources = resources.merge(
+        resources.resource.value_counts().rename('sites_per_resource'),
+        left_on='resource', right_index=True, how='left',
+    )
+    ### Get the non-duplicated profiles. We only keep the first entry, so when using
+    ### individual sites, [i,r] will not be a complete list of the [i,r] for the
+    ### corresponding profile. We'll broadcast the results back to the full [i,r]
+    ### list after running the profile calculations.
+    resource_profiles = resources.drop_duplicates('resource')
 
     # Remove the "8760" safety valve bin
-    safety_bin = max(sdb['bins'].values)
-    sdb = sdb[sdb['bins'] != max(sdb['bins'])]['bins'].tolist()
-
-    # Check length of load data for multiple year CC calculation
-    mult_year = False
-    if len(reeds_cc_data['load']) > args['osprey_ts_length']:
-        mult_year = True
+    safety_bin = max(sdb['bin'].values)
+    sdb = sdb[sdb['bin'] != max(sdb['bin'])]
+    sdb = [int(x) for x in sdb['bin']]
 
     # Temporal definitions
     dt_map = pd.read_csv(os.path.join('inputs_case', 'h_dt_szn.csv'))
-    if not mult_year:
-        idx = dt_map['year'] == args['osprey_reeds_data_year']
-        dt_map = dt_map[idx].reset_index(drop=True)
 
-    dt_cols = dt_map.columns.tolist()
     seasons = []
     if calc_annual:
         seasons += ['year']
     if calc_seasonal:
         seasons += dt_map['season'].drop_duplicates().tolist()
 
-    # Get CSP data if necessary
-    if calc_csp == '1':
-        cspcf = pd.read_pickle(
-            os.path.join('inputs_case',
-                         'csp_profiles_{}.pkl'.format(scenario)))
-        cspcf = cspcf.reset_index(drop=True)
-        cspcf = pd.concat([dt_map, cspcf], axis=1)
+    # Prepare the seasonal profiles
+    vregen_season = {}
+    cf_marginal_season = {}
+    for szn in seasons:
+        if szn == 'year':
+            vregen_season[szn] = HOURLY_PROFILES['vre_gen'].profiles.copy()
+            cf_marginal_season[szn] = HOURLY_PROFILES['vre_gen_marg'].profiles.copy()
+        else:
+            vregen_season[szn] = HOURLY_PROFILES['vre_gen'].profiles.loc[szn]
+            cf_marginal_season[szn] = HOURLY_PROFILES['vre_gen_marg'].profiles.loc[szn]
+    load_profiles = (
+        HOURLY_PROFILES['load'].profiles
+        ### Map BA regions to ccreg's and sum over them
+        .rename(columns=hierarchy.set_index('r').ccreg)
+        .sum(axis=1, level=0)
+    )
+
+    # Get DR data if necessary
+    if calc_dr == '1':
+        # Get DR props
+        marg_dr_props = get_storage_eff()[get_storage_eff()['i'].isin(techs['dr1'])]
+        dr_hrs = INPUTS['dr_hrs'].get_data()
+        dr_hrs['hrs'] = list(zip(dr_hrs.pos_hrs, -dr_hrs.neg_hrs))
+        dr_hrs['max_hrs'] = 8760
+        dr_shed = INPUTS['dr_shed'].get_data()
+        dr_shed['hrs'] = [(1, 1)]*len(dr_shed.index)
+        dr_hrs = pd.concat([dr_hrs, dr_shed])
+        marg_dr_props = pd.merge(marg_dr_props, dr_hrs, on='i', how='right').set_index('i')
+        # Fill missing data
+        marg_dr_props.loc[marg_dr_props.RTE != marg_dr_props.RTE, 'RTE'] = 1
+        marg_dr_props = marg_dr_props[['hrs', 'max_hrs', 'RTE']]
+        # hdt_map counts hours from 2007, whereas DR counts hours from Jan 1
+        # for each year. Adjusting columns here
+        dt_map['dr_hr'] = dt_map['hour'] % 8760
+        dt_map.loc[dt_map['dr_hr']==0, 'dr_hr'] = 8760
+        drcf_inc = HOURLY_PROFILES['dr_inc'].profiles.copy()
+        drcf_dec = HOURLY_PROFILES['dr_dec'].profiles.copy()
 
     # Initialize dataframes to store results
-    all_cc = pd.DataFrame(columns=['i', 'r', 'season', 't', 'MW'])
-    all_cc_mar = pd.DataFrame(columns=['i', 'r', 'season', 't', 'CC'])
-    peaking_stor_all = pd.DataFrame(
-        columns=['ccreg', 'season', 'duration', 't', 'MW'])
-    timeslice_hours_all = pd.DataFrame(
-        columns=['h', 'ccreg', 'season', '%TopHrs'])
+    dict_cc_old = {}
+    dict_cc_mar = {}
+    dict_sdbin_size = {}
+    dict_cc_dr = {}
 
-#%%  FOR LOOP FOR CCREGS
-
-    # March through this for all CCREGs
+    #%% Loop over CCREGs
     for ccreg in hierarchy['ccreg'].drop_duplicates():
-
-        #%%  CCREG DATA
-        # ccreg = 'cc2'  # Uncomment for debugging
-        print1('Calculating capacity credit for {}'.format(ccreg))
+        #%  CCREG DATA
+        # ccreg = 'cc6'  # Uncomment for debugging
         # ------- Get load profile, RECF profiles, VG capacity, storage
         # capacity, and storage RTE for this CCREG -------
 
+        print('Calculating capacity credit for {}'.format(ccreg))
+
         # Resources to be used
-        resources_ccreg = resources[resources['ccreg'] == ccreg].reset_index(
-            drop=True)
+        resources_ccreg = resource_profiles[resource_profiles['ccreg'] == ccreg]
+        resourcelist = (
+            slice(None) if cc_all_resources
+            else resources_ccreg.resource.tolist()
+        )
 
         # Hourly profiles
-        recf_ccreg = reeds_cc_data['vre_gen'][
-            dt_cols + resources_ccreg['resource'].tolist()].reset_index(
-                drop=True)
-        cf_marginal_ccreg = reeds_cc_data['cf_marginal'][
-            dt_cols + resources_ccreg['resource'].tolist()].reset_index(
-                drop=True)
-        load_profile_ccreg = reeds_cc_data['load'][
-            dt_cols + [ccreg]].reset_index(drop=True)
+        load_profile_ccreg = load_profiles[ccreg]
+        # DR profile - TODO: update to new Augur structure
+        if calc_dr == '1':
+            dr_reg = [r for r in resources_ccreg.r.drop_duplicates()
+                      if r in drcf_inc.columns]
+            dr_inc_ccreg = drcf_inc[['i'] + dr_reg]
+            dr_reg = [r for r in resources_ccreg.r.drop_duplicates()
+                      if r in drcf_dec.columns]
+            dr_dec_ccreg = drcf_dec[['i'] + dr_reg]
 
         # Storage information
+        # Note that we only calculate storage capacity credit for storage in the same ccreg
         cap_stor_agg_ccreg = cap_stor_agg[
-            cap_stor_agg['ccreg'] == ccreg].reset_index(
-                drop=True)
-        cap_stor_ccreg = cap_stor[cap_stor['r'].isin(
-            hierarchy[hierarchy['ccreg'] == ccreg]['r'])].reset_index(
-                drop=True)
+            cap_stor_agg['ccreg'] == ccreg].reset_index(drop=True)
+
+        cap_stor_ccreg = cap_stor[
+            cap_stor['r'].isin(hierarchy[hierarchy['ccreg'] == ccreg]['r'])
+        ].reset_index(drop=True)
+
         try:
             eff_charge = cap_stor_agg_ccreg['rte'].values[0]
         except:
             eff_charge = stor_eff
-        max_demand = load_profile_ccreg[ccreg].max() / (1/demand_percentage)
+
+        max_demand = load_profile_ccreg.max() / (1/demand_percentage)
         reductions_considered = int(max_demand // demand_step_size)
         peak_reductions = np.linspace(0, max_demand, reductions_considered)
 
-        # CSP information
-        resources_ccreg_csp = csp_resources[
-            csp_resources['ccreg'] == ccreg].reset_index(drop=True)
-        if not resources_ccreg_csp.empty:
-            cap_csp_ccreg = cap_csp[cap_csp['resource'].isin(
-                resources_ccreg_csp['resource'])].reset_index(drop=True)
-            if calc_csp == '1':
-                cspcf_ccreg_all = cspcf[dt_cols + resources_ccreg_csp[
-                    'resource'].tolist()].reset_index(drop=True)
-                cspcf_ccreg = cspcf_ccreg_all[dt_cols + cap_csp_ccreg[
-                    'resource'].tolist()].reset_index(drop=True)
-                csp_fleet_MW = cap_csp_ccreg['MW'].sum()
-                csp_fleet_MWh = cap_csp_ccreg['MWh'].sum()
-
-
-#%%  LOOP FOR SEASONS
-
         # ---------------------------- CALL FUNCTIONS -------------------------
+        #%%  Loop over seasons
         for season in seasons:
-
             #%%
             # season = 'winter'  # Uncomment for debugging
             # Get the load and CF profiles for this season
             if season == 'year':
                 load_profile_season = load_profile_ccreg.copy()
-                recf_season = recf_ccreg.copy()
-                cf_marginal_season = cf_marginal_ccreg.copy()
-                dt_season = dt_map.copy()
                 hours_considered = annual_hours
-                if not resources_ccreg_csp.empty and calc_csp == '1':
-                    cspcf_season_all = cspcf_ccreg_all.copy()
-                    cspcf_season = cspcf_ccreg.copy()
+                if calc_dr == '1':
+                    dr_inc_season = dr_inc_ccreg.copy()
+                    dr_dec_season = dr_dec_ccreg.copy()
+
             else:
-                load_profile_season = load_profile_ccreg[load_profile_ccreg[
-                    'season'] == season].sort_values('hour').reset_index(
-                        drop=True)
-                recf_season = recf_ccreg[recf_ccreg[
-                    'season'] == season].sort_values('hour').reset_index(
-                        drop=True)
-                cf_marginal_season = cf_marginal_ccreg[cf_marginal_ccreg[
-                    'season'] == season].sort_values('hour').reset_index(
-                        drop=True)
-                dt_season = dt_map[dt_map['season'] == season].sort_values(
-                    'hour').reset_index(drop=True)
+                load_profile_season = load_profile_ccreg.xs(
+                    season, axis=0, level='season').reset_index()
                 hours_considered = season_hours
-                if not resources_ccreg_csp.empty and calc_csp == '1':
-                    cspcf_season_all = cspcf_ccreg_all[cspcf_ccreg_all[
-                        'season'] == season].sort_values('hour').reset_index(
-                            drop=True)
-                    cspcf_season = cspcf_ccreg[cspcf_ccreg[
-                        'season'] == season].sort_values('hour').reset_index(
-                            drop=True)
 
-            # Call cc_vg
-            cc_vg_results = \
-                cc_vg(recf_season.drop(list(dt_cols), 1).values.copy(),
-                      load_profile_season[ccreg].values.copy(),
-                      cf_marginal_season.drop(list(dt_cols), 1).values.copy(),
-                      hours_considered, marg_VG_step_MW)
+                if calc_dr == '1':
+                    dr_inc_season = dr_inc_ccreg.xs(
+                        season, axis=0, level='season').reset_index()
+                    dr_dec_season = dr_dec_ccreg.xs(
+                        season, axis=0, level='season').reset_index()
 
-            # Collect and organize the results
-            timeslice_hours_all = get_top_hours(
-                dt_season.reset_index(), cc_vg_results['top_hours_net'],
-                ccreg, timeslice_hours_all, season)
-            all_cc = get_vg_cc(
-                resources_ccreg, next_year, cc_vg_results['cap_useful_MW'],
-                cap_frac_cspns, hierarchy, ccreg, all_cc, season)
-            all_cc_mar = get_vg_cc_marg(
-                resources_ccreg, next_year, cc_vg_results['cc_marg'],
-                hierarchy, all_cc_mar, season, techs)
+            ###### Calculate the capacity credit for each resource
+            cc_vg_results = cc_vg(
+                vg_power=vregen_season[season][resourcelist].values,
+                load=load_profile_season[ccreg].values,
+                vg_marg_power=cf_marginal_season[season][resourcelist].values,
+                top_hours_n=hours_considered, cap_marg=marg_VG_step_MW)
 
-            # Set the net load profile
-            net_load_profile = cc_vg_results['load_net']
+            ###### Store the existing and marginal capacity credit results
+            dict_cc_old[ccreg, season] = pd.DataFrame({
+                'resource': resource_profiles.set_index('resource').loc[resourcelist].index,
+                'MW': cc_vg_results['cap_useful_MW'][:,0],
+            })
 
-            if mult_year:
-                # The call to this function gives the MWh required for each
-                # peak reduction capacity. For each data year, loop through
-                # and get get the MWh needed for each peak reduction capacity.
-                # Get a "season_required_MWhs" for each year.
-                # Get the maximum value for each position in the array.
-                # Make a new "season_required_MWhs" array to send to the
-                # cc_storage function.
-                # Call storage cc functions for existing and marginal
-                # conventional storage.
-                net_load_profile_timestamp = pd.DataFrame(
-                    net_load_profile, load_profile_season.year)
-                years = list(net_load_profile_timestamp.index.unique())
-                for y in years:
-                    net_load_profile_temp = net_load_profile_timestamp.iloc[
-                        :, 0][net_load_profile_timestamp.index == y].to_numpy()
-                    required_MWhs_temp, batt_powers = calc_required_mwh(
-                        net_load_profile_temp.copy(), peak_reductions.copy(),
-                        eff_charge, stor_buffer_minutes)
-                    if years.index(y) == 0:
-                        required_MWhs = required_MWhs_temp.copy()
-                    else:
-                        required_MWhs = np.maximum(required_MWhs,
-                                                   required_MWhs_temp)
-            else:
-                required_MWhs, batt_powers = calc_required_mwh(
-                    net_load_profile.copy(), peak_reductions.copy(),
-                    eff_charge, stor_buffer_minutes)
+            dict_cc_mar[ccreg, season] = (
+                resource_profiles.loc[resource_profiles.resource.isin(resourcelist)]
+                .drop(['ccreg','sites_per_resource'], axis=1)
+                .assign(CC=cc_vg_results['cc_marg'])
+            )
+            ### Copy the values for csp-ns from the values for the highest-class upv
+            ### resource in the rb region matching the rs region for csp
+            dict_cc_mar[ccreg, season] = dict_cc_mar[ccreg, season].append(
+                dict_cc_mar[ccreg, season]
+                .loc[resource_profiles.i.isin(techs['upv'])]
+                .sort_values('i').drop_duplicates('r', keep='last')
+                [['r','CC']]
+                .merge(r_rs, on='r', how='left')
+                .assign(i='csp-ns')
+                .reindex(['i','rs','CC'], axis=1)
+                .rename(columns={'rs':'r'})
+            )
 
-            cc_stor, peaking_stor = cc_storage(
-                cap_stor_ccreg.copy(), peak_reductions.copy(),
-                required_MWhs.copy(), sdb.copy())
+            ###### Calculate the storage capacity credit
+            # The call to this function gives the MWh required for each
+            # peak reduction capacity. For each data year, loop through
+            # and get get the MWh needed for each peak reduction capacity.
+            # Get a "season_required_MWhs" for each year.
+            # Get the maximum value for each position in the array.
+            # Make a new "season_required_MWhs" array to send to the
+            # cc_storage function.
+            # Call storage cc functions for existing and marginal
+            # conventional storage.
+            net_load_profile_timestamp = pd.DataFrame(
+                cc_vg_results['load_net'], load_profile_season.year)
+            years = list(net_load_profile_timestamp.index.unique())
+
+            for y in years:
+                net_load_profile_temp = net_load_profile_timestamp.iloc[
+                    :, 0][net_load_profile_timestamp.index == y].to_numpy()
+                required_MWhs_temp, batt_powers = calc_required_mwh(
+                    load_profile=net_load_profile_temp.copy(),
+                    peak_reductions=peak_reductions.copy(),
+                    eff_charge=eff_charge, stor_buffer_minutes=stor_buffer_minutes)
+
+                if years.index(y) == 0:
+                    required_MWhs = required_MWhs_temp.copy()
+                else:
+                    required_MWhs = np.maximum(required_MWhs, required_MWhs_temp)
+
             # Get the peaking storage potential by duration
-            peaking_stor_all = get_peaking_stor(
-                peaking_stor, ccreg, next_year, peaking_stor_all, season,
-                safety_bin, safety_bin_size)
-
-            if not resources_ccreg_csp.empty:
-                if calc_csp == '0':
-                    # If not calculating CC for CSP, set its CC to the default
-                    # value
-                    cc_csp = cc_csp_default
-
-                if calc_csp == '1':
-
-                    # Add storage charging to the net load profile
-                    storage_fleet_MW = cap_stor_ccreg['MW'].sum()
-                    storage_fleet_MWh = cap_stor_ccreg['MWh'].sum()
-                    stor_peak_reduct = np.array([storage_fleet_MW * cc_stor])
-                    net_load_profile_stor_adj = np.array([])
-
-                    if storage_fleet_MW > 0:
-                        if mult_year:
-                            for y in years:
-                                net_load_profile_temp = pd.DataFrame()
-                                net_load_profile_temp['year'] = \
-                                    load_profile_season['year'].values
-                                net_load_profile_temp['load'] = \
-                                    net_load_profile
-                                net_load_profile_year = net_load_profile_temp[
-                                    net_load_profile_temp['year'] == y][
-                                        'load'].values
-                                net_load_profile_year = fill_in_charging(
-                                    net_load_profile_year, stor_peak_reduct,
-                                    eff_charge, storage_fleet_MWh,
-                                    storage_fleet_MW)
-                                net_load_profile_stor_adj = np.concatenate(
-                                    (net_load_profile_stor_adj,
-                                     net_load_profile_year))
+            peaking_stor = cc_storage(
+                storage=cap_stor_ccreg.copy(), pr=peak_reductions.copy(),
+                re=required_MWhs.copy(), sdb=sdb.copy())
+            # Store it
+            dict_sdbin_size[ccreg, season] = (
+                peaking_stor[['duration','MW']]
+                ### Add the safety bin
+                .append(
+                    pd.Series(data=[safety_bin, safety_bin_size], 
+                    index=['duration','MW']), ignore_index=True)
+            )
+            if calc_dr == '1':
+                # Pivot DR data
+                inc_timestamp = pd.pivot_table(
+                    pd.melt(dr_inc_season,
+                            id_vars=['h','year','hour','i'],
+                            var_name='r'),
+                    index=['h','year','hour'],
+                    columns=['i','r'], values='value')
+                dec_timestamp = pd.pivot_table(
+                    pd.melt(dr_dec_season,
+                            id_vars=['h','year','hour','i'],
+                            var_name='r'),
+                    index=['h','year','hour'],
+                    columns=['i','r'], values='value')
+                # Loop through techs with a DR profile
+                for i in dec_timestamp.columns.get_level_values(0).unique()[1:]: 
+                    if 2012 not in years:
+                        print("WARNING!\nDR data does not exist for years "+
+                              "other than 2012.\nYou are running without 2012")
+                    for y in years:
+                        if y not in dec_timestamp.index.get_level_values('year').unique():
+                            continue
+                        
+                        # Get DR data in numpy array and multiply by marginal capacity
+                        dec_temp = dec_timestamp[i].xs(y, level='year').values * marg_DR_step_MW
+                        if i in techs['dr2']:
+                            # For shed, there is no increase in energy required so just make sure
+                            # there is sufficient energy to shift into from the decrease hour
+                            inc_temp = dec_temp.copy() * 2
                         else:
-                            net_load_profile_stor_adj = fill_in_charging(
-                                net_load_profile, stor_peak_reduct, eff_charge,
-                                storage_fleet_MWh, storage_fleet_MW)
+                            inc_temp = inc_timestamp[i].xs(y, level='year').values * marg_DR_step_MW
+                        # Replicate net load data for each DR type and region
+                        net_load_profile_temp = net_load_profile_timestamp.iloc[
+                            :, 0][net_load_profile_timestamp.index == y].to_numpy()
+                        net_load_profile_temp = np.array([net_load_profile_temp, ]*len(dec_timestamp[i].columns)
+                                                         ).transpose()
+                        # Get load to shift out of top hours, analagous to curtailment
+                        top_load = (net_load_profile_temp 
+                                    - (net_load_profile_temp.max() - marg_DR_step_MW) )
+                        tot_top_load = top_load.clip(min=0).sum(0)
+                        top_load = top_load.clip(-inc_temp, dec_temp)
+                        dr_cc_i = dr_capacity_credit(
+                            hrs=marg_dr_props.loc[i, 'hrs'], eff=marg_dr_props.loc[i, 'RTE'],
+                            ts_length=top_load.shape[0], poss_dr_changes=top_load, 
+                            marg_peak=tot_top_load, cols=dec_timestamp[i].columns,
+                            maxhrs=marg_dr_props.loc[i, 'max_hrs'])
+                        # If more than just 2012 DR year added, add min as above 
+                    dr_cc_i['i'] = i
+                    if (ccreg, season) in dict_cc_dr.keys():
+                        dict_cc_dr[ccreg, season] = pd.concat(
+                            [dict_cc_dr[ccreg, season],
+                             dr_cc_i[['r', 'i', 'value']]])
                     else:
-                        net_load_profile_stor_adj = net_load_profile.copy()
+                        dict_cc_dr[ccreg, season] = dr_cc_i[['r', 'i', 'value']]           
 
-                    # Only do this if there is CSP capacity
-                    if len(cap_csp_ccreg) > 0:
-                        reductions_considered_csp = int(
-                            (csp_fleet_MW + csp_step_size) // csp_step_size)
-                        if mult_year:
-                            net_load_profile_timestamp = pd.DataFrame(
-                                net_load_profile_stor_adj,
-                                load_profile_season.year)
-                            for y in years:
-                                idx = net_load_profile_timestamp.index == y
-                                net_load_profile_temp = \
-                                    net_load_profile_timestamp[idx][0].values
-                                cspcf_season_temp = cspcf_season[
-                                    cspcf_season['year'] == y].reset_index(
-                                        drop=True)
-                                required_MWhs_csp_temp, csp_powers = \
-                                    calc_required_mwh_csp(
-                                        net_load_profile_temp.copy(),
-                                        cap_csp_ccreg['MW'].values.copy(),
-                                        cap_csp_ccreg['sm'].values.copy(),
-                                        cspcf_season_temp.drop(
-                                            dt_cols, 1).values.copy(),
-                                        reductions_considered_csp,
-                                        combine_profiles=True)
-                                if years.index(y) == 0:
-                                    required_MWhs_csp = \
-                                        required_MWhs_csp_temp.copy()
-                                else:
-                                    required_MWhs_csp = np.maximum(
-                                        required_MWhs_csp,
-                                        required_MWhs_csp_temp)
-                        else:
-                            # Call csp storage cc functions for existing csp
-                            required_MWhs_csp, csp_powers = \
-                                calc_required_mwh_csp(
-                                    net_load_profile_stor_adj.copy(),
-                                    cap_csp_ccreg['MW'].values.copy(),
-                                    cap_csp_ccreg['sm'].values.copy(),
-                                    cspcf_season.drop(
-                                        dt_cols, 1).values.copy(),
-                                    reductions_considered_csp,
-                                    combine_profiles=True)
-                        cc_csp = cc_storage_csp(
-                            required_MWhs_csp.copy(), csp_powers.copy(),
-                            csp_fleet_MWh, csp_fleet_MW)
+    # ------ AGGREGATE OUTPUTS ------
+    cc_old = (
+        pd.concat(dict_cc_old, axis=0)
+        ### Drop the ccreg and numbered indices
+        .reset_index().drop(['level_2'], axis=1)
+        .rename(columns={'level_0':'ccreg', 'level_1':'szn', 'MW':'value'})
+        ### Rename seasons to match ReEDS convention and add year index
+        .replace({'winter':'wint', 'spring':'spri', 'summer':'summ'})
+        .assign(t=str(next_year))
+        ### Each resource profile represents multiple sites if GSw_IndividualSiteAgg > 1.
+        # The calculated existing capacity credit represents the collection of sites 
+        # within the resource profile, so since we report it by site, we need to divide 
+        # the resource capacity credit by by the number of sites represented by the 
+        # resource profile. If not using GSw_IndividualSites, sites_per_resource should
+        # be 1 for all resources, so this step won't have an effect.
+        .merge(resources.drop('ccreg',axis=1), on='resource', how='left')
+    )
+    cc_old.value /= cc_old.sites_per_resource.fillna(1)
+    ### Reorder to match ReEDS convention
+    cc_old = cc_old.reindex(['i','r','ccreg','szn','t','value'], axis=1)
 
-                        # Clip load according to existing csp cc
-                        net_load_profile_stor_adj = np.clip(
-                            net_load_profile_stor_adj, a_min=None,
-                            a_max=(max(net_load_profile_stor_adj)
-                                   - (csp_fleet_MW * cc_csp)),
-                            out=net_load_profile_stor_adj)
+    sdbin_size = (
+        pd.concat(dict_sdbin_size, axis=0)
+        ### Keep the ccreg and szn indices but drop the numbered index
+        .reset_index().drop('level_2', axis=1)
+        .rename(columns={'level_0':'ccreg', 'level_1':'szn', 'duration':'bin'})
+        .astype({'bin':str})
+        .replace({'winter':'wint','spring':'spri','summer':'summ'})
+        .assign(t=str(next_year))
+        .reindex(['ccreg','szn','bin','t','MW'], axis=1)
+    )
 
-                    # If there is no existing CSP then it gets no capacity
-                    # credit
-                    else:
-                        cc_csp = 0
+    cc_mar = (
+        pd.concat(dict_cc_mar, axis=0)
+        .reset_index().drop('level_2', axis=1)
+        .rename(columns={'level_0':'ccreg', 'level_1':'szn', 'CC':'value'})
+        .replace({'winter':'wint','spring':'spri','summer':'summ'})
+        .assign(t=str(next_year))
+        ### Broadcast values to all i,r associated with each profile (only relevant
+        ### if GSw_IndividualSiteAgg > 1)
+        .merge(resources.drop(['ccreg','sites_per_resource'],axis=1),
+               on='resource', how='left', suffixes=('_drop',''))
+    )
+    ### cps-ns doesn't have a resource label, so get its i,r from the original i,r column
+    cc_mar.i.fillna(cc_mar.i_drop, inplace=True)
+    cc_mar.r.fillna(cc_mar.r_drop, inplace=True)
+    ### Reorder to match ReEDS convention
+    cc_mar = cc_mar.reindex(['i','r','ccreg','szn','t','value'], axis=1)
+    
+    if calc_dr == '1':
+        cc_dr = (
+            pd.concat(dict_cc_dr, axis=0)
+            .reset_index().drop(['level_2', 'level_0'], axis=1)
+            .rename(columns={'level_1':'szn'})
+            .replace({'winter':'wint','spring':'spri','summer':'summ'})
+            .assign(t=str(next_year))
+            .reindex(['i','r','szn','t','value'], axis=1)
+            )
+    else:
+        cc_dr = pd.DataFrame(columns=['i', 'r', 'szn', 't', 'value'])
 
-                # Collect and organize the results
-                all_cc = get_csp_cc(resources_ccreg_csp, cap_csp_ccreg,
-                                    cc_csp, next_year, all_cc, season)
+    # ---------------- RETURN A DICTIONARY WITH THE OUTPUTS FOR REEDS --------
+    cc_results = {
+        'cc_mar': cc_mar,
+        'cc_old': cc_old,
+        'cc_dr': cc_dr,
+        'sdbin_size': sdbin_size,
+    }
 
-            if not resources_ccreg_csp.empty:
-                if calc_csp == '0':
-                    # Set the marginal CC for CSP equal to 1
-                    all_cc_mar = csp_cc_marg_equals1(resources_ccreg_csp,
-                                                     next_year, all_cc_mar,
-                                                     season)
+    return cc_results
 
-                if calc_csp == '1':
-                    # Call csp storage marginal cc functions for each csp
-                    # resource
-                    reductions_considered_csp_marg = int(marg_CSP_step_MW //
-                                                         csp_step_size)
-                    if mult_year:
-                        all_cc_mar = calc_marg_cc_csp(
-                            net_load_profile_stor_adj, cspcf_season_all,
-                            resources_ccreg_csp, marg_CSP_step_MW,
-                            reductions_considered_csp_marg, next_year,
-                            all_cc_mar, season, mult_year,
-                            load_profile_season, dt_cols, years=years)
-                    else:
-                        all_cc_mar = calc_marg_cc_csp(
-                            net_load_profile_stor_adj, cspcf_season_all,
-                            resources_ccreg_csp, marg_CSP_step_MW,
-                            reductions_considered_csp_marg, next_year,
-                            all_cc_mar, season, mult_year,
-                            load_profile_season, dt_cols)
-
-#%%  WRITE DATA TO GDX FILE
-
-    # -------------- RENAMING SEASONS TO MATCH REEDS CONVENTION ---------------
-    all_cc = all_cc.replace('winter', 'wint')  # to_replace, value
-    all_cc = all_cc.replace('spring', 'spri')
-    all_cc = all_cc.replace('summer', 'summ')
-    all_cc_mar = all_cc_mar.replace('winter', 'wint')
-    all_cc_mar = all_cc_mar.replace('spring', 'spri')
-    all_cc_mar = all_cc_mar.replace('summer', 'summ')
-    peaking_stor_all = peaking_stor_all.replace('winter', 'wint')
-    peaking_stor_all = peaking_stor_all.replace('spring', 'spri')
-    peaking_stor_all = peaking_stor_all.replace('summer', 'summ')
-    timeslice_hours_all = timeslice_hours_all.replace('winter', 'wint')
-    timeslice_hours_all = timeslice_hours_all.replace('spring', 'spri')
-    timeslice_hours_all = timeslice_hours_all.replace('summer', 'summ')
-
-    # --------------- RENAME COLUMNS TO MATCH REEDS CONVENTION ----------------
-
-    all_cc_mar.columns = ['i', 'r', 'szn', 't', 'value']
-    all_cc.columns = ['i', 'r', 'szn', 't', 'value']
-    peaking_stor_all.columns = ['ccreg', 'szn', 'bin', 't', 'MW']
-    timeslice_hours_all.columns = ['h', 'ccreg', 'szn', 'value']
-
-    # ---------------- WRITE OUT A GDX FILE WITH THE OUTPUTS FOR REEDS --------
-
-    outputs = {
-                'cc_mar':        all_cc_mar,
-                'cc_old':        all_cc,
-                'peak_h_frac':   timeslice_hours_all,
-                'sdbin_size':    peaking_stor_all
-                }
-
-    return outputs
-    #%%
-
-
+#%%
 # ------------------ CALC CC OF EXISTING VG RESOURCES -------------------------
+# @numba.jit(cache=True)
 def cc_vg(vg_power, load, vg_marg_power, top_hours_n, cap_marg):
     '''
     Calculate the capacity credit of existing and marginal variable generation
@@ -432,137 +436,92 @@ def cc_vg(vg_power, load, vg_marg_power, top_hours_n, cap_marg):
     load_net = load - np.sum(vg_power, axis=1)
 
     # get the indices of the top hours of net load
-    top_hours_net = load_net.argsort()[
-        np.arange(hours_n-1, (hours_n-top_hours_n)-1, -1)]
+    top_hours_net = load_net.argsort()[np.arange(hours_n-1, (hours_n-top_hours_n)-1, -1)]
 
     # get the indices of the top hours of load
-    top_hours = load.argsort()[
-        np.arange(hours_n-1, (hours_n-top_hours_n)-1, -1)]
+    top_hours = load.argsort()[np.arange(hours_n-1, (hours_n-top_hours_n)-1, -1)]
 
-    # get the differences and reductions in load as well as the ratio between
-    # the two
+    # get the differences and reductions in load as well as the ratio between the two
     load_dif = load[top_hours] - load_net[top_hours]
     load_reduct = load[top_hours] - load_net[top_hours_net]
-    load_ratio = np.tile(np.divide(
-        load_reduct, load_dif, out=np.zeros_like(load_reduct),
-        where=load_dif != 0).reshape(top_hours_n, 1),
-        (1, len(vg_power[0, :])))
+    load_ratio = np.tile(
+        np.divide(
+            load_reduct, load_dif, 
+            out=np.zeros_like(load_reduct),
+            where=load_dif != 0,
+        ).reshape(top_hours_n, 1),
+        (1, vg_power.shape[1])
+    )
     # get the existing cc for each resource
-    gen_tech = vg_power[top_hours_net, :] + np.where(
-        load_ratio < 1, vg_power[top_hours, :]*load_ratio,
-        vg_power[top_hours, :])
-    gen_sum = np.tile(np.sum(gen_tech, axis=1).reshape(top_hours_n, 1),
-                      (1, len(vg_power[0, :])))
-    gen_frac = np.divide(gen_tech, gen_sum, out=np.zeros_like(gen_tech),
-                         where=gen_sum != 0)
-    cap_useful_MW = (np.sum(gen_frac * np.tile(
-        load_reduct.reshape(top_hours_n, 1), (1, len(vg_power[0, :]))),
-        axis=0) / top_hours_n).reshape(len(vg_power[0, :]), 1)
+    gen_tech = (
+        vg_power[top_hours_net, :]
+        + np.where(
+            load_ratio < 1, 
+            vg_power[top_hours, :]*load_ratio, 
+            vg_power[top_hours, :]))
 
-    # get the marg net load for each VG resource
-    load_marg = np.tile(load_net.reshape(hours_n, 1),
-                        (1, len(vg_marg_power[0, :]))) - vg_marg_power
+    gen_sum = np.tile(
+        np.sum(gen_tech, axis=1).reshape(top_hours_n, 1),
+        (1, vg_power.shape[1]))
 
-    # sort each marginal load profile
-    for n in np.arange(0, len(vg_marg_power[0, :]), 1):
-        load_marg[:, n] = np.flip(load_marg[np.argsort(load_marg[:, n],
-                                                       axis=0), n], axis=0)
+    gen_frac = np.divide(
+        gen_tech, gen_sum, 
+        out=np.zeros_like(gen_tech), where=gen_sum != 0)
+
+    cap_useful_MW = (
+        np.sum(
+            gen_frac 
+            * np.tile(load_reduct.reshape(top_hours_n, 1), (1, vg_power.shape[1])),
+            axis=0) 
+        / top_hours_n
+    ).reshape(vg_power.shape[1], 1)
+
+    # get the marg net load for each VG resource [hours x resources]
+    load_marg = (
+        ###! TODO: Try to speed up this line
+        np.tile(load_net.reshape(hours_n, 1), (1, vg_marg_power.shape[1]))
+        - vg_marg_power)
+
+    ### Get the peak net load hours [top_hours_n x resources]
+    peak_net_load = np.transpose(np.array(
+        ### np.partition returns the max top_hours_n values, unsorted; then np.sort sorts.
+        ### So we only sort top_hours_n values instead of the whole array, saving time.
+        ###! TODO: Try to speed up this line further
+        [np.sort(
+            np.partition(load_marg[:,n], -top_hours_n)[-top_hours_n:]
+         )[::-1]
+         for n in range(load_marg.shape[1])]
+    ))
 
     # get the reductions in load for each resource
     load_reduct_marg = np.tile(
         load_net[top_hours_net].reshape(top_hours_n, 1),
-        (1, len(vg_marg_power[0, :]))) - load_marg[0: top_hours_n, :]
+        (1, vg_marg_power.shape[1])
+    ) - peak_net_load
 
     # get the marginal CCs for each resource
-    cc_marg = (np.sum(load_reduct_marg, axis=0) / top_hours_n) / cap_marg
+    cc_marg = np.sum(load_reduct_marg, axis=0) / top_hours_n / cap_marg
 
     # setting the lower bound for marginal CC to be 0.01
     cc_marg[cc_marg < 0.01] = 0.0
 
-    # rounding outputs to the nearest 5 decimal points
-    load_net = np.around(load_net, decimals=5)
+    # round the outputs
+    load_net = np.around(load_net, decimals=3)
     cc_marg = np.around(cc_marg, decimals=5)
     cap_useful_MW = np.around(cap_useful_MW, decimals=5)
-    top_hours_net = np.around(top_hours_net, decimals=5)
 
     results = {
-                'load_net': load_net,
-                'cc_marg': cc_marg,
-                'cap_useful_MW': cap_useful_MW,
-                'top_hours_net': top_hours_net,
-                }
+        'load_net': load_net,
+        'cc_marg': cc_marg,
+        'cap_useful_MW': cap_useful_MW,
+        'top_hours_net': top_hours_net,
+    }
 
     return results
 
 
-# -----------------------CALC REQUIRED MWHS CSP--------------------------------
-def calc_required_mwh_csp(load_profile, cspcaps, solar_multiples, cspcfs, inc,
-                          combine_profiles=False):
-    '''
-    Determine the energy storage capacity required to acheive a certain peak
-        load reduction for a given load profile
-    Args:
-        load_profile: time-synchronous load profile
-        cspcaps: array of csp capacities by tech, type, and region
-        solar_multiples: solar multiples of charging capacity to generator size
-        cspcfs: matrix of csp profiles by tech and region
-        inc: number of peak reductions considered
-        combine_profiles: this set set to true for calculating existing CC of
-            CSP so that all existing is treated at once
-    Returns:
-        required_MWhs: set of energy storage capacities required for each peak
-            reduction size
-        csp_powers: set of peak reduction sizes corresponding to required_MWhs
-    '''
-
-    csps = len(cspcaps)
-    hours_n = len(load_profile)
-
-    # Adjust the cf profiles by the solar multiple
-    cspcfs *= solar_multiples
-    cspcfs = cspcfs.T
-
-    csp_charge = cspcfs * cspcaps.reshape(csps, 1)
-
-    # Combine charging profiles only for CC of existing CSP
-    if combine_profiles:
-        csp_charge = csp_charge.sum(axis=0).reshape(1, hours_n)
-
-        poss_charges = np.zeros((inc, hours_n))
-        for i in range(0, hours_n):
-            poss_charges[:, i] = np.linspace(0, csp_charge[0, i], inc)
-
-        peak_reductions = np.linspace(0, cspcaps.sum(axis=0), inc)
-
-    else:
-        poss_charges = csp_charge.copy()
-        peak_reductions = cspcaps.copy()
-
-    csp_powers = peak_reductions.reshape(inc, 1)
-
-    max_demands = np.tile(
-        (np.max(load_profile) - peak_reductions).reshape(inc, 1), (1, hours_n))
-
-    necessary_discharges = (max_demands - load_profile)
-
-    # Note CSP can charge while discharging
-    necessary_discharges = np.clip(necessary_discharges, a_min=None,
-                                   a_max=0.0, out=necessary_discharges)
-    poss_batt_changes = poss_charges + necessary_discharges
-
-    batt_e_level = np.zeros([inc, hours_n])
-    batt_e_level[:, 0] = np.minimum(poss_batt_changes[:, 0], 0)
-    for n in np.arange(1, hours_n):
-        batt_e_level[:, n] = batt_e_level[:, n-1] + poss_batt_changes[:, n]
-        batt_e_level[:, n] = np.clip(batt_e_level[:, n], a_min=None,
-                                     a_max=0.0, out=batt_e_level[:, n])
-
-    required_MWhs = -np.min(batt_e_level, axis=1)
-
-    return required_MWhs, csp_powers
-
-
 # -------------------------CALC REQUIRED MWHS----------------------------------
+# @numba.jit(nopython=True, cache=True)
 def calc_required_mwh(load_profile, peak_reductions, eff_charge, stor_buffer_minutes):
     '''
     Determine the energy storage capacity required to acheive a certain peak
@@ -600,162 +559,17 @@ def calc_required_mwh(load_profile, peak_reductions, eff_charge, stor_buffer_min
 
     required_MWhs = -np.min(batt_e_level, axis=1)
 
-# This line of code will implement a buffer on all storage duration
-# requirements, i.e. if the stor_buffer_minutes is set to 60 minutes
-# then a 2-hour peak would be served by a 3-hour device, a 3-hour peak
-# by a 4-hour device, etc.
+    # This line of code will implement a buffer on all storage duration
+    # requirements, i.e. if the stor_buffer_minutes is set to 60 minutes
+    # then a 2-hour peak would be served by a 3-hour device, a 3-hour peak
+    # by a 4-hour device, etc.
     stor_buffer_hrs = stor_buffer_minutes / 60
     required_MWhs = required_MWhs + (batt_powers[:, 0] * stor_buffer_hrs)
 
     return required_MWhs, batt_powers
 
 
-# -------------------------CALC REQUIRED MWHS----------------------------------
-def fill_in_charging(load_profile, peak_reductions, eff_charge,
-                     storage_fleet_MWh, storage_fleet_MW):
-    '''
-    Fill in the load profile with the storage charging load
-    Args:
-        load_profile: time-synchronous load profile
-        peak_reductions: peak reduction acheived as determined from the
-            existing storage cc calculations
-        eff_charge: charging efficiency of storage
-        storage_fleet_MWh: energy capacity of the conventional storage fleet
-    Returns:
-        load_profile: load profile adjusted for conventional storage charging
-    '''
-
-    hours_n = len(load_profile)
-
-    inc = len(peak_reductions)
-    max_demands = np.tile(
-        (np.max(load_profile) - peak_reductions).reshape(inc, 1), (1, hours_n))
-    batt_powers = np.tile(storage_fleet_MW.reshape(inc, 1), (1, hours_n))
-
-    poss_charges = np.minimum(batt_powers * eff_charge,
-                              (max_demands - load_profile) * eff_charge)
-    necessary_discharges = (max_demands - load_profile)
-
-    poss_batt_changes = np.where(necessary_discharges <= 0,
-                                 necessary_discharges, poss_charges)
-
-    batt_e_level = np.zeros([inc, hours_n])
-    batt_e_level[:, 0] = np.minimum(poss_batt_changes[:, 0], 0)
-    for n in np.arange(1, hours_n):
-        batt_e_level[:, n] = batt_e_level[:, n-1] + poss_batt_changes[:, n]
-        batt_e_level[:, n] = np.clip(batt_e_level[:, n], a_min=None,
-                                     a_max=0.0, out=batt_e_level[:, n])
-
-    # Get the time blocks for storage charging
-    discharging_hours = np.argwhere(poss_batt_changes <= 0)[:, 1]
-    charging_hours = np.argwhere(poss_batt_changes > 0)[:, 1]
-    df = pd.DataFrame(columns=['hour', 'discharge', 'potential', 'load',
-                               'block'])
-    df['hour'] = np.arange(0, hours_n)
-    df.loc[discharging_hours, 'discharge'] = poss_batt_changes[
-        0, discharging_hours]
-    df.loc[charging_hours, 'potential'] = poss_batt_changes[0, charging_hours]
-    df['load'] = load_profile
-    df['block'] = -1
-    df.fillna(0, inplace=True)
-    charge_blocks = pd.DataFrame(columns=['end discharge', 'begin discharge'])
-    block = []
-    for i in np.arange(1, len(discharging_hours - 1), 1):
-        if discharging_hours[i] != discharging_hours[i-1] + 1:
-            block.extend(discharging_hours[i-1:i+1])
-            charge_blocks.loc[len(charge_blocks), :] = block
-            block = []
-    if poss_batt_changes[0, 0] > 0:
-        charge_blocks.loc[-1, :] = [-1, discharging_hours[0]]
-        charge_blocks.index += 1
-        charge_blocks.sort_index(inplace=True)
-    charge_blocks.loc[len(charge_blocks), :] = [discharging_hours[-1],
-                                                len(load_profile)]
-    # Get the energy requirements for meeting peak discharging
-    charge_blocks = charge_blocks.astype(int)
-    for i in np.arange(0, len(charge_blocks)-1, 1):
-        charge_blocks.loc[i, 'required_MWh'] = -np.min(batt_e_level[
-            0, charge_blocks.loc[i, 'begin discharge']:charge_blocks.loc[
-                i+1, 'end discharge'] + 1])
-    charge_blocks.fillna(0, inplace=True)
-    charge_blocks['MWh_charged'] = 0
-    # Optimize charging
-    for i in range(0, len(charge_blocks)):
-        df.loc[charge_blocks.loc[i, 'end discharge']+1:charge_blocks.loc[
-            i, 'begin discharge']-1, 'block'] = i
-        t0 = charge_blocks.loc[i, 'begin discharge']
-        MWh_needed = charge_blocks.loc[0: i, 'required_MWh'].sum() \
-            - charge_blocks.loc[0: i, 'MWh_charged'].sum()
-        MWh = 0.0
-        df_subset = df[df['hour'] < t0].reset_index(drop=True)
-        df_subset = df_subset[df_subset['potential'] > 0].reset_index(
-            drop=True)
-        df_subset = df_subset.sort_values('load').reset_index(drop=True)
-        hour = 0
-        while MWh_needed > MWh:
-            try:
-                MWh_add = min(df_subset.loc[hour, 'potential'],
-                              MWh_needed - MWh)
-                Hr = df_subset.loc[hour, 'hour']
-                Blk = df_subset.loc[hour, 'block']
-                val = charge_blocks.loc[Blk, 'MWh_charged'] + MWh_add
-                if val > storage_fleet_MWh:
-                    MWh_add = storage_fleet_MWh \
-                        - charge_blocks.loc[Blk, 'MWh_charged']
-                    df.loc[df['block'] == Blk, 'potential'] = 0
-                    df_subset = df_subset[
-                        df_subset['block'] != Blk].reset_index(drop=True)
-                else:
-                    df.loc[Hr, 'potential'] -= MWh_add
-                df.loc[Hr, 'load'] += MWh_add / eff_charge
-                load_profile[Hr] += MWh_add / eff_charge
-            except:
-                MWh_add = MWh_needed - MWh
-            charge_blocks.loc[Blk, 'MWh_charged'] += MWh_add
-            hour += 1
-            MWh += MWh_add
-
-    load_profile = np.clip(load_profile, a_min=None, a_max=max_demands[0, 0],
-                           out=load_profile)
-
-    return load_profile
-
-
 # --------------------- CALC CC OF MARGINAL STORAGE ---------------------------
-def cc_storage_csp(required_MWhs, batt_powers, stor_MWh, stor_MW):
-    '''Determine the capacity credit of CSP-TES
-       Can use several discrete values for storage duration or a single value
-       More details on the methodology used can be found here: <file location>
-       Args:
-           required_MWhs: energy storage capacities needed to satisfy
-               associated demand reductions
-           batt_powers: demand reductions explored
-           stor_MWh: energy storage capacity of the existing fleet
-           stor_MW: power storage capacity of the existing fleet
-       Returns:
-           cc_stor: capacity credit of the existing storage fleet
-    '''
-
-    stor_inc = len(required_MWhs)
-
-    # cc for case where peak reduction equals installed power capacity
-    if (required_MWhs[stor_inc-1] <= stor_MWh):
-        # get CC of existing storage
-        cc_stor = 1.0
-
-    # existing cc calculation for case where peak reduction is less than
-    # installed power capacity
-    else:
-        # get effective capacity of installed storage
-        cap_eff = np.interp(stor_MWh, required_MWhs, batt_powers[:, 0])
-        # get CC of existing storage
-        cc_stor = cap_eff/stor_MW
-        # rounding outputs to the nearest 5 decimal points
-        cc_stor = np.around(cc_stor, decimals=5)
-
-    return cc_stor
-
-
 def cc_storage(storage, pr, re, sdb):
     '''Determine the amount of peaking capacity that can be provided by
        energy storage with incrementally increasing durations.
@@ -945,254 +759,5 @@ def cc_storage(storage, pr, re, sdb):
 
     # CC is used to determine the peak shaving & charging needed to adjust the
     # load profile for marginal CSP-TES CC calculations.
-    return cc, peak_stor[['peaking potential']].round(decimals=2).reset_index(
+    return peak_stor[['peaking potential']].round(decimals=2).reset_index(
         ).rename(columns={'index': 'duration', 'peaking potential': 'MW'})
-
-
-def get_top_hours(hdtmap, top_hr_results, ccreg, df, season):
-    '''
-    Getting the top hours by timeslice that were used to compute capacity
-    credit
-    '''
-#    hdtmap = dt_season.reset_index()
-#    top_hr_results = cc_vg_results['top_hours_net'].copy()
-#    df = timeslice_hours_all
-
-    temp = hdtmap.loc[hdtmap.index.isin(top_hr_results), 'h'].value_counts() \
-        / len(top_hr_results)
-    temp = temp.reset_index().rename(columns={'index': 'h', 'h': '%TopHrs'})
-    temp['ccreg'] = ccreg
-    if not season == 'year':
-        temp['season'] = season
-    df = pd.concat([df, temp[list(df)]], sort=False).reset_index(drop=True)
-
-    return df
-
-
-def get_vg_cc(resources_ccreg, next_year, cc_results, cap_frac_cspns,
-              hierarchy, ccreg, df, season):
-    '''
-    Getting the capacity credit of existing VG capacity.
-    This function finds where csp-ns was added to upv capacity and allocates
-    the credit accordingly.
-    '''
-#    cc_results = cc_vg_results['cap_useful_MW'].copy()
-#    df = all_cc.copy()
-
-    temp_cap_frac = cap_frac_cspns[cap_frac_cspns['r'].isin(
-        hierarchy[hierarchy['ccreg'] == ccreg]['r'])]
-    temp = resources_ccreg[['i', 'r']].copy()
-    temp['t'] = str(next_year)
-    temp['MW'] = cc_results
-    temp_csp = pd.merge(left=temp, right=temp_cap_frac, on=['i', 'r'],
-                        how='right')
-    temp = pd.merge(left=temp, right=temp_cap_frac, on=['i', 'r'],
-                    how='left').fillna(0)
-    temp = temp[temp['rs'] == 0].reset_index(drop=True)
-    temp = temp[['i', 'r', 't', 'MW']]
-    temp_upv = temp_csp.groupby(['i', 'r', 't'], as_index=False).agg(
-        {'MW': 'mean', 'cspns_frac': 'sum'})
-    temp_upv['upv_frac'] = 1 - temp_upv['cspns_frac']
-    temp_upv['MW'] *= temp_upv['upv_frac']
-    temp_upv = temp_upv[['i', 'r', 't', 'MW']]
-    temp_csp['i'] = 'csp-ns'
-    temp_csp.drop('r', 1, inplace=True)
-    temp_csp.rename(columns={'rs': 'r'}, inplace=True)
-    temp_csp['MW'] *= temp_csp['cspns_frac']
-    temp_csp = temp_csp[['i', 'r', 't', 'MW']]
-    temp_upv_csp = pd.concat([temp_upv, temp_csp],
-                             sort=False).reset_index(drop=True)
-    temp = pd.concat([temp, temp_upv_csp], sort=False).reset_index(drop=True)
-    all_rs = hierarchy[hierarchy['ccreg'] == ccreg]['rs'].drop_duplicates(
-        ).tolist()
-    for rs in all_rs:
-        if rs not in temp_csp['r'].tolist():
-            temp.loc[len(temp), :] = ['csp-ns', rs, str(next_year), 0]
-    if not season == 'year':
-        temp['season'] = season
-    df = pd.concat([df, temp[list(df)]], sort=False).reset_index(drop=True)
-
-    return df
-
-
-def get_vg_cc_marg(resources_ccreg, next_year, cc_results, hierarchy, df,
-                   season, techs):
-    '''
-    Getting the marginal capacity credit of VG
-    This function assigns csp-ns the same marginal capacity credit as the best
-    upv resource in that region
-    '''
-#    cc_results = cc_vg_results['cc_marg'].copy()
-#    df = all_cc_mar.copy()
-
-    temp = resources_ccreg[['i', 'r']].copy()
-    temp['t'] = str(next_year)
-    temp['CC'] = cc_results
-    resources_upv = resources_ccreg[resources_ccreg['i'].isin(
-        techs['UPV'])].reset_index(drop=True)
-    best_resources_upv = resources_upv[['i', 'r']].drop_duplicates(
-        subset='r', keep='last').reset_index(drop=True)
-    temp_csp = pd.merge(left=temp, right=best_resources_upv, on=['i', 'r'],
-                        how='right')
-    temp_csp = pd.merge(left=temp_csp,
-                        right=hierarchy[['r', 'rs']].drop_duplicates(),
-                        on='r', how='left')
-    temp_csp['i'] = 'csp-ns'
-    temp_csp.drop('r', 1, inplace=True)
-    temp_csp.rename(columns={'rs': 'r'}, inplace=True)
-    temp = pd.concat([temp, temp_csp], sort=False).reset_index(drop=True)
-    if not season == 'year':
-        temp['season'] = season
-    df = pd.concat([df, temp[list(df)]], sort=False).reset_index(drop=True)
-
-    return df
-
-
-def get_peaking_stor(results, ccreg, next_year, df, season, safety_bin,
-                     safety_bin_size):
-    '''
-    Getting the peaking storage potential
-    '''
-#    results = peaking_stor.copy()
-#    df = peaking_stor_all.copy()
-
-    results['ccreg'] = ccreg
-    results['t'] = str(next_year)
-    if not season == 'year':
-        results['season'] = season
-        results = results[['ccreg', 'season', 'duration', 't', 'MW']].copy()
-        results.loc[len(results), :] = [ccreg, season, safety_bin,
-                                        str(next_year), safety_bin_size]
-    else:
-        results = results[['ccreg', 'duration', 't', 'MW']]
-        results.loc[len(results), :] = [ccreg, safety_bin, str(next_year),
-                                        safety_bin_size]
-    results.duration = results.duration.astype(int).astype(str)
-    df = pd.concat([df, results[list(df)]], sort=False).reset_index(drop=True)
-
-    return df
-
-
-def get_csp_cc(resources_ccreg_csp, cap_csp_ccreg, annual_cc_csp, next_year,
-               df, season):
-    '''
-    Getting the capacity credit of CSP-TES
-    '''
-#    df = all_cc.copy()
-
-    temp = resources_ccreg_csp[['i', 'r', 'resource']].copy()
-    temp = pd.merge(left=temp,
-                    right=cap_csp_ccreg[['i', 'r', 'resource', 'MW']],
-                    on=['i', 'r', 'resource'], how='left').fillna(0)
-    temp['MW'] *= annual_cc_csp
-    temp['t'] = str(next_year)
-    temp.drop('resource', 1, inplace=True)
-    if not season == 'year':
-        temp['season'] = season
-    df = pd.concat([df, temp[list(df)]], sort=False).reset_index(drop=True)
-
-    return df
-
-
-def csp_cc_marg_equals1(resources_csp_ccreg, next_year, df, season):
-    '''
-    Setting the marginal cc of CSP-TES equal to 1
-    '''
-#    df = all_cc_mar.copy()
-
-    temp = resources_csp_ccreg[['i', 'r']].copy()
-    temp['t'] = str(next_year)
-    temp['CC'] = 1
-    if not season == 'year':
-        temp['season'] = season
-    df = pd.concat([df, temp[list(df)]], sort=False).reset_index(drop=True)
-
-    return df
-
-
-def calc_marg_cc_csp(net_load_profile, cspcf_used, resources_ccreg_csp,
-                     marg_CSP_step_MW, reductions_considered, next_year, df,
-                     season, mult_year, load_profile_season, dt_cols,
-                     years=None):
-    '''
-    Calculating the marginal cc of csp
-    '''
-#    net_load_profile = net_load_profile_stor_adj.copy()
-#    cspcf_used = cspcf_season_all.copy()
-#    df = all_cc_mar.copy()
-#    reductions_considered = reductions_considered_csp_marg
-
-    # Get the required MWhs for 1000 MW (or whatever step size is chosen) for
-    # each resource
-    peak_reductions = (np.ones((1, len(resources_ccreg_csp)))
-                       * marg_CSP_step_MW).reshape(len(resources_ccreg_csp))
-    required_MWhs_csp, csp_powers = calc_required_mwh_csp(
-        net_load_profile.copy(), peak_reductions.copy(),
-        resources_ccreg_csp['sm'].values.copy(),
-        cspcf_used.drop(dt_cols, 1).values.copy(), len(resources_ccreg_csp))
-    temp = resources_ccreg_csp[['i', 'r', 'duration', 'resource', 'sm']].copy()
-    # Find all the resources where the marginal capacity credit will be less
-    # than 1
-    temp['MW'] = peak_reductions
-    temp['required_MWh'] = required_MWhs_csp
-    temp['MWh'] = temp['MW'] * temp['duration']
-    temp_full = pd.DataFrame(columns=list(temp) + ['CC', 't'])
-    temp_part = pd.DataFrame(columns=list(temp) + ['CC', 't'])
-    for i in range(0, len(temp)):
-        if temp.loc[i, 'required_MWh'] > temp.loc[i, 'MWh']:
-            temp_part.loc[len(temp_part), :] = temp.loc[i, :]
-        else:
-            temp_full.loc[len(temp_full), :] = temp.loc[i, :]
-    # For resources with full marginal capacity credit, assign this value
-    if not temp_full.empty:
-        temp_full['t'] = str(next_year)
-        temp_full['CC'] = 1
-        if not season == 'year':
-            temp_full['season'] = season
-        df = pd.concat([df, temp_full[list(df)]], sort=False).reset_index(
-            drop=True)
-    # For resources with partial capacity credit, do a full analysis of that
-    # resource with its given profile
-    if not temp_part.empty:
-        for i in range(0, len(temp_part)):
-            sm = temp_part.loc[i, 'sm']
-            duration = temp_part.loc[i, 'duration']
-            resource = temp_part.loc[i, 'resource']
-            peak_reductions = np.linspace(0, marg_CSP_step_MW,
-                                          reductions_considered)
-            required_MWhs_part = np.array([])
-            if mult_year:
-                net_load_profile_timestamp = pd.DataFrame(
-                    net_load_profile, load_profile_season.year)
-                for y in years:
-                    net_load_profile_temp = net_load_profile_timestamp[
-                        net_load_profile_timestamp.index == y][0].values
-                    cspcf_used_temp = cspcf_used[
-                        cspcf_used['year'] == y].reset_index(drop=True)
-                    required_MWhs_part_temp, csp_powers_part = \
-                        calc_required_mwh_csp(
-                            net_load_profile_temp.copy(),
-                            peak_reductions.copy(), sm,
-                            cspcf_used_temp[resource].values.copy(),
-                            reductions_considered)
-                    if years.index(y) == 0:
-                        required_MWhs_part = required_MWhs_part_temp.copy()
-                    else:
-                        required_MWhs_part = np.maximum(
-                            required_MWhs_part, required_MWhs_part_temp)
-            else:
-                # Call csp storage cc functions for existing csp
-                required_MWhs_part, csp_powers_part = calc_required_mwh_csp(
-                    net_load_profile, peak_reductions.copy(), sm,
-                    cspcf_used[resource].values.copy(), reductions_considered)
-            cc_csp_mar_part = cc_storage_csp(
-                required_MWhs_part.copy(), csp_powers_part.copy(),
-                marg_CSP_step_MW*duration, marg_CSP_step_MW)
-            temp_part.loc[i, 'CC'] = cc_csp_mar_part
-            temp_part.loc[i, 't'] = str(next_year)
-            if not season == 'year':
-                temp_part.loc[:, 'season'] = season
-        df = pd.concat([df, temp_part[list(df)]],
-                       sort=False).reset_index(drop=True)
-
-    return df

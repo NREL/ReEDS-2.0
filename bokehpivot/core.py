@@ -10,7 +10,6 @@ import shutil
 import re
 import math
 import json
-import getpass
 import numpy as np
 import pandas as pd
 import collections
@@ -103,10 +102,7 @@ GL = {'df_source':None, 'df_plots':None, 'columns':None, 'data_source_wdg':None,
 
 #os globals
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
-username = getpass.getuser()
-user_out_path = this_dir_path + '/out/' + username
-if not os.path.exists(user_out_path):
-    os.makedirs(user_out_path)
+out_path = this_dir_path + '/out'
 
 def initialize():
     '''
@@ -467,7 +463,7 @@ def build_report(html_num='one'):
     report_path = report_path.replace('"', '')
     report_path = '"' + report_path + '"'
     time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    output_dir = '"' + user_out_path + '/report-' + time + '"'
+    output_dir = '"' + out_path + '/report-' + time + '"'
     data_source = '"' + GL['widgets']['data'].value.replace('"', '') + '"'
     if html_num == 'one':
         auto_open = '"yes"'
@@ -621,6 +617,8 @@ def build_widgets(df_source, cols, init_load=False, init_config={}, wdg_defaults
     wdg['update'] = bmw.Button(label='Manual Update', button_type='success', css_classes=['update-drop'], visible=False)
     wdg['render_plots'] = bmw.Select(title='Render Plots', value='Yes', options=['Yes', 'No'], css_classes=['update-drop'], visible=False)
     wdg['download_dropdown'] = bmw.Div(text='Download/Export', css_classes=['download-dropdown'])
+    wdg['download_date'] = bmw.Select(title='Add Date', value='Yes', options=['Yes', 'No'], css_classes=['download-drop'], visible=False)
+    wdg['download_prefix'] = bmw.TextInput(title='Prefix', value='', css_classes=['download-drop'], visible=False)
     wdg['download_all'] = bmw.Button(label='All Files of View', button_type='success', css_classes=['download-drop'], visible=False)
     wdg['download_csv'] = bmw.Button(label='CSV of View', button_type='success', css_classes=['download-drop'], visible=False)
     wdg['download_html'] = bmw.Button(label='HTML of View', button_type='success', css_classes=['download-drop'], visible=False)
@@ -1895,10 +1893,11 @@ def download_url(dir_path='', auto_open=True):
             non_defaults[key] = wdg[key].value
     json_string = json.dumps(non_defaults)
     url_query = '?widgets=' + urlp.quote(json_string)
+    prefix, suffix = get_prefix_suffix()
     if dir_path == '':
-        path = user_out_path + '/url-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.txt'
+        path = out_path + '/' + prefix + 'url' + suffix + '.txt'
     else:
-        path = dir_path + '/url.txt'
+        path = dir_path + '/' + prefix + 'url.txt'
     with open(path, 'w') as f:
         f.write('Paste this after "/bokehpivot" in the URL:\n' + url_query + '\n\n')
     if auto_open:
@@ -1938,10 +1937,11 @@ def download_config(dir_path, auto_open, format):
     elif format == 'preset':
         config_string += filter_string + '}}),'
         file_name = 'preset'
+    prefix, suffix = get_prefix_suffix()
     if dir_path == '':
-        path = user_out_path + '/' + file_name + '-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.py'
+        path = out_path + '/' + prefix + file_name + suffix + '.py'
     else:
-        path = dir_path + '/' + file_name + '.py'
+        path = dir_path + '/' + prefix + file_name + '.py'
     with open(path, 'w') as f:
         if format == 'report':
             f.write('static_presets = [\n' + config_string + '\n]\n')
@@ -1964,10 +1964,11 @@ def download_csv(dir_path='', auto_open=True):
     with the current timestamp.
     '''
     logger.info('***Downloading View...')
+    prefix, suffix = get_prefix_suffix()
     if dir_path == '':
-        path = user_out_path + '/view-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.csv'
+        path = out_path + '/' + prefix + 'view' + suffix + '.csv'
     else:
-        path = dir_path + '/view.csv'
+        path = dir_path + '/' + prefix + 'view.csv'
     GL['df_plots'].to_csv(path, index=False)
     logger.info('***Done downloading View to ' + path)
     if auto_open:
@@ -1980,10 +1981,11 @@ def download_html(dir_path='', auto_open=True):
     '''
     logger.info('***Downloading View...')
     try:
+        prefix, suffix = get_prefix_suffix()
         if dir_path == '':
-            html_path = user_out_path + '/view-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.html'
+            html_path = out_path + '/' + prefix + 'view' + suffix + '.html'
         else:
-            html_path = dir_path + '/view.html'
+            html_path = dir_path + '/' + prefix + 'view.html'
         static_plots = []
         legend = bmw.Div(text=GL['widgets']['legend'].text)
         display_config = bmw.Div(text=GL['widgets']['display_config'].text)
@@ -2009,7 +2011,8 @@ def download_all():
     '''
     Download all of the outputs of a view into a timestamped folder
     '''
-    dir_path = user_out_path + '/view-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")
+    prefix, suffix = get_prefix_suffix()
+    dir_path = out_path + '/' + prefix + 'view' + suffix
     os.makedirs(dir_path, False)
     download_csv(dir_path, False)
     download_url(dir_path, False)
@@ -2023,11 +2026,23 @@ def download_source(dir_path='', auto_open=True):
     with the current timestamp.
     '''
     logger.info('***Downloading full source...')
+    prefix, suffix = get_prefix_suffix()
     if dir_path == '':
-        path = user_out_path + '/source-'+ datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")+'.csv'
+        path = out_path + '/' + prefix + 'source' + suffix + '.csv'
     else:
-        path = dir_path + '/source.csv'
+        path = dir_path + '/' + prefix + 'source.csv'
     GL['df_source'].to_csv(path, index=False)
     logger.info('***Done downloading full source to ' + path)
     if auto_open:
         sp.Popen(os.path.abspath(path), shell=True)
+
+def get_prefix_suffix():
+    if GL['widgets']['download_date'].value == 'Yes':
+        suffix = '-' + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f")
+    else:
+        suffix = ''
+    if GL['widgets']['download_prefix'].value != '':
+        prefix = GL['widgets']['download_prefix'].value + '-'
+    else:
+        prefix = ''
+    return prefix, suffix

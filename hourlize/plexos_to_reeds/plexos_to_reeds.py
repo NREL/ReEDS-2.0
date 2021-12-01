@@ -6,7 +6,7 @@ import datetime
 #Enter the path to the hourly csv data by plexos region here. The first column should be 'DATETIME',
 #and the following columns should be the name of each plexos region. Then run 'python plexos_to_reeds.py'
 #from the command prompt, and the output file should be within outputs/
-input_file = '../../h5_2007-2014_ungrown_2012_1hr_EST.csv'
+input_file = "//nrelnas01/ReEDS/Supply_Curve_Data/LOAD/2020_Update/plexos_to_reeds/h5_2007-2014_ungrown_2012_1hr_EST.csv"
 output_file = 'load_hourly_ba_EST.csv'
 
 print('Reading hourly input data: ' + input_file)

@@ -11,8 +11,11 @@ Gas-CC-CCS,0
 Gas-CT,0
 o-g-s,0
 Nuclear,0
+Nuclear-SMR,0
 RE-CT,1
+RE-CC,1
 biopower,1
+beccs,1
 geothermal,1
 Hydro,1
 lfill-gas,1
@@ -26,6 +29,7 @@ battery_8,0
 battery_10,0
 caes,0
 pumped-hydro,0
+pumped-hydro-flex,0
 unknown,0
 other,0
 distPV,1

@@ -14,18 +14,23 @@ import pandas as pd
 import numpy as np
 import collections
 import core
+import copy
 from pdb import set_trace as pdbst
+from itertools import product
 
 rb_globs = {'output_subdir':'/outputs/', 'test_file':'cap.csv', 'report_subdir':'/reeds2'}
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
-df_deflator = pd.read_csv(this_dir_path + '/in/inflation.csv', index_col=0)
+df_deflator = pd.read_csv(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, 'inputs/deflator.csv')), index_col=0)
 costs_orig_inv = ['Capital no ITC']
 costs_pol_inv = ['Capital','PTC','Emissions Tax']
 coststreams = ['_obj','eq_bioused','eq_gasused']
-vf_valstreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_curt_gen_balance','eq_curtailment']
-# valuestreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_national_gen','eq_annual_cap','eq_curt_gen_balance','eq_curtailment','eq_emit_accounting','eq_mingen_lb','eq_mingen_ub','eq_rps_ofswind']
-energy_valstreams = ['eq_supply_demand_balance','eq_curt_gen_balance','eq_curtailment']
-cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','dupv','pumped-hydro','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10']
+vf_valstreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
+# valuestreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_national_gen','eq_annual_cap','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min','eq_emit_accounting','eq_mingen_lb','eq_mingen_ub','eq_rps_ofswind']
+energy_valstreams = ['eq_supply_demand_balance','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
+cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','dupv','pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10']
+h2_techs = ['smr', 'smr-ccs', 'electrolyzer']
+prod_techs = h2_techs + ['dac']
+niche_techs =  ['hydro','csp','geothermal','beccs','lfill-gas','biopower']
 price_types = ['load','res_marg','oper_res','state_rps','nat_gen']
 
 #1. Preprocess functions for results_meta
@@ -64,14 +69,7 @@ def apply_inflation(df, **kw):
 def inflate_series(ser_in):
     return ser_in * 1/df_deflator.loc[int(core.GL['widgets']['var_dollar_year'].value), 'Deflator']
 
-def pre_systemcost(dfs, **kw):
-    df = dfs['sc']
-
-    #apply inflation and adjust to billion dollars
-    df['Cost (Bil $)'] = inflate_series(df['Cost (Bil $)']) * 1e-9
-    d = float(core.GL['widgets']['var_discount_rate'].value)
-    y0 = int(core.GL['widgets']['var_pv_year'].value)
-
+def gather_cost_types(df):
     #Gather lists of capital and operation labels
     cost_cats_df = df['cost_cat'].unique().tolist()
     df_cost_type = pd.read_csv(this_dir_path + '/in/reeds2/cost_cat_type.csv')
@@ -80,6 +78,17 @@ def pre_systemcost(dfs, **kw):
         print('WARNING: Not all cost categories have been mapped!!!')
     cap_type_ls = [c for c in cost_cats_df if c in df_cost_type[df_cost_type['type']=='Capital']['cost_cat'].tolist()]
     op_type_ls = [c for c in cost_cats_df if c in df_cost_type[df_cost_type['type']=='Operation']['cost_cat'].tolist()]
+    return cap_type_ls, op_type_ls
+
+def pre_systemcost(dfs, **kw):
+    df = dfs['sc']
+
+    #apply inflation and adjust to billion dollars
+    df['Cost (Bil $)'] = inflate_series(df['Cost (Bil $)']) * 1e-9
+    d = float(core.GL['widgets']['var_discount_rate'].value)
+    y0 = int(core.GL['widgets']['var_pv_year'].value)
+
+    cap_type_ls, op_type_ls = gather_cost_types(df)
 
     #Calculate objective function system costs
     if 'objective' in kw and kw['objective'] == True:
@@ -98,12 +107,13 @@ def pre_systemcost(dfs, **kw):
     if 'annualize' in kw and kw['annualize'] == True:
         #Turn each cost category into a column
         df = df.pivot_table(index=['year'], columns='cost_cat', values='Cost (Bil $)')
+        if 'remove_existing' in kw and kw['remove_existing'] == True:
+            df = df[df.index >= int(core.GL['widgets']['var_pv_year'].value)]
         #Add rows for all years (including 20 years after end year) and fill
         full_yrs = list(range(df.index.min() - 19, df.index.max() + 21))
         df = df.reindex(full_yrs)
         #For capital costs, multiply by CRF to annualize, and sum over previous 20 years.
-        #This requires 20 years before 2010 to sum properly, and we need to shift capital dataframe down
-        #so that capital payments start in the year after the investment was made
+        #This requires 20 years before 2010 to sum properly.
         if 'crf_from_user' in kw and kw['crf_from_user'] == True:
             crf = pd.DataFrame({'year':full_yrs, 'crf':d*(1+d)**20/((1+d)**20 - 1)}).set_index('year')
         #otherwise use the crf from model run
@@ -112,20 +122,31 @@ def pre_systemcost(dfs, **kw):
             crf = crf.set_index('year').reindex(full_yrs)
             crf = crf.interpolate(method ='linear')
             crf['crf'] = crf['crf'].fillna(method='bfill')
+        if 'shift_capital' in kw and kw['shift_capital'] == True:
+            #This means we start capital payments in the year of the investment, even though loan payments
+            #typically start in the following year, so that investments made in 2050 are still reflected in 2050 capital payments.
+            #This requires dividing the crf by discount rate to result in the same present value calculation.
+            crf = crf/(1+d)
+        else:
+            #This method reflects typical loan payments that start in the year after the loan.
+            df[cap_type_ls] = df[cap_type_ls].shift()
         df = pd.merge(left=df, right=crf, how='left',on=['year'], sort=False)
-        df[cap_type_ls] = df[cap_type_ls].shift().fillna(0)
+        df[cap_type_ls] = df[cap_type_ls].fillna(0)
         df[cap_type_ls] = df[cap_type_ls].multiply(df["crf"], axis="index")
         df[cap_type_ls] = df[cap_type_ls].rolling(20).sum()
         #Remove years before 2010
         full_yrs = list(range(df.index.min() + 19, df.index.max() + 1))
         df = df.reindex(full_yrs)
 
-        #Add capacity payment for existing (pre-2010) generators (in billion $)
-        df_existingpayment = dfs['existcap']
-        df_existingpayment = df_existingpayment.set_index('year')
-        df_existingpayment = df_existingpayment.reindex(full_yrs)
-        df_existingpayment = df_existingpayment.fillna(0)
-        df['inv_investment_capacity_costs'] = df['inv_investment_capacity_costs']+df_existingpayment['existingcap']
+        if 'remove_existing' not in kw:
+            #Add capacity payment for existing (pre-2010) generators (in billion $)
+            df_existingpayment = dfs['existcap']
+            df_existingpayment['existingcap'] = inflate_series(df_existingpayment['existingcap'])
+            df_existingpayment = df_existingpayment.set_index('year')
+            df_existingpayment = df_existingpayment.reindex(full_yrs)
+            df_existingpayment = df_existingpayment.fillna(0)
+            df['inv_investment_capacity_costs'] = df['inv_investment_capacity_costs']+df_existingpayment['existingcap']
+            df['inv_investment_capacity_costs_noitc'] = df['inv_investment_capacity_costs_noitc']+df_existingpayment['existingcap']
 
         #For operation costs, simply fill missing years with model year values.
         df[op_type_ls] = df[op_type_ls].fillna(method='ffill')
@@ -140,59 +161,14 @@ def pre_systemcost(dfs, **kw):
     return df
 
 def pre_avgprice(dfs, **kw):
-    df = dfs['sc']
-    #apply inflation and adjust to billion dollars
-    df['Cost (Bil $)'] = inflate_series(df['Cost (Bil $)']) * 1e-9
-
-    #Gather lists of capital and operation labels
-    cost_cats_df = df['cost_cat'].unique().tolist()
-    df_cost_type = pd.read_csv(this_dir_path + '/in/reeds2/cost_cat_type.csv')
-    #Make sure all cost categories in df are in df_cost_type and throw error if not!!
-    if not set(cost_cats_df).issubset(df_cost_type['cost_cat'].values.tolist()):
-        print('WARNING: Not all cost categories have been mapped!!!')
-    cap_type_ls = [c for c in cost_cats_df if c in df_cost_type[df_cost_type['type']=='Capital']['cost_cat'].tolist()]
-    op_type_ls = [c for c in cost_cats_df if c in df_cost_type[df_cost_type['type']=='Operation']['cost_cat'].tolist()]
-
     #Depending on whether 'National' or 'BA'-level average cost if specified
-    if 'National' in kw and kw['National'] == True:
-        #Turn each cost category into a column
-        df = df.pivot_table(index=['year'], columns='cost_cat', values='Cost (Bil $)')
-        #Add rows for all years (including 20 years after end year) and fill
-        full_yrs = list(range(df.index.min() - 19, df.index.max() + 21))
-        df = df.reindex(full_yrs)
-        #For capital costs, multiply by CRF to annualize, and sum over previous 20 years.
-        #This requires 20 years before 2010 to sum properly, and we need to shift capital dataframe down
-        #so that capital payments start in the year after the investment was made
-        crf = dfs['crf']
-        crf = crf.set_index('year').reindex(full_yrs)
-        crf = crf.interpolate(method ='linear')
-        crf['crf'] = crf['crf'].fillna(method='bfill')
-        df = pd.merge(left=df, right=crf, how='left',on=['year'], sort=False)
-        df[cap_type_ls] = df[cap_type_ls].shift().fillna(0)
-        df[cap_type_ls] = df[cap_type_ls].multiply(df["crf"], axis="index")
-        df[cap_type_ls] = df[cap_type_ls].rolling(20).sum()
-        #Remove years before 2010
-        full_yrs = list(range(df.index.min() + 19, df.index.max() + 1))
-        df = df.reindex(full_yrs)
-
-        #Add capacity payment for existing (pre-2010) generators (in billion $)
-        df_existingpayment = dfs['existcap']
-        df_existingpayment = df_existingpayment.set_index('year')
-        df_existingpayment = df_existingpayment.reindex(full_yrs)
-        df_existingpayment = df_existingpayment.fillna(0)
-        df['inv_investment_capacity_costs'] = df['inv_investment_capacity_costs']+df_existingpayment['existingcap']
-        #For operation costs, simply fill missing years with model year values.
-        df[op_type_ls] = df[op_type_ls].fillna(method='ffill')
-        #The final year should only include capital payments because operation payments last for 20 yrs starting
-        #in the model year, whereas capital payments last for 20 yrs starting in the year after the model year.
-        df.loc[df.index.max(), op_type_ls] = 0
-        df = df.fillna(0)
-        df = pd.melt(df.reset_index(), id_vars=['year'], value_vars=cap_type_ls + op_type_ls, var_name='cost_cat', value_name= 'Cost (Bil $)')
-
+    if kw['reg'] == 'National':
+        df = pre_systemcost(dfs, annualize=True)
         #Read in load
         df_load = dfs['q']
         df_load_nat = df_load[df_load['type'] == 'load'].groupby('year')['q'].sum()
         df_load_nat = df_load_nat.to_frame()
+        full_yrs = list(range(int(df['year'].min()), int(df['year'].max()) + 1))
         df_load_nat = df_load_nat.reindex(full_yrs)
         df_load_nat = df_load_nat.interpolate(method ='linear')
 
@@ -201,10 +177,15 @@ def pre_avgprice(dfs, **kw):
 
         return df_natavgprice
 
-    if 'BA' in kw and kw['BA'] == True:
+    elif kw['reg'] == 'BA':
+        df = dfs['sc']
+        #apply inflation and adjust to billion dollars
+        df['Cost (Bil $)'] = inflate_series(df['Cost (Bil $)']) * 1e-9
 
-        df_rrs_map = pd.read_csv(this_dir_path + '/in/reeds2/region_map.csv')
-        df_rrs_map.columns = ['region','regionnew']
+        cap_type_ls, op_type_ls = gather_cost_types(df)
+
+        df_rrs_map = pd.read_csv(this_dir_path + '/../inputs/rsmap.csv').rename(columns={'*r':'r'})
+        df_rrs_map.columns = ['regionnew','region']
 
         df_hours_map = pd.read_csv(this_dir_path + '/in/reeds2/m_map.csv')
         df_hours_width = pd.read_csv(this_dir_path + '/in/reeds2/m_bar_width.csv')
@@ -262,11 +243,12 @@ def pre_avgprice(dfs, **kw):
         df = df.reset_index(level='region')
 
         #Add capacity payment for existing (pre-2010) generators (in billion $)
-        df_existingpayment = pd.read_csv('D:/ReEDS_YSun/ReEDS-2.0/runs/v20191230_ref_seq_ng0/outputs/cappayments_ba.csv')
-        df_existingpayment.columns = ['region', 'year','existingcap']
+        df_existingpayment = dfs['existcap']
+        df_existingpayment['existingcap'] = inflate_series(df_existingpayment['existingcap'])
         df = pd.merge(left=df, right=df_existingpayment, how='left',on=['year','region'], sort=False)
         df = df.fillna(0)
         df['inv_investment_capacity_costs'] = df['inv_investment_capacity_costs']+df['existingcap']
+        df['inv_investment_capacity_costs_noitc'] = df['inv_investment_capacity_costs_noitc']+df['existingcap']
         df = df.drop(columns = 'existingcap')
         df = pd.melt(df.reset_index(), id_vars=['year','region'], value_vars=df.columns.tolist()[2:], var_name='cost_cat', value_name= 'Cost (Bil $)')
 
@@ -371,7 +353,7 @@ def pre_abatement_cost(dfs, **kw):
 
     elif 'annualize' in kw and kw['annualize'] == True:
         #Preprocess costs
-        df_sc = pre_systemcost(dfs, annualize=True)
+        df_sc = pre_systemcost(dfs, annualize=True, crf_from_user=True, shift_capital=True)
         df_sc = sum_over_cols(df_sc, group_cols=['year','cost_cat'], drop_cols=['Discounted Cost (Bil $)'])
         df_sc['type'] = 'Cost (Bil $)'
         df_sc.rename(columns={'Cost (Bil $)':'val'}, inplace=True)
@@ -403,8 +385,8 @@ def add_class(df, **kw):
     return df
 
 def map_rs_to_rb(df, **kw):
-    df_hier = pd.read_csv(this_dir_path + '/in/reeds2/region_map.csv')
-    dict_hier = dict(zip(df_hier['rs'], df_hier['rb']))
+    df_hier = pd.read_csv(this_dir_path + '/../inputs/rsmap.csv').rename(columns={'*r':'r'})
+    dict_hier = dict(zip(df_hier['rs'], df_hier['r']))
     df.loc[df['region'].isin(dict_hier.keys()), 'region'] = df['region'].map(dict_hier)
     df.rename(columns={'region':'rb'}, inplace=True)
     if 'groupsum' in kw:
@@ -414,6 +396,29 @@ def map_rs_to_rb(df, **kw):
 def remove_ba(df, **kw):
     df = df[~df['region'].astype(str).str.startswith('p')].copy()
     df.rename(columns={'region':'rs'}, inplace=True)
+    return df
+
+def pre_gen_w_load(dfs, **kw):
+    #Aggregate results to national
+    dfs['gen'] = sum_over_cols(dfs['gen'], drop_cols=['rb','vintage'], group_cols=['tech', 'year'])
+    dfs['gen_uncurt'] = sum_over_cols(dfs['gen_uncurt'], drop_cols=['rb','vintage'], group_cols=['tech', 'year'])
+    #Outer join generation, fill any missing gen with 0, and then fill missing gen_uncurt with gen
+    df = pd.merge(left=dfs['gen'], right=dfs['gen_uncurt'], how='outer', on=['tech','year'], sort=False)
+    df['Gen (TWh)'].fillna(0, inplace=True)
+    df['Gen Uncurt (TWh)'].fillna(df['Gen (TWh)'], inplace=True)
+    #Scale generation to TWh
+    df[['Gen (TWh)','Gen Uncurt (TWh)']] = df[['Gen (TWh)','Gen Uncurt (TWh)']] * 1e-6
+    #Scale Load to TWh
+    dfs['load']['TWh'] = dfs['load']['TWh'] * 1e-6
+    #pivot load out to include losses columns
+    dfs['load'] = dfs['load'].pivot_table(index=['year'], columns='type', values='TWh').reset_index()
+    #Join Load
+    df = pd.merge(left=df, right=dfs['load'], how='left', on=['year'], sort=False)
+    #Calculate Gen Fracs
+    df['Gen Frac of Load'] = df['Gen (TWh)'] / df['load']
+    df['Gen Frac of Load Plus Stor/Trans Loss'] = df['Gen (TWh)'] / (df['load'] + df['storage'] + df['trans'])
+    df['Gen Uncurt Frac of Load'] = df['Gen Uncurt (TWh)'] / df['load']
+    df['Gen Uncurt Frac of Load Plus All Losses'] = df['Gen Uncurt (TWh)'] / (df['load'] + df['storage'] + df['trans'] + df['curt'])
     return df
 
 def pre_val_streams(dfs, **kw):
@@ -591,7 +596,7 @@ def pre_val_streams(dfs, **kw):
     df_cap['var_name'] = 'kW'
     df_cap['con_name'] = 'kW'
     df = pd.concat([df, df_cap],sort=False,ignore_index=True)
-    
+
     #Add discounted $ using interface year
     d = float(core.GL['widgets']['var_discount_rate'].value)
     y0 = int(core.GL['widgets']['var_pv_year'].value)
@@ -699,7 +704,8 @@ def pre_firm_cap(dfs, **kw):
     df = pd.merge(left=df_cap, right=dfs['firmcap'], how='left',on=['tech', 'rb', 'year','season'], sort=False)
     df = df.fillna(0)
     df[['Capacity (GW)','Firm Capacity (GW)']] = df[['Capacity (GW)','Firm Capacity (GW)']] * 1e-3
-    df['Capacity Credit'] = df['Firm Capacity (GW)'] / df['Capacity (GW)']
+    if 'ba' in kw and kw['ba'] == True:
+        df['Capacity Credit'] = df['Firm Capacity (GW)'] / df['Capacity (GW)']
     return df
 
 def pre_curt(dfs, **kw):
@@ -751,11 +757,43 @@ def pre_cf(dfs, **kw):
     df['CF'] = df['MWh']/(df['MW']*8760)
     return df
 
+def pre_h2_cf(dfs, **kw):
+    index_cols = ['tech', 'rb', 'year']
+    dfs['cap'] = map_rs_to_rb(dfs['cap'])
+    dfs['cap'] =  dfs['cap'].groupby(index_cols, sort=False, as_index=False).sum()
+    df = pd.merge(left=dfs['cap'], right=dfs['prod'], how='left',on=index_cols, sort=False)
+    df['Production (tonnes)']=df['Production (tonnes)'].fillna(0)
+    df['CF'] = df['Production (tonnes)']/(df['Capacity (tonnes)']*8760)
+    return df
+
 def pre_new_vre_cf(dfs, **kw):
     index_cols = ['tech', 'rs', 'year']
     dfs['gen_new_uncurt'] = sum_over_cols(dfs['gen_new_uncurt'], group_cols=index_cols, val_cols=['MWh'])
     df = pd.merge(left=dfs['gen_new_uncurt'], right=dfs['cap_new'], how='inner',on=index_cols, sort=False)
     df['CF'] = df['MWh']/(df['MW']*8760)
+    return df
+
+def pre_vre_vs_stor(dfs, **kw):
+    df_gen = dfs['gen'].copy()
+    df_stor = dfs['stor'].copy()
+    df_stor = df_stor[df_stor['type'] == 'in'].copy()
+    df_gen = sum_over_cols(df_gen, group_cols=['technology', 'year'], val_cols=['Generation (TWh)'])
+    df_stor = sum_over_cols(df_stor, group_cols=['technology', 'year'], val_cols=['Storage (TWh)'])
+    df_gen['Generation (TWh)'] = df_gen['Generation (TWh)']/1e6
+    df_stor['Storage (TWh)'] = df_stor['Storage (TWh)']/1e6
+    df_wind = df_gen[df_gen['technology'].str.startswith('wind')].copy()
+    df_pv = df_gen[df_gen['technology'].str.contains('upv|distpv')].copy()
+    df_bat = df_stor[df_stor['technology'].str.startswith('battery')].copy()
+    df_wind = sum_over_cols(df_wind, group_cols=['year'], val_cols=['Generation (TWh)'])
+    df_pv = sum_over_cols(df_pv, group_cols=['year'], val_cols=['Generation (TWh)'])
+    df_bat = sum_over_cols(df_bat, group_cols=['year'], val_cols=['Storage (TWh)'])
+    df_storall = sum_over_cols(df_stor, group_cols=['year'], val_cols=['Storage (TWh)'])
+    df_wind = df_wind.rename(columns={'Generation (TWh)': 'Wind (TWh)'}).set_index('year')
+    df_pv = df_pv.rename(columns={'Generation (TWh)': 'PV (TWh)'}).set_index('year')
+    df_bat = df_bat.rename(columns={'Storage (TWh)': 'Battery (TWh)'}).set_index('year')
+    df_storall = df_storall.set_index('year')
+    df = pd.concat([df_wind, df_pv, df_storall, df_bat], axis=1).fillna(0).reset_index().sort_values('year')
+    df['VRE (TWh)'] = df['Wind (TWh)'] + df['PV (TWh)']
     return df
 
 def pre_prices(dfs, **kw):
@@ -788,9 +826,114 @@ def pre_ng_price(dfs, **kw):
     df['p'].fillna(0, inplace=True)
     return df
 
+# calculate storage power (GW) and energy (GWh) capacity
+def calc_storage_cap(dfs, **kw):
+    cap = dfs['cap'].copy()
+    bcr = dfs['bcr'].copy()
+    energy = dfs['energy'].copy()
+    # aggregate vintages
+    energy = energy.groupby(['tech', 'rb', 'year'])['Energy (GWh)'].sum().reset_index()
+    # convert from MWh to GWh
+    energy['Energy (GWh)'] =  energy['Energy (GWh)'] / 1e3
+    # subset to storage techs
+    cap_stor = cap.loc[cap['tech'].isin(energy['tech'].unique()),:].copy()
+    # merge storage cap and battery/capacity ratio for relevant techs
+    cap_stor = cap_stor.merge(bcr, on="tech", how='left')
+    # assume missing bcr are 1 (mostly CSP)
+    cap_stor['bcr'] = cap_stor['bcr'].fillna(1)
+    # calculate storage power capacity using bcr, and convert from MW to GW
+    cap_stor['Capacity (GW)'] = cap_stor['Capacity (GW)'] * cap_stor['bcr'] / 1e3
+    # map CSP regions to BAs
+    cap_stor = map_rs_to_rb(cap_stor)
+    # merge in storage duration
+    cap_stor = cap_stor.merge(energy, on=['tech', 'rb', 'year'])
+    return cap_stor
+
 def add_joint_locations_col(df, **kw):
     df[kw['new']] = df[kw['col1']] + '-' + df[kw['col2']]
     return df
+
+def rgba2hex(rgba):
+    """
+    Input should be in fraction, not [0,255]
+    """
+    if len(rgba) == 4:
+        r,g,b = rgba[:3]
+    else:
+        r,g,b = rgba
+
+    ### r,g,b could be integers in [0,255] or floats in [0,1]
+    if type(r) is int:
+        scaler = 1
+    else:
+        scaler = 255
+
+    hexcolor = '#{:02x}{:02x}{:02x}'.format(
+        int(np.round(r*scaler)),
+        int(np.round(g*scaler)),
+        int(np.round(b*scaler)),
+    ).upper()
+
+    return hexcolor
+
+def pre_runtime(dictin, **kw):
+    """
+    ### Use the code below to redefine the colormap when new scripts are added
+    augur_start = df.index.tolist().index('ReEDS_Augur/A_prep_data.py')
+    for i, row in enumerate(df.index):
+        if i < augur_start:
+            colors[row.lower()] = rgba2hex(plt.cm.tab20b(i))
+        elif i < augur_start + 20:
+            colors[row.lower()] = rgba2hex(plt.cm.tab20c(i-augur_start))
+        else:
+            colors[row.lower()] = rgba2hex(plt.cm.tab20(i-augur_start-20))
+    """
+    df = dictin['runtime'].copy()
+
+    # Drop the git metadata columns
+    df.columns = df.loc[2].values
+    df.drop([0,1,2], inplace=True)
+
+    # Drop blanks (end column)
+    df = df[df.processtime.notnull()].copy()
+
+    #Change dtypes
+    df.processtime = df.processtime.astype(float)
+    df.year = df.year.astype(int)
+
+    # Subtract time for input_processing scripts from createmodel.gms
+    df.loc[
+        df.loc[df.process=='createmodel.gms'].index[0],
+        'processtime'
+    ] -= (
+        df.loc[df.process.map(lambda x: x.startswith('input_processing')),'processtime'].sum()
+        - df.loc[df.process=='input_processing/calc_financial_inputs.py','processtime'].sum()
+    )
+
+    df.loc[
+        df.loc[df.process=='createmodel.gms'].index[0],
+        'process'
+    ] = 'createmodel.gms – input_processing/*.py'
+
+    #Reduce columns
+    df = df[['year','process','processtime']].copy()
+
+    #Convert from seconds to hours
+    df['processtime'] = df['processtime']/3600
+
+    #All processes with year 0 will be year 2000
+    df['year'] = df['year'].replace(0, 2000)
+
+    return df
+
+def net_co2(dfs, **kw):
+    co2 = dfs['emit'].copy()
+    co2['Cumulative CO2 (MMton)'] = co2.groupby('tech')['CO2 (MMton)'].cumsum()
+    # scale to million metric tonnes
+    co2['CO2 (MMton)'] = co2['CO2 (MMton)'] / 1e6
+    co2['Cumulative CO2 (MMton)'] = co2['Cumulative CO2 (MMton)'] / 1e6
+    return co2
+
 #---------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------
 
@@ -865,6 +1008,10 @@ columns_meta = {
         'map': this_dir_path + '/in/reeds2/ctt_map.csv',
         'style': this_dir_path + '/in/reeds2/ctt_style.csv',
     },
+    'process':{
+        'type':'string',
+        'style': this_dir_path + '/in/reeds2/process_style.csv',
+    },
 }
 
 #---------------------------------------------------------------------------------------------------------
@@ -886,6 +1033,9 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars - No H2',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech':{'exclude':prod_techs}}}),
+            ('Stacked Bars - Only H2',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech':prod_techs}}),
+            ('Stacked Bars - Niche techs',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech':niche_techs}}),
             ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
         )),
         }
@@ -903,6 +1053,7 @@ results_meta = collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
+            ('Regional Cap Final',{'x':'custreg', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'filter': {'year':'last'}}),
             ('PCA Map Final by Tech',{'x':'rb', 'y':'Capacity (GW)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Tech',{'x':'st', 'y':'Capacity (GW)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -922,8 +1073,8 @@ results_meta = collections.OrderedDict((
         }
     ),
 
-    ('Capacity icrt (GW)',
-        {'file':'cap_icrt.csv',
+    ('Capacity ivrt (GW)',
+        {'file':'cap_ivrt.csv',
         'columns': ['tech', 'vintage', 'region', 'year','Capacity (GW)'],
         'preprocess': [
             {'func': map_rs_to_rb, 'args': {}},
@@ -935,6 +1086,23 @@ results_meta = collections.OrderedDict((
             ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
             ('PCA Map Final by Tech',{'x':'rb', 'y':'Capacity (GW)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Tech',{'x':'st', 'y':'Capacity (GW)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
+        )),
+        }
+    ),
+
+    ('Storage Capacity (GW or GWh)',
+
+        {'sources': [
+            {'name': 'cap', 'file': 'cap.csv', 'columns': ['tech', 'region', 'year', 'Capacity (GW)']},
+            {'name': 'energy', 'file': 'stor_energy_cap.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'Energy (GWh)']},
+            {'name': 'bcr', 'file': '../inputs_case/bcr.csv', 'columns': ['tech', 'bcr']},
+        ],
+        'preprocess': [
+            {'func': calc_storage_cap, 'args': {}},
+        ],
+        'presets': collections.OrderedDict((
+            ('National Stacked Bars - Power Capacity',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('National Stacked Bars - Energy Capacity',{'x':'year', 'y':'Energy (GWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
         )),
         }
     ),
@@ -1057,6 +1225,25 @@ results_meta = collections.OrderedDict((
         }
     ),
 
+    ('Generation National with Uncurt and Load (TWh)',
+        {'sources': [
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'Gen (TWh)']},
+            {'name': 'gen_uncurt', 'file': 'gen_ivrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'Gen Uncurt (TWh)']},
+            {'name': 'load', 'file': 'losses_ann.csv', 'columns': ['type', 'year','TWh']},
+        ],
+        'preprocess': [
+            {'func': pre_gen_w_load, 'args': {}},
+        ],
+        'index': ['tech', 'year'],
+        'presets': collections.OrderedDict((
+            ('Stacked Bars Gen Frac of Load',{'x':'year', 'y':'Gen Frac of Load', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars Gen Frac of Load Plus Stor/Trans Loss',{'x':'year', 'y':'Gen Frac of Load Plus Stor/Trans Loss', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars Gen Uncurt Frac of Load',{'x':'year', 'y':'Gen Uncurt Frac of Load', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars Gen Uncurt Frac of Load Plus All Losses',{'x':'year', 'y':'Gen Uncurt Frac of Load Plus All Losses', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+        )),
+        }
+    ),
+
     ('Generation BA (TWh)',
         {'file':'gen_ann.csv',
         'columns': ['tech', 'rb', 'year', 'Generation (TWh)'],
@@ -1068,6 +1255,12 @@ results_meta = collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Generation (TWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Generation (TWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Stacked Bars Gen Frac',{'x':'year', 'y':'Generation (TWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'tech', 'adv_col_base':'Total'}),
+            ('Regional Gen Final',{'x':'custreg', 'y':'Generation (TWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'filter': {'year':'last'}}),
+            ('Regional Gen Frac Final',{'x':'custreg', 'y':'Generation (TWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'adv_op':'Ratio', 'adv_col':'tech', 'adv_col_base':'Total', 'filter': {'year':'last'}}),
+            ('State Gen Final',{'x':'st', 'y':'Generation (TWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.99', 'plot_width':'600', 'filter': {'year':'last'}}),
+            ('State Gen Frac Final',{'x':'st', 'y':'Generation (TWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'adv_op':'Ratio', 'adv_col':'tech', 'adv_col_base':'Total', 'bar_width':'0.99', 'plot_width':'600', 'filter': {'year':'last'}}),
+            ('BA Gen Final',{'x':'rb', 'y':'Generation (TWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.99', 'plot_width':'1000', 'filter': {'year':'last'}}),
+            ('BA Gen Frac Final',{'x':'rb', 'y':'Generation (TWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.99', 'plot_width':'1000', 'adv_op':'Ratio', 'adv_col':'tech', 'adv_col_base':'Total', 'filter': {'year':'last'}}),
             ('Explode By Tech',{'x':'year', 'y':'Generation (TWh)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
             ('PCA Map Final by Tech',{'x':'rb', 'y':'Generation (TWh)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Tech',{'x':'st', 'y':'Generation (TWh)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
@@ -1075,8 +1268,8 @@ results_meta = collections.OrderedDict((
         }
     ),
 
-    ('Generation icrt (TWh)',
-        {'file':'gen_icrt.csv',
+    ('Generation ivrt (TWh)',
+        {'file':'gen_ivrt.csv',
         'columns': ['tech', 'vintage', 'rb', 'year', 'Generation (TWh)'],
         'preprocess': [
             {'func': scale_column, 'args': {'scale_factor': 1e-6, 'column':'Generation (TWh)'}},
@@ -1300,21 +1493,51 @@ results_meta = collections.OrderedDict((
         ],
         'presets': collections.OrderedDict((
             ('Stacked Bars Final',{'x':'timeslice', 'y':'Generation (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'filter': {'year':'last'}}),
+            ('Stacked Area Final',{'x':'timeslice', 'y':'Generation (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area', 'filter': {'year':'last'}}),
         )),
         }
     ),
 
-    ('Capacity Factor icrt',
+    ('Gen by timeslice regional (GW)',
+        {'file':'gen_h.csv',
+        'columns': ['tech', 'region', 'timeslice', 'year', 'Generation (GW)'],
+        #'index': ['tech', 'region', 'year', 'timeslice'],
+        'preprocess': [
+            {'func': map_rs_to_rb, 'args': {}},
+            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Generation (GW)'}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Stacked Bars Final',{'x':'timeslice', 'y':'Generation (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'filter': {'year':'last'}}),
+        )),
+        }
+    ),
+
+    ('Capacity Factor ivrt',
         {'sources': [
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year','MWh']},
-            {'name': 'cap', 'file': 'cap_icrt.csv', 'columns': ['tech', 'vintage', 'region', 'year','MW']},
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year','MWh']},
+            {'name': 'cap', 'file': 'cap_ivrt.csv', 'columns': ['tech', 'vintage', 'region', 'year','MW']},
         ],
         'preprocess': [
             {'func': pre_cf, 'args': {}},
         ],
         'presets': collections.OrderedDict((
             ('CF Boxplot',{'chart_type':'Dot', 'x':'year', 'y':'CF', 'y_agg':'None', 'range':'Boxplot', 'explode':'tech', 'explode_group':'scenario', 'y_min':'0','y_max':'1', 'circle_size':r'3', 'bar_width':r'1.75', }),
-            ('CF weighted ave',{'chart_type':'Line', 'x':'year', 'y':'CF', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'MW', 'explode':'tech', 'series':'scenario', 'y_min':'0','y_max':'1', }),
+            ('CF weighted ave',{'chart_type':'Line', 'x':'year', 'y':'CF', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'MW', 'explode':'tech', 'series':'scenario', 'y_min':'0','y_max':'1', 'filter':{'tech':{'exclude':prod_techs}}}),
+        )),
+        }
+    ),
+
+    ('Capacity Factor H2 Production',
+        {'sources': [
+            {'name': 'prod', 'file': 'prod_produce_ann.csv', 'columns': ['tech', 'rb', 'year','Production (tonnes)']},
+            {'name': 'cap', 'file': 'prod_cap.csv', 'columns': ['tech', 'vintage', 'region', 'year','Capacity (tonnes)']},
+        ],
+        'preprocess': [
+            {'func': pre_h2_cf, 'args': {}},
+        ],
+        'presets': collections.OrderedDict((
+            ('CF Boxplot',{'chart_type':'Dot', 'x':'year', 'y':'CF', 'y_agg':'None', 'range':'Boxplot', 'explode':'tech', 'explode_group':'scenario', 'y_min':'0','y_max':'1', 'circle_size':r'3', 'bar_width':r'1.75', }),
+            ('CF weighted ave',{'chart_type':'Line', 'x':'year', 'y':'CF', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'Capacity (tonnes)', 'explode':'tech', 'series':'scenario', 'y_min':'0','y_max':'1',}),
         )),
         }
     ),
@@ -1348,13 +1571,14 @@ results_meta = collections.OrderedDict((
 
     ('Operating Reserves (TW-h)',
         {'file':'opres_supply.csv',
-        'columns': ['ortype', 'tech', 'region', 'year', 'Reserves (TW-h)'],
-        'index': ['ortype', 'tech', 'year'],
+        'columns': ['ortype', 'tech', 'rb', 'year', 'Reserves (TW-h)'],
+        'index': ['ortype', 'tech', 'year', 'rb'],
         'preprocess': [
             {'func': scale_column, 'args': {'scale_factor': 1e-6, 'column':'Reserves (TW-h)'}},
         ],
         'presets': collections.OrderedDict((
             ('Stacked Bars',{'x':'year', 'y':'Reserves (TW-h)', 'series':'tech', 'explode':'scenario', 'explode_group':'ortype', 'chart_type':'Bar', 'bar_width':'1.75', }),
+            ('Stacked Bars by RTO',{'x':'year', 'y':'Reserves (TW-h)', 'series':'tech', 'explode':'ortype', 'explode_group':'rto', 'chart_type':'Bar', 'bar_width':'1.75', }),
         )),
         }
     ),
@@ -1368,6 +1592,7 @@ results_meta = collections.OrderedDict((
         ],
         'presets': collections.OrderedDict((
             ('Stacked Bars Final',{'x':'timeslice', 'y':'Reserves (GW)', 'series':'tech', 'explode':'scenario', 'explode_group':'ortype', 'chart_type':'Bar', 'filter': {'year':'last'}}),
+            ('Stacked Area Final',{'x':'timeslice', 'y':'Reserves (GW)', 'series':'tech', 'explode':'scenario', 'explode_group':'ortype', 'chart_type':'Area', 'filter': {'year':'last'}}),
         )),
         }
     ),
@@ -1384,8 +1609,8 @@ results_meta = collections.OrderedDict((
         ],
         'presets': collections.OrderedDict((
             ('Stacked Bars',{'x':'year', 'y':'Firm Capacity (GW)', 'series':'tech', 'explode':'scenario', 'explode_group':'season', 'chart_type':'Bar', 'bar_width':'1.75'}),
-            ('Average Capacity Credit',{'x':'year', 'y':'Capacity Credit', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'Capacity (GW)', 'series':'scenario', 'explode':'season', 'explode_group':'tech', 'chart_type':'Line'}),
-            ('Average Capacity Credit CC Techs',{'x':'year', 'y':'Capacity Credit', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'Capacity (GW)', 'series':'scenario', 'explode':'season', 'explode_group':'tech', 'chart_type':'Line', 'filter':{'tech':cc_techs}}),
+            ('Average Capacity Credit',{'x':'year', 'y':'Firm Capacity (GW)', 'y_agg':'sum(a)/sum(b)', 'y_b':'Capacity (GW)', 'series':'scenario', 'explode':'season', 'explode_group':'tech', 'chart_type':'Line'}),
+            ('Average Capacity Credit CC Techs',{'x':'year', 'y':'Firm Capacity (GW)', 'y_agg':'sum(a)/sum(b)', 'y_b':'Capacity (GW)', 'series':'scenario', 'explode':'season', 'explode_group':'tech', 'chart_type':'Line', 'filter':{'tech':cc_techs}}),
         )),
         }
     ),
@@ -1397,10 +1622,12 @@ results_meta = collections.OrderedDict((
         ],
         'index': ['tech', 'rb', 'season', 'year'],
         'preprocess': [
-            {'func': pre_firm_cap, 'args': {}},
+            {'func': pre_firm_cap, 'args': {'ba':True}},
         ],
         'presets': collections.OrderedDict((
             ('Stacked Bars',{'x':'year', 'y':'Firm Capacity (GW)', 'series':'tech', 'explode':'scenario', 'explode_group':'season', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Regional Stacked Bars',{'x':'custreg', 'y':'Firm Capacity (GW)', 'series':'tech', 'explode':'scenario',
+                            'explode_group':'season', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'year':'last'}}),
             ('Average Capacity Credit',{'x':'year', 'y':'Capacity Credit', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'Capacity (GW)', 'series':'scenario', 'explode':'season', 'explode_group':'tech', 'chart_type':'Line'}),
             ('Average Capacity Credit CC Techs',{'x':'year', 'y':'Capacity Credit', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'Capacity (GW)', 'series':'scenario', 'explode':'season', 'explode_group':'tech', 'chart_type':'Line', 'filter':{'tech':cc_techs}}),
         )),
@@ -1427,6 +1654,20 @@ results_meta = collections.OrderedDict((
         'index': ['rb', 'year'],
         'presets': collections.OrderedDict((
             ('Final BA Map',{'x':'rb', 'y':'CO2 (MMton)', 'explode':'scenario', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
+        )),
+        }
+    ),
+
+    ('Net CO2 Emissions National (MMton)',
+        {'sources': [
+            {'name': 'emit', 'file': 'emit_nat_tech.csv', 'columns': ['tech', 'year', 'CO2 (MMton)']},
+        ],
+        'preprocess': [
+            {'func': net_co2, 'args': {}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Stacked Bars Over Time',{'x':'year', 'y':'CO2 (MMton)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.75'}),
+            ('Cumulative Stacked Bars Over Time',{'x':'year', 'y':'Cumulative CO2 (MMton)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.75'}),
         )),
         }
     ),
@@ -1464,6 +1705,8 @@ results_meta = collections.OrderedDict((
             ('CO2 Price Lines ($/metric ton)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_annual_cap', 'y_scale':'1e-6', 'filter': {'type':['annual_cap','q_annual_cap'],'subtype':['co2']}}),
             ('Energy Price by Timeslice Final ($/MWh)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'scenario', 'chart_type':'Bar', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load'], 'year':'last'}}),
             ('OpRes Price by Timeslice Final ($/MW-h)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'subtype', 'explode_group':'scenario', 'chart_type':'Bar', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_oper_res', 'filter': {'type':['oper_res','q_oper_res'], 'year':'last'}}),
+            ('Energy Price Area by Timeslice Final ($/MWh)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'scenario', 'chart_type':'Area', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load'], 'year':'last'}}),
+            ('OpRes Price Area by Timeslice Final ($/MW-h)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'subtype', 'explode_group':'scenario', 'chart_type':'Area', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_oper_res', 'filter': {'type':['oper_res','q_oper_res'], 'year':'last'}}),
             ('Bulk System Electricity Price ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load']}}),
             ('Total Bulk System Electricity Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode':'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': ['tot', 'q_load']}}),
         )),
@@ -1487,6 +1730,8 @@ results_meta = collections.OrderedDict((
             ('CO2 Price Lines ($/metric ton)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_annual_cap', 'y_scale':'1e-6', 'filter': {'type':['annual_cap','q_annual_cap'],'subtype':['co2']}}),
             ('Energy Price by Timeslice Final ($/MWh)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'scenario', 'chart_type':'Bar', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load'], 'year':'last'}}),
             ('OpRes Price by Timeslice Final ($/MW-h)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'subtype', 'explode_group':'scenario', 'chart_type':'Bar', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_oper_res', 'filter': {'type':['oper_res','q_oper_res'], 'year':'last'}}),
+            ('Energy Price Area by Timeslice Final ($/MWh)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'scenario', 'chart_type':'Area', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load'], 'year':'last'}}),
+            ('OpRes Price Area by Timeslice Final ($/MW-h)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'subtype', 'explode_group':'scenario', 'chart_type':'Area', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_oper_res', 'filter': {'type':['oper_res','q_oper_res'], 'year':'last'}}),
             ('Energy Price Final BA Map ($/MWh)',{'x':'rb', 'y':'$', 'explode': 'scenario', 'explode_group': 'type', 'chart_type':'Area Map', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load'], 'year':'last'}}),
             ('Bulk System Electricity Price ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load']}}),
             ('Total Bulk System Electricity Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode':'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': ['tot', 'q_load']}}),
@@ -1522,8 +1767,8 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Total Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
             ('Total Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}}}),
-            ('2018-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}, 'year': {'start':2018}}}),
-            ('2018-end Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}, 'year': {'start':2018}}}),
+            ('2020-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}, 'year': {'start':2020}}}),
+            ('2020-end Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}, 'year': {'start':2020}}}),
             ('Discounted by Year',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
             ('Discounted by Year No Pol',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_pol_inv}}}),
             ('Undiscounted by Year',{'x':'year','y':'Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
@@ -1543,8 +1788,8 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Total Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
             ('Total Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}}}),
-            ('2018-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}, 'year': {'start':2018}}}),
-            ('2018-end Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}, 'year': {'start':2018}}}),
+            ('2020-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}, 'year': {'start':2020}}}),
+            ('2020-end Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}, 'year': {'start':2020}}}),
             ('Discounted by Year',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
             ('Discounted by Year No Pol',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_pol_inv}}}),
             ('Undiscounted by Year',{'x':'year','y':'Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
@@ -1562,15 +1807,15 @@ results_meta = collections.OrderedDict((
         ],
         'index': ['cost_cat', 'year'],
         'preprocess': [
-            {'func': pre_systemcost, 'args': {'annualize':True}},
+            {'func': pre_systemcost, 'args': {'annualize':True, 'remove_existing':True, 'crf_from_user':True, 'shift_capital':True}},
         ],
         'presets': collections.OrderedDict((
             ('Total Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
             ('Total Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}}}),
             ('2020-2050 Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}, 'year': {'start':2020, 'end':2050}}}),
             ('2020-2050 Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}, 'year': {'start':2020, 'end':2050}}}),
-            ('2018-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}, 'year': {'start':2018}}}),
-            ('2018-end Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}, 'year': {'start':2018}}}),
+            ('2020-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}, 'year': {'start':2020}}}),
+            ('2020-end Discounted No Pol',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_pol_inv}, 'year': {'start':2020}}}),
             ('Discounted by Year',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
             ('Discounted by Year No Pol',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_pol_inv}}}),
             ('Total Undiscounted',{'x':'scenario','y':'Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
@@ -1589,7 +1834,7 @@ results_meta = collections.OrderedDict((
             {'name': 'crf', 'file': '../inputs_case/crf.csv', 'header': None, 'columns': ['year', 'crf']},
         ],
         'preprocess': [
-            {'func': pre_avgprice, 'args': {'National':True}},
+            {'func': pre_avgprice, 'args': {'reg':'National'}},
         ],
         'presets': collections.OrderedDict((
             ('Average Electricity Cost by Year ($/MWh)',{'x':'year','y':'Average cost ($/MWh)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
@@ -1610,7 +1855,7 @@ results_meta = collections.OrderedDict((
             {'name': 'crf', 'file': '../inputs_case/crf.csv', 'header': None, 'columns': ['year', 'crf']},
         ],
         'preprocess': [
-            {'func': pre_avgprice, 'args': {'BA':True}},
+            {'func': pre_avgprice, 'args': {'reg':'BA'}},
         ],
         'presets': collections.OrderedDict((
             ('Average BA-level Electricity Cost by Year ($/MWh)',{'x':'year','y':'Average cost ($/MWh)','series':'cost_cat','explode':'rb','chart_type':'Bar', 'bar_width':'1.75', 'filter': {'cost_cat':{'exclude':costs_orig_inv}}}),
@@ -1657,8 +1902,8 @@ results_meta = collections.OrderedDict((
     ('Value Streams Sequential New Techs',
         {'sources': [
             {'name': 'vs', 'file': 'valuestreams_chosen.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'var_name', 'con_name', '$']},
-            {'name': 'cap', 'file': 'cap_new_icrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'cap', 'file': 'cap_new_ivrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
             {'name': 'pvf_cap', 'file': 'pvf_capital.csv', 'columns': ['year', 'pvfcap']},
             {'name': 'pvf_onm', 'file': 'pvf_onm.csv', 'columns': ['year', 'pvfonm']},
             {'name': 'cost_scale', 'file': 'cost_scale.csv', 'columns': ['cs']},
@@ -1684,42 +1929,11 @@ results_meta = collections.OrderedDict((
         }
     ),
 
-    ('Value Streams Sequential New Techs (uncurt MWh)',
-        {'sources': [
-            {'name': 'vs', 'file': 'valuestreams_chosen.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'var_name', 'con_name', '$']},
-            {'name': 'cap', 'file': 'cap_new_icrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
-            {'name': 'gen_uncurt', 'file': 'gen_icrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
-            {'name': 'pvf_cap', 'file': 'pvf_capital.csv', 'columns': ['year', 'pvfcap']},
-            {'name': 'pvf_onm', 'file': 'pvf_onm.csv', 'columns': ['year', 'pvfonm']},
-            {'name': 'cost_scale', 'file': 'cost_scale.csv', 'columns': ['cs']},
-        ],
-        'preprocess': [
-            {'func': pre_val_streams, 'args': {'investment_only':True, 'uncurt':True}},
-        ],
-        'presets': collections.OrderedDict((
-            ('NVOE over time', {'x':'year','y':'Bulk $ Dis','series':'con_adj','explode':'scenario','explode_group':'tech','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'MWh', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'bar_width':'1.75', 'sync_axes':'No', 'filter': {'con_name':{'exclude':['kW']}}}),
-            ('NVOE final', {'x':'rb','y':'Bulk $ Dis','series':'con_adj','explode':'scenario','explode_group':'tech','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'MWh', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'filter': {'year':'last','con_name':{'exclude':['kW']}}}),
-            ('NVOE final nat', {'x':'tech','y':'Bulk $ Dis','series':'con_adj','explode':'scenario','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'MWh', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'filter': {'year':'last','con_name':{'exclude':['kW']}}}),
-            ('NVOE final nat tech explode', {'x':'scenario','y':'Bulk $ Dis','series':'con_adj','explode':'tech','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'MWh', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'filter': {'year':'last','con_name':{'exclude':['kW']}}}),
-            ('NVOC over time', {'x':'year','y':'Bulk $ Dis','series':'con_adj','explode':'scenario','explode_group':'tech','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'kW', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'bar_width':'1.75', 'sync_axes':'No', 'filter': {'con_name':{'exclude':['MWh']}}}),
-            ('NVOC final', {'x':'rb','y':'Bulk $ Dis','series':'con_adj','explode':'scenario','explode_group':'tech','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'kW', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'filter': {'year':'last','con_name':{'exclude':['MWh']}}}),
-            ('NVOC final nat', {'x':'tech','y':'Bulk $ Dis','series':'con_adj','explode':'scenario','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'kW', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'filter': {'year':'last','con_name':{'exclude':['MWh']}}}),
-            ('NVOC final nat tech explode', {'x':'scenario','y':'Bulk $ Dis','series':'con_adj','explode':'tech','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'kW', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'filter': {'year':'last','con_name':{'exclude':['MWh']}}}),
-            ('LCOE over time', {'x':'year','y':'Bulk $ Dis','series':'con_adj','explode':'scenario','explode_group':'tech','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'MWh', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'bar_width':'1.75', 'sync_axes':'No', 'y_scale':'-1', 'filter': {'con_name':coststreams+['MWh']}}),
-            ('LCOE final', {'x':'rb','y':'Bulk $ Dis','series':'con_adj','explode':'scenario','explode_group':'tech','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'MWh', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'y_scale':'-1', 'filter': {'year':'last','con_name':coststreams+['MWh']}}),
-            ('LCOE final nat', {'x':'tech','y':'Bulk $ Dis','series':'con_adj','explode':'scenario','adv_op':'Ratio', 'adv_col':'con_adj', 'adv_col_base':'MWh', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'y_scale':'-1', 'filter': {'year':'last','con_name':coststreams+['MWh']}}),
-            ('NVOE var-con', {'x':'tech, vintage','y':'Bulk $ Dis','series':'var, con', 'explode': 'scenario', 'adv_op':'Ratio', 'adv_col':'var, con', 'adv_col_base':'MWh, MWh', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'filter': {'con_name':{'exclude':['kW']}}}),
-            ('NVOC var-con', {'x':'tech, vintage','y':'Bulk $ Dis','series':'var, con', 'explode': 'scenario', 'adv_op':'Ratio', 'adv_col':'var, con', 'adv_col_base':'kW, kW', 'chart_type':'Bar', 'plot_width':'600', 'plot_height':'600', 'sync_axes':'No', 'filter': {'con_name':{'exclude':['MWh']}}}),
-        )),
-        }
-    ),
-
     ('Competitiveness Sequential New Techs',
         {'sources': [
             {'name': 'vs', 'file': 'valuestreams_chosen.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'var_name', 'con_name', '$']},
-            {'name': 'cap', 'file': 'cap_new_icrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'cap', 'file': 'cap_new_ivrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
             {'name': 'pvf_cap', 'file': 'pvf_capital.csv', 'columns': ['year', 'pvfcap']},
             {'name': 'pvf_onm', 'file': 'pvf_onm.csv', 'columns': ['year', 'pvfonm']},
             {'name': 'cost_scale', 'file': 'cost_scale.csv', 'columns': ['cs']},
@@ -1754,9 +1968,9 @@ results_meta = collections.OrderedDict((
     ('LCOE ($/MWh) Sequential New Techs (uncurt MWh)',
         {'sources': [
             {'name': 'vs', 'file': 'valuestreams_chosen.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'var_name', 'con_name', '$']},
-            {'name': 'cap', 'file': 'cap_new_icrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
-            {'name': 'gen_uncurt', 'file': 'gen_icrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'cap', 'file': 'cap_new_ivrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'gen_uncurt', 'file': 'gen_ivrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
             {'name': 'pvf_cap', 'file': 'pvf_capital.csv', 'columns': ['year', 'pvfcap']},
             {'name': 'pvf_onm', 'file': 'pvf_onm.csv', 'columns': ['year', 'pvfonm']},
             {'name': 'cost_scale', 'file': 'cost_scale.csv', 'columns': ['cs']},
@@ -1774,8 +1988,8 @@ results_meta = collections.OrderedDict((
     ('Value Streams Sequential Existing Techs',
         {'sources': [
             {'name': 'vs', 'file': 'valuestreams_chosen.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'var_name', 'con_name', '$']},
-            {'name': 'cap', 'file': 'cap_icrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'cap', 'file': 'cap_ivrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
             {'name': 'pvf_cap', 'file': 'pvf_capital.csv', 'columns': ['year', 'pvfcap']},
             {'name': 'pvf_onm', 'file': 'pvf_onm.csv', 'columns': ['year', 'pvfonm']},
             {'name': 'cost_scale', 'file': 'cost_scale.csv', 'columns': ['cs']},
@@ -1795,8 +2009,8 @@ results_meta = collections.OrderedDict((
     ('Value Streams Intertemporal',
         {'sources': [
             {'name': 'vs', 'file': 'valuestreams_chosen.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'var_name', 'con_name', '$']},
-            {'name': 'cap', 'file': 'cap_new_icrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'cap', 'file': 'cap_new_ivrt.csv', 'columns': ['tech', 'vintage', 'region', 'year', 'MW']},
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
             {'name': 'pvf_cap', 'file': 'pvf_capital.csv', 'columns': ['year', 'pvfcap']},
             {'name': 'pvf_onm', 'file': 'pvf_onm.csv', 'columns': ['year', 'pvfonm']},
             {'name': 'cost_scale', 'file': 'cost_scale.csv', 'columns': ['cs']},
@@ -1815,8 +2029,8 @@ results_meta = collections.OrderedDict((
     ('Value Factors Sequential New Techs',
         {'sources': [
             {'name': 'vs', 'file': 'valuestreams_chosen.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'var_name', 'con_name', '$']},
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
-            {'name': 'gen_uncurt', 'file': 'gen_icrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'gen_uncurt', 'file': 'gen_ivrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
             {'name': 'pvf_cap', 'file': 'pvf_capital.csv', 'columns': ['year', 'pvfcap']},
             {'name': 'pvf_onm', 'file': 'pvf_onm.csv', 'columns': ['year', 'pvfonm']},
             {'name': 'cost_scale', 'file': 'cost_scale.csv', 'columns': ['cs']},
@@ -1863,8 +2077,8 @@ results_meta = collections.OrderedDict((
     ('Value Factors Sequential Existing Techs (curtailment caused missing)',
         {'sources': [
             {'name': 'vs', 'file': 'valuestreams_chosen.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'var_name', 'con_name', '$']},
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
-            {'name': 'gen_uncurt', 'file': 'gen_icrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
+            {'name': 'gen_uncurt', 'file': 'gen_ivrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']},
             {'name': 'pvf_cap', 'file': 'pvf_capital.csv', 'columns': ['year', 'pvfcap']},
             {'name': 'pvf_onm', 'file': 'pvf_onm.csv', 'columns': ['year', 'pvfonm']},
             {'name': 'cost_scale', 'file': 'cost_scale.csv', 'columns': ['cs']},
@@ -2000,11 +2214,20 @@ results_meta = collections.OrderedDict((
         )),
         }
     ),
+	('Time Slice Curtailment',
+        {'file':'curt_h.csv',
+        'columns': ['r','timeslice','year','Curt Energy'],
+        'index': ['year','timeslice'],
+        'presets': collections.OrderedDict((
+            ('Curt Rate Over Time',{'x':'year', 'y':'Curt Energy', 'series':'scenario', 'explode':'timeslice','chart_type':'Line'}),
+        )),
+        }
+    ),
 
-    ('Curtailment Rate icrt (Realized)',
+    ('Curtailment Rate ivrt (Realized)',
         {'sources': [
-            {'name': 'gen', 'file': 'gen_icrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year','MWh']},
-            {'name': 'gen_uncurt', 'file': 'gen_icrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year','MWh uncurt']},
+            {'name': 'gen', 'file': 'gen_ivrt.csv', 'columns': ['tech', 'vintage', 'rb', 'year','MWh']},
+            {'name': 'gen_uncurt', 'file': 'gen_ivrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year','MWh uncurt']},
             {'name': 'load', 'file': 'load_rt.csv', 'columns': ['rb', 'year','MWh load']},
         ],
         'preprocess': [
@@ -2060,6 +2283,7 @@ results_meta = collections.OrderedDict((
         'index': ['type', 'year'],
         'presets': collections.OrderedDict((
             ('Transmission Capacity',{'x':'year', 'y':'Amount (GW-mi)', 'series':'scenario', 'explode':'type', 'chart_type':'Line'}),
+            ('Transmission Capacity Agg by type',{'x':'year', 'y':'Amount (GW-mi)', 'series':'scenario', 'chart_type':'Line'}),
         )),
         }
     ),
@@ -2122,7 +2346,7 @@ results_meta = collections.OrderedDict((
         }
     ),
 
-    ('CO2 Price exxon ($/tonne)',
+    ('CO2 Price ($/tonne)',
         {'file':'co2_price.csv',
         'columns': ['year', '$/tonne'],
         'preprocess': [
@@ -2131,6 +2355,20 @@ results_meta = collections.OrderedDict((
         'index': ['year'],
         'presets': collections.OrderedDict((
             ('CO2 price over time',{'chart_type':'Line', 'x':'year', 'y':'$/tonne', 'series':'scenario', }),
+        )),
+        }
+    ),
+
+    ('VRE (TWh) vs Stor In (TWh)',
+        {'sources': [
+            {'name': 'stor', 'file': 'stor_inout.csv', 'columns': ['technology', 'vintage', 'region', 'year', 'type', 'Storage (TWh)']},
+            {'name': 'gen', 'file': 'gen_ann.csv', 'columns': ['technology', 'rb', 'year', 'Generation (TWh)']},
+        ],
+        'preprocess': [
+            {'func': pre_vre_vs_stor, 'args': {}},
+        ],
+        'presets': collections.OrderedDict((
+            ('PV vs Bat',{'x':'PV (TWh)', 'y':'Battery (TWh)', 'series':'scenario', 'chart_type':'Line'}),
         )),
         }
     ),
@@ -2219,7 +2457,156 @@ results_meta = collections.OrderedDict((
         )),
         }
     ),
+
+    ('Curtailment by BA (TWh)',
+        {'file':'curt_ann.csv',
+        'columns': ['rb','year','TWh'],
+        'preprocess': [
+                {'func': scale_column, 'args': {'scale_factor': 1e-6, 'column': 'TWh'}},
+        ],
+        'index': ['rb', 'year'],
+        'presets': collections.OrderedDict((
+            ('PCA Map Final',{'x':'rb', 'y':'TWh', 'explode':'scenario', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
+        )),
+        }
+    ),
+    ('Upgraded Capacity (GW)',
+        {'file':'cap_upgrade.csv',
+        'columns': ['tech', 'region', 'year', 'Capacity (GW)'],
+        'preprocess': [
+#            {'func': sum_over_cols, 'args': {'drop_cols': ['region'], 'group_cols': ['tech', 'year']}},
+            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Capacity (GW)'}},
+        ],
+        'presets': collections.OrderedDict((
+			('Stacked Bars', {'chart_type':'Bar', 'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'filter': {}}),
+#            ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
+#            ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+#            ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
+        )),
+        }
+    ),
+    ('Load (TWh)',
+        {'file':'load_rt.csv',
+        'columns': ['region', 'year', 'Load (TWh)'],
+        'preprocess': [
+            {'func': sum_over_cols, 'args': {'drop_cols': ['region'], 'group_cols': ['year']}},
+            {'func': scale_column, 'args': {'scale_factor': .000001, 'column':'Load (TWh)'}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Lines',{'x':'year', 'y':'Load (TWh)', 'series':'scenario', 'chart_type':'Line'}),
+        )),
+        }
+    ),
+
+    ('Production Load (TWh)',
+        {'file':'prod_load_ann.csv',
+        'columns': ['region', 'year', 'Load (TWh)'],
+        'preprocess': [
+            {'func': sum_over_cols, 'args': {'drop_cols': ['region'], 'group_cols': ['year']}},
+            {'func': scale_column, 'args': {'scale_factor': .000001, 'column':'Load (TWh)'}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Lines',{'x':'year', 'y':'Load (TWh)', 'series':'scenario', 'chart_type':'Line'}),
+        )),
+        }
+    ),
+
+    ('Production (Million tonnes)',
+        {'file':'prod_produce_ann.csv',
+        'columns': ['tech', 'region', 'year', 'Production (Million tonnes)'],
+        'preprocess': [
+            {'func': scale_column, 'args': {'scale_factor': .000001, 'column':'Production (Million tonnes)'}},
+        ],
+        'presets': collections.OrderedDict((
+			('H2 Stacked Bars', {'chart_type':'Bar', 'x':'year', 'y':'Production (Million tonnes)', 'series':'tech', 'explode':'scenario', 'bar_width':'1.75', 'filter':{'tech':h2_techs}}),
+			('DAC CO2 Capture Lines', {'chart_type':'Line', 'x':'year', 'y':'Production (Million tonnes)', 'series':'scenario', 'filter':{'tech':['dac']}}),
+        )),
+        }
+    ),
+
+    ('Hydrogen Price ($/kg)',
+        {'file':'prod_h2_price.csv',
+        'columns': ['product', 'year', 'Price ($/kg)'],
+        'preprocess': [
+            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Price ($/kg)'}},
+            {'func': apply_inflation, 'args': {'column': 'Price ($/kg)'}},
+        ],
+        'presets': collections.OrderedDict((
+			('Lines',{'x':'year', 'y':'Price ($/kg)', 'series':'scenario', 'explode':'product', 'chart_type':'Line'}),
+        )),
+        }
+    ),
+
+    ('H2-CT Fuel Price ($/mmBTU)',
+        {'file':'prod_rect_cost.csv',
+        'columns': ['product', 'year', 'Price ($/mmBTU)'],
+        'preprocess': [
+            {'func': apply_inflation, 'args': {'column': 'Price ($/mmBTU)'}},
+        ],
+        'presets': collections.OrderedDict((
+			('Lines',{'x':'year', 'y':'Price ($/mmBTU)', 'series':'scenario', 'explode':'product', 'chart_type':'Line', 'filter': {'product':['h2_green']}}),
+        )),
+        }
+    ),
+
+    ('Retail rate (¢/kWh)',
+        {'file': 'retail/retail_rate_USA_centsperkWh.csv',
+        'columns': ['t', 'retailrate', 'source'],
+        'presets': collections.OrderedDict((
+            ('Lines',{'x':'t', 'y':'retailrate', 'series':'source', 'chart_type':'Line'}),
+        )),
+        }
+    ),
+
+    ('Runtime',
+        {'sources': [
+            {'name':'runtime', 'file':'../meta.csv', 'columns':['computer', 'repo', 'branch', 'commit', 'Unnamed: 4']},
+        ],
+        'preprocess': [
+            {'func': pre_runtime, 'args': {}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Stacked Bars',{'x':'scenario', 'y':'processtime', 'series':'process', 'chart_type':'Bar'}),
+            ('Stacked Bars by Year',{'x':'year', 'y':'processtime', 'series':'process', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.95'}),
+        )),
+        }
+    ),
 ))
+
+#Add results that are close copies of others
+new_result = 'Value Streams Sequential New Techs (uncurt MWh)'
+results_meta[new_result] = copy.deepcopy(results_meta['Value Streams Sequential New Techs'])
+results_meta[new_result]['sources'].append({'name': 'gen_uncurt', 'file': 'gen_ivrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']})
+results_meta[new_result]['preprocess'][0]['args']['uncurt'] = True
+
+new_result = 'Competitiveness Sequential New Techs (uncurt MWh)'
+results_meta[new_result] = copy.deepcopy(results_meta['Competitiveness Sequential New Techs'])
+results_meta[new_result]['sources'].append({'name': 'gen_uncurt', 'file': 'gen_ivrt_uncurt.csv', 'columns': ['tech', 'vintage', 'rb', 'year', 'MWh']})
+results_meta[new_result]['preprocess'][0]['args']['uncurt'] = True
+
+new_result = 'Sys Cost Annualized Including Existing (Bil $)'
+results_meta[new_result] = copy.deepcopy(results_meta['Sys Cost Annualized (Bil $)'])
+del results_meta[new_result]['preprocess'][0]['args']['remove_existing']
+
+new_result = 'Capacity BA (GW) [no-index]'
+results_meta[new_result] = copy.deepcopy(results_meta['Capacity BA (GW)'])
+del results_meta[new_result]['index']
+
+new_result = 'Capacity Resource Region (GW) [no-index]'
+results_meta[new_result] = copy.deepcopy(results_meta['Capacity Resource Region (GW)'])
+del results_meta[new_result]['index']
+
+new_result = 'Generation BA (TWh) [no-index]'
+results_meta[new_result] = copy.deepcopy(results_meta['Generation BA (TWh)'])
+del results_meta[new_result]['index']
+
+new_result = 'New Annual Capacity BA (GW) [no-index]'
+results_meta[new_result] = copy.deepcopy(results_meta['New Annual Capacity BA (GW)'])
+del results_meta[new_result]['index']
+
+new_result = 'Annual Retirements BA (GW) [no-index]'
+results_meta[new_result] = copy.deepcopy(results_meta['Annual Retirements BA (GW)'])
+del results_meta[new_result]['index']
 
 #Sort alphabetically
 results_meta = collections.OrderedDict(sorted(results_meta.items()))

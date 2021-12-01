@@ -4,6 +4,7 @@ battery_6,6
 battery_8,8
 battery_10,10
 pumped-hydro,12
+pumped-hydro-flex,12
 CAES,12
 csp1_1,14
 csp1_2,14

@@ -2,23 +2,23 @@
 import pandas as pd
 import numpy as np
 import csv
-import scipy
 import os
 import sys
 import itertools
 
-# Turning off pandas' SettingWithCopyWarning for chained assignments (which would otherwise be raised for an issue that isn't a problem). 
+# Turning off pandas' SettingWithCopyWarning for chained assignments 
+# (which would otherwise be raised for an issue that isn't a problem). 
 pd.options.mode.chained_assignment = None
 
 
 #%%
 class scen_settings():
         
-    def __init__(self, dollar_year, tech_groups, input_dir):
+    def __init__(self, dollar_year, tech_groups, input_dir, switches):
         self.dollar_year = dollar_year
         self.tech_groups = tech_groups
         self.input_dir = input_dir
-
+        self.switches = switches
 
 
 #%%
@@ -28,7 +28,8 @@ def import_tech_groups(file_path):
     Used during the import process -- if a particular assumption applies to a family of technologies, 
         this dictionary creates the mapping. 
         
-    First column of the input csv is the dictionary key for that tech family. There cannot be duplicate keys, and they must differ from a tech name. 
+    First column of the input csv is the dictionary key for that tech family. 
+    There cannot be duplicate keys, and they must differ from a tech name. 
     '''    
     
         
@@ -48,8 +49,10 @@ def import_tech_groups(file_path):
 #%%
 def ingest_years(year_set_suffix, sys_eval_years, end_year):
     '''
-    modeled_years: The years that will be solved in the GAMS model. Specified by the modeled_years input, cut off by the specified end year. 
-    years: All years, not just solve years. Bounded by minimum solve year and max solve year + however long the model looks ahead for evaluating technologies
+    modeled_years: The years that will be solved in the GAMS model. 
+        Specified by the modeled_years input, cut off by the specified end year. 
+    years: All years, not just solve years. Bounded by minimum solve year and 
+        max solve year + however long the model looks ahead for evaluating technologies
     year_map: Mapping of each year to the solve year it is associated with
     
     '''
@@ -66,7 +69,8 @@ def ingest_years(year_set_suffix, sys_eval_years, end_year):
     # Extend beyond the last modeled year by the evaluation horizon of the model
     years = np.arange(np.min(modeled_years), np.max(modeled_years)+sys_eval_years, 1)
 
-    # Create the mapping between years and modeled_year (used for grouping values to their modeled year later), merge
+    # Create the mapping between years and modeled_year 
+    # (used for grouping values to their modeled year later), merge
     # Contains additional years beyond final year for handling termination year continuation 
     year_map = pd.DataFrame(data={'t':np.arange(np.min(modeled_years), np.max(years)+1, 1)})
     year_map['modeled_year'] = [np.max(modeled_years[year>=modeled_years]) for year in year_map['t']]
@@ -103,13 +107,14 @@ def build_dfs(years, techs, regions, ivt_df, year_map, reg_switch):
     df_inv: df for investment-related parameters (e.g. capital costs). 
     
     Notes:
-     - available_for_build means that that [i,v] combo is specified as the vintage available for investment in
-       the given year, per the ivt file. 
+     - available_for_build means that that [i,v] combo is specified as the vintage available 
+       for investment in the given year, per the ivt file. 
      
     '''
     
     # Downselect to only the specified region
-    # Only [usa] option right now. Better to have 'region_type' and 'regions' option in inputs, and remove rfeas from GAMS. 
+    # Only [usa] option right now. Better to have 'region_type' and 'regions' option in inputs, 
+    # and remove rfeas from GAMS. 
     if reg_switch=='usa':    
         regions = regions[regions['country']==reg_switch]
     
@@ -132,12 +137,16 @@ def build_dfs(years, techs, regions, ivt_df, year_map, reg_switch):
     itv_map = pd.DataFrame()
     for tech in techs['i']:
         max_c = np.max(ivt_long[ivt_long['i']==tech]['v'])
-        tech_itv_df = pd.DataFrame(list(itertools.product(years, np.arange(1,max_c+1,1))), columns=['t', 'v'])
+        tech_itv_df = pd.DataFrame(
+            list(itertools.product(years, np.arange(1,max_c+1,1))), 
+            columns=['t', 'v'])
         tech_itv_df['i'] = tech
         itv_map = pd.concat([itv_map, tech_itv_df], ignore_index=True)
     itv_map = itv_map.merge(iv_year_bounds, on=['i', 'v'])
-    itv_map = itv_map[itv_map['t']>=itv_map['first_year_v_available']] # drop all [i,v] combos before the year that v is first available
-    itv_map['available_for_build'] = np.where(itv_map['t']<=itv_map['last_year'], True, False) # Flag which vintages are available for building in any given year    
+    # drop all [i,v] combos before the year that v is first available
+    itv_map = itv_map[itv_map['t']>=itv_map['first_year_v_available']]
+    # Flag which vintages are available for building in any given year    
+    itv_map['available_for_build'] = np.where(itv_map['t']<=itv_map['last_year'], True, False)
     
     # Split regions into 'p' and 's' regions
     p_regions = regions['p'].drop_duplicates()
@@ -147,7 +156,8 @@ def build_dfs(years, techs, regions, ivt_df, year_map, reg_switch):
     p_techs = techs[techs['region_type']=='p']
     s_techs = techs[techs['region_type']=='s']
 
-    # Remove duplicates for each of 's' and 'p' regions, combine into stacked df that has both types in an 'r' column
+    # Remove duplicates for each of 's' and 'p' regions, 
+    # combine into stacked df that has both types in an 'r' column
     regions_s = regions.drop(columns='p').drop_duplicates(keep='first')
     regions_s = regions_s.rename(columns={'s':'r'})
     regions_p = regions.drop(columns='s').drop_duplicates(keep='first')
@@ -169,7 +179,8 @@ def build_dfs(years, techs, regions, ivt_df, year_map, reg_switch):
     itv_map_inv = itv_map[itv_map['available_for_build']==True]
     
     # Merge on itv_map_inv to expand by [v]
-    df_inv = df_inv.merge(itv_map_inv[['i', 't', 'v', 'first_year_v_available']], on=['i', 't']) # Expand for [v]
+    # Expand for [v]
+    df_inv = df_inv.merge(itv_map_inv[['i', 't', 'v', 'first_year_v_available']], on=['i', 't'])
     
     # Merge on year_map, for useful information later on
     df_inv = df_inv.merge(year_map, on='t', how='left')
@@ -179,14 +190,17 @@ def build_dfs(years, techs, regions, ivt_df, year_map, reg_switch):
 
 
 #%%
-def import_sys_financials(financials_sys_suffix, inflation_df, modeled_years, years, year_map, sys_eval_years, scen_settings):
+def import_sys_financials(financials_sys_suffix, inflation_df, modeled_years, 
+                          years, year_map, sys_eval_years, scen_settings):
     '''
     Import system-wide financial parameters, and calculate discount rate from them
     
     '''
     
     # Import and merge on inflation rate data
-    sys_financials = import_data('financials_sys', financials_sys_suffix, ['t'], scen_settings=scen_settings) 
+    sys_financials = import_data(
+        file_root='financials_sys', file_suffix=financials_sys_suffix, 
+        indices=['t'], scen_settings=scen_settings) 
     sys_financials = sys_financials.merge(inflation_df, on='t', how='left')
     
     # Calculate system-wide discount rates, directly using WACC as discount rate       
@@ -194,21 +208,24 @@ def import_sys_financials(financials_sys_suffix, inflation_df, modeled_years, ye
                                             + sys_financials['debt_fraction']*(sys_financials['interest_rate_nom'] - 1)
                                             * (1 - sys_financials['tax_rate']) + 1)
 
-    sys_financials['d_nom'] = (sys_financials['debt_fraction']*(sys_financials['interest_rate_nom']-1.0)*(1.0-sys_financials['tax_rate'])
-                              + (1.0-sys_financials['debt_fraction'])*(sys_financials['rroe_nom']-1.0)) + 1.0    
+    sys_financials['d_nom'] = (
+        sys_financials['debt_fraction'] * (sys_financials['interest_rate_nom']-1.0) * (1.0-sys_financials['tax_rate'])
+        + (1.0-sys_financials['debt_fraction']) * (sys_financials['rroe_nom']-1.0)) + 1.0    
     
     
     sys_financials['d_real'] = sys_financials['d_nom'] / sys_financials['inflation_rate']
             
     
     # Calculate present value factors. 
-    # Treating as pvf at the beginning of the year, so the first year equals 1, all other years are discounted by cumulation of preceding year's discount rates
+    # Treating as pvf at the beginning of the year, so the first year equals 1, 
+    # all other years are discounted by cumulation of preceding year's discount rates
     sys_financials = sys_financials.set_index('t')
 
     # Calculate pvf_capital. 
     sys_financials['pvf_capital'] = 1
     for year in np.arange(np.min(modeled_years)+1, np.max(years)+1):
-        sys_financials.loc[year,'pvf_capital'] = sys_financials.loc[year-1,'pvf_capital'] / sys_financials.loc[year-1,'d_real']
+        sys_financials.loc[year,'pvf_capital'] = (
+            sys_financials.loc[year-1,'pvf_capital'] / sys_financials.loc[year-1,'d_real'])
         
     # Calculate pvf_onm (only for intertemporal mode). 
     sys_financials.loc[np.min(modeled_years), 'pvf_onm'] = 1 / sys_financials.loc[np.min(modeled_years),'d_real']
@@ -234,11 +251,14 @@ def import_data(file_root, file_suffix, indices, scen_settings, inflation_df=[],
     '''
     Description: General importer that does several useful things
         - If there are currency data inputs, this adjusts them to the model's dollar year
-        - If there is an 'i' column, it will expand any tech groups to their full members (making it easier to input data for groups)
-        - Checks to make sure there wasn't duplicated entries for the specified indices (could be a problem when expanding)
+        - If there is an 'i' column, it will expand any tech groups to their full members 
+            (making it easier to input data for groups)
+        - Checks to make sure there wasn't duplicated entries for the specified indices 
+            (could be a problem when expanding)
         
     Arguments:
-        indices = column headers that indicate unique entries. E.g. for [i,t,cap_cost,cost_mult], [i,t] would be the indices. 
+        indices = column headers that indicate unique entries. 
+            E.g. for [i,t,cap_cost,cost_mult], [i,t] would be the indices. 
     
     
     '''
@@ -267,18 +287,24 @@ def import_data(file_root, file_suffix, indices, scen_settings, inflation_df=[],
     # any columns with currency data. If currency data exists, adjust the dollar
     # year of the input data to the scen_settings's dollar year
     if os.path.isfile(os.path.join(scen_settings.input_dir, file_root, 'currency_%s.csv' % file_root)) and adjust_units==True:
-        currency_meta = pd.read_csv(os.path.join(scen_settings.input_dir, file_root, 'currency_%s.csv' % file_root), index_col='file')
+        currency_meta = pd.read_csv(
+            os.path.join(scen_settings.input_dir, file_root, 'currency_%s.csv' % file_root), 
+            index_col='file')
         inflation_df = inflation_df.set_index('t')
                 
         # Check if a row exists in file_root_currency, for the specified input data
         if file_suffix not in currency_meta.index:
-            raise Exception('The input data {0}_{1} has a currency input\nbut the currency type is not specified. In the {0} data\ndirectory, open the currency_{0}.csv and enter a new row with metadata\nfor dataset {0}_{1}.csv'.format(file_root, file_suffix))
+            raise Exception(
+                'The input data {0}_{1} has a currency input\nbut the currency type is not '
+                'specified. In the {0} data\ndirectory, open the currency_{0}.csv and enter a '
+                'new row with metadata\nfor dataset {0}_{1}.csv'.format(file_root, file_suffix))
             
         scenario_currency = currency_meta.loc[file_suffix, :]
     
         for col in scenario_currency.index:
             input_currency = scenario_currency[col]
-            input_dollar_year = int(input_currency.replace('USD','')) # Remove the USD. This should be generalized when other currencies are introduced.
+            # Remove the USD. This should be generalized when other currencies are introduced.
+            input_dollar_year = int(input_currency.replace('USD',''))
             
             if input_dollar_year < scen_settings.dollar_year:
                 inflation_adjust = np.array(np.cumprod(inflation_df.loc[input_dollar_year+1:scen_settings.dollar_year]))[-1]
@@ -300,29 +326,83 @@ def import_data(file_root, file_suffix, indices, scen_settings, inflation_df=[],
     return df
    
 
+def append_pvb_parameters(dfin, tech_to_copy='battery_4', column_scaler=None, pvb_types=[1,2,3]):
+    """
+    Copies the parameters for tech_to_copy (typically standalone batteries, except for the ITC, 
+    where we copy from UPV) for batteries in PV+battery systems and returns a copy of the input 
+    dataframe with the PV+B parameters appended.
+
+    Inputs
+    ------
+    dfin: Original inputs dataframe that includes standalone battery assumptions.
+        Must have a column labeled i containing entries for tech_to_copy.
+    tech_to_copy: default='battery_4'. Technology from which to copy parameters for PV+battery.
+    column_scaler: None or dict. If dict, format should be {column_to_scale: scaler}.
+    pvb_types: default=[1,2,3]. Set of pvb technology types.
+        NOTE: If PV+B techs are added to set i "generation technologies" in b_inputs,
+        make sure to adjust the pvb_types list here.
+
+    Outputs
+    -------
+    dfout: pd.DataFrame consisting of PV+B parameters appended to input dataframe.
+    """
+    ### Get the PVB classes from upv
+    pvb_classes = [i.split('_')[1] for i in dfin.i.unique() if i.startswith('upv')]
+    ### Get values for tech_to_copy
+    copy_params = dfin.set_index('i').loc[[tech_to_copy]].reset_index(drop=True).copy()
+    ### Create output dataframe, copying tech_to_copy assumptions for PV batteries
+    append_pvb_params = pd.concat({
+        'pvb{}_{}'.format(pvb_type, pvb_class): copy_params
+        for pvb_type in pvb_types for pvb_class in pvb_classes
+    }).reset_index(level=0).rename(columns={'level_0':'i'})
+    ### Scale the columns in columns_scaler if necessary
+    if column_scaler is not None:
+        for col, scaler in column_scaler.items():
+            append_pvb_params[col] = (append_pvb_params[col] * scaler).round(5)
+    ### Append to the original dataframe and return
+    dfout = dfin.append(append_pvb_params, ignore_index=True)
+    
+    return dfout
+
+
 #%% 
-def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix, ivt_df, years, sys_financials, inflation_df, scen_settings):
+def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix, ivt_df, years, 
+                              sys_financials, inflation_df, scen_settings):
     '''      
         
-    This code assumes any generation policy (gen_pol) is a tax credit, therefore needs to be adjusted later to get in pre-tax terms. 
-        If a non-tax-credit generation policy is ever implemented, it would be best to split tax and non-tax apart and sum them together later.
+    This code assumes any generation policy (gen_pol) is a tax credit, 
+        therefore needs to be adjusted later to get in pre-tax terms. 
+        If a non-tax-credit generation policy is ever implemented, 
+        it would be best to split tax and non-tax apart and sum them together later.
         
     Other assumptions:
-        - All eligibility of incentives is assumed to be "start construction", as opposed to "start operation". Therefore, all
-            incentives are time shifted by construction times. If a "start operation" incentive is implemented, a column to specify
+        - All eligibility of incentives is assumed to be "start construction", as opposed to 
+            "start operation". Therefore, all incentives are time shifted by construction times. 
+            If a "start operation" incentive is implemented, a column to specify
             whether a given incentive is shifted or not should be added to the input file. 
             
     Notes:
-        - Data handling for incentives are more difficult to generalize then other model inputs. This code may be useful for new 
-            incentives, but the processed model inputs for any new incentive should be examined and custom code may need to be written.
-        - xx_monetized is the value (or fraction) of an incentive, after penalizing it for the costs to monetize, either a time-value-of-money
-            "penalty" due to having to wait until tax burden is sufficient, or through the costs of monetizing through tax equity
+        - Data handling for incentives are more difficult to generalize then other model inputs. 
+            This code may be useful for new incentives, but the processed model inputs for any 
+            new incentive should be examined and custom code may need to be written.
+        - xx_monetized is the value (or fraction) of an incentive, after penalizing it for the 
+            costs to monetize, either a time-value-of-money "penalty" due to having to wait until 
+            tax burden is sufficient, or through the costs of monetizing through tax equity
     
     '''
-    
     # Import construction times
-    construction_times = import_data('construction_times', construction_times_suffix, ['i', 't_online'], scen_settings=scen_settings, adjust_units=False)
-    construction_times['t_start_construction'] = construction_times['t_online'].astype(int) - construction_times['construction_time'].astype(int)
+    construction_times = import_data(
+        file_root='construction_times', file_suffix=construction_times_suffix, 
+        indices=['i', 't_online'], 
+        scen_settings=scen_settings, adjust_units=False)
+    ### Apply the standalone battery construction times to hybrid PV batteries
+    construction_times = append_pvb_parameters(
+        dfin=construction_times, 
+        tech_to_copy='battery_{}'.format(scen_settings.switches['GSw_PVB_Dur']))
+
+    construction_times['t_start_construction'] = (
+        construction_times['t_online'].astype(int) 
+        - construction_times['construction_time'].astype(int))
     construction_times = construction_times.rename(columns={'t_online':'t'})
     
     # Expand for subtechs, melt
@@ -332,7 +412,17 @@ def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix, 
     ivt_long['t'] = ivt_long['t'].astype(int)
     
     # Import incentives, determine the year the tech would be built based on construction times
-    incentive_df = import_data('incentives', incentive_file_suffix, ['i','country','t_start_construction'], inflation_df=inflation_df, scen_settings=scen_settings)
+    incentive_df = import_data(
+        file_root='incentives', file_suffix=incentive_file_suffix, 
+        indices=['i','country','t_start_construction'], 
+        inflation_df=inflation_df, scen_settings=scen_settings)
+    ### Add the hybrid PV+battery incentives (in this case inherited from upv, not battery)
+    incentive_df = append_pvb_parameters(
+        dfin=incentive_df, tech_to_copy='upv_1', 
+        column_scaler={'itc_frac': float(scen_settings.switches['GSw_PVB_ITC_Qual_Award'])}
+    )
+
+    # Merge with construction start years
     incentive_df = incentive_df.merge(construction_times, on=['i', 't_start_construction'], how='left')
 
     # Because of changing construction durations, some incentives don't apply to any online years. Drop those rows. 
@@ -375,31 +465,49 @@ def calc_financial_multipliers(df_inv, construction_schedules, depreciation_sche
     # which would result in a penalty here. Conversely, some type of government loan program
     # could result in overall cheaper financing, which would be represented as a benefit here. 
 
-    df_inv['financing_risk_mult'] = 1.0 + df_inv['finance_diff_real'] * ((1-(1/df_inv['d_real']**df_inv['eval_period']))/(df_inv['d_real']-1.0))
+    df_inv['financing_risk_mult'] = 1.0 + df_inv['finance_diff_real'] * (
+        (1-(1/df_inv['d_real']**df_inv['eval_period']))/(df_inv['d_real']-1.0))
 
     
     #################### Calculate Financial Multiplier  ############################
     df_inv['itc_frac_monetized'] = df_inv['itc_frac_monetized'].fillna(0)
     
     # Multiply the Overnight Capital Cost (OCC) by this to arrive at the total CAPEX    
-    Fin = 1 + (1 - np.array(df_inv['tax_rate'])).reshape(len(df_inv),1) * (np.power.outer(df_inv['interest_rate_nom'].values, scipy.append([0],scipy.arange(0.5,10.5,1.)))  - 1)
+    Fin = 1 + (1 - np.array(df_inv['tax_rate'])).reshape(len(df_inv),1) * (
+        np.power.outer(df_inv['interest_rate_nom'].values, np.append([0],np.arange(0.5,10.5,1.)))
+        - 1)
 
     # Calculate the construction cost multiplier
     df_inv['CCmult'] = np.array(np.sum(construction_schedules[df_inv['construction_sch']].T * Fin, axis=1))
 
     # Calculate the (fractional) present value of depreciation 
-    df_inv['PV_fraction_of_depreciation'] = np.array(np.sum(depreciation_schedules[df_inv['depreciation_sch'].astype(str)].T / np.power.outer(df_inv['d_nom'].values, scipy.arange(1,22)), axis=1))
+    df_inv['PV_fraction_of_depreciation'] = np.array(np.sum(
+        depreciation_schedules[df_inv['depreciation_sch'].astype(str)].T / np.power.outer(df_inv['d_nom'].values, 
+        np.arange(1,22)), 
+        axis=1))
     
     # Calculate the Degradation_Adjustment
     if(timetype == 'seq'):
-        df_inv['Degradation_Adj'] = df_inv.apply(lambda x: calc_degradation_adj(x['d_real'],x['eval_period'],x['annual_degradation']),axis=1)    
+        df_inv['Degradation_Adj'] = df_inv.apply(
+            lambda x: calc_degradation_adj(x['d_real'],x['eval_period'],x['annual_degradation']),
+            axis=1)
     else:
         df_inv['Degradation_Adj'] = 1.0
 
     # Calculate the financial multiplier
-    df_inv['finMult'] = df_inv['CCmult'] / (1 - df_inv['tax_rate']) * (1 - df_inv['tax_rate'] * (1-df_inv['itc_frac_monetized']/2)*df_inv['PV_fraction_of_depreciation'] - df_inv['itc_frac_monetized'])*df_inv['Degradation_Adj'] 
-    df_inv['finMult_noITC'] = df_inv['CCmult'] / (1 - df_inv['tax_rate']) * (1 - df_inv['tax_rate'] *df_inv['PV_fraction_of_depreciation'] )*df_inv['Degradation_Adj'] 
-    
+    df_inv['finMult'] = (
+        df_inv['CCmult'] / (1 - df_inv['tax_rate']) 
+        * (1 
+           - df_inv['tax_rate'] * (1-df_inv['itc_frac_monetized']/2) * df_inv['PV_fraction_of_depreciation'] 
+           - df_inv['itc_frac_monetized'])
+        * df_inv['Degradation_Adj']
+    )
+    df_inv['finMult_noITC'] = (
+        df_inv['CCmult'] 
+        / (1 - df_inv['tax_rate']) 
+        * (1 - df_inv['tax_rate'] * df_inv['PV_fraction_of_depreciation'] ) 
+        * df_inv['Degradation_Adj']
+    )
         
     return df_inv
 
@@ -422,9 +530,14 @@ def calc_ptc_unit_value(df_inv):
     df_inv['ptc_grossup_value'] = df_inv['ptc_value']*(1/(1-df_inv['tax_rate']) - 1.0)
 
     
-    # ptc_unit_value is the full present-value of the PTC over its duration (in pretax terms, after penalty of monetization is applied),
-    # expressed in "unit" terms, in this case meaning this would be the value if a 1 MW generator was operated at CF=1 for one hour with no curtailment. 
-    df_inv['ptc_unit_value'] = df_inv['ptc_value_monetized_posttax'] * ((1-(1/df_inv['d_real']**df_inv['ptc_dur']))/(df_inv['d_real']-1.0))
+    # ptc_unit_value is the full present-value of the PTC over its duration 
+    # (in pretax terms, after penalty of monetization is applied),
+    # expressed in "unit" terms, in this case meaning this would be the value if a 
+    # 1 MW generator was operated at CF=1 for one hour with no curtailment. 
+    df_inv['ptc_unit_value'] = (
+        df_inv['ptc_value_monetized_posttax'] 
+        * ((1-(1/df_inv['d_real']**df_inv['ptc_dur']))/(df_inv['d_real']-1.0))
+    )
             
     return df_inv
 
@@ -452,8 +565,11 @@ def inv_param_exporter(df, modeled_years, parameter, indices, file_name, output_
     df_check_size = df_check_size.drop_duplicates()
     
     if len(df_param) != len(df_check_size):
-        print('Attempting to collapse parameter down, but it varies across a non-specified index\nParameter:', parameter)
-        print('To debug, use df_param.duplicated(indices), pick something that is duplicated, then filter down to that\nin the larger df, looking for reasons why it would vary across the indices given.')
+        print('Attempting to collapse parameter down, but it varies across a non-specified '
+              'index\nParameter:', parameter)
+        print('To debug, use df_param.duplicated(indices), pick something that is duplicated, '
+              'then filter down to that\nin the larger df, looking for reasons why it would '
+              'vary across the indices given.')
         sys.exit()
 
     df_param[parameter] = np.round(df_param[parameter], 6)
