@@ -5221,12 +5221,10 @@ $onlisting
 ;
 
 * Change PSH default duration to 10 hours if using a corresponding supply curve
-$ifthen.pshdur %pshsupplycurve% == "10hr_15bin_wcontingency"
+$ifthen.pshdur %pshsupplycurve% == "10hr_15bin_dec2021"
 storage_duration(i)$psh(i) = 10 ;
-$elseif.pshdur %pshsupplycurve% == "8hr_15bin_wcontingency"
+$elseif.pshdur %pshsupplycurve% == "8hr_15bin_dec2021"
 storage_duration(i)$psh(i) = 8 ;
-$elseif.pshdur %pshsupplycurve% == "10hr_15bin_wcontingency_hicost"
-storage_duration(i)$psh(i) = 10 ;
 $endif.pshdur
 
 storage_duration(i)$[i_water_cooling(i)$Sw_WaterMain] =
