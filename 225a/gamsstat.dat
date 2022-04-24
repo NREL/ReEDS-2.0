@@ -1,0 +1,1384 @@
+=C
+=CGUSS             24.7.4 r58773 Released Sep 19, 2016 WEI x86 64bit/MS Windows 
+=0GUSS             24.7.4 r58773 Released Sep 19, 2016 WEI x86 64bit/MS Windows 
+=C--- Scenario Variable with potential updates identified: net_load
+=C--- Scenario Variable with potential updates identified: cap_max
+=C--- Scenario Variable with potential updates identified: hydro_gen
+=C--- Variable with potential bound updates identified:    GEN
+=1
+=0IBM ILOG CPLEX   24.7.4 r58773 Released Sep 19, 2016 WEI x86 64bit/MS Windows 
+=1
+
+IBM ILOG CPLEX   24.7.4 r58773 Released Sep 19, 2016 WEI x86 64bit/MS Windows 
+=2
+=1
+--- GAMS/Cplex licensed for continuous and discrete problems.
+=2
+=1
+Cplex 12.6.3.0
+
+=2
+ 
+ 
+--------------------------------------------------------------
+CONTROL FILE STATISTICS
+--------------------------------------------------------------
+Rows : 12507, columns : 17001, nonzeroes : 44715
+Free Rows          : 0
+Iteration limit    : 2000000000
+Resource  limit    : 5.000000e+005
+Objective variable : 12480
+Objective sense    : minimize
+Advanced basis     : no
+ 
+ 
+=1
+Reading parameter(s) from "C:\Users\KDUWADI\Desktop\NREL_Projects\ReEDs\ReEDS-2.0\cplex.opt"
+=2
+=1
+>>  threads = 4
+=2
+=1
+>>  lpmethod = 4
+=2
+=1
+>>  advind 0
+=2
+=1
+>>  *reslim 100000
+=2
+=1
+>>  scaind 1
+=2
+=1
+>>  aggind 5
+=2
+=1
+Finished reading from "C:\Users\KDUWADI\Desktop\NREL_Projects\ReEDs\ReEDS-2.0\cplex.opt"
+=2
+
+
+Option Values:
+----------------------------------------------------
+usebasis              0
+cutoff                0
+tryint                0
+domlim                0
+advind                0
+aggcutlim             3
+aggfill               10
+aggind                5
+auxrootthreads        0
+baralg                0
+barcolnz              0
+barcrossalg           0
+bardisplay            1
+barepcomp             1e-008
+bargrowth             1e+012
+baritlim              2000000000
+barmaxcor             -1
+barobjrng             1e+020
+barorder              0
+barqcpepcomp          1e-007
+barstartalg           1
+bbinterval            7
+bndstrenind           -1
+bqpcuts               0
+brdir                 0
+bttol                 0.9999
+calcqcpduals          1
+cliques               0
+clocktype             0
+clonelog              0
+coeredind             -1
+computeserver        
+covers                0
+cpumask               auto
+craind                1
+crossoveralg          default
+cutlo                 -1e+075
+cutpass               0
+cuts                  0
+cutsfactor            -1
+cutup                 1e+075
+depind                -1
+dettilim              1e+075
+disjcuts              0
+divetype              0
+divfltup              1e+299
+divfltlo              -1e+299
+.divflt               0
+dpriind               0
+dtprefix              bnd
+dtterm                1
+dumpcuts              0
+dumptree              0
+dumplp                0
+eachcutlim            2100000000
+epagap                1e-006
+epgap                 0.0001
+epint                 1e-005
+epmrk                 0.01
+epopt                 1e-006
+epper                 1e-006
+eprelax               1e-006
+eprhs                 1e-006
+feasopt               0
+feasoptmode           0
+.feaspref             1
+fixoptfile            
+flowcovers            0
+flowpaths             0
+flushfiles            0
+fpheur                0
+fraccand              200
+fraccuts              0
+fracpass              0
+freegamsmodel         0
+gubcovers             0
+heurfreq              0
+iafile                
+iatriggerfile         
+iatriggertime         60
+iis                   0
+implbd                0
+interactive           0
+intsollim             2100000000
+itlim                 2100000000
+lbheur                0
+liftprojcuts          0
+lpalg                 default
+lpmethod              4
+ltol                  0
+mcfcuts               0
+memoryemphasis        0
+localimplied          0
+mipdisplay            4
+mipemphasis           0
+mipkappastats         -1
+mipinterval           0
+mipordind             1
+mipordtype            0
+mipsearch             0
+mipstart              0
+miptrace              
+miptracenode          100
+miptracetime          1
+miqcpstrat            0
+mircuts               0
+mpslongnum            1
+mtol                  0
+names                 1
+netdisplay            2
+netepopt              1e-006
+neteprhs              1e-006
+netfind               2
+netitlim              2100000000
+netppriind            0
+nodefileind           1
+nodelim               2100000000
+nodesel               1
+numericalemphasis     0
+objdif                0
+objllim               -1e+075
+objrng               
+objulim               1e+075
+parallelmode          1
+perind                0
+perlim                0
+polishtime            0
+polishafterepagap     0
+polishafterepgap      0
+polishafternode       2100000000
+polishafterintsol     2100000000
+polishaftertime       1e+075
+polishafterdettime    1e+075
+populatelim           20
+ppriind               0
+predual               0
+preind                1
+prelinear             1
+prepass               -1
+preslvnd              0
+pricelim              0
+printoptions          0
+probe                 0
+probetime             1e+075
+probedettime          1e+075
+probread              
+qpmakepsdind          1
+qpmethod              0
+qtolin                -1
+quality               0
+rampupdettimelimit    1e+075
+rampupduration        0
+rampuptimelimit       1e+075
+randomseed            0
+readflt               
+readparams            
+reduce                3
+reinv                 0
+relaxfixedinfeas      0
+relaxpreind           -1
+relobjdif             0
+repairtries           0
+repeatpresolve        -1
+rerun                 yes
+rhsrng               
+rinsheur              0
+rngrestart            
+scaind                1
+secret               
+siftalg               0
+siftdisplay           1
+siftitlim             2100000000
+simdisplay            1
+singlim               10
+solnpool              
+solnpoolmerge         
+solnpoolnumsym        10
+solnpoolagap          1e+075
+solnpoolcapacity      2100000000
+solnpoolgap           1e+075
+solnpoolintensity     0
+solnpoolpop           1
+solnpoolpopdel        
+solnpoolpoprepeat     
+solnpoolprefix        soln
+solnpoolreplace       0
+solutiontype          0
+optimalitytarget      0
+solvefinal            1
+startalg              0
+strongcandlim         10
+strongitlim           0
+subalg                0
+submipnodelim         500
+symmetry              -1
+threads               4
+tilim                 500000
+trelim                1e+075
+tuning                
+tuningdisplay         1
+tuningmeasure         1
+tuningrepeat          1
+tuningtilim           100000
+tuningdettilim        1e+007
+usercutcall           
+usercutfirst          10
+usercutfreq           10
+usercutinterval       100
+usercutmult           2
+usercutnewint         1
+usergdxin             bchin.gdx
+usergdxsol            bchsol.gdx
+usergdxname           bchout.gdx
+usergdxnameinc        bchout_i.gdx
+usergdxprefix         
+userheurcall          
+userheurfirst         10
+userheurfreq          10
+userheurinterval      100
+userheurmult          2
+userheurnewint        1
+userheurobjfirst      0
+userincbcall          
+userincbicall         
+userjobid             
+userkeep              0
+usercgmaxcols         2147483647
+usercgadvind          1
+usercgsolopt          0
+usercgdumplp          bchcgdump.lp
+userpricingcall       
+usersolvenodelp       
+varsel                0
+waitforenter          0
+workdir               .
+workmem               128
+writebas              
+writeflt              
+writelp               
+writemps              
+writemst              
+writeord              
+writeparam            
+writepre              
+writesav              
+zerohalfcuts          0
+----------------------------------------------------
+
+=1
+Space for names approximately 1.15 Mb
+Use option 'names no' to turn use of names off
+=2
+Tried aggregator 1 time.
+LP Presolve eliminated 9941 rows and 8883 columns.
+Reduced LP has 2566 rows, 8118 columns, and 16336 nonzeros.
+Presolve time = 0.41 sec. (8.73 ticks)
+Parallel mode: using up to 4 threads for barrier.
+Number of nonzeros in lower triangle of A*A' = 5686
+Using Approximate Minimum Degree ordering
+Total time for automatic ordering = 0.28 sec. (1.28 ticks)
+Summary statistics for Cholesky factor:
+  Threads                   = 4
+  Rows in Factor            = 2566
+  Integer space required    = 8385
+  Total non-zeros in factor = 53762
+  Total FP ops to factor    = 3289532
+ Itn      Primal Obj        Dual Obj  Prim Inf Upper Inf  Dual Inf Inf Ratio
+   0  6.6558013e+010 -1.6410458e+010 2.21e+007 3.45e+007 1.55e+006 1.00e+000
+   1  3.9719631e+010 -8.8915040e+009 1.39e+007 2.16e+007 4.92e+005 6.86e-007
+   2  2.7814582e+010 -4.8207445e+009 9.39e+006 1.46e+007 3.22e+005 8.85e-007
+   3  2.0262373e+010 -2.7924036e+009 6.67e+006 1.04e+007 2.24e+005 1.04e-006
+   4  9.3980735e+009  1.0732009e+009 2.41e+006 3.75e+006 8.09e+004 2.37e-006
+   5  7.5392241e+009  2.6761499e+009 1.61e+006 2.50e+006 3.33e+004 4.63e-006
+   6  6.6292523e+009  3.3068600e+009 1.21e+006 1.89e+006 1.54e+004 7.33e-006
+   7  5.8011785e+009  3.6911295e+009 8.14e+005 1.27e+006 7.95e+003 1.02e-005
+   8  5.3923306e+009  3.8601737e+009 5.87e+005 9.14e+005 5.87e+003 1.26e-005
+   9  4.8517250e+009  4.1427535e+009 2.50e+005 3.90e+005 3.06e+003 2.15e-005
+  10  4.6287718e+009  4.3803187e+009 8.25e+004 1.29e+005 1.13e+003 5.32e-005
+  11  4.6009042e+009  4.4694533e+009 5.66e+004 8.82e+004 4.98e+002 1.18e-004
+  12  4.5686578e+009  4.5119904e+009 2.85e+004 4.44e+004 1.80e+002 2.86e-004
+  13  4.5510659e+009  4.5237493e+009 1.05e+004 1.64e+004 1.06e+002 4.64e-004
+  14  4.5471975e+009  4.5324185e+009 5.34e+003 8.32e+003 5.89e+001 8.45e-004
+  15  4.5450789e+009  4.5397818e+009 2.49e+003 3.88e+003 1.88e+001 2.76e-003
+  16  4.5434538e+009  4.5426135e+009 5.58e+002 8.70e+002 2.17e+000 2.12e-002
+  17  4.5431193e+009  4.5429090e+009 1.05e+002 1.63e+002 6.75e-001 6.71e-002
+  18  4.5430555e+009  4.5430141e+009 1.71e+001 2.67e+001 1.45e-001 2.91e-001
+  19  4.5430453e+009  4.5430452e+009 3.36e-002 5.23e-002 3.41e-004 1.26e+002
+  20  4.5430453e+009  4.5430452e+009 1.02e-003 1.59e-003 1.39e-004 3.13e+002
+  21  4.5430453e+009  4.5430453e+009 4.92e-004 7.52e-004 7.01e-005 7.10e+002
+  22  4.5430453e+009  4.5430453e+009 1.23e-004 1.27e-004 4.48e-005 6.31e+003
+Barrier time = 1.67 sec. (56.91 ticks)
+Parallel mode: deterministic, using up to 4 threads for concurrent optimization.
+
+Dual crossover.
+  Dual:  Fixing 139 variables.
+      138 DMoves:  Infeasibility 1.11674301e-004  Objective 4.54304527e+009
+        0 DMoves:  Infeasibility 5.52196402e-011  Objective 4.54304527e+009
+  Dual:  Pushed 18, exchanged 121.
+  Primal:  Fixing 1066 variables.
+     1065 PMoves:  Infeasibility 1.38253113e-004  Objective 4.54304527e+009
+      476 PMoves:  Infeasibility 0.00000000e+000  Objective 4.54304527e+009
+        0 PMoves:  Infeasibility 7.27595761e-012  Objective 4.54304527e+009
+  Primal:  Pushed 712, exchanged 354.
+Reinitializing dual norms . . .
+
+Dual simplex solved model.
+
+Total crossover time = 0.27 sec. (16.81 ticks)
+
+Total time on 4 threads = 2.42 sec. (82.81 ticks)
+=1
+LP status(1): optimal
+Cplex Time: 2.53sec (det. 82.85 ticks)
+=2
+=1
+Optimal solution found.
+=2
+=1
+Objective :  4543045269.173870
+
+=2
+=C
+=C--- Solution statistics for scenario Base Case
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4543045269.17387
+=C---   Resource Usage   3906
+=C---   Total Time (ms)  4062
+=C--- Scenario d1:        Records read: 2240
+=C--- Solution statistics for scenario d1
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4543045269.17387
+=C---   Resource Usage   468
+=C---   Total Time (ms)  516
+=C--- Scenario d2:        Records read: 2240
+=C--- Solution statistics for scenario d2
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4654061394.62838
+=C---   Resource Usage   281
+=C---   Total Time (ms)  359
+=C--- Scenario d3:        Records read: 2240
+=C--- Solution statistics for scenario d3
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6807158179.62096
+=C---   Resource Usage   437
+=C---   Total Time (ms)  547
+=C--- Scenario d4:        Records read: 2240
+=C--- Solution statistics for scenario d4
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7165949459.95031
+=C---   Resource Usage   422
+=C---   Total Time (ms)  484
+=C--- Scenario d5:        Records read: 2240
+=C--- Solution statistics for scenario d5
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  9244546713.43149
+=C---   Resource Usage   547
+=C---   Total Time (ms)  594
+=C--- Scenario d6:        Records read: 2240
+=C--- Solution statistics for scenario d6
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7771617823.63489
+=C---   Resource Usage   407
+=C---   Total Time (ms)  500
+=C--- Scenario d7:        Records read: 2240
+=C--- Solution statistics for scenario d7
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6767186936.5007
+=C---   Resource Usage   297
+=C---   Total Time (ms)  328
+=C--- Scenario d8:        Records read: 2240
+=C--- Solution statistics for scenario d8
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6797454337.27158
+=C---   Resource Usage   297
+=C---   Total Time (ms)  312
+=C--- Scenario d9:        Records read: 2240
+=C--- Solution statistics for scenario d9
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5851946669.052
+=C---   Resource Usage   172
+=C---   Total Time (ms)  204
+=C--- Scenario d10:       Records read: 2240
+=C--- Solution statistics for scenario d10
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8063405188.80681
+=C---   Resource Usage   171
+=C---   Total Time (ms)  187
+=C--- Scenario d11:       Records read: 2240
+=C--- Solution statistics for scenario d11
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7429093260.15973
+=C---   Resource Usage   187
+=C---   Total Time (ms)  218
+=C--- Scenario d12:       Records read: 2240
+=C--- Solution statistics for scenario d12
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6583651786.89756
+=C---   Resource Usage   204
+=C---   Total Time (ms)  219
+=C--- Scenario d13:       Records read: 2240
+=C--- Solution statistics for scenario d13
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6686556718.60017
+=C---   Resource Usage   312
+=C---   Total Time (ms)  344
+=C--- Scenario d14:       Records read: 2240
+=C--- Solution statistics for scenario d14
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6353113749.86456
+=C---   Resource Usage   203
+=C---   Total Time (ms)  219
+=C--- Scenario d15:       Records read: 2240
+=C--- Solution statistics for scenario d15
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6290598986.22569
+=C---   Resource Usage   235
+=C---   Total Time (ms)  265
+=C--- Scenario d16:       Records read: 2240
+=C--- Solution statistics for scenario d16
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7690139989.10534
+=C---   Resource Usage   297
+=C---   Total Time (ms)  328
+=C--- Scenario d17:       Records read: 2240
+=C--- Solution statistics for scenario d17
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7669263193.51121
+=C---   Resource Usage   297
+=C---   Total Time (ms)  329
+=C--- Scenario d18:       Records read: 2240
+=C--- Solution statistics for scenario d18
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7404642108.3598
+=C---   Resource Usage   234
+=C---   Total Time (ms)  250
+=C--- Scenario d19:       Records read: 2240
+=C--- Solution statistics for scenario d19
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4967437762.63914
+=C---   Resource Usage   250
+=C---   Total Time (ms)  281
+=C--- Scenario d20:       Records read: 2240
+=C--- Solution statistics for scenario d20
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6395348380.26443
+=C---   Resource Usage   281
+=C---   Total Time (ms)  344
+=C--- Scenario d21:       Records read: 2240
+=C--- Solution statistics for scenario d21
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6507648131.46983
+=C---   Resource Usage   281
+=C---   Total Time (ms)  297
+=C--- Scenario d22:       Records read: 2240
+=C--- Solution statistics for scenario d22
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6266606443.63363
+=C---   Resource Usage   297
+=C---   Total Time (ms)  453
+=C--- Scenario d23:       Records read: 2240
+=C--- Solution statistics for scenario d23
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6152822071.02469
+=C---   Resource Usage   250
+=C---   Total Time (ms)  375
+=C--- Scenario d24:       Records read: 2240
+=C--- Solution statistics for scenario d24
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6327575347.2399
+=C---   Resource Usage   453
+=C---   Total Time (ms)  688
+=C--- Scenario d25:       Records read: 2240
+=C--- Solution statistics for scenario d25
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6128642650.66296
+=C---   Resource Usage   594
+=C---   Total Time (ms)  656
+=C--- Scenario d26:       Records read: 2240
+=C--- Solution statistics for scenario d26
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4933235955.52018
+=C---   Resource Usage   282
+=C---   Total Time (ms)  312
+=C--- Scenario d27:       Records read: 2240
+=C--- Solution statistics for scenario d27
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4971742631.22382
+=C---   Resource Usage   281
+=C---   Total Time (ms)  313
+=C--- Scenario d28:       Records read: 2240
+=C--- Solution statistics for scenario d28
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6929696085.85148
+=C---   Resource Usage   360
+=C---   Total Time (ms)  500
+=C--- Scenario d29:       Records read: 2240
+=C--- Solution statistics for scenario d29
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7888709259.72069
+=C---   Resource Usage   641
+=C---   Total Time (ms)  672
+=C--- Scenario d30:       Records read: 2240
+=C--- Solution statistics for scenario d30
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7319612013.07774
+=C---   Resource Usage   422
+=C---   Total Time (ms)  468
+=C--- Scenario d31:       Records read: 2240
+=C--- Solution statistics for scenario d31
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7849312361.44741
+=C---   Resource Usage   406
+=C---   Total Time (ms)  454
+=C--- Scenario d32:       Records read: 2264
+=C--- Solution statistics for scenario d32
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  9396835730.83716
+=C---   Resource Usage   266
+=C---   Total Time (ms)  297
+=C--- Scenario d33:       Records read: 2264
+=C--- Solution statistics for scenario d33
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7028194594.10824
+=C---   Resource Usage   297
+=C---   Total Time (ms)  328
+=C--- Scenario d34:       Records read: 2264
+=C--- Solution statistics for scenario d34
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8262632799.66101
+=C---   Resource Usage   297
+=C---   Total Time (ms)  313
+=C--- Scenario d35:       Records read: 2264
+=C--- Solution statistics for scenario d35
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  11627795668.819
+=C---   Resource Usage   250
+=C---   Total Time (ms)  265
+=C--- Scenario d36:       Records read: 2264
+=C--- Solution statistics for scenario d36
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  10585724691.2945
+=C---   Resource Usage   250
+=C---   Total Time (ms)  266
+=C--- Scenario d37:       Records read: 2264
+=C--- Solution statistics for scenario d37
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8477662394.36015
+=C---   Resource Usage   343
+=C---   Total Time (ms)  375
+=C--- Scenario d38:       Records read: 2264
+=C--- Solution statistics for scenario d38
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7469843142.16186
+=C---   Resource Usage   266
+=C---   Total Time (ms)  281
+=C--- Scenario d39:       Records read: 2264
+=C--- Solution statistics for scenario d39
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8334798465.18386
+=C---   Resource Usage   188
+=C---   Total Time (ms)  203
+=C--- Scenario d40:       Records read: 2264
+=C--- Solution statistics for scenario d40
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7357668845.08549
+=C---   Resource Usage   234
+=C---   Total Time (ms)  266
+=C--- Scenario d41:       Records read: 2264
+=C--- Solution statistics for scenario d41
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7319037743.82428
+=C---   Resource Usage   234
+=C---   Total Time (ms)  250
+=C--- Scenario d42:       Records read: 2264
+=C--- Solution statistics for scenario d42
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7947207675.67764
+=C---   Resource Usage   234
+=C---   Total Time (ms)  266
+=C--- Scenario d43:       Records read: 2264
+=C--- Solution statistics for scenario d43
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7130146947.60564
+=C---   Resource Usage   203
+=C---   Total Time (ms)  218
+=C--- Scenario d44:       Records read: 2264
+=C--- Solution statistics for scenario d44
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7601025250.30774
+=C---   Resource Usage   187
+=C---   Total Time (ms)  203
+=C--- Scenario d45:       Records read: 2264
+=C--- Solution statistics for scenario d45
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  10172916824.652
+=C---   Resource Usage   187
+=C---   Total Time (ms)  203
+=C--- Scenario d46:       Records read: 2264
+=C--- Solution statistics for scenario d46
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  11014721763.6061
+=C---   Resource Usage   250
+=C---   Total Time (ms)  265
+=C--- Scenario d47:       Records read: 2264
+=C--- Solution statistics for scenario d47
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  9406328837.31812
+=C---   Resource Usage   235
+=C---   Total Time (ms)  250
+=C--- Scenario d48:       Records read: 2264
+=C--- Solution statistics for scenario d48
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  9011307602.20564
+=C---   Resource Usage   282
+=C---   Total Time (ms)  297
+=C--- Scenario d49:       Records read: 2264
+=C--- Solution statistics for scenario d49
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7879334703.1712
+=C---   Resource Usage   281
+=C---   Total Time (ms)  297
+=C--- Scenario d50:       Records read: 2264
+=C--- Solution statistics for scenario d50
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8631957954.24887
+=C---   Resource Usage   391
+=C---   Total Time (ms)  422
+=C--- Scenario d51:       Records read: 2264
+=C--- Solution statistics for scenario d51
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  9697895747.78098
+=C---   Resource Usage   422
+=C---   Total Time (ms)  485
+=C--- Scenario d52:       Records read: 2264
+=C--- Solution statistics for scenario d52
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8867658086.99632
+=C---   Resource Usage   500
+=C---   Total Time (ms)  547
+=C--- Scenario d53:       Records read: 2264
+=C--- Solution statistics for scenario d53
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7640850514.09887
+=C---   Resource Usage   250
+=C---   Total Time (ms)  281
+=C--- Scenario d54:       Records read: 2264
+=C--- Solution statistics for scenario d54
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5681840516.82502
+=C---   Resource Usage   281
+=C---   Total Time (ms)  329
+=C--- Scenario d55:       Records read: 2264
+=C--- Solution statistics for scenario d55
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5036326266.28922
+=C---   Resource Usage   250
+=C---   Total Time (ms)  281
+=C--- Scenario d56:       Records read: 2264
+=C--- Solution statistics for scenario d56
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5412042151.49893
+=C---   Resource Usage   484
+=C---   Total Time (ms)  515
+=C--- Scenario d57:       Records read: 2264
+=C--- Solution statistics for scenario d57
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7089199198.10346
+=C---   Resource Usage   407
+=C---   Total Time (ms)  469
+=C--- Scenario d58:       Records read: 2264
+=C--- Solution statistics for scenario d58
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6721417776.20196
+=C---   Resource Usage   359
+=C---   Total Time (ms)  391
+=C--- Scenario d59:       Records read: 2264
+=C--- Solution statistics for scenario d59
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7209844769.16622
+=C---   Resource Usage   266
+=C---   Total Time (ms)  312
+=C--- Scenario d60:       Records read: 2264
+=C--- Solution statistics for scenario d60
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8565919952.37112
+=C---   Resource Usage   328
+=C---   Total Time (ms)  375
+=C--- Scenario d61:       Records read: 2264
+=C--- Solution statistics for scenario d61
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8196779683.52866
+=C---   Resource Usage   359
+=C---   Total Time (ms)  422
+=C--- Scenario d62:       Records read: 2264
+=C--- Solution statistics for scenario d62
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6575793752.98596
+=C---   Resource Usage   438
+=C---   Total Time (ms)  484
+=C--- Scenario d63:       Records read: 2264
+=C--- Solution statistics for scenario d63
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8612495569.62509
+=C---   Resource Usage   500
+=C---   Total Time (ms)  547
+=C--- Scenario d64:       Records read: 2264
+=C--- Solution statistics for scenario d64
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6242185420.83336
+=C---   Resource Usage   297
+=C---   Total Time (ms)  359
+=C--- Scenario d65:       Records read: 2264
+=C--- Solution statistics for scenario d65
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8756966023.80603
+=C---   Resource Usage   313
+=C---   Total Time (ms)  329
+=C--- Scenario d66:       Records read: 2264
+=C--- Solution statistics for scenario d66
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7130490337.96071
+=C---   Resource Usage   453
+=C---   Total Time (ms)  468
+=C--- Scenario d67:       Records read: 2264
+=C--- Solution statistics for scenario d67
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6621784273.54643
+=C---   Resource Usage   422
+=C---   Total Time (ms)  484
+=C--- Scenario d68:       Records read: 2264
+=C--- Solution statistics for scenario d68
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5804559792.95625
+=C---   Resource Usage   297
+=C---   Total Time (ms)  328
+=C--- Scenario d69:       Records read: 2264
+=C--- Solution statistics for scenario d69
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6746105619.96271
+=C---   Resource Usage   266
+=C---   Total Time (ms)  281
+=C--- Scenario d70:       Records read: 2264
+=C--- Solution statistics for scenario d70
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6038849273.81261
+=C---   Resource Usage   266
+=C---   Total Time (ms)  297
+=C--- Scenario d71:       Records read: 2264
+=C--- Solution statistics for scenario d71
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5093946627.60548
+=C---   Resource Usage   297
+=C---   Total Time (ms)  328
+=C--- Scenario d72:       Records read: 2264
+=C--- Solution statistics for scenario d72
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4418289079.31597
+=C---   Resource Usage   250
+=C---   Total Time (ms)  266
+=C--- Scenario d73:       Records read: 2264
+=C--- Solution statistics for scenario d73
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5832896493.21553
+=C---   Resource Usage   235
+=C---   Total Time (ms)  266
+=C--- Scenario d74:       Records read: 2264
+=C--- Solution statistics for scenario d74
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7039379232.01179
+=C---   Resource Usage   266
+=C---   Total Time (ms)  282
+=C--- Scenario d75:       Records read: 2264
+=C--- Solution statistics for scenario d75
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6242244853.0753
+=C---   Resource Usage   250
+=C---   Total Time (ms)  297
+=C--- Scenario d76:       Records read: 2264
+=C--- Solution statistics for scenario d76
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5042329613.94859
+=C---   Resource Usage   218
+=C---   Total Time (ms)  250
+=C--- Scenario d77:       Records read: 2264
+=C--- Solution statistics for scenario d77
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6474380534.82278
+=C---   Resource Usage   281
+=C---   Total Time (ms)  312
+=C--- Scenario d78:       Records read: 2264
+=C--- Solution statistics for scenario d78
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8889536332.46733
+=C---   Resource Usage   312
+=C---   Total Time (ms)  328
+=C--- Scenario d79:       Records read: 2264
+=C--- Solution statistics for scenario d79
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8676178654.0825
+=C---   Resource Usage   281
+=C---   Total Time (ms)  297
+=C--- Scenario d80:       Records read: 2264
+=C--- Solution statistics for scenario d80
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6457363386.18619
+=C---   Resource Usage   157
+=C---   Total Time (ms)  218
+=C--- Scenario d81:       Records read: 2264
+=C--- Solution statistics for scenario d81
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7891688952.83154
+=C---   Resource Usage   234
+=C---   Total Time (ms)  266
+=C--- Scenario d82:       Records read: 2264
+=C--- Solution statistics for scenario d82
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5838832656.64498
+=C---   Resource Usage   250
+=C---   Total Time (ms)  281
+=C--- Scenario d83:       Records read: 2264
+=C--- Solution statistics for scenario d83
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6713890655.85436
+=C---   Resource Usage   297
+=C---   Total Time (ms)  313
+=C--- Scenario d84:       Records read: 2264
+=C--- Solution statistics for scenario d84
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6929025765.16784
+=C---   Resource Usage   250
+=C---   Total Time (ms)  297
+=C--- Scenario d85:       Records read: 2264
+=C--- Solution statistics for scenario d85
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7204513105.56175
+=C---   Resource Usage   266
+=C---   Total Time (ms)  297
+=C--- Scenario d86:       Records read: 2264
+=C--- Solution statistics for scenario d86
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7474088742.4889
+=C---   Resource Usage   219
+=C---   Total Time (ms)  265
+=C--- Scenario d87:       Records read: 2264
+=C--- Solution statistics for scenario d87
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7981857599.35001
+=C---   Resource Usage   328
+=C---   Total Time (ms)  360
+=C--- Scenario d88:       Records read: 2264
+=C--- Solution statistics for scenario d88
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7999976549.51427
+=C---   Resource Usage   250
+=C---   Total Time (ms)  281
+=C--- Scenario d89:       Records read: 2264
+=C--- Solution statistics for scenario d89
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6430855557.97417
+=C---   Resource Usage   250
+=C---   Total Time (ms)  328
+=C--- Scenario d90:       Records read: 2264
+=C--- Solution statistics for scenario d90
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6873303285.13906
+=C---   Resource Usage   359
+=C---   Total Time (ms)  500
+=C--- Scenario d91:       Records read: 2240
+=C--- Solution statistics for scenario d91
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7292506638.73774
+=C---   Resource Usage   312
+=C---   Total Time (ms)  359
+=C--- Scenario d92:       Records read: 2240
+=C--- Solution statistics for scenario d92
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7462249330.44659
+=C---   Resource Usage   250
+=C---   Total Time (ms)  281
+=C--- Scenario d93:       Records read: 2240
+=C--- Solution statistics for scenario d93
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8149107926.70039
+=C---   Resource Usage   266
+=C---   Total Time (ms)  281
+=C--- Scenario d94:       Records read: 2240
+=C--- Solution statistics for scenario d94
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8862760940.56417
+=C---   Resource Usage   344
+=C---   Total Time (ms)  375
+=C--- Scenario d95:       Records read: 2240
+=C--- Solution statistics for scenario d95
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7247163595.83777
+=C---   Resource Usage   328
+=C---   Total Time (ms)  734
+=C--- Scenario d96:       Records read: 2240
+=C--- Solution statistics for scenario d96
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5172245334.19793
+=C---   Resource Usage   484
+=C---   Total Time (ms)  859
+=C--- Scenario d97:       Records read: 2240
+=C--- Solution statistics for scenario d97
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7100802549.54403
+=C---   Resource Usage   359
+=C---   Total Time (ms)  531
+=C--- Scenario d98:       Records read: 2240
+=C--- Solution statistics for scenario d98
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6668974251.0311
+=C---   Resource Usage   359
+=C---   Total Time (ms)  813
+=C--- Scenario d99:       Records read: 2240
+=C--- Solution statistics for scenario d99
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6550657709.1914
+=C---   Resource Usage   453
+=C---   Total Time (ms)  703
+=C--- Scenario d100:      Records read: 2240
+=C--- Solution statistics for scenario d100
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6949314058.26776
+=C---   Resource Usage   562
+=C---   Total Time (ms)  703
+=C--- Scenario d101:      Records read: 2240
+=C--- Solution statistics for scenario d101
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5995050954.99034
+=C---   Resource Usage   532
+=C---   Total Time (ms)  641
+=C--- Scenario d102:      Records read: 2240
+=C--- Solution statistics for scenario d102
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5050051181.07027
+=C---   Resource Usage   297
+=C---   Total Time (ms)  359
+=C--- Scenario d103:      Records read: 2240
+=C--- Solution statistics for scenario d103
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4945983516.52305
+=C---   Resource Usage   328
+=C---   Total Time (ms)  375
+=C--- Scenario d104:      Records read: 2240
+=C--- Solution statistics for scenario d104
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7274719548.30646
+=C---   Resource Usage   375
+=C---   Total Time (ms)  468
+=C--- Scenario d105:      Records read: 2240
+=C--- Solution statistics for scenario d105
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7812718274.8037
+=C---   Resource Usage   328
+=C---   Total Time (ms)  375
+=C--- Scenario d106:      Records read: 2240
+=C--- Solution statistics for scenario d106
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6603452383.89774
+=C---   Resource Usage   312
+=C---   Total Time (ms)  375
+=C--- Scenario d107:      Records read: 2240
+=C--- Solution statistics for scenario d107
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5503926191.55253
+=C---   Resource Usage   297
+=C---   Total Time (ms)  328
+=C--- Scenario d108:      Records read: 2240
+=C--- Solution statistics for scenario d108
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5449645142.21065
+=C---   Resource Usage   219
+=C---   Total Time (ms)  250
+=C--- Scenario d109:      Records read: 2240
+=C--- Solution statistics for scenario d109
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7534293875.6388
+=C---   Resource Usage   282
+=C---   Total Time (ms)  297
+=C--- Scenario d110:      Records read: 2240
+=C--- Solution statistics for scenario d110
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6542339300.53651
+=C---   Resource Usage   328
+=C---   Total Time (ms)  360
+=C--- Scenario d111:      Records read: 2240
+=C--- Solution statistics for scenario d111
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6823018698.83126
+=C---   Resource Usage   282
+=C---   Total Time (ms)  328
+=C--- Scenario d112:      Records read: 2240
+=C--- Solution statistics for scenario d112
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7567205424.41663
+=C---   Resource Usage   234
+=C---   Total Time (ms)  265
+=C--- Scenario d113:      Records read: 2240
+=C--- Solution statistics for scenario d113
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8110816662.88146
+=C---   Resource Usage   359
+=C---   Total Time (ms)  391
+=C--- Scenario d114:      Records read: 2240
+=C--- Solution statistics for scenario d114
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7209203771.25656
+=C---   Resource Usage   313
+=C---   Total Time (ms)  359
+=C--- Scenario d115:      Records read: 2240
+=C--- Solution statistics for scenario d115
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6671086428.694
+=C---   Resource Usage   203
+=C---   Total Time (ms)  219
+=C--- Scenario d116:      Records read: 2240
+=C--- Solution statistics for scenario d116
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6594952105.81535
+=C---   Resource Usage   265
+=C---   Total Time (ms)  281
+=C--- Scenario d117:      Records read: 2240
+=C--- Solution statistics for scenario d117
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7350573098.48039
+=C---   Resource Usage   328
+=C---   Total Time (ms)  359
+=C--- Scenario d118:      Records read: 2240
+=C--- Solution statistics for scenario d118
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7252271838.30829
+=C---   Resource Usage   313
+=C---   Total Time (ms)  360
+=C--- Scenario d119:      Records read: 2240
+=C--- Solution statistics for scenario d119
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7033196438.84201
+=C---   Resource Usage   265
+=C---   Total Time (ms)  297
+=C--- Scenario d120:      Records read: 2240
+=C--- Solution statistics for scenario d120
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5965441022.65381
+=C---   Resource Usage   328
+=C---   Total Time (ms)  343
+=C--- Scenario d121:      Records read: 2240
+=C--- Solution statistics for scenario d121
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6189418110.50029
+=C---   Resource Usage   265
+=C---   Total Time (ms)  313
+=C--- Scenario d122:      Records read: 2240
+=C--- Solution statistics for scenario d122
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5242651755.42971
+=C---   Resource Usage   234
+=C---   Total Time (ms)  296
+=C--- Scenario d123:      Records read: 2240
+=C--- Solution statistics for scenario d123
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5858967688.59471
+=C---   Resource Usage   344
+=C---   Total Time (ms)  375
+=C--- Scenario d124:      Records read: 2240
+=C--- Solution statistics for scenario d124
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5600557401.02954
+=C---   Resource Usage   235
+=C---   Total Time (ms)  250
+=C--- Scenario d125:      Records read: 2240
+=C--- Solution statistics for scenario d125
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7138664825.34466
+=C---   Resource Usage   282
+=C---   Total Time (ms)  329
+=C--- Scenario d126:      Records read: 2240
+=C--- Solution statistics for scenario d126
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  8352193309.6309
+=C---   Resource Usage   406
+=C---   Total Time (ms)  453
+=C--- Scenario d127:      Records read: 2240
+=C--- Solution statistics for scenario d127
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  7618557321.56279
+=C---   Resource Usage   562
+=C---   Total Time (ms)  594
+=C--- Scenario d128:      Records read: 2240
+=C--- Solution statistics for scenario d128
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5358111332.64317
+=C---   Resource Usage   281
+=C---   Total Time (ms)  312
+=C--- Scenario d129:      Records read: 2240
+=C--- Solution statistics for scenario d129
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  3841823937.94281
+=C---   Resource Usage   265
+=C---   Total Time (ms)  281
+=C--- Scenario d130:      Records read: 2240
+=C--- Solution statistics for scenario d130
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  2868841088.28562
+=C---   Resource Usage   234
+=C---   Total Time (ms)  734
+=C--- Scenario d131:      Records read: 2240
+=C--- Solution statistics for scenario d131
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  3525797109.00088
+=C---   Resource Usage   438
+=C---   Total Time (ms)  500
+=C--- Scenario d132:      Records read: 2240
+=C--- Solution statistics for scenario d132
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  3736283775.69006
+=C---   Resource Usage   250
+=C---   Total Time (ms)  360
+=C--- Scenario d133:      Records read: 2240
+=C--- Solution statistics for scenario d133
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  3407364677.45234
+=C---   Resource Usage   594
+=C---   Total Time (ms)  766
+=C--- Scenario d134:      Records read: 2240
+=C--- Solution statistics for scenario d134
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  3717170588.18538
+=C---   Resource Usage   360
+=C---   Total Time (ms)  984
+=C--- Scenario d135:      Records read: 2240
+=C--- Solution statistics for scenario d135
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4119449620.98677
+=C---   Resource Usage   406
+=C---   Total Time (ms)  484
+=C--- Scenario d136:      Records read: 2240
+=C--- Solution statistics for scenario d136
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4718305615.47825
+=C---   Resource Usage   359
+=C---   Total Time (ms)  500
+=C--- Scenario d137:      Records read: 2240
+=C--- Solution statistics for scenario d137
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  4954832128.29499
+=C---   Resource Usage   375
+=C---   Total Time (ms)  500
+=C--- Scenario d138:      Records read: 2240
+=C--- Solution statistics for scenario d138
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6177731269.89918
+=C---   Resource Usage   484
+=C---   Total Time (ms)  578
+=C--- Scenario d139:      Records read: 2240
+=C--- Solution statistics for scenario d139
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5170463773.93333
+=C---   Resource Usage   610
+=C---   Total Time (ms)  735
+=C--- Scenario d140:      Records read: 2240
+=C--- Solution statistics for scenario d140
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  6013489948.83787
+=C---   Resource Usage   531
+=C---   Total Time (ms)  609
+=C--- Scenario d141:      Records read: 2240
+=C--- Solution statistics for scenario d141
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  5657960395.9623
+=C---   Resource Usage   313
+=C---   Total Time (ms)  406
+=C--- Scenario d142:      Records read: 2240
+=C--- Solution statistics for scenario d142
+=C---   Solver Status    1 Normal Completion         
+=C---   Model Status     1 Optimal                   
+=C---   Objective Value  3966182983.38735
+=C---   Resource Usage   406
+=C---   Total Time (ms)  719

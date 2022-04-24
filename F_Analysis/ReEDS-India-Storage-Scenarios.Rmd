@@ -1,0 +1,248 @@
+---
+title: "ReEDS-India Results"
+author: "Created by: National Renewable Energy Laboratory (NREL)"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+  html_document: 
+    toc: true
+    toc_float:
+      collapsed: false
+    number_sections: true
+    fig_width: 10
+    df_print: paged
+    
+params:
+  gdxlist: 'Base#output_Dec10_Base.gdx##'
+  gamsdir: "C:/GAMS/win64/24.7"
+  final.year: 2050
+  curt.switch: 1
+---
+
+```{r setOptions, echo=F, warning=F, message=F, error=F, cache=F, include = F}
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!! USER INPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+
+
+# gdxfiles = c("Reference" = "output_Nov6_Reference.gdx",
+#              "Low Bat Cost" = "output_Nov6_LowBatCost.gdx",
+#              "High Bat Cost" = "output_Nov6_HighBatCost.gdx",
+#              "Lower Peak" = "output_Nov6_LowerPeak.gdx")
+#             "No South Asia" = "output_Oct29_NoSouthAsia.gdx")
+
+gdxfiles = c("Reference" = "output_Nov16_Reference.gdx",
+             "No ES Arbitrage Value" = "output_Nov16_NoStorHAV.gdx",
+             "No ES Capacity Value" = "output_Nov16_NoStorCC.gdx")
+
+#!!!!!!!!!!!!!!!!!!!!!!!! END USER INPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+
+# load packages, data and plotting functions
+if(!require("pacman")){
+  install.packages('devtools')
+  require(remotes)
+  install_version("pacman", version = "0.4.6", repos = "http://cran.us.r-project.org")
+}
+
+pacman::p_load(gdxrrw, ggplot2, data.table, maptools, mapproj, RColorBrewer, 
+               rgdal, rgeos, scales, stringr, rmarkdown, gdata, zoo, viridis, DT, wesanderson)
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!! PROCESSING COMMAND LINE ARGUMENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+
+if(!exists("gdxfiles")){
+  gdxlist = strsplit(params$gdxlist, '##', fixed = TRUE)[[1]]
+  
+  gdxfiles = c()
+  
+    for (i in 1:length(gdxlist)){
+        svector = strsplit(gdxlist[i], split = '#', fixed = TRUE)[[1]]
+        sname = svector[1]
+        spath = svector[2]
+        f = c(spath)
+        names(f) =sname
+        gdxfiles = c(gdxfiles, f)
+    }
+}
+
+curt.switch = params$curt.switch
+
+gamsdir = params$gamsdir
+igdx(gamsdir)
+
+#hacky way to get parent directory... R is dumb
+wd <- getwd()
+setwd("..")
+parent <- getwd()
+setwd(wd) 
+gdx.dir = '../E_Outputs/gdxfiles'
+
+final.year = params$final.year
+
+# load analysis parameters
+input.params = fread("data/analysis_parameters.csv")
+input.params[input.params == ""] = NA
+gen.order = input.params[!is.na(Gen.Order), Gen.Order]
+gen.type.map = na.omit(input.params[,.(reeds.category, Type = factor(Type, levels = gen.order))])
+gen.colors = input.params[!is.na(Plot.Color),Plot.Color]
+names(gen.colors) = input.params[!is.na(Gen.Type),Gen.Type]
+
+focus.regions = input.params[,Focus.Regions]
+
+source("scripts/plot_functions_IC.R")
+source("scripts/plot_functions_AR.R")
+source("scripts/plot_parameters.R")
+source("scripts/gdxr_functions.R")
+source("scripts/query_gdx_files.R")
+
+# set figure width by number of scenarios
+n.scenario = length(gdxfiles)
+n.year = length(unique(cap$Year))
+
+png_path = "plots/png/png_output_"    
+
+# set up default options for chunks, turn off error or warning messages
+knitr::opts_chunk$set(echo=F, comment=NA, warning=F, message=F, include=T, 
+                      dev='png', cache = F, fig.path = png_path)
+
+```
+
+# Models
+```{r analysis-metadata, echo=FALSE}
+metadata = data.table(Scenario = names(gdxfiles),
+                      File = gdxfiles,
+                      `Number of years` = sum(unique(cap$Year)<=final.year),
+                      `Final analysis year` = min(final.year,max(unique(cap$Year))))
+knitr::kable(metadata)
+
+```
+
+# Storage Capacity Results {.tabset}
+
+## Scenario results
+```{r scenario-stor-cap, echo=FALSE, fig.height=3, fig.width = 8}
+india.stor = cap[grepl('BESS|Pumped',Type) , .(tot = sum(capacity)), by = .(Year, scenario)]
+
+ggplot(india.stor) +
+  geom_line(aes(x=Year, y=tot/1000, color = scenario)) +
+  scale_color_manual(values=wes_palette("Darjeeling1")) +
+  labs(y='Power capacity (GW)',x=NULL) 
+ # scale_y_continuous(labels = scales::percent)
+
+map_stor_duration = data.table(Type = c("BESS 2hr","BESS 4hr","BESS 6hr","BESS 8hr","BESS 10hr","Pumped hydro"),
+                               sdbin = c("2","4","6","8","10","12"))
+
+india.stor = cap[grepl('BESS',Type) , .(tot = sum(capacity)), by = .(Year, scenario, Type)]
+
+india.stor = merge(india.stor, map_stor_duration)
+india.stor[,energy := tot * as.numeric(sdbin)]
+india.stor.energy = india.stor[,.(energy=sum(energy)), by=.(Year,scenario)]
+
+ggplot(india.stor.energy) +
+  geom_line(aes(x=Year, y=energy/1000, color = scenario)) +
+  scale_color_manual(values=wes_palette("Darjeeling1")) +
+  labs(y='Energy capacity (GWh)',x=NULL) 
+ # scale_y_continuous(labels = scales::percent)
+
+ggplot(india.stor) +
+  geom_line(aes(x=Year, y=tot/1000, color = scenario)) +
+  scale_color_manual(values=wes_palette("Darjeeling1")) +
+  labs(y='Installed capacity (GW)',x=NULL) +
+  facet_wrap(~Type)
+ # scale_y_continuous(labels = scales::percent)
+  
+```
+
+## Total capacity
+```{r stor-cap, echo=FALSE, fig.height=4, fig.width = 12}
+india.stor = cap[grepl('BESS|Pumped',Type) , .(tot = sum(capacity)), by = .(Year, scenario, Type)]
+
+ggplot(india.stor) +
+  geom_bar(aes(x=Year, y=tot/1000, fill = Type), color = 'black', stat='identity') +
+  scale_fill_manual("",values = gen.colors, drop = TRUE) +
+  labs(y='Installed capacity (GW)') +
+ # scale_y_continuous(labels = scales::percent) +
+  facet_wrap(~scenario, nrow = 1) + 
+  ggtitle('Energy Storage capacity to 2050')
+
+ggplot(india.stor[Year < 2031]) +
+  geom_bar(aes(x=Year, y=tot/1000, fill = Type), color = 'black', stat='identity') +
+  scale_fill_manual("",values = gen.colors, drop = TRUE) +
+  labs(y='Installed capacity (GW)',x=NULL) +
+ # scale_y_continuous(labels = scales::percent) +
+  facet_wrap(~scenario, nrow = 1) + 
+  ggtitle('Energy Storage capacity to 2030')
+  
+```
+
+## Storage Peaking Potential
+```{r stor-peaking, echo=FALSE,  fig.height = 6, rows.print = n.year, fig.width = 8}
+
+map_stor_duration = data.table(Type = c("BESS 2hr","BESS 4hr","BESS 6hr","BESS 8hr","BESS 10hr","Pumped hydro"),
+                               sdbin = c("2","4","6","8","10","12"))
+sdbin_size = merge(sdbin_size, map_stor_duration)
+sdbin_size[,cat := 'Peaking potential']
+storage_built = cap[grepl('BESS|Pumped',Type) , 
+                    .(sdbin_size = sum(capacity),cat="Built"), by = .(Year, scenario, region, Type)]
+sdbin_dat = rbind(sdbin_size,storage_built, fill=T)
+sdbin_dat[,Type := factor(Type, levels =  c("BESS 2hr","BESS 4hr","BESS 6hr","BESS 8hr","BESS 10hr","Pumped hydro"))]
+sdbin_dat = sdbin_dat[,.(bin_size = max(sdbin_size)), by = .(region,Year,scenario,Type,cat)]
+sdbin_dat = sdbin_dat[,.(bin_size = sum(bin_size)), by = .(Year,scenario,Type,cat)]
+
+ggplot(sdbin_dat[Year %in% c(2030,2040,2050)]) +
+  geom_bar(aes(y=bin_size/1000, x=cat, fill = Type), color = 'grey20', stat = 'identity') +
+  scale_y_continuous(label=comma)+
+  scale_fill_manual("",values = gen.colors, drop = TRUE) +
+  labs(x=NULL, y='Storage Peaking Potential (GW)', fill = 'Storage\nduration (hrs)') +
+  facet_grid(scenario~Year)
+
+```
+
+## Total arbitrage value
+```{r arbitrage-value, echo=FALSE, fig.height = 10, fig.width = 10}
+
+pull_gdx_data(type = 'param', gdx.name = 'hav_int', r.name = 'hav_val')
+if('value' %in% names(hav_val)){
+  names(hav_val) = c('Technology','State','Year','HAV_VAL','scenario','temp')
+}else{
+names(hav_val) = c('Technology','State','Year','HAV_VAL','scenario')
+}
+hav_val = merge(hav_val, ba.set, by = c("State","scenario"))
+
+# add tech investment cost for comparison
+pull_gdx_data(type = 'param', gdx.name = 'cost_cap', r.name = 'capital_cost')
+names(capital_cost) = c('Technology','Year','cost','scenario')
+bat_cost = capital_cost[grepl("BATTERY|PUMPED", Technology)]
+bat_cost = bat_cost[Technology != 'BATTERY_1']
+
+ggplot(data=hav_val[as.numeric(as.character(Year)) > 2019]) +
+  geom_violin(aes(x=Year, y=HAV_VAL/70),fill=NA) + 
+  geom_point(aes(x=Year,y=HAV_VAL/70, color = scenario)) +
+  geom_point(aes(x=Year,y=cost/70), data = bat_cost[as.numeric(as.character(Year)) > 2019], inherit.aes = F) +
+  labs(y='$/MW') +
+  scale_y_continuous(labels=scales::comma) +
+  scale_x_discrete(breaks = seq(2020,2050,5)) +
+  scale_color_manual(values=wes_palette("Darjeeling1")) +
+  facet_wrap(~Technology,ncol=1, scales = 'free_y')
+
+```
+
+## Total
+```{r india-capacity, echo=FALSE,  fig.height = 6, rows.print = n.year, fig.width = 14}
+
+# Total capacity by year, national
+p1 = plot_cap_by_year(aggregate.by = "nation",years = 2020:2050)
+
+if(n.scenario==1 & final.year == 2050){
+  p1$plot = p1$plot + 
+  geom_vline(xintercept= 2022.5, linetype = "dashed", color = "darkgrey", size = 1.25) +
+  annotate("text", x = c(2021,2026), y=1300, label = c("Planned", "Modeled"), size = 5,
+           color = c("grey30", "firebrick"))
+}
+
+p1$plot 
+
+datatable(p1$data,  rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
+
+#p2 = plot_cap_by_year(aggregate.by = "nation",years = c(2020,2030,2040,2045,2050))
+
+#p2$plot
+```

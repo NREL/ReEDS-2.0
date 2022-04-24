@@ -1,0 +1,8 @@
+Input=D_Augur\d3_gdx_dump
+ScrDir=225c
+SysDir=C:\GAMS\win64\24.7
+ScriptNext=225c\gamsnext.cmd
+--case=suchana_myrun_January
+--next_year=2020
+--user=suchana
+--runname=suchana_myrun
