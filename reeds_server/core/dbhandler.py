@@ -507,4 +507,9 @@ class DatabaseHandler:
             rule.max_token = limit_dict['max_token']
             rule.allowed_requests_per_minute = limit_dict['rate_pm']
             session.add(rule)
+
+    def update_bug_status(self, session, uuid, status):
+        session.query(Bugs).filter(Bugs.uuid == uuid).update({Bugs.status: status},synchronize_session=False)
         
+    def delete_bug(self, session, uuid):
+        session.query(Bugs).filter(Bugs.uuid == uuid).delete(synchronize_session=False)

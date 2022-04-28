@@ -4,9 +4,13 @@ USER_SIGNUP_EMAIL_SUBJECT = 'Your link to ReEDS Inida Signup awaits!'
 USER_SIGNUP_EMAIL_REJECT_SUBJECT = 'Unfortunately your request for ReEDS Inida Signuo is Rejected!'
 USER_SIGNUP_REQUEST_SUBJECT = 'New request for user sign up awaits!'
 USER_WELCOME_EMAIL_SUBJECT = 'Your new ReEDS India account awaits!'
-REEDS_SIM_INITIATION_SUBJECT = 'Congratulations your simulation is starting!'
+REEDS_SIM_INITIATION_SUBJECT = f'Congratulations your simulation is starting!'
+REEDS_SIM_INQUEUE_SUBJECT = f'Your Simulation is in Queue!'
+REEDS_SIM_COMPLETE_SUBJECT = f'Your Simulation is Complete!'
+REEDS_PASSWORD_CHANGE_SUBJECT = f'You password has been Changed!'
 
 REL_URL_TO_SERVICE_DICT = {
+    '/api/health': 'health', # Auth not needed
     '/api/run_model': 'simulation',
     '/api/get_scenarios': 'get_scenarios',
     '/api/update_scenarios': 'update_scenarios',
@@ -15,8 +19,8 @@ REL_URL_TO_SERVICE_DICT = {
     '/api/get_output_metadata': 'get_output_metadata',
     '/api/delete_output_metadata': 'delete_output_metadata',
     '/api/get_scenario_list': 'get_scenario_list',
-    '/api/user-sign-up': 'user_sign_up',
-    '/api/user-login': 'user_login',
+    '/api/user-sign-up': 'user_sign_up', # Auth not needed
+    '/api/user-login': 'user_login', # Auth not needed
     '/api/authenticated': 'authenticated',
     '/api/update_password': 'update_password',
     '/api/profile_data': 'profile_data',
@@ -37,10 +41,10 @@ REL_URL_TO_SERVICE_DICT = {
     '/api/get_default_scen_state': 'get_default_scen_state',
     '/api/update_output_card_state': 'update_output_card_state',
     '/api/get_download_token': 'get_download_token',
-    '/api/validate_csv': 'validate_csv',
-    '/api/user/reset_password': 'user_reset_password',
+    '/api/validate_csv': 'validate_csv', # No auth required
+    '/api/user/reset_password': 'user_reset_password', # No auth required
     '/api/user-sign-up-request': 'user_sign_up_request',
-    '/api/get-users-request': 'get_users_request',
+    '/api/get-users-request': 'get_users_request', 
     '/api/admin_authenticated': 'admin_authenticated',
     '/api/approve-request': 'approve_request',
     '/api/delete-user-request': 'delete_user_request',
@@ -48,7 +52,7 @@ REL_URL_TO_SERVICE_DICT = {
 }
 
 DEFAULT_RATES_FOR_ALL_USERS = {
-    'simulation': {'max_token': 10, 'rate_pm': 0.007},
+    'simulation': {'max_token': 20, 'rate_pm': 0.007},
     'get_scenarios': {'max_token': 200 , 'rate_pm': 60 },
     'update_scenarios': {'max_token': 200 , 'rate_pm': 60 },
     'clone_scenarios': {'max_token': 200 , 'rate_pm': 60 },
@@ -56,8 +60,6 @@ DEFAULT_RATES_FOR_ALL_USERS = {
     'get_output_metadata': {'max_token': 200 , 'rate_pm': 60 },
     'delete_output_metadata': {'max_token': 200 , 'rate_pm': 60 },
     'get_scenario_list': {'max_token': 200 , 'rate_pm': 60 },
-    'user_sign_up': {'max_token': 60 , 'rate_pm': 60 },
-    'user_login': {'max_token': 200 , 'rate_pm': 60 },
     'authenticated': {'max_token': 500 , 'rate_pm': 60 },
     'update_password': {'max_token': 5 , 'rate_pm': 0.0035 },
     'profile_data': {'max_token': 200 , 'rate_pm': 60 },
@@ -78,8 +80,6 @@ DEFAULT_RATES_FOR_ALL_USERS = {
     'get_default_scen_state': {'max_token': 200 , 'rate_pm': 60 },
     'update_output_card_state': {'max_token': 200 , 'rate_pm': 60 },
     'get_download_token': {'max_token': 200 , 'rate_pm': 60 },
-    'validate_csv': {'max_token': 200 , 'rate_pm': 60 },
-    'user_reset_password': {'max_token': 5, 'rate_pm': 0.0035},
     'user_sign_up_request': {'max_token': 5, 'rate_pm': 0.0035},
     'get_users_request': {'max_token': 200, 'rate_pm':60},
     'admin_authenticated': {'max_token': 200, 'rate_pm':60},
@@ -87,3 +87,11 @@ DEFAULT_RATES_FOR_ALL_USERS = {
     'delete-user-request': {'max_token': 200, 'rate_pm':60},
     'reject_user_request': {'max_token': 200, 'rate_pm':60}
 }
+
+OPEN_ROUTES = {
+    'user_sign_up': {'max_token': 60 , 'rate_pm': 60 },
+    'user_login': {'max_token': 2 , 'rate_pm': 1 },
+    'validate_csv': {'max_token': 200 , 'rate_pm': 60 },
+    'user_reset_password': {'max_token': 5, 'rate_pm': 0.0035}
+}
+

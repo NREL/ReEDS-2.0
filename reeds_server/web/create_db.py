@@ -179,8 +179,9 @@ class Users(Base):
 
 if __name__ == '__main__':
 
-    sqlite_engine = 'sqlite:///test.db'
-    postgres_engine = 'postgresql://postgres:kapil@localhost:5001/reeds'
-    mysql_engine = 'mysql://root:kapil@localhost:3306/reeds'
+    # sqlite_engine = 'sqlite:///test.db'
+    # postgres_engine = 'postgresql://postgres:kapil@localhost:5001/reeds'
+    # mysql_engine = 'mysql://root:kapil@localhost:3306/reeds'
+    mysql_engine = 'mysql://admin:reedsindia@reeds-database.cqpo6huywjus.us-west-1.rds.amazonaws.com:3306/reeds'
     engine = create_engine(mysql_engine, echo=True)
     Base.metadata.create_all(engine)

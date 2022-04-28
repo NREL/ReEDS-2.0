@@ -1,1 +1,15 @@
 sqlalchemy
+jinja2
+numpy
+sendgrid
+boto3
+redis
+sqlalchemy
+pandas
+bcrypt
+python-dotenv
+aiohttp_swagger3
+schedule
+psutil
+pyjwt
+cerberus

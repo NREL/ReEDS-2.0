@@ -10,8 +10,16 @@ import sqlalchemy
 from web.create_db import Rules
 import time
 import os
+import json
+from web.constants import REL_URL_TO_SERVICE_DICT, OPEN_ROUTES
 
-REDIS_DB = redis.Redis(host=os.getenv('REDIS_HOST'), port=int(os.getenv('REDIS_PORT')), charset="utf-8", decode_responses=True)
+REDIS_DB = redis.Redis(
+    host=os.getenv('REDIS_HOST'), 
+    port=int(os.getenv('REDIS_PORT')), 
+    password=os.getenv('REDIS_PASSWORD'),
+    charset="utf-8", 
+    decode_responses=True, 
+    ssl=True)
 
 CLIENT_BUCKET_STORE  = {}
 
@@ -52,39 +60,55 @@ def rule_retriever(sqlalchemy_session):
         
         # Let's write these rules in redis cache
         for key, val in all_rules.items():
-            REDIS_DB.hmset(key, val)
+            REDIS_DB.set(key, json.dumps(val))
 
     except sqlalchemy.exc.NoResultFound as e:
         pass
 
 def get_client_identifier(request):
 
-    return request['userData']['username']
+    try:
+        return (request['userData']['username'], 'user')
+    except Exception as e:
+        return (request.remote, 'non-user')
 
-def check_for_throttle(request, service_name):
+def check_for_throttle(request):
 
     # Get client key
-    client_key = get_client_identifier(request)
+    client_key, client_type = get_client_identifier(request)
+    rel_url = request.rel_url
+    service_name = REL_URL_TO_SERVICE_DICT.get(str(rel_url), None)
+
 
     # Get the rate limit data from cache
-    client_limits = REDIS_DB.hgetall(client_key)
 
-    if isinstance(client_limits, dict) and service_name in client_limits:
+    if client_type == 'user':
+        client_limits = json.loads(REDIS_DB.get(client_key))
+    else:
+        client_limits = OPEN_ROUTES
 
-        # Implement token bucket algorithm
-        if client_key not in CLIENT_BUCKET_STORE:
-            CLIENT_BUCKET_STORE[client_key] = TokenBucketAlgorithm(
-                float(client_limits[service_name]['max_token']), 
-                float(client_limits[service_name]['rate_pm'])/60)
+    try:
 
-        else: 
-            # Check if token size has changed
-            if CLIENT_BUCKET_STORE[client_key].max_token_size != client_limits[service_name]:
-                CLIENT_BUCKET_STORE[client_key].max_token_size = client_limits[service_name]
-                CLIENT_BUCKET_STORE[client_key].refill_rate = client_limits[service_name]/60
+        if isinstance(client_limits, dict) and service_name in client_limits:
 
-        # Now let's check whether to allow request or not
-        return CLIENT_BUCKET_STORE[client_key].throttle_request(1)
+            # Implement token bucket algorithm
+            if client_key not in CLIENT_BUCKET_STORE:
+                CLIENT_BUCKET_STORE[client_key] = TokenBucketAlgorithm(
+                    float(client_limits[service_name]['max_token']), 
+                    float(client_limits[service_name]['rate_pm'])/60)
+
+            else: 
+                # Check if token size has changed
+                if CLIENT_BUCKET_STORE[client_key].max_token_size != client_limits[service_name]['max_token']:
+                    CLIENT_BUCKET_STORE[client_key].max_token_size = client_limits[service_name]['max_token']
+                    CLIENT_BUCKET_STORE[client_key].refill_rate = client_limits[service_name]['rate_pm']/60
+
+            # Now let's check whether to allow request or not
+            return CLIENT_BUCKET_STORE[client_key].throttle_request(1)
+    except Exception as e:
+        import traceback
+        print(traceback.print_exc())
+        raise Exception(e)
 
     return True
 

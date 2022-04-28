@@ -217,7 +217,7 @@ def setupEnvironment(ui_input={}):
 
 	# --- User Input of Capacity Value and Curtailment ---
 	gams_locator = GamsDirFinder()
-	GAMSDir = str(gams_locator.gams_dir)
+	GAMSDir = '/opt/gams/gams29.1_linux_x64_64_sfx' #str(gams_locator.gams_dir)
 
 	if 'settings' not in ui_input:
 		cc_curtchoice = int(input('Do you want to iteritively calculate capacity value and curtailment? (0=no / 1=yes, default 1): ') or 1)

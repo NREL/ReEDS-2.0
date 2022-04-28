@@ -100,10 +100,14 @@ class SendGridHTMLMail(BaseSendGrid,BaseEmail):
 """ Set up Access keys for boto3 following documentation in https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#installation"""
 class BaseAWS_SES(ABC):
 
-    def __init__(self, aws_region: str, access_key: str, secret_access: str):
+    def __init__(self, aws_region: str, access_key: str = None, secret_access: str = None, ec2_instance=False):
+        
         self.aws_region = aws_region
-        self.client = boto3.client('ses', region=self.aws_region, aws_access_key_id=access_key,
-        aws_secret_access_key=secret_access,)
+        if not ec2_instance:
+            self.client = boto3.client('ses', region=self.aws_region, aws_access_key_id=access_key,
+            aws_secret_access_key=secret_access)
+        else:
+            self.client = boto3.client('ses', self.aws_region)
 
 
 """ Concrete implementation for AWS text email"""
@@ -272,6 +276,12 @@ class UserPasswordResetHTMLMessage(DynamicHTMLContent):
     def __init__(self):
         self.html_file = 'user_password_reset_message.html'
 
+class UserChangePasswordHTMLMessage(DynamicHTMLContent):
+
+    def __init__(self):
+        self.html_file = 'user_password_change_message.html'
+
+
 class UserSignUpInstructionsHTMLMessage(DynamicHTMLContent):
 
     def __init__(self):
@@ -297,18 +307,21 @@ class UserSimRunCompleteHTMLMessage(DynamicHTMLContent):
     def __init__(self):
         self.html_file = 'user_simrun_complete_message.html'
 
+class UserSimInQueueHTMLMessage(DynamicHTMLContent):
+
+    def __init__(self):
+        self.html_file = 'user_sim_in_queue_message.html'
+
 
 if __name__ == '__main__':
 
     # Let's try sending simple email usingSMTP
 
-    message = "Hey you got it!"
+
     message = UserWelcomeHTMLMessage().return_rendered_html({})
     subject = "Test Email"
 
-    api_key = ''
-    #sg = SendGridTextMail(api_key)
-    sg = SendGridHTMLMail(api_key)
-    #sg.send_email('kapil.duwadi@nrel.gov', 'kapil.duwadi@nrel.gov', message, subject)
+    am = AWS_SES_HTMLMail('us-west-1', ec2_instance=True)
+    am.send_email('kduwadi2021@gmail.com', 'kduwadi2021@gmail.com', message, subject)
 
   

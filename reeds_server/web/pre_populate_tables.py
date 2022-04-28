@@ -71,6 +71,7 @@ if __name__ == '__main__':
     sqlite_engine = 'sqlite:///test.db'
     postgres_engine = 'postgresql://postgres:kapil@localhost:5001/reeds'
     mysql_engine = 'mysql://root:kapil@localhost:3306/reeds'
+    mysql_engine = 'mysql://admin:reedsindia@reeds-database.cqpo6huywjus.us-west-1.rds.amazonaws.com:3306/reeds'
     PopulateDefaultScenario(
         mysql_engine,
         os.path.join(os.path.dirname(__file__), '..', '..', 'A_Inputs', 'cases.csv')

@@ -110,7 +110,7 @@ class Hash:
         }
         hpwd = self.db.get_hpwd(session, username)
         if hpwd !=None:
-            if bcrypt.checkpw(user['password'].encode('utf-8'),hpwd):
+            if bcrypt.checkpw(user['password'].encode('utf-8'),hpwd.encode('utf-8')):
                 return True
             else:
                 return False

@@ -49,7 +49,7 @@ def get_json_schema(host, port):
 
 class REEDS:
 
-    def __init__(self, host= '127.0.0.1', port= 5001, logging_yaml_file=None):
+    def __init__(self, host= '0.0.0.0', port= 5001, logging_yaml_file=None):
 
         # Check env variables
         
@@ -104,6 +104,7 @@ class REEDS:
         #self.swagger.register_media_type_handler("multipart/form-data", self.handler.post_precise)
         # web.post('/return_folder_paths', self.handler.return_folder_paths),
         self.swagger.add_routes([
+            web.get('/api/health', self.handler.handle_health),
             web.post('/api/run_model', self.handler.run_reeds_model),
             web.get('/api/get_scenarios', self.handler.get_scenarios),
             web.post('/api/update_scenarios', self.handler.update_scenarios),
@@ -151,7 +152,11 @@ class REEDS:
             web.post('/api/approve-request', self.handler.handle_user_request_approval),
             web.post('/api/delete-user-request', self.handler.delete_user_signup_request),
             web.post('/api/reject-user-request', self.handler.handle_user_request_rejection),
-            web.get('/api/get-error-log-file/{token}', self.handler.get_error_log_file)
+            web.get('/api/get-error-log-file/{token}', self.handler.get_error_log_file),
+            web.get('/api/user-signup-token-validate/{token}', self.handler.validate_user_signup_token),
+            web.get('/api/user-password-reset-token-validate/{token}', self.handler.validate_user_password_reset_token),
+            web.post('/api/update-bug-status', self.handler.update_bug_status),
+            web.post('/api/delete_bug', self.handler.handle_delete_bug),
         ])
     
     def configure_cors_on_all_routes(self):
@@ -168,7 +173,7 @@ class REEDS:
         for route in list(self.app.router.routes()):
             cors.add(route)
 
-        logger.info('Addes cors on all routes')
+        logger.info('Added cors on all routes')
 
     async def cleanup_background_tasks(self):
 
