@@ -11,6 +11,7 @@ from create_db import Scenarios, Users, Base
 from sqlalchemy import create_engine
 import os
 import bcrypt
+import shutil
 
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), '..','..', '.env'))
@@ -62,6 +63,24 @@ class PopulateDefaultScenario:
         session.add(user)
         session.commit()
 
+        # create a folder for user if already does not exist
+        case_base_path = os.path.join(os.path.dirname(__file__), '..', 'users_cases', os.getenv('REEDS_SUPERUSER'))
+
+        if not os.path.exists(case_base_path):
+            os.mkdir(case_base_path)
+
+        # Copy the base case.csv file if one already does not exist
+        case_file_path = os.path.join(case_base_path, 'cases.csv')
+        if not os.path.exists(case_file_path):
+            default_case_csv_path = os.path.join(os.path.dirname(__file__), '..', '..', 'A_Inputs', 'cases.csv')
+            shutil.copy( default_case_csv_path, case_file_path)
+
+        # create a output folder for user if already does not exist
+        output_base_path = os.path.join(os.path.dirname(__file__), '..', 'users_output', os.getenv('REEDS_SUPERUSER'))
+
+        if not os.path.exists(output_base_path):
+            os.mkdir(output_base_path)
+
         # Let's create the super user
         session.close()
 
@@ -72,8 +91,10 @@ if __name__ == '__main__':
     postgres_engine = 'postgresql://postgres:kapil@localhost:5001/reeds'
     mysql_engine = 'mysql://root:kapil@localhost:3306/reeds'
     mysql_engine = 'mysql://admin:reedsindia@reeds-database.cqpo6huywjus.us-west-1.rds.amazonaws.com:3306/reeds'
+    postgres_engine = 'postgresql://reeds_india_stage:DUf8f^FRH1YIsMWzR4WubX0CWhSmbDGM@aurora-postgres-mod-stage.cluster-ccklrxkcenui.us-west-2.rds.amazonaws.com/reeds_india_stage'
+    
     PopulateDefaultScenario(
-        mysql_engine,
+        postgres_engine,
         os.path.join(os.path.dirname(__file__), '..', '..', 'A_Inputs', 'cases.csv')
     )
 

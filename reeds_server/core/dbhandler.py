@@ -1,6 +1,4 @@
 # Class to handle database related tasks
-
-
 from web.create_db import (OutputMetadata, Scenarios, Bugs, ScenarioLabels, Labels, 
     PersonnelScenarioState, DefaultScenarioState, OutputCardState, Rules,
     Users, UserResetToken, UserSignUpRequest, UserSignupToken, SimulationQueue)

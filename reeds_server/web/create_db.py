@@ -183,5 +183,7 @@ if __name__ == '__main__':
     # postgres_engine = 'postgresql://postgres:kapil@localhost:5001/reeds'
     # mysql_engine = 'mysql://root:kapil@localhost:3306/reeds'
     mysql_engine = 'mysql://admin:reedsindia@reeds-database.cqpo6huywjus.us-west-1.rds.amazonaws.com:3306/reeds'
-    engine = create_engine(mysql_engine, echo=True)
+    postgres_engine = 'postgresql://reeds_india_stage:DUf8f^FRH1YIsMWzR4WubX0CWhSmbDGM@aurora-postgres-mod-stage.cluster-ccklrxkcenui.us-west-2.rds.amazonaws.com:5432/reeds_india_stage'
+    
+    engine = create_engine(postgres_engine, echo=True)
     Base.metadata.create_all(engine)

@@ -175,7 +175,7 @@ class REEDS:
 
         logger.info('Added cors on all routes')
 
-    async def cleanup_background_tasks(self):
+    async def cleanup_background_tasks(self, *args, **kwargs):
 
         logger.info('Cleaning up background tasks')
         #self.t.join()

@@ -13,3 +13,6 @@ schedule
 psutil
 pyjwt
 cerberus
+psycopg2-binary
+bokeh
+gdxpds

@@ -45,6 +45,8 @@ from web.constants import (USER_RESET_EMAIL_SUBJECT, USER_SIGNUP_EMAIL_SUBJECT,
     REEDS_SIM_INITIATION_SUBJECT, REL_URL_TO_SERVICE_DICT, REEDS_SIM_INQUEUE_SUBJECT, REEDS_SIM_COMPLETE_SUBJECT,
     REEDS_PASSWORD_CHANGE_SUBJECT)
 from web.notifier import notify
+from web.process_logs import process_logs
+
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from core.crypto import Hash
@@ -67,6 +69,8 @@ Base.metadata.bind = engine
 DB_SESSION = sessionmaker(bind=engine)
 
 schedule.every(30).minutes.do(rule_retriever, sqlalchemy_session = DB_SESSION)
+schedule.every(24).hours.do(process_logs, folder_path=os.getenv('LOG_FOLDER'),session = DB_SESSION(), bucket_name=os.getenv('S3_BUCKET'))
+
 data_lock = threading.Lock()
 db = DatabaseHandler()
 
