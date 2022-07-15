@@ -1,6 +1,7 @@
 *.lst
 *.gdx
 *.html
+!user_*.html
 *.Rhistory
 *.png
 *.wmf
