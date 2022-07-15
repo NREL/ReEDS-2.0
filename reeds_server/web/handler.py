@@ -64,7 +64,7 @@ assert JWT_KEY != None
 
 DB_CONN_STRING = os.getenv('DB_CONN_STRING')
 assert DB_CONN_STRING != None
-engine = create_engine(DB_CONN_STRING)
+engine = create_engine(DB_CONN_STRING, pool_size=10, max_overflow=-1)
 Base.metadata.bind = engine 
 DB_SESSION = sessionmaker(bind=engine)
 
@@ -183,7 +183,7 @@ def run_simulation_using_queue(queue, db, instances_dict, thread_event):
             email_body = UserSimRunInitiationHTMLMessage().return_rendered_html({
                 'uuid': sim_data['uuid'],
                 'name': sim_data['input']['run_name'],
-                'description':  sim_data['description'],
+                'description':  sim_data.get('description', 'No description provided'),
                 'link_to_logs': f"{os.getenv('BASE_URL_FOR_SIMULATION_STATUS')}/{sim_data['uuid']}"
             })
 
@@ -196,7 +196,7 @@ def run_simulation_using_queue(queue, db, instances_dict, thread_event):
             email_body = UserSimRunCompleteHTMLMessage().return_rendered_html({
                 'uuid': sim_data['uuid'],
                 'name': sim_data['input']['run_name'],
-                'description':  sim_data['description']
+                'description':  sim_data.get('description', 'No description provided')
             })
 
             mail = AWS_SES_HTMLMail(os.getenv('AWS_REGION'), ec2_instance=True)
@@ -294,7 +294,6 @@ class Handler:
     
     @monitor_time
     @authenticate
-    @rate_limit
     async def handle_get_scenario_file_infos(self, request):
             
         try:
@@ -1686,7 +1685,7 @@ class Handler:
                     if os.path.exists(output_folder):
                         file_exist = False
                         for file in os.listdir(output_folder):
-                            if file.endswith('.xslx'):
+                            if file.endswith('.xlsx'):
                                 file_exist = True
 
                         if file_exist:

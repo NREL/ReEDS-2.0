@@ -8,9 +8,9 @@ This file contains helpful functions used throughout the Augur module.
 """
 
 import gdxpds
+import pandas as pd
 import os
 import numpy as np
-import pandas as pd
 import time
 import platform
 
