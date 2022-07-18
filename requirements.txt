@@ -16,3 +16,5 @@ cerberus
 psycopg2-binary
 bokeh
 gdxpds
+networkx
+openpyxl

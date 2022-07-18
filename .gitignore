@@ -1,6 +1,7 @@
 *.lst
 *.gdx
 *.html
+!user_*.html
 *.Rhistory
 *.png
 *.wmf
@@ -22,4 +23,11 @@ reeds_server/users_output/*
 *.log
 *.log.*
 .env
+*modeled_year.csv
+225d/
+225e/
+225f/
+225g/
+D_Augur/ErrorFile/
+gamslog.txt
 
