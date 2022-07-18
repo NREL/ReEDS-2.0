@@ -276,7 +276,6 @@ $endif.seconditer
 cc_int(i,v,r,szn,t)$[cc_int(i,v,r,szn,t) < 0.001] = 0 ;
 curt_int(i,r,h,t)$[curt_int(i,r,h,t) < 0.001] = 0 ;
 
-
 execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int, curt_int, oldVREgen ;
 
 *following line will load in the level values if the switch is enabled
@@ -302,7 +301,6 @@ curt_totmarg(r,h,t) = round(curt_totmarg(r,h,t), 4) ;
 curt_excess(r,h,t) = round(curt_excess(r,h,t), 4) ;
 curt_scale(r,h,t) = round(curt_scale(r,h,t), 4) ;
 curt_mingen_int(r,h,t) = round(curt_mingen_int(r,h,t), 4) ;
-*storage_in_min(r,h,t) = 0;
 *curt_stor(i,v,r,h,src,t) = 0;
 *sdbin_size(region,szn,sdbin,t) = 0;
 
@@ -316,6 +314,12 @@ if(%niter% = 3,
     %case%.optfile = %modoptfile% ;
     );
 );
+
+* set curtialment to zero when running copperplate
+if(Sw_TxLimit = 0,
+*  curt_int(i,r,h,t) = 0;
+  storage_in_min(r,h,t) = 0;
+  );
 *==============================
 * --- Solve Supply Side ---
 *==============================

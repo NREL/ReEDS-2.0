@@ -37,7 +37,7 @@ eq_ObjFn_Supply.. Z =e=
 
 *costs of transmission lines
               + sum{(r,rr,trtype)$[routes(r,rr,trtype,t)$rfeas(r)$rfeas(rr)],
-                    ((InterTransCost(r) + InterTransCost(rr))/2) * INVTRAN(r,rr,t,trtype) * distance(r,rr) }
+                    r_rr_transcost(r,rr) * INVTRAN(r,rr,t,trtype) }
 
 *costs of substations
               + sum{(r,vc)$(rfeas(r)$tranfeas(r,vc)),
@@ -73,12 +73,12 @@ eq_ObjFn_Supply.. Z =e=
               + sum{(i,v,r,h,ortype)$[rfeas(r)$valgen(i,v,r,t)$cost_opres(i)$sameas(ortype,"spin")],
                    hours(h) * cost_opres(i) * OpRes(ortype,i,v,r,h,t) }
 
-*cost of fuel 
+*cost of fuel
               + sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$heat_rate(i,v,r,t)],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN(i,v,r,h,t) }
 
 * cost of emissions from CO2 tax
-              + sum{r$[Sw_CarbonTax$(yeart(t) >= CarbonPolicyStartYear)], 
+              + sum{r$[Sw_CarbonTax$(yeart(t) >= CarbonPolicyStartYear)],
                    EMIT(r,t)*CarbonTax(t) }
 
 * cost of 'slack fuel' used to represent Naptha use in gas CC plants

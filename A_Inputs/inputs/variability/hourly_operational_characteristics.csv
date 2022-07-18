@@ -1,7 +1,5 @@
 category,Max Capacity_max,Max Capacity_avg,Min Up Time,Min Down Time,Forced Outage Rate,Maintenance Rate,Mean Time To Repair,Start Cost/capacity,Min Stable Level/capacity,Max Ramp Up/capacity
 CCGT-GAS,944,320,8,8,8.5,22,389,7031,0.5,0.03
-CCGT-LNG,944,320,8,8,8.5,31,389,7031,0.5,0.03
-CCGT-NAPTHA,944,320,24,24,8.5,31,389,7031,0.5,0.03
 COGENERATION-BAGASSE,236.8,11.87,24,24,8.5,2.4,389,13451,0.5,0.01
 CT-GAS,803,53,2,2,4.3,5,256,2812.4,0.1,0.05
 DIESEL,803,53,1,1,4.3,4.1,107,6181,0,0.02

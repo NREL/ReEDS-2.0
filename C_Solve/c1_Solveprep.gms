@@ -52,11 +52,10 @@ retiretech(battery,existv,r,t) = no;
 retiretech(hydro, existv,r,t) = no;
 retiretech('NUCLEAR',existv,r,t) = no;
   );
-
-
+retiretech(i,v,r,t)$vre(i) = no;
 
 *====================================
-*remove capacity_exog, prescribed capacity 
+*remove capacity_exog, prescribed capacity
 *and prescribed retirements if Sw_TechPhaseOut is turned on
 *====================================
 
@@ -275,7 +274,7 @@ m_avail_retire_exog_rsc(i,v,r,t)$valcap(i,v,r,t) = round(m_avail_retire_exog_rsc
 m_capacity_exog(i,v,r,t)$valcap(i,v,r,t) = round(m_capacity_exog(i,v,r,t),4) ;
 m_cf(i,r,h)$[cf_tech(i)] = round(m_cf(i,r,h),5) ;
 m_cf(i,r,h)$[(m_cf(i,r,h)<0.001)] = 0 ;
-m_required_prescriptions(i,rb,t) = round(m_required_prescriptions(i,rb,t),4) ;
+m_required_prescriptions_state(i,state,t) = round(m_required_prescriptions_state(i,state,t),4) ;
 m_rsc_dat(r,i,rscbin,"cost") = round(m_rsc_dat(r,i,rscbin,"cost"),3) ;
 
 
@@ -374,7 +373,6 @@ $endif.int
 *======================
 * --- Capacity Credit SETUP ---
 *======================
-*This is throwing errors on HPC, commenting out for now
 $if NOT dexist reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data $call 'mkdir reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data';
 
 * create PKL files that are used in all solve years cc_py calculations

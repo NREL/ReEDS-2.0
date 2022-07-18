@@ -43,6 +43,8 @@ Sw_Hydro        "switch to turn on/off hydro representation (1 = ReEDS, 0 = PLEX
 
 set i, v, r, szn, routes, storage, hydro_d, hydro_nd, coal, nuclear ;
 
+scalar Sw_TxLimit ; 
+
 *Load sets from ReEDS
 $gdxin reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%reeds_data_%case%_%next_year%.gdx
 $loadr i
@@ -54,6 +56,7 @@ $loadr hydro_d
 $loadr hydro_nd
 $loadr coal
 $loadr nuclear
+$loadr Sw_TxLimit 
 $gdxin
 
 set hr_all    "hours in a 48-hour horizon" / hr1*hr48 /,
@@ -269,7 +272,7 @@ eq_gen_cap(hr,i,v,r)$cap_max_feas(i,v,r)..
     cap_max(i,v,r) * (1$[not Sw_StartCost] + ON(hr,i,v,r)$Sw_StartCost)
 ;
 
-eq_flow_cap(hr,r,rr)$routes(r,rr)..
+eq_flow_cap(hr,r,rr)$[routes(r,rr)$Sw_TxLimit]..
 
     FLOW(hr,r,rr)
 

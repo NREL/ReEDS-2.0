@@ -5,5 +5,3 @@ advind 0
 scaind 1
 aggind 7
 barepcomp = 1e-10
-*datacheck = 2
-numericalemphasis = 1
