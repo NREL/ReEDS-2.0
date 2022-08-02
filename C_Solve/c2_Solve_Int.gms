@@ -288,6 +288,13 @@ execute_loadpoint 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%gdxfil
 
 $endif.firstiter
 
+*initial values for capacity credit for first iteration
+if(%niter%=0, 
+    cc_int(i,v,r,szn,t) = cc_mar(i,r,szn,t);
+);
+
+* set storage_in_min to zero, otherwise model does not solve. ISSUE: July 2022 
+storage_in_min(r,h,t) = 0;
 
 * rounding of all cc and curt parameters
 * used in the intertemporal case
