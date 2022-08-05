@@ -1,9 +1,7 @@
-threads = 6
+threads = 0
 lpmethod = 4
 advind 0
 *reslim 100000
 scaind 1
 aggind 7
-barepcomp = 1e-10
-*datacheck = 2
-numericalemphasis = 1
+barepcomp = 1e-8

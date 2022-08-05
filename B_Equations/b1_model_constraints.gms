@@ -81,9 +81,12 @@ EQUATION
  eq_rsc_INVlim(r,i,rscbin)         "--MW-- total investment from each rsc bin cannot exceed the available investment"
  eq_refurblim(i,r,t)               "--MW-- total refurbishments cannot exceed the refurbishments available computed as the expired investments in capital"
  eq_growthlimit_relative(tg,t)      "--MW-- relative growth limit on technologies in growlim(i)"
- eq_growthlimit_absolute(r,tg,t)   "--MW-- absolute growth limit on technologies in growlim(i)"
+ eq_growthlimit_absolute(r,tg,t) "--MW-- absolute growth limit on technologies in growlim(i)"
  eq_tech_phase_out(i,v,r,t)        "--MW-- mandated phase out of select technologies"
- eq_prescribedre_pre2024(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
+ eq_prescribedre_pre2024(i,state,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
+ eq_forceprescription(i,state,t)       "--MW-- after 2024 capacity must meet prescribed targets"
+*eq_prescribedre_pre2024(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
+*eq_forceprescription(i,r,t)       "--MW-- after 2024 capacity must meet prescribed targets"
  eq_re_diversity(i,r,t)            "--MW-- No single resource region can have more than 15% of total national capacity (applies to WIND and UPV)"
  eq_cap_sdbin_balance(i,v,r,szn,t) "--MW-- total binned storage capacity must be equal to total storage capacity"
  eq_sdbin_limit(region,szn,sdbin,t)     "--MW-- binned storage capacity cannot exceed storage duration bin size"
@@ -104,6 +107,7 @@ EQUATION
 * rsc policy constraints
  eq_regen_mandate(t)                 "--fraction-- minimum generation fraction from rsc sources"
  eq_recap_mandate(t)                   "--MW-- minimum capacity from prescribed rsc sources"
+* eq_state_rpo(r,t,rpo_tech)                 "--fraction -- tech specific state RPO target"
 
 * operating reserve constraints
  eq_OpRes_requirement(ortype,region,h,t)  "--MW-- operating reserve constraint"
@@ -126,15 +130,29 @@ EQUATION
  eq_storage_level(i,v,r,h,t)              "--MWh per day-- Storage level inventory balance from one time-slice to the next"
  eq_storage_in_min(r,h,t)                 "--MW-- lower bound on STORAGE_IN"
  eq_storage_in_max(r,h,src,t)             "--MW-- upper bound on storage charging that can come from new sources"
- eq_solar_plus_storage(r,t)			  "--MW-- solar plus storage constraint -- investment in new solar must include storage in the same region"
+ eq_solar_plus_storage(r,t)                       "--MW-- solar plus storage constraint -- investment in new solar must include storage in the same region"
 
 * curtailment equations
  eq_curt_gen_balance(r,h,t)              "--MW-- generation plus reserves cannot exceed max possible generation minus curtailment"
  eq_curtailment(r,h,t)                   "--MW-- curtailment equals avg curt + marg curt for new investments + curt from existing VREs + changes in curt due to min gen - reductions due to storage"
  eq_mingen_lb(r,h,szn,t)                 "--MW-- min gen in each season cannot be lower than min generation level (GEN times minload) in any time slice in that season"
  eq_mingen_ub(r,h,szn,t)                 "--MW-- generation in each time slice in that season must exceed the mingen level for that season"
+
+* test a transmission growth limit of 2GW per year on any corridor
+ eq_trangrowth_limit(r,rr,t)
+
 ;
 
+* 5GW per year transmission growth limit between any two BAs
+eq_trangrowth_limit(r,rr,t)$[sum(trtype,routes(r,rr,trtype,t))$tmodel(t)$rfeas(r)$rfeas(rr)]..
+
+    5000 * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt)})
+
+    =g=
+
+* limit transmission investment to 5 GW per year for any corridor
+     sum{(trtype), INVTRAN(r,rr,t,trtype)$routes(r,rr,trtype,t) + INVTRAN(rr,r,t,trtype)$routes(rr,r,trtype,t)}
+;
 
 *=========================
 * --- LOAD CONSTRAINT ---
@@ -144,8 +162,8 @@ EQUATION
 *determine the full price of electricity load
 *i.e. the price of load with consideration to operating
 *reserve and planning reserve margin considered
-eq_loadcon(r,h,t)$[rfeas(r)$tmodel(t)]..
-  LOAD(r,h,t) =e= lmnt(r,h,t) 
+eq_loadcon(r,h,t)$[rfeas(r)$tmodel(t)$rb(r)]..
+  LOAD(r,h,t) =e= lmnt(r,h,t)
   ;
 
 
@@ -258,21 +276,29 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)
 
 * Prior to 2024, all additions are prescribed.
 * Wind and solar additions with known locations are included in m_capacity_exog
-* When locations are not known, the prescribed capacity is added through INV_RSC and ReEDS selects the location
-eq_prescribedre_pre2024(i,r,t)$[rfeas(r)$tmodel(t)$required_prescriptions(i,r,t)$(yeart(t) < 2024)
+* When locations are not known, the prescribed capacity is added through INV and ReEDS selects the location
+eq_prescribedre_pre2024(i,state,t)$[tmodel(t)$required_prescriptions_state(i,state,t)$(yeart(t) < 2024)
                              $prescriptivetech(i)$Sw_Prescribed]..
 
-* investments in prescribed capacity that correlates to the general category in each BA
-    sum{(rs,v,tt)$[inv_cond(i,v,t,tt)$(tmodel(tt) or tfix(tt))$(yeart(tt)<=yeart(t))],
-      m_capacity_exog(i,v,rs,tt)$[(yeart(t)-yeart(tt)<maxage(i))$r_rs(r,rs)] }
-
-  + sum{(rs,v,tt,rscbin)$[inv_cond(i,v,t,tt)$(tmodel(tt) or tfix(tt))$(yeart(tt)<=yeart(t))],
-      INV_RSC(i,v,rs,tt,rscbin)$[(yeart(t)-yeart(tt)<maxage(i))$r_rs(r,rs)$m_rscfeas(rs,i,rscbin)] }
+  sum{(rs,v)$[valcap(i,v,rs,t)], CAP(i,v,rs,t)$state_rs(state,rs) }
 
         =e=
 
 *must equal the prescribed amount
-    m_required_prescriptions(i,r,t)
+    m_required_prescriptions_state(i,state,t)
+;
+
+
+* For all other years, capacity must meet prescribed targets.
+eq_forceprescription(i,state,t)$[tmodel(t)$required_prescriptions_state(i,state,t)$(yeart(t) > 2023)
+                                 $prescriptivetech(i)$Sw_Prescribed]..
+
+ sum{(rs,v)$[valcap(i,v,rs,t)], CAP(i,v,rs,t)$state_rs(state,rs) }
+
+        =g=
+
+*must be greater than the prescribed amount
+    m_required_prescriptions_state(i,state,t)
 ;
 
 
@@ -304,7 +330,7 @@ eq_refurblim(i,r,t)$[rfeas_cap(r)$tmodel(t)$refurbtech(i)$Sw_Refurb]..
 
 
 *aggregate wind and solar investments across all resource bins
-eq_rsc_inv_account(i,v,r,t)$[tmodel(t)$valinv(i,v,r,t)$rsc_i(i)]..
+eq_rsc_inv_account(i,v,r,t)$[tmodel(t)$valinv(i,v,r,t)$vre(i)]..
 
   sum{rscbin$m_rscfeas(r,i,rscbin),INV_RSC(i,v,r,t,rscbin) }
 
@@ -316,7 +342,7 @@ eq_rsc_inv_account(i,v,r,t)$[tmodel(t)$valinv(i,v,r,t)$rsc_i(i)]..
 *note that the following equation only restricts inv_rsc and not inv_refurb
 *therefore, the capacity indicated by teh supply curve may be limiting
 *but the plant can still be refurbished
-eq_rsc_INVlim(r,i,rscbin)$[rsc_i(i)$rfeas_cap(r)$m_rscfeas(r,i,rscbin)]..
+eq_rsc_INVlim(r,i,rscbin)$[vre(i)$m_rscfeas(r,i,rscbin)]..
 
 *capacity indicated by the resource supply curve
     m_rsc_dat(r,i,rscbin,"cap")
@@ -324,13 +350,12 @@ eq_rsc_INVlim(r,i,rscbin)$[rsc_i(i)$rfeas_cap(r)$m_rscfeas(r,i,rscbin)]..
     =g=
 
 *must exceed the amount of total investment from that supply curve
-sum{(ii,v,tt)$[newv(v)$valinv(ii,v,r,tt)$(tmodel(tt) or tfix(tt))$(rsc_agg(i,ii))],
-         INV_RSC(ii,v,r,tt,rscbin) * resourcescalar(ii)}
-         ;
+    sum{(v,t), INV_RSC(i,v,r,t,rscbin)$valinv(i,v,r,t) * resourcescalar(i)}
+  ;
 
 
 *limit on year-on-year technology growth rate to avoid unrealistic investment growth
-eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2022)$(yeart(t)<2031)$growth_limit_relative(tg)]..
+eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2023)$(yeart(t)<2031)$growth_limit_relative(tg)]..
 
 *the relative growth rate multiplied by the existing technology group's existing capacity
     (1+growth_limit_relative(tg)) ** (sum{tt$[tprev(tt,t)], yeart(tt)} - yeart(t)) *
@@ -339,9 +364,9 @@ eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2022)$(yeart(t)<
 
     =g=
 
-*must exceed the current periods investment 
-    sum{(i,v,r)$[valcap(i,v,r,t)$rfeas_cap(r)$tg_i(tg,i)],
-        CAP(i,v,r,t)}
+*must exceed the current periods investment
+    sum{(i,v,r)$[valinv(i,v,r,t)$tg_i(tg,i)],
+        INV(i,v,r,t)}
 ;
 
 
@@ -362,7 +387,7 @@ eq_growthlimit_absolute(r,tg,t)$[growth_limit_absolute(r,tg)$tmodel(t)$Sw_Growth
 
 eq_regen_mandate(t)$[tmodel(t)$Sw_REGenMandate]..
 
-    sum{(ii,v,r,h)$[rfeas(r)$tmodel(t)$valgen(ii,v,r,t)$(wind(ii) or pv(ii))],
+    sum{(ii,v,r,h)$[rfeas(r)$tmodel(t)$valgen(ii,v,r,t)$genmandate_tech_set(ii)],
         GEN(ii,v,r,h,t) * hours(h)}
 
         =g=
@@ -373,14 +398,14 @@ eq_regen_mandate(t)$[tmodel(t)$Sw_REGenMandate]..
 
 
 eq_recap_mandate(t)$[tmodel(t)$Sw_RECapMandate]..
-
+   
 * wind and solar capacity
     sum{(i,v,r)$[rfeas(r)$tmodel(t)$valcap(i,v,r,t)$rs(r)$(wind(i) or pv(i))],
         CAP(i,v,r,t)} 
 
-* hydro capacity
-*   + sum{(i,v,r)$[prescribed_rsc_set(i)$rfeas(r)$tmodel(t)$valcap(i,v,r,t)$rb(r)],
-*        CAP(i,v,r,t)} 
+* hydro, nuclear, bio capacity
+   + sum{(i,v,r)$[rfeas(r)$tmodel(t)$valcap(i,v,r,t)$rb(r)$(hydro(i) or nuclear(i) or bio(i))],
+        CAP(i,v,r,t)} 
 
         =g=
 
@@ -480,7 +505,7 @@ eq_curtailment(r,h,t)$[tmodel(t)$rfeas(r)]..
          }
 
 *[minus] curtailment reduction from building new transmission to rr
-    - sum{rr$sum{trtype, routes(r,rr,trtype,t) }, CURT_REDUCT_TRANS(r,rr,h,t) } 
+    - sum{rr$sum{trtype, routes(r,rr,trtype,t) }, CURT_REDUCT_TRANS(r,rr,h,t) }
 
 * [plus] net flow of curtailment with no transmission losses (otherwise CURT can be turned into transmission losses)
     + sum{(trtype,rr)$routes(rr,r,trtype,t), CURT_FLOW(r,rr,h,t) }$Sw_CurtFlow
@@ -545,7 +570,7 @@ eq_min_cf(i,r,t)$[minCF(i)$tmodel(t)$sum{v, valgen(i,v,r,t) }$Sw_MinCF]..
 * --- SUPPLY DEMAND BALANCE ---
 *===============================
 
-eq_supply_demand_balance(r,h,t)$[rfeas(r)$tmodel(t)]..
+eq_supply_demand_balance(r,h,t)$[rfeas(r)$tmodel(t)$rb(r)]..
 
 * generation
     sum{(i,v)$valgen(i,v,r,t), GEN(i,v,r,h,t) }
@@ -585,7 +610,7 @@ eq_minloading(i,v,r,h,hh,t)$[valgen(i,v,r,t)$minloadfrac(r,i,hh)
     GEN(i,v,r,hh,t) * minloadfrac(r,i,hh)
 ;
 
-* gas CC and nuclear plants must generate something each season. 
+* gas CC and nuclear plants must generate something each season.
 eq_minszngen(i,v,r,szn,sznszn,t)$[valgen(i,v,r,t)$(GASCC(i) or NUCLEAR(i))
                             $tmodel(t)$rfeas(r)]..
 
@@ -609,7 +634,7 @@ eq_fuelsupply_limit(tf,t)$[tmodel(t)$Sw_FuelSupply]..
       =g=
 
       sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$heat_rate(i,v,r,t)$tf_i(tf,i) ],
-      hours(h) * heat_rate(i,v,r,t) * GEN(i,v,r,h,t) }*1e-6 
+      hours(h) * heat_rate(i,v,r,t) * GEN(i,v,r,h,t) }*1e-6
       ;
 
 
@@ -646,6 +671,11 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$tmodel(t)$Sw_Storage]..
     + storage_eff(i) *  hours_daily(h) * (
           sum{src, STORAGE_IN(i,v,r,h,src,t) }
       )
+
+* natural inflows for existing pumped hydro
+*  + (CAP(i,v,r,t)$UPGRADE(i) * outage(i,h) * hours_daily(h) *
+   + (CAP(i,v,r,t)$existv(v) * outage(i,h) * hours_daily(h) *
+        sum{szn$h_szn(h,szn), cf_adj_hyd(i,szn,r)})
 
     - hours_daily(h) * GEN(i,v,r,h,t)
 ;
@@ -719,12 +749,12 @@ eq_sdbin_limit(region,szn,sdbin,t)$[tmodel(t)]..
 eq_solar_plus_storage(r,t)$[tmodel(t)$(yeart(t) > 2023)$Sw_SolarPlusStorage]..
 
 *investment in 4-hr storage
-	sum{(i,v), INV(i,v,r,t)$[valinv(i,v,r,t)$sameas(i,'BATTERY_4')] }
+        sum{(i,v), INV(i,v,r,t)$[valinv(i,v,r,t)$sameas(i,'BATTERY_4')] }
 
-	=g=
+        =g=
 
 *must be at least 60% of UPV invetsment in the same region
-	sum{(i,v,rr)$cap_agg(r,rr), INV(i,v,rr,t)$[valinv(i,v,rr,t)$upv(i)]} * 0.6
+        sum{(i,v,rr)$cap_agg(r,rr), INV(i,v,rr,t)$[valinv(i,v,rr,t)$upv(i)]} * 0.6
 
 ;
 
@@ -800,7 +830,7 @@ eq_reserve_margin(region,szn,t)$[tmodel(t)$Sw_PRM]..
           cc_int(i,v,rr,szn,t) * CAP(i,v,rr,t)}
         }
 
-* contribution from hydro pondage 
+* contribution from hydro pondage
     + sum{(i,v,r)$[r_region(r,region)$valcap(i,v,r,t)$hydro_pond(i)],
          cc_hydro(i,r,szn,t) * CAP(i,v,r,t) }
 
@@ -843,7 +873,7 @@ eq_CAPTRANEq(r,rr,trtype,t)$[routes(r,rr,trtype,t)$tmodel(t)$rfeas(r)$rfeas(rr)]
     trancap_exog(r,rr,trtype,t)
 
 *all previous year's investment, note this can apply for both r and rr
-    + sum{(tt)$[(yeart(tt) <= yeart(t))$(tmodel(tt) or tfix(tt))$(tt.val>2020)],
+    + sum{(tt)$[(yeart(tt) <= yeart(t))$(tmodel(tt) or tfix(tt))$(tt.val>2022)],
          INVTRAN(r,rr,tt,trtype) + INVTRAN(rr,r,tt,trtype) }
 ;
 
@@ -879,7 +909,7 @@ eq_INVTRAN_VCLimit(r,vc)$[rfeas(r)$tranfeas(r,vc)]..
 
 * flow plus OR reserves cannot exceed the total transmission capacity
 eq_transmission_limit(r,rr,h,t,trtype)$[tmodel(t)$rfeas(r)$rfeas(rr)
-                                        $(routes(r,rr,trtype,t) or routes(rr,r,trtype,t))]..
+                                        $(routes(r,rr,trtype,t) or routes(rr,r,trtype,t))$Sw_TxLimit]..
 
     CAPTRAN(r,rr,trtype,t)
 
@@ -887,7 +917,7 @@ eq_transmission_limit(r,rr,h,t,trtype)$[tmodel(t)$rfeas(r)$rfeas(rr)
 
     FLOW(r,rr,h,t,trtype)
 
-*[plus] operating reserve flows (operating reserves can only be transferred across AC lines) 
+*[plus] operating reserve flows (operating reserves can only be transferred across AC lines)
     + sum{ortype,OPRES_FLOW(ortype,r,rr,h,t) }$[sameas(trtype,"AC")$Sw_OpResTrade]
 
 *[plus] curtailment flows
@@ -951,15 +981,53 @@ eq_co2_mass_limit(t)$[(yeart(t)>=CarbonPolicyStartYear)$tmodel(t)$Sw_CO2Limit]..
     sum{r$rfeas(r),EMIT(r,t) }
 ;
 
+*eq_state_rpo(r,t,rpo_tech)$[tmodel(t)$rfeas(r)$state_rpo(t,rpo_tech,r)]..
+
+*sum{ (i,v,h)$valgen(i,v,r,t), hours(h) * GEN(i,v,r,h,t)$rpotech_i(rpo_tech,i) }
+
+*  =g=
+
+*  sum{ (i,v,h)$valgen(i,v,r,t), hours(h) * GEN(i,v,r,h,t)$(not hydro(i)) } * state_rpo(t,rpo_tech,r)
+*  ;
+
 *=========================
 * --- RE GEOGRAPHIC DIVERSITY CONSTRAINT ---
 *=========================
 
 eq_re_diversity(i,r,t)$[tmodel(t)$rs(r)$rfeas(r)$(wind(i) or upv(i))$Sw_REdiversity]..
 
-    sum{(rr,v,rscbin)$[rs(rr)$valcap(i,v,rr,t)$newv(v)$m_rscfeas(rr,i,rscbin)], INV_RSC(i,v,rr,t,rscbin)} * REdiversity
+* sum of all investments multiplied by the diversity factor
+    sum{(rr,v)$[rs(rr)$valinv(i,v,rr,t)], INV(i,v,rr,t)} * REdiversity
 
     =g=
 
-    sum{(v,rscbin)$[rs(r)$valcap(i,v,r,t)$newv(v)$m_rscfeas(r,i,rscbin)], INV_RSC(i,v,r,t,rscbin)}
+* must be greather than investment in any single resource region
+    sum{(v)$[rs(r)$valinv(i,v,r,t)], INV(i,v,r,t)}
 ;
+
+$ontext
+EQUATION
+* test Raj by itself
+* eq_Raj_import1                      "--MW-- limit imports into Rajasthan";
+ eq_Raj_import2                      " limit in other direction";
+
+*eq_Raj_import1(r,rr,h,t,trtype)$[tmodel(t)$rfeas(r)$rfeas(rr)
+*                                        $(routes(r,"Rajasthan",trtype,t) or routes("Rajasthan",r,trtype,t))
+*                                        $(yeart(t) > 2025)]..
+
+*    FLOW(r,rr,h,t,trtype)
+
+*    =e=
+
+*    0;
+
+eq_Raj_import2(rr,r,h,t,trtype)$[tmodel(t)$rfeas(r)$rfeas(rr)
+                                        $(routes(r,"Rajasthan",trtype,t) or routes("Rajasthan",r,trtype,t))
+                                        $(yeart(t) > 2025)]..
+
+    FLOW(rr,r,h,t,trtype)
+
+    =e=
+
+    0;
+$offtext

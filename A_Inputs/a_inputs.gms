@@ -34,8 +34,7 @@ $setglobal input_folder '%gams.curdir%%ds%inputs'
 * For binary switches, [0] is off and [1] is on.
 
 Scalar
-Sw_MinCF         "Minimum CF for new capacity [0-1]"                               /%GSw_MinCF%/,
-Sw_MinCFCon      "Switch to turn minimum CF for new capacity on [1] or off [0]"    /%GSw_MinCFCon%/,
+Sw_MinCF      "Switch to turn minimum CF for new capacity on [1] or off [0]"       /%GSw_MinCF%/,
 Sw_GrowthRel     "Switch for the relative growth constraint"                       /%GSw_GrowthRel%/,
 Sw_GrowthAbs     "Switch for the absolute growth constraint"                       /%GSw_GrowthAbs%/,
 Sw_OpRes         "Switch to turn on operating reserve constraint"                  /%GSw_OpRes%/,
@@ -66,7 +65,9 @@ Sw_ValStr        "Switch for valuestreams analysis"                             
 Sw_CCcurtAvg     "Switch to select method for average curt/CC calculations"        /%GSw_CCcurtAvg%/,
 Sw_Loadpoint     "Switch to use a loadpoint for the intertemporal case"            /%GSw_Loadpoint%/,
 Sw_SolarPlusStorage "Switch to turn on solar plus storage constraint"              /%GSw_SolarPlusStorage%/,
-Sw_StorHAV        "Switch to turn on hourly arbitrage value for storage"           /%GSw_StorHAV%/
+Sw_StorHAV        "Switch to turn on hourly arbitrage value for storage"           /%GSw_StorHAV%/,
+Sw_FocusRegionZeroTXCost "Zero transmission capital cost between focus regions"    /%GSw_FocusRegionZeroTXCost%/,
+Sw_TxLimit               "Switch to enable transmission flow limits"    /%GSw_TxLimit%/
 ;
 
 
@@ -113,6 +114,11 @@ $offdelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%BA_set.csv
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rs_set.csv
           /,
+    state                                  "states"
+          /
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%state_set.csv
+          /,
+
     rb(r)                                   "balancing areas"
           /
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%BA_set.csv
@@ -129,7 +135,7 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%region_set.csv
           /
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%country_set.csv
           /,
-    hierarchy(r,region,country)              "establish hierarchy between regions"
+    hierarchy(r,state,region,country)     "establish hierarchy between regions"
           /
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%hierarchy_set.csv
@@ -144,10 +150,14 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rs_set.csv
           /
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%country_set.csv
           /,
+      focus_region(r)                         "BAs and resource regions for the state we are studying"
+          /
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%focus_region_set.csv
+          /,
     exporter                  "other South Asian countries trading with India"
           /
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%exporter_set.csv
-          /,   
+          /,
     dummy                             "set used for initalization of numerical sets" / 0*10000 /
           ;
 
@@ -206,6 +216,19 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%r_rs_map.csv
 $offdelim
 ;
 
+
+table state_r(state,r) "mapping set between states and BAs"
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%state_r_map.csv
+$offdelim
+;
+
+table state_rs(state,rs) "mapping set between states and renewable resource regions"
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%state_rs_map.csv
+$offdelim
+;
+
 *#########################
 * --- calculations ---
 
@@ -229,8 +252,8 @@ mindiff(t)$tmodel(t) = smin(tt$tprev(t,tt),t.val-tt.val);
 tprev(t,tt)$(tmodel(t)$tmodel(tt)$(t.val-tt.val<>mindiff(t))) = no;
 
 * initialize boundaries on model areas
-r_region(r,region)$sum((country)$hierarchy(r,region,country),1) = yes;
-r_country(r,country)$sum((region)$hierarchy(r,region,country),1) = yes;
+r_region(r,region)$sum((state,country)$hierarchy(r,state,region,country),1) = yes;
+r_country(r,country)$sum((state,region)$hierarchy(r,state,region,country),1) = yes;
 
 * initialize placeholders for PVF calcualtion
 yeart_tfirst = 0;
@@ -290,7 +313,8 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%i_subtech_set.csv
     hydro_stor(i)  "storage hydro technologies",
     pv(i)        " pv technologies",
     imports(i)   "importing technologies",
-    ivt(i,v,t) "mapping set between i v and t - for new technologies"
+    ivt(i,v,t) "mapping set between i v and t - for new technologies",
+    bio(i)               "biomass technologies" /COGENERATION-BAGASSE/
     ;
 
 alias(i,ii);
@@ -463,13 +487,14 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%refurbtech_set.csv
           /
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%prescriptive_tech_set.csv
           /,
-    sdbin "storage duration bins" /1,2,4,6,8,10,12,24,8760/ 
+    sdbin "storage duration bins" /1,2,4,6,8,10,12,24,8760/
     ;
 
 parameter
           capacity_exog(i,v,r,rs,t)        "--MW-- exogenously specified capacity", //calc from caponrsc, prescribedretirments, binned_capacity
-          avail_retire_exog_rsc            "--MW-- available retired rsc capacity for refurbishments",
-          required_prescriptions(i,r,t)    "--MW-- prescribed RSC cap that ReEDS will decide on location", // derived with prescribedrsc
+          avail_retire_exog_rsc             "--MW-- available retired rsc capacity for refurbishments",
+*required_prescriptions(i, r, t)   "--MW-- prescribed RSC cap that ReEDS will decide on location", // derived with prescribedrsc
+          required_prescriptions_state(i,state,t)    "--MW-- prescribed RSC cap that ReEDS will decide on location", // derived with prescribedrsc_state
           prescribedretirements(t,r,i,*)   "--MW-- raw prescribed capacity retirement data", // default to 0; can be added as needed
           phase_out_year(i)                "year when select technology must be completely retired from system"
           /
@@ -518,6 +543,13 @@ table prescribedrsc(t,i,r,rs,*) "--MW-- raw prescribed capacity data for RSC tec
 
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%prescribedrsc.csv
+$offdelim
+;
+
+table prescribedrsc_state(t,i,state,*) "--MW-- state level prescribed capacity targets RSC tech "
+
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%prescribedrsc_state.csv
 $offdelim
 ;
 
@@ -571,8 +603,8 @@ capacity_exog(i,"prescribed",r,rs,t)$sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yea
          sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), cap_NepalStorage(tt,i,r,rs,"value"));
 
 * for first year, required prescriptions is additions plus existing capacity
-required_prescriptions(i,r,t)$(prescriptivetech(i))
-      = sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), sum(rs, prescribedrsc(tt,i,r,rs,"value")$(sameas(rs,"sk")) + cap_NepalStorage(tt,i,r,rs,"value")$(sameas(rs,"sk"))$Sw_SAsia_Trade ));
+required_prescriptions_state(i,state,t)$(prescriptivetech(i))
+      = sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), prescribedrsc_state(tt,i,state,"value"));
 
 * initialize as empty sets
 valcap(i,v,r,t) = no;
@@ -669,7 +701,8 @@ $offdelim
 cf_adj_hyd(i,szn,r) = cf_adj_hyd(i,szn,r) + cf_nepal_hyd(i,szn,r)$Sw_SAsia_Trade;
 
 * do not constrain pumped hydro
-cf_adj_hyd(i,szn,r) = cf_adj_hyd(i,szn,r)$(not storage(i)) ;
+* cf_adj_hyd(i,szn,r) = cf_adj_hyd(i,szn,r)$(not storage(i)) ;
+cf_adj_hyd('HYDRO-PUMPED',szn,r)$rfeas(r) = cf_adj_hyd('HYDRO-STORAGE',szn,r) ;
 
 outage(i,h) = 1;
 
@@ -743,13 +776,19 @@ $offdelim
     InterTransCost(r)               "--INR/MW/km-- cost of transmission capacity for each BA"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%transmission%ds%inter_transcost.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%transmission%ds%%InterTrancost_file%
 $offdelim
           /,
     trancap(r,rr,trtype)          "--MW-- transmission capacity by type"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%transmission%ds%trancap.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%transmission%ds%%Trancap_file%
+$offdelim
+          /,
+    futuretran(r,rr,futuretran_cat,tt,trtype) "--MW-- announced near-term transmission expansion"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%transmission%ds%futuretran_cap_set.csv
 $offdelim
           /,
     trancost(r,tranvar,vc)          "transmission substation supply curve by voltage class"
@@ -772,7 +811,7 @@ $offdelim
 trancap(r,rr,trtype) = trancap(r,rr,trtype) + trancap(rr,r,trtype);
 shfeas(r,rr)$sum(trtype,trancap(r,rr,trtype)) = yes;
 tranfeas(r,vc)$(trancost(r,"cap",vc)>0) = yes;
-futuretran(r,rr,futuretran_cat,tt,trtype) = 0;
+*futuretran(r,rr,futuretran_cat,tt,trtype) = 0;
 
 trancap_exog(r,rr,trtype,t) =
 *initial transmission capacity
@@ -800,6 +839,13 @@ tranloss(r,rr)$[rb(r)$rb(rr)] = tranloss_permile * distance(r,rr) / 100;
 
 *set transmission losses to 1% per MW since having 0 could give weird results.
 tranloss(r,rr)$[rb(r)$rb(rr)] = .01 ;
+
+parameter r_rr_transcost(r,rr);
+r_rr_transcost(r,rr)$[sum((trtype,t),routes(r,rr,trtype,t))] = ((InterTransCost(r) + InterTransCost(rr))/2) * distance(r,rr);
+
+if(Sw_FocusRegionZeroTXCost=1,
+  r_rr_transcost(r,rr)$[focus_region(r)$focus_region(rr)] = .01;
+  );
 
 *==========================
 * --- Load ---
@@ -1158,19 +1204,19 @@ $offdelim
           / ,
           remainder(i,r,rs)       "remaining amount of capacity in rscbin after existing stock has been deducted",
           resourcescalar(i)       "scalar when multiple types of technologies that can be built on the same plot of land",
-          rsc_copy                " copy of rsc_dat used to calculate remainder(i,r,rs)", 
+          rsc_copy                " copy of rsc_dat used to calculate remainder(i,r,rs)",
           vre_gen_last_year(r,h,t)           "--MW-- generation from VRE generators in the prior solve year",
           cap_fraction(i,v,r,t)              "--fraction--  fraction of capacity that was retired",
           mingen_postret(r,szn,t)            "--MWh-- minimum generation level from retirements" ,
           curt_stor(i,v,r,h,src,t)           "--fraction--  fraction of curtailed energy that can be recovered by storage charging from a given source during that timeslice",
           curt_tran(r,rr,h,t)                "--fraction--  fraction of curtailed energy that can be reduced in r by building new transmission lines to rr",
           curt_reduct_tran_max(r,rr,h,t)     "--MW-- maximum amount of curtailment reduction that can occur in r from adding transmission to rr",
-          curt_old(r,h,t)                    "--MW-- curtailment from old capacity - used to calculate average curtailment for VRE techs", 
+          curt_old(r,h,t)                    "--MW-- curtailment from old capacity - used to calculate average curtailment for VRE techs",
           curt_mingen(r,h,t)                 "--fraction--  fraction of addition curtailment induced by increasing the minimum generation level (sequential only)",
           curt_mingen_int(r,h,t)             "--fraction--  fractional curtailment of mingen (intertemporal only)",
           curt_mingen_load(r,h,t)            "--fraction--  fraction of addition curtailment induced by increasing the minimum generation level, loaded from gdx file (so as to not overwrite existing values for non-modeled years)",
           cc_excess(i,r,szn,t)               "--MW-- this is the excess capacity credit when assuming marginal capacity credit in intertemporal solve",
-          cc_eqcf(i,v,r,rs,t)                   "--fraction--  fractional capacity credit based off average capacity factors - used without iteration with cc and curt scripts", 
+          cc_eqcf(i,v,r,rs,t)                   "--fraction--  fractional capacity credit based off average capacity factors - used without iteration with cc and curt scripts",
           cc_old(i,r,szn,t)                  "--MW-- capacity credit for existing capacity - used in sequential solve similar to heritage reeds",
           cc_old_load(i,r,szn,t)             "--MW-- cc_old loading in from the cc_out gdx file",
           cc_mar(i,r,szn,t)                  "--fraction--  cc_mar loading inititalized to some reasonable value for the 2010 solve",
@@ -1272,7 +1318,7 @@ $offdelim
 
 parameter hours_daily(h) "--number of hours-- number of hours represented by time-slice 'h' during one day" ;
 
-*storage_lifetime_cost_adjust(i) "--unitless-- cost adjustment for battery storage technologies because they do not have a 20-year life" 
+*storage_lifetime_cost_adjust(i) "--unitless-- cost adjustment for battery storage technologies because they do not have a 20-year life"
 *not using storage lifetime cost adjust because we are running intertemporal
 ;//
 
@@ -1281,7 +1327,7 @@ parameter hours_daily(h) "--number of hours-- number of hours represented by tim
 
 SR_Storage(i)$storage(i) = yes;
 
-numdays(szn) = sum(h$h_szn(h,szn),hours(h))/24; 
+numdays(szn) = sum(h$h_szn(h,szn),hours(h))/24;
 
 * set the duration of each storage duration bin
 bin_duration(sdbin) = sdbin.val ;
@@ -1392,8 +1438,8 @@ minloadfrac(r,i,h)$(sum(szn$h_szn(h,szn),hydmin(i,r,szn))) = sum(szn$h_szn(h,szn
 
 * set storage reserve frac to 0 if excluding storage from operating reserves
 if(Sw_StorOpres=0,
-	reserve_frac(i,ortype)$storage(i) = 0 ;
-	) ; 
+        reserve_frac(i,ortype)$storage(i) = 0 ;
+        ) ;
 *==========================
 * --- Policy ---
 *==========================
@@ -1402,7 +1448,20 @@ scalar CarbonPolicyStartYear  "First year for carbon policy" /%carbonpolicystart
 set
     co2mass(r,t)  "BAs and years with CO2 mass limit",
     co2rate(r,t)  "BAs and years with CO2 emissions rate limit",
-    co2massnat(t) "set of years with a national CO2 standard"
+    co2massnat(t) "set of years with a national CO2 standard",
+    rpo_tech "technology groups that can meet state RPOs"
+          /
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rpo_tech.csv
+          /,
+
+    capmandate_tech_set(i)           "technology groups that can meet RE capacity mandates"
+          /
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%capmandate_tech_set.csv
+          /,
+    genmandate_tech_set(i)           "technology groups that can meet RE capacity mandates"
+          /
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%genmandate_tech_set.csv
+          /
     ;
 
 parameter
@@ -1421,7 +1480,21 @@ $offdelim
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%growth_limit_absolute.csv
 $offdelim
-          /;
+          /,
+
+          state_rpo(t,rpo_tech,r) "--fraction-- state RPO tagets"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%state_rpo.csv
+$offdelim
+          /
+;
+
+table rpotech_i(rpo_tech,i) "mapping set between RPO obligations and techs that can contribute"
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rpotech_i_map.csv
+$offdelim
+;
 
 
 *######################
@@ -1450,20 +1523,21 @@ cf_tech(i)                       "techs with capacity factors" //derived from m_
 
 parameter
 m_capacity_exog(i,v,r,t)         "--MW-- exogenous capacity used in the model",
-m_required_prescriptions(i,r,t)  "--MW-- required prescriptions by year (non-cumulative)",
+*m_required_prescriptions(i,r,t)    "--MW-- required prescriptions by year (non-cumulative)",
+m_required_prescriptions_state(i,state,t)  "--MW-- required prescriptions by year (non-cumulative)",
 m_rscfeas(r,i,rscbin)            "--qualifier-- feasibility conditional for investing in RSC techs",
 m_avail_retire_exog_rsc(i,v,r,t) "--MW-- exogenous amoung of available retirements",
 m_rsc_dat(r,i,rscbin,rscvar)     "--MW or $/MW-- resource supply curve attributes",
 m_cc_mar(i,r,szn,t)              "--%-- marginal capacity value",
 m_cf(i,r,h)                    "--%-- modeled capacity factor",
-m_cf_szn(i,r,szn)            "--fraction-- modeled capacity factor, averaged by season" 
+m_cf_szn(i,r,szn)            "--fraction-- modeled capacity factor, averaged by season"
 ;
 
 
   m_capacity_exog(i,v,rb,t) = capacity_exog(i,v,rb,"sk",t);
   m_capacity_exog(i,v,rs,t)$(not sameas(rs,"sk")) = sum(r$r_rs(r,rs),capacity_exog(i,v,r,rs,t));
 
-  m_required_prescriptions(i,rb,t) = required_prescriptions(i,rb,t);
+  m_required_prescriptions_state(i,state,t) = required_prescriptions_state(i,state,t);
 
   m_rscfeas(rb,i,rscbin) = rscfeas(rb,"sk",i,rscbin);
   m_rscfeas(rs,i,rscbin)$(not sameas(rs,"sk")) = sum(r$r_rs(r,rs),rscfeas(r,rs,i,rscbin));
