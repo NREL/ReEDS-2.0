@@ -4,4 +4,10 @@ advind 0
 *reslim 100000
 scaind 1
 aggind 7
-barepcomp = 1e-8
+barepcomp = 1e-9
+numericalemphasis = 1
+depind 3
+barcolnz 30
+barorder 1
+baralg 1
+barstartalg 2

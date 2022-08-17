@@ -339,6 +339,8 @@ class Handler:
                     "input": json.loads(sim.input.decode()),
                     "uuid": sim.uuid,
                     "username": sim.username,
+                    "usr_email": "ilyac@nrel.gov",
+                    "description": "test",
                 }
             )
 

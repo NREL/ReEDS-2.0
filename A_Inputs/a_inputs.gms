@@ -52,6 +52,7 @@ Sw_Int_Curt        "Intertemporal curt method"                                  
 Sw_FuelSupply    "Switch for fuel supply constraint"                               /%GSw_FuelSupply%/,
 Sw_Prescribed    "Switch for prescribed capacity additions"                        /%GSw_Prescribed%/,
 Sw_RECapMandate  "Switch for RE capacity targets"                                  /%GSw_RECapMandate%/,
+Sw_RECapFracMandate  "Switch for RE capacity fraction targets"                     /%GSw_RECapFracMandate%/,
 Sw_REGenMandate  "Switch for RE generation targets"                                /%GSw_REGenMandate%/,
 Sw_TechPhaseOut  "Switch for forced phase out of select technologies"              /%GSw_TechPhaseOut%/,
 Sw_Retire        "Switch allowing endogenous retirements"                          /%GSw_Retire%/,
@@ -433,6 +434,12 @@ $offdelim
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%RECapMandate_file%
 $offdelim
+          /,
+      re_mandate_capfrac(t)          "---fraction--- non-fossil capacity by year"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%RECapFracMandate_file%
+$offdelim
           /
 ;
 
@@ -595,9 +602,8 @@ capacity_exog(i,"prescribed",r,"sk",t)$sum((tt)$((yeart(t)>=yeart(tt))$(yeart(t)
          sum((tt)$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))),prescribednonrsc(tt,i,r,"value"));
 
 *prescribed capacity for rsc technologies follows the same logic but now
-*can be attributed to a specific rs (and for some techs rs still equals sk)
-capacity_exog(i,"prescribed",r,rs,t)$sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), prescribedrsc(tt,i,r,rs,"value")) =
-         sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), prescribedrsc(tt,i,r,rs,"value"));
+*can be attributed to a specific rs 
+capacity_exog(i,"prescribed",r,rs,t) = prescribedrsc(t,i,r,rs,"value");
 
 capacity_exog(i,"prescribed",r,rs,t)$sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))$Sw_SAsia_Trade), cap_NepalStorage(tt,i,r,rs,"value")) =
          sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), cap_NepalStorage(tt,i,r,rs,"value"));

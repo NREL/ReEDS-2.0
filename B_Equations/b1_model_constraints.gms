@@ -107,6 +107,7 @@ EQUATION
 * rsc policy constraints
  eq_regen_mandate(t)                 "--fraction-- minimum generation fraction from rsc sources"
  eq_recap_mandate(t)                   "--MW-- minimum capacity from prescribed rsc sources"
+ eq_recapfrac_mandate(t)               "--fraction-- minimum capacity fraction from non-fossil techs"
 * eq_state_rpo(r,t,rpo_tech)                 "--fraction -- tech specific state RPO target"
 
 * operating reserve constraints
@@ -144,6 +145,7 @@ EQUATION
 ;
 
 * 5GW per year transmission growth limit between any two BAs
+** TODO: Make this an OPTIONAL INPUT and set off by default 
 eq_trangrowth_limit(r,rr,t)$[sum(trtype,routes(r,rr,trtype,t))$tmodel(t)$rfeas(r)$rfeas(rr)]..
 
     5000 * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt)})
@@ -400,16 +402,25 @@ eq_regen_mandate(t)$[tmodel(t)$Sw_REGenMandate]..
 eq_recap_mandate(t)$[tmodel(t)$Sw_RECapMandate]..
    
 * wind and solar capacity
-    sum{(i,v,r)$[rfeas(r)$tmodel(t)$valcap(i,v,r,t)$rs(r)$(wind(i) or pv(i))],
-        CAP(i,v,r,t)} 
-
-* hydro, nuclear, bio capacity
-   + sum{(i,v,r)$[rfeas(r)$tmodel(t)$valcap(i,v,r,t)$rb(r)$(hydro(i) or nuclear(i) or bio(i))],
+    sum{(i,v,r)$[rfeas(r)$tmodel(t)$valcap(i,v,r,t)$capmandate_tech_set(i)],
         CAP(i,v,r,t)} 
 
         =g=
 
     re_mandate_cap(t)
+;
+
+eq_recapfrac_mandate(t)$[tmodel(t)$Sw_RECapFracMandate]..
+
+* wind and solar capacity
+    sum{(i,v,r)$[rfeas(r)$tmodel(t)$valcap(i,v,r,t)$capmandate_tech_set(i)],
+        CAP(i,v,r,t)} 
+
+        =g=
+
+* fraction of total capacity
+    sum{(i,v,r)$[rfeas(r)$tmodel(t)$valcap(i,v,r,t)],
+        CAP(i,v,r,t)}*re_mandate_capfrac(t)
 ;
 
 
