@@ -1,0 +1,15 @@
+﻿data_type,group,data_set,collect_data,description,Marmot Property
+interval,generator,GEN,TRUE,Output from each generator by timestep,generator_Generation
+year,generator,gen_out_ann,FALSE,Generation by year,generator_Generation_Annual
+year,generator,CAP,TRUE,Nameplate power capacity (Max Capacity x Units),generator_Installed_Capacity
+interval,generator,CURT,TRUE,Curtailment of by state by timestep,generator_Curtailment
+year,region,load_rt,FALSE,Total load within a region,region_Load
+interval,line,FLOW,TRUE,"Flow from ""Node From"" to ""Node To""",line_Flow
+interval,line,losses_tran_h,FALSE,"losses from ""Node From"" to ""Node To""",line_Losses
+year,line,CAPTRAN,TRUE,Transmission capacity,line_Import Limit
+interval,generator,STORAGE_IN,TRUE,The amount that a generator charges during a timestep.,generator_Pump Load
+year,storage,stor_energy_cap,FALSE,Storage Energy Capacity,storage_Max Volumne
+year,emission,emit_r,FALSE,Total emissions production,emissions_Production
+interval,reserves_generators,OPRES,TRUE,Reserves provided by generator and timestep,reserves_generators_Provision
+year,reserves_generators,opRes_supply,FALSE,Reserves provided by generators by year,reserves_generators_Provision_Annual
+year,generator,systemcost_techba,FALSE,The total cost for operating a generators,generator_Total_Generation_Cost

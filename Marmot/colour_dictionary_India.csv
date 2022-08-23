@@ -1,0 +1,20 @@
+Generator,Colour
+Curtailment,#E1E1E1
+Diesel,#853D65
+Gas CC,#52216B
+Gas CT,#C2A1DB
+Hydro,#187F94
+Nuclear,#820000
+Other,#A96235
+Pumped hydro,darkblue
+Solar PV,#FFC903
+Sub-Coal,#222222
+Super-Coal,#525352
+Wind,#00B6EF
+BESS,#FF4A88
+BESS 1hr,#FF7FBB
+BESS 2hr,#CC0079
+BESS 4hr,#FF6882
+BESS 6hr,#DF5282
+BESS 8hr,#CC015C
+BESS 10hr,#9B014F
