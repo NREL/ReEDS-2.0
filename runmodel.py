@@ -703,8 +703,10 @@ def main(ui_input={}, notify = None, uuid=None):
 	
 				agg1 = "Country"
 				os.system("python {} {} {} {} {} {} -a {} -sf {} -rmf {} -gnf {} -ogcf {} -cdf {} -mapf {}".format(plotter, mod, scenarios, scenarios_path, plot_select_path, agg1, marmot_out_path, reg_map_file, gen_names_file, gen_order_file, color_dict_file, "Marmot"))
+				agg2 = "region"
+				os.system("python {} {} {} {} {} {} -a {} -sf {} -rmf {} -gnf {} -ogcf {} -cdf {} -mapf {}".format(plotter, mod, scenarios, scenarios_path, plot_select_path, agg2, marmot_out_path, reg_map_file, gen_names_file, gen_order_file, color_dict_file, "Marmot"))
 
-	#   python marmot_formatter_cli.py "ReEDS_India" ilyac_newrun_newtest ilyac_newrun_test "reeds_server/users_output/ilyac/ilyac_newrun/runs" "Marmot/reeds_properties_test.csv" -sf "reeds_server/users_output/ilyac/ilyac_newrun/exceloutput" -rm "Marmot/Region_mapping_ReEDS_India.csv"
+	#   python marmot_formatter_cli.py "ReEDS_India" ilyac_newrun_newtest ilyac_newrun_test "reeds_server/users_output/ilyac/ilyac_newrun/runs" "Marmot/reeds_properties_India.csv" -sf "reeds_server/users_output/ilyac/ilyac_newrun/exceloutput" -rm "Marmot/Region_mapping_ReEDS_India.csv" 
 
 	#	python marmot_plotter_cli.py "ReEDS_India" ilyac_newrun_newtest ilyac_newrun_test "reeds_server/users_output/ilyac/ilyac_newrun/runs" "Marmot/Marmot_plot_select_India.csv" -a "Country" -sf "reeds_server/users_output/ilyac/ilyac_newrun/exceloutput" -rmf "Region_mapping_ReEDS_India.csv" -gnf "gen_names_India.csv" -ogcf "ordered_gen_categories_India.csv" -cdf "colour_dictionary_India.csv" -mapf "Marmot"
 

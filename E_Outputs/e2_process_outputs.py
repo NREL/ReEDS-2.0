@@ -52,8 +52,7 @@ def ProcessingGdx():
 
     case_gdx = "output_{}.gdx".format(case)
     run_name = case.split('_')[0] + '_' + case.split('_')[1]
-    #gdxdir = os.path.join("E_Outputs","gdxfiles",case_gdx) # TODO: change save location to user-specific folder
-    gdxdir = os.path.join("reeds_server","users_output", case.split('_')[0], run_name,"gdxfiles",case_gdx)
+    gdxdir = os.path.join("reeds_server","users_output", case.split('_')[0], run_name,"runs", case, "outputs", case_gdx)
 
     savedir = os.path.join("reeds_server", "users_output", case.split('_')[0], run_name, 'exceloutput') # TODO: change save location to user-specific folder
     Path(savedir).mkdir(parents=True, exist_ok=True)
