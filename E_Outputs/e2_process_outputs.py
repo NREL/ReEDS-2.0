@@ -20,9 +20,10 @@ from bokeh.transform import factor_cmap
 from pathlib import Path
 
 case = str(sys.argv[1])
-#case = 'Sep22_UI_test1'
-#os.chdir('..')
-#%%
+
+# read the timeslice map
+ts_name_map = pd.read_csv(os.path.join("A_Inputs","inputs","analysis","time_slice_names.csv"))
+
 def summarize(df, sumby):
     out = df.groupby(sumby).sum().reset_index()
     return(out)
@@ -40,6 +41,10 @@ def map_rs_to_state(df, rmap):
 def get_tslc_hours(df, left_on, tslc_hours):
     df = df.merge(tslc_hours, left_on = left_on, right_on = 'h')
     df.rename(columns = {'Value':'Timeslice_hours'}, inplace = True)
+    return(df)
+
+def map_h_to_tsname(df, left_on):
+    df = df.merge(ts_name_map, left_on=left_on, right_on='h')
     return(df)
 
 # %%
@@ -97,6 +102,7 @@ def ProcessingGdx():
     pdlist = [gdxin['firm_conv'],gdxin['firm_hydro'],gdxin['firm_vg'],gdxin['firm_stor']]
     firmcap = pd.concat(pdlist)
     firmcap.set_axis(['Region','Season','Year','Technology','firm_capacity_MW'], axis = 1, inplace = True)
+    firmcap = firmcap.round(0)
 
     #%%
     # Timeslice dispatch
@@ -158,18 +164,22 @@ def ProcessingGdx():
     annual_out = pd.merge(cap, inv, on = ['Technology','State','Year'], how='left')
     annual_out = annual_out.merge(gen, on = ['Technology','State','Year'], how='left')
     annual_out = annual_out.merge(opres, on = ['Technology','State','Year'], how='left')
+    annual_out = annual_out.round(0)
     #annual_out = annual_out.merge(emit, on = ['Technology','State','Year'])
 
     # Sheet 2: Seasonal firm capacity - firmcap
     # just firmcap here
 
     # Sheet 3: Timeslice results - gen_tslc, opres_tslc, storops
-    tslc_out = pd.merge(gen_tslc, opres_tslc, on = ['Technology','State','Year','Timeslice'])
-    tslc_out = tslc_out.merge(storops, on = ['Technology','State','Year','Timeslice'] )
+    tslc_out = pd.merge(gen_tslc, opres_tslc, on = ['Technology','State','Year','Timeslice','Timeslice_hours'], how = 'outer')
+    tslc_out = tslc_out.merge(storops, on = ['Technology','State','Year','Timeslice'], how = 'outer')
+    tslc_out = map_h_to_tsname(tslc_out, 'Timeslice')
+    tslc_out.drop(columns=['Timeslice','h','Timeslice_hours'], inplace=True)
+    tslc_out = tslc_out.round(0)
 
     # Sheet 4: Transmission results - txcap, txinv
     tx_out = pd.merge(txcap, txinv, on = ['State_from','State_to','Year'], how='left')
-
+    tx_out = tx_out.round(0)
     #%%
     #%%
     ######## EXPORT TO EXCEL
@@ -177,10 +187,10 @@ def ProcessingGdx():
     # separate sheet for each table
     writer = pd.ExcelWriter(os.path.join(os.getcwd(),savedir,"{}_results.xlsx".format(case)))
 
-    annual_out.to_excel(writer, sheet_name = "Annual results")
-    firmcap.to_excel(writer, sheet_name = "Seasonal firm capacity")
-    tslc_out.to_excel(writer, sheet_name = "Timeslice results")
-    tx_out.to_excel(writer, sheet_name='Transmission results')
+    annual_out.to_excel(writer, sheet_name = "Annual results", index=False)
+    firmcap.to_excel(writer, sheet_name = "Seasonal firm capacity", index=False)
+    tslc_out.to_excel(writer, sheet_name = "Timeslice results", index=False)
+    tx_out.to_excel(writer, sheet_name='Transmission results', index=False)
 
     writer.save()
     print("Results saved to " + os.path.join(savedir,"{}_results.xlsx".format(case)))
