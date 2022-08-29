@@ -339,6 +339,8 @@ class Handler:
                     "input": json.loads(sim.input.decode()),
                     "uuid": sim.uuid,
                     "username": sim.username,
+                    "usr_email": "ilyac@nrel.gov",
+                    "description": "test",
                 }
             )
 
@@ -1301,30 +1303,30 @@ class Handler:
                     "D_Augur",
                     "ErrorFile",
                 )
+                if os.path.exists(error_dir):
+                    if not os.path.exists(
+                        os.path.join(error_dir, runname + ".zip")
+                    ):
 
-                if not os.path.exists(
-                    os.path.join(error_dir, runname + ".zip")
-                ):
+                        errorFileExists = False
+                        for file in os.listdir(error_dir):
+                            if runname in file:
+                                errorFileExists = True
 
-                    errorFileExists = False
-                    for file in os.listdir(error_dir):
-                        if runname in file:
-                            errorFileExists = True
+                        if errorFileExists:
+                            zipf = zipfile.ZipFile(
+                                os.path.join(error_dir, runname + ".zip"),
+                                "w",
+                                zipfile.ZIP_DEFLATED,
+                            )
+                            zipdir(error_dir, zipf, include_only=runname)
+                            zipf.close()
+                            output_file = runname + ".zip"
+                            output_folder_path = error_dir
 
-                    if errorFileExists:
-                        zipf = zipfile.ZipFile(
-                            os.path.join(error_dir, runname + ".zip"),
-                            "w",
-                            zipfile.ZIP_DEFLATED,
-                        )
-                        zipdir(error_dir, zipf, include_only=runname)
-                        zipf.close()
+                    else:
                         output_file = runname + ".zip"
                         output_folder_path = error_dir
-
-                else:
-                    output_file = runname + ".zip"
-                    output_folder_path = error_dir
 
             if output_file:
 
@@ -1346,7 +1348,7 @@ class Handler:
             else:
                 return web.Response(
                     text=json.dumps(
-                        f"Either simulation is not complete or simulation ran into an error!"
+                        f"Either simulation is not complete or simulation ran into a premature error!"
                     ),
                     status=500,
                 )
@@ -1517,6 +1519,9 @@ class Handler:
                 reeds_input["run_name"],
             )
 
+            if not os.path.exists(reeds_input["output_folder_path"]):
+                os.mkdir(reeds_input["output_folder_path"])
+
             if request["userData"]["username"] not in self.instances_dict:
                 self.instances_dict[request["userData"]["username"]] = {}
 
@@ -1559,7 +1564,7 @@ class Handler:
                 }
             )
 
-            # self.mail.send_email(os.getenv('REEDS_SENDER'), usr_email, email_body,  REEDS_SIM_INQUEUE_SUBJECT + f" : {metadata['name']}")
+            self.mail.send_email(os.getenv('REEDS_SENDER'), usr_email, email_body,  REEDS_SIM_INQUEUE_SUBJECT + f" : {metadata['name']}")
 
             return web.Response(text=json.dumps(output_metadata), status=200)
 
@@ -2358,19 +2363,20 @@ class Handler:
                     )
 
                     error_file_exists = False
-                    for file in error_dir:
-                        if run_name in file:
-                            error_file_exists = True
+                    if os.path.exists(error_dir):
+                        for file in error_dir:
+                            if run_name in file:
+                                error_file_exists = True
 
-                    if error_file_exists:
-                        with session_manager() as session:
-                            status = "ERROR"
-                            self.db.update_output_metadata_status(
-                                session,
-                                status,
-                                run_name,
-                                request["userData"]["username"],
-                            )
+                        if error_file_exists:
+                            with session_manager() as session:
+                                status = "ERROR"
+                                self.db.update_output_metadata_status(
+                                    session,
+                                    status,
+                                    run_name,
+                                    request["userData"]["username"],
+                                )
 
                 # self.update_scenarios_and_output()
 
@@ -2457,9 +2463,10 @@ class Handler:
                         "D_Augur",
                         "ErrorFile",
                     )
-                    for file in error_dir:
-                        if data["name"] in file:
-                            os.remove(os.path.join(error_dir, file))
+                    if os.path.exists(error_dir):
+                        for file in error_dir:
+                            if data["name"] in file:
+                                os.remove(os.path.join(error_dir, file))
 
                     # Delete the html from F_Analysis if exists
                     # analysis_folder = os.path.join(os.path.dirname(__file__), '..', '..', 'F_Analysis')

@@ -2,9 +2,14 @@ import os
 import pandas as pd
 
 DEFAULT_CATEGORY_FILES = {
-    'TechCost_file': 'tech_costs.csv',
+    'TechCost_file': 'tech_costs_2021update.csv',
     'FuelLimit_file': 'fuel_limit.csv',
-    'MinLoad_file': 'minloadfrac0.csv'
+    'MinLoad_file': 'minloadfrac0.csv',
+    'RECapMandate_file': 'recap_mandate_2030.csv',
+    'RECapManTech_file': 'capmandate_tech_set.csv',
+    'RECapFracMandate_file': 'recapfrac_mandate_2030.csv',
+    'REGenMandate_file': 'regen_mandate_2030.csv',
+    'REGenManTech_file': 'genmandate_tech_set.csv'
 }
 
 FILE_KEYS =[
@@ -17,8 +22,11 @@ FILE_KEYS =[
     'Load_file', # included
     'PeakDemRegion_file', # included
     'IVT_file', 
-    'RECapMandate_file', 
-    'REGenMandate_file',
+    'RECapMandate_file', # included
+    'RECapManTech_file', # included
+    'RECapFracMandate_file', # included
+    'REGenMandate_file', # included
+    'REGenManTech_file', # included
     'yearset'
 ]
 
@@ -57,7 +65,10 @@ FILE_LOCATION = {
     'PeakDemRegion_file': 'demand', # included
     'IVT_file': 'generators', 
     'RECapMandate_file': 'generators', 
+    'RECapManTech_file': 'sets',
+    'RECapFracMandate_file': 'generators',
     'REGenMandate_file': 'generators',
+    'REGenManTech_file': 'sets',
     'yearset': 'sets'
 }
 
@@ -76,8 +87,11 @@ CASE_ROWS = [
     'Load_file', # included
     'PeakDemRegion_file', # included
     'IVT_file', 
-    'RECapMandate_file', 
-    'REGenMandate_file', 
+    'RECapMandate_file', # included 
+    'RECapManTech_file', # included 
+    'RECapFracMandate_file', # included
+    'REGenMandate_file', # included
+    'REGenManTech_file', # included
     'numclass', 
     'numhintage', 
     'carbonpolicystartyear',  # included
@@ -103,6 +117,7 @@ CASE_ROWS = [
     'GSw_FuelSupply', # included 
     'GSw_Prescribed', # included
     'GSw_RECapMandate', # included
+    'GSw_RECapFracMandate', # included
     'GSw_REGenMandate', # included
     'GSw_TechPhaseOut', # included
     'GSw_Retire', # included

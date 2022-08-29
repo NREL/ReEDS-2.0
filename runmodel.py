@@ -22,6 +22,7 @@ import threading
 import time
 import shutil
 import csv
+import traceback
 import zipfile
 import operator
 import time
@@ -565,115 +566,123 @@ def main(ui_input={}, notify = None, uuid=None):
 		log_contents = []
 		def print(str_):
 			notify(str_, uuid)
-			log_contents.append(str_)
+			log_contents.append(str_ + '\n')
 
-	# import logging
-	# logging.basicConfig(level=logging.DEBUG, format='%(relativeCreated)6d %(threadName)s %(message)s', stream=sys.stdout)
-	# if 'output_folder_path' in ui_input:
-		# if not os.path.exists(ui_input['output_folder_path']):
-		# 	os.mkdir(ui_input['output_folder_path'])
-		#sys.stdout = open(os.path.join(ui_input['output_folder_path'], 'process.out'), "w")
-	""" Executes parallel solves based on cases in 'cases.csv' """
 
-	print(" ")
-	print(" ")
-	print("--------------------------------------------------------------------------------------------------")
-	print(" ")
-	print("         MMM.  808   MMM;   BMW       rMM   @MMMMMMMM2     XM@MMMMMMMMMS   MM0         ")
-	print("        iMMM@S,MMM;X@MMMZ   MMMM.     aMM   MMMW@MMMMMMM   BMMMW@M@M@MMX   MMM         ")
-	print("         r2MMZ     SMMa;i   MMMMM;    SMM   MMB      7MMS  ZMM.            MMM         ")
-	print("           Z         Z      MMZ7MM2   XMM   MMW       MM8  ZMM.            MMM         ")
-	print("        .MMr         .MM7   MM8 rMMB  XMM   MM@     ,MMM   ZMMMMMMMMMM     MMM         ")
-	print("        .MMr         ,MMr   MMB  :MMM :MM   MMW  MMMMMB    ZMMMWMMMMM@     MMM         ")
-	print("           Z         Z      MMW    MMMaMM   MM@   MMMi     ZMM.            MMM         ")
-	print("         XaMM8     aMMZXi   MMW     MMMMM   MM@    0MMr    ZMM.            MMW         ")
-	print("        iMMMW7,MMM;;BMMMZ   MMM      8MMM   MMM     aMMB   0MMMWMMM@MMMZ   MMM@MMMMMMM ")
-	print("         BZ0   SSS   0Z0.   ZBX       :0B   8BS      :BM7  ;8Z8WWWWWW@M2   BZZ0WWWWWWM ")
-	print(" ")
-	print("--------------------------------------------------------------------------------------------------")
-	print(" ")
-	print(" ")
-	print(" ")
-#%%#
-	# --- Gather user inputs from CLI before calling GAMS programs ---
-	envVar = setupEnvironment(ui_input)
+	try:
 
-	# --- Check for Hourly Static File (i.e. /D_Augur/LDCfiles/India_8760) ---
-	#filedst = os.path.join(os.getcwd(),"D_Augur","LDCfiles")
-	filedst = os.path.join(os.path.abspath(os.path.dirname(__file__)),"D_Augur","LDCfiles")
-	pklfiles = ["_load.pkl","_recf.pkl","_resources.pkl"]
-#%%#
-	for i in list(set(envVar['hourlyloadfileset'])):
-		# --- Stitch together state pickles into single (larger than githubs file limit) pickle ---
+		# import logging
+		# logging.basicConfig(level=logging.DEBUG, format='%(relativeCreated)6d %(threadName)s %(message)s', stream=sys.stdout)
+		# if 'output_folder_path' in ui_input:
+			# if not os.path.exists(ui_input['output_folder_path']):
+			# 	os.mkdir(ui_input['output_folder_path'])
+			#sys.stdout = open(os.path.join(ui_input['output_folder_path'], 'process.out'), "w")
+		""" Executes parallel solves based on cases in 'cases.csv' """
+
 		print(" ")
-		print('Stitching together state load pickles for load scenario {}'.format(i))
 		print(" ")
-		state_load_dfs = []
-		print(filedst)
-		load_pickle_dir = os.path.join(filedst, 'state_load_pickles')
-		for p in glob.glob(os.path.join(load_pickle_dir,"*{}*".format(i))):
-			state_load_dfs.append(pd.read_pickle(os.path.join(load_pickle_dir,p)))
-		India_8760_load = pd.concat(state_load_dfs, axis='columns')
-		India_8760_load = India_8760_load.reset_index(drop=False)
-		India_8760_load.to_pickle(os.path.join(filedst, '{}_load.pkl'.format(i)), protocol=2)
+		print("--------------------------------------------------------------------------------------------------")
+		print(" ")
+		print("         MMM.  808   MMM;   BMW       rMM   @MMMMMMMM2     XM@MMMMMMMMMS   MM0         ")
+		print("        iMMM@S,MMM;X@MMMZ   MMMM.     aMM   MMMW@MMMMMMM   BMMMW@M@M@MMX   MMM         ")
+		print("         r2MMZ     SMMa;i   MMMMM;    SMM   MMB      7MMS  ZMM.            MMM         ")
+		print("           Z         Z      MMZ7MM2   XMM   MMW       MM8  ZMM.            MMM         ")
+		print("        .MMr         .MM7   MM8 rMMB  XMM   MM@     ,MMM   ZMMMMMMMMMM     MMM         ")
+		print("        .MMr         ,MMr   MMB  :MMM :MM   MMW  MMMMMB    ZMMMWMMMMM@     MMM         ")
+		print("           Z         Z      MMW    MMMaMM   MM@   MMMi     ZMM.            MMM         ")
+		print("         XaMM8     aMMZXi   MMW     MMMMM   MM@    0MMr    ZMM.            MMW         ")
+		print("        iMMMW7,MMM;;BMMMZ   MMM      8MMM   MMM     aMMB   0MMMWMMM@MMMZ   MMM@MMMMMMM ")
+		print("         BZ0   SSS   0Z0.   ZBX       :0B   8BS      :BM7  ;8Z8WWWWWW@M2   BZZ0WWWWWWM ")
+		print(" ")
+		print("--------------------------------------------------------------------------------------------------")
+		print(" ")
+		print(" ")
+		print(" ")
+	#%%#
+		# --- Gather user inputs from CLI before calling GAMS programs ---
+		envVar = setupEnvironment(ui_input)
 
-#	for i in list(set(envVar['hourlystaticfileset'])): # i default is India_8760
-#		for j in pklfiles:
-#			checkLDCpkl(filedst = filedst, filename = i+j)
-	checkLDCpkl(filedst, filename = "India_hour_season_ts_map.pkl")
+		# --- Check for Hourly Static File (i.e. /D_Augur/LDCfiles/India_8760) ---
+		#filedst = os.path.join(os.getcwd(),"D_Augur","LDCfiles")
+		filedst = os.path.join(os.path.abspath(os.path.dirname(__file__)),"D_Augur","LDCfiles")
+		pklfiles = ["_load.pkl","_recf.pkl","_resources.pkl"]
+	#%%#
+		for i in list(set(envVar['hourlyloadfileset'])):
+			# --- Stitch together state pickles into single (larger than githubs file limit) pickle ---
+			print(" ")
+			print('Stitching together state load pickles for load scenario {}'.format(i))
+			print(" ")
+			state_load_dfs = []
+			print(filedst)
+			load_pickle_dir = os.path.join(filedst, 'state_load_pickles')
+			for p in glob.glob(os.path.join(load_pickle_dir,"*{}*".format(i))):
+				state_load_dfs.append(pd.read_pickle(os.path.join(load_pickle_dir,p)))
+			India_8760_load = pd.concat(state_load_dfs, axis='columns')
+			India_8760_load = India_8760_load.reset_index(drop=False)
+			India_8760_load.to_pickle(os.path.join(filedst, '{}_load.pkl'.format(i)), protocol=2)
 
-	# --- Create runs directory ---
-	if not os.path.exists(os.path.join("E_Outputs","runs")):
-		os.mkdir(os.path.join("E_Outputs","runs"))
-	
-	# --- Create Threads for each Model ---
-	createmodelthreads(envVar)
-	
-	# --- Interpret CLI flags to compile or run after batch scripts are created ---
-	runnames = ['{}_{}'.format(envVar['runname'], i) for i in envVar['casenames']]
-	if ui_input:
-		entry_folder = os.path.abspath(ui_input['output_folder_path'])
-	else:
-		entry_folder = 'E_Outputs'
-	for r in runnames:
-		if envVar['comp'] == 1: #compile the model if indicated by user
-			shell_script_path = os.path.join(entry_folder,'runs',r,'compile_{}{}'.format(r, FILE_EXTENSION))
-			# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
-			# subprocess.call(shell_script_path, shell=True)
-			p1 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-			if notify:
-				p1_stdout_content = p1.stdout.read().decode().split('\n')
-				for each in p1_stdout_content:
-					notify(each, uuid)
-				log_contents.extend(p1_stdout_content)
+	#	for i in list(set(envVar['hourlystaticfileset'])): # i default is India_8760
+	#		for j in pklfiles:
+	#			checkLDCpkl(filedst = filedst, filename = i+j)
+		checkLDCpkl(filedst, filename = "India_hour_season_ts_map.pkl")
 
-			p2 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-			if notify:
-				p2_stdout_content = p2.stdout.read().decode().split('\n')
-				for each in p2_stdout_content:
-					notify(each, uuid)
-				log_contents.extend(p2_stdout_content)
+		# --- Create runs directory ---
+		if not os.path.exists(os.path.join("E_Outputs","runs")):
+			os.mkdir(os.path.join("E_Outputs","runs"))
+		
+		# --- Create Threads for each Model ---
+		createmodelthreads(envVar)
+		
+		# --- Interpret CLI flags to compile or run after batch scripts are created ---
+		runnames = ['{}_{}'.format(envVar['runname'], i) for i in envVar['casenames']]
+		if ui_input:
+			entry_folder = os.path.abspath(ui_input['output_folder_path'])
+		else:
+			entry_folder = 'E_Outputs'
+		for r in runnames:
+			if envVar['comp'] == 1: #compile the model if indicated by user
+				shell_script_path = os.path.join(entry_folder,'runs',r,'compile_{}{}'.format(r, FILE_EXTENSION))
+				# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
+				# subprocess.call(shell_script_path, shell=True)
+				p1 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				if notify:
+					p1_stdout_content = p1.stdout.read().decode().split('\n')
+					for each in p1_stdout_content:
+						notify(each, uuid)
+					log_contents.extend(p1_stdout_content)
 
-		if envVar['run'] == 1: #run the model if indicated by user
-			shell_script_path = os.path.join(entry_folder,'runs',r,'run_{}{}'.format(r, FILE_EXTENSION))
-			# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
-			# subprocess.call(shell_script_path, shell=True)
-			p3 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-			if notify:
-				p3_stdout_content = p3.stdout.read().decode().split('\n')
-				for each in p3_stdout_content:
-					notify(each, uuid)
-				log_contents.extend(p3_stdout_content)
+				p2 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				if notify:
+					p2_stdout_content = p2.stdout.read().decode().split('\n')
+					for each in p2_stdout_content:
+						notify(each, uuid)
+					log_contents.extend(p2_stdout_content)
 
-			p4 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-			if notify:
-				p4_stdout_content = p4.stdout.read().decode().split('\n')
-				for each in p4_stdout_content:
-					notify(each, uuid)
-				log_contents.extend(p4_stdout_content)
-	if notify:
-		with open(os.path.join(ui_input['output_folder_path'], 'full_log.txt'), 'w') as f:
-			f.writelines(log_contents)
+			if envVar['run'] == 1: #run the model if indicated by user
+				shell_script_path = os.path.join(entry_folder,'runs',r,'run_{}{}'.format(r, FILE_EXTENSION))
+				# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
+				# subprocess.call(shell_script_path, shell=True)
+				p3 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				if notify:
+					p3_stdout_content = p3.stdout.read().decode().split('\n')
+					for each in p3_stdout_content:
+						notify(each, uuid)
+					log_contents.extend(p3_stdout_content)
+
+				p4 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				if notify:
+					p4_stdout_content = p4.stdout.read().decode().split('\n')
+					for each in p4_stdout_content:
+						notify(each, uuid)
+					log_contents.extend(p4_stdout_content)
+		if notify:
+			with open(os.path.join(ui_input['output_folder_path'], 'full_log.txt'), 'w') as f:
+				f.writelines(log_contents)
+	except Exception as e:
+		if notify:
+			log_contents.append(traceback.format_exc() + f" >> {str(e)}")
+			with open(os.path.join(ui_input['output_folder_path'], 'full_log.txt'), 'w') as f:
+				f.writelines(log_contents)
 
 if __name__ == '__main__':
 	# --- Wrapper to run from CLI ---
