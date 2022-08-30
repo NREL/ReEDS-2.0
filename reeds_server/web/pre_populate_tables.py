@@ -80,7 +80,7 @@ class PopulateDefaultScenario:
         user.password = bcrypt.hashpw(
             os.getenv("REEDS_SUPERUSER_PASSWORD").encode("utf-8"),
             bcrypt.gensalt(),
-        )
+        ).decode()
         user.email = os.getenv("REEDS_SUPERUSER_EMAIL")
         user.role = "admin"
         user.organization = "NREL"
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # postgres_engine = "postgresql://postgres:kapil@localhost:5001/reeds"
     # mysql_engine = "mysql://root:kapil@localhost:3306/reeds"
 
-    db_connection_string = "mysql://root:password@localhost:3306/reeds"
+    db_connection_string = "postgresql://postgres:mysecretpassword@localhost:3007/reeds"
 
     PopulateDefaultScenario(
         db_connection_string,

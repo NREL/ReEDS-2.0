@@ -265,6 +265,6 @@ if __name__ == "__main__":
     # postgres_engine = 'postgresql://postgres:kapil@localhost:5001/reeds'
     # mysql_engine = 'mysql://root:kapil@localhost:3306/reeds'
 
-    db_connection_string = "mysql://root:password@localhost:3306/reeds"
+    db_connection_string = "postgresql://postgres:mysecretpassword@localhost:3007/reeds"
     engine = create_engine(db_connection_string, echo=True)
     Base.metadata.create_all(engine)
