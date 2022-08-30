@@ -83,7 +83,7 @@ class Hash:
             try:
                 hash_key, salt = self.hash_string(user['password'])
                
-                user_obj = User(user['username'], user['email'], hash_key, user['country'],\
+                user_obj = User(user['username'], user['email'], hash_key.decode(), user['country'],\
                     user['org'], user['image_name'])
                 
                 if user_obj.user != None:
