@@ -14,6 +14,11 @@
 #
 #%%#
 import os
+import subprocess
+
+if os.name == 'posix':
+    os.environ['GAMS_DIR'] = os.path.dirname(subprocess.check_output(['which', 'gams'])).decode()
+
 import re
 import sys
 from datetime import datetime
@@ -30,7 +35,6 @@ import multiprocessing
 import argparse
 import platform
 from subprocess import Popen, PIPE, STDOUT
-import subprocess
 import glob
 
 import pandas as pd
