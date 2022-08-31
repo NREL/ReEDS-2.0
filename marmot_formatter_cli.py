@@ -1,4 +1,9 @@
 import os
+import subprocess
+
+if os.name == 'posix':
+    os.environ['GAMS_DIR'] = os.path.dirname(subprocess.check_output(['which', 'gams'])).decode()
+
 import re
 import argparse
 import gdxpds
