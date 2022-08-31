@@ -1,0 +1,22 @@
+Ordered_Gen,vre,re,pv,thermal,storage
+Nuclear,,,,TRUE,
+Sub-Coal,,,,TRUE,
+Super-Coal,,,,TRUE,
+Gas CC,,,,TRUE,
+Gas CT,,,,TRUE,
+Diesel,,,,TRUE,
+Naptha,,,,TRUE,
+Hydro,,TRUE,,,
+Other,,,,,
+Wind,TRUE,TRUE,,,
+Solar PV,TRUE,TRUE,TRUE,,
+Pumped hydro,,,,,TRUE
+BESS 10hr,,,,,TRUE
+BESS 8hr,,,,,TRUE
+BESS 6hr,,,,,TRUE
+BESS 4hr,,,,,TRUE
+BESS 2hr,,,,,TRUE
+BESS 1hr,,,,,TRUE
+BESS,,,,,TRUE
+Curtailment,,,,,
+Net Imports,,,,,

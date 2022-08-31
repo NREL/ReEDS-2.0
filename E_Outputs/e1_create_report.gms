@@ -1,13 +1,19 @@
 
 *This file aggregates and formats key results for analysis
 
-parameter resgen, rescap, capinv, txinv, totflow, resflow, margcost, 
+parameter gen_out, curt_out, resgen, stor_charge, rescap, capinv, txinv, totflow, resflow, margcost, 
 fuelcost, capcost, fomcost, vomcost, oprescost, firm_conv, firm_vg, firm_hydro, firm_stor,
-avail_refurb, inv_refurb, txcapcost, substcost;
+avail_refurb, inv_refurb, txcapcost, substcost, load_mw, load_rt;
+
+gen_out(i,r,h,t) = sum(v, GEN.l(i,v,r,h,t));
+
+curt_out(i,r,h,t) = sum((v), m_cf(i,r,h) * CAP.l(i,v,r,t) ) - sum((v), GEN.l(i,v,r,h,t) );
 
 resgen(i,r,t) = sum((v,h),hours(h) * GEN.l(i,v,r,h,t));
 
-rescap(i,r,t) = sum(v,cap.l(i,v,r,t));
+stor_charge(i,r,h,t) = sum((v,src), STORAGE_IN.l(i,v,r,h,src,t));
+
+rescap(i,r,t) = sum(v,CAP.l(i,v,r,t));
 
 capinv(i,r,t) = sum(v, INV.l(i,v,r,t)) ;
 
@@ -59,6 +65,10 @@ avail_refurb(i,r,t) =
 
 inv_refurb(i,r,t) = sum(v, INVREFURB.l(i,v,r,t));
 
+load_mw(r,h,t) = LOAD.l(r,h,t);
+
+load_rt(r,t) = sum(h,hours(h) * LOAD.l(r,h,t));
+
 *Load and operating reserve prices are $/MWh, and reserve margin price is $/kW-yr
 parameter
 reqt_price							"--varies-- price of requirements",
@@ -76,4 +86,5 @@ reqt_price('res_marg','na',region,szn,t)$tmodel_new(t) = (1 / cost_scale) * (1 /
 reqt_price('oper_res',ortype,rb,h,t)$(rfeas(rb)$tmodel_new(t)) = sum(region,(1 / cost_scale) * (1 / pvf_onm(t)) * eq_OpRes_requirement.m(ortype,region,h,t) / hours(h) * load_frac_opres(rb,h,t));
 
 $if not set fname $setglobal fname temp
-execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%gdxfiles%ds%output_%fname%.gdx'
+*execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%gdxfiles%ds%output_%fname%.gdx'
+execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%fname%%ds%outputs%ds%output_%fname%.gdx'
