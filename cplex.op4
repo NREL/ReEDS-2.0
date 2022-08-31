@@ -1,13 +1,15 @@
-threads = 0
-lpmethod = 4
+threads 8
+lpmethod 4
 advind 0
-*reslim 100000
+reslim 7200
 scaind 1
 aggind 7
-barepcomp = 1e-9
-numericalemphasis = 1
-depind 3
-barcolnz 30
-barorder 1
-baralg 1
-barstartalg 2
+eprhs 1e-4
+epmrk 0.1
+barepcomp 1e-9
+numericalemphasis 1
+*depind 3
+*barcolnz 30
+*barorder 1
+*baralg 1
+*barstartalg 2
