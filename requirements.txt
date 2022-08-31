@@ -18,4 +18,4 @@ bokeh
 gdxpds
 networkx
 openpyxl
-mysqlclient
+#mysqlclient

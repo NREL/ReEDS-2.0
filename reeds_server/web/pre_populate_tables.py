@@ -127,9 +127,7 @@ if __name__ == "__main__":
     # sqlite_engine = "sqlite:///test.db"
     # postgres_engine = "postgresql://postgres:kapil@localhost:5001/reeds"
     # mysql_engine = "mysql://root:kapil@localhost:3306/reeds"
-
-    db_connection_string = "postgresql://postgres:mysecretpassword@localhost:3007/reeds"
-
+    db_connection_string = "postgresql://reeds_india_prod:EHTZzQ+MMx88eVUDU@aurora-postgres-low-prod.cluster-ccklrxkcenui.us-west-2.rds.amazonaws.com:5432/reeds_india_prod"
     PopulateDefaultScenario(
         db_connection_string,
         os.path.join(
