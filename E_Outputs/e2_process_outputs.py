@@ -1,9 +1,14 @@
 # Process model results from gams, arrange the tables, save key results in Excel format, create basic plots
 
 #%%
+import os
+import subprocess
+
+if os.name == 'posix':
+    os.environ['GAMS_DIR'] = os.path.dirname(subprocess.check_output(['which', 'gams'])).decode()
+
 import gdxpds
 import pandas as pd
-import os
 import datetime
 import sys
 
