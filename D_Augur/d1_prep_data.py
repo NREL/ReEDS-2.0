@@ -4,10 +4,15 @@ Created on Tue Feb 18 08:59:00 2020
 @author: afrazier
 """
 #%%
+import os
+import subprocess
+
+if os.name == 'posix':
+    os.environ['GAMS_DIR'] = os.path.dirname(subprocess.check_output(['which', 'gams'])).decode()
+
 import gdxpds
 import pandas as pd
 import numpy as np
-import os
 from utilities import get_cap, tech_types, weighted_average, get_solar_cap, get_osprey_cap
 #%%
 def prep_data(args):

@@ -7,6 +7,11 @@ Created on Wed Jan 30 10:17:40 2019
 
 import argparse
 import os
+import subprocess
+
+if os.name == 'posix':
+    os.environ['GAMS_DIR'] = os.path.dirname(subprocess.check_output(['which', 'gams'])).decode()
+
 import gdxpds
 import pandas as pd
 import numpy as np

@@ -45,6 +45,10 @@ import logging
 import traceback
 import argparse
 import subprocess
+
+if os.name == 'posix':
+    os.environ['GAMS_DIR'] = os.path.dirname(subprocess.check_output(['which', 'gams'])).decode()
+
 import gdxpds
 import pandas as pd
 import pathlib

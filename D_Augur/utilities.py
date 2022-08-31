@@ -6,10 +6,14 @@ Created on Wed Aug 14 15:53:24 2019
 @author: ngates
 This file contains helpful functions used throughout the Augur module.
 """
+import os
+import subprocess
+
+if os.name == 'posix':
+    os.environ['GAMS_DIR'] = os.path.dirname(subprocess.check_output(['which', 'gams'])).decode()
 
 import gdxpds
 import pandas as pd
-import os
 import numpy as np
 import time
 import platform
