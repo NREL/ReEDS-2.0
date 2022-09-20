@@ -128,7 +128,7 @@ if __name__ == "__main__":
     # postgres_engine = "postgresql://postgres:kapil@localhost:5001/reeds"
     # mysql_engine = "mysql://root:kapil@localhost:3306/reeds"
 
-    db_connection_string = "postgresql://postgres:mysecretpassword@localhost:3007/reeds"
+    db_connection_string = "mysql://admin:reedsindia@reeds-database.cqpo6huywjus.us-west-1.rds.amazonaws.com:3306/reeds"
 
     PopulateDefaultScenario(
         db_connection_string,

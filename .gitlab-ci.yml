@@ -5,7 +5,7 @@ stages:          # List of stages for jobs, and their order of execution
 
 build-job:  
   environment:
-    name: test     # This job runs in the build stage, which runs first.
+    name: Test     # This job runs in the build stage, which runs first.
   stage: build
   script:
     - echo "Creating python environment"
