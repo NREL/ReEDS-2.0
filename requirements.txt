@@ -19,4 +19,3 @@ gdxpds
 networkx
 openpyxl
 mysqlclient
--e git+https://github.com/NREL/Marmot.git@reeds-india
