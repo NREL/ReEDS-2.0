@@ -3,12 +3,36 @@ stages:          # List of stages for jobs, and their order of execution
   - test
   - deploy
 
-build-job:       # This job runs in the build stage, which runs first.
+build-job:  
+  environment:
+    name: test     # This job runs in the build stage, which runs first.
   stage: build
   script:
-    - echo "Starting to build the backend."
-    - echo $PWD
-    - ls
+    - echo "Creating python environment"
+    - python3 -m venv env
+    - echo "Created environment successfully"
+    - source env/bin/activate
+    - pip install -r requirements.txt
+    - echo "Requirements installed successfully"
+    - echo JWT_KEY=$JWT_KEY >> .env
+    - echo DB_CONN_STRING=$DB_CONN_STRING >> .env
+    - echo NUM_OF_PROCESS=1 >> .env
+    - echo BASE_URL_RESET_PASSWORD=$BASE_URL_RESET_PASSWORD >> .env
+    - echo BASE_URL_USER_SIGNUP=$BASE_URL_USER_SIGNUP >> .env
+    - echo BASE_URL_FOR_SIMULATION_STATUS=$BASE_URL_FOR_SIMULATION_STATUS >> .env
+    - echo REEDS_SENDER=$REEDS_SENDER >> .env
+    - echo REEDS_SUPERUSER=$REEDS_SUPERUSER >> .env
+    - echo REEDS_SUPERUSER_PASSWORD=$REEDS_SUPERUSER_PASSWORD >> .env
+    - echo REEDS_SUPERUSER_EMAIL=$REEDS_SUPERUSER_EMAIL >> .env
+    - echo NOTIFIERHOST='localhost' >> .env
+    - echo NOTIFIERPORT='5002' >> .env
+    - echo REDIS_HOST=$REDIS_HOST >> .env
+    - echo REDIS_PORT=$REDIS_PORT >> .env
+    - echo AWS_REGION=$AWS_REGION >> .env
+    - echo S3_BUCKET=$S3_BUCKET >> .env
+    - echo LOG_FOLDER=$LOG_FOLDER >> .env
+    - mkdir logs
+    - cat .env
     - echo "Build complete."
 
 
