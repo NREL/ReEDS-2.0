@@ -14,7 +14,7 @@ handlers:
     level: DEBUG
     formatter: simple
     when: midnight
-    filename: /home/ec2-user/reeds-india/logs/reeds.log
+    filename: logs/reeds.log
     backupCount: 10
     encoding: utf8
 root:
