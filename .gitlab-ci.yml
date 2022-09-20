@@ -42,4 +42,4 @@ deploy-job:      # This job runs in the deploy stage.
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
   script:
     - echo "Deploying application..."
-    - echo "Application successfully deployed."
+    - echo "Deployed!"
