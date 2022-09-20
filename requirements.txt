@@ -19,4 +19,8 @@ gdxpds
 networkx
 openpyxl
 mysqlclient
+asyncio
+aiohttp_cors
+pyyaml
+aiohttp_sse
 requests
