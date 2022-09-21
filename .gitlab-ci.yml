@@ -43,7 +43,7 @@ build-job:
     - which gams
     - cd ..
     - pip install supervisor
-    - echo [supervisord]$'\n'directory=$PWD$'\n'[program:reeds]$'\n'directory=$PWD$'\n'command=env/bin/python reeds_server/server.py$'\n'autostart=true$'\n'autorestart=true$'\n'startretries=2$'\n'stderr_logfile=./reeds.err.log$'\n'stdout_logfile=./reeds.out.log >> supervisor.conf
+    - echo [supervisord]$'\n'directory=$PWD$'\n'[program:reeds]$'\n'directory=$PWD$'\n'command=env/bin/python reeds_server/server.py$'\n'autostart=true$'\n'stderr_logfile=./reeds.err.log$'\n'stdout_logfile=./reeds.out.log >> supervisor.conf
     - cat supervisor.conf
     - supervisord -c supervisor.conf
     - echo "Sleeping for 5 seconds"
@@ -52,7 +52,6 @@ build-job:
     - cd reeds_server/tests
     - curl http://localhost:5001/api/health
     # - pytest test_api.py -s
-    - supervisorctl stop all
     - echo "Awesome Build complete."
 
 
