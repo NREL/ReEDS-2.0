@@ -47,7 +47,7 @@ build-job:
     - cat supervisor.conf
     - supervisord -c supervisor.conf
     - echo "Sleeping for 5 seconds"
-    - sleep 5
+    - sleep 20
     - cat reeds.out.log
     - cat reeds.err.log
     - cd reeds_server/tests
