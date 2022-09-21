@@ -42,8 +42,8 @@ build-job:
     - export PATH=$PATH:$PWD/gams25.1_linux_x64_64_sfx
     - which gams
     - cd ..
-    # - pip install supervisor
-    # - echo [supervisord]$'\n'directory=$PWD$'\n'[program:reeds]$'\n'directory=$PWD$'\n'command=env/bin/python reeds_server/server.py$'\n'autostart=true$'\n'stderr_logfile=./reeds.err.log$'\n'stdout_logfile=./reeds.out.log >> supervisor.conf
+    - pip install supervisor
+    - echo [supervisord]$'\n'directory=$PWD$'\n'[program:reeds]$'\n'directory=$PWD$'\n'command=env/bin/python reeds_server/server.py$'\n'autostart=true$'\n'stderr_logfile=./reeds.err.log$'\n'stdout_logfile=./reeds.out.log >> supervisor.conf
     - cat supervisor.conf
     - supervisord -c supervisor.conf
     - echo "Sleeping for 5 seconds"
