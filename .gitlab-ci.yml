@@ -29,6 +29,7 @@ build-job:
     - echo NOTIFIERPORT='5002' >> .env
     - echo REDIS_HOST=$REDIS_HOST >> .env
     - echo REDIS_PORT=$REDIS_PORT >> .env
+    - echo REDIS_PASSWORD=$REDIS_PASSWORD >> .env
     - echo AWS_REGION=$AWS_REGION >> .env
     - echo S3_BUCKET=$S3_BUCKET >> .env
     - echo DEPLOY_MODE='aws' >> .env
@@ -47,12 +48,11 @@ build-job:
     - cat supervisor.conf
     - supervisord -c supervisor.conf
     - echo "Sleeping for 5 seconds"
-    - sleep 20
+    - sleep 5
     - cat reeds.out.log
-    - cat reeds.err.log
     - cd reeds_server/tests
     - curl http://localhost:5001/api/health
-    # - pytest test_api.py -s
+    - pytest test_api.py -s
     - echo "Awesome Build complete."
 
 
