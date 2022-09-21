@@ -35,6 +35,7 @@ build-job:
     - echo LOG_FOLDER=$LOG_FOLDER >> .env
     - mkdir logs
     - cat .env
+    - which gams
     - python reeds_server/server.py
     - echo "Build complete."
 
