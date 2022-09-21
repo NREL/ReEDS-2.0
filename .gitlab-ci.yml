@@ -43,7 +43,6 @@ build-job:
     - which gams
     - cd ..
     - pip install supervisor
-    - [ -e supervisor.conf ] && rm supervisor.conf
     - echo "[supervisord]
       directory=$PWD
       [program:reeds]
