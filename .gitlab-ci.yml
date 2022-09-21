@@ -43,16 +43,16 @@ build-job:
     - which gams
     - cd ..
     - pip install supervisor
-    - echo "[program:reeds]
-      directory=$PWD
-      command=env/bin/python reeds_server/server.py
-      autostart=true
-      autorestart=true
-      startretries=2
-      stderr_logfile=./reeds.err.log
+    - echo "[program:reeds]\n
+      directory=$PWD\n
+      command=env/bin/python reeds_server/server.py\n
+      autostart=true\n
+      autorestart=true\n
+      startretries=2\n
+      stderr_logfile=./reeds.err.log\n
       stdout_logfile=./reeds.out.log" >> supervisor.conf
     - cat supervisor.conf
-    - supervisor -c supervisor.conf
+    - supervisord -c supervisor.conf
     - echo "Sleeping for 5 seconds"
     - sleep 5
     - cat reeds.err.log
