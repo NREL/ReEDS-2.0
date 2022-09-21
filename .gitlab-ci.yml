@@ -57,7 +57,6 @@ build-job:
     - supervisord -c supervisor.conf
     - echo "Sleeping for 5 seconds"
     - sleep 5
-    - cat reeds.err.log
     - cat reeds.out.log
     - echo "Awesome Build complete."
 
