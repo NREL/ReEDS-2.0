@@ -47,8 +47,10 @@ build-job:
     - cat supervisor.conf
     - supervisord -c supervisor.conf
     - echo "Sleeping for 5 seconds"
-    - sleep 4
+    - sleep 5
     - cat reeds.out.log
+    - cd reeds_server/tests
+    - pytest test_api.py -s
     - echo "Awesome Build complete."
 
 
