@@ -52,6 +52,7 @@ build-job:
     - cd reeds_server/tests
     - curl http://localhost:5001/api/health
     # - pytest test_api.py -s
+    - supervisorctl stop all
     - echo "Awesome Build complete."
 
 
