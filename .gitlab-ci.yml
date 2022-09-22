@@ -57,7 +57,6 @@ deploy-dev-job:
     SECURE_FILES_DOWNLOAD_PATH: '.'
   script:
     - curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/load-secure-files/-/raw/main/installer" | bash
-  script:
     - echo "Deployement starting in dev environment!"
     - ls
     - ssh -i reeds-india.pem ec2-user@172.18.7.44
