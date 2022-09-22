@@ -25,3 +25,4 @@ pyyaml
 aiohttp_sse
 requests
 pytest
+pytest-aiohttp

@@ -4,7 +4,6 @@ import logging.config
 import json
 import os
 import asyncio
-import threading
 from http import HTTPStatus
 import requests
 from concurrent.futures import *
@@ -84,7 +83,7 @@ class REEDS:
         # self.t = threading.Thread(name='api_thread', target= get_json_schema, args=(host,port,))
         # self.t.start()
 
-        self.run_app()
+        # self.run_app()
 
     async def get_app(self):
         return self.app
@@ -288,8 +287,8 @@ class REEDS:
         # self.t.join()
         self.handler.shutdown_event.set()
         self.handler.stop_scheduler_run.set()
-
-
+    
 if __name__ == "__main__":
 
-    REEDS()
+    reed = REEDS()
+    reed.run_app()
