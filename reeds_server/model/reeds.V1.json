@@ -1,9 +1,0 @@
-{
-    "info": {
-        "description": "This API enables REEDS UI",
-        "title": "REEDS",
-        "version": "1.0-alpha"
-    },
-    "openapi": "3.0.0",
-    "paths": {}
-}
