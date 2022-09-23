@@ -221,7 +221,8 @@ class DatabaseHandler:
         if reset_token:
             session.query(UserResetToken).filter(UserResetToken.username==username).update(
                 { UserResetToken.token : token,
-                  UserResetToken.token_created_date: datetime.datetime.utcnow()
+                  UserResetToken.token_created_date: datetime.datetime.utcnow(),
+                  UserResetToken.token_used: False
                 }, 
             synchronize_session=False)
 
