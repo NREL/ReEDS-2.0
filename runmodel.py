@@ -523,7 +523,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 							 " r=" + str(os.path.join(output_folder,"runs",lstfile,"g00files",restartfile)) + toLogGamsString + " --fname=" + lstfile + " --user="+ user + " --runname=" + runname +' \n')
 
 			
-			OPATH.writelines("python " + str(os.path.join("E_Outputs","e2_process_outputs.py")) + " " + str(lstfile + '\n') )
+			# OPATH.writelines("python " + str(os.path.join("E_Outputs","e2_process_outputs.py")) + " " + str(lstfile + '\n') )
 			# OPATH.writelines("Rscript " + str(os.path.join("E_Outputs","e2_query_gdx_files.R ")) + str("output_"+lstfile+".gdx" + '\n') )
 
 			# if rmdchoice == 1:
@@ -680,42 +680,45 @@ def main(ui_input={}, notify = None, uuid=None):
 						notify(each, uuid)
 					log_contents.extend(p4_stdout_content)
 
-			inputs_case_path = os.path.join(entry_folder, 'runs', r, 'inputs_case')
-			os.mkdir(inputs_case_path)
-			shutil.copy(os.path.join("Marmot","h_dt_szn.csv"), os.path.join(inputs_case_path, "h_dt_szn.csv"))
-			shutil.copy(os.path.join("Marmot","regions.csv"), os.path.join(inputs_case_path, "regions.csv"))
+			# inputs_case_path = os.path.join(entry_folder, 'runs', r, 'inputs_case')
+			# os.mkdir(inputs_case_path)
+			# shutil.copy(os.path.join("Marmot","h_dt_szn.csv"), os.path.join(inputs_case_path, "h_dt_szn.csv"))
+			# shutil.copy(os.path.join("Marmot","regions.csv"), os.path.join(inputs_case_path, "regions.csv"))
 
-			# --- Run MARMOT for plots --- 
-			n_runs = len(runnames)
-			if r == runnames[(n_runs-1)]: #run MARMOT if the final run has finished
-				print("Running MARMOT plotter")
-				formatter = "marmot_formatter_cli.py"
-				plotter = "marmot_plotter_cli.py"
-				mod = "ReEDS_India"
-				scenarios = " ".join(runnames)
-				scenarios_path = os.path.join(entry_folder, 'runs')
-				properties_path = os.path.join("Marmot", "reeds_properties_India.csv")
-				region_map_path = os.path.join("Marmot", "Region_mapping_ReEDS_India.csv")
-				marmot_out_path = os.path.join(entry_folder, 'exceloutput')
-				plot_select_path = os.path.join("Marmot","Marmot_plot_select_India.csv")
-				reg_map_file = "Region_mapping_ReEDS_India.csv"
-				gen_names_file = "gen_names_India.csv"
-				gen_order_file = "ordered_gen_categories_India.csv"
-				color_dict_file = "colour_dictionary_India.csv"
+			# # --- Run MARMOT for plots --- 
+			# n_runs = len(runnames)
+			# if r == runnames[(n_runs-1)]: #run MARMOT if the final run has finished
+			# 	print("Running MARMOT plotter")
+			# 	formatter = "marmot_formatter_cli.py"
+			# 	plotter = "marmot_plotter_cli.py"
+			# 	mod = "ReEDS_India"
+			# 	scenarios = " ".join(runnames)
+			# 	scenarios_path = os.path.join(entry_folder, 'runs')
+			# 	properties_path = os.path.join("Marmot", "reeds_properties_India.csv")
+			# 	region_map_path = os.path.join("Marmot", "Region_mapping_ReEDS_India.csv")
+			# 	marmot_out_path = os.path.join(entry_folder, 'exceloutput')
+			# 	plot_select_path = os.path.join("Marmot","Marmot_plot_select_India.csv")
+			# 	reg_map_file = "Region_mapping_ReEDS_India.csv"
+			# 	gen_names_file = "gen_names_India.csv"
+			# 	gen_order_file = "ordered_gen_categories_India.csv"
+			# 	color_dict_file = "colour_dictionary_India.csv"
 
-				os.system("python {} {} {} {} {} -sf {} -rm {}".format(formatter, mod, scenarios, scenarios_path, properties_path, marmot_out_path, region_map_path))
+			# 	os.system("python {} {} {} {} {} -sf {} -rm {}".format(formatter, mod, scenarios, scenarios_path, properties_path, marmot_out_path, region_map_path))
 	
-				agg1 = "Country"
-				os.system("python {} {} {} {} {} -a {} -sf {} -rmf {} -gnf {} -ogcf {} -cdf {} -mapf {}".format(plotter, mod, scenarios, scenarios_path, plot_select_path, agg1, marmot_out_path, reg_map_file, gen_names_file, gen_order_file, color_dict_file, "Marmot"))
-				agg2 = "region"
-				os.system("python {} {} {} {} {} -a {} -sf {} -rmf {} -gnf {} -ogcf {} -cdf {} -mapf {}".format(plotter, mod, scenarios, scenarios_path, plot_select_path, agg2, marmot_out_path, reg_map_file, gen_names_file, gen_order_file, color_dict_file, "Marmot"))
+			# 	agg1 = "Country"
+			# 	os.system("python {} {} {} {} {} -a {} -sf {} -rmf {} -gnf {} -ogcf {} -cdf {} -mapf {}".format(plotter, mod, scenarios, scenarios_path, plot_select_path, agg1, marmot_out_path, reg_map_file, gen_names_file, gen_order_file, color_dict_file, "Marmot"))
+			# 	agg2 = "region"
+			# 	os.system("python {} {} {} {} {} -a {} -sf {} -rmf {} -gnf {} -ogcf {} -cdf {} -mapf {}".format(plotter, mod, scenarios, scenarios_path, plot_select_path, agg2, marmot_out_path, reg_map_file, gen_names_file, gen_order_file, color_dict_file, "Marmot"))
 
-				shutil.rmtree(os.path.join(entry_folder, "exceloutput", "Processed_HDF5_folder"))
-				shutil.rmtree(os.path.join(entry_folder, "exceloutput", "csv_properties"))
-
-	#   python marmot_formatter_cli.py "ReEDS_India" ilyac_newrun_newtest ilyac_newrun_test "reeds_server/users_output/ilyac/ilyac_newrun/runs" "Marmot/reeds_properties_India.csv" -sf "reeds_server/users_output/ilyac/ilyac_newrun/exceloutput" -rm "Marmot/Region_mapping_ReEDS_India.csv" 
-
-	#	python marmot_plotter_cli.py "ReEDS_India" ilyac_newrun_newtest ilyac_newrun_test "reeds_server/users_output/ilyac/ilyac_newrun/runs" "Marmot/Marmot_plot_select_India.csv" -a "Country" -sf "reeds_server/users_output/ilyac/ilyac_newrun/exceloutput" -rmf "Region_mapping_ReEDS_India.csv" -gnf "gen_names_India.csv" -ogcf "ordered_gen_categories_India.csv" -cdf "colour_dictionary_India.csv" -mapf "Marmot"
+			# 	shutil.rmtree(os.path.join(entry_folder, "exceloutput", "Processed_HDF5_folder"))
+			# 	shutil.rmtree(os.path.join(entry_folder, "exceloutput", "csv_properties"))
+			# for testing:
+			#   python marmot_formatter_cli.py "ReEDS_India" ilyac_newrun_newtest ilyac_newrun_test "reeds_server/users_output/ilyac/ilyac_newrun/runs" "Marmot/reeds_properties_India.csv" -sf "reeds_server/users_output/ilyac/ilyac_newrun/exceloutput" -rm "Marmot/Region_mapping_ReEDS_India.csv" 
+			#	python marmot_plotter_cli.py "ReEDS_India" ilyac_newrun_newtest ilyac_newrun_test "reeds_server/users_output/ilyac/ilyac_newrun/runs" "Marmot/Marmot_plot_select_India.csv" -a "Country" -sf "reeds_server/users_output/ilyac/ilyac_newrun/exceloutput" -rmf "Region_mapping_ReEDS_India.csv" -gnf "gen_names_India.csv" -ogcf "ordered_gen_categories_India.csv" -cdf "colour_dictionary_India.csv" -mapf "Marmot"
+			
+			n_runs = len(runnames)
+			if r == runnames[(n_runs-1)]: #process results if the final run has finished
+				os.system("python {} {}".format(os.path.join("E_Outputs","e2_process_outputs.py"), " ".join(runnames)))
 
 		if notify:
 			with open(os.path.join(ui_input['output_folder_path'], 'full_log.txt'), 'w') as f:
