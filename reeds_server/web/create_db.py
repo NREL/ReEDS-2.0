@@ -1,7 +1,5 @@
 """ Need to run this script to make sure all the tables are created !"""
 
-from email.policy import default
-from pydoc import describe
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -265,6 +263,8 @@ if __name__ == "__main__":
     # postgres_engine = 'postgresql://postgres:kapil@localhost:5001/reeds'
     # mysql_engine = 'mysql://root:kapil@localhost:3306/reeds'
 
-    db_connection_string = "postgresql://postgres:mysecretpassword@localhost:3007/reeds"
+    # db_connection_string = "postgresql://reeds_india_prod:EHTZzQ+MMx88eVUDU@aurora-postgres-low-prod.cluster-ccklrxkcenui.us-west-2.rds.amazonaws.  com:5432/reeds_india_prod"
+    # db_connection_string = "mysql://admin:reedsindia@reeds-database.cqpo6huywjus.us-west-1.rds.amazonaws.com:3306/reeds"
+
     engine = create_engine(db_connection_string, echo=True)
     Base.metadata.create_all(engine)

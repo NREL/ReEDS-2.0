@@ -1,4 +1,4 @@
-threads 8
+threads 20
 lpmethod 4
 advind 0
 reslim 7200
