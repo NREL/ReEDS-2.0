@@ -32,9 +32,9 @@ FILE_KEYS =[
 
 DEFAULT_FILE_NAMES = {
     "TechCost_file": {
-        "Low Solar Cost": "tech_costs_LowSolar.csv",
-        "Low Wind Cost": "tech_costs_LCS-LCB.csv",
-        "Low Battery Cost": "tech_costs_LowBat.csv"
+        "Low Solar Cost": "tech_costs_low_UPV_2022.csv",
+        "Low Wind Cost": "tech_costs_low_wind_2022.csv",
+        "Low Battery Cost": "tech_costs_low_battery_2022.csv"
     },
     "FuelLimit_file": {
         "New Gas": "fuel_limit_NewGas.csv"
@@ -43,9 +43,9 @@ DEFAULT_FILE_NAMES = {
 
 DEFAULT_FILE_TO_CATEGORY = {
     "TechCost_file": {
-        "tech_costs_LowSolar.csv": "Low Solar Cost",
-        "tech_costs_LCS-LCB.csv":"Low Wind Cost",
-        "tech_costs_LowBat.csv": "Low Battery Cost" 
+        "tech_costs_low_UPV_2022.csv": "Low Solar Cost",
+        "tech_costs_low_wind_2022.csv":"Low Wind Cost",
+        "tech_costs_low_battery_2022.csv": "Low Battery Cost" 
     },
     "FuelLimit_file": {
         "fuel_limit_NewGas.csv": "New Gas"
