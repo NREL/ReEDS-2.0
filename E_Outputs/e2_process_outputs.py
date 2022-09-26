@@ -22,10 +22,12 @@ import pandas as pd
 # suppress pandas chained assignments warning
 pd.options.mode.chained_assignment = None
 
-cases = list(sys.argv[1:])
+tag = sys.argv[1]
+cases = list(sys.argv[2:])
+scenarios = [x.split('_')[1] + "_" + x.split('_')[2] for x in cases]
 user = [x.split('_')[0] for x in cases][0]
 root = os.path.join("reeds_server", "users_output", user)
-SAVEDIR = os.path.join(root, 'outputs')
+SAVEDIR = os.path.join(root, tag, 'exceloutput')
 Path(SAVEDIR).mkdir(parents=True, exist_ok=True)
 
 #%%
@@ -67,7 +69,14 @@ def map_h_to_tsname(df, left_on):
     return df
 
 def map_tech_to_type(df, left_on):
+    """maps reeds techs to aggregated types"""
     df = df.merge(tech_type_map, left_on=left_on, right_on='reeds.category')
+    return df
+
+def sort_cases(df):
+    """sorts scenario order"""
+    df['scenario'] = pd.Categorical(df['scenario'], scenarios)
+    df.sort_values('scenario', inplace=True)
     return df
 
 def sort_techs(df):
@@ -93,7 +102,7 @@ def add_scen_col(df, scenario):
 
 def read_gdxs(gdxdirs, cs):
     """reads gdx results file into memory"""
-    vars = ['CAP', 'INV', 'GEN', 'OPRES', 'STORAGE_IN', 'CAPTRAN']
+    vars = ['CAP', 'INV', 'GEN', 'LOAD', 'OPRES', 'STORAGE_IN', 'CAPTRAN']
     params = ['r_rs', 'hours', 'firm_conv', 'firm_hydro', 'firm_vg', 'firm_stor', 'txinv']
     keep = vars + params
     out = dict.fromkeys(keep)
@@ -141,7 +150,6 @@ def ProcessingGdx():
     cap = setnames(cap, 'capacity_MW')
     cap = cap[['Technology', 'State', 'Year', 'capacity_MW', 'scenario']]
 
-    #%%
     # Capacity investments
     inv = gdxin['INV']
     inv = map_rs_to_state(inv, rmap)
@@ -150,7 +158,6 @@ def ProcessingGdx():
     inv = setnames(inv, 'investments_MW')
     inv = inv[['Technology', 'State', 'Year', 'investments_MW', 'scenario']]
 
-    #%%
     # Firm capacity 
     pdlist = [gdxin['firm_conv'], gdxin['firm_hydro'], gdxin['firm_vg'], gdxin['firm_stor']]
     firmcap = pd.concat(pdlist)
@@ -158,10 +165,10 @@ def ProcessingGdx():
     firmcap = map_tech_to_type(firmcap, 'Technology')
     firmcap = summarize(firmcap, ['Type','Region','Season','Year','scenario'])
     firmcap = setnames(firmcap, 'firm_capacity_MW')
+    firmcap = sort_cases(firmcap)
     firmcap = sort_techs(firmcap)
     firmcap = firmcap.round(0)
 
-    #%%
     # Timeslice dispatch
     gen_tslc = gdxin['GEN']
     gen_tslc = map_tech_to_type(gen_tslc, 'i')
@@ -175,7 +182,17 @@ def ProcessingGdx():
     gen = summarize(gen_tslc, ['Technology', 'State', 'Year', 'scenario'])
     gen = gen[['Technology', 'State', 'Year', 'generation_MWh', 'scenario']]
 
-    #%%
+    # Demand
+    dem_tslc = gdxin['LOAD']
+    dem_tslc = setnames(dem_tslc, 'demand_MW')
+    dem_tslc = get_tslc_hours(dem_tslc, 'Timeslice', tslc_hours)
+    dem_tslc = dem_tslc[['State', 'Year', 'Timeslice', 'Timeslice_hours', 'demand_MW', 'scenario']]
+    dem_tslc['demand_MWh'] = dem_tslc['demand_MW'] * dem_tslc['Timeslice_hours']
+
+    # Annual demand
+    dem = summarize(dem_tslc, ['State', 'Year', 'scenario'])
+    dem = dem[['State', 'Year', 'demand_MWh', 'scenario']]
+
     # Timeslice operating reserves
     opres_tslc = gdxin['OPRES']
     opres_tslc = map_tech_to_type(opres_tslc, 'i')
@@ -190,7 +207,6 @@ def ProcessingGdx():
     opres = summarize(opres_tslc, ['Technology', 'State', 'Year', 'scenario'])
     opres = opres[['Technology', 'State', 'Year', 'operating_reserves_MWh', 'scenario']]
 
-    #%%
     # Storage operation
     storin = gdxin['STORAGE_IN']
     storin = map_tech_to_type(storin, 'i')
@@ -207,7 +223,6 @@ def ProcessingGdx():
     storops = pd.merge(storin, storgen, on = ['Technology', 'State', 'Year', 'Timeslice', 'scenario'])
     storops = storops[['Technology', 'State', 'Year', 'Timeslice', 'STOR_IN_MW', 'STOR_GEN_MW', 'scenario']]
 
-    #%%
     # Transmission capacity
     txcap = summarize(gdxin['CAPTRAN'], ['r', 'rr', 't', 'scenario'])
     txcap = txcap[['r', 'rr', 't', 'Level', 'scenario']]
@@ -226,6 +241,7 @@ def ProcessingGdx():
     annual_out = pd.merge(cap, inv, on=['Technology', 'State', 'Year', 'scenario'], how='left')
     annual_out = annual_out.merge(gen, on=['Technology', 'State', 'Year', 'scenario'], how='left')
     annual_out = annual_out.merge(opres, on=['Technology', 'State', 'Year', 'scenario'], how='left')
+    annual_out = sort_cases(annual_out)
     annual_out = sort_techs(annual_out)
     annual_out = annual_out.round(0)
     #annual_out = annual_out.merge(emit, on = ['Technology','State','Year'])
@@ -237,33 +253,46 @@ def ProcessingGdx():
     tslc_out = pd.merge(gen_tslc, opres_tslc, on=['Technology', 'State', 'Year', 'Timeslice', 'Timeslice_hours', 'scenario'], how = 'outer')
     tslc_out = tslc_out.merge(storops, on=['Technology', 'State', 'Year', 'Timeslice', 'scenario'], how = 'outer')
     tslc_out = map_h_to_tsname(tslc_out, 'Timeslice')
+    tslc_out = sort_cases(tslc_out)
     tslc_out = sort_techs(tslc_out)
     tslc_out = sort_timeslices(tslc_out)
-    tslc_out.drop(columns=['Timeslice', 'h', 'Timeslice_hours'], inplace=True)
+    tslc_out.drop(columns=['Timeslice', 'h', 'Timeslice_hours', 'generation_MWh'], inplace=True)
     tslc_out = tslc_out.round(0)
 
     # Sheet 4: Transmission results - txcap, txinv
     tx_out = pd.merge(txcap, txinv, on=['State_from', 'State_to', 'Year', 'scenario'], how='left')
+    tx_out = sort_cases(tx_out)
     tx_out = tx_out.round(0)
+
+    # demand - not included in excel output
+    dem_tslc = map_h_to_tsname(dem_tslc, 'Timeslice')
+
+    dem, dem_tslc = [sort_cases(x) for x in [dem, dem_tslc]]
+    dem_tslc = sort_timeslices(dem_tslc)
+
+    # data ordering for vizit
+    annual_out, firmcap, tslc_out, tx_out = [sort_cases(x) for x in [annual_out, firmcap, tslc_out, tx_out]]
+    annual_out, firmcap, tslc_out = [sort_techs(x) for x in [annual_out, firmcap, tslc_out]]
+    tslc_out = sort_timeslices(tslc_out)
 
     # TODO: add helper function to change tech order
 
-    return annual_out, firmcap, tslc_out, tx_out
+    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc
 #%%
 
 def write_outputs(dir):
-    annual_out, firmcap, tslc_out, tx_out = ProcessingGdx()
+    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc = ProcessingGdx()
 
-    timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-    outdir = os.path.join(dir, timestamp)
-    Path(outdir).mkdir(parents=True, exist_ok=True)
-    csvsdir = os.path.join(outdir,'csvs')
+    #timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+    #outdir = os.path.join(dir, tag)
+    #Path(outdir).mkdir(parents=True, exist_ok=True)
+    csvsdir = os.path.join(dir, 'csvs')
     Path(csvsdir).mkdir(parents=True, exist_ok=True)
 
     #%%
     ######## EXPORT TO EXCEL
     # separate sheet for each table
-    writer = pd.ExcelWriter(os.path.join(os.getcwd(), outdir, "{}_outputs.xlsx".format(timestamp)))
+    writer = pd.ExcelWriter(os.path.join(os.getcwd(), dir, "{}_outputs.xlsx".format(tag)))
 
     annual_out.to_excel(writer, sheet_name = "Annual results", index=False)
     firmcap.to_excel(writer, sheet_name = "Seasonal firm capacity", index=False)
@@ -271,7 +300,7 @@ def write_outputs(dir):
     tx_out.to_excel(writer, sheet_name='Transmission results', index=False)
 
     writer.save()
-    print("Results saved to " + os.path.join(outdir, "{}_outputs.xlsx".format(timestamp)))
+    print("Results saved to " + os.path.join(dir, "{}_outputs.xlsx".format(tag)))
 
     ######## WRITE OUTPUTS FOR VIZIT
     
@@ -294,6 +323,19 @@ def write_outputs(dir):
     gen_tslc = tslc_out[['State', 'scenario', 'Technology', 'Year', 'time_slice', 'season', 'time', 'dispatch_MW']]
     gen_tslc.set_axis(['st', 'scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
     gen_tslc.to_csv(os.path.join(csvsdir, 'gen_timeslice.csv'), index=False)
+
+    # demand.csv
+    dem = dem[['State', 'scenario', 'Year', 'demand_MWh']]
+    dem.set_axis(['st', 'scenario', 'year', 'Demand (MWh)'], axis=1, inplace=True)
+    dem.to_csv(os.path.join(csvsdir, 'demand.csv'), index=False)
+
+    # demand_timeslice.csv
+    dem_tslc = dem_tslc[['State', 'scenario', 'Year', 'time_slice', 'season', 'time', 'demand_MW']]
+    dem_tslc.set_axis(['st', 'scenario', 'year', 'timeslice', 'season', 'time', 'Demand (MW)'], axis=1, inplace=True)
+    dem_tslc.to_csv(os.path.join(csvsdir, 'demand_timeslice.csv'), index=False)
+
+    # transmission.csv
+    tx_out.to_csv(os.path.join(csvsdir, 'transmission.csv'), index=False)
 
     # copy visit.html and report.json into the directory
     shutil.copyfile('vizit.html', os.path.join(csvsdir, 'vizit.html'))

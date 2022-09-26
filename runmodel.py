@@ -718,7 +718,7 @@ def main(ui_input={}, notify = None, uuid=None):
 			
 			n_runs = len(runnames)
 			if r == runnames[(n_runs-1)]: #process results if the final run has finished
-				os.system("python {} {}".format(os.path.join("E_Outputs","e2_process_outputs.py"), " ".join(runnames)))
+				os.system("python {} {} {}".format(os.path.join("E_Outputs", "e2_process_outputs.py"), envVar['runname'], " ".join(runnames)))
 
 		if notify:
 			with open(os.path.join(ui_input['output_folder_path'], 'full_log.txt'), 'w') as f:
