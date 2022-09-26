@@ -14,7 +14,7 @@ handlers:
     level: DEBUG
     formatter: simple
     when: midnight
-    filename: C:/Users/KDUWADI/Desktop/NREL_Projects/ReEDs/reeds_microservices/reeds_logs/reeds.log
+    filename: logs/reeds.log
     backupCount: 10
     encoding: utf8
 root:

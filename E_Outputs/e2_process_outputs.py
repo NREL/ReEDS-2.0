@@ -1,6 +1,11 @@
-""" Process ReEDS-India GUI results """
-# Process model results from gams, arrange the tables, 
-# export results in Excel format, export csvs for vizit
+# -*- coding: utf-8 -*-
+"""
+Process ReEDS model results from gams
+Arrange the tables, summarize the data, and save key results in Excel format
+
+@author Ilya Chernyakhovskiy
+
+"""
 
 #%%
 import os
@@ -121,7 +126,7 @@ def ProcessingGdx():
     rmap = gdxin['r_rs'][['r', 'rs']]
     rmap = rmap.groupby(['r', 'rs']).size().reset_index()
 
-    # timeslice horus map
+    # timeslice hours map
     tslc_hours = gdxin['hours']
     tslc_hours = tslc_hours.groupby(['h','Value']).size().reset_index()
     #%%

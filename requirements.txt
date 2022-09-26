@@ -19,4 +19,10 @@ gdxpds
 networkx
 openpyxl
 mysqlclient
--e git+https://github.com/NREL/Marmot.git@reeds-india
+asyncio
+aiohttp_cors
+pyyaml
+aiohttp_sse
+requests
+pytest
+pytest-aiohttp
