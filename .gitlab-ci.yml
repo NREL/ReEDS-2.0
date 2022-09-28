@@ -59,6 +59,7 @@ deploy-dev-job:
     - curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/load-secure-files/-/raw/main/installer" | bash
     - echo "Deployement starting in dev environment!"
     - ls
+    - chmod 400 reeds-india.pem
     - ssh -i reeds-india.pem ec2-user@172.18.7.44
     - exit
 
