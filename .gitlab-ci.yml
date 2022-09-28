@@ -32,7 +32,7 @@ build-job:
     - echo REDIS_PASSWORD=$REDIS_PASSWORD >> .env
     - echo AWS_REGION=$AWS_REGION >> .env
     - echo S3_BUCKET=$S3_BUCKET >> .env
-    - echo DEPLOY_MODE='aws' >> .env
+    - echo DEPLOY_MODE='local' >> .env
     - echo LOG_FOLDER=$LOG_FOLDER >> .env
     - mkdir logs
     - mkdir gams 
