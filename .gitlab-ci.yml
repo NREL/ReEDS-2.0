@@ -60,7 +60,7 @@ deploy-dev-job:
     - echo "Deployement starting in dev environment!"
     - ls
     - chmod 400 reeds-india.pem
-    - ssh -i reeds-india.pem ec2-user@172.18.7.44
+    - ssh -tt -i reeds-india.pem ec2-user@172.18.7.44
     - ls
     - exit
 
