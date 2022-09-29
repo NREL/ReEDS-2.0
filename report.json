@@ -1,0 +1,113 @@
+{
+  "fileNames": [
+    "cap.csv",
+    "cap_new_ann.csv",
+    "gen.csv",
+    "gen_timeslice.csv",
+    "demand.csv",
+    "demand_timeslice.csv",
+    "transmission.csv",
+    "style.csv"
+  ],
+  "dashboards": [
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "cap.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Capacity (MW)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Title": "National capacity by year"
+          }
+        },
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ]
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "gen.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Generation (MWh)"
+            },
+            {
+              "dataSource": "demand.csv",
+              "type": "dot",
+              "agg": "sum",
+              "x": "year",
+              "y": "Demand (MWh)",
+              "col": "scenario"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Title": "National generation by year"
+          }
+        },
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ]
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "gen_timeslice.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "time",
+              "col": "season",
+              "name": "tech",
+              "row": "scenario",
+              "explode": "year",
+              "y": "Generation (MW)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Height (px)": "800",
+            "Plot Title": "National generation dispatch by time slice"
+          }
+        },
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ]
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ]
+    }
+  ],
+  "globalStyleFile": "style.csv"
+}
