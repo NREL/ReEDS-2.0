@@ -326,12 +326,14 @@ def write_outputs(dir):
 
     # demand.csv
     dem = dem[['State', 'scenario', 'Year', 'demand_MWh']]
-    dem.set_axis(['st', 'scenario', 'year', 'Demand (MWh)'], axis=1, inplace=True)
+    dem['type'] = 'Demand'
+    dem.set_axis(['st', 'scenario', 'year', 'Demand (MWh)', 'type'], axis=1, inplace=True)
     dem.to_csv(os.path.join(csvsdir, 'demand.csv'), index=False)
 
     # demand_timeslice.csv
     dem_tslc = dem_tslc[['State', 'scenario', 'Year', 'time_slice', 'season', 'time', 'demand_MW']]
-    dem_tslc.set_axis(['st', 'scenario', 'year', 'timeslice', 'season', 'time', 'Demand (MW)'], axis=1, inplace=True)
+    dem_tslc['type'] = 'Demand'
+    dem_tslc.set_axis(['st', 'scenario', 'year', 'timeslice', 'season', 'time', 'Demand (MW)', 'type'], axis=1, inplace=True)
     dem_tslc.to_csv(os.path.join(csvsdir, 'demand_timeslice.csv'), index=False)
 
     # transmission.csv

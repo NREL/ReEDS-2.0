@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Vizit</title>
+<style>
+label {
+  font-weight: bold;
+}
+select{
+  display:block;
+}
+.dashboard-title,
+.chart-title,
+.trace-title{
+  font-weight: bold;
+  text-decoration: underline;
+}
+.dashboard-outer,
+.chart-outer,
+.trace-controls{
+  margin-bottom:5px;
+}
+.add-dashboard,
+.add-chart,
+.add-trace{
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+.chart-outer{
+  display: inline-block;
+  position: relative;
+}
+.chart{
+  width: 400px;
+  height: 400px;
+  display: inline-block;
+}
+.chart-controls{
+  min-width: 100%;
+}
+.chart-container + .chart-controls {
+  display: none;
+}
+.chart-outer:hover .chart-container + .chart-controls{
+  display:block;
+  position: absolute;
+  background-color: white;
+  z-index: 10;
+}
+.chart-controls,
+.filter-div,
+#global-config{
+  border: 1px solid lightgray;
+}
+#data-sources-label,
+#global-config-header,
+.filters-label,
+.styles-label,
+.filter-name,
+.trace-title,
+#download-html,
+#download-json,
+#config-url{
+  color: #0088cc;
+  cursor: pointer;
+}
+.add-style,
+.update-style,
+.add-filter,
+.update-filter,
+#global-config{
+  display: none;
+}
+.add-filter,
+#add-global-filter{
+  margin-top: 15px;
+}
+
+#global-style-file, #add-global-filter{
+  display: inline-block;
+}
+#update-global-filter{
+  display: block;
+}
+text.js-plot-link-container{
+  display:none;
+}
+.chart:hover text.js-plot-link-container{
+  display:block;
+}
+.tooltip-parent{
+  position: relative;
+  color: #0088cc;
+}
+.tooltip{
+  display: none;
+  width: 400px;
+  background-color: black;
+  color: lightgray;
+  border-radius: 5px;
+  padding: 10px;
+  position: absolute;
+  z-index: 1;
+  top: 7px;
+  left: 7px;
+}
+.tooltip-parent:hover .tooltip {
+  display: block;
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.8.0/plotly.min.js"></script>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script>
+</head>
+<body>
+<a style="position: absolute; top: 10px; right: 20px; z-index:100;" href="https://github.com/mmowers/vizit" target="_blank">Vizit GitHub</a>
+<label id="data-sources-label">Data sources / config:</label><br>
+<div id="data-sources">
+  <input type="file" id="file-input" name="file-input" multiple="multiple">
+  <ul id="file-list">(no files selected)</ul>
+  <input id="url-input" type="text" placeholder="URL to csv">
+  <button id="add-url-input">Load</button>
+</div>
+<div id="report">
+  <div id="global-config-header">Global Config</div>
+  <div id="global-config">
+    <div id="global-style-config">
+      Styling file:
+      <select id="global-style-file" class="standard-file-select">
+        <option value="none">none</option>
+      </select>
+      <span class="tooltip-parent">
+        ?
+        <span class="tooltip">
+          This file must have three columns named 'column_name', 'column_value', and 'color'. The order
+          of the rows will eventually determine the order of display, but this hasn't yet been added.
+        </span>
+      </span>
+    </div>
+    <div id="global-filter-config" class="filter-div">
+      Add Filters:
+      <select id="add-global-filter"><option value="none">Add Filter</option></select>
+      <button id="update-global-filter" class="update-fil-common">Update Filters</button>
+    </div>
+  </div>
+  <button class="add-dashboard">Add Dashboard</button>
+</div>
+<div><span id="download-html">Download HTML</span></div>
+<div><span id="download-json">Download config JSON</span></div>
+<div><span id="config-url">Open config URL</span></div>
+
+<script>
+'use strict';
+const files = {}; //list of html File objects
+let config_load = null; //this gets replaced if we have saved config
+let config_load_json_file = null;
+const config = {fileNames:[], dashboards:[]}; //fileNames are sorted alphabetically
+const rawData = {}; //mapping of filenames to full raw data (or could this keep too much data in memory?)
+const traceData = []; //traceData[dash_idx][chart_idx][trace_idx] = {filteredData: {col1:[], col2:[],...}, aggData: {col1:[], col2:[],...}, traces: [{x:[], y:[], sepDims:[],...},...]}.
+let globalStyles = {}; //e.g. {col_name_1: {col_val_1: {color: '', order:''}}}
+let globalColors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+          '#aec7e8', '#ffbb78', '#98df8a', '#ff9896', '#c5b0d5', '#c49c94', '#f7b6d2', '#c7c7c7', '#dbdb8d', '#9edae5'];
+for(let i = 0; i < 10; i++){
+  globalColors = globalColors.concat(globalColors); //This doubles globalColors each time.
+}
+//Maybe instead keep track of if we've already aggregated data a certain way, defined by filename, an index (sorted array of columns), and value column?
+let plotlySchema = Plotly.PlotSchema.get(); //I found this on a forum: https://community.plotly.com/t/plotly-json-schema-reference/21261
+// Plotly reference links:
+// Single page figure reference: https://plotly.com/javascript/reference/ (this has the schema info as well)
+// Function reference: https://plotly.com/javascript/plotlyjs-function-reference (including image download, another resource is: https://plotly.com/javascript/static-image-export/)
+// Configuration options: https://plotly.com/javascript/configuration-options/
+
+// This was the old way to get the schema (I found it at https://plotly.com/javascript/reference/index/): Uncomment the following section to grab plotly schema (synchronously). First set the global configs to synchronous, then json request, then flip back to async.
+// let plotlySchema = {};
+// $.ajaxSetup({async: false});
+// $.getJSON('https://raw.githubusercontent.com/plotly/plotly.js/master/dist/plot-schema.json', function(data) {
+//   plotlySchema = data;
+// });
+// $.ajaxSetup({async: true});
+
+const chartTypes = {
+  'none':{},
+  'dot':{
+    engine: 'plotly',
+    attr: {
+      type: 'scatter',
+      mode: 'markers',
+    },
+    wdgTypes: ['x','y','name','row','col'],
+    required: ['y'],
+    defaultAgg: 'sum',
+    aggCol: 'y',
+  },
+  'line':{
+    engine: 'plotly',
+    attr: {
+      type: 'scatter',
+      mode: 'lines',
+    },
+    wdgTypes: ['x','y','name','row','col'],
+    required: ['y'],
+    defaultAgg: 'sum',
+    aggCol: 'y',
+  },
+  'line dot':{
+    engine: 'plotly',
+    attr: {
+      type: 'scatter',
+      mode: 'lines+markers',
+    },
+    wdgTypes: ['x','y','name','row','col'],
+    required: ['y'],
+    defaultAgg: 'sum',
+    aggCol: 'y',
+  },
+  'bar':{
+    engine: 'plotly',
+    attr: {
+      type: 'bar',
+    },
+    wdgTypes: ['x','y','name','row','col'],
+    required: ['y'],
+    defaultAgg: 'sum',
+    aggCol: 'y',
+    layout:{
+      barmode: 'relative',
+      //traceorder: 'reversed', //This doesn't seem to be working...
+    },
+  },
+  '3D dot':{
+    engine: 'plotly',
+    attr: {
+      type: 'scatter3d',
+      mode: 'markers',
+    },
+    wdgTypes: ['x','y','z','name'],
+    required: ['x','y','z'],
+    defaultAgg: 'sum',
+    aggCol: 'z',
+  },
+  'US State plotly map':{
+    engine:'plotly',
+    attr: {
+      type: 'choropleth',
+      locationmode: 'USA-states',
+    },
+    wdgTypes: ['locations','z','text'],
+    required:['locations','z'],
+    defaultAgg: 'sum',
+    aggCol: 'z',
+    layout:{
+      geo: {scope:'usa'},
+    }
+  },
+  'lat/lon/dot plotly map':{
+    engine:'plotly',
+    attr: {
+      type: 'scattermapbox',
+    },
+    wdgTypes: ['lat','lon','name','marker_size','text'],
+    required:['lat','lon'],
+    defaultAgg: 'none',
+    aggCol: 'none',
+    layout:{
+      width: 800,
+      height: 400,
+      dragmode: 'zoom',
+      mapbox: {style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
+    }
+  },
+  'lat/lon/dot plotly map (continuous color)':{
+    engine:'plotly',
+    attr: {
+      type: 'scattermapbox',
+    },
+    wdgTypes: ['lat','lon','marker_color','marker_size','text'],
+    required:['lat','lon'],
+    defaultAgg: 'none',
+    aggCol: 'none',
+    layout:{
+      width: 800,
+      height: 400,
+      dragmode: 'zoom',
+      mapbox: {style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
+    }
+  },
+  'lat/lon/area plotly map':{
+    engine:'plotly',
+    attr: {
+      type: 'scattermapbox',
+      fill: 'toself',
+      mode: 'none',
+    },
+    wdgTypes: ['lat','lon','area','name','text'],
+    required:['lat','lon','area'],
+    defaultAgg: 'none',
+    aggCol: 'area',
+    layout:{
+      width: 800,
+      height: 400,
+      dragmode: 'zoom',
+      mapbox: { style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
+      showlegend: true,
+    }
+  },
+};
+
+//Every chart can have explode
+for(const k in chartTypes){
+  if('wdgTypes' in chartTypes[k]){
+    chartTypes[k]['wdgTypes'] = chartTypes[k]['wdgTypes'].concat(['explode']);
+  }
+}
+
+const sepTraceWdg = ['name','row','col','explode']; //These widgets, if set, will create separate subtraces
+
+const wdgTypes = {
+  x: 'X axis',
+  y: 'Y axis',
+  z: 'Z axis',
+  name: 'Color',
+  locations: 'State Codes',
+  text: 'Hover Text',
+  radius: 'Radius (m)',
+  area: 'Area (sq_km)',
+  marker_size: 'Marker Size',
+  marker_color: 'Color',
+  lat: 'Latitude',
+  lng: 'Longitude',
+  lon: 'Longitude',
+  row: 'Facet Rows',
+  col: 'Facet Columns',
+  explode: 'Explode',
+};
+
+const defaultPlotlyLayout = { //See https://plotly.com/javascript/reference/layout/
+  autosize: false,
+  width: 400,
+  height: 400,
+  // font: {
+  //   family: 'Courier New, monospace',
+  //   size: 14,
+  //   color: '#7f7f7f'
+  // },
+  margin: {
+    l: 0,
+    r: 0,
+    b: 0,
+    t: 40,
+  },
+  title: {
+    text: '',
+    yref: "paper",
+    y : 1,
+    yanchor: "bottom",
+    pad: {
+      b: 5,
+    },
+  },
+  legend: {
+    tracegroupgap: 0,
+    itemsizing: 'constant',
+  },
+  annotations:[],
+};
+
+const defaultPlotlyConfig = { //See https://plotly.com/javascript/configuration-options
+  editable: false,
+  // responsive: true,
+  showLink: true,
+  plotlyServerURL: "https://chart-studio.plotly.com",
+  toImageButtonOptions: { //See https://plotly.com/javascript/configuration-options/#customize-download-plot-options
+    format: 'svg', // one of png, svg, jpeg, webp
+    scale: 1 // Multiply title/legend/axis/canvas sizes by this factor
+  },
+};
+
+const rainbow_scl = [[0, 'rgb(150,0,90)'],[0.125, 'rgb(0, 0, 200)'],[0.25,'rgb(0, 25, 255)'],
+                     [0.375,'rgb(0, 152, 255)'],[0.5,'rgb(44, 255, 150)'],[0.625,'rgb(151, 255, 0)'],
+                     [0.75,'rgb(255, 234, 0)'],[0.875,'rgb(255, 111, 0)'],[1,'rgb(255, 0, 0)']];
+
+const default_colorbar = {
+  thickness: 10,
+  titleside: 'right',
+  outlinecolor: 'rgba(0,0,0,0)',
+  ticks: 'outside',
+  ticklen: 3,
+}
+
+//Maybe note which properties are in layout and which will be in the trace itself. Maybe just use schema?
+//But perhaps assume that all trace properties are common across trace types, although some, e.g. 
+const customStyle = {
+  'Plot Width (px)': {
+    type: 'layout',
+    path: ['width'],
+  },
+  'Plot Height (px)': {
+    type: 'layout',
+    path: ['height'],
+  },
+  'Move Chart Up/Down (px)': {
+    tooltip: 'Negative number moves chart up and positive number moves chart down',
+  },
+  'Move Chart Left/Right (px)': {
+    tooltip: 'Negative number moves chart left and positive number moves chart right',
+  },
+  'Z-index': {
+    tooltip: 'Enter a number. Higher z-index will bring to front, lower z-index will move to back. See https://www.w3schools.com/cssref/pr_pos_z-index.asp',
+  },
+  'Plot Title': {
+    type: 'layout',
+    path: ['title','text'],
+    tooltip: 'Manually change the title of the plot.',
+  },
+  'Plot Title Font Size (pt)': {
+    type: 'layout',
+    path: ['title','font','size'],
+  },
+  'X Title': {
+    type: 'layout',
+    path: ['xaxis','title','text'],
+  },
+  'X Title Font Size (pt)': {
+    type: 'layout',
+    path: ['xaxis','title','font','size'],
+  },
+  'X Tick Font Size (pt)': {
+    type: 'layout',
+    path: ['xaxis','tickfont','size'],
+  },
+  'X Label Angle (deg)': {
+    type: 'layout',
+    path: ['xaxis','tickangle'],
+  },
+  'X Scale': {
+    tooltip: 'Enter a number to scale the x values',
+  },
+  'X Min': {
+    tooltip: 'Right now, "X Min" only works with "X Max" set as well',
+  },
+  'X Max': {
+    tooltip: 'Right now, "X Max" only works with "X Min" set as well',
+  },
+  'Y Title': {
+    type: 'layout',
+    path: ['yaxis','title','text'],
+  },
+  'Y Title Font Size (pt)': {
+    type: 'layout',
+    path: ['yaxis','title','font','size'],
+  },
+  'Y Tick Font Size (pt)': {
+    type: 'layout',
+    path: ['yaxis','tickfont','size'],
+  },
+  'Y Scale': {
+    tooltip: 'Enter a number to scale the y values',
+  },
+  'Y Min': {
+    tooltip: 'Right now, "Y Min" only works with "Y Max" set as well',
+  },
+  'Y Max': {
+    tooltip: 'Right now, "Y Max" only works with "Y Min" set as well',
+  },
+  'Map Style': {
+    type: 'layout',
+    path: ['mapbox','style'],
+    tooltip: `Free ones are carto-darkmatter, carto-positron, open-street-map,
+              stamen-terrain, stamen-toner, stamen-watercolor, white-bg.
+              See https://plotly.com/javascript/reference/layout/mapbox/#layout-mapbox-style`,
+  },
+  'Map Zoom': {
+    type: 'layout',
+    path: ['mapbox','zoom'],
+  },
+  'Map Center Latitude': {
+    type: 'layout',
+    path: ['mapbox','center','lat'],
+  },
+  'Map Center Longitude': {
+    type: 'layout',
+    path: ['mapbox','center','lon'],
+  },
+  'Bar Width': {
+    type: 'data',
+    path: ['width'], //this only gets used for bar charts
+  },
+  'Line Width (px)': {
+    type: 'data',
+    path: ['line','width'],
+  },
+  'Dot Size (px)': {
+    type: 'data',
+    path: ['marker','size'],
+  },
+  'Opacity (0-1)': {
+    type: 'data',
+    path: ['marker','opacity'],
+  },
+  'Colorscale': {
+    type: 'data',
+    path: ['marker','colorscale'],
+    tooltip: `For plotly lat/lon (continuous color) maps. e.g. Blackbody, Bluered, Blues,
+              Cividis, Earth, Electric, Greens, Greys, Hot, Jet, Picnic, Portland, Rainbow,
+              RdBu, Reds, Viridis, YlGnBu, YlOrRd`,
+  },
+  'Colorscale Min': {
+    type: 'data',
+    path: ['marker','cmin'],
+  },
+  'Colorscale Max': {
+    type: 'data',
+    path: ['marker','cmax'],
+  },
+};
+
+/*Bokehpivot default styling not yet included
+For Plots::
+Opacity (0-1): 0.8
+Sync Axes: Yes
+Flip Axes: No
+Sort Data: Yes
+Cumulative Sort: None
+Histogram # of bins: 20
+Weighted Histogram: Yes
+Show Line/Dot (Range Only): Yes
+Add Net Levels to Stacked: Yes
+
+For Maps::
+Bin Type: Auto Equal Num
+# of bins (Auto Only): 9
+Ignore Zeros: Yes
+Map Palette: Blues
+Map Palette 2 (Optional):
+Dual Palette Breakpoint (Optional):
+Minimum (Equal Width Only):
+Maximum (Equal Width Only):
+Manual Breakpoints (Manual Only):
+Map Width (px)
+Title Font Size: 10
+Boundary Line Width: 0.1
+Line Width: 2
+Opacity (0-1): 1
+Add Arrows: No
+Arrow Size (px): 7
+Arrow Location (0=start, 1=end): 0.8
+*/
+
+$('#file-input').change(function(evt){
+  let newFiles = Array.from(evt.target.files);
+  //Load all the files asynchronously
+  for(let i = 0; i < newFiles.length; i++){
+    //If the file already exists, remove the old version
+    if(newFiles[i].name in files){
+      $(`#file-list li[data-name="${newFiles[i].name}"]`).remove();
+      delete files[newFiles[i].name];
+    }
+    //If this is a json file, we will save it in config_load_json_file and load
+    if(newFiles[i].name.endsWith('.json')){
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        config_load = JSON.parse(evt.target.result);
+        $('#file-list').append(
+          `<li data-name="${newFiles[i].name}">${newFiles[i].name}
+            (requires <b>${config_load.fileNames.join(', ')}</b>)</li>`
+        );
+        config_load_json_file = newFiles[i];
+        if(config_load.fileNames.every(val => val in rawData)) load_config();
+      }
+      reader.readAsText(newFiles[i]);
+    } else{
+    //Else add the new file to the files object and load
+      files[newFiles[i].name] = newFiles[i];
+      if(!config.fileNames.includes(newFiles[i].name)) config.fileNames.push(newFiles[i].name);
+      config.fileNames.sort();
+      Papa.parse(newFiles[i], {
+        worker: true, //"worker: true" might make things slower, but it prevents the page from hanging...
+        header: false,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: function(results, file) {
+          rawData[newFiles[i].name] = transpose_to_obj(results.data);
+          updateGlobalFilters(newFiles[i].name);
+          $('#file-list').append(`<li data-name="${newFiles[i].name}">${newFiles[i].name}</li>`);
+          //TODO: When new files are added, update the dynamically added file selects via adding "standard-file-select" class to these widgets
+          $('.standard-file-select').append(`<option value="${newFiles[i].name}">${newFiles[i].name}</option>`); //what if we already have this?
+          if(config_load_json_file != null && config_load.fileNames.every(val => val in rawData)){
+            load_config();
+          }
+        }
+      });
+    }
+  }
+});
+
+$('#global-config-header').click(function(){
+  $('#global-config').toggle();
+});
+$('#data-sources-label').click(function(){
+  $('#data-sources').toggle();
+});
+
+$('#global-style-file').change(function(){
+  let selectFile = $(this).val();
+  config.globalStyleFile = selectFile;
+  updateGlobalStyles(rawData[selectFile]);
+});
+
+function updateGlobalStyles(data){
+  globalStyles = {};
+  for(let i = 0; i < data.column_value.length; i++){
+    updateObj(globalStyles, [data.column_name[i], data.column_value[i], 'color'], data.color[i]);
+    updateObj(globalStyles, [data.column_name[i], data.column_value[i], 'order'], i);
+  }
+}
+
+$('#add-url-input').click(function(){
+  //TODO: We should share code with file input I think.
+  let filePath = $('#url-input').val();
+  config.fileNames.push(filePath);
+  Papa.parse(filePath, {
+    worker: true,
+    header: false,
+    dynamicTyping: true,
+    skipEmptyLines: true,
+    download: true,
+    complete: function(results) {
+      rawData[filePath] = transpose_to_obj(results.data);
+      updateGlobalFilters(filePath);
+      $('#file-list').append(`<li data-name="${filePath}">${filePath}</li>`);
+      $('.standard-file-select').append(`<option value="${filePath}">${filePath}</option>`);
+      if(config_load_json_file != null && config_load.fileNames.every(val => val in rawData)){
+        load_config();
+      }
+    }
+  });
+});
+
+$('#report').on('click','.add-dashboard', function(){
+  let dash_idx = config.dashboards.length;
+  config.dashboards[dash_idx] = {charts:[]};
+  traceData[dash_idx] = [];
+  $(this).before(`
+    <div data-dashboardID="${dash_idx}" class="dashboard-outer">
+      <div class="dashboard-title">Dashboard ${dash_idx}</div>
+      <button class="add-chart">Add Chart</button>
+    </div>
+  `);
+  //Automatically click to add the first chart
+  $(`[data-dashboardID="${dash_idx}"] .add-chart`).click();
+});
+$('#report').on('click','.add-chart', function(){
+  let dash_idx = parseInt($(this).parents('.dashboard-outer').attr('data-dashboardID'));
+  let chart_idx = config.dashboards[dash_idx].charts.length;
+  config.dashboards[dash_idx].charts[chart_idx] = {traces:[]};
+  traceData[dash_idx][chart_idx] = [];
+  //Custom styling
+  let styleOptionsHTML = `<option value="none">Add Style</option>`;
+  for (const key in customStyle){
+    styleOptionsHTML += `<option value="${key}">${key}</option>`;
+  }
+  //Build html
+  let html = `
+    <div id="dash-${dash_idx}-chart-${chart_idx}" data-chartID="${chart_idx}" class="chart-outer">
+      <div class="chart-controls">
+        <div class="chart-title">Chart ${chart_idx}</div>
+        <div class="chartstyle-div">
+          <label class="styles-label">Change Chart Style</label>
+          <select class="add-style">${styleOptionsHTML}</select>
+          <button class="update-style">Update Styles</button>
+        </div>
+        <button class="add-trace">Add Data</button>
+      </div>
+    </div>
+  `;
+  $(this).before(html);
+  //Automatically click to add the first trace
+  $(`#dash-${dash_idx}-chart-${chart_idx} .add-trace`).click();
+});
+
+$('#report').on('click','.add-trace', function(){
+  let dash_idx = parseInt($(this).parents('.dashboard-outer').attr('data-dashboardID'));
+  let chart_idx = parseInt($(this).parents('.chart-outer').attr('data-chartID'));
+  let trace_idx = config.dashboards[dash_idx].charts[chart_idx].traces.length;
+  config.dashboards[dash_idx].charts[chart_idx].traces[trace_idx] = {};
+  traceData[dash_idx][chart_idx][trace_idx] = {};
+  let optionsHtml = `<option value="none">none</option>`;
+  for(let fileName of config.fileNames){
+    optionsHtml += `<option value="${fileName}">${fileName}</option>`;
+  }
+  let html = `
+    <div class="trace-controls" data-traceID="${trace_idx}">
+      <div class="trace-title">Data ${trace_idx}</div>
+      <label>Data source:</label>
+      <select class="data-source">${optionsHtml}</select>
+    </div>
+  `;
+  $(this).before(html);
+});
+$('#report').on('change','.data-source', function(){
+  const [dash_idx, chart_idx, trace_idx] = get_idx(this);
+  const thisTraceData = traceData[dash_idx][chart_idx][trace_idx];
+  let selectFile = $(this).val();
+  let thisDS = $(this);
+  config.dashboards[dash_idx].charts[chart_idx].traces[trace_idx].dataSource = selectFile;
+  //Do we need the following check? Is it for 'none'?
+  if(!config.fileNames.includes(selectFile)){
+    return;
+  }
+  let chartTypeHtml = ``;
+  for (const chartType in chartTypes){
+    chartTypeHtml+= `<option value="${chartType}">${chartType}</option>`;
+  }
+  let html = `
+  <label>Chart Type:</label>
+  <select data-config="type">${chartTypeHtml}</select>
+  `;
+  //If we have global filters, apply them, else filteredData is rawData
+  thisTraceData.filteredData = 'filter' in config ? applyFilters(rawData[selectFile], config.filter) : rawData[selectFile];
+  thisTraceData.aggData = thisTraceData.filteredData;
+  thisDS.after(html);
+});
+
+$('#report').on('change','select[data-config="type"]', function(){
+  const [dash_idx, chart_idx, trace_idx] = get_idx(this);
+  const trace_config = config.dashboards[dash_idx].charts[chart_idx].traces[trace_idx];
+  let oldChartType = 'type' in trace_config ? trace_config.type : 'none';
+  trace_config.type = $(this).val();
+  trace_config.agg = chartTypes[$(this).val()].defaultAgg;
+  let chartType = $(this).val();
+  let thisTraceDiv = $(this).parent();
+  let selectFile = thisTraceDiv.children('.data-source').val();
+  if(selectFile != 'none' && chartType != 'none'){
+    if(arraysEqual(chartTypes[chartType].wdgTypes, chartTypes[oldChartType].wdgTypes) &&
+      chartTypes[trace_config.type].required.every((val) => val in trace_config) &&
+      chartTypes[trace_config.type].required.every((val) => val != 'none')
+    ){
+      updateChart(dash_idx, chart_idx);
+    }
+    else{
+      buildTraceControls(thisTraceDiv, selectFile, chartType);
+    }
+  }
+});
+
+function buildTraceControls(thisTraceDiv, selectFile, chartType){
+  let header = Object.keys(rawData[selectFile]).sort();
+  thisTraceDiv.children('.trace-ind-controls').remove();
+  let optionsHtml = '';
+  for (const col of header){
+    optionsHtml+= `<option value="${col}">${col}</option>`;
+  }
+  //Add controls for x axis, y axis, color, style, row, column
+  const wdgOptionsHtml = `<option value="none">none</option>` + optionsHtml;
+  let wdgHtml = ``;
+  for (const wdgType of chartTypes[chartType].wdgTypes){
+    wdgHtml += `
+      <label>${wdgTypes[wdgType]}</label>
+      <select data-config="${wdgType}">${wdgOptionsHtml}</select>
+    `;
+  }
+  //Add aggregation
+  wdgHtml += `
+    <label>Aggregation</label>
+    <select class="agg" data-config="agg">
+      <option value="none">none</option>
+      <option value="sum">Sum</option>
+    </select>
+  `;
+  //Add filters
+  const filtOptionsHtml = `<option value="none">Add Filter</option>` + optionsHtml;
+  wdgHtml += `
+    <div class="filter-div">
+      <label class="filters-label">Add Filters</label>
+      <select class="add-filter">${filtOptionsHtml}</select>
+      <button class="update-filter update-fil-common">Update Filters</button>
+    </div>
+  `;
+
+  let html = `<div class="trace-ind-controls">${wdgHtml}</div>`;
+  thisTraceDiv.append(html);
+  thisTraceDiv.find('.agg').val(chartTypes[chartType].defaultAgg);
+}
+
+$('#report').on('change','.trace-ind-controls > select', function(){
+  const [dash_idx, chart_idx, trace_idx] = get_idx(this);
+  const thisTraceData = traceData[dash_idx][chart_idx][trace_idx];
+  let trace_config = config.dashboards[dash_idx].charts[chart_idx].traces[trace_idx];
+  if($(this).val() == 'none'){
+    delete trace_config[$(this).attr('data-config')]
+  } else{
+    trace_config[$(this).attr('data-config')] = $(this).val();
+  }
+  if('type' in trace_config && trace_config.type != 'none' &&
+    chartTypes[trace_config.type].required.every((val) => val in trace_config) &&
+    chartTypes[trace_config.type].required.every((val) => val != 'none')
+  ){
+    if($(this).attr('data-config') != 'type' || $.isEmptyObject(traceData[dash_idx][chart_idx][trace_idx])){
+      if('agg' in trace_config && trace_config.agg != 'none'){
+        const agg_col = trace_config[chartTypes[trace_config.type].aggCol];
+        const idx_cols = chartTypes[trace_config.type].wdgTypes.filter(
+          wdg => wdg in trace_config && wdg != chartTypes[trace_config.type].aggCol).map(
+          wdg => trace_config[wdg]);
+        thisTraceData.aggData = aggregate(thisTraceData.filteredData, trace_config.agg, idx_cols, agg_col);
+      }
+      updateTraceData(dash_idx, chart_idx, trace_idx);
+    }
+    updateChart(dash_idx, chart_idx);
+  }
+});
+
+function updateGlobalFilters(newFile){
+  for (const col in rawData[newFile]){
+    if($(`#add-global-filter option[value="${col}"]`).length == 0){
+      $(`#add-global-filter`).append(`<option value="${col}">${col}</option>`);
+    }
+  }
+}
+
+function getFilterHTML(column){
+  return `
+    <div class="filter-outer">
+      <label class="filter-name">${column}</label>
+      <select class="filter-type">
+        <option value="none">Filter Type</option>
+        <option value="include">Include Options</option>
+        <option value="exclude">Exclude Options</option>
+        <option value="equals">Equals</option>
+        <option value="greater">Greater than</option>
+        <option value="greater-or-equal">Greater than or equal to</option>
+        <option value="less">Less than</option>
+        <option value="less-or-equal">Less than or equal to</option>
+        <option value="between-inclusive">Between (inclusive)</option>
+      </select>
+    </div>`;
+}
+
+function getFilterCheckBox(uniques){
+  let html = `
+    <div class="filter-val filter-val-options">
+      <div>
+        <button class="select-all">All</button>
+        <button class="select-none">None</button>
+      </div>
+      <div>
+  `;
+  for (let i = 0; i < uniques.length; i++){
+    html += `<label><input type="checkbox" name="filter-val" value="${i}">${uniques[i]}</label><br>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+$('#add-global-filter').change(function(){
+  if($(this).val() == 'none'){
+    return;
+  }
+  let html = getFilterHTML($(this).val());
+  $(this).before(html);
+  $(this).val('none');
+});
+
+$('#report').on('change','.add-filter', function(){
+  if($(this).val() == 'none'){
+    return;
+  }
+  let html = getFilterHTML($(this).val());
+  $(this).before(html);
+  $(this).val('none');
+});
+
+$('#report').on('change','.filter-type', function(){
+  //If we have filter-val, remove it.
+  $(this).next('.filter-val').remove();
+  if($(this).val() == 'none'){
+    let filterName = $(this).prev('.filter-name').text();
+    if(filterName in config.filter){
+      delete config.filter[filterName];
+    }
+    return;
+  }
+  if(['include','exclude'].includes($(this).val())){
+    const filterName = $(this).siblings('.filter-name').text();
+    let uniques = [];
+    if($(this).closest('#global-filter-config').length > 0){
+      //First concatenate all values from all rawData with this column,
+      //then find uniques
+      for (const fileName in rawData){
+        if(filterName in rawData[fileName]){
+          uniques = uniques.concat(rawData[fileName][filterName])
+        }
+      }
+      uniques = [...new Set(uniques)];
+    } else{
+      const [dash_idx, chart_idx, trace_idx] = get_idx(this);
+      const trace_config = config.dashboards[dash_idx].charts[chart_idx].traces[trace_idx];
+      uniques = [... new Set(rawData[trace_config.dataSource][filterName])]; //maybe uniques should be evaluated and saved earlier...
+    }
+    let html = getFilterCheckBox(uniques);
+    $(this).after(html);
+  } else{
+    $(this).after(`<input class="filter-val filter-val-text" type="text">`);
+  }
+});
+
+$('#report').on('click','.select-all, .select-none', function(){
+  const all_bool = $(this).attr('class').includes('select-all');
+  $(this).parent().next().find('input').prop('checked',all_bool);
+});
+
+function getFilterVal(that){
+  let filterVal;
+  if($(that).find('.filter-val-options').length > 0){
+    filterVal = [];
+    $(that).children('.filter-val').find('input:checked').each(function(){
+      let changedVal = $(this).parent().text();
+      if($.isNumeric(changedVal)){
+        changedVal = Number(changedVal);
+      }
+      filterVal.push(changedVal);
+    });
+    if (filterVal.length == 0){
+      filterVal = undefined;
+    }
+  } else if($(that).find('.filter-val-text').length > 0){
+    let textVal = $(that).find('.filter-val-text').val();
+    filterVal = textVal == '' ? undefined : textVal;
+  }
+  return filterVal;
+}
+
+$('#update-global-filter').click(function(){
+  //Build filter config
+  config.filter={};
+  $(this).siblings('.filter-outer').each(function(){
+    let filterVal = getFilterVal(this);
+    if (filterVal !== undefined){
+      config.filter[$(this).children('.filter-name').text()] = {'filter_type':$(this).children('.filter-type').val(), 'filter_val':filterVal};
+    }
+  });
+  let trace_config, raw_data, thisTraceData, allFilters;
+  for (const [dash_idx, dash] of traceData.entries()) {
+    for (const [chart_idx, chart] of traceData[dash_idx].entries()) {
+      for (const [trace_idx, trace] of traceData[dash_idx][chart_idx].entries()) {
+        trace_config = config.dashboards[dash_idx].charts[chart_idx].traces[trace_idx];
+        raw_data = rawData[trace_config.dataSource];
+        thisTraceData = traceData[dash_idx][chart_idx][trace_idx];
+        allFilters = {...config.filter, ...trace_config.filter}; //start with global, then overwrite with trace
+        thisTraceData.filteredData = applyFilters(raw_data, allFilters);
+        thisTraceData.aggData = thisTraceData.filteredData;
+        if('type' in trace_config && trace_config.type != 'none' &&
+          chartTypes[trace_config.type].required.every((val) => val in trace_config) &&
+          chartTypes[trace_config.type].required.every((val) => val != 'none')
+        ){
+          if('agg' in trace_config && trace_config.agg != 'none'){
+            const agg_col = trace_config[chartTypes[trace_config.type].aggCol];
+            const idx_cols = chartTypes[trace_config.type].wdgTypes.filter(
+              wdg => wdg in trace_config && wdg != chartTypes[trace_config.type].aggCol).map(
+              wdg => trace_config[wdg]);
+            thisTraceData.aggData = aggregate(thisTraceData.filteredData, trace_config.agg, idx_cols, agg_col);
+          }
+          updateTraceData(dash_idx, chart_idx, trace_idx);
+          updateChart(dash_idx, chart_idx);
+        }
+      }
+    }
+  }
+});
+
+$('#report').on('click','.update-filter', function(){
+  const [dash_idx, chart_idx, trace_idx] = get_idx(this);
+  const trace_config = config.dashboards[dash_idx].charts[chart_idx].traces[trace_idx];
+  const raw_data = rawData[trace_config.dataSource];
+  const thisTraceData = traceData[dash_idx][chart_idx][trace_idx];
+  //Build filter config
+  trace_config.filter={};
+  $(this).siblings('.filter-outer').each(function(){
+    let filterVal = getFilterVal(this);
+    if (filterVal !== undefined){
+      trace_config.filter[$(this).children('.filter-name').text()] = {'filter_type':$(this).children('.filter-type').val(), 'filter_val':filterVal};
+    }
+  });
+  let allFilters = {...config.filter, ...trace_config.filter}; //start with global, then overwrite with trace
+  thisTraceData.filteredData = applyFilters(raw_data, allFilters);
+  thisTraceData.aggData = thisTraceData.filteredData;
+  if('type' in trace_config && trace_config.type != 'none' &&
+    chartTypes[trace_config.type].required.every((val) => val in trace_config) &&
+    chartTypes[trace_config.type].required.every((val) => val != 'none')
+  ){
+    if('agg' in trace_config && trace_config.agg != 'none'){
+      const agg_col = trace_config[chartTypes[trace_config.type].aggCol];
+      const idx_cols = chartTypes[trace_config.type].wdgTypes.filter(
+        wdg => wdg in trace_config && wdg != chartTypes[trace_config.type].aggCol).map(
+        wdg => trace_config[wdg]);
+      thisTraceData.aggData = aggregate(thisTraceData.filteredData, trace_config.agg, idx_cols, agg_col);
+    }
+    updateTraceData(dash_idx, chart_idx, trace_idx);
+    updateChart(dash_idx, chart_idx);
+  }
+});
+
+$('#report').on('change','.add-style', function(){
+  if($(this).val() == 'none'){
+    return;
+  }
+  let html = `
+    <div class="style-outer">
+      <label class="style-name">${$(this).val()}</label>
+      <input class="style-input" type="text">
+      <span class="tooltip-parent">?<span class="tooltip">${customStyle[$(this).val()].tooltip}</span></span>
+    </div>
+  `;
+  $(this).before(html);
+  $(this).val('none');
+});
+
+$('#report').on('keyup','.style-input', function(){
+  if (event.keyCode === 13) {
+        $(this).closest('.chartstyle-div').find('.update-style').click();
+    }
+});
+
+$('#report').on('keyup','.filter-val input, input.filter-val', function(){
+  if (event.keyCode === 13) {
+        $(this).closest('.filter-div').find('.update-fil-common').click();
+    }
+});
+
+$('#report').on('click','.chartstyle-div .update-style', function(){
+  const [dash_idx, chart_idx] = get_chart_idx(this);
+  const chart_config = config.dashboards[dash_idx].charts[chart_idx];
+  //Build style config
+  chart_config.style={};
+  $(this).siblings('.style-outer').each(function(){
+    chart_config.style[$(this).children('label').text()] = $(this).children('input').val();
+  });
+  //Make sure we even have a chart to update and, if so, update the chart.
+  if(document.getElementById(`chart-container-dash-${dash_idx}-chart-${chart_idx}`)){
+    updateChart(dash_idx, chart_idx);
+  }
+});
+
+$('#report').on('click','.filters-label, .styles-label, .filter-name, .trace-title', function(){
+  $(this).siblings().toggle();
+});
+
+function aggregate(data_in, agg_type, idx_cols, agg_col, help_cols=[]){
+  //data_in looks like {col1:[], col2:[],...}
+  //agg_type is 'sum',...
+  //idx_cols is array of columns to be used as the index
+  //agg_col is the column to aggregate
+  //help_cols is array of columns needed for some aggregation.
+
+  //Do I split-apply-combine? Right now I'm just applying as i iterate through...
+  const data_in_len = data_in[Object.keys(data_in)[0]].length;
+  let data_in_idx = []; //array of arrays.
+  for(const idx_col of idx_cols){
+    data_in_idx.push(data_in[idx_col]);
+  }
+  data_in_idx = transpose(data_in_idx); //now each row is an index value. But does this transpose take too long?
+  const idx_out = [];
+  const vals = []; //perhaps this should look like {'sum(a)':[]} for agg_type='sum(a)' or {'ave(a)':[],'count':[]} for 'ave(a)' or {'sum(a*b)':[], 'sum(b)':[], 'sum(a*b)/sum(b)':[]} for 'sum(a*b)/sum(b)'? 
+  switch(agg_type){
+    case 'sum': //TODO: change to 'sum(a)'?
+      for(let i = 0; i < data_in_len; i++){
+        let idx_out_i = indexOfArr(idx_out, data_in_idx[i]);
+        if(idx_out_i == -1){
+          idx_out.push(data_in_idx[i]);
+          vals.push(data_in[agg_col][i]);
+        }else{
+          vals[idx_out_i] += data_in[agg_col][i]; //because we're simply summing
+        }
+      }
+      //some operations will require an additional step here to produce vals array...
+      break;
+  }
+  //now we have idx_out and vals arrays to combine into our output object.
+  const arr_out = transpose(idx_out); //another transpose, expensive?
+  const data_out = {};
+  data_out[agg_col] = vals;
+  for(let i = 0; i < arr_out.length; i++){
+    data_out[idx_cols[i]] = arr_out[i];
+  }
+  return data_out;
+}
+
+function applyFilters(data_in, filters_in = {}){
+  //data_in looks like {col1:[], col2:[],...}
+  //filters_in looks like {col1: {filter_type: 'include', filter_val:[]},...}
+  if($.isEmptyObject(filters_in)){
+    return data_in;
+  }
+  //else (explicit else not needed because of return statement)
+  let filters = JSON.parse(JSON.stringify(filters_in)); //Make local copy so i don't change the original
+  //Only apply filters that reference columns in data_in
+  for(const col in filters_in){
+    if(!(col in data_in)) delete filters[col];
+  }
+  const data_out = {};
+  const cols_out = Object.keys(data_in); // before I had a columns=[] argument and const cols_out = (columns.length === 0) ? Object.keys(data_in) : columns;
+  for(const col of cols_out){
+    data_out[col] = [];
+  }
+  const data_in_len = data_in[Object.keys(data_in)[0]].length;
+  const filter_entries = Object.entries(filters);
+  loop1:
+  for(let i = 0; i < data_in_len; i++){
+    //make sure this row passes all filters
+    loop2:
+    for(const [col_filt, filt] of filter_entries){
+      if(filt.filter_type == 'include'){
+        if(!filt.filter_val.includes(data_in[col_filt][i])){
+          continue loop1;
+        }
+      } else if(filt.filter_type == 'exclude'){
+        if(filt.filter_val.includes(data_in[col_filt][i])){
+          continue loop1;
+        }
+      } else if(filt.filter_type == 'equals'){
+        if(data_in[col_filt][i] != filt.filter_val){
+          continue loop1;
+        }
+      } else if(filt.filter_type == 'greater'){
+        if(data_in[col_filt][i] <= filt.filter_val){
+          continue loop1;
+        }
+      } else if(filt.filter_type == 'greater-or-equal'){
+        if(data_in[col_filt][i] < filt.filter_val){
+          continue loop1;
+        }
+      } else if(filt.filter_type == 'less'){
+        if(data_in[col_filt][i] >= filt.filter_val){
+          continue loop1;
+        }
+      } else if(filt.filter_type == 'less-or-equal'){
+        if(data_in[col_filt][i] > filt.filter_val){
+          continue loop1;
+        }
+      } else if(filt.filter_type == 'between-inclusive'){
+        let filt_arr = filt.filter_val.split(',');
+        if(data_in[col_filt][i] < filt_arr[0] || data_in[col_filt][i] > filt_arr[1]){
+          continue loop1;
+        }
+      }
+    }
+    //If we're here, it means this row passed all filters
+    for(const col of cols_out){
+      data_out[col].push(data_in[col][i]);
+    }
+  }
+  return data_out;
+}
+
+function updateTraceData(dash_idx, chart_idx, trace_idx){
+  const thisTraceData = traceData[dash_idx][chart_idx][trace_idx];
+  thisTraceData.subtraces = []; //E.g. a trace could be a series of lines while a subtrace would be each line (plotly disagrees)
+  const subtrace_data = thisTraceData.subtraces;
+  const trace_config = config.dashboards[dash_idx].charts[chart_idx].traces[trace_idx];
+  const agg_data = traceData[dash_idx][chart_idx][trace_idx].aggData;
+  const agg_data_len = agg_data[Object.keys(agg_data)[0]].length;
+  const sepWdg = []; //Widgets that cause separate subtraces
+  const nonsepWdg = []; //Widgets that don't cause separate subtraces
+  for(const wdg of chartTypes[trace_config.type].wdgTypes){
+    if(wdg in trace_config && trace_config[wdg] != 'none'){
+      if(sepTraceWdg.includes(wdg)){
+        sepWdg.push(wdg);
+      } else {
+        nonsepWdg.push(wdg);
+      }
+    }
+  }
+  thisTraceData.sepWdg = sepWdg;
+  const sepWdgUniques = {};
+  thisTraceData.sepWdgUniques = sepWdgUniques;
+  for(const wdg of sepWdg){
+    sepWdgUniques[wdg] = [];
+  }
+  //If we don't have sepWdg, it's easy, just pass through the full data as one subtrace
+  if(sepWdg.length == 0){
+    const newTrace = {};
+    for(const wdg of nonsepWdg){
+      newTrace[wdg] = agg_data[trace_config[wdg]];
+    }
+    subtrace_data.push(newTrace); //the array has only one element
+  //If we have sepWdg, we need to create a subtrace for each combo of sepWdg values.
+  } else{
+    for(let i = 0; i < agg_data_len; i++){
+      const sepVals = [];
+      //find all the values of the sepWdg columns
+      for(const wdg of sepWdg){
+        sepVals.push(agg_data[trace_config[wdg]][i]);
+      }
+      //Now loop through the existing subtraces to see if we already have one with the same sepVals.
+      //Would probably be smarter to to start with the previous match, rather than from the beginning?
+      //Or should I save sepVals as a key, using JSON.stringify? Sounds like JSON.stringify might
+      //be slow though itself for small payloads. Might as well not micro-optimize now...
+      let sepValsFound = false;
+      for(const subtrace of subtrace_data){
+        if(arraysEqual(sepVals,subtrace.sepVals)){
+          sepValsFound = true;
+          for(const wdg of nonsepWdg){
+            subtrace[wdg].push(agg_data[trace_config[wdg]][i]);
+          }
+          break;
+        }
+      }
+      if(!sepValsFound){
+        const newSubtrace = {sepVals: sepVals};
+        for(const wdg of nonsepWdg){
+          newSubtrace[wdg] = [agg_data[trace_config[wdg]][i]];
+        }
+        subtrace_data.push(newSubtrace);
+        //Add to sepWdgUniques if we have any uniques
+        for(let j = 0; j < sepWdg.length; j++){
+          if(!(sepWdgUniques[sepWdg[j]].includes(sepVals[j]))){
+            sepWdgUniques[sepWdg[j]].push(sepVals[j]);
+          }
+        }
+      }
+    }
+  }
+}
+function updateChart(dash_idx, chart_idx){
+  const chart_config = JSON.parse(JSON.stringify(config.dashboards[dash_idx].charts[chart_idx])); //Maybe structuredClone would be better...
+  const chart_data = JSON.parse(JSON.stringify(traceData[dash_idx][chart_idx]));
+  if($(`#chart-container-dash-${dash_idx}-chart-${chart_idx}`).length == 0){
+    $(`#dash-${dash_idx}-chart-${chart_idx}`).prepend(`<div id="chart-container-dash-${dash_idx}-chart-${chart_idx}" class="chart-container"></div>`);
+  }
+  //Use first trace to figure out if we are exploding.
+  let explodes = [null];
+  if(chart_data[0].sepWdg.includes('explode')){
+    explodes = chart_data[0].sepWdgUniques.explode;
+  }
+  //If we have exploded charts, remove extras, based on explodes above (from first trace)
+  let num_charts = $(`#chart-container-dash-${dash_idx}-chart-${chart_idx} .chart`).length;
+  if(num_charts > explodes.length){
+    $(`#chart-container-dash-${dash_idx}-chart-${chart_idx} .chart:nth-last-child(-n+${num_charts - explodes.length})`).remove();
+  }
+  for(let ei = 0; ei < explodes.length; ei++){
+    if($(`#chart-dash-${dash_idx}-chart-${chart_idx}-explode-${ei}`).length == 0){
+      $(`#chart-container-dash-${dash_idx}-chart-${chart_idx}`).append(`<div id="chart-dash-${dash_idx}-chart-${chart_idx}-explode-${ei}" class="chart"></div>`);
+    }
+    let explode_val = explodes[ei];
+    if(chartTypes[chart_config.traces[0].type].engine == 'plotly'){
+      let plotlyData = [];
+      let plotlyLayout = JSON.parse(JSON.stringify(defaultPlotlyLayout));
+      for(let i = 0; i < chart_data.length; i++){
+        if(!('subtraces' in chart_data[i])){
+          continue;
+        }
+        let trace_config = chart_config.traces[i];
+        let sepWdg = chart_data[i].sepWdg;
+        let sepWdgUniques = chart_data[i].sepWdgUniques;
+        let subtrace_data= chart_data[i].subtraces;
+        if(chart_data[i].sepWdg.includes('explode')){
+          subtrace_data= subtrace_data.filter(st => st.sepVals[chart_data[i].sepWdg.indexOf('explode')] == explode_val);
+        }
+        let chartType = chartTypes[trace_config.type];
+        //Apply default styling for this chart type.
+        //Note that multiple chart types in the same chart could conflict here, and if so the last will win.
+        if('layout' in chartType){
+          for(const prop in chartType['layout']){
+            plotlyLayout[prop] = chartType['layout'][prop];
+          }
+        }
+        //Add faceting. If we have multiple traces for a given chart, this will overwrite the layout for each one, so they need to correspond.
+        if(sepWdg.includes('row') || sepWdg.includes('col')){
+          //TODO: Allow for "independent" pattern, defaulting to ~square rows/columns but allowing user-specified row number or column number.
+          //Note that "independent" pattern requires we simply use the subtrace number j to set both xaxis and yaxis.
+          plotlyLayout.grid = {pattern:'coupled'};
+          plotlyLayout.grid.rows = sepWdg.includes('row') ? sepWdgUniques['row'].length : 1;
+          plotlyLayout.grid.columns = sepWdg.includes('col') ? sepWdgUniques['col'].length : 1;
+        }
+        //Add the plotly traces (what we call "subtraces")
+        let seriesVals = []; //As we go, we'll add unique elements to seriesVals, and if they already exist, showLegend will be false.
+        for(const [j, ser] of subtrace_data.entries()){
+          if(trace_config.type == 'lat/lon/area plotly map'){
+            //If this is a lat/lon/area plotly map, we need to find the bounding box and draw it.
+            //This expands the lat and lon arrays, and we'll also expand the other arrays to match.
+            const new_ser = {};
+            const nonLatLons = [];
+            for(const prop in ser){
+              if(chartType.wdgTypes.includes(prop)){
+                new_ser[prop] = [];
+                if(prop != 'lat' && prop != 'lon'){
+                  nonLatLons.push(prop);
+                }
+              }
+            }
+            for(let i = 0; i < ser.lat.length; i++){
+              const bb = getBoundingBox(ser.lat[i], ser.lon[i], ser.area[i]**0.5/2);
+              new_ser.lat.push(ser.lat[i], null, bb.lat_max, bb.lat_min, bb.lat_min, bb.lat_max, bb.lat_max, null);
+              new_ser.lon.push(ser.lon[i], null, bb.lon_min, bb.lon_min, bb.lon_max, bb.lon_max, bb.lon_min, null);
+              //for all other properties, simply copy values.
+              for(const prop of nonLatLons){
+                const serProp = ser[prop][i];
+                new_ser[prop].push(serProp, null, serProp, serProp, serProp, serProp, serProp, null);
+              }
+            }
+            for(const prop in new_ser){
+              ser[prop] = new_ser[prop];
+            }
+          }
+          let xaxis = 'x'; //These are defaults that can change below if we have rows/columns
+          let yaxis = 'y'; //These are defaults that can change below if we have rows/columns
+          let layoutXaxis = 'xaxis';
+          let layoutYaxis = 'yaxis';
+          let rowLabel = '';
+          let colLabel = '';
+          if(sepWdg.includes('row')){
+            var rowVal = ser.sepVals[sepWdg.indexOf('row')];
+            let rowNum = sepWdgUniques['row'].indexOf(rowVal) + 1; //axis numbers are one-indexed
+            if(rowNum > 1){ //when rowNum = 1, we don't need to specify the yaxis, and it will default to 'y' (which is used instead of 'y1' for some reason).
+              yaxis = `y${rowNum}`;
+              layoutYaxis = `yaxis${rowNum}`;
+            }
+            rowLabel = `<b>${rowVal}</b><br><br>`;
+          }
+          if(sepWdg.includes('col')){
+            var colVal = ser.sepVals[sepWdg.indexOf('col')];
+            let colNum = sepWdgUniques['col'].indexOf(colVal) + 1; //axis numbers are one-indexed
+            if(colNum > 1){ //when colNum = 1, we don't need to specify the yaxis, and it will default to 'x' (which is used instead of 'x1' for some reason).
+              xaxis = `x${colNum}`;
+              layoutXaxis = `xaxis${colNum}`;
+            }
+            colLabel = `<br><br><b>${colVal}</b>`;
+          }
+          ser['xaxis'] = xaxis;
+          ser['yaxis'] = yaxis;
+          if('x' in trace_config){
+            plotlyLayout[layoutXaxis] = {
+              automargin: true,
+              title: {text: `<br>${trace_config.x}${colLabel}`},
+            };
+          }
+          if('y' in trace_config){
+            plotlyLayout[layoutYaxis] = {
+              automargin: true,
+              title: {text: `${rowLabel}${trace_config.y}<br>`},
+            };
+          }
+          if('marker_size' in trace_config){
+            let marker_size_max = Math.max(...chart_data[i].aggData[trace_config.marker_size]);
+            let marker_size_scaled = ser.marker_size.map(i => i / marker_size_max*15);
+            updateObj(ser, ['marker','size'], marker_size_scaled);
+          }
+          if('marker_color' in trace_config){
+            updateObj(ser, ['marker','color'], ser.marker_color);
+            ser.marker.colorscale = rainbow_scl;
+            ser.marker.colorbar = default_colorbar;
+          }
+          if(sepWdg.includes('name')){
+            ser.name = ser.sepVals[sepWdg.indexOf('name')];
+            if (!$.isEmptyObject(globalStyles)
+            && trace_config.name in globalStyles
+            && ser.name in globalStyles[trace_config.name]
+            && 'color' in globalStyles[trace_config.name][ser.name]){
+              updateObj(ser, ['marker','color'], globalStyles[trace_config.name][ser.name].color);
+              updateObj(ser, ['line','color'], globalStyles[trace_config.name][ser.name].color);
+            } else{
+              updateObj(ser, ['marker','color'], globalColors[sepWdgUniques.name.indexOf(ser.name)]);
+              updateObj(ser, ['line','color'], globalColors[sepWdgUniques.name.indexOf(ser.name)]);
+            }
+          }
+          ser.legendgroup = ser.name;
+          if(seriesVals.includes(ser.name)){
+            ser.showlegend = false;
+          } else{
+            seriesVals.push(ser.name);
+          }
+          for(const prop in chartType['attr']){
+            ser[prop] = chartType['attr'][prop];
+          }
+          //Add custom styling that applies to data (must be added to each series, even though this is inefficient...)
+          if('style' in chart_config){
+            for(const prop in chart_config['style']){
+              let propVal = chart_config['style'][prop];
+              if(propVal == ''){
+                continue;
+              }
+              if(prop in customStyle && 'type' in customStyle[prop] && customStyle[prop]['type'] == 'data'){
+                if(prop == 'Dot Size (px)' && 'marker_size' in trace_config){
+                  let marker_size_scaled = ser.marker.size.map(i => i * propVal/6);
+                  updateObj(ser, ['marker','size'], marker_size_scaled);
+                } else{
+                  updateObj(ser, customStyle[prop].path, propVal);
+                }
+              } else if(prop in customStyle && 'type' in customStyle[prop] && customStyle[prop]['type'] == 'layout'){
+                let propPath = [...customStyle[prop].path]; //this uses spread operator to make shallow copy
+                if(propPath[0] == 'xaxis'){
+                  propPath[0] = layoutXaxis;
+                  if(propPath[1] == 'title' && propPath[2] == 'text'){
+                    propVal = `<br>${propVal}${colLabel}`;
+                  }
+                }else if(propPath[0] == 'yaxis'){
+                  propPath[0] = layoutYaxis;
+                  if(propPath[1] == 'title' && propPath[2] == 'text'){
+                    propVal = `${rowLabel}${propVal}<br>`;
+                  }
+                }
+                updateObj(plotlyLayout, propPath, propVal);
+              }
+              //One-offs
+              if(prop == 'X Scale'){
+                ser['x'] = ser['x'].map(x => x * propVal);
+              } else if(prop == 'Y Scale'){
+                ser['y'] = ser['y'].map(y => y * propVal);
+              } else if(prop == 'X Min'){
+                if(!('range' in plotlyLayout[layoutXaxis])) plotlyLayout[layoutXaxis].range = [null,null];
+                plotlyLayout.xaxis.range[0] = Number(propVal);
+              } else if(prop == 'X Max'){
+                if(!('range' in plotlyLayout[layoutXaxis])) plotlyLayout[layoutXaxis].range = [null,null];
+                plotlyLayout.xaxis.range[1] = Number(propVal);
+              } else if(prop == 'Y Min'){
+                if(!('range' in plotlyLayout[layoutYaxis])) plotlyLayout[layoutYaxis].range = [null,null];
+                plotlyLayout.yaxis.range[0] = Number(propVal);
+              } else if(prop == 'Y Max'){
+                if(!('range' in plotlyLayout[layoutYaxis])) plotlyLayout[layoutYaxis].range = [null,null];
+                plotlyLayout.yaxis.range[1] = Number(propVal);
+              }
+            }
+          }
+          plotlyData.push(ser);
+        }
+      }
+
+      //Update html element width and height
+      $(`#chart-dash-${dash_idx}-chart-${chart_idx}-explode-${ei}`).width(plotlyLayout.width);
+      $(`#chart-dash-${dash_idx}-chart-${chart_idx}-explode-${ei}`).height(plotlyLayout.height);
+
+      if('style' in chart_config && 'Move Chart Up/Down (px)' in chart_config['style']){
+        $(`#chart-container-dash-${dash_idx}-chart-${chart_idx}`).css('top',chart_config['style']['Move Chart Up/Down (px)'] + 'px');
+      }
+      if('style' in chart_config && 'Move Chart Left/Right (px)' in chart_config['style']){
+        $(`#chart-container-dash-${dash_idx}-chart-${chart_idx}`).css('left',chart_config['style']['Move Chart Left/Right (px)'] + 'px');
+      }
+      if('style' in chart_config && 'Z-index' in chart_config['style']){
+        $(`#chart-container-dash-${dash_idx}-chart-${chart_idx}`).css('z-index',chart_config['style']['Z-index']);
+      }
+      if(chart_data[0].sepWdg.includes('explode')){
+        let plot_title_text = explode_val;
+        if('style' in chart_config && 'Plot Title' in chart_config.style){
+          plot_title_text = `${chart_config.style['Plot Title']}, ${plot_title_text}`;
+        }
+        updateObj(plotlyLayout, ['title','text'], plot_title_text);
+      }
+      Plotly.react(`chart-dash-${dash_idx}-chart-${chart_idx}-explode-${ei}`, plotlyData, plotlyLayout, defaultPlotlyConfig);
+      // window.dispatchEvent(new Event('resize')); //This works but maybe we should just be using plotly width and height...
+    }
+  }
+}
+
+function updateObj(obj, keys, value){
+  //'obj' is an object, and 'keys' is an array specifying the path of (nested) keys for which we are setting the 'value'.
+  keys.forEach(function (item, index) {
+    //If this is the final item of path, set it to the value
+    if(index == keys.length -1){
+      obj[item] = value;
+      return;
+    }
+    //Else add the level if it doesn't exist
+    else if(!(item in obj)){
+      obj[item] = {};
+    }
+    //Walk to the next level of the object
+    obj = obj[item];
+  });
+}
+
+function get_idx(that){
+  let dash_idx = parseInt($(that).parents('.dashboard-outer').attr('data-dashboardID'));
+  let chart_idx = parseInt($(that).parents('.chart-outer').attr('data-chartID'));
+  let trace_idx = parseInt($(that).parents('.trace-controls').attr('data-traceID'));
+  return [dash_idx, chart_idx, trace_idx];
+}
+
+function get_chart_idx(that){
+  let dash_idx = parseInt($(that).parents('.dashboard-outer').attr('data-dashboardID'));
+  let chart_idx = parseInt($(that).parents('.chart-outer').attr('data-chartID'));
+  return [dash_idx, chart_idx];
+}
+
+//TODO: should i really have this? Shouldn't i just use transpose below and then shift()?
+//Did i do this because shift needs to re-index and i thought it might be a performance hit?
+function transpose_to_obj(matrix_in) {
+  //matrix_in is array of arrays
+  //obj_out is object with keys as first row of matrix_in and values as transposed matrix_in arrays (minus first row of matrix_in)
+  const rows = matrix_in.length;
+  const cols = matrix_in[0].length;
+  const header = matrix_in[0];
+  const obj_out = {};
+  for (let j = 0; j < cols; j++) {
+    obj_out[header[j]] = Array(rows - 1);
+  }
+  for (let i = 1; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      obj_out[header[j]][i-1] = matrix_in[i][j];
+    }
+  }
+  return obj_out;
+}
+
+//I got the following from https://stackoverflow.com/a/46805290/11048803, "Vanilla Approach"
+function transpose(matrix_in) {
+  const rows = matrix_in.length;
+  const cols = matrix_in[0].length;
+  const matrix_out = [];
+  for (let j = 0; j < cols; j++) {
+    matrix_out[j] = Array(rows);
+  }
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      matrix_out[j][i] = matrix_in[i][j];
+    }
+  }
+  return matrix_out;
+}
+
+//The following is from https://stackoverflow.com/questions/3115982/how-to-check-if-two-arrays-are-equal-with-javascript
+function arraysEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (a.length !== b.length) return false;
+  for (var i = 0; i < a.length; ++i) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+//I got the following mostly from https://betterprogramming.pub/check-if-an-array-is-within-a-2d-array-using-javascript-c534d96cb269
+function indexOfArr(arr, subarr){
+  for(var i = 0; i<arr.length; i++){
+    let checker = false
+    for(var j = 0; j<arr[i].length; j++){
+      if(arr[i][j] === subarr[j]){
+        checker = true
+      } else {
+        checker = false
+        break;
+      }
+    }
+    if (checker){
+      return i;
+    }
+  }
+  return -1;
+}
+
+//The following is from GeoPoint.prototype.boundingCoordinates of https://github.com/davidwood/node-geopoint/blob/master/geopoint.js,
+//which is based on http://janmatuschek.de/LatitudeLongitudeBoundingCoordinates, which i found referenced at:
+//https://stackoverflow.com/questions/238260/how-to-calculate-the-bounding-box-for-a-given-lat-lng-location
+function getBoundingBox(lat_deg, lon_deg, dist_km){
+  const DEG2RAD = Math.PI / 180;
+  const RAD2DEG = 1 / DEG2RAD;
+  const EARTH_RADIUS_KM = 6371.01;
+
+  const lat_rad = lat_deg * DEG2RAD;
+  const lon_rad = lon_deg * DEG2RAD;
+  const radDist = dist_km / EARTH_RADIUS_KM;
+  const min_lat_rad = lat_rad - radDist;
+  const max_lat_rad = lat_rad + radDist;
+  const deltaLon = Math.asin(Math.sin(radDist) / Math.cos(lat_rad));
+  const min_lon_rad = lon_rad - deltaLon;
+  const max_lon_rad = lon_rad + deltaLon;
+
+  return {
+    lat_min: min_lat_rad * RAD2DEG,
+    lat_max: max_lat_rad * RAD2DEG,
+    lon_min: min_lon_rad * RAD2DEG,
+    lon_max: max_lon_rad * RAD2DEG,
+  };
+}
+$('#download-html').click(function(){
+  var stringifiedConfig = JSON.stringify(config);
+  var stringifiedRawData = JSON.stringify(rawData);
+  var stringifiedGlobalStyles = JSON.stringify(globalStyles);
+  let html_str = orig_html_str.replace(/let config_load = .*;/,`let config_load = ${stringifiedConfig};`)
+  html_str = html_str.replace(/const rawData = .*;/,`const rawData = ${stringifiedRawData};`)
+  let content = "data:text/html;charset=utf-8," + encodeURIComponent(html_str);
+  const link = document.createElement("a");
+  link.setAttribute("href", content);
+  link.setAttribute("download", "vizit.html");
+  document.body.appendChild(link); // Required for FF
+  link.click();
+  document.body.removeChild(link);
+});
+$('#download-json').click(function(){
+  let content = "data:text/json;charset=utf-8," + JSON.stringify(config, null, 2);
+  const link = document.createElement("a");
+  link.setAttribute("href", content);
+  link.setAttribute("download", "config.json");
+  document.body.appendChild(link); // Required for FF
+  link.click();
+  document.body.removeChild(link);
+});
+$('#config-url').click(function(){
+  window.open(`https://mmowers.github.io/vizit?config=${encodeURIComponent(JSON.stringify(config))}`, "_blank");
+});
+
+//Function to import specified configurations.
+function load_config(){
+  if (config_load === null) {
+    return;
+  }
+  config.fileNames = config_load.fileNames;
+  //Configure all the charts like a user would, but do the required widgets last so the charts only get built once.
+  //First global styles
+  $('#global-config-header').click();
+  if('globalStyleFile' in config_load){
+    $('#global-style-file').val(config_load.globalStyleFile).change();
+  }
+  //Now global filters
+  if('filter' in config_load){
+    for (const key in config_load.filter){
+      $(`#add-global-filter`).val(key).change();
+      $(`#global-filter-config .filter-type`).last().val(config_load.filter[key]['filter_type']).change();
+      if(['include','exclude'].includes(config_load.filter[key].filter_type)){
+        $(`#global-filter-config .filter-val`).last().find('label').each(function(){
+          if(config_load.filter[key]['filter_val'].map(String).includes($(this).text())){ //perhaps map to string in separate step for speed
+            $(this).children('input').prop( "checked", true );
+          }
+        });
+      } else {
+        $(`#global-filter-config .filter-val`).last().val(config_load.filter[key].filter_val);
+      }
+    }
+    $(`#update-global-filter`).click();
+  }
+  $('#global-config-header').click();
+  //Now all dashboard, chart, and trace config.
+  config_load.dashboards.forEach((db, di) => {
+    $('.add-dashboard').click();
+    db.charts.forEach((cht, ci) => {
+      if(ci > 0){ //The first one is clicked automatically
+        $(`[data-dashboardID="${di}"] .add-chart`).click();
+      }
+      //Add custom styles for chart
+      if('style' in cht){
+        $(`#dash-${di}-chart-${ci} .chartstyle-div .styles-label`).click();
+        for (const key in cht['style']){
+          $(`#dash-${di}-chart-${ci} .chartstyle-div .add-style`).val(key).change();
+          $(`#dash-${di}-chart-${ci} .chartstyle-div .style-outer input`).last().val(cht['style'][key]).change();
+        }
+        $(`#dash-${di}-chart-${ci} .chartstyle-div .update-style`).click();
+        $(`#dash-${di}-chart-${ci} .chartstyle-div .styles-label`).click();
+      }
+      cht.traces.forEach((trc, ti) => {
+        if(ti > 0){ //The first one is clicked automatically
+          $(`#dash-${di}-chart-${ci} .add-trace`).click();
+        }
+        //dataSource first
+        if('dataSource' in trc){
+          $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] .data-source`).val(trc['dataSource']).change();
+        }
+        //Now type
+        if('type' in trc){
+          $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] [data-config="type"]`).val(trc['type']).change();
+        }
+        //Now filters
+        if('filter' in trc){
+          $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] .filters-label`).click();
+          for (const key in trc['filter']){
+            $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] .add-filter`).val(key).change();
+            $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] .filter-type`).last().val(trc['filter'][key]['filter_type']).change();
+            //TODO: If filter type is include or exclude, do the following, else simply fill with value.
+            if(['include','exclude'].includes(trc.filter[key].filter_type)){
+              $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] .filter-val`).last().find('label').each(function(){
+                if(trc['filter'][key]['filter_val'].map(String).includes($(this).text())){ //perhaps map to string in separate step for speed
+                  $(this).children('input').prop( "checked", true );
+                }
+              });
+            } else{
+              $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] .filter-val`).last().val(trc.filter[key].filter_val);
+            }
+          }
+          $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] .update-filter`).click();
+          $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] .filters-label`).click();
+        }
+        //Now non-required widgets
+        for (const key in trc){
+          if(chartTypes[trc['type']].required.includes(key)){
+            continue;
+          }
+          if(chartTypes[trc['type']].wdgTypes.concat(['agg']).includes(key)){
+            $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] [data-config="${key}"`).val(trc[key]).change();
+          }
+        }
+        //Now required widgets
+        for (const key in trc){
+          if(chartTypes[trc['type']].required.includes(key)){
+            $(`#dash-${di}-chart-${ci} [data-traceID="${ti}"] [data-config="${key}"`).val(trc[key]).change();
+          }
+        }
+      });
+    });
+  });
+}
+
+//If we have config in the url, retrieve the datasources and set config_load
+const urlSearchParams = new URLSearchParams(window.location.search);
+const params = Object.fromEntries(urlSearchParams.entries());
+if('config' in params){
+  config_load = JSON.parse(params.config); //what about decodeURIComponent()? I think it's already decoded.
+  //Load all datasources first
+  for(let fileName of config_load.fileNames){
+    Papa.parse(fileName, {
+      worker: true,
+      header: false,
+      dynamicTyping: true,
+      skipEmptyLines: true,
+      download: true,
+      complete: function(results) {
+        rawData[fileName] = transpose_to_obj(results.data);
+        //Do we need below inside of the $(document).ready to prevent this html from showing up in orig_html_str?
+        updateGlobalFilters(fileName);
+        $('#file-list').append(`<li data-name="${fileName}">${fileName}</li>`);
+        $('.standard-file-select').append(`<option value="${fileName}">${fileName}</option>`);
+        if(config_load.fileNames.every(val => val in rawData)) $(document).ready(load_config);
+      }
+    });
+  }
+} else{
+  //Load config_load if it exists, e.g. if embedded in html via #download-html
+  if (config_load !== null) {
+    $(document).ready(function(){
+      for(let fileName of config_load.fileNames){
+        updateGlobalFilters(fileName);
+        $('#file-list').append(`<li data-name="${fileName}">${fileName}</li>`);
+        $('.standard-file-select').append(`<option value="${fileName}">${fileName}</option>`);
+      }
+      load_config();
+    });
+  }
+}
+
+</script>
+<script>
+//The following saves the original html so that we can save into html. It needs to be at the very end so we get everything.
+let orig_html_str = $('html').prop('outerHTML');
+//we need to remove this one plotly style tag that plotly adds, otherwise it will build up on susequent file download.
+let plotly_style = $('html').find('[id="plotly.js-style-global"]').prop('outerHTML');
+orig_html_str = orig_html_str.replace(plotly_style, ''); //or see https://stackoverflow.com/questions/1405128/remove-dom-elements-from-jquery-object
+orig_html_str = '<!DOCTYPE html>\n' + orig_html_str;
+//var orig_html = new XMLSerializer().serializeToString(document); //See https://stackoverflow.com/questions/817218/how-to-get-the-entire-document-html-as-a-string
+</script>
+</body>
+</html>

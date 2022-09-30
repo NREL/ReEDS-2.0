@@ -26,7 +26,8 @@
           ],
           "style": {
             "Plot Width (px)": "1200",
-            "Plot Title": "National capacity by year"
+            "Plot Title": "National capacity by year",
+            "Plot Height (px)": "500"
           }
         },
         {
@@ -54,13 +55,15 @@
               "type": "dot",
               "agg": "sum",
               "x": "year",
+              "col": "scenario",
               "y": "Demand (MWh)",
-              "col": "scenario"
+              "name": "type"
             }
           ],
           "style": {
             "Plot Width (px)": "1200",
-            "Plot Title": "National generation by year"
+            "Plot Title": "National generation by year",
+            "Plot Height (px)": "500"
           }
         },
         {
@@ -84,6 +87,17 @@
               "row": "scenario",
               "explode": "year",
               "y": "Generation (MW)"
+            },
+            {
+              "dataSource": "demand_timeslice.csv",
+              "type": "dot",
+              "agg": "sum",
+              "x": "time",
+              "y": "Demand (MW)",
+              "name": "type",
+              "row": "scenario",
+              "col": "season",
+              "explode": "year"
             }
           ],
           "style": {
