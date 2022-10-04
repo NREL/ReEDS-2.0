@@ -79,7 +79,7 @@ class REEDS:
         # self.swagger.register_media_type_handler()
         self.add_routes()
 
-        self.loop.run_in_executor(self.pool, get_json_schema, "localhost", port)
+        # self.loop.run_in_executor(self.pool, get_json_schema, "localhost", port)
         # self.t = threading.Thread(name='api_thread', target= get_json_schema, args=(host,port,))
         # self.t.start()
 

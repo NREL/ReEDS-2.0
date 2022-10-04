@@ -30,4 +30,4 @@ reeds_server/users_output/*
 225g/
 D_Augur/ErrorFile/
 gamslog.txt
-
+reeds_server/web/test_db_connection.py

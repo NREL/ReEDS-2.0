@@ -18,10 +18,10 @@ if os.getenv("DEPLOY_MODE") != "local":
     REDIS_DB = redis.Redis(
         host=os.getenv("REDIS_HOST"),
         port=int(os.getenv("REDIS_PORT")),
-        password=os.getenv("REDIS_PASSWORD"),
+        # password=os.getenv("REDIS_PASSWORD"),
         charset="utf-8",
         decode_responses=True,
-        ssl=True,
+        ssl=False,
     )
 else:
     REDIS_DB = redis.Redis(
