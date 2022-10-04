@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 def get_json_schema(host, port):
 
-    base_path = os.path.join(os.path.dirname(__file__), "model\\reeds.V1.json")
+    base_path = os.path.join(os.path.dirname(__file__), "model/reeds.V1.json")
     base_url = f"http://{host}:{port}" + "/docs/swagger.json"
 
     isvalid = False
@@ -79,7 +79,7 @@ class REEDS:
         # self.swagger.register_media_type_handler()
         self.add_routes()
 
-        self.loop.run_in_executor(self.pool, get_json_schema, "localhost", port)
+        # self.loop.run_in_executor(self.pool, get_json_schema, "localhost", port)
         # self.t = threading.Thread(name='api_thread', target= get_json_schema, args=(host,port,))
         # self.t.start()
 
@@ -284,7 +284,9 @@ class REEDS:
     async def cleanup_background_tasks(self, *args, **kwargs):
 
         logger.info("Cleaning up background tasks")
+
         # self.t.join()
+
         self.handler.shutdown_event.set()
         self.handler.stop_scheduler_run.set()
     
