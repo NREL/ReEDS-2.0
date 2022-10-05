@@ -9,6 +9,7 @@ test:
   script:
     - echo "Creating python environment"
     - echo JWT_KEY=$JWT_KEY
+    - exit 1
     # - python3 -m venv env
     # - echo "Created environment successfully"
     # - source env/bin/activate
