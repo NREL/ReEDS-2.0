@@ -10,6 +10,7 @@ test:
     - echo "Creating python environment"
     - echo JWT_KEY=$JWT_KEY
     - echo SAMPLE_KEY=$SAMPLE_KEY
+    - exit 1
     # - python3 -m venv env
     # - echo "Created environment successfully"
     # - source env/bin/activate
