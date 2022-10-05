@@ -1,8 +1,8 @@
 stages:          # List of stages for jobs, and their order of execution
   - test
-  - deploy
+  - deploy_dev
 
-test-job:  
+test:  
   environment:
     name: Test     # This job runs in the build stage, which runs first.
   stage: test
@@ -42,13 +42,14 @@ test-job:
     - export PATH=$PATH:$PWD/gams25.1_linux_x64_64_sfx
     - which gams
     - cd ..
+    - cat .env
     - pytest reeds_server/tests/test_api.py
     - echo "Awesome Build complete."
 
-deploy-dev-job:
+deploy_dev:
   environment:
     name: Dev
-  stage: deploy
+  stage: deploy_dev
   rules:
     - if: $CI_COMMIT_BRANCH == "develop"
       when: always
