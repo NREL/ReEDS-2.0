@@ -99,7 +99,7 @@ engine = create_engine(DB_CONN_STRING, pool_size=10, max_overflow=-1)
 Base.metadata.bind = engine
 DB_SESSION = sessionmaker(bind=engine)
 
-schedule.every(30).minutes.do(rule_retriever, sqlalchemy_session=DB_SESSION)
+# schedule.every(30).minutes.do(rule_retriever, sqlalchemy_session=DB_SESSION)
 
 
 if os.getenv("DEPLOY_MODE") != "local":
@@ -110,7 +110,7 @@ if os.getenv("DEPLOY_MODE") != "local":
         bucket_name=os.getenv("S3_BUCKET"),
     )
 
-# schedule.run_all()
+schedule.run_all()
 
 data_lock = threading.Lock()
 db = DatabaseHandler()
@@ -486,7 +486,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def handle_remove_card_label(self, request):
 
         label_data = await request.json()
@@ -508,7 +508,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_scenario_labels_list(self, request):
 
         with session_manager() as session:
@@ -523,7 +523,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def upload_user_label(self, request):
 
         label_data = await request.json()
@@ -553,7 +553,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_user_labels(self, request):
 
         with session_manager() as session:
@@ -564,7 +564,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def handle_bug_report(self, request):
 
         try:
@@ -655,7 +655,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def update_profile_data(self, request):
 
         try:
@@ -752,7 +752,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_profile_data(self, request):
 
         try:
@@ -796,7 +796,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def update_password(self, request):
 
         try:
@@ -845,7 +845,7 @@ class Handler:
     # Check for JWT authentication
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def check_authentication(self, request):
         return web.json_response(
             text=json.dumps(request["userData"]), status=200
@@ -853,7 +853,7 @@ class Handler:
 
     # Handle user login
     @monitor_time
-    @rate_limit
+    #@rate_limit
     async def handle_sigin(self, request):
 
         user_detail = await request.json()
@@ -1013,7 +1013,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_download_token(self, request):
 
         # Encode file_type, category, username and scen_name in the token and make it short lived
@@ -1026,7 +1026,7 @@ class Handler:
         return web.Response(text=json.dumps({"token": token}), status=200)
 
     @monitor_time
-    @rate_limit
+    #@rate_limit
     async def handle_csv_validation(self, request):
 
         try:
@@ -1360,7 +1360,7 @@ class Handler:
     # I left here
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_list_of_scenarios(self, request):
 
         try:
@@ -1384,7 +1384,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def handle_add_card_label(self, request):
 
         label = await request.json()
@@ -1479,7 +1479,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def run_reeds_model(self, request):
 
         # request, authenticated = self.jwt_authenticate(request)
@@ -1580,7 +1580,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_scenarios(self, request):
 
         try:
@@ -1606,7 +1606,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def update_label_status(self, request):
 
         try:
@@ -1629,7 +1629,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_lable_statuses(self, request):
 
         try:
@@ -1645,7 +1645,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def delete_personnel_scenario_state(self, request):
 
         try:
@@ -1664,7 +1664,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_personnel_scen_state(self, request):
 
         try:
@@ -1686,7 +1686,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_default_scen_state(self, request):
 
         try:
@@ -1750,7 +1750,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_output_card_state(self, request):
 
         try:
@@ -1772,7 +1772,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def update_personnel_scen_state(self, request):
 
         try:
@@ -1793,7 +1793,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def update_default_scen_state(self, request):
 
         try:
@@ -1814,7 +1814,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def update_output_card_state(self, request):
 
         try:
@@ -1835,7 +1835,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def clone_scenarios(self, request):
 
         try:
@@ -1953,7 +1953,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def update_scenarios(self, request):
 
         try:
@@ -2222,7 +2222,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def delete_scenarios(self, request):
 
         try:
@@ -2301,7 +2301,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def get_ouput_metadata(self, request):
 
         try:
@@ -2396,7 +2396,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def delete_output_metadata(self, request):
 
         try:
@@ -2492,7 +2492,7 @@ class Handler:
             )
 
     @monitor_time
-    @rate_limit
+    #@rate_limit
     async def get_reset_token(self, request):
 
         user_detail = await request.json()
@@ -2634,7 +2634,7 @@ class Handler:
     # admin_authenticated
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def handle_admin_check(self, request):
 
         with session_manager() as session:
@@ -2651,7 +2651,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def return_users_requests(self, request):
 
         try:
@@ -2692,7 +2692,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def delete_user_signup_request(self, request):
 
         try:
@@ -2739,7 +2739,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def handle_user_request_approval(self, request):
 
         try:
@@ -2805,7 +2805,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def handle_user_request_rejection(self, request):
 
         try:
@@ -2899,7 +2899,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def update_bug_status(self, request):
         try:
             with session_manager() as session:
@@ -2921,7 +2921,7 @@ class Handler:
 
     @monitor_time
     @authenticate
-    @rate_limit
+    #@rate_limit
     async def handle_delete_bug(self, request):
         try:
             with session_manager() as session:
