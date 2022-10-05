@@ -64,6 +64,7 @@ deploy-dev-job:
       supervisorctl stop reeds_api;
       cd /home/ec2-user/reeds-india/reeds_api;
       git pull origin develop;
+      cd ~;
       supervisorctl start reeds_api"
     - echo "Finished!"
 
