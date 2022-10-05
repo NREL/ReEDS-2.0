@@ -50,6 +50,8 @@ test:
     # - echo "Awesome Build complete."
 
 deploy_dev:
+  needs: 
+    - test
   environment:
     name: Dev
   stage: deploy_dev
