@@ -50,14 +50,12 @@ test:
     # - echo "Awesome Build complete."
 
 deploy_dev:
-  needs: 
-    - test
   environment:
     name: Dev
   stage: deploy_dev
   rules:
     - if: $CI_COMMIT_BRANCH == "develop"
-      when: always
+      when: on_success
     - when: never
   variables:
     SECURE_FILES_DOWNLOAD_PATH: '.'
