@@ -31,5 +31,7 @@ D_Augur/LDCfiles/NREL_Baseline_8760_load.pkl
 A_Inputs/inputs/generators/*-*-*-*.csv
 A_Inputs/inputs/fuels/*-*-*-*.csv
 A_Inputs/inputs/reserves/*-*-*-*.csv
+reeds_server/model/**
+reeds_server/web/test_db_connection.py
 
 
