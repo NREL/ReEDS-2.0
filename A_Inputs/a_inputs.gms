@@ -71,6 +71,9 @@ Sw_FocusRegionZeroTXCost "Zero transmission capital cost between focus regions" 
 Sw_TxLimit               "Switch to enable transmission flow limits"    /%GSw_TxLimit%/
 ;
 
+if(Sw_Retire=0,
+  Sw_TechPhaseOut=0;
+  );
 
 *==========================
 * --- Model Boundaries ---
