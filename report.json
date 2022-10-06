@@ -1,0 +1,162 @@
+{
+  "fileNames": [
+    "cap.csv",
+    "cap_new_ann.csv",
+    "cap_diff.csv",
+    "gen.csv",
+    "opres.csv",
+    "gen_timeslice.csv",
+    "demand.csv",
+    "demand_timeslice.csv",
+    "transmission.csv",
+    "style.csv"
+  ],
+  "dashboards": [
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "cap.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Capacity (MW)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Title": "National installed capacity by year",
+            "Plot Height (px)": "500"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "cap_new_ann.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Investments (MW)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Height (px)": "",
+            "Plot Title": "National capacity additions by year"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "cap_diff.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "y": "Difference (MW)",
+              "name": "tech",
+              "col": "scenario"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "800",
+            "Plot Height (px)": "500",
+            "Plot Title": "Installed capacity difference from first scenario"
+          }
+        }
+      ]
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "gen.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Generation (MWh)"
+            },
+            {
+              "dataSource": "demand.csv",
+              "type": "dot",
+              "agg": "sum",
+              "x": "year",
+              "col": "scenario",
+              "name": "type",
+              "y": "Demand (MWh)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Title": "National generation by year",
+            "Plot Height (px)": "500",
+            "Y Title": "Generation (MWh)"
+          }
+        },
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ]
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "gen_timeslice.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "time",
+              "col": "season",
+              "name": "tech",
+              "row": "scenario",
+              "explode": "year",
+              "y": "Generation (MW)"
+            },
+            {
+              "dataSource": "demand_timeslice.csv",
+              "type": "dot",
+              "agg": "sum",
+              "x": "time",
+              "name": "type",
+              "row": "scenario",
+              "col": "season",
+              "explode": "year",
+              "y": "Demand (MW)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Height (px)": "800",
+            "Plot Title": "National generation dispatch by time slice",
+            "Y Title": "Dispatch (MW)"
+          }
+        },
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ]
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ]
+    }
+  ],
+  "globalStyleFile": "style.csv"
+}

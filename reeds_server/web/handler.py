@@ -333,16 +333,17 @@ class Handler:
         with session_manager() as session:
             prev_sim_list = self.db.get_sim_queue(session)
 
-        for sim in prev_sim_list:
-            self.simulation_queue.put(
-                {
-                    "input": json.loads(sim.input.decode()),
-                    "uuid": sim.uuid,
-                    "username": sim.username,
-                    "usr_email": "ilyac@nrel.gov",
-                    "description": "test",
-                }
-            )
+            for sim in prev_sim_list:
+                user_data = self.db.get_user_data(session, sim.username)
+                self.simulation_queue.put(
+                    {
+                        "input": json.loads(sim.input.decode()),
+                        "uuid": sim.uuid,
+                        "username": sim.username,
+                        "usr_email": user_data["email"],
+                        "description": "ReEDS simulation!",
+                    }
+                )
 
         sim_thread = threading.Thread(
             name="sim_running_thread",
@@ -814,7 +815,7 @@ class Handler:
                         user_detail["password"]
                     )
                     self.db.update_password(
-                        session, hash_key, request["userData"]["username"]
+                        session, hash_key.decode(), request["userData"]["username"]
                     )
                     usr_email = self.db.get_email_from_username(
                         session, request["userData"]["username"]
@@ -983,6 +984,7 @@ class Handler:
 
                 # send email template
                 email_body = UserWelcomeHTMLMessage().return_rendered_html({})
+                schedule.run_all()
                 # print(email_body)
 
                 # TODO: Activate this email during the testing
@@ -1080,7 +1082,15 @@ class Handler:
 
                     df_dict = df.to_dict(orient="records")
                     for idx, record in enumerate(df_dict):
-                        if not csv_validator.validate(record):
+                        record_mod = {}
+                        for k_, v_ in record.items():
+                            if isinstance(k_, str):
+                                k_ = k_.strip()
+                            if isinstance(v_, str):
+                                v_ = v_.strip()
+                            record_mod[k_] = v_
+
+                        if not csv_validator.validate(record_mod):
                             errors[key].append(
                                 f"Item {idx}: {csv_validator.errors}"
                             )
@@ -2551,7 +2561,7 @@ class Handler:
                         user_detail["password"]
                     )
                     self.db.update_user_info_by_username(
-                        session, decoded["username"], "password", hash_pwd
+                        session, decoded["username"], "password", hash_pwd.decode()
                     )
                     session.commit()
                     return web.Response(
@@ -2882,7 +2892,6 @@ class Handler:
         )
 
     @monitor_time
-    @authenticate
     async def validate_user_password_reset_token(self, request):
 
         token = request.match_info["token"]
