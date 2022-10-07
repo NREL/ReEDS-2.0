@@ -1,13 +1,13 @@
 
-USER_RESET_EMAIL_SUBJECT = 'Your new ReEDS India password awaits!'
-USER_SIGNUP_EMAIL_SUBJECT = 'Your link to ReEDS Inida Signup awaits!'
-USER_SIGNUP_EMAIL_REJECT_SUBJECT = 'Unfortunately your request for ReEDS Inida Signuo is Rejected!'
-USER_SIGNUP_REQUEST_SUBJECT = 'New request for user sign up awaits!'
-USER_WELCOME_EMAIL_SUBJECT = 'Your new ReEDS India account awaits!'
-REEDS_SIM_INITIATION_SUBJECT = f'Congratulations your simulation is starting!'
-REEDS_SIM_INQUEUE_SUBJECT = f'Your Simulation is in Queue!'
-REEDS_SIM_COMPLETE_SUBJECT = f'Your Simulation is Complete!'
-REEDS_PASSWORD_CHANGE_SUBJECT = f'You password has been Changed!'
+USER_RESET_EMAIL_SUBJECT = 'Your new ReEDS-India password awaits!'
+USER_SIGNUP_EMAIL_SUBJECT = 'Your ReEDS-India dashboard account awaits!'
+USER_SIGNUP_EMAIL_REJECT_SUBJECT = 'Your request was rejected'
+USER_SIGNUP_REQUEST_SUBJECT = 'New account request'
+USER_WELCOME_EMAIL_SUBJECT = 'Your new ReEDS-India dashboard account awaits!'
+REEDS_SIM_INITIATION_SUBJECT = f'Your simulation is starting!'
+REEDS_SIM_INQUEUE_SUBJECT = f'Your simulation is in queue!'
+REEDS_SIM_COMPLETE_SUBJECT = f'Congratulations, your simulation is complete!'
+REEDS_PASSWORD_CHANGE_SUBJECT = f'Your password has been changed!'
 
 REL_URL_TO_SERVICE_DICT = {
     '/api/health': 'health', # Auth not needed

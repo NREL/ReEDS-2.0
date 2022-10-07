@@ -3,7 +3,7 @@ import datetime
 import jwt
 import bcrypt
 import os
-
+import traceback
 
 # TDOO: During production get this from environment key
 JWT_KEY = os.getenv('JWT_KEY')
@@ -135,7 +135,7 @@ class Hash:
             else:
                 return ('Login Failed', None, 500)
         except Exception as e:
-            return (str(e), None, 500)
+            return (str(e)+traceback.format_exc(), None, 500)
 
     def generate_token(self, data, life_seconds):
 

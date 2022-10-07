@@ -62,6 +62,7 @@ def rule_retriever(sqlalchemy_session):
     try:
         rules = session.query(Rules).all()
         all_rules = {}
+        print(rules)
         for rule in rules:
             if rule.client_key not in all_rules:
                 all_rules[rule.client_key] = {}
@@ -72,6 +73,7 @@ def rule_retriever(sqlalchemy_session):
 
         # Let's write these rules in redis cache
         for key, val in all_rules.items():
+            print(key, val)
             REDIS_DB.set(key, json.dumps(val))
 
     except sqlalchemy.exc.NoResultFound as e:

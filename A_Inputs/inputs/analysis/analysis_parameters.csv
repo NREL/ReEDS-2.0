@@ -1,29 +1,29 @@
 reeds.category,Type,Gen.Type,Plot.Color,Gen.Order,Focus.Regions
-CCGT-GAS,Gas CC,Curtailment,#E1E1E1,Curtailment,Andhra_Pradesh
-COGENERATION-BAGASSE,Other,Diesel,#853D65,BESS,Arunachal_Pradesh
-CT-GAS,Gas CT,Gas CC,#52216B,BESS 1hr,Assam
-DIESEL,Diesel,Gas CT,#C2A1DB,BESS 2hr,Bihar
-DISTPV,Solar PV,Hydro,#187F94,BESS 4hr,Chandigarh
-HYDRO-PONDAGE,Hydro,Nuclear,#820000,BESS 6hr,Chhattisgarh
-HYDRO-PUMPED,Pumped hydro,Other,#A96235,BESS 8hr,Dadra_Nagar_Haveli
-HYDRO-ROR,Hydro,Pumped hydro,darkblue,BESS 10hr,Daman_Diu
-HYDRO-STORAGE,Hydro,Solar PV,#FFC903,Pumped hydro,Delhi
-NUCLEAR,Nuclear,Sub-Coal,#222222,Solar PV,Goa
-SUBCRITICAL-COAL,Sub-Coal,Super-Coal,#525352,Wind,Gujarat
-SUBCRITICAL-LIGNITE,Sub-Coal,Wind,#00B6EF,Other,Haryana
-SUBCRITICAL-OIL,Other,BESS,#FF4A88,Hydro,Himachal_Pradesh
-SUPERCRITICAL-COAL,Super-Coal,BESS 1hr,#FF7FBB,Naptha,Jammu_Kashmir
-UPV,Solar PV,BESS 2hr,#CC0079,Diesel,Jharkhand
-WHR,Other,BESS 4hr,#FF6882,Gas CT,Karnataka
-WIND,Wind,BESS 6hr,#DF5282,Gas CC,Kerala
-BATTERY,BESS,BESS 8hr,#CC015C,Super-Coal,Madhya_Pradesh
-BATTERY_1,BESS 1hr,BESS 10hr,#9B014F,Sub-Coal,Maharashtra
-BATTERY_2,BESS 2hr,,,Nuclear,Manipur
-BATTERY_4,BESS 4hr,,,,Meghalaya
+CCGT-GAS,Gas CC,Curtailment,#E1E1E1,Imports,Andhra_Pradesh
+COGENERATION-BAGASSE,Other,Diesel,#853D65,Curtailment,Arunachal_Pradesh
+CT-GAS,Gas CT,Gas CC,#52216B,BESS,Assam
+DIESEL,Diesel,Gas CT,#C2A1DB,BESS 1hr,Bihar
+DISTPV,Solar PV,Hydro,#187F94,BESS 2hr,Chandigarh
+HYDRO-PONDAGE,Hydro,Nuclear,#820000,BESS 4hr,Chhattisgarh
+HYDRO-PUMPED,Pumped hydro,Other,#A96235,BESS 6hr,Dadra_Nagar_Haveli
+HYDRO-ROR,Hydro,Pumped hydro,darkblue,BESS 8hr,Daman_Diu
+HYDRO-STORAGE,Hydro,Solar PV,#FFC903,BESS 10hr,Delhi
+NUCLEAR,Nuclear,Sub-Coal,#222222,Pumped hydro,Goa
+SUBCRITICAL-COAL,Sub-Coal,Super-Coal,#525352,Solar PV,Gujarat
+SUBCRITICAL-LIGNITE,Sub-Coal,Wind,#00B6EF,Wind,Haryana
+SUBCRITICAL-OIL,Other,BESS,#FF4A88,Other,Himachal_Pradesh
+SUPERCRITICAL-COAL,Super-Coal,BESS 1hr,#FF7FBB,Hydro,Jammu_Kashmir
+UPV,Solar PV,BESS 2hr,#CC0079,Naptha,Jharkhand
+WHR,Other,BESS 4hr,#FF6882,Diesel,Karnataka
+WIND,Wind,BESS 6hr,#DF5282,Gas CT,Kerala
+BATTERY,BESS,BESS 8hr,#CC015C,Gas CC,Madhya_Pradesh
+BATTERY_1,BESS 1hr,BESS 10hr,#9B014F,Super-Coal,Maharashtra
+BATTERY_2,BESS 2hr,,,Sub-Coal,Manipur
+BATTERY_4,BESS 4hr,,,Nuclear,Meghalaya
 BATTERY_6,BESS 6hr,,,,Mizoram
 BATTERY_8,BESS 8hr,,,,Nagaland
 BATTERY_10,BESS 10hr,,,,Odisha
-,,,,,Puducherry
+NEPAL_STORAGE,Imports,,,,Puducherry
 ,,,,,Punjab
 ,,,,,Rajasthan
 ,,,,,Sikkim
