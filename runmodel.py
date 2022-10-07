@@ -255,6 +255,10 @@ def setupEnvironment(ui_input={}):
 	for c in to_run:
 		#Fill any missing switches with the defaults in cases.csv
 		case_df[c] = case_df[c].fillna(case_df['Default Value'])
+
+		#Update switches based on input
+		if case_df.loc['GSw_Retire', c] == '0':
+			case_df.loc['GSw_TechPhaseOut', c] = '0'
 		
 		#Clean entered file paths
 		path_entries = ['yearset','HourlyLoadFile','FuelLimit_file','FuelPrice_file','TechCost_file','MinLoad_file','Hours_file','Load_file','PeakDemRegion_file','IVT_file','Trancap_file','InterTrancost_file']
@@ -274,8 +278,7 @@ def setupEnvironment(ui_input={}):
 	ccworkers = min(list(map(int, case_df.loc['augur_workers'])))
 	hourlyloadfileset = case_df.loc['HourlyLoadFile'].tolist()
 	niterset = case_df.loc['CC/Curtailment Iterations'].tolist()
-
-
+	
 	# --- Intialize envdict, which holds flags written in a batch script eventually ---
 	envdict =  {'WORKERS': ccworkers,
 				'startiter': 0,
@@ -403,7 +406,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 	Path(os.path.join(output_folder, "runs", lstfile, "g00files")).mkdir(parents=True, exist_ok=True)
 	Path(os.path.join(output_folder, "runs", lstfile, "lstfiles")).mkdir(parents=True, exist_ok=True)
 	Path(os.path.join(output_folder, "runs", lstfile, "outputs")).mkdir(parents=True, exist_ok=True)
-	Path(os.path.join(output_folder, "runs", lstfile, "outputs", "variabilityFiles")).mkdir(parents=True, exist_ok=True)
+	#Path(os.path.join(output_folder, "runs", lstfile, "outputs", "variabilityFiles")).mkdir(parents=True, exist_ok=True)
 	Path(os.path.join(output_folder, "gdxfiles")).mkdir(parents=True, exist_ok=True)
 	
 	#if not os.path.exists(os.path.join(output_folder, "runs", lstfile)):
