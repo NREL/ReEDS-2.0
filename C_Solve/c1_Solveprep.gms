@@ -377,7 +377,7 @@ $if NOT dexist reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%c
 
 * create PKL files that are used in all solve years cc_py calculations
 execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%pickle_prep.gdx'   rb, r_rs, r_region;
-execute 'python D_Augur%ds%d00_pickle_prep.py %HourlyLoadFile% %case%'
+execute '%pythonpath% D_Augur%ds%d00_pickle_prep.py %HourlyLoadFile% %case%'
 
 *======================
 * --- Unload all inputs ---
