@@ -261,7 +261,7 @@ def setupEnvironment(ui_input={}):
 			case_df.loc['GSw_TechPhaseOut', c] = '0'
 		
 		#Clean entered file paths
-		path_entries = ['yearset','HourlyLoadFile','FuelLimit_file','FuelPrice_file','TechCost_file','MinLoad_file','Hours_file','Load_file','PeakDemRegion_file','IVT_file','Trancap_file','InterTrancost_file']
+		path_entries = ['yearset','HourlyLoadFile','PRM_file','FuelLimit_file','FuelPrice_file','TechCost_file','MinLoad_file','Hours_file','Load_file','PeakDemRegion_file','IVT_file','Trancap_file','InterTrancost_file']
 		for r in path_entries:
 			case_df.loc[r, c] = clean_file_paths(case_df.loc[r, c])
 

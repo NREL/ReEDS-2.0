@@ -5,6 +5,7 @@ augur_workers,Number of windows for Augur module runs,36,,,,,,,
 yearset,Set of years that are modeled,modeledyears_set.csv,,,,,,,
 endyear,Last year to be modeled,2050,,,,,,,
 HourlyLoadFile,Load scenario name for capacity value and curtailment load duration curve data,NREL_Baseline_8760,,,,,,,
+PRM_file,file name of the PRM input,prm_region.csv,,,,,,,
 FuelLimit_file,file name of the fuel limit file to be used in scenario run,fuel_limit.csv,,,,,,,
 FuelPrice_file,file name of the fuel price file to be used in scenario run,fprice.csv,,,,,,,
 TechCost_file,file name of the technology cost to be used in the scenario run,tech_costs_2021update.csv,,,,tech_costs_low_UPV_2022.csv,tech_costs_low_wind_2022.csv,tech_costs_low_battery_2022.csv,tech_costs_high_battery_2022.csv

@@ -1400,7 +1400,7 @@ $offdelim
           prm_region(region,t)    "planning reserve margin by region"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%reserves%ds%prm_region.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%reserves%ds%%PRM_file%
 $offdelim
           /,
           cost_opres(i)          "--INR/MWh-- cost of regulating reserves "
