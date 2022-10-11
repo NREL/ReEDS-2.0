@@ -2,7 +2,9 @@
   "fileNames": [
     "cap.csv",
     "cap_new_ann.csv",
+    "cap_diff.csv",
     "gen.csv",
+    "opres.csv",
     "gen_timeslice.csv",
     "demand.csv",
     "demand_timeslice.csv",
@@ -26,14 +28,27 @@
           ],
           "style": {
             "Plot Width (px)": "1200",
-            "Plot Title": "National capacity by year",
+            "Plot Title": "National installed capacity by year",
             "Plot Height (px)": "500"
           }
         },
         {
           "traces": [
-            {}
-          ]
+            {
+              "dataSource": "cap_new_ann.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Investments (MW)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Height (px)": "",
+            "Plot Title": "National capacity additions by year"
+          }
         }
       ]
     },
@@ -56,14 +71,15 @@
               "agg": "sum",
               "x": "year",
               "col": "scenario",
-              "y": "Demand (MWh)",
-              "name": "type"
+              "name": "type",
+              "y": "Demand (MWh)"
             }
           ],
           "style": {
             "Plot Width (px)": "1200",
             "Plot Title": "National generation by year",
-            "Plot Height (px)": "500"
+            "Plot Height (px)": "500",
+            "Y Title": "Generation (MWh)"
           }
         },
         {
@@ -93,17 +109,18 @@
               "type": "dot",
               "agg": "sum",
               "x": "time",
-              "y": "Demand (MW)",
               "name": "type",
               "row": "scenario",
               "col": "season",
-              "explode": "year"
+              "explode": "year",
+              "y": "Demand (MW)"
             }
           ],
           "style": {
             "Plot Width (px)": "1200",
             "Plot Height (px)": "800",
-            "Plot Title": "National generation dispatch by time slice"
+            "Plot Title": "National generation dispatch by time slice",
+            "Y Title": "Dispatch (MW)"
           }
         },
         {

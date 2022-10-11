@@ -165,6 +165,7 @@ tech,Gas CC,#52216B
 tech,Super-Coal,#525352
 tech,Sub-Coal,#222222
 tech,Nuclear,#820000
+tech,Imports,#A1A7B5
 trtype,AC (initial),#98DF8A
 trtype,B2B intertie (initial),#C5B0D5
 trtype,"DC, LCC (initial)",#FFBB78

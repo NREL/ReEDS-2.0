@@ -46,6 +46,9 @@ from tempfile import mkstemp
 from shutil import move
 from os import remove, close
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 if platform.system() in ['Darwin','Linux']:
 	FILE_EXTENSION = '.sh'
@@ -255,9 +258,13 @@ def setupEnvironment(ui_input={}):
 	for c in to_run:
 		#Fill any missing switches with the defaults in cases.csv
 		case_df[c] = case_df[c].fillna(case_df['Default Value'])
+
+		#Update switches based on input
+		if case_df.loc['GSw_Retire', c] == '0':
+			case_df.loc['GSw_TechPhaseOut', c] = '0'
 		
 		#Clean entered file paths
-		path_entries = ['yearset','HourlyLoadFile','FuelLimit_file','FuelPrice_file','TechCost_file','MinLoad_file','Hours_file','Load_file','PeakDemRegion_file','IVT_file','Trancap_file','InterTrancost_file']
+		path_entries = ['yearset','HourlyLoadFile','PRM_file','FuelLimit_file','FuelPrice_file','TechCost_file','MinLoad_file','Hours_file','Load_file','PeakDemRegion_file','IVT_file','Trancap_file','InterTrancost_file']
 		for r in path_entries:
 			case_df.loc[r, c] = clean_file_paths(case_df.loc[r, c])
 
@@ -274,8 +281,7 @@ def setupEnvironment(ui_input={}):
 	ccworkers = min(list(map(int, case_df.loc['augur_workers'])))
 	hourlyloadfileset = case_df.loc['HourlyLoadFile'].tolist()
 	niterset = case_df.loc['CC/Curtailment Iterations'].tolist()
-
-
+	
 	# --- Intialize envdict, which holds flags written in a batch script eventually ---
 	envdict =  {'WORKERS': ccworkers,
 				'startiter': 0,
@@ -403,7 +409,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 	Path(os.path.join(output_folder, "runs", lstfile, "g00files")).mkdir(parents=True, exist_ok=True)
 	Path(os.path.join(output_folder, "runs", lstfile, "lstfiles")).mkdir(parents=True, exist_ok=True)
 	Path(os.path.join(output_folder, "runs", lstfile, "outputs")).mkdir(parents=True, exist_ok=True)
-	Path(os.path.join(output_folder, "runs", lstfile, "outputs", "variabilityFiles")).mkdir(parents=True, exist_ok=True)
+	#Path(os.path.join(output_folder, "runs", lstfile, "outputs", "variabilityFiles")).mkdir(parents=True, exist_ok=True)
 	Path(os.path.join(output_folder, "gdxfiles")).mkdir(parents=True, exist_ok=True)
 	
 	#if not os.path.exists(os.path.join(output_folder, "runs", lstfile)):
@@ -477,7 +483,8 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 								 str(os.path.join(output_folder,"runs",lstfile,"g00files","supply_objective")) +\
 								 " s=" + str(os.path.join(output_folder,"runs",lstfile,"g00files",savefile)) +\
 								 " o=" + str(os.path.join(output_folder,"runs",lstfile,"lstfiles", lstfile +".lst")) +\
-								 ' --hourlyloadfile='+str(hourlyloadfile) + toLogGamsString + options + " --user=" + user + " --runname=" + runname + ' \n')
+								 ' --hourlyloadfile='+str(hourlyloadfile) + toLogGamsString + options + " --user=" + user + " --runname=" + runname + \
+								 ' --pythonpath=' + str(os.getenv('PYTHON_PATH')) + ' \n')
 				restartfile=savefile
 			if startiter > 0:
 				restartfile = lstfile+"_"+startiter
@@ -499,7 +506,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 				#no need to run cc curt scripts for final iteration
 				if i < niter:
 					if cc_curtchoice == 1:
-						OPATH.writelines("python " + str(os.path.join("D_Augur","augurbatch.py")) + " " + lstfile + " " + str(ccworkers) +\
+						OPATH.writelines(f"{os.getenv('PYTHON_PATH')} " + str(os.path.join("D_Augur","augurbatch.py")) + " " + lstfile + " " + str(ccworkers) +\
 										 " " + yearfile + " " + savefile + " " + str(begyear) + " " + str(endyear) + " " + str(timetype) + " " + str(i) + ' \n')
 					   
 						#merge all the resulting r2_in gdx files
@@ -718,7 +725,7 @@ def main(ui_input={}, notify = None, uuid=None):
 			
 			n_runs = len(runnames)
 			if r == runnames[(n_runs-1)]: #process results if the final run has finished
-				os.system("python {} {} {}".format(os.path.join("E_Outputs", "e2_process_outputs.py"), envVar['runname'], " ".join(runnames)))
+				os.system("{} {} {} {}".format(os.getenv('PYTHON_PATH'),os.path.join("E_Outputs", "e2_process_outputs.py"), envVar['runname'], " ".join(runnames)))
 
 		if notify:
 			with open(os.path.join(ui_input['output_folder_path'], 'full_log.txt'), 'w') as f:

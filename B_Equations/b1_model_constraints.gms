@@ -142,6 +142,15 @@ EQUATION
 * test a transmission growth limit of 2GW per year on any corridor
  eq_trangrowth_limit(r,rr,t)
 
+* test equation to constrain national RE to 160GW
+ eq_national_RElim(t)
+
+;
+
+eq_national_RElim(t)$(yeart(t) < 2023)..
+   	160000
+        =g=
+  	sum{(i,rs,v)$[valcap(i,v,rs,t)], CAP(i,v,rs,t)}
 ;
 
 * 5GW per year transmission growth limit between any two BAs
@@ -276,22 +285,22 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)
     ;
 
 
-* Prior to 2024, all additions are prescribed.
+* Prior to 2023, all additions are prescribed.
 * Wind and solar additions with known locations are included in m_capacity_exog
 * When locations are not known, the prescribed capacity is added through INV and ReEDS selects the location
 eq_prescribedre_pre2024(i,state,t)$[tmodel(t)$required_prescriptions_state(i,state,t)$(yeart(t) < 2024)
                              $prescriptivetech(i)$Sw_Prescribed]..
 
   sum{(rs,v)$[valcap(i,v,rs,t)], CAP(i,v,rs,t)$state_rs(state,rs) }
-
-        =e=
+* was previously an equality constraint but causing infeasible/unbounded solution in years 2021-2023
+        =g=
 
 *must equal the prescribed amount
     m_required_prescriptions_state(i,state,t)
 ;
 
 
-* For all other years, capacity must meet prescribed targets.
+* capacity must meet prescribed targets.
 eq_forceprescription(i,state,t)$[tmodel(t)$required_prescriptions_state(i,state,t)$(yeart(t) > 2023)
                                  $prescriptivetech(i)$Sw_Prescribed]..
 
@@ -357,7 +366,7 @@ eq_rsc_INVlim(r,i,rscbin)$[vre(i)$m_rscfeas(r,i,rscbin)]..
 
 
 *limit on year-on-year technology growth rate to avoid unrealistic investment growth
-eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2023)$(yeart(t)<2031)$growth_limit_relative(tg)]..
+eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2022)$(yeart(t)<2031)$growth_limit_relative(tg)]..
 
 *the relative growth rate multiplied by the existing technology group's existing capacity
     (1+growth_limit_relative(tg)) ** (sum{tt$[tprev(tt,t)], yeart(tt)} - yeart(t)) *

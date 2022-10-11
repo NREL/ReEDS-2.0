@@ -9,7 +9,8 @@ DEFAULT_CATEGORY_FILES = {
     'RECapManTech_file': 'capmandate_tech_set.csv',
     'RECapFracMandate_file': 'recapfrac_mandate_2030.csv',
     'REGenMandate_file': 'regen_mandate_2030.csv',
-    'REGenManTech_file': 'genmandate_tech_set.csv'
+    'REGenManTech_file': 'genmandate_tech_set.csv',
+    "PRM_file": 'prm_region.csv'
 }
 
 FILE_KEYS =[
@@ -27,6 +28,7 @@ FILE_KEYS =[
     'RECapFracMandate_file', # included
     'REGenMandate_file', # included
     'REGenManTech_file', # included
+    'PRM_file', # included
     'yearset'
 ]
 
@@ -69,6 +71,7 @@ FILE_LOCATION = {
     'RECapFracMandate_file': 'generators',
     'REGenMandate_file': 'generators',
     'REGenManTech_file': 'sets',
+    'PRM_file': 'reserves',
     'yearset': 'sets'
 }
 
@@ -79,6 +82,7 @@ CASE_ROWS = [
     'yearset',  # included
     'endyear',  # included
     'HourlyLoadFile', 
+    'PRM_file', # included
     'FuelLimit_file', # included
     'FuelPrice_file', 
     'TechCost_file', # included
@@ -195,11 +199,40 @@ CSV_SCHEMA = {
     "MinLoad_file": {
         "first": {'type': 'string', 'allowed': TECHNOLOGIES},
         "second": {'type': 'float', 'min': 0.0, 'max': 1.0}
+    },
+    "RECapMandate_file": {
+        "first": {'type': 'integer', 'min': 2017, 'max': 2050},
+        "second": {'type': 'float', 'min':0, 'max': 100000000000000}
+    },
+    "RECapFracMandate_file": {
+        "first": {'type': 'integer', 'min': 2017, 'max': 2050},
+        "second": {'type': 'float', 'min':0, 'max': 1.0}
+    },
+    "RECapManTech_file": {
+        "first": {'type': 'string', 'allowed': TECHNOLOGIES}
+    },
+    "REGenMandate_file": {
+        "first": {'type': 'integer', 'min': 2017, 'max': 2050},
+        "second": {'type': 'float', 'min':0, 'max': 1.0}
+    },
+    "REGenManTech_file": {
+        "first": {'type': 'string', 'allowed': TECHNOLOGIES}
+    },
+    "PRM_file": {
+        "first": {'type': 'string'},
+        "second": {'type': 'integer', 'min': 2017, 'max': 2050},
+        "third": {'type': 'float', 'min':0, 'max': 1.0}
     }
 
 }
 
 CSV_FILE_HEADERS = {
     'FuelLimit_file': ['first', 'second', 'third'],
-    'MinLoad_file': ['first', 'second']
+    'MinLoad_file': ['first', 'second'],
+    'RECapMandate_file': ['first', 'second'],
+    'RECapFracMandate_file': ['first', 'second'],
+    'RECapManTech_file': ['first'],
+    'REGenMandate_file': ['first', 'second'],
+    'REGenManTech_file': ['first'],
+    'PRM_file': ['first','second','third']
 }

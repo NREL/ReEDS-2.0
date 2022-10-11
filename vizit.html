@@ -240,71 +240,71 @@ const chartTypes = {
     defaultAgg: 'sum',
     aggCol: 'z',
   },
-  'US State plotly map':{
-    engine:'plotly',
-    attr: {
-      type: 'choropleth',
-      locationmode: 'USA-states',
-    },
-    wdgTypes: ['locations','z','text'],
-    required:['locations','z'],
-    defaultAgg: 'sum',
-    aggCol: 'z',
-    layout:{
-      geo: {scope:'usa'},
-    }
-  },
-  'lat/lon/dot plotly map':{
-    engine:'plotly',
-    attr: {
-      type: 'scattermapbox',
-    },
-    wdgTypes: ['lat','lon','name','marker_size','text'],
-    required:['lat','lon'],
-    defaultAgg: 'none',
-    aggCol: 'none',
-    layout:{
-      width: 800,
-      height: 400,
-      dragmode: 'zoom',
-      mapbox: {style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
-    }
-  },
-  'lat/lon/dot plotly map (continuous color)':{
-    engine:'plotly',
-    attr: {
-      type: 'scattermapbox',
-    },
-    wdgTypes: ['lat','lon','marker_color','marker_size','text'],
-    required:['lat','lon'],
-    defaultAgg: 'none',
-    aggCol: 'none',
-    layout:{
-      width: 800,
-      height: 400,
-      dragmode: 'zoom',
-      mapbox: {style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
-    }
-  },
-  'lat/lon/area plotly map':{
-    engine:'plotly',
-    attr: {
-      type: 'scattermapbox',
-      fill: 'toself',
-      mode: 'none',
-    },
-    wdgTypes: ['lat','lon','area','name','text'],
-    required:['lat','lon','area'],
-    defaultAgg: 'none',
-    aggCol: 'area',
-    layout:{
-      width: 800,
-      height: 400,
-      dragmode: 'zoom',
-      mapbox: { style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
-      showlegend: true,
-    }
-  },
+  // 'US State plotly map':{
+  //   engine:'plotly',
+  //   attr: {
+  //     type: 'choropleth',
+  //     locationmode: 'USA-states',
+  //   },
+  //   wdgTypes: ['locations','z','text'],
+  //   required:['locations','z'],
+  //   defaultAgg: 'sum',
+  //   aggCol: 'z',
+  //   layout:{
+  //     geo: {scope:'usa'},
+  //   }
+  // },
+  // 'lat/lon/dot plotly map':{
+  //   engine:'plotly',
+  //   attr: {
+  //     type: 'scattermapbox',
+  //   },
+  //   wdgTypes: ['lat','lon','name','marker_size','text'],
+  //   required:['lat','lon'],
+  //   defaultAgg: 'none',
+  //   aggCol: 'none',
+  //   layout:{
+  //     width: 800,
+  //     height: 400,
+  //     dragmode: 'zoom',
+  //     mapbox: {style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
+  //   }
+  // },
+  // 'lat/lon/dot plotly map (continuous color)':{
+  //   engine:'plotly',
+  //   attr: {
+  //     type: 'scattermapbox',
+  //   },
+  //   wdgTypes: ['lat','lon','marker_color','marker_size','text'],
+  //   required:['lat','lon'],
+  //   defaultAgg: 'none',
+  //   aggCol: 'none',
+  //   layout:{
+  //     width: 800,
+  //     height: 400,
+  //     dragmode: 'zoom',
+  //     mapbox: {style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
+  //   }
+  // },
+  // 'lat/lon/area plotly map':{
+  //   engine:'plotly',
+  //   attr: {
+  //     type: 'scattermapbox',
+  //     fill: 'toself',
+  //     mode: 'none',
+  //   },
+  //   wdgTypes: ['lat','lon','area','name','text'],
+  //   required:['lat','lon','area'],
+  //   defaultAgg: 'none',
+  //   aggCol: 'area',
+  //   layout:{
+  //     width: 800,
+  //     height: 400,
+  //     dragmode: 'zoom',
+  //     mapbox: { style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
+  //     showlegend: true,
+  //   }
+  // },
 };
 
 //Every chart can have explode
