@@ -46,6 +46,9 @@ from tempfile import mkstemp
 from shutil import move
 from os import remove, close
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 if platform.system() in ['Darwin','Linux']:
 	FILE_EXTENSION = '.sh'
@@ -480,7 +483,8 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 								 str(os.path.join(output_folder,"runs",lstfile,"g00files","supply_objective")) +\
 								 " s=" + str(os.path.join(output_folder,"runs",lstfile,"g00files",savefile)) +\
 								 " o=" + str(os.path.join(output_folder,"runs",lstfile,"lstfiles", lstfile +".lst")) +\
-								 ' --hourlyloadfile='+str(hourlyloadfile) + toLogGamsString + options + " --user=" + user + " --runname=" + runname + ' \n')
+								 ' --hourlyloadfile='+str(hourlyloadfile) + toLogGamsString + options + " --user=" + user + " --runname=" + runname + \
+								 ' --pythonpath=' + str(os.getenv('PYTHON_PATH')) + ' \n')
 				restartfile=savefile
 			if startiter > 0:
 				restartfile = lstfile+"_"+startiter
@@ -502,7 +506,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 				#no need to run cc curt scripts for final iteration
 				if i < niter:
 					if cc_curtchoice == 1:
-						OPATH.writelines("python " + str(os.path.join("D_Augur","augurbatch.py")) + " " + lstfile + " " + str(ccworkers) +\
+						OPATH.writelines(f"{os.getenv('PYTHON_PATH')} " + str(os.path.join("D_Augur","augurbatch.py")) + " " + lstfile + " " + str(ccworkers) +\
 										 " " + yearfile + " " + savefile + " " + str(begyear) + " " + str(endyear) + " " + str(timetype) + " " + str(i) + ' \n')
 					   
 						#merge all the resulting r2_in gdx files
@@ -721,7 +725,7 @@ def main(ui_input={}, notify = None, uuid=None):
 			
 			n_runs = len(runnames)
 			if r == runnames[(n_runs-1)]: #process results if the final run has finished
-				os.system("python {} {} {}".format(os.path.join("E_Outputs", "e2_process_outputs.py"), envVar['runname'], " ".join(runnames)))
+				os.system("{} {} {} {}".format(os.getenv('PYTHON_PATH'),os.path.join("E_Outputs", "e2_process_outputs.py"), envVar['runname'], " ".join(runnames)))
 
 		if notify:
 			with open(os.path.join(ui_input['output_folder_path'], 'full_log.txt'), 'w') as f:
