@@ -49,24 +49,6 @@
             "Plot Height (px)": "",
             "Plot Title": "National capacity additions by year"
           }
-        },
-        {
-          "traces": [
-            {
-              "dataSource": "cap_diff.csv",
-              "type": "bar",
-              "agg": "sum",
-              "x": "year",
-              "y": "Difference (MW)",
-              "name": "tech",
-              "col": "scenario"
-            }
-          ],
-          "style": {
-            "Plot Width (px)": "800",
-            "Plot Height (px)": "500",
-            "Plot Title": "Installed capacity difference from first scenario"
-          }
         }
       ]
     },
