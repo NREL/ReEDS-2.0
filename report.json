@@ -9,6 +9,8 @@
     "demand.csv",
     "demand_timeslice.csv",
     "transmission.csv",
+    "firmcap.csv",
+    "peakdem.csv",
     "style.csv"
   ],
   "dashboards": [
@@ -49,6 +51,35 @@
             "Plot Height (px)": "",
             "Plot Title": "National capacity additions by year"
           }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "firmcap.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "season",
+              "y": "Firm Capacity (MW)",
+              "name": "tech",
+              "col": "scenario",
+              "row": "year"
+            },
+            {
+              "dataSource": "peakdem.csv",
+              "type": "dot",
+              "agg": "sum",
+              "x": "season",
+              "y": "PRM requirement (MW)",
+              "name": "type",
+              "col": "scenario",
+              "row": "year"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Height (px)": "1000",
+            "Plot Title": "National firm capacity and PRM requirement"
+          }
         }
       ]
     },
@@ -84,8 +115,20 @@
         },
         {
           "traces": [
-            {}
-          ]
+            {
+              "dataSource": "opres.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "y": "Operating Reserves (MWh)",
+              "name": "tech",
+              "col": "scenario"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Title": "National operating reserves provision"
+          }
         }
       ]
     },
