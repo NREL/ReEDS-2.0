@@ -181,3 +181,4 @@ wst,brackish or saline groundwater,#222222
 wst,saline surface water,#820000
 wst,wastewater effluent,#C2A1DB
 type,Demand,#000000
+type,PRM,#EE4B2B

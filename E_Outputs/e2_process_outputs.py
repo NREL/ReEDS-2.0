@@ -127,7 +127,7 @@ def add_scen_col(df, scenario):
 def read_gdxs(gdxdirs, cs):
     """reads gdx results file into memory"""
     vars = ['CAP', 'INV', 'GEN', 'LOAD', 'OPRES', 'STORAGE_IN', 'CAPTRAN']
-    params = ['r_rs', 'hours', 'firm_conv', 'firm_hydro', 'firm_vg', 'firm_stor', 'txinv', 'import']
+    params = ['r_rs', 'hours', 'firm_conv', 'firm_hydro', 'firm_vg', 'firm_stor', 'txinv', 'import', 'peakdem_region', 'prm_region']
     keep = vars + params
     out = dict.fromkeys(keep)
 
@@ -149,14 +149,9 @@ def read_gdxs(gdxdirs, cs):
     return out
 #%%
 def ProcessingGdx():
-    # developing mode - use these cases for testing
-    # cases = ["ilyac_marmot3_test","ilyac_marmot3_newtest"]
-    #%%
     gdxdirs = get_gdxdirs(cases)
 
-    #%%
     gdxin = read_gdxs(gdxdirs, cases)
-    #%%
 
     # get mapping of resource regions to states
     rmap = gdxin['r_rs'][['r', 'rs']]
@@ -165,7 +160,7 @@ def ProcessingGdx():
     # timeslice hours map
     tslc_hours = gdxin['hours']
     tslc_hours = tslc_hours.groupby(['h','Value']).size().reset_index()
-    #%%
+
     ####### Begin data queries 
     #######
 
@@ -193,6 +188,15 @@ def ProcessingGdx():
     firmcap = summarize(firmcap, 'firm_capacity_MW', ['Type', 'Region', 'Season', 'Year', 'scenario'])
     firmcap.rename(columns={'Type':'Technology'}, inplace=True)
     firmcap = firmcap.round(0)
+
+    # region peak demand and PRM
+    peakdem = gdxin['peakdem_region']
+    prm = gdxin['prm_region']
+    peakdem_prm = pd.merge(peakdem, prm, on = ['region', 't', 'scenario'])
+    peakdem_prm = peakdem_prm.loc[peakdem_prm['t'].isin(firmcap['Year'].unique())]
+    peakdem_prm['PRM_req'] = peakdem_prm['Value_x'] * (1+peakdem_prm['Value_y'])
+    peakdem_prm.set_axis(['Region', 'Season', 'Year', 'peak_demand_MW', 'scenario', 'PRM', 'PRM_req'], axis=1, inplace=True)
+    peakdem_prm = peakdem_prm.round(2)
 
     # Timeslice dispatch
     gen_tslc = gdxin['GEN']
@@ -271,7 +275,6 @@ def ProcessingGdx():
     # Emissions
   #  emit = gdxin['EMIT']
 
-    #%%
     ##### Organize sheets
     # Sheet 1: Annual results - cap, inv, gen, opres, emit
     annual_out = pd.merge(cap, inv, on=['Technology', 'State', 'Year', 'scenario'], how='left')
@@ -304,12 +307,11 @@ def ProcessingGdx():
     dem_tslc = dem_tslc.round(0)
     dem_tslc = sorting(dem_tslc, False, True, True)
 
-    #%%
-    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc
+    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm
 #%%
 
 def write_outputs(dir):
-    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc = ProcessingGdx()
+    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm = ProcessingGdx()
 
     #timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #outdir = os.path.join(dir, tag)
@@ -380,6 +382,7 @@ def write_outputs(dir):
     gen_tslc_BA.set_axis(['st', 'scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
     gen_tslc_BA.to_csv(os.path.join(csvsdir, 'BAs', 'gen_timeslice_BA.csv'), index=False)
 
+    #%%
     # demand.csv
     dem = dem[['State', 'scenario', 'Year', 'demand_MWh']]
     dem['type'] = 'Demand'
@@ -406,6 +409,22 @@ def write_outputs(dir):
     opres = annual_out[['State', 'scenario', 'Technology', 'Year', 'operating_reserves_MWh']]
     opres.set_axis(['st', 'scenario', 'tech', 'year', 'Operating Reserves (MWh)'], axis=1, inplace=True)
     opres.to_csv(os.path.join(csvsdir, 'opres.csv'), index=False)
+
+    # firmcap.csv
+    firmcap.set_axis(['tech', 'region', 'season', 'year', 'scenario', 'Firm Capacity (MW)'], axis=1, inplace=True)
+    firmcap['tech'] = pd.Categorical(firmcap['tech'], tech_order)
+    firmcap['season'] = pd.Categorical(firmcap['season'], season_order)
+    firmcap['scenario'] = pd.Categorical(firmcap['scenario'], scenarios)
+    firmcap.sort_values(['tech', 'season', 'region', 'year', 'scenario'], inplace=True) 
+    firmcap.to_csv(os.path.join(csvsdir, 'firmcap.csv'), index=False)
+
+    # peak_demand.csv
+    peakdem_prm.set_axis(['region', 'season', 'year', 'Peak Demand (MW)', 'scenario', 'PRM (%)', 'PRM requirement (MW)'], axis=1, inplace=True)
+    peakdem_prm['type'] = 'PRM'
+    peakdem_prm['season'] = pd.Categorical(peakdem_prm['season'], season_order)
+    peakdem_prm['scenario'] = pd.Categorical(peakdem_prm['scenario'], scenarios)
+    peakdem_prm.sort_values(['season', 'region', 'year', 'scenario'], inplace=True) 
+    peakdem_prm.to_csv(os.path.join(csvsdir, 'peakdem.csv'), index=False)
 
     # copy visit.html and report.json into the directory
     shutil.copyfile('vizit.html', os.path.join(csvsdir, 'vizit.html'))
