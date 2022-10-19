@@ -14,22 +14,24 @@ import json
 from web.constants import REL_URL_TO_SERVICE_DICT, OPEN_ROUTES
 
 
-if os.getenv("DEPLOY_MODE") != "local":
-    REDIS_DB = redis.Redis(
-        host=os.getenv("REDIS_HOST"),
-        port=int(os.getenv("REDIS_PORT")),
-        # password=os.getenv("REDIS_PASSWORD"),
-        charset="utf-8",
-        decode_responses=True,
-        ssl=False,
-    )
-else:
-    REDIS_DB = redis.Redis(
-        host=os.getenv("REDIS_HOST"),
-        port=int(os.getenv("REDIS_PORT")),
-        charset="utf-8",
-        decode_responses=True,
-    )
+# if os.getenv("DEPLOY_MODE") != "local":
+#     REDIS_DB = redis.Redis(
+#         host=os.getenv("REDIS_HOST"),
+#         port=int(os.getenv("REDIS_PORT")),
+#         # password=os.getenv("REDIS_PASSWORD"),
+#         charset="utf-8",
+#         decode_responses=True,
+#         ssl=False,
+#     )
+# else:
+#     REDIS_DB = redis.Redis(
+#         host=os.getenv("REDIS_HOST"),
+#         port=int(os.getenv("REDIS_PORT")),
+#         charset="utf-8",
+#         decode_responses=True,
+#     )
+
+REDIS_DB = None
 
 CLIENT_BUCKET_STORE = {}
 
