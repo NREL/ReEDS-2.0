@@ -78,14 +78,10 @@ deploy_prod:
     - if: $CI_COMMIT_BRANCH == "main"
       when: on_success
     - when: never
-  variables:
-    SECURE_FILES_DOWNLOAD_PATH: '.'
   script:
-    - curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/load-secure-files/-/raw/main/installer" | bash
-    - echo "Deployement starting in dev environment!"
+    - echo "Deployement starting in prod environment!"
     - ls
-    - chmod 400 reeds-india.pem
-    - ssh -i reeds-india.pem ec2-user@172.17.25.248 "ls;
+    - ssh -i ~/.ssh/id_ed25519 ec2-user@172.17.25.248 "ls;
       supervisorctl stop reeds_api;
       cd /home/ec2-user/reeds_microservices/reeds_api;
       git pull;
