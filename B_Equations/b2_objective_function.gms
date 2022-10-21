@@ -46,6 +46,8 @@ eq_ObjFn_Supply.. Z =e=
 *hourly arbitrage value for storage - intertemporal only
               - sum{(i,v,r)$[valinv(i,v,r,t)$storage(i)],
                    hav_int(i,r,t) * INV(i,v,r,t) }
+* TESTING slack variable for VRE
+              + sum{(i,v,r,rs)$[vre(i)$valinv(i,v,r,t)$r_rs(r,rs)], SLACK_VRE(i,v,rs,t)} * 1e7
 
             ) //end to multiplier by pvf_capital
         } //end of capital cost component of objective function
