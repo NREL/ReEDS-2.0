@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Vizit</title>
+<title>Vizit: Rapid data visualization</title>
+<link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
 <style>
+body {
+  font-family: "Open Sans", sans-serif;
+  font-size: 0.9em;
+}
 label {
   font-weight: bold;
 }
 select{
   display:block;
 }
-.dashboard-title,
 .chart-title,
 .trace-title{
   font-weight: bold;
@@ -19,6 +23,32 @@ select{
 .chart-outer,
 .trace-controls{
   margin-bottom:5px;
+}
+.dashboard-title-descr-outer{
+  margin-top: 20px;
+}
+.dashboard-title,
+.dashboard-descr{
+  margin: auto;
+  padding-bottom: 10px;
+  max-width: 800px;
+}
+.dashboard-title{
+  text-align: center;
+}
+.dashboard-title-descr-edit{
+  display: none;
+  max-width: 800px;
+  margin: auto;
+  text-align: center;
+}
+.dashboard-title-descr-outer:hover .dashboard-title-descr-edit{
+  display:block;
+  position:absolute;
+  background-color: white;
+  left: 0;
+  right: 0;
+  z-index: 10;
 }
 .add-dashboard,
 .add-chart,
@@ -35,6 +65,13 @@ select{
   width: 400px;
   height: 400px;
   display: inline-block;
+  margin: 5px;
+}
+.chart-caption{
+  width: 400px;
+  margin: 5px;
+  padding: 5px;
+  font-size: 0.9em;
 }
 .chart-controls{
   min-width: 100%;
@@ -60,10 +97,14 @@ select{
 .filter-name,
 .trace-title,
 #download-html,
+#download-html-no-controls,
 #download-json,
 #config-url{
   color: #0088cc;
   cursor: pointer;
+}
+#data-sources-label{
+  font-weight: bold;
 }
 .add-style,
 .update-style,
@@ -91,7 +132,7 @@ text.js-plot-link-container{
 }
 .tooltip-parent{
   position: relative;
-  color: #0088cc;
+  color: coral;
 }
 .tooltip{
   display: none;
@@ -104,10 +145,12 @@ text.js-plot-link-container{
   z-index: 1;
   top: 7px;
   left: 7px;
+  font-weight: normal;
 }
 .tooltip-parent:hover .tooltip {
   display: block;
 }
+/*no-controls-placeholder*/
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.1/papaparse.min.js"></script>
@@ -116,15 +159,34 @@ text.js-plot-link-container{
 </head>
 <body>
 <a style="position: absolute; top: 10px; right: 20px; z-index:100;" href="https://github.com/mmowers/vizit" target="_blank">Vizit GitHub</a>
-<label id="data-sources-label">Data sources / config:</label><br>
-<div id="data-sources">
-  <input type="file" id="file-input" name="file-input" multiple="multiple">
-  <ul id="file-list">(no files selected)</ul>
-  <input id="url-input" type="text" placeholder="URL to csv">
-  <button id="add-url-input">Load</button>
-</div>
-<div id="report">
-  <div id="global-config-header">Global Config</div>
+<div id="top-controls">
+  <span id="data-sources-label">Data sources / config:
+    <span class="tooltip-parent">
+      (?)
+      <span class="tooltip">
+        Only csv and json files are currently allowed, including an optional vizit
+        configuration json file (with filename that must start with "vizit-config" and end with ".json").
+        when loading a json configuration file, all required data files must also be loaded before
+        charts are rendered.
+      </span>
+    </span>
+  </span>
+  <br>
+  <div id="data-sources">
+    <input type="file" id="file-input" name="file-input" multiple="multiple">
+    <ul id="file-list">(no files selected)</ul>
+    <input id="url-input" type="text" placeholder="URL to csv">
+    <button id="add-url-input">Load</button>
+  </div>
+  <div id="global-config-header">Global Styles and Filters
+    <span class="tooltip-parent">
+      (?)
+      <span class="tooltip">
+        Add a global styling file and set global filters that will apply
+        to all charts, unless overridden in specific chart configuration.
+      </span>
+    </span>
+  </div>
   <div id="global-config">
     <div id="global-style-config">
       Styling file:
@@ -132,7 +194,7 @@ text.js-plot-link-container{
         <option value="none">none</option>
       </select>
       <span class="tooltip-parent">
-        ?
+        (?)
         <span class="tooltip">
           This file must have three columns named 'column_name', 'column_value', and 'color'. The order
           of the rows will eventually determine the order of display, but this hasn't yet been added.
@@ -145,11 +207,54 @@ text.js-plot-link-container{
       <button id="update-global-filter" class="update-fil-common">Update Filters</button>
     </div>
   </div>
+</div>
+<div id="report">
   <button class="add-dashboard">Add Dashboard</button>
 </div>
-<div><span id="download-html">Download HTML</span></div>
-<div><span id="download-json">Download config JSON</span></div>
-<div><span id="config-url">Open config URL</span></div>
+<div id="bottom-controls">
+  <span id="download-html">
+    Download vizit.html
+    <span class="tooltip-parent">
+      (?)
+      <span class="tooltip">
+        Download html file with current chart configuration, all raw data, and full vizit functionality embedded.
+      </span>
+    </span>
+  </span>
+  <br>
+  <span id="download-html-no-controls">
+    Download vizit.html without controls
+    <span class="tooltip-parent">
+      (?)
+      <span class="tooltip">
+        Download html file with current chart configuration, but hide controls.
+      </span>
+    </span>
+  </span>
+  <br>
+  <span id="download-json">
+    Download vizit-config.json
+    <span class="tooltip-parent">
+      (?)
+      <span class="tooltip">
+        Download json configuration file with current chart configuration.
+        When imported along with the other data files, the current charts will be rendered.
+      </span>
+    </span>
+  </span>
+  <br>
+  <span id="config-url">
+    Open config URL
+    <span class="tooltip-parent">
+      (?)
+      <span class="tooltip">
+        This will produce and open a URL with configuration embedded in the URL itself.
+        This is only useful if all data sources are URLs themselves, but in that case the
+        produced URL will be all that is required to load this vizit report.
+      </span>
+    </span>
+  </span>
+</div>
 
 <script>
 'use strict';
@@ -240,71 +345,6 @@ const chartTypes = {
     defaultAgg: 'sum',
     aggCol: 'z',
   },
-  // 'US State plotly map':{
-  //   engine:'plotly',
-  //   attr: {
-  //     type: 'choropleth',
-  //     locationmode: 'USA-states',
-  //   },
-  //   wdgTypes: ['locations','z','text'],
-  //   required:['locations','z'],
-  //   defaultAgg: 'sum',
-  //   aggCol: 'z',
-  //   layout:{
-  //     geo: {scope:'usa'},
-  //   }
-  // },
-  // 'lat/lon/dot plotly map':{
-  //   engine:'plotly',
-  //   attr: {
-  //     type: 'scattermapbox',
-  //   },
-  //   wdgTypes: ['lat','lon','name','marker_size','text'],
-  //   required:['lat','lon'],
-  //   defaultAgg: 'none',
-  //   aggCol: 'none',
-  //   layout:{
-  //     width: 800,
-  //     height: 400,
-  //     dragmode: 'zoom',
-  //     mapbox: {style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
-  //   }
-  // },
-  // 'lat/lon/dot plotly map (continuous color)':{
-  //   engine:'plotly',
-  //   attr: {
-  //     type: 'scattermapbox',
-  //   },
-  //   wdgTypes: ['lat','lon','marker_color','marker_size','text'],
-  //   required:['lat','lon'],
-  //   defaultAgg: 'none',
-  //   aggCol: 'none',
-  //   layout:{
-  //     width: 800,
-  //     height: 400,
-  //     dragmode: 'zoom',
-  //     mapbox: {style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
-  //   }
-  // },
-  // 'lat/lon/area plotly map':{
-  //   engine:'plotly',
-  //   attr: {
-  //     type: 'scattermapbox',
-  //     fill: 'toself',
-  //     mode: 'none',
-  //   },
-  //   wdgTypes: ['lat','lon','area','name','text'],
-  //   required:['lat','lon','area'],
-  //   defaultAgg: 'none',
-  //   aggCol: 'area',
-  //   layout:{
-  //     width: 800,
-  //     height: 400,
-  //     dragmode: 'zoom',
-  //     mapbox: { style: 'carto-positron', center: { lat: 38, lon: -95 }, zoom: 3 },
-  //     showlegend: true,
-  //   }
-  // },
 };
 
 //Every chart can have explode
@@ -326,10 +366,14 @@ const wdgTypes = {
   radius: 'Radius (m)',
   area: 'Area (sq_km)',
   marker_size: 'Marker Size',
+  line_width: 'Line Width',
   marker_color: 'Color',
   lat: 'Latitude',
-  lng: 'Longitude',
   lon: 'Longitude',
+  lat_start: 'Latitude Start',
+  lon_start: 'Longitude Start',
+  lat_end: 'Latitude End',
+  lon_end: 'Longitude End',
   row: 'Facet Rows',
   col: 'Facet Columns',
   explode: 'Explode',
@@ -392,6 +436,10 @@ const default_colorbar = {
 //Maybe note which properties are in layout and which will be in the trace itself. Maybe just use schema?
 //But perhaps assume that all trace properties are common across trace types, although some, e.g. 
 const customStyle = {
+  'Chart Caption': {
+    input: 'textarea',
+    tooltip: 'Enter figure caption (html allowed)',
+  },
   'Plot Width (px)': {
     type: 'layout',
     path: ['width'],
@@ -497,12 +545,12 @@ const customStyle = {
   },
   'Opacity (0-1)': {
     type: 'data',
-    path: ['marker','opacity'],
+    path: ['opacity'],
   },
   'Colorscale': {
     type: 'data',
     path: ['marker','colorscale'],
-    tooltip: `For plotly lat/lon (continuous color) maps. e.g. Blackbody, Bluered, Blues,
+    tooltip: `For continuous color maps. e.g. Blackbody, Bluered, Blues,
               Cividis, Earth, Electric, Greens, Greys, Hot, Jet, Picnic, Portland, Rainbow,
               RdBu, Reds, Viridis, YlGnBu, YlOrRd`,
   },
@@ -557,8 +605,8 @@ $('#file-input').change(function(evt){
       $(`#file-list li[data-name="${newFiles[i].name}"]`).remove();
       delete files[newFiles[i].name];
     }
-    //If this is a json file, we will save it in config_load_json_file and load
-    if(newFiles[i].name.endsWith('.json')){
+    //If this is a config json file, we will save it in config_load_json_file and load
+    if(newFiles[i].name.startsWith('vizit-config') && newFiles[i].name.endsWith('.json')){
       const reader = new FileReader();
       reader.onload = function(evt) {
         config_load = JSON.parse(evt.target.result);
@@ -644,15 +692,34 @@ $('#report').on('click','.add-dashboard', function(){
   traceData[dash_idx] = [];
   $(this).before(`
     <div data-dashboardID="${dash_idx}" class="dashboard-outer">
-      <div class="dashboard-title">Dashboard ${dash_idx}</div>
+      <div class="dashboard-title-descr-outer">
+        <div class="dashboard-title-descr">
+          <h2 class="dashboard-title">Dashboard ${dash_idx}</h2>
+          <p class="dashboard-descr"></p>
+        </div>
+        <div class="dashboard-title-descr-edit">
+          <input type="text" class="dashboard-title-edit" placeholder="Edit dashboard title"><br>
+          <textarea class="dashboard-descr-edit" placeholder="Edit dashboard description"></textarea><br>
+          <button class="dashboard-update-title-descr">Update title/description</button>
+        </div>
+      </div>
       <button class="add-chart">Add Chart</button>
     </div>
   `);
   //Automatically click to add the first chart
   $(`[data-dashboardID="${dash_idx}"] .add-chart`).click();
 });
+$('#report').on('click', '.dashboard-update-title-descr', function(){
+  let dash_idx = parseInt($(this).closest('.dashboard-outer').attr('data-dashboardID'));
+  let title = $(this).siblings('.dashboard-title-edit').val();
+  let description = $(this).siblings('.dashboard-descr-edit').val().replace(/(\r\n|\r|\n)/g, '<br>');
+  config.dashboards[dash_idx].title = title;
+  config.dashboards[dash_idx].description = description;
+  $(this).closest('.dashboard-title-descr-outer').find('.dashboard-title').html(title);
+  $(this).closest('.dashboard-title-descr-outer').find('.dashboard-descr').html(description);
+});
 $('#report').on('click','.add-chart', function(){
-  let dash_idx = parseInt($(this).parents('.dashboard-outer').attr('data-dashboardID'));
+  let dash_idx = parseInt($(this).closest('.dashboard-outer').attr('data-dashboardID'));
   let chart_idx = config.dashboards[dash_idx].charts.length;
   config.dashboards[dash_idx].charts[chart_idx] = {traces:[]};
   traceData[dash_idx][chart_idx] = [];
@@ -681,8 +748,8 @@ $('#report').on('click','.add-chart', function(){
 });
 
 $('#report').on('click','.add-trace', function(){
-  let dash_idx = parseInt($(this).parents('.dashboard-outer').attr('data-dashboardID'));
-  let chart_idx = parseInt($(this).parents('.chart-outer').attr('data-chartID'));
+  let dash_idx = parseInt($(this).closest('.dashboard-outer').attr('data-dashboardID'));
+  let chart_idx = parseInt($(this).closest('.chart-outer').attr('data-chartID'));
   let trace_idx = config.dashboards[dash_idx].charts[chart_idx].traces.length;
   config.dashboards[dash_idx].charts[chart_idx].traces[trace_idx] = {};
   traceData[dash_idx][chart_idx][trace_idx] = {};
@@ -825,8 +892,8 @@ function getFilterHTML(column){
       <label class="filter-name">${column}</label>
       <select class="filter-type">
         <option value="none">Filter Type</option>
-        <option value="include">Include Options</option>
-        <option value="exclude">Exclude Options</option>
+        <option value="include">Include options</option>
+        <option value="exclude">Exclude options</option>
         <option value="equals">Equals</option>
         <option value="greater">Greater than</option>
         <option value="greater-or-equal">Greater than or equal to</option>
@@ -871,7 +938,7 @@ $('#report').on('change','.add-filter', function(){
   $(this).val('none');
 });
 
-$('#report').on('change','.filter-type', function(){
+$('body').on('change','.filter-type', function(){
   //If we have filter-val, remove it.
   $(this).next('.filter-val').remove();
   if($(this).val() == 'none'){
@@ -905,7 +972,7 @@ $('#report').on('change','.filter-type', function(){
   }
 });
 
-$('#report').on('click','.select-all, .select-none', function(){
+$('body').on('click','.select-all, .select-none', function(){
   const all_bool = $(this).attr('class').includes('select-all');
   $(this).parent().next().find('input').prop('checked',all_bool);
 });
@@ -1005,11 +1072,18 @@ $('#report').on('change','.add-style', function(){
   if($(this).val() == 'none'){
     return;
   }
+  let thisStyle = customStyle[$(this).val()];
+  let inputHTML;
+  if('input' in thisStyle && thisStyle.input == 'textarea'){
+    inputHTML = `<textarea class="style-input" rows="1"></textarea>`;
+  } else{
+    inputHTML = `<input class="style-input" type="text">`;
+  }
   let html = `
     <div class="style-outer">
       <label class="style-name">${$(this).val()}</label>
-      <input class="style-input" type="text">
-      <span class="tooltip-parent">?<span class="tooltip">${customStyle[$(this).val()].tooltip}</span></span>
+      ${inputHTML}
+      <span class="tooltip-parent">(?)<span class="tooltip">${thisStyle.tooltip}</span></span>
     </div>
   `;
   $(this).before(html);
@@ -1022,7 +1096,7 @@ $('#report').on('keyup','.style-input', function(){
     }
 });
 
-$('#report').on('keyup','.filter-val input, input.filter-val', function(){
+$('body').on('keyup','.filter-val input, input.filter-val', function(){
   if (event.keyCode === 13) {
         $(this).closest('.filter-div').find('.update-fil-common').click();
     }
@@ -1034,7 +1108,7 @@ $('#report').on('click','.chartstyle-div .update-style', function(){
   //Build style config
   chart_config.style={};
   $(this).siblings('.style-outer').each(function(){
-    chart_config.style[$(this).children('label').text()] = $(this).children('input').val();
+    chart_config.style[$(this).children('label').text()] = $(this).children('.style-input').val();
   });
   //Make sure we even have a chart to update and, if so, update the chart.
   if(document.getElementById(`chart-container-dash-${dash_idx}-chart-${chart_idx}`)){
@@ -1042,7 +1116,7 @@ $('#report').on('click','.chartstyle-div .update-style', function(){
   }
 });
 
-$('#report').on('click','.filters-label, .styles-label, .filter-name, .trace-title', function(){
+$('body').on('click','.filters-label, .styles-label, .filter-name, .trace-title', function(){
   $(this).siblings().toggle();
 });
 
@@ -1228,6 +1302,26 @@ function updateChart(dash_idx, chart_idx){
   if($(`#chart-container-dash-${dash_idx}-chart-${chart_idx}`).length == 0){
     $(`#dash-${dash_idx}-chart-${chart_idx}`).prepend(`<div id="chart-container-dash-${dash_idx}-chart-${chart_idx}" class="chart-container"></div>`);
   }
+  //Add styling
+  if('style' in chart_config && 'Move Chart Up/Down (px)' in chart_config.style){
+    $(`#dash-${dash_idx}-chart-${chart_idx}`).css('top',chart_config.style['Move Chart Up/Down (px)'] + 'px');
+  }
+  if('style' in chart_config && 'Move Chart Left/Right (px)' in chart_config.style){
+    $(`#dash-${dash_idx}-chart-${chart_idx}`).css('left',chart_config.style['Move Chart Left/Right (px)'] + 'px');
+  }
+  if('style' in chart_config && 'Z-index' in chart_config.style){
+    $(`#dash-${dash_idx}-chart-${chart_idx}`).css('z-index',chart_config.style['Z-index']);
+  }
+  if('style' in chart_config && 'Chart Caption' in chart_config.style){
+    if($(`#caption-dash-${dash_idx}-chart-${chart_idx}`).length > 0){
+      $(`#caption-dash-${dash_idx}-chart-${chart_idx}`).html(chart_config.style['Chart Caption']);
+    }
+    else{
+      $(`#dash-${dash_idx}-chart-${chart_idx}`).append(`
+        <div id="caption-dash-${dash_idx}-chart-${chart_idx}" class="chart-caption">${chart_config.style['Chart Caption']}</div>
+      `);
+    }
+  }
   //Use first trace to figure out if we are exploding.
   let explodes = [null];
   if(chart_data[0].sepWdg.includes('explode')){
@@ -1276,8 +1370,8 @@ function updateChart(dash_idx, chart_idx){
         //Add the plotly traces (what we call "subtraces")
         let seriesVals = []; //As we go, we'll add unique elements to seriesVals, and if they already exist, showLegend will be false.
         for(const [j, ser] of subtrace_data.entries()){
-          if(trace_config.type == 'lat/lon/area plotly map'){
-            //If this is a lat/lon/area plotly map, we need to find the bounding box and draw it.
+          if(trace_config.type == 'lat/lon/area map'){
+            //If this is a lat/lon/area map, we need to find the bounding box and draw it.
             //This expands the lat and lon arrays, and we'll also expand the other arrays to match.
             const new_ser = {};
             const nonLatLons = [];
@@ -1289,13 +1383,13 @@ function updateChart(dash_idx, chart_idx){
                 }
               }
             }
-            for(let i = 0; i < ser.lat.length; i++){
-              const bb = getBoundingBox(ser.lat[i], ser.lon[i], ser.area[i]**0.5/2);
-              new_ser.lat.push(ser.lat[i], null, bb.lat_max, bb.lat_min, bb.lat_min, bb.lat_max, bb.lat_max, null);
-              new_ser.lon.push(ser.lon[i], null, bb.lon_min, bb.lon_min, bb.lon_max, bb.lon_max, bb.lon_min, null);
+            for(let j = 0; j < ser.lat.length; j++){
+              const bb = getBoundingBox(ser.lat[j], ser.lon[j], ser.area[j]**0.5/2);
+              new_ser.lat.push(ser.lat[j], null, bb.lat_max, bb.lat_min, bb.lat_min, bb.lat_max, bb.lat_max, null);
+              new_ser.lon.push(ser.lon[j], null, bb.lon_min, bb.lon_min, bb.lon_max, bb.lon_max, bb.lon_min, null);
               //for all other properties, simply copy values.
               for(const prop of nonLatLons){
-                const serProp = ser[prop][i];
+                const serProp = ser[prop][j];
                 new_ser[prop].push(serProp, null, serProp, serProp, serProp, serProp, serProp, null);
               }
             }
@@ -1342,8 +1436,9 @@ function updateChart(dash_idx, chart_idx){
             };
           }
           if('marker_size' in trace_config){
-            let marker_size_max = Math.max(...chart_data[i].aggData[trace_config.marker_size]);
-            let marker_size_scaled = ser.marker_size.map(i => i / marker_size_max*15);
+            //using square root of data for marker size because data should be proportional to area (px^2), while marker size is in px
+            let marker_size_max = Math.sqrt(Math.max(...chart_data[i].aggData[trace_config.marker_size]));
+            let marker_size_scaled = ser.marker_size.map(i => Math.sqrt(i) / marker_size_max*10);
             updateObj(ser, ['marker','size'], marker_size_scaled);
           }
           if('marker_color' in trace_config){
@@ -1363,12 +1458,21 @@ function updateChart(dash_idx, chart_idx){
               updateObj(ser, ['marker','color'], globalColors[sepWdgUniques.name.indexOf(ser.name)]);
               updateObj(ser, ['line','color'], globalColors[sepWdgUniques.name.indexOf(ser.name)]);
             }
+          } else{
+            ser.name = `Data ${i}`;
+            if(!('marker_color' in trace_config)){
+              updateObj(ser, ['marker','color'], globalColors[i]);
+              updateObj(ser, ['line','color'], globalColors[i]);
+            }
           }
           ser.legendgroup = ser.name;
           if(seriesVals.includes(ser.name)){
             ser.showlegend = false;
           } else{
             seriesVals.push(ser.name);
+            if(!('marker_color' in trace_config)){
+              ser.showlegend = true;
+            }
           }
           for(const prop in chartType['attr']){
             ser[prop] = chartType['attr'][prop];
@@ -1422,23 +1526,50 @@ function updateChart(dash_idx, chart_idx){
               }
             }
           }
-          plotlyData.push(ser);
+          if(trace_config.type.startsWith('lat/lon/width line map')){
+            const lat_start=ser.lat_start, lat_end=ser.lat_end, lon_start=ser.lon_start, lon_end=ser.lon_end;
+            let ser_copy = JSON.parse(JSON.stringify(ser));
+            //Remove properties so that it is lighter to copy in for loop below.
+            delete ser_copy.lat_start;
+            delete ser_copy.lat_end;
+            delete ser_copy.lon_start;
+            delete ser_copy.lon_end;
+            let line_width;
+            if('line_width' in trace_config){
+              let line_width_max = Math.max(...chart_data[i].aggData[trace_config.line_width]);
+              line_width = ser_copy.line_width.map(i => i / line_width_max*10);
+              delete ser_copy.line_width;
+            }
+            let hover_txt;
+            if('text' in trace_config){
+              hover_txt = ser_copy.text;
+              delete ser_copy.text;
+            }
+            for(let j = 0; j<ser.lat_start.length; j++){
+              let ser_ln_cp = JSON.parse(JSON.stringify(ser_copy));
+              ser_ln_cp.lat = [lat_start[j], lat_end[j]];
+              ser_ln_cp.lon = [lon_start[j], lon_end[j]];
+              if('line_width' in trace_config){
+                updateObj(ser_ln_cp, ['line','width'], line_width[j]);
+              }
+              if('text' in trace_config){
+                ser_ln_cp.text = hover_txt[j];
+              }
+              if(j > 0){
+                ser_ln_cp.showlegend = false;
+              }
+              plotlyData.push(ser_ln_cp);
+            }
+          }else{
+            plotlyData.push(ser);
+          }
         }
       }
 
       //Update html element width and height
       $(`#chart-dash-${dash_idx}-chart-${chart_idx}-explode-${ei}`).width(plotlyLayout.width);
       $(`#chart-dash-${dash_idx}-chart-${chart_idx}-explode-${ei}`).height(plotlyLayout.height);
-
-      if('style' in chart_config && 'Move Chart Up/Down (px)' in chart_config['style']){
-        $(`#chart-container-dash-${dash_idx}-chart-${chart_idx}`).css('top',chart_config['style']['Move Chart Up/Down (px)'] + 'px');
-      }
-      if('style' in chart_config && 'Move Chart Left/Right (px)' in chart_config['style']){
-        $(`#chart-container-dash-${dash_idx}-chart-${chart_idx}`).css('left',chart_config['style']['Move Chart Left/Right (px)'] + 'px');
-      }
-      if('style' in chart_config && 'Z-index' in chart_config['style']){
-        $(`#chart-container-dash-${dash_idx}-chart-${chart_idx}`).css('z-index',chart_config['style']['Z-index']);
-      }
+      $(`#caption-dash-${dash_idx}-chart-${chart_idx}`).width(plotlyLayout.width);
       if(chart_data[0].sepWdg.includes('explode')){
         let plot_title_text = explode_val;
         if('style' in chart_config && 'Plot Title' in chart_config.style){
@@ -1470,15 +1601,15 @@ function updateObj(obj, keys, value){
 }
 
 function get_idx(that){
-  let dash_idx = parseInt($(that).parents('.dashboard-outer').attr('data-dashboardID'));
-  let chart_idx = parseInt($(that).parents('.chart-outer').attr('data-chartID'));
-  let trace_idx = parseInt($(that).parents('.trace-controls').attr('data-traceID'));
+  let dash_idx = parseInt($(that).closest('.dashboard-outer').attr('data-dashboardID'));
+  let chart_idx = parseInt($(that).closest('.chart-outer').attr('data-chartID'));
+  let trace_idx = parseInt($(that).closest('.trace-controls').attr('data-traceID'));
   return [dash_idx, chart_idx, trace_idx];
 }
 
 function get_chart_idx(that){
-  let dash_idx = parseInt($(that).parents('.dashboard-outer').attr('data-dashboardID'));
-  let chart_idx = parseInt($(that).parents('.chart-outer').attr('data-chartID'));
+  let dash_idx = parseInt($(that).closest('.dashboard-outer').attr('data-dashboardID'));
+  let chart_idx = parseInt($(that).closest('.chart-outer').attr('data-chartID'));
   return [dash_idx, chart_idx];
 }
 
@@ -1572,12 +1703,26 @@ function getBoundingBox(lat_deg, lon_deg, dist_km){
     lon_max: max_lon_rad * RAD2DEG,
   };
 }
-$('#download-html').click(function(){
+$('#download-html, #download-html-no-controls').click(function(){
   var stringifiedConfig = JSON.stringify(config);
   var stringifiedRawData = JSON.stringify(rawData);
   var stringifiedGlobalStyles = JSON.stringify(globalStyles);
   let html_str = orig_html_str.replace(/let config_load = .*;/,`let config_load = ${stringifiedConfig};`)
   html_str = html_str.replace(/const rawData = .*;/,`const rawData = ${stringifiedRawData};`)
+  if(this.id == 'download-html-no-controls'){
+    let newCSS = `
+    #top-controls,
+    #bottom-controls,
+    .add-dashboard,
+    .add-chart,
+    .add-trace,
+    .chart-controls,
+    .dashboard-title-descr-edit{
+      display: none !important;
+    }
+    `;
+    html_str = html_str.replace('/*no-controls-placeholder*/', newCSS)
+  }
   let content = "data:text/html;charset=utf-8," + encodeURIComponent(html_str);
   const link = document.createElement("a");
   link.setAttribute("href", content);
@@ -1590,7 +1735,7 @@ $('#download-json').click(function(){
   let content = "data:text/json;charset=utf-8," + JSON.stringify(config, null, 2);
   const link = document.createElement("a");
   link.setAttribute("href", content);
-  link.setAttribute("download", "config.json");
+  link.setAttribute("download", "vizit-config.json");
   document.body.appendChild(link); // Required for FF
   link.click();
   document.body.removeChild(link);
@@ -1632,6 +1777,17 @@ function load_config(){
   //Now all dashboard, chart, and trace config.
   config_load.dashboards.forEach((db, di) => {
     $('.add-dashboard').click();
+    //Configure title and description of dashboard
+    if('title' in db || 'description' in db){
+      if('title' in db){
+        $(`[data-dashboardID="${di}"] .dashboard-title-edit`).val(db.title);
+      }
+      if('description' in db){
+        $(`[data-dashboardID="${di}"] .dashboard-descr-edit`).val(db.description);
+      }
+      $(`[data-dashboardID="${di}"] .dashboard-update-title-descr`).click();
+    }
+    //Configure charts
     db.charts.forEach((cht, ci) => {
       if(ci > 0){ //The first one is clicked automatically
         $(`[data-dashboardID="${di}"] .add-chart`).click();
@@ -1641,7 +1797,7 @@ function load_config(){
         $(`#dash-${di}-chart-${ci} .chartstyle-div .styles-label`).click();
         for (const key in cht['style']){
           $(`#dash-${di}-chart-${ci} .chartstyle-div .add-style`).val(key).change();
-          $(`#dash-${di}-chart-${ci} .chartstyle-div .style-outer input`).last().val(cht['style'][key]).change();
+          $(`#dash-${di}-chart-${ci} .chartstyle-div .style-outer .style-input`).last().val(cht['style'][key]).change();
         }
         $(`#dash-${di}-chart-${ci} .chartstyle-div .update-style`).click();
         $(`#dash-${di}-chart-${ci} .chartstyle-div .styles-label`).click();

@@ -1,17 +1,17 @@
 {
   "fileNames": [
     "cap.csv",
-    "cap_new_ann.csv",
     "cap_diff.csv",
-    "gen.csv",
-    "opres.csv",
-    "gen_timeslice.csv",
+    "cap_new_ann.csv",
     "demand.csv",
     "demand_timeslice.csv",
-    "transmission.csv",
     "firmcap.csv",
+    "gen.csv",
+    "gen_timeslice.csv",
+    "opres.csv",
     "peakdem.csv",
-    "style.csv"
+    "style.csv",
+    "transmission.csv"
   ],
   "dashboards": [
     {
@@ -23,15 +23,15 @@
               "type": "bar",
               "agg": "sum",
               "x": "year",
+              "y": "Capacity (MW)",
               "name": "tech",
-              "col": "scenario",
-              "y": "Capacity (MW)"
+              "col": "scenario"
             }
           ],
           "style": {
-            "Plot Width (px)": "1200",
-            "Plot Title": "National installed capacity by year",
-            "Plot Height (px)": "500"
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "420",
+            "Plot Title": "National installed capacity"
           }
         },
         {
@@ -41,15 +41,15 @@
               "type": "bar",
               "agg": "sum",
               "x": "year",
+              "y": "Investments (MW)",
               "name": "tech",
-              "col": "scenario",
-              "y": "Investments (MW)"
+              "col": "scenario"
             }
           ],
           "style": {
-            "Plot Width (px)": "1200",
-            "Plot Height (px)": "",
-            "Plot Title": "National capacity additions by year"
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "420",
+            "Plot Title": "Annual capacity additions"
           }
         },
         {
@@ -58,30 +58,32 @@
               "dataSource": "firmcap.csv",
               "type": "bar",
               "agg": "sum",
-              "x": "season",
+              "x": "year",
               "y": "Firm Capacity (MW)",
               "name": "tech",
-              "col": "scenario",
-              "row": "year"
+              "col": "season",
+              "row": "scenario"
             },
             {
               "dataSource": "peakdem.csv",
               "type": "dot",
               "agg": "sum",
-              "x": "season",
+              "x": "year",
               "y": "PRM requirement (MW)",
-              "name": "type",
-              "col": "scenario",
-              "row": "year"
+              "row": "scenario",
+              "col": "season",
+              "name": "type"
             }
           ],
           "style": {
-            "Plot Width (px)": "1200",
-            "Plot Height (px)": "1000",
-            "Plot Title": "National firm capacity and PRM requirement"
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "800",
+            "Plot Title": "Firm capacity and PRM requirement"
           }
         }
-      ]
+      ],
+      "title": "Annual capacity results",
+      "description": ""
     },
     {
       "charts": [
@@ -92,25 +94,24 @@
               "type": "bar",
               "agg": "sum",
               "x": "year",
+              "y": "Generation (MWh)",
               "name": "tech",
-              "col": "scenario",
-              "y": "Generation (MWh)"
+              "col": "scenario"
             },
             {
               "dataSource": "demand.csv",
               "type": "dot",
               "agg": "sum",
               "x": "year",
-              "col": "scenario",
+              "y": "Demand (MWh)",
               "name": "type",
-              "y": "Demand (MWh)"
+              "col": "scenario"
             }
           ],
           "style": {
-            "Plot Width (px)": "1200",
-            "Plot Title": "National generation by year",
-            "Plot Height (px)": "500",
-            "Y Title": "Generation (MWh)"
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "400",
+            "Plot Title": "National generation and demand"
           }
         },
         {
@@ -126,11 +127,14 @@
             }
           ],
           "style": {
-            "Plot Width (px)": "1200",
-            "Plot Title": "National operating reserves provision"
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "400",
+            "Plot Title": "Operating reserves provision"
           }
         }
-      ]
+      ],
+      "title": "Annual generation results",
+      "description": ""
     },
     {
       "charts": [
@@ -141,47 +145,35 @@
               "type": "bar",
               "agg": "sum",
               "x": "time",
-              "col": "season",
-              "name": "tech",
+              "y": "Generation (MW)",
               "row": "scenario",
+              "col": "season",
               "explode": "year",
-              "y": "Generation (MW)"
+              "name": "tech"
             },
             {
               "dataSource": "demand_timeslice.csv",
               "type": "dot",
               "agg": "sum",
               "x": "time",
+              "y": "Demand (MW)",
               "name": "type",
               "row": "scenario",
               "col": "season",
-              "explode": "year",
-              "y": "Demand (MW)"
+              "explode": "year"
             }
           ],
           "style": {
-            "Plot Width (px)": "1200",
+            "Plot Width (px)": "1000",
             "Plot Height (px)": "800",
-            "Plot Title": "National generation dispatch by time slice",
-            "Y Title": "Dispatch (MW)"
+            "Plot Title": "National timeslice generation and demand"
           }
-        },
-        {
-          "traces": [
-            {}
-          ]
         }
-      ]
-    },
-    {
-      "charts": [
-        {
-          "traces": [
-            {}
-          ]
-        }
-      ]
+      ],
+      "title": "Timeslice generation",
+      "description": ""
     }
   ],
-  "globalStyleFile": "style.csv"
+  "globalStyleFile": "style.csv",
+  "filter": {}
 }

@@ -431,7 +431,7 @@ def write_outputs(dir):
 
     # copy visit.html and report.json into the directory
     shutil.copyfile('vizit.html', os.path.join(csvsdir, 'vizit.html'))
-    shutil.copyfile('report.json', os.path.join(csvsdir, 'report.json'))
+    shutil.copyfile('vizit-config.json', os.path.join(csvsdir, 'vizit-config.json'))
     shutil.copyfile('style.csv', os.path.join(csvsdir, 'style.csv'))
 
 write_outputs(SAVEDIR)
