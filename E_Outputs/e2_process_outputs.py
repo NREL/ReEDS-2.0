@@ -25,6 +25,8 @@ pd.options.mode.chained_assignment = None
 
 tag = sys.argv[1] #tag = "ilya2_test2"
 cases = list(sys.argv[2:]) #cases = ["ilya2_test2_Ref","ilya2_test2_LCSolar"]
+
+#%%
 scenarios = [x.split('_')[1] + "_" + x.split('_')[2] for x in cases]
 user = [x.split('_')[0] for x in cases][0]
 root = os.path.join("reeds_server", "users_output", user)
@@ -192,7 +194,8 @@ def ProcessingGdx():
     # region peak demand and PRM
     peakdem = gdxin['peakdem_region']
     prm = gdxin['prm_region']
-    peakdem_prm = pd.merge(peakdem, prm, on = ['region', 't', 'scenario'])
+    peakdem_prm = pd.merge(peakdem, prm, on = ['region', 't', 'scenario'], how="left")
+    peakdem_prm.loc[peakdem_prm['Value_y'].isnull(), 'Value_y'] = 0 
     peakdem_prm = peakdem_prm.loc[peakdem_prm['t'].isin(firmcap['Year'].unique())]
     peakdem_prm['PRM_req'] = peakdem_prm['Value_x'] * (1+peakdem_prm['Value_y'])
     peakdem_prm.set_axis(['Region', 'Season', 'Year', 'peak_demand_MW', 'scenario', 'PRM', 'PRM_req'], axis=1, inplace=True)

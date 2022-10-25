@@ -507,6 +507,12 @@ parameter
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%tech_phase_out_schedule.csv
 $offdelim
+          /,
+          retire_penalty(t) "--fraction-- penalty for retiring a power plant expressed as a fraction of FOM"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%retire_penalty.csv
+$offdelim
           /
 ;
 

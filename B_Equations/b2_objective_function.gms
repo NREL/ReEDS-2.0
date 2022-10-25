@@ -86,6 +86,14 @@ eq_ObjFn_Supply.. Z =e=
 * cost of 'slack fuel' used to represent Naptha use in gas CC plants
               + SLACK_FUEL(t)*slackfuel_price
 
+* --- penalty for retiring a technology (represents friction in retirements)---
+              - sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
+                   cost_fom(i,v,r,t) * retire_penalty(t) *
+                   (CAP(i,v,r,t)
+                    - INV(i,v,r,t)$valinv(i,v,r,t)
+                    - INVREFURB(i,v,r,t)$[valinv(i,v,r,t)$refurbtech(i)$Sw_Refurb] )
+                   }
+
          )//end multiplier for pvf_onm
     }//end operations component for objective function
 ;
