@@ -170,6 +170,7 @@ def ProcessingGdx():
     cap = gdxin['CAP']
     cap = map_rs_to_state(cap, rmap)
     cap = map_tech_to_type(cap, 'i')
+    cap.drop(cap[cap['Type'] == 'Imports'].index, inplace=True)
     cap = summarize(cap, 'Level', ['Type', 'r', 't', 'scenario'])
     cap = setnames(cap, 'capacity_MW')
     cap = cap[['Technology', 'State', 'Year', 'capacity_MW', 'scenario']]
@@ -430,7 +431,7 @@ def write_outputs(dir):
     peakdem_prm.to_csv(os.path.join(csvsdir, 'peakdem.csv'), index=False)
 
     # copy visit.html and report.json into the directory
-    shutil.copyfile('vizit.html', os.path.join(csvsdir, 'vizit.html'))
+    shutil.copyfile('vizit.html', os.path.join(csvsdir, "..", 'vizit.html'))
     shutil.copyfile('vizit-config.json', os.path.join(csvsdir, 'vizit-config.json'))
     shutil.copyfile('style.csv', os.path.join(csvsdir, 'style.csv'))
 

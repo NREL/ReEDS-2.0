@@ -428,7 +428,7 @@ eq_recapfrac_mandate(t)$[tmodel(t)$Sw_RECapFracMandate]..
         =g=
 
 * fraction of total capacity
-    sum{(i,v,r)$[rfeas(r)$tmodel(t)$valcap(i,v,r,t)],
+    sum{(i,v,r)$[rfeas(r)$tmodel(t)$valcap(i,v,r,t)$(not storage(i))],
         CAP(i,v,r,t)}*re_mandate_capfrac(t)
 ;
 
