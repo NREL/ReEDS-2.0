@@ -46,13 +46,14 @@ $endif.gdxin
 if(Sw_Retire=1,
 *add retirement techs here
 *make sure only setting retiretech for 'existv'
-retiretech(i,existv,r,t) = yes;
-retiretech("HYDRO-PUMPED",existv,r,t) = no;
-retiretech(battery,existv,r,t) = no;
-retiretech(hydro, existv,r,t) = no;
-retiretech('NUCLEAR',existv,r,t) = no;
+retiretech(i,existv,rb,t) = yes;
+retiretech("HYDRO-PUMPED",existv,rb,t) = no;
+retiretech(battery,existv,rb,t) = no;
+retiretech(hydro, existv,rb,t) = no;
+retiretech('NUCLEAR',existv,rb,t) = no;
   );
 retiretech(i,v,r,t)$vre(i) = no;
+retiretech(i,v,rs,t) = no;
 
 *====================================
 *remove capacity_exog, prescribed capacity
@@ -274,7 +275,7 @@ m_avail_retire_exog_rsc(i,v,r,t)$valcap(i,v,r,t) = round(m_avail_retire_exog_rsc
 m_capacity_exog(i,v,r,t)$valcap(i,v,r,t) = round(m_capacity_exog(i,v,r,t),4) ;
 m_cf(i,r,h)$[cf_tech(i)] = round(m_cf(i,r,h),5) ;
 m_cf(i,r,h)$[(m_cf(i,r,h)<0.001)] = 0 ;
-m_required_prescriptions_state(i,state,t) = round(m_required_prescriptions_state(i,state,t),4) ;
+m_required_prescriptions(i,r,t) = round(m_required_prescriptions(i,r,t),4) ;
 m_rsc_dat(r,i,rscbin,"cost") = round(m_rsc_dat(r,i,rscbin,"cost"),3) ;
 
 

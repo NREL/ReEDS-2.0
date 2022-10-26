@@ -9,7 +9,7 @@ HYDRO-STORAGE,Chhattisgarh,sk,120
 HYDRO-PONDAGE,Gujarat,sk,250
 HYDRO-ROR,Gujarat,sk,240
 HYDRO-STORAGE,Gujarat,sk,1500
-HYDRO-PONDAGE,Himachal_Pradesh,sk,5788
+HYDRO-PONDAGE,Himachal_Pradesh,sk,2950
 HYDRO-ROR,Himachal_Pradesh,sk,1339.02
 HYDRO-STORAGE,Himachal_Pradesh,sk,1066
 HYDRO-PONDAGE,Jammu_Kashmir,sk,1710.5
@@ -27,7 +27,7 @@ HYDRO-STORAGE,Madhya_Pradesh,sk,1549.5
 HYDRO-PONDAGE,Maharashtra,sk,205
 HYDRO-PUMPED,Maharashtra,sk,250
 HYDRO-ROR,Maharashtra,sk,80
-HYDRO-STORAGE,Maharashtra,sk,2324
+HYDRO-STORAGE,Maharashtra,sk,2624
 HYDRO-STORAGE,Manipur,sk,105
 HYDRO-ROR,Meghalaya,sk,126
 HYDRO-STORAGE,Meghalaya,sk,156
@@ -36,10 +36,10 @@ HYDRO-PONDAGE,Odisha,sk,114.75
 HYDRO-STORAGE,Odisha,sk,2027.5
 HYDRO-ROR,Punjab,sk,494
 HYDRO-STORAGE,Punjab,sk,1925
-HYDRO-STORAGE,Rajasthan,sk,460.5
+HYDRO-STORAGE,Rajasthan,sk,460
 HYDRO-PONDAGE,Sikkim,sk,570
 HYDRO-ROR,Sikkim,sk,195
-HYDRO-PONDAGE,Tamil_Nadu,sk,602.2
+HYDRO-PONDAGE,Tamil_Nadu,sk,640
 HYDRO-PUMPED,Tamil_Nadu,sk,400
 HYDRO-ROR,Tamil_Nadu,sk,660
 HYDRO-STORAGE,Tamil_Nadu,sk,520

@@ -46,6 +46,8 @@ eq_ObjFn_Supply.. Z =e=
 *hourly arbitrage value for storage - intertemporal only
               - sum{(i,v,r)$[valinv(i,v,r,t)$storage(i)],
                    hav_int(i,r,t) * INV(i,v,r,t) }
+* TESTING slack variable for VRE
+              + sum{(i,v,r,rs)$[vre(i)$valinv(i,v,r,t)$r_rs(r,rs)], SLACK_VRE(i,v,rs,t)} * 1e7
 
             ) //end to multiplier by pvf_capital
         } //end of capital cost component of objective function
@@ -83,6 +85,14 @@ eq_ObjFn_Supply.. Z =e=
 
 * cost of 'slack fuel' used to represent Naptha use in gas CC plants
               + SLACK_FUEL(t)*slackfuel_price
+
+* --- penalty for retiring a technology (represents friction in retirements)---
+              - sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
+                   cost_fom(i,v,r,t) * retire_penalty(t) *
+                   (CAP(i,v,r,t)
+                    - INV(i,v,r,t)$valinv(i,v,r,t)
+                    - INVREFURB(i,v,r,t)$[valinv(i,v,r,t)$refurbtech(i)$Sw_Refurb] )
+                   }
 
          )//end multiplier for pvf_onm
     }//end operations component for objective function

@@ -499,13 +499,19 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%prescriptive_tech_set.cs
 parameter
           capacity_exog(i,v,r,rs,t)        "--MW-- exogenously specified capacity", //calc from caponrsc, prescribedretirments, binned_capacity
           avail_retire_exog_rsc             "--MW-- available retired rsc capacity for refurbishments",
-*required_prescriptions(i, r, t)   "--MW-- prescribed RSC cap that ReEDS will decide on location", // derived with prescribedrsc
-          required_prescriptions_state(i,state,t)    "--MW-- prescribed RSC cap that ReEDS will decide on location", // derived with prescribedrsc_state
+          required_prescriptions(i, r, t)   "--MW-- prescribed RSC cap that ReEDS will decide on location", // derived with prescribedrsc
+*          required_prescriptions_state(i,state,t)    "--MW-- prescribed RSC cap that ReEDS will decide on location", // derived with prescribedrsc_state
           prescribedretirements(t,r,i,*)   "--MW-- raw prescribed capacity retirement data", // default to 0; can be added as needed
           phase_out_year(i)                "year when select technology must be completely retired from system"
           /
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%tech_phase_out_schedule.csv
+$offdelim
+          /,
+          retire_penalty(t) "--fraction-- penalty for retiring a power plant expressed as a fraction of FOM"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%retire_penalty.csv
 $offdelim
           /
 ;
@@ -552,12 +558,12 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%prescribedrsc.csv
 $offdelim
 ;
 
-table prescribedrsc_state(t,i,state,*) "--MW-- state level prescribed capacity targets RSC tech "
-
-$ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%prescribedrsc_state.csv
-$offdelim
-;
+*table prescribedrsc_state(t,i,state,*) "--MW-- state level prescribed capacity targets RSC tech "
+*
+*$ondelim
+*$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%prescribedrsc_state.csv
+*$offdelim
+*;
 
 table cap_NepalStorage(t,i,r,rs,*) "--MW-- capacity of Nepal storage plants importing to Indian BAs"
 
@@ -602,14 +608,16 @@ capacity_exog(i,"prescribed",r,"sk",t)$sum((tt)$((yeart(t)>=yeart(tt))$(yeart(t)
 
 *prescribed capacity for rsc technologies follows the same logic but now
 *can be attributed to a specific rs 
-capacity_exog(i,"prescribed",r,rs,t) = prescribedrsc(t,i,r,rs,"value");
+capacity_exog(i,"prescribed",r,rs,t)$sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), prescribedrsc(tt,i,r,rs,"value")) =
+         sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), prescribedrsc(tt,i,r,rs,"value")$(not sameas(rs, "sk")));
 
 capacity_exog(i,"prescribed",r,rs,t)$sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))$Sw_SAsia_Trade), cap_NepalStorage(tt,i,r,rs,"value")) =
          sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), cap_NepalStorage(tt,i,r,rs,"value"));
 
 * for first year, required prescriptions is additions plus existing capacity
-required_prescriptions_state(i,state,t)$(prescriptivetech(i))
-      = sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), prescribedrsc_state(tt,i,state,"value"));
+required_prescriptions(i,rb,t)$(prescriptivetech(i))
+      = sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), sum(rs, prescribedrsc(tt,i,rb,rs,"value") )) ;
+
 
 * initialize as empty sets
 valcap(i,v,r,t) = no;
@@ -1528,8 +1536,8 @@ cf_tech(i)                       "techs with capacity factors" //derived from m_
 
 parameter
 m_capacity_exog(i,v,r,t)         "--MW-- exogenous capacity used in the model",
-*m_required_prescriptions(i,r,t)    "--MW-- required prescriptions by year (non-cumulative)",
-m_required_prescriptions_state(i,state,t)  "--MW-- required prescriptions by year (non-cumulative)",
+m_required_prescriptions(i,r,t)    "--MW-- required prescriptions by year (non-cumulative)",
+*m_required_prescriptions_state(i,state,t)  "--MW-- required prescriptions by year (non-cumulative)",
 m_rscfeas(r,i,rscbin)            "--qualifier-- feasibility conditional for investing in RSC techs",
 m_avail_retire_exog_rsc(i,v,r,t) "--MW-- exogenous amoung of available retirements",
 m_rsc_dat(r,i,rscbin,rscvar)     "--MW or $/MW-- resource supply curve attributes",
@@ -1542,7 +1550,7 @@ m_cf_szn(i,r,szn)            "--fraction-- modeled capacity factor, averaged by 
   m_capacity_exog(i,v,rb,t) = capacity_exog(i,v,rb,"sk",t);
   m_capacity_exog(i,v,rs,t)$(not sameas(rs,"sk")) = sum(r$r_rs(r,rs),capacity_exog(i,v,r,rs,t));
 
-  m_required_prescriptions_state(i,state,t) = required_prescriptions_state(i,state,t);
+  m_required_prescriptions(i,r,t) = required_prescriptions(i,r,t);
 
   m_rscfeas(rb,i,rscbin) = rscfeas(rb,"sk",i,rscbin);
   m_rscfeas(rs,i,rscbin)$(not sameas(rs,"sk")) = sum(r$r_rs(r,rs),rscfeas(r,rs,i,rscbin));

@@ -53,8 +53,10 @@ positive variables
   CAPTRAN(r,rr,trtype,t)         "--MW-- capacity of transmission"
   INVTRAN(r,rr,t,trtype)         "--MW-- investment in transmission capacity"
   INVSUBSTATION(r,vc,t)          "--MW-- substation investment--"
-;
 
+* TEST slack variable for VRE prescriptions equality
+  SLACK_VRE(i,v,rs,t)
+;
 
 *========================================
 * -- Equation Declaration --
@@ -83,8 +85,7 @@ EQUATION
  eq_growthlimit_relative(tg,t)      "--MW-- relative growth limit on technologies in growlim(i)"
  eq_growthlimit_absolute(r,tg,t) "--MW-- absolute growth limit on technologies in growlim(i)"
  eq_tech_phase_out(i,v,r,t)        "--MW-- mandated phase out of select technologies"
- eq_prescribedre_pre2024(i,state,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
- eq_forceprescription(i,state,t)       "--MW-- after 2024 capacity must meet prescribed targets"
+ eq_prescribedre_pre2023(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
 *eq_prescribedre_pre2024(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
 *eq_forceprescription(i,r,t)       "--MW-- after 2024 capacity must meet prescribed targets"
  eq_re_diversity(i,r,t)            "--MW-- No single resource region can have more than 15% of total national capacity (applies to WIND and UPV)"
@@ -142,16 +143,8 @@ EQUATION
 * test a transmission growth limit of 2GW per year on any corridor
  eq_trangrowth_limit(r,rr,t)
 
-* test equation to constrain national RE to 160GW
- eq_national_RElim(t)
-
 ;
 
-eq_national_RElim(t)$(yeart(t) < 2023)..
-   	160000
-        =g=
-  	sum{(i,rs,v)$[valcap(i,v,rs,t)], CAP(i,v,rs,t)}
-;
 
 * 5GW per year transmission growth limit between any two BAs
 ** TODO: Make this an OPTIONAL INPUT and set off by default 
@@ -288,29 +281,36 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)
 * Prior to 2023, all additions are prescribed.
 * Wind and solar additions with known locations are included in m_capacity_exog
 * When locations are not known, the prescribed capacity is added through INV and ReEDS selects the location
-eq_prescribedre_pre2024(i,state,t)$[tmodel(t)$required_prescriptions_state(i,state,t)$(yeart(t) < 2024)
+eq_prescribedre_pre2023(i,r,t)$[rfeas(r)$tmodel(t)$required_prescriptions(i,r,t)$(yeart(t) < 2023)
                              $prescriptivetech(i)$Sw_Prescribed]..
 
-  sum{(rs,v)$[valcap(i,v,rs,t)], CAP(i,v,rs,t)$state_rs(state,rs) }
-* was previously an equality constraint but causing infeasible/unbounded solution in years 2021-2023
-        =g=
+* investments in prescribed capacity that correlates to the general category in each BA
+    sum{(rs,v)$r_rs(r,rs), m_capacity_exog(i,v,rs,t) }
+
+  + sum{(rs,v,tt,rscbin)$[inv_cond(i,v,t,tt)$(tmodel(tt) or tfix(tt))$(yeart(tt)<=yeart(t))],
+      INV_RSC(i,v,rs,tt,rscbin)$[(yeart(t)-yeart(tt)<maxage(i))$r_rs(r,rs)$m_rscfeas(rs,i,rscbin)] }
+
+  + sum{(rs,v)$[r_rs(r,rs)$valinv(i,v,r,t)$vre(i)], SLACK_VRE(i,v,rs,t) }
+
+        =e=
 
 *must equal the prescribed amount
-    m_required_prescriptions_state(i,state,t)
+    m_required_prescriptions(i,r,t)
+
 ;
 
 
 * capacity must meet prescribed targets.
-eq_forceprescription(i,state,t)$[tmodel(t)$required_prescriptions_state(i,state,t)$(yeart(t) > 2023)
-                                 $prescriptivetech(i)$Sw_Prescribed]..
+*eq_forceprescription(i,r,t)$[tmodel(t)$required_prescriptions(i,r,t)$(yeart(t) > 2022)
+*                                 $prescriptivetech(i)$Sw_Prescribed]..
 
- sum{(rs,v)$[valcap(i,v,rs,t)], CAP(i,v,rs,t)$state_rs(state,rs) }
+* sum{(v)$[valcap(i,v,r,t)], CAP(i,v,r,t) }
 
-        =g=
+*        =g=
 
 *must be greater than the prescribed amount
-    m_required_prescriptions_state(i,state,t)
-;
+*    m_required_prescriptions(i,r,t)
+*;
 
 
 *here we limit the amount of refurbishments available in specific year
