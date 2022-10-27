@@ -171,7 +171,10 @@ def get_formatted_time():
 	formatted_time = time.strftime('%Y%m%d_%H%M%S')
 	return formatted_time
 #%%
-def setupEnvironment(ui_input={}):
+def setupEnvironment(ui_input=None):
+	print('I am here')
+	if ui_input is None:
+		ui_input = {}
 
 	# If input is coming at once
 	# input = {'run_name': 'test', '}
@@ -401,7 +404,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 			 cc_curtchoice, GAMSDir, hpcchoice, rmdchoice, output_folder=''):
 
 	if output_folder == '':
-		output_folder = 'E_outputs'
+		output_folder = 'E_Outputs'
 	else:
 		output_folder = os.path.abspath(output_folder)
 
@@ -571,13 +574,16 @@ def checkLDCpkl(filedst,filename,filesrc=os.path.join('nrelqnap02','ReEDS','8760
 		shutil.copy(os.path.join(filesrc, filename), os.path.join(filedst, filename))     
 
 
-def main(ui_input={}, notify = None, uuid=None):
+def main(ui_input=None, notify = None, uuid=None):
 	
-	if notify:
+	if ui_input is None:
+		ui_input = {}
+	
+	if notify is not None:
 		log_contents = []
-		def print(str_):
-			notify(str_, uuid)
-			log_contents.append(str_ + '\n')
+		# def print(str_):
+		# 	notify(str_, uuid)
+		# 	log_contents.append(str_ + '\n')
 
 
 	try:
@@ -652,40 +658,42 @@ def main(ui_input={}, notify = None, uuid=None):
 			entry_folder = 'E_Outputs'
 		for r in runnames:
 			if envVar['comp'] == 1: #compile the model if indicated by user
+				print('=======================================================')
 				shell_script_path = os.path.join(entry_folder,'runs',r,'compile_{}{}'.format(r, FILE_EXTENSION))
+				print(shell_script_path)
 				# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
-				# subprocess.call(shell_script_path, shell=True)
-				p1 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-				if notify:
-					p1_stdout_content = p1.stdout.read().decode().split('\n')
-					for each in p1_stdout_content:
-						notify(each, uuid)
-					log_contents.extend(p1_stdout_content)
+				subprocess.call(shell_script_path, shell=True)
+				# p1 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				# if notify:
+				# 	p1_stdout_content = p1.stdout.read().decode().split('\n')
+				# 	for each in p1_stdout_content:
+				# 		notify(each, uuid)
+				# 	log_contents.extend(p1_stdout_content)
 
-				p2 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-				if notify:
-					p2_stdout_content = p2.stdout.read().decode().split('\n')
-					for each in p2_stdout_content:
-						notify(each, uuid)
-					log_contents.extend(p2_stdout_content)
+				# p2 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				# if notify:
+				# 	p2_stdout_content = p2.stdout.read().decode().split('\n')
+				# 	for each in p2_stdout_content:
+				# 		notify(each, uuid)
+				# 	log_contents.extend(p2_stdout_content)
 
 			if envVar['run'] == 1: #run the model if indicated by user
 				shell_script_path = os.path.join(entry_folder,'runs',r,'run_{}{}'.format(r, FILE_EXTENSION))
 				# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
-				# subprocess.call(shell_script_path, shell=True)
-				p3 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-				if notify:
-					p3_stdout_content = p3.stdout.read().decode().split('\n')
-					for each in p3_stdout_content:
-						notify(each, uuid)
-					log_contents.extend(p3_stdout_content)
+				subprocess.call(shell_script_path, shell=True)
+				# p3 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				# if notify:
+				# 	p3_stdout_content = p3.stdout.read().decode().split('\n')
+				# 	for each in p3_stdout_content:
+				# 		notify(each, uuid)
+				# 	log_contents.extend(p3_stdout_content)
 
-				p4 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-				if notify:
-					p4_stdout_content = p4.stdout.read().decode().split('\n')
-					for each in p4_stdout_content:
-						notify(each, uuid)
-					log_contents.extend(p4_stdout_content)
+				# p4 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				# if notify:
+				# 	p4_stdout_content = p4.stdout.read().decode().split('\n')
+				# 	for each in p4_stdout_content:
+				# 		notify(each, uuid)
+				# 	log_contents.extend(p4_stdout_content)
 
 			# inputs_case_path = os.path.join(entry_folder, 'runs', r, 'inputs_case')
 			# os.mkdir(inputs_case_path)
