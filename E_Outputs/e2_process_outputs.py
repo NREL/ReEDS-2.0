@@ -352,7 +352,7 @@ def write_outputs(dir):
     # cap_diff.csv
     cap_diff = cap.pivot_table(index=['st','tech','year'], columns='scenario', values='Capacity (MW)').reset_index()
     for i in scenarios[1:]:
-        cap_diff[i] = cap_diff[scenarios[0]] - cap_diff[i]
+        cap_diff[i] = cap_diff[i] - cap_diff[scenarios[0]]
     cap_diff.drop(scenarios[0], axis=1, inplace=True)
     cap_diff = cap_diff.set_index(['st','tech','year']).stack().reset_index(name='Difference (MW)')
     cap_diff.to_csv(os.path.join(csvsdir, 'cap_diff.csv'), index=False)
