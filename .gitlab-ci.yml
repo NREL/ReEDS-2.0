@@ -1,6 +1,7 @@
 stages:          # List of stages for jobs, and their order of execution
   - test
   - deploy_dev
+  - deploy_prod
 
 test:  
   environment:
@@ -31,7 +32,7 @@ test:
     - echo REDIS_PASSWORD=$REDIS_PASSWORD >> .env
     - echo AWS_REGION=$AWS_REGION >> .env
     - echo S3_BUCKET=$S3_BUCKET >> .env
-    - echo DEPLOY_MODE='aws' >> .env
+    - echo DEPLOY_MODE='local' >> .env
     - echo LOG_FOLDER=$LOG_FOLDER >> .env
     - mkdir logs
     - mkdir gams 
@@ -65,6 +66,25 @@ deploy_dev:
       supervisorctl stop reeds_api;
       cd /home/ec2-user/reeds-india/reeds_api;
       git pull origin develop;
+      cd ~;
+      supervisorctl start reeds_api"
+    - echo "Finished!"
+
+deploy_prod:
+  environment:
+    name: Prod
+  stage: deploy_prod
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: on_success
+    - when: never
+  script:
+    - echo "Deployement starting in prod environment!"
+    - ls
+    - ssh -i ~/.ssh/id_ed25519 ec2-user@172.17.25.248 "ls;
+      supervisorctl stop reeds_api;
+      cd /home/ec2-user/reeds_microservices/reeds_api;
+      git pull;
       cd ~;
       supervisorctl start reeds_api"
     - echo "Finished!"

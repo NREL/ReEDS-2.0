@@ -86,5 +86,4 @@ reqt_price('res_marg','na',region,szn,t)$tmodel_new(t) = (1 / cost_scale) * (1 /
 reqt_price('oper_res',ortype,rb,h,t)$(rfeas(rb)$tmodel_new(t)) = sum(region,(1 / cost_scale) * (1 / pvf_onm(t)) * eq_OpRes_requirement.m(ortype,region,h,t) / hours(h) * load_frac_opres(rb,h,t));
 
 $if not set fname $setglobal fname temp
-*execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%gdxfiles%ds%output_%fname%.gdx'
-execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%fname%%ds%outputs%ds%output_%fname%.gdx'
+execute_unload '%casepath%%ds%outputs%ds%output_%fname%.gdx'

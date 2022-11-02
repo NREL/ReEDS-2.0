@@ -12,6 +12,7 @@ import datetime
 import math
 import uuid
 import sys
+from wsgiref import headers
 from aiohttp.web_request import Request
 import psutil
 import shutil
@@ -186,7 +187,10 @@ def rate_limit(func):
                         "message": "Request denied! Please wait before sending more request!"
                     }
                 ),
-                status=429,
+                status=429,  headers={
+                "X-XSS-Protection": "1; mode=block",
+                "X-Frame-Options": "DENY"
+                }
             )
 
     return inner_wrapper
@@ -208,7 +212,12 @@ def authenticate(func):
             logger.error(
                 f"Unauthorized request to service {request.rel_url}, {str(e)}"
             )
-            return web.Response(text=json.dumps(f"Unauthorized"), status=401)
+            return web.Response(text=json.dumps(f"Unauthorized"), status=401, headers=
+            {
+                "X-XSS-Protection": "1; mode=block",
+                "X-Frame-Options": "DENY"
+            }
+            )
 
     return inner_wrapper
 
@@ -327,6 +336,10 @@ class Handler:
 
         self.db = DatabaseHandler()
         self.hash = Hash(self.db)
+        self.headers = {
+            "X-XSS-Protection": "1; mode=block",
+            "X-Frame-Options": "DENY"
+        }
 
         self.simulation_queue = Queue()
 
@@ -382,7 +395,8 @@ class Handler:
         # TODO: Authenticate this service
         with session_manager() as session:
             return web.Response(
-                text=json.dumps(self.db.get_bugs(session)), status=200
+                text=json.dumps(self.db.get_bugs(session)), status=200,
+                headers=self.headers
             )
 
     @monitor_time
@@ -409,17 +423,18 @@ class Handler:
                         )
                     ),
                     status=200,
+                    headers=self.headers
                 )
 
         else:
             return web.Response(
-                text=json.dumps({"message": "Unauthorized"}), status=401
+                text=json.dumps({"message": "Unauthorized"}), status=401, headers=self.headers
             )
 
     async def handle_health(self, request):
 
         return web.Response(
-            text=json.dumps({"message": "UP and running!"}), status=200
+            text=json.dumps({"message": "UP and running!"}), status=200, headers=self.headers
         )
 
     @monitor_time
@@ -477,12 +492,12 @@ class Handler:
                         "ontechnologies": onTechnologies,
                     }
                 ),
-                status=200,
+                status=200, headers=self.headers
             )
 
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -504,7 +519,7 @@ class Handler:
                 session.commit()
 
             return web.Response(
-                text=json.dumps({"message": "success"}), status=200
+                text=json.dumps({"message": "success"}), status=200, headers=self.headers
             )
 
     @monitor_time
@@ -519,7 +534,7 @@ class Handler:
                         session, request["userData"]["username"]
                     )
                 ),
-                status=200,
+                status=200, headers=self.headers
             )
 
     @monitor_time
@@ -545,11 +560,11 @@ class Handler:
                 labels = self.db.get_all_user_labels(
                     session, request["userData"]["username"]
                 )
-                return web.Response(text=json.dumps(labels), status=200)
+                return web.Response(text=json.dumps(labels), status=200, headers=self.headers)
 
         else:
             return web.Response(
-                text=json.dumps({"message": message}), status=500
+                text=json.dumps({"message": message}), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -561,7 +576,7 @@ class Handler:
             labels = self.db.get_all_user_labels(
                 session, request["userData"]["username"]
             )
-            return web.Response(text=json.dumps(labels), status=200)
+            return web.Response(text=json.dumps(labels), status=200, headers=self.headers)
 
     @monitor_time
     @authenticate
@@ -638,20 +653,20 @@ class Handler:
                     session.commit()
 
                     return web.Response(
-                        text=json.dumps({"message": f"Success"}), status=200
+                        text=json.dumps({"message": f"Success"}), status=200, headers=self.headers
                     )
 
                 else:
                     return web.Response(
                         text=json.dumps({"message": f"Failed uploading bug"}),
-                        status=500,
+                        status=500, headers=self.headers
                     )
 
         except Exception as e:
             print(e)
             return web.Response(
                 text=json.dumps({"message": f"Failed to report a bug {e}"}),
-                status=500,
+                status=500, headers=self.headers
             )
 
     @monitor_time
@@ -741,14 +756,14 @@ class Handler:
                         "message": message,
                     }
                 ),
-                status=code,
+                status=code, headers=self.headers
             )
 
         except Exception as e:
             # import traceback
             # print(traceback.print_exc())
             return web.Response(
-                text=json.dumps({"message": "Signing up failed"}), status=500
+                text=json.dumps({"message": "Signing up failed"}), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -763,15 +778,15 @@ class Handler:
                 )
             if user_detail:
                 return web.json_response(
-                    text=json.dumps(user_detail), status=200
+                    text=json.dumps(user_detail), status=200, headers=self.headers
                 )
             else:
                 return web.json_response(
-                    text=json.dumps({"message": "Unsuccessful!"}), status=500
+                    text=json.dumps({"message": "Unsuccessful!"}), status=500, headers=self.headers
                 )
         except Exception as e:
             return web.json_response(
-                text=json.dumps({"message": "Unsuccessful!"}), status=500
+                text=json.dumps({"message": "Unsuccessful!"}), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -793,7 +808,8 @@ class Handler:
                 )
         except Exception as e:
             pass
-        return web.FileResponse(image_path)
+        print(image_path)
+        return web.FileResponse(path=image_path, headers=self.headers, status=200)
 
     @monitor_time
     @authenticate
@@ -833,12 +849,12 @@ class Handler:
                     )
 
                     return web.json_response(
-                        text=json.dumps({"message": "success"}), status=200
+                        text=json.dumps({"message": "success"}), status=200, headers=self.headers
                     )
                 else:
                     return web.json_response(
                         text=json.dumps({"message": "Unauthorized!"}),
-                        status=401,
+                        status=401, headers=self.headers
                     )
         except Exception as e:
             print(traceback.print_exc())
@@ -849,23 +865,29 @@ class Handler:
     #@rate_limit
     async def check_authentication(self, request):
         return web.json_response(
-            text=json.dumps(request["userData"]), status=200
+            text=json.dumps(request["userData"]), status=200, headers=self.headers
         )
 
     # Handle user login
     @monitor_time
     #@rate_limit
     async def handle_sigin(self, request):
-
+        
         user_detail = await request.json()
 
-        with session_manager() as session:
-            message, jwt_token, code = self.hash.login(session, user_detail)
+        if user_detail:
+            with session_manager() as session:
+                message, jwt_token, code = self.hash.login(session, user_detail)
 
-        return web.Response(
-            text=json.dumps({"message": message, "token": jwt_token}),
-            status=code,
-        )
+            return web.Response(
+                text=json.dumps({"message": message, "token": jwt_token}),
+                status=code, headers=self.headers
+            )
+        else:
+            return web.Response(
+                text=json.dumps({"message": "Unauthorized!"}),
+                status=401, headers=self.headers
+            )
 
     # Handles user sign up
     @monitor_time
@@ -1001,16 +1023,16 @@ class Handler:
                             "message": message,
                         }
                     ),
-                    status=code,
+                    status=code, headers=self.headers
                 )
             else:
                 return web.Response(
-                    text=json.dumps({"message": f"Unauthorized"}), status=401
+                    text=json.dumps({"message": f"Unauthorized"}), status=401, headers=self.headers
                 )
         except Exception as e:
             print(e)
             return web.Response(
-                text=json.dumps({"message": "Signing up failed"}), status=500
+                text=json.dumps({"message": "Signing up failed"}), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1025,7 +1047,7 @@ class Handler:
 
         # Generate token
         token = self.hash.generate_token(data, 120)
-        return web.Response(text=json.dumps({"token": token}), status=200)
+        return web.Response(text=json.dumps({"token": token}), status=200, headers=self.headers)
 
     @monitor_time
     #@rate_limit
@@ -1102,11 +1124,11 @@ class Handler:
             if not errors:
                 errors = ""
 
-            return web.Response(text=json.dumps({"errors": errors}), status=200)
+            return web.Response(text=json.dumps({"errors": errors}), status=200, headers=self.headers)
         except Exception as e:
 
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1165,13 +1187,15 @@ class Handler:
                 headers={
                     "Content-Type": "application/octet-stream",
                     "Content-Disposition": f"attachement; filename={file_name}",
+                    "X-XSS-Protection": "1; mode=block",
+                    "X-Frame-Options": "DENY"
                 },
-                status=200,
+                status=200, 
             )
 
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     # async def return_folder_paths(self, request):
@@ -1224,17 +1248,19 @@ class Handler:
                     headers={
                         "Content-Type": "application/octet-stream",
                         "Content-Disposition": f"attachement; filename=log.txt",
+                        "X-XSS-Protection": "1; mode=block",
+                        "X-Frame-Options": "DENY"
                     },
-                    status=200,
+                    status=200
                 )
             else:
                 return web.Response(
                     text=json.dumps(f"No log file found for the sim!"),
-                    status=500,
+                    status=500, headers=self.headers
                 )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1352,6 +1378,8 @@ class Handler:
                     headers={
                         "Content-Type": "application/octet-stream",
                         "Content-Disposition": f"attachement; filename={output_file}",
+                        "X-XSS-Protection": "1; mode=block",
+                        "X-Frame-Options": "DENY"
                     },
                     status=200,
                 )
@@ -1360,11 +1388,11 @@ class Handler:
                     text=json.dumps(
                         f"Either simulation is not complete or simulation ran into a premature error!"
                     ),
-                    status=500,
+                    status=500, headers=self.headers
                 )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     # I left here
@@ -1385,11 +1413,11 @@ class Handler:
                 {"name": d["name"], "description": d["description"]}
                 for d in all_scenarios
             ]
-            return web.Response(text=json.dumps(scen_list), status=200)
+            return web.Response(text=json.dumps(scen_list), status=200, headers=self.headers)
 
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1413,15 +1441,15 @@ class Handler:
                         session.commit()
                 if success:
                     return web.Response(
-                        text=json.dumps(f"{success}"), status=200
+                        text=json.dumps(f"{success}"), status=200, headers=self.headers
                     )
                 else:
                     return web.Response(
-                        text=json.dumps(f"{message}"), status=500
+                        text=json.dumps(f"{message}"), status=500, headers=self.headers
                     )
             else:
                 return web.Response(
-                    text=json.dumps(f"Label can not be empty"), status=500
+                    text=json.dumps(f"Label can not be empty"), status=500, headers=self.headers
                 )
 
     @monitor_time
@@ -1480,11 +1508,11 @@ class Handler:
 
             model_year_df = pd.read_csv(model_year_file)
             scenario_data["yearset"] = ",".join(list(model_year_df.columns))
-            return web.Response(text=json.dumps(scenario_data), status=200)
+            return web.Response(text=json.dumps(scenario_data), status=200, headers=self.headers)
 
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1576,14 +1604,14 @@ class Handler:
 
             self.mail.send_email(os.getenv('REEDS_SENDER'), usr_email, email_body,  REEDS_SIM_INQUEUE_SUBJECT + f" : {metadata['name']}")
 
-            return web.Response(text=json.dumps(output_metadata), status=200)
+            return web.Response(text=json.dumps(output_metadata), status=200, headers=self.headers)
 
         except Exception as e:
             import traceback
 
             traceback.print_exc()
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
         # else:
         #     return web.Response(text=json.dumps(f"Unauthorized"), status=401)
@@ -1606,12 +1634,12 @@ class Handler:
                 text=json.dumps(
                     {"base": base_scenarios, "personnel": personnel_scenarios}
                 ),
-                status=200,
+                status=200, headers=self.headers
             )
 
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1630,11 +1658,11 @@ class Handler:
                 )
                 session.commit()
             return web.Response(
-                text=json.dumps({"message": "success"}), status=200
+                text=json.dumps({"message": "success"}), status=200, headers=self.headers
             )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1647,10 +1675,10 @@ class Handler:
                 status_dict = self.db.get_label_status_dict(
                     session, request["userData"]["username"]
                 )
-            return web.Response(text=json.dumps(status_dict), status=200)
+            return web.Response(text=json.dumps(status_dict), status=200, headers=self.headers)
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1665,11 +1693,11 @@ class Handler:
                 )
                 session.commit()
             return web.Response(
-                text=json.dumps({"message": "success"}), status=200
+                text=json.dumps({"message": "success"}), status=200, headers=self.headers
             )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1684,14 +1712,14 @@ class Handler:
                 )
 
             if data:
-                return web.Response(text=json.dumps(data.decode()), status=200)
+                return web.Response(text=json.dumps(data.decode()), status=200, headers=self.headers)
             else:
                 return web.Response(
-                    text=json.dumps({"message": "no data"}), status=500
+                    text=json.dumps({"message": "no data"}), status=500, headers=self.headers
                 )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1706,14 +1734,14 @@ class Handler:
                 )
 
             if data:
-                return web.Response(text=json.dumps(data.decode()), status=200)
+                return web.Response(text=json.dumps(data.decode()), status=200, headers=self.headers)
             else:
                 return web.Response(
-                    text=json.dumps({"message": "no data"}), status=500
+                    text=json.dumps({"message": "no data"}), status=500, headers=self.headers
                 )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1751,11 +1779,11 @@ class Handler:
                     }
                 )
 
-            return web.Response(text=json.dumps(technologies), status=200)
+            return web.Response(text=json.dumps(technologies), status=200, headers=self.headers)
 
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1770,14 +1798,14 @@ class Handler:
                 )
             if data:
                 print(data.decode())
-                return web.Response(text=json.dumps(data.decode()), status=200)
+                return web.Response(text=json.dumps(data.decode()), status=200, headers=self.headers)
             else:
                 return web.Response(
-                    text=json.dumps({"message": "no data"}), status=500
+                    text=json.dumps({"message": "no data"}), status=500, headers=self.headers
                 )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1794,11 +1822,11 @@ class Handler:
                 )
                 session.commit()
             return web.Response(
-                text=json.dumps({"status": "success"}), status=200
+                text=json.dumps({"status": "success"}), status=200, headers=self.headers
             )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1815,11 +1843,11 @@ class Handler:
                 )
                 session.commit()
             return web.Response(
-                text=json.dumps({"status": "success"}), status=200
+                text=json.dumps({"status": "success"}), status=200, headers=self.headers
             )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1836,11 +1864,11 @@ class Handler:
                 )
                 session.commit()
             return web.Response(
-                text=json.dumps({"status": "success"}), status=200
+                text=json.dumps({"status": "success"}), status=200, headers=self.headers
             )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -1953,12 +1981,12 @@ class Handler:
                     session, request["userData"]["username"]
                 )
             return web.Response(
-                text=json.dumps(scenarios_personnel), status=200
+                text=json.dumps(scenarios_personnel), status=200, headers=self.headers
             )
 
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2028,7 +2056,7 @@ class Handler:
             if not metadata["name"]:
                 return web.Response(
                     text=json.dumps(f"Scenario name cannot be empty"),
-                    status=500,
+                    status=500, headers=self.headers
                 )
 
             case_rows = case_df["case"].to_list()
@@ -2039,7 +2067,7 @@ class Handler:
                         text=json.dumps(
                             f"{metadata['name']} scenario does not exist"
                         ),
-                        status=500,
+                        status=500, headers=self.headers
                     )
 
                 case_row_dict = dict(
@@ -2052,7 +2080,7 @@ class Handler:
                         text=json.dumps(
                             f"{metadata['name']} already exists, use different name"
                         ),
-                        status=500,
+                        status=500, headers=self.headers
                     )
 
                 # By default all values are nans
@@ -2222,12 +2250,12 @@ class Handler:
                     session, request["userData"]["username"]
                 )
             return web.Response(
-                text=json.dumps(scenarios_personnel), status=200
+                text=json.dumps(scenarios_personnel), status=200, headers=self.headers
             )
 
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2302,11 +2330,11 @@ class Handler:
                     )
 
             return web.Response(
-                text=json.dumps(scenarios_personnel), status=200
+                text=json.dumps(scenarios_personnel), status=200, headers=self.headers
             )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2398,10 +2426,10 @@ class Handler:
                     session, request["userData"]["username"]
                 )
 
-            return web.Response(text=json.dumps(output_metadata), status=200)
+            return web.Response(text=json.dumps(output_metadata), status=200, headers=self.headers)
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2495,10 +2523,10 @@ class Handler:
                         session, request["userData"]["username"]
                     )
 
-            return web.Response(text=json.dumps(output_metadata), status=200)
+            return web.Response(text=json.dumps(output_metadata), status=200, headers=self.headers)
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2541,7 +2569,7 @@ class Handler:
             text=json.dumps(
                 {"message": "Email has been sent if it exists in our system!"}
             ),
-            status=200,
+            status=200, headers=self.headers
         )
 
     @monitor_time
@@ -2568,7 +2596,7 @@ class Handler:
                         text=json.dumps(
                             {"message": "Password updated successfully!"}
                         ),
-                        status=200,
+                        status=200, headers=self.headers
                     )
                 else:
                     return web.Response(
@@ -2577,7 +2605,7 @@ class Handler:
                                 "message": "Token is invalid, Unauthorized to reset password!"
                             }
                         ),
-                        status=401,
+                        status=401, headers=self.headers
                     )
 
         except Exception as e:
@@ -2587,7 +2615,7 @@ class Handler:
                         "message": f"Error occurred during reset password! >> {str(e)}"
                     }
                 ),
-                status=500,
+                status=500, headers=self.headers
             )
 
         # Need to validate the token
@@ -2628,7 +2656,7 @@ class Handler:
                 text=json.dumps(
                     {"message": f"Success submitting the request!"}
                 ),
-                status=200,
+                status=200, headers=self.headers
             )
 
         except Exception as e:
@@ -2638,7 +2666,7 @@ class Handler:
                         "message": f"Error occurred during processing new user request! >> {str(e)}"
                     }
                 ),
-                status=500,
+                status=500, headers=self.headers
             )
 
     # admin_authenticated
@@ -2654,10 +2682,10 @@ class Handler:
 
         if is_admin:
             return web.Response(
-                text=json.dumps({"message": "authenticated"}), status=200
+                text=json.dumps({"message": "authenticated"}), status=200, headers=self.headers
             )
         else:
-            return web.Response(text=json.dumps(f"Unauthorized"), status=401)
+            return web.Response(text=json.dumps(f"Unauthorized"), status=401, headers=self.headers)
 
     @monitor_time
     @authenticate
@@ -2690,14 +2718,14 @@ class Handler:
                     ]
 
             if is_admin:
-                return web.Response(text=json.dumps(user_requests), status=200)
+                return web.Response(text=json.dumps(user_requests), status=200, headers=self.headers)
             else:
                 return web.Response(
-                    text=json.dumps(f"Unauthorized"), status=401
+                    text=json.dumps(f"Unauthorized"), status=401, headers=self.headers
                 )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2736,15 +2764,15 @@ class Handler:
                     ]
 
             if is_admin:
-                return web.Response(text=json.dumps(user_requests), status=200)
+                return web.Response(text=json.dumps(user_requests), status=200, headers=self.headers)
             else:
                 return web.Response(
-                    text=json.dumps(f"Unauthorized"), status=401
+                    text=json.dumps(f"Unauthorized"), status=401, headers=self.headers
                 )
         except Exception as e:
             return web.Response(
                 text=json.dumps({"message": f"Error occured > {str(e)}"}),
-                status=500,
+                status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2803,14 +2831,14 @@ class Handler:
                     ]
 
             if is_admin:
-                return web.Response(text=json.dumps(user_requests), status=200)
+                return web.Response(text=json.dumps(user_requests), status=200, headers=self.headers)
             else:
                 return web.Response(
-                    text=json.dumps(f"Unauthorized"), status=401
+                    text=json.dumps(f"Unauthorized"), status=401, headers=self.headers
                 )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2868,14 +2896,14 @@ class Handler:
                     ]
 
             if is_admin:
-                return web.Response(text=json.dumps(user_requests), status=200)
+                return web.Response(text=json.dumps(user_requests), status=200, headers=self.headers)
             else:
                 return web.Response(
-                    text=json.dumps(f"Unauthorized"), status=401
+                    text=json.dumps(f"Unauthorized"), status=401, headers=self.headers
                 )
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2888,7 +2916,7 @@ class Handler:
 
         status_code = 200 if token_is_valid else 401
         return web.Response(
-            text=json.dumps(f"{token_is_valid}"), status=status_code
+            text=json.dumps(f"{token_is_valid}"), status=status_code, headers=self.headers
         )
 
     @monitor_time
@@ -2903,7 +2931,7 @@ class Handler:
 
         status_code = 200 if validate_token else 401
         return web.Response(
-            text=json.dumps(f"{validate_token}"), status=status_code
+            text=json.dumps(f"{validate_token}"), status=status_code, headers=self.headers
         )
 
     @monitor_time
@@ -2921,11 +2949,11 @@ class Handler:
                     )
                     session.commit()
 
-                    return web.Response(text=json.dumps(f"success"), status=200)
-            return web.Response(text=json.dumps(f"Unauthorized"), status=401)
+                    return web.Response(text=json.dumps(f"success"), status=200, headers=self.headers)
+            return web.Response(text=json.dumps(f"Unauthorized"), status=401, headers=self.headers)
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )
 
     @monitor_time
@@ -2941,9 +2969,9 @@ class Handler:
                     self.db.delete_bug(session, data["uuid"])
                     session.commit()
 
-                    return web.Response(text=json.dumps(f"success"), status=200)
-            return web.Response(text=json.dumps(f"Unauthorized"), status=401)
+                    return web.Response(text=json.dumps(f"success"), status=200, headers=self.headers)
+            return web.Response(text=json.dumps(f"Unauthorized"), status=401, headers=self.headers)
         except Exception as e:
             return web.Response(
-                text=json.dumps(f"Error occured > {str(e)}"), status=500
+                text=json.dumps(f"Error occured > {str(e)}"), status=500, headers=self.headers
             )

@@ -192,9 +192,9 @@ routes_filt(r,rr)$[rfeas(r)$rfeas(rr)] = sum{(trtype,t)$tcur(t), routes(r,rr,trt
 * Unload all relevant data to a gdx file
 *=======================================
 
-execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%reeds_data_%case%_%next_year%.gdx' avail_filt, cap_pv, cap_storage, cap_thermal, cap_trans, cap_wind, cf_hyd_filt,
+execute_unload '%data_dir%%ds%reeds_data_%case%_%next_year%.gdx' avail_filt, cap_pv, cap_storage, cap_thermal, cap_trans, cap_wind, cf_hyd_filt,
                                                          coal, cost_vom_filt, fuel_price_filt, h_szn, heat_rate_filt, cost_cap_fin_mult_filt, cost_cap_filt, rsc_dat_filt,
                                                          hierarchy, hours, hydmin, hydro_d, hydro_nd, i, losses_trans_h, m_cf_filt, nuclear, r, r_region, r_rs,
                                                          rfeas, routes_filt, sdbin, storage, storage_duration, storage_eff, szn, tranloss, v, cf_adj_t_filt, pvf_onm, pvf_capital, sw_sasia_trade, sw_txlimit;
 
-execute_unload 'D_Augur%ds%dump.gdx';
+*execute_unload 'D_Augur%ds%dump.gdx';

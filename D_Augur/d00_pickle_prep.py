@@ -23,6 +23,7 @@ if __name__ == '__main__':
     # Mandatory arguments
     parser.add_argument("filename", help="""Filename of the LDC_static_inputs file used for this ReEDS run""", type=str)
     parser.add_argument("scenario", help="""Scenario name""", type=str)
+    parser.add_argument("casepath", help="""File path of augur data""")
  
     args = parser.parse_args()
 
@@ -33,8 +34,8 @@ if __name__ == '__main__':
     load_input = args.filename
     
     # -------- Define the file paths --------
-    user, runname = scenario.split('_')[0],  scenario.split('_')[0] + '_' + scenario.split('_')[1]
-    path_pickles = os.path.join('reeds_server', 'users_output', user, runname,'runs',scenario,'augur_data')
+    user, runname = scenario.split('_')[0], scenario.split('_')[0] + '_' + scenario.split('_')[1]
+    path_pickles = os.path.join(args.casepath, 'augur_data')
     path_static = os.path.join('D_Augur','LDCfiles')
     path_variability = os.path.join('A_Inputs','inputs','variability')
     if not os.path.exists(path_pickles): os.mkdir(path_pickles)
