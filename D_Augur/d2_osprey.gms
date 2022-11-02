@@ -46,7 +46,7 @@ set i, v, r, szn, routes, storage, hydro_d, hydro_nd, coal, nuclear ;
 scalar Sw_TxLimit ; 
 
 *Load sets from ReEDS
-$gdxin reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%reeds_data_%case%_%next_year%.gdx
+$gdxin %data_dir%%ds%reeds_data_%case%_%next_year%.gdx
 $loadr i
 $loadr v
 $loadr r
@@ -110,7 +110,7 @@ parameters cost(i,v,r)           "--$/MWh-- total variable generation costs (fue
           ;
 
 * Load values from ReEDS
-$gdxin reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%osprey_inputs_%case%_%next_year%.gdx
+$gdxin %data_dir%%ds%osprey_inputs_%case%_%next_year%.gdx
 $loadr cost = gen_cost
 $loadr cap_max_in = cap
 $loadr cap_trans = cap_trans
@@ -134,7 +134,7 @@ cost_flow = 0.001 ;
 Table net_load_in(d,hr_all,r) "--MW-- Net load for 48-hour horizon"
 $offlisting
 $ondelim
-$include reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%net_load_osprey_%case%_%next_year%.csv
+$include %data_dir%%ds%net_load_osprey_%case%_%next_year%.csv
 $offdelim
 $onlisting
 ;
@@ -464,12 +464,12 @@ storage_in_output_h1(d,h1,i,v,r) = storage_in_output(d,h1,i,v,r) ;
 storage_level_output_h1(d,h1,i,v,r) = storage_level_output(d,h1,i,v,r) ;
 dropped_load_output_h1(d,h1,r) = dropped_load_output(d,h1,r) ;
 
-execute_unload "reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%osprey_outputs_%case%_%next_year%.gdx", prices, flows_output, gen_output, storage_in_output,
+execute_unload "%data_dir%%ds%osprey_outputs_%case%_%next_year%.gdx", prices, flows_output, gen_output, storage_in_output,
                                                                  storage_level_output, dropped_load_output, net_load_day, cap_max_model
 *                                                                 prices_h1, flows_output_h1, gen_output_h1,
 *                                                                 storage_in_output_h1, storage_level_output_h1,
 *                                                                 dropped_load_output_h1
 ;
-execute_unload 'D_Augur%ds%osprey.gdx';
+*execute_unload 'D_Augur%ds%osprey.gdx';
 
 ;

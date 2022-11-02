@@ -374,11 +374,11 @@ $endif.int
 *======================
 * --- Capacity Credit SETUP ---
 *======================
-$if NOT dexist reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data $call 'mkdir reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data';
+$if NOT dexist %casepath%%ds%augur_data $call 'mkdir %casepath%%ds%augur_data';
 
 * create PKL files that are used in all solve years cc_py calculations
-execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%pickle_prep.gdx'   rb, r_rs, r_region;
-execute '%pythonpath% D_Augur%ds%d00_pickle_prep.py %HourlyLoadFile% %case%'
+execute_unload '%casepath%%ds%augur_data%ds%pickle_prep.gdx' rb, r_rs, r_region;
+execute '%pythonpath% D_Augur%ds%d00_pickle_prep.py %HourlyLoadFile% %case% %casepath%'
 
 *======================
 * --- Unload all inputs ---

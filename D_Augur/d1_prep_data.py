@@ -243,8 +243,8 @@ def prep_data(args):
         print('getting VRE capacity...')
     
     # Get CF profiles and resources
-    recf = pd.read_pickle(os.path.join('reeds_server','users_output', user, runname,'runs',args['scenario'],'augur_data','recf_{}.pkl'.format(scenario))) # 0.4 s
-    resources = pd.read_pickle(os.path.join('reeds_server','users_output', user, runname,'runs',args['scenario'],'augur_data','resources_{}.pkl'.format(scenario)))
+    recf = pd.read_pickle(os.path.join(args['data_dir'],'recf_{}.pkl'.format(scenario)))
+    resources = pd.read_pickle(os.path.join(args['data_dir'],'resources_{}.pkl'.format(scenario)))
 
     #Filter datetime mapper to a single year if only running with one year of data
     if len(recf) == 8760:
@@ -364,7 +364,7 @@ def prep_data(args):
         print('getting load and net load profiles...')
 
     # Get load profiles
-    load = pd.read_pickle(os.path.join('reeds_server','users_output', user, runname,'runs',args['scenario'],'augur_data','load_{}.pkl'.format(scenario)))
+    load = pd.read_pickle(os.path.join(args['data_dir'],'load_{}.pkl'.format(scenario)))
     # EFS profiles are indexed by year and hour index
     # If there are two index names for load, then we know we are using EFS profiles
     # if(len(load.index.names)==2):

@@ -461,9 +461,9 @@ def delete_csvs(args):
     
     user, runname = args['scenario'].split('_')[0], args['scenario'].split('_')[0] + '_' +  args['scenario'].split('_')[1]
     for f in file_names:
-        if os.path.isfile(os.path.join(args['reeds_path'],'reeds_server','users_output',user, runname,'runs',args['scenario'],'augur_data', f)):
-            os.remove(os.path.join(args['reeds_path'],'reeds_server','users_output',user, runname, 'runs',args['scenario'], 'augur_data', f))
-    os.remove(os.path.join(args['reeds_path'],'reeds_server','users_output',user, runname,'runs',args['scenario'], 'augur_data',
+        if os.path.isfile(os.path.join(args['data_dir'], f)):
+            os.remove(os.path.join(args['data_dir'], f))
+    os.remove(os.path.join(args['data_dir'],
                            'osprey_outputs_{}.gdx'.format(args['tag'])))
 
 

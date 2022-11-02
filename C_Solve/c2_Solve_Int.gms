@@ -58,7 +58,7 @@ storage_in_min_load_file(gdxfiles,r,h,t)
 hourly_arbitrage_value_load_file(gdxfiles,i,r,t)
 hav_int_load(gdxfiles,i,r,dummy);
 
-$gdxin reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%ReEDS_augur_merged_%case%_%niter%.gdx
+$gdxin %casepath%%ds%augur_data%ds%ReEDS_augur_merged_%case%_%niter%.gdx
 $loadr curt_old_load_file = curt_old
 $loadr curt_mingen_load_file = curt_mingen
 $loadr curt_marg_load_file = curt_marg
@@ -276,13 +276,13 @@ $endif.seconditer
 cc_int(i,v,r,szn,t)$[cc_int(i,v,r,szn,t) < 0.001] = 0 ;
 curt_int(i,r,h,t)$[curt_int(i,r,h,t) < 0.001] = 0 ;
 
-execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%runs%ds%%case%%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int, curt_int, oldVREgen ;
+execute_unload '%casepath%%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int, curt_int, oldVREgen ;
 
 *following line will load in the level values if the switch is enabled
 *note that this is still within the conditional that we are now past the first iteration
 *and thus a loadpoint is enabled
 if(Sw_Loadpoint = 1,
-execute_loadpoint 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%gdxfiles%ds%%case%_load.gdx';
+execute_loadpoint '%casepath%%ds%gdxfiles%ds%%case%_load.gdx';
 );
 
 
@@ -333,7 +333,7 @@ if(Sw_TxLimit = 0,
 solve %case% using lp minimizing z;
 
 if(Sw_Loadpoint = 1,
-execute_unload 'reeds_server%ds%users_output%ds%%user%%ds%%runname%%ds%gdxfiles%ds%%case%_load.gdx';
+execute_unload '%casepath%%ds%gdxfiles%ds%%case%_load.gdx';
 );
 
 *============================

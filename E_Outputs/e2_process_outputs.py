@@ -19,18 +19,36 @@ if os.name == 'posix':
     os.environ['GAMS_DIR'] = os.path.dirname(subprocess.check_output(['which', 'gams'])).decode()
 import gdxpds
 import pandas as pd
+import argparse
 #%%
 # suppress pandas chained assignments warning
 pd.options.mode.chained_assignment = None
 
-tag = sys.argv[1] #tag = "ilya2_test2"
-cases = list(sys.argv[2:]) #cases = ["ilya2_test2_Ref","ilya2_test2_LCSolar"]
+parser = argparse.ArgumentParser(description="""Create analysis outputs for VIZIT""")
+
+parser.add_argument("solutions_dir", help="""Directory of runs folder with solutions""", type=str)
+parser.add_argument("excel", help="""Save to excel file""", type=str)
+parser.add_argument("solutions", help="""List of solutions""", nargs='+', type=str)
+input_args = parser.parse_args()
+
+args = dict()
+for arg in vars(input_args):
+    args[arg] = getattr(input_args, arg)
+
+cases = args['solutions'] #cases = ["ilya2_test2_Ref","ilya2_test2_LCSolar"]
 
 #%%
-scenarios = [x.split('_')[1] + "_" + x.split('_')[2] for x in cases]
-user = [x.split('_')[0] for x in cases][0]
-root = os.path.join("reeds_server", "users_output", user)
-SAVEDIR = os.path.join(root, tag, 'exceloutput')
+if len(cases[0].split('_')) == 3:
+    user = [x.split('_')[0] for x in cases][0]
+    scenarios = [x.split('_')[1] + "_" + x.split('_')[2] for x in cases]
+    root = args['solutions_dir']
+    SAVEDIR = os.path.join(root, 'exceloutput')
+else:
+    user = ""
+    scenarios = [x.split('_')[1] for x in cases]
+    root = os.path.join("E_Outputs", "runs")
+    SAVEDIR = os.path.join(root, 'outputs_{}'.format("-".join(cases)))
+
 Path(SAVEDIR).mkdir(parents=True, exist_ok=True)
 
 #%%
@@ -118,7 +136,10 @@ def sorting(df, techs=False, tslcs=False, BAs=False):
 
 def get_gdxdirs(cs):
     """finds path directories for gdx outputs"""
-    gdxdirs = [os.path.join(root, x.split('_')[0] + '_' + x.split('_')[1], "runs", x, "outputs", "output_{}.gdx".format(x)) for x in cs]
+    if user == '':
+        gdxdirs = [os.path.join(root, x, "outputs", "output_{}.gdx".format(x)) for x in cs]
+    else:
+        gdxdirs = [os.path.join(root, "runs", x, "outputs", "output_{}.gdx".format(x)) for x in cs]
     return gdxdirs
 
 def add_scen_col(df, scenario):
@@ -139,7 +160,10 @@ def read_gdxs(gdxdirs, cs):
             exit()
         else:
             print("Reading {}".format(gdxdirs[i]))
-        scenario = cs[i].split('_')[1] + "_" + cs[i].split('_')[2]
+        if user == '':
+            scenario = cs[i].split('_')[1] 
+        else:
+            scenario = cs[i].split('_')[1] + "_" + cs[i].split('_')[2]
         dat = dict.fromkeys(keep)
         with gdxpds.gdx.GdxFile(lazy_load=False) as f:
             f.read(gdxdirs[i])
@@ -327,15 +351,16 @@ def write_outputs(dir):
     #%%
     ######## EXPORT TO EXCEL
     # separate sheet for each table
-    writer = pd.ExcelWriter(os.path.join(os.getcwd(), dir, "{}_outputs.xlsx".format(tag)))
+    if args['excel'] == 'T':
+        writer = pd.ExcelWriter(os.path.join(os.getcwd(), dir, "outputs_{}.xlsx".format("-".join(cases))))
 
-    annual_out.to_excel(writer, sheet_name="Annual results", index=False)
-    firmcap.to_excel(writer, sheet_name="Seasonal firm capacity", index=False)
-    tslc_out.to_excel(writer, sheet_name="Timeslice results", index=False)
-    tx_out.to_excel(writer, sheet_name='Transmission results', index=False)
+        annual_out.to_excel(writer, sheet_name="Annual results", index=False)
+        firmcap.to_excel(writer, sheet_name="Seasonal firm capacity", index=False)
+        tslc_out.to_excel(writer, sheet_name="Timeslice results", index=False)
+        tx_out.to_excel(writer, sheet_name='Transmission results', index=False)
 
-    writer.save()
-    print("Results saved to " + os.path.join(dir, "{}_outputs.xlsx".format(tag)))
+        writer.save()
+        print("Results saved to " + os.path.join(dir, "outputs_{}.xlsx".format("-".join(cases))))
 
     ######## WRITE OUTPUTS FOR VIZIT
     
@@ -436,3 +461,4 @@ def write_outputs(dir):
     shutil.copyfile('style.csv', os.path.join(csvsdir, 'style.csv'))
 
 write_outputs(SAVEDIR)
+print('Done writing files for VIZIT')
