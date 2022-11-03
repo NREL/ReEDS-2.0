@@ -336,7 +336,7 @@ def createmodelthreads(envVar):
 					 ThreadInit['GAMSDir'],
 					 ThreadInit['hpcchoice'],
 					 ThreadInit['output_folder_path'],
-					 )
+					)
 			q.task_done()
 
 	threads = []
@@ -621,10 +621,12 @@ def main(ui_input=None, notify = None, uuid=None):
 		else:
 			entry_folder = 'E_Outputs'
 		for r in runnames:
+
 			if envVar['comp'] == 1: #compile the model if indicated by user
 				shell_script_path = os.path.join(entry_folder,'runs',r,'compile_{}{}'.format(r, FILE_EXTENSION))
-				# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
+				subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
 				subprocess.call(shell_script_path, shell=True)
+				# print('Command executed', shell_script_path)
 				# p1 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
 				# if notify:
 				# 	p1_stdout_content = p1.stdout.read().decode().split('\n')
@@ -641,7 +643,7 @@ def main(ui_input=None, notify = None, uuid=None):
 
 			if envVar['run'] == 1: #run the model if indicated by user
 				shell_script_path = os.path.join(entry_folder,'runs',r,'run_{}{}'.format(r, FILE_EXTENSION))
-				# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
+				subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
 				subprocess.call(shell_script_path, shell=True)
 				# p3 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
 				# if notify:
