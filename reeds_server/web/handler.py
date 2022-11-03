@@ -226,100 +226,106 @@ def run_simulation_using_queue(queue, db, instances_dict, thread_event):
 
     while True:
 
-        # Remove this in the future
-        time.sleep(3)
+        try:
 
-        if not queue.empty():
-            sim_data = queue.get()
+            # Remove this in the future
+            time.sleep(3)
 
-            # Generate a process
-            p = Process(
-                target=main,
-                name=sim_data["uuid"],
-                args=(sim_data["input"], notify, sim_data["uuid"]),
-            )
+            if not queue.empty():
+                sim_data = queue.get()
 
-            with data_lock:
-                if sim_data["username"] not in instances_dict:
-                    instances_dict[sim_data["username"]] = {}
-
-                instances_dict[sim_data["username"]][sim_data["uuid"]] = {
-                    "process": p,
-                    "name": sim_data["input"]["run_name"],
-                }
-
-            with session_manager() as session:
-                db.update_output_metadata_status(
-                    session,
-                    "RUNNING",
-                    sim_data["input"]["run_name"],
-                    sim_data["username"],
+                # Generate a process
+                p = Process(
+                    target=main,
+                    name=sim_data["uuid"],
+                    args=(sim_data["input"], notify, sim_data["uuid"]),
                 )
-                session.commit()
 
-            # Start a process
-            p.start()
+                with data_lock:
+                    if sim_data["username"] not in instances_dict:
+                        instances_dict[sim_data["username"]] = {}
 
-            email_body = UserSimRunInitiationHTMLMessage().return_rendered_html(
-                {
-                    "uuid": sim_data["uuid"],
-                    "name": sim_data["input"]["run_name"],
-                    "description": sim_data.get(
-                        "description", "No description provided"
-                    ),
-                    "link_to_logs": f"{os.getenv('BASE_URL_FOR_SIMULATION_STATUS')}/{sim_data['uuid']}",
-                }
-            )
+                    instances_dict[sim_data["username"]][sim_data["uuid"]] = {
+                        "process": p,
+                        "name": sim_data["input"]["run_name"],
+                    }
 
-            if os.getenv("DEPLOY_MODE") != "local":
-                mail = AWS_SES_HTMLMail(
-                    os.getenv("AWS_REGION"), ec2_instance=True
+                with session_manager() as session:
+                    db.update_output_metadata_status(
+                        session,
+                        "RUNNING",
+                        sim_data["input"]["run_name"],
+                        sim_data["username"],
+                    )
+                    session.commit()
+
+                # Start a process
+                p.start()
+
+                email_body = UserSimRunInitiationHTMLMessage().return_rendered_html(
+                    {
+                        "uuid": sim_data["uuid"],
+                        "name": sim_data["input"]["run_name"],
+                        "description": sim_data.get(
+                            "description", "No description provided"
+                        ),
+                        "link_to_logs": f"{os.getenv('BASE_URL_FOR_SIMULATION_STATUS')}/{sim_data['uuid']}",
+                    }
                 )
-            else:
-                mail = TestMail()
-            mail.send_email(
-                os.getenv("REEDS_SENDER"),
-                sim_data["usr_email"],
-                email_body,
-                REEDS_SIM_INITIATION_SUBJECT
-                + f" : {sim_data['input']['run_name']}",
-            )
 
-            # Join the process
-            p.join()
-
-            email_body = UserSimRunCompleteHTMLMessage().return_rendered_html(
-                {
-                    "uuid": sim_data["uuid"],
-                    "name": sim_data["input"]["run_name"],
-                    "description": sim_data.get(
-                        "description", "No description provided"
-                    ),
-                }
-            )
-
-            if os.getenv("DEPLOY_MODE") != "local":
-                mail = AWS_SES_HTMLMail(
-                    os.getenv("AWS_REGION"), ec2_instance=True
+                if os.getenv("DEPLOY_MODE") != "local":
+                    mail = AWS_SES_HTMLMail(
+                        os.getenv("AWS_REGION"), ec2_instance=True
+                    )
+                else:
+                    mail = TestMail()
+                mail.send_email(
+                    os.getenv("REEDS_SENDER"),
+                    sim_data["usr_email"],
+                    email_body,
+                    REEDS_SIM_INITIATION_SUBJECT
+                    + f" : {sim_data['input']['run_name']}",
                 )
-            else:
-                mail = TestMail()
-            mail.send_email(
-                os.getenv("REEDS_SENDER"),
-                sim_data["usr_email"],
-                email_body,
-                REEDS_SIM_COMPLETE_SUBJECT
-                + f" : {sim_data['input']['run_name']}",
-            )
 
-            with session_manager() as session:
-                db.delete_simulation_queue(
-                    session, sim_data["username"], sim_data["uuid"]
+                # Join the process
+                p.join()
+
+                email_body = UserSimRunCompleteHTMLMessage().return_rendered_html(
+                    {
+                        "uuid": sim_data["uuid"],
+                        "name": sim_data["input"]["run_name"],
+                        "description": sim_data.get(
+                            "description", "No description provided"
+                        ),
+                    }
                 )
-                session.commit()
 
-        if thread_event.is_set():
-            break
+                if os.getenv("DEPLOY_MODE") != "local":
+                    mail = AWS_SES_HTMLMail(
+                        os.getenv("AWS_REGION"), ec2_instance=True
+                    )
+                else:
+                    mail = TestMail()
+                mail.send_email(
+                    os.getenv("REEDS_SENDER"),
+                    sim_data["usr_email"],
+                    email_body,
+                    REEDS_SIM_COMPLETE_SUBJECT
+                    + f" : {sim_data['input']['run_name']}",
+                )
+
+                
+                with session_manager() as session:
+                    db.delete_simulation_queue(
+                        session, sim_data["username"], sim_data["uuid"]
+                    )
+                    session.commit()
+            
+
+            if thread_event.is_set():
+                break
+        except Exception as e:
+            print('Ran into an error >>>', str(e))
 
 
 class Handler:
@@ -2265,6 +2271,7 @@ class Handler:
 
         try:
             data = await request.json()
+            
             with session_manager() as session:
                 scenarios_personnel = self.db.get_scenarios_by_user(
                     session, request["userData"]["username"]
@@ -2441,6 +2448,7 @@ class Handler:
             data = await request.json()
 
             if data["status"] == "INQUEUE":
+                
                 with data_lock:
                     temp_queue = Queue()
                     for _ in range(self.simulation_queue.qsize()):
@@ -2461,8 +2469,10 @@ class Handler:
                     session, request["userData"]["username"], data["uuid"]
                 )
                 session.commit()
+            
 
             if data in output_metadata:
+                
 
                 #  Kill the process if alive
                 for uuid_ in self.instances_dict.get(
@@ -2474,13 +2484,18 @@ class Handler:
                         ]["name"]
                         == data["name"]
                     ):
+                        
                         if self.instances_dict[request["userData"]["username"]][
                             uuid_
                         ]["process"].is_alive():
-                            self.instances_dict[
+                            
+                            try:
+                                self.instances_dict[
                                 request["userData"]["username"]
-                            ][uuid_]["process"].terminate()
-
+                                ][uuid_]["process"].kill()
+                            except Exception as e:
+                                print('Captured an exception', str(e))
+                            
                 # delete the folder from E-Outputs folder
                 try:
                     run_folder = os.path.join(
@@ -2516,12 +2531,16 @@ class Handler:
                     print(str(e))
                     pass
 
-                with session_manager() as session:
-                    self.db.delete_output_metadata(session, data)
-                    session.commit()
-                    output_metadata = self.db.get_output_metadata(
-                        session, request["userData"]["username"]
-                    )
+                try:
+                    with session_manager() as session:
+                        self.db.delete_output_metadata(session, data)
+                        session.commit()
+                        output_metadata = self.db.get_output_metadata(
+                            session, request["userData"]["username"]
+                        )
+                except Exception as e:
+                    print('Exception', str(e))
+                print('Completed')
 
             return web.Response(text=json.dumps(output_metadata), status=200, headers=self.headers)
         except Exception as e:
