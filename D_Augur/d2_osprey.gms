@@ -396,6 +396,7 @@ eq_ObjFn..
 Model transmission /all/ ;
 
 transmission.optfile = 1 ;
+OPTION lp = Cplex;
 OPTION RESLIM = 500000 ;
 
 *=============================

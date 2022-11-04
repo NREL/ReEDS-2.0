@@ -231,14 +231,15 @@ def setupEnvironment(ui_input=None):
 
 	if 'settings' not in ui_input:
 		cc_curtchoice = int(input('Do you want to iteritively calculate capacity value and curtailment? (0=no / 1=yes, default 1): ') or 1)
-		GAMSDir_input = str(input('Where is the path to the GAMS executable? (default {}): '.format(GAMSDir)))
+		# GAMSDir_input = str(input('Where is the path to the GAMS executable? (default {}): '.format(GAMSDir)))
+		GAMSDir_input = ''
 		if GAMSDir_input != '': #user input will be '' if nothing was entered.
 			GAMSDir = GAMSDir_input
 		comp = int(input('Compile inputs and model equations? (0=no / 1=yes, default 1): ') or 1)
 		run = int(input('Run model? (0=no / 1=yes, default 1): ') or 1)
 	
 		if run == 0:
-			hpcchoice = int(input('Generate shell scripts to run on NREL HPC (SLURM)? (0=no / 1=yes, default 0):') or 0)
+			hpcchoice = int(input('Generate shell scripts to run on NREL HPC (SLURM)? (0=no / 1=yes, default 1):') or 1)
 		else:
 			hpcchoice = 0
 	else:
@@ -513,7 +514,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 
 			OPATH.writelines("gams " + str(os.path.join("E_Outputs","e1_create_report.gms")) + " o=" + str(os.path.join(output_folder,"runs",lstfile,"lstfiles","e1_create_report_" + lstfile + ".lst")) +\
 							 " r=" + str(os.path.join(OutputDir,"g00files",restartfile)) + toLogGamsString + " --fname=" + lstfile + ' --casepath=' + OutputDir +' \n')
-		   
+		   	
 			OPATH.close()
 
 			if hpcchoice == 1:
@@ -616,10 +617,13 @@ def main(ui_input=None, notify = None, uuid=None):
 		
 		# --- Interpret CLI flags to compile or run after batch scripts are created ---
 		runnames = ['{}_{}'.format(envVar['runname'], i) for i in envVar['casenames']]
+		n_runs = len(runnames)
+		
 		if ui_input:
 			entry_folder = os.path.abspath(ui_input['output_folder_path'])
 		else:
 			entry_folder = 'E_Outputs'
+
 		for r in runnames:
 
 			if envVar['comp'] == 1: #compile the model if indicated by user
@@ -658,18 +662,25 @@ def main(ui_input=None, notify = None, uuid=None):
 				# 	for each in p4_stdout_content:
 				# 		notify(each, uuid)
 				# 	log_contents.extend(p4_stdout_content)
-
-			n_runs = len(runnames)
-				
+					
 			if r == runnames[(n_runs-1)]: #process results if the final run has finished
-				if ui_input == {}:
+				if envVar['hpcchoice'] == 0:
+					if ui_input == {}:
+						solutions_dir = os.path.join("E_Outputs", "runs")
+						saveexcel = 'F'
+					else:
+						solutions_dir = entry_folder
+						saveexcel = 'T'
+					#print("{} {} {} {} {}".format(os.getenv('PYTHON_PATH'), os.path.join("E_Outputs", "e2_process_outputs.py"), solutions_dir, saveexcel, " ".join(runnames)))
+					os.system("{} {} {} {} {}".format(os.getenv('PYTHON_PATH'), os.path.join("E_Outputs", "e2_process_outputs.py"), solutions_dir, saveexcel, " ".join(runnames)))
+				else:
 					solutions_dir = os.path.join("E_Outputs", "runs")
 					saveexcel = 'F'
-				else:
-					solutions_dir = entry_folder
-					saveexcel = 'T'
-				print("{} {} {} {} {}".format(os.getenv('PYTHON_PATH'), os.path.join("E_Outputs", "e2_process_outputs.py"), solutions_dir, saveexcel, " ".join(runnames)))
-				os.system("{} {} {} {} {}".format(os.getenv('PYTHON_PATH'), os.path.join("E_Outputs", "e2_process_outputs.py"), solutions_dir, saveexcel, " ".join(runnames)))
+					process_outputs_command = "{} {} {} {} {}".format(os.getenv('PYTHON_PATH'), os.path.join("E_Outputs", "e2_process_outputs.py"), solutions_dir, saveexcel, " ".join(runnames))
+					with open(os.path.join("shfiles", r + '.sh'), 'a') as OPATH:
+						OPATH.write("\n")
+						OPATH.write(process_outputs_command)
+					OPATH.close()
 
 		if notify:
 			with open(os.path.join(ui_input['output_folder_path'], 'full_log.txt'), 'w') as f:
