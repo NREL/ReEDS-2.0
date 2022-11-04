@@ -171,7 +171,9 @@ def get_formatted_time():
 	formatted_time = time.strftime('%Y%m%d_%H%M%S')
 	return formatted_time
 #%%
-def setupEnvironment(ui_input={}):
+def setupEnvironment(ui_input=None):
+	if ui_input is None:
+		ui_input = {}
 
 	# If input is coming at once
 	# input = {'run_name': 'test', '}
@@ -229,22 +231,21 @@ def setupEnvironment(ui_input={}):
 
 	if 'settings' not in ui_input:
 		cc_curtchoice = int(input('Do you want to iteritively calculate capacity value and curtailment? (0=no / 1=yes, default 1): ') or 1)
-		GAMSDir_input = str(input('Where is the path to the GAMS executable? (default {}): '.format(GAMSDir)))
+		# GAMSDir_input = str(input('Where is the path to the GAMS executable? (default {}): '.format(GAMSDir)))
+		GAMSDir_input = ''
 		if GAMSDir_input != '': #user input will be '' if nothing was entered.
 			GAMSDir = GAMSDir_input
 		comp = int(input('Compile inputs and model equations? (0=no / 1=yes, default 1): ') or 1)
 		run = int(input('Run model? (0=no / 1=yes, default 1): ') or 1)
-		rmdchoice = int(input('Generate R Markdown for visualization after scenario run? (0=no / 1=yes, default 1): ') or 1)
 	
 		if run == 0:
-			hpcchoice = int(input('Generate shell scripts to run on NREL HPC (SLURM)? (0=no / 1=yes, default 0):') or 0)
+			hpcchoice = int(input('Generate shell scripts to run on NREL HPC (SLURM)? (0=no / 1=yes, default 1):') or 1)
 		else:
 			hpcchoice = 0
 	else:
 		cc_curtchoice = int(ui_input['settings']['iterative'])
 		comp = int(ui_input['settings']['compile'])
 		run = int(ui_input['settings']['run_model'])
-		rmdchoice = int(ui_input['settings']['r_md'])
 		hpcchoice = 0
 
 
@@ -291,7 +292,6 @@ def setupEnvironment(ui_input={}):
 				'GAMSDir': GAMSDir,
 				'INPUTDir' : INPUTDir,
 				'cc_curtchoice' : cc_curtchoice,
-				'rmdchoice' : rmdchoice,
 				'comp' : comp,
 				'run' : run,
 				'timetypeset' : timetypeset,
@@ -336,9 +336,8 @@ def createmodelthreads(envVar):
 					 ThreadInit['cc_curtchoice'],
 					 ThreadInit['GAMSDir'],
 					 ThreadInit['hpcchoice'],
-					 ThreadInit['rmdchoice'],
 					 ThreadInit['output_folder_path'],
-					 )
+					)
 			q.task_done()
 
 	threads = []
@@ -363,7 +362,6 @@ def createmodelthreads(envVar):
 			   'cc_curtchoice':envVar['cc_curtchoice'],
 			   'GAMSDir':envVar['GAMSDir'],
 			   'hpcchoice':envVar['hpcchoice'],
-			   'rmdchoice':envVar['rmdchoice'],
 			   'output_folder_path': envVar.get('output_folder_path', '')
 			   })
 
@@ -398,57 +396,42 @@ def makeOptFile(optFileNum, caseIndex, case_name):
 
 def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPUTDir,
 			 endyear,ccworkers,startiter,hourlyloadfile,
-			 cc_curtchoice, GAMSDir, hpcchoice, rmdchoice, output_folder=''):
+			 cc_curtchoice, GAMSDir, hpcchoice, output_folder=''):
 
 	if output_folder == '':
-		output_folder = 'E_outputs'
+		output_folder = 'E_Outputs'
+		OutputDir = os.path.join(INPUTDir, "E_Outputs", "runs", lstfile)
 	else:
 		output_folder = os.path.abspath(output_folder)
+		OutputDir = os.path.join(output_folder, "runs", lstfile)
 
-	Path(os.path.join(output_folder, "runs", lstfile)).mkdir(parents=True, exist_ok=True)
-	Path(os.path.join(output_folder, "runs", lstfile, "g00files")).mkdir(parents=True, exist_ok=True)
-	Path(os.path.join(output_folder, "runs", lstfile, "lstfiles")).mkdir(parents=True, exist_ok=True)
-	Path(os.path.join(output_folder, "runs", lstfile, "outputs")).mkdir(parents=True, exist_ok=True)
-	#Path(os.path.join(output_folder, "runs", lstfile, "outputs", "variabilityFiles")).mkdir(parents=True, exist_ok=True)
-	Path(os.path.join(output_folder, "gdxfiles")).mkdir(parents=True, exist_ok=True)
-	
-	#if not os.path.exists(os.path.join(output_folder, "runs", lstfile)):
-		#os.mkdir(os.path.join("E_Outputs", "runs", lstfile))
-	#if not os.path.exists(os.path.join("E_Outputs", "runs", lstfile, "g00files")):
-		#os.mkdir(os.path.join("E_Outputs", "runs", lstfile, "g00files"))
-	# if not os.path.exists(os.path.join("E_Outputs", "runs", lstfile, "lstfiles")):
-	# 	os.mkdir(os.path.join("E_Outputs", "runs", lstfile, "lstfiles"))
-	# if not os.path.exists(os.path.join("E_Outputs", "runs", lstfile, "outputs")):
-	# 	os.mkdir(os.path.join("E_Outputs", "runs", lstfile, "outputs"))
-	# if not os.path.exists(os.path.join("E_Outputs", "runs", lstfile, "outputs", "variabilityFiles")):
-	# 	os.mkdir(os.path.join("E_Outputs", "runs", lstfile, "outputs", "variabilityFiles"))
+	Path(os.path.join(OutputDir)).mkdir(parents=True, exist_ok=True)
+	Path(os.path.join(OutputDir, "g00files")).mkdir(parents=True, exist_ok=True)
+	Path(os.path.join(OutputDir, "lstfiles")).mkdir(parents=True, exist_ok=True)
+	Path(os.path.join(OutputDir, "outputs")).mkdir(parents=True, exist_ok=True)
+	Path(os.path.join(OutputDir, "gdxfiles")).mkdir(parents=True, exist_ok=True)
 	
 	# --- Clean paths entered in cases.csv ---
 	yearfile = yearfile.replace('\\', os.sep).replace('/', os.sep)
 	hourlyloadfile = hourlyloadfile.replace('\\', os.sep).replace('/', os.sep)
-
-	if output_folder != "E_Outputs":
-		OutputDir = os.path.join(output_folder, "runs", lstfile)
-	else:
-		OutputDir = os.path.join(INPUTDir, "E_Outputs", "runs", lstfile)
 	
 	solveyears= list(csv.reader(open(os.path.join(INPUTDir,"A_Inputs","inputs","sets",yearfile), 'r'), delimiter=","))[0]
 	solveyears = [y for y in solveyears if y <= endyear]
-	toLogGamsString =  ' logOption=4 logFile=' + str(os.path.join(output_folder, "runs", lstfile, 'gamslog.txt')) + ' ' + 'appendLog=1 '
+	toLogGamsString =  ' logOption=4 logFile=' + str(os.path.join(OutputDir, 'gamslog.txt')) + ' ' + 'appendLog=1 '
 
 	with open(os.path.join(OutputDir, 'compile_' + lstfile + FILE_EXTENSION), 'w') as OPATH:
 		OPATH.write("gams " + str(os.path.join("A_Inputs", "a_inputs.gms")) +\
-					" s=" + str(os.path.join(output_folder,"runs",lstfile,"g00files","data_india")) +\
-					" o=" + str(os.path.join(output_folder,"runs",lstfile,"lstfiles","inputs.lst")) +\
+					" s=" + str(os.path.join(OutputDir,"g00files","data_india")) +\
+					" o=" + str(os.path.join(OutputDir,"lstfiles","inputs.lst")) +\
 					" --TotIter=" + str(niter) +' --hourlyloadfile=' + str(hourlyloadfile) + toLogGamsString + options + ' \n')
 		OPATH.write("gams " + str(os.path.join("B_Equations","b1_model_constraints.gms")) +\
-					" o=" + str(os.path.join(output_folder,"runs",lstfile,"lstfiles","Supply_Model.lst")) +\
-					" r=" + str(os.path.join(output_folder,"runs",lstfile,"g00files","data_india")) + " s=" +\
-					str(os.path.join(output_folder,"runs",lstfile,"g00files","supmod")) + ' \n')
+					" o=" + str(os.path.join(OutputDir,"lstfiles","Supply_Model.lst")) +\
+					" r=" + str(os.path.join(OutputDir,"g00files","data_india")) + " s=" +\
+					str(os.path.join(OutputDir,"g00files","supmod")) + ' \n')
 		OPATH.write("gams " + str(os.path.join("B_Equations","b2_objective_function.gms")) +\
-					" o=" + str(os.path.join(output_folder,"runs",lstfile,"lstfiles","Supply_Objective.lst")) +\
-					" r=" + str(os.path.join(output_folder,"runs",lstfile,"g00files","supmod")) +\
-					" s=" + str(os.path.join(output_folder,"runs",lstfile,"g00files","supply_objective" + ' \n')))
+					" o=" + str(os.path.join(OutputDir,"lstfiles","Supply_Objective.lst")) +\
+					" r=" + str(os.path.join(OutputDir,"g00files","supmod")) +\
+					" s=" + str(os.path.join(OutputDir,"g00files","supply_objective" + ' \n')))
 
     
 	#############################
@@ -460,8 +443,6 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 	#############################
 	# -- window setup -- 
 	#############################
-	user = lstfile.split('_')[0]
-	runname = lstfile.split('_')[0] + '_' + lstfile.split('_')[1]
 	if timetype=='win':
 		raise NotImplementedError("This branch is currently only implemented to work with intertemporal solve!")
 
@@ -480,11 +461,12 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 			savefile = lstfile
 			if startiter == 0:
 				OPATH.writelines("gams " + str(os.path.join("C_Solve","c1_Solveprep.gms")) + " r=" +\
-								 str(os.path.join(output_folder,"runs",lstfile,"g00files","supply_objective")) +\
-								 " s=" + str(os.path.join(output_folder,"runs",lstfile,"g00files",savefile)) +\
-								 " o=" + str(os.path.join(output_folder,"runs",lstfile,"lstfiles", lstfile +".lst")) +\
-								 ' --hourlyloadfile='+str(hourlyloadfile) + toLogGamsString + options + " --user=" + user + " --runname=" + runname + \
-								 ' --pythonpath=' + str(os.getenv('PYTHON_PATH')) + ' \n')
+								 str(os.path.join(OutputDir,"g00files","supply_objective")) +\
+								 " s=" + str(os.path.join(OutputDir,"g00files",savefile)) +\
+								 " o=" + str(os.path.join(OutputDir,"lstfiles", lstfile +".lst")) +\
+								 ' --hourlyloadfile='+str(hourlyloadfile) + toLogGamsString + options + \
+								 ' --pythonpath=' + str(os.getenv('PYTHON_PATH')) + \
+								 ' --casepath=' + OutputDir +'\n')
 				restartfile=savefile
 			if startiter > 0:
 				restartfile = lstfile+"_"+startiter
@@ -492,28 +474,32 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 			#for the number of iterations we have...
 			niter = int(niter)
 			startiter = int(startiter)
+
+			if cc_curtchoice == 0:
+				niter = 1
 			
 			for i in range(startiter,niter):
 				#call the intertemporal solve
 				savefile = lstfile+"_"+str(i)
 				OPATH.writelines("gams " + str(os.path.join("C_Solve","c2_Solve_Int.gms")) +\
-								 " o=" + str(os.path.join(output_folder,"runs",lstfile,"lstfiles", lstfile + "_" + str(i) + ".lst")) +\
-								 " r=" + str(os.path.join(output_folder,"runs",lstfile,"g00files",restartfile)) + " s=" +\
-								 str(os.path.join(output_folder,"runs",lstfile,"g00files",savefile)) + toLogGamsString +\
-								 " --niter=" + str(i) + " --case=" + lstfile  + " --modoptfile=" + str(modoptfile) + " --user=" + user + " --runname=" + runname + '\n')
+								 " o=" + str(os.path.join(OutputDir,"lstfiles", lstfile + "_" + str(i) + ".lst")) +\
+								 " r=" + str(os.path.join(OutputDir,"g00files",restartfile)) + " s=" +\
+								 str(os.path.join(OutputDir,"g00files",savefile)) + toLogGamsString +\
+								 " --niter=" + str(i) + " --case=" + lstfile  + " --modoptfile=" + str(modoptfile) + ' --casepath=' + OutputDir + '\n')
 
 				#start threads for cc/curt
-				#no need to run cc curt scripts for final iteration
-				if i < niter:
+				#no need to run cc curt scripts for final iteration or for one iteration
+				if i < niter and niter > 1:
 					if cc_curtchoice == 1:
 						OPATH.writelines(f"{os.getenv('PYTHON_PATH')} " + str(os.path.join("D_Augur","augurbatch.py")) + " " + lstfile + " " + str(ccworkers) +\
-										 " " + yearfile + " " + savefile + " " + str(begyear) + " " + str(endyear) + " " + str(timetype) + " " + str(i) + ' \n')
+										 " " + yearfile + " " + savefile + " " + str(begyear) + " " + str(endyear) + " " + str(timetype) + " " + str(i) + " " +\
+										 OutputDir + '\n')
 					   
 						#merge all the resulting r2_in gdx files
 						#the output file will be for the next iteration
 						nextiter = i+1
-						gdxmergedfile = os.path.join(output_folder,"runs",lstfile,"augur_data","ReEDS_augur_merged_" + lstfile + "_" + str(nextiter))
-						OPATH.writelines("gdxmerge "+os.path.join(output_folder,"runs",lstfile,"augur_data","ReEDS_augur_"+lstfile+"*")+ " output=" + gdxmergedfile  + ' \n')
+						gdxmergedfile = os.path.join(OutputDir,"augur_data","ReEDS_augur_merged_" + lstfile + "_" + str(nextiter))
+						OPATH.writelines("gdxmerge "+os.path.join(OutputDir,"augur_data","ReEDS_augur_"+lstfile+"*")+ " output=" + gdxmergedfile  + ' \n')
 						#check to make sure previous calls were successful
 						#AR - following line kept throwing up inconsistent tabs and spaces error
                  		#OPATH.writelines(writeerrorcheck(gdxmergedfile+".gdx"))
@@ -522,31 +508,13 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 	
 			if caseSwitches['GSw_ValStr'] != '0':
 				OPATH.writelines('gams ' + str(os.path.join("F_Analysis","valuestreams","valuestreams.gms")) + " o=" +\
-					 str(os.path.join(output_folder,"runs",lstfile,"lstfiles","valuestreams_" + lstfile + ".lst")) +\
-					 " r=" + str(os.path.join(output_folder,"runs",lstfile,"g00files",restartfile)) + toLogGamsString +\
+					 str(os.path.join(OutputDir,"lstfiles","valuestreams_" + lstfile + ".lst")) +\
+					 " r=" + str(os.path.join(OutputDir,"g00files",restartfile)) + toLogGamsString +\
 					 ' --case=' + lstfile + '\n')
 
 			OPATH.writelines("gams " + str(os.path.join("E_Outputs","e1_create_report.gms")) + " o=" + str(os.path.join(output_folder,"runs",lstfile,"lstfiles","e1_create_report_" + lstfile + ".lst")) +\
-							 " r=" + str(os.path.join(output_folder,"runs",lstfile,"g00files",restartfile)) + toLogGamsString + " --fname=" + lstfile + " --user="+ user + " --runname=" + runname +' \n')
-
-			
-			# OPATH.writelines("python " + str(os.path.join("E_Outputs","e2_process_outputs.py")) + " " + str(lstfile + '\n') )
-			# OPATH.writelines("Rscript " + str(os.path.join("E_Outputs","e2_query_gdx_files.R ")) + str("output_"+lstfile+".gdx" + '\n') )
-
-			# if rmdchoice == 1:
-			# 	pandoc_path = str(os.path.join("Program Files","RStudio","bin","pandoc")).replace("\\","\\\\")
-			# 	rmd_render_path = str(os.path.join('F_Analysis','Basic-results.Rmd')).replace("\\","\\\\")
-
-			# 	OPATH.writelines("""Rscript -e "Sys.setenv(RSTUDIO_PANDOC='C:\\\\Program Files\\\\RStudio\\\\bin\\\\pandoc')" -e "rmarkdown::render('{}', output_file='ReEDS-India-results_{}.html', params = list('scenario' = '{}'))" \n""".format(rmd_render_path, lstfile, lstfile))
-			# 	base_dir = os.path.dirname(__file__)
-				
-			# 	# TODO :Mkae sure to point to user folder
-			# 	if output_folder:
-			# 		html_path = os.path.join(output_folder,'ReEDS-India-results_{}.html'.format(lstfile)).replace("\\","\\\\")
-			# 	else:
-			# 		html_path = os.path.join(base_dir, 'F_Analysis','ReEDS-India-results_{}.html'.format(lstfile)).replace("\\","\\\\")
-			# 	OPATH.writelines("""start {} \n""".format(html_path))
-					   
+							 " r=" + str(os.path.join(OutputDir,"g00files",restartfile)) + toLogGamsString + " --fname=" + lstfile + ' --casepath=' + OutputDir +' \n')
+		   	
 			OPATH.close()
 
 			if hpcchoice == 1:
@@ -571,13 +539,17 @@ def checkLDCpkl(filedst,filename,filesrc=os.path.join('nrelqnap02','ReEDS','8760
 		shutil.copy(os.path.join(filesrc, filename), os.path.join(filedst, filename))     
 
 
-def main(ui_input={}, notify = None, uuid=None):
+def main(ui_input=None, notify = None, uuid=None):
 	
-	if notify:
+	if ui_input is None:
+		ui_input = {}
+		os.environ['PYTHON_PATH'] = 'python'
+	
+	if notify is not None:
 		log_contents = []
-		def print(str_):
-			notify(str_, uuid)
-			log_contents.append(str_ + '\n')
+		# def print(str_):
+		# 	notify(str_, uuid)
+		# 	log_contents.append(str_ + '\n')
 
 
 	try:
@@ -616,21 +588,20 @@ def main(ui_input={}, notify = None, uuid=None):
 		# --- Check for Hourly Static File (i.e. /D_Augur/LDCfiles/India_8760) ---
 		#filedst = os.path.join(os.getcwd(),"D_Augur","LDCfiles")
 		filedst = os.path.join(os.path.abspath(os.path.dirname(__file__)),"D_Augur","LDCfiles")
-		pklfiles = ["_load.pkl","_recf.pkl","_resources.pkl"]
 	#%%#
 		for i in list(set(envVar['hourlyloadfileset'])):
 			# --- Stitch together state pickles into single (larger than githubs file limit) pickle ---
-			print(" ")
-			print('Stitching together state load pickles for load scenario {}'.format(i))
-			print(" ")
-			state_load_dfs = []
-			print(filedst)
-			load_pickle_dir = os.path.join(filedst, 'state_load_pickles')
-			for p in glob.glob(os.path.join(load_pickle_dir,"*{}*".format(i))):
-				state_load_dfs.append(pd.read_pickle(os.path.join(load_pickle_dir,p)))
-			India_8760_load = pd.concat(state_load_dfs, axis='columns')
-			India_8760_load = India_8760_load.reset_index(drop=False)
-			India_8760_load.to_pickle(os.path.join(filedst, '{}_load.pkl'.format(i)), protocol=2)
+			if not os.path.exists(os.path.join(filedst, '{}_load.pkl'.format(i))):
+				print(" ")
+				print('Stitching together state load pickles for load scenario {}'.format(i))
+				print(" ")
+				state_load_dfs = []
+				load_pickle_dir = os.path.join(filedst, 'state_load_pickles')
+				for p in glob.glob(os.path.join(load_pickle_dir,"*{}*".format(i))):
+					state_load_dfs.append(pd.read_pickle(os.path.join(load_pickle_dir,p)))
+				India_8760_load = pd.concat(state_load_dfs, axis='columns')
+				India_8760_load = India_8760_load.reset_index(drop=False)
+				India_8760_load.to_pickle(os.path.join(filedst, '{}_load.pkl'.format(i)), protocol=2)
 
 	#	for i in list(set(envVar['hourlystaticfileset'])): # i default is India_8760
 	#		for j in pklfiles:
@@ -646,86 +617,70 @@ def main(ui_input={}, notify = None, uuid=None):
 		
 		# --- Interpret CLI flags to compile or run after batch scripts are created ---
 		runnames = ['{}_{}'.format(envVar['runname'], i) for i in envVar['casenames']]
+		n_runs = len(runnames)
+		
 		if ui_input:
 			entry_folder = os.path.abspath(ui_input['output_folder_path'])
 		else:
 			entry_folder = 'E_Outputs'
+
 		for r in runnames:
+
 			if envVar['comp'] == 1: #compile the model if indicated by user
 				shell_script_path = os.path.join(entry_folder,'runs',r,'compile_{}{}'.format(r, FILE_EXTENSION))
-				# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
-				# subprocess.call(shell_script_path, shell=True)
-				p1 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-				if notify:
-					p1_stdout_content = p1.stdout.read().decode().split('\n')
-					for each in p1_stdout_content:
-						notify(each, uuid)
-					log_contents.extend(p1_stdout_content)
+				subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
+				subprocess.call(shell_script_path, shell=True)
+				# print('Command executed', shell_script_path)
+				# p1 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				# if notify:
+				# 	p1_stdout_content = p1.stdout.read().decode().split('\n')
+				# 	for each in p1_stdout_content:
+				# 		notify(each, uuid)
+				# 	log_contents.extend(p1_stdout_content)
 
-				p2 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-				if notify:
-					p2_stdout_content = p2.stdout.read().decode().split('\n')
-					for each in p2_stdout_content:
-						notify(each, uuid)
-					log_contents.extend(p2_stdout_content)
+				# p2 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				# if notify:
+				# 	p2_stdout_content = p2.stdout.read().decode().split('\n')
+				# 	for each in p2_stdout_content:
+				# 		notify(each, uuid)
+				# 	log_contents.extend(p2_stdout_content)
 
 			if envVar['run'] == 1: #run the model if indicated by user
 				shell_script_path = os.path.join(entry_folder,'runs',r,'run_{}{}'.format(r, FILE_EXTENSION))
-				# subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
-				# subprocess.call(shell_script_path, shell=True)
-				p3 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-				if notify:
-					p3_stdout_content = p3.stdout.read().decode().split('\n')
-					for each in p3_stdout_content:
-						notify(each, uuid)
-					log_contents.extend(p3_stdout_content)
+				subprocess.call('chmod +x {}'.format(shell_script_path), shell=True)
+				subprocess.call(shell_script_path, shell=True)
+				# p3 = Popen('chmod +x {}'.format(shell_script_path), shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				# if notify:
+				# 	p3_stdout_content = p3.stdout.read().decode().split('\n')
+				# 	for each in p3_stdout_content:
+				# 		notify(each, uuid)
+				# 	log_contents.extend(p3_stdout_content)
 
-				p4 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-				if notify:
-					p4_stdout_content = p4.stdout.read().decode().split('\n')
-					for each in p4_stdout_content:
-						notify(each, uuid)
-					log_contents.extend(p4_stdout_content)
-
-			# inputs_case_path = os.path.join(entry_folder, 'runs', r, 'inputs_case')
-			# os.mkdir(inputs_case_path)
-			# shutil.copy(os.path.join("Marmot","h_dt_szn.csv"), os.path.join(inputs_case_path, "h_dt_szn.csv"))
-			# shutil.copy(os.path.join("Marmot","regions.csv"), os.path.join(inputs_case_path, "regions.csv"))
-
-			# # --- Run MARMOT for plots --- 
-			# n_runs = len(runnames)
-			# if r == runnames[(n_runs-1)]: #run MARMOT if the final run has finished
-			# 	print("Running MARMOT plotter")
-			# 	formatter = "marmot_formatter_cli.py"
-			# 	plotter = "marmot_plotter_cli.py"
-			# 	mod = "ReEDS_India"
-			# 	scenarios = " ".join(runnames)
-			# 	scenarios_path = os.path.join(entry_folder, 'runs')
-			# 	properties_path = os.path.join("Marmot", "reeds_properties_India.csv")
-			# 	region_map_path = os.path.join("Marmot", "Region_mapping_ReEDS_India.csv")
-			# 	marmot_out_path = os.path.join(entry_folder, 'exceloutput')
-			# 	plot_select_path = os.path.join("Marmot","Marmot_plot_select_India.csv")
-			# 	reg_map_file = "Region_mapping_ReEDS_India.csv"
-			# 	gen_names_file = "gen_names_India.csv"
-			# 	gen_order_file = "ordered_gen_categories_India.csv"
-			# 	color_dict_file = "colour_dictionary_India.csv"
-
-			# 	os.system("python {} {} {} {} {} -sf {} -rm {}".format(formatter, mod, scenarios, scenarios_path, properties_path, marmot_out_path, region_map_path))
-	
-			# 	agg1 = "Country"
-			# 	os.system("python {} {} {} {} {} -a {} -sf {} -rmf {} -gnf {} -ogcf {} -cdf {} -mapf {}".format(plotter, mod, scenarios, scenarios_path, plot_select_path, agg1, marmot_out_path, reg_map_file, gen_names_file, gen_order_file, color_dict_file, "Marmot"))
-			# 	agg2 = "region"
-			# 	os.system("python {} {} {} {} {} -a {} -sf {} -rmf {} -gnf {} -ogcf {} -cdf {} -mapf {}".format(plotter, mod, scenarios, scenarios_path, plot_select_path, agg2, marmot_out_path, reg_map_file, gen_names_file, gen_order_file, color_dict_file, "Marmot"))
-
-			# 	shutil.rmtree(os.path.join(entry_folder, "exceloutput", "Processed_HDF5_folder"))
-			# 	shutil.rmtree(os.path.join(entry_folder, "exceloutput", "csv_properties"))
-			# for testing:
-			#   python marmot_formatter_cli.py "ReEDS_India" ilyac_newrun_newtest ilyac_newrun_test "reeds_server/users_output/ilyac/ilyac_newrun/runs" "Marmot/reeds_properties_India.csv" -sf "reeds_server/users_output/ilyac/ilyac_newrun/exceloutput" -rm "Marmot/Region_mapping_ReEDS_India.csv" 
-			#	python marmot_plotter_cli.py "ReEDS_India" ilyac_newrun_newtest ilyac_newrun_test "reeds_server/users_output/ilyac/ilyac_newrun/runs" "Marmot/Marmot_plot_select_India.csv" -a "Country" -sf "reeds_server/users_output/ilyac/ilyac_newrun/exceloutput" -rmf "Region_mapping_ReEDS_India.csv" -gnf "gen_names_India.csv" -ogcf "ordered_gen_categories_India.csv" -cdf "colour_dictionary_India.csv" -mapf "Marmot"
-			
-			n_runs = len(runnames)
+				# p4 = Popen(shell_script_path, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+				# if notify:
+				# 	p4_stdout_content = p4.stdout.read().decode().split('\n')
+				# 	for each in p4_stdout_content:
+				# 		notify(each, uuid)
+				# 	log_contents.extend(p4_stdout_content)
+					
 			if r == runnames[(n_runs-1)]: #process results if the final run has finished
-				os.system("{} {} {} {}".format(os.getenv('PYTHON_PATH'),os.path.join("E_Outputs", "e2_process_outputs.py"), envVar['runname'], " ".join(runnames)))
+				if envVar['hpcchoice'] == 0:
+					if ui_input == {}:
+						solutions_dir = os.path.join("E_Outputs", "runs")
+						saveexcel = 'F'
+					else:
+						solutions_dir = entry_folder
+						saveexcel = 'T'
+					#print("{} {} {} {} {}".format(os.getenv('PYTHON_PATH'), os.path.join("E_Outputs", "e2_process_outputs.py"), solutions_dir, saveexcel, " ".join(runnames)))
+					os.system("{} {} {} {} {}".format(os.getenv('PYTHON_PATH'), os.path.join("E_Outputs", "e2_process_outputs.py"), solutions_dir, saveexcel, " ".join(runnames)))
+				else:
+					solutions_dir = os.path.join("E_Outputs", "runs")
+					saveexcel = 'F'
+					process_outputs_command = "{} {} {} {} {}".format(os.getenv('PYTHON_PATH'), os.path.join("E_Outputs", "e2_process_outputs.py"), solutions_dir, saveexcel, " ".join(runnames))
+					with open(os.path.join("shfiles", r + '.sh'), 'a') as OPATH:
+						OPATH.write("\n")
+						OPATH.write(process_outputs_command)
+					OPATH.close()
 
 		if notify:
 			with open(os.path.join(ui_input['output_folder_path'], 'full_log.txt'), 'w') as f:

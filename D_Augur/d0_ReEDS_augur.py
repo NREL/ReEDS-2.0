@@ -67,25 +67,22 @@ def ReEDS_augur(args):
     ##############################
 #%% # ReEDS data dump
     ##############################
-    user, runname = args['scenario'].split('_')[0],  args['scenario'].split('_')[0] + '_' + args['scenario'].split('_')[1]
     if args['data_dump'] and args['timetype'] != 'seq':
         if os.name!="posix":
             print('\n##############################')
             print('dumping ReEDS data...')
             print('\n##############################')
         subprocess.call(['gams', os.path.join('C_Solve','c3_augur_data_dump.gms'),
-                         'o='+os.path.join('reeds_server', 'users_output', user, runname,'runs',args['scenario'],'lstfiles','data_dump.lst'),
+                         'o='+os.path.join(args['data_dir'],'..','lstfiles','data_dump.lst'),
                          'logOption='+args['log_option'],
                          'logfile=gamslog.txt',
                          'appendLog=1',
-                         'r='+os.path.join('reeds_server', 'users_output', user, runname,'runs',args['scenario'],'g00files','{}.g00'.format(args['g00'])),
+                         'r='+os.path.join(args['data_dir'],'..','g00files','{}.g00'.format(args['g00'])),
                          '--case='+args['scenario'],
                          '--cur_year='+str(args['year']),
                          '--next_year='+str(args['next_year']),
                          '--timetype='+args['timetype'],
-                         '--data_dir='+args['data_dir'],
-                         '--user='+user,
-                         '--runname='+runname
+                         '--data_dir='+args['data_dir']
                          ], 
                          cwd=os.getcwd())
     else:
@@ -118,14 +115,13 @@ def ReEDS_augur(args):
             print('ReEDS Augur: d2_Osprey')
             print('##############################\n')
         subprocess.call(['gams', os.path.join('D_Augur','d2_osprey'),
-                         'o='+os.path.join('reeds_server', 'users_output', user, runname,'runs',args['scenario'],'lstfiles','osprey_{}.lst'.format(args['tag'])),
+                         'o='+os.path.join(args['data_dir'],'..','lstfiles','osprey_{}.lst'.format(args['tag'])),
                          'logOption='+args['log_option'], 
                          'logfile=gamslog.txt',
                          'appendLog=1',
                          '--case='+args['scenario'],
                          '--next_year='+str(args['next_year']),
-                         '--user='+user,
-                         '--runname='+runname
+                         '--data_dir='+args['data_dir']
                          ], cwd=os.getcwd())
     else:
         if os.name!="posix":
@@ -144,8 +140,7 @@ def ReEDS_augur(args):
         subprocess.call(['gams', os.path.join('D_Augur','d3_gdx_dump'),
                          '--case='+args['scenario'],
                          '--next_year='+str(args['next_year']),
-                         '--user='+user,
-                         '--runname='+runname
+                         '--data_dir='+args['data_dir']
                          ], cwd=os.getcwd())
     else:
         if os.name!="posix":
@@ -262,7 +257,8 @@ if __name__ == '__main__':
     parser.add_argument("next_year", help="""Upcoming ReEDS solve year""", default=2030, type=int)
     parser.add_argument("timetype", help="""ReEDS temporal solve method""", default='seq', type=str)
     parser.add_argument("iteration", help="""Iteration number for intertemporal and window solve""", default='0', type=str)
-    
+    parser.add_argument("casepath", help="""Path to case files""", default='', type=str)
+
     # Optional arguments: booleans to turn on/off scripts for debugging purposes
     parser.add_argument("-c3","--data_dump", help="""Switch to turn off data_dump. Default is true""", action="store_false")
     parser.add_argument("-d1","--prep_data", help="""Swtich to turn off prep_data. Default is true""", action="store_false")
@@ -327,8 +323,7 @@ if __name__ == '__main__':
     args['tag'] = args['scenario'] + '_' + str(args['next_year'])
     args['g00'] = args['scenario'] + '_' + str(args['iteration'])
 
-    user, runname = args['scenario'].split('_')[0],  args['scenario'].split('_')[0] + '_' + args['scenario'].split('_')[1]
-    args['data_dir'] = os.path.join('reeds_server', 'users_output', user, runname,'runs',args['scenario'],'augur_data')
+    args['data_dir'] = os.path.join(args['casepath'], 'augur_data')
 #%%
         
     # Preparing to log any errors if they occur
