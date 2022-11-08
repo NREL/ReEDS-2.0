@@ -81,6 +81,36 @@
             "Plot Height (px)": "800",
             "Plot Title": "Firm capacity and PRM requirement"
           }
+        }
+      ],
+      "title": "Annual capacity results",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "costs.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "Year",
+              "y": "Cost",
+              "name": "cost_cat",
+              "filter": {
+                "Year": {
+                  "filter_type": "less-or-equal",
+                  "filter_val": "2050"
+                }
+              },
+              "col": "scenario"
+            }
+          ],
+          "style": {
+            "Y Title": "Undiscounted cost (INR)",
+            "Plot Width (px)": "1000",
+            "Plot Title": "Costs by year"
+          }
         },
         {
           "traces": [
@@ -90,23 +120,17 @@
               "agg": "sum",
               "x": "scenario",
               "y": "Cost",
-              "name": "cost_cat",
-              "filter": {
-                "Year": {
-                  "filter_type": "less-or-equal",
-                  "filter_val": "2050"
-                }
-              }
+              "name": "cost_cat"
             }
           ],
           "style": {
-            "Y Title": "Cost (INR)",
-            "Plot Width (px)": "1000",
+            "Y Title": "Undiscounted cost (INR)",
+            "Plot Width (px)": "800",
             "Plot Title": "Total costs"
           }
         }
       ],
-      "title": "Annual capacity results",
+      "title": "Costs",
       "description": ""
     },
     {
