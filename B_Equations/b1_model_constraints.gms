@@ -369,7 +369,7 @@ eq_rsc_INVlim(r,i,rscbin)$[vre(i)$m_rscfeas(r,i,rscbin)]..
 eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2022)$(yeart(t)<2031)$growth_limit_relative(tg)]..
 
 *the relative growth rate multiplied by the existing technology group's existing capacity
-    (1+growth_limit_relative(tg)) ** (sum{tt$[tprev(tt,t)], yeart(tt)} - yeart(t)) *
+    (growth_limit_relative(tg)) ** (sum{tt$[tprev(tt,t)], yeart(tt)} - yeart(t)) *
     sum{(i,v,r,tt)$[tprev(t,tt)$valcap(i,v,r,tt)$tg_i(tg,i)$rfeas_cap(r)],
          CAP(i,v,r,tt) }
 
