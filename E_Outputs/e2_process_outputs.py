@@ -20,6 +20,7 @@ if os.name == 'posix':
 import gdxpds
 import pandas as pd
 import argparse
+from functools import reduce
 #%%
 # suppress pandas chained assignments warning
 pd.options.mode.chained_assignment = None
@@ -151,7 +152,8 @@ def read_gdxs(gdxdirs, cs):
     """reads gdx results file into memory"""
     vars = ['CAP', 'INV', 'GEN', 'LOAD', 'OPRES', 'STORAGE_IN', 'CAPTRAN']
     params = ['r_rs', 'hours', 'firm_conv', 'firm_hydro', 'firm_vg', 'firm_stor', 'txinv', 'import', 'peakdem_region', 'prm_region']
-    keep = vars + params
+    costs = ['capcost', 'txcapcost', 'substcost', 'vomcost', 'fomcost', 'oprescost', 'fuelcost']
+    keep = vars + params + costs
     out = dict.fromkeys(keep)
 
     for i in range(len(gdxdirs)):
@@ -300,6 +302,38 @@ def ProcessingGdx():
     txinv = gdxin['txinv'].copy()
     txinv.set_axis(['State_from', 'State_to', 'Year', 'transmission_investment_MW', 'scenario'], axis = 1, inplace = True)
 
+    # Costs
+    capcost, txcost, sstcost = gdxin['capcost'], gdxin['txcapcost'], gdxin['substcost']
+    vmcost, fmcost, oprcost, fcost = gdxin['vomcost'], gdxin['fomcost'], gdxin['oprescost'], gdxin['fuelcost']
+
+    capcost.set_axis(['i', 'r', 't', 'capacity', 'scenario'], axis = 1, inplace = True)
+    capcost = map_rs_to_state(capcost, rmap)
+    capcost = map_tech_to_type(capcost, 'i') 
+    capcost = summarize(capcost, 'capacity', ['t', 'scenario']).drop(0, axis=1)
+
+    txcost.set_axis(['r', 'rr', 't', 'trtype', 'transmission', 'scenario'], axis = 1, inplace = True)
+    txcost = summarize(txcost, 'transmission', ['t', 'scenario'])
+
+    sstcost.set_axis(['r', 't', 'substations', 'scenario'], axis = 1, inplace = True)
+    sstcost = summarize(sstcost, 'substations', ['t', 'scenario'])
+
+    vmcost.set_axis(['i', 'r', 't', 'variable_O&M', 'scenario'], axis = 1, inplace = True)
+    vmcost = summarize(vmcost, 'variable_O&M', ['t', 'scenario'])
+    
+    fmcost.set_axis(['i', 'r', 't', 'fixed_O&M', 'scenario'], axis = 1, inplace = True)
+    fmcost = summarize(fmcost, 'fixed_O&M', ['t', 'scenario'])
+
+    oprcost.set_axis(['i', 'r', 't', 'operating_reserves', 'scenario'], axis = 1, inplace = True)
+    oprcost = summarize(oprcost, 'operating_reserves', ['t', 'scenario'])
+
+    fcost.set_axis(['i', 'r', 't', 'fuel', 'scenario'], axis = 1, inplace = True)
+    fcost = summarize(fcost, 'fuel', ['t', 'scenario'])
+
+    costs = [capcost, txcost, sstcost, vmcost, fmcost, oprcost, fcost]
+    costs = reduce(lambda  left,right: pd.merge(left, right, on=['t', 'scenario']), costs).fillna('NA')
+    costs = costs.set_index(['t','scenario']).stack().reset_index(name='Cost')
+    costs.set_axis(['Year', 'scenario', 'cost_cat', 'Cost'], axis = 1, inplace = True)
+        
     # Emissions
   #  emit = gdxin['EMIT']
 
@@ -327,6 +361,10 @@ def ProcessingGdx():
     tx_out = tx_out.round(0)
     tx_out = sorting(tx_out)
 
+    # Sheet 5: Costs
+    costs = costs.round(0)
+    costs = sorting(costs)
+
     # demand - not included in excel output
     dem = dem.round(0)
     dem = sorting(dem, False, False, True)
@@ -335,11 +373,12 @@ def ProcessingGdx():
     dem_tslc = dem_tslc.round(0)
     dem_tslc = sorting(dem_tslc, False, True, True)
 
-    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm
+
+    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs
 #%%
 
 def write_outputs(dir):
-    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm = ProcessingGdx()
+    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs = ProcessingGdx()
 
     #timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #outdir = os.path.join(dir, tag)
@@ -358,6 +397,7 @@ def write_outputs(dir):
         firmcap.to_excel(writer, sheet_name="Seasonal firm capacity", index=False)
         tslc_out.to_excel(writer, sheet_name="Timeslice results", index=False)
         tx_out.to_excel(writer, sheet_name='Transmission results', index=False)
+        costs.to_excel(writer, sheet_name='Costs', index=False)
 
         writer.save()
         print("Results saved to " + os.path.join(dir, "outputs_{}.xlsx".format("-".join(cases))))
@@ -454,6 +494,9 @@ def write_outputs(dir):
     peakdem_prm['scenario'] = pd.Categorical(peakdem_prm['scenario'], scenarios)
     peakdem_prm.sort_values(['season', 'region', 'year', 'scenario'], inplace=True) 
     peakdem_prm.to_csv(os.path.join(csvsdir, 'peakdem.csv'), index=False)
+
+    # costs
+    costs.to_csv(os.path.join(csvsdir, 'costs.csv'), index=False)
 
     # copy visit.html and report.json into the directory
     shutil.copyfile('vizit.html', os.path.join(csvsdir, "..", 'vizit.html'))

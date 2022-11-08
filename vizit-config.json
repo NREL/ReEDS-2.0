@@ -3,6 +3,7 @@
     "cap.csv",
     "cap_diff.csv",
     "cap_new_ann.csv",
+    "costs.csv",
     "demand.csv",
     "demand_timeslice.csv",
     "firmcap.csv",
@@ -23,9 +24,9 @@
               "type": "bar",
               "agg": "sum",
               "x": "year",
-              "y": "Capacity (MW)",
               "name": "tech",
-              "col": "scenario"
+              "col": "scenario",
+              "y": "Capacity (MW)"
             }
           ],
           "style": {
@@ -41,9 +42,9 @@
               "type": "bar",
               "agg": "sum",
               "x": "year",
-              "y": "Investments (MW)",
               "name": "tech",
-              "col": "scenario"
+              "col": "scenario",
+              "y": "Investments (MW)"
             }
           ],
           "style": {
@@ -59,26 +60,49 @@
               "type": "bar",
               "agg": "sum",
               "x": "year",
-              "y": "Firm Capacity (MW)",
               "name": "tech",
               "col": "season",
-              "row": "scenario"
+              "row": "scenario",
+              "y": "Firm Capacity (MW)"
             },
             {
               "dataSource": "peakdem.csv",
               "type": "dot",
               "agg": "sum",
               "x": "year",
-              "y": "PRM requirement (MW)",
               "row": "scenario",
               "col": "season",
-              "name": "type"
+              "name": "type",
+              "y": "PRM requirement (MW)"
             }
           ],
           "style": {
             "Plot Width (px)": "1000",
             "Plot Height (px)": "800",
             "Plot Title": "Firm capacity and PRM requirement"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "costs.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "scenario",
+              "y": "Cost",
+              "name": "cost_cat",
+              "filter": {
+                "Year": {
+                  "filter_type": "less-or-equal",
+                  "filter_val": "2050"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Y Title": "Cost (INR)",
+            "Plot Width (px)": "1000",
+            "Plot Title": "Total costs"
           }
         }
       ],
@@ -94,18 +118,18 @@
               "type": "bar",
               "agg": "sum",
               "x": "year",
-              "y": "Generation (MWh)",
               "name": "tech",
-              "col": "scenario"
+              "col": "scenario",
+              "y": "Generation (MWh)"
             },
             {
               "dataSource": "demand.csv",
               "type": "dot",
               "agg": "sum",
               "x": "year",
-              "y": "Demand (MWh)",
               "name": "type",
-              "col": "scenario"
+              "col": "scenario",
+              "y": "Demand (MWh)"
             }
           ],
           "style": {
@@ -121,9 +145,9 @@
               "type": "bar",
               "agg": "sum",
               "x": "year",
-              "y": "Operating Reserves (MWh)",
               "name": "tech",
-              "col": "scenario"
+              "col": "scenario",
+              "y": "Operating Reserves (MWh)"
             }
           ],
           "style": {
@@ -145,22 +169,22 @@
               "type": "bar",
               "agg": "sum",
               "x": "time",
-              "y": "Generation (MW)",
               "row": "scenario",
               "col": "season",
               "explode": "year",
-              "name": "tech"
+              "name": "tech",
+              "y": "Generation (MW)"
             },
             {
               "dataSource": "demand_timeslice.csv",
               "type": "dot",
               "agg": "sum",
               "x": "time",
-              "y": "Demand (MW)",
               "name": "type",
               "row": "scenario",
               "col": "season",
-              "explode": "year"
+              "explode": "year",
+              "y": "Demand (MW)"
             }
           ],
           "style": {
