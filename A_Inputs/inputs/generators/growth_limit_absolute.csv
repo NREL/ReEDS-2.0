@@ -3,7 +3,7 @@ Arunachal_Pradesh,biomass,8
 Assam,biomass,212
 Bihar,biomass,619
 Chandigarh,biomass,0.1
-Chhattisgarh,biomass,236
+Chhattisgarh,biomass,300
 Dadra_Nagar_Haveli,biomass,0.1
 Delhi,biomass,0.1
 Daman_Diu,biomass,0.1
@@ -13,10 +13,10 @@ Haryana,biomass,1333
 Himachal_Pradesh,biomass,142
 Jammu_Kashmir,biomass,43
 Jharkhand,biomass,90
-Karnataka,biomass,1131
+Karnataka,biomass,2000
 Kerala,biomass,1044
 Madhya_Pradesh,biomass,1364
-Maharashtra,biomass,1887
+Maharashtra,biomass,3000
 Manipur,biomass,13
 Meghalaya,biomass,11
 Mizoram,biomass,1
@@ -27,9 +27,9 @@ Punjab,biomass,3172
 Rajasthan,biomass,1039
 Sikkim,biomass,2
 Tamil_Nadu,biomass,1070
-Telangana,biomass,0.1
+Telangana,biomass,200
 Tripura,biomass,3
-Uttar_Pradesh,biomass,1617
+Uttar_Pradesh,biomass,4000
 Uttarakhand,biomass,24
 West_Bengal,biomass,396
 Andhra_Pradesh,hydro_pondage,1300

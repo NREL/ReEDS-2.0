@@ -48,7 +48,7 @@ else:
     user = ""
     scenarios = [x.split('_')[1] for x in cases]
     root = os.path.join("E_Outputs", "runs")
-    SAVEDIR = os.path.join(root, 'outputs_{}'.format("-".join(cases)))
+    SAVEDIR = os.path.join(root, "..", 'vizit_{}'.format("-".join(cases)))
 
 Path(SAVEDIR).mkdir(parents=True, exist_ok=True)
 
@@ -62,9 +62,16 @@ tech_order.reverse()
 season_order = ['Winter', 'Spring', 'Summer', 'Rainy', 'Autumn']
 time_order = ['night', 'sunrise', 'morning', 'afternoon', 'sunset', 'evening', 'peak']
 
+latlon = params[['reeds.states','json.states','lon','lat']]
+
 def summarize(df, value, sumby, drop=True):
     """aggregation helper function"""
-    out = df.groupby(sumby).sum().reset_index()
+    if len(df) == 0:
+        df = df[sumby+[value]]
+        df.loc[len(df),value] = 1
+        out = df.copy()
+    else:
+        out = df.groupby(sumby).sum().reset_index()
     if drop:
         out = out.loc[out[value] != 0]
     return out
@@ -151,7 +158,7 @@ def add_scen_col(df, scenario):
 def read_gdxs(gdxdirs, cs):
     """reads gdx results file into memory"""
     vars = ['CAP', 'INV', 'GEN', 'LOAD', 'OPRES', 'STORAGE_IN', 'CAPTRAN']
-    params = ['r_rs', 'hours', 'firm_conv', 'firm_hydro', 'firm_vg', 'firm_stor', 'txinv', 'import', 'peakdem_region', 'prm_region']
+    params = ['r_rs', 'hours', 'firm_conv', 'firm_hydro', 'firm_vg', 'firm_stor', 'txinv', 'import', 'peakdem_region', 'prm_region', 'm_cf']
     costs = ['capcost', 'txcapcost', 'substcost', 'vomcost', 'fomcost', 'oprescost', 'fuelcost']
     keep = vars + params + costs
     out = dict.fromkeys(keep)
@@ -176,7 +183,7 @@ def read_gdxs(gdxdirs, cs):
             out[k] = pd.concat([out[k], dat[k]], axis=0)
     return out
 #%%
-def ProcessingGdx():
+def ProcessGdx():
     gdxdirs = get_gdxdirs(cases)
 
     gdxin = read_gdxs(gdxdirs, cases)
@@ -229,7 +236,7 @@ def ProcessingGdx():
     peakdem_prm = peakdem_prm.round(2)
 
     # Timeslice dispatch
-    gen_tslc = gdxin['GEN']
+    gen_tslc = gdxin['GEN'].copy()
     gen_tslc = map_tech_to_type(gen_tslc, 'i')
 
     # add import parameter
@@ -249,6 +256,21 @@ def ProcessingGdx():
     # Annual generation
     gen = summarize(gen_tslc, 'generation_MWh', ['Technology', 'State', 'Year', 'scenario'])
     gen = gen[['Technology', 'State', 'Year', 'generation_MWh', 'scenario']]
+
+    # VRE curtailment
+    gen_vre = gdxin['GEN'].loc[gdxin['GEN']['i'].isin(['WIND','UPV','DISTPV'])].drop(columns={'Marginal','Lower','Upper','Scale'})
+    gen_vre = summarize(gen_vre, 'Level', ['i','r','h','t','scenario']).rename(columns={'Level':'Gen'})
+    cap_vre = gdxin['CAP'].loc[gdxin['CAP']['i'].isin(['WIND','UPV','DISTPV'])].drop(columns={'Marginal','Lower','Upper','Scale'})
+    cap_vre = summarize(cap_vre, 'Level', ['i','r','t','scenario'])
+    cap_vre = pd.merge(gdxin['m_cf'], cap_vre, on = ['i','r','scenario'])
+    cap_vre['potential'] = cap_vre['Value'] * cap_vre['Level']
+    cap_vre = map_rs_to_state(cap_vre, rmap)
+    cap_vre = summarize(cap_vre, 'potential', ['i','r','h','t','scenario'])
+    curt = pd.merge(cap_vre, gen_vre, on = ['i', 'r', 'h', 't', 'scenario'], how = 'left')
+    curt['curtailment'] = curt['potential'] - curt['Gen'].fillna(0)
+    curt = map_tech_to_type(curt, 'i')
+    curt = summarize(curt, ['potential','curtailment'], ['Type','h','t','scenario'], drop=False)
+    curt['curt_frac'] = curt['curtailment'] / curt['potential']
 
     # Demand
     dem_tslc = gdxin['LOAD']
@@ -330,8 +352,10 @@ def ProcessingGdx():
     fcost = summarize(fcost, 'fuel', ['t', 'scenario'])
 
     costs = [capcost, txcost, sstcost, vmcost, fmcost, oprcost, fcost]
-    costs = reduce(lambda  left,right: pd.merge(left, right, on=['t', 'scenario']), costs).fillna('NA')
+    costs = reduce(lambda  left,right: pd.merge(left, right, on=['t', 'scenario'], how='outer'), costs).fillna('NA')
     costs = costs.set_index(['t','scenario']).stack().reset_index(name='Cost')
+    costs = costs.loc[costs['t'] != 'NA']
+    costs.loc[costs['Cost'] == 'NA','Cost'] = 0
     costs.set_axis(['Year', 'scenario', 'cost_cat', 'Cost'], axis = 1, inplace = True)
         
     # Emissions
@@ -373,19 +397,24 @@ def ProcessingGdx():
     dem_tslc = dem_tslc.round(0)
     dem_tslc = sorting(dem_tslc, False, True, True)
 
+    # curt - not included in excel output
+    curt_tslc = map_h_to_tsname(curt, 'h')
+    curt_tslc.drop(columns=['h',0], inplace=True)
+    curt_tslc.rename(columns={'t':'Year','Type':'Technology'}, inplace=True)
+    curt_tslc = sorting(curt_tslc, True, True, False)
 
-    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs
+    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc
 #%%
 
 def write_outputs(dir):
-    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs = ProcessingGdx()
+    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc = ProcessGdx()
 
     #timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #outdir = os.path.join(dir, tag)
     #Path(outdir).mkdir(parents=True, exist_ok=True)
-    csvsdir = os.path.join(dir, 'csvs')
+    csvsdir = os.path.join(dir)
     Path(csvsdir).mkdir(parents=True, exist_ok=True)
-    Path(os.path.join(csvsdir,'BAs')).mkdir(parents=True, exist_ok=True)
+   # Path(os.path.join(csvsdir,'BAs')).mkdir(parents=True, exist_ok=True)
 
     #%%
     ######## EXPORT TO EXCEL
@@ -407,6 +436,7 @@ def write_outputs(dir):
     # cap.csv
     cap = annual_out[['State', 'scenario', 'Technology', 'Year', 'capacity_MW']]
     cap.set_axis(['st', 'scenario', 'tech', 'year', 'Capacity (MW)'], axis=1, inplace=True)
+    cap = pd.merge(cap, latlon[['reeds.states','json.states']], left_on='st', right_on='reeds.states', how='left').drop('reeds.states',axis=1)
     cap.to_csv(os.path.join(csvsdir, 'cap.csv'), index=False)
 
     # cap_new_ann.csv
@@ -415,10 +445,15 @@ def write_outputs(dir):
     cap_new.to_csv(os.path.join(csvsdir, 'cap_new_ann.csv'), index=False)
 
     # cap_diff.csv
-    cap_diff = cap.pivot_table(index=['st','tech','year'], columns='scenario', values='Capacity (MW)').reset_index()
+    cap_diff = cap.copy()
+    cap_diff[['scenario','tech','year']] = cap_diff[['scenario','tech','year']].astype('object') 
+    cap_diff = cap_diff.pivot_table(index=['st','tech','year'], columns='scenario', values='Capacity (MW)').reset_index()
     for i in scenarios[1:]:
-        cap_diff[i] = cap_diff[i] - cap_diff[scenarios[0]]
-    cap_diff.drop(scenarios[0], axis=1, inplace=True)
+        cap_diff[i] = cap_diff[i].fillna(0) - cap_diff[scenarios[0]].fillna(0)
+    if len(scenarios) == 1:
+        cap_diff[scenarios[0]] = 0
+    else:
+        cap_diff.drop(scenarios[0], axis=1, inplace=True)
     cap_diff = cap_diff.set_index(['st','tech','year']).stack().reset_index(name='Difference (MW)')
     cap_diff.to_csv(os.path.join(csvsdir, 'cap_diff.csv'), index=False)
 
@@ -444,13 +479,24 @@ def write_outputs(dir):
     gen_tslc.set_axis(['scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
     gen_tslc.to_csv(os.path.join(csvsdir, 'gen_timeslice.csv'), index=False)
     
-    stor_charge_BA['dispatch_MW'] = stor_charge_BA['STOR_IN_MW'] * -1
-    stor_charge_BA.drop('STOR_IN_MW', axis=1, inplace=True)
-    gen_tslc_BA = pd.concat([gen_tslc_BA, stor_charge_BA])
-    gen_tslc_BA = gen_tslc_BA.loc[gen_tslc_BA['dispatch_MW'].notnull()]
-    gen_tslc_BA.set_axis(['st', 'scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
-    gen_tslc_BA.to_csv(os.path.join(csvsdir, 'BAs', 'gen_timeslice_BA.csv'), index=False)
+    #stor_charge_BA['dispatch_MW'] = stor_charge_BA['STOR_IN_MW'] * -1
+    #stor_charge_BA.drop('STOR_IN_MW', axis=1, inplace=True)
+    #gen_tslc_BA = pd.concat([gen_tslc_BA, stor_charge_BA])
+    #gen_tslc_BA = gen_tslc_BA.loc[gen_tslc_BA['dispatch_MW'].notnull()]
+    #gen_tslc_BA.set_axis(['st', 'scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
+    #gen_tslc_BA.to_csv(os.path.join(csvsdir, 'BAs', 'gen_timeslice_BA.csv'), index=False)
 
+    # curt_timeslice.csv
+    curt_tslc.rename(columns={'Year':'year'}, inplace=True)
+    curt_tslc['tech'] = 'Curtailment'
+    curt_tslc.to_csv(os.path.join(csvsdir, 'curt_timeslice.csv'), index=False)
+
+    # average annual fractional curtailment
+    curt_tslc['Technology'] = curt_tslc['Technology'].astype('object')
+    curt_frac = summarize(curt_tslc, ['potential','curtailment'], ['Technology','year','scenario'], drop=False)
+    curt_frac.rename(columns={'Technology':'tech'}, inplace=True)
+    curt_frac['curt_frac'] = curt_frac['curtailment'] / curt_frac['potential']
+    curt_frac.to_csv(os.path.join(csvsdir,'curt_frac.csv'), index=False)
     #%%
     # demand.csv
     dem = dem[['State', 'scenario', 'Year', 'demand_MWh']]
@@ -468,10 +514,15 @@ def write_outputs(dir):
     dem_tslc.set_axis(['scenario', 'year', 'timeslice', 'season', 'time', 'type', 'Demand (MW)'], axis=1, inplace=True)
     dem_tslc.to_csv(os.path.join(csvsdir, 'demand_timeslice.csv'), index=False)
 
-    dem_tslc_BA.set_axis(['st', 'scenario', 'year', 'timeslice', 'season', 'time', 'Demand (MW)', 'type'], axis=1, inplace=True)
-    dem_tslc_BA.to_csv(os.path.join(csvsdir, 'BAs', 'demand_timeslice_BA.csv'), index=False)
+    #dem_tslc_BA.set_axis(['st', 'scenario', 'year', 'timeslice', 'season', 'time', 'Demand (MW)', 'type'], axis=1, inplace=True)
+    #dem_tslc_BA.to_csv(os.path.join(csvsdir, 'BAs', 'demand_timeslice_BA.csv'), index=False)
 
     # transmission.csv
+    tx_out = pd.merge(tx_out, latlon, left_on=['State_from'], right_on='reeds.states')
+    tx_out.rename(columns={'lon':'lon_from','lat':'lat_from','json.states':'map_from'}, inplace=True)
+    tx_out = pd.merge(tx_out, latlon, left_on=['State_to'], right_on='reeds.states')
+    tx_out.rename(columns={'lon':'lon_to','lat':'lat_to','json.states':'map_to','Year':'year'}, inplace=True)
+    tx_out.drop(['reeds.states_x','reeds.states_y'], axis=1, inplace=True)
     tx_out.to_csv(os.path.join(csvsdir, 'transmission.csv'), index=False)
 
     # opres.csv
@@ -496,11 +547,22 @@ def write_outputs(dir):
     peakdem_prm.to_csv(os.path.join(csvsdir, 'peakdem.csv'), index=False)
 
     # costs
+    costs.set_axis(['year', 'scenario', 'cost_cat', 'Cost'], axis = 1, inplace = True)
     costs.to_csv(os.path.join(csvsdir, 'costs.csv'), index=False)
 
+    # percent non-fossil cap and gen
+    pnf = pd.merge(cap, gen, on = ['st', 'scenario', 'tech', 'year'])
+    pnf.loc[pnf['tech'].isin(params['NonFossil']), 'type'] = 'non-fossil'
+    pnf.loc[~((pnf['tech'].isin(params['NonFossil'])) | (pnf['tech'].str.contains('BESS|Pumped'))), 'type'] = 'fossil'
+    pnf = pnf.groupby(['scenario', 'year', 'type'])[['Capacity (MW)', 'Generation (MWh)']].sum().reset_index()
+    pnf['cap_frac'] = pnf['Capacity (MW)'] / pnf.groupby(['scenario', 'year'])['Capacity (MW)'].transform('sum')
+    pnf['gen_frac'] = pnf['Generation (MWh)'] / pnf.groupby(['scenario', 'year'])['Generation (MWh)'].transform('sum')
+    pnf.to_csv(os.path.join(csvsdir, 'pnf.csv'), index = False)
+
     # copy visit.html and report.json into the directory
-    shutil.copyfile('vizit.html', os.path.join(csvsdir, "..", 'vizit.html'))
-    shutil.copyfile('vizit-config.json', os.path.join(csvsdir, 'vizit-config.json'))
+    if user != "":
+        shutil.copyfile('vizit.html', os.path.join(csvsdir, "..", 'vizit.html'))
+    shutil.copyfile('vizit-config.json', os.path.join(csvsdir, 'vizit-config-RI2030-report.json'))
     shutil.copyfile('style.csv', os.path.join(csvsdir, 'style.csv'))
 
 write_outputs(SAVEDIR)
