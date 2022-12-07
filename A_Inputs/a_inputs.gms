@@ -68,7 +68,8 @@ Sw_Loadpoint     "Switch to use a loadpoint for the intertemporal case"         
 Sw_SolarPlusStorage "Switch to turn on solar plus storage constraint"              /%GSw_SolarPlusStorage%/,
 Sw_StorHAV        "Switch to turn on hourly arbitrage value for storage"           /%GSw_StorHAV%/,
 Sw_FocusRegionZeroTXCost "Zero transmission capital cost between focus regions"    /%GSw_FocusRegionZeroTXCost%/,
-Sw_TxLimit               "Switch to enable transmission flow limits"    /%GSw_TxLimit%/
+Sw_TxLimit               "Switch to enable transmission flow limits"    /%GSw_TxLimit%/,
+Sw_CurtLim				"Switch to enable curtailment limit"			/%GSw_CurtLim%/
 ;
 
 *==========================
@@ -1491,7 +1492,7 @@ $offdelim
           growth_limit_absolute(r,tg) "--MW-- growth limit for technology groups in absolute terms"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%growth_limit_absolute.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%AbsGrowLim_file%
 $offdelim
           /,
 
