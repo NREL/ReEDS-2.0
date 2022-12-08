@@ -375,7 +375,9 @@ const chartTypes = {
     aggCol: 'y',
     layout:{
       barmode: 'relative',
-      //traceorder: 'reversed', //This doesn't seem to be working...
+      legend:{
+        traceorder: 'reversed',
+      }
     },
   },
   '3D dot':{
@@ -799,6 +801,10 @@ const customStyle = {
   'Dot Size (px)': {
     type: 'data',
     path: ['marker','size'],
+    tooltip: 'Default is 6.',
+  },
+  'Dot Max Value': {
+    tooltip: 'Specify the data value to be assigned the "max" marker size.',
   },
   'Opacity (0-1)': {
     type: 'data',
@@ -849,38 +855,6 @@ const customStyle = {
     tooltip: `This requires Colorscale Min (region)`,
   },
 };
-
-/*Bokehpivot default styling not yet included
-For Plots::
-Opacity (0-1): 0.8
-Sync Axes: Yes
-Flip Axes: No
-Sort Data: Yes
-Cumulative Sort: None
-Histogram # of bins: 20
-Weighted Histogram: Yes
-Show Line/Dot (Range Only): Yes
-Add Net Levels to Stacked: Yes
-
-For Maps::
-Bin Type: Auto Equal Num
-# of bins (Auto Only): 9
-Ignore Zeros: Yes
-Map Palette: Blues
-Map Palette 2 (Optional):
-Dual Palette Breakpoint (Optional):
-Minimum (Equal Width Only):
-Maximum (Equal Width Only):
-Manual Breakpoints (Manual Only):
-Map Width (px)
-Title Font Size: 10
-Boundary Line Width: 0.1
-Line Width: 2
-Opacity (0-1): 1
-Add Arrows: No
-Arrow Size (px): 7
-Arrow Location (0=start, 1=end): 0.8
-*/
 
 $('#file-input').change(function(evt){
   let newFiles = Array.from(evt.target.files);
@@ -1887,9 +1861,14 @@ function updateChart(dash_idx, chart_idx){
             };
           }
           if('marker_size' in trace_config){
+            let marker_val_max;
+            if('style' in chart_config && 'Dot Max Value' in chart_config['style']){
+              marker_val_max = Number(chart_config['style']['Dot Max Value']);
+            } else{
+              marker_val_max = Math.max(...chart_data[i].aggData[trace_config.marker_size]);
+            }
             //using square root of data for marker size because data should be proportional to area (px^2), while marker size is in px
-            let marker_size_max = Math.sqrt(Math.max(...chart_data[i].aggData[trace_config.marker_size]));
-            let marker_size_scaled = ser.marker_size.map(i => Math.sqrt(i) / marker_size_max*10);
+            let marker_size_scaled = ser.marker_size.map(i => Math.sqrt(i) / Math.sqrt(marker_val_max)*10);
             updateObj(ser, ['marker','size'], marker_size_scaled);
           }
           if('marker_color' in trace_config){

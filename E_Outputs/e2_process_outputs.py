@@ -204,6 +204,10 @@ def ProcessGdx():
     cap = map_rs_to_state(cap, rmap)
     cap = map_tech_to_type(cap, 'i')
     cap.drop(cap[cap['Type'] == 'Imports'].index, inplace=True)
+    cap_rs = summarize(cap, 'Level',['Type','rs','t','scenario'])
+    cap_rs = setnames(cap_rs, 'capacity_MW')
+    cap_rs = cap_rs[['Technology', 'rs', 'Year', 'capacity_MW', 'scenario']]
+
     cap = summarize(cap, 'Level', ['Type', 'r', 't', 'scenario'])
     cap = setnames(cap, 'capacity_MW')
     cap = cap[['Technology', 'State', 'Year', 'capacity_MW', 'scenario']]
@@ -404,11 +408,11 @@ def ProcessGdx():
     curt_tslc.rename(columns={'t':'Year','Type':'Technology'}, inplace=True)
     curt_tslc = sorting(curt_tslc, True, True, False)
 
-    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc
+    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc, cap_rs
 #%%
 
 def write_outputs(dir):
-    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc = ProcessGdx()
+    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc, cap_rs = ProcessGdx()
 
     #timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #outdir = os.path.join(dir, tag)
@@ -444,6 +448,10 @@ def write_outputs(dir):
     cap_new = annual_out[['State', 'scenario', 'Technology', 'Year', 'investments_MW']]
     cap_new.set_axis(['st', 'scenario', 'tech', 'year', 'Investments (MW)'], axis=1, inplace=True)
     cap_new.to_csv(os.path.join(csvsdir, 'cap_new_ann.csv'), index=False)
+
+    # cap_rs.csv
+    cap_rs.set_axis(['tech','rs','year','capacity_MW', 'scenario'], axis=1, inplace=True)
+    cap_rs.to_csv(os.path.join(csvsdir, 'cap_rs.csv'), index=False)
 
     # cap_diff.csv
     cap_diff = cap.copy()
