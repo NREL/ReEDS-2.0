@@ -6,7 +6,7 @@ units into historical, binned vintages (hintages)
 
 The primary arguments are the plant data file to use, the number of bins, 
 and the minimum deviation across bins. There are also operations specific
-to proessing data for whether or not waterconstraints are enabled. 
+to proessing data for whether or not GSw_WaterMain are enabled. 
 
 Kmeans clustering is the default option and the general sequence, by tech and 
 BA combinations, is as follows:
@@ -79,8 +79,8 @@ class grouping:
         '''
         output_df = pd.DataFrame()
         #Note: The calculations here and below in group() can probably be done faster by group (without a loop).
-        for ba in input_df.PCA.unique():
-            ba_df = input_df[input_df.PCA == ba]
+        for ba in input_df.reeds_ba.unique():
+            ba_df = input_df[input_df.reeds_ba == ba]
             for tech in ba_df.TECH.unique():
                 
                 df = ba_df[ba_df.TECH == tech]
@@ -99,13 +99,13 @@ class grouping:
         *args: collects unused positional arguments to simplify code
         **kwargs: collects unused keyword arguments to simplify code
         '''
-        grouping_df = (input_df[['PCA', 'TECH', col]]
+        grouping_df = (input_df[['reeds_ba', 'TECH', col]]
                        .drop_duplicates()
                        .reset_index(drop=True)
                        )
         output_df = pd.DataFrame()        
-        for ba in grouping_df.PCA.unique():
-            ba_df = grouping_df[grouping_df.PCA == ba].copy()
+        for ba in grouping_df.reeds_ba.unique():
+            ba_df = grouping_df[grouping_df.reeds_ba == ba].copy()
             for tech in ba_df.TECH.unique():
                 tech_df = ba_df[ba_df.TECH == tech].copy()
                 tech_df['bin'] = tech_df.reset_index().index + 1
@@ -114,7 +114,7 @@ class grouping:
         
 
         output_df = input_df.merge(output_df,
-                                   on=['PCA','TECH', col],
+                                   on=['reeds_ba','TECH', col],
                                    how='left'
                                    )
         return output_df
@@ -278,48 +278,77 @@ class grouping:
                                      ).centers])
         return tdat
 
+# #%% DEBUGGING
+# cwd = "/users/mbrown1/Documents/GitHub/MI_R2"
+# inputs_case = "/users/mbrown1/Desktop"
 # %% MAIN
-def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
-         nBin=6,
-         retscen="NukeRefRetireYear",
-         mindev=50,
-         distpvscen='StScen2020_Mid_Case',
-         genunitfile='ReEDS_generator_database_final_EIA-NEMS.csv',
-         outdir="/users/mbrown1/Desktop",
-         waterconstraints='0',
-         make_plots=0):
+def main(cwd, inputs_case):
+    #%% Read inputs from switches
+    sw = pd.read_csv(
+        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+
+    nBin = sw.numhintage
+    retscen = sw.retscen
+    mindev = int(sw.mindev)
+    distpvscen = sw.distpvscen
+    generatorfile = f'ReEDS_generator_database_final_{sw.unitdata}.csv'
+    GSw_WaterMain = sw.GSw_WaterMain    
+    GSw_CoalRetire = int(sw.GSw_CoalRetire)
+    coalretireyrs = int(sw.coalretireyrs)
+
     # %%
     inflator = 1.69 # Inflation factor 1987$ to 2004$
+    
+    # dictionary of relevant technology groups
+    TECH = {
+    # This is not all technologies that do not having cooling, but technologies
+    # that are (or could be) in the plant database.
+    'no_cooling':['dupv', 'upv', 'pvb', 'gas-ct', 'geothermal',
+                  'battery_2', 'battery_4', 'battery_6', 'battery_8', 
+                  'battery_10', 'pumped-hydro', 'pumped-hydro-flex', 'hydUD', 
+                  'hydUND', 'hydD', 'hydND', 'hydSD', 'hydSND', 'hydNPD',
+                  'hydNPND', 'hydED', 'hydEND', 'wind-ons', 'wind-ofs', 'caes'
+                  ]
+    }
     
     # change directory to local ReEDS repo
     os.chdir(cwd)
 
-    # read in genunitfile
-    indat = pd.read_csv(os.path.join('inputs', 'capacitydata',
-                                     '{}'.format(genunitfile)))
+    # read in generatorfile
+    indat = pd.read_csv(os.path.join(cwd, 'inputs', 'capacitydata',
+                                     '{}'.format(generatorfile)))
+
+    ### If aggregating regions, do so now (note that all other region aggregation
+    ### is handled in aggregate_regions.py)
+    if int(sw['GSw_AggregateRegions']):
+        hierarchy = pd.read_csv(
+            os.path.join(inputs_case,'hierarchy.csv')
+            ).rename(columns={'*r':'r'}).set_index('r')
+        rb2aggreg = hierarchy.aggreg.copy()
+        indat['reeds_ba'] = indat['reeds_ba'].map(rb2aggreg)
 
     # include O&M of polution control upgrades into FOM
-    indat['W_VOM'] = inflator * (indat.W_VOM + indat.WCOMB_V + indat.WSNCR_V
-                                 + indat.WSCR_V + indat.W_FFV + indat.W_DSIV)
-    indat['W_FOM'] = inflator * (indat.W_FOM + indat.W_CAPAD + indat.WCOMB_F
-                                 + indat.WSNCR_F + indat.WSCR_F + indat.W_FFF
-                                 + indat.W_DSIF)
+    indat['T_VOM'] = inflator * (indat.T_VOM + indat.TCOMB_V + indat.TSNCR_V
+                                 + indat.TSCR_V + indat.T_FFV + indat.T_DSIV)
+    indat['T_FOM'] = inflator * (indat.T_FOM + indat.T_CAPAD + indat.TCOMB_F
+                                 + indat.TSNCR_F + indat.TSCR_F + indat.T_FFF
+                                 + indat.T_DSIF)
 
     # concatenate tech names based on whether water analysis is on -or- leave
     # them alone
-    if waterconstraints == '1':
+    if GSw_WaterMain == '1':
+        # If techs do not have a cooling technology, then replace coolingwatertech with the tech name
+        indat.loc[indat['tech'].isin(TECH['no_cooling']),
+                  'coolingwatertech'] = indat.loc[indat['tech'].isin(TECH['no_cooling']),'tech']
         indat['tech'] = indat.coolingwatertech
 
-    ad = indat[["tech", "pca", "ctt", "resource_region", "cap", retscen,
-                "Commercial.Online.Year.Quarter", "IsExistUnit",
-                "Fully.Loaded.Tested.Heat.Rate.Btu.kWh...Modeled",
-                "Plant.NAICS.Description", "W_VOM", "W_FOM"]].copy()
+    ad = indat[["tech", "reeds_ba", "ctt", "resource_region", "cap", "TC_WIN", retscen,
+                "StartYear", "IsExistUnit", "HeatRate", "T_VOM", "T_FOM"]].copy()
 
     # rename Columns in ad
     rename = {}
-    newnames = ["TECH", "PCA", "ctt", "resource.region", "Summer.capacity",
-                "RetireYear", "Solve.Year.Online", "EXIST", "HR", "NAICS",
-                "VOM", "FOM"]
+    newnames = ["TECH", "reeds_ba", "ctt", "resource.region", "Summer.capacity", "Winter.capacity",
+                "RetireYear", "onlineyear", "EXIST", "HR", "VOM", "FOM"]
     for old, new in zip(ad.columns, newnames):
         rename[old] = new
     ad.rename(columns=rename, inplace=True)
@@ -327,46 +356,29 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
     # subset only generators that exist
     ad = ad[ad.EXIST]
 
-    # subset only generators that have these NAICS category
-    naics_cats = ["Hydroelectric Power Generation",
-                  "Nuclear Electric Power Generation",
-                  "Other Electric Power Generation",
-                  "Electric Power Generation",
-                  "Electric Power Distribution",
-                  "Utilities",
-                  "Electric Power Generation, Transmission and Distribution"
-                  ]
-    ad = ad[(ad.NAICS.isin(naics_cats))]
-
-    # make the solve year column
-    ad['onlineyear'] = (ad['Solve.Year.Online']
-                        .str
-                        .split('-', expand=True)[0]
-                        .astype(float)
-                        .round()
-                        .astype(int)
-                        )
-
-    # format regions column
-    ad['pcn'] = (ad
-                .PCA
-                .str
-                .strip('p')
-                .astype(float)
-                .round()
-                .astype(int)
-                )
-
     # only want those with a heat rate - all other binning is arbitrary
-    # because the only data we get from genunitfile is the capacity and heat
+    # because the only data we get from generatorfile is the capacity and heat
     # rate but O&M costs are assumed
-    df = ad[(~ad.HR.isna()) & (~ad.TECH.isin(['geothermal', 'unknown',
-            'CofireNew']))]
+    df = ad[(~ad.HR.isna()) & (~ad.TECH.isin(['geothermal', 'CofireNew']))]
+
+    # Adjust coal retirement dates based on switch
+    tech_table = pd.read_csv(
+        os.path.join(inputs_case, 'tech-subset-table.csv')).set_index('Unnamed: 0')
+    coal_techs = tech_table[tech_table['COAL'] == 'YES'].index.values.tolist()
+    current_yr = datetime.date.today().year
+    if GSw_CoalRetire == 1:
+        df.loc[(df['RetireYear'] < current_yr + coalretireyrs) & (df['RetireYear'] > current_yr)
+               & (df['TECH'].isin(coal_techs)), 'RetireYear'] = current_yr
+        df.loc[(df['RetireYear'] >= current_yr + coalretireyrs) & (df['TECH'].isin(coal_techs)),
+               'RetireYear'] -= coalretireyrs
+    elif GSw_CoalRetire == 2:
+        df.loc[(df['RetireYear'] > current_yr) & (df['TECH'].isin(coal_techs)),
+               'RetireYear'] += coalretireyrs
 
     # group up similar generators
-    dat = df.groupby(['TECH', 'PCA', 'HR', 'resource.region', 'onlineyear',
+    dat = df.groupby(['TECH', 'reeds_ba', 'HR', 'resource.region', 'onlineyear',
                       'RetireYear', 'VOM', 'FOM']).sum().reset_index()
-    dat.drop(columns=['EXIST', 'pcn'], inplace=True)
+    dat.drop(columns=['EXIST'], inplace=True)
 
     # remove others category
     dat = dat[dat.TECH != 'others'].copy()
@@ -375,7 +387,7 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
     dat = dat[(dat.RetireYear >= 2010) & (dat['onlineyear'] < 2010)].copy()
 
     # make unique ID column for generators
-    dat['id'] = dat.TECH + '_' + dat.PCA
+    dat['id'] = dat.TECH + '_' + dat.reeds_ba
     
     # bin hintage data - this leverages the kmeans function in
     # the grouping class to perform the operations in the _kmeans sub-class
@@ -387,30 +399,31 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
     tdat['wHR'] = tdat.HR * tdat['Summer.capacity']
     tdat['wVOM'] = tdat.VOM * tdat['Summer.capacity']
     tdat['wFOM'] = tdat.FOM * tdat['Summer.capacity']
-    tdat['solveYearOnline'] = tdat.onlineyear * tdat['Summer.capacity']    
+    tdat['solveYearOnline'] = tdat.onlineyear * tdat['Summer.capacity']
 
     zout = pd.DataFrame()
     level_cols = ['wHR', 'wVOM', 'wFOM', 'solveYearOnline']
-#    Adjust the hr, vom, fom and solveyearonline
+    combine_cols = level_cols + ['Winter.capacity']
+    # Adjust the hr, vom, fom, solveyearonline, and winter capacity
     for i in list(range(2010, tdat.RetireYear.max() + 1)):
         # subset on years earlier than i
         ydat = tdat.loc[tdat.RetireYear > i,
-                        ['id', 'bin', 'Summer.capacity'] + level_cols
+                        ['id', 'bin', 'Summer.capacity'] + combine_cols
                         ]
-#        sum up the parameters by id and bin
+        # sum up the parameters by id and bin
         ydat = ydat.groupby(['id', 'bin']).sum()
 
-#        levelize parameters
+        # levelize parameters
         for j in level_cols:
             ydat[j] /= ydat['Summer.capacity']
 
         ydat['year'] = i
-#        paste dataframes together
+        # paste dataframes together
         zout = pd.concat([zout, ydat])
         
-#    parse id
+    # parse id
     zout.reset_index(inplace=True)
-    if waterconstraints == '1':
+    if GSw_WaterMain == '1':
         zout['tech'] = zout.id.str.rsplit('_', n=1, expand=True)[0]
         zout['ba'] = zout.id.str.rsplit('_', n=1, expand=True)[1]
     else:
@@ -432,11 +445,17 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
                                 ['ba', 'year', 'Summer.capacity'])),
                inplace=True)
 
+    ### Aggregate BAs if necessary
+    if int(sw['GSw_AggregateRegions']):
+        dpv['ba'] = dpv['ba'].map(rb2aggreg)
+        dpv = dpv.groupby(['ba','year'], as_index=False).sum()
+
     # initiate columns for dpv dataframe
-    dpv['tech'] = 'distPV'
+    dpv['tech'] = 'distpv'
     dpv['wHR'] = 0
     dpv['wVOM'] = 0
     dpv['wFOM'] = 0
+    dpv['Winter.capacity'] = dpv['Summer.capacity']
     dpv['bin'] = 1
     dpv['solveYearOnline'] = 2010
 
@@ -444,18 +463,17 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
     zout = pd.concat([zout, dpv])
 
     #get forced retirement dataframe and merge onto output dataframe
-    forced_retire = pd.read_csv(os.path.join(cwd, "inputs", "state_policies",
-                                             "forced_retirements.csv"),
-                                             header=None)
-    forced_retire.rename(columns=dict(zip(forced_retire.columns,
-                                          ['tech', 'ba', 'retire_year'])),
-                         inplace=True)
+    forced_retire = pd.read_csv(
+        os.path.join(cwd, "inputs", "state_policies", "forced_retirements.csv"),
+        header=0, names=['tech','ba','retire_year'])
+
     zout = zout.merge(forced_retire,
                       how='left',
                       on=['tech', 'ba']).fillna(9000)
     
     # zero out retired generators' capacity
     zout.loc[zout.solveYearOnline >= zout.retire_year, 'Summer.capacity'] = 0
+    zout.loc[zout.solveYearOnline >= zout.retire_year, 'Winter.capacity'] = 0
     
     # clean up output dataframe
     zout['bin_int'] = zout['bin'] #keep integer bins in dataframe for ease of plotting
@@ -463,22 +481,26 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
     zout['solveYearOnline'] = zout['solveYearOnline'].round()
     zout['wFOM'] *= 1e3
     zout.rename(columns={'Summer.capacity': 'cap',
+                         'Winter.capacity': 'wintercap',
                         'solveYearOnline': 'wOnlineYear',
                         'year': 'yr',
                         'tech': 'TECH'},
                 inplace=True)
 
     zout.cap = zout.cap.round(decimals=1)
+    zout.wintercap = zout.wintercap.round(decimals=1)
     zout.wHR = zout.wHR.round(decimals=1)
     zout.wFOM = zout.wFOM.round(decimals=3)
     zout.wVOM = zout.wVOM.round(decimals=3)
 
     # save output dataframe in inputs_case folder
-    cols = ['TECH', 'bin', 'ba', 'yr', 'cap', 'wHR',
+    cols = ['TECH', 'bin', 'ba', 'yr', 'cap', 'wintercap', 'wHR',
         'wFOM', 'wVOM', 'wOnlineYear']
-    zout[cols].dropna().to_csv(os.path.join(outdir, 'hintage_data.csv'), index=False)
 
+    zout[cols].dropna().to_csv(os.path.join(inputs_case, 'hintage_data.csv'), index=False)
 
+    make_plots = 0 
+    
     # Make plots comparing actual unit heatrates with binned ones, if desired
     if make_plots:
         import matplotlib.pyplot as plt
@@ -486,12 +508,11 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
         allgens = pd.merge(
             tdat.loc[
                 (tdat.RetireYear > 2020) & (tdat['onlineyear'] < 2020),
-                ['TECH','PCA','bin','HR','FOM','VOM','onlineyear','Summer.capacity']],
+                ['TECH','reeds_ba','bin','HR','FOM','VOM','onlineyear','Summer.capacity']],
             zout.loc[zout.yr==2020],
-            left_on=['PCA','TECH','bin'],
+            left_on=['reeds_ba','TECH','bin'],
             right_on=['ba','TECH','bin_int'],
             how='left')
-        
         
         ## Summary scatter plot for all techs
         plt.close()
@@ -506,7 +527,7 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
         plt.title('Hintage Binning Results for All BAs and All Techs')
         plt.xlabel("Actual Heat Rate (MMBtu / MWh)")
         plt.ylabel("Binned Heat Rate (MMBtu / MWh)")
-        plt.savefig(os.path.join(outdir, 'hintage_data_2020_heatrate_binning_summary.png'))
+        plt.savefig(os.path.join(inputs_case, 'hintage_data_2020_heatrate_binning_summary.png'))
 
 
         ## Faceted scatter plot showing a fairly random selection of nine BAs for all techs
@@ -545,15 +566,15 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
         color_bar = f.colorbar(im, cax=cbar_ax)
         color_bar.set_label(color_col)
 
-        plt.savefig(os.path.join(outdir, 'hintage_data_2020_BA_binning_examples_all_techs.png'))
+        plt.savefig(os.path.join(inputs_case, 'hintage_data_2020_BA_binning_examples_all_techs.png'))
 
 
         ## Faceted scatter plot showing the BA with the highest number of units for each tech 
         # (i.e. where our binning assumptions have the most impact)
         color_col = 'onlineyear'
-        allgens.groupby(["PCA", "TECH"]).count().groupby('TECH').max()
+        allgens.groupby(["reeds_ba", "TECH"]).count().groupby('TECH').max()
         bas_with_max_num_units_by_tech = (
-            allgens.groupby(["PCA", "TECH"]).count()
+            allgens.groupby(["reeds_ba", "TECH"]).count()
             .groupby('TECH').idxmax()['bin_x'].tolist()
         )
 
@@ -605,7 +626,7 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
         color_bar = f.colorbar(im, cax=cbar_ax)
         color_bar.set_label(color_col)
 
-        plt.savefig(os.path.join(outdir, 'hintage_data_2020_BAs_with_max_num_units_of_each_tech.png'))
+        plt.savefig(os.path.join(inputs_case, 'hintage_data_2020_BAs_with_max_num_units_of_each_tech.png'))
 
 
         corrcoef = allgens['HR'].corr(allgens['wHR'])
@@ -616,31 +637,11 @@ def main(cwd="/users/mbrown1/Documents/GitHub/MI_R2",
 if __name__ == '__main__':
     # %%
     parser = argparse.ArgumentParser()
-    parser.add_argument('cwd',
-                        type=str,
-                        help='Path to local ReEDS repo')
-    parser.add_argument('nBin',
-                        type=str,
-                        help='Maximum number of bins for generator grouping')
-    parser.add_argument('retscen',
-                        type=str,
-                        help='Retirement Scenario')
-    parser.add_argument('mindev',
-                        type=int,
-                        help='Minimum distance between bins')
-    parser.add_argument('distpvscen',
-                        type=str)
-    parser.add_argument('genunitfile',
-                        type=str)
-    parser.add_argument('outdir',
-                        type=str)
-    parser.add_argument('waterconstraints',
-                        nargs='?',
-                        default='0',
-                        type=str)
+    parser.add_argument('cwd', type=str, help='Path to local ReEDS repo')
+    parser.add_argument('inputs_case', type=str)    
 
-    args = vars(parser.parse_args())
-    main(**args)
+    args = parser.parse_args()
+    main(args.cwd, args.inputs_case)
 
     toc(tic=tic, year=0, process='input_processing/WriteHintage.py', 
-        path=os.path.join(args['outdir'],'..'))
+        path=os.path.join(args.inputs_case,'..'))

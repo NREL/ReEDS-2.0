@@ -1,4 +1,4 @@
 dac_conversion_rate_bau,1.5
 dac_conversion_rate_conservative,2.7
-dac_vom_percentage_bau,0.04
-dac_vom_percentage_conservative,0.08
+dac_fom_percentage_bau,0.04
+dac_fom_percentage_conservative,0.08

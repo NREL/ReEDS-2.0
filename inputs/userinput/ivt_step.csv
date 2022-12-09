@@ -6,10 +6,15 @@ battery_6,1
 battery_8,1
 battery_10,1
 biopower,5
-beccs,5
+beccs_mod,5
+beccs_max,5
 caes,1
 can-imports,0
-coal-CCS,5
+coal-CCS_mod,5
+coal-CCS_max,5
+coal-CCS-F1,5
+coal-CCS-F2,5
+coal-CCS-F3,5
 Coal-IGCC,5
 coal-new,5
 CoalOldScr,0
@@ -17,9 +22,13 @@ CoalOldUns,0
 CofireNew,5
 CofireOld,0
 csp-ns,0
-distPV,0
+distpv,0
 Gas-CC,5
-Gas-CC-CCS,5
+Gas-CC-CCS_mod,5
+Gas-CC-CCS_max,5
+Gas-CC-CCS-F1,5
+Gas-CC-CCS-F2,5
+Gas-CC-CCS-F3,5
 Gas-CT,5
 RE-CT,5
 RE-CC,5
@@ -31,10 +40,8 @@ Nuclear,5
 Nuclear-SMR,5
 Ocean,5
 o-g-s,5
-other,0
 pumped-hydro,1
 pumped-hydro-flex,1
-unknown,0
 upv_1*upv_10,1
 dupv_1*dupv_10,1
 pvb1_1 * pvb1_10,1
@@ -70,5 +77,6 @@ electrolyzer,1
 smr,1
 smr_ccs,1
 dac,1
+dac_gas,1
 hyded_pumped-hydro,5
 hyded_pumped-hydro-flex,5

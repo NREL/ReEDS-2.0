@@ -4,16 +4,14 @@ import os
 import pandas as pd
 # import numba
 
-from ReEDS_Augur.utility.functions import get_prop, agg_r_to_ccreg, agg_profiles, \
-    dr_capacity_credit, get_storage_eff, dr_dispatch
-from ReEDS_Augur.utility.generatordata import GEN_DATA, GEN_TECHS
+from ReEDS_Augur.utility.functions import (
+    get_prop, dr_capacity_credit, get_storage_eff)
+from ReEDS_Augur.utility.generatordata import GEN_DATA
 from ReEDS_Augur.utility.hourlyprofiles import HOURLY_PROFILES
 from ReEDS_Augur.utility.inputs import INPUTS
 from ReEDS_Augur.utility.switchsettings import SwitchSettings
 
-#%%
-
-
+#%% Main function
 def reeds_cc():
     '''
     This function directs all of the capacity credit calculations for ReEDS
@@ -22,24 +20,19 @@ def reeds_cc():
     '''
     #%%
     # Collect arguments
-    scenario =              SwitchSettings.scen
     next_year =             SwitchSettings.next_year
-    calc_csp =              SwitchSettings.switches['calc_csp_cc']
     calc_dr =               SwitchSettings.switches['gsw_dr']
     annual_hours =          SwitchSettings.switches['reedscc_ann_hours']
-    season_hours =          SwitchSettings.switches['reedscc_szn_hours']
+    season_hours =          SwitchSettings.switches['capcredit_szn_hours']
     demand_percentage =     SwitchSettings.switches['reedscc_max_stor_pen']
     stor_eff =              SwitchSettings.switches['reedscc_default_rte']
     demand_step_size =      SwitchSettings.switches['reedscc_stor_stepsize']
     stor_buffer_minutes =   SwitchSettings.switches['reedscc_stor_buffer']
-    cc_csp_default =        SwitchSettings.switches['reedscc_csp_cc_default']
-    marg_CSP_step_MW =      SwitchSettings.switches['reedscc_marg_csp_mw']
-    marg_VG_step_MW =       SwitchSettings.switches['marg_vre_mw']
+    marg_VG_step_MW =       SwitchSettings.switches['marg_vre_mw_cc']
     marg_DR_step_MW =       SwitchSettings.switches['marg_dr_mw']
     calc_annual =           SwitchSettings.switches['reedscc_calc_annual']
     calc_seasonal =         SwitchSettings.switches['reedscc_calc_seasonal']
     safety_bin_size =       SwitchSettings.switches['reedscc_safety_bin_size']
-    csp_step_size =         SwitchSettings.switches['reedscc_csp_step_size']
     cc_all_resources =      SwitchSettings.switches['cc_all_resources']
 
     # Unpack input data
@@ -48,9 +41,9 @@ def reeds_cc():
     r = INPUTS['rfeas'].get_data()
     r_rs = INPUTS['r_rs'].get_data()
     r_rs = r_rs[r_rs['r'].isin(r['r'])]
-    r_rs = r_rs.loc[(r_rs['rs'] != 'sk') & r_rs.rs.str.startswith('s')]
+    if not int(SwitchSettings.switches['gsw_aggregateregions']):
+        r_rs = r_rs.loc[r_rs.rs.str.startswith('s')]
     cap = GEN_DATA['max_cap'].copy()
-    cap_csp = GEN_TECHS['csp'].max_cap_orig.copy()
     cap_stor = cap[cap['i'].isin(techs['storage_standalone'])]
     cap_stor = get_prop(cap_stor, 'storage_duration', merge_cols = ['i'])
     cap_stor['MWh'] = cap_stor['MW'] * cap_stor['duration']
@@ -63,7 +56,6 @@ def reeds_cc():
     cap_shed = cap[cap['i'].isin(techs['dr2'])]
     cap_shed_agg = cap_shed.merge(hierarchy[['r','ccreg']], on = 'r')
     cap_shed_agg = cap_shed_agg.groupby('ccreg', as_index = False).sum()
-    csp_resources = INPUTS['csp_resources'].get_data()
     sdb = INPUTS['sdbin'].get_data()
     resources = INPUTS['resources'].get_data()
     ### Get the number of sites per resource profile (for individual sites)
@@ -93,14 +85,20 @@ def reeds_cc():
 
     # Prepare the seasonal profiles
     vregen_season = {}
-    cf_marginal_season = {}
+    vregen_marginal_season = {}
     for szn in seasons:
         if szn == 'year':
             vregen_season[szn] = HOURLY_PROFILES['vre_gen'].profiles.copy()
-            cf_marginal_season[szn] = HOURLY_PROFILES['vre_gen_marg'].profiles.copy()
+            vregen_marginal_season[szn] = (
+                HOURLY_PROFILES['vre_cf_marg'].profiles
+                * SwitchSettings.switches['marg_vre_mw_cc']
+            )
         else:
             vregen_season[szn] = HOURLY_PROFILES['vre_gen'].profiles.loc[szn]
-            cf_marginal_season[szn] = HOURLY_PROFILES['vre_gen_marg'].profiles.loc[szn]
+            vregen_marginal_season[szn] = (
+                HOURLY_PROFILES['vre_cf_marg'].profiles
+                * SwitchSettings.switches['marg_vre_mw_cc']
+            ).loc[szn]
     load_profiles = (
         HOURLY_PROFILES['load'].profiles
         ### Map BA regions to ccreg's and sum over them
@@ -208,7 +206,7 @@ def reeds_cc():
             cc_vg_results = cc_vg(
                 vg_power=vregen_season[season][resourcelist].values,
                 load=load_profile_season[ccreg].values,
-                vg_marg_power=cf_marginal_season[season][resourcelist].values,
+                vg_marg_power=vregen_marginal_season[season][resourcelist].values,
                 top_hours_n=hours_considered, cap_marg=marg_VG_step_MW)
 
             ###### Store the existing and marginal capacity credit results
@@ -400,14 +398,15 @@ def reeds_cc():
 
     return cc_results
 
-#%%
+#%% Additional functions
 # ------------------ CALC CC OF EXISTING VG RESOURCES -------------------------
 # @numba.jit(cache=True)
 def cc_vg(vg_power, load, vg_marg_power, top_hours_n, cap_marg):
     '''
     Calculate the capacity credit of existing and marginal variable generation
     capacity using a top hour approximation. More details on the methodology
-    used in this approximation can be found here: <file location>
+    used in this approximation can be found here: 
+    //nrelnas01/ReEDS/8760_Method_Inputs/8760 Method Documentation
     Args:
         vg_power: numpy matrix containing power output profiles for all
             hours_n for each variable generating resource
@@ -442,6 +441,11 @@ def cc_vg(vg_power, load, vg_marg_power, top_hours_n, cap_marg):
     top_hours = load.argsort()[np.arange(hours_n-1, (hours_n-top_hours_n)-1, -1)]
 
     # get the differences and reductions in load as well as the ratio between the two
+
+    # load_ratio is the effective reduction in load from wind and PV for each top load
+    # hour, and is used to scale the contributions of wind and PV respectively
+    # see slide 5 of "\\nrelnas01\ReEDS\8760_Method_Inputs\8760 Method Documentation\
+    # VG Capacity credit allocation documentation.pptx" for additional details
     load_dif = load[top_hours] - load_net[top_hours]
     load_reduct = load[top_hours] - load_net[top_hours_net]
     load_ratio = np.tile(
@@ -666,6 +670,7 @@ def cc_storage(storage, pr, re, sdb):
         else:
             # Now add small incremental capacity until we reach the crossover
             # point
+            error = 0
             p = p_base
             condition = True
             while condition:
@@ -675,6 +680,9 @@ def cc_storage(storage, pr, re, sdb):
                     condition = False
                 else:
                     p += p_step_small
+                error += 1
+                if error > 1e7:
+                    raise Exception('Runaway while loop in E_capacity_credit.py')
             # Find the max addition that could be made without exceeding the
             # marginal duration limit
             pr_temp = pr[pr <= p]
@@ -743,14 +751,6 @@ def cc_storage(storage, pr, re, sdb):
 
     peak_stor['remaining potential'] = peak_stor['peaking potential'] \
         - peak_stor['existing power']
-
-    # Capacity credit of existing storage is approximated here so that the
-    # load profile can be adjusted before the assessment of the marginal
-    # capacity credit of CSP with thermal energy storage
-    if storage.empty:
-        cc = 0
-    else:
-        cc = peak_stor['existing power'].sum() / storage['MW'].sum()
 
     # Setting the data type for peaking potential so that it can be rounded
     # before sent back to ReEDS

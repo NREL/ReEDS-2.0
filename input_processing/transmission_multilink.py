@@ -1,8 +1,7 @@
 """
 main contact: Patrick.Brown@nrel.gov
 Notes:
-* 'DC' refers only to LCC DC lines; 'VSC' refers to VSC macrogrid lines
-* AC/DC converter costs and losses are bundled in with LCC DC lines, but are
+* AC/DC converter costs and losses are bundled in with LCC DC and B2B lines, but are
   disaggregated for VSC lines (since not every node in a VSC macrogrid needs a converter)
 
 TODO:
@@ -17,6 +16,7 @@ sys.stderr = open('gamslog.txt', 'a')
 from ticker import toc
 import datetime
 tic = datetime.datetime.now()
+
 
 ###############
 #%% IMPORTS ###
@@ -35,76 +35,41 @@ print('Starting transmission_multilink.py', flush=True)
 #%% Fixed inputs
 decimals = 5
 drop_canmex = True
-### Multiply losses by 3x for lines beginning or ending in New England
-### (3x is the ratio of 345kV/500kV losses from the WECC/TEPPC calculator)
-extra_newengland_loss_multiplier = 3
+dollar_year = 2004
+weight = 'cost'
+### Indicate the source and year for the initial transmission capacity.
+### 'NARIS2024' is a better starting point for future-oriented studies, but it becomes
+### increasingly inaccurate for years earlier than 2024.
+### 'REFS2009' does not inclue direction-dependent capacities or differentiated capacities
+### for energy and PRM trading, but it better represents historical additions between 2010-2024.
+networksource, trans_init_year = 'NARIS2024', 2024
+# networksource, trans_init_year = 'REFS2009', 2009
 
 #%% Argument inputs
 parser = argparse.ArgumentParser(description="Format and write climate inputs")
-parser.add_argument('-i', '--reedsdir', help='ReEDS directory')
-parser.add_argument('-o', '--inputs_case', help='output directory (inputs_case)')
-parser.add_argument('-t', '--GSw_TranScen', type=str, default='default',
-                    help='transmission scenario (e.g. default, HVDC_Certain, HVDC_Possible)')
-parser.add_argument('-l', '--GSw_TransMultiLink', type=int, default=0)
-parser.add_argument('-e', '--GSw_TransExtent', type=str, default='country',
-                    help='Allowed extent of multi-link transmission paths; see hierarchy.csv',
-                    choices=['country','interconnect','nercr','rto', 'rto_agg', 'st'])
-parser.add_argument('-w', '--weight', type=str, default='loss',
-                    choices=['distance','loss','cost'],
-                    help='metric to minimize for optimal multi-link paths')
-parser.add_argument('-v', '--GSw_VSC', type=int, default=0,
-                    help='turn on/off multi-terminal VSC HVDC macrogrid')
-parser.add_argument('-b', '--GSw_VSC_BAlist', type=str, default='all',
-                    help='Suffix of file with list of candidate BAs for VSC AC/DC converters')
-parser.add_argument('-s', '--GSw_VSC_LinkList', type=str, default='all',
-                    help='Suffix of file with list of candidate links for VSC HVDC lines')
+parser.add_argument('reedsdir', help='ReEDS directory')
+parser.add_argument('inputs_case', help='output directory (inputs_case)')
 
 args = parser.parse_args()
 reedsdir = args.reedsdir
 inputs_case = args.inputs_case
-GSw_TranScen = args.GSw_TranScen
-GSw_TransMultiLink = args.GSw_TransMultiLink
-GSw_TransExtent = args.GSw_TransExtent
-weight = args.weight
-GSw_VSC = args.GSw_VSC
-GSw_VSC_BAlist = args.GSw_VSC_BAlist
-GSw_VSC_LinkList = args.GSw_VSC_LinkList
 
 # #%% DEBUG
 # reedsdir = os.path.expanduser('~/github/ReEDS-2.0/')
-# inputs_case = os.path.join(reedsdir,'runs','v20210630_VSC1_Z35_VSC_all','inputs_case','')
-# GSw_TranScen = 'VSC_ACpaths'
-# GSw_TransMultiLink = 1
-# GSw_TransExtent = 'country'
-# weight = 'cost'
-# GSw_VSC = 1
-# GSw_VSC_BAlist = 'all'
-# GSw_VSC_LinkList = 'all'
+# inputs_case = os.path.join(reedsdir,'runs','v20221106_NTPm0_ercot_seq','inputs_case','')
+
+#%% Inputs from switches
+sw = pd.read_csv(
+    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+
+GSw_TransScen = sw.GSw_TransScen
+GSw_TransMultiLink = int(sw.GSw_TransMultiLink)
+GSw_TransRestrict = sw.GSw_TransRestrict
+GSw_VSC = int(sw.GSw_VSC)
+GSw_TransSquiggliness = float(sw.GSw_TransSquiggliness)
 
 #################
 #%% FUNCTIONS ###
-
-def scalar_csv_to_txt(path_to_scalar_csv):
-    """
-    Write a scalar csv to GAMS-readable text
-    Format of csv should be: scalar,value,comment
-    """
-    ### Load the csv
-    dfscalar = pd.read_csv(
-        path_to_scalar_csv,
-        header=None, names=['scalar','value','comment'], index_col='scalar')
-    ### Create the GAMS-readable string
-    scalartext = '\n'.join([
-        'scalar {:<25} "{:<100}" /{}/ ;'.format(
-            i, dfscalar.loc[i,'comment'], dfscalar.loc[i,'value'])
-        for i in dfscalar.index
-    ])
-    ### Write it to a file, replacing .csv with .txt in the filename
-    with open(path_to_scalar_csv.replace('.csv','.txt'), 'w') as w:
-        w.write(scalartext)
-
-    return dfscalar
-
 
 def get_multilink_paths(transmission_paths, weight='cost'):
     """
@@ -145,8 +110,11 @@ def get_multilink_paths(transmission_paths, weight='cost'):
     dfout.index = dfout.index.rename(['r','rr'])
     return dfout
 
-def sort_regions(regions):
-    return ['p{}'.format(r) for r in sorted([int(r[1:]) for r in regions])]
+def sort_regions(regions, GSw_AggregateRegions):
+    if not int(GSw_AggregateRegions):
+        return ['p{}'.format(r) for r in sorted([int(r[1:]) for r in regions])]
+    else:
+        return sorted(regions)
 
 def finish(inputs_case=inputs_case):
     toc(tic=tic, year=0, process='input_processing/transmission_multilink.py', 
@@ -157,154 +125,211 @@ def finish(inputs_case=inputs_case):
 #################
 #%% PROCEDURE ###
 
+#%% Additional inputs
+costcol = 'USD{}perMW'.format(dollar_year)
+
 #%% Get the spatial hierarchy
 hierarchy = pd.read_csv(
-    os.path.join(reedsdir,'inputs','hierarchy.csv'),
-    names=['r','nercr','nercr_new','rto','rto_agg','cendiv','st',
-        'interconnect','country','customreg','ccreg','usda'],
-)
-### Clean up the first and last columns
-hierarchy.r = hierarchy.r.map(lambda x: x.replace('(',''))
-hierarchy.ccreg = hierarchy.ccreg.map(lambda x: x.replace(')','').replace(',',''))
-### Set r as the index
-hierarchy.set_index('r',inplace=True)
+    os.path.join(inputs_case,'hierarchy.csv')
+).rename(columns={'*r':'r'}).set_index('r')
 
-#%%### Get single-link distances and losses; write transmission scalars
+#%%### Get single-link distances and losses
 ### Get single-link distances [miles]
-transmission_distance = pd.read_csv(
-    os.path.join(reedsdir,'inputs','transmission','transmission_distance.csv')
-)
+infiles = {'AC':'500kVac', 'LCC':'500kVdc', 'B2B':'500kVac'}
+tline_data = pd.concat({
+    trtype: pd.read_csv(
+        os.path.join(
+            reedsdir,'inputs','transmission','transmission_distance_cost_{}.csv'.format(
+                infiles[trtype])))
+    for trtype in ['AC','LCC','B2B']
+}, axis=0).reset_index(level=0).rename(columns={'level_0':'trtype', 'length_miles':'miles'})
+### Apply the distance multiplier
+tline_data.miles *= GSw_TransSquiggliness
 
-transmission_distance['r_rr'] = transmission_distance.r + '_' + transmission_distance.rr
-
-### Merge the AC and DC columns
-transmission_distance = transmission_distance.melt(
-    id_vars=['r','rr','Source','Project(s)','Vintage','r_rr'],
-    value_vars=['AC','DC',], var_name='transtype', value_name='distance')
-
-### Drop the entries with null distance (AC entries from NARIS)
-transmission_distance.drop(
-    transmission_distance.loc[transmission_distance.distance.isnull()].index,
-    inplace=True)
+tline_data['r_rr'] = tline_data.r + '_' + tline_data.rr
 
 ### Make sure there are no duplicates
-if (transmission_distance.loc[
-        transmission_distance[['r','rr','transtype']].duplicated(keep=False)
+if (tline_data.loc[
+        tline_data[['r','rr','trtype']].duplicated(keep=False)
     ].shape[0] != 0):
         print(
-            transmission_distance.loc[
-                transmission_distance[['r','rr','transtype']].duplicated(keep=False),
-                ['r','rr','Source','distance','transtype','Project(s)']
+            tline_data.loc[
+                tline_data[['r','rr','trtype']].duplicated(keep=False)
             ].sort_values(['r','rr'])
         )
-        raise Exception('Duplicate entries in transmission_distance')
+        raise Exception('Duplicate entries in tline_data')
 
 
-### Load and write the transmission scalars
-scalars_transmission = scalar_csv_to_txt(os.path.join(inputs_case,'scalars_transmission.csv'))
-### Put some in dicts for easier access
-cost_acdc_lcc = scalars_transmission.loc['cost_acdc_lcc','value']
-cost_acdc_vsc = scalars_transmission.loc['cost_acdc_vsc','value']
-tranloss_permile = {'AC': scalars_transmission.loc['tranloss_permile_ac','value'],
-                    'DC': scalars_transmission.loc['tranloss_permile_dc','value'],}
+#%% Load the transmission scalars
+scalars = pd.read_csv(
+    os.path.join(inputs_case,'scalars.csv'),
+    header=None, names=['scalar','value','comment'], index_col='scalar').value
+### Get the contingency levels for energy and PRM trading
+nlevel = {
+    'energy': int(scalars['trans_contingency_level_energy']),
+    'prm': int(scalars['trans_contingency_level_prm']),
+}
+
+#%% Put some in dicts for easier access
+cost_acdc_lcc = scalars['cost_acdc_lcc']
+cost_acdc_vsc = scalars['cost_acdc_vsc']
+tranloss_permile = {
+    'AC': scalars['tranloss_permile_ac'],
+    ### B2B converters are AC-AC/DC-DC/AC-AC, so use AC per-mile losses
+    'B2B': scalars['tranloss_permile_ac'],
+    'LCC': scalars['tranloss_permile_dc'],
+    'VSC': scalars['tranloss_permile_dc'],
+}
 tranloss_fixed = {
-    'AC': 1 - scalars_transmission.loc['converter_efficiency_ac','value'],
-    'DC': 1 - scalars_transmission.loc['converter_efficiency_lcc','value'],
-    'VSC': 1 - scalars_transmission.loc['converter_efficiency_vsc','value'],
+    'AC': 1 - scalars['converter_efficiency_ac'],
+    'B2B': 1 - scalars['converter_efficiency_lcc'],
+    'LCC': 1 - scalars['converter_efficiency_lcc'],
+    'VSC': 1 - scalars['converter_efficiency_vsc'],
 }
 
 ### Calculate losses
 def getloss(row):
     """
-    Fixed losses are entered as per-endpoint values (e.g. for each AC-DC converter station
-    on a DC line). There are two endpoints per line, so multiply fixed losses by 2.
-    ! NOTE: Change this approach if converter stations are modeled explicitly
+    Fixed losses are entered as per-endpoint values (e.g. for each AC/DC converter station
+    on a LCC DC line). There are two endpoints per line, so multiply fixed losses by 2.
+    Note that this approach only applies for LCC DC lines; tline_data does not
+    have entries for VSC, and VSC AC/DC losses are applied later.
     """
-    return row.distance * tranloss_permile[row.transtype] + tranloss_fixed[row.transtype] * 2
+    return row.miles * tranloss_permile[row.trtype] + tranloss_fixed[row.trtype] * 2
 
-transmission_distance['loss'] = transmission_distance.apply(getloss, axis=1)
-
-### Apply the New-England-specific losses.
-### To only apply it to lines within New England (not lines into and out of New England,
-### change '|' to '&'.
-### ! NOTE: Other region-dependent losses could be added here as well
-transmission_distance.loc[
-    transmission_distance.r.isin(hierarchy.loc[hierarchy.cendiv=='NE'].index)
-    | transmission_distance.rr.isin(hierarchy.loc[hierarchy.cendiv=='NE'].index),
-    'loss'
-] *= extra_newengland_loss_multiplier
-
-### Write the single-link loss table (adding * to make GAMS read column names as comment)
-(transmission_distance[['r','rr','transtype','loss']]
- .round(decimals).rename(columns={'r':'*r','transtype':'trtype'})
-).to_csv(os.path.join(inputs_case,'tranloss.csv'), index=False, header=True)
+tline_data['loss'] = tline_data.apply(getloss, axis=1)
 
 ### Set the identifier index for easier indexing later
-transmission_distance.set_index(['r','rr','transtype'], inplace=True)
+tline_data.set_index(['r','rr','trtype'], inplace=True)
 
-#%% Write the regional transmission FOM costs [$/MW-mile/year]
-### Load the transmission component costs
-transmission_cost_components = pd.read_csv(
-    os.path.join(reedsdir,'inputs','transmission','transmission_line_cost_components.csv'),
-    header=0, index_col='r',
-)
-trans_fom_frac = scalars_transmission.loc['trans_fom_frac','value']
-trans_fom_region_mult = int(scalars_transmission.loc['trans_fom_region_mult','value'])
+#%% Include distances for existing lines
+transmission_distance = tline_data.miles.copy()
+
+#%% Write the line-specific transmission FOM costs [$/MW/year]
+trans_fom_region_mult = int(scalars['trans_fom_region_mult'])
+trans_fom_frac = scalars['trans_fom_frac']
+
+### For simplicity we just take the unweighted average base cost across
+### the four regions for which we have transmission cost data.
+### Future work should identify a better assumption.
+rev_transcost_base = pd.read_csv(
+    os.path.join(inputs_case,'rev_transmission_basecost.csv'),
+    header=[0], skiprows=[1],
+).replace({'500ACsingle':'AC','500DCbipole':'LCC'}).set_index('Voltage')
+transfom_USDperMWmileyear = {
+    trtype: (
+        rev_transcost_base.loc[trtype][['TEPPC','SCE','MISO','Southeast']].mean()
+        * trans_fom_frac
+    )
+    for trtype in ['AC','LCC']
+}
+
 if trans_fom_region_mult:
-    cost_columns = ['AC_final','DC_final']
+    ### Multiply line-specific $/MW by FOM fraction to get $/MW/year
+    transmission_line_fom = tline_data[costcol] * trans_fom_frac
+    ### Use regional average * distance_initial for existing lines
+    append = transmission_distance.loc[
+        transmission_distance.reset_index().trtype.isin(
+            ['AC','LCC','B2B']).set_axis(transmission_distance.index)
+    ]
 else:
-    cost_columns = ['AC_base','DC_base']
+    ### Multiply $/MW/mile/year by distance [miles] to get $/MW/year for ALL lines
+    transmission_line_fom = (
+        transmission_distance.reset_index().trtype.map(transfom_USDperMWmileyear)
+        * transmission_distance.values
+    ).set_axis(transmission_distance.index).rename('USDperMWyear')
 
-trans_fom = (
-    ## Take capital cost in $/MW-mile
-    transmission_cost_components[cost_columns]
-    .rename(columns=dict(zip(cost_columns, ['AC','DC'])))
-    ## Multiply by fraction/year to get $/MW-mile/year
-    * trans_fom_frac
-)
 
-### Write it
-trans_fom.round(decimals).to_csv(os.path.join(inputs_case,'trans_fom.csv'))
+#%%### Write files for ReEDS (adding * to make GAMS read column names as comment)
+### transmission_distance
+transmission_distance.round(3).reset_index().rename(columns={'r':'*r'}).to_csv(
+    os.path.join(inputs_case,'transmission_distance.csv'), index=False)
 
-#%% Process the initial-capacity, future-capacity, and distance files
-### trancap_init
-trancap_init = pd.read_csv(
-    os.path.join(reedsdir,'inputs','transmission','transmission_capacity_initial.csv')
-).melt(
-    id_vars=['r','rr'], value_vars=['AC','DC'],
-    var_name='trtype', value_name='value',
-)
-trancap_init.loc[
-    trancap_init.value > 0
-].rename(columns={'r':'*r'}).round(3).to_csv(
-    os.path.join(inputs_case,'trancap_init.csv'),
-    index=False,
-)
+### tranloss
+tranloss = transmission_distance.reset_index()
+tranloss['loss'] = tranloss.apply(getloss, axis=1)
+tranloss[['r','rr','trtype','loss']].round(decimals).rename(columns={'r':'*r'}).to_csv(
+    os.path.join(inputs_case,'tranloss.csv'), index=False, header=True)
 
-### trancap_fut
-trancap_fut = pd.read_csv(
+### transmission_line_fom
+transmission_line_fom.round(2).rename_axis(('*r','rr','trtype')).to_csv(
+    os.path.join(inputs_case,'transmission_line_fom.csv'))
+
+#%% trancap_init
+### AC capacity is defined for each direction and calculated using the scripts at
+### https://github.nrel.gov/pbrown/TSC
+trancap_init_ac = pd.read_csv(
     os.path.join(
-        reedsdir,'inputs','transmission','transmission_capacity_future_{}.csv'
-    ).format(GSw_TranScen)
-).melt(
-    id_vars=['r','rr','status','t'], value_vars=['AC','DC'],
-    var_name='trtype', value_name='value',
+        reedsdir,'inputs','transmission',f'transmission_capacity_init_AC_{networksource}.csv'))
+trancap_init_ac['trtype'] = 'AC'
+## DC capacity is only defined in one direction, so duplicate it for the opposite direction
+trancap_init_nonac_undup = pd.read_csv(
+    os.path.join(reedsdir,'inputs','transmission',f'transmission_capacity_init_nonAC.csv'))
+trancap_init_nonac = pd.concat(
+    [trancap_init_nonac_undup, trancap_init_nonac_undup.rename(columns={'r':'rr', 'rr':'r'})],
+    axis=0
 )
-trancap_fut.loc[
-    trancap_fut.value > 0
-].rename(columns={'r':'*r'}).round(3).to_csv(
-    os.path.join(inputs_case,'trancap_fut.csv'),
-    index=False,
-)
+### SPECIAL CASE: p19 is islanded with NARIS transmission data, so connect it manually
+if networksource == 'NARIS2024':
+    trancap_init_ac = trancap_init_ac.append(
+        {'interface':'p19||p20', 'r':'p19', 'rr':'p20',
+        'MW_f0':0.001, 'MW_r0':0.001, 'MW_f1':0, 'MW_r1':0, 'trtype':'AC'},
+        ignore_index=True
+    )
 
-### distance
-(
-    transmission_distance.distance.round(3)
-    .reset_index().rename(columns={'r':'*r','transtype':'trtype'})
-).to_csv(
-    os.path.join(inputs_case,'transmission_distance.csv'),
-    index=False,
-)
+### Initial trading limit, using contingency levels specified by contingency level (nlevel)
+### (but assuming full capacity of DC is available for both energy and capcity)
+trancap_init = {
+    n: pd.concat([
+        ## AC
+        pd.concat([
+            ## Forward direction
+            (trancap_init_ac[['r','rr','trtype',f'MW_f{nlevel[n]}']]
+             .rename(columns={f'MW_f{nlevel[n]}':'MW'})),
+            ## Reverse direction
+            (trancap_init_ac[['r','rr','trtype',f'MW_r{nlevel[n]}']]
+             .rename(columns={'r':'rr', 'rr':'r', f'MW_r{nlevel[n]}':'MW'}))
+        ], axis=0),
+        ## DC
+        trancap_init_nonac[['r','rr','trtype','MW']]
+    ## Drop entries with zero capacity
+    ], axis=0).replace(0.,np.nan).dropna()
+    for n in nlevel
+}
+#%% Write the initial capacities
+for n in nlevel:
+    trancap_init[n].rename(columns={'r':'*r'}).round(3).to_csv(
+        os.path.join(inputs_case,f'trancap_init_{n}.csv'),
+        index=False,
+    )
+
+#%% trancap_fut
+## note that '0' is used as a filler value in the t column for firstyear_trans, which is defined
+## in inputs/scalars.csv. So we replace it whenever we load a transmission_capacity_future file.
+trancap_fut = pd.concat([
+    (
+        pd.read_csv(os.path.join(
+            reedsdir,'inputs','transmission','transmission_capacity_future_baseline.csv'))
+        .drop(['Notes','notes','Note','note'], axis=1, errors='ignore')
+        .replace({'t':{0:int(scalars['firstyear_trans'])}})
+    ),
+    (
+        pd.read_csv(os.path.join(
+            reedsdir,'inputs','transmission','transmission_capacity_future_{}.csv').format(
+                GSw_TransScen))
+        .drop(['Notes','notes','Note','note'], axis=1, errors='ignore')
+        .replace({'t':{0:int(scalars['firstyear_trans'])}})
+    ),
+], axis=0, ignore_index=True)
+
+### Drop prospective lines from years <= trans_init_year
+trancap_fut = trancap_fut.loc[trancap_fut.t > trans_init_year].copy()
+trancap_fut.rename(columns={'r':'*r'}).round(3).to_csv(
+    os.path.join(inputs_case,'trancap_fut.csv'), index=False)
+
+### transmission_line_capcost
+tline_data[costcol].round(2).reset_index().rename(columns={'r':'*r'}).to_csv(
+    os.path.join(inputs_case,'transmission_line_capcost.csv'), index=False)
 
 ##########################################################
 #%% Quit here if multi-link transmission assessment is off
@@ -314,58 +339,56 @@ if not GSw_TransMultiLink:
 
 #%% Load existing and possible transmission capacity
 transmission_capacity = {
-    ending.lower(): pd.read_csv(os.path.join(
-        reedsdir,'inputs','transmission','transmission_capacity_{}.csv'.format(ending)))
-    for ending in ['initial','future_{}'.format(GSw_TranScen)]
+    ending.lower(): (
+        pd.read_csv(os.path.join(
+            reedsdir,'inputs','transmission','transmission_capacity_{}.csv'.format(ending)))
+        .drop(['Project(s)','Notes','rnum','rrnum'], axis=1, errors='ignore')
+        .replace({'t':{0:int(scalars['firstyear_trans'])}})
+    )
+    for ending in ['future_baseline','future_{}'.format(GSw_TransScen)]
 }
+transmission_capacity['initial'] = pd.concat([
+    trancap_init_ac.assign(MW=trancap_init_ac[['MW_f0','MW_r0']].max(axis=1)),
+    trancap_init_nonac_undup
+], axis=0)[['r','rr','trtype','MW']].copy()
 for ending in transmission_capacity:
     transmission_capacity[ending.lower()]['r_rr'] = (
         transmission_capacity[ending.lower()].r + '_' + transmission_capacity[ending.lower()].rr)
+transmission_capacity_future = pd.concat([
+    transmission_capacity['future_baseline'],
+    transmission_capacity['future_{}'.format(GSw_TransScen).lower()]
+], axis=0, ignore_index=True)
+### Drop VSC links for now (VSC is handled separately below)
+transmission_capacity_future = transmission_capacity_future.loc[
+    transmission_capacity_future.trtype != 'VSC'
+].copy()
+### Drop prospective lines from years <= trans_init_year
+transmission_capacity_future = transmission_capacity_future.loc[
+    transmission_capacity_future.t > trans_init_year].copy()
 
 #%% Include extra lines from chosen transmission scenario
 addlinks = [
-    r_rr for r_rr in transmission_capacity['future_{}'.format(GSw_TranScen).lower()].r_rr.values
+    r_rr for r_rr in transmission_capacity_future.r_rr.values
     if r_rr not in transmission_capacity['initial'].r_rr.values
 ]
 
 #%% Include future links based on transmission scenario
 transmission_paths = transmission_capacity['initial'].append(
-    transmission_capacity['future_{}'.format(GSw_TranScen).lower()].loc[
-        transmission_capacity['future_{}'.format(GSw_TranScen).lower()].r_rr.isin(addlinks)
-    ],
-    ignore_index=True
+    transmission_capacity_future.loc[transmission_capacity_future.r_rr.isin(addlinks)],
+    ignore_index=True,
 )
-### Remove rows that are marked as "removed" in Notes column
-transmission_paths.drop(
-    transmission_paths.loc[transmission_paths.Notes.map(lambda x: 'removed' in str(x))].index,
-    inplace=True
-)
-### Get the rows with both AC and DC capacity
-duprows = transmission_paths.loc[
-    (transmission_paths.DC != 0) & (transmission_paths.AC != 0)]
-
-### Split the rows with both AC/DC into two rows
-for i in duprows.index:
-    ### Add a line for DC only
-    transmission_paths = transmission_paths.append(duprows.loc[i], ignore_index=True)
-    ### Zero out the original DC
-    transmission_paths.loc[i,'DC'] = 0
-    ### Zero out the new AC
-    transmission_paths.loc[transmission_paths.iloc[-1].name,'AC'] = 0
-
-if (transmission_paths.loc[
-        (transmission_paths.AC!=0) & (transmission_paths.DC!=0)
-    ].shape[0] != 0):
-        raise Exception('Duplicate entries in transmission_paths')
-### Identify line type
-transmission_paths['transtype'] = transmission_paths.AC.map(
-    lambda x: 'AC' if x != 0 else 'DC')
-
+transmission_paths = transmission_paths.replace({'trtype':{'B2B':'LCC'}})
 ### Add chosen multi-link extent
-transmission_paths['extent1'] = transmission_paths.r.map(hierarchy[GSw_TransExtent])
-transmission_paths['extent2'] = transmission_paths.rr.map(hierarchy[GSw_TransExtent])
+transmission_paths['extent1'] = transmission_paths.r.map(hierarchy[GSw_TransRestrict])
+transmission_paths['extent2'] = transmission_paths.rr.map(hierarchy[GSw_TransRestrict])
 transmission_paths['extents'] = (
     transmission_paths.extent1 + '_' + transmission_paths.extent2
+)
+### Add interconnect (so that we can drop cross-interconnect AC lines if using aggregated regions)
+transmission_paths['interconnect1'] = transmission_paths.r.map(hierarchy.interconnect)
+transmission_paths['interconnect2'] = transmission_paths.rr.map(hierarchy.interconnect)
+transmission_paths['interconnects'] = (
+    transmission_paths.interconnect1 + '_' + transmission_paths.interconnect2
 )
 
 ### Drop links to Canada and Mexico if desired
@@ -378,35 +401,69 @@ if drop_canmex:
         inplace=True
     )
 
+#%%### Aggregate regions if necessary (special case for multi-link; all the
+### rest of the region-aggregation is handled in aggregate_regions.py)
+if int(sw['GSw_AggregateRegions']):
+    rb2aggreg = hierarchy.aggreg.copy()
+    #%%### Get the "anchor" zone for each aggregation region (same as aggregate_regions.py)
+    ## Get annual average load
+    load = pd.read_csv(
+        os.path.join(reedsdir, 'inputs', 'variability', 'multi_year', 'load.csv.gz'),
+        index_col=0,
+    ).mean().rename_axis('r').rename('MW').to_frame()
+    ## Add column for new regions
+    load['aggreg'] = load.index.map(rb2aggreg)
+    ## Take the original zone with largest demand
+    aggreg2anchorreg = load.groupby('aggreg').idxmax()['MW'].rename('rb')
+    anchorreg2aggreg = pd.Series(index=aggreg2anchorreg.values, data=aggreg2anchorreg.index)
+
+    #%%### Map original regions to aggregated regions
+    for c in ['r','rr']:
+        transmission_paths[c] = transmission_paths[c].map(rb2aggreg)
+    transmission_paths['r_rr'] = transmission_paths.r + '_' + transmission_paths.rr
+    ### Drop intra-aggreg paths and duplicate paths
+    transmission_paths = transmission_paths.loc[
+        transmission_paths.r != transmission_paths.rr
+    ].drop_duplicates(subset=['r','rr']).copy()
+    ### Drop AC links that cross interconnect boundaries
+    transmission_paths = transmission_paths.loc[
+        ~(
+            (transmission_paths.interconnect1 != transmission_paths.interconnect2)
+            & (transmission_paths.trtype.isin(['AC']))
+        )
+    ].copy()
+
+    #%%### Keep anchor regions from tline_data, then map to aggregated regions
+    tline_data = tline_data.loc[
+        tline_data.index.get_level_values('r').isin(aggreg2anchorreg)
+        & tline_data.index.get_level_values('rr').isin(aggreg2anchorreg)
+    ].reset_index().copy()
+    ### Map to aggregated retions
+    for c in ['r','rr']:
+        tline_data[c] = tline_data[c].map(anchorreg2aggreg)
+    ## Switch back to original index
+    tline_data = tline_data.set_index(['r','rr','trtype'])
+
 #%% Add distance to transmission_paths
 distances = []
 for i in transmission_paths.index:
-    r,rr,transtype = transmission_paths.loc[i,['r','rr','transtype']].values
+    r,rr,trtype = transmission_paths.loc[i,['r','rr','trtype']].values
     try:
-        distance = transmission_distance.loc[(r,rr,transtype),'distance']
+        distance = tline_data.loc[(r,rr,trtype),'miles']
     except KeyError:
-        distance = transmission_distance.loc[(rr,r,transtype),'distance']
+        distance = tline_data.loc[(rr,r,trtype),'miles']
     distances.append(distance)
-transmission_paths['distance'] = distances
+transmission_paths['miles'] = distances
 
 #%% Add losses
 transmission_paths['loss'] = transmission_paths.apply(getloss, axis=1)
 
 #%% Add costs
-### $/MW-mile cost
-transmission_line_cost = pd.read_csv(
-    os.path.join(reedsdir,'inputs','transmission','transmission_line_cost.csv'),
-    header=0, index_col='r',
-)
-
 def cost(row):
-    """Average of regional costs time distance. Returns $/MW."""
+    """Transmission line cost plus LCC converter if necessary [returns $/MW]"""
     out = (
-        (transmission_line_cost.loc[row['r'],row['transtype']]
-         + transmission_line_cost.loc[row['rr'],row['transtype']]
-        ) / 2
-        * row['distance']
-        + (2 * cost_acdc_lcc if row['DC'] else 0)
+        tline_data.loc[(row.r, row.rr, row.trtype), costcol]
+        + (2 * cost_acdc_lcc if row.trtype in ['LCC','B2B'] else 0)
     )
     return out
 
@@ -424,8 +481,20 @@ transmission_paths.drop(
 ### Check if there are entries with r,rr reversed
 for r,rr in transmission_paths[['r','rr']].values:
     if transmission_paths.loc[(transmission_paths.r==rr)&(transmission_paths.rr==r)].shape[0] > 0:
-        print(transmission_paths.loc[(transmission_paths.r==r)&(transmission_paths.rr==rr)])
-        raise Exception('Duplicate (r,rr) pairs')
+        ## Drop the duplicates if aggregating (since we expect some)
+        if int(sw['GSw_AggregateRegions']):
+            print(f'dropping duplicate entry for {r},{rr}')
+            transmission_paths.drop(
+                transmission_paths.loc[(transmission_paths.r==r)&(transmission_paths.rr==rr)].index,
+                inplace=True
+            )
+        else:
+            dfdup = transmission_paths.loc[
+                ((transmission_paths.r==rr)&(transmission_paths.rr==r))
+                | (transmission_paths.r==r)&(transmission_paths.rr==rr)
+            ]
+            print(dfdup)
+            raise Exception('Duplicate (r,rr) pairs')
 
 ### Drop nulls
 transmission_paths.dropna(subset=[weight], inplace=True)
@@ -446,8 +515,9 @@ for extent in extents:
         (transmission_paths.extent1 == extent)
         & (transmission_paths.extent2 == extent)
     ]
-    dictout[extent] = get_multilink_paths(
-        transmission_paths=transmission_paths_extent, weight=weight)
+    if not transmission_paths_extent.empty:
+        dictout[extent] = get_multilink_paths(
+            transmission_paths=transmission_paths_extent, weight=weight)
 dfout = pd.concat(dictout, axis=0).reset_index(level=0,drop=True)
 
 #%% Get path loss even if weight != loss (since we need it for Augur)
@@ -470,7 +540,7 @@ if weight != 'loss':
 dfout['VSC'] = 0
 
 #%% Save it
-dfout.to_csv(os.path.join(inputs_case,'trans-multilink-paths.csv'))
+dfout.round(decimals).to_csv(os.path.join(inputs_case,'trans_multilink_paths.csv'))
 
 #%%### Generate the linking matrix
 ### Format:
@@ -487,7 +557,12 @@ df = dfout.copy()
 def make_linkage_set(dfin, transmission_paths=transmission_paths.copy(), sinklabel='rr'):
     df = dfin.copy()
     ### Make the trtype lookup
-    trtype = transmission_paths.set_index(['r','rr']).transtype.to_dict()
+    trtype = (
+        transmission_paths
+        .append(transmission_paths[['rr','r','trtype']].rename(columns={'r':'rr','rr':'r'}))
+        [['r','rr','trtype']].set_index(['r','rr']).trtype
+        .to_dict()
+    )
     vsc = dfin.VSC.to_dict()
     ### Drop the diagonal
     df.drop(df.loc[df.path.map(lambda x: '|' not in x)].index, inplace=True)
@@ -502,7 +577,8 @@ def make_linkage_set(dfin, transmission_paths=transmission_paths.copy(), sinklab
 
     ### For each (n,nn) pair, put the lower-numbered region in n
     dflinkage_sorted = dflinkage.copy()
-    dflinkage_sorted[['n','nn']] = [sort_regions(i) for i in dflinkage[['n','nn']].values]
+    dflinkage_sorted[['n','nn']] = [
+        sort_regions(i, int(sw['GSw_AggregateRegions'])) for i in dflinkage[['n','nn']].values]
 
     ### Add the transmission type
     dflinkage_sorted['trtype'] = dflinkage_sorted.apply(
@@ -518,7 +594,7 @@ dflinkage_r = make_linkage_set(dfout)
 
 #%% Save the outputs
 dflinkage_r.to_csv(
-    os.path.join(inputs_case,'trans-multilink-segments.csv'), 
+    os.path.join(inputs_case,'trans_multilink_segments.csv'), 
     index=False, header=True)
 
 
@@ -534,56 +610,48 @@ dflinkage_r.to_csv(
 if not GSw_VSC:
     finish()
 
-### Load candidate AC/DC VSC converter locations
-vsc_bas = pd.read_csv(
-    os.path.join(reedsdir,'inputs','transmission',
-                 'converter_vsc_bas_{}.csv'.format(GSw_VSC_BAlist)),
-    squeeze=True, header=None, names=['r'],
-)
-
 #%% Load candidate corridors for VSC
 ### 'all' includes initial AC and B2B links, but not existing/proposed DC (which is all LCC)
 vsc_links = pd.read_csv(
-    os.path.join(reedsdir,'inputs','transmission',
-                 'transmission_vsc_links_{}.csv'.format(GSw_VSC_LinkList)),
-    header=0, names=['r','rr'],
-)
+    os.path.join(
+        reedsdir,'inputs','transmission',
+        'transmission_capacity_future_{}.csv'.format(GSw_TransScen)),
+    header=0,
+).replace({'t':{0:int(scalars['firstyear_trans'])}})
+### Only keep the VSC links
+vsc_links = vsc_links.loc[vsc_links.trtype=='VSC',['r','rr']].drop_duplicates()
+
+### Convert to aggregate regions if necessary
+if int(sw['GSw_AggregateRegions']):
+    for c in ['r','rr']:
+        vsc_links[c] = vsc_links[c].map(rb2aggreg)
+    vsc_links = vsc_links.loc[vsc_links.r != vsc_links.rr].drop_duplicates()
+
 ### Add distance and losses (leaving out converter losses, which are treated separately)
 distance_lookup = (
-    transmission_distance
-    .xs(slice(None),level='transtype')['distance']
+    tline_data
+    .xs('LCC',level='trtype')['miles']
     .reset_index()
     .drop_duplicates()
     .set_index(['r','rr'])
-    ['distance']
+    ['miles']
     .to_dict()
 )
-vsc_links['transtype'] = 'VSC'
-vsc_links['distance'] = vsc_links.apply(
+vsc_links['trtype'] = 'VSC'
+vsc_links['miles'] = vsc_links.apply(
     lambda row: distance_lookup[row.r, row.rr],
     axis=1
 )
-vsc_links['loss'] = vsc_links.distance * tranloss_permile['DC']
+vsc_links['loss'] = vsc_links.miles * tranloss_permile['VSC']
 
 #%% Get the cost table for VSC
-def cost_vsc(row):
-    """
-    Average of regional costs time distance. Returns $/MW.
-    Differs from cost() in that here we only use DC, and don't apply the converter cost
-    (which applies to each multilink line, not to each link)
-    """
-    out = (
-        (transmission_line_cost.loc[row['r'],'DC'] 
-         + transmission_line_cost.loc[row['rr'],'DC']
-        ) / 2 
-        * row['distance']
-    )
-    return out
-
-transmission_paths_vsc = (transmission_paths_extent.merge(vsc_links[['r','rr']], on=['r','rr']))
-transmission_paths_vsc.cost = transmission_paths_vsc.apply(cost_vsc, axis=1)
-transmission_paths_vsc.loss = transmission_paths_vsc.distance * tranloss_permile['DC']
-### The macrogrid is assumed to connect the entire USA, so we don't apply GSw_TransExtent
+### Length-dependent cost (same as LCC DC but leave out converter)
+transmission_paths_vsc = vsc_links.merge(
+    tline_data[costcol].reset_index().replace({'LCC':'VSC'}),
+    on=['r','rr','trtype'], how='left').rename(columns={costcol:'cost'})
+### Length-dependent losses are the same for LCC and VSC (both assumed to be 500 kV)
+transmission_paths_vsc.loss = transmission_paths_vsc.miles * tranloss_permile['VSC']
+### The macrogrid is assumed to connect the entire USA, so we don't apply GSw_TransRestrict
 dfout_vsc = get_multilink_paths(
     transmission_paths=transmission_paths_vsc, weight=weight)
 ### Each optimized VSC multilink path gets 2x cost_acdc_vsc and 2x converter losses,
@@ -614,7 +682,7 @@ dfout_best = pd.concat([
 ], axis=0)
 
 #%% Save it, overwriting the old version
-dfout_best.to_csv(os.path.join(inputs_case,'trans-multilink-paths.csv'))
+dfout_best.round(decimals).to_csv(os.path.join(inputs_case,'trans_multilink_paths.csv'))
 
 
 #%% Generate the linking matrix
@@ -622,32 +690,34 @@ dflinkage_vsc = make_linkage_set(dfout_best)
 
 #%% Save it, overwriting the old version
 dflinkage_vsc.to_csv(
-    os.path.join(inputs_case,'trans-multilink-segments.csv'), 
+    os.path.join(inputs_case,'trans_multilink_segments.csv'), 
     index=False, header=True)
 
 
 #%% Save the (r,rr) pairs for which VSC is optimal, so that ReEDS knows
 ### it must build VSC converters at either end to get the curtailment reduction
 dfout_best.loc[dfout_best.VSC==1].reset_index()[['r','rr']].rename(columns={'r':'*r'}).to_csv(
-    os.path.join(inputs_case,'trans-multilink-converters.csv'),
+    os.path.join(inputs_case,'trans_multilink_converters.csv'),
     index=False, header=True)
 
-
-#%% Add VSC lines to tranloss(r,rr,trtype) used in ReEDS
+#%%### Overwrite the ReEDS files written above to include VSC
+### tranloss
 pd.concat([
-    transmission_distance.reset_index()[['r','rr','transtype','loss']],
-    vsc_links[['r','rr','transtype','loss']],
-    vsc_links[['rr','r','transtype','loss']].rename(columns={'r':'rr','rr':'r'}),
-], axis=0).round(decimals).drop_duplicates().rename(columns={'r':'*r','transtype':'trtype'}).to_csv(
+    tranloss[['r','rr','trtype','loss']],
+    vsc_links[['r','rr','trtype','loss']],
+    vsc_links[['rr','r','trtype','loss']].rename(columns={'r':'rr','rr':'r'}),
+], axis=0).round(decimals).drop_duplicates().rename(columns={'r':'*r','trtype':'trtype'}).to_csv(
     os.path.join(inputs_case,'tranloss.csv'), index=False, header=True
 )
 
-#%% Add VSC lines to distance(r,rr,trtype) used in ReEDS
+#%% transmission_distance
 pd.concat([
-    transmission_distance.reset_index()[['r','rr','transtype','distance']],
-    vsc_links[['r','rr','transtype','distance']],
-    vsc_links[['rr','r','transtype','distance']].rename(columns={'r':'rr','rr':'r'}),
-], axis=0).round(3).drop_duplicates().rename(columns={'r':'*r','transtype':'trtype'}).to_csv(
+    transmission_distance.reset_index()[['r','rr','trtype','miles']],
+    vsc_links[['r','rr','trtype','miles']],
+    vsc_links[['rr','r','trtype','miles']].rename(columns={'r':'rr','rr':'r'}),
+], axis=0).round(3).drop_duplicates().rename(
+    columns={'r':'*r','trtype':'trtype','miles':'miles'}
+).to_csv(
     os.path.join(inputs_case,'transmission_distance.csv'), index=False, header=True
 )
 
@@ -657,11 +727,7 @@ pd.concat([
     vsc_links[['rr','r']].rename(columns={'r':'rr','rr':'r'})
 ]).drop_duplicates().rename(columns={'r':'*r'}).to_csv(
     os.path.join(inputs_case, 'transmission_vsc_routes.csv'),
-    index=False, sep='.',
-)
-vsc_bas.to_csv(
-    os.path.join(inputs_case, 'transmission_vsc_regions.csv'),
-    index=False, header=False,
+    index=False,
 )
 
 #%% Finish the timer

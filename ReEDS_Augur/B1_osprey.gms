@@ -45,7 +45,7 @@ Sw_Hydro        "switch to turn on/off hydro representation (1 = ReEDS, 0 = PLEX
 set i, v, r, rfeas, szn, routes, storage_standalone, dr1, dr2, hydro_d, hydro_nd, geo, nuclear ;
 
 *Load sets from ReEDS
-$gdxin ReEDS_Augur%ds%augur_data%ds%reeds_data_%next_year%.gdx
+$gdxin ReEDS_Augur%ds%augur_data%ds%reeds_data_%prev_year%.gdx
 $loadr i
 $loadr v
 $loadr r
@@ -63,7 +63,7 @@ $gdxin
 set hr_all    "hours in a 48-hour horizon" / hr1*hr48 /
     hr(hr_all) "hours in a 24-hour horizon" / hr1*hr24 /
     d        "day"  / d1*d%osprey_num_days% /
-    trtype "transmission type: AC includes AC and LCC DC" / AC, VSC /
+    trtype "transmission type: AC includes everything except VSC" / AC, VSC /
 ;
 
 alias (hr,hh) ;
@@ -131,7 +131,7 @@ parameters cap_trans(r,rr,trtype)         "--MW-- transmission line capacities",
 
 
 * Load values from ReEDS
-$gdxin ReEDS_Augur%ds%augur_data%ds%osprey_inputs_%next_year%.gdx
+$gdxin ReEDS_Augur%ds%augur_data%ds%osprey_inputs_%prev_year%.gdx
 $loadr cap_trans = trancap
 $loadr gen_cost = gen_cost
 $loadr mingen = mingen
@@ -155,24 +155,26 @@ cost_flow = 0.001 ;
 Table cap_in(i,v,r,d) "--MW-- Available capacity for each day"
 $offlisting
 $ondelim
-$include ReEDS_Augur%ds%augur_data%ds%avail_cap_d_%next_year%.csv
+$include ReEDS_Augur%ds%augur_data%ds%avail_cap_d_%prev_year%.csv
 $offdelim
 $onlisting
 ;
 
-
-Table energy_budget_in(i,v,r,d) "--MWh-- Energy budget for dispatchable hydro and hybrid resources"
+$onempty
+Parameter energy_budget_in(i,v,r,d) "--MWh-- Energy budget for dispatchable hydro and hybrid resources"
+/
 $offlisting
 $ondelim
-$include ReEDS_Augur%ds%augur_data%ds%daily_energy_budget_%next_year%.csv
+$include ReEDS_Augur%ds%augur_data%ds%daily_energy_budget_%prev_year%.csv
 $offdelim
 $onlisting
-;
+/ ;
+$offempty
 
 Table net_load_in(d,hr_all,r) "--MW-- Net load for 48-hour horizon"
 $offlisting
 $ondelim
-$include ReEDS_Augur%ds%augur_data%ds%net_load_osprey_%next_year%.csv
+$include ReEDS_Augur%ds%augur_data%ds%net_load_osprey_%prev_year%.csv
 $offdelim
 $onlisting
 ;
@@ -208,7 +210,7 @@ Parameter prod_load(r)     "--MWh-- demand for production (used in model)" ;
 Table dr_cf_inc_in(d,hr_all,i,r) "--fraction-- fraction of DR capacity that can be increased"
 $offlisting
 $ondelim
-$include ReEDS_Augur%ds%augur_data%ds%dr_inc_osprey_%next_year%.csv
+$include ReEDS_Augur%ds%augur_data%ds%dr_inc_osprey_%prev_year%.csv
 $offdelim
 $onlisting
 ;
@@ -216,7 +218,7 @@ $onlisting
 Table dr_cf_dec_in(d,hr_all,i,r) "--fraction-- fraction of DR capacity that can be decreased"
 $offlisting
 $ondelim
-$include ReEDS_Augur%ds%augur_data%ds%dr_dec_osprey_%next_year%.csv
+$include ReEDS_Augur%ds%augur_data%ds%dr_dec_osprey_%prev_year%.csv
 $offdelim
 $onlisting
 ;
@@ -578,6 +580,7 @@ Parameter prices(d,hr,r)                           "--$/MWh-- energy prices"
           PRODUCE_output(d,hr,r)                   "--MW-- additional generation for the production of produce"
           PRODUCE_output_h1(d,h1,r)                "--MW-- additional generation for production for the first 24 hours only"
           CONVERSION_output(d,hr,r,intype,outtype) "--MW-- conversion of AC->DC_VSC or DC_VSC->AC"
+          cf_output(i,r)                           "--fraction-- capacity factor of dispatchable generators"
 ;
 
 *=============================
@@ -683,7 +686,9 @@ dr_inc_output_h1(d,h1,i,v,r) = dr_inc_output(d,h1,i,v,r) ;
 dropped_load_output_h1(d,h1,r) = dropped_load_output(d,h1,r) ;
 PRODUCE_output_h1(d,h1,r) = PRODUCE_output(d,h1,r) ;
 
-execute_unload "ReEDS_Augur%ds%augur_data%ds%osprey_outputs_%next_year%.gdx"
+cf_output(i,r)$sum{v, cap(i,v,r) } = sum{(d,hr,v), gen_output(d,hr,i,v,r) } / (sum{v, cap(i,v,r) } * 8760) ;
+
+execute_unload "ReEDS_Augur%ds%augur_data%ds%osprey_outputs_%prev_year%.gdx"
     prices
     flows_output
     gen_output
@@ -701,6 +706,7 @@ execute_unload "ReEDS_Augur%ds%augur_data%ds%osprey_outputs_%next_year%.gdx"
     cost_dropped_load
     energy_budget_feas
     CONVERSION_output
+    cf_output
 *     prices_h1, flows_output_h1, gen_output_h1,
 *     storage_in_output_h1, storage_level_output_h1,
 *     dropped_load_output_h1

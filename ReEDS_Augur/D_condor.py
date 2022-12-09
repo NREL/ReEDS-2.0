@@ -39,430 +39,439 @@ def get_marginal_storage_value(trans_region_curt):
     '''
     This function performs a simulated storage dispatch
     '''
-#%%
-    if SwitchSettings.switches['gsw_storage'] != '0':
-        # Default efficiency value for Condor
-        eta_discharge = SwitchSettings.switches['condor_discharge_eff']
-        # List of technology types that are considered when adjusting price
-        #   profiles for start costs
-        keep_techs = SwitchSettings.switches['condor_keep_techs']
+    #%% Bypass this calculation if Augur curtailment is turned off,
+    ### if arbitrage value is completely derated,
+    ### or if storage is turned off
+    if ((not int(SwitchSettings.switches['gsw_augurcurtailment']))
+        or (not float(SwitchSettings.switches['gsw_storagearbitragemult']))
+        or (not int(SwitchSettings.switches['gsw_storage']))
+    ):
+        return {'hourly_arbitrage_value': pd.DataFrame(columns=['i','r','t','revenue'])}
+
+    # Default efficiency value for Condor
+    eta_discharge = SwitchSettings.switches['condor_discharge_eff']
+    # List of technology types that are considered when adjusting price
+    #   profiles for start costs
+    keep_techs = SwitchSettings.switches['condor_keep_techs']
+
+    techs = INPUTS['i_subsets'].get_data()
+    techs_to_keep = []
+    for t in keep_techs:
+        techs_to_keep += techs[t.lower()]
+
+    # Results from Condor are adjusted for when it charges storage from
+    # curtailment. The potential for marginal storage to charge from
+    # curtailment is captured in C2_marginal_curtailment, and the value of
+    # this is captured in ReEDS.
+    df_curt = trans_region_curt.reset_index(drop=True)
+
+    # Generation
+    gen, gen_names = OSPREY_RESULTS['gen'].get_data()
+    gen_names = gen_names[gen_names['i'].isin(techs_to_keep)]
+    gen = gen[gen_names['generator']]
+
+    # Prices
+    prices = INPUTS['osprey_prices'].get_data(SwitchSettings.prev_year)
+    prices['idx_hr'] = ((prices.d.str[1:].astype(int) - 1)*24
+                        + prices.hr.str[2:].astype(int) - 1)
+    prices = prices.rename(columns={'Val': 'price_org'})
+    prices.loc[prices['price_org'] < 0.001, 'price_org'] = 0
+
+    # Get the transmission connected regions
+    trans_region_map_df = OSPREY_RESULTS['trans_regions'].get_data()
+
+    # Lists and counts
+    index_hr_map = pd.read_csv(os.path.join('inputs_case', 'index_hr_map.csv'))
+    hour_day_map = index_hr_map[['idx_hr', 'd']].drop_duplicates()
+
+    #% Import generator characteristics
+
+    generator_data = pd.read_csv(
+        os.path.join('inputs_case', 'hourly_operational_characteristics.csv'))
+    generator_data = generator_data.rename(
+        columns={'Start Cost/capacity': 'start_cost_per_MW',
+                    'category': 'i', 'Min Stable Level/capacity': 'mingen_f'})
+    generator_df = pd.merge(left=gen_names,
+                            right=generator_data[['i', 'start_cost_per_MW']],
+                            on='i', how='left')
+
+    # Module works better when all generators are assigned CT startup costs
+    idx = generator_data['i'] == 'gas-ct'
+    ct_start_cost_per_MW = float(generator_data[idx]['start_cost_per_MW'])
+    generator_df['start_cost_per_MW'] = ct_start_cost_per_MW
+
+    # Ingest and merge each generator's operating cost onto generator_df
+    op_costs = GEN_DATA['gen_cost'].copy().rename(columns = {'gen_cost':'op_cost'})
+    op_costs['generator'] = op_costs['i'] + op_costs['v'] + op_costs['r']
+    generator_df = generator_df.merge(op_costs[['generator', 'op_cost']],
+                                        on='generator')
+
+    # Create arrays for broadcasting later
+    startup_costs_perMW = generator_df.set_index('generator')
+    startup_costs_perMW = startup_costs_perMW['start_cost_per_MW']
+    op_costs_lookup = generator_df.set_index('generator')['op_cost']
+
+    #% Modify LP prices to get price spikes
+
+    # Generation
+    gen = gen.merge(hour_day_map, on='idx_hr', how='left')
+
+    # Get max, min, and total gen by day
+    gen_maxes = gen[gen_names['generator'].tolist()+['d']].groupby('d').max(
+        ).fillna(0)
+    gen_mins = gen[gen_names['generator'].tolist()+['d']].groupby('d').min(
+        ).fillna(0)
+    gen_sums = gen[gen_names['generator'].tolist()+['d']].groupby('d').sum(
+        ).fillna(0)
+
+    # Convert back to long format, which works better since there are so
+    #   many transmission regions.
+    gen = gen.melt(id_vars=['idx_hr', 'd']).rename(
+        columns={'variable': 'generator'})
+    gen = pd.merge(left=gen_names[['r', 'generator']], right=gen,
+                    on='generator', how='right')
+    gen = gen[gen['value'] > 0].reset_index(drop=True)
+
+    startup_bool = gen_mins == 0.0
+    startup_bool = startup_bool.astype(int)
+
+    # Only apply start costs to the fraction of the unit that starts up.
+    gen_starts = (gen_maxes - gen_mins) * startup_bool
+    startup_expenditures = gen_starts * \
+                            startup_costs_perMW.reindex(gen_starts.columns)
+
+    # Spread out total start cost ($) over the sum of the generation that day
+    startup_costs_perMWh = startup_expenditures / gen_sums
+    startup_costs_perMWh = startup_costs_perMWh.fillna(0.0)
+
+    # Each generator's "bid price" is its operating cost plus the amount to
+    #   recover the startup cost for that day
+    bid_prices = \
+        startup_costs_perMWh + \
+        op_costs_lookup.reindex(startup_costs_perMWh.columns)
+    bid_prices = bid_prices.reset_index()
+    bid_prices_long = bid_prices.melt(id_vars='d', value_name='bid_price',
+                                        var_name='generator')
+
+    # Find the maximum price price of all generators generating in each
+    #   transmission region each hour
+    gen = gen.merge(bid_prices_long, on=['d', 'generator'], how='left')
+    gen = gen.merge(trans_region_map_df[['idx_hr', 'r', 'trans_region']],
+                    on=['idx_hr', 'r'], how='left')
+    bid_price_maxes = gen[['trans_region', 'bid_price']].groupby(
+        by=['trans_region'], as_index=False).max()
+
+    # Merge on the maximum bid price within each transmission region. The new
+    #   price is the maximum of either the LP's price or the bid price.
+    prices = prices.merge(trans_region_map_df[['idx_hr', 'r', 'trans_region']],
+                            on=['idx_hr', 'r'], how='left')
+    prices = prices.merge(bid_price_maxes[['trans_region', 'bid_price']],
+                            on=['trans_region'], how='left')
+    prices['bid_price'].fillna(0.0, inplace=True)
+    prices['price_startup'] = np.max(prices[['bid_price', 'price_org']],
+                                        axis=1)
+
+    prices_pivot = pd.DataFrame(columns=['idx_hr'],
+                                data=index_hr_map['idx_hr'].values)
+    prices_pivot = pd.merge(left=prices_pivot, right=prices.pivot(
+        index='idx_hr', columns='r', values='price_startup'),
+        on='idx_hr', how='left').fillna(0)
+    prices_pivot = prices_pivot.set_index('idx_hr')
+    ### Write the final prices for plots if necessary
+    if SwitchSettings.switches['plots']:
+        prices_pivot.to_hdf(
+            os.path.join(
+                'ReEDS_Augur','augur_data',
+                'plot_prices_condor_{}.h5'.format(SwitchSettings.prev_year)),
+            key='data', complevel=4)
+
+    # Initialize empty data frame for storing the results
+    df_results = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
+    df_results_pvb = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
+
+    # These are the storage technologies to compute the marginal arbitrage
+    #   revenue of
+    # marg_stor_techs = condor_data['marg_stor_techs'].copy()# Get storage capital costs
+    marg_storage_props = get_storage_eff()
+    marg_storage_props.i = marg_storage_props.i.str.lower()
+    marg_storage_props.rename(columns={'RTE': 'rte'}, inplace=True)
+    # Filter out CSP
+    marg_storage_props = marg_storage_props[
+            marg_storage_props['i'].isin(techs['storage_standalone'])]
+    marg_storage_props.index = range(0,len(marg_storage_props))
+    # Merge in duration by i
+    marg_storage_props = get_prop(marg_storage_props, 'storage_duration', merge_cols = ['i'])
+    rsc_cost = INPUTS['rsc_dat'].get_data()
+    cost_cap = INPUTS['cost_cap'].get_data().rename(
+                                            columns = {'cost_cap':'Value'})
     
-        techs = INPUTS['i_subsets'].get_data()
-        techs_to_keep = []
-        for t in keep_techs:
-            techs_to_keep += techs[t.lower()]
+    pvf = INPUTS['pvf_onm'].get_data()
+    # Note the capital cost multipliers are indexed by valinv
+    cost_cap_mult = INPUTS['cost_cap_fin_mult'].get_data()
+
+    # Get the most expensive supply curve bin
+    rsc_cost = rsc_cost[['i', 'r', 'Value']].groupby(['i', 'r'], as_index=False).max()
+    # Merge in capital cost multipliers
+    rsc_cost = pd.merge(left=rsc_cost,
+                        right=cost_cap_mult,
+                        on=['i', 'r'],
+                        how='left')
+    rsc_cost['t'].fillna(SwitchSettings.next_year, inplace=True)
+    rsc_cost['t'] = rsc_cost['t'].astype(int)
+    rsc_cost['fin_mult'].fillna(1, inplace=True)
     
-        # Results from Condor are adjusted for when it charges storage from
-        # curtailment. The potential for marginal storage to charge from
-        # curtailment is captured in C2_marginal_curtailment, and the value of
-        # this is captured in ReEDS.
-        df_curt = trans_region_curt.reset_index(drop=True)
+    cost_cap = pd.merge(left=cost_cap,
+                        right=cost_cap_mult,
+                        on=['i', 't'],
+                        how='inner')
     
-        # Generation
-        gen, gen_names = OSPREY_RESULTS['gen'].get_data()
-        gen_names = gen_names[gen_names['i'].isin(techs_to_keep)]
-        gen = gen[gen_names['generator']]
+    marg_stor_techs = pd.concat([rsc_cost, cost_cap],
+                                sort=False).reset_index(drop=True)
+    # Merge in PVF
+    marg_stor_techs = pd.merge(left=marg_stor_techs,
+                                right=pvf,
+                                on='t',
+                                how='left')
     
-        # Prices
-        prices = INPUTS['osprey_prices'].get_data(SwitchSettings.next_year)
-        prices['idx_hr'] = ((prices.d.str[1:].astype(int) - 1)*24
-                            + prices.hr.str[2:].astype(int) - 1)
-        prices = prices.rename(columns={'Val': 'price_org'})
-        prices.loc[prices['price_org'] < 0.001, 'price_org'] = 0
+    # Multiply capital cost by regional capital cost multipliers
+    marg_stor_techs['Value'] *= marg_stor_techs['fin_mult']
+    # Divide by PVF
+    marg_stor_techs['Value'] /= marg_stor_techs['pvf']
+    marg_stor_techs.drop(['fin_mult', 'pvf'], axis=1, inplace=True)
+    marg_stor_techs = pd.merge(left=marg_stor_techs,
+                                right=marg_storage_props,
+                                on='i',
+                                how='left')
+    marg_stor_techs.rename(columns={'Value': 'cost'}, inplace=True)
+    marg_stor_techs_save = marg_stor_techs.copy()
+    marg_stor_techs_save['t'] = marg_stor_techs_save['t'].astype(str)
     
-        # Get the transmission connected regions
-        trans_region_map_df = OSPREY_RESULTS['trans_regions'].get_data()
+    # This number determines the resolution of Condor
+    condor_res = SwitchSettings.switches['condor_res']
     
-        # Lists and counts
-        index_hr_map = pd.read_csv(os.path.join('inputs_case', 'index_hr_map.csv'))
-        hour_day_map = index_hr_map[['idx_hr', 'd']].drop_duplicates()
-    
-        #% Import generator characteristics
-    
-        generator_data = pd.read_csv(
-            os.path.join('inputs_case', 'hourly_operational_characteristics.csv'))
-        generator_data = generator_data.rename(
-            columns={'Start Cost/capacity': 'start_cost_per_MW',
-                     'category': 'i', 'Min Stable Level/capacity': 'mingen_f'})
-        generator_df = pd.merge(left=gen_names,
-                                right=generator_data[['i', 'start_cost_per_MW']],
-                                on='i', how='left')
-    
-        # Module works better when all generators are assigned CT startup costs
-        idx = generator_data['i'] == 'gas-ct'
-        ct_start_cost_per_MW = float(generator_data[idx]['start_cost_per_MW'])
-        generator_df['start_cost_per_MW'] = ct_start_cost_per_MW
-    
-        # Ingest and merge each generator's operating cost onto generator_df
-        op_costs = GEN_DATA['gen_cost'].copy().rename(columns = {'gen_cost':'op_cost'})
-        op_costs['generator'] = op_costs['i'] + op_costs['v'] + op_costs['r']
-        generator_df = generator_df.merge(op_costs[['generator', 'op_cost']],
-                                          on='generator')
-    
-        # Create arrays for broadcasting later
-        startup_costs_perMW = generator_df.set_index('generator')
-        startup_costs_perMW = startup_costs_perMW['start_cost_per_MW']
-        op_costs_lookup = generator_df.set_index('generator')['op_cost']
-    
-        #% Modify LP prices to get price spikes
-    
-        # Generation
-        gen = gen.merge(hour_day_map, on='idx_hr', how='left')
-    
-        # Get max, min, and total gen by day
-        gen_maxes = gen[gen_names['generator'].tolist()+['d']].groupby('d').max(
-            ).fillna(0)
-        gen_mins = gen[gen_names['generator'].tolist()+['d']].groupby('d').min(
-            ).fillna(0)
-        gen_sums = gen[gen_names['generator'].tolist()+['d']].groupby('d').sum(
-            ).fillna(0)
-    
-        # Convert back to long format, which works better since there are so
-        #   many transmission regions.
-        gen = gen.melt(id_vars=['idx_hr', 'd']).rename(
-            columns={'variable': 'generator'})
-        gen = pd.merge(left=gen_names[['r', 'generator']], right=gen,
-                       on='generator', how='right')
-        gen = gen[gen['value'] > 0].reset_index(drop=True)
-    
-        startup_bool = gen_mins == 0.0
-        startup_bool = startup_bool.astype(int)
-    
-        # Only apply start costs to the fraction of the unit that starts up.
-        gen_starts = (gen_maxes - gen_mins) * startup_bool
-        startup_expenditures = gen_starts * \
-                               startup_costs_perMW.reindex(gen_starts.columns)
-    
-        # Spread out total start cost ($) over the sum of the generation that day
-        startup_costs_perMWh = startup_expenditures / gen_sums
-        startup_costs_perMWh = startup_costs_perMWh.fillna(0.0)
-    
-        # Each generator's "bid price" is its operating cost plus the amount to
-        #   recover the startup cost for that day
-        bid_prices = \
-            startup_costs_perMWh + \
-            op_costs_lookup.reindex(startup_costs_perMWh.columns)
-        bid_prices = bid_prices.reset_index()
-        bid_prices_long = bid_prices.melt(id_vars='d', value_name='bid_price',
-                                          var_name='generator')
-    
-        # Find the maximum price price of all generators generating in each
-        #   transmission region each hour
-        gen = gen.merge(bid_prices_long, on=['d', 'generator'], how='left')
-        gen = gen.merge(trans_region_map_df[['idx_hr', 'r', 'trans_region']],
-                        on=['idx_hr', 'r'], how='left')
-        bid_price_maxes = gen[['trans_region', 'bid_price']].groupby(
-            by=['trans_region'], as_index=False).max()
-    
-        # Merge on the maximum bid price within each transmission region. The new
-        #   price is the maximum of either the LP's price or the bid price.
-        prices = prices.merge(trans_region_map_df[['idx_hr', 'r', 'trans_region']],
-                              on=['idx_hr', 'r'], how='left')
-        prices = prices.merge(bid_price_maxes[['trans_region', 'bid_price']],
-                              on=['trans_region'], how='left')
-        prices['bid_price'].fillna(0.0, inplace=True)
-        prices['price_startup'] = np.max(prices[['bid_price', 'price_org']],
-                                         axis=1)
-    
-        prices_pivot = pd.DataFrame(columns=['idx_hr'],
-                                    data=index_hr_map['idx_hr'].values)
-        prices_pivot = pd.merge(left=prices_pivot, right=prices.pivot(
-            index='idx_hr', columns='r', values='price_startup'),
-            on='idx_hr', how='left').fillna(0)
-        prices_pivot = prices_pivot.set_index('idx_hr')
-    
-        # Initialize empty data frame for storing the results
-        df_results = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
-        df_results_pvb = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
-    
-        # These are the storage technologies to compute the marginal arbitrage
-        #   revenue of
-    #    marg_stor_techs = condor_data['marg_stor_techs'].copy()# Get storage capital costs
-        marg_storage_props = get_storage_eff()
-        marg_storage_props.i = marg_storage_props.i.str.lower()
-        marg_storage_props.rename(columns={'RTE': 'rte'}, inplace=True)
-        # Filter out CSP
-        marg_storage_props = marg_storage_props[
-                marg_storage_props['i'].isin(techs['storage_standalone'])]
-        marg_storage_props.index = range(0,len(marg_storage_props))
-        # Merge in duration by i
-        marg_storage_props = get_prop(marg_storage_props, 'storage_duration', merge_cols = ['i'])
-        rsc_cost = INPUTS['rsc_dat'].get_data()
-        cost_cap = INPUTS['cost_cap'].get_data().rename(
-                                                columns = {'cost_cap':'Value'})
-        
-        pvf = INPUTS['pvf_onm'].get_data()
-        # Note the capital cost multipliers are indexed by valinv
-        cost_cap_mult = INPUTS['cost_cap_fin_mult'].get_data()
-    
-        # Get the most expensive supply curve bin
-        rsc_cost = rsc_cost[['i', 'r', 'Value']].groupby(['i', 'r'], as_index=False).max()
-        # Merge in capital cost multipliers
-        rsc_cost = pd.merge(left=rsc_cost,
-                            right=cost_cap_mult,
-                            on=['i', 'r'],
-                            how='left')
-        rsc_cost['t'].fillna(SwitchSettings.next_year, inplace=True)
-        rsc_cost['t'] = rsc_cost['t'].astype(int)
-        rsc_cost['fin_mult'].fillna(1, inplace=True)
-        
-        cost_cap = pd.merge(left=cost_cap,
-                            right=cost_cap_mult,
-                            on=['i', 't'],
-                            how='inner')
-        
-        marg_stor_techs = pd.concat([rsc_cost, cost_cap],
-                                    sort=False).reset_index(drop=True)
-        # Merge in PVF
-        marg_stor_techs = pd.merge(left=marg_stor_techs,
-                                   right=pvf,
-                                   on='t',
-                                   how='left')
-        
-        # Multiply capital cost by regional capital cost multipliers
-        marg_stor_techs['Value'] *= marg_stor_techs['fin_mult']
-        # Divide by PVF
-        marg_stor_techs['Value'] /= marg_stor_techs['pvf']
-        marg_stor_techs.drop(['fin_mult', 'pvf'], axis=1, inplace=True)
-        marg_stor_techs = pd.merge(left=marg_stor_techs,
-                                   right=marg_storage_props,
-                                   on='i',
-                                   how='left')
-        marg_stor_techs.rename(columns={'Value': 'cost'}, inplace=True)
-        marg_stor_techs_save = marg_stor_techs.copy()
-        marg_stor_techs_save['t'] = marg_stor_techs_save['t'].astype(str)
-        
-        # This number determines the resolution of Condor
-        condor_res = SwitchSettings.switches['condor_res']
-        
-        # Add appropriate resolution ('res') column and values to the dataframe
-        if marg_stor_techs.empty:
-            marg_stor_techs['res'] = None # Needs this column still
+    # Add appropriate resolution ('res') column and values to the dataframe
+    if marg_stor_techs.empty:
+        marg_stor_techs['res'] = None # Needs this column still
+    else:
+        # Modify marg_stor_techs to have the appropriate 'res' column
+        #   Can add in A_prep_data.py so it's in condor_inputs...
+        condor_res_method = SwitchSettings.switches['condor_res_method']
+        if condor_res_method == 'equal':
+            # equal: condor_res is the resolution for all storage techs
+            marg_stor_techs['res'] = int(condor_res)
+        elif condor_res_method == 'scaled':
+            # scaled: condor_res is the resolution for battery_2; get the
+            #   resolution for remaining techs by scaling up using duration
+            #   relative to battery_2
+            i_duration = INPUTS['storage_duration'].get_data()
+            i_duration = i_duration[i_duration['i'].isin(techs['storage_standalone'])]
+            i_duration = i_duration.sort_values(by='duration').set_index('i')
+            i_duration.duration -= (SwitchSettings.switches['reedscc_stor_buffer']/60)
+            res = i_duration.copy()
+            res['scale'] = i_duration.divide(i_duration.duration.iloc[0], 
+                axis=0)
+            res['res'] = res.scale * condor_res
+            res.res = res.res.astype(int) # Condor resolution must be an integer
+            res = res.reset_index()
+            i_res_map = dict(zip(res.i, res.res))
+            marg_stor_techs['res'] = marg_stor_techs.i.map(i_res_map)
         else:
-            # Modify marg_stor_techs to have the appropriate 'res' column
-            #   Can add in A_prep_data.py so it's in condor_inputs...
-            condor_res_method = SwitchSettings.switches['condor_res_method']
-            if condor_res_method == 'equal':
-                # equal: condor_res is the resolution for all storage techs
-                marg_stor_techs['res'] = int(condor_res)
-            elif condor_res_method == 'scaled':
-                # scaled: condor_res is the resolution for battery_2; get the
-                #   resolution for remaining techs by scaling up using duration
-                #   relative to battery_2
-                i_duration = INPUTS['storage_duration'].get_data()
-                i_duration = i_duration[i_duration['i'].isin(techs['storage_standalone'])]
-                i_duration = i_duration.sort_values(by='duration').set_index('i')
-                i_duration.duration -= (SwitchSettings.switches['reedscc_stor_buffer']/60)
-                res = i_duration.copy()
-                res['scale'] = i_duration.divide(i_duration.duration.iloc[0], 
-                   axis=0)
-                res['res'] = res.scale * condor_res
-                res.res = res.res.astype(int) # Condor resolution must be an integer
-                res = res.reset_index()
-                i_res_map = dict(zip(res.i, res.res))
-                marg_stor_techs['res'] = marg_stor_techs.i.map(i_res_map)
-            else:
-                print('ERROR: options for condor_res_method are equal or scaled')
+            print('ERROR: options for condor_res_method are equal or scaled')
+
+    # If we are interpolating data for the remaining durations:
+    if not SwitchSettings.switches['condor_stor_techs'] == 'all':
+        i_data = ['battery_4', 'battery_8']
+        has4 = (marg_stor_techs.i == i_data[0]).any()
+        has8 = (marg_stor_techs.i == i_data[1]).any()
+        if (has4 & has8):  # Needs to have both of these techs to interpolate
+            marg_stor_techs['i'].isin(i_data)
+            marg_stor_techs = marg_stor_techs[marg_stor_techs['i'].isin(
+                i_data)].reset_index(drop=True)
+            missing_techs = False
+            # This assumes every region has these two techs as well; will break
+            # if some regions have 4 and 8 hr storage when others don't and it
+            # tries to interpolate for all the regions. Figure out why the
+            # storage technologies are being limited in
+            # condor_data['marg_stor_techs']
+        else:  # Otherwise compute the values manually for each duration
+            missing_techs = True
+    marg_stor_props = marg_stor_techs[['i', 'rte', 'duration', 'res']]
+    marg_stor_props = marg_stor_props.drop_duplicates().set_index('i')
+
+    stor_MW = SwitchSettings.switches['condor_stor_MW']
+
+
+    pvb_profiles = filter_data_year(
+        HOURLY_PROFILES['pvb'].profiles.copy(),
+        data_years=SwitchSettings.osprey_years
+    ).round(SwitchSettings.switches['decimals'])
+
+    resources = INPUTS['resources'].get_data()
+    pvb_resources = resources[resources['i'].isin(techs['pvb'])].copy()
+
+    ### Get the ILR to identify hours with clipping
+    pvb_ilr = (
+        INPUTS['ilr_pvb_config'].get_data()
+        .set_index('pvb_config')['ilr']
+        .round(SwitchSettings.switches['decimals'])
+    )
     
-        # If we are interpolating data for the remaining durations:
-        if not SwitchSettings.switches['condor_stor_techs'] == 'all':
-            i_data = ['battery_4', 'battery_8']
-            has4 = (marg_stor_techs.i == i_data[0]).any()
-            has8 = (marg_stor_techs.i == i_data[1]).any()
-            if (has4 & has8):  # Needs to have both of these techs to interpolate
-                marg_stor_techs['i'].isin(i_data)
-                marg_stor_techs = marg_stor_techs[marg_stor_techs['i'].isin(
-                    i_data)].reset_index(drop=True)
-                missing_techs = False
-                # This assumes every region has these two techs as well; will break
-                # if some regions have 4 and 8 hr storage when others don't and it
-                # tries to interpolate for all the regions. Figure out why the
-                # storage technologies are being limited in
-                # condor_data['marg_stor_techs']
-            else:  # Otherwise compute the values manually for each duration
-                missing_techs = True
-        marg_stor_props = marg_stor_techs[['i', 'rte', 'duration', 'res']]
-        marg_stor_props = marg_stor_props.drop_duplicates().set_index('i')
-    
-        stor_MW = SwitchSettings.switches['condor_stor_MW']
-    
-    
-        pvb_profiles = filter_data_year(
-            HOURLY_PROFILES['pvb'].profiles.copy(),
-            data_years=SwitchSettings.osprey_years
-        ).round(SwitchSettings.switches['decimals'])
-    
-        resources = INPUTS['resources'].get_data()
-        pvb_resources = resources[resources['i'].isin(techs['pvb'])].copy()
-    
-        ### Get the ILR to identify hours with clipping
-        pvb_ilr = (
-            INPUTS['ilr_pvb_config'].get_data()
-            .set_index('pvb_config')['ilr']
-            .round(SwitchSettings.switches['decimals'])
-        )
-        
-        clip_pvb = []
-        for pvb_type in [1,2,3]:
-            pvbtype_ilr = pvb_ilr['PVB{}'.format(pvb_type)]
-            pvbtype_resources = pvb_resources[pvb_resources['i'].isin(techs['pvb{}'.format(pvb_type)])]
-            pvbtype_clipcheck = pvb_profiles[pvbtype_resources['resource']]
-            ### Clipping occurs when the inverter output is equal to 1/ILR
-            clip = pvbtype_clipcheck == round(1/pvbtype_ilr, SwitchSettings.switches['decimals'])
-            clip_pvb.append(clip)
-        clip_pvb = pd.concat(clip_pvb, sort=False, axis=1)
-    
-        cost_pvb_max = marg_stor_techs[
-            marg_stor_techs['i'] == 'battery_{}'.format(SwitchSettings.switches['gsw_pvb_dur'])
-        ]['cost'].max()
-    
-        pvb_resources['t'] = SwitchSettings.next_year
-        pvb_resources['rte'] = (
-            marg_storage_props.set_index('i')
-            .loc['battery_{}'.format(SwitchSettings.switches['gsw_pvb_dur']),'rte']
-        )
-        pvb_resources['duration'] = int(SwitchSettings.switches['gsw_pvb_dur'])
-        pvb_resources['res'] = condor_res
-    
-        # Loop through each storage technology
-        for i, row in marg_stor_props.iterrows():
-            e_level_n = int(row.res)
-            # Note that we subtract an hour off of the storage duration to account
-            # for the inevitable overestimation of storage revenue using a price-\
-            # taking model with perfect foresight.
-            stor_MWh = stor_MW * (row.duration - (SwitchSettings.switches['reedscc_stor_buffer']/60))
-            eta_charge = row.rte
-            ba_list = marg_stor_techs.loc[marg_stor_techs.i == i, 'r'].tolist()
-            # ba_list = marg_stor_techs_new.loc[marg_stor_techs_new.i == i, 'r'].tolist()
-            for ba in ba_list:
-                df_temp = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
-    
-                try:
-                    ba_prices_startup = prices_pivot[ba].values
-                except KeyError:
-                    # If the ba isn't in prices_pivot its price is zero in all hours
-                    ba_prices_startup = np.zeros(len(prices_pivot))
-    
-                # Dispatch against the startup-modified LP prices
-                dispatch_results = dispatch_storage(
-                    ba_prices_startup, stor_MW, stor_MWh, e_level_n, eta_charge,
-                    eta_discharge)
-    
-                df_temp['revenue'] = [dispatch_results['revenue']]
-                df_temp['i'] = i
-                df_temp['r'] = ba
-                df_temp['t'] = str(SwitchSettings.next_year)
-    
-                # Figure out when storage is charging while there is curtailment
-                dispatch = dispatch_results['dispatch_profile']
-                idx_charge = dispatch > 0
-    
-                dispatch[idx_charge].sum()  # Total charging
-                idx_curt = df_curt[ba]
-                idx_curt.sum()
-    
-                # Total charging when there is not curtailment:
-                dispatch[idx_charge & ~idx_curt].sum()
-                stor_rev_fraction = np.divide(
-                    dispatch[idx_charge & ~idx_curt].sum(),
-                    dispatch[idx_charge].sum(),
-                    where=dispatch[idx_charge].sum() != 0)
-    
-                # Adjust the total revenue by this fraction to remove the revenue
-                #   from charging during curtailment
-                df_temp['revenue'] *= stor_rev_fraction
-                
-                # Store results
-                df_results.loc[len(df_results), :] = df_temp.loc[0, :]# Loop through each storage technology
-    
-        for i in pvb_resources.index:
+    clip_pvb = []
+    for pvb_type in [1,2,3]:
+        pvbtype_ilr = pvb_ilr['PVB{}'.format(pvb_type)]
+        pvbtype_resources = pvb_resources[pvb_resources['i'].isin(techs['pvb{}'.format(pvb_type)])]
+        pvbtype_clipcheck = pvb_profiles[pvbtype_resources['resource']]
+        ### Clipping occurs when the inverter output is equal to 1/ILR
+        clip = pvbtype_clipcheck == round(1/pvbtype_ilr, SwitchSettings.switches['decimals'])
+        clip_pvb.append(clip)
+    clip_pvb = pd.concat(clip_pvb, sort=False, axis=1)
+
+    cost_pvb_max = marg_stor_techs[
+        marg_stor_techs['i'] == 'battery_{}'.format(SwitchSettings.switches['gsw_pvb_dur'])
+    ]['cost'].max()
+
+    pvb_resources['t'] = SwitchSettings.next_year
+    pvb_resources['rte'] = (
+        marg_storage_props.set_index('i')
+        .loc['battery_{}'.format(SwitchSettings.switches['gsw_pvb_dur']),'rte']
+    )
+    pvb_resources['duration'] = int(SwitchSettings.switches['gsw_pvb_dur'])
+    pvb_resources['res'] = condor_res
+
+    # Loop through each storage technology
+    for i, row in marg_stor_props.iterrows():
+        e_level_n = int(row.res)
+        # Note that we subtract an hour off of the storage duration to account
+        # for the inevitable overestimation of storage revenue using a price-\
+        # taking model with perfect foresight.
+        stor_MWh = stor_MW * (row.duration - (SwitchSettings.switches['reedscc_stor_buffer']/60))
+        eta_charge = row.rte
+        ba_list = marg_stor_techs.loc[marg_stor_techs.i == i, 'r'].tolist()
+        # ba_list = marg_stor_techs_new.loc[marg_stor_techs_new.i == i, 'r'].tolist()
+        for ba in ba_list:
             df_temp = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
-            ba = pvb_resources.loc[i, 'r']
-            resource = pvb_resources.loc[i, 'resource']
-            stor_MWh = stor_MW * (pvb_resources.loc[i, 'duration'] - \
-                        (SwitchSettings.switches['reedscc_stor_buffer']/60))
-            e_level_n = pvb_resources.loc[i, 'res']
-            eta_charge = pvb_resources.loc[i, 'rte']
-            restrict = clip_pvb[resource]
-            tech = pvb_resources.loc[i, 'i']
-    
+
             try:
                 ba_prices_startup = prices_pivot[ba].values
             except KeyError:
                 # If the ba isn't in prices_pivot its price is zero in all hours
                 ba_prices_startup = np.zeros(len(prices_pivot))
-    
+
             # Dispatch against the startup-modified LP prices
             dispatch_results = dispatch_storage(
                 ba_prices_startup, stor_MW, stor_MWh, e_level_n, eta_charge,
-                eta_discharge, restrict=restrict)
-    
+                eta_discharge)
+
             df_temp['revenue'] = [dispatch_results['revenue']]
-            df_temp['i'] = tech
+            df_temp['i'] = i
             df_temp['r'] = ba
             df_temp['t'] = str(SwitchSettings.next_year)
-    
+
             # Figure out when storage is charging while there is curtailment
             dispatch = dispatch_results['dispatch_profile']
             idx_charge = dispatch > 0
-    
+
             dispatch[idx_charge].sum()  # Total charging
             idx_curt = df_curt[ba]
-            idx_curt = idx_curt[~restrict].reset_index(drop=True)
-    
+            idx_curt.sum()
+
             # Total charging when there is not curtailment:
             dispatch[idx_charge & ~idx_curt].sum()
             stor_rev_fraction = np.divide(
                 dispatch[idx_charge & ~idx_curt].sum(),
                 dispatch[idx_charge].sum(),
                 where=dispatch[idx_charge].sum() != 0)
-    
+
             # Adjust the total revenue by this fraction to remove the revenue
             #   from charging during curtailment
             df_temp['revenue'] *= stor_rev_fraction
             
             # Store results
-            df_results_pvb.loc[len(df_results_pvb), :] = df_temp.loc[0, :]
-    
-    
-        # The results come on with dtype=object, so convert to float
-        df_results.revenue = df_results.revenue.astype(float)
-        df_results_pvb.revenue = df_results_pvb.revenue.astype(float)
-    
-        # Divide by the number of Osprey years to get the annual revenue
-        df_results.revenue /= SwitchSettings.switches['osprey_num_years']
-        df_results_pvb.revenue /= SwitchSettings.switches['osprey_num_years']
-    
-        # If we are interpolating data for the remaining durations:
-        if not SwitchSettings.switches['condor_stor_techs'] == 'all':
-            if not missing_techs:
-                # Interpolate revenue for remaining durations
-                storage_revenue_pair = df_results.copy()
-                df_results = interpolate_other_durations(storage_revenue_pair)
-                
-        # Don't let the revenue exceed the capital costs in ReEDS
-        df_results = pd.merge(
-            left=df_results,
-            right=marg_stor_techs_save.reset_index()[['i', 'r', 't', 'cost']],
-            on=['i', 'r', 't'])
-        df_results.revenue = df_results.revenue.clip(upper=df_results.cost)
-        df_results.drop('cost', axis=1, inplace=True)
+            df_results.loc[len(df_results), :] = df_temp.loc[0, :]# Loop through each storage technology
+
+    for i in pvb_resources.index:
+        df_temp = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
+        ba = pvb_resources.loc[i, 'r']
+        resource = pvb_resources.loc[i, 'resource']
+        stor_MWh = stor_MW * (pvb_resources.loc[i, 'duration'] - \
+                    (SwitchSettings.switches['reedscc_stor_buffer']/60))
+        e_level_n = pvb_resources.loc[i, 'res']
+        eta_charge = pvb_resources.loc[i, 'rte']
+        restrict = clip_pvb[resource]
+        tech = pvb_resources.loc[i, 'i']
+
+        try:
+            ba_prices_startup = prices_pivot[ba].values
+        except KeyError:
+            # If the ba isn't in prices_pivot its price is zero in all hours
+            ba_prices_startup = np.zeros(len(prices_pivot))
+
+        # Dispatch against the startup-modified LP prices
+        dispatch_results = dispatch_storage(
+            ba_prices_startup, stor_MW, stor_MWh, e_level_n, eta_charge,
+            eta_discharge, restrict=restrict)
+
+        df_temp['revenue'] = [dispatch_results['revenue']]
+        df_temp['i'] = tech
+        df_temp['r'] = ba
+        df_temp['t'] = str(SwitchSettings.next_year)
+
+        # Figure out when storage is charging while there is curtailment
+        dispatch = dispatch_results['dispatch_profile']
+        idx_charge = dispatch > 0
+
+        dispatch[idx_charge].sum()  # Total charging
+        idx_curt = df_curt[ba]
+        idx_curt = idx_curt[~restrict].reset_index(drop=True)
+
+        # Total charging when there is not curtailment:
+        dispatch[idx_charge & ~idx_curt].sum()
+        stor_rev_fraction = np.divide(
+            dispatch[idx_charge & ~idx_curt].sum(),
+            dispatch[idx_charge].sum(),
+            where=dispatch[idx_charge].sum() != 0)
+
+        # Adjust the total revenue by this fraction to remove the revenue
+        #   from charging during curtailment
+        df_temp['revenue'] *= stor_rev_fraction
         
-        df_results_pvb ['cost'] = cost_pvb_max
-        df_results_pvb.revenue = df_results_pvb.revenue.clip(upper=df_results_pvb.cost)
-        df_results_pvb.drop('cost', axis=1, inplace=True)
-                
-        df_results = pd.concat([df_results, df_results_pvb], sort=False)
+        # Store results
+        df_results_pvb.loc[len(df_results_pvb), :] = df_temp.loc[0, :]
+
+
+    # The results come on with dtype=object, so convert to float
+    df_results.revenue = df_results.revenue.astype(float)
+    df_results_pvb.revenue = df_results_pvb.revenue.astype(float)
+
+    # Divide by the number of Osprey years to get the annual revenue
+    df_results.revenue /= SwitchSettings.switches['osprey_num_years']
+    df_results_pvb.revenue /= SwitchSettings.switches['osprey_num_years']
+
+    # If we are interpolating data for the remaining durations:
+    if not SwitchSettings.switches['condor_stor_techs'] == 'all':
+        if not missing_techs:
+            # Interpolate revenue for remaining durations
+            storage_revenue_pair = df_results.copy()
+            df_results = interpolate_other_durations(storage_revenue_pair)
+            
+    # Don't let the revenue exceed the capital costs in ReEDS
+    df_results = pd.merge(
+        left=df_results,
+        right=marg_stor_techs_save.reset_index()[['i', 'r', 't', 'cost']],
+        on=['i', 'r', 't'])
+    df_results.revenue = df_results.revenue.clip(upper=df_results.cost)
+    df_results.drop('cost', axis=1, inplace=True)
     
-        # Remove small numbers and round results
-        df_results.loc[df_results['revenue'] < SwitchSettings.switches['min_val'], 'revenue'] = 0
-        df_results['revenue'] = (
-            df_results['revenue'].astype(float)
-            ### Derate arbitrage revenue to account for imperfect foresight
-            * (1 - SwitchSettings.switches['condor_arbitrage_derate'])
-        ).round(SwitchSettings.switches['decimals'])
-    elif SwitchSettings.switches['gsw_storage'] == '0':
-        df_results = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
+    df_results_pvb ['cost'] = cost_pvb_max
+    df_results_pvb.revenue = df_results_pvb.revenue.clip(upper=df_results_pvb.cost)
+    df_results_pvb.drop('cost', axis=1, inplace=True)
+            
+    df_results = pd.concat([df_results, df_results_pvb], sort=False)
+
+    # Remove small numbers and round results
+    df_results.loc[df_results['revenue'] < SwitchSettings.switches['min_val'], 'revenue'] = 0
+    df_results['revenue'] = (
+        df_results['revenue'].astype(float).round(SwitchSettings.switches['decimals']))
 
     # DR calculations
     df_results_dr = pd.DataFrame(columns=['i', 'r', 't', 'revenue'])
@@ -650,10 +659,7 @@ def get_marginal_storage_value(trans_region_curt):
     # Remove small numbers and round results
     df_results_dr.loc[df_results_dr['revenue'] < SwitchSettings.switches['min_val'], 'revenue'] = 0
     df_results_dr['revenue'] = (
-        df_results_dr['revenue'].astype(float)
-        ### Derate arbitrage revenue to account for imperfect foresight
-        * (1 - SwitchSettings.switches['condor_arbitrage_derate'])
-    ).round(SwitchSettings.switches['decimals'])
+        df_results_dr['revenue'].astype(float)).round(SwitchSettings.switches['decimals'])
 
     df_results = pd.concat([df_results, df_results_dr], sort=False)
 
@@ -1059,7 +1065,7 @@ def interpolate_other_durations(storage_revenue_pair):
 
     # Just use types in duration_map for interpolation
     df_in = storage_revenue_pair[storage_revenue_pair.i.isin(duration_map.keys())].copy()
-    df_in['r_t'] = df_in.r+'_'+df_in.t
+    df_in['r_t'] = df_in.r+'<><>'+df_in.t
     df_in['duration'] = df_in.i.map(duration_map)
     df_in = df_in.pivot(index='duration', columns='r_t', values='revenue')
     df_in = df_in.reindex(durations)
@@ -1092,7 +1098,7 @@ def interpolate_other_durations(storage_revenue_pair):
     # Prepare output data
     df_out = df_fit.stack().reset_index().rename(
             columns={'level_0': 'duration', 0: 'revenue'})
-    df_out[['r', 't']] = df_out.r_t.str.split('_', expand=True)
+    df_out[['r', 't']] = df_out.r_t.str.split('<><>', expand=True)
     df_out['i'] = df_out.duration.map(duration_map_r)
     # Append back on other types for output
     df_out = pd.concat(

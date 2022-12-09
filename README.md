@@ -1,6 +1,6 @@
 # ReEDS 2.0
 
-![Image of NREL Logo](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/nrel-logo.png)
+![Image of NREL Logo](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/nrel-logo.png)
 
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
@@ -33,21 +33,8 @@ A ReEDS training video (recorded in July 2020 and based on the 2019 version of R
 * [Contact Us](#Contact)
 * [Appendix](#Appendix)
   * [ReEDS Model Switches](#Switches)
-    * [Modeling horizon switches](#SwHorizon)
-    * [Demand switches](#SwDemand)
-    * [Renewable energy variability switches](#SwRE)
-    * [Technology cost and performance switches](#SwCostPerf)
-    * [Region switches](#SwRegion)
-    * [Financing switches](#SwFin)
-    * [Model plant switches](#SwModPlant)
-    * [Capital stock switches](#SwStock)
-    * [Capacity growth limit switches](#SwGrowth)
-    * [Policy switches](#SwPolicy)
-    * [Technology inclusion switches](#SwTech)
-    * [Other model constraint switches](#SwOther)
-    * [Linear programming switches](#SwLP)
-    * [Cooling water formulation switches](#SwCoolingWater)
-   * [Coding Conventions](#Code)
+  * [Hourly resolution quick-start guide](#Hourly)
+  * [Coding Conventions](#Code)
 
 <a name="Introduction"></a>
 # Introduction ([https://www.nrel.gov/analysis/reeds/](https://www.nrel.gov/analysis/reeds/)) 
@@ -81,7 +68,7 @@ Git is a version-control tool used to manage code repositories. Included in Git 
 The setup and execution of the ReEDS model can be accomplished using a command-line interpreter application and launching a command line interface (referred to as a &quot;terminal window&quot; in this document). For example, initiating the Windows Command Prompt application, i.e., cmd.exe, will launch a terminal window ([Figure 1](#Fig1)).
 
 <a name="Fig1"></a>
-![Image of Command Prompt](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/cmd-prompt.png)
+![Image of Command Prompt](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/cmd-prompt.png)
 
 *Figure 1. Screenshot of a Windows Command Prompt terminal window.*
 
@@ -90,12 +77,12 @@ The setup and execution of the ReEDS model can be accomplished using a command-l
 **IMPORTANT:** Users should exercise Administrative Privileges when installing software. For example, right click on the installer executable for one of the required software (e.g., Anaconda3-2019.07-Windows-x86\_64.exe) and click on &quot;Run as administrator&quot; ([Figure 2](#Fig2)). Alternatively, right click on the executable for the command line interface (e.g., Command Prompt) and click on &quot;Run as administrator&quot; ([Figure 3](#Fig3)). Then run the required software installer executables from the command line.
 
 <a name="Fig2"></a> 
-![Image of Run as Admin](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/run-as-admin.png)
+![Image of Run as Admin](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/run-as-admin.png)
 
 *Figure 2. Screenshot of running an installer executable using &quot;Run as administrator&quot;.*
 
 <a name="Fig3"></a>
-![Image of Run as Admin 2](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/run-as-admin-2.png)
+![Image of Run as Admin 2](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/run-as-admin-2.png)
  
 *Figure 3. Screenshot of running &quot;Command Prompt&quot; with &quot;Run as administrator&quot;.*
 
@@ -125,7 +112,7 @@ git lfs install
 Once `windows_setup.sh` completes, the ReEDS repository will contain a symbolic link to the GAMS installation with several python packages installed.
 
 <a name="Fig4"></a>
-![Image of GitHub Download](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/github-download.png)
+![Image of GitHub Download](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/github-download.png)
  
 *Figure 4. Screenshot of GitHub links to clone the ReEDS repository or download ZIP of the ReEDS files.*
 
@@ -158,27 +145,27 @@ Add Python to the &quot;path&quot; environment variable
 Install the gdxpds package from the command line by typing &quot;pip install gdxpds&quot; (no quotes) in the terminal window ([Figure 10](#Fig10)).The gdxpds package is required for reading GAMS Data Exchange files (.gdx) into Python.
 
 <a name="Fig5"></a>
-![Image of Search Environment Variable](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/search-env-var.png)
+![Image of Search Environment Variable](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/search-env-var.png)
  
 *Figure 5. Screenshot of a search for &quot;environment variables&quot; in the Windows start menu.*
 
 <a name="Fig6"></a> 
-![Image of System Properties Window](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/sys-prop-win.png)
+![Image of System Properties Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/sys-prop-win.png)
  
 *Figure 6. Screenshot of the &quot;System Properties&quot; window.*
 
 <a name="Fig7"></a> 
-![Image of Environment Variables Window](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/env-var-win.png)
+![Image of Environment Variables Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/env-var-win.png)
  
 *Figure 7. Edit the Path environment variable.*
 
 <a name="Fig8"></a>
-![Image of Edit Environment Variables Window](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/edit-env-var-win.png)
+![Image of Edit Environment Variables Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/edit-env-var-win.png)
 
 *Figure 8. Append the Path environment.*
 
 <a name="Fig9"></a>
-![Image of Test Python](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/py-test.png)
+![Image of Test Python](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/py-test.png)
 
 *Figure 9. Screenshot of a test of Python in the terminal window.*
 
@@ -194,7 +181,7 @@ Add GAMS to the &quot;path&quot; environment variable. Follow the same instructi
 **IMPORTANT** : Test the GAMS installation from the command line by typing &quot;gams&quot; (no quotes) in the terminal window. The GAMS program should initiate (Figure 10).
 
 <a name="Fig10"></a>
-![Image of Test GAMS](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/gams-test.png)
+![Image of Test GAMS](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/gams-test.png)
 
 *Figure 10. Screenshot of a test of GAMS from the terminal window.*
 
@@ -215,12 +202,12 @@ rscript demand\packagesetup.R
 The Rscript.exe program will install a suite of R packages ([Figure 12](#Fig12)).
 
 <a name="Fig11"></a>
-![Image of Test R](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/r-test.png)
+![Image of Test R](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/r-test.png)
 
 *Figure 11. Screenshot of a test of R from the terminal window.*
 
 <a name="Fig12"></a>
-![Image of Install R Packages](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/install-r-pack.png)
+![Image of Install R Packages](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/install-r-pack.png)
  
 *Figure 12. Screenshot of installing R packages with packagesetup.R.*
 
@@ -233,7 +220,7 @@ A ReEDS case (also referred to as a &quot;run&quot;, &quot;scenario&quot; or &qu
 Within &quot;cases.csv&quot;, The data in Column A are the model &quot;switches&quot; (also referred to as &quot;options&quot;). The data in Column B are brief descriptions of the switches. The data in Column C are the default values of the switches. The case configuration (or set of switches that define a case) begin with Column D. Each case configuration is represented by a single column. The case name is specified in Row 1. The value for each switch is specified beginning in Row 2. If a switch value is left blank, default value from Column C is used. A complete list of switches is provided in the Appendix of this document.
 
 <a name="Fig13"></a>
-![Image of Cases.csv](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/cases-csv.png) 
+![Image of Cases.csv](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/cases-csv.png) 
 
 *Figure 13. Screenshot of cases.csv.*
 
@@ -247,22 +234,22 @@ Within &quot;cases.csv&quot;, The data in Column A are the model &quot;switches&
 **Step 3** : Wait for each case to finish, check for successful completion, and view outputs. Once a case has finished (either from successful completion or from an error), the case-specific terminal window will close and a message in the main terminal window (i.e., where &quot;runbatch.py&quot; was initiated) will appear stating that the case has completed ([Figure 17](#Fig17)).
 
  <a name="Fig14"></a>
-![Image of Execute RunBatch.py](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/exe-runbatch.png) 
+![Image of Execute RunBatch.py](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/exe-runbatch.png) 
 
 *Figure 14. Screenshot of initiating &quot;runbatch.py&quot; from the command line.*
 
  <a name="Fig15"></a>
-![Image of RunBatch.py Prompts](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/prompts.png)  
+![Image of RunBatch.py Prompts](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/prompts.png)  
 
 *Figure 15. Screenshot of prompts for user input during &quot;runbatch.py&quot;.*
 
  <a name="Fig16"></a>
-![Image of Case Window](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/case-win.png) 
+![Image of Case Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/case-win.png) 
 
 *Figure 16. Screenshot of a separate terminal window being launched for a case.*
 
  <a name="Fig17"></a>
-![Image of Case Finish Message](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/case-finish.png)  
+![Image of Case Finish Message](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/case-finish.png)  
 
 *Figure 17. Screenshot of a message in the main terminal window stating when a case has finished.*
 
@@ -286,12 +273,12 @@ Therefore, &quot;batch prefix&quot; CANNOT begin with a numeric and SHOULD begin
 - **WARNING! Avoid re-using a (batch prefix, case) pair**. If a directory &quot;\runs\{batch prefix}\_{case}&quot; already exists, a warning will be issued in the case-specific terminal window, but &quot;runbatch.py&quot; will overwrite data in the existing case directory ([Figure 18](#Fig18)). In some instances, the case execution will pause, and a message will appear in the case-specific terminal window &quot;mv: replace […] overriding mode 0666?&quot; ([Figure 19](#Fig19)). Pressing &quot;Enter/Return&quot; will continue the execution. NREL plans to address this overwriting issue in the future by requiring user approval to overwrite an existing case directory.
 
  <a name="Fig18"></a>
-![Image of Duplicate Case Warning](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/duplicate-case.png)  
+![Image of Duplicate Case Warning](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/duplicate-case.png)  
 
 *Figure 18. Screenshot of warning message that appears in the main terminal window when reusing a (batch prefix, case) pair.*
 
  <a name="Fig19"></a>
-![Image of Duplicate Case Warning 2](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/duplicate-case-2.png)  
+![Image of Duplicate Case Warning 2](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/duplicate-case-2.png)  
  
 *Figure 19. Screenshot of warning message that occurs in the case-specific terminal window when reusing a (batch prefix, case) pair.*
 
@@ -356,12 +343,11 @@ Below are the key steps that occur when a user initiates &quot;runbatch.py&quot;
 
 **Execute CreateModel.gms:**
 
-1. Execute a\_writedata.gms – execute several R and Python scripts and write files to &quot;\runs\{batch prefix}\_{case}\inputs\_case\&quot; based on selected switch settings
-2. Execute B\_Inputs.gms – ingest data from the files created in a\_writedata.gms and format the data to be useful for the GAMS execution
-3. Execute C\_SupplyModel.gms – declare the variables and constraints for the linear program
-4. Execute C\_SupplyObjective.gms – declare the objective function for the linear program, broken into two parts (investment and operations)
-5. Execute D\_SolvePrep.gms – initiate the LP solve and compute parameters based on switch values in the case configuration file (e.g., &quot;cases.csv&quot;)
-6. Create a GAMS work file at the completion of CreateModel.gms
+1. Execute B\_Inputs.gms – ingest data from the files created by the input_processing scripts and format the data to be useful for the GAMS execution
+2. Execute C\_SupplyModel.gms – declare the variables and constraints for the linear program
+3. Execute C\_SupplyObjective.gms – declare the objective function for the linear program, broken into two parts (investment and operations)
+4. Execute D\_SolvePrep.gms – initiate the LP solve and compute parameters based on switch values in the case configuration file (e.g., &quot;cases.csv&quot;)
+5. Create a GAMS work file at the completion of CreateModel.gms
   1. Path: &quot;\runs\{batch\_prefix}\_{case}\g00files\{batch\_prefix}\_{case}.g00&quot;
   2. For more information about GAMS work files: [https://www.gams.com/latest/docs/UG\_SaveRestart.html](https://www.gams.com/latest/docs/UG_SaveRestart.html)
 
@@ -377,7 +363,7 @@ For every year in the model horizon, execute d\_solveoneyear.gms:
   4. Execute d4\_Translate\_Variability.R – Translate the values from REflow\_RTO\_3.gms (ReEDS Heritage) back to the syntax and structure used in ReEDS 2.0
 
  <a name="Fig20"></a>
-![Image of Sequential Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/seq-flow.png)  
+![Image of Sequential Flow](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/seq-flow.png)  
  
 *Figure 20. Depiction of execution sequence for the &quot;sequential&quot; solve.*
 
@@ -392,7 +378,7 @@ For each iteration (specified via the runbatch.py prompt),
 3. Execute d5\_mergevariability.R – The resulting file from the gdxmerge execution is restructured for use in GAMS during the next iteration of the intertemporal solve.
 
  <a name="Fig21"></a>
-![Image of Intertemporal Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/inter-flow.png)  
+![Image of Intertemporal Flow](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/inter-flow.png)  
  
 *Figure 21. Depiction of execution sequence for the &quot;intertemporal&quot; solve.*
 
@@ -452,17 +438,17 @@ Outage rates|Outage rates based on 2003–2007 Generating Availability Data Syst
 The ReEDS model is comprised of several modules with one and two-way data exchange between the modules. [Figure 22](#Fig22) depicts these modules, including linkages between the modules and directions of data exchange. The supply module is the core module for ReEDS. Within a ReEDS execution, the key data exchanges occur between (1) the Supply Module and the Variable Resource Renewable (VRR) Modules for estimating Capacity Credit and Curtailment; and (2) the Supply Module and the Demand Module. These module interactions are dictated by the model execution approach, i.e., _sequential_ solves, _sliding window_ solves, or _intertemporal_ solves. [Figure 23](#Fig23) illustrates the _sequential_ approach; [Figure 24](#Fig24) the sliding window and intertemporal approaches.
 
 <a name="Fig22"></a>
-![Image of ReEDS Modules](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/modules.png)  
+![Image of ReEDS Modules](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/modules.png)  
 
 *Figure 22. Depiction of ReEDS modules; arrows indicate directions of data exchange.*
 
 <a name="Fig23"></a>
-![Image of Sequential Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/seq-flow-2.png)   
+![Image of Sequential Flow](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/seq-flow-2.png)   
 
 *Figure 23. Schematic illustrating the model structure with a sequential solve.*
 
 <a name="Fig24"></a>
-![Image of Intertemporal Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/inter-flow-2.png)   
+![Image of Intertemporal Flow](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/inter-flow-2.png)   
 
 *Figure 24. Schematic illustrating the model structure with sliding window or intertemporal solves.*
 
@@ -472,12 +458,12 @@ The ReEDS model is comprised of several modules with one and two-way data exchan
 Because ReEDS is a long-term capacity planning model, electricity generation capacity (capital stock) must be tracked over time, including initial capacity, new investments, refurbishment investments, lifetime retirements, and endogenous retirements. [Figure 25](#Fig25) depicts time resolution terminology and capital stock terminology. &quot;Historical&quot; years are 2010-2018, inclusive. &quot;Future&quot; years are 2019 and beyond. &quot;Pre-modeled&quot; years are years prior to 2010 and are not represented in the model decision making. &quot;Modeled&quot; years are years beginning in 2010, the first year of the model to the end of the model horizon. Users can specify the frequency of modeled years as depicted in [Figure 26](#Fig26) in &quot;\inputs\user\_input\modeledyears\_default.csv&quot; and the horizon is specified in &quot;cases.csv&quot;.
 
 <a name="Fig25"></a>
-![Image of Time and Stock](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/time-and-stock.jpg)   
+![Image of Time and Stock](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/time-and-stock.jpg)   
 
 *Figure 25. Depiction of time resolution terminology and capital stock terminology*
 
 <a name="Fig26"></a>
-![Image of Model Years](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/model-years.png)   
+![Image of Model Years](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/model-years.png)   
  
 *Figure 26. Depiction of user-specified model years.*
 
@@ -488,7 +474,7 @@ Distinction is made between vintage classes for capacity built during the _pre-m
 _Initial_ capacity is tracked based on the capacity remaining in each model year after planned retirements have been removed. Planned capacity additions made during _historical modeled_ years, i.e., 2010-2018, are prescribed _exactly_, thus the model must build _exactly_ the prescribed amount. Planned capacity built during _future modeled years_, i.e.,  2019-2050, are prescribed as a _lower bound_ for new investments, thus the model must build _at least_ the prescribed amount ([Figure 25](#Fig25)).
 
 <a name="Fig27"></a>
-![Image of Historical Bins](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/historical-bins.png)   
+![Image of Historical Bins](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/images/historical-bins.png)   
 
 *Figure 27. Example of categorizing model plants for the existing fleet based on heat rate.*
 
@@ -554,697 +540,36 @@ If you have comments and/or questions, please contacts the ReEDS team:
 <a name="Switches"></a>
 ## ReEDS Model Switches (specified by user in &quot;cases.csv&quot;)
 
-<a name="SwHorizon"></a>
-### Modeling horizon switches
-
-**timetype** [string] - defines how the model portrays foresight
-
-- **seq** (sequential) solves one solve year at a time assuming the modeled year&#39;s operations last for 20 years
-- **int** (intertemporal): full foresight of all modeled years
-- **win** (window): foresight for a selected period of time, defined in \inputs\userinput\windows_default.csv
-
-default value: seq
-
-**yearset\_suffix** [string] – file pointer suffix used in the file path to specify the model years
-
-path: \inputs\userinput\modeledyears\_{suffix}.csv
-
-default value: default
-
-**endyear** [integer] - Last year to be modeled
-
-default value: 2050
-
-<a name="SwDemand"></a>
-### Demand switches
-
-**demand** [binary] – switch to turn on demand module
-
-- 0 – Exclude demand module (OFF)
-- 1 – Include demand module (ON)
-
-default value: 0 (OFF)
-
-**demandscen** [string] – file pointer for electricity demand profile
-
-path: \inputs\loaddata\demand\_{demandscen}.csv
-
-default value: AEO\_2019\_reference
-
-**GSw\_LoadDemand** [binary] – Set inelastic demand when running the demand side
-
-Default value: 0
-
-**GSw\_EV** [binary] – Turn electric vehicle demand on/off
-
-Default value: 0
-
-<a name="SwRE"></a>
-### Renewable energy capacity credit and curtailment switches
-
-**calc\_csp\_cc** [binary] –Turn on/off CSP capacity credit calculations
-
-- 0 – OFF
-- 1 – ON
-
-default value: 0 (OFF)
-
-**csp\_configs** [integer] – number of CSP configurations for hourly calculations
-
-default value: 2
-
-**cc\_curt\_load** [binary] – Switch to enable loading of default capacity credit and curtailment parameters in the intertemporal case (stored in inputs\cccurt\_defaults.gdx). When executing an intertemporal case, it is good practice to set &quot;cc\_curt\_load = 1&quot; in &quot;cases.csv&quot; to enable pre-computed starting values for capacity credit and curtailment.
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_AVG\_iter** [integer] – Select method for choosing which iterations are used for CC/curt calculations
-
-Default value: 1
-
-**GSw\_CurtCC\_RTO** [binary] – Switch to average cc curt values over RTO
-
-Default value: 0
-
-**GSw\_Int\_CC** [integer] – Select intertemporal capacity credit method
-
-- 0=average undifferentiated
-- 1=average differentiated
-- 2=marginal differentiated
-
-Default value: 0
-
-**GSw\_Int\_Curt** [integer] – select intertemporal curtailment method
-
-- 0=average undifferentiated
-- 1=average differentiated
-- 2=marginal undifferentiated
-- 3=marginal differentiated
-
-Default value: 0
-
-**GSw\_CurtStorage** [fraction] – fraction of storage charging that can reduce curtailment
-
-Default value: 0.5
-
-<a name="SwCostPerf"></a>
-### Technology cost and performance switches
-
-**distpvscen** [string] – file pointer for rooftop PV deployment trajectories from the dGen model
-
-path: \inputs\dGen\_Model\_Inputs\{dispvscen}.csv
-
-default value: StScen2019\_Mid\_Case
-
-**batteryscen** [string] – file pointer for battery cost and performance characteristics
-
-path: \inputs\plant\_characteristics\{batteryscen}.csv
-
-default value: battery\_ATB\_2019\_mid
-
-**coalscen** [string] – file pointer for battery cost and performance characteristics
-
-path: \inputs\fuelprices\coal\_{coalscen}.csv
-
-default value: AEO\_2019\_reference
-
-**convscen** [string] – file pointer for conventional generation cost and performance characteristics
-
-path: \inputs\plant\_characteristics\{convscen}.csv
-
-default value: conv\_ATB\_2019
-
-**cspscen** [string] – file pointer for CSP cost and performance characteristics
-
-path: \inputs\plant\_characteristics\{cspscen}.csv
-
-default value: csp\_ATB\_2019\_mid
-
-**geoscen** [string] – file pointer for geothermal cost and performance characteristics
-
-path: \inputs\plant\_characteristics\{cspscen}.csv
-
-default value: geo\_ATB\_2019\_mid
-
-**geosupplycurve** [string]– file pointer for geothermal resource supply curve
-
-path: \inputs\geothermal\geo\_rsc\_{geosupplycurve}.csv
-
-default value: BAU
-
-**hydroscen** [string] – file pointer for hydro power cost and performance data
-
-path: \inputs\plant\_characteristics\{hydroscen}.csv
-
-default value: hydro\_ATB\_2019\_mid
-
-**ngscen** [string] – file pointer for natural gas prices
-
-path: \inputs\fuelprices\ng\_{ngscen}.csv
-
-default value: AEO\_2019\_reference
-
-note: HOG refers to the EIA AEO high oil & gas resource scenario, and LOG refers to the EIA AEO low oil & gas resource scenario. Thus, HOG will be a low natural gas price scenario, while LOG will be a high natural gas price scenario.
-
-**retscen** [string] – generator retirement schedule
-
-path to generator database: \inputs\capacitydata\ReEDS\_generator\_database\_final\_EIA-NEMS.csv
-
-default value: NukeRefRetireYear
-
-**upvscen** [string] – file pointer for UPV cost and performance data
-
-path: \inputs\plant\_characteristics\{upvscen}.csv
-
-default value: upv\_ATB\_2019\_mid
-
-**uraniumscen** [string] – file pointer for uranium prices
-
-path: \inputs\fuelprices\uranium\_{uraniumscen}.csv
-
-default value: AEO\_2019\_refernce
-
-**windscen** [string] – file pointer for UPV cost and performance data
-
-path: \inputs\plant\_characteristics\{windscen}.csv
-
-default value: wind\_ATB\_2019\_mid
-
-**numbins_upv** [int] – Number of interconnection supply curve bins for utility-scale PV
-
-default value: 20
-
-**numbins_windons** [int] – Number of interconnection supply curve bins for onshore wind
-
-default value: 5
-
-**numbins_windofs** [int] – Number of interconnection supply curve bins for offshore wind
-
-default value: 5
-
-**GSw\_TransCostMult** [fraction] – Multiplier for bulk BA-BA transmission costs
-
-default value: 1
-
-<a name="SwRegion"></a>
-### Region switches
-
-The following three switches are interrelated and are used together to gather the regional information for a scenario:
-
-Select all rows in &quot;\inputs\regions\regions\_{region\_suffix}.csv&quot; where the entry for column &quot;{region\_type}&quot; is equal to &quot;{GSw\_region}.&quot;
-
-**Example for the lower 48 US:**
-Select all rows in &quot;\inputs\regions\regions\_default.csv&quot; where the entry for column &quot;country&quot; is equal to &quot;usa.&quot;
-
-**Example for ERCOT:**
-Select all rows in &quot;\inputs\regions\regions\_ercot.csv&quot; where the entry for column &quot;interconnect&quot; is equal to &quot;Texas.&quot; An example for ERCOT is shown in &quot;cases\_test.csv&quot;
-
-**regions\_suffix** [string] – file pointer suffix for regional hierarchy file
-
-path: \inputs\regions\regions\_{regions\_suffix}.csv
-
-- default (for lower 48 US analysis)
-- ercot (for ERCOT analysis)
-
-Default value: default
-
-**region\_type** [string] – specify what region type will be used for &quot;GSwS\_region&quot;. Valid inputs are either column names in regions file or &#39;custom&#39; (e.g. naris), where custom regions are defined in their own file. Model will not work for all regions.
-
-- country (for lower 48 US analysis)
-- interconnect (for ERCOT analysis)
-
-Default value: country
-
-**GSw\_region** [string] – spatial extent of model regions
-
-- usa (lower 48 US analysis)
-- texas (for ERCOT analysis)
-
-Default value: usa
-
-<a name="SwFin"></a>
-### Financing switches
-
-**construction\_schedules\_suffix** [string] –  file pointer suffix for construction schedules
-
-Default value: default
-
-**construction\_times\_suffix** [string] – file pointer suffix for construction times by technology
-
-Default value: default
-
-**depreciation\_schedules\_suffix** [string] – file pointer suffix depreciation schedules
-
-Default value: default
-
-**financials\_sys\_suffix** [string] – file pointer suffix for the system-wide system discount rate
-
-Default value: ATB2019
-
-**financials\_tech\_suffix** [string] – file pointer suffix for technology-specific financial assumptions
-
-Default value: ATB2019\_mid
-
-**incentives\_suffix** [string] – file pointer suffix for incentive definition
-
-Default value: biennial
-
-**inflation\_suffix** [string] – file pointer suffix for historical inflation schedule
-
-Default value: default
-
-**reg\_cap\_cost\_mult\_suffix** [string] – file pointer suffix for regional capital cost multipliers
-
-Default value: default
-
-**techs\_suffix** [string] – file pointer suffix for main list of technologies
-
-path: \inputs\techs\techs\_{techs\_suffix}.csv
-
-Default value: default
-
-**dollar\_year** [integer] – DO NOT CHANGE FROM 2004 UNTIL ALL FINANCIAL INPUTS HAVE DOLLAR YEAR ADJUSTMENT – Real dollar year for model to calculate and report
-
-Default value: 2004
-
-**sys\_eval\_years** [integer] – Number of years that the model evaluates investments on
-
-Default value: 20
-
-<a name="SwModPlant"></a>
-### Model plant switches
-
-**Numclass**  [integer] – maximum number of vintage classes for generating capacity added after 2010
-
-Default value: 17
-
-**Numhintage** [integer] – maximum number of vintage bins for generating capacity existing prior to 2010; specifying &quot;unit&quot; will give a unit-level representation
-
-Default value: 6
-
-**mindev** [string]- minimum heat rate deviation for binning existing (prior to 2010) generating units into a separate vintage bin
-
-Default value: 50
-
-**Unitdata** [string] – pointer for which unit database to use
-
--  &quot;EIA-NEMS&quot; – use the unit database from the EIA&#39;s NEMS model
-
-Default value: EIA-NEMS
-
-**GSw\_DemonstrationPlants** [binary] – Turn on/off demonstration plants in prescriptive builds
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_BinOM** [binary] – Turn on/off binned FOM and VOM for each historical vintage bin
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-<a name="SwStock"></a>
-### Capital stock switches
-
-**GSw\_ForcePrescription** [binary] – Turn on/off forced prescriptions - turning off will allow unlimited but not free builds in historical years
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_Refurb** [binary] – Turn on/off refurbishments
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_Retire** [integer] – Turn on/off endogenous retirement
-
-- 0 – OFF
-- 1 – ON for all existing (2010) capacity of any technology
-- 2 - ON for all existing (2010) coal and gas capacity
-- 3 - ON for all existing (2010) and new nuclear, coal, and gas capacity; retirements are not allowed before the minimum age is reached (only this setting uses the minimum age)
-- 4 - ON for all existing (2010) and new (optimally built) capacity of any technology. In sequential solves, this option can lead to poor retirement behavior because some existing technologies' value streams are not represented using the CAP variable.
-
-Default value: 3
-
-**GSw\_RetirePenalty** [percent] – Penalty value for retirements
-
-Applies a penalty (as the fraction of fixed O&M) for retirements
-
-Default value: 0.5
-
-**GSw\_RetireYear** [integer] – Year to begin retirements
-
-Default value: 2022
-
-**GSw\_CoalRetire** [binary] – Adjust lifetime coal retirements
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-<a name="SwGrowth"></a>
-### Capacity growth limit switches
-
-**GSw\_GrowthAbsCon** [binary] –  Turn on/off absolute growth constraint
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_GrowthRelCon** [binary] – Turn on/off relative growth constraint
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_CSPRelLim** [percent] – Value of the CSP relative limit (% / year)
-
-Default value: 25
-
-**GSw\_SolarRelLim** [percent] – Value of the solar relative limit (% / year)
-
-Default value: 25
-
-**GSw\_WindRelLim** [percent] – Value of the wind relative limit (% / year)
-
-Default value: 25
-
-**GSw\_NearTermLimits** [binary] – Turn on/off near term capacity investment decisions
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-<a name="SwPolicy"></a>
-### Policy switches
-
-**GSw\_AB32** [binary] – Turn on/off AB32
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_AnnualCap** [binary] – Turn on/off CO2 cap
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_BankBorrowCap** [binary] – Turn on/off CO2 cap with banking and borrowing
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_BatteryMandate** [binary] – Turn on/off battery mandate constraint
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_CSAPR** [binary] – Turn on/off the CSAPR emissions regulation
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_CarbTax** [binary] – Turn on/off CO2 tax
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_PTC** [binary] – Switch to turn on/off wind PTC
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_PTCCont** [binary] – Extend PTC for wind
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_RGGI** [binary] – Turn on/off RGGI
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_StateRPS** [binary] – Turn on/off state RPS requirements
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_Upgrades** [binary] - Switch to turn capacity upgrades on or off, needs specifics defined when GSw_WaterMain is turned on
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_UpgradeYear** [integer] - First year to allow for capacity upgrades
-
-Default value: 2022
-
-
-**GSw\_MCS** [string] – Select countries to apply the mid-century strategy
-
-Default value: no
-
-**GSw\_GenMandate** [binary] – Turn on/off national Gen Requirement
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-<a name="SwTech"></a>
-### Technology inclusion switches
-
-**GSw\_Geothermal** [integer] – inclusion of geothermal
-
-- 0 – OFF
-- 1 – ON; default representation
-- 2 – ON; extended representation
-
-Default value: 1
-
-**GSw\_Storage** [binary] – Turn on/off all storage
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_CCS** [binary] – Turn on/off all Carbon Capture and Storage (CCS) technologies
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-<a name="SwOther"></a>
-### Other model constraint switches
-
-**GSw\_CapTranMax** [integer] – Upper bound on the capacity of individual BA-BA transmission corridors
-
-- 0: Constraint is turned off; no upper bound on transmission corridor capacity
-- Other numeric value [MW]: Each transmission corridor is limited to the value of GSw\_CapTranMax in MW
-
-Default value: 0 (constraint turned off)
-
-**GSw\_GasCurve** [integer] – Select natural gas supply curve
-
-- 0: census division supply curves
-- 1: national and census division supply curves
-- 2: static natural gas prices in each census division
-- 3: national supply curves with census division multipliers
-
-Default value: 0
-
-**GSw\_MaxCFCon** [binary] – Turn on/off minimum seasonal CF constraint
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_MinCFCon** [binary] – Turn on/off min CF constraint
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_Mingen** [binary] – Turn on/off Mingen variable
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_OpRes** [binary] – Turn on/off operating reserve constraints
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_ReducedResource** [binary] – Turn on/off switch to reduce the RE resource available
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_ReserveMargin** [binary] – Turn on/off planning reserve margin
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_TransExtent** [string] – Specify the extent of multi-link transmission paths, chosen from levels in the hierarchy file [country, interconnect, rto, st]
-
-Default value: country
-
-**GSw\_TransMultiLink** [binary] – Turn on/off assessment of marginal transmission reduction through multi-link transmission
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-**GSw\_TranRestrict** [integer] – Specify the types of transmission expansion that are allowed
-
-- 0 – New lines allowed between adjacent BA's within interconnects, but no AC-DC-AC interties allowed across interconnects
-- 1 – New lines only allowed between BA's within the same state
-- 2 – No new transmission
-- 3 – New lines allowed between adjacent BA's, including AC-DC-AC interties across interconnects
-
-Default value: 3
-
-**GSw\_VSC** [binary] – Turn on/off multi-terminal VSC HVDC macrogrid as an investment option
-- 0 - OFF
-- 1 - ON
-
-Default value: 0
-
-**GSw\_VSC_BAlist** [string] – Suffix of file with list of candidate BAs for VSC AC/DC converter stations
-
-Default value: all
-
-**GSw\_VSC_LinkList** [string] – Suffix of file with list of candidate BA-BA links for VSC DC lines
-
-Default value: all
-
-<a name="SwLP"></a>
-### Linear programming switches
-
-**GSw\_Loadpoint** [binary] – Turn on/off the use a GAMS &quot;loadpoint&quot; for the intertemporal case
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_gopt** – select solver option file to be used
-
-Default value: 1
-
-**GSw\_ValStr** – Turn on/off value stream calculation; this is a decomposition of reduced cost to help understand the model decision making
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-<a name="SwCoolingWater"></a>
-### Cooling water formulation switches
-
-**GSw\_WaterMain** [binary] – Turn on/off the representation of water use and source types
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_WaterCapacity** [binary] – Turn on/off the water capacity constraints
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_WaterUse** [binary] – 
-Turn on/off the water capacity and water use constraints
-- 0 – OFF
-- 1 – ON
-
-Default value: 0
-
-**GSw\_CoolingTechMults** [binary] – Turn on/off to enable cooling tech cost/performance multipliers; this is turned on when GSw\_WaterMain is ON
-
-- 0 – OFF
-- 1 – ON
-
-Default value: 1
-
-<a name="SwClimate"></a>
-### Climate-change modifier switches
-
-**GSw\_ClimateWater** [binary] – Turn on/off climate impacts on cooling water
-- 0 - OFF
-- 1 - ON
-
-Default value: 0
-
-**GSw\_ClimateHydro** [binary] – Turn on/off climate impacts on hydropower
-- 0 - OFF
-- 1 - ON
-
-Default value: 0
-
-**GSw\_ClimateDemand** [binary] – Turn on/off climate impacts on demand
-- 0 - OFF
-- 1 - ON
-
-Default value: 0
-
-**GSw\_ClimateStartYear** [integer] – Year in which to start applying climate impacts
-Default value: 2020
-
-**climatescen** [string] – Climate scenario for climate impacts
-Default value: HadGEM2-ES_rcp45_AT
-
-**climateloc** [string] – Directory for climate scenarios (change to `qnap/CIRA_Inputs_R2` to use scenarios not included in `inputs/climate`)
-Default value: inputs/climate
+ReEDS model switches are set in the cases.csv file. The "Choices" column lists allowable options for that switch, with N/A meaning that no error checking is performed for the options selected.
+
+<a name="Hourly"></a>
+## Hourly resolution quick-start guide
+
+If you'd like to run the model with hourly resolution, here is the minimal set of switches to change in cases.csv:
+* `GSw_Hourly = 1`
+  * Turn on hourly resolution
+* `GSw_Canada = 2`
+  * Turn on hourly resolution for Canadian imports/exports
+* `GSw_AugurCurtailment = 0`
+  * Turn off the Augur calculation of curtailment
+* `GSw_StorageArbitrageMult = 0`
+  * Turn off the Augur calculation of storage arbitrage value
+* `GSw_Storage_in_Min = 0`
+  * Turn off the Augur calculation of storage charging
+* `capcredit_szn_hours = 3`
+  * The current default hourly representation is 18 representative 5-day weeks. Each representative period is treated as a 'season' and is thus active in the planning-reserve margin constraint. In h17 ReEDS we set `capcredit_szn_hours = 10`, giving 40 total hours considered for planning reserves (the top 10 hours in each of the 4 quarterly seasons). 18 'seasons' with 10 hours each would give 180 hours, so we switch to 3 hours per 'season' (for 54 hours total).
+
+If you'd like the model to solve in less than 2 days, you can also make the following changes:
+* `yearset_suffix = fiveyear`
+  * Solve in 5-year steps
+* `GSw_OpRes = 0`
+  * Turn off operating reserves
+* `GSw_MinLoading = 0`
+  * Turn off the sliding-window representation of minimum-generation limits
+* `GSw_PVB = 0`
+  * Turn off PV-battery hybrids
+* `GSw_calc_powfrac = 0`
+  * Turn off a post-processing calculation of power flows
 
 <a name="Code"></a>
 ## Coding Conventions

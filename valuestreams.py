@@ -6,8 +6,14 @@ import raw_value_streams as rvs
 from datetime import datetime
 import logging
 
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
+
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
 vs_path = this_dir_path + '/inputs_case'
+output_dir = this_dir_path + '/outputs'
+solution_file = this_dir_path + '/ReEDSmodel_p.gdx'
+mps_file = this_dir_path + '/ReEDSmodel.mps'
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -16,10 +22,6 @@ sh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(message)s')
 sh.setFormatter(formatter)
 logger.addHandler(sh)
-fh = logging.FileHandler(this_dir_path + '/valuestreams.log')
-fh.setLevel(logging.DEBUG)
-fh.setFormatter(formatter)
-logger.addHandler(fh)
 
 df_var_map = pd.read_csv(vs_path+'/var_map.csv', dtype=object)
 df_hier = pd.read_csv(vs_path + '/rsmap.csv').rename(columns={'*r':'r'})
@@ -42,9 +44,6 @@ def add_concat_csv(df_in, csv_file):
 def createValueStreams():
     very_start = datetime.now()
     logger.info('Starting valuestreams.py')
-    output_dir = 'outputs'
-    solution_file = 'ReEDSmodel_p.gdx'
-    mps_file = 'ReEDSmodel.mps'
     df = rvs.get_value_streams(solution_file, mps_file, var_list)
     logger.info('Raw value streams completed: ' + str(datetime.now() - very_start))
 
@@ -86,3 +85,5 @@ def createValueStreams():
 
 if __name__ == '__main__':
     createValueStreams()
+    os.remove(solution_file)
+    os.remove(mps_file)

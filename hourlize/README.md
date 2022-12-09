@@ -30,7 +30,7 @@ the paths in *config.py* are correct.
 1. If specified, we reduce the hourly data to one year.
 1. If specified, we remove the final day from leap years.
 1. If specified, we shift the data into local time of each BA.
-1. If specified, we calibrate each year of hourly data to annual EIA load data by state combined with load participation factors by BA.
+1. If specified, we calibrate each year of hourly data to EIA 2010 load data by state combined with load participation factors by BA. These load participation factors are from heritage ReEDS load inputs, which I believe were derived from Ventyx 2006 county-level load data.
 1. For each BA we calculate average load by timeslice and peak load by season.
 1. The load profiles, means by timeslice, and peaks by season are sent to a new folder in *out/*
 * Current inputs and outputs are stored here: `\\nrelnas01\ReEDS\Supply_Curve_Data\LOAD\`

@@ -1,4 +1,3 @@
-
 * global needed for this file:
 * case : name of case you're running
 * niter : current iteration
@@ -173,12 +172,12 @@ storage_in_min(r,h,t)$storage_in_min(r,h,t) =
     min(storage_in_min(r,h,t),
 * scaling by plant-specific pump capacity and storage duration
         sum{(i,v) , ( (storage_duration_m(i,v,r) / storage_duration(i))$storage_duration(i) + 1$(not storage_duration(i)) )
-                    * avail(i,v,h) * sum{rr$cap_agg(r,rr), storinmaxfrac(i,v,rr) * sum{tt$tprev(t,tt), CAP.l(i,v,rr,tt)} } } ,
+                    * avail(i,h) * sum{rr$cap_agg(r,rr), storinmaxfrac(i,v,rr) * sum{tt$tprev(t,tt), CAP.l(i,v,rr,tt)} } } ,
 * scaling by plant-specific storage duration
         sum{(i,v) , ( (storage_duration_m(i,v,r) / storage_duration(i))$storage_duration(i) + 1$(not storage_duration(i)) )
-                    * avail(i,v,h) * sum{(rr,tt)$[tprev(t,tt)$cap_agg(r,rr)], CAP.l(i,v,rr,tt)} } ,
+                    * avail(i,h) * sum{(rr,tt)$[tprev(t,tt)$cap_agg(r,rr)], CAP.l(i,v,rr,tt)} } ,
 * scaling by plant-specific pump capacity
-        sum{(i,v) , avail(i,v,h) * sum{rr$cap_agg(r,rr), storinmaxfrac(i,v,rr) * sum{tt$tprev(t,tt), CAP.l(i,v,rr,tt)} } }
+        sum{(i,v) , avail(i,h) * sum{rr$cap_agg(r,rr), storinmaxfrac(i,v,rr) * sum{tt$tprev(t,tt), CAP.l(i,v,rr,tt)} } }
     ) ;
 hourly_arbitrage_value(i,r,t)$[tload(t)$valcap_irt(i,r,t)$storage_standalone(i)] = hourly_arbitrage_value_load(i,r,t) ;
 *PV+Battery arbitrage value can be restricted by the ITC charging requirement
@@ -187,9 +186,6 @@ hourly_arbitrage_value(i,r,t)$[tload(t)$valcap_irt(i,r,t)$pvb(i)] = hourly_arbit
 *Upgrades - used for hydropower upgraded to add pumping
 curt_stor(i,v,r,h,src,t)$[tload(t)$upgrade(i)$storage_standalone(i)$valcap(i,v,r,t)] = smax(vv, sum{ii$upgrade_to(i,ii), curt_stor(ii,vv,r,h,src,t) } );
 hourly_arbitrage_value(i,r,t)$[tload(t)$upgrade(i)$(storage_standalone(i) or hyd_add_pump(i))$valcap_irt(i,r,t)] = sum{ii$upgrade_to(i,ii), hourly_arbitrage_value(ii,r,t) } ;
-
-* --- Assign hybrid PV+battery capacity credit derate factor ---
-hybrid_cc_derate(i,r,szn,sdbin,t)$[tload(t)$valcap_irt(i,r,t)$storage_hybrid(i)] = 1 ;
 
 *Sw_Int_CC=0 means use average capacity credit for each tech, and don't differentiate vintages
 *If there is no existing capacity to calculate average, use marginal capacity credit instead.

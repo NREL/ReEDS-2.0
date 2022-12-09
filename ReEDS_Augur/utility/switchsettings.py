@@ -24,7 +24,7 @@ class SwitchSettings(object):
     @classmethod
     def set_switches(cls, next_year, prev_year, scen):
         cls.gdx_file = os.path.join(
-            'ReEDS_Augur','augur_data','reeds_data_{}.gdx'.format(str(next_year)))
+            'ReEDS_Augur','augur_data','reeds_data_{}.gdx'.format(prev_year))
         cls.next_year = next_year
         cls.prev_year = prev_year
         cls.scen = scen
@@ -66,14 +66,23 @@ class SwitchSettings(object):
                         '{}:{} must be TRUE or FALSE'.format(key,value))
             cls.switches[key] = value
         cls.data_year = cls.switches['reeds_data_year']
+        cls.switches['gdx_file'] = cls.gdx_file
+        cls.switches['next_year'] = cls.next_year
+        cls.switches['prev_year'] = cls.prev_year
+        cls.switches['scen'] = scen
         ### Adjust types for some switches from ReEDS
+        cls.switches['capcredit_szn_hours'] = int(cls.switches['capcredit_szn_hours'])
         cls.switches['marg_vre_mw'] = float(cls.switches['marg_vre_mw'])
         cls.switches['marg_stor_mw'] = float(cls.switches['marg_stor_mw'])
         cls.switches['marg_dr_mw'] = float(cls.switches['marg_dr_mw'])
         cls.switches['osprey_years'] = [int(y) for y in cls.switches['osprey_years'].split(',')]
+        cls.switches['run_osprey_years'] = [
+            int(y) for y in cls.switches['run_osprey_years'].split('_')]
         cls.osprey_years = cls.switches['osprey_years']
         ### Derived values
         cls.switches['osprey_num_years'] = len(cls.switches['osprey_years'])
         cls.switches['osprey_ts_length'] = 8760 * cls.switches['osprey_num_years']
         cls.switches['precision'] = (
             {16:np.float16, 32:np.float32, 64:np.float64}[cls.switches['precision']])
+        cls.switches['plot_years'] = [int(y) for y in cls.switches['plot_years']]
+        cls.switches['plots'] = True if len(cls.switches['plot_years']) else False

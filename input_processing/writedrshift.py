@@ -19,6 +19,10 @@ import pandas as pd
 # direct print and errors to log file
 sys.stdout = open('gamslog.txt', 'a')
 sys.stderr = open('gamslog.txt', 'a')
+# Time the operation of this script
+from ticker import toc
+import datetime
+tic = datetime.datetime.now()
 
 if __name__ == "__main__":
 
@@ -27,17 +31,17 @@ if __name__ == "__main__":
         description="""This file produces the DR shiftability inputs""")
 
     parser.add_argument("reeds_dir", help="ReEDS directory")
-    parser.add_argument("GSw_DR", type=int, default=0,
-                        help="Switch to turn on DR investment")
-    parser.add_argument("drscen", type=str, default='none',
-                        help='DR scenario for supply curve and flex load')
     parser.add_argument("inputs_case", help="output directory")
 
     args = parser.parse_args()
-
-    GSw_DR = args.GSw_DR
-    drscen = args.drscen
     inputs_case = args.inputs_case
+
+    #%% Inputs from switches
+    sw = pd.read_csv(
+        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+
+    GSw_DR = int(sw.GSw_DR)
+    drscen = sw.drscen
 
     # Read in DR shifting for specified scenario
     dr_hrs = pd.read_csv(
@@ -68,7 +72,7 @@ if __name__ == "__main__":
     # Cross join shifts and timeslices
     dr_shifts['key'] = 1
     hr_ts['key'] = 1
-    hr_shifts = pd.merge(dr_shifts, hr_ts, on='key').drop('key', 1)
+    hr_shifts = pd.merge(dr_shifts, hr_ts, on='key').drop('key', axis=1)
     hr_shifts['shifted_hr'] = hr_shifts['hour'] + hr_shifts['shift']
     # Adjust hrs to be between 1 and 8760
     lt0 = hr_shifts.shifted_hr <= 0
@@ -81,10 +85,10 @@ if __name__ == "__main__":
     hr_shifts = pd.merge(hr_shifts,
                          hr_ts.rename({'h': 'shifted_h', 'hour': 'shifted_hr',
                                        'season': 'shifted_season'}, axis=1),
-                         on='shifted_hr').drop('key', 1)
+                         on='shifted_hr').drop('key', axis=1)
     # Only allow shifts within the same season
     hr_shifts = hr_shifts[hr_shifts.season == hr_shifts.shifted_season]
-    hr_shifts.drop(['shifted_season'], 1, inplace=True)
+    hr_shifts.drop(['shifted_season'], axis=1, inplace=True)
 
     hr_shifts2 = (
         hr_shifts[['dr_type', 'h', 'hour', 'shifted_h']]
@@ -155,3 +159,6 @@ if __name__ == "__main__":
     shutil.copy(os.path.join(args.reeds_dir, 'inputs', 'demand_response',
                              'dr_types_{}.csv'.format(drscen)),
                 os.path.join(inputs_case, 'dr_types.csv'))
+    
+    toc(tic=tic, year=0, process='input_processing/writedrshift.py', 
+        path=os.path.join(inputs_case,'..'))

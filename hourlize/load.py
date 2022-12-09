@@ -16,11 +16,12 @@ import logging
 #Setup logger
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-sh = logging.StreamHandler(sys.stdout)
-sh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(message)s')
-sh.setFormatter(formatter)
-logger.addHandler(sh)
+if cf.logToTerminal:
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.DEBUG)
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
 logger.info('Load logger setup.')
 
 def setup(this_dir_path, out_dir, paths):

@@ -81,6 +81,7 @@ print('Starting climateprep.py')
 
 ################
 #%% FIXED INPUTS
+verbose = 2
 ### Set rounding precision
 decimals = 5
 ### Link between peak-timeslices and parent-timeslices (in case we add more peak-slices)
@@ -90,53 +91,31 @@ slicetree = {'h17': 'h3',}
 #%% ARGUMENT INPUTS
 
 parser = argparse.ArgumentParser(description="Format and write climate inputs")
-parser.add_argument('-i', '--reedsdir', help='ReEDS directory')
-parser.add_argument('-o', '--inputs_case', help='output directory')
-parser.add_argument('-c', '--climatescen', help='climate scenario', default='HadGEM2-ES_rcp45_AT')
-parser.add_argument('-l', '--climateloc', help='climate scenario location', default='inputs/climate')
-parser.add_argument('-w', '--GSw_ClimateWater', help='GSw_ClimateWater', type=int, default=0)
-parser.add_argument('-y', '--GSw_ClimateHydro', help='GSw_ClimateHydro', type=int, default=0)
-parser.add_argument('-d', '--GSw_ClimateDemand', help='GSw_ClimateDemand', type=int, default=0)
-parser.add_argument('-a', '--yearset', help='file with years to be modeled',
-                    default='modeledyears_default.csv')
-parser.add_argument('-e', '--endyear', help='last year to model', type=int, default=2050)
-parser.add_argument('-s', '--GSw_ClimateStartYear', default=2020, type=int,
-                    help='year in which to start applying climate impacts')
-parser.add_argument('-f', '--GSw_EFS1_AllYearLoad', help='GSw_EFS1_AllYearLoad',
-                    type=str, default='default')
-parser.add_argument('-v', '--verbose', action='count', default=0)
+parser.add_argument('reedsdir', help='ReEDS directory')
+parser.add_argument('inputs_case', help='output directory')
 
 args = parser.parse_args()
 reedsdir = args.reedsdir
 inputs_case = args.inputs_case
-climatescen = args.climatescen
-climateloc = args.climateloc
-GSw_ClimateWater = args.GSw_ClimateWater
-GSw_ClimateHydro = args.GSw_ClimateHydro
-GSw_ClimateDemand = args.GSw_ClimateDemand
-GSw_EFS1_AllYearLoad = args.GSw_EFS1_AllYearLoad
-yearset = args.yearset
-endyear = args.endyear
-GSw_ClimateStartYear = args.GSw_ClimateStartYear
-verbose = args.verbose
 
 # #%% Settings for testing ###
 # reedsdir = os.path.expanduser('~/github/ReEDS-2.0/')
 # inputs_case = os.path.expanduser(
 #     '~/github/ReEDS-2.0/runs/v20201208_beyond2050_Climate2100step5/inputs_case/')
-# climatescen = 'HadGEM2-ES_rcp45_AT'
-# # climatescen = 'dummy'
-# # climateloc = '/Volumes/ReEDS/CIRA_Inputs_R2/'
-# climateloc = 'inputs/climate'
-# GSw_ClimateWater = 1
-# GSw_ClimateHydro = 1
-# GSw_ClimateDemand = 1
-# GSw_ClimateStartYear = 2020
-# # GSw_EFS1_AllYearLoad = 'EPHIGH'
-# GSw_EFS1_AllYearLoad = 'default'
-# endyear = 2120
-# yearset = 'modeledyears_beyond2050step10.csv'
-# verbose = 2
+
+#%% Inputs from switches
+sw = pd.read_csv(
+    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+
+climatescen = sw.climatescen
+climateloc = sw.climateloc
+GSw_ClimateWater = int(sw.GSw_ClimateWater)
+GSw_ClimateHydro = int(sw.GSw_ClimateHydro)
+GSw_ClimateDemand = int(sw.GSw_ClimateDemand)
+GSw_EFS1_AllYearLoad = sw.GSw_EFS1_AllYearLoad
+endyear = int(sw.endyear)
+GSw_ClimateStartYear = int(sw.GSw_ClimateStartYear)
+
 
 #%% TEMPORARY: Don't allow climate impacts to be used with EFS load until we work out the bugs
 if GSw_ClimateDemand and (GSw_EFS1_AllYearLoad != 'default'):
@@ -150,8 +129,8 @@ else:
 ### Get the directory for climate inputs
 climatedir = os.path.join(climateloc, climatescen)
 
-### Get yearset and endyear
-modelyears = [int(y) for y in pd.read_csv(os.path.join(inputs_case,yearset)).columns.tolist()]
+### Get modeled years
+modelyears = pd.read_csv(os.path.join(inputs_case,'modeledyears.csv')).columns.astype(int).tolist()
 allyears = list(range(2010, endyear+1))
 ### Get reeds_data_year
 reeds_data_year = int(
@@ -161,7 +140,7 @@ reeds_data_year = int(
 
 ### Get some other fixed inputs
 distloss = pd.read_csv(
-    os.path.join(inputs_case,'scalars_transmission.csv'),
+    os.path.join(inputs_case,'scalars.csv'),
     header=None, usecols=[0,1], index_col=0, squeeze=True)['distloss']
 
 #############
@@ -334,10 +313,13 @@ def write_load_files(
 
     #%% Get the cendiv-to-r mapper
     hierarchy = pd.read_csv(
-        os.path.join(inputs_case,'hierarchy.csv'), index_col='r',
-        names=['r','nercr','nercr_new','rto','rto_agg','cendiv','st',
-               'interconnect','country','customreg','ccreg','usda'],
-    )
+        os.path.join(inputs_case,'hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
+
+    #%% Get valid regions
+    rfeas = sorted(
+        pd.read_csv(
+            os.path.join(inputs_case, 'valid_ba_list.csv'), squeeze=True, header=None).tolist())
 
     #%% Get load_multiplier by r
     load_multiplier_r = hierarchy[['cendiv']].merge(
@@ -529,8 +511,8 @@ def write_load_files(
                 ### Scale up by distribution losses
                 load_write /= (1 - distloss)
                 ### Write it
-                savename = os.path.join(augurpath, 'load_7year_{}.pkl'.format(t))
-                load_write.to_pickle(savename)
+                savename = os.path.join(augurpath, 'load_7year_{}.h5'.format(t))
+                load_write[rfeas].to_hdf(savename, key='data', complevel=4)
                 if verbose >= 2:
                     print(os.path.basename(savename))
         ##### Otherwise no normalize, but apply distloss and store for concat
@@ -539,8 +521,13 @@ def write_load_files(
             dict_load_hourlybyyear[t] = load_write
 
     #%% Concat and save peak_allyear
-    peak_allyear = pd.concat(dict_sznpeak_allyear, axis=1)
-    peak_allyear.round(decimals).to_csv(os.path.join(inputs_case, 'peak_all.csv'))
+    peak_allyear = (
+        pd.concat(dict_sznpeak_allyear, axis=0, names=('t','r','szn')).rename('MW')
+        .reset_index().rename(columns={'r':'*r'})
+        [['*r','szn','t','MW']]
+    )
+    peak_allyear.round(decimals).to_csv(
+        os.path.join(inputs_case, 'peak_all.csv'), index=False)
     ### Concat and save load_allyear
     load_allyear = pd.concat(dict_load_allyear, axis=1)
     load_allyear.round(decimals).to_csv(os.path.join(inputs_case, 'load_all.csv'))
@@ -551,8 +538,8 @@ def write_load_files(
     if GSw_EFS1_AllYearLoad != 'default':
         df_load_hourlybyyear = pd.concat(dict_load_hourlybyyear, axis=0)
         df_load_hourlybyyear.index.set_names(['year','hour'],inplace=True)
-        savename = os.path.join(augurpath, 'load_allyears.pkl')
-        df_load_hourlybyyear.to_pickle(savename)
+        savename = os.path.join(augurpath, 'load_allyears.h5')
+        df_load_hourlybyyear.to_hdf(savename, key='data', complevel=4)
         if verbose >= 2:
             print(savename)
     #%% Return for debugging

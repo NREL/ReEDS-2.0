@@ -5,7 +5,9 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --mail-user=[your email address]
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mem=172000      # RAM in MB
+#SBATCH --mem=90000    # RAM in MB; 90000 for normal or 184000 for big-mem
+
+# add >>> #SBATCH --qos=high <<< above for quicker launch at double AU cost
 
 #load your default settings
 . $HOME/.bashrc

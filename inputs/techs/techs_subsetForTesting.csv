@@ -1,5 +1,6 @@
 i,region_type
-coal-CCS,p
+coal-CCS_mod,p
+coal-CCS_max,p
 Coal-IGCC,p
 coal-new,p
 CoalOldScr,p

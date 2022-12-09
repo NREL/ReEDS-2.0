@@ -22,7 +22,7 @@
 ### Basic logic in *plexos_to_reeds.py*
 1. The output of the above process, *h5_2007-2014_ungrown_2012_1hr_EST.csv* is read in as an input
 1. Data is reduced to 2007-2013 only.
-1. Load participation factors are used to map the data to PLEXOS nodes. WECC uses seasonal factors, ERCOT uses monthly factors, and EI simply
+1. Load participation factors (I believe from Energy Visuals) are used to map the data to PLEXOS nodes. WECC uses seasonal factors, ERCOT uses monthly factors, and EI simply
 assumes that PLEXOS region data is split evenly between the associated nodes.
 1. The PLEXOS nodes are mapped directly to ReEDS BAs based strictly on location of the nodes and BA boundaries.
 1. This results in load participation factors between PLEXOS regions and ReEDS BAs. Hourly ReEDS BA-level data is then produced using the load participation factors

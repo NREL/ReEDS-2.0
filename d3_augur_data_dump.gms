@@ -16,13 +16,12 @@ $if not set start_year $setglobal start_year 2010
 * Set and parameter definitions
 *===============================
 
-set trange(t)         "range from first year to current year"
-    tcur(t)           "current year"
-    tnext(t)          "next year"
-    valcap_i(i)       "subset of valcap"
-    valcap_ir(i,r)    "subset of valcap"
-    valcap_iv(i,v)    "subset of valcap"
-    valcap_ivr(i,v,r) "subset of valcap"
+set trange(t)                "range from first year to current year"
+    tcur(t)                  "current year"
+    tnext(t)                 "next year"
+    valcap_i_filt(i)         "subset of valcap"
+    valcap_ir(i,r)           "subset of valcap"
+    valcap_iv_filt(i,v)      "subset of valcap"
     routes_filt(r,rr,trtype) "set of transmission connections"
 ;
 
@@ -68,8 +67,8 @@ repgasprice(cendiv,t)              "--$/mmBTU-- NG prices in ReEDS, the calculat
 repgasquant(cendiv,t)              "--mmBTU-- NG fuel usage in ReEDS - used to determine NG price"
 ret_ivrt(i,v,r,t)                  "--MW-- retirements of generation capacity"
 ret(i,v,r)                         "--MW-- retirements of generation capacity"
-rsc_dat_dr(r,rs,i,rscbin,sc_cat)   "--varies-- resource supply curve data"
-rsc_dat_filt(r,rs,i,rscbin,sc_cat) "--$/MW-- capital costs filtered for pumped-hydro so arbitrage value doesn't exceed capital costs"
+rsc_dat_dr(i,r,sc_cat,rscbin)      "--varies-- resource supply curve data"
+rsc_dat_filt(i,r,sc_cat,rscbin)    "--$/MW-- capital costs filtered for pumped-hydro so arbitrage value doesn't exceed capital costs"
 storage_eff_filt(i)                "--fraction-- storage efficiency filtered for the next solve year"
 upgrade_to_filt(i,ii)              "--set-- set linking upgrade techs to the tech the upgraded from filtered for existing upgrades"
 ;
@@ -88,9 +87,8 @@ tnext(t) = no ;
 tnext("%next_year%") = yes ;
 
 *populate reduced-form sets
-valcap_ivr(i,v,r) = sum{t, valcap(i,v,r,t) } ;
-valcap_iv(i,v) = sum{(r,t)$tcur(t), valcap(i,v,r,t)} ;
-valcap_i(i) = sum{v, valcap_iv(i,v)} ;
+valcap_iv_filt(i,v) = sum{(r,t)$tcur(t), valcap(i,v,r,t)} ;
+valcap_i_filt(i) = sum{v, valcap_iv_filt(i,v)} ;
 valcap_ir(i,r) = sum{t$tcur(t), valcap_irt(i,r,t)} ;
 
 *=======================================
@@ -114,8 +112,8 @@ storage_standalone(i) = storage_standalone(i)$(not ban(i)) ;
 
 cap_exist(i,v,r)$valcap_ivr(i,v,r) = sum{t$tcur(t), CAP.l(i,v,r,t) } ;
 cap_exist_ir(i,r)$valcap_ir(i,r) = sum{v, cap_exist(i,v,r) } ;
-cap_exist_iv(i,v)$valcap_iv(i,v) = sum{r, cap_exist(i,v,r) } ;
-cap_exist_i(i)$valcap_i(i) = sum{(r,v), cap_exist(i,v,r) } ;
+cap_exist_iv(i,v)$valcap_iv_filt(i,v) = sum{r, cap_exist(i,v,r) } ;
+cap_exist_i(i)$valcap_i_filt(i) = sum{(r,v), cap_exist(i,v,r) } ;
 
 cap_ivrt(i,v,r,t)$([not (upv(i) or dupv(i) or wind(i))]$valcap(i,v,r,t)$trange(t)) = CAP.l(i,v,r,t) ;
 cap_ivrt(i,v,r,t)$([upv(i) or dupv(i) or wind(i)]$valcap(i,v,r,t)) = (m_capacity_exog(i,v,r,t)$trange(t) + sum{tt$[inv_cond(i,v,r,t,tt)$trange(tt)],
@@ -123,8 +121,8 @@ cap_ivrt(i,v,r,t)$([upv(i) or dupv(i) or wind(i)]$valcap(i,v,r,t)) = (m_capacity
 cap_init(i,v,r)$([not distpv(i)]$valcap_ivr(i,v,r)) = sum{t$tcur(t), cap_ivrt(i,v,r,t)$initv(v) } ;
 cap_init(i,v,r)$(distpv(i)$valcap_ivr(i,v,r)) = sum{t$tfirst(t), cap_ivrt(i,v,r,t) } ;
 inv_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)] = [INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)]$valinv(i,v,r,t) + UPGRADES.l(i,v,r,t)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades] ;
-inv_ivrt("distPV",v,r,t)$([trange(t)$(not tfirst(t))]$valcap("distPV",v,r,t)) = cap_ivrt("distPV",v,r,t) - sum{tt$tprev(t,tt), cap_ivrt("distPV",v,r,tt) } ;
-inv_ivrt("distPV","init-1",r,"%next_year%")$rfeas(r) = inv_distpv(r,"%next_year%") ;
+inv_ivrt("distpv",v,r,t)$([trange(t)$(not tfirst(t))]$valcap("distpv",v,r,t)) = cap_ivrt("distpv",v,r,t) - sum{tt$tprev(t,tt), cap_ivrt("distpv",v,r,tt) } ;
+inv_ivrt("distpv","init-1",r,"%next_year%")$rfeas(r) = inv_distpv(r,"%next_year%") ;
 
 ret_ivrt(i,v,r,t)$([trange(t)$(not tfirst(t))$newv(v)]$valcap(i,v,r,t)) = sum{tt$tprev(t,tt), cap_ivrt(i,v,r,tt)} - cap_ivrt(i,v,r,t) + inv_ivrt(i,v,r,t) ;
 ret_ivrt(i,v,r,t)$([abs(ret_ivrt(i,v,r,t) < 1e-6)]$valcap(i,v,r,t)) = 0 ;
@@ -145,7 +143,7 @@ fuel_price_filt(i,r)$cap_exist_ir(i,r) = sum{t$tcur(t), fuel_price(i,r,t) } ;
 * a positive value here since if an RE-CT is built it consumes hydrogen 
 * the equation from which we extract the marginal depends on whether
 * we have the national (Sw_H2 = 1) or regional (Sw_H2 = 2) constraint
-fuel_price_filt(i,r)$[rfeas(r)$Sw_H2$re_ct(i)$(sum{t$tcur(t),yeart(t) } >= Sw_H2_Start)$cap_exist_ir(i,r)] = 
+fuel_price_filt(i,r)$[rfeas(r)$Sw_H2$re_ct(i)$(sum{t$tcur(t),yeart(t) } >= Sw_H2_Demand_Start)$cap_exist_ir(i,r)] = 
             sum{t$tcur(t),
                 (1 / cost_scale) * (1 / pvf_onm(t)) * h2_rect_intensity
                 * ( eq_h2_demand.m("h2_green",t)$[Sw_H2 = 1] 
@@ -180,14 +178,18 @@ repgasprice(cendiv,t)$[(Sw_GasCurve = 2)$tcur(t)$cdfeas(cendiv)$repgasquant(cend
 repgasprice_r(r,t)$[(Sw_GasCurve = 0 or Sw_GasCurve = 2)$tcur(t)$rfeas(r)] = sum{cendiv$r_cendiv(r,cendiv), repgasprice(cendiv,t) } ;
 
 repgasprice_r(r,t)$[(Sw_GasCurve = 1)$tcur(t)$rfeas(r)] =
-              ( sum{(h,cendiv)$r_cendiv(r,cendiv),
+              ( sum{(h,cendiv),
                    gasmultterm(cendiv,t) * szn_adj_gas(h) * cendiv_weights(r,cendiv) *
                    hours(h) } / sum{h, hours(h) }
 
-              + smax((fuelbin,cendiv)$VGASBINQ_REGIONAL.l(fuelbin,cendiv,t), gasbinp_regional(fuelbin,cendiv,t) )
+              + smax((fuelbin,cendiv)$[VGASBINQ_REGIONAL.l(fuelbin,cendiv,t)$r_cendiv(r,cendiv)], gasbinp_regional(fuelbin,cendiv,t) )
 
               + smax(fuelbin$VGASBINQ_NATIONAL.l(fuelbin,t), gasbinp_national(fuelbin,t) )
               ) ;
+
+* catch any infinite values, assign to reference gas price
+repgasprice_r(r,t)$[(repgasprice_r(r,t) = -inf or repgasprice_r(r,t) = inf)$tcur(t)$rfeas(r)] = 
+    smax{cendiv$r_cendiv(r,cendiv), gasprice_ref(cendiv,t) } ;   
 
 repgasprice_filt(r)$rfeas(r) = sum{t$tcur(t), repgasprice_r(r,t) } ;
 
@@ -195,7 +197,7 @@ repgasprice_filt(r)$rfeas(r) = sum{t$tcur(t), repgasprice_r(r,t) } ;
 * Filter necessary input data
 *============================
 
-avail_filt(i,v,szn)$[cap_exist_iv(i,v)$(not vre(i))] = smax{h$h_szn(h,szn), avail(i,v,h) } ;
+avail_filt(i,v,szn)$[cap_exist_iv(i,v)$(not vre(i))] = smax{h$h_szn(h,szn), avail(i,h) * derate_geo_vintage(i,v) } ;
 
 can_exports_h_filt(r,h)$rfeas(r) = sum{t$tcur(t), can_exports_h(r,h,t)} ;
 
@@ -224,9 +226,9 @@ emit_rate_filt(e,i,v,r)$cap_exist(i,v,r) = sum{t$tcur(t), emit_rate(e,i,v,r,t) }
 
 heat_rate_filt(i,v,r)$cap_exist(i,v,r) = sum{t$tcur(t), heat_rate(i,v,r,t) } ;
 
-inv_cond_filt(i,v,t)$[(vre(i) or pvb(i))$tnext(t)] = sum{(tt,r)$rfeas_cap(r), inv_cond(i,v,r,tt,t)} ;
+inv_cond_filt(i,v,t)$[(vre(i) or pvb(i))$tnext(t)] = sum{(tt,r)$rfeas_cap(r), inv_cond(i,v,r,tt,t) } ;
 
-load_multiplier_filt(cendiv) = sum{t$tcur(t), load_multiplier(cendiv,t)} ;
+load_multiplier_filt(cendiv) = sum{t$tcur(t), load_multiplier(cendiv,t) } ;
 
 m_cf_filt(i,v,r,h)$[(vre(i) or pvb(i))$cap_exist(i,v,r)] = sum{t$tnext(t), m_cf(i,v,r,h,t) } ;
 
@@ -234,9 +236,9 @@ m_cf_szn_filt(i,v,r,szn)$[hydro(i)$cap_exist(i,v,r)] = sum{t$tcur(t), m_cf_szn(i
 
 minloadfrac_filt(r,i,szn)$[hydro(i)$cap_exist_ir(i,r)] = sum{h$h_szn(h,szn), minloadfrac(r,i,h) * hours(h) } / sum{h$h_szn(h,szn), hours(h) } ;
 
-rsc_dat_filt(r,rs,i,rscbin,"cost")$[rfeas(r)$storage_standalone(i)$cap_exist_ir(i,r)]  = sum{t$tnext(t), rsc_dat(r,rs,i,t,rscbin,"cost")};
+rsc_dat_filt(i,r,"cost",rscbin)$[rfeas_cap(r)$storage_standalone(i)$cap_exist_ir(i,r)] = rsc_dat(i,r,"cost",rscbin) ;
 
-rsc_dat_dr(r,rs,i,rscbin,"cost")$[rfeas(r)$dr(i)]  = sum{t$tnext(t), rsc_dat(r,rs,i,t,rscbin,"cost")};
+rsc_dat_dr(i,r,"cost",rscbin)$[rfeas_cap(r)$dr(i)]  = sum{t$tnext(t), rsc_dr(i,r,"cost",rscbin,t) };
 
 storage_eff_filt(i)$storage(i) = sum{t$tnext(t), storage_eff(i,t) } ;
 
@@ -246,21 +248,21 @@ upgrade_to_filt(i,ii) = upgrade_to(i,ii)$cap_exist_i(i) ;
 * Get ReEDS transmission data
 *============================
 
-cap_trans(r,rr,trtype)$[rfeas(r)$rfeas(rr)] = sum{t$tcur(t), CAPTRAN.l(r,rr,trtype,t)} ;
+cap_trans(r,rr,trtype)$[rfeas(r)$rfeas(rr)] = sum{t$tcur(t), CAPTRAN_ENERGY.l(r,rr,trtype,t) } ;
 
-cap_converter_filt(r)$rfeas(r) = sum{t$tcur(t), CAP_CONVERTER.l(r,t)} ;
+cap_converter_filt(r)$rfeas(r) = sum{t$tcur(t), CAP_CONVERTER.l(r,t) } ;
 
-* In Osprey, trtype="AC" includes both AC and LCC DC lines; VSC DC lines are treated differently
-routes_filt(r,rr,"AC")$[rfeas(r)$rfeas(rr)] = sum{(trtype,t)$[tcur(t)$aclike(trtype)], routes(r,rr,trtype,t)} ;
-routes_filt(r,rr,"VSC")$[rfeas(r)$rfeas(rr)] = sum{t$tcur(t), routes(r,rr,"VSC",t)} ;
+* In Augur, trtype="AC" includes everything except for VSC
+routes_filt(r,rr,"AC")$[rfeas(r)$rfeas(rr)] = sum{(trtype,t)$[tcur(t)$notvsc(trtype)], routes(r,rr,trtype,t) } ;
+routes_filt(r,rr,"VSC")$[rfeas(r)$rfeas(rr)] = sum{t$tcur(t), routes(r,rr,"VSC",t) } ;
 
 *============================
 * Flexible load data
 *============================
 
-flex_load(r,h)$rfeas(r) = sum{(flex_type,t)$tcur(t), load_exog_flex(flex_type,r,h,t)} ;
+flex_load(r,h)$rfeas(r) = sum{(flex_type,t)$tcur(t), load_exog_flex(flex_type,r,h,t) } ;
 
-flex_load_opt(r,h)$rfeas(r) = sum{(flex_type,t)$tcur(t), FLEX.l(flex_type,r,h,t)} ;
+flex_load_opt(r,h)$rfeas(r) = sum{(flex_type,t)$tcur(t), FLEX.l(flex_type,r,h,t) } ;
 
 *============================
 * Extra consumption data
@@ -298,11 +300,11 @@ energy_price(r,h)$rfeas(r) = sum{t$tcur(t), (1 / cost_scale) * (1 / pvf_onm(t)) 
 * Unload all relevant data to a gdx file
 *=======================================
 
-execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%next_year%.gdx'
+execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     allowed_shed
     avail_filt
     bcr
-    bcr_pvb_config
+    bir_pvb_config
     can_exports_h_filt
     can_imports_cap
     can_imports_szn_filt

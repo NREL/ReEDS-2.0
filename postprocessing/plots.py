@@ -8,8 +8,8 @@ leg = ax[-1].legend(
     loc='upper left', bbox_to_anchor=(1.02,1),
 )
 for legobj in leg.legendHandles:
-        legobj.set_linewidth(8)
-        legobj.set_solid_capstyle('butt')
+    legobj.set_linewidth(8)
+    legobj.set_solid_capstyle('butt')
 leg.set_title('title', prop={'size':'large'})
 
 ### Legends - two legends
@@ -27,7 +27,7 @@ leg = ax.legend(
 """
 import pandas as pd
 import numpy as np
-import os, copy, shapely
+import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import (
@@ -84,14 +84,34 @@ def get_latlonlabels(df, latlonlabels=None, columns=None):
         latlabel, lonlabel = 'lat', 'long'
     elif ('Lat' in columns) and ('Long' in columns):
         latlabel, lonlabel = 'Lat', 'Long'
-    elif ('x' in columns) and ('y' in columns):
-        latlabel, lonlabel = 'x', 'y'
     
     return latlabel, lonlabel
 
 
+def df2gdf(dfin, crs='ESRI:102008'):
+    """
+    """
+    ### Imports
+    import os
+    import geopandas as gpd
+    import shapely
+    os.environ['PROJ_NETWORK'] = 'OFF'
+
+    ### Convert
+    df = dfin.copy()
+    latlabel, lonlabel = get_latlonlabels(df)
+    df['geometry'] = df.apply(
+        lambda row: shapely.geometry.Point(row[lonlabel], row[latlabel]), axis=1)
+    df = gpd.GeoDataFrame(df, crs='EPSG:4326').to_crs(crs)
+
+    return df
+
+
 ### Sequential color dict
-def rainbowmapper(iterable, colormap=None, explicitcolors=False):
+def rainbowmapper(iterable, colormap=None, explicitcolors=False, categorical=False):
+    categoricalrainbow = [
+        plt.cm.tab20(i) for i in [10,11,6,7,2,3,12,13,16,17,4,5,18,19,0,1,8,9,14,15,]
+    ]
     if colormap is not None:
         if type(colormap) is list:
             colors=[colormap[i] for i in range(len(iterable))]
@@ -113,8 +133,12 @@ def rainbowmapper(iterable, colormap=None, explicitcolors=False):
         colors=['C5','C3','C1','C8','C2','C9','C0','C4','k']
     elif len(iterable) == 10:
         colors=['C5','C3','C1','C6','C8','C2','C9','C0','C4','k']
+    elif len(iterable) <= 20:
+        colors = categoricalrainbow[:len(iterable)]
+    elif categorical:
+        colors = categoricalrainbow * (len(iterable)//20 + 1)
     else:
-        colors=[plt.cm.viridis(i) for i in np.linspace(0,1,len(iterable))]
+        colors=[plt.cm.rainbow(i) for i in np.linspace(0,1,len(iterable))]
     out = dict(zip(iterable, colors))
     if explicitcolors:
         explicit = {
@@ -148,9 +172,11 @@ def addcolorbarhist(
     title_fontsize='large',
     title_alignment=None,
     title_weight='bold',
+    ticklabel_fontsize='medium',
     log=False,
     histcolor='0.5',
-    extend=False,
+    extend='neither',
+    extendfrac=(0.05,0.05),
     orientation='vertical'):
     """
     Notes
@@ -163,9 +189,6 @@ def addcolorbarhist(
     ########################
     ### Imports and warnings
     import matplotlib as mpl
-    from warnings import warn
-    if extend:
-        warn('extend=True currently does not maintain colorbar and hist alignment')
     ### Warnings
     #############
     ### Procedure
@@ -192,14 +215,16 @@ def addcolorbarhist(
     elif (cbarbottom is None) and (orientation == 'vertical'):
         cbarbottom = (1 - cbarheight) / 2
 
-    ### Set extension
-    if extend:
-        if (vmin > data.min() and vmax < data.max()):
-            extend = 'both'
-        elif vmin > data.min(): extend = 'min'
-        elif vmax < data.max(): extend = 'max'
-        else: extend = 'neither'
-    else: extend = 'neither'
+    ### If extending the colorbar, clip the ends of the data distribution so
+    ### the extended values show up in the histogram
+    if extend == 'neither':
+        data_hist = data
+    elif extend == 'max':
+        data_hist = data.clip(max=vmax)
+    elif extend == 'min':
+        data_hist = data.clip(min=vmin)
+    elif extend == 'both':
+        data_hist = data.clip(min=vmin, max=vmax)
 
     ######### Add colorbar
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
@@ -207,31 +232,40 @@ def addcolorbarhist(
 
     ### Horizontal orientation
     if orientation in ['horizontal', 'h']:
-        # ax1left = ax0x0 + ax0width * (1 - cbarheight) / 2
-        ax1left = ax0x0 + ax0width * (1 - cbarheight) / 2 * (1 + cbarhoffset)
-        ax1bottom = ax0y0 + ax0height * cbarbottom
-        ax1width = cbarheight * ax0width
-        ax1height = cbarwidth * ax0height
+        caxleft = ax0x0 + ax0width * (1 - cbarheight) / 2 * (1 + cbarhoffset)
+        caxbottom = ax0y0 + ax0height * cbarbottom
+        caxwidth = cbarheight * ax0width
+        caxheight = cbarwidth * ax0height
         
-        ax1 = f.add_axes([ax1left, ax1bottom, ax1width, ax1height])
+        cax = f.add_axes([caxleft, caxbottom, caxwidth, caxheight])
 
         cb1 = mpl.colorbar.ColorbarBase(
-            ax1, cmap=cmap, norm=norm, orientation='horizontal',
-            extend=extend)
-        ax1.xaxis.set_ticks_position('bottom')
+            cax, cmap=cmap, norm=norm, orientation='horizontal',
+            extend=extend, extendfrac=extendfrac)
+        cax.xaxis.set_ticks_position('bottom')
 
-        ##### Add histogram
-        ax2left = ax1left# + (cbarwidth + histpad) * ax0width
-        ax2bottom = ax1bottom + (cbarwidth + histpad) * ax0height
-        ax2width = ax1width #histratio * cbarwidth * ax0width
-        ax2height = histratio * cbarwidth * ax0height
+        ##### Add histogram, adjusting for extension length if necessary
+        haxleft = caxleft + (
+            (extendfrac[0] * caxwidth) if extend in ['min','both']
+            else 0
+        )
+        haxbottom = caxbottom + (cbarwidth + histpad) * ax0height
+        if extend == 'neither':
+            haxwidth = caxwidth
+        elif extend == 'max':
+            haxwidth = caxwidth - extendfrac[1] * caxwidth
+        elif extend == 'min':
+            haxwidth = caxwidth - extendfrac[0] * caxwidth
+        elif extend == 'both':
+            haxwidth = caxwidth - sum(extendfrac) * caxwidth
+        haxheight = histratio * cbarwidth * ax0height
 
-        ax2 = f.add_axes([ax2left, ax2bottom, ax2width, ax2height])
-
-        ax2.hist(data, bins=bins, color=histcolor, 
+        hax = f.add_axes([haxleft, haxbottom, haxwidth, haxheight])
+        ### Plot the histogram
+        hax.hist(data_hist, bins=bins, color=histcolor, 
                  log=log, orientation='vertical')
-        ax2.set_xlim(vmin, vmax)
-        ax2.axis('off')
+        hax.set_xlim(vmin, vmax)
+        hax.axis('off')
 
         if title is not None:
             if title_alignment is None:
@@ -270,38 +304,63 @@ def addcolorbarhist(
             ha['bottom center'], ha['top center'] = ha['bottom'], ha['top']
             ha['center bottom'], ha['center top'] = ha['bottom'], ha['top']
 
-            ax1.annotate(
+            cax.annotate(
                 title, fontsize=title_fontsize, weight=title_weight,
                 xycoords='axes fraction',
                 va=va[title_alignment], xy=xy[title_alignment],
                 ha=ha[title_alignment])
+
+        ###### Relabel the first and last values if extending the colorbar
+        cax.tick_params(labelsize=ticklabel_fontsize)
+        plt.draw()
+        xticks = cax.get_xticks()
+        xticklabels = [c._text for c in cax.get_xticklabels()]
+        if extend == 'neither':
+            pass
+        if extend in ['min','both']:
+            xticklabels[0] = '≤' + xticklabels[0]
+        if extend in ['max','both']:
+            xticklabels[-1] += '+'
+        if extend != 'neither':
+            cax.set_xticks(xticks)
+            cax.set_xticklabels(xticklabels)
     
     ### Vertical orientation
     elif orientation in ['vertical', 'vert', 'v', None]:
-        ax1left = ax0width + ax0x0 + (ax0width * (cbarleft - 1))
-        ax1bottom = (1 - cbarheight * ax0height) / 2
-        ax1width = cbarwidth * ax0width
-        ax1height = cbarheight * ax0height
+        caxleft = ax0width + ax0x0 + (ax0width * (cbarleft - 1))
+        caxbottom = (1 - cbarheight * ax0height) / 2
+        caxwidth = cbarwidth * ax0width
+        caxheight = cbarheight * ax0height
 
-        ax1 = f.add_axes([ax1left, ax1bottom, ax1width, ax1height])
+        cax = f.add_axes([caxleft, caxbottom, caxwidth, caxheight])
 
         cb1 = mpl.colorbar.ColorbarBase(
-            ax1, cmap=cmap, norm=norm, orientation='vertical',
-            extend=extend)
-        ax1.yaxis.set_ticks_position('left')
+            cax, cmap=cmap, norm=norm, orientation='vertical',
+            extend=extend, extendfrac=extendfrac)
+        cax.yaxis.set_ticks_position('left')
 
         ##### Add histogram
-        ax2left = ax1left + (cbarwidth + histpad) * ax0width
-        ax2bottom = ax1bottom
-        ax2width = histratio * cbarwidth * ax0width
-        ax2height = ax1height
+        haxleft = caxleft + (cbarwidth + histpad) * ax0width
+        haxbottom = caxbottom + (
+            extendfrac[0] * caxheight if extend in ['min','both']
+            else 0
+        )
+        haxwidth = histratio * cbarwidth * ax0width
+        if extend == 'neither':
+            haxheight = caxheight
+        elif extend == 'max':
+            haxheight = caxheight - extendfrac[1] * caxheight
+        elif extend == 'min':
+            haxheight = caxheight - extendfrac[0] * caxheight
+        elif extend == 'both':
+            haxheight = caxheight - sum(extendfrac) * caxheight
 
-        ax2 = f.add_axes([ax2left, ax2bottom, ax2width, ax2height])
+        hax = f.add_axes([haxleft, haxbottom, haxwidth, haxheight])
 
-        ax2.hist(data, bins=bins, color=histcolor, 
+        hax.hist(data_hist, bins=bins, color=histcolor, 
                  log=log, orientation='horizontal')
-        ax2.set_ylim(vmin, vmax)
-        ax2.axis('off')
+        hax.set_ylim(vmin, vmax)
+        hax.axis('off')
 
         if title is not None:
             ## 'both center': align to center of cbar + hist
@@ -325,14 +384,29 @@ def addcolorbarhist(
                 'gap center': 'center',
             }
 
-            ax1.annotate(
+            cax.annotate(
                 title, fontsize=title_fontsize, weight=title_weight,
                 xycoords='axes fraction',
                 verticalalignment='bottom', xy=xy[title_alignment],
                 horizontalalignment=horizontalalignment[title_alignment])
 
+        ###### Relabel the first and last values if extending the colorbar
+        cax.tick_params(labelsize=ticklabel_fontsize)
+        plt.draw()
+        yticks = cax.get_yticks()
+        yticklabels = [c._text for c in cax.get_yticklabels()]
+        if extend == 'neither':
+            pass
+        if extend in ['min','both']:
+            yticklabels[0] = '≤' + yticklabels[0]
+        if extend in ['max','both']:
+            yticklabels[-1] = '≥' + yticklabels[-1]
+        if extend != 'neither':
+            cax.set_yticks(yticks)
+            cax.set_yticklabels(yticklabels)
+
     ### Return axes
-    return ax1, ax2
+    return cax, hax
 
 
 def plot2dhistarray(xdata, ydata, logcolor=True, bins=None,
@@ -923,6 +997,7 @@ def draw_screen_poly(poly, m,
     https://stackoverflow.com/questions/12251189/how-to-draw-rectangles-on-a-basemap
     https://basemaptutorial.readthedocs.io/en/latest/shapefile.html
     """
+    import shapely
     if facecolor is None:
         facecolor = cmap(cvalue)
     if edgecolor is None:
@@ -971,6 +1046,7 @@ def plotusascattermap(
     * Canada/Mexico maps: https://gadm.org/download_country_v3.html
     """
     import geopandas as gpd
+    import shapely
     ### Set the map bounds based on input
     if type(bounds) is dict:
         dictbounds = bounds
@@ -1260,7 +1336,7 @@ def sparkline(ax, dsplot, endlabels=True,
 
 
 def plotyearbymonth(dfs, plotcols=None, colors=None, 
-    style='fill', lwforline=1, figsize=(12,6), dpi=None,
+    style='fill', lwforline=1, ls='-', figsize=(12,6), dpi=None,
     normalize=False, alpha=1, f=None, ax=None):
     """
     """
@@ -1297,7 +1373,7 @@ def plotyearbymonth(dfs, plotcols=None, colors=None,
                                else ('C0' if colors == None else colors[0])))
                 elif style in ['line', 'l']:
                     ax[i].plot(
-                        dfplot.index, dfplot[plotcols].values, lw=lwforline, alpha=alpha,
+                        dfplot.index, dfplot[plotcols].values, lw=lwforline, alpha=alpha, ls=ls,
                         color=(colors if type(colors) in [str,mpl.colors.ListedColormap] 
                                else ('C0' if colors == None else colors[0])))
                     
@@ -1317,7 +1393,7 @@ def plotyearbymonth(dfs, plotcols=None, colors=None,
                                            lw=0, alpha=alpha, color=colors[j], label=plotcol)
                     elif style in ['line', 'l']:
                         ax[i].plot(dfplot.index, dfplot[plotcol].values, 
-                                   lw=lwforline, alpha=alpha, color=colors[j], label=plotcol)
+                                   lw=lwforline, alpha=alpha, ls=ls, color=colors[j], label=plotcol)
                                         
         ax[i].set_ylabel(month, rotation=0, ha='right', va='top')
         for which in ['left', 'right', 'top', 'bottom']:
@@ -1326,7 +1402,7 @@ def plotyearbymonth(dfs, plotcols=None, colors=None,
         ax[i].set_yticks([])
         ax[i].set_xticks([])
 
-    ax[0].set_xlim('2001-01-01 00:00', '2001-02-01 00:00')
+    ax[0].set_xlim(pd.to_datetime('2001-01-01 00:00'), pd.to_datetime('2001-02-01 00:00'))
     if normalize:
         ax[0].set_ylim(0, 1)
     else:
@@ -1400,6 +1476,7 @@ def add_parasite_axis_converter(
     
     return par
 
+
 def _despine_sub(ax, 
     top=False, right=False, left=True, bottom=True,
     direction='out'):
@@ -1431,6 +1508,7 @@ def despine(ax=None,
     else:
         _despine_sub(ax, top, right, left, bottom, direction)
 
+
 def patchlegend(colors, edgecolor='none', alpha=1, reverse=False, **kwargs):
     patches = [mpl.patches.Patch(
                    facecolor=colors[i], 
@@ -1443,6 +1521,7 @@ def patchlegend(colors, edgecolor='none', alpha=1, reverse=False, **kwargs):
     else:
         leg = plt.legend(handles=patches, **kwargs)
     return leg
+
 
 def _differentiate_lines_sub(ax, cycle=10, linestyles=['--',':','-.']):
     """
@@ -1479,6 +1558,31 @@ def differentiate_lines(ax, cycle=10, linestyles=['--',':','-.']):
                 _differentiate_lines_sub(sub, cycle, linestyles)
     else:
         _differentiate_lines_sub(ax, cycle, linestyles)
+
+
+def shorten_years(ax, start_shortening_in=2021):
+    """
+    Notes
+    -----
+    * Run plt.draw() first
+    * Only run once (not for every subplot) if sharing x axis
+    """
+    xmin, xmax = ax.get_xlim()
+    oldxticklabels = [c._text for c in ax.get_xticklabels()]
+    newxticks = []
+    newxticklabels = []
+    for i, year in enumerate(oldxticklabels):
+        if year == '':
+            continue
+        if (int(year) >= xmin) and (int(year) <= xmax):
+            newxticks.append(float(year))
+            if int(year) < start_shortening_in:
+                newxticklabels.append(year)
+            else:
+                newxticklabels.append(f"'{year[2:]}")
+    ax.set_xticks(newxticks)
+    ax.set_xticklabels(newxticklabels)
+
 
 def annotate(ax, label, x, offset, decimals=0, **kwargs):
     """
@@ -1524,6 +1628,234 @@ def annotate(ax, label, x, offset, decimals=0, **kwargs):
         xytext=offset,
         ha='left' if offset[0] > 0 else 'right' if offset[0] < 0 else 'center',
         va='bottom' if offset[1] > 0 else 'top' if offset[1] < 0 else 'center',
-        color=color,
         **noteprops,
     )
+
+
+def stackbar(df, ax, colors, width=1, net=True, align='center', bottom=0, x0=0, **netargs):
+    """
+    Inputs
+    -----
+    df: [pd.DataFrame] should have x-axis values as the index and component bars as the columns.
+    ax: [matplotlib axis]
+    colors: [dict] should include an entry for each column in df
+    width: [float] bar width
+    net: [boolean] indicate whether to plot the summed value for each bar
+    align: [str] 'center' or 'edge' (passed to plt.bar)
+    **netargs: additional keyword arguments sent to the net-value plot
+    """
+    for i, (index, row) in enumerate(df.iterrows()):
+        ### Separate into positive and negative columns
+        negcols = (row < 0).loc[(row < 0) > 0].index
+        poscols = [c for c in row.index if c not in negcols]
+        dfneg = row[negcols]
+        dfpos = row[poscols]
+        x = index if isinstance(index, (int,float)) else i
+        ### Positive
+        if len(dfpos):
+            ax.bar(
+                x=[x0+x]*len(dfpos),
+                height=dfpos.cumsum()[::-1],
+                bottom=bottom,
+                color=[colors[c] for c in dfpos.index][::-1],
+                width=width, align=align,
+            )
+        ### Negative
+        if len(dfneg):
+            ax.bar(
+                x=[x0+x]*len(dfneg),
+                height=dfneg.cumsum()[::-1],
+                bottom=bottom,
+                color=[colors[c] for c in dfneg.index][::-1],
+                width=width, align=align,
+            )
+        ### Net
+        if net:
+            netargs = {
+                **{'marker':'o','markerfacecolor':'w','markeredgecolor':'k','lw':0.,'color':'k'},
+                **netargs
+            }
+            ax.plot([x0+x], [row.sum()], **netargs)
+            
+    return ax
+
+
+def waterfall(
+        data, ax, bottom=None, colors=None,
+        width=0.8,
+        positive_color='C0', negative_color='C3',
+        zero_width=1, zero_style='--', zero_color='k',
+        expand_ylim=0.05,
+        debug=False,
+        xlabel=False, xticklabelrotation=90,
+        bararrow=False, bararrowcolor='C7',
+        barannotate='', barannotateround=1, barannotatecolor='C7',
+    ):
+    """
+    barannotate: string format for bar annotation. e.g. {:+.1f}, {:,.0f}, etc.
+    """
+    ### Check inputs
+    if bottom:
+        assert len(bottom) == len(data)
+    if colors:
+        assert len(colors) == len(data)
+    ### Create working dataframe
+    if isinstance(data, list) or isinstance(data, np.ndarray):
+        dfplot = pd.Series(data).rename('input').to_frame()
+    elif isinstance(data, pd.Series):
+        dfplot = pd.DataFrame({'index':data.index, 'input':data.values})
+
+    dfplot['cumsum'] = dfplot['input'].cumsum()
+
+    if not bottom:
+        dfplot['bottom_index'] = -1
+        dfplot.loc[0,'bottom_index'] = 0
+    else:
+        dfplot['bottom_index'] = bottom
+
+    ### Get the bottom value according to the index
+    dfplot['bottom'] = 0
+    for i, row in dfplot.iterrows():
+        dfplot.loc[i,'bottom'] = dfplot.loc[i + row['bottom_index'], 'cumsum']
+    ## Always starts at 0
+    dfplot.loc[0, 'bottom'] = 0
+
+    ### Make the colors
+    if colors:
+        dfplot['color'] = colors
+    else:
+        dfplot['color'] = positive_color
+        dfplot.loc[dfplot['input'] < 0, 'color'] = negative_color
+    
+    ### Get the axis span
+    span = dfplot['cumsum'].max() - dfplot['cumsum'].min()
+
+    ### Plot it
+    for x, row in dfplot.iterrows():
+        ### Bar
+        ax.bar(
+            x=[x], bottom=[row.bottom], height=[row.input],
+            color=row['color'],
+        )
+        ### Joining lines
+        if not x:
+            pass
+        else:
+            ax.plot(
+                [x-1-width/2, x+width/2],
+                [row.bottom]*2,
+                solid_capstyle='butt',
+                color='k'
+            )
+        ### Bar arrow
+        if bararrow:
+            ax.annotate(
+                '', (x, row.bottom+row.input), xytext=(x, row.bottom),
+                arrowprops={'arrowstyle':'-|>', 'color':bararrowcolor, 'shrinkA':0, 'shrinkB':0},
+            )
+        ### Bar annotation
+        if barannotate != '':
+            extra = span * 0.02 if (row.input > 0) else span * -0.02
+            ax.annotate(
+                barannotate.format(np.around(row.input, barannotateround)),
+                (x, row.bottom+row.input+extra),
+                color=(row['color'] if barannotatecolor=='color' else barannotatecolor),
+                ha='center', va=('bottom' if (row.input > 0) else 'top'),
+                annotation_clip=False,
+            )
+            
+
+    ### Formatting
+    if zero_width:
+        ax.axhline(0, c=zero_color, ls=zero_style, lw=zero_width)
+
+    if expand_ylim:
+        ax.set_ylim(
+            dfplot['cumsum'].min() - span * expand_ylim,
+            dfplot['cumsum'].max() + span * expand_ylim
+        )
+
+    if xlabel:
+        ax.set_xticks(range(len(dfplot)))
+        if (xticklabelrotation == 0) or (xticklabelrotation >= 75):
+            ax.set_xticklabels(
+                dfplot['index'].values, rotation=xticklabelrotation)
+        else:
+            ax.set_xticklabels(
+                dfplot['index'].values, rotation=xticklabelrotation,
+                ha='right', rotation_mode='anchor')
+
+    ### All done
+    if debug:
+        return dfplot, ax
+    else:
+        return ax
+
+
+def waterfall_span(
+        df, ax, colors=None, width=0.7, alpha=0.8,
+        zero_width=1, zero_style='--', zero_color='k',
+        bararrow=True, bararrowcolor='k',
+        xticklabelrotation=60,
+    ):
+    """
+    # Inputs
+    df [pd.DataFrame]: rows = observations, columns = value categories
+    """
+    ### Check inputs
+    assert isinstance(df, pd.DataFrame)
+    arrowprops = {'arrowstyle':'-|>', 'color':bararrowcolor, 'shrinkA':0, 'shrinkB':0}
+    xticklabels = df.columns
+    ### Make the colors
+    if colors:
+        pass
+    else:
+        colors = dict(zip(df.columns, ['C7']*df.shape[1]))
+
+    ###### Plot it
+    vmin, vmax = {}, {}
+    for x, col in enumerate(df.columns):
+        vmin[col], vmax[col] = df.loc[:,:col].sum(axis=1).min(), df.loc[:,:col].sum(axis=1).max()
+        ax.bar(
+            [x], bottom=[vmin[col]], height=[vmax[col]-vmin[col]],
+            color=colors[col], width=width, alpha=0.8,
+        )
+        ###### Arrows
+        if not bararrow:
+            continue
+        ### First value
+        if x == 0:
+            ax.annotate(
+                '', xy=(x, (vmin[col]+vmax[col])/2),
+                xytext=(x,0),
+                arrowprops=arrowprops,
+            )
+        ### Later values start from prior values
+        else:
+            colprev = df.columns[x-1]
+            ## Arrow
+            ax.annotate(
+                '', xy=(x, (vmin[col]+vmax[col])/2),
+                xytext=(x, (vmin[colprev]+vmax[colprev])/2),
+                arrowprops=arrowprops,
+            )
+            ## Linking line from center of previous distribution
+            ax.plot(
+                [x-1,x], [(vmin[colprev]+vmax[colprev])/2]*2,
+                c='k', lw=1, ls=':',
+            )
+
+    ###### Formatting
+    ax.set_xticks(range(len(xticklabels)))
+    if (xticklabelrotation == 0) or (xticklabelrotation >= 75):
+        ax.set_xticklabels(
+            xticklabels, rotation=xticklabelrotation)
+    else:
+        ax.set_xticklabels(
+            xticklabels, rotation=xticklabelrotation,
+            ha='right', rotation_mode='anchor')
+
+    if zero_width:
+        ax.axhline(0, c=zero_color, ls=zero_style, lw=zero_width)
+
+    return ax

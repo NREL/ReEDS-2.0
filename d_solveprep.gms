@@ -14,7 +14,6 @@ Model ReEDSmodel /all/ ;
 
 OPTION lp = %solver% ;
 ReEDSmodel.optfile = %GSw_gopt% ;
-OPTION RESLIM = 50000 ;
 *treat fixed variables as parameters
 ReEDSmodel.holdfixed = 1 ;
 
@@ -57,7 +56,7 @@ valret(i,v)$[(Sw_Retire=2)$initv(v)$(not noretire(i))
 
 *All new and existing nuclear, coal, and gas are retirable if Sw_Retire = 3
 *Existing plants have to meet the min_retire_age before retiring
-valret(i,v)$[(Sw_Retire=3)$(not noretire(i))
+valret(i,v)$[((Sw_Retire=3) or (Sw_Retire=5))$(not noretire(i))
             $(coal(i) or gas(i) or nuclear(i) or ogs(i))] = yes ;
 
 *new and existings plants of any technology can be retired if Sw_Retire = 4
@@ -66,24 +65,35 @@ valret(i,v)$[(Sw_Retire=4)$(not noretire(i))] = yes ;
 retiretech(i,v,r,t)$[valret(i,v)$valcap(i,v,r,t)] = yes ;
 
 * when Sw_Retire = 3 ensure that plants do not retire before their minimum age
-retiretech(i,v,r,t)$[(Sw_Retire=3)$initv(v)$(not noretire(i))$(plant_age(i,v,r,t) <= min_retire_age(i))
+retiretech(i,v,r,t)$[((Sw_Retire=3) or (Sw_Retire=5))$initv(v)$(not noretire(i))$(plant_age(i,v,r,t) <= min_retire_age(i))
                     $(coal(i) or gas(i) or nuclear(i) or ogs(i))] = no ;
 
+* for sw_retire=5, don't allow nuclear to retire until 2030
+retiretech(i,v,r,t)$[(Sw_Retire=5)$nuclear(i)$(yeart(t)<=2030)] = no ;
 
-*5 states have subsidies for nuclear power, so do not allow nuclear to retire in these states
+*several states have subsidies for nuclear power, so do not allow nuclear to retire in these states
 *before the year specified (see https://www.eia.gov/todayinenergy/detail.php?id=41534)
+*Note that Ohio has since repealed their nuclear subsidy, so is no longer included
 retiretech(i,initv,r,t)$[r_st(r,"CT")$(yeart(t)<2030)$valcap(i,initv,r,t)$nuclear(i)] = no ;
 retiretech(i,initv,r,t)$[r_st(r,"IL")$(yeart(t)<2028)$valcap(i,initv,r,t)$nuclear(i)] = no ;
 retiretech(i,initv,r,t)$[r_st(r,"NJ")$(yeart(t)<2026)$valcap(i,initv,r,t)$nuclear(i)] = no ;
 retiretech(i,initv,r,t)$[r_st(r,"NY")$(yeart(t)<2030)$valcap(i,initv,r,t)$nuclear(i)] = no ;
-retiretech(i,initv,r,t)$[r_st(r,"OH")$(yeart(t)<2027)$valcap(i,initv,r,t)$nuclear(i)] = no ;
+
+* if Sw_NukeNoRetire is enabled, don't allow nuclear to retire through Sw_NukeNoRetireYear
+if(Sw_NukeNoRetire = 1,
+         retiretech(i,v,r,t)$[nuclear(i)$(yeart(t)<=Sw_NukeNoRetireYear)] = no ;
+) ;
+
 
 *Do not allow retirements before they are allowed
-retiretech(i,v,r,t)$[(yeart(t)<retireyear)] = no ;
+retiretech(i,v,r,t)$[(yeart(t)<Sw_Retireyear)] = no ;
 
 *Allow forced retirements to be done endogenously by the model
 retiretech(i,v,r,t)$[forced_retirements(i,r,t)$valcap(i,v,r,t)] = yes ;
 
+*Need to enable endogenous retirements for plants that can have persistent upgrades
+retiretech(i,v,r,t)$[(yeart(t)>=Sw_Upgradeyear)$(yeart(t)>=Sw_Retireyear)$(Sw_Upgrades = 2)
+                     $sum{ii$[upgrade_from(ii,i)$valcap(ii,v,r,t)], 1 }] = yes ;
 *============================
 * Setting for CAP SCENARIO
 *============================
@@ -119,8 +129,8 @@ cc_old_load2(loadset,i,r,allszn,t)             "--MW-- cc_old loading in from th
 cc_scale(i,r,allszn,t)                         "--unitless-- scaling of marginal capacity value levels in intertemporal runs to equal total capacity value"
 cc_totmarg(i,r,allszn,t)                       "--MW-- original estimate of total capacity value for intertemporal, based on marginals"
 curt_change(i,r,allh,t)                        "--fraction-- Change of curtailment between this and previous iteration"
-curt_dr_load(i,v,r,allh,src,t)                 "--fraction-- curt_dr value loaded from gdx file"
-curt_dr_load2(loadset,i,v,r,allh,src,t)        "--fraction-- curt_dr value loaded from gdx file"
+curt_dr_load(i,v,r,allh,allsrc,t)              "--fraction-- curt_dr value loaded from gdx file"
+curt_dr_load2(loadset,i,v,r,allh,allsrc,t)     "--fraction-- curt_dr value loaded from gdx file"
 curt_iter(i,r,allh,t,cciter)                   "--fraction-- Actual curtailment in iteration cciter"
 curt_marg_load(i,r,allh,t)                     "--fraction-- marginal curtailment rate for new generators, loaded from gdx file"
 curt_marg_load2(loadset,i,r,allh,t)            "--fraction-- marginal curtailment rate for new generators, loaded from gdx file"
@@ -131,8 +141,8 @@ curt_old_load(r,allh,t)                        "--MW-- curt_old but loaded in fr
 curt_old_load2(loadset,r,allh,t)               "--MW-- curt_old but loaded in from the gdx file for whichever year"
 curt_prod_load(r,allh,t)                       "--fraction-- curt_h2 valued loaded from gdx file"
 curt_scale(r,allh,t)                           "--unitless-- scaling of marginal curtailment levels in intertemporal runs to equal total curtailment levels"
-curt_stor_load(i,v,r,allh,src,t)               "--fraction-- curt_stor value loaded from gdx file"
-curt_stor_load2(loadset,i,v,r,allh,src,t)      "--fraction-- curt_stor value loaded from gdx file"
+curt_stor_load(i,v,r,allh,allsrc,t)            "--fraction-- curt_stor value loaded from gdx file"
+curt_stor_load2(loadset,i,v,r,allh,allsrc,t)   "--fraction-- curt_stor value loaded from gdx file"
 curt_totmarg(r,allh,t)                         "--MW-- original estimate of total curtailment for intertemporal, based on marginals"
 curt_tran_load(r,rr,allh,t)                    "--fraction-- curt_tran value loaded from gdx file"
 curt_tran_load2(loadset,r,rr,allh,t)           "--fraction-- curt_tran value loaded from gdx file"
@@ -174,43 +184,26 @@ m_capacity_exog(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
 m_cf(i,v,r,h,t)$[not valcap(i,v,r,t)] = 0 ;
 emit_rate(e,i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
 
-cost_cap_fin_mult(i,r,t)$[(not valinv_irt(i,r,t))$(not upgrade(i))$(not sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) })
-                         $(not sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) })] = 0 ;
 
-cost_cap_fin_mult_noITC(i,r,t)$[(not valinv_irt(i,r,t))$(not upgrade(i))
-                                $(not sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) })
-                                $(not sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) })] = 0 ;
-
-cost_cap_fin_mult_no_credits(i,r,t)$[(not valinv_irt(i,r,t))$(not upgrade(i))
-                                    $(not sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) })
-                                    $(not sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) })] = 0 ;
 
 * round parameters
 acp_price(st,t)$acp_price(st,t) = round(acp_price(st,t),3) ;
-avail(i,v,h)$avail(i,v,h) = round(avail(i,v,h),4) ;
+avail(i,h)$avail(i,h) = round(avail(i,h),4) ;
 batterymandate(r,t)$batterymandate(r,t) = round(batterymandate(r,t),2) ;
 bcr(i)$bcr(i) = round(bcr(i),4) ;
+derate_geo_vintage(i,v)$derate_geo_vintage(i,v) = round(derate_geo_vintage(i,v),4) ;
 can_exports_h(r,h,t)$can_exports_h(r,h,t) = round(can_exports_h(r,h,t),3) ;
 cap_hyd_szn_adj(i,szn,r)$cap_hyd_szn_adj(i,szn,r) = round(cap_hyd_szn_adj(i,szn,r),5) ;
+cc_storage(i,sdbin)$cc_storage(i,sdbin) = round(cc_storage(i,sdbin),3) ;
 cendiv_weights(r,cendiv)$cendiv_weights(r,cendiv) = round(cendiv_weights(r,cendiv), 3) ;
 cf_hyd(i,szn,r,t)$cf_hyd(i,szn,r,t) = round(cf_hyd(i,szn,r,t),4) ;
 cost_cap(i,t)$cost_cap(i,t) = round(cost_cap(i,t),3) ;
 
-cost_cap_fin_mult(i,r,t)$[valinv_irt(i,r,t) or upgrade(i) or sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) }
-                         or sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) }] = round(cost_cap_fin_mult(i,r,t),3) ;
-
-cost_cap_fin_mult_noITC(i,r,t)$[valinv_irt(i,r,t) or upgrade(i) or sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) }
-                               or sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) }] = round(cost_cap_fin_mult_noITC(i,r,t),3) ;
-
-cost_cap_fin_mult_no_credits(i,r,t)$[valinv_irt(i,r,t) or upgrade(i) or sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) }
-                                    or sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) }]
-                            = round(cost_cap_fin_mult_no_credits(i,r,t),3) ;
 
 cost_fom(i,v,r,t)$cost_fom(i,v,r,t) = round(cost_fom(i,v,r,t),3) ;
 cost_h2_transport(r,rr)$cost_h2_transport(r,rr) = round(cost_h2_transport(r,rr),3) ;
 cost_opres(i,ortype,t)$cost_opres(i,ortype,t) = round(cost_opres(i,ortype,t),3) ;
 cost_prod(i,v,r,t)$cost_prod(i,v,r,t) = round(cost_prod(i,v,r,t), 3) ;
-cost_tranline(r,trtype)$cost_tranline(r,trtype) = round(cost_tranline(r,trtype),3) ;
 cost_upgrade(i,t)$cost_upgrade(i,t) = round(cost_upgrade(i,t), 3) ;
 cost_vom(i,v,r,t)$cost_vom(i,v,r,t) = round(cost_vom(i,v,r,t),3) ;
 cost_vom_pvb_b(i,v,r,t)$cost_vom_pvb_b(i,v,r,t) = round(cost_vom_pvb_b(i,v,r,t), 3) ;
@@ -228,34 +221,38 @@ h_weight_csapr(h)$h_weight_csapr(h) = round(h_weight_csapr(h),4) ;
 heat_rate(i,v,r,t)$heat_rate(i,v,r,t) = round(heat_rate(i,v,r,t),2) ;
 load_exog(r,h,t)$[rfeas(r)$load_exog(r,h,t)] = round(load_exog(r,h,t),3) ;
 load_exog_static(r,h,t)$[rfeas(r)$load_exog_static(r,h,t)] = round(load_exog_static(r,h,t),3) ;
-m_avail_retire_exog_rsc(i,v,r,t)$valcap(i,v,r,t) = round(m_avail_retire_exog_rsc(i,v,r,t),4) ;
+avail_retire_exog_rsc(i,v,r,t)$valcap(i,v,r,t) = round(avail_retire_exog_rsc(i,v,r,t),4) ;
 m_capacity_exog(i,v,r,t)$valcap(i,v,r,t) = round(m_capacity_exog(i,v,r,t),4) ;
 m_cf(i,v,r,h,t)$[(m_cf(i,v,r,h,t)<0.001)$valcap(i,v,r,t)] = 0 ;
 m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)] = round(m_cf(i,v,r,h,t),5) ;
-m_required_prescriptions(pcat,r,t)$m_required_prescriptions(pcat,r,t) = round(m_required_prescriptions(pcat,r,t),4) ;
-m_rsc_dat(r,i,t,rscbin,"cap")$m_rsc_dat(r,i,t,rscbin,"cap") = round(m_rsc_dat(r,i,t,rscbin,"cap"),4) ;
-m_rsc_dat(r,i,t,rscbin,"cost")$m_rsc_dat(r,i,t,rscbin,"cost") = round(m_rsc_dat(r,i,t,rscbin,"cost"),3) ;
+m_rsc_dat(r,i,rscbin,"cap")$m_rsc_dat(r,i,rscbin,"cap") = round(m_rsc_dat(r,i,rscbin,"cap"),4) ;
+m_rsc_dat(r,i,rscbin,"cost")$m_rsc_dat(r,i,rscbin,"cost") = round(m_rsc_dat(r,i,rscbin,"cost"),3) ;
 mingen_postret(r,szn,tt) = round(mingen_postret(r,szn,tt),4) ;
 minloadfrac(r,i,h)$minloadfrac(r,i,h) = round(minloadfrac(r,i,h),4) ;
 net_trade_can(r,h,t) = round(net_trade_can(r,h,t),3) ;
 peakdem_static_szn(r,szn,t)$peakdem_static_szn(r,szn,t) = round(peakdem_static_szn(r,szn,t),2) ;
 prm(r,t)$prm(r,t) = round(prm(r,t),4) ;
-ptc_unit_value(i,v,r,t)$ptc_unit_value(i,v,r,t) = round(ptc_unit_value(i,v,r,t),3) ;
+ptc_value_scaled(i,v,t)$ptc_value_scaled(i,v,t) = round(ptc_value_scaled(i,v,t),3) ;
 recperc(rpscat,st,t)$recperc(rpscat,st,t) = round(recperc(rpscat,st,t),4) ;
 rggi_cap(t)$rggi_cap(t) = round(rggi_cap(t),4) ;
-rsc_fin_mult(i,r,t)$rsc_fin_mult(i,r,t) = round(rsc_fin_mult(i,r,t),3) ;
 state_cap(t)$state_cap(t) = round(state_cap(t),4) ;
 storage_eff_pvb_g(i,t)$storage_eff_pvb_g(i,t) = round(storage_eff_pvb_g(i,t),4) ;
 storage_eff_pvb_p(i,t)$storage_eff_pvb_p(i,t) = round(storage_eff_pvb_p(i,t),4) ;
 szn_adj_gas(h)$szn_adj_gas(h) = round(szn_adj_gas(h), 3) ;
 tranloss(r,rr,trtype)$tranloss(r,rr,trtype) = round(tranloss(r,rr,trtype),4) ;
-transmission_line_capex(r,rr,trtype)$transmission_line_capex(r,rr,trtype) = round(transmission_line_capex(r,rr,trtype),3) ;
+transmission_line_capcost(r,rr,trtype)$transmission_line_capcost(r,rr,trtype) = round(transmission_line_capcost(r,rr,trtype),3) ;
 transmission_line_fom(r,rr,trtype)$transmission_line_fom(r,rr,trtype) = round(transmission_line_fom(r,rr,trtype),3) ;
+trans_cost_cap_fin_mult(t) = round(trans_cost_cap_fin_mult(t),3) ;
+trans_cost_cap_fin_mult_noITC(t) = round(trans_cost_cap_fin_mult_noITC(t),3) ;
+winter_cap_frac_delta(i,v,r)$winter_cap_frac_delta(i,v,r) = round(winter_cap_frac_delta(i,v,r),3) ;
+seas_cap_frac_delta(i,v,r,szn,t)$seas_cap_frac_delta(i,v,r,szn,t) = round(seas_cap_frac_delta(i,v,r,szn,t),3) ;
 
-*Set cost_cap_fin_mult_out equal to cost_cap_fin_mult before we alter cost_cap_fin_mult for Virginia policy
-*and zero carbon policy.
-cost_cap_fin_mult_out(i,r,t) = cost_cap_fin_mult(i,r,t) ;
 
+* Track the initial amount of m_rsc_dat capacity to compare in e_report
+* We adust upwards by small amounts given potential for infeasibilities
+* in very tiny amounts and thus track the extent of the adjustments
+parameter m_rsc_dat_init(r,i,rscbin) "--MW-- Inital amount of resource supply curve capacity to compare with final amounts after adjustments" ;
+m_rsc_dat_init(r,i,rscbin)$m_rsc_dat(r,i,rscbin,"cap") = m_rsc_dat(r,i,rscbin,"cap") ;
 
 *============================
 * --- Iteration Tracking ---
@@ -281,11 +278,7 @@ cc_int(i,v,r,szn,t) = 0 ;
 pvf_capital(t) = 1 ;
 pvf_onm(t)$tmodel_new(t) = round(1 / crf(t),6) ;
 
-*Penalizing new gas built within cost recovery period of 20 years in Virginia
-cost_cap_fin_mult(i,r,t)$[gas(i)$r_st(r,'VA')] = cost_cap_fin_mult(i,r,t) * ng_lifetime_cost_adjust(t) ;
 
-*Penalizing new gas that can be upgraded to recover upgrade costs prior to upgrade within 20 years of a zero carbon policy
-cost_cap_fin_mult(i,r,t)$[gas(i)$(not ccs(i))] = cost_cap_fin_mult(i,r,t) * (((ng_carb_lifetime_cost_adjust(t) - 1) * .2) + 1) ;
 $endif.seq
 
 
@@ -320,8 +313,6 @@ cc_int(i,v,r,szn,t)$[rsc_i(i)$(cc_int(i,v,r,szn,t)>0.4)$wind(i)] = 0.4 ;
 cc_int(i,v,r,szn,t)$[rsc_i(i)$(cc_int(i,v,r,szn,t)>0.6)$pv(i)] = 0.6 ;
 
 
-*increase reslim for the intertemporal solve
-option reslim = 345600 ;
 *set objective function to millions of dollars
 cost_scale = 1 ;
 

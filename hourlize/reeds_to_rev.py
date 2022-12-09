@@ -12,6 +12,7 @@ import h5py
 import logging
 import numpy as np
 import pandas as pd
+import traceback
 
 
 # ------------------------------------------------------------------------------
@@ -27,7 +28,7 @@ logger.addHandler(sh)
 logger.info('Resource logger setup.')
 
 
-def get_supply_curve(run_folder, sc_file, tech, cost_col, exist_plant_file,
+def get_supply_curve(reedspath, run_folder, sc_file, tech, cost_col,
                      r2rev_priority, out_dir):
 
     # ------------------------------------------------------------------------------
@@ -87,11 +88,41 @@ def get_supply_curve(run_folder, sc_file, tech, cost_col, exist_plant_file,
         rname = 'p' if tech in ['upv', 'dupv'] else 's'
         df_sc_in['region'] = rname + df_sc_in['model_region'].map(str)
         df_sc_in['bin'] = None
+    if tech == 'dupv':
+        df_sc_in['bin'] = None
+
+    ### If using aggregated regions, map original regions to new aggreg's
+    sw = pd.read_csv(
+        os.path.join(run_folder, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0, squeeze=True)
+    if int(sw['GSw_AggregateRegions']):
+        ### Load original hierarchy file
+        hierarchy = pd.read_csv(
+            os.path.join(
+                reedspath, 'inputs','hierarchy{}.csv'.format(
+                    '' if (sw['GSw_HierarchyFile'] == 'default')
+                    else '_'+sw['GSw_HierarchyFile'])),
+            index_col='*r')
+        rb2aggreg = hierarchy.aggreg.copy()
+        ### Get the rb-to-rs map
+        rsmap = pd.read_csv(
+            os.path.join(reedspath,'inputs','rsmap_sreg.csv'), index_col='rs', squeeze=True)
+        ### Make all-regions-to-aggreg map
+        r2aggreg = pd.concat([rb2aggreg, rsmap.map(rb2aggreg)])
+
+        ### Map original regions to new aggreg's
+        df_sc_in['region'] = df_sc_in['region'].map(r2aggreg)
+
     # Save initial state of df_sc_in for later
     df_sc_in_raw = df_sc_in.copy()
     # Remove unneeded columns
-    df_sc_in = df_sc_in[['sc_gid', 'sc_point_gid', 'latitude', 'longitude',
-                         'region', 'class', 'bin', 'capacity', cost_col]].copy()
+    if tech=='dupv':
+        # For DUPV need to un-do scaling before passing to reV, so keep compare column
+        df_sc_in = df_sc_in[['sc_gid', 'sc_point_gid', 'latitude', 'longitude',
+                             'region', 'class', 'bin', 'capacity', 'compare', cost_col]].copy()
+    else:
+        df_sc_in = df_sc_in[['sc_gid', 'sc_point_gid', 'latitude', 'longitude',
+                             'region', 'class', 'bin', 'capacity', cost_col]].copy()
     df_sc_in.rename(columns={'capacity': 'cap_avail'}, inplace=True)
 
     # Sort data by:
@@ -104,18 +135,22 @@ def get_supply_curve(run_folder, sc_file, tech, cost_col, exist_plant_file,
     if r2rev_priority == "cost":
         df_sc_in = df_sc_in.sort_values(by=['region', 'class', 'bin', cost_col],
                                         ascending=[True, True, True, True])
+
+    # it looks like this code isn't functional anymore so flagging for
+    # potentially pruning
     elif r2rev_priority == "existing":
+        pass
         # Get list of existing plants
         #  (1) sc_point_gid = unique identifier for each supply curve grid cell
         #      of a given wind regime {reference access, open access, limited access}
         #  (2) is_exist = 1 if existing wind farm polygon intersects a supply
         #      curve grid cell; 0 otherwise
-        df_exist_plant = pd.read_csv(exist_plant_file, low_memory=False)
-        # Join existing wind farms to reV supply curve; join column="sc_point_gid"
-        df_sc_in = df_sc_in.merge(df_exist_plant, how='left',
-                                  on=['sc_point_gid'], sort=False)
-        df_sc_in = df_sc_in.sort_values(by=['region', 'class', 'bin', 'is_exist', cost_col],
-                                        ascending=[True, True, True, False, True])
+        # df_exist_plant = pd.read_csv(exist_plant_file, low_memory=False)
+        # # Join existing wind farms to reV supply curve; join column="sc_point_gid"
+        # df_sc_in = df_sc_in.merge(df_exist_plant, how='left',
+        #                           on=['sc_point_gid'], sort=False)
+        # df_sc_in = df_sc_in.sort_values(by=['region', 'class', 'bin', 'is_exist', cost_col],
+        #                                 ascending=[True, True, True, False, True])
 
     # Write input data
     df_sc_in.to_csv(os.path.join(out_dir, 'df_sc_in_{}.csv'.format(tech)), index=False)
@@ -317,7 +352,8 @@ def get_supply_curve(run_folder, sc_file, tech, cost_col, exist_plant_file,
             for sc_i, sc_r in df_sc_rc.iterrows():
                 # This loops through each gid of the supply curve for this
                 # region/class
-                if round(ret_left, 2) > round(sc_r['cap'], 2):
+                # Floor is to ensure rounding doesn't lead to small overbuilds
+                if np.floor(ret_left*100)/100 > np.floor(sc_r['cap']*100)/100:
                     # retirement is too large for just this gid. Fill up this
                     # gid and move to the next.
                     df_sc.loc[sc_i, 'ret'] = sc_r['cap']
@@ -332,7 +368,7 @@ def get_supply_curve(run_folder, sc_file, tech, cost_col, exist_plant_file,
                     df_sc.loc[sc_i, 'cap'] = sc_r['cap'] - ret_left
                     ret_left = 0
                     break
-            if round(ret_left, 2) != 0:
+            if np.floor(ret_left*100)/100 != 0:
                 logger.info('ERROR at rcy=%s: ret_left should be 0 and it is:%s',
                             rcy, str(ret_left))
 
@@ -400,7 +436,7 @@ def get_supply_curve(run_folder, sc_file, tech, cost_col, exist_plant_file,
                         df_sc.loc[sc_i, 'inv_rsc'] = sc_r['cap_left']
                         df_sc.loc[sc_i, 'cap_left'] = 0
                         df_sc.loc[df_sc_rcb.index[0], 'inv_rsc'] += inv_left - sc_r['cap_left']
-                        df_sc.loc[df_sc_rcb.index[0], 'cap_expand'] += inv_left - sc_r['cap_left']
+                        # df_sc.loc[df_sc_rcb.index[0], 'cap_expand'] += inv_left - sc_r['cap_left']
                         df_sc.loc[df_sc_rcb.index[0], 'expanded'] = 'yes'
                         inv_left = 0
                         break
@@ -431,7 +467,9 @@ def get_supply_curve(run_folder, sc_file, tech, cost_col, exist_plant_file,
         # cap_df_sc_yr = df_sc['cap'].sum()
         # cap_chk_yr = df_cap_chk[df_cap_chk['year'] == year]['MW'].sum()
         # if round(cap_df_sc_yr) != round(cap_chk_yr):
-        #     logger.info('WARNING: total capacity, ' + str(round(cap_df_sc_yr)) + ', is not the same as from cap.csv, ' + str(round(cap_chk_yr)))
+        #     logger.info(
+        #         'WARNING: total capacity, ' + str(round(cap_df_sc_yr))
+        #         + ', is not the same as from cap.csv, ' + str(round(cap_chk_yr)))
         df_sc_out = pd.concat([df_sc_out, df_sc], sort=False)
 
     # ------------------------------------------------------------------------------
@@ -492,19 +530,95 @@ def expand_star(df, index=True, col=None):
         tmp = expand(df.set_index(col))
         return tmp.reset_index().rename(columns={'index': col})
 
+def reeds_to_rev(revData, run_folder, r2rev_priority, reduced_only, reedspath):
+    # Make sure if running PV, you have bins set
+    assert revData.tech != 'upv' or revData.bins, "If using upv, bins must be set"
 
+    # format for relevant supply curve file
+    # exceptions for DUPV and CSP below
+    supplyCurve = '{}_{}bin_{}*'.format(revData.tech,
+                                        int(revData.bins) if not np.isnan(revData.bins) else "",
+                                        revData.rev_case)
+
+    # Pre 2020 update, hdf5 files were used, with a different file structure
+    # DUPV is special and somewhat janky on the reV side, so gets its own thing
+    # DUPV profiles should be updated to be more consistent across reV and ReEDS
+    if revData.tech == 'dupv':
+        sc_file = os.path.join(revData.sc_path, 'dupv_sc_naris_scaled.csv')
+    elif revData.tech == 'csp':
+        sc_file = os.path.join(revData.sc_path, 'vision_sn2_csp_conus_2012.h5')
+    else:
+        sc_file = os.path.join(revData.sc_path, supplyCurve,
+                               'results', '{}_supply_curve_raw.csv'.format(revData.tech))
+
+    # Ensure the wildcard matches one and only one file
+    sc_list = glob.glob(sc_file)
+    if len(sc_list) != 1:
+        if len(sc_list) == 0:
+            logger.info("No SC files matched")
+        else:
+            logger.info(
+                'The wildcard in {} should only match one SC file.\nIt matches files \n  {}'.format(
+                    sc_file, sc_list))
+        logger.error('Please fix your file paths for this tech and version.')
+        raise Exception(f'No SC files match {sc_file}')
+
+    sc_file = sc_list[0]
+
+    # tansmission cost column of supply curve data frame
+    if revData.tech in ['wind-ons','wind-ofs','upv']:
+        cost_col = 'supply_curve_cost_per_mw'
+    elif os.path.splitext(sc_file)[1] == '.csv':
+        cost_col = 'trans_cap_cost'
+    elif os.path.splitext(sc_file)[1] == '.h5':
+        cost_col = 'cap_cost_transmission'
+
+    # existing plant file, only used if r2rev_priority = "existing plants"
+    # TODO: check if this shouldn't depend on access regime. E.g. can we use
+    # Open Access for all three access regimes?
+    # Also, these files seem to include offshore too, even though they're
+    # labeled "wind-ons"...
+
+    out_dir = os.path.join(run_folder, 'outputs')
+
+    # Make output directory
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    df_sc_out = get_supply_curve(reedspath, run_folder, sc_file, revData.tech, cost_col,
+                                 r2rev_priority, out_dir)
+
+    # ------------------------------------------------------------------------------
+    # Dump outputs
+    # ------------------------------------------------------------------------------
+    logger.info('Outputting data for {}...'.format(revData.tech))
+    df_sc_out['investment_bool'] = 0
+    df_sc_out.loc[(df_sc_out['inv_rsc'] > 1e-3)
+                  | (df_sc_out['refurb'] > 1e-3), 'investment_bool'] = 1
+    df_sc_out = df_sc_out.rename(columns={'cap': 'built_capacity'})
+    if not reduced_only:
+        df_sc_out.to_csv(os.path.join(out_dir, 'df_sc_out_{}.csv'.format(revData.tech)),
+                         index=False)
+    # reduced version of df_sc_out
+    df_sc_out = df_sc_out[df_sc_out['built_capacity'] > 1e-3].copy()
+    df_sc_out = df_sc_out[['year', 'sc_gid', 'sc_point_gid', 'latitude',
+                           'longitude', 'region', 'class', 'bin',
+                           cost_col, 'built_capacity', 'investment_bool']].copy()
+    df_sc_out.to_csv(os.path.join(out_dir, 'df_sc_out_{}_reduced.csv'.format(revData.tech)),
+                     index=False)
+
+
+# ------------------------------------------------------------------------------
+# Main
+# ------------------------------------------------------------------------------
 if __name__ == "__main__":
+
     # Argument inputs
     parser = argparse.ArgumentParser(
         description="""This file produces the DR shiftability inputs""")
 
+    parser.add_argument("reedspath", help="path to ReEDS directory")
     parser.add_argument("run_folder", help="Folder containing ReEDS run")
-    parser.add_argument("tech", help="technology to get supply curve data for",
-                        choices=['wind-ons', 'wind-ofs', 'upv', 'dupv', 'csp'])
-    parser.add_argument('access_type', choices=['reference', 'open', 'limited'],
-                        help='What type of access was used to create the ' +
-                        'supply curve data. Should be read in from switch' +
-                        'GWs_Siting[UPV/WindOns/WindOfs] based on tech')
     parser.add_argument('priority', default='existing',
                         choices=['existing', 'cost'],
                         help="How to rank reV sites. " +
@@ -512,144 +626,50 @@ if __name__ == "__main__":
                         "   existing plants = First assign capacity to supply curve " + \
                         "                     points that had existing plants as " + \
                         "                     of 2020; Second based on lowest cost")
-    parser.add_argument('-b', '--bins', default=None,
-                        help='Number of bins used. Currently only for UPV')
-    parser.add_argument('-v', '--version', default=None,
-                        help='Which version of data to use. Default uses ' +
-                        'most updated data available for each type.')
     parser.add_argument('-r', '--reduced_only', action="store_true",
                         help='Switch if you only want the reduced outputs')
+
+    # these arguments are typically only passed when debugging
+    # as a standalone script for a single tech
+    parser.add_argument('-t', '--tech', default=None,
+                        help="technology to get supply curve data for",
+                        choices=['wind-ons', 'wind-ofs', 'upv', 'dupv', 'csp'])
+    parser.add_argument('-b', '--bins', default=None,
+                        help='Number of bins used. Currently only for UPV')
+    parser.add_argument('--rev_case', default=None,
+                        help='Which version of data to use. Default uses ' +
+                        'most updated data available for each type. Note that' +
+                        'the script will fill in tech and bin information, so' +
+                        'this only needs to be the rev scenario name')
+    parser.add_argument('--sc_path', default=None,
+                        help='Path to supply curve files where the specified version' +
+                        ' resides. Does not need to be specified if the path is the same' +
+                        ' as the current default.')
     args = parser.parse_args()
 
-    # ------------------------------------------------------------------------------
-    # Define Constants
-    # ------------------------------------------------------------------------------
-    # Make sure if running PV, you have bins set
-    assert args.tech != 'upv' or args.bins, "If using upv, bins must be set"
+    logger.info('Starting reeds_to_rev')
 
-    # Location of supply curve data.
-    # This is not great, because not everywhere can access the drive as
-    # //nrelnas01, but leaving for now because all likely places this is
-    # run will be able to.
-    if os.name != 'posix':
-        sc_path = r'//nrelnas01/ReEDS/Supply_Curve_Data'
-    else:
-        sc_path = r'/Volumes/ReEDS/Supply_Curve_Data'
+    # read in data on supply curves for this run
+    revPaths = pd.read_csv(
+        os.path.join(args.run_folder, 'inputs_case', 'supplycurve_metadata', 'rev_supply_curves.csv'))
 
-    sc_tech = {'wind-ons': 'ONSHORE',
-               'wind-ofs': 'OFFSHORE',
-               'upv': 'UPV',
-               'dupv': 'DUPV',
-               'csp': 'CSP'}
+    # subset to focus tech if only running one
+    if args.tech is not None:
+        revPaths = revPaths[revPaths.tech == args.tech]
+        # overwrite default information if needed
+        if args.bins is not None:
+            revPaths['bins'] = args.bins
+        if args.rev_case is not None:
+            revPaths['rev_case'] = args.rev_case
+        if args.sc_path is not None:
+            revPaths['sc_path'] = args.sc_path
 
-    updated_versions = {'wind-ons': '2021_Update',
-                        'wind-ofs': '2021_Update',
-                        'upv': '2021_Update',
-                        'dupv': '2018_Update',
-                        'csp': '2019_Existing'}
+    # iterate over techs
+    for idx, revRow in revPaths.iterrows():
+        logger.info('Running reeds_to_rev for ' + revRow.tech)
+        try:
+            reeds_to_rev(revRow, args.run_folder, args.priority, args.reduced_only, args.reedspath)
+        except Exception as e:
+            logger.info('***Error for ' + revRow.tech + '...\n' + traceback.format_exc())
 
-    access_str = {'upv': {'reference': 'scen_128_ed1_{}bin-upv_*'.format(args.bins),
-                          'open': 'scen_128_ed0_{}bin-upv_*'.format(args.bins),
-                          'limited': 'scen_128_ed4_{}bin-upv_*'.format(args.bins)},
-                  'wind-ons': {'reference': 'wind-ons_10_reference_*',
-                               'open': 'wind-ons_08_open_*',
-                               'limited': 'wind-ons_11_limited_*'},
-                  'wind-ofs': {'open': 'wind-ofs_2_moderate_open_*',
-                               'limited': 'wind-ofs_3_moderate_limited_*'},
-                  'dupv': {'reference': '',
-                           'open': '',
-                           'limited': ''},
-                  'csp': {'reference': '',
-                          'open': '',
-                          'limited': ''}}
-    # ------------------------------------------------------------------------------
-    # Define User Inputs
-    # ------------------------------------------------------------------------------
-    # technology
-    tech = args.tech
-
-    # ---Priority for assigning ReEDS capacity to reV sites---
-    r2rev_priority = args.priority
-
-    # Version of data to use
-    ver = args.version if args.version else updated_versions[tech]
-
-    # Pre 2020 update, hdf5 files were used, with a different file structure
-    if int(ver[0:4]) < 2020:
-        sc_file = os.path.join(sc_path, sc_tech[tech], ver, '*.h5')
-    else:
-        sc_file = os.path.join(sc_path, sc_tech[tech], ver,
-                               access_str[tech][args.access_type],
-                               'results', '{}_supply_curve_raw.csv'.format(tech))
-    # Ensure the wildcard matches one and only one file
-    sc_list = glob.glob(sc_file)
-    if len(sc_list) != 1:
-        logger.info(
-            'The wildcard in {} should only match one SC file.\nIt matches files \n  {}'.format(
-                sc_file, sc_list))
-        sys.exit('Please fix your file paths for this tech and version.')
-
-    sc_file = sc_list[0]
-
-    # tansmission cost column of supply curve data frame
-    if tech in ['wind-ons','wind-ofs']:
-        cost_col = 'supply_curve_cost_per_mw'
-    elif os.path.splitext(sc_file)[1] == '.csv':
-        cost_col = 'trans_cap_cost'
-    elif os.path.splitext(sc_file)[1] == '.h5':
-        cost_col = 'cap_cost_transmission'
-
-
-    run_folder = args.run_folder
-
-    # existing plant file, only used if r2rev_priority = "existing plants"
-    # TODO: check if this shouldn't depend on access regime. E.g. can we use
-    # Open Access for all three access regimes?
-    # Also, these files seem to include offshore too, even though they're
-    # labeled "wind-ons"...
-    exist_plant_file = os.path.join(sc_path, sc_tech[tech], ver, 'multi_wind-ons_2020-08-14-17-52-38-083947',
-                                    'results', '{}_existing_lbnl2020.csv'.format(tech))
-
-    out_dir = os.path.join(run_folder, 'outputs')
-
-    # ------------------------------------------------------------------------------
-    # For testing
-    # ------------------------------------------------------------------------------
-    # tech = 'wind-ons'
-    # r2rev_priority = "existing plants"
-    # sc_file = r'//nrelnas01/ReEDS/Supply_Curve_Data/ONSHORE/2020_Update/multi_wind-ons_2020-08-14-17-52-38-083947/results/wind-ons_supply_curve_raw.csv' #Reference Access
-    # run_folder = r'//nrelnas01/ReEDS/FY20-reV_R2-MRM/runs_2020-08-27/bl_ref_mod' #Reference Access ATB moderate costs
-    # exist_plant_file = r'//nrelnas01/ReEDS/Supply_Curve_Data/ONSHORE/2020_Update/multi_wind-ons_2020-08-14-17-52-38-083947/results/wind-ons_existing_lbnl2020.csv'
-    #
-    # scen = os.path.basename(run_folder)
-    # timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S-%f')
-    # out_dir = os.path.join(
-    #     'out', 'r2rev_{}_{}_{}'.format(scen, tech, timestamp))
-    # ------------------------------------------------------------------------------
-
-    # Make output directory
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-
-    df_sc_out = get_supply_curve(run_folder, sc_file, tech, cost_col,
-                                 exist_plant_file, r2rev_priority, out_dir)
-
-    # ------------------------------------------------------------------------------
-    # Dump outputs
-    # ------------------------------------------------------------------------------
-    logger.info('Outputting data...')
-    df_sc_out['investment_bool'] = 0
-    df_sc_out.loc[(df_sc_out['inv_rsc'] > 1e-3)
-                  | (df_sc_out['refurb'] > 1e-3), 'investment_bool'] = 1
-    df_sc_out = df_sc_out.rename(columns={'cap': 'capacity_MW'})
-    if not args.reduced_only:
-        df_sc_out.to_csv(os.path.join(out_dir, 'df_sc_out_{}.csv'.format(tech)),
-                         index=False)
-    # reduced version of df_sc_out
-    df_sc_out = df_sc_out[df_sc_out['capacity_MW'] > 1e-3].copy()
-    df_sc_out = df_sc_out[['year', 'sc_gid', 'sc_point_gid', 'latitude',
-                           'longitude', 'region', 'class', 'bin',
-                           cost_col, 'capacity_MW', 'investment_bool']].copy()
-    df_sc_out.to_csv(os.path.join(out_dir, 'df_sc_out_{}_reduced.csv'.format(tech)),
-                     index=False)
-    logger.info('All done!')
+    logger.info('Completed reeds_to_rev!')

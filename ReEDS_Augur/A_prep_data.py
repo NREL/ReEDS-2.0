@@ -26,7 +26,6 @@ def prep_data():
     # =========================================================================
     # Get Marginal Step Sizes based on previous investments
     # =========================================================================
-
     set_marg_vre_step_size()
 
     # =========================================================================
@@ -109,14 +108,14 @@ def prep_data():
     # Format DR data for Osprey
     dr_inc = HOURLY_PROFILES['dr_inc'].profiles.copy()
     dr_dec = HOURLY_PROFILES['dr_dec'].profiles.copy()
-    if dr_inc.empty:
+    if not int(SwitchSettings.switches['gsw_dr']):
         rtmp = INPUTS['rfeas'].get_data()['r'].values[0]
         dr_inc_day = pd.DataFrame(columns=['d', 'hr', 'i', rtmp]).append(
             {'d': 'd1', 'hr': 'hr1', 'i': 'dr1_1', rtmp: 0},
             ignore_index=True)
     else:
         dr_inc_day = format_osprey_profiles(dr_inc)
-    if dr_dec.empty:
+    if not int(SwitchSettings.switches['gsw_dr']):
         rtmp = INPUTS['rfeas'].get_data()['r'].values[0]
         dr_dec_day = pd.DataFrame(columns=['d', 'hr', 'i', rtmp]).append(
             {'d': 'd1', 'hr': 'hr1', 'i': 'dr1_1', rtmp: 0},
@@ -160,12 +159,7 @@ def prep_data():
                                               values = 'MW').reset_index()
 
     # Aggregate daily energy budget of hybrids and dispatchable hydro
-    daily_energy_budget_pivot = agg_rs_to_r(GEN_DATA['daily_energy_budget'])
-    daily_energy_budget_pivot = pd.pivot_table(daily_energy_budget_pivot,
-                                               index = ['i','v','r'],
-                                               columns = 'd',
-                                               values = 'MWh'
-                                               ).reset_index()
+    daily_energy_budget = agg_rs_to_r(GEN_DATA['daily_energy_budget']).rename(columns={'i':'*i'})
 
     # =========================================================================
     # Write data for Osprey
@@ -197,31 +191,31 @@ def prep_data():
         os.path.join(
             'ReEDS_Augur',
             'augur_data',
-            'avail_cap_d_{}.csv'.format(str(SwitchSettings.next_year))),
+            'avail_cap_d_{}.csv'.format(str(SwitchSettings.prev_year))),
         index=False)
-    daily_energy_budget_pivot.to_csv(
+    daily_energy_budget.to_csv(
         os.path.join(
             'ReEDS_Augur',
             'augur_data',
-            'daily_energy_budget_{}.csv'.format(str(SwitchSettings.next_year))),
+            'daily_energy_budget_{}.csv'.format(str(SwitchSettings.prev_year))),
         index=False)
     net_load.to_csv(
         os.path.join(
             'ReEDS_Augur',
             'augur_data',
-            'net_load_osprey_{}.csv'.format(str(SwitchSettings.next_year))),
+            'net_load_osprey_{}.csv'.format(str(SwitchSettings.prev_year))),
         index=False)
     dr_inc_day.to_csv(
         os.path.join(
             'ReEDS_Augur',
             'augur_data',
-            'dr_inc_osprey_{}.csv'.format(str(SwitchSettings.next_year))),
+            'dr_inc_osprey_{}.csv'.format(str(SwitchSettings.prev_year))),
         index=False)
     dr_dec_day.to_csv(
         os.path.join(
             'ReEDS_Augur',
             'augur_data',
-            'dr_dec_osprey_{}.csv'.format(str(SwitchSettings.next_year))),
+            'dr_dec_osprey_{}.csv'.format(str(SwitchSettings.prev_year))),
         index=False)
     with gdxpds.gdx.GdxFile() as gdx:
         for key in osprey_inputs:
@@ -235,8 +229,23 @@ def prep_data():
         gdx.write(
             os.path.join(
                 'ReEDS_Augur', 'augur_data',
-                'osprey_inputs_{}.gdx'.format(str(SwitchSettings.next_year)))
+                'osprey_inputs_{}.gdx'.format(str(SwitchSettings.prev_year)))
         )
+
+    ### Write data for plots if necessary
+    if SwitchSettings.switches['plots']:
+        HOURLY_PROFILES['load'].profiles.to_hdf(
+            os.path.join('ReEDS_Augur','augur_data',
+                         'plot_load_{}.h5'.format(SwitchSettings.prev_year)),
+            key='data', complevel=4)
+        HOURLY_PROFILES['vre_gen'].profiles.to_hdf(
+            os.path.join('ReEDS_Augur','augur_data',
+                         'plot_vre_gen_{}.h5'.format(SwitchSettings.prev_year)),
+            key='data', complevel=4)
+        HOURLY_PROFILES['prod_noflex'].profiles.to_hdf(
+            os.path.join('ReEDS_Augur','augur_data',
+                         'plot_prod_noflex_{}.h5'.format(SwitchSettings.prev_year)),
+            key='data', complevel=4)
 
     return ReEDS_inputs
 

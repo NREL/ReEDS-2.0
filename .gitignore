@@ -19,6 +19,9 @@ inout/gdxfiles/*.gdx
 *.pyc
 *__pycache__
 
+# jupyter notebook checkpoints
+*.ipynb_checkpoints*/
+
 # lst and g00 files
 *.lst
 *.g00
@@ -26,7 +29,7 @@ inout/gdxfiles/*.gdx
 # ds_store files
 *.DS_Store
 
-# distPV csv input files
+# distpv csv input files
 inout/dSolar_Inputs/*.csv
 inputs/capacitydata/distpv/*.csv
 
@@ -35,7 +38,8 @@ inputs/capacitydata/distpv/*.csv
 *.RData
 
 # raw input files for retail rates
-retail_rate_module/inputs/EIA861
+retail_rate_module/inputs/EIA861/*
+postprocessing/retail_rate_module/inputs/EIA861/*
 
 # IDE stuff
 *.vscode

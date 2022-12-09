@@ -24,7 +24,6 @@ import os, sys, csv, pickle, shutil
 import argparse
 from glob import glob
 from warnings import warn
-
 #%% Direct print and errors to log file
 sys.stdout = open('gamslog.txt', 'a')
 sys.stderr = open('gamslog.txt', 'a')
@@ -131,44 +130,31 @@ if __name__ == '__main__':
     #%%####################
     ### ARGUMENT INPUTS ###
     parser = argparse.ArgumentParser(description='Extend inputs to arbitrary future year')
-    parser.add_argument('-i', '--basedir', help='path to ReEDS directory')
-    parser.add_argument('-o', '--inputs_case', help='path to inputs_case directory')
-    parser.add_argument('-e', '--endyear', type=int, default=2050, 
-                        help='last year to be modeled')
-    parser.add_argument('-y', '--yearset', help='file with years to be modeled', 
-                        default='modeledyears_default.csv')
-    parser.add_argument('-p', '--distpvscen', type=str, default='StScen2020_Mid_Case',
-                        help='Setting for distPV scenario')
-    parser.add_argument('-m', '--missing', default='raise', choices=['raise','warn'],
-                        help='what to do for missing files in futurefiles.csv')
-    parser.add_argument('-v', '--verbose', action='count', default=0)
+    parser.add_argument('basedir', help='path to ReEDS directory')
+    parser.add_argument('inputs_case', help='path to inputs_case directory')
 
     args = parser.parse_args()
     basedir = args.basedir
     inputs_case = os.path.join(args.inputs_case, '')
-    endyear = args.endyear
-    yearset = args.yearset
-    distpvscen = args.distpvscen
-    verbose = args.verbose
-    missing = args.missing
-
-    #%% Set debug == True to write to a new folder (inputs_case/future/), leaving original files
-    ### intact. If debug == False (default), the original files are overwritten.
-    debug = False
 
     # #%%#########################
     # ### Settings for testing ###
-    # basedir = '/Users/pbrown/github/ReEDS-2.0/'
-    # inputs_case = '/Users/pbrown/github/ReEDS-2.0/runs/v20201203_beyond2050_Climate2050/inputs_case/'
-    # inputs_case = '/Users/pbrown/github/ReEDS-2.0/runs/v20201123_beyond2050_USAprep/inputs_case/'
-    # inputs_case = '/Users/pbrown/github/ReEDS-2.0/runs/v20201205_beyond2050_EFS2100step5/inputs_case/'
-    # yearset = 'modeledyears_beyond2050step5.csv'
-    # endyear = 2150
-    # distpvscen = 'StScen2020_Mid_Case'
-    # casename = 'v20201109_master_Flex'
-    # missing = 'raise'
-    # verbose = 3
-    # debug = True
+    # basedir = os.path.expanduser('~/github/ReEDS-2.0')
+    # inputs_case = os.path.join(basedir,'runs','v20220411_prmM0_USA2060','inputs_case')
+
+    #%% Inputs from switches
+    sw = pd.read_csv(
+        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+    endyear = int(sw.endyear)
+    distpvscen = sw.distpvscen
+    ###### Inputs related to debugging
+    ### Set debug == True to write to a new folder (inputs_case/future/), leaving original files
+    ### intact. If debug == False (default), the original files are overwritten.
+    debug = False
+    ### missing: 'raise' or 'warn'
+    missing = 'raise'
+    ### verbose: 0, 1, 2
+    verbose = 2
 
     #%%####################################
     ### If endyear <= 2050, exit the script
@@ -192,8 +178,7 @@ if __name__ == '__main__':
         outpath = inputs_case
     ### Get the modeled years
     tmodel_new = pd.read_csv(
-        os.path.join(basedir, 'inputs', 'userinput',  yearset)
-    ).T.index.astype(int).values
+        os.path.join(inputs_case,'modeledyears.csv')).columns.astype(int).values
 
     ### Get the settings file
     futurefiles = pd.read_csv(
@@ -208,7 +193,7 @@ if __name__ == '__main__':
         lambda x: x.format(casename=casename, distpvscen=distpvscen)
     )
     ### If any files are missing, stop and alert the user
-    inputfiles = [os.path.basename(f) for f in glob(inputs_case+'*')]
+    inputfiles = [os.path.basename(f) for f in glob(os.path.join(inputs_case,'*'))]
     missingfiles = [
         f for f in inputfiles if ((f not in futurefiles.filename.values) and ('.' in f))]
     if any(missingfiles):
@@ -226,7 +211,7 @@ if __name__ == '__main__':
                 .format('\n'.join(missingfiles))
             )
             for filename in missingfiles:
-                shutil.copy(inputs_case + filename, outpath + filename)
+                shutil.copy(os.path.join(inputs_case, filename), os.path.join(outpath, filename))
                 print('copied {}, which is missing from futurefiles.csv'.format(filename),
                     flush=True)
 
@@ -238,21 +223,21 @@ if __name__ == '__main__':
         ### if ignore == 1, just copy the file to outpath and skip the rest
         elif futurefiles.loc[i, 'ignore'] == 1:
             if debug:
-                shutil.copy(inputs_case + filename, outpath + filename)
+                shutil.copy(os.path.join(inputs_case, filename), os.path.join(outpath, filename))
             if verbose > 1:
                 print('ignored: {}'.format(filename), flush=True)
             continue
         ### if ignore == 2, need to project for EFS or copy otherwise
         elif futurefiles.loc[i, 'ignore'] == 2:
             ### Read the file to determine if it's formatted for default or EFS load
-            dftest = pd.read_csv(inputs_case + filename, header=0, nrows=20)
+            dftest = pd.read_csv(os.path.join(inputs_case, filename), header=0, nrows=20)
             ### If it has more than 10 columns (indicating EFS), follow the directions
             if dftest.shape[1] > 10:
                 pass
             ### Otherwise (indicating default), just copy it
             else:
                 if debug:
-                    shutil.copy(inputs_case + filename, outpath + filename)
+                    shutil.copy(os.path.join(inputs_case, filename), os.path.join(outpath, filename))
                 if verbose > 1:
                     print('EFS special case: {}'.format(filename), flush=True)
                 continue
@@ -261,7 +246,7 @@ if __name__ == '__main__':
             if filename == 'oddyears.csv':
                 out = [y for y in range(2010,endyear+1) if y%2 == 1]
                 pd.Series(out).to_csv(
-                    outpath + filename, header=False, index=False)
+                    os.path.join(outpath, filename), header=False, index=False)
             if verbose > 1:
                 print('special case: {}'.format(filename), flush=True)
             continue
@@ -304,27 +289,27 @@ if __name__ == '__main__':
 
         ### Load it
         if filetype in ['.csv', '.csv.gz']:
-            dfin = pd.read_csv(inputs_case + filename, header=header,)
-        elif filetype == '.pkl':
-            ### Currently load.pkl is the only pkl file we need to project forward, so the
+            dfin = pd.read_csv(os.path.join(inputs_case, filename), header=header,)
+        elif filetype == '.h5':
+            ### Currently load.h5 is the only h5 file we need to project forward, so the
             ### procedure is currently specific to that file
-            dfin = pd.read_pickle(inputs_case + filename)
+            dfin = pd.read_hdf(os.path.join(inputs_case, filename))
             if header == 'keepindex':
                 indexnames = list(dfin.index.names)
                 dfin.reset_index(inplace=True)
-            ### We only need to do the projection for load.pkl if we're using EFS load,
+            ### We only need to do the projection for load.h5 if we're using EFS load,
             ### which has a (year,hour) multiindex (which we reset above to columns). 
             ### If dfin doesn't have 'year' and 'hour' columns, we can therefore skip this file.
             if (('year' in dfin.columns) and ('hour' in dfin.columns)):
                 efs = True
             else:
                 if debug:
-                    shutil.copy(inputs_case + filename, outpath + filename)
+                    shutil.copy(os.path.join(inputs_case, filename), os.path.join(outpath, filename))
                 if verbose > 1:
                     print('ignored: {}'.format(filename), flush=True)
                 continue
         elif filetype == '.txt':
-            dfin = pd.read_csv(inputs_case + filename, header=header, sep=' ')
+            dfin = pd.read_csv(os.path.join(inputs_case, filename), header=header, sep=' ')
             ### Remove parentheses and commas
             for col in [0,1]:
                 dfin[col] = dfin[col].map(
@@ -345,7 +330,7 @@ if __name__ == '__main__':
             ### one gdx file (cccurt_defaults.gdx) and we ignore it by default since
             ### it's only used for intertemporal/windows. To speed things up we could 
             ### change that file to .csv.
-            dfall = gdxpds.to_dataframes(inputs_case + filename)
+            dfall = gdxpds.to_dataframes(os.path.join(inputs_case, filename))
             dfin = dfall[key]
         else:
             raise Exception('Unsupported filetype: {}'.format(filename))
@@ -394,12 +379,12 @@ if __name__ == '__main__':
 
         #%% All columns should now be years
         df.rename(columns={c: int(c) for c in df.columns}, inplace=True)
+        lastdatayear = max([int(c) for c in df.columns])
         ### Interpolate to make sure we have data at yearly frequency
         df = interpolate_missing_years(df)
         ### Get indices for projection
-        lastdatayear = max([int(c) for c in df.columns])
         addyears = list(range(lastdatayear+1, endyear+1))
-        ### If file is for EFS hourlyload, only project for years in yearset to save time
+        ### If file is for EFS hourlyload, only project for years in tmodel_new to save time
         if efs:
             addyears = [y for y in addyears if y in tmodel_new]
 
@@ -408,7 +393,7 @@ if __name__ == '__main__':
             dfi=df, lastdatayear=lastdatayear, addyears=addyears, 
             forecast_fit=forecast_fit, clip_min=clip_min, clip_max=clip_max)
 
-        ## #%% Would be nice to keep only the years in yearset, but
+        ## #%% Would be nice to keep only the years in tmodel_new, but
         ## #%% createmodel breaks when the following line is active (not sure why)
         ## df.drop([y for y in df.columns if y not in tmodel_new], axis=1, inplace=True)
 
@@ -430,17 +415,17 @@ if __name__ == '__main__':
         #%% Write it
         if filetype in ['.csv','.csv.gz']:
             dfout.round(decimals).to_csv(
-                outpath + filename,
+                os.path.join(outpath, filename),
                 header=(False if header is None else True),
                 index=False,
             )
-        elif filetype == '.pkl':
+        elif filetype == '.h5':
             if header == 'keepindex':
                 dfwrite = dfout.sort_values(indexnames).set_index(indexnames)
                 dfwrite.columns.name = None
             else:
                 dfwrite = dfout
-            dfwrite.round(decimals).to_pickle(outpath + filename)
+            dfwrite.round(decimals).to_hdf(os.path.join(outpath, filename), key='data', complevel=4)
         elif filetype == '.txt':
             dfwrite = dfout.sort_index(axis=1)
             ### Make the GAMS-readable index
@@ -455,7 +440,7 @@ if __name__ == '__main__':
             dfwrite.iloc[-1] = dfwrite.iloc[-1].replace(',','')
             ### Write it
             dfwrite.to_csv(
-                outpath + filename,
+                os.path.join(outpath, filename),
                 header=(False if header is None else True),
                 index=True, sep=' ',
             )
@@ -477,7 +462,7 @@ if __name__ == '__main__':
 ## ##############################
 ## ### Initial one-time setup ###
 ## infiles = pd.DataFrame(
-##     {'filename': [os.path.basename(f) for f in glob(inputs_case+'*')]})
+##     {'filename': [os.path.basename(f) for f in glob(os.path.join(inputs_case,'*'))]})
 ## infiles['filetype'] = infiles.filename.map(lambda x: os.path.splitext(x)[1])
 ## infiles.sort_values(['filetype','filename'], inplace=True)
 ## infiles.to_csv(

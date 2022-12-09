@@ -9,39 +9,32 @@ sys.stderr = open('gamslog.txt', 'a')
 from ticker import toc
 import datetime
 tic = datetime.datetime.now()
-print("Starting calculation of fuelcostprep.R")
+print("Starting calculation of fuelcostprep.py")
 
-# Model Inputs
+#%% Argument Inputs
 parser = argparse.ArgumentParser(description="""This file organizes fuel cost data by techonology""")
 
 parser.add_argument("reeds_dir", help="ReEDS directory")
-parser.add_argument("coalscen", help="thermal plant characteristics")
-parser.add_argument("uraniumscen", help="wind charecteristics")
-parser.add_argument("ngscen", help="upv charecteristics")
-parser.add_argument("rectscen", help="rect charecteristics")
-parser.add_argument("load_type", help="loadtype")
-parser.add_argument("ng_sector", help="natural gas sector")
-parser.add_argument("outdir", help="output directory")
+parser.add_argument("inputs_case", help="output directory")
 
 args = parser.parse_args()
-
 reeds_dir = args.reeds_dir
-coalscen = args.coalscen
-uraniumscen = args.uraniumscen
-ngscen = args.ngscen
-ng_sector = args.ng_sector
-rectscen = args.rectscen
-load_type = args.load_type
-outdir = args.outdir
+inputs_case = args.inputs_case
 
-#%%
-# Inputs for testing
+#%% Inputs for testing
 # reeds_dir = 'd:\\Danny_ReEDS\\ReEDS-2.0'
-# coalscen = "AEO_2020_reference"
-# uraniumscen = "AEO_2020_reference"
-# ngscen = "AEO_2020_reference"
-# rectscen = 'reference'
-# outdir = os.getcwd()
+# inputs_case = os.getcwd()
+
+#%% Inputs from switches
+sw = pd.read_csv(
+    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+
+coalscen = sw.coalscen
+uraniumscen = sw.uraniumscen
+ngscen = sw.ngscen
+GSw_GasSector = sw.GSw_GasSector
+rectfuelscen = sw.rectfuelscen
+GSw_EFS1_AllYearLoad = sw.GSw_EFS1_AllYearLoad
 
 os.chdir(os.path.join(reeds_dir,"inputs","fuelprices"))
 
@@ -70,7 +63,7 @@ deflate = dollaryear.loc[dollaryear['Scenario'] == coalscen,'Deflator'].values[0
 coal.loc[:,'value'] = coal['value'] * deflate
 
 coal = coal.merge(r_cendiv,on='cendiv',how='left')
-coal = coal.drop('cendiv',1)
+coal = coal.drop('cendiv', axis=1)
 coal = coal[['year','r','value']].rename(columns={'year':'t','value':'coal'})
 coal.coal = coal.coal.round(8)
 #urnaium
@@ -86,10 +79,10 @@ uranium = uranium[['year','r','cost']].rename(columns={'year':'t','cost':'uraniu
 uranium.uranium = uranium.uranium.round(8)
 
 #RE-CT
-rect = pd.read_csv('re-ct_'+rectscen+'.csv')
+rect = pd.read_csv('re-ct_'+rectfuelscen+'.csv')
 
 #Adjust prices to 2004$
-deflate = dollaryear.loc[dollaryear['Scenario'] == rectscen,'Deflator'].values[0]
+deflate = dollaryear.loc[dollaryear['Scenario'] == rectfuelscen,'Deflator'].values[0]
 rect.loc[:,'cost'] = rect['cost'] * deflate
 rect = pd.concat([rect]*205).sort_values(['year'])
 rect['r'] = ['p'+str(r) for r in list(range(1,206))*41]
@@ -112,7 +105,7 @@ ngprice_cendiv = ngprice_cendiv.round(8)
 
 #Map cenus regions to BAs
 ngprice = ngprice.merge(r_cendiv,on='cendiv',how='left')
-ngprice = ngprice.drop('cendiv',1)
+ngprice = ngprice.drop('cendiv', axis=1)
 ngprice = ngprice[['year','r','value']].rename(columns={'year':'t','value':'naturalgas'})
 ngprice.naturalgas = ngprice.naturalgas.round(8)
 
@@ -125,30 +118,30 @@ fuel = fuel.sort_values(['t','r'])
 #Natural gas demand
 ngdemand = pd.read_csv("ng_demand_" + ngscen + ".csv")
 ngdemand.index = ngdemand.year
-ngdemand = ngdemand.drop('year',1)
+ngdemand = ngdemand.drop('year', axis=1)
 ngdemand = ngdemand.transpose()
 ngdemand = ngdemand.round(8)
 
 #Total demand
 ngtotdemand = pd.read_csv('ng_tot_demand_' + ngscen + ".csv")
 ngtotdemand.index = ngtotdemand.year
-ngtotdemand = ngtotdemand.drop('year',1)
+ngtotdemand = ngtotdemand.drop('year', axis=1)
 ngtotdemand = ngtotdemand.transpose()
 ngtotdemand = ngtotdemand.round(8)
 
 ### Natural Gas Alphas (already in 2004$)
-if(ng_sector=="electric_sector"):
+if(GSw_GasSector=="electric_sector"):
     alpha = pd.read_csv("alpha_"+ngscen+".csv")
-elif(ng_sector=="energy_sector"):
-    alpha = pd.read_csv("alpha_"+ngscen+"_"+load_type+".csv")
+elif(GSw_GasSector=="energy_sector"):
+    alpha = pd.read_csv("alpha_"+ngscen+"_"+GSw_EFS1_AllYearLoad+".csv")
 alpha = alpha.round(8)
 #%%
-fuel.to_csv(os.path.join(outdir,"fprice.csv"),index=False)
-ngprice_cendiv.to_csv(os.path.join(outdir,'ng_price_cendiv.csv'))
-ngdemand.to_csv(os.path.join(outdir,'ng_demand_elec.csv'))
-ngtotdemand.to_csv(os.path.join(outdir,'ng_demand_tot.csv'))
-alpha.to_csv(os.path.join(outdir,'alpha.csv'),index=False)
+fuel.to_csv(os.path.join(inputs_case,"fprice.csv"),index=False)
+ngprice_cendiv.to_csv(os.path.join(inputs_case,'ng_price_cendiv.csv'))
+ngdemand.to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
+ngtotdemand.to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))
+alpha.to_csv(os.path.join(inputs_case,'alpha.csv'),index=False)
 
 toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
-    path=os.path.join(outdir,'..'))
+    path=os.path.join(inputs_case,'..'))
 print('fuelcostprep.py completed succesfully')

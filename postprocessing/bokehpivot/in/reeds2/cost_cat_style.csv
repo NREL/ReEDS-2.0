@@ -1,0 +1,19 @@
+order,color
+PTC,#31a354
+ITC,#74c476
+CCS Incentives,#a1d99b
+H2 Revenue,#c7e9c0
+Gen & Stor Capex,#1f77b4
+Gen & Stor O&M,#ff7f0e
+Fuel,#d62728
+Trans,#636363
+POI,#969696
+Spur,#BDBDBD
+Trans O&M,#D9D9D9
+CO2 T&S Capex,#8c564b
+CO2 T&S O&M,#c49c94
+H2 T&S Capex,#e377c2
+H2 Prod O&M,#f7b6d2
+ACP,#bcbd22
+Emissions Tax,#dbdb8d
+Other,#000000

@@ -1,8 +1,8 @@
 #%% IMPORTS ###
+import gdxpds
 import pandas as pd
 import os
 import argparse
-import gdxpds
 #%% direct print and errors to log file
 import sys
 sys.stdout = open('gamslog.txt', 'a')
@@ -16,48 +16,30 @@ tic = datetime.datetime.now()
 parser = argparse.ArgumentParser(description="""This file outputs capacity factor data""")
 
 parser.add_argument("reeds_dir", help="ReEDS directory")
-parser.add_argument("distpvscen", help="distpv scenario")
 parser.add_argument("inputs_case", help="output directory")
-parser.add_argument('-x', '--GSw_IndividualSites', type=int, default=1, 
-                    choices=[0,1], help='Switch to use individual sites')
-parser.add_argument('-w', '--GSw_SitingWindOns', type=str, default='reference',
-                    choices=['reference','open','limited'],
-                    help='siting access scenario for onshore wind')
-parser.add_argument('-f', '--GSw_SitingWindOfs', type=str, default='reference',
-                    choices=['reference','open','limited'],
-                    help='siting access scenario for offshore wind')
-parser.add_argument('-p', '--GSw_SitingUPV', type=str, default='reference',
-                    choices=['reference','open','limited'],
-                    help='siting access scenario for UPV')
-parser.add_argument('-b', '--GSw_PVB', type=int, default=1, choices=[0,1],
-                    help='switch to turn on/off hybrid PV+battery (overrides GSw_PVB_Types)')
-parser.add_argument('-v', '--GSw_PVB_Types', type=str, default='1',
-                    help='_-delimited pvb_types to include, such as 1 or 1_2')
 
 args = parser.parse_args()
-
 reeds_dir = args.reeds_dir
-distpvscen = args.distpvscen
 inputs_case = args.inputs_case
-GSw_IndividualSites = args.GSw_IndividualSites
-GSw_SitingWindOns = args.GSw_SitingWindOns
-GSw_SitingWindOfs = args.GSw_SitingWindOfs
-GSw_SitingUPV = args.GSw_SitingUPV
-GSw_PVB = args.GSw_PVB
-GSw_PVB_Types = (
-    [int(i) for i in args.GSw_PVB_Types.split('_')] if int(GSw_PVB)
-    else []
-)
 
 #%% Inputs for testing
 # reeds_dir = os.path.expanduser('~/github2/ReEDS-2.0/')
-# distpvscen = 'StScen2019_Mid_Case'
 # inputs_case = os.path.join(reeds_dir,'runs','v20210630_pvbdc1_Ref_ERCOT','inputs_case','')
-# GSw_SitingWindOns = 'reference'
-# GSw_SitingWindOfs = 'reference'
-# GSw_SitingUPV = 'open'
-# GSw_PVB = 1
-# GSw_PVB_Types = [1]
+
+#%% Inputs from switches
+sw = pd.read_csv(
+    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+
+distpvscen = sw.distpvscen
+GSw_IndividualSites = int(sw.GSw_IndividualSites)
+GSw_SitingWindOns = sw.GSw_SitingWindOns
+GSw_SitingWindOfs = sw.GSw_SitingWindOfs
+GSw_SitingUPV = sw.GSw_SitingUPV
+GSw_PVB = int(sw.GSw_PVB)
+GSw_PVB_Types = (
+    [int(i) for i in sw.GSw_PVB_Types.split('_')] if int(GSw_PVB)
+    else []
+)
 
 #%% Procedure
 print('Beginning calculations in cfgather.py')
@@ -65,9 +47,7 @@ print('Beginning calculations in cfgather.py')
 
 colid = ['i','j','k','l','m','n','o','p']
 
-os.chdir(os.path.join(reeds_dir))
-
-gdxfile = os.path.join('inputs','cf','cfdata.gdx')
+gdxfile = os.path.join(reeds_dir,'inputs','cf','cfdata.gdx')
 rs = pd.read_csv(os.path.join(inputs_case,'rsmap.csv')).rename(columns={'*r':'r'})
 rs.columns = ['r','s']
 
@@ -77,7 +57,7 @@ rs.columns = ['r','s']
 ###########
 windons = pd.read_csv(
     os.path.join(
-        'inputs', 'cf','wind-ons_cf_ts_{}-{}.csv'
+        reeds_dir, 'inputs', 'cf','wind-ons_cf_ts_{}-{}.csv'
     .format('site' if GSw_IndividualSites else 'sreg', GSw_SitingWindOns))
 ).drop('cfsigma', axis=1, errors='ignore')
 windons['type'] = 'wind-ons'
@@ -85,7 +65,7 @@ windons['type'] = 'wind-ons'
 #%% Offshore wind
 windofs = pd.read_csv(
     os.path.join(
-        'inputs', 'cf','wind-ofs_cf_ts_{}-{}.csv'
+        reeds_dir, 'inputs', 'cf','wind-ofs_cf_ts_{}-{}.csv'
     .format('site' if GSw_IndividualSites else 'sreg', GSw_SitingWindOfs))
 ).drop('cfsigma', axis=1, errors='ignore')
 windofs['type'] = 'wind-ofs'
@@ -101,11 +81,11 @@ wind = wind[['r','i','h','value']]
 ##############
 
 upv = (
-    pd.read_csv(os.path.join('inputs','cf','upv_cf_ts-{}.csv'.format(GSw_SitingUPV)))
+    pd.read_csv(os.path.join(reeds_dir,'inputs','cf','upv_cf_ts-{}.csv'.format(GSw_SitingUPV)))
     .rename(columns={'region':'r','timeslice':'h','class':'i','cfmean':'value'})
     .drop('cfsigma', axis=1, errors='ignore')
 )
-upv.i = upv.i.map(lambda x: 'UPV_{}'.format(x))
+upv.i = upv.i.map(lambda x: 'upv_{}'.format(x))
 upv = upv.drop(upv.loc[upv.value==0].index).reset_index(drop=True)
 
 #############
@@ -114,21 +94,21 @@ upv = upv.drop(upv.loc[upv.value==0].index).reset_index(drop=True)
 
 dupv = gdxpds.to_dataframe(gdxfile,'CFDUPV')
 dupv = pd.DataFrame(dupv['CFDUPV'])
-dupv['c'] = 'DUPV_' + dupv.k.str.strip('class')
+dupv['c'] = 'dupv_' + dupv.k.str.strip('class')
 dupv.columns = ['r','h','cl','value','i']
 dupv = dupv[['r','i','h','value']]
 
 
 #############
-#distPV
+#distpv
 #############
 
 distpv = pd.read_csv(
-    os.path.join('inputs','dGen_Model_Inputs',distpvscen,'distPVCF_'+distpvscen+'.csv')
+    os.path.join(reeds_dir,'inputs','dGen_Model_Inputs',distpvscen,'distPVCF_'+distpvscen+'.csv')
 ).rename(columns = {'Unnamed: 0':'r'})
 distpv = distpv.melt('r')
 distpv.columns = ['r','h','value']
-distpv['i'] = 'distPV'
+distpv['i'] = 'distpv'
 distpv = distpv[['r','i','h','value']]
 
 
@@ -148,14 +128,14 @@ for pvb_type in GSw_PVB_Types:
     acfile = 'upv' if ilr == 130 else 'upv{}'.format(ilr)
     ### Get timeslice AC output
     pvb_cf_ac = (
-        pd.read_csv(os.path.join('inputs','cf','{}_cf_ts-{}.csv'.format(
+        pd.read_csv(os.path.join(reeds_dir,'inputs','cf','{}_cf_ts-{}.csv'.format(
             acfile, GSw_SitingUPV)))
         .rename(columns={'region':'r','timeslice':'h','class':'i','cfmean':'value'})
         .set_index(['r','i','h'])['value']
     )
     ### Get timeslice clipping (given as AC CF, i.e. after inverter losses are applied)
     pvb_cf_clipping = (
-        pd.read_csv(os.path.join('inputs','cf','upv{}clip_cf_ts-{}.csv'.format(
+        pd.read_csv(os.path.join(reeds_dir,'inputs','cf','upv{}clip_cf_ts-{}.csv'.format(
             ### NOTE: We don't yet have clipping profiles for limited and open access
             ### from reV, so for now we use clipping from reference access for all PV
             ### siting scenarios. Once the open and limited clipping profiles are
@@ -187,7 +167,7 @@ pvb = (
 #############
 
 #Read in tech-subset-table.csv to determine number of configureations
-tst = pd.read_csv(os.path.join('inputs','tech-subset-table.csv'))
+tst = pd.read_csv(os.path.join(reeds_dir,'inputs','tech-subset-table.csv'))
 csp_configs = tst[(tst['CSP']=='YES') & (tst['STORAGE'] == 'YES')].shape[0]
 
 # CFCspwStorallyears in heritage ReEDS is the adjusted CSP-ws field capacity factor from CFCSPws_tower;

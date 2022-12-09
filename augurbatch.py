@@ -96,7 +96,7 @@ def main():
     print('Restart file: ' + restartfile)
     print('Start year: ' + str(startyear))
     print('End year: ' + str(endyear))
-    print('distPV switch setting: ' + distpv)
+    print('distpv switch setting: ' + distpv)
     print('calc_csp_cc setting: ' + csp)
     print('calc_dr_cc setting: ' + dr)
     print('timetype: ' + timetype)

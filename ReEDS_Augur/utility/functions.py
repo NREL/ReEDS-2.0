@@ -26,7 +26,7 @@ def adjust_tz(df, mapper=None, option='local_to_ET'):
     # in local time and will require adjustment but the translation
     # back to eastern time does not need to occur, thus resetting
     # the sign appropriately based on both the switch setting and option argument
-    if (SwitchSettings.switches['gsw_hourlytzadj'] == 1) & (option=='ET_to_local'):
+    if (option=='ET_to_local'):
         sign = 0
     shift = {'PT':3*sign, 'MT':2*sign, 'CT':1*sign, 'ET':0}
     # Get the region-to-shift map
@@ -77,21 +77,26 @@ def agg_r_to_ccreg(df):
     agg_profiles(df, r_ccreg)
     return df
 
-def agg_rs_to_r(df):
-    data_col = df.columns[-1]
-    cols = df.columns.tolist()
+def agg_rs_to_r(dfin):
+    r_rs = INPUTS['r_rs'].get_data()
+    ### If all r's are the same as all rs's, return the input dataframe
+    if (r_rs.r == r_rs.rs).all():
+        return dfin
+    ### Continue
+    data_col = dfin.columns[-1]
+    cols = dfin.columns.tolist()
     group_cols = cols.copy()
     group_cols.remove(data_col)
-    r_rs = INPUTS['r_rs'].get_data()
-    r_rs = r_rs[r_rs['rs'] != 'sk']
-    df_r = df[df['r'].isin(r_rs['r'])]
-    df_rs = df[df['r'].isin(r_rs['rs'])].reset_index(drop=True)
+    df_r = dfin[dfin['r'].isin(r_rs['r'])]
+    df_rs = dfin[
+        dfin['r'].isin(r_rs['rs'])
+        & ~dfin['r'].isin(r_rs['r'])
+    ].reset_index(drop=True)
     df_rs.rename(columns = {'r':'rs'}, inplace = True)
     df_rs = df_rs.merge(r_rs, on = 'rs')
-    df = pd.concat([df_r, df_rs], sort = False, ignore_index = True)
-    df = df.groupby(group_cols, as_index = False).sum()
-    df = df[cols]
-    return df
+    dfout = pd.concat([df_r, df_rs], sort = False, ignore_index = True)
+    dfout = dfout.groupby(group_cols, as_index=False).sum().reindex(cols, axis=1)
+    return dfout
 
 def apply_series_to_df(df, series, method, invert = False):
     '''
@@ -136,24 +141,19 @@ def convert_series_to_profiles(df, cols, vals, idx = 'index'):
     df = df.pivot(index = idx, columns = cols, values = vals)
     return df
 
-def decant_pickles(path):
-    '''
-    Recreating pickle files so they can be read in faster
-    '''
-    df = pd.read_csv(path)
-    df.to_pickle(path.replace('csv.gz','pkl'))
-
 def delete_csvs(keep=[]):
     """
-    Delete temporary csv and pkl files
+    Delete temporary csv, pkl, and h5 files
     """
     dropfiles = glob(
-        os.path.join('ReEDS_augur','augur_data','*_{}*.pkl'.format(SwitchSettings.next_year))
+        os.path.join('ReEDS_Augur','augur_data','*_{}*.pkl'.format(SwitchSettings.prev_year))
     ) + glob(
-        os.path.join('ReEDS_augur','augur_data','*_{}*.csv'.format(SwitchSettings.next_year))
+        os.path.join('ReEDS_Augur','augur_data','*_{}*.h5'.format(SwitchSettings.prev_year))
     ) + glob(
-        os.path.join('ReEDS_augur','augur_data',
-                     'osprey_outputs_{}*.gdx'.format(SwitchSettings.next_year))
+        os.path.join('ReEDS_Augur','augur_data','*_{}*.csv'.format(SwitchSettings.prev_year))
+    ) + glob(
+        os.path.join('ReEDS_Augur','augur_data',
+                     'osprey_outputs_{}*.gdx'.format(SwitchSettings.prev_year))
     )
     if not len(keep):
         pass
@@ -225,7 +225,7 @@ def expand_df(df, expand, old_col, new_col, drop_cols):
     df.reset_index(inplace=True)
     df.columns = cols
     df = pd.merge(left=expand, right=df, on=old_col, how='left')
-    df.drop(drop_cols, 1, inplace=True)
+    df.drop(drop_cols, axis=1, inplace=True)
     df.set_index(new_col, inplace=True)
     df = df.T
 
@@ -351,8 +351,10 @@ def format_prod_flex(cap_prod, net_load, prod_load):
     format_prod_load.
     '''
     prod_load_formatted = pd.DataFrame(columns=['d', 'r', 'MWh'])
-    flatten = lambda l: [item for sublist in l for item in sublist]
-    day = flatten([['d'+str(i+1)]*24 for i in range(365)])
+    def flatten(l): return [item for sublist in l for item in sublist]
+    day = flatten([
+        ['d'+str(i+1)]*24
+        for i in range(365 * SwitchSettings.switches['osprey_num_years'])])
     net_load['d'] = day
     # Sort net load by region
     for r in prod_load['r'].drop_duplicates():
@@ -431,6 +433,8 @@ def format_prod_load():
         cons_flex = cons_flex[['d', 'r', 'MWh']]
         cons_flex['MWh'] = round(cons_flex['MWh'],
                                        SwitchSettings.switches['decimals'])
+        # Eliminate entries that round to zero. (They'll throw errors in format_prod_flex())
+        cons_flex = cons_flex.loc[cons_flex['MWh'] > 0 ]
         # Create hourly profiles for inflexible consumption
         h_map.rename(columns={'season':'szn'}, inplace=True)
         h_map['szn'].replace('winter', 'wint', inplace=True)
@@ -460,36 +464,45 @@ def format_trancap():
     '''
     Get transmission capacity. Combine AC and LCC DC lines.
     '''
-    df = INPUTS['trancap'].get_data()
-    df = (
-        df.loc[df.trtype.isin(['AC','DC'])]
+    trancap = INPUTS['trancap'].get_data()
+    trancap = (
+        trancap.loc[trancap.trtype.isin(['AC','LCC','B2B'])]
         .groupby(['r','rr'], as_index=False).sum()
         .sort_values(['r','rr'], ignore_index=True)
         .assign(trtype='AC')
-        .append(df.loc[df.trtype == 'VSC'])
+        .append(trancap.loc[trancap.trtype == 'VSC'])
         .reindex(['r','rr','trtype','MW'], axis=1)
         .round(SwitchSettings.switches['decimals'])
-    )
-    return df
+    ).set_index(['r','rr','trtype']).MW
+    ### Add zeroes
+    append = []
+    for (r,rr,trtype), val in trancap.iteritems():
+        if (rr,r,trtype) not in trancap:
+            append.append(pd.DataFrame({'r':rr,'rr':r,'trtype':trtype,'MW':0}, index=[0]))
+    trancap = trancap.reset_index().append(append).reset_index(drop=True)
+    return trancap
 
 def format_tranloss():
     """
     Get transmission losses. Take weighted average for AC and LCC DC lines.
     """
-    df = INPUTS['tranloss'].get_data()
+    tranloss = INPUTS['tranloss'].get_data()
     trancap = INPUTS['trancap'].get_data()
-    df = df.merge(trancap, on=['r','rr','trtype'], how='right')
-    df = (
+    tranloss = tranloss.merge(trancap, on=['r','rr','trtype'], how='right')
+    tranloss = (
         weighted_average(
-            df=df.loc[df.trtype.isin(['AC','DC'])],
+            df=tranloss.loc[tranloss.trtype.isin(['AC','LCC','B2B'])],
             data_cols=['tranloss'], weighter_col='MW', groupby_cols=['r','rr'])
         .sort_values(['r','rr'], ignore_index = True)
         .assign(trtype='AC')
-        .append(df.loc[df.trtype=='VSC', ['r','rr','trtype','tranloss']])
+        .append(tranloss.loc[tranloss.trtype=='VSC', ['r','rr','trtype','tranloss']])
         .reindex(['r','rr','trtype','tranloss'], axis=1)
         .round(SwitchSettings.switches['decimals'])
     )
-    return df
+    ### Add the opposite direction, then drop duplicates
+    ### (since we need both directions for C2_marginal_curtailment)
+    tranloss = pd.concat([tranloss, tranloss.rename(columns={'r':'rr','rr':'r'})]).drop_duplicates()
+    return tranloss
 
 def get_prop(df, prop, merge_cols = None, method = 'left', na_val = 0):
     '''
@@ -526,7 +539,7 @@ def get_remaining_cycles_per_day(stor_level,
                   right=df[['device', 'avg_remaining']],
                   on='device', how='right')
     df.sort_values('resource_device', inplace=True)
-    df.drop('device', 1, inplace=True)
+    df.drop('device', axis=1, inplace=True)
     df.set_index('resource_device', inplace=True)
     df = df.T
     columns = marg_curt_exist_stor_recovery_ratio.columns.to_list()
@@ -542,9 +555,10 @@ def get_startup_costs():
     Start-up costs come from the TEPPC WECC database
     '''
     df = INPUTS['wecc_data'].get_data()
-    df = df[['i','Start Cost/cap']].fillna(0)
-    df['Start Cost/cap'] = df['Start Cost/cap'].round(
-                                        SwitchSettings.switches['decimals'])
+    df = df.loc[
+        ~df.i.str.startswith('csp'),
+        ['i','Start Cost/cap']
+    ].fillna(0).round(SwitchSettings.switches['decimals'])
     return df
 
 def get_storage_eff():
@@ -556,17 +570,19 @@ def get_storage_eff():
     df = df[df['i'].isin(techs['storage_standalone'])].reset_index(drop=True)
     return df
 
-def get_relative_step_sizes():
+def get_relative_step_sizes(yearset, target_step):
     '''
     Checking the relative ReEDS temporal step sizes for this solve year and
-    the previous solve year.
+    any previous solve year, specified by 'target_step'
     '''
-    yearset = INPUTS['yearset'].get_data()['t'].tolist()
     solve_year = SwitchSettings.prev_year
     i = yearset.index(solve_year)
-    prev_year = yearset[i-1]
     next_year = yearset[i+1]
-    relative_step_sizes = (next_year - solve_year) / (solve_year - prev_year)
+
+    j = yearset.index(target_step)
+    targ_prev = yearset[j-1]
+
+    relative_step_sizes = (next_year - solve_year) / (target_step - targ_prev)
     return relative_step_sizes
 
 def map_rs_to_r(df):
@@ -576,7 +592,6 @@ def map_rs_to_r(df):
     regions and this will still work fine.
     '''
     r_rs = INPUTS['r_rs'].get_data()
-    r_rs = r_rs[r_rs['rs'] != 'sk']
     r_rs.columns = ['rs','r']
     df = df.merge(r_rs, on='r', how='left')
     df.rename(columns={'r':'rs','rs':'r'}, inplace = True)
@@ -592,33 +607,6 @@ def map_szn_to_day(df):
     df = df.merge(d_szn, on = 'szn')
     return df
 
-def pkl_to_csv(file, load=False, remove=True):
-
-    #check for file extensions
-    if file[-3:] != 'pkl':
-        infile = file + '.pkl'
-        outfile = file + '.csv.gz'
-    else:
-        infile = file
-        outfile = file[:-4] + '.csv.gz'
-
-    #read in .pkl file
-    inpath  = os.path.join('inputs_case', infile)
-    df = pd.read_pickle(inpath)
-
-    # write out .csv.gz file
-    # Note that we need the index if allyearload is used
-    if SwitchSettings.switches['keep_pickles'] == '1':
-        if SwitchSettings.switches['gsw_efs1_allyearload'] != 'default' \
-            and load == True:
-            df.to_csv(os.path.join('inputs_case', outfile), index=True)
-        else:
-            df.to_csv(os.path.join('inputs_case', outfile), index=False)
-
-    #remove original pickle file if requested
-    if remove:
-        os.remove(inpath)
-
 def printscreen(txt, outlined=False):
     if platform.system() != 'Linux':
         if outlined:
@@ -631,24 +619,69 @@ def printscreen(txt, outlined=False):
 def set_marg_vre_step_size():
     '''
     Marginal vre step size has a default floor value of 1000 MW but
-    here we check to see if it needs to be higher. We take the max
-    of 1000 MW and the average new VRE investment by ccreg.
-    We also count for potentially varying step sizes in ReEDS.
+    here we check to see if it needs to be higher. The function looks
+    back by the number of steps specified by 'marg_vre_steps' and computes
+    the max of the average new vre investment in those previous steps.
+    We take the max of that value and 1000 MW to set the set size.
+    The fuction also accounts for potentially varying step sizes in ReEDS.
     '''
-    relative_step_sizes = get_relative_step_sizes()
+    #  load yearset for getting various previous steps
+    yearset = INPUTS['yearset'].get_data()['t'].tolist()
+
+    # collect list of previous years and their relative step sizes
+    prev_year_list = []
+    step_sizes = []
+    for step in range(0, SwitchSettings.switches['marg_vre_steps']):
+
+        # try-except to handle cases where there aren't multiple
+        # steps to go back to (e.g. running Augur after 1st solve)
+        try:
+            target_last_step = yearset[yearset.index(SwitchSettings.prev_year)-step]
+
+            # only look at steps beyond the previous year if the step sizes
+            # are less than 5 years
+            if (SwitchSettings.prev_year - target_last_step) < 5:
+                step_sizes.append(get_relative_step_sizes(yearset, target_last_step))
+                prev_year_list.append(target_last_step)
+        except:
+            pass
+    relative_step_sizes = pd.DataFrame(list(zip(prev_year_list, step_sizes)),
+                                            columns=['t', 'step'])
+
+    # load investment data for all techs
     techs = INPUTS['i_subsets'].get_data()
     inv = INPUTS['cap_inv'].get_data()
-    inv_last_year = inv[inv['t'] == SwitchSettings.prev_year]
-    inv_vre = inv_last_year[inv_last_year['i'].isin(techs['vre'])]
+
+    # get investment from any previous steps under consideration
+    inv_last_years = inv[inv['t'].isin(prev_year_list)]
+    inv_vre = inv_last_years[inv_last_years['i'].isin(techs['vre'])]
+
+    # map inv_vre to ccregions
     hierarchy = INPUTS['hierarchy'].get_data()
     r_ccreg = hierarchy[['r','ccreg']].drop_duplicates()
     inv_vre = inv_vre.merge(r_ccreg, on = 'r')
-    inv_vre = inv_vre.groupby('ccreg', as_index = False).sum()
-    marg_vre = int(round(inv_vre['MW'].mean(), 0))
-    SwitchSettings.switches['marg_vre_mw'] = max(
-                            SwitchSettings.switches['marg_vre_mw'],
-                            marg_vre)
-    SwitchSettings.switches['marg_vre_mw'] *= relative_step_sizes
+
+    # aggregate by tech and then and compute average across the appropriate
+    # geographic resolution - r for curtailment, ccreg for capacity credit
+    marg_vre_mw = {}
+    for level in ['r','ccreg']:
+        df = inv_vre.groupby([level, 't'], as_index = False).sum()
+        df = df.groupby(['t'], as_index=False).mean()
+
+        # adjust each previous step by its relative step size
+        df = df.merge(relative_step_sizes, on='t')
+        df['MW'] *= df['step']
+
+        # now get max across all previous steps and set as marg_vre_mw
+        marg_vre_mw[level] = int(round(df['MW'].max(), 0))
+
+    SwitchSettings.switches['marg_vre_mw_curt'] = max(
+        SwitchSettings.switches['marg_vre_mw'], marg_vre_mw['r'])
+    SwitchSettings.switches['marg_vre_mw_cc'] = max(
+        SwitchSettings.switches['marg_vre_mw'], marg_vre_mw['ccreg'])
+    for i in ['marg_vre_mw_curt','marg_vre_mw_cc']:
+        print(f'{i} set to {SwitchSettings.switches[i]}')
+
 
 def storage_dispatch(poss_batt_changes, ts_length, eff, e):
     """
@@ -754,7 +787,7 @@ def weighted_average(df, data_cols, weighter_col, groupby_cols,
     df_avg = df_avg.groupby(by=groupby_cols, as_index=False).mean()
     for data_col in data_cols:
         df_avg[data_col] = df_avg[data_col] / df_avg[weighter_col]
-    df_avg.drop(weighter_col, 1, inplace=True)
+    df_avg.drop(weighter_col, axis=1, inplace=True)
     if new_col and old_col:
         df_avg.rename(columns={old_col: new_col}, inplace=True)
     return df_avg

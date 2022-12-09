@@ -7,7 +7,6 @@ Patrick.Brown@nrel.gov 20210520
 import os
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
 import geopandas as gpd
 import shapely
 ### Set up projection environment - needed for geopandas
@@ -18,7 +17,7 @@ pd.options.display.max_columns = 200
 ##############
 #%% INPUTS ###
 ### Indicate whether to run for offshore
-offshore = True
+offshore = False
 ### Filepaths
 if os.name == 'posix':
     scpath = '/Volumes/ReEDS/Supply_Curve_Data/'
@@ -29,37 +28,22 @@ reedspath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 outpath = os.path.join(reedspath,'inputs','supplycurvedata')
 
 pvpath = os.path.join(scpath,'UPV','2021_Update','reV','scenarios_aux')
-windpath = os.path.join(scpath,'ONSHORE','2021_Update','reV')
-offshorepath = os.path.join(scpath,'OFFSHORE','2021_Update','reV')
+onswindpath = os.path.join(scpath,'ONSHORE','2022_06_13_Update','reV')
+ofswindpath = os.path.join(scpath,'OFFSHORE','2022_08_19_Update','reV')
+windpath = ofswindpath if offshore else onswindpath
+### For onshore wind we construct the full list of sc_point_gids from the combination of the following reV cases, using the biggest one first
+onswindcases = ['00_open_moderate', '01_reference_moderate', '02_limited_moderate']
+ofswindcases = ['0_open_moderate', '1_limited_moderate']
+windcases = ofswindcases if offshore else onswindcases
 
 ### Indicate whether to make plots for output investigation
-makeplots = True
+makeplots = False
 ### Set threshold for distance between x columns and y rows [units: meters]
 ### Should be a few km less than the rough spacing between reV sites
 ### (currently 11500 km for onshore)
 thresh = 8000
 ### Aggregation levels (agglevel=2 indicates 2x2 aggregation)
 agglevels = list(range(1,11)) + [500]
-### reV runs for metadata. Use all scenarios to make sure that we get all sites.
-scens = {
-    # 'windons_ref': os.path.join(
-    #     windpath,'10_reference_moderate_eos_flicker','10_reference_moderate_eos_flicker_sc.csv'),
-    # 'windons_lim': os.path.join(
-    #     windpath,'11_limited_moderate_eos_flicker','11_limited_moderate_eos_flicker_sc.csv'),
-    'windons_open': os.path.join(
-        windpath,'08_open_moderate_eos_flicker','08_open_moderate_eos_flicker_sc.csv'),
-    # 'upv_ref': os.path.join(
-    #     pvpath,'scen_128_ed1','scen_128_ed1_sc.csv'),
-    # 'upv_lim': os.path.join(
-    #     pvpath,'scen_128_ed4','scen_128_ed4_sc.csv'),
-    'upv_open': os.path.join(
-        pvpath,'scen_128_ed0','scen_128_ed0_sc.csv'),
-}
-### For offshore we can use a single open-access scenario
-offshorescens = {
-    'open': os.path.join(offshorepath,'2_moderate_open','2_moderate_open_sc.csv'),
-    'limited': os.path.join(offshorepath,'3_moderate_limited','3_moderate_limited_sc.csv'),
-}
 ### reV projection string
 ### (https://spatialreference.org/ref/esri/north-america-albers-equal-area-conic/)
 projstring = 'ESRI:102008'
@@ -67,90 +51,41 @@ projstring = 'ESRI:102008'
 #################
 #%% PROCEDURE ###
 
+#%% Get full site-to-fips map
+cols = ['sc_point_gid','state','county','cnty_fips','longitude','latitude']
+basecase = windcases[0]
+dfkey = pd.read_csv(
+    os.path.join(windpath, basecase, basecase + '_supply-curve.csv'),
+    usecols=cols,
+)
+print('NOTE: ' + basecase + ' has ' + str(len(dfkey)) + ' sc_point_gids.')
+for case in windcases[1:]:
+    dfcase = pd.read_csv(
+        os.path.join(windpath, case, case + '_supply-curve.csv'),
+        usecols=cols,
+    )
+    #select only those rows where sc_point_gid is not in original
+    dfcase = dfcase[~dfcase['sc_point_gid'].isin(dfkey['sc_point_gid'])].copy()
+    print('NOTE: ' + case + ' added ' + str(len(dfcase)) + ' more sc_point_gids.')
+    dfkey = pd.concat([dfkey, dfcase])
+
+dfkey = dfkey.set_index('sc_point_gid')
+dfkey.cnty_fips = dfkey.cnty_fips.map(lambda x: '{:0>5}'.format(int(x)))
+
+### Update to Oglala Lakota county, SD
+dfkey.cnty_fips = dfkey.cnty_fips.replace('46113','46102')
+dfkey.loc[dfkey.cnty_fips == '46102','county'] = 'Oglala Lakota'
+
 #%% Get ReEDS regions from county map
-fipsmap = pd.read_csv(
+reedsmap = pd.read_csv(
     os.path.join(reedspath,'hourlize','inputs','resource','county_map.csv'),
 )
-fipsmap.cnty_fips = fipsmap.cnty_fips.map(lambda x: '{:0>5}'.format(int(x)))
-fipsmap = fipsmap.set_index('cnty_fips')
+reedsmap.cnty_fips = reedsmap.cnty_fips.map(lambda x: '{:0>5}'.format(int(x)))
+reedsmap = reedsmap.set_index('cnty_fips')
 
-#%% Simpler procedure for offshore
-if offshore:
-    #%% Get meta for offshore sites
-    dictmeta = {}
-    for scen in tqdm(offshorescens, desc='load metadata'):
-        dictmeta[scen] = pd.read_csv(
-            offshorescens[scen],
-            low_memory=False, dtype={'sc_point_gid':int},
-        )
-    dfmeta = (
-        pd.concat(dictmeta, axis=0, ignore_index=True)
-        .drop_duplicates('sc_point_gid').set_index('sc_point_gid').sort_index())
-    dfmeta.cnty_fips = dfmeta.cnty_fips.map(lambda x: '{:0>5}'.format(int(x)))
-    #%% Map to ReEDS BAs & resource resgions
-    dfmeta['rb'] = dfmeta.cnty_fips.map(fipsmap.reeds_ba)
-    dfmeta['rs'] = dfmeta.cnty_fips.map(fipsmap.reeds_region)
-
-    #%% Make the key
-    dfkey = dfmeta[['cnty_fips','latitude','longitude','rb']].copy()
-
-### Otherwise use all scenarios
-else:
-    #%% Get meta for all sites (wind and pv)
-    dfmeta = {}
-    for scen in tqdm(scens, desc='load metadata'):
-        dfmeta[scen] = pd.read_csv(scens[scen], index_col=0, low_memory=False)
-    dfmeta = pd.concat(dfmeta, axis=0)
-    dfmeta.sc_point_gid = dfmeta.sc_point_gid.astype(int)
-    dfmeta.cnty_fips = dfmeta.cnty_fips.map(lambda x: '{:0>5}'.format(int(x)))
-
-    # ###### Make sure they overlap
-    # dftest = dfmeta.reset_index(level=0).rename(columns={'level_0':'scen'}).pivot(
-    #     index='sc_point_gid', columns='scen', values=['latitude','longitude'])
-
-    # ### Looks ok; largest deviation is 0.0006°. 
-    # ### Wind values match each other exactly.
-    # ### UPV values match each other within float precision (1E-15).
-    # print(dftest['latitude'].T.std().dropna().nlargest(10))
-    # print(dftest['latitude'].T.mean().dropna().nlargest(10))
-    # print(dftest['longitude'].T.std().dropna().nlargest(10))
-    # print(dftest['longitude'].T.mean().dropna().nlargest(10))
-
-    ### Same length
-    # print(len(sc_point_gids))
-    # print(len(latlon))
-
-    latlon = (
-        dfmeta.loc[dfmeta.offshore != 1.]
-        .reset_index(level=0).rename(columns={'level_0':'scen'})
-        .pivot(
-            index='sc_point_gid', columns='scen', 
-            values=['latitude','longitude','state','county','cnty_fips'])
-    )
-    ### Keep wind value if there is one; otherwise use UPV
-    sc_point_gids = sorted(latlon.index.unique())
-    latitudes, longitudes = {}, {}
-    dflat = latlon['latitude'][scens.keys()].copy()
-    dflon = latlon['longitude'][scens.keys()].copy()
-    dffips = latlon['cnty_fips'][scens.keys()].copy()
-    data = {}
-    for sc_point_gid in tqdm(sc_point_gids, desc='assign metadata to sites'):
-        data['latitude',sc_point_gid] = (
-            dflat.loc[sc_point_gid].dropna().drop_duplicates(keep='first').values[0])
-        data['longitude',sc_point_gid] = (
-            dflon.loc[sc_point_gid].dropna().drop_duplicates(keep='first').values[0])
-        data['cnty_fips',sc_point_gid] = (
-            dffips.loc[sc_point_gid].dropna().drop_duplicates(keep='first').values[0])
-        data['rb',sc_point_gid] = fipsmap.loc[data['cnty_fips',sc_point_gid], 'reeds_ba']
-        data['rs',sc_point_gid] = fipsmap.loc[data['cnty_fips',sc_point_gid], 'reeds_region']
-
-    #%% Make the key
-    dfkey = (
-        pd.Series(data)
-        .reset_index().rename(columns={'level_1':'sc_point_gid'})
-        .pivot(columns='level_0',index='sc_point_gid',values=0)
-    ).drop('rs', axis=1)
-    dfkey.columns.name = None
+#%% Map reV points to BAs
+dfkey['rb'] = dfkey.cnty_fips.map(reedsmap.reeds_ba)
+dfkey['rs'] = dfkey.cnty_fips.map(reedsmap.reeds_region)
 
 #%% Do the equal-area projection
 dfkey['geometry'] = dfkey.apply(

@@ -1,10 +1,8 @@
 ,ercot_small
 timetype,seq
 endyear,2030
-region_type,interconnect
-GSw_region,texas
-regions_suffix,ercot
-ldcProfiles,test
+GSw_RegionLevel,interconnect
+GSw_Region,texas
 GSw_BanRECT,1
 GSw_BatteryMandate,0
 GSw_Biopower,0
@@ -28,7 +26,6 @@ GSw_Nuclear,0
 GSw_OfsWind,0
 GSw_OnsWind6to10,0
 GSw_OpRes,0
-GSw_OpResTrade,0
 GSw_PVB,0
 GSw_Refurb,0
 GSw_ReserveMargin,0

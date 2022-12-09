@@ -1,6 +1,11 @@
   biopower  ,0.035
-  beccs  ,0.035
-  coal-CCS  ,0.055
+  beccs_mod  ,0.035
+  beccs_max  ,0.035
+  coal-CCS_mod  ,0.055
+  coal-CCS_max  ,0.055
+  coal-CCS-F1  ,0.055
+  coal-CCS-F2  ,0.055
+  coal-CCS-F3  ,0.055
   Coal-IGCC ,0.055
   coal-new  ,0.055
   CoalOldScr  ,0.055
@@ -8,7 +13,11 @@
   CofireNew ,0.055
   CofireOld ,0.055
   Gas-CC  ,0.035
-  Gas-CC-CCS  ,0.035
+  Gas-CC-CCS_mod  ,0.035
+  Gas-CC-CCS_max  ,0.035
+  Gas-CC-CCS-F1  ,0.035
+  Gas-CC-CCS-F2  ,0.035
+  Gas-CC-CCS-F3  ,0.035
   Gas-CT  ,0.11
   geothermal  ,0
   Hydro ,0

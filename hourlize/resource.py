@@ -1,13 +1,12 @@
 #%% Imports
 import pandas as pd
 import numpy as np
-import sklearn.cluster as sc
+# import sklearn.cluster as sc
 from pdb import set_trace as pdbst
 import datetime
 import os
 import sys
 import shutil
-import tables
 import json
 import config as cf
 import logging
@@ -19,15 +18,16 @@ import h5py
 #Setup logger
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
-sh = logging.StreamHandler(sys.stdout)
-sh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(message)s')
-sh.setFormatter(formatter)
-logger.addHandler(sh)
+if cf.logToTerminal:
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.DEBUG)
+    sh.setFormatter(formatter)
+    logger.addHandler(sh)
 logger.info('Resource logger setup.')
 
 #%% Functions
-def setup(this_dir_path, out_dir, paths):
+def setup(this_dir_path, out_dir, paths, rev_cases_path, profile_dir):
     time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     #Create output directory, creating backup if one already exists.
     if os.path.exists(out_dir):
@@ -48,16 +48,36 @@ def setup(this_dir_path, out_dir, paths):
     for path in paths:
         if path != None:
             shutil.copy2(path, out_dir + 'inputs/')
-    logger.info('Done copying inputs.')
 
-def get_supply_curve_and_preprocess(tech, rev_case_path, rev_prefix, reg_col, profile_id_col, reg_out_col, reg_map_path, min_cap, individual_sites, existing_sites, start_year, filter_cols={}, test_mode=False, test_filters={}):
+    # Copy .json config files
+    jsonfiles = [
+        'config_aggregation.json', 'config_pipeline.json',
+        'config_rep-profiles.json', 'config_supply-curve.json',
+        ### These two files are only included for PV, so don't worry about them for wind
+        'config_rep-profiles_aggprof.json', 'config_rep-profiles_repprof.json',
+    ]
+    for jsonfile in jsonfiles:
+        try:
+            shutil.copy2(
+                os.path.join(rev_cases_path, profile_dir, jsonfile),
+                os.path.join(out_dir, 'inputs', ''),
+            )
+        except FileNotFoundError as err:
+            logger.info("WARNING: {}".format(err))
+
+    logger.info('Done creating ' + out_dir + ' and copying inputs.')
+
+def get_supply_curve_and_preprocess(tech, rev_sc_file_path, rev_prefix, reg_col, reg_out_col, reg_map_path, min_cap, individual_sites, existing_sites, state_abbrev, start_year, filter_cols={}, test_mode=False, test_filters={}):
     #Retrieve and filter the supply curve. Also, add a 'region' column, apply minimum capacity thresholds, and apply test mode if necessary.
     logger.info('Reading supply curve inputs and filtering...')
     startTime = datetime.datetime.now()
-    df = pd.read_csv(rev_case_path + '/' + rev_prefix + '_sc.csv', dtype={reg_col:int}, low_memory=False)
-    if profile_id_col == 'index':
-        #This means we assume the columns in the profile file correspond to the rows in the supply curve file.
-        df['index'] = df.index
+    df = pd.read_csv(rev_sc_file_path, low_memory=False)
+    cnty_na_cond = df['cnty_fips'].isna()
+    cnty_na_count = len(df[cnty_na_cond])
+    if(cnty_na_count > 0):
+        logger.info("WARNING: " + str(cnty_na_count) + " site(s) don't have cnty_fips. Removing them now.")
+        df = df[~cnty_na_cond].copy()
+    df['cnty_fips'] = df['cnty_fips'].astype(int)
     for k in filter_cols.keys():
         #Apply any filtering of the supply curve, e.g. to select onshore or offshore wind.
         if filter_cols[k][0] == '=':
@@ -82,13 +102,19 @@ def get_supply_curve_and_preprocess(tech, rev_case_path, rev_prefix, reg_col, pr
         logger.info('Assigning existing sites...')
         #Read in existing sites and filter
         df_exist = pd.read_csv(existing_sites, low_memory=False)
-        df_exist = df_exist[['tech','STATE','pca','resource_region','UID','LONG','LAT','cap','Commercial.Online.Year','RetireYear']].copy()
+        df_exist = df_exist[
+            ['tech','TSTATE','reeds_ba','resource_region','Unique ID',
+            'T_LONG','T_LAT','cap','StartYear','RetireYear']
+        ].rename(columns={
+            'TSTATE':'STATE', 'T_LAT':'LAT', 'T_LONG':'LONG', 'reeds_ba':'pca',
+            'Unique ID':'UID', 'StartYear':'Commercial.Online.Year',
+        }).copy()
         df_exist = df_exist[(df_exist['tech'].str.lower() == tech) & (df_exist['RetireYear'] > start_year)].reset_index(drop=True)
         df_exist['LONG'] = df_exist['LONG'] * -1
         df_exist.sort_values('cap', ascending=False, inplace=True)
         #Map the state codes of df_exist to the state names in df
         df_cp = df.copy()
-        df_st = pd.read_csv('inputs/resource/state_abbrev.csv', low_memory=False)
+        df_st = pd.read_csv(state_abbrev, low_memory=False)
         dict_st = dict(zip(df_st['ST'], df_st['State']))
         df_exist['STATE'] = df_exist['STATE'].map(dict_st)
         df_cp = df_cp[['sc_gid','state','latitude','longitude','capacity']].copy()
@@ -176,71 +202,19 @@ def add_classes(df_sc, class_path):
     logger.info('Done adding classes: '+ str(datetime.datetime.now() - startTime))
     return df_sc
 
-def add_bins(df_sc, individual_sites, bin_group_cols, bin_col, bin_num, bin_method, tech):
-    #Add 'bin' column to supply curve using bin_method after grouping by bin_group_cols.
+def add_cost(df_sc, bin_col, transcost_col):
+    # Generate the combined supply-curve cost column
     if bin_col == 'combined_eos_trans':
-        df_sc[bin_col] = df_sc['mean_capital_cost'] / df_sc['mean_system_capacity'] * (df_sc['capital_cost_scalar'] - 1)*1000 + df_sc['trans_cap_cost']
+        df_sc[bin_col] = df_sc['mean_capital_cost'] / df_sc['mean_system_capacity'] * (df_sc['capital_cost_scalar'] - 1)*1000 + df_sc[transcost_col]
     if bin_col == 'combined_off_ons_trans':
-        df_sc[bin_col] = (df_sc['mean_export'] + df_sc['mean_array']) / (df_sc['mean_system_capacity'] * 40) * 1000 + df_sc['trans_cap_cost_per_mw']
-    if individual_sites:
-        #In this case, we just call each bin 1 and return it.
-        df_sc['bin'] = 1
-        logger.info('Done adding bin column for individual sites.')
-    else:
-        logger.info('Adding bins...')
-        startTime = datetime.datetime.now()
-        df_sc = df_sc.groupby(bin_group_cols, sort=False).apply(get_bin, bin_col, bin_num, bin_method)
-        df_sc = df_sc.reset_index(drop=True).sort_values('sc_gid')
-        logger.info('Done adding bins: '+ str(datetime.datetime.now() - startTime))
+        df_sc[bin_col] = (df_sc['mean_export'] + df_sc['mean_array']) / (df_sc['mean_system_capacity'] * 40) * 1000 + df_sc[transcost_col]
+    logger.info('Done adding supply-curve cost column.')
+
     return df_sc
 
-def get_bin(df_in, bin_col, bin_num, bin_method):
-    df = df_in.copy()
-    ser = df[bin_col]
-    #If we have less than or equal unique points than bin_num, we simply group the points with the same values.
-    if ser.unique().size <= bin_num:
-        bin_ser = ser.rank(method='dense')
-        df['bin'] = bin_ser.values
-    elif bin_method == 'kmeans':
-        nparr = ser.to_numpy().reshape(-1,1)
-        kmeans = sc.KMeans(n_clusters=bin_num, random_state=0).fit(nparr)
-        bin_ser = pd.Series(kmeans.labels_)
-        #but kmeans doesn't necessarily label in order of increasing value because it is 2D,
-        #so we replace labels with cluster centers, then rank
-        kmeans_map = pd.Series(kmeans.cluster_centers_.flatten())
-        bin_ser = bin_ser.map(kmeans_map).rank(method='dense')
-        df['bin'] = bin_ser.values
-    elif bin_method == 'equal_cap_man':
-        #using a manual method instead of pd.cut because i want the first bin to contain the
-        #first sc point regardless, even if its capacity is more than the capacity of the bin,
-        #and likewise for other bins, so i don't skip any bins.
-        orig_index = df.index
-        df.sort_values(by=[bin_col], inplace=True)
-        cumcaps = df['capacity'].cumsum().tolist()
-        totcap = df['capacity'].sum()
-        vals = df[bin_col].tolist()
-        bins = []
-        curbin = 1
-        for i,v in enumerate(vals):
-            bins.append(curbin)
-            if cumcaps[i] >= totcap*curbin/bin_num:
-                curbin += 1
-        df['bin'] = bins
-        df = df.reindex(index=orig_index) #we need the same index ordering for apply to work.
-    elif bin_method == 'equal_cap_cut':
-        #Use pandas.cut with cumulative capacity in each class. This will assume equal capacity bins
-        #to bin the data.
-        orig_index = df.index
-        df.sort_values(by=[bin_col], inplace=True)
-        df['cum_cap'] = df['capacity'].cumsum()
-        bin_ser = pd.cut(df['cum_cap'], bin_num, labels=False)
-        bin_ser = bin_ser.rank(method='dense')
-        df['bin'] = bin_ser.values
-        df = df.reindex(index=orig_index) #we need the same index ordering for apply to work.
-    df['bin'] = df['bin'].astype(int)
-    return df
-
-def save_sc_outputs(df_sc, individual_sites, existing_sites, start_year, bin_col, out_dir, tech, reg_map_path):
+def save_sc_outputs(
+        df_sc, individual_sites, existing_sites, start_year, bin_col, out_dir, tech,
+        reg_map_path, distance_cols, subtract_exog):
     #Save resource supply curve outputs
     logger.info('Saving supply curve outputs...')
     startTime = datetime.datetime.now()
@@ -249,23 +223,34 @@ def save_sc_outputs(df_sc, individual_sites, existing_sites, start_year, bin_col
     df_sc['supply_curve_cost_per_mw'] = df_sc[bin_col]
     df_sc.to_csv(out_dir + 'results/' + tech + '_supply_curve_raw.csv', index=False)
     #Round now to prevent infeasibility in model because existing (pre-2010 + prescribed) capacity is slightly higher than supply curve capacity
-    decimals = 4
+    decimals = 3
     df_sc[['capacity','existing_capacity']] = df_sc[['capacity','existing_capacity']].round(decimals)
     if existing_sites:
+        # bincol = ['sc_point_gid'] if exog_bin else []
         df_exist = df_sc[df_sc['existing_capacity'] > 0].copy()
         #Exogenous (pre-start-year) capacity output
         df_exog = df_exist[df_exist['online_year'] < start_year].copy()
+        # # Write the full existing-capacity table
+        # df_exog[[
+        #     'region','class','bin','sc_point_gid','cnty_fips','online_year','retire_year',
+        #     'dist_km','trans_cap_cost_per_mw','supply_curve_cost_per_mw','existing_capacity',
+        # ]].to_csv(os.path.join(out_dir, 'results', tech+'_existing_cap_pre{}.csv'.format(start_year)), index=False)
+        # Aggregate existing capacity to (i,rs,t)
         if not df_exog.empty:
-            df_exog = df_exog[['sc_gid','class','region','retire_year','existing_capacity']].copy()
+            df_exog = df_exog[['sc_point_gid','class','region','retire_year','existing_capacity']].copy()
             max_exog_ret_year = df_exog['retire_year'].max()
             ret_year_ls = list(range(start_year,max_exog_ret_year + 1))
-            df_exog = df_exog.pivot_table(index=['sc_gid','class','region'], columns='retire_year', values='existing_capacity')
+            df_exog = df_exog.pivot_table(
+                index=['sc_point_gid','class','region'], columns='retire_year', values='existing_capacity')
+            # Make a column for every year until the largest retirement year
             df_exog = df_exog.reindex(columns=ret_year_ls).fillna(method='bfill', axis='columns')
-            df_exog = pd.melt(df_exog.reset_index(), id_vars=['sc_gid','class','region'], value_vars=ret_year_ls, var_name='year', value_name= 'capacity')
+            df_exog = pd.melt(
+                df_exog.reset_index(), id_vars=['sc_point_gid','class','region'],
+                value_vars=ret_year_ls, var_name='year', value_name='capacity')
             df_exog = df_exog[df_exog['capacity'].notnull()].copy()
             df_exog['tech'] = tech + '_' + df_exog['class'].astype(str)
-            df_exog = df_exog[['tech','region','year','capacity']].copy()
-            df_exog = df_exog.groupby(['tech','region','year'], sort=False, as_index =False).sum()
+            df_exog = df_exog[['tech','region','sc_point_gid','year','capacity']].copy()
+            df_exog = df_exog.groupby(['tech','region','sc_point_gid','year'], sort=False, as_index=False).sum()
             df_exog['capacity'] =  df_exog['capacity'].round(decimals)
             df_exog.to_csv(out_dir + 'results/' + tech + '_exog_cap.csv', index=False)
         #Prescribed capacity output
@@ -277,188 +262,88 @@ def save_sc_outputs(df_sc, individual_sites, existing_sites, start_year, bin_col
             df_pre['capacity'] =  df_pre['capacity'].round(decimals)
             df_pre.to_csv(out_dir + 'results/' + tech + '_prescribed_builds.csv', index=False)
         #Reduce supply curve based on exogenous (pre-start-year) capacity
-        criteria = (df_sc['online_year'] > 0) & (df_sc['online_year'] < start_year)
-        df_sc.loc[criteria, 'capacity'] = df_sc.loc[criteria, 'capacity'] - df_sc.loc[criteria, 'existing_capacity']
-    
-    distance_col = 'dist_to_coast' if tech == 'wind-ofs' else 'dist_mi'
-    keepcols = ['capacity', 'supply_curve_cost_per_mw', distance_col]
+        if subtract_exog:
+            criteria = (df_sc['online_year'] > 0) & (df_sc['online_year'] < start_year)
+            df_sc.loc[criteria, 'capacity'] = (
+                df_sc.loc[criteria, 'capacity'] - df_sc.loc[criteria, 'existing_capacity'])
+
+    keepcols = ['capacity', 'supply_curve_cost_per_mw'] + distance_cols
+
+    df_sc_out = df_sc[['region','class','sc_point_gid'] + keepcols].copy()
+    df_sc_out[keepcols] = df_sc_out[keepcols].round(decimals)
+    df_sc_out.to_csv(out_dir + 'results/' + tech + '_supply_curve.csv', index=False)
+
     if individual_sites:
         df_reg_map = df_sc[['region','cnty_fips']].copy()
         df_county_map = pd.read_csv(reg_map_path, low_memory=False, usecols=['cnty_fips','reeds_ba'])
         df_reg_map = pd.merge(left=df_reg_map, right=df_county_map, how='left', on=['cnty_fips'], sort=False)
         df_reg_map = df_reg_map.rename(columns={'reeds_ba':'rb'}).drop(columns=['cnty_fips'])
         df_reg_map.to_csv(out_dir + 'results/region_map.csv', index=False)
-        df_sc_ind = df_sc[['region','class','bin'] + keepcols].copy()
-        df_sc_ind[keepcols] = df_sc_ind[keepcols].round(decimals)
-        df_sc_ind.to_csv(out_dir + 'results/' + tech + '_supply_curve.csv', index=False)
-    else:
-        #Aggregate: Calculate the capacity, supply_curve_cost_per_mw, and distance for each region,class,bin.
-        #supply_curve_cost_per_mw and distance are weighted averages, with capacity as the weighting factor.
-        def wm(x):
-            return np.average(x, weights=df_sc.loc[x.index, 'capacity']) if df_sc.loc[x.index, 'capacity'].sum() > 0 else 0
-        def concat_sc_point_gid(x):
-            return x.astype(str).str.cat(sep=',')
-        aggs = {
-            'capacity': 'sum',
-            'supply_curve_cost_per_mw': wm,
-            distance_col: wm,
-            'sc_point_gid': concat_sc_point_gid,
-        }
-        df_sc_agg = df_sc.groupby(['region','class','bin']).agg(aggs)
-        df_sc_agg[keepcols] = df_sc_agg[keepcols].round(decimals)
-        df_sc_agg.to_csv(out_dir + 'results/' + tech + '_supply_curve.csv')
+
     logger.info('Done saving supply curve outputs: '+ str(datetime.datetime.now() - startTime))
 
-def get_profiles(df_sc, rev_case_path, rev_prefix, select_year, profile_dset, profile_id_col, profile_weight_col,
-                 rep_profile_method, driver, gather_method, profile_dir):
-    #Get the hourly profiles for each supply curve point, calculate weighted average profile for each
-    #region,class (avgs_arr). Also select one of the original profiles to represent each region,class (reps_arr)
-    #based on  a specified method (rep_profile_method e.g. root mean square error using differences from avgs_arr).
-    logger.info('Getting profiles...')
-    startTime = datetime.datetime.now()
-    #get unique combinations of region and class
-    df_rep = df_sc[['region','class']].drop_duplicates().sort_values(by=['region','class']).reset_index(drop=True)
-    num_profiles = len(df_rep)
-    #Get the hourly profiles from the provided h5 file path.
-    h5path = os.path.join(
-        rev_case_path, profile_dir, 
-        '{}_rep_profiles_{}.h5'.format(
-            rev_prefix if profile_dir == '' else profile_dir, select_year))
-    with tables.open_file(h5path, 'r', driver=driver) as h5:
-        #iniitialize avgs_arr and reps_arr with the right dimensions
-        avgs_arr = np.zeros((8760,num_profiles))
-        reps_arr = avgs_arr.copy()
-        reps_idx = []
-        timezones = []
-        #get idxls, the index of the profiles, which excludes half hour for pv, e.g.
-        times = h5.root['time_index'][:].astype('datetime64')
-        time_df = pd.DataFrame({'datetime':times})
-        idxls = time_df[time_df['datetime'].dt.minute == 0].index.tolist()
-        t0 = datetime.datetime.now()
-        #For each region+class combination, gather all the associated profiles to calculate the
-        #weighted average and representative profile (adding to avgs_arr and reps_arr respectively).
-        for i,r in df_rep.iterrows():
-            t1 = datetime.datetime.now()
-            df_rc = df_sc[(df_sc['region'] == r['region']) & (df_sc['class'] == r['class'])].copy()
-            df_rc = df_rc.reset_index(drop=True)
-            #Get the list of IDs, weights, and timezones for each region+class
-            idls = df_rc[profile_id_col].tolist()
-            wtls = df_rc[profile_weight_col].tolist()
-            tzls = df_rc['timezone'].tolist()
-            tzls = [int(t) for t in tzls]
-            if df_rc[profile_id_col].dtype == object:
-                #This means there is a list of IDs and weights for each supply curve row (e.g. for PV).
-                #So we need additional processing to gather all the IDs for profile retrieval:
-                idls = [json.loads(l) for l in idls]
-                wtls = [json.loads(l) for l in wtls]
-                #We need to duplicate tzls entries to match up with idls
-                for n in range(len(tzls)):
-                    tzls[n] = [tzls[n]] * len(idls[n])
-                #flatten lists and gather into dataframe
-                idls = [item for sublist in idls for item in sublist]
-                wtls = [item for sublist in wtls for item in sublist]
-                tzls = [item for sublist in tzls for item in sublist]
-                df_ids = pd.DataFrame({'idls':idls, 'wtls':wtls, 'tzls':tzls})
-                #Remove duplicate IDs by summing the weighting factors for each ID.
-                #This also ends up sorting by id, important for h5 retrieval:
-                df_ids =  df_ids.groupby(['idls'], as_index =False).agg({'wtls':sum, 'tzls':lambda x: x.iloc[0]})
-                idls = df_ids['idls'].tolist()
-                wtls = df_ids['wtls'].tolist()
-                tzls = df_ids['tzls'].tolist()
-            if len(idls) != len(wtls):
-                logger.info('ERROR: IDs and weights have different length!')
-            t2 = datetime.datetime.now()
-            #The 'smart' method will grab profiles as a slice if the average spacing of those profiles
-            #is less than 250 (based on some manual speed tests). If the average spacing is greater than 250,
-            #this method simply grabs each profile separately (which requires separate io steps).
-            ave_spacing = (max(idls) - min(idls))/len(idls)
-            if gather_method == 'slice' or (gather_method == 'smart' and ave_spacing < 250):
-                min_idls = min(idls)
-                orig_idls_idx = [j - min_idls for j in idls]
-                arr = h5.root[profile_dset][:,min_idls:max(idls)+1]
-                arr = arr[:, orig_idls_idx].copy()
-            else:
-                arr = h5.root[profile_dset][:,idls]
-            t3 = datetime.datetime.now()
-            #reduce elements to on the hour using idxls
-            arr = arr[idxls,:]
-            arr = arr.T
-            #Take weighted average and add to avgs_arr
-            avg_arr = np.average(arr, axis=0, weights=wtls)
-            avgs_arr[:,i] = avg_arr
-            #Now find the profile in arr that is most representative, ie has the minimum error
-            if rep_profile_method == 'rmse':
-                errs = np.sqrt(((arr-avg_arr)**2).mean(axis=1))
-            elif rep_profile_method == 'ave':
-                errs = abs(arr.sum(axis=1) - avg_arr.sum())
-            min_idx = np.argmin(errs)
-            reps_arr[:,i] = arr[min_idx]
-            #For reference, save the id and timezone, of the represenative profile
-            reps_idx.append(idls[min_idx])
-            timezones.append(tzls[min_idx])
-            #Output to logger the time spent on this region+class and progress made.
-            t4 = datetime.datetime.now()
-            frac = (i+1)/num_profiles
-            pct = round(frac*100)
-            tthis = round((t4 - t1).total_seconds(),2)
-            th5 = round((t3 - t2).total_seconds(),2)
-            ttot = (t4 - t0).total_seconds()
-            mtot, stot = divmod(round(ttot), 60)
-            tlft = ttot*(1- frac)/frac
-            mlft, slft = divmod(round(tlft), 60)
-            logger.info(str(pct)+'%'+
-                  '\treg='+str(r['region'])+
-                  '\tcls='+str(r['class'])+
-                  '\tt='+str(tthis)+'s'+
-                  '\th5= '+str(th5)+'s'+
-                  '\ttot='+str(mtot)+'m,'+str(stot)+'s'+
-                  '\tlft='+str(mlft)+'m,'+str(slft)+'s')
-
-        #scale the data as necessary
-        if 'scale_factor' in h5.root[profile_dset].attrs:
-            scale = h5.root[profile_dset].attrs['scale_factor']
-            reps_arr = reps_arr / scale
-            avgs_arr = avgs_arr / scale
-    df_rep['rep_gen_gid'] = reps_idx
-    df_rep['timezone'] = timezones
-
-    logger.info('Done getting profiles: '+ str(datetime.datetime.now() - startTime))
-    return df_rep, avgs_arr, reps_arr
-
-def get_individual_profiles(df_sc, rev_case_path, rev_prefix, select_year, profile_dset, profile_id_col, driver):
-    logger.info('Getting individual site profiles for select year')
-    startTime = datetime.datetime.now()
-    df_rep = df_sc[['region','class',profile_id_col,'timezone']].copy().reset_index(drop=True)
-    df_rep = df_rep.rename(columns={profile_id_col:'rep_gen_gid'})
-    df_rep['timezone'] = df_rep['timezone'].astype(int)
-    h5 = tables.open_file(rev_case_path + '/' + rev_prefix + '_rep_profiles_' + str(select_year) + '.h5', 'r', driver=driver)
-    reps_arr = h5.root[profile_dset][:]
-    reps_arr = reps_arr[:, df_rep['rep_gen_gid'].tolist()].copy()
-    if 'scale_factor' in h5.root[profile_dset].attrs:
-        scale = h5.root[profile_dset].attrs['scale_factor']
-        reps_arr = reps_arr / scale
-    h5.close()
-    avgs_arr = reps_arr.copy()
-    logger.info('Done getting profiles: '+ str(datetime.datetime.now() - startTime))
-    return df_rep, avgs_arr, reps_arr
-
-def get_profiles_allyears(df_rep, rev_case_path, rev_prefix, hourly_out_years, profile_dset, driver, profile_dir):
-    #Based on the representative profiles selected in get_profiles(), gather the profiles for all other years
+def get_profiles_allyears_weightedave(
+        df_sc, rev_cases_path, rev_prefix, hourly_out_years, profile_dset,
+        profile_dir, profile_id_col, profile_weight_col, select_year, tech):
+    """
+    Get the weighted average profiles for all years rather than representative profiles
+    """
     logger.info('Getting multiyear profiles...')
     startTime = datetime.datetime.now()
-    idls = df_rep['rep_gen_gid'].tolist()
-    reps_arr_out = np.empty((0, len(idls)))
+    ### Create df_rep, the dataframe to map reigon,class to timezone, using capacity weighting to assign timezone.
+    def wm(x):
+        return np.average(x, weights=df_sc.loc[x.index, 'capacity']) if df_sc.loc[x.index, 'capacity'].sum() > 0 else 0
+    df_rep = df_sc.groupby(['region','class'], as_index =False).agg({'timezone':wm})
+    df_rep['timezone'] = df_rep['timezone'].round().astype(int)
+    #%% Get the weights
+    dfweight_regionclass = df_sc.groupby(['region','class'])[profile_weight_col].sum()
+    dfweight_id = (
+        df_sc[['region','class',profile_weight_col,profile_id_col]]
+        .merge(
+            dfweight_regionclass, left_on=['region','class'], right_index=True,
+            suffixes=['_index','_regionclass'])
+        .sort_values(profile_id_col)
+    )
+    dfweight_id['weight'] = (
+        dfweight_id[profile_weight_col+'_index']
+        / dfweight_id[profile_weight_col+'_regionclass'])
+    colweight = dfweight_id.set_index(profile_id_col).weight.copy()
+    id_to_regionclass = pd.Series(
+        index=dfweight_id[profile_id_col],
+        data=zip(dfweight_id.region, dfweight_id['class']),
+    )
+    ### Load hourly profile for each year
+    dfyears = []
     for year in hourly_out_years:
         h5path = os.path.join(
-            rev_case_path, profile_dir, 
-            '{}_rep_profiles_{}.h5'.format(
-                rev_prefix if profile_dir == '' else profile_dir, year))
-        with tables.open_file(h5path, 'r', driver=driver) as h5:
-            arr = h5.root[profile_dset][:,idls]
-            reps_arr_out = np.vstack((reps_arr_out, arr))
+            rev_cases_path, profile_dir, f'{rev_prefix}_rep-profiles_{year}.h5')
+        with h5py.File(h5path, 'r') as h5:
+            dfall = pd.DataFrame(h5[profile_dset][:])
+            df_meta = pd.DataFrame(h5['meta'][:])
+        
+        ### Check that meta and profile are the same dimensions
+        assert dfall.shape[1] == df_meta.shape[0], f"Dimensions of profile ({dfall.shape[1]}) do not match meta file dimensions ({df_meta.shape[0]}) in {rev_prefix}_rep-profiles_{year}.h5"        
+        ### Change hourly profile column names from simple index to associated sc_point_gid
+        dfall.columns = dfall.columns.map(df_meta[profile_id_col])
+        ### Multiply each column by its weight, then drop the unweighted columns
+        dfall *= colweight
+        dfall.dropna(axis=1, inplace=True)
+        ### Switch to (region,class) index
+        dfall.columns = dfall.columns.map(id_to_regionclass)
+        ### Sum by (region,class)
+        dfall = dfall.sum(axis=1, level=[0,1])
+        ### Keep columns in the (region,class) order from df_rep
+        dfall = dfall[list(zip(df_rep.region, df_rep['class']))].copy()
+        dfyears.append(dfall)
+        #If this is select_year, save avgs_arr for output
+        if year == select_year:
+            avgs_arr = dfall.values
         logger.info('Done with ' + str(year))
+
+    ### Concatenate individual years, drop indices
+    reps_arr_out = pd.concat(dfyears, axis=0).values
     logger.info('Done getting multiyear profiles: '+ str(datetime.datetime.now() - startTime))
-    return reps_arr_out
+    return df_rep, reps_arr_out, avgs_arr
 
 def shift_timezones(arr, df_rep, source_timezone, output_timezone):
     #Shift timezone of hourly data
@@ -475,7 +360,7 @@ def shift_timezones(arr, df_rep, source_timezone, output_timezone):
         arr = arr.T
     return arr
 
-def calc_performance(avgs_arr, reps_arr, df_rep, timeslice_path, cfmean_type, add_h17):
+def calc_performance(avgs_arr, df_rep, timeslice_path, add_h17):
     #Calculated aggregated performance characteristics for each region+class, including capacity factor,
     #capacity factor corrections, and standard deviations by timeslice, based on representative
     #profiles.
@@ -487,11 +372,7 @@ def calc_performance(avgs_arr, reps_arr, df_rep, timeslice_path, cfmean_type, ad
     df_cfmean_ts = df_cf.copy()
     df_cfsigma_ts = df_cf.copy()
     df_cfcorr_ts = df_cf.copy()
-    #Use either avgs_arr or reps_arr for average capacity factors, depending on cfmean_type.
-    if cfmean_type == 'ave':
-        cfmean_arr = avgs_arr.copy()
-    elif cfmean_type == 'rep':
-        cfmean_arr = reps_arr.copy()
+    cfmean_arr = avgs_arr.copy()
     #Calculate average capacity factor across the entire year for each region+class.
     df_cf['cfmean'] = np.mean(cfmean_arr, axis=0)
     #For each timeslice, calculate capacity factor, correction factor (timeslice capacity factor divided
@@ -501,8 +382,7 @@ def calc_performance(avgs_arr, reps_arr, df_rep, timeslice_path, cfmean_type, ad
         ts_idx = df_ts[df_ts['timeslice'] == ts].index
         df_cfmean_ts[ts] = np.mean(cfmean_arr[ts_idx], axis=0)
         df_cfcorr_ts[ts] = df_cfmean_ts[ts] / df_cf['cfmean']
-        #We use reps_arr regardless for standard deviations. Perhaps we should use the average of the standard deviations tho...
-        df_cfsigma_ts[ts] = np.std(reps_arr[ts_idx], ddof=1, axis=0)
+        df_cfsigma_ts[ts] = np.std(avgs_arr[ts_idx], ddof=1, axis=0)
     if add_h17:
         #Fill in H17 with H13.
         df_cfmean_ts['H17'] = df_cfmean_ts['H3']
@@ -555,6 +435,139 @@ def save_time_outputs(df_cf, df_cf_ts, df_cfcorr_ts, reps_arr_out, df_rep, start
     df_rep.to_csv(out_dir + 'results/' + tech + '_rep_profiles_meta.csv', index=False)
     logger.info('Done saving time-dependent outputs: '+ str(datetime.datetime.now() - startTime))
 
+
+def map_supplycurve(
+        tech, rev_sc_file_path, out_dir,
+        cm=None, dpi=None,
+    ):
+    #%%### Imports
+    ## Turn off loggers for imported packages
+    for i in ['matplotlib','shapely','fiona','pyproj']:
+        logging.getLogger(i).setLevel(logging.CRITICAL)
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import os, site
+    import geopandas as gpd
+    os.environ['PROJ_NETWORK'] = 'OFF'
+
+    reedspath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    site.addsitedir(os.path.join(reedspath,'postprocessing'))
+    import plots
+    plots.plotparams()
+
+    os.makedirs(os.path.join(out_dir, 'plots'), exist_ok=True)
+
+    #%%### Format inputs
+    if not cm:
+        cmap = plt.cm.gist_earth_r
+    else:
+        cmap = cm
+    ms = {'wind-ofs':1.75, 'wind-ons':2.65, 'upv':2.65}[tech]
+
+    labels = {
+        'capacity': 'Available capacity [MW]',
+        'trans_cap_cost_per_kw': 'Spur-line cost [$/kW]',
+        'mean_cf': 'Capacity factor [.]',
+        'dist_km': 'Spur-line distance [km]',
+        'area_sq_km': 'Area [km^2]',
+        'mean_lcoe': 'LCOE [$/MWh]',
+        'lcot': 'LCOT [$/MWh]',
+        'dist_to_coast': 'Distance to coast [km?]',
+    }
+    vmax = {
+        'capacity': {'wind-ons':400.,'wind-ofs':600.,'upv':4000.}[tech],
+        'trans_cap_cost_per_kw': 1000.,
+        'mean_cf': 0.60,
+        'dist_km': 100.,
+        'area_sq_km': 11.5**2,
+        'mean_lcoe': 100.,
+        'lcot': 100.,
+        'dist_to_coast': 437.,
+    }
+    vmin = {
+        'capacity': 0.,
+        'trans_cap_cost_per_kw': 0.,
+        'mean_cf': 0.,
+        'dist_km': 0.,
+        'area_sq_km': 0.,
+        'mean_lcoe': 0.,
+        'lcot': 0.,
+        'dist_to_coast': 0.,
+    }
+    background = {
+        'capacity': False,
+        'trans_cap_cost_per_kw': True,
+        'mean_cf': True,
+        'dist_km': True,
+        'area_sq_km': False,
+        'mean_lcoe': True,
+        'lcot': True,
+        'dist_to_coast': True,
+    }
+
+    #%%### Load data
+    dfsc = pd.read_csv(rev_sc_file_path, index_col='sc_point_gid')
+    ### Convert to geopandas dataframe
+    dfsc = plots.df2gdf(dfsc)
+
+    #%% Load ReEDS regions
+    dfba = (
+        gpd.read_file(os.path.join(reedspath,'inputs','shapefiles','US_PCA'))
+        .set_index('rb'))
+    ### Aggregate to states
+    dfstates = dfba.dissolve('st')
+    ### Get the lakes
+    lakes = gpd.read_file(os.path.join(reedspath,'inputs','shapefiles','greatlakes.gpkg'))
+
+    #%% Processing
+    dfplot = dfsc.copy()
+    ## Convert to $/kW
+    dfplot['trans_cap_cost_per_kw'] = dfplot['trans_cap_cost_per_mw'] / 1000
+    if 'dist_to_coast' in dfplot:
+        dfplot['dist_to_coast'] /= 1000
+
+    #%% Plot it
+    for col in labels:
+        if col not in dfplot:
+            continue
+        plt.close()
+        f,ax = plt.subplots(figsize=(12,9), dpi=dpi)
+        ### Background
+        if background[col]:
+            dfba.plot(ax=ax, facecolor='C7', edgecolor='none', lw=0.3, zorder=-1e6)
+        dfba.plot(ax=ax, facecolor='none', edgecolor='k', lw=0.3, zorder=1e6)
+        dfstates.plot(ax=ax, facecolor='none', edgecolor='k', lw=0.5, zorder=2e6)
+        lakes.plot(ax=ax, edgecolor='#2CA8E7', facecolor='#D3EFFA', lw=0.2, zorder=-1)
+        ### Map of data
+        dfplot.plot(
+            ax=ax, column=col,
+            cmap=cmap, marker='s', markersize=ms, lw=0,
+            legend=False, vmin=vmin[col], vmax=vmax[col],
+        )
+        ### Colorbar-histogram
+        plots.addcolorbarhist(
+            f=f, ax0=ax, data=dfplot[col].values,
+            title=labels[col], cmap=cmap,
+            vmin=vmin[col], vmax=vmax[col],
+            orientation='horizontal', labelpad=2.1, cbarbottom=-0.06,
+            cbarheight=0.7, log=False,
+            nbins=101, histratio=2,
+            ticklabel_fontsize=20, title_fontsize=24,
+            extend='neither',
+        )
+        ### Annotation
+        ax.set_title(rev_sc_file_path, fontsize='small', y=0.97)
+        note = str(dfplot[col].describe().round(3))
+        note = note[:note.index('\nName')]
+        ax.annotate(note, (-1.05e6, -1.05e6), ha='right', va='top', fontsize=8)
+        ### Formatting
+        ax.axis('off')
+        plt.savefig(os.path.join(out_dir, 'plots', f'{tech}-{col}.png'), dpi=dpi)
+        plt.close()
+        logger.info(f'mapped {col}')
+
+
+#%% Run it
 if __name__== '__main__':
     #%% Initial setup - copy input files, create output directories
     startTime = datetime.datetime.now()
@@ -562,47 +575,34 @@ if __name__== '__main__':
     out_dir = this_dir_path + 'out/' + cf.out_dir
     setup(
         this_dir_path=this_dir_path, out_dir=out_dir,
-        paths=[cf.timeslice_path, cf.class_path, cf.reg_map_path])
+        paths=[cf.timeslice_path, cf.class_path, cf.reg_map_path],
+        rev_cases_path=cf.rev_cases_path, profile_dir=cf.profile_dir,
+    )
     #%% Get supply curves
     df_sc = get_supply_curve_and_preprocess(
-        tech=cf.tech, rev_case_path=cf.rev_case_path, rev_prefix=cf.rev_prefix, reg_col=cf.reg_col,
-        profile_id_col=cf.profile_id_col, reg_out_col=cf.reg_out_col,
+        tech=cf.tech, rev_sc_file_path=cf.rev_sc_file_path, rev_prefix=cf.rev_prefix, reg_col=cf.reg_col,
+        reg_out_col=cf.reg_out_col,
         reg_map_path=cf.reg_map_path, min_cap=cf.min_cap,
-        individual_sites=cf.individual_sites, existing_sites=cf.existing_sites,
+        individual_sites=cf.individual_sites, existing_sites=cf.existing_sites, state_abbrev=cf.state_abbrev,
         start_year=cf.start_year, filter_cols=cf.filter_cols,
         test_mode=cf.test_mode,test_filters=cf.test_filters)
     #%% Add classes
     df_sc = add_classes(df_sc=df_sc, class_path=cf.class_path)
     #%% Add bins
-    df_sc = add_bins(
-        df_sc=df_sc, individual_sites=cf.individual_sites, bin_group_cols=cf.bin_group_cols,
-        bin_col=cf.bin_col, bin_num=cf.bin_num, bin_method=cf.bin_method, tech=cf.tech)
+    df_sc = add_cost(df_sc=df_sc, bin_col=cf.bin_col, transcost_col=cf.transcost_col)
     #%% Save the supply curve
     save_sc_outputs(
         df_sc=df_sc, individual_sites=cf.individual_sites, existing_sites=cf.existing_sites,
         start_year=cf.start_year, bin_col=cf.bin_col, out_dir=out_dir, tech=cf.tech,
-        reg_map_path=cf.reg_map_path)
+        reg_map_path=cf.reg_map_path, distance_cols=cf.distance_cols,
+        subtract_exog=cf.subtract_exog)
     #%% Get the profiles
-    if cf.individual_sites:
-        df_rep, avgs_arr, reps_arr = get_individual_profiles(
-            df_sc=df_sc, rev_case_path=cf.rev_case_path, rev_prefix=cf.rev_prefix,
-            select_year=cf.select_year, profile_dset=cf.profile_dset,
-            profile_id_col=cf.profile_id_col, driver=cf.driver)
-    else:
-        df_rep, avgs_arr, reps_arr = get_profiles(
-            df_sc=df_sc, rev_case_path=cf.rev_case_path, rev_prefix=cf.rev_prefix,
-            select_year=cf.select_year, profile_dset=cf.profile_dset,
-            profile_id_col=cf.profile_id_col, profile_weight_col=cf.profile_weight_col,
-            rep_profile_method=cf.rep_profile_method, driver=cf.driver,
-            gather_method=cf.gather_method, profile_dir=cf.profile_dir)
-    reps_arr_out = get_profiles_allyears(
-        df_rep=df_rep, rev_case_path=cf.rev_case_path, rev_prefix=cf.rev_prefix,
-        hourly_out_years=cf.hourly_out_years, profile_dset=cf.profile_dset, driver=cf.driver,
-        profile_dir=cf.profile_dir)
+    df_rep, reps_arr_out, avgs_arr = get_profiles_allyears_weightedave(
+        df_sc=df_sc, rev_cases_path=cf.rev_cases_path, rev_prefix=cf.rev_prefix,
+        hourly_out_years=cf.hourly_out_years, profile_dset=cf.profile_dset,
+        profile_dir=cf.profile_dir, profile_id_col=cf.profile_id_col,
+        profile_weight_col=cf.profile_weight_col, select_year=cf.select_year, tech=cf.tech)
     #%% Shift timezones
-    reps_arr = shift_timezones(
-        arr=reps_arr, df_rep=df_rep,
-        source_timezone=cf.resource_source_timezone, output_timezone=cf.agg_outputs_timezone)
     reps_arr_out = shift_timezones(
         arr=reps_arr_out, df_rep=df_rep,
         source_timezone=cf.resource_source_timezone, output_timezone=cf.hourly_outputs_timezone)
@@ -611,11 +611,18 @@ if __name__== '__main__':
         source_timezone=cf.resource_source_timezone, output_timezone=cf.agg_outputs_timezone)
     #%% Get timeslice outputs
     df_cf, df_cf_ts, df_cfcorr_ts = calc_performance(
-        avgs_arr=avgs_arr, reps_arr=reps_arr, df_rep=df_rep, timeslice_path=cf.timeslice_path,
-        cfmean_type=cf.cfmean_type, add_h17=cf.add_h17)
+        avgs_arr=avgs_arr, df_rep=df_rep, timeslice_path=cf.timeslice_path,
+        add_h17=cf.add_h17)
     #%% Save timeslice outputs
     save_time_outputs(
         df_cf=df_cf, df_cf_ts=df_cf_ts, df_cfcorr_ts=df_cfcorr_ts, reps_arr_out=reps_arr_out,
         df_rep=df_rep, start_1am=cf.start_1am, out_dir=out_dir, tech=cf.tech,
         filetype=cf.filetype, compression_opts=cf.compression_opts, dtype=cf.dtype)
+    #%% Map the supply curve
+    try:
+        map_supplycurve(
+            tech=cf.tech, rev_sc_file_path=cf.rev_sc_file_path, out_dir=out_dir,
+            cm=None, dpi=None)
+    except Exception as err:
+        logger.info(f'map_cupplycurve() failed with the following exception:\n{err}')
     logger.info('All done! total time: '+ str(datetime.datetime.now() - startTime))

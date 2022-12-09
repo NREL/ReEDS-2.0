@@ -36,8 +36,20 @@ def marginal_curtailment(curt_results):
         Marginal curtailment results.
 
     '''
-    #%%
+    #%% Bypass this calculation if not running Augur
+    if not int(SwitchSettings.switches['gsw_augurcurtailment']):
+        mc_results = {
+            'curt_stor': pd.DataFrame(columns=['i','v','r','h','src','t','value']),
+            'curt_marg': pd.DataFrame(columns=['i','r','h','t','value']),
+            'curt_tran': pd.DataFrame(columns=['r','rr','h','t','value']),
+            'curt_prod': pd.DataFrame(columns=['r','h','t','value']),
+            'net_load_adj_no_curt_h': pd.DataFrame(columns=['r','h','t','value']),
+            'curt_dr': pd.DataFrame(columns=['i','v','r','h','src','t','value']),
+        }
+        trans_region_curt = pd.DataFrame()
+        return mc_results, trans_region_curt
 
+    #%% Continue
     # collect inputs
     techs = INPUTS['i_subsets'].get_data()
 
@@ -45,7 +57,7 @@ def marginal_curtailment(curt_results):
     year =         SwitchSettings.next_year
     marg_stor_MW = SwitchSettings.switches['marg_stor_mw']
     marg_dr_MW =   SwitchSettings.switches['marg_dr_mw']
-    marg_vre_mw =  SwitchSettings.switches['marg_vre_mw']
+    marg_vre_mw =  SwitchSettings.switches['marg_vre_mw_curt']
     marg_trans =   SwitchSettings.switches['curt_tran_step_size']
     marg_prod    = SwitchSettings.switches['marg_prod_size']
 
@@ -59,7 +71,7 @@ def marginal_curtailment(curt_results):
     stor_eff = get_storage_eff()
     cap_stor = cap_stor.merge(stor_eff, on = 'i')
     cap_stor = get_prop(cap_stor, 'storage_duration', merge_cols = ['i'])
-#    cap_stor_reeds =  marg_curt_data['cap_stor_reeds'].copy()
+    # cap_stor_reeds =  marg_curt_data['cap_stor_reeds'].copy()
     cap_dr = GEN_DATA['max_cap'].copy()
     cap_dr = cap_dr[cap_dr['i'].isin(techs['dr1']+techs['dr2'])]
     cap_dr['device'] = cap_dr['i'] + '_' + cap_dr['v'] + cap_dr['r']
@@ -72,24 +84,28 @@ def marginal_curtailment(curt_results):
         .assign(path=tranloss['r'] + '_' + tranloss['rr'])
         .loc[tranloss.trtype=='AC'].drop('trtype', axis=1)
     )
-    resources = INPUTS['resources'].get_data()
-    resource_r = map_rs_to_r(resources)
+    resources_in = INPUTS['resources'].get_data()
+    ### Remove CSP
+    resources = resources_in.loc[~resources_in.resource.str.startswith('csp')].copy()
+    resource_r = map_rs_to_r(resources)[['r','resource']].drop_duplicates()
     rfeas = INPUTS['rfeas'].get_data()['r'].tolist()
     ##! TODO: Do we need a `.groupby('resource').cf_marg.mean()` here?
     gen_marg_vre = filter_data_year(
-                HOURLY_PROFILES['vre_gen_marg'].profiles.copy(),
-                data_years=SwitchSettings.osprey_years)
+        (HOURLY_PROFILES['vre_cf_marg'].profiles
+         * SwitchSettings.switches['marg_vre_mw_curt']),
+        data_years=SwitchSettings.osprey_years
+    )[resources.resource.drop_duplicates().values].copy()
     gen_marg_vre_local = adjust_tz(gen_marg_vre, 
-                                   mapper = resource_r[['r','resource']],
+                                   mapper = resource_r,
                                    option = 'ET_to_local')
     # DR data only exists for 2012 weather year, so no filtering needed
     dr_inc = HOURLY_PROFILES['dr_inc_marg'].profiles.copy()
     dr_inc_local = adjust_tz(dr_inc,
-                             mapper = resource_r[['r', 'resource']],
+                             mapper = resource_r,
                              option = 'ET_to_local')
     dr_dec = HOURLY_PROFILES['dr_dec_marg'].profiles.copy()
     dr_dec_local = adjust_tz(dr_dec,
-                             mapper = resource_r[['r', 'resource']],
+                             mapper = resource_r,
                              option = 'ET_to_local')
 
     # collect osprey_results
@@ -109,6 +125,8 @@ def marginal_curtailment(curt_results):
         .pivot(index='idx_hr', columns='path', values='Val')
         .reindex(index=range(ts_length),
                  columns=trancap['path'].tolist())
+        ## Fill empty flow directions
+        .reindex(trancap.path, axis=1)
         .fillna(0)
     )
     ### BUG Ignore VSC for now
@@ -123,7 +141,7 @@ def marginal_curtailment(curt_results):
     
     if SwitchSettings.switches['gsw_transmultilink'] != '0':
         path_mapper_multi = pd.read_csv(
-            os.path.join('inputs_case','trans-multilink-paths.csv')
+            os.path.join('inputs_case','trans_multilink_paths.csv')
         )[['r','rr','path','loss']]
 
         path_mapper_multi['path'] = path_mapper_multi['path'].map(
@@ -188,8 +206,7 @@ def marginal_curtailment(curt_results):
 
     # map all vre resources in the "i" set to the "r" set - wind is normally
     # mapped to s-region rather than p-region
-    i_resource_r = map_rs_to_r(resources)
-    i_resource_r = i_resource_r[['i', 'resource', 'r']]
+    i_resource_r = map_rs_to_r(resources)[['i', 'resource', 'r']].drop_duplicates()
     # filter for utility-scale resources and distributed resources seperately
     i_resource_r_utility = i_resource_r[i_resource_r['i'].isin(
         techs['vre_utility']+techs['pvb'])].reset_index(drop=True)
@@ -409,12 +426,12 @@ def marginal_curtailment(curt_results):
     imports_can_reduce = pd.merge(
         left=path_mapper[['rr', 'path']], right=imports_can_reduce.T.reset_index(), 
         on='path'
-    ).groupby('rr').sum().T
+    ).groupby('rr').sum().T.reindex(rfeas, axis=1).fillna(0)
 
     exports_avail_path = pd.merge(
         left=path_mapper[['r', 'path']], right=exports_avail_path.T.reset_index(), 
         on='path'
-    ).groupby('r').sum().T
+    ).groupby('r').sum().T.reindex(rfeas, axis=1).fillna(0)
 
     # Adjust the marginal net load by the available transmission to get
     # available load for marginal resources. Only do this where there is
@@ -472,7 +489,7 @@ def marginal_curtailment(curt_results):
 
     ###### Convert to local time, then to timeslice for ReEDS
     marg_curt_local = adjust_tz(
-        df=marg_curt, mapper=resource_r[['r','resource']], option='ET_to_local')
+        df=marg_curt, mapper=resource_r, option='ET_to_local')
 
     # get marginal curtailment by time slice
     marg_curt_h = pd.concat([hdtmap_single[['h']], marg_curt_local], sort=False,
@@ -514,7 +531,7 @@ def marginal_curtailment(curt_results):
         ### Also convert to local to align with marg_curt_h_utility
         net_load_marg_utility_local = adjust_tz(
             df=net_load_marg[load_avail_resource_utility.columns],
-            mapper=i_resource_r_utility[['r','resource']], option='ET_to_local'
+            mapper=i_resource_r_utility[['r','resource']].drop_duplicates(), option='ET_to_local'
         )
         marg_curt_h_utility = marg_curt_stor_h[
                 load_avail_resource_utility.columns]
@@ -653,7 +670,7 @@ def marginal_curtailment(curt_results):
             marg_curt_h=curt_resource_device_utility_h)
     
         # get the state-of-charge of storage from Osprey (in eastern time)
-        stor_level = INPUTS['osprey_SOC'].get_data(SwitchSettings.next_year)
+        stor_level = INPUTS['osprey_SOC'].get_data(SwitchSettings.prev_year)
         stor_level['device'] = stor_level['i'] + stor_level['v'] + \
                                 stor_level['r']
         stor_level['idx_hr'] = ((stor_level.d.str[1:].astype(int) - 1)*24
@@ -823,258 +840,268 @@ def marginal_curtailment(curt_results):
     # Calculate recovery of marginal curtailment with marginal DR
     # =========================================================================
 
-    # each resource region is calculated individually, and then the results
-    # are averaged across VG type
+    if int(SwitchSettings.switches['gsw_dr']):
 
-    marg_curt_marg_dr_recovery_ratio = dict()
-    shift_techs = [i for i in dr_inc_local.index.get_level_values(level='i').drop_duplicates()
-                   if i in dr_dec_local.index.get_level_values(level='i').drop_duplicates()]
-    for i in shift_techs:
-        # Get DR profiles, repeated for each resource region
-        dr_inc_tmp = dr_inc_local.xs(i, level='i').reset_index(drop=True)
-        dr_dec_tmp = dr_dec_local.xs(i, level='i').reset_index(drop=True)
+        # each resource region is calculated individually, and then the results
+        # are averaged across VG type
 
-        cols = [c for c in dr_inc_tmp.columns
-                if c in net_load_marg.columns]
-        ### Also convert to local to align with marg_curt_h_utility
-        net_load_marg_utility_local = adjust_tz(
-            df=net_load_marg[cols],
-            mapper = resource_r[['r', 'resource']],
-            option='ET_to_local'
-        )
+        marg_curt_marg_dr_recovery_ratio = dict()
+        shift_techs = [i for i in dr_inc_local.index.get_level_values(level='i').drop_duplicates()
+                    if i in dr_dec_local.index.get_level_values(level='i').drop_duplicates()]
+        for i in shift_techs:
+            # Get DR profiles, repeated for each resource region
+            dr_inc_tmp = dr_inc_local.xs(i, level='i').reset_index(drop=True)
+            dr_dec_tmp = dr_dec_local.xs(i, level='i').reset_index(drop=True)
 
-        # clip marg_curt_local at +/- marg_DR_MW to get the available
-        # charge/discharge profile of marginal DR for marginal VRE
-        clip_tmp = net_load_marg_utility_local.where(
-            net_load_marg_utility_local > -dr_inc_tmp, -dr_inc_tmp)
-        poss_dr_changes_marg_local = - clip_tmp.where(
-            clip_tmp < dr_dec_tmp, dr_dec_tmp)
+            cols = [c for c in dr_inc_tmp.columns
+                    if c in net_load_marg.columns]
+            ### Also convert to local to align with marg_curt_h_utility
+            net_load_marg_utility_local = adjust_tz(
+                df=net_load_marg[cols],
+                mapper = resource_r,
+                option='ET_to_local'
+            )
 
-        marg_curt_dr = poss_dr_changes_marg_local.where(
-            poss_dr_changes_marg_local > 0, 0)
-        marg_curt_dr_h = pd.concat([hdtmap_single[['h']], marg_curt_dr],
-                                     sort=False, axis=1).groupby('h').sum()
+            # clip marg_curt_local at +/- marg_DR_MW to get the available
+            # charge/discharge profile of marginal DR for marginal VRE
+            clip_tmp = net_load_marg_utility_local.where(
+                net_load_marg_utility_local > -dr_inc_tmp, -dr_inc_tmp)
+            poss_dr_changes_marg_local = - clip_tmp.where(
+                clip_tmp < dr_dec_tmp, dr_dec_tmp)
 
-        # Get the marginal curtialment recovery rate for each marginal DR 
-        # technology
-        marg_curt_marg_dr_recovery_ratio[i] = dr_curt_recovery(
-            hrs=marg_dr_props.loc[i, 'hrs'], eff=marg_dr_props.loc[i, 'RTE'],
-            ts_length=ts_length, poss_dr_changes=poss_dr_changes_marg_local,
-            hdtmap=hdtmap_single, marg_curt_h=marg_curt_dr_h)
-    
-    # =========================================================================
-    # Repeating for marginal DR with existing curtailment
-    # =========================================================================
+            marg_curt_dr = poss_dr_changes_marg_local.where(
+                poss_dr_changes_marg_local > 0, 0)
+            marg_curt_dr_h = pd.concat([hdtmap_single[['h']], marg_curt_dr],
+                                        sort=False, axis=1).groupby('h').sum()
 
-    exist_curt_marg_dr_recovery_ratio = dict()
-    ### Use local time since outputs are by timeslice
-    # clip net_load_adj at +/- marg_DR_MW to get the available
-    # charge/discharge profile of marginal DR with existing VRE
-    shift_techs = [i for i in dr_inc_local.index.get_level_values(level='i').drop_duplicates()
-                   if i in dr_dec_local.index.get_level_values(level='i').drop_duplicates()]
-    for i in shift_techs:
-        cols = [c for c in dr_inc_local.columns
-                if c in net_load_marg_utility_local.columns]
-        if not cols:
-            continue
-        dr_inc_tmp = dr_inc_local.xs(i, level='i').reset_index(drop=True)
-        dr_dec_tmp = dr_dec_local.xs(i, level='i').reset_index(drop=True)
-        clip_tmp = net_load_marg_utility_local[cols].where(
-            net_load_marg_utility_local[cols] > -dr_inc_tmp, -dr_inc_tmp)
-        poss_dr_changes_margexist_local = - clip_tmp.where(clip_tmp < dr_dec_tmp, dr_dec_tmp)
-    
-        # Identify total curtailment marginal DR could have recovered so
-        # that curtailment recovery is relative to how much marginal DR could
-        # have recovered if it was able to recover at a flat MW level
-        # "could have recovered" for DR is the availibility to increase load
-        # during hours of curtailment, and is just the positive values from above
-        curt_region_local = poss_dr_changes_margexist_local.where(
-            poss_dr_changes_margexist_local > 0, 0)
-        # Get existing curtailment by timeslice
-        curt_region_h = pd.concat([hdtmap_single[['h']], curt_region_local], sort=False,
-                                  axis=1).groupby('h').sum()
+            # Get the marginal curtialment recovery rate for each marginal DR 
+            # technology
+            marg_curt_marg_dr_recovery_ratio[i] = dr_curt_recovery(
+                hrs=marg_dr_props.loc[i, 'hrs'], eff=marg_dr_props.loc[i, 'RTE'],
+                ts_length=ts_length, poss_dr_changes=poss_dr_changes_marg_local,
+                hdtmap=hdtmap_single, marg_curt_h=marg_curt_dr_h)
+        
+        # =========================================================================
+        # Repeating for marginal DR with existing curtailment
+        # =========================================================================
 
-        # Get the existing curtailment recovery rate for marginal DR
-        # technology i
-        marg_dr_hr = marg_dr_props.loc[i, 'hrs']
-        exist_curt_marg_dr_recovery_ratio[i] = dr_curt_recovery(
-            hrs=marg_dr_hr, eff=marg_dr_props.loc[i, 'RTE'], ts_length=ts_length,
-            poss_dr_changes=poss_dr_changes_margexist_local, 
-            hdtmap=hdtmap_single, marg_curt_h=curt_region_h[cols])
+        exist_curt_marg_dr_recovery_ratio = dict()
+        ### Use local time since outputs are by timeslice
+        # clip net_load_adj at +/- marg_DR_MW to get the available
+        # charge/discharge profile of marginal DR with existing VRE
+        shift_techs = [i for i in dr_inc_local.index.get_level_values(level='i').drop_duplicates()
+                    if i in dr_dec_local.index.get_level_values(level='i').drop_duplicates()]
+        for i in shift_techs:
+            cols = [c for c in dr_inc_local.columns
+                    if c in net_load_marg_utility_local.columns]
+            if not cols:
+                continue
+            dr_inc_tmp = dr_inc_local.xs(i, level='i').reset_index(drop=True)
+            dr_dec_tmp = dr_dec_local.xs(i, level='i').reset_index(drop=True)
+            clip_tmp = net_load_marg_utility_local[cols].where(
+                net_load_marg_utility_local[cols] > -dr_inc_tmp, -dr_inc_tmp)
+            poss_dr_changes_margexist_local = - clip_tmp.where(clip_tmp < dr_dec_tmp, dr_dec_tmp)
+        
+            # Identify total curtailment marginal DR could have recovered so
+            # that curtailment recovery is relative to how much marginal DR could
+            # have recovered if it was able to recover at a flat MW level
+            # "could have recovered" for DR is the availibility to increase load
+            # during hours of curtailment, and is just the positive values from above
+            curt_region_local = poss_dr_changes_margexist_local.where(
+                poss_dr_changes_margexist_local > 0, 0)
+            # Get existing curtailment by timeslice
+            curt_region_h = pd.concat([hdtmap_single[['h']], curt_region_local], sort=False,
+                                    axis=1).groupby('h').sum()
 
-    # =========================================================================
-    # Calculating ability of existing DR to reduce marginal curtailment
-    # =========================================================================
+            # Get the existing curtailment recovery rate for marginal DR
+            # technology i
+            marg_dr_hr = marg_dr_props.loc[i, 'hrs']
+            exist_curt_marg_dr_recovery_ratio[i] = dr_curt_recovery(
+                hrs=marg_dr_hr, eff=marg_dr_props.loc[i, 'RTE'], ts_length=ts_length,
+                poss_dr_changes=poss_dr_changes_margexist_local, 
+                hdtmap=hdtmap_single, marg_curt_h=curt_region_h[cols])
 
-    if cap_dr.size > 0:
-        # Reset net load marg
-        net_load_marg_utility_local = adjust_tz(
-            df=net_load_marg[load_avail_resource_utility.columns],
-            mapper = resource_r[['r','resource']], option='ET_to_local'
-        )
+        # =========================================================================
+        # Calculating ability of existing DR to reduce marginal curtailment
+        # =========================================================================
 
-        # Map DR devices to resource_device combinations
-        cap_dr_resource_device = pd.merge(
-            left=resource_dr_utility[['device', 'resource_device']],
-            right=cap_dr, how='right', on='device')
+        if cap_dr.size > 0:
+            # Reset net load marg
+            net_load_marg_utility_local = adjust_tz(
+                df=net_load_marg[load_avail_resource_utility.columns],
+                mapper = resource_r, option='ET_to_local'
+            )
 
-        # expand net_load_marg_utility to include a profile for every utility
-        # scale resource-DR device combination
-        net_load_marg_resource_dr_utility_local = expand_df(
-            df=net_load_marg_utility_local,
-            expand=resource_dr_utility[
-                ['resource', 'device', 'r', 'resource_device']],
-            old_col='resource', new_col='resource_device',
-            drop_cols=['resource', 'device', 'r'])
-        # reorder columns to match cap_dr_resource_device
-        net_load_marg_resource_dr_utility_local = \
-            net_load_marg_resource_dr_utility_local[
-                cap_dr_resource_device['resource_device']]
+            # Map DR devices to resource_device combinations
+            cap_dr_resource_device = pd.merge(
+                left=resource_dr_utility[['device', 'resource_device']],
+                right=cap_dr, how='right', on='device')
 
-        # Get existing DR usage in Osprey in same format as above
-        dr_inc_osprey = OSPREY_RESULTS['dr_inc'].get_data()
-        dr_inc_osprey.i = dr_inc_osprey.i.str.lower()  # Standardize names
-        dr_inc_osprey['idx_hr'] = ((dr_inc_osprey.d.str[1:].astype(int) - 1)*24
-                                   + dr_inc_osprey.hr.str[2:].astype(int) - 1)
-        dr_dec_osprey = OSPREY_RESULTS['gen'].get_data()[resource_dr_utility.device.values]
-        dr_dec_osprey = dr_dec_osprey.reset_index().melt(id_vars='idx_hr', var_name='device',
-                                                         value_name='Val')
+            # expand net_load_marg_utility to include a profile for every utility
+            # scale resource-DR device combination
+            net_load_marg_resource_dr_utility_local = expand_df(
+                df=net_load_marg_utility_local,
+                expand=resource_dr_utility[
+                    ['resource', 'device', 'r', 'resource_device']],
+                old_col='resource', new_col='resource_device',
+                drop_cols=['resource', 'device', 'r'])
+            # reorder columns to match cap_dr_resource_device
+            net_load_marg_resource_dr_utility_local = \
+                net_load_marg_resource_dr_utility_local[
+                    cap_dr_resource_device['resource_device']]
 
-        # Expand DR increase data and subtract off osprey results
-        dr_inc_local['idx_hr'] = list(range(0, 8760)) * len(dr_inc_local.index.drop_duplicates())
-        dr_inc_local = dr_inc_local.reset_index().set_index('idx_hr')
-        dr_inc_tmp = pd.merge(dr_inc_local.melt(id_vars='i', var_name='r'),
-                              cap_dr, on=['i', 'r'])
-        dr_inc_tmp = pd.merge(dr_inc_tmp, dr_inc_osprey.drop(['d', 'hr'], axis=1),
-                              on=['idx_hr', 'i', 'r', 'v'], how='left').fillna(0)
-        dr_inc_tmp.loc[:,'value'] = dr_inc_tmp['value']*dr_inc_tmp['MW'] - dr_inc_tmp['Val']
-        dr_inc_tmp = dr_inc_tmp.pivot(index='idx_hr',
-                                      columns='generator',
-                                      values='value').fillna(0)
-        dr_inc_tmp = expand_df(
-            df=dr_inc_tmp,
-            expand=resource_dr_utility[['resource', 'device', 'r', 'resource_device']],
-            old_col='device', new_col='resource_device',
-            drop_cols=['resource','device','r'])
+            # Get existing DR usage in Osprey in same format as above
+            dr_inc_osprey = OSPREY_RESULTS['dr_inc'].get_data()
+            dr_inc_osprey.i = dr_inc_osprey.i.str.lower()  # Standardize names
+            dr_inc_osprey['idx_hr'] = ((dr_inc_osprey.d.str[1:].astype(int) - 1)*24
+                                    + dr_inc_osprey.hr.str[2:].astype(int) - 1)
+            dr_dec_osprey = OSPREY_RESULTS['gen'].get_data()[resource_dr_utility.device.values]
+            dr_dec_osprey = dr_dec_osprey.reset_index().melt(id_vars='idx_hr', var_name='device',
+                                                            value_name='Val')
 
-        # Expand DR decrease data and subtract off osprey results
-        dr_dec_tmp = pd.merge(dr_dec_local.reset_index().melt(id_vars='i', var_name='r'),
-                              cap_dr, on=['i', 'r'])
-        dr_dec_tmp['idx_hr'] = list(range(0, 8760)) * len(cap_dr.i.drop_duplicates())
-        dr_dec_tmp = pd.merge(dr_dec_tmp, dr_dec_osprey,
-                              on=['idx_hr', 'device'], how='left').fillna(0)
-        dr_dec_tmp.loc[:,'value'] = dr_dec_tmp['value']*dr_dec_tmp['MW'] - dr_dec_tmp['Val']
-        dr_dec_tmp = dr_dec_tmp.pivot(index='idx_hr',
-                                      columns='device',
-                                      values='value').fillna(0)
-        dr_dec_tmp = expand_df(
-            df=dr_dec_tmp,
-            expand=resource_dr_utility[['resource', 'device', 'r', 'resource_device']],
-            old_col='device', new_col='resource_device',
-            drop_cols=['resource','device','r'])
+            # Expand DR increase data and subtract off osprey results
+            dr_inc_local['idx_hr'] = list(range(0, 8760)) * len(dr_inc_local.index.drop_duplicates())
+            dr_inc_local = dr_inc_local.reset_index().set_index('idx_hr')
+            dr_inc_tmp = pd.merge(dr_inc_local.melt(id_vars='i', var_name='r'),
+                                cap_dr, on=['i', 'r'])
+            dr_inc_tmp = pd.merge(dr_inc_tmp, dr_inc_osprey.drop(['d', 'hr'], axis=1),
+                                on=['idx_hr', 'i', 'r', 'v'], how='left').fillna(0)
+            dr_inc_tmp.loc[:,'value'] = dr_inc_tmp['value']*dr_inc_tmp['MW'] - dr_inc_tmp['Val']
+            dr_inc_tmp = dr_inc_tmp.pivot(index='idx_hr',
+                                        columns='generator',
+                                        values='value').fillna(0)
+            dr_inc_tmp = expand_df(
+                df=dr_inc_tmp,
+                expand=resource_dr_utility[['resource', 'device', 'r', 'resource_device']],
+                old_col='device', new_col='resource_device',
+                drop_cols=['resource','device','r'])
 
-        # clip marg_curt_local at +/- marg_DR_MW to get the available
-        # charge/discharge profile of marginal DR for marginal VRE
-        clip_tmp = net_load_marg_resource_dr_utility_local.where(
-            net_load_marg_resource_dr_utility_local > -dr_inc_tmp, -dr_inc_tmp)
-        poss_dr_changes_exist_local = - clip_tmp.where(
-            clip_tmp < dr_dec_tmp, dr_dec_tmp)
+            # Expand DR decrease data and subtract off osprey results
+            dr_dec_tmp = pd.merge(dr_dec_local.reset_index().melt(id_vars='i', var_name='r'),
+                                cap_dr, on=['i', 'r'])
+            dr_dec_tmp['idx_hr'] = list(range(0, 8760)) * len(cap_dr.i.drop_duplicates())
+            dr_dec_tmp = pd.merge(dr_dec_tmp, dr_dec_osprey,
+                                on=['idx_hr', 'device'], how='left').fillna(0)
+            dr_dec_tmp.loc[:,'value'] = dr_dec_tmp['value']*dr_dec_tmp['MW'] - dr_dec_tmp['Val']
+            dr_dec_tmp = dr_dec_tmp.pivot(index='idx_hr',
+                                        columns='device',
+                                        values='value').fillna(0)
+            dr_dec_tmp = expand_df(
+                df=dr_dec_tmp,
+                expand=resource_dr_utility[['resource', 'device', 'r', 'resource_device']],
+                old_col='device', new_col='resource_device',
+                drop_cols=['resource','device','r'])
 
-        curt_resource_dr_utility_local = poss_dr_changes_exist_local.where(
-            poss_dr_changes_exist_local > 0, 0)
-        curt_resource_dr_utility_h = pd.concat(
-            [hdtmap_single[['h']], curt_resource_dr_utility_local],
-            sort=False, axis=1
-            ).groupby('h').sum()
+            # clip marg_curt_local at +/- marg_DR_MW to get the available
+            # charge/discharge profile of marginal DR for marginal VRE
+            clip_tmp = net_load_marg_resource_dr_utility_local.where(
+                net_load_marg_resource_dr_utility_local > -dr_inc_tmp, -dr_inc_tmp)
+            poss_dr_changes_exist_local = - clip_tmp.where(
+                clip_tmp < dr_dec_tmp, dr_dec_tmp)
 
-        marg_dr_hr = marg_dr_props.loc[i, 'hrs']
-        marg_curt_exist_dr_recovery_ratio = dr_curt_recovery(
-            hrs=marg_dr_hr, eff=marg_dr_props.loc[i, 'RTE'], ts_length=ts_length,
-            poss_dr_changes=poss_dr_changes_exist_local, hdtmap=hdtmap_single,
-            marg_curt_h=curt_resource_dr_utility_h)
-        curt_dr = marg_curt_exist_dr_recovery_ratio.T.reset_index()
+            curt_resource_dr_utility_local = poss_dr_changes_exist_local.where(
+                poss_dr_changes_exist_local > 0, 0)
+            curt_resource_dr_utility_h = pd.concat(
+                [hdtmap_single[['h']], curt_resource_dr_utility_local],
+                sort=False, axis=1
+                ).groupby('h').sum()
+
+            marg_dr_hr = marg_dr_props.loc[i, 'hrs']
+            marg_curt_exist_dr_recovery_ratio = dr_curt_recovery(
+                hrs=marg_dr_hr, eff=marg_dr_props.loc[i, 'RTE'], ts_length=ts_length,
+                poss_dr_changes=poss_dr_changes_exist_local, hdtmap=hdtmap_single,
+                marg_curt_h=curt_resource_dr_utility_h)
+            curt_dr = marg_curt_exist_dr_recovery_ratio.T.reset_index()
+        else:
+            cap_dr_resource_device = pd.merge(
+                left=resource_dr_utility[['device', 'resource_device']],
+                right=cap_dr, how='right', on='device')
+            curt_dr = pd.DataFrame(data=[0]*len(hdtmap_single['h'].drop_duplicates()),
+                                index=hdtmap_single['h'].drop_duplicates()).T.reset_index()
+
+        # DR processing for output
+        # Take the average of curt_dr across source and device
+        curt_dr = pd.merge(
+            left=resource_dr_utility[
+                ['src', 'device', 'resource_device']].rename(
+                    columns={'resource_device': 'index'}),
+            right=curt_dr, on='index')
+        curt_dr = curt_dr.groupby(['src', 'device'], as_index=False).mean()
+        # Merge in the storage technology and regions
+        curt_dr = pd.merge(
+            left=cap_dr_resource_device[['i', 'r', 'device']].drop_duplicates(),
+            right=curt_dr, on='device', how='right'
+        ).drop('device', axis=1)
+        # Collapse to long fromat for ReEDS
+        curt_dr = curt_dr.melt(id_vars=['i', 'r', 'src'], var_name='h')
+        # Merge in the reeds vintages that exist
+        curt_dr = pd.merge(left=cap_dr[['i', 'v', 'r']], right=curt_dr,
+                        on=['i', 'r'])
+        # Reorder columns to match ReEDS convention
+        curt_dr = curt_dr[['i', 'v', 'r', 'h', 'src', 'value']]
+
+        # Get the marginal vintage of each storage tech
+        ivt = pd.read_csv(os.path.join('inputs_case', 'ivt.csv'), index_col=0)
+        ivt = expand_star(ivt)
+        for i in marg_stor_props.index:
+            marg_stor_props.loc[i, 'v'] = 'new' + str(ivt.loc[i, str(year)])
+        ivt = pd.melt(ivt.reset_index(), id_vars='index')
+        ivt.rename(columns={'index': 'i', 'variable': 't'}, inplace=True)
+        ivt['v'] = 'new' + ivt['value'].astype(str)
+        ivt['t'] = pd.to_numeric(ivt['t'])
+        # Get the marginal vintage of each DR tech
+        for i in [d for d in marg_dr_props.index if d in ivt.i.values]:
+            marg_dr_props.loc[i, 'v'] = ivt.loc[(ivt.i==i) & (ivt.t==year),'v'].values[0]
+
+        # Collect exist curt/marg dr results
+        for i in exist_curt_marg_dr_recovery_ratio.keys():
+            # Get results for one tech at a time, collapse to long format
+            temp = (exist_curt_marg_dr_recovery_ratio[i].reset_index()
+                    .melt(id_vars='h', var_name='r'))
+            # Define tech and vintage
+            temp['i'] = i
+            temp['v'] = marg_dr_props.loc[i, 'v']
+            # Charging from existing curtailment is in the "old" category
+            temp['src'] = 'old'
+            # Concatenate these results with the rest
+            curt_dr = pd.concat([curt_dr, temp], sort=False).reset_index(
+                drop=True)
+
+        # Collect marg curt/marg dr results
+        for i in marg_curt_marg_dr_recovery_ratio.keys():
+            # Get results for one tech at a time, collapse to long format
+            temp = (marg_curt_marg_dr_recovery_ratio[i].reset_index()
+                    .melt(id_vars='h', var_name='resource'))
+            # Take the average of curt_dr across source
+            temp = pd.merge(
+                left=i_resource_r_utility, right=temp, on='resource',
+                how='right').groupby(['r', 'h', 'src'], as_index=False).mean()
+            # Define tech and vintage
+            temp['i'] = i
+            temp['v'] = marg_dr_props.loc[i, 'v']
+            # Concatenate these results with the rest
+            curt_dr = pd.concat([curt_dr, temp], sort=False).reset_index(
+                drop=True)
+
+        # Set the year and organize the columns to match ReEDS
+        curt_dr['t'] = str(year)
+        curt_dr = curt_dr[['i', 'v', 'r', 'h', 'src', 't', 'value']]
+        # Remove small numbers and round results
+        curt_dr.loc[curt_dr['value'] < SwitchSettings.switches['min_val'], 'value'] = 0
+        curt_dr['value'] = curt_dr['value'].round(SwitchSettings.switches['decimals'])
+        # Add in H17
+        curt_dr_h17 = curt_dr[curt_dr['h'] == 'h3'].reset_index(drop=True)
+        curt_dr_h17['h'] = 'h17'
+        curt_dr = pd.concat([curt_dr, curt_dr_h17], sort=False).reset_index(
+            drop=True)
+
     else:
-        cap_dr_resource_device = pd.merge(
-            left=resource_dr_utility[['device', 'resource_device']],
-            right=cap_dr, how='right', on='device')
-        curt_dr = pd.DataFrame(data=[0]*len(hdtmap_single['h'].drop_duplicates()),
-                               index=hdtmap_single['h'].drop_duplicates()).T.reset_index()
+        curt_dr = pd.DataFrame(columns=['i','v','r','h','src','t','value'])
 
-    # DR processing for output
-    # Take the average of curt_dr across source and device
-    curt_dr = pd.merge(
-        left=resource_dr_utility[
-            ['src', 'device', 'resource_device']].rename(
-                columns={'resource_device': 'index'}),
-        right=curt_dr, on='index')
-    curt_dr = curt_dr.groupby(['src', 'device'], as_index=False).mean()
-    # Merge in the storage technology and regions
-    curt_dr = pd.merge(
-        left=cap_dr_resource_device[['i', 'r', 'device']].drop_duplicates(),
-        right=curt_dr, on='device', how='right'
-    ).drop('device', axis=1)
-    # Collapse to long fromat for ReEDS
-    curt_dr = curt_dr.melt(id_vars=['i', 'r', 'src'], var_name='h')
-    # Merge in the reeds vintages that exist
-    curt_dr = pd.merge(left=cap_dr[['i', 'v', 'r']], right=curt_dr,
-                       on=['i', 'r'])
-    # Reorder columns to match ReEDS convention
-    curt_dr = curt_dr[['i', 'v', 'r', 'h', 'src', 'value']]
 
-    # Get the marginal vintage of each storage tech
-    ivt = pd.read_csv(os.path.join('inputs_case', 'ivt.csv'), index_col=0)
-    ivt = expand_star(ivt)
-    for i in marg_stor_props.index:
-        marg_stor_props.loc[i, 'v'] = 'new' + str(ivt.loc[i, str(year)])
-    ivt = pd.melt(ivt.reset_index(), id_vars='index')
-    ivt.rename(columns={'index': 'i', 'variable': 't'}, inplace=True)
-    ivt['v'] = 'new' + ivt['value'].astype(str)
-    ivt['t'] = pd.to_numeric(ivt['t'])
-    # Get the marginal vintage of each DR tech
-    for i in [d for d in marg_dr_props.index if d in ivt.i.values]:
-        marg_dr_props.loc[i, 'v'] = ivt.loc[(ivt.i==i) & (ivt.t==year),'v'].values[0]
-
-    # Collect exist curt/marg dr results
-    for i in exist_curt_marg_dr_recovery_ratio.keys():
-        # Get results for one tech at a time, collapse to long format
-        temp = (exist_curt_marg_dr_recovery_ratio[i].reset_index()
-                .melt(id_vars='h', var_name='r'))
-        # Define tech and vintage
-        temp['i'] = i
-        temp['v'] = marg_dr_props.loc[i, 'v']
-        # Charging from existing curtailment is in the "old" category
-        temp['src'] = 'old'
-        # Concatenate these results with the rest
-        curt_dr = pd.concat([curt_dr, temp], sort=False).reset_index(
-            drop=True)
-
-    # Collect marg curt/marg dr results
-    for i in marg_curt_marg_dr_recovery_ratio.keys():
-        # Get results for one tech at a time, collapse to long format
-        temp = (marg_curt_marg_dr_recovery_ratio[i].reset_index()
-                .melt(id_vars='h', var_name='resource'))
-        # Take the average of curt_dr across source
-        temp = pd.merge(
-            left=i_resource_r_utility, right=temp, on='resource',
-            how='right').groupby(['r', 'h', 'src'], as_index=False).mean()
-        # Define tech and vintage
-        temp['i'] = i
-        temp['v'] = marg_dr_props.loc[i, 'v']
-        # Concatenate these results with the rest
-        curt_dr = pd.concat([curt_dr, temp], sort=False).reset_index(
-            drop=True)
-
-    # Set the year and organize the columns to match ReEDS
-    curt_dr['t'] = str(year)
-    curt_dr = curt_dr[['i', 'v', 'r', 'h', 'src', 't', 'value']]
-    # Remove small numbers and round results
-    curt_dr.loc[curt_dr['value'] < SwitchSettings.switches['min_val'], 'value'] = 0
-    curt_dr['value'] = curt_dr['value'].round(SwitchSettings.switches['decimals'])
-    # Add in H17
-    curt_dr_h17 = curt_dr[curt_dr['h'] == 'h3'].reset_index(drop=True)
-    curt_dr_h17['h'] = 'h17'
-    curt_dr = pd.concat([curt_dr, curt_dr_h17], sort=False).reset_index(
-        drop=True)
+    # =========================================================================
+    # Format results for ReEDS
+    # =========================================================================
 
     # Format marginal curtailment results for ReEDS
     curt_marg = curt_ratio_h.reset_index().melt(id_vars='h').rename(

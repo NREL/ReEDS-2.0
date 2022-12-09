@@ -1,0 +1,245 @@
+{
+    "data_layers": {
+        "ba_regions": {
+            "dset": "ba_regions",
+            "method": "mode"
+        },
+        "reeds_regions": {
+            "dset": "reeds_regions",
+            "method": "mode"
+        },
+        "cnty_fips": {
+            "dset": "cnty_fips",
+            "method": "mode"
+        },
+        "resolution_128_sc_point_gid": {
+            "dset": "resolution_128_sc_point_gid",
+            "method": "mode"
+        },
+        "lbnl_convex_hull_existing_farms_2021": {
+            "dset": "lbnl_convex_hull_existing_farms_2018",
+            "method": "mode"
+        },
+        "lbnl_upv_1km_buffer": {
+            "dset": "lbnl_upv_1km_buffer",
+            "method": "mode"
+        },
+        "detort_habitat": {
+            "dset": "detort_habitat",
+            "method": "sum"
+        },
+        "detort_range": {
+            "dset": "detort_range",
+            "method": "sum"
+        },
+        "grpchi_habitat": {
+            "dset": "grpchi_habitat",
+            "method": "sum"
+        },
+        "grpchi_range": {
+            "dset": "grpchi_range",
+            "method": "sum"
+        },
+        "lepchi_habitat": {
+            "dset": "lepchi_habitat",
+            "method": "sum"
+        },
+        "lepchi_range": {
+            "dset": "lepchi_range",
+            "method": "sum"
+        },
+        "saggro_habitat": {
+            "dset": "saggro_habitat",
+            "method": "sum"
+        },
+        "saggro_lek": {
+            "dset": "saggro_lek",
+            "method": "sum"
+        },
+        "saggro_range": {
+            "dset": "saggro_range",
+            "method": "sum"
+        },
+        "shtgro_habitat": {
+            "dset": "shtgro_habitat",
+            "method": "sum"
+        },
+        "shtgro_range": {
+            "dset": "shtgro_range",
+            "method": "sum"
+        },
+        "usa_mrlc_nlcd2011": {
+            "dset": "usa_mrlc_nlcd2011",
+            "method": "category"
+        },
+        "fed_land_owner": {
+            "dset": "fed_land_owner",
+            "method": "category"
+        },
+        "yr_blt_conus": {
+            "dset": "yr_blt_conus",
+            "method": "category"
+        },
+        "r_owner_occupied_conus": {
+            "dset": "r_owner_occupied_conus",
+            "method": "sum"
+        },
+        "r_use_code_std_ctgr_desc_lps_conus": {
+            "dset": "r_use_code_std_ctgr_desc_lps_conus",
+            "method": "category"
+        },
+        "val_assd_conus": {
+            "dset": "val_assd_conus",
+            "method": "mean"
+        },
+        "val_assd_imprv_conus": {
+            "dset": "val_assd_imprv_conus",
+            "method": "mean"
+        },
+        "val_assd_land_conus": {
+            "dset": "val_assd_land_conus",
+            "method": "mean"
+        }
+    },
+    "excl_dict": {
+        "albers": {
+            "include_values": [
+                1
+            ]
+        },
+        "atlas_landform_elev_exclusion": {
+            "exclude_values": [
+                1
+            ]
+        },
+        "blm_acec_update_10_2020": {
+            "exclude_values": [
+                1
+            ]
+        },
+        "conus_hsip_airports": {
+            "exclude_values": [
+                1
+            ]
+        },
+        "conus_rail_percent": {
+            "use_as_weights": true
+        },
+        "conus_xmission_percent": {
+            "use_as_weights": true
+        },
+        "esri_fedlands": {
+            "exclude_values": [
+                12,
+                15,
+                26,
+                28,
+                31,
+                33,
+                35,
+                36,
+                43,
+                44
+            ]
+        },
+        "esri_landmarks": {
+            "exclude_values": [
+                1
+            ]
+        },
+        "esri_parks": {
+            "exclude_values": [
+                1
+            ]
+        },
+        "ghsl_smod": {
+            "exclude_values": [
+                2,
+                3
+            ]
+        },
+        "mrlc_nlcd_2016": {
+            "exclude_values": [
+                11,
+                90,
+                95
+            ]
+        },
+        "nced_update_10_2020_gap_1_2": {
+            "exclude_values": [
+                1
+            ]
+        },
+        "padus_update_10_2020_gap_1_2": {
+            "exclude_values": [
+                1
+            ]
+        },
+        "pipe_frac_area_avail_100m_buffer": {
+            "use_as_weights": true
+        },
+        "reeds_regions": {
+            "exclude_values": [
+                65535
+            ]
+        },
+        "usfs_ira": {
+            "exclude_values": [
+                1
+            ]
+        },
+        "lbnl_convex_hull_existing_farms_2018": {
+            "force_include_values": [
+                1
+            ]
+        },
+        "lbnl_upv_1km_buffer": {
+            "force_include_values": [
+                1
+            ]
+        },
+        "setbacks_percent_road_30m": {
+            "use_as_weights": true
+        },
+        "setbacks_percent_structure_30m": {
+            "use_as_weights": true
+        },
+        "setbacks_percent_water_30m": {
+            "use_as_weights": true
+        },
+        "srtm_slope": {
+            "include_range": [
+                0,
+                10
+            ]
+        }
+    },
+    "excl_fpath": [
+        "/shared-projects/rev/exclusions/BLM_Exclusions.h5",
+        "/shared-projects/rev/projects/seto/fy22/data/exclusions/CONUS_Solar_Setbacks.h5",
+        "/shared-projects/rev/projects/seto/fy22/data/exclusions/Parcel_Characterizations.h5",
+        "/projects/rev/data/exclusions/ATB_Exclusions.h5"
+    ],
+    "execution_control": {
+        "allocation": "wetosa",
+        "feature": "--qos=normal",
+        "option": "eagle",
+        "walltime": 10,
+        "memory": 179
+    },
+    "area_filter_kernel": "queen",
+    "min_area": 0.3,
+    "gen_fpath": "/lustre/eaglefs/shared-projects/rev/projects/hybrids/rev/pv_15cost_gen_clipping/pv_15cost_gen_clipping_multi-year.h5",
+    "lcoe_dset": "lcoe_fcr-means",
+    "cf_dset": "cf_mean-means",
+    "res_class_dset": "ghi_mean-means",
+    "tm_dset": "techmap_nsrdb",
+    "power_density": 32.0,
+    "res_class_bins": null,
+    "res_fpath": "/datasets/NSRDB/v3.0.1/nsrdb_{}.h5",
+    "resolution": 128,
+    "pre_extract_inclusions": false,
+    "log_directory": "./logs",
+    "recalc_lcoe": false,
+    "log_level": "DEBUG"
+}

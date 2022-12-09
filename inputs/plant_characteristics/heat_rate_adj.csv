@@ -1,22 +1,31 @@
 Geothermal,1
 Hydro,1
 Biopower,1
-beccs,1
+beccs_mod,1
+beccs_max,1
 Nuclear,1
 Nuclear-SMR,1
 gas-CT ,1.1502
 gas-CC ,1.0545
-gas-CC-CCS,1.0545
+Gas-CC-CCS_mod,1.0545
+Gas-CC-CCS_max,1.0545
+gas-CC-CCS-F1,1
+gas-CC-CCS-F2,1
+gas-CC-CCS-F3,1
 CoalOldScr,1.0674
 CoalOldUns,1.0674
 coal-new,1.0674
 coal-IGCC,1.0674
-coal-CCS,1.0674
+coal-CCS_mod,1.0674
+coal-CCS_max,1.0674
+coal-CCS-F1,1
+coal-CCS-F2,1
+coal-CCS-F3,1
 o-g-s,1.1704
 CofireOld,1.0538
 CofireNew,1.0538
 lfill-gas,1
 ocean,1
-distPV,1
+distpv,1
 RE-CT,1.1502
 RE-CC ,1.1502

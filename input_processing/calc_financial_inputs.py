@@ -1,16 +1,24 @@
+#%% Imports
 import pandas as pd
+import numpy as np
 import os
 import csv
 import support_functions as sFuncs
 # Time the operation of this script
 from ticker import toc
 import datetime
+#%% direct print and errors to log file
+import sys
+sys.stdout = open('gamslog.txt', 'a')
+sys.stderr = open('gamslog.txt', 'a')
 
-def calc_financial_inputs(batch, case, switches):
+#%% Functions
+def calc_financial_inputs(basedir, inputs_case):
     """
     Write the following files to runs/{batch_case}/inputs_case/:
     - ivt.csv
     - ptc_values.csv
+    - ptc_value_scaled.csv
     - itc_fractions.csv
     - regions.csv
     - depreciation_schedules.csv
@@ -20,112 +28,98 @@ def calc_financial_inputs(batch, case, switches):
     - cap_cost_mult.csv
     - cap_cost_mult_noITC.csv
     - cap_cost_mult_for_ratebase.csv
-    - ptc_unit_value.csv
     - crf.csv
     - pvf_onm_int.csv
     - pvf_cap.csv
-    - retail_cap_cost_mult.pkl
-    - retail_eval_period.pkl
-    - retail_depreciation_sch.pkl
+    - retail_cap_cost_mult.h5
+    - retail_eval_period.h5
+    - retail_depreciation_sch.h5
     """
-    print('Starting calculation of financial parameters for',case)
-    tic = datetime.datetime.now()
- 
+    print('Starting calculation of financial parameters for', inputs_case)
+
+    # #%% Inputs for testing
+    # basedir = '/Users/pbrown/github/ReEDS-2.0/'
+    # inputs_case = os.path.join(basedir,'runs','v20220621_NTPm0_ercot_seq_test','inputs_case')
+
     #%% Input processing
-    input_dir = os.path.join('inputs')
-    output_dir = os.path.join('runs', '%s_%s' % (batch, case), 'inputs_case')
+    switches = pd.read_csv(
+        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True,
+    )
+
+    input_dir = os.path.join(basedir, 'inputs')
     switches['endyear'] = int(switches['endyear'])
     switches['sys_eval_years'] = int(switches['sys_eval_years'])
 
+    scalars = pd.read_csv(
+        os.path.join(inputs_case,'scalars.csv'),
+        header=None, names=['scalar','value','comment'], index_col='scalar')['value']
+
     #%% Import some general data and maps
-    
+
     # Import inflation (which includes both historical and future inflation). 
     # Used for adjusting currency inputs to the specified dollar year, and financial calculations. 
     inflation_df = pd.read_csv(os.path.join(
-        input_dir, 'inflation', 'inflation_%s.csv' % switches['inflation_suffix']))
+        input_dir, 'financials', 'inflation_%s.csv' % switches['inflation_suffix']))
 
     # Import tech groups. Used to expand data inputs 
     # (e.g., 'UPV' expands to all of the upv subclasses, like upv_1, upv_2, etc)
-    tech_groups = sFuncs.import_tech_groups(os.path.join('inputs', 'tech-subset-table.csv'))
-    
+    tech_groups = sFuncs.import_tech_groups(os.path.join(input_dir, 'tech-subset-table.csv'))
+
     # Set up scen_settings object
     scen_settings = sFuncs.scen_settings(
         dollar_year=int(switches['dollar_year']), tech_groups=tech_groups, input_dir=input_dir,
         switches=switches)
-    
-    #%% Extend ivt if necessary
-    ### (similar functionality for other inputs is in input_processing/forecast.py)
-    ivt = pd.read_csv(os.path.join(
-        input_dir, 'userinput', 'ivt_%s.csv' % switches['ivt_suffix']), index_col=0)
-    ivt_step = pd.read_csv(os.path.join(input_dir, 'userinput', 'ivt_step.csv'), 
-                           index_col=0, squeeze=True)
-    lastdatayear = max([int(c) for c in ivt.columns])
-    addyears = list(range(lastdatayear + 1, switches['endyear'] + 1))
-    num_added_years = len(addyears)
-    ### Add v for the extra years
-    ivt_add = {}
-    for i in ivt.index:
-        vlast = ivt.loc[i,str(lastdatayear)]
-        if ivt_step[i] == 0:
-            ### Use the same v forever
-            ivt_add[i] = [vlast] * num_added_years
-        else:
-            ### Use the same spacing forever
-            forever = [[vlast + 1 + x] * ivt_step[i] for x in range(1000)]
-            forever = [item for sublist in forever for item in sublist]
-            ivt_add[i] = forever[:num_added_years]
-    ivt_add = pd.DataFrame(ivt_add, index=addyears).T
-    ### Concat and resave
-    ivtout = pd.concat([ivt, ivt_add], axis=1)
-    ivtout.to_csv(os.path.join(output_dir, 'ivt.csv'))
-    ### Get numclass, which is used in b_inputs.gms
-    numclass = ivtout.max().max()
 
-    
-    #%% Ingest data, determine what regions have been specified, and build df_inv and df_gen_pol
-    # df_inv is a df for investment-related parameters (e.g. capital cost multipliers)
-    # df_gen_pol is a df for generation-policy-related parameters (e.g. present value factors)
 
-    techs = pd.read_csv(os.path.join(input_dir, 'techs', 'techs_%s.csv' % switches['techs_suffix']))
-    ivt_df = pd.read_csv(os.path.join(output_dir, 'ivt.csv'))
+    #%% Ingest data, determine what regions have been specified, and build df_ivt
+    # Build df_ivt (for calculating various parameters at subscript [i,v,t])
+
+    techs = pd.read_csv(
+        os.path.join(input_dir, 'techs', 'techs_%s.csv' % switches['techs_suffix']))
+    vintage_definition = pd.read_csv(os.path.join(inputs_case, 'ivt.csv')).rename(columns={'Unnamed: 0':'i'})
 
     annual_degrade = pd.read_csv(
-        os.path.join(input_dir,'degradation','degradation_annual_%s.csv' % switches['degrade_suffix']),
+        os.path.join(input_dir,'degradation',
+                     'degradation_annual_%s.csv' % switches['degrade_suffix']),
         header=None, names=['i','annual_degradation'])
     ### Assign the PV+battery values to values for standalone batteries
     annual_degrade = sFuncs.append_pvb_parameters(
         dfin=annual_degrade, 
         tech_to_copy='battery_{}'.format(scen_settings.switches['GSw_PVB_Dur']))
-    
+
     years, modeled_years, year_map = sFuncs.ingest_years(
-        switches['yearset_suffix'], switches['sys_eval_years'], switches['endyear'])
+        inputs_case, switches['sys_eval_years'], switches['endyear'])
     regions, valid_ba_list, valid_regions_list = sFuncs.ingest_regions(
-        switches['regions_suffix'], switches['region_type'], switches['GSw_region'], scen_settings)
-    
-    df_inv = sFuncs.build_dfs(years, techs, regions, ivt_df, year_map, switches['GSw_region'])
-    print('df_inv created for', case)
-    
-    
-    #%% Import and merge data onto df_inv and df_gen_pol
-    
+        switches['GSw_RegionLevel'], switches['GSw_Region'], scen_settings, NARIS=False)
+
+    df_ivt = sFuncs.build_dfs(years, techs, vintage_definition, year_map)
+    print('df_ivt created for', inputs_case)
+
+
+    #%% Import and merge data onto df_ivt
+
     # Import system-wide real discount rates, calculate present-value-factors, merge onto df's
     financials_sys = sFuncs.import_sys_financials(
         switches['financials_sys_suffix'], inflation_df, modeled_years, 
         years, year_map, switches['sys_eval_years'], scen_settings)
-    df_inv = df_inv.merge(
+    df_ivt = df_ivt.merge(
         financials_sys[['t', 'pvf_capital', 'crf', 'd_real', 'd_nom', 'interest_rate_nom', 
                         'tax_rate', 'debt_fraction', 'rroe_nom']], 
         on=['t'], how='left')
-    
+
+    # The script only works for USA currently. Something needs to be added here
+    # to expand to other countries, if needed. 
+    df_ivt['country'] = 'usa'
+
+
     # Merge inflation into investment df
-    df_inv = df_inv.merge(inflation_df, on=['t'], how='left', )
+    df_ivt = df_ivt.merge(inflation_df, on=['t'], how='left', )
+
+    # Merge annual degradation into investment df
+    df_ivt = df_ivt.merge(annual_degrade, on=['i'], how='left')
+    df_ivt['annual_degradation'] = df_ivt['annual_degradation'].fillna(0.0)
     
-    #Merge annual degradation into investment df
-    
-    df_inv = df_inv.merge(annual_degrade, on=['i'], how='left')
-    df_inv['annual_degradation'] = df_inv['annual_degradation'].fillna(0.0)
-    
-    # Import financial assumptions
+    ### Import financial assumptions
     financials_tech = sFuncs.import_data(
         file_root='financials_tech', file_suffix=switches['financials_tech_suffix'], 
         indices=['i','country','t'], scen_settings=scen_settings)
@@ -139,7 +133,8 @@ def calc_financial_inputs(batch, case, switches):
             financials_tech.i.str.startswith('pvb') & (financials_tech.country == 'usa'),
             'depreciation_sch'
         ] = 5
-    # Project financials_tech forward
+
+    ### Project financials_tech forward
     financials_tech_projected = financials_tech.pivot(
         index=['i','country','depreciation_sch','eval_period','construction_sch'], 
         columns=['t'])['finance_diff_real']
@@ -148,33 +143,161 @@ def calc_financial_inputs(batch, case, switches):
         financials_tech_projected[addyear] = financials_tech_projected[lastdatayear]
     # Overwrite with projected values
     financials_tech = financials_tech_projected.stack().rename('finance_diff_real').reset_index()
-    # Merge with df_inv
-    df_inv = df_inv.merge(financials_tech, on=['i', 't', 'country'], how='left')
-        
-    # Import incentives, shift eligibility by construction times, merge incentives
+    # Merge with df_ivt
+    df_ivt = df_ivt.merge(financials_tech, on=['i', 't', 'country'], how='left')
+    
+    # Calculate multipliers to account for evaluation periods. If a tech's eval period is
+    # the system-wide default, this will be 1. If not, the capital costs are adjusted accordingly. 
+    financials_sys['sys_pvf_eval_period_sum'] = (1 - (1 / (financials_sys['d_real'])**(switches['sys_eval_years']-1))) / (financials_sys['d_real']-1.0) + 1
+    df_ivt['pvf_eval_period_sum'] = (1 - (1 / (df_ivt['d_real'])**(df_ivt['eval_period']-1))) / (df_ivt['d_real']-1.0) + 1
+    df_ivt = df_ivt.merge(financials_sys[['sys_pvf_eval_period_sum', 't']], on='t', how='left')
+    df_ivt['eval_period_adj_mult'] = df_ivt['sys_pvf_eval_period_sum'] / df_ivt['pvf_eval_period_sum']
+
+    #%% Process incentives
+    
+    # Import incentives, shift eligibility by safe harbor, merge incentives
     incentive_df = sFuncs.import_and_mod_incentives(
         incentive_file_suffix=switches['incentives_suffix'], 
         construction_times_suffix=switches['construction_times_suffix'],
-        ivt_df=ivt_df, years=years, sys_financials=financials_sys, 
         inflation_df=inflation_df, scen_settings=scen_settings)
-    df_inv = df_inv.merge(incentive_df, on=['i', 't', 'country'], how='left')
+    df_ivt = df_ivt.merge(incentive_df, on=['i', 't', 'country'], how='left')
+    df_ivt['safe_harbor_max'] = df_ivt['safe_harbor_max'].fillna(0.0)
+    df_ivt['co2_capture_value_monetized'] = df_ivt['co2_capture_value_monetized'].fillna(0.0)
     
+    ### Calculate the tax impacts of the PTC, and calculate the adjustment to reflect the 
+    # difference between the PTC duration and ReEDS evaluation period
+    df_ivt = sFuncs.adjust_ptc_values(df_ivt)
+    
+    # Expand co2_capture_value by the duration of the incentive. 
+    co2_capture_value = df_ivt[['i', 'v', 't', 'co2_capture_value_monetized', 'co2_capture_dur']].copy()
+    co2_capture_value = co2_capture_value[co2_capture_value['co2_capture_value_monetized']>0]
+    if len(co2_capture_value) > 0:
+        dur_list = [] # create year expander
+        for n in list(co2_capture_value['co2_capture_dur'].drop_duplicates()):
+            dur_df = pd.DataFrame()
+            dur_df['year_adder'] = np.arange(0,n)
+            dur_df['co2_capture_dur'] = n
+            dur_list += [dur_df.copy()]
+        expander = pd.concat(dur_list, ignore_index=True, sort=False)
+        co2_capture_value = co2_capture_value.merge(expander, on='co2_capture_dur', how='left')
+        co2_capture_value['t'] = co2_capture_value['t'] + co2_capture_value['year_adder']
+    else:
+        co2_capture_value = df_ivt[['i', 'v', 't', 'co2_capture_value_monetized', 'co2_capture_dur']].iloc[0:5,:]
+    co2_capture_value = co2_capture_value.drop_duplicates(['i', 'v', 't'])
+    co2_capture_value['v'] = ['new%s' % v for v in co2_capture_value['v']]
+    co2_capture_value['t'] = co2_capture_value['t'].astype(int)
+    
+    # Expand the various ptc values by the duration of the incentive. 
+    # We are tracking various ptc_values (e.g. with and without tax grossups)
+    # because different downstream processes require different forms of the ptc's value
+    ptc_values_df = df_ivt[['i', 'v', 't', 'ptc_value', 'ptc_dur', 'ptc_value_monetized', 'ptc_tax_equity_penalty',
+                            'ptc_value_monetized_posttax', 'ptc_grossup_value', 'ptc_value_scaled']].copy()
+    ptc_values_df = ptc_values_df[ptc_values_df['ptc_value']>0]
+    if len(ptc_values_df) > 0:
+        dur_list = [] # create year expander
+        for n in list(ptc_values_df['ptc_dur'].drop_duplicates()):
+            dur_df = pd.DataFrame()
+            dur_df['year_adder'] = np.arange(0,n)
+            dur_df['ptc_dur'] = n
+            dur_list += [dur_df.copy()]
+        expander = pd.concat(dur_list, ignore_index=True, sort=False)
+        ptc_values_df = ptc_values_df.merge(expander, on='ptc_dur', how='left')
+        ptc_values_df['t'] = ptc_values_df['t'] + ptc_values_df['year_adder']
+    else:
+        ptc_values_df = df_ivt[['i', 'v', 't', 'ptc_value', 'ptc_dur', 'ptc_value_monetized', 'ptc_tax_equity_penalty',
+                            'ptc_value_monetized_posttax', 'ptc_grossup_value', 'ptc_value_scaled']].iloc[0:5,:] # this is just a hack because pjg didn't know how to have gams handle empty files
+    ptc_values_df = ptc_values_df.drop_duplicates(['i', 'v', 't'])
+    ptc_values_df['v'] = ['new%s' % v for v in ptc_values_df['v']]
+    ptc_values_df['t'] = ptc_values_df['t'].astype(int)
+    
+    
+
+    #%%
     # Import schedules for financial calculations
     construction_schedules = pd.read_csv(os.path.join(
-        input_dir, 'construction_schedules', 
+        input_dir, 'financials', 
         'construction_schedules_%s.csv' % switches['construction_schedules_suffix']))
     depreciation_schedules = pd.read_csv(os.path.join(
-        input_dir, 'depreciation_schedules', 
+        input_dir, 'financials', 
         'depreciation_schedules_%s.csv' % switches['depreciation_schedules_suffix']))
+
+    ### Calculate financial multipliers
+    print('Calculating financial multipliers for', inputs_case, '...')
+    df_ivt = sFuncs.calc_financial_multipliers(
+        df_ivt, construction_schedules, depreciation_schedules, switches['timetype'])
     
-    # Perform derivative financial calculations
-    print('Calculating financial multipliers for', case, '...')
-    df_inv = sFuncs.calc_financial_multipliers(
-        df_inv, construction_schedules, depreciation_schedules, switches['timetype'])
+
+    #%%### Calculate financial multipliers for transmission
+    ### Load transmission data
+    dftrans = pd.read_csv(
+        os.path.join(
+            input_dir, 'financials',
+            'financials_transmission_{}.csv'.format(switches['financials_trans_suffix'])),
+    )
+    ### Get transmission capital recovery period (CRP) from input scalars
+    dftrans['eval_period'] = int(scalars['trans_crp'])
+    ### Get online year
+    dftrans['t'] = dftrans.t_start_construction + dftrans.construction_time
+    ### Get ITC monetization
+    dftrans['itc_frac_monetized'] = dftrans.itc_frac * (1 - dftrans.itc_tax_equity_penalty)
+    ### Get sys financials
+    dftrans = dftrans.merge(financials_sys.dropna(how='any'), on='t', how='right')
+    ### Get financial multipliers
+    dftrans = sFuncs.calc_financial_multipliers(
+        df_inv=dftrans, construction_schedules=construction_schedules,
+        depreciation_schedules=depreciation_schedules, timetype=switches['timetype'],
+    )
     
-    # Calculate the "unit value" of the PTC
-    df_inv = sFuncs.calc_ptc_unit_value(df_inv)
-        
+    ### Calculate the financial multiplier for transmission
+    dftrans['finMult'] = (
+        dftrans['CCmult']
+        / (1 - dftrans['tax_rate'])
+        * (1 
+           - dftrans['tax_rate'] * (1 - dftrans['itc_frac_monetized']/2) * dftrans['PV_fraction_of_depreciation'] 
+           - dftrans['itc_frac_monetized'])
+        * dftrans['Degradation_Adj']
+    )
+    dftrans['finMult_noITC'] = (
+        dftrans['CCmult'] 
+        / (1 - dftrans['tax_rate']) 
+        * (1 - dftrans['tax_rate'] * dftrans['PV_fraction_of_depreciation'] ) 
+        * dftrans['Degradation_Adj']
+    )
+    
+    ### Get the CRF for transmission
+    dftrans['crf_tech'] = sFuncs.calc_crf(dftrans['d_real'], dftrans['eval_period'])
+
+    ### Get the final capital cost multiplier (including the CRF scaler above)
+    dftrans['cap_cost_mult'] = (
+        dftrans['finMult'] * dftrans['financing_risk_mult']
+        ## Scale the cost multiplier by the ratio of CRF(trans_crp) / CRF (sys_eval_years)
+        * dftrans['crf_tech'] / dftrans['crf']
+    )
+    dftrans['cap_cost_mult_noITC'] = (
+        dftrans['finMult_noITC'] * dftrans['financing_risk_mult']
+        * dftrans['crf_tech'] / dftrans['crf']
+    )
+
+    ### The transmission ITC is not meant to apply to currently-planned transmission.
+    ### So for years before firstyear_trans, use cap_cost_mult_noITC;
+    ### i.e. only start applying the ITC once the model switches to endogenous transmission.
+    firstyear_trans = int(scalars['firstyear_trans'])
+    dftrans.loc[dftrans.t<firstyear_trans, 'cap_cost_mult'] = (
+        dftrans.loc[dftrans.t<firstyear_trans, 'cap_cost_mult_noITC'])
+
+    ### Write it
+    dftrans.rename(columns={'t':'*t'})[['*t','cap_cost_mult']].round(6).to_csv(
+        os.path.join(inputs_case, 'trans_cap_cost_mult.csv'), index=False)
+    dftrans.rename(columns={'t':'*t'})[['*t','cap_cost_mult_noITC']].round(6).to_csv(
+        os.path.join(inputs_case, 'trans_cap_cost_mult_noITC.csv'), index=False)
+    dftrans.loc[
+        dftrans.itc_frac != 0,
+        ['t','itc_frac','itc_tax_equity_penalty','itc_frac_monetized']
+    ].round(6).to_csv(
+        os.path.join(inputs_case, 'trans_itc_fractions.csv'), index=False)
+
+
+    #%%
     # Import regional capital cost multipliers, create multipliers for csp configurations
     reg_cap_cost_mult = sFuncs.import_data(
         file_root='reg_cap_cost_mult', file_suffix=switches['reg_cap_cost_mult_suffix'], 
@@ -186,7 +309,7 @@ def calc_financial_inputs(batch, case, switches):
 
     reg_cap_cost_mult_csp = reg_cap_cost_mult[reg_cap_cost_mult['i'].str.contains('csp1_')].copy()
     # Read in techs subset table to determine number of csp configurations
-    tech_subset_table = pd.read_csv(os.path.join('inputs', 'tech-subset-table.csv'))
+    tech_subset_table = pd.read_csv(os.path.join(input_dir, 'tech-subset-table.csv'))
     csp_configs =  int(len(tech_subset_table.query('CSP == "YES" and STORAGE == "YES"')))
     del tech_subset_table
     for i in range(2, csp_configs + 1):
@@ -196,113 +319,158 @@ def calc_financial_inputs(batch, case, switches):
         reg_cap_cost_mult = reg_cap_cost_mult.append(mult_temp)
         del mult_temp
     del reg_cap_cost_mult_csp
+    
+    # Trim down to just the techs in this run
+    reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['i'].isin(list(techs['i']))]
 
-    # Merge regional capital cost multipliers, calculate final capital cost multipliers
-    df_inv = df_inv.merge(reg_cap_cost_mult, on=['i', 'r'], how='left')
-    
-    # Calculate the final capital cost multiplier
-    df_inv['cap_cost_mult'] = df_inv['reg_cap_cost_mult'] * df_inv['finMult'] * df_inv['financing_risk_mult']
-    df_inv['cap_cost_mult_noITC'] = df_inv['reg_cap_cost_mult'] * df_inv['finMult_noITC'] * df_inv['financing_risk_mult']
-    # This is for the actual capital expenditures. Not adjusted for any tax incentives (depreciation or ITC). 
-    df_inv['cap_cost_mult_for_ratebase'] = df_inv['CCmult'] * df_inv['reg_cap_cost_mult']
-    
-    
+
     #%% Before writing outputs, change "x" to "newx" in [v]
-    df_inv['v'] = ['new%s' % v for v in df_inv['v']]
-    
-    
+    df_ivt['v'] = ['new%s' % v for v in df_ivt['v']]
+
+
     #%% Write the scenario-specific output files
-    sFuncs.inv_param_exporter(
-        df_inv, modeled_years, 'cap_cost_mult', ['i', 'r', 't'], 
-        'cap_cost_mult', output_dir)
-    sFuncs.inv_param_exporter(
-        df_inv, modeled_years, 'cap_cost_mult_noITC', ['i', 'r', 't'], 
-        'cap_cost_mult_noITC', output_dir)
-    sFuncs.inv_param_exporter(
-        df_inv, modeled_years, 'cap_cost_mult_for_ratebase', ['i', 'r', 't'], 
-        'cap_cost_mult_for_ratebase', output_dir)
     
-    # Select the PTC unit value for each modeled year. This will select the PTC with the highest "unit value",
-    # (if there are PTC's of different levels or some years without a PTC). This is a slight disconnect, because
-    # ReEDS is nominally only actually building things in the actual solve year, but this disconnect outweighs
-    # not having a PTC over a whole window because one was not available on the specific solve year
-    ptc_unit_value = df_inv[['i','v','r','modeled_year','ptc_unit_value', 'ptc_value', 'ptc_grossup_value', 'ptc_dur']].copy()
-    ptc_unit_value[['ptc_unit_value']] = ptc_unit_value[['ptc_unit_value']].fillna(0)
-    ptc_unit_value = ptc_unit_value[ptc_unit_value['ptc_unit_value']!=0]
-    ptc_unit_value = ptc_unit_value.sort_values(
-        'ptc_unit_value', ascending=False).drop_duplicates(['i','v','r','modeled_year'], keep='first')
-    ptc_unit_value = ptc_unit_value.reset_index()
-    ptc_unit_value = ptc_unit_value.rename(columns={'modeled_year':'t'})
+    # Write out the components of the financial multiplier
+    sFuncs.inv_param_exporter(
+        df_ivt, modeled_years, 'CCmult', ['i', 't'], 
+        'ccmult', inputs_case)
+    sFuncs.inv_param_exporter(
+        df_ivt, modeled_years, 'tax_rate', ['t'], 
+        'tax_rate', inputs_case)
+    sFuncs.inv_param_exporter(
+        df_ivt, modeled_years, 'itc_frac_monetized', ['i', 't'], 
+        'itc_frac_monetized', inputs_case)
+    sFuncs.inv_param_exporter(
+        df_ivt, modeled_years, 'PV_fraction_of_depreciation', ['i', 't'], 
+        'pv_frac_of_depreciation', inputs_case)
+    sFuncs.inv_param_exporter(
+        df_ivt, modeled_years, 'Degradation_Adj', ['i', 't'], 
+        'degradation_adj', inputs_case)  
+    sFuncs.inv_param_exporter(
+        df_ivt, modeled_years, 'financing_risk_mult', ['i', 't'], 
+        'financing_risk_mult', inputs_case) 
+    sFuncs.inv_param_exporter(
+        reg_cap_cost_mult, None, 'reg_cap_cost_mult', ['i', 'r'], 
+        'reg_cap_cost_mult', inputs_case)
+    
+    # Write out the adjustment multiplier for non-standard evaluation periods
     sFuncs.param_exporter(
-        ptc_unit_value[['i', 'v', 'r', 't', 'ptc_unit_value']], 
-        'ptc_unit_value', 'ptc_unit_value', output_dir)
+        df_ivt[['i', 't', 'eval_period_adj_mult']], 
+        'eval_period_adj_mult', 'eval_period_adj_mult', inputs_case)
     
-    # Write out the PTC's nominal value, grossup value, and duration. This is
-    #   used in the retail rate module. 
-    ptc_unit_value[['i', 'v', 'r', 't', 'ptc_value', 'ptc_grossup_value', 'ptc_dur']].to_csv(
-        os.path.join(output_dir, 'ptc_values.csv'), index=False)
+    # Write out the maximum safe harbor window for each tech, for determining
+    # the tax credit phaseout schedules
+    sFuncs.param_exporter(
+        df_ivt[['i', 't', 'safe_harbor_max']], 
+        'safe_harbor_max', 'safe_harbor_max', inputs_case)
     
+    # Write out the carbon capture incentive values
+    sFuncs.param_exporter(
+        co2_capture_value[['i', 'v', 't', 'co2_capture_value_monetized']], 
+        'co2_capture_value_monetized', 'co2_capture_incentive', inputs_case)
+    
+    
+    # Write out the ptc_value_scaled (which incorporates all the adjustments reeds expects)
+    sFuncs.param_exporter(
+        ptc_values_df[['i', 'v', 't', 'ptc_value_scaled']], 
+        'ptc_value_scaled', 'ptc_value_scaled', inputs_case)
+
+    # Write out the PTC's nominal value, grossup value, tax equity penalty, and duration. This is
+    # used in the retail rate module.
+    ptc_values_df[
+        ['i', 'v', 't', 'ptc_value', 'ptc_grossup_value', 'ptc_dur', 'ptc_tax_equity_penalty']
+    ].to_csv(os.path.join(inputs_case, 'ptc_values.csv'), index=False)
+
     # Write out the ITC fractions, for use in retail rate calculations
     itc_df = incentive_df[incentive_df['itc_frac']!=0]
-    itc_df[['i', 'country', 't', 'itc_frac']].to_csv(os.path.join(output_dir, 'itc_fractions.csv'), index=False)
+    itc_df[
+        ['i', 'country', 't', 'itc_frac', 'itc_tax_equity_penalty']
+    ].to_csv(os.path.join(inputs_case, 'itc_fractions.csv'), index=False)
 
 
     # CRF used in sequential case for calculating pvf_onm values (pvf)
     crf_df = financials_sys[financials_sys['t']==financials_sys['modeled_year']].copy()
-    sFuncs.param_exporter(crf_df[['t', 'crf']], 'crf', 'crf', output_dir)
+    sFuncs.param_exporter(crf_df[['t', 'crf']], 'crf', 'crf', inputs_case)
 
-        
+
     # pvf_onm used in intertemporal
     pvf_onm_int = financials_sys[['modeled_year', 'pvf_onm']].groupby(by=['modeled_year']).sum()
     pvf_onm_int = pvf_onm_int.reset_index()
     pvf_onm_int = pvf_onm_int.rename(columns={'modeled_year':'t'})
-    sFuncs.param_exporter(pvf_onm_int, 'pvf_onm', 'pvf_onm_int', output_dir)
+    sFuncs.param_exporter(pvf_onm_int, 'pvf_onm', 'pvf_onm_int', inputs_case)
 
 
     # pvf_cap (used in both seq and int modes)
-    sFuncs.inv_param_exporter(df_inv, modeled_years, 'pvf_capital', ['t'], 'pvf_cap', output_dir)
-    
-    
+    sFuncs.inv_param_exporter(df_ivt, modeled_years, 'pvf_capital', ['t'], 'pvf_cap', inputs_case)
+
+
     # Export valid region lists
-    with open(os.path.join(output_dir, 'valid_ba_list.csv'), 'w') as myfile:
-        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-        wr.writerow(valid_ba_list)
-    
-    with open(os.path.join(output_dir, 'valid_regions_list.csv'), 'w') as myfile:
-        wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-        wr.writerow(valid_regions_list)
-        
+    pd.Series(valid_ba_list).to_csv(
+        os.path.join(inputs_case, 'valid_ba_list.csv'), header=False, index=False)
+    pd.Series(valid_regions_list).to_csv(
+        os.path.join(inputs_case, 'valid_regions_list.csv'), header=False, index=False)
+
     # Copy input files into inputs_case
-    regions.to_csv(os.path.join(output_dir, 'regions.csv'), index=False)
-    depreciation_schedules.to_csv(os.path.join(output_dir, 'depreciation_schedules.csv'), index=False)
-    inflation_df.to_csv(os.path.join(output_dir, 'inflation.csv'), index=False)
-    
+    regions.to_csv(os.path.join(inputs_case, 'regions.csv'), index=False)
+    depreciation_schedules.to_csv(
+        os.path.join(inputs_case, 'depreciation_schedules.csv'), index=False)
+    inflation_df.to_csv(os.path.join(inputs_case, 'inflation.csv'), index=False)
+
+    # Copy construction_times into inputs_case
+    pd.read_csv(
+        os.path.join(input_dir, 'financials', 
+                     'construction_times_%s.csv' % switches['construction_times_suffix'])
+    ).to_csv(
+        os.path.join(inputs_case, 'construction_times.csv'), index=False)
+
+    # Copy tc_phaseout_schedule into inputs_case
+    pd.read_csv(
+        os.path.join(input_dir, 'financials', 
+                     'tc_phaseout_schedule_%s.csv' % switches['GSw_TCPhaseout_schedule'])
+    ).to_csv(
+        os.path.join(inputs_case, 'tc_phaseout_schedule.csv'), index=False)
+
+
     # Output some values used in the retail rate module
-    
-    # This is for the actual capital expenditures. Not adjusted for any tax incentives (depreciation or ITC). 
-    df_inv['cap_cost_mult_for_ratebase'] = df_inv['CCmult'] * df_inv['reg_cap_cost_mult']
-    retail_cap_cost_mult = df_inv[['i', 't', 'r', 'cap_cost_mult_for_ratebase']].drop_duplicates(['i', 'r', 't'])
-    retail_cap_cost_mult = retail_cap_cost_mult[retail_cap_cost_mult['cap_cost_mult_for_ratebase'].isnull()==False]
-    retail_eval_period = df_inv[['i', 't', 'r', 'eval_period']].drop_duplicates(['i', 'r', 't'])
-    retail_depreciation_sch = df_inv[['i', 't', 'r', 'depreciation_sch']].drop_duplicates(['i', 'r', 't'])
+    retail_eval_period = df_ivt[['i', 't', 'eval_period']].drop_duplicates(['i', 't'])
+    retail_depreciation_sch = df_ivt[
+        ['i', 't', 'depreciation_sch']].drop_duplicates(['i', 't'])
+    retail_eval_period.astype({'i':'category'}).to_hdf(
+        os.path.join(inputs_case, 'retail_eval_period.h5'),
+        key='data', complevel=4, index=False, format='table')
+    retail_depreciation_sch.astype({'i':'category'}).to_hdf(
+        os.path.join(inputs_case, 'retail_depreciation_sch.h5'),
+        key='data', complevel=4, index=False, format='table')
 
-    retail_cap_cost_mult.to_csv(
-        os.path.join(output_dir, 'retail_cap_cost_mult.csv.gz'), index=False)
-    retail_eval_period.to_csv(
-        os.path.join(output_dir, 'retail_eval_period.csv.gz'), index=False)
-    retail_depreciation_sch.to_csv(
-        os.path.join(output_dir, 'retail_depreciation_sch.csv.gz'), index=False)
 
-        
-    print('Finished calculation of financial parameters for',case)
-    toc(tic=tic, year=0, process='input_processing/calc_financial_inputs.py', 
-        path=os.path.join(output_dir,'..'))
+    print('Finished calculation of financial parameters for', inputs_case)
 
     #%% Write a dictionary of the results
     finance_dict = {
-        'numclass': numclass,
-        'df_inv': df_inv,
+        'df_ivt': df_ivt,
         'financials_sys': financials_sys,
     }
-    
+
     return finance_dict
+
+#%% Procedure
+if __name__ == '__main__':
+    ###################
+    #%% Argument inputs
+    import argparse
+    parser = argparse.ArgumentParser(description="calc_financial_inputs.py")
+    parser.add_argument("basedir",
+                        help="ReEDS-2.0 directory")
+    parser.add_argument("inputs_case",
+                        help="ReEDS-2.0/runs/{case}/inputs_case directory")
+    args = parser.parse_args()
+    basedir = args.basedir
+    inputs_case = args.inputs_case
+
+    #%% Run it
+    tic = datetime.datetime.now()
+
+    calc_financial_inputs(basedir, inputs_case)
+
+    toc(tic=tic, year=0, process='input_processing/calc_financial_inputs.py', 
+        path=os.path.join(inputs_case,'..'))

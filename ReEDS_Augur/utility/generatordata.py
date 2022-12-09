@@ -66,10 +66,22 @@ class TechData(SwitchSettings):
         '''
         emit_rate = INPUTS['emit_rate'].get_data()
         emit_rate = self.filter_tech(emit_rate)
+        ### Include non-CO2 GHG emissions based on global warming potential if specified
+        if int(SwitchSettings.switches['gsw_annualcapco2e']):
+            emit_rate_co2e = emit_rate.loc[emit_rate.e=='CO2'].merge(
+                emit_rate.loc[emit_rate.e=='CH4'].drop(['e'], axis=1),
+                on=['i','v','r'], how='left', suffixes=('','_CH4')
+            ).fillna(0)
+            emit_rate_co2e.emit_rate += (
+                emit_rate_co2e.emit_rate_CH4 * float(SwitchSettings.switches['gsw_methanegwp']))
+            emit_rate = pd.concat([
+                emit_rate_co2e.drop(['emit_rate_CH4'], axis=1),
+                emit_rate.loc[emit_rate.e != 'CO2']
+            ], axis=0)
+        ### Apply emissions price
         emit_price = INPUTS['emit_price'].get_data()
         emit_cost = emit_price.merge(emit_rate, on = ['e', 'r'])
-        emit_cost['emit_cost'] = emit_cost['emit_rate'] * \
-                                                    emit_cost['emit_price']
+        emit_cost['emit_cost'] = emit_cost['emit_rate'] * emit_cost['emit_price']
         emit_cost.drop(['emit_price', 'emit_rate'], axis = 1, inplace = True)
         emit_cost = emit_cost.groupby(['i', 'v', 'r'], as_index = False).sum()
         if not emit_cost.empty:
@@ -515,116 +527,6 @@ class ConsumeData(TechData):
     min_gen_size = 0
 
 
-class CSPData(TechData):
-    '''
-    Handling properties specific to CSP
-    '''
-
-    def __init__(self, tech_key):
-        super().__init__(tech_key)
-        '''
-        CSP capacity in ReEDS is at the "s" region level rather than the "p"
-        region level. Osprey operates at the "p" region level, so max_cap for
-        CSP is aggregated up to the "p" regions. But, CSP resource profiles
-        are at the "s" region level, so we save the original unaggregated CSP
-        capacity to this attribute so it can be called upon to get CSP inflow
-        when multiplied by CSP profiles.
-        NOTE this DOES NOT include the "solar
-        multiple (sm)" of CSP, which is needed to calculate the full inflow
-        to CSP.
-        '''
-        self.max_cap_orig = None
-
-    def agg_gens(self, df, rs_to_r = True):
-        '''
-        CSP generators need to be aggregated from the "s" regions to the "p"
-        regions. Also, aggregating different water-cooled plants together if
-        needed.
-        '''
-        if self.switches['gsw_watermain'] == '1':
-            df = self.remove_watercooling(df)
-        df = super().agg_gens(df)
-        if rs_to_r: df = agg_rs_to_r(df)
-        return df
-
-    def format_daily_energy_budget(self):
-        '''
-        Calculate the amount of energy coming in to CSP for each day. We let
-        CSP dispatch that energy to the grid as needed within each day.
-        Note that we aggregate up to the "p" regions from the "s" regions.
-        '''
-        cap_init = self.get_init_cap()
-        cap_inv = self.get_inv()
-        cap = pd.concat([cap_init, cap_inv], sort = False, ignore_index = True)
-        if not cap.empty:
-            cap = self.apply_degradation(cap)
-            cap = self.agg_gens(cap, rs_to_r = False)
-            cap = cap[cap['MW'] >= self.min_gen_size]
-            cap['resource'] = cap['i'] + '_' + cap['r']
-            # Saving the original capacity
-            self.max_cap_orig = cap.groupby(['i', 'r', 'resource'],
-                                                        as_index = False).sum()
-            sm = INPUTS['csp_sm'].get_data()
-            sm = self.filter_tech(sm)
-            if self.switches['gsw_watermain'] == '1':
-                sm = self.remove_watercooling(sm)
-            cap = cap.merge(sm, on='i')
-            cap['MW'] *= cap['sm']
-            profiles = HOURLY_PROFILES['csp'].profiles[cap['resource']]
-            profiles = filter_data_year(
-                profile=profiles, data_years=self.osprey_years, reset_index=False)
-            def flatten(l): return [item for sublist in l for item in sublist]
-            day = flatten([
-                ['d'+str(i+1)]*24
-                for i in range(365 * SwitchSettings.switches['osprey_num_years'])
-            ])
-            profiles['d'] = day
-            daily_energy = profiles.groupby('d').sum()
-            days = daily_energy.index
-            daily_energy = apply_series_to_df(daily_energy,
-                                              cap[['resource', 'MW']],
-                                              'multiply')
-            daily_energy['d'] = days
-            daily_energy = daily_energy.melt(id_vars = 'd',
-                                             var_name = 'resource')
-            daily_energy.rename(columns={'value':'MWh'}, inplace = True)
-            df = daily_energy.merge(cap[['i', 'v', 'r', 'resource']],
-                                    on = 'resource')
-            # Don't let daily CF exceed cap
-            df = df.merge(cap, on = ['i', 'v', 'r', 'resource'])
-            df['MW'] *= 24
-            df['MW'] /= df['sm']
-            # Accounting for rounding issues
-            df['MW'] -= 0.005
-            df['MW'] = df['MW'].round(2)
-            cap_check = df['MW'] < df['MWh']
-            df.loc[cap_check, 'MWh'] = df.loc[cap_check, 'MW']
-            df.drop(['MW', 'sm'], axis = 1, inplace = True)
-            df = df[['i', 'v', 'r', 'd', 'MWh']]
-            df = agg_rs_to_r(df)
-            df.index = range(len(df))
-        else:
-            df = pd.DataFrame(columns = ['i', 'v', 'r', 'd', 'MWh'])
-            self.max_cap_orig = pd.DataFrame(
-                                    columns = ['i', 'r', 'resource', 'MW'])
-        df['MWh'] = df['MWh'].round(self.switches['decimals'])
-        self.daily_energy_budget = df
-        return df
-
-    def remove_watercooling(self, df):
-        '''
-        Removing the watercooling information from CSP data
-        '''
-        df['split'] = df['i'].str.split('_')
-        for i in range(len(df)):
-            df.loc[i, 'i'] = df.loc[i, 'split'][0] \
-                                + '_' + df.loc[i, 'split'][1]
-        df.drop('split', axis=1, inplace=True)
-        df = df.drop_duplicates()
-        df.index = range(len(df))
-        return df
-
-
 class DispatchableHydroData(TechData):
     '''
     Handling properties specific to dispatchable hydro
@@ -854,9 +756,7 @@ class PVBData(TechData):
         df = df.merge(resources, on = 'i', how = 'right')
         df['cf_marg'].fillna(1, inplace = True)
         df = df[['i', 'r', 'resource', 'cf_marg']]
-        df['cf_marg'] *= self.switches['marg_vre_mw']
-        df['cf_marg'] = df['cf_marg'].round(
-                                        self.switches['decimals'])
+
         self.hourly_cfs_marg = df
         return df
 
@@ -1115,7 +1015,7 @@ class CSPNSData(VREData):
         return df
 
 
-class PVWindData(VREData):
+class PVWindCSPData(VREData):
     '''
     Handling properties specific to PV and wind
     '''
@@ -1159,9 +1059,7 @@ class PVWindData(VREData):
         df = df.merge(resources, on = 'i', how = 'right')
         df['cf_marg'].fillna(1, inplace = True)
         df = df[['i', 'r', 'resource', 'cf_marg']]
-        df['cf_marg'] *= self.switches['marg_vre_mw']
-        df['cf_marg'] = df['cf_marg'].round(
-                                        self.switches['decimals'])
+
         self.hourly_cfs_marg = df
         return df
 
@@ -1212,7 +1110,7 @@ GEN_DATA = {
     'hourly_cfs_marg':     pd.DataFrame(columns = ['i', 'r', 'resource', 'cf_marg']),
     'mingen':              pd.DataFrame(columns = ['i', 'v', 'r', 'szn', 'mingen']),
     'ret_frac':            pd.DataFrame(columns = ['i', 'v', 'r', 't', 'ret_frac'])
-           }
+}
 
 # Dictionary where each entry is a generation technology and the values are
 # the class defined above that corresponds to each technology.
@@ -1222,12 +1120,12 @@ GEN_TECHS = {
     'can-imports': CanImportData('canada'),
     'coal':        TechData('coal'),
     'consume':     ConsumeData('consume'),
-    'csp':         CSPData('csp_storage'),
+    'csp':         PVWindCSPData('csp_storage'),
     'cspns':       CSPNSData('csp_nostorage'),
-    'distpv':      PVWindData('distpv'),
+    'distpv':      PVWindCSPData('distpv'),
     'dr1':         DRData('dr1'),
     'dr2':         DRData('dr2'),
-    'dupv':        PVWindData('dupv'),
+    'dupv':        PVWindCSPData('dupv'),
     'gas':         NGData('gas'),
     'geothermal':  TechData('geo'),
     'hydro_d':     DispatchableHydroData('hydro_d'),
@@ -1238,7 +1136,7 @@ GEN_TECHS = {
     'psh':         PSHData('psh'),
     'pvb':         PVBData('pvb'),
     're-ct':       TechData('re_ct'),
-    'upv':         PVWindData('upv'),
-    'wind':        PVWindData('wind'),
+    'upv':         PVWindCSPData('upv'),
+    'wind':        PVWindCSPData('wind'),
 }
 #%%

@@ -1,4 +1,4 @@
-distPV,0.007
+distpv,0.007
 upv_1,0.007
 upv_2,0.007
 upv_3,0.007
@@ -36,10 +36,12 @@ battery_6,0
 battery_8,0
 battery_10,0
 biopower,0
-beccs,0
+beccs_mod,0
+beccs_max,0
 caes,0
 can-imports,0
-coal-CCS,0
+coal-CCS_mod,0
+coal-CCS_max,0
 Coal-IGCC,0
 coal-new,0
 CoalOldScr,0
@@ -48,7 +50,8 @@ CofireNew,0
 CofireOld,0
 csp-ns,0
 Gas-CC,0
-Gas-CC-CCS,0
+Gas-CC-CCS_mod,0
+Gas-CC-CCS_max,0
 Gas-CT,0
 RE-CT,0
 RE-CC,0
@@ -60,10 +63,8 @@ Nuclear,0
 Nuclear-SMR,0
 Ocean,0
 o-g-s,0
-other,0
 pumped-hydro,0
 pumped-hydro-flex,0
-unknown,0
 hydD,0
 hydND,0
 hydSD,0

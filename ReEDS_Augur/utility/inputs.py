@@ -35,7 +35,6 @@ class AugurInput(SwitchSettings):
             '''
             rfeas = INPUTS['rfeas'].get_data()
             r_rs = INPUTS['r_rs'].get_data()
-            r_rs = r_rs[r_rs['rs'] != 'sk']
             r_rs_feas = rfeas.merge(r_rs, on = 'r', how='left')
             r_rs_feas = r_rs_feas['r'].drop_duplicates().tolist() + \
                                     r_rs_feas['rs'].tolist()
@@ -96,9 +95,9 @@ class AugurInput(SwitchSettings):
         return self.df.copy()
 
 
-class PKLInput(AugurInput):
+class H5Input(AugurInput):
     '''
-    Class for grabbing data from .pkl files.
+    Class for grabbing data from .h5 files.
     '''
 
     def __init__(self, file, col_names):
@@ -108,26 +107,14 @@ class PKLInput(AugurInput):
 
     def read_data(self, *args, **kwargs):
         '''
-        Get data from a pkl file. Set the column names and drop any unneeded
-        columns. Assert that all tech types in the "i" column, if it exists,
-        are all lower case, and that all years in the "t" column, if it exists,
-        are set to be a string so that data types are consistent. Also assert
-        that all regions in the "r" columns are included in the ReEDS run and
-        all tech types in the "i" column represent the same thing i.e. water
-        cooling is included if it is being used in ReEDS.
+        Get data from a .h5 file
         '''
         if self.df is None:
-            try:
-                self.df = pd.read_pickle(self.file)
-            except:
-                # pkl files are deleted when the run finishes. Grab from a
-                # .csv.gz file if the .pkl file doesn't exist.
-                filename = self.file[:-4]
-                self.df = pd.read_csv('{}.csv.gz'.format(filename))
+            self.df = pd.read_hdf(self.file)
         return self.df
 
 
-class LoadData(PKLInput):
+class LoadData(H5Input):
     '''
     Class for load because load can be stored differently when EFS or climate
     profiles are used
@@ -137,20 +124,26 @@ class LoadData(PKLInput):
             super().read_data()
             # Filter for proper data year here if EFS load profiles are used
             if self.switches['gsw_efs1_allyearload'] != 'default':
-                self.df = self.df.loc[self.next_year]
+                self.df = self.df.loc[
+                    (self.next_year if SwitchSettings.switches['osprey_load_year'] == 'next'
+                     else self.prev_year)
+                ]
         return self.df
 
 
-class LoadDataWithSwtich(LoadData):
+class LoadDataWithSwitch(LoadData):
     '''
     Class for year-specific load files
     '''
     def read_data(self, suffix, *args, **kwargs):
         if self.df is None:
-            self.df = pd.read_pickle(self.file + str(suffix) + '.pkl')
+            self.df = pd.read_hdf(self.file + str(suffix) + '.h5')
             # Filter for proper data year here if EFS load profiles are used
             if self.switches['gsw_efs1_allyearload'] != 'default':
-                self.df = self.df.loc[self.next_year]
+                self.df = self.df.loc[
+                    (self.next_year if SwitchSettings.switches['osprey_load_year'] == 'next'
+                     else self.prev_year)
+                ]
         return self.df
 
 
@@ -166,13 +159,7 @@ class CSVInput(AugurInput):
 
     def read_data(self, *args, **kwargs):
         '''
-        Get data from a csv file. Set the column names and drop any unneeded
-        columns. Assert that all tech types in the "i" column, if it exists,
-        are all lower case, and that all years in the "t" column, if it exists,
-        are set to be a string so that data types are consistent. Also assert
-        that all regions in the "r" columns are included in the ReEDS run and
-        all tech types in the "i" column represent the same thing i.e. water
-        cooling is included if it is being used in ReEDS.
+        Get data from a csv file
         '''
         if self.df is None:
             self.df = pd.read_csv(self.file)
@@ -192,13 +179,7 @@ class CSVInputWithSwitch(AugurInput):
 
     def read_data(self, suffix, *args, **kwargs):
         '''
-        Get data from a csv file. Set the column names and drop any unneeded
-        columns. Assert that all tech types in the "i" column, if it exists,
-        are all lower case, and that all years in the "t" column, if it exists,
-        are set to be a string so that data types are consistent. Also assert
-        that all regions in the "r" columns are included in the ReEDS run and
-        all tech types in the "i" column represent the same thing i.e. water
-        cooling is included if it is being used in ReEDS.
+        Get data from a csv file.
         Note that a suffix is required (e.g. the year for any Osprey outputs).
         '''
         if self.df is None:
@@ -217,13 +198,7 @@ class GDXInput(AugurInput):
 
     def read_data(self):
         '''
-        Get data from the gdx file. Set the column names and drop any unneeded
-        columns. Assert that all tech types in the "i" column, if it exists,
-        are all lower case, and that all years in the "t" column, if it exists,
-        are set to be a string so that data types are consistent. Also assert
-        that all regions in the "r" columns are included in the ReEDS run and
-        all tech types in the "i" column represent the same thing i.e. water
-        cooling is included if it is being used in ReEDS.
+        Get data from the gdx file.
         Note that a suffix is required (e.g. the year for any Osprey outputs).
         '''
         if self.df is None:
@@ -254,7 +229,6 @@ class TechMapping(GDXInput):
             '''
             rfeas = INPUTS['rfeas'].get_data()
             r_rs = INPUTS['r_rs'].get_data()
-            r_rs = r_rs[r_rs['rs'] != 'sk']
             r_rs_feas = rfeas.merge(r_rs, on = 'r', how='left')
             r_rs_feas = r_rs_feas['r'].drop_duplicates().tolist() + \
                                     r_rs_feas['rs'].tolist()
@@ -304,16 +278,16 @@ INPUTS = {
         'avail_filt', ['i','v','szn','avail']),
     'bcr': GDXInput(
         'bcr', ['i','bcr']),
-    'bcr_pvb_config': GDXInput(
-        'bcr_pvb_config', ['pvb_config','bcr']),
+    'bir_pvb_config': GDXInput(
+        'bir_pvb_config', ['pvb_config','bir']),
     'can_exports': GDXInput(
         'can_exports_h_filt', ['r', 'h', 'MW']),
     'can_imports_cap': GDXInput(
         'can_imports_cap', ['i', 'v', 'r', 'MW']),
     'can_imports_szn': GDXInput(
         'can_imports_szn_filt', ['r', 'szn', 'imports']),
-    'can_trade_8760':CSVInput(
-        os.path.join('inputs_case', 'can_trade_8760.csv'),
+    'can_trade_8760':H5Input(
+        os.path.join('inputs_case', 'can_trade_8760.h5'),
         ['r','hours','t','MW']),
     'cap_converter': GDXInput(
         'cap_converter_filt', ['r', 'MW']),
@@ -341,12 +315,6 @@ INPUTS = {
         'cost_cap_fin_mult_filt', ['i', 'r', 't', 'fin_mult']),
     'cost_vom': GDXInput(
         'cost_vom_filt', ['i', 'v', 'r', 'cost_vom']),
-    'csp_profiles': PKLInput(
-        os.path.join('inputs_case', 'csp_profiles.pkl'),
-        False),
-    'csp_resources': CSVInput(
-        os.path.join('inputs_case', 'csp_resources.csv'),
-        False),
     'csp_sm': GDXInput(
         'csp_sm', ['i', 'sm']),
     'd_szn': CSVInput(
@@ -384,8 +352,9 @@ INPUTS = {
     'heat_rate': GDXInput(
         'heat_rate_filt', ['i', 'v', 'r', 'heat_rate']),
     'hierarchy': GDXInput(
-        'hierarchy', ['r', 'nercr', 'nercr_new', 'rto', 'rto_agg', 'cendiv', 'st',
-                'interconnect', 'country', 'customreg', 'ccreg', 'usda_region', 'drop']),
+        'hierarchy', [
+            'r', 'nercr', 'transreg', 'cendiv', 'st', 'interconnect',
+            'country', 'usda_region', 'aggreg', 'ccreg', 'drop']),
     'hours': GDXInput(
         'hours', ['h', 'hours']),
     'hours_peak': CSVInput(
@@ -402,15 +371,15 @@ INPUTS = {
         os.path.join('inputs_case','index_hr_map.csv'),
         False),
     'load_climate_allyears': LoadData(
-        os.path.join('ReEDS_Augur','augur_data','load_allyears.pkl'),
+        os.path.join('ReEDS_Augur','augur_data','load_allyears.h5'),
         False),
-    'load_climate_sevenyears': LoadDataWithSwtich(
+    'load_climate_sevenyears': LoadDataWithSwitch(
         os.path.join('ReEDS_Augur','augur_data','load_7year_'),
         False),
     'load_multiplier': GDXInput(
         'load_multiplier_filt', ['cendiv', 'load_mult']),
     'load_profiles': LoadData(
-        os.path.join('inputs_case', 'load.pkl'),
+        os.path.join('inputs_case', 'load.h5'),
         False),
     'm_cf': GDXInput(
         'm_cf_filt', ['i', 'v', 'r', 'h', 'CF']),
@@ -464,9 +433,9 @@ INPUTS = {
     'routes': GDXInput(
         'routes_filt', False),
     'rsc_dat': GDXInput(
-        'rsc_dat_filt', ['r', 'rs', 'i', 'rscbin', 'sc_cat', 'Value']),
+        'rsc_dat_filt', ['i', 'r', 'sc_cat', 'rscbin', 'Value']),
     'rsc_dat_dr': GDXInput(
-        'rsc_dat_dr', ['r', 'rs', 'i', 'rscbin', 'sc_cat', 'cost']),
+        'rsc_dat_dr', ['i', 'r', 'sc_cat', 'rscbin', 'cost']),
     'sdbin': GDXInput(
         'sdbin', ['bin', 'drop']),
     'storage_duration': GDXInput(
@@ -483,8 +452,8 @@ INPUTS = {
         'inv_cond_filt', ['i', 'v', 't', 'drop']),
     'upgrades': TechMapping(
         'upgrade_to_filt', ['i', 'ii', 'drop']),
-    'vre_profiles': PKLInput(
-        os.path.join('inputs_case', 'recf.pkl'),
+    'vre_profiles': H5Input(
+        os.path.join('inputs_case', 'recf.h5'),
         False),
     'watertechs': TechMapping(
         'ctt_i_ii_filt', ['i', 'ii', 'drop']),

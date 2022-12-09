@@ -1,23 +1,32 @@
-Geothermal  ,0.04
-Hydro ,1
-Biopower  ,0.04
-beccs,0.04
-gas-CT  ,0.08
-gas-CC  ,0.05
-gas-CC-CCS  ,0.05
-CoalOldScr  ,0.02
-CoalOldUns  ,0.02
-coal-new  ,0.02
-coal-IGCC ,0.02
-coal-CCS  ,0.02
-o-g-s ,0.04
-CofireOld ,0.02
-CofireNew ,0.02
+Geothermal,0.04
+Hydro,1
+Biopower,0.04
+beccs_mod,0.04
+beccs_max,0.04
+gas-CT,0.08
+gas-CC,0.05
+Gas-CC-CCS_mod,0.05
+Gas-CC-CCS_max,0.05
+gas-CC-CCS-F1,0.05
+gas-CC-CCS-F2,0.05
+gas-CC-CCS-F3,0.05
+CoalOldScr,0.02
+CoalOldUns,0.02
+coal-new,0.02
+coal-IGCC,0.02
+coal-CCS_mod,0.02
+coal-CCS_max,0.02
+coal-CCS-F1,0.02
+coal-CCS-F2,0.02
+coal-CCS-F3,0.02
+o-g-s,0.04
+CofireOld,0.02
+CofireNew,0.02
 nuclear,0.02
 nuclear-SMR,0.02
-lfill-gas ,0.04
+lfill-gas,0.04
 RE-CT,0.08
-RE-CC  ,0.08
+RE-CC,0.08
 csp1_1*csp1_12,0.1
 csp2_1*csp2_12,0.1
 csp3_1*csp3_12,0.1

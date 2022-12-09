@@ -28,11 +28,28 @@ from ReEDS_Augur.utility.switchsettings import SwitchSettings
 
 def existing_curtailment():
 
+    #%% Bypass this calculation if not running Augur
+    if not int(SwitchSettings.switches['gsw_augurcurtailment']):
+        curt_results = {
+            'curt': pd.DataFrame(),
+            'curt_h': pd.DataFrame(),
+            'curt_load_adj': pd.DataFrame(),
+            'curt_mingen': pd.DataFrame(),
+        }
+        curt_reeds = {
+            'curt_old': pd.DataFrame(columns=['r','h','t','value']),
+            'curt_mingen': pd.DataFrame(columns=['r','h','t','value']),
+            'storage_in_min': pd.DataFrame(columns=['r','h','t','value']),
+            'storage_starting_soc' : pd.DataFrame(columns=['i','v','r','h','t','Val']),
+        }
+        return curt_results, curt_reeds
+
+    #%% Load the inputs
     decimals = SwitchSettings.switches['decimals']
     year = int(SwitchSettings.next_year)  # Year must be an integer, not a string
     marginal_curtailment_step = SwitchSettings.switches['curt_mingen_step_size']
     techs = INPUTS['i_subsets'].get_data()
-    regions = INPUTS['rfeas'].get_data()['r']
+    rfeas = INPUTS['rfeas'].get_data()['r']
     ts_length = SwitchSettings.switches['osprey_ts_length']
     converter_efficiency_vsc = INPUTS['converter_efficiency_vsc'].get_data().loc[0,'value']
 
@@ -63,7 +80,7 @@ def existing_curtailment():
     dr_out = dr_out.groupby('r').sum().T
     dr_out = dr_out.reindex(
         index=np.arange(SwitchSettings.switches['osprey_ts_length']),
-        columns=regions).fillna(0)
+        columns=rfeas).fillna(0)
 
     # Remove storage from gen dataframe
     gen = gen[gen_names_no_stor_dr['generator']]
@@ -173,7 +190,7 @@ def existing_curtailment():
     #%% Compute curtailment
 
     # Get net regional transmission flows
-    region_flows = OSPREY_RESULTS['region_flows'].get_data()
+    region_flows = OSPREY_RESULTS['region_flows'].get_data().reindex(rfeas, axis=1).fillna(0)
     
     # Get Osprey hydrogen production demand
     produce = OSPREY_RESULTS['produce'].get_data()
@@ -191,7 +208,7 @@ def existing_curtailment():
         dr_charge = dr_in - dr_out
 
     # Get net VSC AC/DC conversion
-    conversion = INPUTS['osprey_conversion'].get_data(str(SwitchSettings.next_year))
+    conversion = INPUTS['osprey_conversion'].get_data(str(SwitchSettings.prev_year))
     if not len(conversion):
         conversion = 0
     else:
@@ -252,8 +269,15 @@ def existing_curtailment():
     idx = curt < 0
     curt[idx] = 0
 
-    #%% Process outputs for ReEDS
+    #%% Write cutailment for plots if necessary
+    if SwitchSettings.switches['plots']:
+        curt.to_hdf(
+            os.path.join(
+                'ReEDS_Augur','augur_data',
+                'curt_C1_{}.h5'.format(SwitchSettings.prev_year)),
+            key='data', complevel=4)
 
+    #%% Process outputs for ReEDS
     # Convert curtailment from ET to local time
     curt_ET = curt.reset_index(drop=True)
     curt_ET.index.name = 'idx_hr'
@@ -271,7 +295,7 @@ def existing_curtailment():
     curt_tz_agg = curt_tz_agg.drop(
             columns=['index', 'hour', 'year', 'season']).groupby('h').sum()
     curt_tz_agg = curt_tz_agg.reindex(index=['h'+str(i+1) for i in range(16)],
-                                      columns=regions)
+                                      columns=rfeas)
     # In the future, compute this accurately using the max 40 hours by BA
 
     # Convert to MWh and format for ReEDS
@@ -375,7 +399,7 @@ def existing_curtailment():
 
 
     # Compute starting state of charge 
-    storage_soc = INPUTS['osprey_SOC'].get_data(SwitchSettings.next_year)
+    storage_soc = INPUTS['osprey_SOC'].get_data(SwitchSettings.prev_year)
     storage_soc['hour'] = ((storage_soc.d.str[1:].astype(int)-1)*24
                               + storage_soc.hr.str[2:].astype(int)-1)
     if len(storage_soc):
