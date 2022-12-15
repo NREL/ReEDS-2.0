@@ -43,7 +43,7 @@ if len(cases[0].split('_')) == 3:
     user = [x.split('_')[0] for x in cases][0]
     scenarios = [x.split('_')[1] + "_" + x.split('_')[2] for x in cases]
     root = args['solutions_dir']
-    SAVEDIR = os.path.join(root, 'exceloutput')
+    SAVEDIR = os.path.join(root, 'exceloutput', 'vizit')
 else:
     user = ""
     scenarios = [x.split('_')[1] for x in cases]
@@ -454,7 +454,7 @@ def write_outputs(dir):
     ######## EXPORT TO EXCEL
     # separate sheet for each table
     if args['excel'] == 'T':
-        writer = pd.ExcelWriter(os.path.join(os.getcwd(), dir, "outputs_{}.xlsx".format("-".join(cases))))
+        writer = pd.ExcelWriter(os.path.join(os.getcwd(), dir,"..","outputs_{}.xlsx".format("-".join(cases))))
 
         annual_out.to_excel(writer, sheet_name="Annual results", index=False)
         firmcap.to_excel(writer, sheet_name="Seasonal firm capacity", index=False)
@@ -463,7 +463,7 @@ def write_outputs(dir):
         costs.to_excel(writer, sheet_name='Costs', index=False)
 
         writer.save()
-        print("Results saved to " + os.path.join(dir, "outputs_{}.xlsx".format("-".join(cases))))
+        print("Results saved to " + os.path.join(dir,"..","outputs_{}.xlsx".format("-".join(cases))))
 
     ######## WRITE OUTPUTS FOR VIZIT
     
