@@ -7,7 +7,7 @@ avail_refurb, inv_refurb, txcapcost, substcost, load_mw, load_rt;
 
 gen_out(i,r,h,t) = sum(v, GEN.l(i,v,r,h,t));
 
-curt_out(i,r,h,t) = sum((v), m_cf(i,r,h) * CAP.l(i,v,r,t) ) - sum((v), GEN.l(i,v,r,h,t) );
+curt_out(i,r,h,t) = sum((v), m_cf(i,r,h) * CAP.l(i,v,r,t)$vre(i) ) - sum((v), GEN.l(i,v,r,h,t)$vre(i) );
 
 resgen(i,r,t) = sum((v,h),hours(h) * GEN.l(i,v,r,h,t));
 
@@ -29,8 +29,7 @@ capcost(i,r,t) = sum(v$valinv(i,v,r,t), INV.l(i,v,r,t) * cost_cap_fin_mult(i,r,t
                  + sum((v, rscbin)$valinv(i,v,r,t), INV_RSC.l(i,v,r,t,rscbin) * m_rsc_dat(r,i,rscbin,"cost")) 
                  + sum(v$valinv(i,v,r,t), cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INVREFURB.l(i,v,r,t) * refurb_cost_multiplier(i));
 
-txcapcost(r,rr,t,trtype) = 
-                    ((InterTransCost(r) + InterTransCost(rr))/2) * INVTRAN.l(r,rr,t,trtype) * distance(r,rr) ;
+txcapcost(r,rr,t,trtype) = r_rr_transcost(r,rr) * INVTRAN.l(r,rr,t,trtype) ;
 
 substcost(r,t) = sum{(vc), trancost(r,"cost",vc) * InvSubstation.l(r,vc,t) };
 

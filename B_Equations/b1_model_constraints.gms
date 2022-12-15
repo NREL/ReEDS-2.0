@@ -143,6 +143,9 @@ EQUATION
 * test a transmission growth limit of 2GW per year on any corridor
  eq_trangrowth_limit(r,rr,t)
 
+* test annual limit on fractional curtailment
+ eq_curtlim(i,t)
+
 ;
 
 
@@ -156,6 +159,20 @@ eq_trangrowth_limit(r,rr,t)$[sum(trtype,routes(r,rr,trtype,t))$tmodel(t)$rfeas(r
 
 * limit transmission investment to 5 GW per year for any corridor
      sum{(trtype), INVTRAN(r,rr,t,trtype)$routes(r,rr,trtype,t) + INVTRAN(rr,r,t,trtype)$routes(rr,r,trtype,t)}
+;
+
+eq_curtlim(i,t)$[vre(i)$Sw_CurtLim]..
+
+* fraction of potential generation
+  0.3 * sum{(v,r,rr,h)$[cap_agg(r,rr)$valcap(i,v,rr,t)$rfeas_cap(rr)$vre(i)],
+         m_cf(i,rr,h) * CAP(i,v,rr,t) }
+
+  =g=
+    
+* realized generation minus total potential generation 
+    sum((h,r), sum{(v,rr)$[cap_agg(r,rr)$valcap(i,v,rr,t)$rfeas_cap(rr)$vre(i)],
+                   m_cf(i,rr,h) * CAP(i,v,rr,t) } -
+               sum{(v,rr)$[valgen(i,v,r,t)$vre(i)],GEN(i,v,r,h,t)} )
 ;
 
 *=========================
@@ -369,7 +386,7 @@ eq_rsc_INVlim(r,i,rscbin)$[vre(i)$m_rscfeas(r,i,rscbin)]..
 eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2022)$(yeart(t)<2031)$growth_limit_relative(tg)]..
 
 *the relative growth rate multiplied by the existing technology group's existing capacity
-    (1+growth_limit_relative(tg)) ** (sum{tt$[tprev(tt,t)], yeart(tt)} - yeart(t)) *
+    (growth_limit_relative(tg)) ** (sum{tt$[tprev(tt,t)], yeart(tt)} - yeart(t)) *
     sum{(i,v,r,tt)$[tprev(t,tt)$valcap(i,v,r,tt)$tg_i(tg,i)$rfeas_cap(r)],
          CAP(i,v,r,tt) }
 
@@ -389,10 +406,13 @@ eq_growthlimit_absolute(r,tg,t)$[growth_limit_absolute(r,tg)$tmodel(t)$Sw_Growth
 
      =g=
 
-* must exceed the total capacity - same RHS as previous equation
+* must exceed the total capacity
 * note scarcely-used set 'tg' is technology group (allows for lumping together or all wind/solar techs)
-     sum{(i,v)$tg_i(tg,i),
+     sum{(i,v,rr)$[tg_i(tg,i)$cap_agg(r,rr)$vre(i)],
+         CAP(i,v,rr,t)} +
+     sum{(i,v)$[tg_i(tg,i)$(not vre(i))],
          CAP(i,v,r,t)}
+
 ;
 
 

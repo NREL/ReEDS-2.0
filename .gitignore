@@ -13,6 +13,7 @@ slurm-*
 /shfiles/india_*
 /D_8760/gdxfiles/
 /E_Outputs/runs/
+/E_Outputs/vizit_*
 **/__pycache__/
 /F_Analysis/data/output*
 reeds_server/users_avatar/*
