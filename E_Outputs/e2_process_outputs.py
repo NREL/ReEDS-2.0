@@ -212,6 +212,16 @@ def ProcessGdx():
     cap = setnames(cap, 'capacity_MW')
     cap = cap[['Technology', 'State', 'Year', 'capacity_MW', 'scenario']]
 
+    # Capacity difference
+    cap_diff = cap.pivot_table(index=['State','Technology','Year'], columns='scenario', values='capacity_MW').reset_index()
+    for i in scenarios[1:]:
+        cap_diff[i] = cap_diff[i].fillna(0) - cap_diff[scenarios[0]].fillna(0)
+    if len(scenarios) == 1:
+        cap_diff[scenarios[0]] = 0
+    else:
+        cap_diff.drop(scenarios[0], axis=1, inplace=True)
+    cap_diff = cap_diff.set_index(['State','Technology','Year']).stack().reset_index(name='capacity_MW')
+
     # Capacity investments
     inv = gdxin['INV']
     inv = map_rs_to_state(inv, rmap)
@@ -362,6 +372,17 @@ def ProcessGdx():
     costs = costs.loc[costs['t'] != 'NA']
     costs.loc[costs['Cost'] == 'NA','Cost'] = 0
     costs.set_axis(['Year', 'scenario', 'cost_cat', 'Cost'], axis = 1, inplace = True)
+
+    costs_diff = costs.copy()
+    costs_diff['Cost'] = costs_diff['Cost'].astype(float)
+    costs_diff = costs_diff.pivot_table(index=['cost_cat','Year'], columns='scenario', values='Cost').reset_index()
+    for i in scenarios[1:]:
+        costs_diff[i] = costs_diff[i].fillna(0) - costs_diff[scenarios[0]].fillna(0)
+    if len(scenarios) == 1:
+        costs_diff[scenarios[0]] = 0
+    else:
+        costs_diff.drop(scenarios[0], axis=1, inplace=True)
+    costs_diff = costs_diff.set_index(['Year','cost_cat']).stack().reset_index(name='Cost')
         
     # Emissions
   #  emit = gdxin['EMIT']
@@ -393,6 +414,14 @@ def ProcessGdx():
     # Sheet 5: Costs
     costs = costs.round(0)
     costs = sorting(costs)
+    
+    # costs diff - not included in excel output
+    costs_diff = costs_diff.round(0)
+    costs_diff = sorting(costs_diff)
+
+    # cap diff - not included in excel output
+    cap_diff = cap_diff.round(2)
+    cap_diff = sorting(cap_diff, True, False, True)    
 
     # demand - not included in excel output
     dem = dem.round(0)
@@ -408,11 +437,11 @@ def ProcessGdx():
     curt_tslc.rename(columns={'t':'Year','Type':'Technology'}, inplace=True)
     curt_tslc = sorting(curt_tslc, True, True, False)
 
-    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc, cap_rs
+    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, costs_diff, curt_tslc, cap_rs, cap_diff
 #%%
 
 def write_outputs(dir):
-    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc, cap_rs = ProcessGdx()
+    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, costs_diff, curt_tslc, cap_rs, cap_diff = ProcessGdx()
 
     #timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #outdir = os.path.join(dir, tag)
@@ -454,16 +483,7 @@ def write_outputs(dir):
     cap_rs.to_csv(os.path.join(csvsdir, 'cap_rs.csv'), index=False)
 
     # cap_diff.csv
-    cap_diff = cap.copy()
-    cap_diff[['scenario','tech','year']] = cap_diff[['scenario','tech','year']].astype('object') 
-    cap_diff = cap_diff.pivot_table(index=['st','tech','year'], columns='scenario', values='Capacity (MW)').reset_index()
-    for i in scenarios[1:]:
-        cap_diff[i] = cap_diff[i].fillna(0) - cap_diff[scenarios[0]].fillna(0)
-    if len(scenarios) == 1:
-        cap_diff[scenarios[0]] = 0
-    else:
-        cap_diff.drop(scenarios[0], axis=1, inplace=True)
-    cap_diff = cap_diff.set_index(['st','tech','year']).stack().reset_index(name='Difference (MW)')
+    cap_diff.set_axis(['st','tech','year','scenario','Difference (MW)'], axis=1, inplace=True)
     cap_diff.to_csv(os.path.join(csvsdir, 'cap_diff.csv'), index=False)
 
     # gen.csv
@@ -555,9 +575,13 @@ def write_outputs(dir):
     peakdem_prm.sort_values(['season', 'region', 'year', 'scenario'], inplace=True) 
     peakdem_prm.to_csv(os.path.join(csvsdir, 'peakdem.csv'), index=False)
 
-    # costs
+    # costs.csv
     costs.set_axis(['year', 'scenario', 'cost_cat', 'Cost'], axis = 1, inplace = True)
     costs.to_csv(os.path.join(csvsdir, 'costs.csv'), index=False)
+
+    # costs_diff.csv
+    costs_diff.set_axis(['year', 'cost_cat', 'scenario', 'Cost'], axis = 1, inplace = True)
+    costs_diff.to_csv(os.path.join(csvsdir, 'costs_diff.csv'), index=False)
 
     # percent non-fossil cap and gen
     pnf = pd.merge(cap, gen, on = ['st', 'scenario', 'tech', 'year'])

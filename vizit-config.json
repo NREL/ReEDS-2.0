@@ -5,6 +5,7 @@
     "cap_diff.csv",
     "cap_new_ann.csv",
     "costs.csv",
+    "costs_diff.csv",
     "demand.csv",
     "demand_timeslice.csv",
     "firmcap.csv",
@@ -191,6 +192,22 @@
             "Y Title": "Undiscounted cost (INR)",
             "Plot Width (px)": "800",
             "Plot Title": "Total costs"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "costs_diff.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "scenario",
+              "y": "Cost",
+              "name": "cost_cat"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "800",
+            "Plot Title": "Cost difference from reference scenario"
           }
         }
       ],
@@ -455,13 +472,6 @@
               "dataSource": "cap_rs.csv",
               "type": "custom region map (mapbox)",
               "agg": "sum",
-              "geojson": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
-              "geojsonboundaries": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
-              "featureidkey": "properties.grid_vals",
-              "locations": "rs",
-              "z": "capacity_MW",
-              "text": "tech",
-              "explode": "scenario",
               "filter": {
                 "tech": {
                   "filter_type": "select",
@@ -471,7 +481,14 @@
                   "filter_type": "slider",
                   "filter_val": "2030"
                 }
-              }
+              },
+              "geojsonboundaries": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
+              "featureidkey": "properties.grid_vals",
+              "text": "tech",
+              "explode": "scenario",
+              "geojson": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
+              "locations": "rs",
+              "z": "capacity_MW"
             }
           ],
           "style": {
@@ -486,13 +503,6 @@
               "dataSource": "cap_rs.csv",
               "type": "custom region map (mapbox)",
               "agg": "sum",
-              "geojson": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
-              "geojsonboundaries": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
-              "featureidkey": "properties.grid_vals",
-              "locations": "rs",
-              "z": "capacity_MW",
-              "text": "tech",
-              "explode": "scenario",
               "filter": {
                 "tech": {
                   "filter_type": "select",
@@ -502,7 +512,14 @@
                   "filter_type": "slider",
                   "filter_val": "2030"
                 }
-              }
+              },
+              "geojsonboundaries": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
+              "featureidkey": "properties.grid_vals",
+              "text": "tech",
+              "explode": "scenario",
+              "geojson": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
+              "locations": "rs",
+              "z": "capacity_MW"
             }
           ],
           "style": {
@@ -511,8 +528,8 @@
           }
         }
       ],
-        "title": "Resource region maps",
-        "discription": ""
+      "title": "Resource region maps",
+      "description": ""
     },
     {
       "charts": [
@@ -521,6 +538,7 @@
             {
               "dataSource": "transmission.csv",
               "type": "lat/lon/width line map (mapbox)",
+              "agg": "none",
               "filter": {
                 "transmission_investment_MW": {
                   "filter_type": "greater",
