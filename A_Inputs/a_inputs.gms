@@ -1106,13 +1106,13 @@ pvf_hav(i, t, dummy)$sum(storage(i)$(dummy.val >= t.val  and dummy.val<= t.val +
 * --- Costs---
 *==========================
 parameter
-          vom_init(i,r)         "--$ per MWh-- variable OM" //
+          vom_init(i,r)         "--INR per MWh-- variable OM" //
           /
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%vom_init.csv
 $offdelim
           /,
-          coal_transport(r)     "--$ per MWh-- transport charge adder for coal plants"
+          coal_transport(r)     "--INR per MWh-- transport charge adder for coal plants"
           /
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%transport_charge.csv
