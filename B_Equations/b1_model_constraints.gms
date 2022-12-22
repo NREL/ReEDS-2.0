@@ -96,7 +96,8 @@ EQUATION
  eq_supply_demand_balance(r,h,t)         "--MWh-- supply demand balance"
  eq_dhyd_dispatch(i,v,r,szn,t)           "--MWh-- dispatchable hydro seasonal constraint"
  eq_capacity_limit(i,v,r,h,t)            "--MWh-- generation limit for new capacity"
- eq_reserve_margin(region,szn,t)         "--MW--  planning reserve margin requirement"
+ eq_reserve_margin(region,szn,t)         "--MW--  regional planning reserve margin requirement"
+ eq_reserve_margin_state(r,szn,t)             "--MW-- state planning reserve margin requirement"
  eq_transmission_limit(r,rr,h,t,trtype)  "--MWh-- transmission limit"
  eq_trans_reduct1(r,rr,h,t)               "--MW-- limit CURT_REDUCT_TRANS by transmission investment"
  eq_trans_reduct2(r,rr,h,t)               "--MW-- limit CURT_REDUCT_TRANS by maximum level found by Augur"
@@ -124,6 +125,7 @@ EQUATION
  eq_CAPTRANEq(r,rr,trtype,t)                 "--MW-- capacity accounting for transmission"
  eq_INVTRAN_VCLimit(r,vc)                    "--MW-- investment in transmission capacity cannot exceed that available in its VC bin"
  eq_PRMTRADELimit(r,rr,szn,t)                "--MW-- trading of PRM capacity cannot exceed the line's capacity"
+ eq_PRMTRADELimit_state(r,rr,szn,t)          "--MW-- trading of PRM capacity between states cannot exceed the line's capacity"
  eq_SubStationAccounting(r,t)                "--Substations-- accounting for total investment in each substation"
 
 * storage-specific equations
@@ -841,13 +843,13 @@ eq_OpRes_requirement(ortype,region,h,t)$[tmodel(t)$Sw_OpRes]..
 
 
 
-*=================================
-* --- PLANNING RESERVE MARGIN ---
-*=================================
+*=========================================
+* --- Regional PLANNING RESERVE MARGIN ---
+*=========================================
 
 *trade of planning reserve margin capacity cannot exceed the transmission line's available capacity
 eq_PRMTRADELimit(r,rr,szn,t)$[tmodel(t)$rfeas(r)$rfeas(rr)
-                         $sum{trtype,routes_region(r,rr,trtype,t)}$Sw_PRM]..
+                         $sum{trtype,routes_region(r,rr,trtype,t)}$Sw_PRMregion$Sw_PRMTrade]..
 
     sum{trtype$[routes_region(r,rr,trtype,t)],CAPTRAN(r,rr,trtype,t)}
 
@@ -857,7 +859,7 @@ eq_PRMTRADELimit(r,rr,szn,t)$[tmodel(t)$rfeas(r)$rfeas(rr)
 ;
 
 *following equation assumes the ratio of all demand to peak demand remains constant
-eq_reserve_margin(region,szn,t)$[tmodel(t)$Sw_PRM]..
+eq_reserve_margin(region,szn,t)$[tmodel(t)$Sw_PRMregion]..
 
 *sum of all non-rsc and non-storage capacity
     sum{(i,v,r)$[r_region(r,region)$valcap(i,v,r,t)$(not rsc_i(i))$(not storage(i))],
@@ -895,6 +897,60 @@ eq_reserve_margin(region,szn,t)$[tmodel(t)$Sw_PRM]..
     =g=
 
     (1+prm_region(region,t)) * peakdem_region(region,szn,t)
+;
+
+*======================================
+* --- State PLANNING RESERVE MARGIN ---
+*======================================
+
+*trade of planning reserve margin capacity cannot exceed the transmission line's available capacity
+eq_PRMTRADELimit_state(r,rr,szn,t)$[tmodel(t)$rfeas(r)$rfeas(rr)
+                                $sum{trtype,routes(r,rr,trtype,t)}$Sw_PRMstate$Sw_PRMTrade]..
+
+    sum{trtype$[routes(r,rr,trtype,t)],CAPTRAN(r,rr,trtype,t)}
+
+    =g=
+
+    PRMTRADE(r,rr,szn,t)
+;
+
+*following equation assumes the ratio of all demand to peak demand remains constant
+eq_reserve_margin_state(r,szn,t)$[tmodel(t)$prm_state(r)$(yeart(t) > 2023)$Sw_PRMstate]..
+
+*sum of all non-rsc and non-storage capacity
+    sum{(i,v)$[valcap(i,v,r,t)$(not rsc_i(i))$(not storage(i))],
+        CAP(i,v,r,t) }
+
+*average capacity value times capacity
+*used in rolling window and full intertemporal solve
+    + sum{(i,v,rr)$[cap_agg(r,rr)$(rsc_i(i))$(not hydro(i))$(not storage(i))$valcap(i,v,rr,t)],
+          cc_int(i,v,rr,szn,t) * CAP(i,v,rr,t)}
+
+* contribution from hydro pondage
+    + sum{(i,v)$[valcap(i,v,r,t)$hydro_pond(i)],
+         cc_hydro(i,r,szn,t) * CAP(i,v,r,t) }
+
+* contribution from dispatchable hydro storage (excluding imports)
+    + sum{(i,v)$[valcap(i,v,r,t)$hydro_stor(i)],
+          CAP(i,v,r,t) }
+
+*contribution from importing hydro if switch is turned on
+    + sum{(i,v)$[valcap(i,v,r,t)$hydro_d(i)$imports(i)$Sw_SAsia_PRM],
+          CAP(i,v,r,t) }
+
+*[plus] firm capacity contribution from all binned storage capacity
+*for now this is just battery and pumped-hydro
+    + sum{(i,v,sdbin)$[storage(i)$valcap(i,v,r,t)],
+          cc_storage(i,sdbin) * CAP_SDBIN(i,v,r,szn,sdbin,t)
+         }
+
+*[plus] net trade of firm capacity
+    + sum{(trtype,rr)$[routes(rr,r,trtype,t)$rfeas(rr)$Sw_PRMTrade],(1-tranloss(rr,r))*PRMTRADE(rr,r,szn,t) }
+    - sum{(trtype,rr)$[routes(r,rr,trtype,t)$rfeas(rr)$Sw_PRMTrade],PRMTRADE(r,rr,szn,t) }
+
+    =g=
+
+    (1+prm_state(r)) * peakdem_state(r,szn,t)
 ;
 
 *================================
