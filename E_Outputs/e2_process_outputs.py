@@ -508,12 +508,12 @@ def write_outputs(dir):
     gen_tslc.set_axis(['scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
     gen_tslc.to_csv(os.path.join(csvsdir, 'gen_timeslice.csv'), index=False)
     
-    #stor_charge_BA['dispatch_MW'] = stor_charge_BA['STOR_IN_MW'] * -1
-    #stor_charge_BA.drop('STOR_IN_MW', axis=1, inplace=True)
-    #gen_tslc_BA = pd.concat([gen_tslc_BA, stor_charge_BA])
-    #gen_tslc_BA = gen_tslc_BA.loc[gen_tslc_BA['dispatch_MW'].notnull()]
-    #gen_tslc_BA.set_axis(['st', 'scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
-    #gen_tslc_BA.to_csv(os.path.join(csvsdir, 'BAs', 'gen_timeslice_BA.csv'), index=False)
+    stor_charge_BA['dispatch_MW'] = stor_charge_BA['STOR_IN_MW'] * -1
+    stor_charge_BA.drop('STOR_IN_MW', axis=1, inplace=True)
+    gen_tslc_BA = pd.concat([gen_tslc_BA, stor_charge_BA])
+    gen_tslc_BA = gen_tslc_BA.loc[gen_tslc_BA['dispatch_MW'].notnull()]
+    gen_tslc_BA.set_axis(['st', 'scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
+    gen_tslc_BA.to_csv(os.path.join(csvsdir, 'gen_timeslice_BA.csv'), index=False)
 
     # curt_timeslice.csv
     curt_tslc.rename(columns={'Year':'year'}, inplace=True)
@@ -543,8 +543,8 @@ def write_outputs(dir):
     dem_tslc.set_axis(['scenario', 'year', 'timeslice', 'season', 'time', 'type', 'Demand (MW)'], axis=1, inplace=True)
     dem_tslc.to_csv(os.path.join(csvsdir, 'demand_timeslice.csv'), index=False)
 
-    #dem_tslc_BA.set_axis(['st', 'scenario', 'year', 'timeslice', 'season', 'time', 'Demand (MW)', 'type'], axis=1, inplace=True)
-    #dem_tslc_BA.to_csv(os.path.join(csvsdir, 'BAs', 'demand_timeslice_BA.csv'), index=False)
+    dem_tslc_BA.set_axis(['st', 'scenario', 'year', 'timeslice', 'season', 'time', 'Demand (MW)', 'type'], axis=1, inplace=True)
+    dem_tslc_BA.to_csv(os.path.join(csvsdir, 'demand_timeslice_BA.csv'), index=False)
 
     # transmission.csv
     tx_out = pd.merge(tx_out, latlon, left_on=['State_from'], right_on='reeds.states')
