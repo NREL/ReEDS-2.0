@@ -40,12 +40,13 @@ Sw_GrowthAbs     "Switch for the absolute growth constraint"                    
 Sw_OpRes         "Switch to turn on operating reserve constraint"                  /%GSw_OpRes%/,
 Sw_OpResTrade    "Switch to allow trading operating reserves between regions"      /%GSw_OpResTrade%/,
 Sw_Refurb        "Switch to allow refurbishments"                                  /%GSw_Refurb%/,
-Sw_PRM           "Switch to turn on planning reserve margin constraint"            /%GSw_PRM%/,
+Sw_PRMregion     "Switch to turn on regional planning reserve margin constraint"   /%GSw_PRMregion%/,
+Sw_PRMstate      "Switch to turn on state planning reserve margin constraint"      /%GSw_PRMstate%/,
 Sw_PRMTrade      "Switch to allow trading planning reserve margin between regions" /%GSw_PRMTrade%/,
 Sw_Storage       "Switch to allow storage"                                         /%GSw_Storage%/,
 Sw_CurtStorage   "Fraction of storage charging that counts toward reducing curtailment" /%GSw_CurtStorage%/,
-Sw_StorCC        "Turn storage contribution to reserve margin on [1] or off [0]"    /%GSw_StorCC%/,
-Sw_StorOpres     "Turn storage contribution to operating reserve on [1] or off [0]"    /%GSw_StorOpres%/,
+Sw_StorCC        "Turn storage contribution to reserve margin on [1] or off [0]"   /%GSw_StorCC%/,
+Sw_StorOpres     "Turn storage contribution to operating reserve on [1] or off [0]"  /%GSw_StorOpres%/,
 Sw_CurtFlow      "Switch to allow curtailment trading"                             /%GSw_CurtFlow%/,
 Sw_Int_CC        "Intertemporal CC method"                                         /%GSw_Int_CC%/,
 Sw_Int_Curt        "Intertemporal curt method"                                     /%GSw_Int_Curt%/,
@@ -877,10 +878,16 @@ $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%demand%ds%%Load_file%
 $offdelim
           /,
-      peakdem_region(region,szn,t)        "--MW-- peak demand by region and year"
+      peakdem_region(region,szn,t)        "--MW-- seasonal peak demand by region and year"
           /
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%demand%ds%%PeakDemRegion_file%
+$offdelim
+          /,
+      peakdem_state(r,szn,t)        "--MW-- seasonal peak demand by state/UT and year"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%demand%ds%%PeakDemState_file%
 $offdelim
           /,
        import(exporter, r,h,t)        "--MW-- imports from South Asia to Indian BA r"
@@ -1409,7 +1416,13 @@ $offdelim
           prm_region(region,t)    "planning reserve margin by region"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%reserves%ds%%PRM_file%
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%reserves%ds%%PRMregion_file%
+$offdelim
+          /,
+          prm_state(r)    "planning reserve margin by state/UT"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%reserves%ds%%PRMstate_file%
 $offdelim
           /,
           cost_opres(i)          "--INR/MWh-- cost of regulating reserves "

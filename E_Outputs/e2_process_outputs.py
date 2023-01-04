@@ -49,6 +49,8 @@ else:
     scenarios = [x.split('_')[1] for x in cases]
     root = os.path.join("E_Outputs", "runs")
     SAVEDIR = os.path.join(root, "..", 'vizit_{}'.format("-".join(cases)))
+    if len(SAVEDIR) > 200:
+        SAVEDIR = os.path.join(root, "..", 'visit_{}'.format(datetime.now().strftime("%Y-%m-%d-%H-%M")))
 
 Path(SAVEDIR).mkdir(parents=True, exist_ok=True)
 
