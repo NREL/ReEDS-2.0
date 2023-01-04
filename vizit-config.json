@@ -1,9 +1,11 @@
 {
   "fileNames": [
     "cap.csv",
+    "cap_rs.csv",
     "cap_diff.csv",
     "cap_new_ann.csv",
     "costs.csv",
+    "costs_diff.csv",
     "demand.csv",
     "demand_timeslice.csv",
     "firmcap.csv",
@@ -92,9 +94,9 @@
               "type": "bar",
               "agg": "sum",
               "x": "year",
-              "y": "Difference (MW)",
               "col": "scenario",
-              "name": "tech"
+              "name": "tech",
+              "y": "Difference (MW)"
             }
           ],
           "style": {
@@ -190,6 +192,22 @@
             "Y Title": "Undiscounted cost (INR)",
             "Plot Width (px)": "800",
             "Plot Title": "Total costs"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "costs_diff.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "scenario",
+              "y": "Cost",
+              "name": "cost_cat"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "800",
+            "Plot Title": "Cost difference from reference scenario"
           }
         }
       ],
@@ -369,7 +387,8 @@
             "Mapbox Center Longitude": "83",
             "Mapbox Zoom": "2.9",
             "Colorscale Max (region)": "50000",
-            "Colorscale Min (region)": "0"
+            "Colorscale Min (region)": "0",
+            "Mapbox Style": "white-bg"
           }
         },
         {
@@ -401,7 +420,8 @@
             "Colorscale (region)": " [[0, 'rgb(0,0,255)'], [1, 'rgb(255,0,0)']]",
             "Reverse Colorscale (region)": "false",
             "Plot Width (px)": "400",
-            "Plot Title": "Solar capacity in 2030"
+            "Plot Title": "Solar capacity in 2030",
+            "Mapbox Style": "white-bg"
           }
         },
         {
@@ -436,22 +456,97 @@
             "Plot Width (px)": "400",
             "Plot Title": "Coal capacity in 2030",
             "Colorscale (region)": "Greys",
-            "Reverse Colorscale (region)": "true"
+            "Reverse Colorscale (region)": "true",
+            "Mapbox Style": "white-bg"
+          }
+        }
+      ],
+      "title": "State-wise capacity maps",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "cap_rs.csv",
+              "type": "custom region map (mapbox)",
+              "agg": "sum",
+              "filter": {
+                "tech": {
+                  "filter_type": "select",
+                  "filter_val": "Wind"
+                },
+                "year": {
+                  "filter_type": "slider",
+                  "filter_val": "2030"
+                }
+              },
+              "geojsonboundaries": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
+              "featureidkey": "properties.grid_vals",
+              "text": "tech",
+              "explode": "scenario",
+              "geojson": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
+              "locations": "rs",
+              "z": "capacity_MW"
+            }
+          ],
+          "style": {
+            "Colorscale (region)": "Blues",
+            "Reverse Colorscale (region)": "true",
+            "Plot Width (px)": "400"
           }
         },
         {
           "traces": [
             {
+              "dataSource": "cap_rs.csv",
+              "type": "custom region map (mapbox)",
+              "agg": "sum",
+              "filter": {
+                "tech": {
+                  "filter_type": "select",
+                  "filter_val": "Solar PV"
+                },
+                "year": {
+                  "filter_type": "slider",
+                  "filter_val": "2030"
+                }
+              },
+              "geojsonboundaries": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
+              "featureidkey": "properties.grid_vals",
+              "text": "tech",
+              "explode": "scenario",
+              "geojson": "https://raw.githubusercontent.com/mmowers/randomfiles/428249e9502b281a60945f83bda744c441800296/india_map.json",
+              "locations": "rs",
+              "z": "capacity_MW"
+            }
+          ],
+          "style": {
+            "Colorscale (region)": "[[0, 'rgb(0,0,255)'], [1, 'rgb(255,0,0)']]",
+            "Plot Width (px)": "400"
+          }
+        }
+      ],
+      "title": "Resource region maps",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
               "dataSource": "transmission.csv",
               "type": "lat/lon/width line map (mapbox)",
+              "agg": "none",
               "filter": {
                 "transmission_investment_MW": {
                   "filter_type": "greater",
                   "filter_val": "0"
                 }
               },
-              "line_width": "transmission_investment_MW",
-              "text": "transmission_investment_MW",
+              "line_width": "tx_inv_cumulative",
+              "text": "tx_inv_cumulative",
               "name": "scenario",
               "geojsonboundaries": "https://raw.githubusercontent.com/mmowers/randomfiles/main/india-states.geojson",
               "explode": "scenario",
@@ -471,7 +566,7 @@
           }
         }
       ],
-      "title": "Capacity maps",
+      "title": "Transmission investment maps",
       "description": ""
     }
   ],

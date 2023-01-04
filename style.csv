@@ -65,15 +65,15 @@ con_adj,eq_transmission_limit,#ff7f0e
 con_adj,kW,#2ca02c
 con_adj,MWh,#d62728
 con_adj,Other,#9467bd
-cost_cat,Capital,#1f77b4
+cost_cat,capacity,#1f77b4
 cost_cat,ITC,#ff7f0e
 cost_cat,H2 Revenue,#98DF8A
-cost_cat,PTC,#2ca02c
-cost_cat,O&M,#d62728
-cost_cat,Fuel,#9467bd
-cost_cat,Trans,#636363
-cost_cat,Spur,#969696
-cost_cat,Trans O&M,#BDBDBD
+cost_cat,operating_reserves,#bcbd22
+cost_cat,variable_O&M,#2ca02c
+cost_cat,fuel,#9467bd
+cost_cat,transmission,#636363
+cost_cat,substations,#ffc903
+cost_cat,fixed_O&M,#ff7f0e
 cost_cat,Emissions Tax,#e377c2
 cost_cat,ACP,#BCBD22
 cost_cat,Capacity Import,#8ba4b3

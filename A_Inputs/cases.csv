@@ -1,27 +1,45 @@
+<<<<<<< A_Inputs/cases.csv
 case,Description,Default Value,RefATB22,ATBLowPV,ATBLowWind,ATBLowBESS,ATBLowPSH,ATBLowAll,ATBHighPV,ATBHighWind,ATBHighBESS,RefITC22,ITCLowPV,ITCLowWind,ITCLowBESS,ITCLowPSH,ITCLowAll,ITCHighPV,ITCHighWind,ITCHighBESS,ITCCoalFlex,ITCNoNewFossil,ITCNonFossil70,ATBCoalFlex,ATBNoNewFossil,ATBNonFossil70,ATBLowCoal,ATBLowGas,ITCLowCoal,ITCLowGas,ATBstateprm,ITCstateprm,ATBvrelim,ITCvrelim
+=======
+case,Description,Default Value,RefATB22,ATBLowPV,ATBLowWind,ATBLowBESS,ATBLowPSH,ATBLowAll,ATBHighPV,ATBHighWind,ATBHighBESS,RefITC22,ITCLowPV,ITCLowWind,ITCLowBESS,ITCLowPSH,ITCLowAll,ITCHighPV,ITCHighWind,ITCHighBESS,ITCCoalFlex,ITCNoNewFossil,ITCNonFossil70,ATBCoalFlex,ATBNoNewFossil,ATBNonFossil70,ATBLowCoal,ATBLowGas,ITCLowCoal,ITCLowGas,ATBNoPRM,ITCNoPRM,ATBvrelim,ATBcurtlim
+>>>>>>> A_Inputs/cases.csv
 timetype,Sequential or Intertemporal,int,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 solver,Solver for GAMS to use,CPLEX,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 augur_workers,Number of windows for Augur module runs,36,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 yearset,Set of years that are modeled,yearset_2030.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 endyear,Last year to be modeled,2050,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 HourlyLoadFile,Load scenario name for capacity value and curtailment load duration curve data,NREL_Baseline_8760,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+<<<<<<< A_Inputs/cases.csv
 PRMregion_file,file name of the PRM by region,prm_region.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 PRMstate_file,file name of PRM by state,prm_state.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 FuelLimit_file,file name of the fuel limit file to be used in scenario run,fuel_limit.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 FuelPrice_file,file name of the fuel price file to be used in scenario run,fprice.csv,,,,,,,,,,,,,,,,,,,,,,,,,fprice_low_coal.csv,fprice_low_gas.csv,fprice_low_coal.csv,fprice_low_gas.csv,,,,
 TechCost_file,file name of the technology cost to be used in the scenario run,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_atb22_low_pv.csv,tech_costs_atb22_low_wind.csv,tech_costs_atb22_low_bess.csv,tech_costs_atb22_low_psh.csv,tech_costs_atb22_low_all.csv,tech_costs_atb22_high_pv.csv,tech_costs_atb22_high_wind.csv,tech_costs_atb22_high_bess.csv,tech_costs_itc22.csv,tech_costs_itc22_low_pv.csv,tech_costs_itc22_low_wind.csv,tech_costs_itc22_low_bess.csv,tech_costs_itc22_low_psh.csv,tech_costs_itc22_low_all.csv,tech_costs_itc22_high_pv.csv,tech_costs_itc22_high_wind.csv,tech_costs_itc22_high_bess.csv,tech_costs_itc22.csv,tech_costs_itc22.csv,tech_costs_itc22.csv,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_itc22.csv,tech_costs_itc22.csv,tech_costs_atb22.csv,tech_costs_itc22.csv,tech_costs_atb22.csv,tech_costs_itc22.csv
+=======
+PRM_file,file name of the PRM input,prm_region.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+FuelLimit_file,file name of the fuel limit file to be used in scenario run,fuel_limit.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+FuelPrice_file,file name of the fuel price file to be used in scenario run,fprice.csv,,,,,,,,,,,,,,,,,,,,,,,,,fprice_low_coal.csv,fprice_low_gas.csv,fprice_low_coal.csv,fprice_low_gas.csv,,,,
+TechCost_file,file name of the technology cost to be used in the scenario run,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_atb22_low_pv.csv,tech_costs_atb22_low_wind.csv,tech_costs_atb22_low_bess.csv,tech_costs_atb22_low_psh.csv,tech_costs_atb22_low_all.csv,tech_costs_atb22_high_pv.csv,tech_costs_atb22_high_wind.csv,tech_costs_atb22_high_bess.csv,tech_costs_itc22.csv,tech_costs_itc22_low_pv.csv,tech_costs_itc22_low_wind.csv,tech_costs_itc22_low_bess.csv,tech_costs_itc22_low_psh.csv,tech_costs_itc22_low_all.csv,tech_costs_itc22_high_pv.csv,tech_costs_itc22_high_wind.csv,tech_costs_itc22_high_bess.csv,tech_costs_itc22.csv,tech_costs_itc22.csv,tech_costs_itc22.csv,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_atb22.csv,tech_costs_itc22.csv,tech_costs_itc22.csv,tech_costs_atb22.csv,tech_costs_itc22.csv,tech_costs_atb22.csv,tech_costs_atb22.csv
+>>>>>>> A_Inputs/cases.csv
 MinLoad_file,file name of the min loading limits to be used in the scenario run,minloadfrac0.csv,,,,,,,,,,,,,,,,,,,minloadfrac0_CoalFlex.csv,,,minloadfrac0_CoalFlex.csv,,,,,,,,,,
 Hours_file,file name of the hours in each time block to be used in the scenario run,hours_NREL_Baseline.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 Load_file,file name of the load in each time block to be used in the scenario run,load_NREL_Baseline.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 PeakDemRegion_file,file name of the peak demand by region to be used in the scenario run,peakdem_region_NREL_Baseline.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+<<<<<<< A_Inputs/cases.csv
 PeakDemState_file,file name of the peak demand by state to be used in the scenario run,peakdem_state_NREL_Baseline.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+=======
+>>>>>>> A_Inputs/cases.csv
 IVT_file,"file name of the technology, vintage and year combinations file used in the scenario run",ivt.csv,,,,,,,,,,,,,,,,,,,,ivt_nonewfossil.csv,,,ivt_nonewfossil.csv,,,,,,,,,
 RECapMandate_file,file name of the RE capacity mandate to be used in the scenario run,recap_mandate_2030.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 RECapFracMandate_file,file name of the non-fossil fractional capacity mandate to be used in the scenario run,recapfrac_mandate_2030.csv,,,,,,,,,,,,,,,,,,,,,recapfrac_mandate_70.csv,,,recapfrac_mandate_70.csv,,,,,,,,
 RECapManTech_file,file name of set of technologies that qualify for RE capacity mandate,capmandate_tech_set.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 REGenMandate_file,file name of the RE generation mandate to be used in the scenario run,regen_mandate_2030.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 REGenManTech_file,file name of set of technologies that qualify for RE generation mandate,genmandate_tech_set.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+<<<<<<< A_Inputs/cases.csv
 AbsGrowLim_file,file name of absolute growth limit,growth_limit_absolute.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,growth_limit_absolute_vre.csv,growth_limit_absolute_vre.csv
+=======
+AbsGrowLim_file,file name of absolute growth limit data,growth_limit_absolute.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,growth_limit_absolute_vre.csv,
+>>>>>>> A_Inputs/cases.csv
 Trancap_file,file name of the exogenous transmission capacity,trancap.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 InterTrancost_file,file name of the transmission cost between states,inter_transcost.csv,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 numclass,maximum number of technology classes,4,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -36,9 +54,14 @@ GSw_GrowthAbs,Turn absolute growth constraint on [1] or off [0],1,,,,,,,,,,,,,,,
 GSw_OpRes,Turn operating reserve constraints on [1] or off [0],1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_OpResTrade,Turn operating reserve trading between regions on [1] or off [0],0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_Refurb,Turn refurbishments on [1] or off [0],1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+<<<<<<< A_Inputs/cases.csv
 GSw_PRMregion,Turn regional planning reserve margin on [1] or off [0],1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0,0,,
 GSw_PRMstate,Turn state planning reserve margin on [1] or off [0],0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,1,1,,
 GSw_PRMTrade,Turn planning reserve margin trading between regions [1] or off [0],1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+=======
+GSw_PRM,Turn planning reserve margin on [1] or off [0],1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0,0,,
+GSw_PRMTrade,Turn planning reserve margin trading between regions [1] or off [0],1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0,0,,
+>>>>>>> A_Inputs/cases.csv
 GSw_Storage,Turn all storage on [1] or off [0],1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_CurtStorage,Fraction of STORAGE IN that counts toward reducing curtailment,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_StorCC,Turn storage contribution to reserve margin on [1] or off [0],1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
@@ -67,4 +90,8 @@ GSw_SolarPlusStorage,Mandate UPV investment to include storage,0,,,,,,,,,,,,,,,,
 GSw_StorHAV,Turn Hourly Arbitrage Value for storage on [1] or off [0],1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_FocusRegionZeroTXCost,Zero transmission capital cost between focus regions,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_TxLimit,Switch to turn on transmission flow limits,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+<<<<<<< A_Inputs/cases.csv
 GSw_CurtLim,Switch to turn on curtailment limit,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+=======
+GSw_CurtLim,Switch to turn on curtailment limit,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,1
+>>>>>>> A_Inputs/cases.csv

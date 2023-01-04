@@ -43,7 +43,7 @@ if len(cases[0].split('_')) == 3:
     user = [x.split('_')[0] for x in cases][0]
     scenarios = [x.split('_')[1] + "_" + x.split('_')[2] for x in cases]
     root = args['solutions_dir']
-    SAVEDIR = os.path.join(root, 'exceloutput')
+    SAVEDIR = os.path.join(root, 'exceloutput', 'vizit')
 else:
     user = ""
     scenarios = [x.split('_')[1] for x in cases]
@@ -206,9 +206,23 @@ def ProcessGdx():
     cap = map_rs_to_state(cap, rmap)
     cap = map_tech_to_type(cap, 'i')
     cap.drop(cap[cap['Type'] == 'Imports'].index, inplace=True)
+    cap_rs = summarize(cap, 'Level',['Type','rs','t','scenario'])
+    cap_rs = setnames(cap_rs, 'capacity_MW')
+    cap_rs = cap_rs[['Technology', 'rs', 'Year', 'capacity_MW', 'scenario']]
+
     cap = summarize(cap, 'Level', ['Type', 'r', 't', 'scenario'])
     cap = setnames(cap, 'capacity_MW')
     cap = cap[['Technology', 'State', 'Year', 'capacity_MW', 'scenario']]
+
+    # Capacity difference
+    cap_diff = cap.pivot_table(index=['State','Technology','Year'], columns='scenario', values='capacity_MW').reset_index()
+    for i in scenarios[1:]:
+        cap_diff[i] = cap_diff[i].fillna(0) - cap_diff[scenarios[0]].fillna(0)
+    if len(scenarios) == 1:
+        cap_diff[scenarios[0]] = 0
+    else:
+        cap_diff.drop(scenarios[0], axis=1, inplace=True)
+    cap_diff = cap_diff.set_index(['State','Technology','Year']).stack().reset_index(name='capacity_MW')
 
     # Capacity investments
     inv = gdxin['INV']
@@ -360,6 +374,17 @@ def ProcessGdx():
     costs = costs.loc[costs['t'] != 'NA']
     costs.loc[costs['Cost'] == 'NA','Cost'] = 0
     costs.set_axis(['Year', 'scenario', 'cost_cat', 'Cost'], axis = 1, inplace = True)
+
+    costs_diff = costs.copy()
+    costs_diff['Cost'] = costs_diff['Cost'].astype(float)
+    costs_diff = costs_diff.pivot_table(index=['cost_cat','Year'], columns='scenario', values='Cost').reset_index()
+    for i in scenarios[1:]:
+        costs_diff[i] = costs_diff[i].fillna(0) - costs_diff[scenarios[0]].fillna(0)
+    if len(scenarios) == 1:
+        costs_diff[scenarios[0]] = 0
+    else:
+        costs_diff.drop(scenarios[0], axis=1, inplace=True)
+    costs_diff = costs_diff.set_index(['Year','cost_cat']).stack().reset_index(name='Cost')
         
     # Emissions
   #  emit = gdxin['EMIT']
@@ -391,6 +416,14 @@ def ProcessGdx():
     # Sheet 5: Costs
     costs = costs.round(0)
     costs = sorting(costs)
+    
+    # costs diff - not included in excel output
+    costs_diff = costs_diff.round(0)
+    costs_diff = sorting(costs_diff)
+
+    # cap diff - not included in excel output
+    cap_diff = cap_diff.round(2)
+    cap_diff = sorting(cap_diff, True, False, True)    
 
     # demand - not included in excel output
     dem = dem.round(0)
@@ -406,11 +439,11 @@ def ProcessGdx():
     curt_tslc.rename(columns={'t':'Year','Type':'Technology'}, inplace=True)
     curt_tslc = sorting(curt_tslc, True, True, False)
 
-    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc
+    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, costs_diff, curt_tslc, cap_rs, cap_diff
 #%%
 
 def write_outputs(dir):
-    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, curt_tslc = ProcessGdx()
+    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, costs_diff, curt_tslc, cap_rs, cap_diff = ProcessGdx()
 
     #timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #outdir = os.path.join(dir, tag)
@@ -423,7 +456,7 @@ def write_outputs(dir):
     ######## EXPORT TO EXCEL
     # separate sheet for each table
     if args['excel'] == 'T':
-        writer = pd.ExcelWriter(os.path.join(os.getcwd(), dir, "outputs_{}.xlsx".format("-".join(cases))))
+        writer = pd.ExcelWriter(os.path.join(os.getcwd(), dir,"..","outputs_{}.xlsx".format("-".join(cases))))
 
         annual_out.to_excel(writer, sheet_name="Annual results", index=False)
         firmcap.to_excel(writer, sheet_name="Seasonal firm capacity", index=False)
@@ -432,7 +465,7 @@ def write_outputs(dir):
         costs.to_excel(writer, sheet_name='Costs', index=False)
 
         writer.save()
-        print("Results saved to " + os.path.join(dir, "outputs_{}.xlsx".format("-".join(cases))))
+        print("Results saved to " + os.path.join(dir,"..","outputs_{}.xlsx".format("-".join(cases))))
 
     ######## WRITE OUTPUTS FOR VIZIT
     
@@ -447,17 +480,12 @@ def write_outputs(dir):
     cap_new.set_axis(['st', 'scenario', 'tech', 'year', 'Investments (MW)'], axis=1, inplace=True)
     cap_new.to_csv(os.path.join(csvsdir, 'cap_new_ann.csv'), index=False)
 
+    # cap_rs.csv
+    cap_rs.set_axis(['tech','rs','year','capacity_MW', 'scenario'], axis=1, inplace=True)
+    cap_rs.to_csv(os.path.join(csvsdir, 'cap_rs.csv'), index=False)
+
     # cap_diff.csv
-    cap_diff = cap.copy()
-    cap_diff[['scenario','tech','year']] = cap_diff[['scenario','tech','year']].astype('object') 
-    cap_diff = cap_diff.pivot_table(index=['st','tech','year'], columns='scenario', values='Capacity (MW)').reset_index()
-    for i in scenarios[1:]:
-        cap_diff[i] = cap_diff[i].fillna(0) - cap_diff[scenarios[0]].fillna(0)
-    if len(scenarios) == 1:
-        cap_diff[scenarios[0]] = 0
-    else:
-        cap_diff.drop(scenarios[0], axis=1, inplace=True)
-    cap_diff = cap_diff.set_index(['st','tech','year']).stack().reset_index(name='Difference (MW)')
+    cap_diff.set_axis(['st','tech','year','scenario','Difference (MW)'], axis=1, inplace=True)
     cap_diff.to_csv(os.path.join(csvsdir, 'cap_diff.csv'), index=False)
 
     # gen.csv
@@ -482,12 +510,12 @@ def write_outputs(dir):
     gen_tslc.set_axis(['scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
     gen_tslc.to_csv(os.path.join(csvsdir, 'gen_timeslice.csv'), index=False)
     
-    #stor_charge_BA['dispatch_MW'] = stor_charge_BA['STOR_IN_MW'] * -1
-    #stor_charge_BA.drop('STOR_IN_MW', axis=1, inplace=True)
-    #gen_tslc_BA = pd.concat([gen_tslc_BA, stor_charge_BA])
-    #gen_tslc_BA = gen_tslc_BA.loc[gen_tslc_BA['dispatch_MW'].notnull()]
-    #gen_tslc_BA.set_axis(['st', 'scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
-    #gen_tslc_BA.to_csv(os.path.join(csvsdir, 'BAs', 'gen_timeslice_BA.csv'), index=False)
+    stor_charge_BA['dispatch_MW'] = stor_charge_BA['STOR_IN_MW'] * -1
+    stor_charge_BA.drop('STOR_IN_MW', axis=1, inplace=True)
+    gen_tslc_BA = pd.concat([gen_tslc_BA, stor_charge_BA])
+    gen_tslc_BA = gen_tslc_BA.loc[gen_tslc_BA['dispatch_MW'].notnull()]
+    gen_tslc_BA.set_axis(['st', 'scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
+    gen_tslc_BA.to_csv(os.path.join(csvsdir, 'gen_timeslice_BA.csv'), index=False)
 
     # curt_timeslice.csv
     curt_tslc.rename(columns={'Year':'year'}, inplace=True)
@@ -517,8 +545,8 @@ def write_outputs(dir):
     dem_tslc.set_axis(['scenario', 'year', 'timeslice', 'season', 'time', 'type', 'Demand (MW)'], axis=1, inplace=True)
     dem_tslc.to_csv(os.path.join(csvsdir, 'demand_timeslice.csv'), index=False)
 
-    #dem_tslc_BA.set_axis(['st', 'scenario', 'year', 'timeslice', 'season', 'time', 'Demand (MW)', 'type'], axis=1, inplace=True)
-    #dem_tslc_BA.to_csv(os.path.join(csvsdir, 'BAs', 'demand_timeslice_BA.csv'), index=False)
+    dem_tslc_BA.set_axis(['st', 'scenario', 'year', 'timeslice', 'season', 'time', 'Demand (MW)', 'type'], axis=1, inplace=True)
+    dem_tslc_BA.to_csv(os.path.join(csvsdir, 'demand_timeslice_BA.csv'), index=False)
 
     # transmission.csv
     tx_out = pd.merge(tx_out, latlon, left_on=['State_from'], right_on='reeds.states')
@@ -549,9 +577,13 @@ def write_outputs(dir):
     peakdem_prm.sort_values(['season', 'region', 'year', 'scenario'], inplace=True) 
     peakdem_prm.to_csv(os.path.join(csvsdir, 'peakdem.csv'), index=False)
 
-    # costs
+    # costs.csv
     costs.set_axis(['year', 'scenario', 'cost_cat', 'Cost'], axis = 1, inplace = True)
     costs.to_csv(os.path.join(csvsdir, 'costs.csv'), index=False)
+
+    # costs_diff.csv
+    costs_diff.set_axis(['year', 'cost_cat', 'scenario', 'Cost'], axis = 1, inplace = True)
+    costs_diff.to_csv(os.path.join(csvsdir, 'costs_diff.csv'), index=False)
 
     # percent non-fossil cap and gen
     pnf = pd.merge(cap, gen, on = ['st', 'scenario', 'tech', 'year'])
