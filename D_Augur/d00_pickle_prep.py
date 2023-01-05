@@ -74,8 +74,8 @@ if __name__ == '__main__':
     load_profiles = pd.read_pickle(os.path.join(path_static,'{}_load.pkl'.format(load_input)))
     recf = pd.read_pickle(os.path.join(path_static,'India_8760_recf.pkl'))
     resources = pd.read_pickle(os.path.join(path_static,'India_8760_resources.pkl'))
-    print(recf)
-    
+
+
     # ------- Performin load modifications -------
     
     # Filtering out load profiles not included in this run
@@ -88,12 +88,11 @@ if __name__ == '__main__':
       
     # Resetting indices before merging to assure there are no issues in the merge
     recf = recf.reset_index(drop=True)
-    print(recf)
-  
+    
     # Filtering out profiles of resources not included in this run and sorting to match the order of the rows in resources
     resources = resources[resources['area'].isin(ResReg_true['area'])]
     recf = recf[resources['resource']]        
-    print(recf)
+    
 
     # ------- Dump static data into pickle files for future years -------
     		
