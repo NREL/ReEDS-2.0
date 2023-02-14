@@ -2331,11 +2331,11 @@ $endif.ofswindban
 
 * turn off first 5 onshore wind technologies
 $ifthene.onswindban %GSw_OnsWind6to10% == 0
-bannew('wind-ons_6') = yes ;
-bannew('wind-ons_7') = yes ;
-bannew('wind-ons_8') = yes ;
-bannew('wind-ons_9') = yes ;
-bannew('wind-ons_10') = yes ;
+ban('wind-ons_6') = yes ;
+ban('wind-ons_7') = yes ;
+ban('wind-ons_8') = yes ;
+ban('wind-ons_9') = yes ;
+ban('wind-ons_10') = yes ;
 $endif.onswindban
 
 * turn off biopower technology
