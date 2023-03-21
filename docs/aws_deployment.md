@@ -218,15 +218,7 @@ python pre_populate_tables.py
 
 Refer to https://github.com/KapilDuwadi/free_code_snippets/blob/main/docs/ec2_instance.md for launching the long running server in the background. You would need to create a separate screen.
 
-1. First deploy the notification service by running the following command
-   
-    ```cmd
-    cd reeds_notifier
-    conda activate reeds
-    python main.py
-    ```
-
-2. Second deploy the REST API by running the following command. Before you run the command make the path change in `reeds_india_api/reeds_server/logging.aws.yaml`  file.
+1. First deploy the REST API by running the following command. Before you run the command make the path change in `reeds_india_api/reeds_server/logging.aws.yaml`  file.
 
     ```cmd
     cd reeds_india_api
@@ -234,7 +226,7 @@ Refer to https://github.com/KapilDuwadi/free_code_snippets/blob/main/docs/ec2_in
     python reeds_server/server.py
     ```
 
-3. Third deploy the frontend dashboard. If this the first time running your frontend application install dependencies first. Update the config.js inside `reeds_ui/src/config.js` to change the URLS. It should look something like this.
+2. Second deploy the frontend dashboard. If this the first time running your frontend application install dependencies first. Update the config.js inside `reeds_ui/src/config.js` to change the URLS. It should look something like this.
 
     ```
     export default {
