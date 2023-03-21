@@ -17,13 +17,13 @@
 `cd ../../projects/southasia` *default dir is your hpc user folder*
 
 *Now you can either create your own folder within projects/southasia or use an existing repo.* <br />
-*For this example, we will create a repo called reeds_api in projects/southasia.*
+*For this example, we will create a repo called reeds_india_api in projects/southasia.*
 
-### Clone the reeds_api repo (for first time setup only)
-`git clone git@gitlab.com:reeds-india1/reeds_api.git` **NOTE: This already exists in projects/southasia**
+### Clone the reeds_india_api repo (for first time setup only)
+`git clone git@github.com:NREL/reeds_india_api.git`
 
 ### Setup environment (for first time setup or if HPC restarts)
-`cd reeds_api` <br />
+`cd reeds_india_api` <br />
 `module purge` <br />
 `module use /nopt/nrel/apps/modules/centos74/modulefiles/` <br />
 `module load conda` <br />
