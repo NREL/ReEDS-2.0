@@ -193,8 +193,7 @@ The ReEDS India repository is organized into six (6) folders. In the main folder
 | <ul><li>*d4_process_osprey_results.py*</li><ul> | standardize generator results and aggregate transmission flows to region level  |
 | <ul><li>*d5_existing_curtailment.gms*</li><ul> | compute the curtailment of existing resources based on results from Osprey |
 | <ul><li>*d6_marginal_curtailment.gms*</li><ul> | compute the curtailment of marginal variable generation based on results from Osprey |
-| <ul><li>*d7_condor.R*</li><ul> | calculate the energy arbitrage revenue for marginal storage
-additions |
+| <ul><li>*d7_condor.R*</li><ul> | calculate the energy arbitrage revenue for marginal storage additions |
 | <ul><li>*d8_capacity_credit.R*</li><ul> | calculate capacity credit of existing and marginal variable generation |
 | **E_Outputs**    | **Generates gdx files with model results** |
 | <ul><li>*e1_create_report.gms*</li><ul> | format results and write them to gdx file |
