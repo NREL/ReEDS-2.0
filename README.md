@@ -1,6 +1,6 @@
 # ReEDS India
 
-![Image of NREL Logo](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/nrel-logo.png)
+![Image of NREL Logo](images/nrel-logo.png)
 
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
