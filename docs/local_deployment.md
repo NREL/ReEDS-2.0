@@ -15,9 +15,8 @@ Before you deploy please make sure you have following softwares installed in you
 
 ReEDS is a set of three microservices. You need to clone following repositories to be able to make changes and test it. Make sure you have an account in GitLAB and reach out to ReEDS India team so that they can add you to the repository. 
 
-* ReEDS API + ReEDS: `git clone git@gitlab.com:reeds-india1/reeds_api.git`
-* ReEDS Notifier: `git clone git@gitlab.com:reeds-india1/reeds_notifier.git`
-* ReEDS UI: `git clone git@gitlab.com:reeds-india1/reeds_ui.git`
+* ReEDS API + ReEDS: `git clone git@github.com:NREL/reeds_india_api.git`
+* ReEDS UI: `git clone git@github.com:NREL/reeds_india_ui.git`
 
 #### 3. Create a virtual environment
 
@@ -30,8 +29,6 @@ ReEDS is a set of three microservices. You need to clone following repositories 
 ``` cmd
     cd reeds_api
     conda activate reeds
-    pip install -r requirements.txt
-    cd ../reeds_notifier
     pip install -r requirements.txt
 ```
 
@@ -56,7 +53,7 @@ If you are already using pre-setup database for ReEDS you can totally skip this.
 - Let's create all the tables. To do this open file `reeds_api/reeds_server/web/create_db.py` and edit the db_connection_string. It should be something like this `mysql://root:password@localhost:3306/reeds`. Make sure to change the username, password and/or database name if necessary. After updating this file open up the command prompt and execute following commands.
 
     ```cmd
-    cd reeds_api/reeds_server/web
+    cd reeds_india_api/reeds_server/web
     conda activate reeds
     python create_db.py
     ```
@@ -73,7 +70,7 @@ docker run --name redis -d -p 6379:6379 redis
 
 #### 6. Preparing environment file for ReEDS
 
-Create a file named `.env` in `reeds_api\reeds-server` directory and copy paste following contents. Make sure to change the appropriate values.
+Create a file named `.env` in `reeds_india_api\reeds-server` directory and copy paste following contents. Make sure to change the appropriate values.
 
 ```
 JWT_KEY='test$%^ReEDS'
@@ -95,35 +92,27 @@ DEPLOY_MODE='local'
 
 #### 7. Prepolulate the database with superuser and default scenarios
 
-To prepopulate superuser and default scenarios first update the file `reeds_api\reeds_server\web\pre_populate_tables.py` to use correct db_connection_string `(e.g. mysql://root:password@localhost:3306/reeds)`.
+To prepopulate superuser and default scenarios first update the file `reeds_india_api\reeds_server\web\pre_populate_tables.py` to use correct db_connection_string `(e.g. mysql://root:password@localhost:3306/reeds)`.
 
 Open up a command prompt and run following commands.
 
 ```cmd
-cd reeds_api/reeds_server
+cd reeds_india_api/reeds_server
 conda activate reeds
 python pre_populate_tables.py
 ```
 
 #### 8. Deploy the services
 
-1. First deploy the notification service by running the following command
-   
-    ```cmd
-    cd reeds_notifier
-    conda activate reeds
-    python main.py
-    ```
-
-2. Second deploy the REST API by running the following command. Before you run the command make the path change in `reeds_api/reeds_server/logging.local.yaml` file.
+1. First deploy the REST API by running the following command. Before you run the command make the path change in `reeds_india_api/reeds_server/logging.local.yaml` file.
 
     ```cmd
-    cd reeds_api
+    cd reeds_india_api
     conda activate reeds
     python reeds_server/server.py
     ```
 
-3. Third deploy the frontend dashboard. If this the first time running your frontend application install dependencies first.
+2. Second deploy the frontend dashboard. If this the first time running your frontend application install dependencies first.
 
     ```cmd
     cd reeds_ui
