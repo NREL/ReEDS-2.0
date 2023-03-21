@@ -2,7 +2,7 @@
 
 ##### 1. Setting up EC2 instance and EBS volume
 
-Please use the following table as a reference  to spin off EC2 instance and EBS volumne for deploying ReEDS web app for production environment.
+Please use the following table as a reference  to spin off EC2 instance and EBS volume for deploying ReEDS web app for production environment.
 
 | Metadata | Value |
 | -------- | ----- |
@@ -70,13 +70,12 @@ Please use the following table as a reference  to spin off EC2 instance and EBS 
 
 #### 4. Clone the repositories in EC2 instance
 
-Make sure you have access to ReEDS Gitlab repository. ReEDS is a set of three microservices. You need to clone following repositories to be able to make changes and test it. Make sure you have an account in GitLAB and reach out to ReEDS India team so that they can add you to the repository. Create a `reeds_india` folder and clone repositories inside. 
+Make sure you have access to ReEDS GitHub repositories. ReEDS is a set of two microservices. You need to clone the following repositories to be able to make changes and test it. Make sure you have an account in GitHub and reach out to ReEDS India team so that they can add you to the repository. Create a `reeds_india` folder and clone repositories inside. 
 
-* ReEDS API + ReEDS: `git clone git@gitlab.com:reeds-india1/reeds_api.git`
-* ReEDS Notifier: `git clone git@gitlab.com:reeds-india1/reeds_notifier.git`
-* ReEDS UI: `git clone git@gitlab.com:reeds-india1/reeds_ui.git`
+* ReEDS API + ReEDS: `git clone git@github.com:NREL/reeds_india_api.git`
+* ReEDS UI: `git clone git@github.com:NREL/reeds_india_ui.git`
 
-If you see issue with SSH follow the instruction here https://docs.gitlab.com/ee/user/ssh.html to setup SSH for GitLAB.
+If you see issue with SSH follow the instruction here [https://docs.github.com/en/authentication/connecting-to-github-with-ssh](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) to setup SSH for GitHub.
 
 #### 5. Create a python virtual environment inside the `reeds_india` folder
 - Create environment
@@ -88,9 +87,7 @@ If you see issue with SSH follow the instruction here https://docs.gitlab.com/ee
 - Install the python requirements
     ``` cmd
     source env/bin/activate
-    cd reeds_api
-    pip install -r requirements.txt
-    cd ../reeds_notifier
+    cd reeds_india_api
     pip install -r requirements.txt
     ```
 
@@ -172,7 +169,7 @@ create database reeds
   
 #### 10. Creating .env file for deployment 
 
-Create a file named `.env` in `reeds_api\reeds-server` directory and copy paste following contents. Make sure to change the appropriate values.
+Create a file named `.env` in `reeds_india_api\reeds-server` directory and copy paste following contents. Make sure to change the appropriate values.
 
 ```
 JWT_KEY='test$%^ReEDS'
@@ -197,22 +194,22 @@ LOG_FOLDER='/home/ec2-user/reeds-india/logs'
 
 #### 11. Creating initial tables in database
 
-* Let's create all the tables. To do this open file `reeds_api/reeds_server/web/create_db.py` and edit the db_connection_string. It should be something like this `mysql://root:password@localhost:3306/reeds` for MySQL appropriatly uncomment the connection string for other type of databases.. Make sure to change the username, password and/or database name if necessary. After updating this file open up the command prompt and execute following commands.
+* Let's create all the tables. To do this open file `reeds_india_api/reeds_server/web/create_db.py` and edit the db_connection_string. It should be something like this `mysql://root:password@localhost:3306/reeds` for MySQL appropriatly uncomment the connection string for other type of databases.. Make sure to change the username, password and/or database name if necessary. After updating this file open up the command prompt and execute following commands.
 
     ```cmd
-    cd reeds_api/reeds_server/web
+    cd reeds_india_api/reeds_server/web
     conda activate reeds
     python create_db.py
     ```
 
 #### 12. Prepoluating database with superuser 
 
-To prepopulate superuser and default scenarios first update the file `reeds_api\reeds_server\web\pre_populate_tables.py` to use correct db_connection_string `(e.g. mysql://root:password@localhost:3306/reeds)`.
+To prepopulate superuser and default scenarios first update the file `reeds_india_api\reeds_server\web\pre_populate_tables.py` to use correct db_connection_string `(e.g. mysql://root:password@localhost:3306/reeds)`.
 
 Open up a command prompt and run following commands.
 
 ```cmd
-cd reeds_api/reeds_server
+cd reeds_india_api/reeds_server
 conda activate reeds
 python pre_populate_tables.py
 ```
@@ -229,10 +226,10 @@ Refer to https://github.com/KapilDuwadi/free_code_snippets/blob/main/docs/ec2_in
     python main.py
     ```
 
-2. Second deploy the REST API by running the following command. Before you run the command make the path change in `reeds_api/reeds_server/logging.aws.yaml`  file.
+2. Second deploy the REST API by running the following command. Before you run the command make the path change in `reeds_india_api/reeds_server/logging.aws.yaml`  file.
 
     ```cmd
-    cd reeds_api
+    cd reeds_india_api
     conda activate reeds
     python reeds_server/server.py
     ```
