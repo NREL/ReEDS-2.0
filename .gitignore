@@ -3,7 +3,6 @@
 *.html
 !user_*.html
 *.Rhistory
-*.png
 *.wmf
 *.mps
 *.sh
