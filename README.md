@@ -183,20 +183,23 @@ The ReEDS India repository is organized into six (6) folders. In the main folder
 | **C_Solve**      | **Initiates all solve parameters and solve the model**|
 | <ul><li>*c1_Solveprep.gms*</li><ul> | initiate the LP solve and compute parameters based on switch values and configurations defined in “cases.csv” |
 | <ul><li>*c2_Solve_Int.gms*</li><ul> | execute the model using the intertemporal solve option |
-| **D_8760**       | **Computes capacity credit and curtailment using hourly load and generation data** |
-| <ul><li>*d0_pickle_prep.py*</li><ul> | create pickle files for hourly load and resource data |
-| <ul><li>*d1_8760batch.py*</li><ul> | handle inputs and outputs from GAMS files for capacity credit and curtailment |
-| <ul><li>*d2_call8760.gms*</li><ul> | hand off input and output data from capacity credit and curtailment files and create final outputs to be returned to ReEDS |
-| <ul><li>*d3_run_CC_py.gms*</li><ul> | format inputs for capacity credit calculations and call cc_py.py script to calculate capacity credit |
-| <ul><li>*d4_CC_py.py*</li><ul> | calculate capacity credit of existing and marginal variable generation using a top hour approximation method |
-| <ul><li>*d5_Curt_param.gms*</li><ul> | read in and format all inputs for curtailment calculation |
-| <ul><li>*d6_Curt_calc.gms*</li><ul> | calculate curtailment of existing and marginal variable generation using a statistical approximation method |
-| <ul><li>*d7_Translate_8760.R*</li><ul> | format outputs for each model year for ReEDS |
-| <ul><li>*d8_Merge_8760.R*</li><ul> | combine results from each individual year to single file to be returned to ReEDS |
+| <ul><li>*c3_augur_data_dump.gms*</li><ul> | create a gdx file with all of the data necessary for the Augur module to solve |
+| **D_Augur**       | **Computes capacity credit and curtailment using hourly load and generation data** |
+| <ul><li>*d00_pickle_prep.py*</li><ul> | create pickle files for hourly load and resource data |
+| <ul><li>*d0_ReEDS_augur.py*</li><ul> | call the below scripts in order and write results to a gdx file that is read back into ReEDS |
+| <ul><li>*d1_prep_data.py*</li><ul> | prepare data for Osprey and package it into a single gdx file |
+| <ul><li>*d2_osprey.gms*</li><ul> | optimize generation, transmission, and storage with hourly time resolution |
+| <ul><li>*d3_gdx_dump.gms*</li><ul> | output raw data from Osprey as .csv files |
+| <ul><li>*d4_process_osprey_results.py*</li><ul> | standardize generator results and aggregate transmission flows to region level  |
+| <ul><li>*d5_existing_curtailment.gms*</li><ul> | compute the curtailment of existing resources based on results from Osprey |
+| <ul><li>*d6_marginal_curtailment.gms*</li><ul> | compute the curtailment of marginal variable generation based on results from Osprey |
+| <ul><li>*d7_condor.R*</li><ul> | calculate the energy arbitrage revenue for marginal storage
+additions |
+| <ul><li>*d8_capacity_credit.R*</li><ul> | calculate capacity credit of existing and marginal variable generation |
 | **E_Outputs**    | **Generates gdx files with model results** |
 | <ul><li>*e1_create_report.gms*</li><ul> | format results and write them to gdx file |
-| <ul><li>*gdxfiles* folder</li><ul> | solution files for each model scenario saved with the name “output_{runname}_{scenarioname}.gdx” |
-| <ul><li>*runs* folder</li><ul> | .bat files to compile and execute the model for each scenario |
+| <ul><li>*e2_process_outputs.py*</li><ul> | process ReEDS model results from gams and save key results in Excel format |
+| <ul><li>*runs* folder</li><ul> | solution folders for each model scenario saved with the name “{runname}_{scenarioname}” |
 | **F_Analysis**   | **Create html and figures of model outputs** |
 | <ul><li>*ReEDS-India-markdown.Rmd*</li><ul> | generate html of model results for all user-defined scenarios |
 | <ul><li>*data* folder</li><ul> | external data used for generating plots and tables (i.e., geographic coordinates for mapping) |
