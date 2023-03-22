@@ -66,13 +66,13 @@ jobs:
     needs: [deploy_dev]
     if: contains( github.ref, 'main' )
     steps:
-      - run: echo "Deployment starting in prod environment!"
-      - run: ls
       - run: |
+          echo "Deployment starting in prod environment!"
+          ls
           ssh -i ~/.ssh/id_ed25519 ec2-user@172.17.25.248 "ls;
           supervisorctl stop reeds_api;
           cd /home/ec2-user/reeds_microservices/reeds_api;
           git pull;
           cd ~;
           supervisorctl start reeds_api"
-      - run: echo "Finished!"
+          echo "Finished!"
