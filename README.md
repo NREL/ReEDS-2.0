@@ -1,6 +1,6 @@
 # ReEDS India
 
-![Image of NREL Logo](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/nrel-logo.png)
+![Image of NREL Logo](images/nrel-logo.png)
 
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
@@ -33,9 +33,9 @@ Users of this source code agree to the ReEDS licensing agreement [https://nrel.g
 <a name="Introduction"></a>
 # Introduction ([https://www.nrel.gov/analysis/reeds/](https://www.nrel.gov/analysis/reeds/)) 
 
-The Regional Energy Deployment System (ReEDS) India is a capacity planning and dispatch model for the North American electricity system.
+The Regional Energy Deployment System (ReEDS) India model is a capacity planning and dispatch model for the Indian electricity system.
 
-As NREL&#39;s flagship long-term power sector model, ReEDS has served as the primary analytic tool for many studies ([https://www.nrel.gov/analysis/reeds/publications.html](https://www.nrel.gov/analysis/reeds/publications.html)) of important energy sector research questions, including clean energy policy, renewable grid integration, technology innovation, and forward-looking issues of the generation and transmission infrastructure. The ReEDS India model extends this capability to investigate critical power sector question for India
+As NREL&#39;s flagship long-term power sector model, ReEDS has served as the primary analytic tool for many studies ([https://www.nrel.gov/analysis/reeds/publications.html](https://www.nrel.gov/analysis/reeds/publications.html)) of important energy sector research questions, including clean energy policy, renewable grid integration, technology innovation, and forward-looking issues of the generation and transmission infrastructure. The ReEDS India model extends this capability to investigate critical power sector question for India.
 
 ReEDS uses high spatial resolution and high-fidelity modeling. Though it covers a broad geographic and technological scope, ReEDS is designed to reflect the regional attributes of energy production and consumption. Unique among long-term capacity expansion models, ReEDS possesses advanced algorithms and data to represent the cost and value of variable renewable energy; the full suite of other major generation technologies, including fossil and nuclear; and transmission and storage expansion options. Used in combination with other NREL tools, data, and expertise, ReEDS can provide objective and comprehensive electricity system futures.
 
@@ -58,7 +58,7 @@ Python is &quot;an object-oriented programming language, comparable to Perl, Rub
 The setup and execution of the ReEDS model can be accomplished using a command-line interpreter application and launching a command line interface (referred to as a &quot;terminal window&quot; in this document). For example, initiating the Windows Command Prompt application, i.e., cmd.exe, will launch a terminal window ([Figure 1](#Fig1)).
 
 <a name="Fig1"></a>
-![Image of Command Prompt](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/cmd-prompt.png)
+![Image of Command Prompt](images/cmd-prompt.png)
 
 *Figure 1. Screenshot of a Windows Command Prompt terminal window.*
 
@@ -69,12 +69,12 @@ While these installation instructions are specific to Windows 10, this version o
 **IMPORTANT:** Users should exercise Administrative Privileges when installing software. For example, right click on the installer executable for one of the required software (e.g., Anaconda3-2019.07-Windows-x86\_64.exe) and click on &quot;Run as administrator&quot; ([Figure 2](#Fig2)). Alternatively, right click on the executable for the command line interface (e.g., Command Prompt) and click on &quot;Run as administrator&quot; ([Figure 3](#Fig3)). Then run the required software installer executables from the command line.
 
 <a name="Fig2"></a> 
-![Image of Run as Admin](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/run-as-admin.png)
+![Image of Run as Admin](images/run-as-admin.png)
 
 *Figure 2. Screenshot of running an installer executable using &quot;Run as administrator&quot;.*
 
 <a name="Fig3"></a>
-![Image of Run as Admin 2](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/run-as-admin-2.png)
+![Image of Run as Admin 2](images/run-as-admin-2.png)
  
 *Figure 3. Screenshot of running &quot;Command Prompt&quot; with &quot;Run as administrator&quot;.*
 
@@ -87,7 +87,7 @@ The ReEDS India source code is hosted on GitHub: https://github.com/NREL/ReEDS\_
 3. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
 
 <a name="Fig4"></a>
-![Image of GitHub Download](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/github-download.png)
+![Image of GitHub Download](images/github-download.png)
  
 *Figure 4. Screenshot of GitHub links to clone the ReEDS repository or download ZIP of the ReEDS files.*
 
@@ -110,27 +110,27 @@ Add Python to the &quot;path&quot; environment variable
 Install the gdxpds package from the command line by typing &quot;pip install gdxpds&quot; (no quotes) in the terminal window ([Figure 10](#Fig10)).The gdxpds package is required for reading GAMS Data Exchange files (.gdx) into Python.
 
 <a name="Fig5"></a>
-![Image of Search Environment Variable](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/search-env-var.png)
+![Image of Search Environment Variable](images/search-env-var.png)
  
 *Figure 5. Screenshot of a search for &quot;environment variables&quot; in the Windows start menu.*
 
 <a name="Fig6"></a> 
-![Image of System Properties Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/sys-prop-win.png)
+![Image of System Properties Window](images/sys-prop-win.png)
  
 *Figure 6. Screenshot of the &quot;System Properties&quot; window.*
 
 <a name="Fig7"></a> 
-![Image of Environment Variables Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/env-var-win.png)
+![Image of Environment Variables Window](images/env-var-win.png)
  
 *Figure 7. Edit the Path environment variable.*
 
 <a name="Fig8"></a>
-![Image of Edit Environment Variables Window](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/edit-env-var-win.png)
+![Image of Edit Environment Variables Window](images/edit-env-var-win.png)
 
 *Figure 8. Append the Path environment.*
 
 <a name="Fig9"></a>
-![Image of Test Python](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/py-test.png)
+![Image of Test Python](images/py-test.png)
 
 *Figure 9. Screenshot of a test of Python in the terminal window.*
 
@@ -144,7 +144,7 @@ Add GAMS to the &quot;path&quot; environment variable. Follow the same instructi
 **IMPORTANT** : Test the GAMS installation from the command line by typing &quot;gams&quot; (no quotes) in the terminal window. The GAMS program should initiate (Figure 10).
 
 <a name="Fig10"></a>
-![Image of Test GAMS](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/gams-test.png)
+![Image of Test GAMS](images/gams-test.png)
 
 *Figure 10. Screenshot of a test of GAMS from the terminal window.*
 
@@ -158,7 +158,7 @@ Add R to the &quot;path&quot; environment variable. Follow the same instructions
 **IMPORTANT** : Test the R installation from the command line by typing &quot;r&quot; (no quotes) in the terminal window. The R program should initiate ([Figure 11](#Fig11)).
 
 <a name="Fig11"></a>
-![Image of Test R](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/r-test.png)
+![Image of Test R](images/r-test.png)
 
 *Figure 11. Screenshot of a test of R from the terminal window.*
 
@@ -183,20 +183,22 @@ The ReEDS India repository is organized into six (6) folders. In the main folder
 | **C_Solve**      | **Initiates all solve parameters and solve the model**|
 | <ul><li>*c1_Solveprep.gms*</li><ul> | initiate the LP solve and compute parameters based on switch values and configurations defined in “cases.csv” |
 | <ul><li>*c2_Solve_Int.gms*</li><ul> | execute the model using the intertemporal solve option |
-| **D_8760**       | **Computes capacity credit and curtailment using hourly load and generation data** |
-| <ul><li>*d0_pickle_prep.py*</li><ul> | create pickle files for hourly load and resource data |
-| <ul><li>*d1_8760batch.py*</li><ul> | handle inputs and outputs from GAMS files for capacity credit and curtailment |
-| <ul><li>*d2_call8760.gms*</li><ul> | hand off input and output data from capacity credit and curtailment files and create final outputs to be returned to ReEDS |
-| <ul><li>*d3_run_CC_py.gms*</li><ul> | format inputs for capacity credit calculations and call cc_py.py script to calculate capacity credit |
-| <ul><li>*d4_CC_py.py*</li><ul> | calculate capacity credit of existing and marginal variable generation using a top hour approximation method |
-| <ul><li>*d5_Curt_param.gms*</li><ul> | read in and format all inputs for curtailment calculation |
-| <ul><li>*d6_Curt_calc.gms*</li><ul> | calculate curtailment of existing and marginal variable generation using a statistical approximation method |
-| <ul><li>*d7_Translate_8760.R*</li><ul> | format outputs for each model year for ReEDS |
-| <ul><li>*d8_Merge_8760.R*</li><ul> | combine results from each individual year to single file to be returned to ReEDS |
+| <ul><li>*c3_augur_data_dump.gms*</li><ul> | create a gdx file with all of the data necessary for the Augur module to solve |
+| **D_Augur**       | **Computes capacity credit and curtailment using hourly load and generation data** |
+| <ul><li>*d00_pickle_prep.py*</li><ul> | create pickle files for hourly load and resource data |
+| <ul><li>*d0_ReEDS_augur.py*</li><ul> | call the below scripts in order and write results to a gdx file that is read back into ReEDS |
+| <ul><li>*d1_prep_data.py*</li><ul> | prepare data for Osprey and package it into a single gdx file |
+| <ul><li>*d2_osprey.gms*</li><ul> | optimize generation, transmission, and storage with hourly time resolution |
+| <ul><li>*d3_gdx_dump.gms*</li><ul> | output raw data from Osprey as .csv files |
+| <ul><li>*d4_process_osprey_results.py*</li><ul> | standardize generator results and aggregate transmission flows to region level  |
+| <ul><li>*d5_existing_curtailment.gms*</li><ul> | compute the curtailment of existing resources based on results from Osprey |
+| <ul><li>*d6_marginal_curtailment.gms*</li><ul> | compute the curtailment of marginal variable generation based on results from Osprey |
+| <ul><li>*d7_condor.R*</li><ul> | calculate the energy arbitrage revenue for marginal storage additions |
+| <ul><li>*d8_capacity_credit.R*</li><ul> | calculate capacity credit of existing and marginal variable generation |
 | **E_Outputs**    | **Generates gdx files with model results** |
 | <ul><li>*e1_create_report.gms*</li><ul> | format results and write them to gdx file |
-| <ul><li>*gdxfiles* folder</li><ul> | solution files for each model scenario saved with the name “output_{runname}_{scenarioname}.gdx” |
-| <ul><li>*runs* folder</li><ul> | .bat files to compile and execute the model for each scenario |
+| <ul><li>*e2_process_outputs.py*</li><ul> | process ReEDS model results from gams and save key results in Excel format |
+| <ul><li>*runs* folder</li><ul> | solution folders for each model scenario saved with the name “{runname}_{scenarioname}” |
 | **F_Analysis**   | **Create html and figures of model outputs** |
 | <ul><li>*ReEDS-India-markdown.Rmd*</li><ul> | generate html of model results for all user-defined scenarios |
 | <ul><li>*data* folder</li><ul> | external data used for generating plots and tables (i.e., geographic coordinates for mapping) |
@@ -217,7 +219,7 @@ The scenario configuration file name is called &quot;cases.csv&quot; in the &quo
 A complete list of switches is provided in the Appendix of this document.
 
 <a name="Fig12"></a>
-![Image of Cases.csv](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/India_Public/images/cases.jpg) 
+![Image of Cases.csv](images/cases.jpg) 
 
 *Figure 12. Screenshot of cases.csv.*
 
