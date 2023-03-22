@@ -412,7 +412,7 @@ $offdelim
       maxage(i)                 "maximum age for technologies"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%maxage.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%Maxage_file%
 $offdelim
           /,
       refurb_cost_multiplier(i)   "capex reduction for refurbished technologies"
@@ -528,7 +528,7 @@ scalar retireyear  "First year for economic retirements" /%retireyear%/;
 table  binned_capacity(allt,i,r,v,*)    "existing capacity binned by vom cost"
 
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%binned_capacity.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%Binnedcap_file%
 $offdelim
 ;
 
