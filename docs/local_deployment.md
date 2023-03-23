@@ -13,7 +13,7 @@ Before you deploy please make sure you have following softwares installed in you
 
 #### 2. Clone the repositories
 
-ReEDS is a set of three microservices. You need to clone following repositories to be able to make changes and test it. Make sure you have an account in GitLAB and reach out to ReEDS India team so that they can add you to the repository. 
+ReEDS is a set of two microservices. You need to clone following repositories to be able to make changes and test it. Make sure you have an account in GitHub and reach out to ReEDS India team so that they can add you to the repository. 
 
 * ReEDS API + ReEDS: `git clone git@github.com:NREL/reeds_india_api.git`
 * ReEDS UI: `git clone git@github.com:NREL/reeds_india_ui.git`
@@ -27,7 +27,7 @@ ReEDS is a set of three microservices. You need to clone following repositories 
 
 - Install the python requirements
 ``` cmd
-    cd reeds_api
+    cd reeds_india_api
     conda activate reeds
     pip install -r requirements.txt
 ```
@@ -50,7 +50,7 @@ If you are already using pre-setup database for ReEDS you can totally skip this.
     ```cmd
     create database reeds
     ``` 
-- Let's create all the tables. To do this open file `reeds_api/reeds_server/web/create_db.py` and edit the db_connection_string. It should be something like this `mysql://root:password@localhost:3306/reeds`. Make sure to change the username, password and/or database name if necessary. After updating this file open up the command prompt and execute following commands.
+- Let's create all the tables. To do this open file `reeds_india_api/reeds_server/web/create_db.py` and edit the db_connection_string. It should be something like this `mysql://root:password@localhost:3306/reeds`. Make sure to change the username, password and/or database name if necessary. After updating this file open up the command prompt and execute following commands.
 
     ```cmd
     cd reeds_india_api/reeds_server/web
@@ -135,11 +135,10 @@ _Q1. What to do if you receive Docker Desktop - Access Denied error ?_
 
 When using a Windows OS, if you are not part of the docker-users group, then you might get Docker Desktop – Access Denied error. To fix this error, run Computer Management as an administrator and navigate to Local Users* and Groups > Groups > docker-users. Right-click to add the user to the group. Log out and log back in for the changes to take effect. If you receive the same error warning when running a Linux OS, try the solution posted in this Stackoverflow article. If you are installing docker desktop in Windows and your Windows version supports a subsystem for Linux (WSL 2) , please refer to the steps outlined in this article.
 
-_Q2. How to setup SSH for Gitlab access ?_
+_Q2. How to setup SSH for GitHub access ?_
 
-Generate ssh key if you have not done already. Link to GitLAB documentation https://docs.gitlab.com/ee/user/ssh.html
-- Run this command to create SSH key `ssh-keygen -t ed25519 -C "comment"`
-- Copy the public id to Gitlab : Profile >> Preferences >> SSH Keys >> Add SSH key. 
+- Generate SSH key if you have not done already: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key
+- Add SSH key to the ssh-agent: https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#adding-your-ssh-key-to-the-ssh-agent
 
 _Q3. Getting error when using Python connect to MySQL_
 
