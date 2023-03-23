@@ -1,9 +1,27 @@
 on: [pull_request, push]
 
+env:
+  AWS_REGION: us-west-2
+  BASE_URL_FOR_SIMULATION_STATUS: http://13.57.16.146/#/notifications
+  BASE_URL_RESET_PASSWORD: http://13.57.16.146/#/change-password
+  BASE_URL_USER_SIGNUP: http://13.57.16.146/#/new-user
+  DB_CONN_STRING: mysql://admin:reedsindia@reeds-database.cqpo6huywjus.us-west-1.rds.amazonaws.com:3306/reeds
+  JWT_KEY: zgVtt/9{#YZfmTCKn;)5^)Ujo_]};#
+  LOG_FOLDER: logs
+  REDIS_HOST: reeds-india-us-west-2.kw8sl3.ng.0001.usw2.cache.amazonaws.com
+  REDIS_PASSWORD: qJACs1J0apruOOJCggOtkjB4c
+  REDIS_PORT: 6379
+  REEDS_SENDER: reeds-india@nrel.gov
+  REEDS_SUPERUSER_EMAIL: reeds-india@nrel.gov
+  REEDS_SUPERUSER_PASSWORD: j6A{bU//gB
+  S3_BUCKET: reeds-india
+  SAMPLE_KEY: sample_key
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps: 
+      - uses: actions/checkout@v3
       - run: |
           echo "Creating python environment"
           python3 -m venv env
@@ -44,7 +62,7 @@ jobs:
           echo "Awesome Build complete."
 
   deploy_dev:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [test]
     if: contains( github.ref, 'develop' )
     steps:
@@ -62,7 +80,7 @@ jobs:
           echo "Finished!"
 
   deploy_prod:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [deploy_dev]
     if: contains( github.ref, 'main' )
     steps:
