@@ -60,6 +60,7 @@ jobs:
           cat .env
           pytest reeds_server/tests/test_api.py
           echo "Awesome Build complete."
+
   deploy_dev:
     runs-on: self-hosted
     needs: [test]
@@ -76,6 +77,7 @@ jobs:
           cd ~;
           supervisorctl start reeds_api"
           echo "Finished!"
+
   deploy_prod:
     runs-on: self-hosted
     needs: [test]
