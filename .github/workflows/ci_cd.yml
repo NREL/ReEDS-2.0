@@ -1,4 +1,4 @@
-on: [pull_request, push]
+on: push
 
 env:
   AWS_REGION: us-west-2
@@ -67,13 +67,12 @@ jobs:
     if: contains( github.ref, 'develop' )
     steps:
       - run: |
-          curl --silent "https://gitlab.com/gitlab-org/incubation-engineering/mobile-devops/load-secure-files/-/raw/main/installer" | bash
           echo "Deployment starting in dev environment!"
           ls
-          chmod 400 reeds-india.pem
-          ssh -i reeds-india.pem ec2-user@172.18.7.44 "ls;
+          ssh -i ~/.ssh/id_ed25519 ec2-user@172.18.7.44 "ls;
+          sudo service supervisord restart;
           supervisorctl stop reeds_api;
-          cd /home/ec2-user/reeds-india/reeds_api;
+          cd /home/ec2-user/reeds_india_api;
           git pull origin develop;
           cd ~;
           supervisorctl start reeds_api"
@@ -88,8 +87,9 @@ jobs:
           echo "Deployment starting in prod environment!"
           ls
           ssh -i ~/.ssh/id_ed25519 ec2-user@172.17.25.248 "ls;
+          sudo service supervisord restart;
           supervisorctl stop reeds_api;
-          cd /home/ec2-user/reeds_microservices/reeds_api;
+          cd /home/ec2-user/reeds_india_api;
           git pull;
           cd ~;
           supervisorctl start reeds_api"
