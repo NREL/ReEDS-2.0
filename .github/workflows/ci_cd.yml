@@ -81,7 +81,7 @@ jobs:
   deploy_prod:
     runs-on: self-hosted
     needs: [test]
-    if: contains( github.ref, 'main' )
+    if: contains( github.ref, 'gui-source' )
     steps:
       - run: |
           echo "Deployment starting in prod environment!"
