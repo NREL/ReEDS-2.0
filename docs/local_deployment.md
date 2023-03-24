@@ -27,7 +27,7 @@ ReEDS is a set of two microservices. You need to clone following repositories to
 
 - Install the python requirements
 ``` cmd
-    cd reeds_api
+    cd reeds_india_api
     conda activate reeds
     pip install -r requirements.txt
 ```
