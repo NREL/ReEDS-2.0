@@ -1,4 +1,4 @@
-# Instrucitons for first time setup and running ReEDS-India on the HPC
+# Instructions for first time setup and running ReEDS-India on the HPC
 
 ## Step 1. SSH into an HPC login node
 `ssh -m hmac-sha2-512 [hpc-username]@el2.hpc.nrel.gov`
