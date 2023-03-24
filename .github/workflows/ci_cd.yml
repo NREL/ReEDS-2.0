@@ -80,7 +80,7 @@ jobs:
 
   deploy_prod:
     runs-on: self-hosted
-    needs: [deploy_dev]
+    needs: [test]
     if: contains( github.ref, 'main' )
     steps:
       - run: |
