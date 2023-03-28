@@ -10,6 +10,7 @@ rmd.bat
 D_Augur/*_8760_load.pkl
 slurm-*
 /shfiles/india_*
+!/shfiles/srun_template.sh
 /D_8760/gdxfiles/
 /E_Outputs/runs/
 /E_Outputs/vizit_*
