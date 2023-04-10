@@ -2,10 +2,11 @@ on: push
 
 jobs:
   dispatch_to_india_modeling:
-    uses: peter-evans/repository-dispatch@v2
     runs-on: ubuntu-latest
-    with:
-      token: ${{ secrets.INDIA_MODELING_DISPATCH_TOKEN }}
-      repository: NREL/india_modeling
-      event-type: submodule-update
-      client-payload: '{"repo": "${{ github.repository }}"}'
+    steps:
+      - uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.INDIA_MODELING_DISPATCH_TOKEN }}
+          repository: NREL/india_modeling
+          event-type: submodule-update
+          client-payload: '{"repo": "${{ github.repository }}"}'
