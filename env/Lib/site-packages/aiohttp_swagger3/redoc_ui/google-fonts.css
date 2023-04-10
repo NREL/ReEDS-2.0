@@ -1,0 +1,54 @@
+/* montserrat-300 - cyrillic-ext_vietnamese_latin-ext_latin_cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 300;
+  src: local('Montserrat Light'), local('Montserrat-Light'),
+       url('../redoc_ui_static/fonts/montserrat/montserrat-v14-cyrillic-ext_vietnamese_latin-ext_latin_cyrillic-300.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('../redoc_ui_static/fonts/montserrat/montserrat-v14-cyrillic-ext_vietnamese_latin-ext_latin_cyrillic-300.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+/* montserrat-regular - cyrillic-ext_vietnamese_latin-ext_latin_cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Montserrat Regular'), local('Montserrat-Regular'),
+       url('../redoc_ui_static/fonts/montserrat/montserrat-v14-cyrillic-ext_vietnamese_latin-ext_latin_cyrillic-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('../redoc_ui_static/fonts/montserrat/montserrat-v14-cyrillic-ext_vietnamese_latin-ext_latin_cyrillic-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+/* montserrat-700 - cyrillic-ext_vietnamese_latin-ext_latin_cyrillic */
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Montserrat Bold'), local('Montserrat-Bold'),
+       url('../redoc_ui_static/fonts/montserrat/montserrat-v14-cyrillic-ext_vietnamese_latin-ext_latin_cyrillic-700.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('../redoc_ui_static/fonts/montserrat/montserrat-v14-cyrillic-ext_vietnamese_latin-ext_latin_cyrillic-700.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+/* roboto-300 - greek-ext_cyrillic-ext_vietnamese_latin-ext_latin_greek_cyrillic */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 300;
+  src: local('Roboto Light'), local('Roboto-Light'),
+       url('../redoc_ui_static/fonts/roboto/roboto-v20-greek-ext_cyrillic-ext_vietnamese_latin-ext_latin_greek_cyrillic-300.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('../redoc_ui_static/fonts/roboto/roboto-v20-greek-ext_cyrillic-ext_vietnamese_latin-ext_latin_greek_cyrillic-300.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+/* roboto-regular - greek-ext_cyrillic-ext_vietnamese_latin-ext_latin_greek_cyrillic */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Roboto'), local('Roboto-Regular'),
+       url('../redoc_ui_static/fonts/roboto/roboto-v20-greek-ext_cyrillic-ext_vietnamese_latin-ext_latin_greek_cyrillic-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('../redoc_ui_static/fonts/roboto/roboto-v20-greek-ext_cyrillic-ext_vietnamese_latin-ext_latin_greek_cyrillic-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}
+/* roboto-700 - greek-ext_cyrillic-ext_vietnamese_latin-ext_latin_greek_cyrillic */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Roboto Bold'), local('Roboto-Bold'),
+       url('../redoc_ui_static/fonts/roboto/roboto-v20-greek-ext_cyrillic-ext_vietnamese_latin-ext_latin_greek_cyrillic-700.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+       url('../redoc_ui_static/fonts/roboto/roboto-v20-greek-ext_cyrillic-ext_vietnamese_latin-ext_latin_greek_cyrillic-700.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+}

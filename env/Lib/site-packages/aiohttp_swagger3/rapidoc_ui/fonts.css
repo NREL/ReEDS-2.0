@@ -1,0 +1,27 @@
+@font-face {
+    font-family: 'Rapidoc Regular';
+    src: url('rapidoc-regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Rapidoc Regular';
+    src: url('rapidoc-semi-bold.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Roboto Mono';
+    src: url('roboto-mono-regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Roboto Mono';
+    src: url('roboto-mono-bold.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+}
