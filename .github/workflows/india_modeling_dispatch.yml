@@ -10,4 +10,4 @@ jobs:
           token: ${{ secrets.INDIA_MODELING_DISPATCH_TOKEN }}
           repository: NREL/india_modeling
           event-type: submodule-update
-          client-payload: '{"repo": "${{ github.repository }}"}'
+          client-payload: '{"repo": "reeds_india_api"}'
