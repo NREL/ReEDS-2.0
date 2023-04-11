@@ -1,4 +1,7 @@
 on: push
+#   push:
+#     branches:
+#       - main
 
 jobs:
   update:
@@ -10,30 +13,11 @@ jobs:
           repository: NREL/india_modeling
           token: ${{ secrets.INDIA_MODELING_DISPATCH_TOKEN }}
           submodules: true
-
-      - name: Pull & update submodules recursively
-        run: |
+      - run: |
           git submodule update --init --recursive
           git submodule update --recursive --remote
-
-      - name: Commit
-        run: |
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add -A
           git commit -m "Automatic submodule update (test)"
           git push
-
-# on: push
-
-# jobs:
-#   dispatch_to_india_modeling:
-#     if: contains( github.ref, 'feature/dispatch_updates_to_india_modeling' )
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: peter-evans/repository-dispatch@v2
-#         with:
-#           token: ${{ secrets.INDIA_MODELING_DISPATCH_TOKEN }}
-#           repository: NREL/india_modeling
-#           event-type: submodule-update
-#           client-payload: '{"repo": "reeds_india_api"}'
