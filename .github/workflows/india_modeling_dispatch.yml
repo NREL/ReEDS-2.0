@@ -1,23 +1,22 @@
-on: push
-#   push:
-#     branches:
-#       - main
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  update:
+  update_india_modeling:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
         with: 
           repository: NREL/india_modeling
-          token: ${{ secrets.INDIA_MODELING_DISPATCH_TOKEN }}
+          token: ${{ secrets.INDIA_MODELING_UPDATE_TOKEN }}
           submodules: true
       - run: |
-          git submodule update --init reeds_india_api
-          git submodule update --remote reeds_india_api
+          git submodule update --init reeds_india_ui
+          git submodule update --remote reeds_india_ui
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add -A
-          git commit -m "Automatic submodule update (test)"
+          git commit -m "Automatic submodule update"
           git push
