@@ -13,8 +13,8 @@ jobs:
           token: ${{ secrets.INDIA_MODELING_UPDATE_TOKEN }}
           submodules: true
       - run: |
-          git submodule update --init reeds_india_ui
-          git submodule update --remote reeds_india_ui
+          git submodule update --init reeds_india_api
+          git submodule update --remote reeds_india_api
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
           git add -A
