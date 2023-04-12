@@ -18,6 +18,10 @@
 ## Validation / Comparison Report
 ### Link to report and/or example plots
 
-### (if pertinent) How big is the default run folder (runs/{base}_ref_seq/) before and after the change?
+### (if pertinent) How big is the default run folder before and after the change?
 
-### (if pertinent) What is the run time for ref_seq on the same machine before and after the change?
+### (if pertinent) What is the run time for a basic run (5 years) on the same machine before and after the change?
+
+## Review
+
+### Was anything relevant to the ReEDS-to-PCM conversion changed?
