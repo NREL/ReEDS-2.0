@@ -444,7 +444,7 @@ $offdelim
           /
 ;
 
-
+* (abarlas - need to update these tech_costs.csv files)
 * input tables
 table data_conv(allt,i,*)       "data for all technologies not defined in binned_capacity: cost_vom, cost_fom, cost_cap, heat_rate"  //
 
@@ -457,6 +457,7 @@ $offdelim
 *==========================
 * --- Generation Capacity ---
 *==========================
+* (abarlas - should RE-CTs be added to tech groups for growth constraints?)
 set
     tg                    "tech groups for growth constraints"
           /
@@ -659,6 +660,7 @@ retiretech(i,v,r,t) = no;
 *=======================================================
 * --- Generation Availability (outage, capacity factor) ---
 *=======================================================
+* (abarlas - does RE-CT have fored or planned outage rate? Not shown in US)
 
 scalar
        distloss         "distribution losses from bus to final consumption"  /0/
@@ -920,6 +922,8 @@ lmnt_region(region,h,t) = sum(r$r_region(r,region),lmnt(r,h,t))
 *==========================
 * --- Fuels ---
 *==========================
+* (abarlas - need to update ATB files for RE-CTs, starting with fprice.csv)
+
 set
     f              "fuel types"
           /
@@ -1005,6 +1009,7 @@ scalar
        cost_scale "cost scaling parameter" / 1e-12 / ;
        ;
 
+* (abarlas - how to represent RE-CTs in FinAssumptions.csv file? Not in US.)
 parameter
 
 
@@ -1112,6 +1117,8 @@ pvf_hav(i, t, dummy)$sum(storage(i)$(dummy.val >= t.val  and dummy.val<= t.val +
 *==========================
 * --- Costs---
 *==========================
+* (abarlas - how to represent RE-CTs costs? Updated capmult.csv with RE-CTs - but may not be needed?)
+
 parameter
           vom_init(i,r)         "--INR per MWh-- variable OM" //
           /
@@ -1198,6 +1205,8 @@ cost_cap_fin_mult(i,rs,t)$[vre(i)$(cost_cap_fin_mult(i,rs,t)=0)] = 1;
 *======================================================
 * --- RE supply curves, capacity value and curtailment ---
 *======================================================
+* (abarlas - do RE-CTs need to be added to rsc_dat.csv?)
+
 set
     rscbin                            "Resource supply curves bins"
           /
