@@ -250,7 +250,7 @@ parameter
   ACP_portion(r,t)                          "--unitless-- BA level proportion of ACP requirement"
   tax_expenditure_itc(t)                    "--2004$-- ITC tax expenditure"
   tax_expenditure_ptc(t)                    "--2004$-- PTC tax expenditure"
-  tran_flow_all(r,rr,h,trtype,t)            "--MW-- transmission flows between regions by time slice"
+  tran_flow_all(r,rr,allh,trtype,t)         "--MW-- transmission flows between regions by time slice"
   tran_flow_out_ann(r,rr,trtype,t)          "--MWh-- gross annual transmission flows between regions"
   tran_flow_out(r,rr,allh,trtype,t)         "--MWh-- gross transmission flows between regions by time slice"
   tran_flow_power(r,rr,allh,trtype,t)       "--MW-- power flow along each transmission line, losses NOT included"
