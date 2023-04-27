@@ -71,6 +71,7 @@ Sw_StorHAV        "Switch to turn on hourly arbitrage value for storage"        
 Sw_FocusRegionZeroTXCost "Zero transmission capital cost between focus regions"    /%GSw_FocusRegionZeroTXCost%/,
 Sw_TxLimit               "Switch to enable transmission flow limits"    /%GSw_TxLimit%/,
 Sw_CurtLim				"Switch to enable curtailment limit"			/%GSw_CurtLim%/
+Sw_H2CT           "Switch to turn on/off H2CT and H2CC techs on [1] or off [0]"     /%GSw_H2CT%/
 ;
 
 *==========================
