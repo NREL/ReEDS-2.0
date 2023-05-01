@@ -12,6 +12,7 @@ env:
   REDIS_PASSWORD: qJACs1J0apruOOJCggOtkjB4c
   REDIS_PORT: 6379
   REEDS_SENDER: reeds-india@nrel.gov
+  REEDS_SUPERUSER: reedssuperuser
   REEDS_SUPERUSER_EMAIL: reeds-india@nrel.gov
   REEDS_SUPERUSER_PASSWORD: j6A{bU//gB
   S3_BUCKET: reeds-india

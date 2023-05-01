@@ -1,12 +1,12 @@
 threads 20
 lpmethod 4
 advind 0
-reslim 7200
+*reslim 7200
 scaind 1
 aggind 7
 eprhs 1e-4
 epmrk 0.1
-barepcomp 1e-9
+barepcomp 1e-6
 numericalemphasis 1
 *depind 3
 *barcolnz 30
