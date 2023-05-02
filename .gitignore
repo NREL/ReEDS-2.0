@@ -36,5 +36,5 @@ A_Inputs/inputs/sets/*-*-*-*.csv
 reeds_server/model/**
 reeds_server/web/test_db_connection.py
 *.g00
-
+.DS_Store
 
