@@ -270,7 +270,7 @@ def setupEnvironment(ui_input=None):
 			case_df.loc[r, c] = clean_file_paths(case_df.loc[r, c])
 
 		shcom = ' --case=' + runname + "_" + c
-		for i,v in case_df[c].iteritems():
+		for i,v in case_df[c].items():
 			shcom = shcom + ' --' + str(i) + '=' + str(v)
 		caseList.append(shcom)
 		caseSwitches.append(case_df[c].to_dict())
