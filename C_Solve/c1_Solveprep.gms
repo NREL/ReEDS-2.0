@@ -385,3 +385,5 @@ execute '%pythonpath% D_Augur%ds%d00_pickle_prep.py %HourlyLoadFile% %case% %cas
 *======================
 
 execute_unload 'C_Solve%ds%alldat.gdx';
+* (abarlas)
+execute_unload '%casepath%%ds%gdxfiles%ds%alldat.gdx';
