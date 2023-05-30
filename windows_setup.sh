@@ -95,7 +95,6 @@ python -m pip install scipy >> setuplog.txt 2>> setuperr.txt
 python -m pip uninstall jinja2 -y >> setuplog.txt 2>> setuperr.txt
 python -m pip install jinja2==2.10.3 >> setuplog.txt 2>> setuperr.txt
 python -m pip uninstall enum34 -y >> setuplog.txt 2>> setuperr.txt
-python -m pip install h5py >> setuplog.txt 2>> setuperr.txt
 
 echo "Done!"
 echo -ne '\007'

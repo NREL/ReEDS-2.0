@@ -103,7 +103,7 @@ def reeds_cc():
         HOURLY_PROFILES['load'].profiles
         ### Map BA regions to ccreg's and sum over them
         .rename(columns=hierarchy.set_index('r').ccreg)
-        .sum(axis=1, level=0)
+        .groupby(axis=1, level=0).sum()
     )
 
     # Get DR data if necessary

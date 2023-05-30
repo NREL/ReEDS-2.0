@@ -11,13 +11,9 @@ import argparse
 import shutil
 import LDC_prep
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 
 #%% Argument inputs
 parser = argparse.ArgumentParser(
@@ -34,7 +30,10 @@ inputs_case = args.inputs_case
 # #%% Settings for testing ###
 # reeds_dir = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
 # inputs_case = os.path.join(
-#     reeds_dir,'runs','v20220906_NTPm2_ERCOT_EFShigh','inputs_case')
+#     reeds_dir,'runs','v20230104_hourlymergeM0_default','inputs_case')
+
+#%% Set up logger
+log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
 #%% Inputs from switches
 sw = pd.read_csv(
@@ -51,6 +50,10 @@ reeds_data_year = int(
 )
 ### Link between peak-timeslices and parent-timeslices (in case we add more peak-slices)
 slicetree = {'h17': 'h3',}
+
+# Get valid regions
+val_r = pd.read_csv(
+        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
 
 #%%### FUNCTIONS
 def get_season_peaks(load_hourly_local, hierarchy, h_dt_szn, tzmap, reeds_data_year, sw):
@@ -171,18 +174,17 @@ def get_timeslice_peaks(
     peakhour_agg_bytimeslice = pd.concat(peakhour_agg_bytimeslice, axis=1).droplevel(0, axis=1)
 
     #%% Get the BA demand during the peak hour of the associated GSw_PRM_hierarchy_level
-    h_peak_all = {}
+    peak_h = {}
     for r in load_hourly_aligned:
         for h in peakhour_agg_bytimeslice.index:
-            ## Upper case h to match old treatment
-            h_peak_all[r,h.upper()] = load_hourly_aligned.loc[
+            peak_h[r,h] = load_hourly_aligned.loc[
                 peakhour_agg_bytimeslice.loc[h, hierarchy[sw.GSw_PRM_hierarchy_level][r]],
                 r
             ]
-    h_peak_all = pd.Series(h_peak_all)
-    h_peak_all.index = h_peak_all.index.rename(('r','h'))
+    peak_h = pd.Series(peak_h)
+    peak_h.index = peak_h.index.rename(('r','h'))
 
-    return h_peak_all
+    return peak_h
 
 
 #%%### Calculate timeslice-average and -peak load from hourly load
@@ -190,7 +192,7 @@ def get_timeslice_peaks(
 ### Get the number of hours per timeslice
 numhours = pd.read_csv(
     os.path.join(reeds_dir,'inputs','numhours.csv'),
-    names=['h','numhours'],index_col='h',squeeze=True)
+    header=0, names=['h','numhours'], index_col='h', squeeze=True)
 
 # Get fraction of timeslice split off
 slicefrac = pd.merge(
@@ -210,12 +212,13 @@ slicefrac['frac'] = slicefrac['numhours'] / slicefrac['numhours_tot']
 tzmap = pd.read_csv(
     os.path.join(reeds_dir,'inputs','variability','reeds_ba_tz_map.csv'),
     index_col='r', squeeze=True,
-)
+)[val_r]
 ### Get the region hierarchy
 hierarchy = pd.read_csv(
     os.path.join(inputs_case,'hierarchy.csv')
 ).rename(columns={'*r':'r'}).set_index('r')
 hierarchy['r'] = hierarchy.index
+
 ### Get the hour-mapper
 h_dt_szn = (
     pd.read_csv(os.path.join(reeds_dir,'inputs','variability','h_dt_szn.csv'), index_col='hour')
@@ -229,45 +232,6 @@ h_dt_szn['timestamp'] = pd.concat([
     for y in range(2007,2014)
 ]).index
 
-#%% Get the 7-year hourly demand, downselect to reeds_data_year
-load_hourly_local = pd.read_csv(
-    os.path.join(reeds_dir,'inputs','variability','multi_year','load.csv.gz'), 
-    index_col=0, float_precision='round_trip')
-load_hourly_local.columns.name = 'r'
-load_hourly_local['t'] = load_hourly_local.index.map(h_dt_szn.t)
-load_hourly_local = load_hourly_local.loc[
-    load_hourly_local.t==reeds_data_year].drop(['t'],axis=1).copy()
-
-#%% Calculate the timeslice-average demand by region for the base year, save as load_2010.csv
-load_hourly_local['szn'] = load_hourly_local.index.map(h_dt_szn.szn)
-load_hourly_local['h'] = load_hourly_local.index.map(h_dt_szn.h)
-
-load_2010 = (
-    load_hourly_local
-    ### Drop extra columns, take the mean by timeslice
-    .drop(['szn'], axis=1).groupby('h').mean()
-    ### Add peak rows, which we fill below
-    .append(pd.DataFrame(index=list(slicetree.keys())))
-)
-load_2010.index.name = 'h'
-load_2010.columns.name = 'r'
-### Loop over peak slices (e.g. h17), get peak and (parent-peak) averages
-for peakslice, parentslice in slicetree.items():
-    for r in load_2010.columns:
-        ### Take peakslice (e.g. h17) from the top hours of parent slice (e.g. h3)
-        load_2010.loc[peakslice,r] = (
-            load_hourly_local.loc[load_hourly_local.h==parentslice,r]
-            .nlargest(numhours[peakslice]).mean())
-        ### Overwrite parent slice with average over the remaining hours in parent slice
-        ### Note that numhours already includes the correct number of hours (e.g. h3: 268-40=228)
-        load_2010.loc[parentslice,r] = (
-            load_hourly_local.loc[load_hourly_local.h==parentslice,r]
-            .nsmallest(numhours[parentslice]).mean()
-        )
-### Capitalize the timeslices to match the original format
-load_2010.index = load_2010.index.map(lambda x: x.upper())
-### Write it
-load_2010.T.round(decimals).sort_index(axis=1).to_csv(os.path.join(inputs_case, 'load_2010.csv'))
 
 #%%### Calculate peak load by season and timeslice for non-default (EFS-like) demand
 ### NOTE: The summer peak timeslice (h17) is defined by BA, so corresponds to different hours
@@ -275,72 +239,123 @@ load_2010.T.round(decimals).sort_index(axis=1).to_csv(os.path.join(inputs_case, 
 ### For this purpose, we calculate the h17 hours by GSw_PRM_hierarchy_level instead of by BA.
 ### That's inconsistent with the treatment of average load. But the peak timeslice doesn't
 ### make sense for tranmsission anyway (since different BAs peak during different hours,
-### transmission flows during h17 are not physical), so this problem won't really be resolved
-### until we switch to hourly resolution in ReEDS.
-if sw.GSw_EFS1_AllYearLoad == "default":
-    h_peak_all = get_timeslice_peaks(
-        load_hourly_local, hierarchy, h_dt_szn, tzmap, reeds_data_year, numhours, sw,
-    ).rename(2010)
+### transmission flows during h17 are not physical), so this problem will always apply to h17.
+if sw.GSw_EFS1_AllYearLoad == 'historic':
+    #%% Get the 7-year hourly demand, downselect to reeds_data_year
+    load_hourly_local = pd.read_hdf(
+        os.path.join(reeds_dir,'inputs','loaddata','historic_load_hourly.h5'))[val_r]
+    load_hourly_local.columns.name = 'r'
+    load_hourly_local['t'] = load_hourly_local.index.map(h_dt_szn.t)
+    load_hourly_local = load_hourly_local.loc[
+        load_hourly_local.t==reeds_data_year].drop(['t'],axis=1).copy()
 
+    #%% Calculate the timeslice-average demand by region for the base year, save as load_2010.csv
+    load_hourly_local['szn'] = load_hourly_local.index.map(h_dt_szn.szn)
+    load_hourly_local['h'] = load_hourly_local.index.map(h_dt_szn.h)
+
+    load_2010 = (
+        load_hourly_local
+        ### Drop extra columns, take the mean by timeslice
+        .drop(['szn'], axis=1).groupby('h').mean()
+        ### Add peak rows, which we fill below
+        .append(pd.DataFrame(index=list(slicetree.keys())))
+    )
+    load_2010.index.name = 'h'
+    load_2010.columns.name = 'r'
+    ### Loop over peak slices (e.g. h17), get peak and (parent-peak) averages
+    for peakslice, parentslice in slicetree.items():
+        for r in load_2010.columns:
+            ### Take peakslice (e.g. h17) from the top hours of parent slice (e.g. h3)
+            load_2010.loc[peakslice,r] = (
+                load_hourly_local.loc[load_hourly_local.h==parentslice,r]
+                .nlargest(numhours[peakslice]).mean())
+            ### Overwrite parent slice with average over the remaining hours in parent slice
+            ### Note that numhours already includes the correct number of hours (e.g. h3: 268-40=228)
+            load_2010.loc[parentslice,r] = (
+                load_hourly_local.loc[load_hourly_local.h==parentslice,r]
+                .nsmallest(numhours[parentslice]).mean()
+            )
+
+    #%%### Calculate load for all modeled years by scaling by load_multiplier
+    ### load multiplier by cendiv
+    load_multiplier = pd.read_csv(
+        os.path.join(inputs_case,'load_multiplier.csv'), index_col='cendiv')
+    load_multiplier.columns = load_multiplier.columns.astype(int)
+    ### map to regions
+    load_multiplier_r = hierarchy[['cendiv']].merge(
+        load_multiplier, left_on='cendiv', right_index=True).drop('cendiv', axis=1)
+    load_multiplier_r.index = load_multiplier_r.index.rename('r')
+
+    ### Scale load_2010 by load_multiplier
+    load_allyear = load_multiplier_r.multiply(load_2010.unstack('h'), axis=0).reset_index()
+
+    ###### Peak demand, scaled up by load_multiplier
     #%% Get the BA demand during the peak hour of the associated GSw_PRM_hierarchy_level
-    peak_all = (
+    peak_szn = (
         get_season_peaks(
             load_hourly_local, hierarchy, h_dt_szn, tzmap, reeds_data_year, sw)
-        .stack().rename('MW').to_frame().assign(t=2010).reset_index().rename(columns={'r':'*r'})
-        [['*r','szn','t','MW']]
+        .stack().rename('MW').to_frame().assign(t=2010).reset_index()
+    )
+    ### Scale up by load_multiplier
+    peak_szn = (
+        load_multiplier_r.multiply(peak_szn.set_index(['r','szn']).MW, axis=0)
+        .stack().rename('MW').reset_index()
+        .rename(columns={'r':'*r', 'level_2':'t'})
     )
 
-    if int(sw.GSw_EFS_Flex) > 0:
-        flex_data = pd.read_csv(
-            os.path.join(reeds_dir, 'inputs','loaddata',f'{sw.GSw_EFS2_FlexCase}_frac.csv'))
+    #%% Calculate peak demand by timeslice
+    peak_h = get_timeslice_peaks(
+        load_hourly_local, hierarchy, h_dt_szn, tzmap, reeds_data_year, numhours, sw,
+    )
+    ### Scale up by load_multiplier
+    peak_h = load_multiplier_r.multiply(peak_h, axis=0)
 
 else:
     # Just use the input data directly; don't scale it by inputs/variability.
     ### Get timeslice load directly
-    load_data = pd.read_csv(
+    load_allyear = pd.read_csv(
         os.path.join(reeds_dir, 'inputs','loaddata',f'{sw.GSw_EFS1_AllYearLoad}load.csv'))
+
     ### Get hourly load, used to calculate peak demand
     load_hourly_local_byyear = LDC_prep.read_file(
         os.path.join(
-            reeds_dir,'inputs','variability','EFS_Load',
-            f'{sw.GSw_EFS1_AllYearLoad}_load_hourly'),
+            reeds_dir ,'inputs', 'loaddata', f'{sw.GSw_EFS1_AllYearLoad}_load_hourly'),
         index_columns=(
-            2 if (('EER' not in sw.GSw_EFS1_AllYearLoad) and (sw.GSw_EFS1_AllYearLoad != 'default'))
+            2 if (('EER' not in sw.GSw_EFS1_AllYearLoad) and (sw.GSw_EFS1_AllYearLoad != 'historic'))
             else 1)
-    )
+    )[val_r]
     if 'year' in load_hourly_local_byyear:
         load_hourly_local_byyear = load_hourly_local_byyear.set_index(['year','hour'])
     years = load_hourly_local_byyear.index.get_level_values('year').unique()
     ### Get peak demand by year and season
-    peak_all = {}
+    peak_szn = {}
     for year in years:
-        peak_all[year] = get_season_peaks(
+        peak_szn[year] = get_season_peaks(
             load_hourly_local_byyear.loc[year], hierarchy, h_dt_szn, tzmap, reeds_data_year, sw
         ).stack()
-    peak_all = (
-        pd.concat(peak_all, axis=0, names=('t','r','szn')).rename('MW')
+    peak_szn = (
+        pd.concat(peak_szn, axis=0, names=('t','r','szn')).rename('MW')
         .reset_index().rename(columns={'r':'*r'})
         [['*r','szn','t','MW']]
     )
     ### Get peak demand by year and timeslice
-    h_peak_all = {}
+    peak_h = {}
     for year in years:
-        h_peak_all[year] = get_timeslice_peaks(
+        peak_h[year] = get_timeslice_peaks(
             load_hourly_local_byyear.loc[year], hierarchy, h_dt_szn, tzmap,
             reeds_data_year, numhours, sw)
-    h_peak_all = pd.concat(h_peak_all, axis=1)
+    peak_h = pd.concat(peak_h, axis=1)
 
-    if int(sw.GSw_EFS_Flex) > 0:
+### Reshape to long format
+peak_h = peak_h.stack().rename_axis(['*r','h','t']).rename('MW')
+
+#%% Read in the flexibility inputs; if flexibility is not turned on, load in
+#   the reference case as a placeholder
+if int(sw.GSw_EFS_Flex) > 0:
         #load in the %GSw_EFS_AllYearLoad%_%GSw_EFS_Case%_frac.csv file
         flex_data = pd.read_csv(
             os.path.join(reeds_dir, 'inputs','loaddata','{}_frac.csv'.format(sw.GSw_EFS2_FlexCase)))
-
-    load_data.round(decimals).rename(columns={'timeslice':'h'}).to_csv(
-        os.path.join(inputs_case,'load_all.csv'),index=False)
-
-#%% if flexibility is not turned on, load in the reference case
-### Not needed for DR, as reference case is loaded based on default scenario
-if int(sw.GSw_EFS_Flex) == 0:
+elif int(sw.GSw_EFS_Flex) == 0:
     flex_data = pd.read_csv(
         os.path.join(reeds_dir, 'inputs','loaddata','EPREFERENCE_Baseflex_frac.csv'))
     for col in flex_data.columns:
@@ -348,15 +363,21 @@ if int(sw.GSw_EFS_Flex) == 0:
         if np.issubdtype(flex_data[col].dtype, np.number):
             flex_data[col].values[:] = 0
 
-# Don't need switch for DR - no DR has default (none) scenario
-shutil.copy(os.path.join(reeds_dir, 'inputs','demand_response',f'dr_increase_profile_{sw.drscen}.csv'),
-            os.path.join(inputs_case, 'dr_inc.csv'))
-shutil.copy(os.path.join(reeds_dir, 'inputs','demand_response',f'dr_decrease_profile_{sw.drscen}.csv'),
-            os.path.join(inputs_case, 'dr_dec.csv'))
+dr_profile_increase = pd.read_csv(
+    os.path.join(reeds_dir, 'inputs','demand_response',f'dr_increase_profile_{sw.drscen}.csv'))
+dr_profile_decrease = pd.read_csv(
+    os.path.join(reeds_dir, 'inputs','demand_response',f'dr_decrease_profile_{sw.drscen}.csv'))
 dr_data1 = pd.read_csv(
     os.path.join(reeds_dir, 'inputs','demand_response',f'dr_increase_{sw.drscen}.csv'))
 dr_data2 = pd.read_csv(
     os.path.join(reeds_dir, 'inputs','demand_response',f'dr_decrease_{sw.drscen}.csv'))
+
+# Filter by regions
+dr_profile_increase = dr_profile_increase.loc[:,dr_profile_increase.columns.isin(['i','hour','year'] + val_r)]
+dr_profile_decrease = dr_profile_decrease.loc[:,dr_profile_decrease.columns.isin(['i','hour','year'] + val_r)]
+dr_data1 = dr_data1.loc[dr_data1['r'].isin(val_r)]
+dr_data2 = dr_data2.loc[dr_data1['r'].isin(val_r)]
+
 
 #%% If Using DR, adjust data for H17
 if int(sw.GSw_DR) > 0:
@@ -378,16 +399,57 @@ if int(sw.GSw_DR) > 0:
         dr_data2.loc[(dr_data2.timeslice!=dr_data2.h) & ts_adj,'h']
     dr_data2 = dr_data2.round(decimals).drop(['h','frac'], axis=1)
 
+#%% Filter by valid regions
+load_allyear = load_allyear.loc[load_allyear['r'].isin(val_r)]
+flex_data = (
+    flex_data.loc[flex_data['r'].isin(val_r)]
+    .rename(columns={'timeslice':'h'})
+    .set_index(['flextype','r','h'])
+    .stack().rename_axis(['*flextype','r','h','t'])
+    .rename('MW')
+)
+
+#%% Canadian exports: spread equally over timeslices by quarter
+can_exports_szn_frac = pd.read_csv(
+    os.path.join(reeds_dir, 'inputs', 'canada_imports', 'can_exports_szn_frac.csv'),
+    header=0, names=['szn','frac'],
+)
+h_szn = pd.read_csv(
+    os.path.join(reeds_dir,'inputs','variability','h_szn.csv'),
+    header=0, names=['h','szn'], index_col='h', squeeze=True,
+)
+df = can_exports_szn_frac.merge(h_szn.reset_index(), on='szn')
+## Calculate the fraction of year hours represented by each timeslice by scaling
+## the season frac (frac) by the fraction of the season that the timeslice represents
+## (hours / hours_per_szn)
+df['hours'] = df.h.map(numhours)
+df['hours_per_szn'] = (
+    df.szn.map(df.groupby('szn').hours.sum()))
+df['frac_weighted'] = (
+    df.frac * df.hours / df.hours_per_szn)
+can_exports_h_frac = df[['h','frac_weighted']].rename(columns={'h':'*h'})
+
 #%% Write outputs
-h_peak_all.round(decimals).to_csv(os.path.join(inputs_case,'h_peak_all.csv'),index=True)
-peak_all.round(decimals).rename(columns={'season':'szn'}).to_csv(
-    os.path.join(inputs_case,'peak_all.csv'),index=False)
-flex_data.round(decimals).rename(columns={'timeslice':'h'}).to_csv(
-    os.path.join(inputs_case,'flex_frac_all.csv'),index=False)
+load_allyear.round(decimals).rename(columns={'timeslice':'h'}).to_csv(
+    os.path.join(inputs_case,'load_allyear.csv'),index=False)
+peak_h.round(decimals).to_csv(os.path.join(inputs_case,'peak_h.csv'))
+peak_szn.round(decimals).rename(columns={'season':'szn'}).to_csv(
+    os.path.join(inputs_case,'peak_szn.csv'),index=False)
+flex_data.round(decimals).to_csv(
+    os.path.join(inputs_case,'flex_frac_all.csv'))
+dr_profile_increase.to_csv(
+    os.path.join(inputs_case,'dr_inc.csv'),index=False)
+dr_profile_decrease.to_csv(
+    os.path.join(inputs_case,'dr_dec.csv'),index=False)
 dr_data1.to_csv(
     os.path.join(inputs_case,'dr_increase.csv'),index=False, header=False)
 dr_data2.to_csv(
     os.path.join(inputs_case,'dr_decrease.csv'),index=False, header=False)
+if sw.GSw_EFS1_AllYearLoad == 'historic':
+    load_multiplier_r.stack().rename_axis(['r','t']).rename('mulitplier').round(decimals).to_csv(
+        os.path.join(inputs_case,'load_multiplier_r.csv'))
+can_exports_h_frac.round(decimals).to_csv(
+    os.path.join(inputs_case, 'can_exports_h_frac.csv'), index=False)
 
 toc(tic=tic, year=0, process='input_processing/all_year_load.py', 
     path=os.path.join(inputs_case,'..'))

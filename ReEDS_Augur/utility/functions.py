@@ -5,18 +5,52 @@ Created on Thu Mar  4 19:31:59 2021
 @author: afrazier
 """
 
-import numba
 import numpy as np
-import os
+import os, sys, logging
 import pandas as pd
 import platform
 import datetime
 from glob import glob
 import platform
-import re
 
 from ReEDS_Augur.utility.inputs import INPUTS
 from ReEDS_Augur.utility.switchsettings import SwitchSettings
+
+
+def makelog(scriptname, logpath):
+    ### Set up logger
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.INFO)
+    eh = logging.StreamHandler(sys.stderr)
+    eh.setLevel(logging.CRITICAL)
+    class StreamToLogger(object):
+        """
+        https://stackoverflow.com/questions/19425736/
+        how-to-redirect-stdout-and-stderr-to-logger-in-python
+        """
+        def __init__(self, logger, level):
+            self.logger = logger
+            self.level = level
+            self.linebuf = ''
+
+        def write(self, buf):
+            for line in buf.rstrip().splitlines():
+                self.logger.log(self.level, line.rstrip())
+        
+        def flush(self):
+            pass
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format=(os.path.basename(scriptname)+' | %(asctime)s | %(levelname)s | %(message)s'),
+        handlers=[logging.FileHandler(logpath, mode='a'), sh, eh],
+    )
+    log = logging.getLogger(__name__)
+    sys.stdout = StreamToLogger(log, logging.INFO)
+    sys.stderr = StreamToLogger(log, logging.ERROR)
+
+    return log
+
 
 def adjust_tz(df, mapper=None, option='local_to_ET'):
     """Adjust hourly profiles between local and ET"""
@@ -464,7 +498,10 @@ def format_trancap():
     '''
     Get transmission capacity. Combine AC and LCC DC lines.
     '''
-    trancap = INPUTS['trancap'].get_data()
+    if int(SwitchSettings.switches['osprey_prm']):
+        trancap = INPUTS['cap_trans_prm'].get_data()
+    else:
+        trancap = INPUTS['cap_trans_energy'].get_data()
     trancap = (
         trancap.loc[trancap.trtype.isin(['AC','LCC','B2B'])]
         .groupby(['r','rr'], as_index=False).sum()
@@ -487,7 +524,10 @@ def format_tranloss():
     Get transmission losses. Take weighted average for AC and LCC DC lines.
     """
     tranloss = INPUTS['tranloss'].get_data()
-    trancap = INPUTS['trancap'].get_data()
+    if int(SwitchSettings.switches['osprey_prm']):
+        trancap = INPUTS['cap_trans_prm'].get_data()
+    else:
+        trancap = INPUTS['cap_trans_energy'].get_data()
     tranloss = tranloss.merge(trancap, on=['r','rr','trtype'], how='right')
     tranloss = (
         weighted_average(

@@ -88,7 +88,7 @@ $onlisting
 alias (r, rr) ;
 alias (trtype, intype, outtype) ;
 
-
+$onempty
 set dr_h(i,hr,hh) "mapping of with hours DR technologies can shift between" /
 $offlisting
 $ondelim
@@ -96,7 +96,9 @@ $include inputs_case%ds%dr_shifts_augur.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
+$onempty
 parameter dr_max_h(i) "maximum hours DR technologies can shed per day" /
 $offlisting
 $ondelim
@@ -104,6 +106,7 @@ $include inputs_case%ds%dr_shed_augur.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 
 *==============================

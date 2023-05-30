@@ -77,6 +77,14 @@ def get_supply_curve(reedspath, run_folder, sc_file, tech, cost_col,
     # Get reV supply curve
     if os.path.splitext(sc_file)[1] == '.csv':
         df_sc_in = pd.read_csv(sc_file, low_memory=False)
+        if 'bin' not in df_sc_in.columns:
+            df_site_bin_map = pd.read_csv(os.path.join(run_folder, 'inputs_case',
+                'site_bin_map.csv'))
+            df_site_bin_map = (
+                df_site_bin_map[df_site_bin_map['tech'] == tech]
+                .drop(columns=['tech']).drop_duplicates())
+            df_sc_in = df_sc_in.merge(df_site_bin_map, on='sc_point_gid', how='inner')
+            df_sc_in['bin'] = df_sc_in['bin'].astype(int)
     elif os.path.splitext(sc_file)[1] == '.h5':
         with h5py.File(sc_file, mode='r') as h:
             df_sc_in = pd.DataFrame(np.asarray(h['rev']['supply_curve']))
@@ -534,12 +542,6 @@ def reeds_to_rev(revData, run_folder, r2rev_priority, reduced_only, reedspath):
     # Make sure if running PV, you have bins set
     assert revData.tech != 'upv' or revData.bins, "If using upv, bins must be set"
 
-    # format for relevant supply curve file
-    # exceptions for DUPV and CSP below
-    supplyCurve = '{}_{}bin_{}*'.format(revData.tech,
-                                        int(revData.bins) if not np.isnan(revData.bins) else "",
-                                        revData.rev_case)
-
     # Pre 2020 update, hdf5 files were used, with a different file structure
     # DUPV is special and somewhat janky on the reV side, so gets its own thing
     # DUPV profiles should be updated to be more consistent across reV and ReEDS
@@ -548,22 +550,8 @@ def reeds_to_rev(revData, run_folder, r2rev_priority, reduced_only, reedspath):
     elif revData.tech == 'csp':
         sc_file = os.path.join(revData.sc_path, 'vision_sn2_csp_conus_2012.h5')
     else:
-        sc_file = os.path.join(revData.sc_path, supplyCurve,
-                               'results', '{}_supply_curve_raw.csv'.format(revData.tech))
-
-    # Ensure the wildcard matches one and only one file
-    sc_list = glob.glob(sc_file)
-    if len(sc_list) != 1:
-        if len(sc_list) == 0:
-            logger.info("No SC files matched")
-        else:
-            logger.info(
-                'The wildcard in {} should only match one SC file.\nIt matches files \n  {}'.format(
-                    sc_file, sc_list))
-        logger.error('Please fix your file paths for this tech and version.')
-        raise Exception(f'No SC files match {sc_file}')
-
-    sc_file = sc_list[0]
+        sc_file = os.path.join(revData.sc_path, f'{revData.tech}_{revData.rev_case}',
+                               'results', f'{revData.tech}_supply_curve_raw.csv')
 
     # tansmission cost column of supply curve data frame
     if revData.tech in ['wind-ons','wind-ofs','upv']:

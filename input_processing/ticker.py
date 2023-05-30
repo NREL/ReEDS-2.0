@@ -1,5 +1,42 @@
-import os
+#%% Imports
+import os, sys, logging
 from datetime import datetime
+
+#%% Functions
+def makelog(scriptname, logpath):
+    ### Set up logger
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.INFO)
+    eh = logging.StreamHandler(sys.stderr)
+    eh.setLevel(logging.CRITICAL)
+    class StreamToLogger(object):
+        """
+        https://stackoverflow.com/questions/19425736/
+        how-to-redirect-stdout-and-stderr-to-logger-in-python
+        """
+        def __init__(self, logger, level):
+            self.logger = logger
+            self.level = level
+            self.linebuf = ''
+
+        def write(self, buf):
+            for line in buf.rstrip().splitlines():
+                self.logger.log(self.level, line.rstrip())
+        
+        def flush(self):
+            pass
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format=(os.path.basename(scriptname)+' | %(asctime)s | %(levelname)s | %(message)s'),
+        handlers=[logging.FileHandler(logpath, mode='a'), sh, eh],
+    )
+    log = logging.getLogger(__name__)
+    sys.stdout = StreamToLogger(log, logging.INFO)
+    sys.stderr = StreamToLogger(log, logging.ERROR)
+
+    return log
+
 
 def toc(tic, year, process, path=''):
     """append timing data to meta file"""

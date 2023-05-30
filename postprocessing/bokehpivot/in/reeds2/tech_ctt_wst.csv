@@ -1287,3 +1287,17 @@ csp4_9_d_ww,d,ww
 csp4_10_d_ww,d,ww
 csp4_11_d_ww,d,ww
 csp4_12_d_ww,d,ww
+pumped-hydro_n_fsu,n,fsu
+pumped-hydro_n_fsa,n,fsa
+pumped-hydro_n_fsl,n,fsl
+pumped-hydro_n_fg,n,fg
+pumped-hydro_n_sg,n,sg
+pumped-hydro_n_ss,n,ss
+pumped-hydro_n_ww,n,ww
+pumped-hydro-flex_n_fsu,n,fsu
+pumped-hydro-flex_n_fsa,n,fsa
+pumped-hydro-flex_n_fsl,n,fsl
+pumped-hydro-flex_n_fg,n,fg
+pumped-hydro-flex_n_sg,n,sg
+pumped-hydro-flex_n_ss,n,ss
+pumped-hydro-flex_n_ww,n,ww

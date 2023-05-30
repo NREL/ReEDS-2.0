@@ -74,10 +74,19 @@ retiretech(i,v,r,t)$[(Sw_Retire=5)$nuclear(i)$(yeart(t)<=2030)] = no ;
 *several states have subsidies for nuclear power, so do not allow nuclear to retire in these states
 *before the year specified (see https://www.eia.gov/todayinenergy/detail.php?id=41534)
 *Note that Ohio has since repealed their nuclear subsidy, so is no longer included
-retiretech(i,initv,r,t)$[r_st(r,"CT")$(yeart(t)<2030)$valcap(i,initv,r,t)$nuclear(i)] = no ;
-retiretech(i,initv,r,t)$[r_st(r,"IL")$(yeart(t)<2028)$valcap(i,initv,r,t)$nuclear(i)] = no ;
-retiretech(i,initv,r,t)$[r_st(r,"NJ")$(yeart(t)<2026)$valcap(i,initv,r,t)$nuclear(i)] = no ;
-retiretech(i,initv,r,t)$[r_st(r,"NY")$(yeart(t)<2030)$valcap(i,initv,r,t)$nuclear(i)] = no ;
+$onempty
+parameter nuclear_subsidies(st) '--year-- the year a nuclear subsidy ends in a given state'
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%nuclear_subsidies.csv
+$offdelim
+$onlisting
+/
+;
+$offempty
+
+retiretech(i,initv,r,t)$[(yeart(t) < sum{st$r_st(r,st), nuclear_subsidies(st) })$valcap(i,initv,r,t)$nuclear(i)] = no ;
 
 * if Sw_NukeNoRetire is enabled, don't allow nuclear to retire through Sw_NukeNoRetireYear
 if(Sw_NukeNoRetire = 1,
@@ -88,11 +97,8 @@ if(Sw_NukeNoRetire = 1,
 *Do not allow retirements before they are allowed
 retiretech(i,v,r,t)$[(yeart(t)<Sw_Retireyear)] = no ;
 
-*Allow forced retirements to be done endogenously by the model
-retiretech(i,v,r,t)$[forced_retirements(i,r,t)$valcap(i,v,r,t)] = yes ;
-
 *Need to enable endogenous retirements for plants that can have persistent upgrades
-retiretech(i,v,r,t)$[(yeart(t)>=Sw_Upgradeyear)$(yeart(t)>=Sw_Retireyear)$(Sw_Upgrades = 2)
+retiretech(i,v,r,t)$[(yeart(t)>=Sw_Upgradeyear)$(yeart(t)>=Sw_Retireyear)$(Sw_Upgrades = 2)$rb(r)
                      $sum{ii$[upgrade_from(ii,i)$valcap(ii,v,r,t)], 1 }] = yes ;
 *============================
 * Setting for CAP SCENARIO
@@ -112,7 +118,7 @@ set tload(t) "years in which data is loaded" ;
 tload(t) = no ;
 
 set cciter "placeholder for iteration number for tracking CC and curtailment" /0*20/ ;
-set loadset "set used for loading in merged gdx files" / ReEDS_Augur_2010*ReEDS_Augur_%endyear% /;
+set loadset "set used for loading in merged gdx files" / ReEDS_Augur_2010*ReEDS_Augur_%endyear% / ;
 
 parameter
 z_rep(t)                                       "--$-- objective function value by year"
@@ -174,7 +180,7 @@ curt_scale(r,h,t) = 0 ;
 curt_mingen_int(r,h,t) = 0 ;
 
 *Initialize marginal on reserve margin constraint
-eq_reserve_margin.m(r,szn,t)$[rfeas(r)$tmodel_new(t)] = 0 ;
+eq_reserve_margin.m(r,szn,t)$tmodel_new(t) = 0 ;
 
 *trimming the largest matrices to reduce file sizes
 cost_vom(i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
@@ -196,7 +202,6 @@ can_exports_h(r,h,t)$can_exports_h(r,h,t) = round(can_exports_h(r,h,t),3) ;
 cap_hyd_szn_adj(i,szn,r)$cap_hyd_szn_adj(i,szn,r) = round(cap_hyd_szn_adj(i,szn,r),5) ;
 cc_storage(i,sdbin)$cc_storage(i,sdbin) = round(cc_storage(i,sdbin),3) ;
 cendiv_weights(r,cendiv)$cendiv_weights(r,cendiv) = round(cendiv_weights(r,cendiv), 3) ;
-cf_hyd(i,szn,r,t)$cf_hyd(i,szn,r,t) = round(cf_hyd(i,szn,r,t),4) ;
 cost_cap(i,t)$cost_cap(i,t) = round(cost_cap(i,t),3) ;
 
 
@@ -204,7 +209,7 @@ cost_fom(i,v,r,t)$cost_fom(i,v,r,t) = round(cost_fom(i,v,r,t),3) ;
 cost_h2_transport(r,rr)$cost_h2_transport(r,rr) = round(cost_h2_transport(r,rr),3) ;
 cost_opres(i,ortype,t)$cost_opres(i,ortype,t) = round(cost_opres(i,ortype,t),3) ;
 cost_prod(i,v,r,t)$cost_prod(i,v,r,t) = round(cost_prod(i,v,r,t), 3) ;
-cost_upgrade(i,t)$cost_upgrade(i,t) = round(cost_upgrade(i,t), 3) ;
+cost_upgrade(i,v,r,t)$cost_upgrade(i,v,r,t) = round(cost_upgrade(i,v,r,t), 3) ;
 cost_vom(i,v,r,t)$cost_vom(i,v,r,t) = round(cost_vom(i,v,r,t),3) ;
 cost_vom_pvb_b(i,v,r,t)$cost_vom_pvb_b(i,v,r,t) = round(cost_vom_pvb_b(i,v,r,t), 3) ;
 cost_vom_pvb_p(i,v,r,t)$cost_vom_pvb_p(i,v,r,t) = round(cost_vom_pvb_p(i,v,r,t), 3) ;
@@ -219,8 +224,8 @@ fuel_price(i,r,t)$fuel_price(i,r,t) = round(fuel_price(i,r,t),3) ;
 gasmultterm(cendiv,t)$gasmultterm(cendiv,t) = round(gasmultterm(cendiv,t), 3) ;
 h_weight_csapr(h)$h_weight_csapr(h) = round(h_weight_csapr(h),4) ;
 heat_rate(i,v,r,t)$heat_rate(i,v,r,t) = round(heat_rate(i,v,r,t),2) ;
-load_exog(r,h,t)$[rfeas(r)$load_exog(r,h,t)] = round(load_exog(r,h,t),3) ;
-load_exog_static(r,h,t)$[rfeas(r)$load_exog_static(r,h,t)] = round(load_exog_static(r,h,t),3) ;
+load_exog(r,h,t)$load_exog(r,h,t) = round(load_exog(r,h,t),3) ;
+load_exog_static(r,h,t)$load_exog_static(r,h,t) = round(load_exog_static(r,h,t),3) ;
 avail_retire_exog_rsc(i,v,r,t)$valcap(i,v,r,t) = round(avail_retire_exog_rsc(i,v,r,t),4) ;
 m_capacity_exog(i,v,r,t)$valcap(i,v,r,t) = round(m_capacity_exog(i,v,r,t),4) ;
 m_cf(i,v,r,h,t)$[(m_cf(i,v,r,h,t)<0.001)$valcap(i,v,r,t)] = 0 ;
@@ -265,6 +270,13 @@ parameter cap_iter(i,v,r,t,cciter)             "--MW-- Capacity by iteration"
 ;
 cap_iter(i,v,r,t,cciter) = 0 ;
 gen_iter(i,v,r,t,cciter) = 0 ;
+
+
+* -- upgrade capacity tracking --
+parameter m_capacity_exog0(i,v,r,t) "--MW-- original value of m_capacity_exog used in d_solveoneyear to make sure upgraded capacity isnt forced into retirement" ;
+
+m_capacity_exog0(i,v,r,t) = m_capacity_exog(i,v,r,t) ;
+
 *================================================
 * --- SEQUENTIAL SETUP ---
 *================================================
@@ -278,7 +290,6 @@ cc_int(i,v,r,szn,t) = 0 ;
 pvf_capital(t) = 1 ;
 pvf_onm(t)$tmodel_new(t) = round(1 / crf(t),6) ;
 
-
 $endif.seq
 
 
@@ -287,15 +298,6 @@ $endif.seq
 *================================================
 
 $ifthen.int %timetype%=="int"
-
-*load the default values for capacity credit and curtailment
-$ifthene.loadcccurt %cc_curt_load%==1
-$gdxin inputs_case%ds%cccurt_defaults.gdx
-$loadr cc_int
-$loadr curt_int
-$loadr curt_mingen_int
-$gdxin
-$endif.loadcccurt
 
 *Assign csp3 and csp4 to use the same initial values as csp2_1
 cc_int(i,v,r,szn,t)$[csp3(i) or csp4(i)] = cc_int('csp2_1',v,r,szn,t) ;
@@ -355,15 +357,6 @@ pvf_capital0(t) = pvf_capital(t) ;
 pvf_onm0(t) = pvf_onm(t) ;
 
 cost_scale = 1e-3 ;
-
-*load the default values for capacity credit and curtailment
-$ifthene.loadcccurt %cc_curt_load%==1
-$gdxin inputs_case%ds%cccurt_defaults.gdx
-$loadr cc_int
-$loadr curt_int
-$loadr curt_mingen_int
-$gdxin
-$endif.loadcccurt
 
 *Assign csp3 and csp4 to use the same initial values as csp2_1
 cc_int(i,v,r,szn,t)$[csp3(i) or csp4(i)] = cc_int('csp2_1',v,r,szn,t) ;

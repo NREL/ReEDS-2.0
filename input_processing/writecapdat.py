@@ -20,13 +20,8 @@ import pandas as pd
 import os
 import argparse
 import numpy as np
-
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
@@ -46,9 +41,13 @@ reeds_dir = args.reeds_dir
 inputs_case = args.inputs_case
 
 # #%% Testing inputs
+# reeds_dir = os.getcwd()
 # reeds_dir = os.path.expanduser('~/github/ReEDS-2.0')
 # inputs_case = os.path.join(
-#     reeds_dir,'runs','v20220913_NTPm1_ercot_seq','inputs_case')
+#     reeds_dir,'runs','a5_ercot_seq','inputs_case')
+
+#%% Set up logger
+log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
 #%% Inputs from switches
 sw = pd.read_csv(
@@ -64,6 +63,9 @@ def season_names(df,col):
 	df[col] = df[col].str.replace('spring','spri')
 	df[col] = df[col].str.replace('winter','wint')
 	return df
+
+val_r = pd.read_csv(
+        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
 
 ##=================================
 #   --- Supplemental Data ---
@@ -163,15 +165,21 @@ rsm = rsm.loc[rsm.val=='Y',:]
 rsnew = rsm[['r','rs']]
 
 print('Importing generator database:')
-gdb_use = pd.read_csv(os.path.join(cappath,'ReEDS_generator_database_final_EIA-NEMS.csv'))
+gdb_use = pd.read_csv(os.path.join(cappath,'ReEDS_generator_database_final_EIA-NEMS.csv'),
+                      low_memory=False)
+gdb_use = gdb_use.loc[gdb_use['reeds_ba'].isin(val_r)]
 
 # Change tech category of hydro that will be prescribed to use upgrade tech
 # This is a coarse assumption that all recent new hydro is upgrades
 # Existing hydro techs (hydED/hydEND) specifically refer to hydro that exists in 2010
 # Future work could incorporate this change into unit database creation and possibly
 #    use data from ORNL HydroSource to assign a more accurate hydro category.
-gdb_use['tech'][(gdb_use['tech']=='hydEND') & (gdb_use[Sw_onlineyearcol] >= Sw_startyear)] = 'hydUND'
-gdb_use['tech'][(gdb_use['tech']=='hydED') & (gdb_use[Sw_onlineyearcol] >= Sw_startyear)] = 'hydUD'
+gdb_use.loc[
+    (gdb_use['tech']=='hydEND') & (gdb_use[Sw_onlineyearcol] >= Sw_startyear), 'tech'
+] = 'hydUND'
+gdb_use.loc[
+    (gdb_use['tech']=='hydED') & (gdb_use[Sw_onlineyearcol] >= Sw_startyear), 'tech'
+] = 'hydUD'
 
 # If using cooling water, set the coolingwatertech of technologies with no 
 # cooling to be the same as the tech
@@ -209,12 +217,19 @@ print('Gathering non-RSC Prescribed Capacity...')
 pnonrsc = gdb_use.loc[(gdb_use['tech'].isin(TECH['pnonrsc'])) &
                       (gdb_use[Sw_onlineyearcol] >= Sw_startyear) 
                       ]
+
+
 pnonrsc = pnonrsc[COLNAMES['pnonrsc'][0]]
 pnonrsc.columns = COLNAMES['pnonrsc'][1]
 # Remove ctt and wst data from storage, set coolingwatertech to tech type ('i')
 for j, row in pnonrsc.iterrows():
     if row['i'] in TECH['storage']:
         pnonrsc.loc[j,['ctt','wst','coolingwatertech']] = ['n','n',row['i']]
+
+demo = pd.read_csv(os.path.join(reeds_dir,'inputs','capacitydata','demonstration_plants.csv'))
+
+pnonrsc = pd.concat([pnonrsc,demo],sort=False)
+
 pnonrsc = pnonrsc.groupby(COLNAMES['pnonrsc'][1][:-1]).sum().reset_index()
 
 #===============================
@@ -362,6 +377,10 @@ hydcf = season_names(hydcf, 'szn') #need names to match
 hydcfadj = pd.read_csv(os.path.join(cappath, "SeaCapAdj_hy.csv"))
 hydcfadj['value'] = hydcfadj['value'].round(6)
 hydcfadj = season_names(hydcfadj,'szn') #need names to match
+
+# filter down to modeled regions
+hydcf = hydcf[hydcf['r'].isin(val_r)]
+hydcfadj = hydcfadj[hydcfadj['r'].isin(val_r)]
 
 #%%
 #=================================

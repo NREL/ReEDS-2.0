@@ -15,12 +15,8 @@ import argparse
 import sys
 import shutil
 import pandas as pd
-
-# direct print and errors to log file
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
@@ -35,6 +31,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     inputs_case = args.inputs_case
+
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
     #%% Inputs from switches
     sw = pd.read_csv(
@@ -67,7 +66,7 @@ if __name__ == "__main__":
     hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
 
     num_hrs = pd.read_csv(os.path.join(args.reeds_dir, 'inputs', 'numhours.csv'),
-                          names=['h', 'numhours'], index_col='h', squeeze=True)
+                          header=0, names=['h', 'numhours'], index_col='h', squeeze=True)
 
     # Cross join shifts and timeslices
     dr_shifts['key'] = 1

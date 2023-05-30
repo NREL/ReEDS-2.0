@@ -1,14 +1,9 @@
 #%% IMPORTS ###
-import gdxpds
 import pandas as pd
 import os
 import argparse
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
@@ -22,9 +17,13 @@ args = parser.parse_args()
 reeds_dir = args.reeds_dir
 inputs_case = args.inputs_case
 
-#%% Inputs for testing
+# #%% Inputs for testing
 # reeds_dir = os.path.expanduser('~/github2/ReEDS-2.0/')
-# inputs_case = os.path.join(reeds_dir,'runs','v20210630_pvbdc1_Ref_ERCOT','inputs_case','')
+# inputs_case = os.path.join(
+#     reeds_dir,'runs','v20221215_hourlycleanupM4_Pacific','inputs_case')
+
+#%% Set up logger
+log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
 #%% Inputs from switches
 sw = pd.read_csv(
@@ -44,12 +43,18 @@ GSw_PVB_Types = (
 #%% Procedure
 print('Beginning calculations in cfgather.py')
 
+# Read in set of valid regions
+val_r = pd.read_csv(
+        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
+val_r_cap = pd.read_csv(
+        os.path.join(inputs_case, 'val_r_cap.csv'), squeeze=True, header=None).tolist()
 
 colid = ['i','j','k','l','m','n','o','p']
 
-gdxfile = os.path.join(reeds_dir,'inputs','cf','cfdata.gdx')
 rs = pd.read_csv(os.path.join(inputs_case,'rsmap.csv')).rename(columns={'*r':'r'})
 rs.columns = ['r','s']
+
+rs = rs.loc[rs['r'].isin(val_r)]
 
 
 ###########
@@ -59,16 +64,15 @@ windons = pd.read_csv(
     os.path.join(
         reeds_dir, 'inputs', 'cf','wind-ons_cf_ts_{}-{}.csv'
     .format('site' if GSw_IndividualSites else 'sreg', GSw_SitingWindOns))
-).drop('cfsigma', axis=1, errors='ignore')
-windons['type'] = 'wind-ons'
+).drop('cfsigma', axis=1, errors='ignore').assign(type='wind-ons')
+
 
 #%% Offshore wind
 windofs = pd.read_csv(
     os.path.join(
         reeds_dir, 'inputs', 'cf','wind-ofs_cf_ts_{}-{}.csv'
     .format('site' if GSw_IndividualSites else 'sreg', GSw_SitingWindOfs))
-).drop('cfsigma', axis=1, errors='ignore')
-windofs['type'] = 'wind-ofs'
+).drop('cfsigma', axis=1, errors='ignore').assign(type='wind-ofs')
 
 wind = pd.concat([windons,windofs])
 wind['tech'] = wind['type'] + '_' + wind['class'].astype(str)
@@ -92,12 +96,7 @@ upv = upv.drop(upv.loc[upv.value==0].index).reset_index(drop=True)
 #DUPV
 #############
 
-dupv = gdxpds.to_dataframe(gdxfile,'CFDUPV')
-dupv = pd.DataFrame(dupv['CFDUPV'])
-dupv['c'] = 'dupv_' + dupv.k.str.strip('class')
-dupv.columns = ['r','h','cl','value','i']
-dupv = dupv[['r','i','h','value']]
-
+dupv = pd.read_csv(os.path.join(reeds_dir,'inputs','cf','cf_dupv.csv'))
 
 #############
 #distpv
@@ -106,6 +105,7 @@ dupv = dupv[['r','i','h','value']]
 distpv = pd.read_csv(
     os.path.join(reeds_dir,'inputs','dGen_Model_Inputs',distpvscen,'distPVCF_'+distpvscen+'.csv')
 ).rename(columns = {'Unnamed: 0':'r'})
+
 distpv = distpv.melt('r')
 distpv.columns = ['r','h','value']
 distpv['i'] = 'distpv'
@@ -170,51 +170,67 @@ pvb = (
 tst = pd.read_csv(os.path.join(reeds_dir,'inputs','tech-subset-table.csv'))
 csp_configs = tst[(tst['CSP']=='YES') & (tst['STORAGE'] == 'YES')].shape[0]
 
-# CFCspwStorallyears in heritage ReEDS is the adjusted CSP-ws field capacity factor from CFCSPws_tower;
-# data for tower system starts from 2018 and are the same across years (no need for a year dimension)
-# Note that in the most version, CFCSPws_tower (read from field_capacity_factor.csv file) has 
-# already incorporated the availability factors (CFCSPws_adj_factor_tower and CSPws_avail_factor)
-# so can directly read from CFCSPws_tower
+# Note that in the most version, cf_csp_ws_tower (read from field_capacity_factor.csv file) has 
+# already incorporated the availability factors (CFCSPws_adj_factor_tower and CSPws_avail_factor
+# from Heritage ReEDS) so can directly read from cf_csp_ws_tower
 
-# CF for CSP is from SAM modeling results, and assumes SM=1 (i.e. the numbers will need to be 
-# multiplied by the actual SM of certain configurations)
-csp = gdxpds.to_dataframe(gdxfile,'CFCSPws_tower')
-csp = pd.DataFrame(csp['CFCSPws_tower'])
-csp.columns = ['r','h','i','value']
-csp['i'] = 'csp1_' + csp.i.str.strip('cspclass')
-csp['r'] = 's' + csp['r']
-csp = csp[['r','h','i','value']]
+# CF for CSP is from SAM modeling results, and assumes a solar multiple (SM) = 1.
+# The solar multiple is applied in c_supplymodel.
+csp_in = pd.read_csv(os.path.join(reeds_dir,'inputs','cf','cf_csp_ws_tower.csv'))
 
-csp = csp.pivot_table(index=['r','i'], columns='h', values = 'value').fillna(0).reset_index()
-csp['H5'] = 0
-csp['H9'] = 0
-csp1 = csp.copy()
-for i in list(range(2,csp_configs+1)):
-    config = 'csp'+str(i)
-    csp_temp = csp1.copy()
-    csp_temp.i = csp_temp.i.str.replace('csp1',config)
-    csp = pd.concat([csp,csp_temp])
-    
-#Output writing
-allcf = pd.concat([wind,upv,dupv,distpv,pvb])
-allcf = allcf.pivot_table(index=['r','i'],columns='h',values='value').fillna(0).reset_index()
-allcf = pd.concat([allcf,csp],sort=False)
-allcf = allcf.round(8)
- 
+### Add profiles for each csp tech
+csp = pd.concat([
+    csp_in.assign(i=csp_in.i.str.replace('csp1',f'csp{i+1}')) for i in range(csp_configs)
+], axis=0)
+
+###### csp-ns
+# Capacity factors for CSP-ns are developed using typical DNI year (TDY) hourly resource data
+# (Habte et al. 2014) from 18 representative sites. The TDY weather files are processed through
+# the CSP modules of SAM to develop performance characteristics for a system with a
+# solar multiple of 1.4. These representative sites have an average DNI range of
+# 7.25-7.5 kWh/m2/day (see "Class 3" in Table 4 of the ReEDS Model Documnetation: Version 2016).
+# Habte, A., A. Lopez, M. Sengupta, and S. Wilcox. 2014. Temporal and Spatial Comparison of
+# Gridded TMY, TDY, and TGY Data Sets. Golden, CO: National Renewable Energy Laboratory.
+# http://www.osti.gov/scitech/biblio/1126297.
+cf_cspns = pd.read_csv(
+    os.path.join(reeds_dir,'inputs','cf','cf_cspns.csv'),
+    header=None, names=['h','value'], index_col='h')
+### Scale by availability
+scalars = pd.read_csv(
+    os.path.join(inputs_case,'scalars.csv'),
+    header=None, names=['scalar','value','comment'], index_col='scalar')['value']
+cf_cspns *= scalars['avail_cspns']
+### All regions use the same CF for csp-ns
+cspns = pd.concat({(r,'csp-ns'): cf_cspns for r in rs.s}, names=['r','i','h']).reset_index()
+
+#######################
+### Combine VRE CFs
+#######################
+allcf = pd.concat([wind,upv,dupv,distpv,pvb,csp,cspns])
+allcf.h = allcf.h.str.lower()
+allcf = (
+    ## Filter for valid regions
+    allcf.loc[allcf.r.isin(val_r_cap)]
+    .rename(columns={'i':'*i','value':'cf'})
+    [['*i','r','h','cf']]
+).copy()
+
 #######################
 #Hydro mingen
 #######################
 
-hydro = gdxpds.to_dataframe(gdxfile,'minplantload_hy')
-hydro = pd.DataFrame(hydro['minplantload_hy'])
-hydro['j'] = hydro['j'].str[0:4]
-hydro.columns = ['i','szn','r','value']
+hydro = pd.read_csv(os.path.join(reeds_dir,'inputs','cf','hydro_mingen.csv'))
+
+# Filter for valid regions
+hydro = hydro.loc[hydro['r'].isin(val_r)]
+
 hydro = hydro.pivot_table(index =['i','r'],columns = 'szn',values = 'value').fillna(0).reset_index()
+hydro = hydro.round(8)
 
 #%% Save the outputs
 print('writing capacity factor data to: '+inputs_case)
-allcf.to_csv(os.path.join(inputs_case,'cfout.csv'),index=False)
-hydro.to_csv(os.path.join(inputs_case,'minhyd.csv'),index=False)
+allcf.round(6).to_csv(os.path.join(inputs_case,'cf_vre.csv'), index=False)
+hydro.to_csv(os.path.join(inputs_case,'hydmin.csv'),index=False)
 
 toc(tic=tic, year=0, process='input_processing/cfgather.py', 
     path=os.path.join(inputs_case,'..'))

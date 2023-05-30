@@ -1,3 +1,4 @@
+'''Configuration file for load.py and resource.py'''
 #If individual_sites = False, run in this order: resource.py -> hourlize_to_reeds.py
 #If individual_sites = True, run in this order: resource.py -> hourlize_to_reeds.py -> rev-site-aggregation.py -> update_indsites_rsmap.py.
 
@@ -10,14 +11,18 @@ import pandas as pd
 this_dir_path = os.path.dirname(os.path.realpath(__file__)) + '/'
 
 #%% SHARED CONFIG
-timeslice_path = this_dir_path + 'inputs/timeslices_hourend.csv' #The index will be the hour number of the year, ie the first entry is Jan 1, 12am. Timeslices assume this is end-of-hour, e.g. H9 ends at 6am, so this is its last entry per day.
-agg_outputs_timezone = 'local' #This is for the aggregated (non-hourly) outputs. 'local' means convert to local standard time of the respective region. UTC is 0. EST is -5.
-hourly_outputs_timezone = 'local' #'local' means convert to local time of the respective region. UTC is 0. EST is -5.
+timeslice_path = this_dir_path + 'inputs/timeslices_hourend.csv' #The first entry represents Jan 1, 12am. Note that this is hour ending, so it really represents 11pm-12am.
+output_timezone = 'local' #'local' means convert to local standard time of the respective region. UTC is 0. EST is -5.
 start_1am = True #False means start at 12am
 select_year = 2012 #This is the year used for load and resource profile-derived inputs, although the profile outputs may still be multiyear (see multiyear)
 hourly_out_years = list(range(2007,2014)) #e.g. [2012] for just 2012 or list(range(2007,2014)) for 2007-2013
 remotepath = 'Volumes' if sys.platform == 'darwin' else '/nrelnas01'
 logToTerminal = True
+###### Specify the settings for hourly profile files
+### filetype: 'csv' or 'h5'. Note that load.py uses h5 regardless for default (historical) and EER load
+filetype = 'h5'
+### compression_opts: can select from 0-9: 0 is faster and larger, 9 is slower and smaller, 4 is default
+compression_opts = 4
 
 #%% RESOURCE CONFIG, used for resource.py
 #Test Mode:
@@ -29,6 +34,7 @@ test_filters = {'region':['s270']}
 tech = 'wind-ons' #e.g. 'wind-ons', 'wind-ofs', 'upv', 'dupv'
 access_case = 'limited' #e.g. 'reference', 'open', 'limited'
 individual_sites = False
+bespoke_style = True #bespoke_style has different columns and a single h5 profile file (for all years).
 
 df_rev = pd.read_csv(this_dir_path + '../inputs/supplycurvedata/metadata/rev_paths.csv')
 df_rev = df_rev[(df_rev['tech'] == tech)&(df_rev['access_case'] == access_case)].squeeze()
@@ -56,7 +62,7 @@ add_h17 = True #Add h17 timeslice as equal to h3
 driver = 'H5FD_CORE' #'H5FD_CORE', None. H5FD_CORE will load the h5 into memory for better perforamnce, but None must be used for low-memory machines.
 gather_method = 'smart' # 'list', 'slice', 'smart'. This setting will take a slice of profile ids from the min to max, rather than using a list of ids, for improved performance when ids are close together for each group.
 if tech == 'wind-ons':
-    min_cap = 5.5 #MW
+    min_cap = 0 #MW
     bin_col = 'combined_eos_trans' #'combined_eos_trans' is a computed column from economies of scale and transmission cost. To turn off economies of scale, use 'trans_cap_cost'
     transcost_col = 'trans_cap_cost_per_mw'
     distance_cols = ['dist_km']
@@ -85,11 +91,7 @@ elif tech in ['upv','dupv']:
     profile_id_col = 'sc_point_gid'
     profile_weight_col = 'capacity'
     reg_out_col = 'reeds_ba'
-###### Specify the settings for hourly profile files
-### filetype: 'csv' or 'h5'
-filetype = 'h5'
-### compression_opts: can select from 0-9: 0 is faster and larger, 9 is slower and smaller, 4 is default
-compression_opts = 4
+
 ### dtype: np.float16 or np.float32
 dtype = np.float16
 
@@ -99,14 +101,21 @@ out_dir = tech + tech_suffix + '_' + rev_prefix + '/'
 
 #%% LOAD CONFIG, used for load.py
 #Note that calcs assume UTC, although the current load source is in eastern time (delete this after updating)
-load_source = this_dir_path + 'plexos_to_reeds/outputs/load_hourly_ba_EST.csv' #e.g. '//nrelnas01/ReEDS/PLEXOS_ReEDS_Load/combined/load_full.csv' This is a file (csv or compressed csv) with datetime as index and ba columns
+#The load source file's first column should be datetime, starting at Jan 1, 12am, stepping by 1 hour, and one column for each BA. It should be a csv (or a compressed csv).
+load_source = '//nrelnas01/ReEDS/Supply_Curve_Data/LOAD/2020_Update/plexos_to_reeds/outputs/load_hourly_ba_EST.csv' #This is a file (csv or compressed csv) with datetime as index and ba columns
 load_source_timezone = -5 #UTC would be 0, Eastern standard time would be -5
+load_source_hr_type = 'end' #Use 'end' if load_source data hour-ending, or 'begin' for hour-beginning. For instantaneous use 'end'.
 calibrate_path = this_dir_path + 'inputs/load/EIA_2010loadbystate.csv' #Enter string to calibrate path or False to leave uncalibrated
-calibrate_year = 2010 #This is the year that the outputs of load.py represent, based on the EIA calibration year
+calibrate_year = 2010 #This is the year that the outputs of load.py represent, based on the EIA calibration year. Unused if calibrate_path is False.
+calibrate_type = 'all_years' #either 'one_year' or 'all_years'. Unused if calibrate_path is False. 'one_year' means to only calibrate one year to the EIA data and then apply the same scaling factor to all years. 'all_years' will calibrate all each year to the EIA data.
+output_style = 'default' # either 'default' or 'EFS'. 'default' will produce the ReEDS load inputs that correspond to the 'default' option of the 'GSw_EFS1_AllYearLoad' switch, and 'EFS' will correspond to the other options of that switch.
 ba_frac_path = this_dir_path + 'inputs/load/load_participation_factors_st_to_ba.csv' #These are fractions of state load in each ba, unused if calibrate_path is False
 hierarchy_path = this_dir_path + 'inputs/load/hierarchy.csv' #Used for both calibration and variability outputs
 season_path = this_dir_path + 'inputs/load/seasons.csv' #These are fractions of state load in each ba, unused if calibrate_path is False
 ba_timezone_path = this_dir_path + 'inputs/load/ba_timezone.csv' #Should this be used for resource too, rather than site timezone?
 hourly_process = True #If False, skip all hourly processing steps
-truncate_leaps = True #Truncate leap years
+truncate_leaps = True #Truncate leap years. This currently needs to be True for mapping properly to timeslices.
 us_only = True #Only run US BAs.
+use_default_before_yr = False #Either False or a year. If set to a year, this will pull in ReEDS default load data before that year (2012 weather year)
+
+dtypeLoad = np.float32 #Use int if the file size ends up too large.

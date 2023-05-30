@@ -2,10 +2,10 @@
     "log_directory": "./logs",
     "execution_control": {
         "allocation": "wetosa",
-        "feature": "--qos=normal",
-        "memory": 90,
-        "nodes": 4,
+        "feature": "--qos=high",
         "option": "eagle",
+        "memory": 170,
+        "nodes": 4,
         "walltime": 2
     },
     "fixed_charge_rate": 0.049,

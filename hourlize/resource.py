@@ -117,7 +117,7 @@ def get_supply_curve_and_preprocess(tech, rev_sc_file_path, rev_prefix, reg_col,
         df_st = pd.read_csv(state_abbrev, low_memory=False)
         dict_st = dict(zip(df_st['ST'], df_st['State']))
         df_exist['STATE'] = df_exist['STATE'].map(dict_st)
-        df_cp = df_cp[['sc_gid','state','latitude','longitude','capacity']].copy()
+        df_cp = df_cp[['sc_point_gid','state','latitude','longitude','capacity']].copy()
         df_cp['existing_capacity'] = 0.0
         df_cp['existing_uid'] = 0
         df_cp['online_year'] = 0
@@ -157,8 +157,8 @@ def get_supply_curve_and_preprocess(tech, rev_sc_file_path, rev_prefix, reg_col,
                 df_cp_out = pd.concat([df_cp_out, df_cp_out_add], sort=False).reset_index(drop=True)
                 df_cp_st = df_cp_st[df_cp_st['existing_capacity'] == 0].copy()
         df_cp_out['exist_mi_diff'] = df_cp_out['mi_sq']**0.5
-        df_cp_out = df_cp_out[['sc_gid', 'existing_capacity', 'existing_uid', 'online_year', 'retire_year', 'exist_mi_diff']].copy()
-        df = pd.merge(left=df, right=df_cp_out, how='left', on=['sc_gid'], sort=False)
+        df_cp_out = df_cp_out[['sc_point_gid', 'existing_capacity', 'existing_uid', 'online_year', 'retire_year', 'exist_mi_diff']].copy()
+        df = pd.merge(left=df, right=df_cp_out, how='left', on=['sc_point_gid'], sort=False)
         df[['existing_capacity','existing_uid','online_year','retire_year','exist_mi_diff']] = df[['existing_capacity','existing_uid','online_year','retire_year','exist_mi_diff']].fillna(0)
         df[['existing_uid','online_year','retire_year']] = df[['existing_uid','online_year','retire_year']].astype(int)
     else:
@@ -202,10 +202,13 @@ def add_classes(df_sc, class_path):
     logger.info('Done adding classes: '+ str(datetime.datetime.now() - startTime))
     return df_sc
 
-def add_cost(df_sc, bin_col, transcost_col):
+def add_cost(df_sc, bin_col, transcost_col, bespoke_style):
     # Generate the combined supply-curve cost column
     if bin_col == 'combined_eos_trans':
-        df_sc[bin_col] = df_sc['mean_capital_cost'] / df_sc['mean_system_capacity'] * (df_sc['capital_cost_scalar'] - 1)*1000 + df_sc[transcost_col]
+        if bespoke_style:
+            df_sc[bin_col] = df_sc[transcost_col] + df_sc['eos_adder_per_mw']
+        else:
+            df_sc[bin_col] = df_sc['mean_capital_cost'] / df_sc['mean_system_capacity'] * (df_sc['capital_cost_scalar'] - 1)*1000 + df_sc[transcost_col]
     if bin_col == 'combined_off_ons_trans':
         df_sc[bin_col] = (df_sc['mean_export'] + df_sc['mean_array']) / (df_sc['mean_system_capacity'] * 40) * 1000 + df_sc[transcost_col]
     logger.info('Done adding supply-curve cost column.')
@@ -284,7 +287,7 @@ def save_sc_outputs(
 
 def get_profiles_allyears_weightedave(
         df_sc, rev_cases_path, rev_prefix, hourly_out_years, profile_dset,
-        profile_dir, profile_id_col, profile_weight_col, select_year, tech):
+        profile_dir, profile_id_col, profile_weight_col, select_year, tech, bespoke_style):
     """
     Get the weighted average profiles for all years rather than representative profiles
     """
@@ -315,12 +318,20 @@ def get_profiles_allyears_weightedave(
     ### Load hourly profile for each year
     dfyears = []
     for year in hourly_out_years:
-        h5path = os.path.join(
-            rev_cases_path, profile_dir, f'{rev_prefix}_rep-profiles_{year}.h5')
-        with h5py.File(h5path, 'r') as h5:
-            dfall = pd.DataFrame(h5[profile_dset][:])
-            df_meta = pd.DataFrame(h5['meta'][:])
-        
+        if bespoke_style: #only one profile file
+            h5path = os.path.join(
+                rev_cases_path, profile_dir,
+                f'{rev_prefix}_bespoke.h5')
+            with h5py.File(h5path, 'r') as h5:
+                dfall = pd.DataFrame(h5[f'cf_profile-{year}'][:])
+                dfall = dfall/h5[f'cf_profile-{year}'].attrs['scale_factor']
+                df_meta = pd.DataFrame(h5['meta'][:])
+        else:
+            h5path = os.path.join(
+                rev_cases_path, profile_dir, f'{rev_prefix}_rep-profiles_{year}.h5')
+            with h5py.File(h5path, 'r') as h5:
+                dfall = pd.DataFrame(h5[profile_dset][:])
+                df_meta = pd.DataFrame(h5['meta'][:])
         ### Check that meta and profile are the same dimensions
         assert dfall.shape[1] == df_meta.shape[0], f"Dimensions of profile ({dfall.shape[1]}) do not match meta file dimensions ({df_meta.shape[0]}) in {rev_prefix}_rep-profiles_{year}.h5"        
         ### Change hourly profile column names from simple index to associated sc_point_gid
@@ -589,7 +600,7 @@ if __name__== '__main__':
     #%% Add classes
     df_sc = add_classes(df_sc=df_sc, class_path=cf.class_path)
     #%% Add bins
-    df_sc = add_cost(df_sc=df_sc, bin_col=cf.bin_col, transcost_col=cf.transcost_col)
+    df_sc = add_cost(df_sc=df_sc, bin_col=cf.bin_col, transcost_col=cf.transcost_col, bespoke_style=cf.bespoke_style)
     #%% Save the supply curve
     save_sc_outputs(
         df_sc=df_sc, individual_sites=cf.individual_sites, existing_sites=cf.existing_sites,
@@ -601,14 +612,14 @@ if __name__== '__main__':
         df_sc=df_sc, rev_cases_path=cf.rev_cases_path, rev_prefix=cf.rev_prefix,
         hourly_out_years=cf.hourly_out_years, profile_dset=cf.profile_dset,
         profile_dir=cf.profile_dir, profile_id_col=cf.profile_id_col,
-        profile_weight_col=cf.profile_weight_col, select_year=cf.select_year, tech=cf.tech)
+        profile_weight_col=cf.profile_weight_col, select_year=cf.select_year, tech=cf.tech, bespoke_style=cf.bespoke_style)
     #%% Shift timezones
     reps_arr_out = shift_timezones(
         arr=reps_arr_out, df_rep=df_rep,
-        source_timezone=cf.resource_source_timezone, output_timezone=cf.hourly_outputs_timezone)
+        source_timezone=cf.resource_source_timezone, output_timezone=cf.output_timezone)
     avgs_arr = shift_timezones(
         arr=avgs_arr, df_rep=df_rep,
-        source_timezone=cf.resource_source_timezone, output_timezone=cf.agg_outputs_timezone)
+        source_timezone=cf.resource_source_timezone, output_timezone=cf.output_timezone)
     #%% Get timeslice outputs
     df_cf, df_cf_ts, df_cfcorr_ts = calc_performance(
         avgs_arr=avgs_arr, df_rep=df_rep, timeslice_path=cf.timeslice_path,

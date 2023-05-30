@@ -2,12 +2,9 @@
 import pandas as pd
 import os
 import argparse
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
+import support_functions as sFuncs
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
@@ -25,6 +22,9 @@ inputs_case = args.inputs_case
 # #%% Testing inputs
 # reeds_dir = os.path.expanduser('~/github2/ReEDS-2.0/')
 # inputs_case = os.path.join(reeds_dir,'runs','v20220421_prmM0_ercot_seq','inputs_case')
+
+#%% Set up logger
+log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
 #%% Inputs from switches
 sw = pd.read_csv(
@@ -225,7 +225,10 @@ hydro = pd.read_csv(os.path.join(inpath,hydroscen+'.csv'), index_col=0).round(6)
 ofswind_rsc_mult = pd.read_csv(os.path.join(inpath,ofswindscen+'_rsc_mult.csv'),index_col=0).round(6)
 degrade = pd.read_csv(
 	os.path.join(reeds_dir,"inputs","degradation",'degradation_annual_' + degrade_suffix + '.csv'),
-	index_col=0,header=None).round(6)
+	header=None)
+degrade.columns = ['i','rate']
+degrade = sFuncs.expand_GAMS_tech_groups(degrade)
+degrade = degrade.set_index('i').round(6)
 
 #%%### PV+battery cost model
 ### Get PVB designs
@@ -320,8 +323,10 @@ for i in range(1,4):
 pvb = pd.concat(pvb, axis=1)
 
 
-## Create DAC scenario output if the DAC scenario is set to anything other than "default":
-if dacscen != 'default':
+## Create Electric DAC scenario output
+# For electric DAC, we assume a sorbent system: https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a
+# FYI, for DAC-gas we assume a solvent system: https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987
+if dacscen:
     dac = pd.read_csv(os.path.join(reeds_dir,"inputs","consume",f'dac_elec_{dacscen}.csv'))
     dac = deflate_func(dac, f'dac_elec_{dacscen}')
 

@@ -90,18 +90,18 @@ curt_scale(r,h,t)$tload(t) = 0 ;
 curt_mingen_int(r,h,t)$tload(t) = 0 ;
 
 
-oldVREgen(r,h,t)$(tload(t)$rfeas(r)) =
+oldVREgen(r,h,t)$tload(t) =
     sum{(i,v,rr)$[cap_agg(r,rr)$vre(i)$valcap(i,v,rr,t)],
           m_cf(i,v,rr,h,t) * CAP.l(i,v,rr,t)
        } ;
 
-oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) } ;
+oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) } ;
 
 *Sw_Int_Curt=0 means use average curtailment, and don't differentiate techs
 if(Sw_Int_Curt=0,
     curt_int(i,rr,h,t)$[tload(t)$valcap_irt(i,rr,t)$vre(i)$sum{r$cap_agg(r,rr), oldVREgen(r,h,t) + oldMINGEN(r,h,t) }] =
         sum{r$cap_agg(r,rr), curt_old_load(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) } ;
-    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
+    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
         curt_old_load(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) ;
 ) ;
 
@@ -110,7 +110,7 @@ if(Sw_Int_Curt=1 or Sw_Int_Curt=2 or Sw_Int_Curt=3,
     curt_int(i,rb,h,t)$[tload(t)$vre(i)$valcap_irt(i,rb,t)] = curt_marg_load(i,rb,h,t) ;
     curt_int(i,rs,h,t)$[tload(t)$vre(i)$valcap_irt(i,rs,t)] =
         sum{r$r_rs(r,rs), curt_marg_load(i,r,h,t) } ;
-    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = curt_mingen_load(r,h,t) ;
+    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)] = curt_mingen_load(r,h,t) ;
     curt_totmarg(r,h,t)$tload(t) =
         sum{(i,v,rr)$[cap_agg(r,rr)$valcap(i,v,rr,t)$vre(i)],
               m_cf(i,v,rr,h,t) * CAP.l(i,v,rr,t) * curt_int(i,rr,h,t)
@@ -133,7 +133,7 @@ if(Sw_Int_Curt=1,
 if(Sw_Int_Curt=2,
     curt_int(i,rr,h,t)$[tload(t)$valcap_irt(i,rr,t)$vre(i)$sum{r$cap_agg(r,rr), (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) }] =
         sum{r$cap_agg(r,rr), curt_totmarg(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) } ;
-    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
+    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
         curt_totmarg(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) ;
     curt_excess(r,h,t)$curt_totmarg(r,h,t) = curt_old_load(r,h,t) - curt_totmarg(r,h,t) ;
 ) ;
@@ -169,7 +169,7 @@ hourly_arbitrage_value(i,r,t)$tload(t) = 0 ;
 *Storage duration bin sizes by year
 sdbin_size(ccreg,szn,sdbin,t)$tload(t) = sdbin_size_load(ccreg,szn,sdbin,t) ;
 curt_stor(i,v,r,h,src,t)$[tload(t)$valcap(i,v,r,t)$storage_standalone(i)] = curt_stor_load(i,v,r,h,src,t) ;
-curt_tran(r,rr,h,t)$[tload(t)$rfeas(r)$rfeas(rr)$rb(r)$rb(rr)$(not sameas(r,rr))
+curt_tran(r,rr,h,t)$[tload(t)$rb(r)$rb(rr)$(not sameas(r,rr))
                      $sum{(n,nn,trtype)$routes_inv(n,nn,trtype,t), translinkage(r,rr,n,nn,trtype)}
                     ] = curt_tran_load(r,rr,h,t) ;
 storage_in_min(r,h,t)$[tload(t)$(sum{(i,v)$storage_standalone(i), valcap(i,v,r,t) })] = storage_in_min_load(r,h,t) ;
@@ -242,7 +242,7 @@ $ifthene.afterseconditer %niter%>1
 if(Sw_AVG_iter=1,
         cc_int(i,v,r,szn,t)$[tload(t)$(vre(i) or storage(i))$valcap(i,v,r,t)] = round((cc_int(i,v,r,szn,t) + cc_iter(i,v,r,szn,t,"%previter%")) / 2 ,4) ;
         curt_int(i,r,h,t)$[tload(t)$vre(i)$valcap_irt(i,r,t)] = round((curt_int(i,r,h,t) + curt_iter(i,r,h,t,"%previter%")) / 2, 4) ;
-        curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = round((curt_mingen_int(r,h,t) + curt_mingen_iter(r,h,t,"%previter%")) / 2,4) ;
+        curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)] = round((curt_mingen_int(r,h,t) + curt_mingen_iter(r,h,t,"%previter%")) / 2,4) ;
     ) ;
 
 $endif.afterseconditer

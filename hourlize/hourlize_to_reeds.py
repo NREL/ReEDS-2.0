@@ -18,6 +18,24 @@ reeds_path = os.path.realpath(os.path.join(this_dir_path,'..'))
 ### region/class when using an upper limit of 2000 bins is 1300 (for upv), so we use numbins=1300
 ### to avoid creating more bins than we need in ReEDS.
 
+###### aggregated (non-individual sites)
+# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
+#    'wind-ons', 'open', 'wind-ons_00_open_moderate', False, None)
+tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
+   'wind-ons', 'reference', 'wind-ons_01_reference_moderate', False, None)
+# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
+#    'wind-ons', 'limited', 'wind-ons_02_limited_moderate', False, None)
+# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
+#    'upv', 'open', 'upv_0_moderate_open', False, None)
+# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
+#    'upv', 'reference', 'upv_1_moderate_reference', False, None)
+# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
+#    'upv', 'limited', 'upv_2_moderate_limited', False, None)
+# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
+#    'wind-ofs', 'open', 'wind-ofs_0_open_moderate', False, None)
+# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
+#    'wind-ofs', 'limited', 'wind-ofs_1_limited_moderate', False, None)
+
 ##### onshore, individual sites
 # tech, scenario, hourlize_run, GSw_IndividualSites = (
 #     'wind-ons', 'open', 'wind-ons_ind_00_open_moderate',True)
@@ -31,77 +49,8 @@ reeds_path = os.path.realpath(os.path.join(this_dir_path,'..'))
 ##### offshore, individual sites
 # tech, scenario, hourlize_run, GSw_IndividualSites = (
 #     'wind-ofs', 'open', 'wind-ofs_ind_0_open_moderate',True)
-tech, scenario, hourlize_run, GSw_IndividualSites = (
-    'wind-ofs', 'limited', 'wind-ofs_ind_1_limited_moderate',True)
-
-##### onshore, s regions, 5 bins
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'wind-ons', 'open', 'wind-ons_5bin_00_open_moderate', False, 5)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'wind-ons', 'reference', 'wind-ons_5bin_01_reference_moderate', False, 5)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'wind-ons', 'limited', 'wind-ons_5bin_02_limited_moderate', False, 5)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'wind-ons', 'limitedplus', 'wind-ons_5bin_21_limited_moderate_eos_flicker_lc_rl', False, 5)
-
-##### onshore, s regions, 1300 bins
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'wind-ons', 'open', 'wind-ons_1300bin_00_open_moderate', False, 1300)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'wind-ons', 'reference', 'wind-ons_1300bin_01_reference_moderate', False, 1300)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'wind-ons', 'limited', 'wind-ons_1300bin_02_limited_moderate', False, 1300)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'wind-ons', 'limitedplus', 'wind-ons_1300bin_21_limited_moderate_eos_flicker_lc_rl', False, 1300)
-
-##### offshore, s regions, 5 bins
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'wind-ofs', 'open', 'wind-ofs_5bin_0_open_moderate', False, 5)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'wind-ofs', 'limited', 'wind-ofs_5bin_1_limited_moderate', False, 5)
-
-##### offshore, s regions, 1300 bins (sufficient for 1 bin per site)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'wind-ofs', 'open', 'wind-ofs_1300bin_0_open_moderate', False, 1300)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'wind-ofs', 'limited', 'wind-ofs_1300bin_1_limited_moderate', False, 1300)
-
-#### upv, 20 bins [default]
-#tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'upv', 'open', 'upv_20bin_0_moderate_open', False, 20)
-#tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'upv', 'reference', 'upv_20bin_1_moderate_reference', False, 20)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#      'upv', 'limited', 'upv_20bin_2_moderate_limited', False, 20)
-
-# ### upv, 1300 bins [one bin per site]
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'upv', 'open', 'upv_1300bin_scen_128_ed0_2021-08-30-18-18-35-789756', False, 1300)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'upv', 'reference', 'upv_1300bin_1_moderate_reference', False, 1300)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'upv', 'limited', 'upv_1300bin_scen_128_ed4_2021-08-30-18-31-13-221406', False, 1300)
-# ## 20220110 - binned exogenous capacity
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#     'upv', 'reference', 'upv_1300bin_scen_128_ed1', False, 1300)
-
-###### binless
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'wind-ons', 'open', 'wind-ons_00_open_moderate', False, None)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'wind-ons', 'reference', 'wind-ons_01_reference_moderate', False, None)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'wind-ons', 'limited', 'wind-ons_02_limited_moderate', False, None)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'upv', 'open', 'upv_0_moderate_open', False, None)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'upv', 'reference', 'upv_1_moderate_reference', False, None)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'upv', 'limited', 'upv_2_moderate_limited', False, None)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'wind-ofs', 'open', 'wind-ofs_0_open_moderate', False, None)
-# tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
-#    'wind-ofs', 'limited', 'wind-ofs_1_limited_moderate', False, None)
+# tech, scenario, hourlize_run, GSw_IndividualSites = (
+#     'wind-ofs', 'limited', 'wind-ofs_ind_1_limited_moderate',True)
 
 ###### Load
 # tech, scenario, hourlize_run, GSw_IndividualSites, numbins = (
@@ -131,7 +80,7 @@ else:
     # get supply curve path on nrelnas01 from supply curve metada file. 
     df_rev = pd.read_csv(os.path.join(this_dir_path, '../inputs/supplycurvedata/metadata/rev_paths.csv'))
     df_rev = df_rev[(df_rev['tech'] == tech)&(df_rev['access_case'] == scenario)].squeeze()
-    hourlize_base = os.path.join('ReEDS','Supply_Curve_Data', df_rev['sc_path'])       
+    hourlize_base = os.path.join('ReEDS','Supply_Curve_Data', df_rev['sc_path'])
 
 ### Overwrite to a different path if desired
 # hourlize_base = '/Volumes/ReEDS/Users/pbrown/hourlize/'

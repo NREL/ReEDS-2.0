@@ -5,15 +5,9 @@ Created on Mon Mar 16 16:30:25 2020
 @author: afrazier
 """
 
-#%% Direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
-
 #%% Imports
 import argparse
 import gdxpds
-import logging
 import os
 import subprocess
 import traceback
@@ -24,7 +18,7 @@ from ReEDS_Augur.C1_existing_curtailment import existing_curtailment
 from ReEDS_Augur.C2_marginal_curtailment import marginal_curtailment
 from ReEDS_Augur.D_condor import get_marginal_storage_value
 from ReEDS_Augur.E_capacity_credit import reeds_cc
-from ReEDS_Augur.utility.functions import delete_csvs, toc, printscreen
+from ReEDS_Augur.utility.functions import delete_csvs, toc, printscreen, makelog
 from ReEDS_Augur.utility.switchsettings import SwitchSettings
 
 # Not used in the script but useful for debugging
@@ -149,7 +143,7 @@ def ReEDS_Augur(next_year, prev_year, scen):
         toc(tic=tic, year=prev_year, process='ReEDS_Augur/F_plots.py')
 
     # Remove intermediate csv files to save drive space
-    if SwitchSettings.switches['remove_csv']:
+    if not int(SwitchSettings.switches['keep_augur_files']):
         delete_csvs(SwitchSettings.switches['keepfiles'])
 
 
@@ -168,18 +162,7 @@ if __name__ == '__main__':
     prev_year = args.prev_year
     scen = args.scen
 
-    # IF an error occurs, write it to a .txt file in the lstfiles folder
-    path_errorfile = 'lstfiles'
-    errorfile = os.path.join(
-        'lstfiles', 'Augur_errors_{}.txt'.format(prev_year))
-    logging.basicConfig(filename = errorfile, level = logging.ERROR)
-    logger = logging.getLogger(__name__)
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath='gamslog.txt')
 
-    try:
-        ReEDS_Augur(next_year, prev_year, scen)
-    except:
-        logger.error('{}'.format(str(prev_year)))
-        logger.error(traceback.format_exc())
-    logging.shutdown()
-    if os.stat(errorfile).st_size == 0:
-        os.remove(errorfile)
+    ReEDS_Augur(next_year, prev_year, scen)

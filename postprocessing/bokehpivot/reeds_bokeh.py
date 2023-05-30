@@ -25,7 +25,7 @@ logger = logging.getLogger('')
 
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
 
-DEFAULT_DOLLAR_YEAR = 2021
+DEFAULT_DOLLAR_YEAR = 2022
 DEFAULT_PV_YEAR = 2022
 DEFAULT_DISCOUNT_RATE = .05
 DEFAULT_END_YEAR = 2050
@@ -395,13 +395,16 @@ def process_reeds_data(topwdg, custom_sorts, custom_colors, result_dfs):
             #merge df_join into df
             df = pd.merge(left=df, right=df_join, on=col, sort=False)
 
-    #apply mappings
+    #Apply mappings, allowing wildcard *. Order matters here, the first match is used.
     for col in df.columns.values.tolist():
         if 'meta_map_'+col in topwdg and topwdg['meta_map_'+col].value != '':
             df_map = pd.read_csv(topwdg['meta_map_'+col].value.replace('"',''))
-            #now map from raw to display
-            map_dict = dict(zip(list(df_map['raw']), list(df_map['display'])))
-            df[col] = df[col].replace(map_dict)
+            #Use regex, replacing * with .*
+            df_map['raw'] = '^' + df_map['raw'] + '$'
+            df_map['raw'] = df_map['raw'].str.replace('*', '.*', regex=False)
+            #now map from raw to display, but keep original column as "[column]_raw"
+            df[col + '_raw'] = df[col]
+            df[col] = df[col].replace(to_replace=df_map['raw'].tolist(), value=df_map['display'].tolist(), regex=True)
 
     #apply custom styling
     non_scen_col = [c for c in df.columns.values.tolist() if c != 'scenario']
@@ -425,9 +428,9 @@ def process_reeds_data(topwdg, custom_sorts, custom_colors, result_dfs):
     cols['all'] = df.columns.values.tolist()
     for c in cols['all']:
         if c in reeds.columns_meta and 'type' in reeds.columns_meta[c]:
-            if reeds.columns_meta[c]['type'] is 'number':
+            if reeds.columns_meta[c]['type'] == 'number':
                 df[c] = pd.to_numeric(df[c], errors='coerce')
-            elif reeds.columns_meta[c]['type'] is 'string':
+            elif reeds.columns_meta[c]['type'] == 'string':
                 df[c] = df[c].astype(str)
 
     #categorize columns
@@ -479,7 +482,7 @@ def update_data_source(path, init_load, init_config, data_type):
     core.GL['variant_wdg'], GL_REEDS['scenarios'] = get_wdg_reeds(path, init_load, init_config, core.GL['wdg_defaults'], core.GL['custom_sorts'], core.GL['custom_colors'])
     core.GL['widgets'].update(core.GL['variant_wdg'])
     #if this is the initial load, we need to build the rest of the widgets if we've selected a result.
-    if init_load and core.GL['variant_wdg']['result'].value is not 'None':
+    if init_load and core.GL['variant_wdg']['result'].value != 'None':
         get_reeds_data(core.GL['variant_wdg'], GL_REEDS['scenarios'], GL_REEDS['result_dfs'])
         core.GL['df_source'], core.GL['columns'] = process_reeds_data(core.GL['variant_wdg'], core.GL['custom_sorts'], core.GL['custom_colors'], GL_REEDS['result_dfs'])
         preset_options = []
@@ -567,7 +570,7 @@ def update_reeds_wdg(wdg_type):
     for key in list(core.GL['wdg_defaults'].keys()):
         if key not in list(core.GL['variant_wdg'].keys()) + ['data']:
             core.GL['wdg_defaults'].pop(key, None)
-    if 'result' in core.GL['variant_wdg'] and core.GL['variant_wdg']['result'].value is not 'None':
+    if 'result' in core.GL['variant_wdg'] and core.GL['variant_wdg']['result'].value != 'None':
         preset_options = []
         if wdg_type in ['result','vars']:
             get_reeds_data(core.GL['variant_wdg'], GL_REEDS['scenarios'], GL_REEDS['result_dfs'])

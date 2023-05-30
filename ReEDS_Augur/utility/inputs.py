@@ -116,34 +116,15 @@ class H5Input(AugurInput):
 
 class LoadData(H5Input):
     '''
-    Class for load because load can be stored differently when EFS or climate
-    profiles are used
+    Class for hourly load files
     '''
     def read_data(self, *args, **kwargs):
         if self.df is None:
-            super().read_data()
-            # Filter for proper data year here if EFS load profiles are used
-            if self.switches['gsw_efs1_allyearload'] != 'default':
-                self.df = self.df.loc[
-                    (self.next_year if SwitchSettings.switches['osprey_load_year'] == 'next'
-                     else self.prev_year)
-                ]
-        return self.df
-
-
-class LoadDataWithSwitch(LoadData):
-    '''
-    Class for year-specific load files
-    '''
-    def read_data(self, suffix, *args, **kwargs):
-        if self.df is None:
-            self.df = pd.read_hdf(self.file + str(suffix) + '.h5')
-            # Filter for proper data year here if EFS load profiles are used
-            if self.switches['gsw_efs1_allyearload'] != 'default':
-                self.df = self.df.loc[
-                    (self.next_year if SwitchSettings.switches['osprey_load_year'] == 'next'
-                     else self.prev_year)
-                ]
+            self.df = pd.read_hdf(self.file)
+            # Filter for proper data year
+            self.df = self.df.loc[
+                (self.next_year if SwitchSettings.switches['osprey_load_year'] == 'next'
+                 else self.prev_year)]
         return self.df
 
 
@@ -301,6 +282,10 @@ INPUTS = {
         'inv_ivrt', ['i', 'v', 'r', 't', 'MW']),
     'cap_ret': GDXInput(
         'ret', ['i', 'v', 'r', 'ret']),
+    'cap_trans_energy': GDXInput(
+        'cap_trans_energy', ['r', 'rr', 'trtype', 'MW']),
+    'cap_trans_prm': GDXInput(
+        'cap_trans_prm', ['r', 'rr', 'trtype', 'MW']),
     'cf_adj': GDXInput(
         'cf_adj_t_filt', ['i', 'v', 't', 'CF']),
     'co2_tax': GDXInput(
@@ -340,6 +325,8 @@ INPUTS = {
         'flex_load', ['r', 'h', 'exog']),
     'flex_load_opt': GDXInput(
         'flex_load_opt', ['r', 'h', 'opt']),
+    'forced_outage': GDXInput(
+        'forced_outage', ['i', 'fraction']),
     'fuel_price': GDXInput(
         'fuel_price_filt', ['i', 'r', 'fuel_price']),
     'fuel_price_biopower': GDXInput(
@@ -370,14 +357,11 @@ INPUTS = {
     'index_hr_map': CSVInput(
         os.path.join('inputs_case','index_hr_map.csv'),
         False),
+    'ivt': GDXInput(
+        'ivt_num',['i','t','v_num']),
     'load_climate_allyears': LoadData(
         os.path.join('ReEDS_Augur','augur_data','load_allyears.h5'),
         False),
-    'load_climate_sevenyears': LoadDataWithSwitch(
-        os.path.join('ReEDS_Augur','augur_data','load_7year_'),
-        False),
-    'load_multiplier': GDXInput(
-        'load_multiplier_filt', ['cendiv', 'load_mult']),
     'load_profiles': LoadData(
         os.path.join('inputs_case', 'load.h5'),
         False),
@@ -457,6 +441,8 @@ INPUTS = {
         False),
     'watertechs': TechMapping(
         'ctt_i_ii_filt', ['i', 'ii', 'drop']),
+    'watertechs_psh': TechMapping(
+        'ctt_i_ii_psh', ['i', 'ii', 'drop']),        
     'wecc_data': CSVInput(
         os.path.join('inputs_case', 'hourly_operational_characteristics.csv'),
         ['i', 'maxcap', 'avgcap', 'Min Up Time', 'Mid Down Time',

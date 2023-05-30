@@ -396,11 +396,12 @@ def plot_trans_diff(
         pcalabel=False, wscale=0.0003,
         year='last', yearlabel=True,
         colors={'+':'C3', '-':'C0',
-                'AC':'C2', 'DC':'C1', 'LCC':'C1', 'VSC': 'C4',
+                'AC':'C2', 'DC':'C1', 'LCC':'C1', 'VSC': 'C3',
                 'AC_init':plt.cm.tab20(5), 'LCC_init':plt.cm.tab20(3), 'B2B_init':plt.cm.tab20(11)},
-        alpha=0.75, dpi=None,
-        simpletypes=None,
+        alpha=0.75, dpi=None, drawzones=True, drawstates=True,
+        simpletypes=None, subtract_baseyear=None,
         trtypes=['AC','VSC','DC','LCC','AC_init','LCC_init','B2B_init'],
+        f=None, ax=None, scale=True, label_line_capacity=False,
     ):
     dfba = get_zonemap(casebase)
     dfstates = dfba.dissolve('st')
@@ -424,6 +425,13 @@ def plot_trans_diff(
                 dicttran[trtype] = dicttran[trtype].add(dicttran[trtype+'_init'], fill_value=0)
             tran_out[case] = pd.concat(dicttran, axis=0, names=['trtype','r','rr','t']).reset_index()
 
+        if subtract_baseyear:
+            tran_out[case] = (
+                tran_out[case].pivot(index=['r','rr','trtype'], columns='t', values='MW')
+                .subtract(
+                    tran_out[case].pivot(index=['r','rr','trtype'], columns='t', values='MW')
+                    [subtract_baseyear].fillna(0), axis=0)
+            ).stack('t').rename('MW').reset_index()
 
     dfplot = tran_out['base'].merge(
         tran_out['comp'], on=['r','rr','t','trtype'], suffixes=('_base','_comp'), how='outer').fillna(0)
@@ -436,78 +444,127 @@ def plot_trans_diff(
     dfplot['rr_x'] = dfplot.rr.map(dfba.x)
     dfplot['rr_y'] = dfplot.rr.map(dfba.y)
 
-    plt.close()
-    f,ax=plt.subplots(
-        1,3,sharex=True,sharey=True,figsize=(14,8),
-        gridspec_kw={'wspace':-0.05, 'hspace':0.05},
-        dpi=dpi,
-    )
+    ## Make figure if necessary
+    justdiff = True
+    if (not f) and (not ax):
+        justdiff = False
+        plt.close()
+        f,ax=plt.subplots(
+            1,3,sharex=True,sharey=True,figsize=(14,8),
+            gridspec_kw={'wspace':-0.05, 'hspace':0.05},
+            dpi=dpi,
+        )
 
-    ###### Shared
+    ###### Just difference
+    if justdiff:
+        ### Boundaries
+        if drawzones:
+            dfba.plot(ax=ax, edgecolor='0.5', facecolor='none', lw=0.1)
+        if drawstates:
+            dfstates.plot(ax=ax, edgecolor='0.25', facecolor='none', lw=0.2)
+        ax.axis('off')
+        ### Diff
+        for i, row in dfplot.iterrows():
+            ax.plot(
+                [row['r_x'], row['rr_x']], [row['r_y'], row['rr_y']],
+                color=(colors['+'] if row['MW_diff'] >= 0 else colors['-']), 
+                lw=abs(wscale*row['MW_diff']), solid_capstyle='butt', alpha=alpha,
+            )
+            if label_line_capacity and (abs(row.MW_diff/1000) >= label_line_capacity):
+                _label_line(row=row, ax=ax, wscale=wscale, cap='MW_diff', sign=True)
+        ### Stop here
+        return dfplot
+
+    ###### Absolute and difference
     for col in range(3):
         ### Boundaries
         dfba.plot(ax=ax[col], edgecolor='0.5', facecolor='none', lw=0.1)
         dfstates.plot(ax=ax[col], edgecolor='0.5', facecolor='none', lw=0.2)
         ax[col].axis('off')
-        ### Labels
-        if pcalabel:
-            for r in dfba.index:
-                ax[col].annotate(
-                    r.replace('p',''), dfba.loc[r,['x','y']].values,
-                    ha='center', va='center', fontsize=5, color='0.7'
-                )
 
-    if yearlabel:
-        ax[0].annotate(
-            'Year: {}'.format(year), 
-            (0.9,0.97), xycoords='axes fraction', fontsize=10, ha='right', va='top')
-
-
-    ###### Base
-    for i in dfplot.index:
-        row = dfplot.loc[i]
+    for i, row in dfplot.iterrows():
+        ### Base
         ax[0].plot(
             [row['r_x'], row['rr_x']], [row['r_y'], row['rr_y']],
             color=colors[row['trtype']], lw=wscale*row['MW_base'], solid_capstyle='butt',
             alpha=alpha,
         )
-    ax[0].annotate(
-        os.path.basename(cases['base']),
-        (0.1,1), xycoords='axes fraction', fontsize=10)
-
-    ###### Comp
-    for i in dfplot.index:
-        row = dfplot.loc[i]
+        if label_line_capacity and (row.MW_base/1000 >= label_line_capacity):
+            _label_line(row=row, ax=ax[0], wscale=wscale, cap='MW_base')
+        ### Comp
         ax[1].plot(
             [row['r_x'], row['rr_x']], [row['r_y'], row['rr_y']],
             color=colors[row['trtype']], lw=wscale*row['MW_comp'], solid_capstyle='butt',
             alpha=alpha,
         )
-    ax[1].annotate(
-        os.path.basename(cases['comp']),
-        (0.1,1), xycoords='axes fraction', fontsize=10)
-
-    ###### Diff
-    for i in dfplot.index:
-        row = dfplot.loc[i]
+        if label_line_capacity and (row.MW_comp/1000 >= label_line_capacity):
+            _label_line(row=row, ax=ax[1], wscale=wscale, cap='MW_comp')
+        ### Diff
         ax[2].plot(
             [row['r_x'], row['rr_x']], [row['r_y'], row['rr_y']],
             color=(colors['+'] if row['MW_diff'] >= 0 else colors['-']), 
             lw=abs(wscale*row['MW_diff']), solid_capstyle='butt', alpha=alpha,
         )
+        if label_line_capacity and (abs(row.MW_diff/1000) >= label_line_capacity):
+            _label_line(row=row, ax=ax[2], wscale=wscale, cap='MW_diff', sign=True)
+
+    ###### Labels
+    if pcalabel:
+        for col in range(3):
+            for r in dfba.index:
+                ax[col].annotate(
+                    r.replace('p',''), dfba.loc[r,['x','y']].values,
+                    ha='center', va='center', fontsize=5, color='0.7')
+    if yearlabel:
+        ax[0].annotate(
+            'Year: {}'.format(year), 
+            (0.9,0.97), xycoords='axes fraction', fontsize=10, ha='right', va='top')
+    ax[0].annotate(
+        os.path.basename(cases['base']),
+        (0.1,1), xycoords='axes fraction', fontsize=10)
+    ax[1].annotate(
+        os.path.basename(cases['comp']),
+        (0.1,1), xycoords='axes fraction', fontsize=10)
     ax[2].annotate(
         '{}\n– {}'.format(os.path.basename(cases['comp']),os.path.basename(cases['base'])),
         (0.1,1), xycoords='axes fraction', fontsize=10)
-    
+
     ###### Scale
-    ax[0].plot(
-        [-2.0e6,-1.5e6], [-1.0e6, -1.0e6],
-        color='k', lw=wscale*10e3, solid_capstyle='butt'
-    )
-    ax[0].annotate(
-        '10 GW', (-1.75e6, -1.1e6), ha='center', va='top', weight='bold')
+    if scale:
+        ax[0].plot(
+            [-2.0e6,-1.5e6], [-1.0e6, -1.0e6],
+            color='k', lw=wscale*10e3, solid_capstyle='butt'
+        )
+        ax[0].annotate(
+            '10 GW', (-1.75e6, -1.1e6), ha='center', va='top', weight='bold')
+        if subtract_baseyear:
+            ax[0].annotate(
+                f'(new since {subtract_baseyear})', (-1.75e6, -1.3e6), ha='center', va='top')
 
     return f, ax
+
+
+def _label_line(row, ax, wscale, label_line_color='k', cap='MW', sign=False):
+    """
+    * only works when line thicknesses are in points (not data units)
+    """
+    ### Get the angle
+    angle = np.arctan((row.rr_y - row.r_y) / (row.rr_x - row.r_x)) * 180 / np.pi
+    ## Keep it upright
+    if (90 < angle < 270) or (-90 > angle > -270):
+        angle *= -1
+    ### Get the font size in points
+    size = abs(row[cap]) * wscale
+    ### Get the middle of the line
+    xtext = (row.r_x + row.rr_x) / 2
+    ytext = (row.r_y + row.rr_y) / 2
+
+    ### Write it in GW
+    ax.annotate(
+        (f'{row[cap]/1000:+.0f}' if sign else f'{row[cap]/1000:.0f}'),
+        (xtext, ytext), rotation=angle,
+        size=size, color=label_line_color, ha='center', va='center',
+    )
 
 
 def plot_trans_onecase(
@@ -526,9 +583,10 @@ def plot_trans_onecase(
         f=None, ax=None, scale=True, title=True,
         routes=False, tolerance=1000,
         subtract_baseyear=None, nest_trtypes=False,
-        show_overlap=True, show_background=True, show_converters=0.5,
+        show_overlap=True, drawzones=True, show_converters=0.5,
         crs='ESRI:102008',
         thickborders='none', drawstates=True,
+        label_line_capacity=0,
     ):
     """
     Notes
@@ -643,12 +701,12 @@ def plot_trans_onecase(
 
     ###### Shared
     ### Boundaries
-    if show_background:
+    if drawzones:
         dfba.plot(ax=ax, edgecolor='0.5', facecolor='none', lw=0.1)
-        if drawstates:
-            dfstates.plot(ax=ax, edgecolor='0.25', facecolor='none', lw=0.2)
-        if thickborders not in [None,'','none','None',False]:
-            dfthick.plot(ax=ax, edgecolor='C7', facecolor='none', lw=0.5)
+    if drawstates:
+        dfstates.plot(ax=ax, edgecolor='0.25', facecolor='none', lw=0.2)
+    if thickborders not in [None,'','none','None',False]:
+        dfthick.plot(ax=ax, edgecolor='C7', facecolor='none', lw=0.5)
     ax.axis('off')
     ### Labels
     if pcalabel:
@@ -708,6 +766,8 @@ def plot_trans_onecase(
                     lw=wscale*row['MW'], solid_capstyle='butt',
                     alpha=alpha,
                 )
+                if label_line_capacity and (row.MW/1000 >= label_line_capacity):
+                    _label_line(row=row, ax=ax, wscale=wscale)
         else:
             alllines = []
             for i in dfplot.index:
@@ -732,8 +792,12 @@ def plot_trans_onecase(
     
     ###### Scale
     if title and isinstance(case,str):
-        ax.annotate('{} ({})'.format(os.path.basename(case), year),
-                    (0.1,1), xycoords='axes fraction', fontsize=10)
+        ax.annotate(
+            '{} ({}{})'.format(
+                os.path.basename(case), year,
+                f', additions since {subtract_baseyear}' if subtract_baseyear else ' total',
+            ),
+            (0.1,1), xycoords='axes fraction', fontsize=10)
     if scale:
         if routes or (not show_overlap):
             gpd.GeoSeries(
@@ -1068,7 +1132,7 @@ def plot_transmission_utilization(
     except FileNotFoundError:
         hours = pd.read_csv(
             os.path.join(case,'inputs_case','numhours.csv'),
-            header=None, names=['h','hours'], index_col='h', squeeze=True)
+            header=0, names=['h','hours'], index_col='h', squeeze=True)
     utilization['MWh'] = utilization.apply(
         lambda row: hours[row.h] * abs(row.MW_flow),
         axis=1
@@ -1322,9 +1386,10 @@ def plot_average_flow(
         cm=plt.cm.inferno_r, wscale=7, alpha=0.8,
         trtypes=['AC','LCC','VSC'],
         simpletypes={'AC_init':'AC','LCC_init':'LCC','B2B_init':'LCC','B2B':'LCC'},
-        crs='ESRI:102008',
+        crs='ESRI:102008', scale=True,
         f=None, ax=None,
-        both_directions=True, debug=False,
+        both_directions=True, debug=False, title=False,
+        drawzones=True, thickborders='none', drawstates=True,
     ):
     """
     NOTE: Currently using max flow as max value but should instead
@@ -1342,6 +1407,17 @@ def plot_average_flow(
     dfba['x'] = dfba.index.map(endpoints.x)
     dfba['y'] = dfba.index.map(endpoints.y)
 
+    if thickborders not in [None,'','none','None',False]:
+        hierarchy = pd.read_csv(
+            os.path.join(case,'inputs_case','hierarchy.csv')
+        ).rename(columns={'*r':'r'}).set_index('r')
+        hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
+        if thickborders in hierarchy:
+            dfthick = dfba.copy()
+            dfthick[thickborders] = hierarchy[thickborders]
+            dfthick.geometry = dfthick.buffer(0.)
+            dfthick = dfthick.dissolve(thickborders)
+
     ### Load results
     if both_directions:
         tran_out = pd.read_csv(
@@ -1351,7 +1427,7 @@ def plot_average_flow(
         )
         hours = pd.read_csv(
             os.path.join(case,'inputs_case','numhours.csv'),
-            header=None, names=['h','hours'], index_col='h', squeeze=True,
+            header=0, names=['h','hours'], index_col='h', squeeze=True,
         )
         tran_flow_power = pd.read_csv(
             os.path.join(case,'outputs','tran_flow_power.csv'),
@@ -1420,8 +1496,12 @@ def plot_average_flow(
         plt.close()
         f,ax = plt.subplots(figsize=(12,8), dpi=150)
 
-    dfba.plot(ax=ax, edgecolor='0.5', facecolor='none', lw=0.2)
-    dfstates.plot(ax=ax, edgecolor='k', facecolor='none', lw=0.5)
+    if drawzones:
+        dfba.plot(ax=ax, edgecolor='0.75', facecolor='none', lw=0.2)
+    if drawstates:
+        dfstates.plot(ax=ax, edgecolor='0.7', facecolor='none', lw=0.4)
+    if thickborders not in [None,'','none','None',False]:
+        dfthick.plot(ax=ax, edgecolor='C7', facecolor='none', lw=1)
 
     ### Average power flow
     for i, row in dfplot.iterrows():
@@ -1446,9 +1526,31 @@ def plot_average_flow(
         )
         ax.add_patch(arrow)
 
-    ax.annotate(
-        f'{os.path.basename(case)} {year} ({",".join(trtypes)})',
-        (0.1,1.0), xycoords='axes fraction', ha='left', va='top')
+    ### Scale
+    if scale:
+        (startx, starty, delx, dely) = (-2.0e6, -1.2e6, 0.5e6, 0e6)
+        arrow = mpl.patches.FancyArrow(
+            startx, starty, delx, dely,
+            width=maxflow*wscale,
+            length_includes_head=True,
+            head_width=maxflow*wscale*2.,
+            head_length=maxflow*wscale*1.0,
+            lw=0, color=cm(maxflow/maxflow), alpha=alpha,
+        )
+        ax.add_patch(arrow)
+        ax.annotate(
+            f'{maxflow/1000:.0f} GW',
+            # (startx+delx/2, starty+dely/2), color='0.8', va='center',
+            # (startx+delx/2, starty+dely/2+(maxflow*wscale/2)+0.08e6),
+            (startx+delx+0.02e6, starty+dely/2), ha='left', va='center',
+            color='k', fontsize=14,
+        )
+
+    ### Formatting
+    if title:
+        ax.annotate(
+            f'{os.path.basename(case)} {year} ({",".join(trtypes)})',
+            (0.1,1.0), xycoords='axes fraction', ha='left', va='top')
     ax.axis('off')
 
     if debug:
@@ -1548,7 +1650,7 @@ def animate_dispatch(
 
     ##### Demand
     demand = pd.read_csv(
-        os.path.join(case,'inputs_case','load_all_hourly.csv'),
+        os.path.join(case,'inputs_case','load_h_hourly.csv'),
         index_col=['h','r']
     )[str(year)] / 1000
 
@@ -1686,10 +1788,11 @@ def animate_dispatch(
 
 
 def map_trans_agg(
-        case, year=2050, agglevel='transreg', f=None, ax=None, dpi=None,
-        wscale=0.2e4, width_inter=3e5, width_intra_frac=0.5,
+        case, agglevel='transreg', startyear=2020,
+        f=None, ax=None, dpi=None,
+        wscale='auto', width_inter=3e5, width_intra_frac=0.5, width_step=3,
         drawstates=0., drawzones=0., scale_loc=(2.5,-1.5), scale_val=100,
-        drawgrid=False,
+        drawgrid=False, drawregions=1.,
     ):
     """
     # Notes
@@ -1768,30 +1871,60 @@ def map_trans_agg(
     dfcorridors = dfcorridors.loc[~dfcorridors.index.duplicated()].copy()
 
     ### Aggregated
-    dfplot = tran_out_agg.loc[tran_out_agg.t==year].pivot(
-        index=['aggreg1','aggreg2'],columns='trtype',values='GW'
-    ).reindex(['B2B','AC','LCC','VSC'],axis=1)
+    dfplot = tran_out_agg.loc[tran_out_agg.t >= startyear].pivot(
+        index=['aggreg1','aggreg2','t'],columns='trtype',values='GW'
+    ).reindex(['B2B','AC','LCC','VSC'],axis=1).dropna(axis=1, how='all')
+
+    ### Plot settings
+    width_year = width_inter / len(tran_out_agg.t.unique())
+    yearspan = tran_out_agg.t.max() - startyear
+    if wscale in ['auto','scale','default',None,'','max']:
+        df = dfplot.reset_index()
+        capmax = max([
+            (df.loc[df.aggreg1==df.aggreg2].groupby('t').sum().sum(axis=1).max()
+             if width_intra else 0),
+            df.loc[df.aggreg1!=df.aggreg2].groupby('t').sum().sum(axis=1).max(),
+        ])
+        _wscale = 3e6 / capmax * 0.95
+    else:
+        _wscale = wscale
 
     ###### Plot it
     if (f == None) and (ax == None):
         plt.close()
         f,ax = plt.subplots(figsize=(12,8),dpi=dpi)
     ### Plot background
-    dfreg.plot(ax=ax, facecolor='none', edgecolor='k', lw=1.)
-    if drawstates:
-        dfstates.plot(ax=ax, facecolor='none', edgecolor='0.5', lw=drawstates)
-    if drawzones:
-        dfba.plot(ax=ax, facecolor='none', edgecolor='0.5', lw=drawzones)
+    if drawregions:
+        dfreg.plot(ax=ax, facecolor='none', edgecolor='k', lw=drawregions)
+        if drawstates:
+            dfstates.plot(ax=ax, facecolor='none', edgecolor='0.5', lw=drawstates)
+        if drawzones:
+            dfba.plot(ax=ax, facecolor='none', edgecolor='0.5', lw=drawzones)
 
     ### Transmission
-    for i, row in dfplot.iterrows():
-        r, rr = i
-        x, y, _ = dfcorridors.loc[r, rr].T.squeeze()
-        y -= row.sum() * wscale / 2
+    for (r1,r2), (x,y,angle) in dfcorridors.iterrows():
+        if (r1 == r2) and (not width_intra_frac):
+            continue
+        try:
+            df = dfplot.loc[r1].loc[r2] * _wscale
+        except KeyError:
+            try:
+                df = dfplot.loc[r2].loc[r1] * _wscale
+            except KeyError:
+                continue
+        df.index = (
+            (df.index - startyear - yearspan/2)
+            * width_year / width_step
+            * (width_intra_frac if r1 == r2 else 1)
+        )
+        y -= df.sum(axis=1).max() / 2
+
         plots.stackbar(
-            df=row.rename(x).to_frame().T*wscale,
-            ax=ax, colors=transcolors, width=(width_intra if r==rr else width_inter),
-            net=False, bottom=y)
+            df=df,
+            ax=ax, colors=transcolors,
+            width=(width_year * (width_intra_frac if r1 == r2 else 1)),
+            net=False, bottom=y, x0=x,
+        )
 
     ### Scale
     if scale_loc:
@@ -1799,39 +1932,51 @@ def map_trans_agg(
         dfscale = dfplot.reset_index()
         dfintra = (
             dfscale.loc[dfscale.aggreg1 == dfscale.aggreg2]
-            .drop(['aggreg1','aggreg2'],axis=1).sum())
+            .drop(['aggreg1','aggreg2'],axis=1).groupby('t').sum()
+        ) * _wscale
         dfinter = (
             dfscale.loc[dfscale.aggreg1 != dfscale.aggreg2]
-            .drop(['aggreg1','aggreg2'],axis=1).sum())
+            .drop(['aggreg1','aggreg2'],axis=1).groupby('t').sum()
+        ) * _wscale
+        dfintra.index = (
+            (dfintra.index - startyear - yearspan/2)
+            * width_year / width_step * width_intra_frac)
+        dfinter.index = (dfinter.index - startyear - yearspan/2) * width_year / width_step
         ### Get the bar locations
         gap = 0.06e6
         xintra = scale_loc[0]*1e6 + (width_inter * width_intra_frac)/2 + gap/2
         xinter = scale_loc[0]*1e6 - width_inter/2 - gap/2
         y0 = scale_loc[1]*1e6
         ### Plot and annotate them
+        ## Intra
+        if width_intra_frac:
+            plots.stackbar(
+                df=dfintra,
+                ax=ax, colors=transcolors, width=width_year*width_intra_frac,
+                net=False, bottom=y0, x0=xintra,
+            )
+            ax.annotate(
+                'Intra', (xintra,y0-0.02e6), weight='bold', ha='center', va='top',
+                fontsize='large', annotation_clip=False)
+        ## Inter
         plots.stackbar(
-            dfintra.rename(xintra).to_frame().T*wscale,
-            ax=ax, colors=transcolors, width=width_intra, net=False, bottom=y0,
+            df=dfinter,
+            ax=ax, colors=transcolors, width=width_year, net=False,
+            bottom=y0, x0=xinter,
         )
         ax.annotate(
-            'Intra', (xintra,y0-0.01e6), weight='bold', ha='center', va='top',
-            fontsize='large', annotation_clip=False)
-        plots.stackbar(
-            dfinter.rename(xinter).to_frame().T*wscale,
-            ax=ax, colors=transcolors, width=width_inter, net=False, bottom=y0,
-        )
-        ax.annotate(
-            'Inter', (xinter,y0-0.01e6), weight='bold', ha='center', va='top',
+            'Inter', (xinter,y0-0.02e6), weight='bold', ha='center', va='top',
             fontsize='large', annotation_clip=False)
         ### Add scale
-        xscale = xinter - width_inter/2 - gap
-        plots.stackbar(
-            pd.DataFrame({'scale':scale_val*wscale}, index=[xscale]),
-            ax=ax, colors={'scale':'k'}, width=width_intra/10, net=False, bottom=y0,
-        )
-        ax.annotate(
-            f'{scale_val} GW', (xscale-gap/2,y0+scale_val*wscale/2), weight='bold',
-            ha='right', va='center', fontsize='large', annotation_clip=False)
+        if scale_val:
+            xscale = xinter - width_inter/2 - gap
+            plots.stackbar(
+                pd.DataFrame({'scale':scale_val*_wscale}, index=[xscale]),
+                ax=ax, colors={'scale':'k'}, width=width_intra/10, net=False, bottom=y0,
+            )
+            ax.annotate(
+                f'{scale_val} GW', (xscale-gap/2,y0+scale_val*_wscale/2), weight='bold',
+                ha='right', va='center', fontsize='large', annotation_clip=False)
 
     ax.axis('off')
     ### Grid
@@ -1845,12 +1990,13 @@ def map_trans_agg(
 
     return f, ax
 
+
 def map_agg(
         case, data='cap', startyear=2020, agglevel='transreg',
         f=None, ax=None, dpi=None,
-        wscale='auto', width_total=4e5, width_step=5,
+        wscale='auto', width_total=4e5, width_step=3,
         drawstates=0., drawzones=0., scale_loc=(2.3,-1.55), scale_val=1000,
-        drawgrid=False,
+        drawgrid=False, transmission=False, legend=True,
     ):
     """
     # Inputs
@@ -1875,9 +2021,10 @@ def map_agg(
     capcolors = pd.read_csv(
         os.path.join(reedspath,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
         index_col='order', squeeze=True)
-    capmap = pd.read_csv(
-        os.path.join(reedspath,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'),
-        index_col='raw', squeeze=True)
+    tech_map = pd.read_csv(
+        os.path.join(reedspath,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'))
+    tech_map.raw = tech_map.raw.str.strip('_01234567890*')
+    tech_map = tech_map.drop_duplicates().set_index('raw').display
 
     ### Get outputs
     if data in ['cap','Cap','capacity',None,'GW','']:
@@ -1906,7 +2053,8 @@ def map_agg(
     ### Map capacity to agglevel
     val['aggreg'] = val.r.map(hierarchy[agglevel])
     val_agg = val.copy()
-    val_agg.i = val_agg.i.map(capmap)
+    ## Use reduced technology set
+    val_agg.i = val_agg.i.str.strip('_01234567890*').map(tech_map)
     val_agg = val_agg.groupby(['i','aggreg','t'], as_index=False).Value.sum()
 
     ### Get region map
@@ -1961,7 +2109,10 @@ def map_agg(
 
     ### Capacity
     for aggreg, (x,y) in dfcenter.iterrows():
-        df = dfplot.loc[aggreg] * _wscale
+        try:
+            df = dfplot.loc[aggreg] * _wscale
+        except KeyError:
+            continue
         df.index = (df.index - startyear - yearspan/2) * width_year / width_step
         y -= df.sum(axis=1).max() / 2
         plots.stackbar(
@@ -1975,6 +2126,9 @@ def map_agg(
         ### Get the total value
         dfscale = dfplot.groupby('t').sum() * _wscale
         dfscale.index = (dfscale.index - startyear - yearspan/2) * width_year / width_step
+        ### Scale down scale value if necessary
+        if capmax < scale_val*2:
+            scale_val /= 10
         ### Get the bar locations
         gap = 3e4
         x0 = scale_loc[0]*1e6
@@ -1998,6 +2152,29 @@ def map_agg(
             f'{scale_val} {units}', (xscale-gap,y0+scale_val*_wscale/2), weight='bold',
             ha='right', va='center', fontsize='large', annotation_clip=False)
 
+    ###### Inter-regional transmission, if requested
+    if transmission:
+        map_trans_agg(
+            case=case, agglevel=agglevel, startyear=startyear,
+            f=f, ax=ax, dpi=dpi, wscale=_wscale, width_step=width_step,
+            width_intra_frac=0, drawregions=0, drawgrid=False,
+            scale_val=0, width_inter=width_total,
+            scale_loc=(scale_loc[0]+0.7, scale_loc[1]),
+        )
+
+    ###### Legend
+    if legend:
+        handles = [
+            mpl.patches.Patch(facecolor=capcolors[i], edgecolor='none', label=i)
+            for i in capcolors.index if i in dfplot.columns
+        ]
+        leg = ax.legend(
+            handles=handles[::-1], loc='upper left', fontsize=6, ncol=1, frameon=False,
+            bbox_to_anchor=((0.875,0.95) if transmission else (0.955,0.95)),
+            handletextpad=0.3, handlelength=0.7, columnspacing=0.5, 
+        )
+
+    ###### Formatting
     ax.axis('off')
     ### Grid
     if drawgrid:
@@ -2009,6 +2186,7 @@ def map_agg(
         ax.axis('on')
 
     return f, ax
+
 
 def map_hybrid_pv_wind(
         case, val='site_cap', year=2050,
@@ -2072,12 +2250,12 @@ def map_hybrid_pv_wind(
     )
     sitemap.index = 'i' + sitemap.index.astype(str)
 
-    rfeas = pd.read_csv(
-        os.path.join(case,'inputs_case','valid_ba_list.csv'),
+    val_r = pd.read_csv(
+        os.path.join(case,'inputs_case','val_r.csv'),
         header=None, squeeze=True,
     ).values.tolist()
 
-    dfba = get_zonemap(case).loc[rfeas]
+    dfba = get_zonemap(case).loc[val_r]
 
     ### Make the combined output dataframe
     df = dictin_hybrid[val].loc[dictin_hybrid[val].t==year].copy()
@@ -2129,4 +2307,122 @@ def map_hybrid_pv_wind(
     # ax.set_xlim(xmin-xspan*(stretch-1), xmax+xspan*(stretch-1))
     # ax.set_ylim(ymin-yspan*(stretch-1), ymax+yspan*(stretch-1))
     ax.axis('off')
+    return f, ax
+
+
+def plot_dispatch_yearbymonth(
+        case, val='7_Final Gen by timeslice (GW)', f=None, ax=None, figsize=(12,6),
+        techs=None):
+    """
+    Full year dispatch for final year with rep days mapped to actual days
+    Inputs
+    techs: None to plot all techs, or list of subset techs, or single tech string
+    """
+    ### Load run files
+    hmap_1yr = pd.read_csv(os.path.join(case, 'inputs_case', 'hmap_1yr.csv'))
+    dispatch = (
+        pd.read_excel(
+            os.path.join(case, 'outputs', 'reeds-report', 'report.xlsx'),
+            sheet_name=val)
+        .drop(['scenario','Net Level Generation (GW)'], axis=1, errors='ignore')
+        .pivot(index='timeslice',columns='tech',values='Generation (GW)'))
+    if techs != None:
+        if isinstance(techs, list):
+            dispatch = dispatch[[c for c in techs if c in dispatch]].copy()
+        else:
+            dispatch = dispatch[[techs]].copy()
+    bokehcolors = pd.read_csv(
+        os.path.join(reedspath,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
+        index_col='order', squeeze=True)
+    ### Broadcast representative days to actual days
+    dfin = (
+        hmap_1yr[['actual_h','h']]
+        .merge(dispatch, left_on='h', right_index=True)
+        .sort_values('actual_h').set_index('actual_h').drop('h', axis=1)
+    )
+    ### Map to actual timestamps
+    def h2timestamp(h):
+        y = int(h.strip('y').split('d')[0])
+        d = int(h.split('d')[1].split('h')[0])
+        h = int(h.split('h')[1])-1
+        return pd.to_datetime(f'y{y}d{d}h{h}', format='y%Yd%jh%H')
+
+    dfin.index = dfin.index.map(h2timestamp).tz_localize('EST')
+
+    ### Put negative parts of columns that go negative on bottom
+    goes_negative = list(dfin.columns[(dfin < 0).any()])
+    df = dfin.copy()
+    for col in goes_negative:
+        df[col+'_neg'] = df[col].clip(upper=0)
+        df[col+'_pos'] = df[col].clip(lower=0)
+    df.drop(goes_negative, axis=1, inplace=True)
+
+    negcols = [c+'_neg' for c in goes_negative]
+    poscols = [c+'_pos' for c in goes_negative]
+    plotorder = negcols + list(bokehcolors.index) + poscols
+    dfplot = (
+        df
+        [[c for c in plotorder if c in df]].cumsum(axis=1)
+        [[c for c in plotorder[::-1] if c in df]]
+    )
+
+    ### Plot it
+    plt.close()
+    f, ax = plots.plotyearbymonth(
+        dfplot,
+        colors=[bokehcolors[i.replace('_pos','').replace('_neg','')] for i in dfplot],
+        lwforline=0, f=f, ax=ax, figsize=figsize)
+
+    return f, ax
+
+
+def plot_dispatch_weightwidth(
+        case, val='7_Final Gen by timeslice (GW)', figsize=(13,4)):
+    """
+    Rep period dispatch for final year with period width given by period weight
+    """
+    ### Load run files
+    hmap_1yr = pd.read_csv(os.path.join(case, 'inputs_case', 'hmap_1yr.csv'))
+    dispatch = (
+        pd.read_excel(
+            os.path.join(case, 'outputs', 'reeds-report', 'report.xlsx'),
+            sheet_name=val)
+        .drop(['scenario','Net Level Generation (GW)'], axis=1, errors='ignore')
+        .pivot(index='timeslice',columns='tech',values='Generation (GW)'))
+    bokehcolors = pd.read_csv(
+        os.path.join(reedspath,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
+        index_col='order', squeeze=True)
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0, squeeze=True)
+
+    ### Get some settings
+    if (sw.GSw_HourlyType == 'year'):
+        raise NotImplementedError('GSw_HourlyType = year is not yet implemented')
+    GSw_HourlyChunkLength = int(sw.GSw_HourlyChunkLength)
+    hours_per_period = {'day':24, 'wek':120, 'year':np.nan}[sw.GSw_HourlyType]
+    dfplot = dispatch[[c for c in bokehcolors.index if c in dispatch]].copy()
+    sznweights = hmap_1yr.season.value_counts() // hours_per_period
+
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        1, len(sznweights), figsize=figsize, sharex=True, sharey=True,
+        gridspec_kw={'wspace':0, 'width_ratios':sznweights.values},
+    )
+    for col, szn in enumerate(sznweights.index):
+        date = pd.to_datetime(szn, format='y%Yd%j').strftime('%Y-%m-%d')
+        df = dfplot.loc[dfplot.index.str.startswith(szn)]
+        plots.stackbar(df=df, ax=ax[col], colors=bokehcolors, align='edge', net=False)
+        ax[col].axvline(0, c='w', lw=0.25)
+        ax[col].axhline(0, c='k', ls=':', lw=0.75)
+        ax[col].annotate(f'{date} ({sznweights[szn]})', (0,1), xycoords='axes fraction', rotation=45)
+        if col:
+            ax[col].axis('off')
+    ### Formatting
+    ax[0].set_xlim(0,24/GSw_HourlyChunkLength)
+    plots.despine(ax[0], bottom=False)
+    ax[0].set_xticks([])
+    ax[0].set_ylabel('Generation [GW]')
+
     return f, ax

@@ -68,16 +68,11 @@ import os
 import argparse
 import gzip, pickle
 from forecast import forecast
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
-print('Starting climateprep.py')
 
 ################
 #%% FIXED INPUTS
@@ -102,6 +97,13 @@ inputs_case = args.inputs_case
 # reedsdir = os.path.expanduser('~/github/ReEDS-2.0/')
 # inputs_case = os.path.expanduser(
 #     '~/github/ReEDS-2.0/runs/v20201208_beyond2050_Climate2100step5/inputs_case/')
+# reedsdir = os.getcwd()
+# inputs_case = os.path.join('runs','a5_ercot_seq','inputs_case')
+
+#%% Set up logger
+log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+
+print('Starting climateprep.py')
 
 #%% Inputs from switches
 sw = pd.read_csv(
@@ -118,7 +120,7 @@ GSw_ClimateStartYear = int(sw.GSw_ClimateStartYear)
 
 
 #%% TEMPORARY: Don't allow climate impacts to be used with EFS load until we work out the bugs
-if GSw_ClimateDemand and (GSw_EFS1_AllYearLoad != 'default'):
+if GSw_ClimateDemand and (GSw_EFS1_AllYearLoad != 'historic'):
     raise NotImplementedError("Climate impacts aren't yet compatible with EFS load")
 
 if climateloc.startswith('inputs'):
@@ -137,6 +139,10 @@ reeds_data_year = int(
     pd.read_csv(os.path.join(reedsdir, 'ReEDS_Augur', 'value_defaults.csv'), index_col='key')
     .loc['reeds_data_year','value']
 )
+
+### Get valid regions
+val_r = pd.read_csv(
+        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
 
 ### Get some other fixed inputs
 distloss = pd.read_csv(
@@ -164,6 +170,10 @@ def readwrite(
     }
     ### Load the climate scenario data
     dfin = pd.read_csv(os.path.join(climatedir, infile+'.csv'))
+    
+    # Filter for valid regions
+    dfin = dfin.loc[dfin['r'].isin(val_r)]
+    
     ### Put in GAMS-readable format
     dfout = pd.pivot_table(dfin, values='Value', index=index[infile], columns=['t'])
     ### If data end before endyear, create a column for endyear so we can forward-fill to it
@@ -218,6 +228,7 @@ def calculate_load_delta(
             index_col=0)
         slopes[ddtype].index = slopes[ddtype].index.map(lambda x: 'p{}'.format(x)).rename('r')
         slopes[ddtype].columns.name = 'h'
+        slopes[ddtype] = slopes[ddtype][slopes[ddtype].index.isin(val_r)]
     dfslopes = pd.concat(slopes, axis=0)
     dfslopes.rename(columns={c:'h{}'.format(c) for c in dfslopes.columns}, inplace=True)
     dfslopes.index.set_names(['ddtype','r'],inplace=True)
@@ -225,6 +236,10 @@ def calculate_load_delta(
 
     ### Load the heating/cooling-degree-days data (specific to climate scenario)
     hddcdd = pd.read_csv(os.path.join(climateloc,climatescen,'HDDCDD.csv')).fillna(0.)
+    
+    # Filter by valid regions
+    hddcdd = hddcdd.loc[hddcdd['r'].isin(val_r)]
+    
     hddcdd = pd.pivot_table(hddcdd, values='Value', index=['ddtype','r','szn'], columns=['t'])
     ### Interpolate to odd years
     hddcdd = (
@@ -241,10 +256,12 @@ def calculate_load_delta(
     #%% Calculate hours per season
     hhours = pd.read_csv(
         os.path.join(reedsdir,'inputs','numhours.csv'),
-        header=None, names=['h','hours'], index_col='h', squeeze=True)
+        header=0, names=['h','hours'], index_col='h', squeeze=True)
     ### Get timeslice-to-season mapper
     h_dt_szn = (
-        pd.read_csv(reedsdir+'inputs/variability/h_dt_szn.csv', index_col='hour')
+        pd.read_csv(
+            os.path.join(reedsdir,'inputs', 'variability','h_dt_szn.csv'),
+            index_col='hour')
         .replace({'winter':'wint','spring':'spri','summer':'summ'})
         .rename(columns={'season':'szn','year':'t7',})
     )
@@ -296,7 +313,7 @@ def write_load_files(
     ###### Load the necessary inputs
     #%% Get the hour-mapper
     h_dt_szn = (
-        pd.read_csv(reedsdir+'inputs/variability/h_dt_szn.csv', index_col='hour')
+        pd.read_csv(os.path.join(reedsdir,'inputs', 'variability','h_dt_szn.csv'), index_col='hour')
         .replace({'winter':'wint','spring':'spri','summer':'summ'})
         .rename(columns={'season':'szn','year':'t7',})
     )
@@ -304,26 +321,12 @@ def write_load_files(
     #%% Get numhours
     numhours = pd.read_csv(
         os.path.join(inputs_case,'numhours.csv'),
-        names=['h','numhours'],index_col='h',squeeze=True)
+        header=0, names=['h','numhours'], index_col='h', squeeze=True)
 
     #%% Get the load-growth factors
-    load_multiplier = pd.read_csv(
-        os.path.join(inputs_case,'load_multiplier.csv'), index_col='cendiv')
-    load_multiplier.rename(columns={i:int(i) for i in load_multiplier.columns}, inplace=True)
-
-    #%% Get the cendiv-to-r mapper
-    hierarchy = pd.read_csv(
-        os.path.join(inputs_case,'hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-
-    #%% Get valid regions
-    rfeas = sorted(
-        pd.read_csv(
-            os.path.join(inputs_case, 'valid_ba_list.csv'), squeeze=True, header=None).tolist())
-
-    #%% Get load_multiplier by r
-    load_multiplier_r = hierarchy[['cendiv']].merge(
-        load_multiplier, left_on='cendiv', right_index=True).drop('cendiv',axis=1)
+    load_multiplier_r = pd.read_csv(
+        os.path.join(inputs_case,'load_multiplier_r.csv'), index_col=['r','t'], squeeze=True,
+    ).unstack('t').loc[val_r]
 
     #%% If running beyond the last year of data in load_multiplier.csv we need to project to
     ### future years. That's done in forecast.py, but forecast.py also needs to project the
@@ -346,18 +349,18 @@ def write_load_files(
             forecast_fit=futurefiles.loc[filename,'forecast_fit'],
             clip_min=clip_min, clip_max=clip_max)
 
-    #%% Get the 7-year hourly demand
+    #%% Get the hourly demand
+    from LDC_prep import read_file
     ### Default
-    if GSw_EFS1_AllYearLoad == 'default':
-        load_hourly_base = pd.read_csv(
-            os.path.join(reedsdir,'inputs','variability','multi_year','load.csv.gz'),
-            index_col=0, float_precision='round_trip')
+    if GSw_EFS1_AllYearLoad == 'historic':
+        load_hourly_base = pd.read_hdf(
+            os.path.join(reedsdir,'inputs','loaddata','historic_load_hourly.h5')
+        )[val_r]
     ### EFS - only available for a single year, so concatenate it
     else:
-        load_hourly_base = pd.read_csv(
-            os.path.join(reedsdir,'inputs','variability','EFS_Load',
-                        '{}_load_hourly.csv.gz'.format(GSw_EFS1_AllYearLoad)),
-            index_col=[0,1], float_precision='round_trip',)
+        load_hourly_base = read_file(
+            os.path.join(reedsdir,'inputs','loaddata', f'{GSw_EFS1_AllYearLoad}_load_hourly'),
+            index_columns=2)[val_r]
     load_hourly_base.columns.name = 'r'
 
     #%% Get the climate-induced load delta
@@ -390,13 +393,11 @@ def write_load_files(
     )
 
     #%% Make some additional inputs
-    ### Get the regions
-    r_usa = ['p{}'.format(i) for i in range(1,135)]
     ### Make the Augur io path
     augurpath = os.path.join(inputs_case,'..','ReEDS_Augur','augur_data')
     os.makedirs(augurpath, exist_ok=True)
     ### Get the one-year hours for default
-    if GSw_EFS1_AllYearLoad == 'default':
+    if GSw_EFS1_AllYearLoad == 'historic':
         hours_oneyear = h_dt_szn.loc[h_dt_szn.t7==reeds_data_year].index.tolist()
     ### EFS only uses one year so it always uses hours 1-8760
     else:
@@ -426,9 +427,9 @@ def write_load_files(
         #### the hourly load and (year,timeslice) load, thus smoothing out
         #### the edges of the climate deltas and accentuating the peaks
         ### Default: Also apply load-growth multipliers
-        if GSw_EFS1_AllYearLoad == 'default':
+        if GSw_EFS1_AllYearLoad == 'historic':
             load_out = (
-                load_hourly_base * load_multiplier_r.loc[r_usa,t]
+                load_hourly_base * load_multiplier_r.loc[val_r,t]
                 + (load_delta_hourly[t] * load_hourly_ratio
                     if t >= GSw_ClimateStartYear else 0))
         ### EFS: Read from the year directly
@@ -498,7 +499,7 @@ def write_load_files(
 
         #%%### If default, write the 7-year hourly load for Augur,
         ###### with normalization and distribution losses as in LDC_prep.py
-        if GSw_EFS1_AllYearLoad == 'default':
+        if GSw_EFS1_AllYearLoad == 'historic':
             if t in modelyears:
                 ### Get the year label
                 load_write = load_out.merge(h_dt_szn['t7'], on='hour')
@@ -512,7 +513,7 @@ def write_load_files(
                 load_write /= (1 - distloss)
                 ### Write it
                 savename = os.path.join(augurpath, 'load_7year_{}.h5'.format(t))
-                load_write[rfeas].to_hdf(savename, key='data', complevel=4)
+                load_write[val_r].to_hdf(savename, key='data', complevel=4)
                 if verbose >= 2:
                     print(os.path.basename(savename))
         ##### Otherwise no normalize, but apply distloss and store for concat
@@ -527,15 +528,15 @@ def write_load_files(
         [['*r','szn','t','MW']]
     )
     peak_allyear.round(decimals).to_csv(
-        os.path.join(inputs_case, 'peak_all.csv'), index=False)
+        os.path.join(inputs_case, 'peak_szn.csv'), index=False)
     ### Concat and save load_allyear
     load_allyear = pd.concat(dict_load_allyear, axis=1)
-    load_allyear.round(decimals).to_csv(os.path.join(inputs_case, 'load_all.csv'))
+    load_allyear.round(decimals).to_csv(os.path.join(inputs_case, 'load_allyear.csv'))
     ### Concat and save h_peak_all
     h_peak_all = pd.concat(dict_hpeak_allyear, axis=1)
-    h_peak_all.round(decimals).to_csv(os.path.join(inputs_case, 'h_peak_all.csv'))
+    h_peak_all.round(decimals).to_csv(os.path.join(inputs_case, 'peak_h.csv'))
     #%% Concat and save hourly-by-year load file if necessary
-    if GSw_EFS1_AllYearLoad != 'default':
+    if GSw_EFS1_AllYearLoad != 'historic':
         df_load_hourlybyyear = pd.concat(dict_load_hourlybyyear, axis=0)
         df_load_hourlybyyear.index.set_names(['year','hour'],inplace=True)
         savename = os.path.join(augurpath, 'load_allyears.h5')

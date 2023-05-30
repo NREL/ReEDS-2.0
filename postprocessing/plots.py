@@ -1509,6 +1509,16 @@ def despine(ax=None,
         _despine_sub(ax, top, right, left, bottom, direction)
 
 
+def trim_subplots(ax, nrows, ncols, nsubplots):
+    """
+    When using a 2d grid of subplots, trim off the empty subplots from the bottom right.
+    The number of rows (nrows) is assumed to be defined as a function of ncols as:
+    `nrows = nsubplots // ncols + (1 if nsubplots % ncols else 0)`
+    """
+    for col in range(nrows * ncols - nsubplots):
+        ax[-1, -1-col].axis('off')
+
+
 def patchlegend(colors, edgecolor='none', alpha=1, reverse=False, **kwargs):
     patches = [mpl.patches.Patch(
                    facecolor=colors[i], 

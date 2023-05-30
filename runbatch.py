@@ -8,7 +8,6 @@ import shutil
 import csv
 import numpy as np
 import pandas as pd
-import numpy as np
 import subprocess
 from datetime import datetime
 import argparse
@@ -16,28 +15,6 @@ from builtins import input
 
 #############
 #%% FUNCTIONS
-
-def scalar_csv_to_txt(path_to_scalar_csv):
-    """
-    Write a scalar csv to GAMS-readable text
-    Format of csv should be: scalar,value,comment
-    """
-    ### Load the csv
-    dfscalar = pd.read_csv(
-        path_to_scalar_csv,
-        header=None, names=['scalar','value','comment'], index_col='scalar').fillna(' ')
-    ### Create the GAMS-readable string (comments can only be 255 characters long)
-    scalartext = '\n'.join([
-        'scalar {:<30} "{:<5.255}" /{}/ ;'.format(
-            i, row['comment'], row['value'])
-        for i, row in dfscalar.iterrows()
-    ])
-    ### Write it to a file, replacing .csv with .txt in the filename
-    with open(path_to_scalar_csv.replace('.csv','.txt'), 'w') as w:
-        w.write(scalartext)
-
-    return dfscalar
-
 
 def writeerrorcheck(checkfile, errorcode=17):
     """
@@ -65,19 +42,6 @@ def write_delete_file(checkfile, deletefile, PATH):
         PATH.writelines("if [ -f " + checkfile + " ]; then \n   rm " + deletefile + '\nfi\n\n' )
     else:
         PATH.writelines("if exist " + checkfile + " (del " + deletefile + ')\n' )
-
-
-def addMPSToOpt(optFileNum, case_dir):
-    #Modify the optfile to create an mps file.
-    if int(optFileNum) == 1:
-        origOptExt = 'opt'
-    elif int(optFileNum) < 10:
-        origOptExt = 'op' + optFileNum
-    else:
-        origOptExt = 'o' + optFileNum
-    #Add writemps statement to opt file
-    with open(case_dir + '/cplex.'+origOptExt, 'a') as file:
-        file.write('\nwritemps ReEDSmodel.mps')
 
 
 def get_ivt_numclass(InputDir, casedir, caseSwitches):
@@ -115,13 +79,61 @@ def get_ivt_numclass(InputDir, casedir, caseSwitches):
     return numclass
 
 
+def check_compatibility(sw):
+    ### Hourly resolution
+    if int(sw['GSw_Hourly']) and (
+        (int(sw['endyear']) > 2050)
+        or int(sw['GSw_ClimateHydro'])
+        or int(sw['GSw_ClimateDemand'])
+        or int(sw['GSw_ClimateWater'])
+        or int(sw['GSw_EFS_Flex'])
+        or (float(sw['GSw_HydroWithinSeasFrac']) < 1)
+        or (float(sw['GSw_HydroPumpWithinSeasFrac']) < 1)
+    ):
+        raise NotImplementedError(
+            'At least one of GSw_Canada, GSw_ClimateHydro, GSw_ClimateDemand, GSw_ClimateWater, '
+            'endyear, GSw_EFS_Flex, GSw_HydroWithinSeasFrac, GSw_HydroPumpWithinSeasFrac '
+            'are incompatible with GSw_Hourly=1')
+
+    if int(sw['GSw_HourlyWindow']) % int(sw['GSw_HourlyChunkLength']):
+        raise ValueError(
+            ('GSw_HourlyWindow must be divisible by chunk length:'
+            '\nGSw_HourlyWindow = {}\nGSw_HourlyChunkLength = {}'.format(
+                sw['GSw_HourlyWindow'], sw['GSw_HourlyChunkLength'])))
+
+    if int(sw['GSw_HourlyOverlap']) % int(sw['GSw_HourlyChunkLength']):
+        raise ValueError(
+            ('GSw_HourlyOverlap must be divisible by chunk length:'
+            '\nGSw_HourlyOverlap = {}\nGSw_HourlyChunkLength = {}'.format(
+                sw['GSw_HourlyOverlap'], sw['GSw_HourlyChunkLength'])))
+
+    if int(sw['GSw_HourlyWindow']) <= int(sw['GSw_HourlyOverlap']):
+        raise ValueError(
+            ('GSw_HourlyWindow must be greater than GSw_HourlyOverlap:'
+            '\nGSw_HourlyWindow = {}\nGSw_HourlyOverlap = {}'.format(
+                sw['GSw_HourlyWindow'], sw['GSw_HourlyOverlap'])))
+
+    if int(sw['GSw_HourlyClusterMultiYear']):
+        raise NotImplementedError('Only GSw_HourlyClusterMultiYear=0 is currently supported')
+
+    ### Aggregation
+    if (not int(sw['GSw_AggregateRegions'])) and (
+        (int(sw['GSw_NumCSPclasses']) != 12)
+        or (int(sw['GSw_NumDUPVclasses']) != 7)
+    ):
+        raise NotImplementedError(
+            'Aggregated CSP/DUPV classes only work with aggregated regions. '
+            'At least one of GSw_NumCSPclasses and GSw_NumDUPVclasses are incompatible with '
+            'GSw_AggregateRegions=0')
+
+
 #############
 #%% PROCEDURE 
 
 def setupEnvironment(BatchName=False, cases_suffix=False, simult_runs=0, verbose=0, forcelocal=0):
     # #%% Inputs for debugging
-    # BatchName = 'v20220422_clusterM0_h8760_CL4_CF1_CC10_SD73_noH2_NSMR0_ERCOT'
-    # cases_suffix = 'hourly4'
+    # BatchName = 'v20221101_hourlyM0'
+    # cases_suffix = 'test'
     # WORKERS = 1
     # verbose = 1
     # forcelocal = 0
@@ -186,6 +198,18 @@ def setupEnvironment(BatchName=False, cases_suffix=False, simult_runs=0, verbose
         df_cases = df_cases[['Choices', 'Default Value']]
         cases_filename = 'cases_' + cases_suffix + '.csv'
         df_cases_suf = pd.read_csv(cases_filename, dtype=object, index_col=0)
+
+        # If there are any switches in the user-specified cases file that are not in cases.csv,
+        # stop the run and alert the user
+        weird_switches = [i for i in df_cases_suf.index if i not in df_cases.index]
+        if len(weird_switches):
+            print(
+                'cases_{}.csv includes the following switches that are not in cases.csv:\n{}'.format(
+                    cases_suffix,
+                    '\n'.join(weird_switches)
+                ))
+            raise KeyError(
+                f'There are strange switches in cases_{cases_suffix}.csv; try checking capitalization')
 
         #First use 'Default Value' from cases_[suffix].csv to fill missing switches
         #Later, we will also use 'Default Value' from cases.csv to fill any remaining holes.
@@ -389,7 +413,8 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
     os.makedirs(os.path.join("runs",lstfile,"outputs","tc_phaseout_data"), exist_ok=True)
     os.makedirs(inputs_case, exist_ok=True)
 
-    #%% Coerce some switches based on model compatibility
+    #%% Stop now if any switches are incompatible
+    check_compatibility(caseSwitches)
 
     #%% Record some metadata about this run
     pd.Series(caseSwitches).to_csv(os.path.join(inputs_case,'switches.csv'), header=False)
@@ -413,7 +438,6 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
     ## Add a 'comment' column and write to csv and GAMS-readable text
     gswitches.reset_index().assign(comment='').to_csv(
         os.path.join(inputs_case,'gswitches.csv'), header=False, index=False)
-    scalar_csv_to_txt(os.path.join(inputs_case,'gswitches.csv'))
 
     #%% Information on reV supply curves associated with this run
     shutil.copytree(os.path.join(InputDir,'inputs','supplycurvedata','metadata'),
@@ -483,22 +507,8 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
         METAFILE.writelines('#,#,#,#,#\n')
         METAFILE.writelines('year,process,starttime,stoptime,processtime\n')
 
-    ### Copy over the cases file and the files in filesforbatch.csv
+    ### Copy over the cases file
     shutil.copy2(os.path.join(InputDir, cases_filename), casedir)
-    with open('filesforbatch.csv', 'r') as f:
-        reader = csv.reader(f, delimiter = ',')
-        for row in reader:
-            filename = row[0]
-            if filename.split('/')[0] in ['inputs', 'postprocessing']:
-                dir_dst = inputs_case
-            else:
-                dir_dst = casedir
-            src_file = os.path.join(InputDir, filename)
-            if os.path.exists(src_file):
-                shutil.copy(src_file, dir_dst)
-
-    ### Rewrite the scalar table as GAMS-readable definitions
-    scalar_csv_to_txt(os.path.join(inputs_case,'scalars.csv'))
 
     ### Get hpc setting (used in Augur)
     caseSwitches['hpc'] = int(hpc)
@@ -523,168 +533,6 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
     solveyears = [y for y in solveyears if y <= endyear]
     yearset_augur = os.path.join('inputs_case','modeledyears.csv')
     toLogGamsString = ' logOption=4 logFile=gamslog.txt appendLog=1 '
-
-    if caseSwitches['GSw_ValStr'] != '0':
-        addMPSToOpt(caseSwitches['GSw_gopt'], casedir)
-
-    ###### Write run-specific files
-    ### Special-case files for individual sites
-    if int(caseSwitches['GSw_IndividualSites']):
-        shutil.copy(os.path.join(InputDir,'inputs','rsmap.csv'),
-                    inputs_case)
-        shutil.copy(os.path.join(InputDir,'inputs','capacitydata','wind-ons_prescribed_builds_site_{}.csv'.format(caseSwitches['GSw_SitingWindOns'])),
-                    os.path.join(inputs_case,'wind-ons_prescribed_builds.csv'))
-        shutil.copy(os.path.join(InputDir,'inputs','capacitydata','wind-ofs_prescribed_builds_site_{}.csv'.format(caseSwitches['GSw_SitingWindOfs'])),
-                    os.path.join(inputs_case,'wind-ofs_prescribed_builds.csv'))
-    else:
-        shutil.copy(os.path.join(InputDir,'inputs','rsmap_sreg.csv'),
-                    os.path.join(inputs_case,'rsmap.csv'))
-        shutil.copy(os.path.join(InputDir,'inputs','capacitydata','wind-ons_prescribed_builds_sreg_{}.csv'.format(caseSwitches['GSw_SitingWindOns'])),
-                    os.path.join(inputs_case,'wind-ons_prescribed_builds.csv'))
-        shutil.copy(os.path.join(InputDir,'inputs','capacitydata','wind-ofs_prescribed_builds_sreg_{}.csv'.format(caseSwitches['GSw_SitingWindOfs'])),
-                    os.path.join(inputs_case,'wind-ofs_prescribed_builds.csv'))
-
-    ### Specific versions of files
-    osprey_num_years = len(caseSwitches['osprey_years'].split(','))
-    shutil.copy(
-        os.path.join(
-            InputDir, 'inputs', 'variability', 'index_hr_map_{}.csv'.format(osprey_num_years)),
-        os.path.join(inputs_case, 'index_hr_map.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir, 'inputs', 'variability', 'd_szn_{}.csv'.format(osprey_num_years)),
-        os.path.join(inputs_case, 'd_szn.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir,'inputs','state_policies','offshore_req_{}.csv'.format(caseSwitches['GSw_OfsWindForceScen'])),
-        os.path.join(inputs_case,'offshore_req.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir,'inputs','consume',f"dac_gas_{caseSwitches['GSw_DAC_Gas_Case']}.csv"),
-        os.path.join(inputs_case,'dac_gas.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir,'inputs','carbonconstraints',f"capture_rates_{caseSwitches['GSw_CCS_Rate']}.csv"),
-        os.path.join(inputs_case,'capture_rates.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir,'inputs','hierarchy{}.csv'.format(
-                '' if (caseSwitches['GSw_HierarchyFile'] == 'default')
-                else '_'+caseSwitches['GSw_HierarchyFile'])),
-        os.path.join(inputs_case,'hierarchy.csv')
-    )
-    for f in ['distPVCF','distPVcap','distPVCF_hourly']:
-        shutil.copy(
-            os.path.join(
-                InputDir,'inputs','dGen_Model_Inputs','{s}','{f}_{s}.csv').format(
-                    f=f, s=caseSwitches['distpvscen']),
-            os.path.join(inputs_case, f'{f}.csv')
-        )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','loaddata',f"demand_{caseSwitches['demandscen']}.csv"),
-    ).round(6).to_csv(os.path.join(inputs_case,'load_multiplier.csv'),index=False)
-
-    ### Files defined from case inputs
-    pd.DataFrame(
-        {'*pvb_type': ['pvb{}'.format(i) for i in range(1,4)],
-         'ilr': [np.around(float(c) / 100, 2) for c in caseSwitches['GSw_PVB_ILR'].split('_')]}
-    ).to_csv(os.path.join(inputs_case, 'pvb_ilr.csv'), index=False)
-
-    pd.DataFrame(
-        {'*pvb_type': ['pvb{}'.format(i) for i in range(1,4)],
-         'bir': [np.around(float(c) / 100, 2) for c in caseSwitches['GSw_PVB_BIR'].split('_')]}
-    ).to_csv(os.path.join(inputs_case, 'pvb_bir.csv'), index=False)
-
-    ### Constant value if input is float, otherwise named profile
-    try:
-        rate = float(caseSwitches['GSw_MethaneLeakageScen'])
-        pd.Series(index=range(2010,2051), data=rate, name='constant').rename_axis('*t').round(5).to_csv(
-            os.path.join(inputs_case,'methane_leakage_rate.csv'))
-    except ValueError:
-        pd.read_csv(
-            os.path.join(InputDir,'inputs','carbonconstraints','methane_leakage_rate.csv'),
-            index_col='t',
-        )[caseSwitches['GSw_MethaneLeakageScen']].rename_axis('*t').round(5).to_csv(
-            os.path.join(inputs_case,'methane_leakage_rate.csv'))
-
-
-    ### Single column from input table
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','carbonconstraints','ng_crf_penalty.csv'), index_col='t',
-    )[caseSwitches['GSw_NG_CRF_penalty']].rename_axis('*t').to_csv(
-        os.path.join(inputs_case,'ng_crf_penalty.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','carbonconstraints','co2_cap.csv'), index_col='t',
-    ).loc[caseSwitches['GSw_AnnualCapScen']].rename_axis('*t').to_csv(
-        os.path.join(inputs_case,'co2_cap.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','carbonconstraints','co2_tax.csv'), index_col='t',
-    )[caseSwitches['GSw_CarbTaxOption']].rename_axis('*t').round(2).to_csv(
-        os.path.join(inputs_case,'co2_tax.csv')
-    )
-    pd.DataFrame(columns=solveyears).to_csv(
-        os.path.join(inputs_case,'modeledyears.csv'), index=False)
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','national_generation','gen_mandate_trajectory.csv'),
-        index_col='GSw_GenMandateScen'
-    ).loc[caseSwitches['GSw_GenMandateScen']].rename_axis('*t').round(5).to_csv(
-        os.path.join(inputs_case,'gen_mandate_trajectory.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','national_generation','gen_mandate_tech_list.csv'),
-        index_col='*i',
-    )[caseSwitches['GSw_GenMandateList']].to_csv(
-        os.path.join(inputs_case,'gen_mandate_tech_list.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','climate','climate_heuristics_yearfrac.csv'),
-        index_col='*t',
-    )[caseSwitches['GSw_ClimateHeuristics']].round(3).to_csv(
-        os.path.join(inputs_case,'climate_heuristics_yearfrac.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','climate','climate_heuristics_finalyear.csv'),
-        index_col='*parameter',
-    )[caseSwitches['GSw_ClimateHeuristics']].round(3).to_csv(
-        os.path.join(inputs_case,'climate_heuristics_finalyear.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','capacitydata','upgrade_costs_ccs_coal.csv'),
-        index_col='t',
-    )[caseSwitches['ccs_upgrade_cost_case']].round(3).rename_axis('*t').to_csv(
-        os.path.join(inputs_case,'upgrade_costs_ccs_coal.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','capacitydata','upgrade_costs_ccs_gas.csv'),
-        index_col='t',
-    )[caseSwitches['ccs_upgrade_cost_case']].round(3).rename_axis('*t').to_csv(
-        os.path.join(inputs_case,'upgrade_costs_ccs_gas.csv')
-    )
-
-    ### All files from the user input folder
-    userinputs = os.listdir(os.path.join(InputDir,"inputs","userinput"))
-
-    for file_name in userinputs:
-        full_file_name = os.path.join(InputDir,"inputs","userinput", file_name)
-        # ivt is now a special case written in calc_financial_inputs, so skip it here
-        if (os.path.isfile(full_file_name) and (file_name != 'ivt.csv')):
-            shutil.copy(full_file_name, inputs_case)
-
-    ### Legacy files - no longer used
-    if caseSwitches['unitdata'] == 'ABB':
-        nas = '//nrelnas01/ReEDS/FY18-ReEDS-2.0/data/'
-        out = os.path.join(InputDir,'inputs','capacitydata')
-        shutil.copy(os.path.join(nas,'ExistingUnits_ABB.gdx'), out)
-        shutil.copy(os.path.join(nas,'PrescriptiveBuilds_ABB.gdx'), out)
-        shutil.copy(os.path.join(nas,'PrescriptiveRetirements_ABB.gdx'), out)
-        shutil.copy(os.path.join(nas,'ReEDS_generator_database_final_ABB.gdx'), out)
 
     #copy over the ReEDS_Augur folder
     shutil.copytree(os.path.join(InputDir,"ReEDS_Augur"),os.path.join(casedir,'ReEDS_Augur'))
@@ -730,6 +578,7 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
         OPATH.writelines(comment + " Input processing scripts\n")
         tolog = ''
         for s in [
+            'copy_files',
             'calc_financial_inputs',
             'fuelcostprep',
             'writecapdat',
@@ -802,6 +651,7 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
                     + " --prev_year=" + str(prev_year)
                     + " --GSW_SkipAugurYear={}".format(caseSwitches['GSw_SkipAugurYear'])
                     + " --GSw_IndividualSites={}".format(caseSwitches['GSw_IndividualSites'])
+                    + " --GSw_Hourly={}".format(caseSwitches['GSw_Hourly'])
                     + '\n')
                 OPATH.writelines(writescripterrorcheck())
                 OPATH.writelines('python {t} --year={y}\n'.format(t=ticker, y=cur_year))

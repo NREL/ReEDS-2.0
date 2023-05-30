@@ -157,6 +157,9 @@ def prep_data():
     avail_cap_d = pd.pivot_table(avail_cap_d, index = ['i','v','r'],
                                               columns = 'd',
                                               values = 'MW').reset_index()
+    
+    #get max capacity by day for writing to csv for ReEDS2PRAS pass
+    max_cap = GEN_DATA['max_cap']
 
     # Aggregate daily energy budget of hybrids and dispatchable hydro
     daily_energy_budget = agg_rs_to_r(GEN_DATA['daily_energy_budget']).rename(columns={'i':'*i'})
@@ -193,6 +196,27 @@ def prep_data():
             'augur_data',
             'avail_cap_d_{}.csv'.format(str(SwitchSettings.prev_year))),
         index=False)
+    max_cap.to_csv(
+        os.path.join(
+            'ReEDS_Augur',
+            'augur_data',
+            'max_cap_{}.csv'.format(str(SwitchSettings.prev_year))),
+        index=False)
+    osprey_inputs['energy_cap'].to_csv(os.path.join(
+            'ReEDS_Augur',
+            'augur_data',
+            'energy_cap_{}.csv'.format(str(SwitchSettings.prev_year))),
+        index=False)
+    osprey_inputs['cap_converter'].to_csv(os.path.join(
+            'ReEDS_Augur',
+            'augur_data',
+            'cap_converter_{}.csv'.format(str(SwitchSettings.prev_year))),
+        index=False)
+    osprey_inputs['trancap'].to_csv(os.path.join(
+            'ReEDS_Augur',
+            'augur_data',
+            'tran_cap_{}.csv'.format(str(SwitchSettings.prev_year))),
+        index=False)
     daily_energy_budget.to_csv(
         os.path.join(
             'ReEDS_Augur',
@@ -217,6 +241,8 @@ def prep_data():
             'augur_data',
             'dr_dec_osprey_{}.csv'.format(str(SwitchSettings.prev_year))),
         index=False)
+    INPUTS['forced_outage'].get_data().to_csv(
+        os.path.join('ReEDS_Augur','augur_data','forced_outage.csv'), index=False)
     with gdxpds.gdx.GdxFile() as gdx:
         for key in osprey_inputs:
             gdx.append(

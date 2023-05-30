@@ -385,7 +385,7 @@ class LoadProfile(HourlyProfile):
         h_map = INPUTS['h_dt_szn'].get_data()
         # If allyearload is used, map to just one year
         if (
-            (self.switches['gsw_efs1_allyearload'] != 'default')
+            (self.switches['gsw_efs1_allyearload'] != 'historic')
             and ('EER' not in self.switches['gsw_efs1_allyearload'])
         ):
             h_map = h_map[h_map['year'] == min(h_map['year'])]
@@ -436,7 +436,7 @@ class LoadProfile(HourlyProfile):
         h_map = INPUTS['h_dt_szn'].get_data()
         # If using yearly profiles then do this for a single year
         if (
-            (SwitchSettings.switches['gsw_efs1_allyearload'] != 'default')
+            (SwitchSettings.switches['gsw_efs1_allyearload'] != 'historic')
             and ('EER' not in SwitchSettings.switches['gsw_efs1_allyearload'])
         ):
             h_map = h_map[h_map['year'] == min(h_map['year'])]
@@ -465,37 +465,14 @@ class LoadProfile(HourlyProfile):
     
         return df
     
-    def apply_load_multiplier(self, df, *args, **kwargs):
-        '''
-        Applying load multiplier
-        '''
-        hierarchy = INPUTS['hierarchy'].get_data()
-        r_cendiv = hierarchy[['r','cendiv']].drop_duplicates(
-                                                    ignore_index = True)
-        load_mult = INPUTS['load_multiplier'].get_data()
-        load_mult = r_cendiv.merge(load_mult, on = 'cendiv')
-        df = apply_series_to_df(df, load_mult[['r','load_mult']], 'multiply')
-        return df
-    
     def format_profiles(self, *args, **kwargs):
         '''
         Formatting load profiles based on the switch settings used in ReEDS.
         '''
-        # If not using climate demand, grab the normal load profiles
-        if self.switches['gsw_climatedemand'] == '0':
-            df = INPUTS['load_profiles'].get_data()
-        # If using climate demand, grab the proper load profiles
-        elif self.switches['gsw_efs1_allyearload'] == 'default':
-            df = INPUTS['load_climate_sevenyears'].get_data(
-                self.next_year if SwitchSettings.switches['osprey_load_year'] == 'next'
-                else self.prev_year)
-        elif self.switches['gsw_efs1_allyearload'] != 'default':
-            df = INPUTS['load_climate_allyears'].get_data()
-
-        # Scale load unless load is specified for all years
-        if self.switches['gsw_efs1_allyearload'] == 'default' and \
-            self.switches['gsw_climatedemand'] == '0':
-            df = self.apply_load_multiplier(df)
+        ### Get the load profiles for the modeled year
+        df = INPUTS['load_profiles'].get_data(
+            self.next_year if SwitchSettings.switches['osprey_load_year'] == 'next'
+            else self.prev_year)
 
         # Apply the load flexibility solution from ReEDS
         if SwitchSettings.switches['gsw_efs_flex'] != '0':
@@ -506,7 +483,7 @@ class LoadProfile(HourlyProfile):
         # Duplicate load profiles for 7 years if load is specified for all
         # years (which implies there is not 7 years of load data to use)
         if (
-            (SwitchSettings.switches['gsw_efs1_allyearload'] != 'default')
+            (SwitchSettings.switches['gsw_efs1_allyearload'] != 'historic')
             and ('EER' not in SwitchSettings.switches['gsw_efs1_allyearload'])
         ):
             h_map = INPUTS['h_dt_szn'].get_data()
@@ -639,7 +616,7 @@ def calculate_vre_gen(profiles, cfs_exist, cfs_marg):
         ### regions (i.e. the resources that are present in r_resource)
         [sorted(r_resource.r.unique())]
         ### Sum over BA regions, giving vre_gen_r[dt x rb]
-        .sum(axis=1, level=0)
+        .groupby(axis=1, level=0).sum()
     )
     # Round profiles
     vre_gen = vre_gen.round(SwitchSettings.switches['decimals'])
@@ -695,15 +672,23 @@ def format_mustrun(avail):
     imust = []
     for must_set in must_sets:
         imust += techs[must_set]
-    mustrun = avail[avail['i'].isin(imust)]
-    ### If making intermediate plots, save the tech-disaggregated capacities
-    if SwitchSettings.switches['plots']:
-        mustrun.to_hdf(
-            os.path.join('ReEDS_Augur','augur_data',
-                         'plot_mustrun_{}.h5'.format(SwitchSettings.prev_year)),
-            key='data', complevel=4, format='table')
-    ### Sum over all mustrun technologies
-    mustrun = mustrun.groupby(['r', 'szn'], as_index=False).sum()
+    
+    # Check to make sure there are mustrun plants
+    if avail['i'].isin(imust).any():
+        mustrun = avail[avail['i'].isin(imust)]
+        ### If making intermediate plots, save the tech-disaggregated capacities
+        if SwitchSettings.switches['plots']:
+            mustrun.to_hdf(
+                os.path.join('ReEDS_Augur','augur_data',
+                             'plot_mustrun_{}.h5'.format(SwitchSettings.prev_year)),
+                key='data', complevel=4, format='table')
+        ### Sum over all mustrun technologies
+        mustrun = mustrun.groupby(['r', 'szn'], as_index=False).sum()
+    # If there are no mustrun plants, then just create dataframe with a zero
+    # value for each season
+    else:
+        mustrun = pd.DataFrame({'r':rfeas.iloc[0,0], 'szn':['wint','spri','summ','fall'], 'MW':0})
+        
     mustrun = mustrun.pivot(index='szn',
                             columns='r',
                             values='MW').reset_index()
@@ -722,6 +707,7 @@ def format_mustrun(avail):
         INPUTS['h_dt_szn'].get_data()
         .set_index(['season','year','h','hour']).index)
     mustrun.index = hdtmap_index
+    
 
     HOURLY_PROFILES['mustrun'].profiles = mustrun
 

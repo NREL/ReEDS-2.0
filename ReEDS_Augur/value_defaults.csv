@@ -35,7 +35,6 @@ reedscc_safety_bin_size,100000,int,default value (in MW) for the safety bin size
 reedscc_stor_buffer,60,int,additional duration (in minutes) that is required of storage to receive full capacity credit
 reedscc_stor_stepsize,100,int,step size (in MW) used when determining the peaking capacity potential of storage
 reeds_data_year,2012,int,data year to use in ReEDS for hourly data
-remove_csv,TRUE,boolean,when true: delete Augur CSV files after it finishes
 solver,cplex,str,solver for augur
 threads,4,int,number of parallel threads for Augur calculations
 low_memory,FALSE,boolean,if TRUE write A_prep_data files as pickled dicts rather than keeping in memory; if FALSE keep in memory

@@ -105,7 +105,7 @@ vre_gen = pd.read_hdf(
 vre_gen_usa = (
     vre_gen
     .rename(columns=resources.tech)
-    .sum(axis=1, level=0)
+    .groupby(axis=1, level=0).sum()
     .xs(Sw['reeds_data_year'], level='year', axis=0)
     .set_index(timeindex)
 )
@@ -113,7 +113,7 @@ vre_gen_usa = (
 vre_gen_r = (
     vre_gen
     .rename(columns=resources.rb.to_dict())
-    .sum(axis=1, level=0)
+    .groupby(axis=1, level=0).sum()
 )
 
 def get_vre_gen(level='interconnect', region='western'):
@@ -125,7 +125,7 @@ def get_vre_gen(level='interconnect', region='western'):
     vre_gen_out = (
         vre_gen_out
         .rename(columns=resources.tech)
-        .sum(axis=1, level=0)
+        .groupby(axis=1, level=0).sum()
         .xs(Sw['reeds_data_year'], level='year', axis=0)
         .set_index(timeindex)
     )
@@ -154,7 +154,7 @@ def get_mustrun(level='interconnect', region='western'):
         .drop(['season','hour'], axis=1)
         .rename(columns=tech_map)
         .rename(columns={'hydro':'hydro_nd'})
-        .sum(axis=1, level=0)
+        .groupby(axis=1, level=0).sum()
         .set_index(timeindex)
     )
     return mustrun_out
@@ -182,7 +182,7 @@ def get_load(level='interconnect', region='western'):
     load_out = (
         load_r
         .rename(columns=hierarchy[level])
-        .sum(axis=1, level=0)
+        .groupby(axis=1, level=0).sum()
         [region]
         .xs(Sw['reeds_data_year'], level='year', axis=0)
         .rename('Demand')
@@ -211,7 +211,7 @@ try:
             .loc[h_dt_szn.loc[h_dt_szn.year==2007,['d','hr']].values.tolist()]
             .rename(columns=tech_map)
             .rename(columns={'hyded':'hydro_d','hydud':'hydro_d','gas-ct_re-ct':'h2-ct'})
-            .sum(axis=1, level=0)
+            .groupby(axis=1, level=0).sum()
             .set_index(timeindex)
         )
         return gen_out
@@ -316,7 +316,7 @@ except Exception as err:
 ### Get net load by BA
 net_load_r = load_r - vre_gen_r
 ### Get net load by ccreg
-net_load_ccreg = net_load_r.rename(columns=hierarchy.ccreg).sum(axis=1, level=0)
+net_load_ccreg = net_load_r.rename(columns=hierarchy.ccreg).groupby(axis=1, level=0).sum()
 ### Get net load for the USA for a single year
 net_load_usa = net_load_r.set_index(fulltimeindex).sum(axis=1).loc[str(Sw['reeds_data_year'])]
 
@@ -365,7 +365,7 @@ try:
         **{c: 're-ct' for c in dfall if c.endswith('re-ct')},
         # **tech_map.map(tech_style).to_dict(),
     }
-    dfpos = dfall.rename(columns=groupcols).sum(axis=1, level=0)
+    dfpos = dfall.rename(columns=groupcols).groupby(axis=1, level=0).sum()
     order = [c for c in tech_style.index if c in dfpos]
     if not len(order) == dfpos.shape[1]:
         raise Exception(
@@ -423,7 +423,7 @@ try:
     )
     #%% Combine results
     dfout = pd.concat({
-        'gen_pos': dfall.rename(columns=groupcols).sum(axis=1, level=0)[order],
+        'gen_pos': dfall.rename(columns=groupcols).groupby(axis=1, level=0).sum()[order],
         'gen_neg': pd.concat([stor_charge_usa, produce_usa.rename('produce')], axis=1),
         'load': pd.concat([
             load_usa.rename('total'),
@@ -559,7 +559,7 @@ try:
     for level, region in dispatchregions:
         net_load_region = (
             net_load_r.rename(columns=hierarchy[level])
-            .sum(axis=1, level=0)
+            .groupby(axis=1, level=0).sum()
             .set_index(fulltimeindex)
             .loc[str(Sw['reeds_data_year'])]
             [region]
@@ -607,7 +607,7 @@ try:
             **{c: 're-ct' for c in dfall if c.endswith('re-ct')},
             # **tech_map.map(tech_style).to_dict(),
         }
-        dfpos = dfall.rename(columns=groupcols).sum(axis=1, level=0)
+        dfpos = dfall.rename(columns=groupcols).groupby(axis=1, level=0).sum()
         order = [c for c in tech_style.index if c in dfpos]
         if not len(order) == dfpos.shape[1]:
             raise Exception(

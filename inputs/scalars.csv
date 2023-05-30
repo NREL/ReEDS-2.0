@@ -1,8 +1,8 @@
-avail_cspns,0.96,"--fraction-- availability of csp without storage"
-bio_cofire_perc,0.15,"--fraction-- fraction of total fuel that is biomass used in cofire plants"
+avail_cspns,0.96,#NAME?
+bio_cofire_perc,0.15,#NAME?
 CA_import_emit,0.217,--metric ton CO2/MWh--emissions measured on imports to California (assuming 2019 value from figure 8 of: https://ww3.arb.ca.gov/cc/inventory/pubs/reports/2000_2019/ghg_inventory_trends_00-19.pdf with data at https://ww3.arb.ca.gov/cc/inventory/pubs/rep
 CarbPolicyStartyear,2020,"--year-- start year for carbon policy"
-co2_emissions_2022,1557.726,"--million metric tonnes CO2-- 2022 emissions (used for tax credit phaseout)"
+co2_emissions_2022,1523.603,"--million metric tonnes CO2-- 2022 emissions (used for tax credit phaseout)"
 converter_efficiency_ac,1,"--fraction-- AC substation efficiency"
 converter_efficiency_lcc,0.993,"--fraction-- LCC AC/DC converter efficiency [https://doi.org/10.1016/j.rser.2019.04.062]"
 converter_efficiency_vsc,0.99,"--fraction-- VSC AC/DC converter efficiency [https://doi.org/10.1016/j.rser.2019.04.062]"
@@ -21,40 +21,41 @@ csp_sm_ns,1.4,"--fraction-- solar multiple for cspns"
 distloss,0.05,"--fraction-- distribution loss rate from bus to final consumption. A generic estimate of distribution losses taken many years ago from AEO 2006"
 dupv_cost_cap_mult,1.29,"--fraction-- price premium for dupv over upv. Cost premium is the ratio of the 5 MW system cost to the 100 MW system cost from figure 28 of the U.S. Solar PV System Cost Benchmark: Q1 2018 (https://www.nrel.gov/docs/fy19osti/72399.pdf)"
 euros_dollar,1.124,"--USD/Euro-- dollars per euro exchange rate from treasury department (https://fiscal.treasury.gov/files/reports-statements/treasury-reporting-rates-exchange/ratesofexchangeasofdecember312019.pdf)"
-firstyear_trans,2023,"first year transmission expansion is allowed"
+firstyear_trans_nearterm,2023,"first year transmission expansion within Sw_TransInvMaxNearterm is allowed"
+firstyear_trans_longterm,2028,"first year transmission expansion within Sw_TransInvMaxLongterm is allowed"
 gas_elasticity,0.76,"--fraction-- gas supply curve elasticity. long run price elasticity as estimated by: https://www.diw.de/documents/publikationen/73/diw_01.c.441773.de/dp1372.pdf"
 gas_scale,1000000,"--unitless-- conversion factor for gas-related parameters to help in scaling the problem"
 gasprice_ref_frac_adder,0.04,"--fraction-- fraction by which to multiply gasprice_ref for winter"
 gassupplyscale,-0.5,"shifting of reference gas price bin. gassupply scale determines how far the bins reference quantity should deviate from its reference price. With gassupply scale = -0.5, the center of the reference price bin will be the reference quantity. with gassupplyscale = 0, the end of the reference gas price's bin will the limit for that reference bin."
-geothermal_availability,0.75,"--fraction-- Existing geothermal plants have a 75% availability rate based on historical capacity factors"
+geothermal_availability,0.75,--fraction-- Existing geothermal plants have a 75% availability rate based on historical capacity factors
 h2_energy_intensity,60920,"--btu/lb-- H2 energy intensity (HHV, from https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html)"
-ilr_dist,1.1,"--MW_dc/MW_ac-- inverter-loading ratio for distpv"
-ilr_utility,1.3,"--MW_dc/MW_ac-- inverter-loading ratio for UPV and DUPV"
-industrialGasMult,1.21,"--fraction-- accounts for differences in the gas price for electricity generators and industrial customers. Accounts for the cost differences between electricity and industrial gas prices in the AEO 2022 Reference Scenario data"
-inverter_efficiency,0.98,"--fraction-- one-way efficiency of AC-DC or DC-AC conversion"
-lb_per_tonne,2204.62,"--lb/tonne-- pound per metric tonne"
-maxage_default,100,"--years-- maximum age for technogies (default if no entry in maxage.csv)"
-minCF_nuclear_flex,0.06,"--fraction-- fleet mincf for nuclear when using flexible nuclear"
-mingen_firstyear,2020,"--integer-- first year for mingen considerations"
-minloadfrac_coal,0.5,"--fraction-- coal mingen"
-minloadfrac_csp,0.15,"--fraction-- CSP mingen"
-minloadfrac_nuclear_flex,0.4,"--fraction-- nuclear mingen if running with flexible nuclear"
-molWeightCH4,16.043,"--g/mol--molecular weight of CH4"
-molWeightCO2,44.009,"--g/mol--molecular weight of CO2"
-nat_beta_energy,0.1276,"--$/MMBtu per Quad-- beta value for national natural gas supply curves; see documentation for how value is calculated"
-nat_beta_nonenergy,0.1352,"--$/MMBtu per Quad-- beta value for national natural gas supply curves; see documentation for how value is calculated"
-normfuelbinmax,1.4,"top cutoff for natural gas supply curve"
-normfuelbinmin,0.6,"bottom cutoff for natural gas supply curve"
-reduced_resource_frac,0.5,"--fraction-- fraction by which to reduce resource when Sw_ReducedResource=1"
-reg_energy_frac,0.15,"--fraction-- fraction of regulating reserves that produces energy. from Page 7 (pdf page 16) of https://www.nrel.gov/docs/fy14osti/60568.pdf"
-RGGI_start_yr,2012,"--year-- RGGI start year"
-RPS_StartYear,2020,"--year-- Start year for states RPS policies"
-smr_capture_rate,0.9,"--fraction-- capture rate of CO2 for SMR with CCS"
+ilr_dist,1.1,#NAME?
+ilr_utility,1.3,#NAME?
+industrialGasMult,1.21,--fraction-- accounts for differences in the gas price for electricity generators and industrial customers. Accounts for the cost differences between electricity and industrial gas prices in the AEO 2022 Reference Scenario data
+inverter_efficiency,0.98,#NAME?
+lb_per_tonne,2204.62,#NAME?
+maxage_default,100,#NAME?
+minCF_nuclear_flex,0.06,#NAME?
+mingen_firstyear,2020,#NAME?
+minloadfrac_coal,0.5,#NAME?
+minloadfrac_csp,0.15,#NAME?
+minloadfrac_nuclear_flex,0.4,#NAME?
+molWeightCH4,16.043,#NAME?
+molWeightCO2,44.009,#NAME?
+nat_beta_energy,0.1276,--$/MMBtu per Quad-- beta value for national natural gas supply curves; see documentation for how value is calculated
+nat_beta_nonenergy,0.1352,--$/MMBtu per Quad-- beta value for national natural gas supply curves; see documentation for how value is calculated
+normfuelbinmax,1.4,top cutoff for natural gas supply curve
+normfuelbinmin,0.6,bottom cutoff for natural gas supply curve
+reduced_resource_frac,0.5,#NAME?
+reg_energy_frac,0.15,--fraction-- fraction of regulating reserves that produces energy. from Page 7 (pdf page 16) of https://www.nrel.gov/docs/fy14osti/60568.pdf
+RGGI_start_yr,2012,#NAME?
+RPS_StartYear,2020,#NAME?
+smr_capture_rate,0.9,#NAME?
 smr_co2_intensity,9.83,"--tonnes CO2 / tonnes H2-- emissions rate for SMR H2 production. The median CO2 emission normalized for SMR hydrogen production was 9 kg CO2/kg H2 production, or 75 g CO2/MJ H2 (using H2 low heating value [LHV]). The median emission is similar with the value of 9.26 kg CO2/kg H2 in GREET 2018, which was based on the H2A modeling by Rutkowski et al (2012). (https://greet.es.anl.gov/publication-smr_h2_2019) Actual emissions value of 9.83 and 90% capture rate based on a 2011 NETL study (DOE/NETL-2011/1434)"
-state_cap_start_yr,2014,"--year-- state co2 cap start year"
-storage_eff_psh,0.8,"--fraction-- round-trip efficiency of PSH"
+state_cap_start_yr,2014,#NAME?
+storage_eff_psh,0.8,#NAME?
 storage_lifetime_cost_adjust_pvb,1.24,"--fraction-- The CRF_15 divided by CRF_20 to account for batteries only having a 15-year lifetime. It technically should change over time (if CRF changes over time), but is represented as a constant value here for simplicity"
-szn_adj_gas_winter,1.054,"--fraction-- seasonal adjustment for gas prices. calculated based on natural gas futures prices -- see documentation"
+szn_adj_gas_winter,0.054,"--fraction-- seasonal adjustment for gas prices. calculated based on natural gas futures prices -- see documentation"
 topfuelbinwidth,2,"top fuel bin width"
 tranloss_permile_ac,0.00010,"--fraction per mile-- AC transmission losses for regional trade"
 tranloss_permile_dc,0.00005,"--fraction per mile-- DC transmission losses for regional trade"
@@ -63,9 +64,8 @@ trans_contingency_level_prm,1,"--integer-- n-x contingency level to use for init
 trans_crp,40,"--years-- transmission capital recovery period (financial lifetime / evaluation period). Applied to transmission lines, AC/DC converters, and substations."
 trans_fom_frac,0.015,"--fraction-- Transmission FOM cost expressed as fraction of upfront cost [https://publications.jrc.ec.europa.eu/repository/handle/JRC92496]"
 trans_fom_region_mult,0,"--boolean-- indicate whether to use regional multipliers on transmission FOM (1) or just the base cost (0)"
-vom_hyd,1.0244,"--2004$/MWh-- hydropower VOM (only one for all hydro)"
-co2_detail_startyr,2026,"--year-- Year to start the detailed representation of CO2 capture/storage"
-co2_pipeline_cost,3000,"--2018$/(tonne-mi)/hr-- capacity cost for CO2 pipelines"
-co2_pipeline_fom,80,"--2018$/(tonne-mi)/hr-yr-- FOM costs for CO2 pipelines"
-co2_spurline_cost,3000,"--2018$/(tonne-mi)/hr-- capacity cost for CO2 spurlines"
-co2_spurline_fom,80,"--2018$/(tonne-mi)/hr-yr-- FOM costs for CO2 spurlines"
+upgrade_inflator,1.72,inflator for 1987 cost values of upgrade costs in the generator database
+vom_hyd,1.0244,--2004$/MWh-- hydropower VOM (only one for all hydro)
+co2_detail_startyr,2026,#NAME?
+co2_capture_incentive_length,12,#NAME?
+last_year_co2_capture_incentive,2038,#NAME?

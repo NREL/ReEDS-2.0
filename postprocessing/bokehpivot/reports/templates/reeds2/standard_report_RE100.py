@@ -20,7 +20,7 @@ static_presets = [
     {'name': 'National Annual Capacity Price ($/kW-yr)', 'result': 'Requirement Prices and Quantities National', 'preset': 'ResMarg Price Lines ($/kW-yr)'},
     {'name': 'National RE Energy Price ($/MWh)', 'result': 'RE Generation Price ($/MWh)', 'preset': 'Scenario Lines Over Time'},
     {'name': 'RE Capacity Price by BA ($/kW-yr)', 'result': 'RE Capacity Price BA ($/kW-yr)', 'preset': 'RE Cap Price by BA'},
-    {'name': '2022-2050 Present Value of System Cost (Bil $)', 'result': 'Sys Cost Annualized (Bil $)', 'preset': '2022-2050 Discounted'},
+    {'name': 'Present Value of System Cost through 2050 (Bil $)', 'result': 'Sys Cost Annualized (Bil $)', 'preset': 'Discounted through 2050'},
     {'name': 'CO2 Emissions National (MMton)', 'result': 'CO2 Emissions National (MMton)', 'preset': 'Scenario Lines Over Time'},
     {'name': 'Final Wind Capacity (GW)', 'result': 'Capacity Resource Region (GW)', 'preset': 'RS Map Final Wind'},
     {'name': 'PV Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['upv','dupv','distpv']}}},

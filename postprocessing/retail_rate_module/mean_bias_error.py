@@ -16,7 +16,6 @@ import argparse
 
 pd.options.display.max_columns = 200
 pd.options.display.max_rows = 50
-stdout, stderr = sys.stdout, sys.stderr
 
 
 #######################
@@ -37,6 +36,10 @@ out_dollar_year = args.out_dollar_year
 # run_dir = os.path.join(reeds_dir,'runs','v20210716_main_Ref_2026')
 # out_dollar_year = 2019
 
+#%% Set up logger
+site.addsitedir(os.path.join(reeds_dir,'input_processing'))
+from ticker import makelog
+log = makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
 
 ##############
 #%% Inputs ###
@@ -58,8 +61,6 @@ inf_adjust = inflation.loc[
 ### Import the retail rate module
 site.addsitedir(retailmodulepath)
 import retail_rate_calculations
-### reset the stdout and stderr (otherwise messages will be written to gamslog.txt)
-sys.stdout, sys.stderr = stdout, stderr
 
 
 #################

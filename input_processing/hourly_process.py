@@ -30,26 +30,26 @@ TODO:
 """
 
 #%% IMPORTS
-import pandas as pd
-from pandas import DataFrame
-import math
-
-from sklearn.preprocessing import normalize
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.cluster import KMeans
-from sklearn.neighbors import NearestCentroid
-import numpy as np
-import sys
-import argparse
 import os
-from scipy.cluster.vq import vq
-import json
+import sys
+import math
 import argparse
+import logging
+import shutil
+## Turn off logging for imported packages
+for i in ['matplotlib']:
+    logging.getLogger(i).setLevel(logging.CRITICAL)
+import json
+import pandas as pd
+import numpy as np
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.neighbors import NearestCentroid
 import scipy
+from scipy.cluster.vq import vq
 from LDC_prep import read_file
 
 ##% Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
@@ -60,17 +60,38 @@ select_year = 2012
 decimals = 3
 ### Indicate whether to show plots interactively [default False]
 interactive = False
+### Indicate whether to save the old h17 inputs for comparison
+debug = True
 
 #############
 #%% FUNCTIONS
-def collect_regions(rfeas,rs):
-    rs = list(rs[rs["r"].isin(rfeas)]["rs"])
+def collect_regions(val_r,rs):
+    rs = list(rs[rs["r"].isin(val_r)]["rs"])
 
-    r_subset = rfeas.copy()
+    r_subset = val_r.copy()
     for x in rs:
         r_subset.append(x)
 
     return r_subset
+
+
+def szn2yearperiod(szn):
+    """
+    szn's are formatted as 'y{20xx}{d or w}{day of year or wek of year}'
+    where a 'wek' is a 5-day period (5*73 = 365)
+    """
+    year, period = szn.split('d') if 'd' in szn else szn.split('w')
+    return int(year.strip('y')), int(period)
+
+
+def szn2period(szn):
+    """
+    szn's are formatted as 'y{20xx}{d or w}{day of year or wek of year}'
+    where a 'wek' is a 5-day period (5*73 = 365)
+    """
+    year, period = szn.split('d') if 'd' in szn else szn.split('w')
+    return int(period)
+
 
 ###################################
 # -- Capacity Factor Processing --
@@ -114,32 +135,32 @@ def convert_input(basedir, tech, siting, GSw_HourlyClusterMultiYear, select_year
     return result
 
 
-def make_equal_periods(GSw_HourlyNumClusters):
+def make_equal_periods(numperiods):
     '''
     Create referencing table that has columns ['hour','dayhour,'season'].
     This is useful to merge with load data and m_cf data to find seasonal 
     average later when using the equal_periods method to divide up the year
-    into `GSw_HourlyNumClusters` seasons of equal duration.
+    into `numperiods` seasons of equal duration.
 
     arg: 
-    GSw_HourlyNumClusters: number of periods to divide 365 days into
+    numperiods: number of periods to divide 365 days into
     period_length: 24 for day, 168 for week
 
     return: pandas dataframe
     '''
     df_season = []
-    remainder = 365 % GSw_HourlyNumClusters
-    for this_clust in range(1,GSw_HourlyNumClusters + 1): 
+    remainder = 365 % numperiods
+    for this_clust in range(1,numperiods + 1): 
         # distribute one extra day to each cluster until any remainder's gone
         if remainder > 0:
-            days_in_this_period = math.floor(365/GSw_HourlyNumClusters) + 1
+            days_in_this_period = math.floor(365/numperiods) + 1
             remainder -= 1
         else:
-            days_in_this_period = math.floor(365/GSw_HourlyNumClusters)
+            days_in_this_period = math.floor(365/numperiods)
         df_season = df_season + ['szn' + str(this_clust)] * days_in_this_period * 24
 
     # roll months to center clusters on midnight Jan. 1 (such that when
-    # GSw_HourlyNumClusters == 4, szn1 reflects winter) if season is odd number of days,
+    # numperiods == 4, szn1 reflects winter) if season is odd number of days,
     # have to have one more day on one side of the year than the other
     if sum([ 1 for x in df_season if x == 'szn1' ])/24 % 2 > 0:
         df_season = np.roll(df_season,-int(sum([ 1 for x in df_season if x == 'szn1' ])/2 - 12))
@@ -163,33 +184,28 @@ def make_equal_periods(GSw_HourlyNumClusters):
     return df
 
 
-def map_new_hour(df,period_length):
-    newmap = DataFrame({'season':df.season.unique()})
-    newmap["num"] = newmap.index
-    df = pd.merge(df,newmap,how='outer',on=['season'])
-    df['hour'] = ([int(i.lstrip("0")) for i in df['h_of_period']] + period_length * df['num'])
-    df['hour'] = 'h' + df['hour'].astype(str)
-    return df
-
-
 ########################
 # -- Load Processing --
 ########################
 
-def create_load(rfeas, sw, basedir, select_year=2012):
-    if sw['GSw_EFS1_AllYearLoad'] == 'default':
-        load = pd.read_csv(
-            os.path.join(basedir,"inputs","variability","multi_year","load.csv.gz")
-        )[rfeas]
-
-    else:
-        load = pd.read_csv(
-            os.path.join(basedir,"inputs","variability","EFS_Load",
-                         "{}_load_hourly.csv.gz".format(sw['GSw_EFS1_AllYearLoad'])),
-            index_col=[0,1],
-        ### Subset to cluster year
-        )[rfeas].loc[int(sw['GSw_HourlyClusterYear'])]
-        ### Make 7 copies to line up with the 7 years of VRE data
+def create_load(val_r, sw, inputs_case, select_year=2012):
+    load = read_file(
+        os.path.join(inputs_case,'load'), index_columns=2,
+    ### Subset to modeled regions
+    )[val_r]
+    ### Subset to cluster year; if it's not included, keep the latest year
+    loadyears = load.index.get_level_values('year').unique()
+    keepyear = (
+        int(sw['GSw_HourlyClusterYear']) if int(sw['GSw_HourlyClusterYear']) in loadyears
+        else max(loadyears))
+    load = load.loc[keepyear].copy()
+    ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
+    scalars = pd.read_csv(
+        os.path.join(inputs_case,'scalars.csv'),
+        header=None, usecols=[0,1], index_col=0, squeeze=True)
+    load *= (1 - scalars['distloss'])
+    ### If necessary, make 7 copies to line up with the 7 years of VRE data
+    if ('EER' not in sw.GSw_EFS1_AllYearLoad) and ('historic' not in sw.GSw_EFS1_AllYearLoad):
         load = pd.concat([load]*7, axis=0, ignore_index=True)
 
     # Add year and hour indices
@@ -202,7 +218,7 @@ def create_load(rfeas, sw, basedir, select_year=2012):
     #organize the data for gams to read in as a table with hours in 
     # the first column and regions in the proceeding columns.
     # Here, we keep the "year" column for use in the clustering.
-    cols = ['year','hour'] + rfeas
+    cols = ['year','hour'] + val_r
 
     #subset load based on GSw_HourlyClusterMultiYear switch
     if int(sw['GSw_HourlyClusterMultiYear'])==0:
@@ -214,72 +230,102 @@ def create_load(rfeas, sw, basedir, select_year=2012):
     return load_out
 
 
-def create_outputs(cf_representative,load_representative,rfeas,rs):
+def create_timeslice_profiles(cf_representative, load_representative, val_r, rs, sw):
 
-    regions = collect_regions(rfeas,rs)
+    regions = collect_regions(val_r,rs)
 
-    # make subsets of larger datasets based on 
+    ### Downselect to modeled regions
     cf_rep = cf_representative[cf_representative['region'].isin(regions)].copy()
-    load_rep = load_representative[load_representative['region'].isin(rfeas)]
+    load_rep = load_representative[load_representative['region'].isin(val_r)]
 
-    #need to rename csp set such that it matches with the sets defined
-    # in b_inputs - this gets broadcast to all appropriate csp types
-    # via the tg_rsc_agg set in b_inputs
-    cf_rep["property"] = (
-        cf_rep["property"].str.replace("csp","csp1",case=False).values)
+    ### As in cfgather.py, we duplicate the csp1 profiles for each CSP tech
+    cfcsp = cf_rep.loc[cf_rep.property.str.startswith('csp')].copy()
+    cfcsp['resource_class'] = cfcsp.property.map(lambda x: int(x.split('_')[1]))
+    cfcsp = pd.concat([
+        cfcsp.assign(property=cfcsp.property.str.replace('csp',f'csp{i}'))
+        for i in sw['GSw_CSP_Types']
+    ])
 
-    # TODO: Need to differentiate between cf_rep inputs
-    # (when doing representative days) and cf (when doing 8760) here
-    cf_rep = cf_rep.rename(
-        columns={'region':'r','property':'i','hour':'h'})
-    load_rep = load_rep.rename(
-        columns={'region':'r','hour':'h'})
+    ### csp-ns profile is copied from the best csp profile in each region
+    r2class = (
+        cfcsp.loc[cfcsp.property.str.startswith('csp1'), ['resource_class','region']]
+        ## csp class number increases with resource quality, so keep the highest-numbered
+        ## resource class in each region
+        .sort_values('resource_class').drop_duplicates(subset=['region'], keep='last')
+        .set_index('region').resource_class)
+    r2class = 'csp1_' + r2class.astype(str)
+    cfcspns = cfcsp.loc[
+        (cfcsp.tech=='csp')
+        & (cfcsp.region.map(r2class)==cfcsp.property)
+    ].assign(property='csp-ns')
+    ### Drop the original 'csp' profile and append the duplicated CSP profiles to rest of cf's
+    cf_rep = pd.concat([cf_rep.loc[cf_rep.tech != 'csp'], cfcsp, cfcspns])
 
-    cf_all = cf_rep[['i','r','h','value']]
-    load = load_rep[['h','r','value']]
+    cf_rep = (
+        cf_rep.rename(columns={'region':'r', 'property':'i', 'hour':'h', 'value':'cf'})
+        [['i','r','h','cf']])
+    load_rep = (
+        load_rep.rename(columns={'region':'r','hour':'h'})
+        [['h','r','value']])
 
-    return cf_all, load
+    return cf_rep, load_rep
 
 
-def make_8760_map(period_szn, sw):
+def make_8760_map(period_szn, select_year, sw):
     """
     """
     hoursperperiod = {'day':24, 'wek':120, 'year':np.nan}[sw['GSw_HourlyType']]
     periodsperyear = {'day':365, 'wek':73, 'year':np.nan}[sw['GSw_HourlyType']]
     # create the reference season
     hmap_1yr = pd.DataFrame({
+        'year': select_year,
         'day': (
             [y for x in range(1,366) for y in (x,)*24] if sw['GSw_HourlyType'] == 'year'
             else [y for x in range(1,periodsperyear+1) for y in (x,)*hoursperperiod]),
         'hour': range(1,8761),
         'season': (
-            np.ravel([[x]*24 for x in period_szn.season]) if sw['GSw_HourlyType'] == 'year'
-            else np.ravel([[x]*hoursperperiod for x in period_szn.season])),
+            np.ravel([[x]*24 for x in period_szn]) if sw['GSw_HourlyType'] == 'year'
+            else np.ravel([[x]*hoursperperiod for x in period_szn])),
         'periodhour': (
             list(range(1,25))*365 if sw['GSw_HourlyType'] == 'year'
             else list(range(1,hoursperperiod+1))*periodsperyear),
     })
-    ### If using representative years (i.e. 8760) the timeslices are just hours
+    ### create the timestamp index: y{20xx}d{xxx}h{xx} (left-padded with 0)
     if sw['GSw_HourlyType'] == 'year':
-        hmap_1yr['h'] = 'h' + hmap_1yr.hour.astype(str)
+        ### If using a chronological year (i.e. 8760) the day index uses actual days
+        hmap_1yr['h'] = (
+            f'y{select_year}'
+            + 'd' + hmap_1yr.day.astype(str).map('{:>03}'.format)
+            + 'h' + hmap_1yr.periodhour.astype(str).map('{:>03}'.format)
+        )
     else:
-        season_periodhour2h = dict(zip(
-            [(season,periodhour)
-                for season in [f'szn{s+1}' for s in range(int(sw['GSw_HourlyNumClusters']))]
-                for periodhour in range(1,hoursperperiod+1)],
-            [f'h{h+1}' for h in range(int(sw['GSw_HourlyNumClusters'])*hoursperperiod)]
-        ))
-        hmap_1yr['h'] = hmap_1yr.apply(
-            lambda row: season_periodhour2h[row.season, row.periodhour], axis=1)
+        ### If using representative periods (days/weks) the period index uses
+        ### representative periods, which are in the 'season' column
+        hmap_1yr['h'] = (
+            hmap_1yr.season
+            + 'h' + hmap_1yr.periodhour.astype(str).map('{:>03}'.format)
+        )
+
+    ### Keep actual h and period for postprocessing
+    hmap_1yr['actual_period'] = (
+        f'y{select_year}'
+        + sw['GSw_HourlyType'][0] + hmap_1yr.day.astype(str).map('{:>03}'.format)
+    )
+    hmap_1yr['actual_h'] = (
+        hmap_1yr.actual_period
+        + 'h' + hmap_1yr.periodhour.astype(str).map('{:>03}'.format)
+    )
 
     ### Create the 7-year version for Augur
     hmap_7yr = pd.concat(
-        {y: hmap_1yr for y in range(2007,2014)}, names=('year',),
+        {y: hmap_1yr.drop('year', axis=1) for y in range(2007,2014)}, names=('year',),
         axis=0,
     ).reset_index(level='year').reset_index(drop=True)
     hmap_7yr['hour'] = range(1, 8760*7+1)
+    for col in ['actual_period', 'actual_h']:
+        hmap_7yr[col] = 'y' + hmap_7yr.year.astype(str) + hmap_7yr[col].str[5:]
 
-    return hmap_7yr,  hmap_1yr
+    return hmap_7yr, hmap_1yr
 
 
 def duplicate_r_rs(df,mapper):
@@ -310,17 +356,164 @@ def get_season_peaks_hourly(load, sw, hierarchy, hour2szn):
     seasons = hour2szn.unique()
     peak_out = {}
     for r in load.r.unique():
+        load_r = load.loc[load.r==r].set_index('hour').MW
+        peak_szn = peakhour_agg_byseason[hierarchy.loc[r,sw['GSw_PRM_hierarchy_level']]]
         for szn in seasons:
-            peak_out[r,szn] = float(load.loc[
-                (load.r==r)
-                & (load.hour==peakhour_agg_byseason.loc[
-                    szn, hierarchy.loc[r,sw['GSw_PRM_hierarchy_level']]]),
-                'MW'
-            ])
+            peak_out[r,szn] = float(load_r[peak_szn[szn]])
     peak_out = (
         pd.Series(peak_out).rename('MW')
         .reset_index().rename(columns={'level_0':'r','level_1':'szn'}))
     return peak_out
+
+
+def optimize_period_weights(profiles_fitperiods, numclusters=100, select_year=2012):
+    """
+    The optimization approach (minimizing sum of absolute errors) is described at
+    https://optimization.mccormick.northwestern.edu/index.php/Optimization_with_absolute_values
+    The general idea of optimizing period weights to reproduce regional variability is similar
+    to the method used in the EPRI US-REGEN model, described at
+    https://www.epri.com/research/products/000000003002016601
+    """
+    #%% Imports
+    import pulp
+
+    #%% Input processing
+    profiles_day = (
+        profiles_fitperiods.loc[select_year].groupby(['property','region'], axis=1).mean())
+    profiles_mean = profiles_day.mean()
+    numdays = len(profiles_day)
+    days = profiles_day.index.values
+
+    #%% Optimization: minimize sum of absolute errors
+    m = pulp.LpProblem('LinearDaySelection', pulp.LpMinimize)
+    ###### Variables
+    ### day weights
+    WEIGHT = pulp.LpVariable.dicts('WEIGHT', (d for d in days), lowBound=0, cat='Continuous')
+    ### errors
+    ERROR_POS = pulp.LpVariable.dicts(
+        'ERROR_POS', (c for c in profiles_day.columns), lowBound=0, cat='Continuous')
+    ERROR_NEG = pulp.LpVariable.dicts(
+        'ERROR_NEG', (c for c in profiles_day.columns), lowBound=0, cat='Continuous')
+    ###### Constraints
+    ### weights must sum to 1
+    m += pulp.lpSum([WEIGHT[d] for d in days]) == 1
+    ### definition of errors
+    for c in profiles_day.columns:
+        m += (
+            ### Full error for column (given by positive component minus negative component)...
+            ERROR_POS[c] - ERROR_NEG[c]
+            ### ...plus sum of values for weighted representative days...
+            + pulp.lpSum([WEIGHT[d] * profiles_day[c][d] for d in days])
+            ### ...equals the mean for that column
+            == profiles_mean[c])
+    ###### Objective: minimize the sum of absolute values of errors across all columns
+    m += pulp.lpSum([
+        ERROR_POS[c] + ERROR_NEG[c]
+        for c in profiles_day.columns
+    ])
+
+    #%% Solve it
+    m.solve(solver=pulp.PULP_CBC_CMD(msg=True))
+
+    ### Collect weights, scaled by total number of days
+    weights = pd.Series({d:WEIGHT[d].varValue for d in days}) * numdays
+
+    #%% Truncate based on numclusters, scale appropriately, and convert to integers
+    ### Keep the the 'numclusters' highest-weighted days
+    rweights = (weights.sort_values(ascending=False)[:numclusters].iloc[::-1])
+    ### Scale so that the weights sum to numdays (have to do if numclusters is small)
+    rweights *= numdays / rweights.sum()
+    ### Sort from smallest to largest and convert to integers
+    iweights = rweights.iloc[::-1].round(0).astype(int)
+    sumweights = iweights.sum()
+    diffweights = sumweights - numdays
+    ### Add or drop days as necessary to sum to numdays
+    if diffweights < 0:
+        ### Scale it up little by little until it sums to 365
+        for i in range(1000000):
+            iweights = (rweights.iloc[::-1]*(1+0.00001*i)).round(0).astype(int)
+            sumweights = iweights.sum()
+            diffweights = sumweights - numdays
+            if diffweights >= 0:
+                break
+    elif diffweights > 0:
+        for d in iweights.index:
+            if iweights[d] >= diffweights:
+                ### Just subtract diffweights from the smallest weight and stop
+                iweights[d] -= diffweights
+                break
+            else:
+                ### Subtract the whole value of the smallest weight, then keep going
+                diffweights -= iweights[d]
+                iweights[d] = 0
+
+    iweights = iweights.replace(0,np.nan).dropna().astype(int).iloc[::-1]
+    ### Make sure it worked
+    if iweights.sum() != numdays:
+        raise ValueError(f'Sum of rounded weights = {iweights.sum()} != {numdays}')
+
+    return profiles_day, iweights
+
+
+def assign_representative_days(profiles_day, rweights):
+    """
+    """
+    #%% Imports
+    import pulp
+
+    #%% Input processing
+    actualdays = profiles_day.index.values
+    repdays = list(rweights.index)
+
+    #%% Optimization: minimize sum of absolute errors
+    m = pulp.LpProblem('RepDayAssignment', pulp.LpMinimize)
+    ###### Variables
+    ### Weighting of rep days (r) for each actual day (a).
+    ### Can only use whole days, so it's a binary variable.
+    WEIGHT = pulp.LpVariable.dicts(
+        'WEIGHT', ((a,r) for a in actualdays for r in repdays),
+        lowBound=0, upBound=1, cat=pulp.LpInteger)
+    ### Errors. These are defined for features (c) and for actual days (a).
+    ERROR_POS = pulp.LpVariable.dicts(
+        'ERROR_POS', ((a,c) for a in actualdays for c in profiles_day.columns),
+        lowBound=0, cat='Continuous')
+    ERROR_NEG = pulp.LpVariable.dicts(
+        'ERROR_NEG', ((a,c) for a in actualdays for c in profiles_day.columns),
+        lowBound=0, cat='Continuous')
+    ###### Constraints
+    ### Each actual day can only be assigned to one representative day
+    for a in actualdays:
+        m += pulp.lpSum([WEIGHT[a,r] for r in repdays]) == 1
+    ### Each representative day must be used a number of times equal to its weight
+    for r in repdays:
+        m += pulp.lpSum([WEIGHT[a,r] for a in actualdays]) == rweights[r]
+    ### Define the error variables
+    for a in actualdays:
+        for c in profiles_day.columns:
+            m += (
+                ### Full error for column on actual day (given by positive
+                ### component minus negative component)...
+                ERROR_POS[a,c] - ERROR_NEG[a,c]
+                ### ...plus value for its representative day (since WEIGHT is binary)...
+                + pulp.lpSum([WEIGHT[a,r] * profiles_day[c][r] for r in repdays])
+                ### ...equals the actual value for that column and day
+                == profiles_day[c][a])
+    ###### Objective: minimize the sum of absolute values of errors
+    m += pulp.lpSum([
+        ERROR_POS[a,c] + ERROR_NEG[a,c]
+        for a in actualdays for c in profiles_day.columns
+    ])
+
+    #%% Solve it
+    m.solve(solver=pulp.PULP_CBC_CMD(msg=True))
+
+    ### Collect assignments
+    assignments = pd.Series(
+        {(a,r):WEIGHT[a,r].varValue for a in actualdays for r in repdays}).astype(int)
+    assignments.index = assignments.index.rename(['act','rep'])
+    a2r = assignments.replace(0,np.nan).dropna().reset_index(level='rep').rep
+
+    return a2r
 
 
 ######################
@@ -399,9 +592,48 @@ def plot_unclustered_periods(profiles, profiles_scaled, basedir, figpath):
         plt.close()
 
 
+def plot_feature_scatter(profiles_fitperiods, basedir, figpath):
+    """
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib as mpl
+    import site
+    site.addsitedir(os.path.join(basedir,'postprocessing'))
+    import plots
+    plots.plotparams()
+    ### Settings
+    colors = plots.rainbowmapper(profiles_fitperiods.columns.get_level_values('region').unique())
+    props = ['load','upv','wind-ons']
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(3,3,figsize=(7,7),sharex='col',sharey='row')
+    for row, yax in enumerate(props):
+        for col, xax in enumerate(props):
+            for region, c in colors.items():
+                ax[row,col].plot(
+                    profiles_fitperiods[xax][region].values,
+                    profiles_fitperiods[yax][region].values,
+                    c=c, lw=0, markeredgewidth=0, ms=5, alpha=0.5, marker='o',
+                    label=(region if (row,col)==(1,2) else '_nolabel'),
+                )
+    ### Formatting
+    ax[1,-1].legend(
+        loc='center left', bbox_to_anchor=(1,0.5), frameon=False, fontsize='large',
+        handletextpad=0.3,handlelength=0.7,
+    )
+    for i, prop in enumerate(props):
+        ax[-1,i].set_xlabel(prop)
+        ax[i,0].set_ylabel(prop)
+
+    plots.despine(ax)
+    plt.savefig(os.path.join(figpath,'feature_scatter.png'))
+    if interactive: plt.show()
+    plt.close()
+
+
 def plot_clustered_days(
-        profiles_fitperiods, profiles_scaled, idx,
-        centroids, numclusters, forceperiods, repperiods, sw, basedir, figpath):
+        profiles_fitperiods_hourly, profiles_scaled, idx, rep_periods,
+        forceperiods, nearest_period, sw, basedir, figpath):
     """
     """
     import matplotlib.pyplot as plt
@@ -411,20 +643,24 @@ def plot_clustered_days(
     import plots
     plots.plotparams()
 
-    properties = profiles_fitperiods.columns.get_level_values('property').unique()
-    nhours = (len(profiles_fitperiods.columns.get_level_values('region').unique())
+    ### Input processing
+    numclusters = int(sw['GSw_HourlyNumClusters'])
+    centroids = profiles_scaled.loc[select_year].loc[rep_periods]
+    properties = profiles_fitperiods_hourly.columns.get_level_values('property').unique()
+    nhours = (len(profiles_fitperiods_hourly.columns.get_level_values('region').unique())
               * (24 if sw['GSw_HourlyType']=='day' else 120))
+    ### Plot it
     plt.close()
     f,ax = plt.subplots(
         len(properties), numclusters+len(forceperiods),
         sharey='row', sharex=True, figsize=(nhours/12*numclusters/3,6))
     for row, prop in enumerate(properties):
         for col in range(numclusters):
-            profiles_fitperiods.loc[:,idx==col,:][prop].T.reset_index(drop=True).plot(
+            profiles_fitperiods_hourly.loc[:,idx==col,:][prop].T.reset_index(drop=True).plot(
                 ax=ax[row,col], lw=0.2, legend=False)
             centroids[prop].T[col].reset_index(drop=True).plot(
                 ax=ax[row,col], lw=1.5, ls=':', c='k', legend=False)
-            profiles_fitperiods.loc[:,repperiods[col],:][prop].T.reset_index(drop=True).plot(
+            profiles_fitperiods_hourly.loc[:,nearest_period[col],:][prop].T.reset_index(drop=True).plot(
                 ax=ax[row,col], lw=1.5, c='k', legend=False)
         for col, period in enumerate(forceperiods):
             profiles_scaled.loc[:,period,:][prop].T.reset_index(drop=True).plot(
@@ -452,7 +688,7 @@ def plot_clustered_days(
     plt.close()
 
 
-def plot_clusters_pca(profiles_fitperiods, idx, sw, basedir, figpath):
+def plot_clusters_pca(profiles_fitperiods_hourly, idx, sw, basedir, figpath):
     """
     """
     import matplotlib.pyplot as plt
@@ -465,7 +701,7 @@ def plot_clusters_pca(profiles_fitperiods, idx, sw, basedir, figpath):
 
     # ###### 3D version (not too informative)
     # pca = sklearn.decomposition.PCA(n_components=3)
-    # transformed = pd.DataFrame(pca.fit_transform(profiles_fitperiods))
+    # transformed = pd.DataFrame(pca.fit_transform(profiles_fitperiods_hourly))
     # from mpl_toolkits import mplot3d
     # plt.close()
     # ax = plt.axes(projection='3d')
@@ -477,7 +713,7 @@ def plot_clusters_pca(profiles_fitperiods, idx, sw, basedir, figpath):
     # plt.show()
 
     pca = sklearn.decomposition.PCA(n_components=2)
-    transformed = pd.DataFrame(pca.fit_transform(profiles_fitperiods))
+    transformed = pd.DataFrame(pca.fit_transform(profiles_fitperiods_hourly))
     colors = plots.rainbowmapper(range(int(sw['GSw_HourlyNumClusters'])))
 
     plt.close()
@@ -494,7 +730,7 @@ def plot_clusters_pca(profiles_fitperiods, idx, sw, basedir, figpath):
 
 
 def plot_ldc(
-        period_szn, profiles_scaled, select_year, medoid_idx,
+        period_szn, profiles_scaled, select_year, rep_periods,
         forceperiods_write, sw, basedir, figpath):
     """
     """
@@ -505,14 +741,12 @@ def plot_ldc(
     import plots
     plots.plotparams()
 
-    colors = plots.rainbowmapper(medoid_idx.season.values, plt.cm.turbo)
-    yperiod2color = (period_szn.set_index('day').season.str.strip('szn').astype(int)-1).map(colors)
+    colors = plots.rainbowmapper(rep_periods, plt.cm.turbo)
 
     ### Get clustered load, repeating representative periods based on how many
     ### periods they represent
-    numperiods = period_szn.season.value_counts().rename('numperiods').to_frame()
-    numperiods['season'] = numperiods.index.map(lambda x: int(x.strip('szn'))-1)
-    numperiods['yperiod'] = numperiods.season.map(medoid_idx.set_index('season').yperiod)
+    numperiods = period_szn.value_counts().rename('numperiods').to_frame()
+    numperiods['yperiod'] = numperiods.index.map(szn2period)
     periods = [[row[1].yperiod]*row[1].numperiods for row in numperiods.iterrows()]
     periods = [item for sublist in periods for item in sublist]
 
@@ -526,11 +760,11 @@ def plot_ldc(
     hourly_out = hourly_in.unstack('h_of_period').loc[periods].stack('h_of_period')
 
     #### Daily
-    periodly_in = hourly_in.mean(axis=0, level='yperiod')
+    periodly_in = hourly_in.groupby('yperiod').mean()
     ## Index doesn't matter; replace it so we can take daily mean
     periodly_out = hourly_out.copy()
     hourly_out.index = hourly_in.index.copy()
-    periodly_out = hourly_out.mean(axis=0, level='yperiod')
+    periodly_out = hourly_out.groupby('yperiod').mean()
 
     ### Get axis coordinates: properties = rows, regions = columns
     properties = periodly_out.columns.get_level_values('property').unique().values
@@ -613,43 +847,47 @@ def plot_maps(sw, inputs_case, basedir, figpath):
     plots.plotparams()
     ### Settings
     cmaps = {
-        'cf_h17':'turbo', 'cf_hourly':'turbo', 'cf_diff':'coolwarm',
-        'GW_h17':'gist_earth_r', 'GW_hourly':'gist_earth_r',
+        'cf_full':'turbo', 'cf_hourly':'turbo', 'cf_diff':'coolwarm',
+        'GW_full':'gist_earth_r', 'GW_hourly':'gist_earth_r',
         'GW_diff':'coolwarm', 'GW_frac':'coolwarm', 'GW_pct':'coolwarm', 
     }
     vm = {
-        'wind-ons':{'cf_h17':(0,0.8),'cf_hourly':(0,0.8),'cf_diff':(-0.4,0.4)},
-        'upv':{'cf_h17':(0,0.4),'cf_hourly':(0,0.4),'cf_diff':(-0.2,0.2)},
+        'wind-ons':{'cf_full':(0,0.8),'cf_hourly':(0,0.8),'cf_diff':(-0.05,0.05)},
+        'upv':{'cf_full':(0,0.4),'cf_hourly':(0,0.4),'cf_diff':(-0.05,0.05)},
     }
-    vlimload = 0.1
+    vlimload = 0.05
     title = (
-        'Algorithm={}, CenterType={}, NumClusters={}, RegionLevel={},\n'
+        'Algorithm={}, NumClusters={}, RegionLevel={},\n'
         'PeakLevel={}, MinRElevel={}, ClusterWeights={}'
     ).format(
-        sw['GSw_HourlyClusterAlgorithm'], sw['GSw_HourlyCenterType'],
+        sw['GSw_HourlyClusterAlgorithm'],
         sw['GSw_HourlyNumClusters'], sw['GSw_HourlyClusterRegionLevel'],
         sw['GSw_HourlyPeakLevel'], sw['GSw_HourlyMinRElevel'],
         '__'.join(['_'.join([
             str(i),str(v)]) for (i,v) in sw['GSw_HourlyClusterWeights'].iteritems()]))
     techs = ['wind-ons','upv']
-    colors = {'cf_h17':'k', 'cf_hourly':'C1'}
-    lss = {'cf_h17':':', 'cf_hourly':'-'}
-    zorders = {'cf_h17':10, 'cf_hourly':9}
+    colors = {'cf_full':'k', 'cf_hourly':'C1'}
+    lss = {'cf_full':':', 'cf_hourly':'-'}
+    zorders = {'cf_full':10, 'cf_hourly':9}
 
-    ### Get supply curve positions
+    ### Get the CF data over all years, take the mean
+    recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5')).mean()
+
+    ### Get supply curves
     dfsc = {}
     for tech in techs:
         dfsc[tech] = pd.read_csv(
             os.path.join(
                 basedir,'inputs','supplycurvedata',
-                '{}_supply_curve_{}1300bin-{}.csv'.format(
-                    tech,'sreg' if tech == 'wind-ons' else '',sw['GSw_SitingWindOns']))
+                '{}_supply_curve{}-{}.csv'.format(
+                    tech,'_sreg' if tech == 'wind-ons' else '',sw['GSw_SitingWindOns']))
         ).rename(columns={'region':'r'})
         dfsc[tech]['i'] = tech + '_' + dfsc[tech]['class'].astype(str)
 
     dfsc = pd.concat(dfsc, axis=0, names=('tech',)).drop(
-        ['dist_km','dist_mi','supply_curve_cost_per_mw'], axis=1)
+        ['dist_km','dist_mi','supply_curve_cost_per_mw'], errors='ignore', axis=1)
 
+    ### Add geographic and CF information
     sitemap = pd.read_csv(
         os.path.join(basedir,'inputs','supplycurvedata','sitemap.csv'),
         index_col='sc_point_gid',
@@ -657,6 +895,9 @@ def plot_maps(sw, inputs_case, basedir, figpath):
 
     dfsc['latitude'] = dfsc.sc_point_gid.map(sitemap.latitude)
     dfsc['longitude'] = dfsc.sc_point_gid.map(sitemap.longitude)
+    dfsc = plots.df2gdf(dfsc)
+    dfsc['resource'] = dfsc.i + '_' + dfsc.r
+    dfsc['cf_full'] = dfsc.resource.map(recf)
 
     ### Get the BA map
     dfba = gpd.read_file(os.path.join(basedir,'inputs','shapefiles','US_PCA')).set_index('rb')
@@ -665,58 +906,33 @@ def plot_maps(sw, inputs_case, basedir, figpath):
     ### Aggregate to states
     dfstates = dfba.dissolve('st')
 
-    ### Get some other shared parameters
-    hours_h17 = pd.read_csv(
-        os.path.join(inputs_case,'numhours.csv'),
-        header=None, names=['h','numhours'], index_col='h', squeeze=True,
-    )
+    ### Get the hourly data
     hours = pd.read_csv(
-        os.path.join(inputs_case,'hours_hourly.csv')
+        os.path.join(inputs_case,'numhours.csv')
     ).rename(columns={'*h':'h'}).set_index('h').numhours
+    dfcf = pd.read_csv(os.path.join(inputs_case,'cf_vre.csv')).rename(columns={'*i':'i'})
 
     for tech in techs:
-        ### Get the h17 data
-        dfcf = pd.read_csv(os.path.join(inputs_case,'cfout.csv'))
-        dfcf = dfcf.loc[dfcf.i.str.lower().str.startswith(tech)].set_index(['r','i'])
+        ### Get the annual average CF of the hourly-processed data
+        cf_hourly = dfcf.loc[dfcf.i.str.startswith(tech)].pivot(
+            index=['i','r'],columns='h',values='cf')
+        cf_hourly = (
+            (cf_hourly * cf_hourly.columns.map(hours)).sum(axis=1) / hours.sum()
+        ).rename('cf_hourly').reset_index()
+        cf_hourly['resource'] = cf_hourly.i + '_' + cf_hourly.r
 
-        dfmap_h17 = dfcf.rename(columns=(dict(zip(dfcf.columns, dfcf.columns.str.lower()))))
-
-        dfmap_h17 = (
-            (dfmap_h17 * dfmap_h17.columns.map(hours_h17)).sum(axis=1) / 8760
-        ).rename('cf').reset_index()
-        dfmap_h17.i = dfmap_h17.i.str.lower()
-
-        dfmap_h17 = dfmap_h17.merge(dfsc.loc[tech][['i','r','longitude','latitude']], on=['i','r'])
-        dfmap_h17['geometry'] = dfmap_h17.apply(
-            lambda row: shapely.geometry.Point(row.longitude, row.latitude), axis=1)
-        dfmap_h17 = gpd.GeoDataFrame(dfmap_h17, crs='EPSG:4326').to_crs('ESRI:102008')
-
-        ### Get the hourly data
-        dfcf = pd.read_csv(os.path.join(inputs_case,'cf_hourly.csv')).rename(columns={'*i':'i'})
-
-        dfmap = dfcf.loc[dfcf.i.str.startswith(tech)].pivot(
-            index=['i','r'],columns='h',values='value')
-        dfmap = ((dfmap * dfmap.columns.map(hours)).sum(axis=1) / 8760).rename('cf').reset_index()
-
-        dfmap = dfmap.merge(dfsc.loc[tech][['i','r','longitude','latitude']], on=['i','r'])
-        dfmap['geometry'] = dfmap.apply(
-            lambda row: shapely.geometry.Point(row.longitude, row.latitude), axis=1)
-        dfmap = gpd.GeoDataFrame(dfmap, crs='EPSG:4326').to_crs('ESRI:102008')
-
-        ### Take the difference
-        dfdiff = dfmap.merge(
-            dfmap_h17, on=['i','r','longitude','latitude','geometry'],
-            suffixes=('_hourly','_h17')
-        )
-        dfdiff['cf_diff'] = dfdiff.cf_hourly - dfdiff.cf_h17
+        ### Merge with supply curve, take the difference
+        cfmap = dfsc.assign(
+            cf_hourly=dfsc.resource.map(cf_hourly.set_index('resource').cf_hourly)).loc[tech].copy()
+        cfmap['cf_diff'] = cfmap.cf_hourly - cfmap.cf_full
 
         ### Plot the difference map
         plt.close()
         f,ax = plt.subplots(1,3,figsize=(13,4),gridspec_kw={'wspace':-0.05})
         for col in range(3):
             dfstates.plot(ax=ax[col], facecolor='none', edgecolor='k', lw=0.25, zorder=10000)
-        for x,col in enumerate(['cf_h17','cf_hourly','cf_diff']):
-            dfdiff.plot(
+        for x,col in enumerate(['cf_full','cf_hourly','cf_diff']):
+            cfmap.plot(
                 ax=ax[x], column=col, cmap=cmaps[col],
                 marker='s', markersize=0.4, lw=0, legend=True,
                 legend_kwds={'shrink':0.75,'orientation':'horizontal',
@@ -733,10 +949,10 @@ def plot_maps(sw, inputs_case, basedir, figpath):
         ### Plot the distribution of capacity factors
         plt.close()
         f,ax = plt.subplots()
-        for col in ['cf_h17','cf_hourly']:
+        for col in ['cf_full','cf_hourly']:
             ax.plot(
-                np.linspace(0,100,len(dfdiff)),
-                dfdiff.sort_values('cf_h17', ascending=False)[col].values,
+                np.linspace(0,100,len(cfmap)),
+                cfmap.sort_values('cf_full', ascending=False)[col].values,
                 label=col.split('_')[1],
                 color=colors[col], ls=lss[col], zorder=zorders[col],
             )
@@ -754,70 +970,44 @@ def plot_maps(sw, inputs_case, basedir, figpath):
         plt.close()
 
     ###### Do it again for load
-    ### Get the h17 data
-    if sw['GSw_EFS1_AllYearLoad'] != 'default':
-        dfmap_h17 = pd.read_csv(
-            os.path.join(inputs_case,'load_all.csv'),
-            index_col=['r','h']
-        )[str(sw['GSw_HourlyClusterYear'])].rename('MW').unstack('h')
-    else:
-        dfmap_h17 = pd.read_csv(
-            os.path.join(inputs_case,'load_2010.csv'), index_col='r',
-        )
-
-    dfmap_h17 = dfmap_h17.rename(
-        columns=dict(zip(dfmap_h17.columns, dfmap_h17.columns.str.lower())))
-    hours = pd.read_csv(
-        os.path.join(inputs_case,'numhours.csv'),
-        header=None, names=['h','numhours'], index_col='h', squeeze=True,
-    )
-
-    dfmap_h17 = (
-        (dfmap_h17 * dfmap_h17.columns.map(hours)).sum(axis=1) / 8760 / 1E3
-    ).rename('GW').reset_index()
-    dfmap_h17 = dfba.merge(dfmap_h17, left_on='rb', right_on='r')
-
-    ### Get the hourly data
-    if sw['GSw_EFS1_AllYearLoad'] != 'default':
-        dfload = pd.read_csv(
-            os.path.join(inputs_case,'load_all_hourly.csv'),
-            index_col=['r','h']
-        )[str(sw['GSw_HourlyClusterYear'])].rename('MW').reset_index()
-    else:
-        dfload = pd.read_csv(
-            os.path.join(inputs_case,'load_hourly.csv')
-        ).rename(columns={'*h':'h','value':'MW'})
-
-    hours = pd.read_csv(
-        os.path.join(inputs_case,'hours_hourly.csv')
-    ).rename(columns={'*h':'h'}).set_index('h').numhours
-
-    dfmap = dfload.pivot(index=['r'],columns='h',values='MW')
-    dfmap = (
-        (dfmap * dfmap.columns.map(hours)).sum(axis=1) / 8760 / 1E3
-    ).rename('GW').reset_index()
-    dfmap = dfba.merge(dfmap, left_on='rb', right_on='r')
-
-    ### Take the difference
-    dfdiff = dfmap.merge(
-        dfmap_h17[['r','GW',]], on=['r'],
-        suffixes=('_hourly','_h17')
-    )
-    dfdiff['GW_diff'] = dfdiff.GW_hourly - dfdiff.GW_h17
-    dfdiff['GW_frac'] = dfdiff.GW_hourly / dfdiff.GW_h17 - 1
+    ### Get the full hourly data, take the mean for the cluster year
+    load_raw = pd.read_hdf(os.path.join(inputs_case, 'load.h5'))
+    loadyears = load_raw.index.get_level_values('year').unique()
+    keepyear = (
+        int(sw['GSw_HourlyClusterYear']) if int(sw['GSw_HourlyClusterYear']) in loadyears
+        else max(loadyears))
+    load_raw = load_raw.loc[keepyear].mean() / 1000
+    ## load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
+    scalars = pd.read_csv(
+        os.path.join(inputs_case,'scalars.csv'),
+        header=None, usecols=[0,1], index_col=0, squeeze=True)
+    load_raw *= (1 - scalars['distloss'])
+    ### Get the representative data, take the mean for the cluster year
+    load_allyear = (
+        pd.read_csv(os.path.join(inputs_case, 'load_allyear.csv'), index_col=['r','h'])
+        [str(keepyear)]
+        .multiply(hours).groupby('r').sum()
+        / hours.sum()
+    ) / 1000
+    ### Map it
+    dfmap = dfba.copy()
+    dfmap['GW_full'] = load_raw
+    dfmap['GW_hourly'] = load_allyear
+    dfmap['GW_diff'] = dfmap.GW_hourly - dfmap.GW_full
+    dfmap['GW_frac'] = dfmap.GW_hourly / dfmap.GW_full - 1
 
     ### Plot the difference map
     plt.close()
     f,ax = plt.subplots(1,3,figsize=(13,4),gridspec_kw={'wspace':-0.05})
     for col in range(3):
         dfstates.plot(ax=ax[col], facecolor='none', edgecolor='k', lw=0.25, zorder=10000)
-    for x,col in enumerate(['GW_h17','GW_hourly','GW_frac']):
-        dfdiff.plot(
+    for x,col in enumerate(['GW_full','GW_hourly','GW_frac']):
+        dfmap.plot(
             ax=ax[x], column=col, cmap=cmaps[col], legend=True,
             legend_kwds={'shrink':0.75,'orientation':'horizontal',
                         'label':'load {}'.format(col), 'pad':0},
             vmin=(0 if col != 'GW_frac' else -vlimload),
-            vmax=(dfdiff[['GW_h17','GW_hourly']].max().max() if col != 'GW_frac' else vlimload),
+            vmax=(dfmap[['GW_full','GW_hourly']].max().max() if col != 'GW_frac' else vlimload),
         )
         ax[x].axis('off')
     ax[0].set_title(title, y=0.95, x=0.05, ha='left', fontsize=10)
@@ -827,20 +1017,20 @@ def plot_maps(sw, inputs_case, basedir, figpath):
     plt.close()
 
     ### Plot the distribution of load by region
-    colors = {'GW_h17':'k', 'GW_hourly':'C1'}
-    lss = {'GW_h17':':', 'GW_hourly':'-'}
-    zorders = {'GW_h17':10, 'GW_hourly':9}
+    colors = {'GW_full':'k', 'GW_hourly':'C1'}
+    lss = {'GW_full':':', 'GW_hourly':'-'}
+    zorders = {'GW_full':10, 'GW_hourly':9}
     plt.close()
     f,ax = plt.subplots()
-    for col in ['GW_h17','GW_hourly']:
+    for col in ['GW_full','GW_hourly']:
         ax.plot(
-            range(1,len(dfdiff)+1),
-            dfdiff.sort_values('GW_h17', ascending=False)[col].values,
-            label='{} ({:.1f} GW mean)'.format(col.split('_')[1], dfdiff[col].sum()),
+            range(1,len(dfmap)+1),
+            dfmap.sort_values('GW_full', ascending=False)[col].values,
+            label='{} ({:.1f} GW mean)'.format(col.split('_')[1], dfmap[col].sum()),
             color=colors[col], ls=lss[col], zorder=zorders[col],
         )
     ax.set_ylim(0)
-    ax.set_xlim(0,len(dfdiff)+1)
+    ax.set_xlim(0,len(dfmap)+1)
     ax.xaxis.set_minor_locator(mpl.ticker.MultipleLocator(10))
     ax.legend(fontsize='large', frameon=False)
     ax.set_ylabel('Average load [GW]')
@@ -853,7 +1043,7 @@ def plot_maps(sw, inputs_case, basedir, figpath):
     plt.close()
 
 
-def plot_8760(profiles, period_szn, medoid_idx, select_year, basedir, figpath):
+def plot_8760(profiles, period_szn, rep_periods, select_year, basedir, figpath):
     import matplotlib.pyplot as plt
     import matplotlib as mpl
     import site
@@ -874,9 +1064,7 @@ def plot_8760(profiles, period_szn, medoid_idx, select_year, basedir, figpath):
         dforig = pd.concat(dforig, axis=1)
 
         ### Representative profiles
-        periodmap = period_szn.assign(iszn=period_szn.season.str.strip('szn').astype(int)-1)
-        periodmap['repperiod'] = periodmap.iszn.map(medoid_idx.set_index('season').yperiod)
-        periodmap = periodmap.set_index('period').repperiod
+        periodmap = period_szn.map(szn2period)
 
         dfrep = {}
         for prop in props:
@@ -954,9 +1142,9 @@ def plot_8760(profiles, period_szn, medoid_idx, select_year, basedir, figpath):
 
 
 def plots_original(
-        profiles_long, profiles, centroid_profiles, medoid_profiles,
-        profiles_scaled, medoid_idx, idx_reedsyr, period_szn,
-        select_year, sw, basedir, figpath,
+        profiles_long, profiles,
+        profiles_scaled, rep_periods, period_szn,
+        select_year, sw, basedir, figpath, make_plots,
     ):
     """
     """
@@ -967,287 +1155,263 @@ def plots_original(
     import plots
     plots.plotparams()
 
-    ### plot a dendrogram
-    plt.close()
-    plt.figure(figsize=(12,9))
-    plt.title("Dendrogram of Time Clusters")
-    dend = scipy.cluster.hierarchy.dendrogram(
-        scipy.cluster.hierarchy.linkage(profiles_scaled, method='ward'),
-        color_threshold=7,
-    )
-    plt.gcf().savefig(os.path.join(figpath,'dendrogram.png'))
-    if interactive: plt.show()
-    plt.close()
+    ### Input processing
+    idx_reedsyr = period_szn.map(szn2period)
+    medoid_profiles = profiles.loc[select_year].loc[rep_periods]
+    centroids = profiles_scaled.loc[select_year].loc[rep_periods]
+    centroid_profiles = centroids * profiles.stack('h_of_period').max()
 
-    #define colors for plotting
     colors = plots.rainbowmapper(list(set(idx_reedsyr)), plt.cm.turbo)
+    hoursperperiod = {'day':24, 'wek':120, 'year':24}[sw['GSw_HourlyType']]
+    periodsperyear = {'day':365, 'wek':73, 'year':365}[sw['GSw_HourlyType']]
 
-    #set up the old quarterly season mapping for comparison
-    df_season_quarterly = make_equal_periods(4)
-    #avg day:
-    quarterly_profiles = pd.merge(profiles_long,df_season_quarterly,on='hour')
-    quarterly_avg_centroids = quarterly_profiles[
-        quarterly_profiles['year']==select_year
-    ].groupby(['property','region','season','h_of_period'], as_index=False).mean()
-    quarterly_avg_centroids = quarterly_avg_centroids.pivot_table(
-        index=['year','season'], columns=['property','region','h_of_period'])['value']
-
-    #h17:
-    quarterly_h17_centroids = quarterly_profiles[
-        quarterly_profiles['year']==select_year
-    ].groupby(['property','region','season','period'],as_index=False).mean()
-    quarterly_h17_centroids = pd.merge(
-        quarterly_profiles, quarterly_h17_centroids,
-        on=['property','region','season','period'])
-    quarterly_h17_profiles = quarterly_h17_centroids[
-        ['year_x','region','value_y','hour','season','property','yperiod_x','h_of_period']]
-    quarterly_h17_profiles.columns = [
-        'year','region','value','hour','season','property','yperiod','h_of_period']
-
-    quarterly_h17_centroids = quarterly_h17_profiles[
-        ['year','region','value','season','property','h_of_period']].drop_duplicates()
-    quarterly_h17_centroids = quarterly_h17_centroids.pivot_table(
-        index=['year','season'], columns=['property','region','h_of_period'])['value']
-    # TODO: grab top 40 hours for h17 mapping
+    ### plot a dendrogram
+    if make_plots >= 3:
+        plt.close()
+        plt.figure(figsize=(12,9))
+        plt.title("Dendrogram of Time Clusters")
+        dend = scipy.cluster.hierarchy.dendrogram(
+            scipy.cluster.hierarchy.linkage(profiles_scaled, method='ward'),
+            color_threshold=7,
+        )
+        plt.gcf().savefig(os.path.join(figpath,'dendrogram.png'))
+        if interactive: plt.show()
+        plt.close()
 
     ### PLOT ALL DAYS ON SAME X AXIS:
-    ## Map days to axes
-    ncols = len(colors)
-    nrows = 1
-    coords = dict(zip(
-        range(len(colors)),
-        [col for col in range(ncols)]
-    ))
-    plt.close()
-    f,ax = plt.subplots(nrows, ncols, figsize=(1.5*ncols,2.5*nrows), sharex=True, sharey=True)
-    for day in range(len(idx_reedsyr)):
-        szn = idx_reedsyr[day]
-        this_profile = profiles.load.iloc[day].groupby('h_of_period').sum()
-        ax[coords[szn]].plot(
-            range(len(this_profile)), this_profile.values/1e3, color=colors[szn], alpha=0.5)
-    ## add centroids and medoids to the plot:
-    for i in range(len(set(idx_reedsyr))):
-        ## centroids - only for clustered days, not force-included days
-        try:
+    try:
+        ## Map days to axes
+        ncols = len(colors)
+        nrows = 1
+        coords = dict(zip(
+            range(len(colors)),
+            [col for col in range(ncols)]
+        ))
+        plt.close()
+        f,ax = plt.subplots(
+            nrows, ncols, figsize=(1.5*ncols,2.5*nrows), sharex=True, sharey=True)
+        for day in range(len(idx_reedsyr)):
+            szn = idx_reedsyr[day]
+            this_profile = profiles.load.iloc[day].groupby('h_of_period').sum()
+            ax[coords[szn]].plot(
+                range(len(this_profile)), this_profile.values/1e3, color=colors[szn], alpha=0.5)
+        ## add centroids and medoids to the plot:
+        for i in range(len(set(idx_reedsyr))):
+            ## centroids - only for clustered days, not force-included days
+            try:
+                ax[coords[i]].plot(
+                    range(len(this_profile)),
+                    centroid_profiles['load'].iloc[i].groupby('h_of_period').sum().values/1e3,
+                    color='k', alpha=1, linewidth=2, label='centroid',
+                )
+            except IndexError:
+                pass
+            ## medoids
             ax[coords[i]].plot(
                 range(len(this_profile)),
-                centroid_profiles['load'].iloc[i].groupby('h_of_period').sum().values/1e3,
-                color='k', alpha=1, linewidth=2, label='centroid',
+                medoid_profiles['load'].iloc[i].groupby('h_of_period').sum().values/1e3,
+                ls='--', color='0.7', alpha=1, linewidth=2, label='medoid',
             )
-        except IndexError:
-            pass
-        ## medoids
-        ax[coords[i]].plot(
-            range(len(this_profile)),
-            medoid_profiles['load'].iloc[i].groupby('h_of_period').sum().values/1e3,
-            ls='--', color='0.7', alpha=1, linewidth=2, label='medoid',
-        )
-        ## title
-        ax[coords[i]].set_title('szn{}, {} days'.format(i+1, sum(idx_reedsyr == i)), size=9)
-    ### -- Comparison with quarterly season centroids and h17 --
-    # ## quarterly season centroids
-    # linetype = ['-','--','-.',':']
-    # quarterly_szns = df_season_quarterly.season.unique()
-    # for iszn in range(len(quarterly_szns)):
-    #     for i in range(GSw_HourlyNumClusters):
-    #         ax[coords[i]].plot(
-    #             range(len(this_profile)),
-    #             quarterly_avg_centroids.load.xs(
-    #                 quarterly_szns[iszn],level='season'
-    #             ).iloc[0].groupby('h_of_period').sum().values/1e3,
-    #             linetype[iszn], color='c', linewidth=2,
-    #             label='Quarterly Seasons: {} {} avg.'.format(
-    #                 select_year, quarterly_szns[iszn]),
-    #         )
-    #         ## h17
-    #         ax[coords[i]].plot(
-    #             range(len(this_profile)),
-    #             quarterly_h17_centroids.load.xs(
-    #                 quarterly_szns[iszn],level='season'
-    #             ).iloc[0].groupby('h_of_period').sum().values/1e3,
-    #             linetype[iszn], color='m', linewidth=2,
-    #             label='h17: {} {} avg.'.format(
-    #                 select_year, quarterly_szns[iszn]),
-    #         )
+            ## title
+            ax[coords[i]].set_title('szn{}, {} days'.format(i+1, sum(idx_reedsyr == i)), size=9)
 
-    ax[coords[0]].legend(loc='upper left', frameon=False, fontsize='small')
-    ax[coords[0]].set_xlabel('Hour')
-    ax[coords[0]].set_ylabel('Conterminous\nUS Load [GW]', y=0, ha='left')
-    ax[coords[0]].xaxis.set_major_locator(mpl.ticker.MultipleLocator(6 if sw['GSw_HourlyType']=='day' else 24))
-    ax[coords[0]].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(3 if sw['GSw_HourlyType']=='day' else 12))
-    ax[coords[0]].annotate(
-        'Cluster Comparison (All Days in {} Shown)'.format(
-            '2007–2013' if len(profiles.index.unique(level='year')) > 1 else '2012' ),
-        xy=(0,1.2), xycoords='axes fraction', ha='left',
-    )
-    plots.despine(ax)
-    plt.savefig(os.path.join(figpath,'day_comparison_all.png'))
-    if interactive: plt.show()
-    plt.close()
+        ax[coords[0]].legend(loc='upper left', frameon=False, fontsize='small')
+        ax[coords[0]].set_xlabel('Hour')
+        ax[coords[0]].set_ylabel('Conterminous\nUS Load [GW]', y=0, ha='left')
+        ax[coords[0]].xaxis.set_major_locator(
+            mpl.ticker.MultipleLocator(6 if sw['GSw_HourlyType']=='day' else 24))
+        ax[coords[0]].xaxis.set_minor_locator(
+            mpl.ticker.MultipleLocator(3 if sw['GSw_HourlyType']=='day' else 12))
+        ax[coords[0]].annotate(
+            'Cluster Comparison (All Days in {} Shown)'.format(
+                '2007–2013' if len(profiles.index.unique(level='year')) > 1 else '2012' ),
+            xy=(0,1.2), xycoords='axes fraction', ha='left',
+        )
+        plots.despine(ax)
+        plt.savefig(os.path.join(figpath,'day_comparison_all.png'))
+        if interactive: plt.show()
+        plt.close()
+    except Exception as err:
+        print('day_comparison_all.png failed with the following error:\n{}'.format(err))
 
 
     ### PLOT LOAD FOR THE ENTIRE ReEDS YEAR COLORED BY CLUSTER AND MEDOID:
-    hoursperperiod = {'day':24, 'wek':120, 'year':24}[sw['GSw_HourlyType']]
-    periodsperyear = {'day':365, 'wek':73, 'year':365}[sw['GSw_HourlyType']]
-    plt.close()
-    f,ax = plt.subplots(figsize=(14,3.5))
-    plotted = [False for i in range(int(sw['GSw_HourlyNumClusters']))]
-    nationwide_reedsyr_load = profiles_long[
-        (profiles_long['year']==select_year) & (profiles_long['property']=='load')
-    ].groupby(['year','yperiod','hour'],as_index=False).sum()
-    nationwide_reedsyr_load['hour_numeric'] = pd.to_numeric(
-        nationwide_reedsyr_load['hour'].str.lstrip('h'))
-    nationwide_reedsyr_load.sort_values(['year','hour_numeric'],inplace=True)
-    for this_yperiod in nationwide_reedsyr_load.yperiod.unique():
-        ax.fill_between(
-            nationwide_reedsyr_load.loc[
-                nationwide_reedsyr_load['yperiod'] == this_yperiod,'hour_numeric'].to_numpy(),
-            nationwide_reedsyr_load.loc[
-                nationwide_reedsyr_load['yperiod'] == this_yperiod,'value'].to_numpy()/1e3,
-            ls='-', color=colors[idx_reedsyr[this_yperiod-1]], lw=0, alpha=0.5,
-            label=(
-                '{} ({} periods)'.format(
-                    period_szn.loc[period_szn['period']==this_yperiod,'season'].iloc[0],
-                    sum(idx_reedsyr == idx_reedsyr[this_yperiod-1]))
-                if not plotted[idx_reedsyr[this_yperiod-1]]
-                else '_nolabel'
+    if make_plots >= 3:
+        try:
+            plt.close()
+            f,ax = plt.subplots(figsize=(14,3.5))
+            plotted = [False for i in range(int(sw['GSw_HourlyNumClusters']))]
+            nationwide_reedsyr_load = profiles_long[
+                (profiles_long['year']==select_year) & (profiles_long['property']=='load')
+            ].groupby(['year','yperiod','hour'],as_index=False).sum()
+            nationwide_reedsyr_load['hour_numeric'] = pd.to_numeric(
+                nationwide_reedsyr_load['hour'].str.lstrip('h'))
+            nationwide_reedsyr_load.sort_values(['year','hour_numeric'],inplace=True)
+            for this_yperiod in nationwide_reedsyr_load.yperiod.unique():
+                ax.fill_between(
+                    nationwide_reedsyr_load.loc[
+                        nationwide_reedsyr_load['yperiod']==this_yperiod,'hour_numeric'].to_numpy(),
+                    nationwide_reedsyr_load.loc[
+                        nationwide_reedsyr_load['yperiod'] == this_yperiod,'value'].to_numpy()/1e3,
+                    ls='-', color=colors[idx_reedsyr[this_yperiod-1]], lw=0, alpha=0.5,
+                    label=(
+                        '{} ({} periods)'.format(
+                            period_szn.loc[period_szn['period']==this_yperiod,'season'].iloc[0],
+                            sum(idx_reedsyr == idx_reedsyr[this_yperiod-1]))
+                        if not plotted[idx_reedsyr[this_yperiod-1]]
+                        else '_nolabel'
+                    )
+                )
+                plotted[idx_reedsyr[this_yperiod-1]] = True
+            ### Plot the medoid profiles
+            for i, (yperiod, row) in enumerate(medoid_profiles.iterrows()):
+                ax.plot(
+                    list(range((yperiod-1)*hoursperperiod+1,(yperiod)*hoursperperiod+1)),
+                    row['load'].groupby('h_of_period').sum().values/1e3,
+                    color=colors[i], alpha=1, linewidth=1.5,
+                    label='{} Medoid'.format(period_szn.set_index('period').season[int(yperiod)])
+                )
+            ax.set_xlim(0,8760)
+            ax.set_ylim(0)
+            ax.legend(
+                loc='upper left', bbox_to_anchor=(1,1), ncol=len(colors)//9+1)
+            ax.set_ylabel('Conterminous US Load (GW)')
+            ax.set_title('Cluster and Medoid Definitions')
+            plots.despine(ax)
+            plt.savefig(os.path.join(figpath,'year_clusters.png'))
+            if interactive: plt.show()
+            plt.close()
+        except Exception as err:
+            print('year_clusters.png failed with the following error:\n{}'.format(err))
+
+
+    ### Plot daily profile for the US colored by representative period
+    try:
+        ## TODO: Switch to actual months...
+        nrows, ncols = (12, 31) if sw['GSw_HourlyType'] in ['day','year'] else (13,6)
+        coords = dict(zip(
+            range(1,periodsperyear+1),
+            [(row,col) for row in range(nrows) for col in range(ncols)]
+        ))
+        for prop in ['load','upv','wind-ons']:
+            dfplot = profiles_long[
+                (profiles_long['year']==select_year) & (profiles_long['property']==prop)
+            ].groupby(['year','yperiod','hour'],as_index=False).sum()
+            dfplot['hour_numeric'] = pd.to_numeric(
+                dfplot['hour'].str.lstrip('h'))
+            dfplot.sort_values(['year','hour_numeric'],inplace=True)
+
+            plt.close()
+            f,ax = plt.subplots(
+                nrows, ncols, sharex=True, sharey=True,
+                gridspec_kw={'wspace':0, 'hspace':0,},
+                figsize=(12,6),
             )
-        )
-        plotted[idx_reedsyr[this_yperiod-1]] = True
-    ### Plot the medoid profiles
-    for i, (yperiod, row) in enumerate(medoid_profiles.iterrows()):
-        ax.plot(
-            list(range((yperiod-1)*hoursperperiod+1,(yperiod)*hoursperperiod+1)),
-            row['load'].groupby('h_of_period').sum().values/1e3,
-            color=colors[i], alpha=1, linewidth=1.5,
-            label='{} Medoid'.format(period_szn.set_index('period').season[int(yperiod)])
-        )
-    ax.set_xlim(0,8760)
-    ax.set_ylim(0)
-    ax.legend(
-        loc='upper left', bbox_to_anchor=(1,1), ncol=len(colors)//9+1)
-    ax.set_ylabel('Conterminous US Load (GW)')
-    ax.set_title('Cluster and Medoid Definitions')
-    plots.despine(ax)
-    plt.savefig(os.path.join(figpath,'year_clusters.png'))
-    if interactive: plt.show()
-    plt.close()
-
-
-    ### PLOT DAILY LOAD FOR THE ENTIRE ReEDS YEAR COLORED BY CLUSTER AND MEDOID:
-    ## TODO: Switch to actual months...
-    nrows, ncols = (12, 31) if sw['GSw_HourlyType'] in ['day','year'] else (13,6)
-    coords = dict(zip(
-        range(1,periodsperyear+1), [(row,col) for row in range(nrows) for col in range(ncols)]
-    ))
-
-    nationwide_reedsyr_load = profiles_long[
-        (profiles_long['year']==select_year) & (profiles_long['property']=='load')
-    ].groupby(['year','yperiod','hour'],as_index=False).sum()
-    nationwide_reedsyr_load['hour_numeric'] = pd.to_numeric(
-        nationwide_reedsyr_load['hour'].str.lstrip('h'))
-    nationwide_reedsyr_load.sort_values(['year','hour_numeric'],inplace=True)
-
-    plt.close()
-    f,ax = plt.subplots(
-        nrows, ncols, sharex=True, sharey=True,
-        gridspec_kw={'wspace':0, 'hspace':0,},
-        figsize=(12,6),
-    )
-    for this_yperiod in range(1,periodsperyear+1):
-        ax[coords[this_yperiod]].fill_between(
-            range(hoursperperiod),
-            nationwide_reedsyr_load.loc[
-                nationwide_reedsyr_load['yperiod'] == this_yperiod,'value'].to_numpy()/1e3,
-            ls='-', color=colors[idx_reedsyr[this_yperiod-1]], alpha=0.35,
-        )
-        ### Label the szn
-        ax[coords[this_yperiod]].annotate(
-            period_szn.set_index('period').season[this_yperiod].strip('szn'),
-            (0.5,0), xycoords='axes fraction', va='bottom', ha='center',
-            fontsize=8, color=colors[idx_reedsyr[this_yperiod-1]],
-        )
-    ### Plot the medoid profiles
-    for i, (yperiod, row) in enumerate(medoid_profiles.iterrows()):
-        ax[coords[yperiod]].plot(
-            range(hoursperperiod), row['load'].groupby('h_of_period').sum().values/1e3,
-            color=colors[i], alpha=1, linewidth=2,
-            label='{} Medoid'.format(period_szn.set_index('period').season[int(yperiod)])
-        )
-    for row in range(nrows):
-        for col in range(ncols):
-            ax[row,col].axis('off')
-    ax[-1,0].set_ylabel('Conterminous US Load (GW)')
-    ax[0,0].set_title('Cluster and Medoid Definitions', x=0, ha='left')
-    ax[0,0].set_ylim(0)
-    ax[0,0].set_xlim(-1,hoursperperiod+1)
-    plots.despine(ax)
-    plt.savefig(os.path.join(figpath,'year_clusters_daily.png'))
-    if interactive: plt.show()
-    plt.close()
+            for this_yperiod in range(1,periodsperyear+1):
+                ax[coords[this_yperiod]].fill_between(
+                    range(hoursperperiod),
+                    dfplot.loc[
+                        dfplot['yperiod'] == this_yperiod,'value'].to_numpy()/1e3,
+                    ls='-', color=colors[idx_reedsyr[this_yperiod]], alpha=0.35,
+                )
+                ### Label the szn
+                ax[coords[this_yperiod]].annotate(
+                    int(period_szn[this_yperiod][6:]),
+                    (0.5,0), xycoords='axes fraction', va='bottom', ha='center',
+                    fontsize=8, color=colors[idx_reedsyr[this_yperiod]],
+                )
+            ### Plot the medoid profiles
+            for i, (yperiod, row) in enumerate(medoid_profiles.iterrows()):
+                ax[coords[yperiod]].plot(
+                    range(hoursperperiod), row[prop].groupby('h_of_period').sum().values/1e3,
+                    color=colors[yperiod], alpha=1, linewidth=2,
+                )
+            for row in range(nrows):
+                for col in range(ncols):
+                    ax[row,col].axis('off')
+            ax[0,0].set_title('Cluster and Medoid Definitions', x=0, ha='left')
+            ax[0,0].set_ylim(0)
+            ax[0,0].set_xlim(-1,hoursperperiod+1)
+            plots.despine(ax)
+            plt.savefig(os.path.join(figpath,f'year_clusters_daily-{prop}.png'))
+            if interactive: plt.show()
+            plt.close()
+    except Exception as err:
+        print('year_clusters_daily.png failed with the following error:\n{}'.format(err))
 
 
     ## PLOT LDCs:
-    # for prop in medoid_profiles.
-    plt.close()
-    f,ax = plt.subplots()
-    weights = [sum(idx_reedsyr == x) for x in range(len(set(idx_reedsyr)))]
-    medoid_sums = medoid_profiles['load'].groupby('h_of_period',axis=1).sum()
-    medoid_ldc = np.repeat(np.array(medoid_sums),np.array(weights),axis=0)
+    if make_plots >= 3:
+        try:
+            #set up the old quarterly season mapping for comparison
+            df_season_quarterly = make_equal_periods(4)
+            #avg day:
+            quarterly_profiles = pd.merge(profiles_long,df_season_quarterly,on='hour')
+            quarterly_avg_centroids = quarterly_profiles[
+                quarterly_profiles['year']==select_year
+            ].groupby(['property','region','season','h_of_period'], as_index=False).mean()
+            quarterly_avg_centroids = quarterly_avg_centroids.pivot_table(
+                index=['year','season'], columns=['property','region','h_of_period'])['value']
+            # for prop in medoid_profiles.
+            plt.close()
+            f,ax = plt.subplots()
+            weights = [sum(idx_reedsyr == x) for x in range(len(set(idx_reedsyr)))]
+            medoid_sums = medoid_profiles['load'].groupby('h_of_period',axis=1).sum()
+            medoid_ldc = np.repeat(np.array(medoid_sums),np.array(weights),axis=0)
 
-    # centroid_sums = centroid_profiles['load'].groupby('h_of_period',axis=1).sum()
-    # centroid_ldc = np.repeat(
-    #     np.array(centroid_sums),np.array(weights[:len(centroid_profiles)]),axis=0)
-    centroid_sums = pd.concat(
-        [centroid_profiles, medoid_profiles.iloc[len(centroid_profiles):]], axis=0
-    )['load'].groupby('h_of_period',axis=1).sum()
-    centroid_ldc = np.repeat(np.array(centroid_sums),np.array(weights),axis=0)
+            # centroid_sums = centroid_profiles['load'].groupby('h_of_period',axis=1).sum()
+            # centroid_ldc = np.repeat(
+            #     np.array(centroid_sums),np.array(weights[:len(centroid_profiles)]),axis=0)
+            centroid_sums = pd.concat(
+                [centroid_profiles, medoid_profiles.iloc[len(centroid_profiles):]], axis=0
+            )['load'].groupby('h_of_period',axis=1).sum()
+            centroid_ldc = np.repeat(np.array(centroid_sums),np.array(weights),axis=0)
 
-    quarterly_avg_sums = quarterly_avg_centroids['load'].groupby('h_of_period',axis=1).sum()
-    quarterly_avg_ldc = np.repeat(
-        np.array(quarterly_avg_sums),
-        np.array([92, 91, 91, 91]),
-        axis=0)
+            quarterly_avg_sums = quarterly_avg_centroids['load'].groupby('h_of_period',axis=1).sum()
+            quarterly_avg_ldc = np.repeat(
+                np.array(quarterly_avg_sums),
+                np.array([92, 91, 91, 91]),
+                axis=0)
 
-    quarterly_h17_sums = quarterly_avg_centroids['load'].groupby('h_of_period',axis=1).sum()
-    quarterly_h17_ldc = np.repeat(
-        np.array(quarterly_h17_sums),
-        np.array([92, 91, 91, 91]),
-        axis=0)
-    #TODO: Account for top 40 hours being used for h17. Currently the above is just h16.
+            quarterly_h17_sums = quarterly_avg_centroids['load'].groupby('h_of_period',axis=1).sum()
+            quarterly_h17_ldc = np.repeat(
+                np.array(quarterly_h17_sums),
+                np.array([92, 91, 91, 91]),
+                axis=0)
 
-    ax.plot(
-        range(8760), sorted(medoid_ldc.flatten()/1e3)[::-1],
-        color='C3', lw=1.0, label='2012 Medoids')
-    ax.plot(
-        range(8760), sorted(centroid_ldc.flatten()/1e3)[::-1],
-        color='C0', lw=1.0, label='2012 Centroids')
-    ax.plot(
-        range(8760), sorted(quarterly_avg_ldc.flatten()/1e3)[::-1],
-        color='C2', lw=1.0, label='Quarterly Season Average Days')
-    ax.plot(
-        range(8760), sorted(quarterly_h17_ldc.flatten()/1e3)[::-1],
-        color='C1', lw=1.0, label='h17', ls='--')
-    ax.plot(
-        range(8760), np.sort(nationwide_reedsyr_load['value'])[::-1]/1e3,
-        color='black', lw=1.0, alpha=0.5, label='2012 Actual')
+            ax.plot(
+                range(8760), sorted(medoid_ldc.flatten()/1e3)[::-1],
+                color='C3', lw=1.0, label='2012 Medoids')
+            ax.plot(
+                range(8760), sorted(centroid_ldc.flatten()/1e3)[::-1],
+                color='C0', lw=1.0, label='2012 Centroids')
+            ax.plot(
+                range(8760), sorted(quarterly_avg_ldc.flatten()/1e3)[::-1],
+                color='C2', lw=1.0, label='Quarterly Season Average Days')
+            ax.plot(
+                range(8760), sorted(quarterly_h17_ldc.flatten()/1e3)[::-1],
+                color='C1', lw=1.0, label='h17', ls='--')
+            ax.plot(
+                range(8760), np.sort(nationwide_reedsyr_load['value'])[::-1]/1e3,
+                color='black', lw=1.0, alpha=0.5, label='2012 Actual')
 
-    # TODO: add LDC for all weather years condensed into an 8760 for comparison.
-    ax.legend()
-    ax.set_ylabel('Conterminous US Load (GW)')
-    ax.set_xlabel('Hours of %s' % select_year)
-    ax.set_title('LDC Validation')
-    plt.savefig(os.path.join(figpath,'LDC_all.png'))
-    if interactive: plt.show()
-    plt.close()
-    # TODO: add a few LDCs for state-averaged load and VRE CF profiles. Superimpose on US map.
+            ax.legend()
+            ax.set_ylabel('Conterminous US Load (GW)')
+            ax.set_xlabel('Hours of %s' % select_year)
+            ax.set_title('LDC Validation')
+            plt.savefig(os.path.join(figpath,'LDC_all.png'))
+            if interactive: plt.show()
+            plt.close()
+        except Exception as err:
+            print('LDC_all.png failed with the following error:\n{}'.format(err))
 
 
 ###########################
 #    -- Clustering --     #
 ###########################
 
-def cluster_profiles(select_year, cf, load, sw, rfeas, basedir, inputs_case, make_plots, figpath):
+def cluster_profiles(
+        select_year, cf_full, load_full, sw, val_r, basedir, inputs_case, make_plots, figpath):
     """
     Cluster the load and (optionally) RE profiles to find representative days for dispatch in ReEDS.
 
@@ -1262,17 +1426,15 @@ def cluster_profiles(select_year, cf, load, sw, rfeas, basedir, inputs_case, mak
                             for all regions and technologies
         load_representative - hourly profile of centroid or medoid load values for all regions
         period_szn - day indices of each cluster center
-        medoid_idx - indices of medoid days for each szn
     """
-    ### declarations for those that differ in name from function arguments
-    # cf = cf_full
-    # load = load_full
-
     ### Get region hierarchy for use with GSw_HourlyClusterRegionLevel
     hierarchy = pd.read_csv(
         os.path.join(inputs_case,'hierarchy.csv')).rename(columns={'*r':'r'})
     ## Get BA-to-aggregated-region lookup table
-    rmap = hierarchy.set_index('r')[sw['GSw_HourlyClusterRegionLevel']]
+    if sw.GSw_HourlyClusterRegionLevel == 'r':
+        rmap = pd.Series(hierarchy.r.values, index=hierarchy.r.values)
+    else:
+        rmap = hierarchy.set_index('r')[sw['GSw_HourlyClusterRegionLevel']]
     ### Get rs-to-rb map
     rsmap = pd.read_csv(
         os.path.join(basedir,'inputs','rsmap_sreg.csv'), index_col='rs', squeeze=True)
@@ -1281,24 +1443,31 @@ def cluster_profiles(select_year, cf, load, sw, rfeas, basedir, inputs_case, mak
 
     if sw['GSw_HourlyType'] == 'day':
         ### map hours of year to days of year
-        h_to_yperiod = DataFrame({'yperiod': [ y for x in range(1,366) for y in (x,)*24 ]})
+        h_to_yperiod = pd.DataFrame({'yperiod': [ y for x in range(1,366) for y in (x,)*24 ]})
         h_of_period = list(range(1,25))*365
     elif sw['GSw_HourlyType'] == 'wek':
-        h_to_yperiod = DataFrame({'yperiod': [ y for x in range(1,74) for y in (x,)*120 ]})
+        h_to_yperiod = pd.DataFrame({'yperiod': [ y for x in range(1,74) for y in (x,)*120 ]})
         h_of_period = list(range(1,121))*73
 
     h_to_yperiod['hour'] = ['h'] + (h_to_yperiod.index+1).astype('str')
-    h_of_period = DataFrame({'h_of_period':[str(item).zfill(4) for item in h_of_period]})
+    ## have to use 3 zeros so that it works for weks
+    h_of_period = pd.DataFrame({'h_of_period':[str(item).zfill(3) for item in h_of_period]})
     h_map = pd.concat([h_to_yperiod,h_of_period],axis=1)
+    h_map['timestamp'] = (
+        f'y{select_year}'
+        ## d for day and w for wek 
+        + sw.GSw_HourlyType[0] + h_map.yperiod.astype(str).map('{:>03}'.format)
+        + 'h' + h_map.h_of_period
+    )
 
     ### Create profiles dataframe, starting with load
-    profiles = load.copy()
+    profiles = load_full.copy()
     profiles['property'] = 'load'
     ## Aggregate to GSw_HourlyClusterRegionLevel
     profiles.region = profiles.region.map(rmap)
     profiles = profiles.groupby(['year','region','hour','property'], as_index=False).value.sum()
 
-    cf = cf.rename(columns={'h':'hour','i':'property','r':'region'})
+    cf_full = cf_full.rename(columns={'h':'hour','i':'property','r':'region'})
 
     ### If clustering on more than load, add RE to profiles
     if len(sw['GSw_HourlyClusterWeights']) > 1:
@@ -1321,9 +1490,9 @@ def cluster_profiles(select_year, cf, load, sw, rfeas, basedir, inputs_case, mak
         ### Assemble profiles
         resource = (
             ### Only include profiles techs with weights
-            cf.loc[
-                (cf['tech'].isin(sw['GSw_HourlyClusterWeights'].keys()))
-                & (cf.region.map(rsmap).isin(rfeas))]
+            cf_full.loc[
+                (cf_full['tech'].isin(sw['GSw_HourlyClusterWeights'].keys()))
+                & (cf_full.region.map(rsmap).isin(val_r))]
             .rename(columns={'value':'cf'})
             ### Merge with available capacity by (i,r)
             .merge(sc[['region','i','capacity']],
@@ -1366,10 +1535,10 @@ def cluster_profiles(select_year, cf, load, sw, rfeas, basedir, inputs_case, mak
         ## Map BAs to region aggregation level specified by GSw_HourlyPeakLevel
         rmap_peak = dict(zip(hierarchy.r, hierarchy[sw['GSw_HourlyPeakLevel']]))
         df = (
-            load
-            .assign(yperiod=load.hour.map(h_map.set_index('hour').yperiod))
-            .assign(h_of_period=load.hour.map(h_map.set_index('hour').h_of_period))
-            .assign(peakregion=load.region.map(rmap_peak))
+            load_full
+            .assign(yperiod=load_full.hour.map(h_map.set_index('hour').yperiod))
+            .assign(h_of_period=load_full.hour.map(h_map.set_index('hour').h_of_period))
+            .assign(peakregion=load_full.region.map(rmap_peak))
             .groupby(['peakregion','yperiod','h_of_period']).value.sum()
             .groupby(['peakregion','yperiod']).max()
         )
@@ -1399,26 +1568,19 @@ def cluster_profiles(select_year, cf, load, sw, rfeas, basedir, inputs_case, mak
                 forceperiods_minre.add(
                     (df.loc[tech].loc[region].nsmallest(1).index[0],tech,region,'min_period'))
 
-    ### Maintain desired number of clusters, so subtract number of force-include periods
-    ### from GSw_HourlyNumClusters
-    numclusters = int(sw['GSw_HourlyNumClusters']) - len(forceperiods)
+    ### Add number of force-include periods to GSw_HourlyNumClusters for total number of periods
+    numclusters = int(sw['GSw_HourlyNumClusters']) + len(forceperiods)
 
     ### Record the force-included periods
-    print('total periods: {}'.format(sw['GSw_HourlyNumClusters']))
+    print('representative periods: {}'.format(sw['GSw_HourlyNumClusters']))
     print('force-include periods: {}'.format(len(forceperiods)))
     print('    peak-load periods: {}'.format(len(forceperiods_load)))
     print('    min-RE periods: {}'.format(len(forceperiods_minre)))
-    print('remaining cluster periods: {}'.format(numclusters))
+    print('total periods: {}'.format(numclusters))
     forceperiods_write = pd.DataFrame(
         list(forceperiods_load)+list(forceperiods_minre),
         columns=['yperiod','property','region','reason'],
     )
-
-    ### Make sure we still have at least one period left for clustering
-    assert numclusters > 0, (
-        "GSw_HourlyNumClusters = {} but forceperiods = {}; consider increasing "
-        "GSw_HourlyNumClusters or using a larger aggregation level for GSw_HourlyPeakLevel"
-    ).format(sw['GSw_HourlyNumClusters'], len(forceperiods))
 
     ### Remove the force-include periods from the profiles used for clustering
     ### (since they're already included)
@@ -1426,21 +1588,29 @@ def cluster_profiles(select_year, cf, load, sw, rfeas, basedir, inputs_case, mak
         d for d in profiles_scaled.index.get_level_values('yperiod').unique()
         if d not in forceperiods
     ]
-    profiles_fitperiods = profiles_scaled.loc[:, clusterperiods, :].copy()
+    profiles_fitperiods_hourly = profiles_scaled.loc[:, clusterperiods, :].copy()
+    ### If aggregating from hours to periods, do so now
+    if sw.GSw_HourlyClusterTimestep in ['period','day','wek','week']:
+        profiles_fitperiods = (
+            profiles_fitperiods_hourly.groupby(axis=1, level=['property','region']).mean())
+    else:
+        profiles_fitperiods = profiles_fitperiods_hourly.copy()
 
     #%% Plots
-    if make_plots:
+    if make_plots >= 3:
         try:
             plot_unclustered_periods(profiles, profiles_scaled, basedir, figpath)
         except Exception as err:
             print('plot_unclustered_periods failed with the following error:\n{}'.format(err))
 
-    ###### Run the clustering
-    #output of each method is period_szn (mapping from day to szn) and medoid_idx (indices of
-    # medoid days for each szn) along with other variables for plotting
+        try:
+            plot_feature_scatter(profiles_fitperiods, basedir, figpath)
+        except Exception as err:
+            print('plot_feature_scatter failed with the following error:\n{}'.format(err))
 
+    ###### Run the clustering
     if sw['GSw_HourlyClusterAlgorithm'] == 'equal_periods':
-        print("Performing equal_periods clustering..\n")
+        print("Performing equal_periods clustering")
         if sw['GSw_HourlyPeakLevel'].lower() != 'false':
             # grab the peak day (defined as the day where the peak nationally
             # coincident load hour occurs) for use in multiple time selection methods:
@@ -1483,155 +1653,129 @@ def cluster_profiles(select_year, cf, load, sw, rfeas, basedir, inputs_case, mak
         # ALL-YEARS centroids (if the peak day is included as a cluster,
         # it's already been defined as the centroid)
         # vector quantization to find medoids
-        medoid_idx, _ = vq(centroids_allyrs,profiles.loc[select_year])
-        medoid_idx = pd.DataFrame({'yperiod':medoid_idx, 'season':range(len(medoid_idx))})
-        #TODO: create medoid_profiles or just select medoid days by indexing into profiles
-        # with medoid_idx in the plots below. same with centroid_profiles, really
-
+        rep_periods, _ = vq(centroids_allyrs,profiles.loc[select_year])
 
     elif sw['GSw_HourlyClusterAlgorithm'] == 'hierarchical':
-        print("Performing hierarchical clustering..\n")
+        print("Performing hierarchical clustering")
         #run the clustering and get centroids based on all years of data input
         clusters = AgglomerativeClustering(
-            n_clusters=int(numclusters), affinity='euclidean', linkage='ward')
+            n_clusters=int(sw['GSw_HourlyNumClusters']), affinity='euclidean', linkage='ward')
         idx = clusters.fit_predict(profiles_fitperiods)
         centroids = pd.DataFrame(
             NearestCentroid().fit(profiles_fitperiods, idx).centroids_,
             columns=profiles_fitperiods.columns,
         )
         ### Get nearest period to each centroid
-        repperiods = {
+        nearest_period = {
             i:
             profiles_fitperiods.loc[:,idx==i,:].apply(
                 lambda row: scipy.spatial.distance.euclidean(row, centroids.loc[i]),
                 axis=1
             ).nsmallest(1).index[0][1]
-            for i in range(numclusters)
+            for i in range(int(sw['GSw_HourlyNumClusters']))
         }
 
         period_szn = pd.DataFrame({
             'period': profiles_fitperiods.index.get_level_values('yperiod'),
-            'season': 'szn'+(pd.Series(idx)+1).astype(str)
+            'szn': [f"y{select_year}{sw['GSw_HourlyType'][0]}{i:>03}"
+                       for i in pd.Series(idx).map(nearest_period)]
         ### Add the force-include periods to the end of the list of seasons
         }).append(
             pd.DataFrame({
                 'period': list(forceperiods),
-                'season':
-                    'szn'+pd.Series(range(numclusters+1, numclusters+1+len(forceperiods))).astype(str)
+                'szn': [f"y{select_year}{sw['GSw_HourlyType'][0]}{i:>03}" for i in forceperiods]
             })
-        ).sort_values('period')
+        ).sort_values('period').set_index('period').szn
 
-        medoid_idx = (
-            pd.Series(repperiods, name='yperiod').reset_index().rename(columns={'index':'season'})
-        ### Add the force-include periods to the end of the list of seasons
-        ).append(
-          pd.DataFrame({
-                'yperiod': list(forceperiods),
-                'season':
-                    pd.Series(range(numclusters, numclusters+len(forceperiods)))
-            })
-        )[['yperiod','season']].astype(int)
+    elif sw['GSw_HourlyClusterAlgorithm'] in ['opt','optimized','optimize']:
+        print("Performing optimized clustering")
+        ### Optimize the weights of representative days
+        profiles_day, rweights = optimize_period_weights(
+            profiles_fitperiods=profiles_fitperiods, numclusters=int(sw['GSw_HourlyNumClusters']),
+            select_year=select_year)
+        ### Optimize the assignment of actual days to representative days
+        a2r = assign_representative_days(profiles_day=profiles_day, rweights=rweights)
 
-        if make_plots:
-            try:
-                plot_clustered_days(
-                    profiles_fitperiods, profiles_scaled, idx,
-                    centroids, numclusters, forceperiods, repperiods, sw, basedir, figpath)
-            except Exception as err:
-                print('plot_clustered_days failed with the following error:\n{}'.format(err))
+        if len(rweights) < int(sw['GSw_HourlyNumClusters']):
+            print(
+                'Asked for {} representative periods but only needed {}'.format(
+                    sw['GSw_HourlyNumClusters'], len(rweights)))
 
-            try:
-                plot_clusters_pca(profiles_fitperiods, idx, sw, basedir, figpath)
-            except Exception as err:
-                print('plot_clusters_pca failed with the following error:\n{}'.format(err))
+        period_szn = a2r.reset_index().rename(columns={'act':'period','rep':'szn'}).append(
+            pd.DataFrame({'period':list(forceperiods), 'szn':list(forceperiods)})
+            if len(forceperiods) else None
+        ).sort_values('period').set_index('period').szn
+        period_szn = period_szn.map(lambda x: f'y{select_year}{sw.GSw_HourlyType[0]}{x:>03}')
 
 
-    else: 
-        raise Exception(
-            """'equal_periods' and 'hierarchical' are the only accepted arguments
-            for the `GSw_HourlyClusterAlgorithm` argument
-            to specify how to select representative days.""")
+    ### Get the list of representative periods for convenience
+    rep_periods = sorted(period_szn.map(szn2period).unique())
+    ### Add seasons to forceperiods
+    forceperiods_write['szn'] = forceperiods_write.yperiod.map(period_szn)
 
-
-    ### Make original plots
-    if make_plots:
+    if make_plots >= 3:
         try:
-            idx_reedsyr = (period_szn.season.str.lstrip('szn').astype(int) - 1).values
-            centroid_profiles = centroids * profiles.stack('h_of_period').max()
-            medoid_profiles = profiles.loc[select_year].loc[medoid_idx.yperiod]
+            plot_clustered_days(
+                profiles_fitperiods_hourly, profiles_scaled, idx, rep_periods,
+                forceperiods, nearest_period, sw, basedir, figpath)
+        except Exception as err:
+            print('plot_clustered_days failed with the following error:\n{}'.format(err))
+
+        try:
+            plot_clusters_pca(profiles_fitperiods_hourly, idx, sw, basedir, figpath)
+        except Exception as err:
+            print('plot_clusters_pca failed with the following error:\n{}'.format(err))
+
+    if make_plots >= 2:
+        try:
             plots_original(
-                profiles_long, profiles, centroid_profiles, medoid_profiles,
-                profiles_scaled, medoid_idx, idx_reedsyr, period_szn,
-                select_year, sw, basedir, figpath)
+                profiles_long, profiles,
+                profiles_scaled, rep_periods, period_szn,
+                select_year, sw, basedir, figpath, make_plots)
         except Exception as err:
             print('plots_original failed with the following error:\n{}'.format(err))
 
 
     ###### Create cluster center profiles for export
-    load_representative = load.merge(h_map, on='hour', how='left')
-    hoursperperiod = {'day':24, 'wek':120, 'year':24}[sw['GSw_HourlyType']]
-    if sw['GSw_HourlyCenterType'] == 'medoid':
-        print("Creating medoid clusters..\n")
-        load_representative = load_representative.loc[
-            (load_representative['year']==select_year)
-            & load_representative.yperiod.isin(medoid_idx['yperiod'])
-        ]
-        load_representative = pd.merge(load_representative,medoid_idx,on='yperiod',how='left')
-        load_representative = map_new_hour(load_representative,hoursperperiod)
-        load_representative = load_representative.drop(
-            ['h_of_period','year','yperiod','season'],axis=1)
+    ### timeslice index (h) is y{year}{d or w}{period of year}h{hour of period}
+    periodh2hour = (
+        h_map.set_index(['yperiod','h_of_period']).loc[rep_periods]
+        .rename(columns={'timestamp':'h'}))
 
-        #we need to construct the center days from the original cf_full
-        cf_representative = pd.merge(cf[cf['year']==select_year],h_map,on='hour',how='left')
-        cf_representative = cf_representative[cf_representative['yperiod'].isin(medoid_idx.yperiod)]
-        cf_representative = pd.merge(cf_representative,medoid_idx,on='yperiod',how='left')
-        cf_representative = map_new_hour(cf_representative,hoursperperiod)
-        cf_representative = cf_representative.drop(['h_of_period','year','yperiod','season'],axis=1)
+    load_representative = load_full.loc[load_full.year==select_year].merge(h_map, on='hour', how='left')
+    load_representative = load_representative.loc[load_representative.yperiod.isin(rep_periods)].copy()
+    load_representative['hour'] = (
+        pd.Series(load_representative[['yperiod','h_of_period']].itertuples(index=False, name=None))
+        .map(periodh2hour.h)).values
+    load_representative = load_representative[['region','hour','value']].copy()
 
-    elif sw['GSw_HourlyCenterType'] == 'centroid':
-        print("Creating centroid clusters..\n")
-        load_representative = pd.merge(
-            load_representative.loc[(load_representative['year']==select_year)],
-            period_szn,
-            left_on='yperiod', right_on='period',
-        ).drop(['yperiod','period'],axis=1)
-        load_representative = load_representative.groupby(
-            ['region','h_of_period','season'],
-            as_index=False).mean()
-        load_representative = map_new_hour(load_representative,hoursperperiod)
-        load_representative = load_representative.drop(['h_of_period','year','season'],axis=1)
+    cf_representative = cf_full.loc[cf_full.year==select_year].merge(h_map, on='hour', how='left')
+    cf_representative = cf_representative.loc[cf_representative.yperiod.isin(rep_periods)].copy()
+    cf_representative['hour'] = (
+        pd.Series(cf_representative[['yperiod','h_of_period']].itertuples(index=False, name=None))
+        .map(periodh2hour.h)).values
+    cf_representative = cf_representative[['tech','property','region','hour','value']].copy()
 
-        #we need to construct the center days from the original cf_full
-        cf_representative = pd.merge(cf[cf['year']==select_year],h_map,on='hour',how='left')
-        cf_representative = pd.merge(
-            cf_representative,
-            period_szn,
-            left_on='yperiod', right_on='period'
-        ).drop(['yperiod','period'], axis=1)
-        cf_representative = cf_representative.groupby(
-            ['property','region','h_of_period','season'],
-            as_index=False).mean()
-        cf_representative = map_new_hour(cf_representative,hoursperperiod)
-        cf_representative = cf_representative.drop(['h_of_period','year','season'],axis=1)
 
     ### Plot duration curves
-    if make_plots:
+    if make_plots >= 1:
         try:
             plot_ldc(
-                period_szn, profiles_scaled, select_year, medoid_idx,
+                period_szn, profiles_scaled, select_year, rep_periods,
                 forceperiods_write, sw, basedir, figpath)
         except Exception as err:
             print('plot_ldc failed with the following error:\n{}'.format(err))
-        
+
+    if make_plots >= 3:
         try:
-            plot_8760(profiles, period_szn, medoid_idx, select_year, basedir, figpath)
+            plot_8760(profiles, period_szn, rep_periods, select_year, basedir, figpath)
         except Exception as err:
             print('plot_8760 failed with the following error:\n{}'.format(err))
 
-    return cf_representative, load_representative, period_szn, medoid_idx, forceperiods_write
+    return cf_representative, load_representative, period_szn, rep_periods, forceperiods_write
 
 
-def window_overlap(sw, chunkmap):
+def window_overlap(sw, chunkmap, rep_periods, hmap_1yr):
     """
     """
     #test arguments
@@ -1639,14 +1783,14 @@ def window_overlap(sw, chunkmap):
     #n_window = 6
     #n_ovlp = 2
     ### Input arguments
-    n_periods=int(365 if sw['GSw_HourlyType'] == 'year' else sw['GSw_HourlyNumClusters'])
+    n_periods=int(365 if sw['GSw_HourlyType'] == 'year' else len(rep_periods))
     n_window=int(sw['GSw_HourlyWindow'])
     n_ovlp=int(sw['GSw_HourlyOverlap'])
     hoursperperiod = {'day':24, 'wek':120, 'year':24}[sw['GSw_HourlyType']]
 
     print(
         "Creating hour groups for the minloading constraint with {} clusters, "
-        "{} window length, and {} overlapping timeslices \n".format(n_periods, n_window, n_ovlp))
+        "{} window length, and {} overlapping timeslices".format(n_periods, n_window, n_ovlp))
     ## create a list of full window
     list_periodhours = np.arange(1,hoursperperiod+1).tolist()
     list_output = []
@@ -1680,8 +1824,8 @@ def window_overlap(sw, chunkmap):
 
     ###--- Formatting Exporting File ---###
     df = (
-        ### convert to pandas dataframe, add h prefix
-        ('h' + pd.DataFrame(hourlist).astype(str))
+        ### convert to pandas dataframe, look up timestamp from hour of year
+        pd.DataFrame(hourlist).applymap(hmap_1yr.set_index('hour').h.get)
         ### convert to hour chunks
         .applymap(chunkmap.get)
         ### drop duplicate columns; since .drop_duplicates() only works on rows,
@@ -1709,54 +1853,70 @@ def window_overlap(sw, chunkmap):
 
 
 def get_yearly_demand(
-        sw, period_szn, representative_periods, szn_h, rfeas, basedir, inputs_case):
+        sw, period_szn, rep_periods, val_r,
+        hmap_1yr, set_szn, basedir, inputs_case,
+    ):
     """
-    Only used for EFS-like demand, which has 8760 values for each year in 2020-2050.
     After clustering based on GSw_HourlyClusterYear and identifying the modeled days,
-    reload the raw EFS demand and extract the demand on the modeled days for each year.
+    reload the raw demand and extract the demand on the modeled days for each year.
     """
     hoursperperiod = {'day':24, 'wek':120, 'year':np.nan}[sw['GSw_HourlyType']]
-    ### Get original EFS demand data
-    load_in = pd.read_csv(
-        os.path.join(basedir,'inputs','variability','EFS_Load',
-                     '{}_load_hourly.csv.gz'.format(sw['GSw_EFS1_AllYearLoad'])),
-        index_col=[0,1],
-    ### Subset to cluster year
-    )[rfeas].unstack('year')
-    load_in.columns = load_in.columns.rename(['r','year'])
+    ### Get the set of szn's and h's
+    szn_h = (
+        hmap_1yr
+        .drop_duplicates(['h','season'])
+        .sort_values(['season','hour']).reset_index(drop=True)
+        [['season','h']]
+        .assign(periodhour=np.ravel(
+            ([range(1,25)] * 365 if sw['GSw_HourlyType']=='year'
+                else [range(1,hoursperperiod+1)] * len(set_szn))
+        ))
+        .set_index(['season','periodhour']).h
+    ).copy()
+
+    ### Get original demand data, subset to cluster year
+    load_in = read_file(os.path.join(inputs_case,'load'), index_columns=2)[val_r].unstack(level=0)
+    load_in.columns = load_in.columns.rename(['r','t'])
+    ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale up by distloss
+    scalars = pd.read_csv(
+        os.path.join(inputs_case,'scalars.csv'),
+        header=None, usecols=[0,1], index_col=0, squeeze=True)
+    load_in *= (1 - scalars['distloss'])
     ### Convert all profiles to eastern time
     r_shift = pd.read_csv(
         os.path.join(inputs_case, 'reeds_ba_tz_map.csv'),
         index_col='r', squeeze=True,
     ).map({'ET':0, 'CT':1, 'MT':2, 'PT':3})
     load_in = load_in.apply(lambda col: np.roll(col, r_shift[col.name[0]]))
+    ### Subset to a single year if using 7-year data
+    if ('EER' in sw.GSw_EFS1_AllYearLoad) or ('historic' in sw.GSw_EFS1_AllYearLoad):
+        load_in['year'] = np.ravel([[y]*8760 for y in range(2007,2014)])
+        load_in = load_in.loc[load_in.year==select_year].copy()
+        load_in.index = range(1,8761)
+        load_in.index = load_in.index.rename('hour')
+        load_in = load_in.drop('year', axis=1)
     ### Add time indices ("season" is the identifier for modeled periods)
     load_in['period'] = (
-        np.ravel([[d]*24 for d in range(365)]) if sw['GSw_HourlyType'] == 'year'
-        else np.ravel([[d]*hoursperperiod for d in period_szn.period.values]))
+        np.ravel([[d]*24 for d in range(1,366)]) if sw['GSw_HourlyType'] == 'year'
+        else np.ravel([[d]*hoursperperiod for d in period_szn.index.values]))
     load_in['periodhour'] = (
         np.ravel([range(1,25) for d in range(365)]) if sw['GSw_HourlyType'] == 'year'
-        else np.ravel([range(1,hoursperperiod+1) for d in period_szn.period.values])
+        else np.ravel([range(1,hoursperperiod+1) for d in period_szn.index.values])
     )
-    load_in['season'] = load_in.period.map(period_szn.set_index('period').season)
+    load_in['season'] = load_in.period.map(period_szn)
 
-    ### If using average (i.e. centroid) periods, calculate the average over each "season"
-    if (sw['GSw_HourlyType'] != 'year') and (sw['GSw_HourlyCenterType'] == 'centroid'):
-        load_out = load_in.drop('period',axis=1).groupby(['season','periodhour']).mean().sort_index()
-        load_out.index = load_out.index.map(szn_h).rename('h')
 
+    ### If modeling a full year, keep everything
+    if sw['GSw_HourlyType'] == 'year':
+        load_out = load_in.drop(['period','periodhour','season'], axis=1)
+        load_out.index = hmap_1yr.h
     ### If using representative (i.e. medoid) periods, pull out the representative periods
-    elif sw['GSw_HourlyType'] != 'year':
+    else:
         load_out = (
-            load_in.loc[load_in.period.isin(representative_periods)]
+            load_in.loc[load_in.period.isin(rep_periods)]
             .drop('period',axis=1).set_index(['season','periodhour']).sort_index()
         )
         load_out.index = load_out.index.map(szn_h).rename('h')
-
-    ### If modeling a full year, keep everything
-    elif sw['GSw_HourlyType'] == 'year':
-        load_out = load_in.drop(['period','periodhour','season'], axis=1)
-        load_out.index = ('h'+load_out.index.astype(str)).rename('h')
 
     ### Reshape for ReEDS
     load_out = load_out.stack('r').reorder_levels(['r','h'], axis=0).sort_index()
@@ -1768,7 +1928,7 @@ def get_yearly_demand(
 #    -- Main Function --  #
 ###########################
 
-def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
+def main(sw, basedir, inputs_case, select_year=2012, make_plots=1, figpathtail=''):
     """
     """
     #######################################
@@ -1778,61 +1938,22 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
             path=os.path.join(inputs_case,'..'))
         quit()
 
-    #####################################################################################
-    #%% TODO TEMPORARY checks: Raise error if using hourly with incompatible capabilities
-    if (
-        (int(sw['GSw_Canada']) == 1)
-        or int(sw['GSw_ClimateHydro'])
-        or int(sw['GSw_ClimateDemand'])
-        or int(sw['GSw_ClimateWater'])
-        or (int(sw['endyear']) > 2050)
-        or int(sw['GSw_EFS_Flex'])
-        or (float(sw['GSw_HydroWithinSeasFrac']) < 1)
-        or (float(sw['GSw_HydroPumpWithinSeasFrac']) < 1)
-    ):
-        print("sw['GSw_Canada'] = {}".format(sw['GSw_Canada']))
-        print("sw['GSw_ClimateHydro'] = {}".format(sw['GSw_ClimateHydro']))
-        print("sw['GSw_ClimateDemand'] = {}".format(sw['GSw_ClimateDemand']))
-        print("sw['GSw_ClimateWater'] = {}".format(sw['GSw_ClimateWater']))
-        print("sw['endyear'] = {}".format(sw['endyear']))
-        print("sw['GSw_EFS_Flex'] = {}".format(sw['GSw_EFS_Flex']))
-        print("sw['GSw_HydroWithinSeasFrac'] = {}".format(sw['GSw_HydroWithinSeasFrac']))
-        print("sw['GSw_HydroPumpWithinSeasFrac'] = {}".format(sw['GSw_HydroPumpWithinSeasFrac']))
-        raise NotImplementedError(
-            'At least one of the above switches is incompatible with GSw_Hourly=1')
-
-
-    ### Also make sure the window parameters are divisible by the chunk length
-    assert not int(sw['GSw_HourlyWindow']) % int(sw['GSw_HourlyChunkLength']), (
-        'GSw_HourlyWindow is not divisible by chunk length:'
-        '\nGSw_HourlyWindow = {}\nGSw_HourlyChunkLength = {}'
-    ).format(sw['GSw_HourlyWindow'], sw['GSw_HourlyChunkLength'])
-
-    assert not int(sw['GSw_HourlyOverlap']) % int(sw['GSw_HourlyChunkLength']), (
-        'GSw_HourlyOverlap is not divisible by chunk length:'
-        '\nGSw_HourlyOverlap = {}\nGSw_HourlyChunkLength = {}'
-    ).format(sw['GSw_HourlyOverlap'], sw['GSw_HourlyChunkLength'])
-
     # =============================================================================
     ### Direct plots to outputs folder
-    figpath = os.path.join(inputs_case,'..','outputs','hourly')
+    figpath = os.path.join(inputs_case,'..','outputs',f'hourly{figpathtail}')
     os.makedirs(figpath, exist_ok=True)
 
     # gather relevant regions for capacity regions
     rs = pd.read_csv(os.path.join(basedir,"inputs","rsmap_sreg.csv"))
     rs = rs.rename(columns={'*r':'r'})
 
-    rfeas = pd.read_csv(
-        os.path.join(inputs_case, 'valid_ba_list.csv'), squeeze=True, header=None).tolist()
-    pset_non0 = rfeas
+    val_r = pd.read_csv(
+        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
 
     ### Get original seasons (for 8760)
     d_szn_in = pd.read_csv(
         os.path.join(basedir,'inputs','variability','d_szn_1.csv'),
         index_col='*d', squeeze=True)
-
-    ### Get some useful constants depending on length of modeled period
-    hoursperperiod = {'day':24, 'wek':120, 'year':np.nan}[sw['GSw_HourlyType']]
 
     # -- 8760 data processing -- #
 
@@ -1847,7 +1968,7 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
         ("wind-ofs", sw['GSw_SitingWindOfs']),
     ]
 
-    print("\nCollecting 8760 capacity factor data..")
+    print("Collecting 8760 capacity factor data")
     cf_full = {}
     for tech, siting in tech_siting:
         #temp here is a dataframe that gets appended to the final set
@@ -1857,7 +1978,7 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
 
     # Note: we don't have dGen results for 2007-2013, so multi-year clustering
     # can't include distpv. We'll just always exclude distpv from the clustering.
-    print("\nAppending 8760 distpv capacity factors")
+    print("Appending 8760 distpv capacity factors")
     distpv = (
         pd.read_csv(os.path.join(inputs_case,"distPVCF_hourly.csv"))
         .rename(columns={'Unnamed: 0':'r'})
@@ -1874,11 +1995,12 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
         pd.concat(cf_full, axis=0)
         .reset_index().rename(columns={'level_0':'tech'}).drop('level_1', axis=1))
 
-    print("\nCollecting 8760 load data..")
-    load_full = create_load(rfeas=pset_non0, sw=sw, basedir=basedir, select_year=select_year)
+    print("Collecting 8760 load data")
+    load_full = create_load(
+        val_r=val_r, sw=sw, inputs_case=inputs_case, select_year=select_year)
 
     # -- Time Zone Adjustment -- #
-    print("\nAdjust time zones for 8760 capacity factor and load..")
+    print("Adjust time zones for 8760 capacity factor and load")
     #basic steps: 
     # map timezone to ba
     # map cf and load data to tz
@@ -1917,27 +2039,17 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
     load_full = load_newhour.drop('h',axis=1).rename(columns={'h_out':'hour','r':'region'})
     cf_full = cf_newhour.drop('h',axis=1).rename(columns={'h_out':'h'})
 
-    #
-    # -- Clustering to determine representative days to model in ReEDS
-    # (only for pset1 currently --may develop representative week clustering) -- #
-    #
 
-    print("\n \nBeginning clustering of capacity factors and load..\n")
-    sys.stdout.flush()
+    ### Clustering to determine representative periods to model in ReEDS
+    print("Beginning clustering of capacity factors and load")
     #identify clusters mapping 8760 to some number of periods based on input arguments:
-    ## Representative days
-    if sw['GSw_HourlyType']=='day':
-        cf_representative, load_representative, period_szn, medoid_idx, forceperiods_write = (
+    ## Representative days or weeks
+    if sw['GSw_HourlyType'] in ['day','wek']:
+        cf_representative, load_representative, period_szn, rep_periods, forceperiods_write = (
             cluster_profiles(
-                select_year=select_year, cf=cf_full, load=load_full, sw=sw, rfeas=rfeas,
-                basedir=basedir, inputs_case=inputs_case, make_plots=make_plots, figpath=figpath,
-            ))
-    ## Representative weeks
-    elif sw['GSw_HourlyType']=='wek':
-        cf_representative, load_representative, period_szn, medoid_idx, forceperiods_write = (
-            cluster_profiles(
-                select_year=select_year, cf=cf_full, load=load_full, sw=sw, rfeas=rfeas,
-                basedir=basedir, inputs_case=inputs_case, make_plots=make_plots, figpath=figpath,
+                select_year=select_year, cf_full=cf_full, load_full=load_full, sw=sw, val_r=val_r,
+                basedir=basedir, inputs_case=inputs_case, make_plots=make_plots,
+                figpath=figpath,
             ))
     ## 8760
     elif sw['GSw_HourlyType']=='year':
@@ -1946,88 +2058,61 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
         ).copy()
         load_representative = load_full.drop('year',axis=1).copy()
         ### For 8760 we use the original seasons
-        period_szn = pd.DataFrame({
-            'period': range(1,366),
-            'season': d_szn_in.values,
-        })
-        medoid_idx = (
-            period_szn
-            .assign(season=d_szn_in.values)
-            .rename(columns={'period':'yperiod'}))
+        period_szn = pd.Series(d_szn_in.values, index=range(1,366), name='szn')
+        period_szn.index = period_szn.index.rename('period')
+        rep_periods = period_szn.index.tolist()
         forceperiods_write = pd.DataFrame(columns=['yperiod','property','region','reason'])
 
-    print("\nClustering complete.\n")
+    print("Clustering complete")
 
-    # -- Averaging or aggregating based on rfeas assignments -- #
+    # -- Averaging or aggregating based on val_r assignments -- #
 
-    #8760 mapping for Augur
-    hmap_7yr, hmap_1yr = make_8760_map(period_szn=period_szn, sw=sw)
+    # 8760 mapping
+    hmap_7yr, hmap_1yr = make_8760_map(period_szn=period_szn, select_year=select_year, sw=sw)
 
+    ### If using full year, switch from h1..h8760 to timestamps
     if sw['GSw_HourlyType'] == 'year':
-        print("\nProcessing capacity factor and load for 8760 representation...")
-        cf_out, load_out = create_outputs(
-            cf_full.rename(columns={'r':'region','i':'property'}),load_full,rfeas,rs)
+        cf_representative = (
+            cf_representative
+            .assign(hour=cf_representative.hour.map(
+                hmap_1yr.set_index('h'+hmap_1yr.hour.astype(str)).h))
+        ).dropna(how='any')
+        load_representative = (
+            load_representative
+            .assign(hour=load_representative.hour.map(
+                hmap_1yr.set_index('h'+hmap_1yr.hour.astype(str)).h))
+        ).dropna(how='any')
 
-    else:
-        print("\nProcessing capacity factor and load for representative periods...")
-        cf_out, load_out = create_outputs(cf_representative,load_representative,rfeas,rs)
+    print("Processing capacity factor and load for modeled timeslices")
+    cf_out, load_out = create_timeslice_profiles(
+        cf_representative=cf_representative,
+        load_representative=load_representative, val_r=val_r, rs=rs, sw=sw)
 
-    #calculate number of hours represented based on hmap_1yr
+    # calculate number of hours represented based on hmap_1yr
     hours = hmap_1yr.groupby('h').season.count().rename('numhours')
 
-    #create an h_szn mapping..
+    # create the timeslice-to-season mapping
     h_szn = hmap_1yr[['h','season']].drop_duplicates().reset_index(drop=True)
-    #grab minimum and maximum h by szn from h_szn
-    #duplicate for all BAs
-    #    get the ba-to-tz mapping csv file
-    #    designate the necessary shift for each BA based on its
-    #    [roll those hours by necessary shift indicated by regions' timezones]
 
     #create a szn set to adjust the 'szn' set in b_inputs.gms
-    sznset = pd.DataFrame({'szn':period_szn.season.drop_duplicates()})
+    set_szn = pd.DataFrame({'szn':period_szn.sort_values().unique()})
 
     #create an hours set to adjust the 'h' set in b_inputs.gms
-    hset = pd.Series([
-        'h{}'.format(i) for i in
-        sorted([int(h[1:]) for h in hmap_1yr.h.unique()])
-    ], name='h')
+    hset = h_szn.h.sort_values().reset_index(drop=True)
 
-
-    ###### Net trade with Canada
-    #load in canadian 8760 data
-    print("\nLoading 8760 Canadian net trade from can_trade_8760.h5")
-    can_8760 = pd.read_hdf(os.path.join(inputs_case,"can_trade_8760.h5"))
-    can_8760 = can_8760.rename(columns={'h':'hour'})
-
-    print("\nMapping 8760 Canadian data to modeled hours,"
-        "filling in missing permutations then averaging")
-    can_8760['hour'] = can_8760['hour'].str.replace('h', '').astype('int')
-    can_out = pd.merge(can_8760,hmap_7yr,how='left',on=['hour'])
-    can_out['net'] = can_out['net'].fillna(0)
-    can_out = can_out.dropna()
-    can_out['t'] = can_out['t'].astype('int')
-    can_out = can_out[['r','h','t','net']]
-    can_out = can_out.rename(columns={'net':'Val'})
-    #note that we can sum here and avoid creating all permutations of r/h_8760/t
-    can_out = can_out.groupby(['r','h','t']).sum().astype(float).reset_index()
-
-
-    ###### Seasonal peak demand hours for PRM constraint
-    ### Procedure reproduced from all_year_load.get_season_peaks()
-    ### Note that the resulting peak_dem_hourly_load file is not used with EFS-style demand
-    hour2szn = hmap_1yr.assign(hour='h'+hmap_1yr.hour.astype(str)).set_index('hour').season
-    hierarchy = pd.read_csv(
-        os.path.join(inputs_case,'hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-
-    if int(sw['GSw_HourlyClusterMultiYear']):
-        raise NotImplementedError(
-            f"sw['GSw_HourlyClusterMultiYear']={sw['GSw_HourlyClusterMultiYear']}")
-
-    peak_dem_hourly_load = get_season_peaks_hourly(
-        load=load_full.rename(columns={'region':'r','value':'MW'}),
-        sw=sw, hierarchy=hierarchy, hour2szn=hour2szn)
-
+    ### List of periods in which to apply operating reserve constraints
+    if (sw['GSw_OpResPeriods'] == 'all') or (sw['GSw_HourlyType'] == 'year'):
+        opres_periods = set_szn
+    elif sw['GSw_OpResPeriods'] == 'representative':
+        opres_periods =  set_szn.loc[~set_szn.szn.isin(forceperiods_write.szn)]
+    elif sw['GSw_OpResPeriods'] == 'stress':
+        opres_periods =  set_szn.loc[set_szn.szn.isin(forceperiods_write.szn)]
+    elif sw['GSw_OpResPeriods'] in ['peakload','peak_load','peak','load','demand']:
+        opres_periods =  set_szn.loc[
+            set_szn.szn.isin(forceperiods_write.loc[forceperiods_write.property=='load'].szn)]
+    elif sw['GSw_OpResPeriods'] in ['minre','re','vre','min_re']:
+        opres_periods =  set_szn.loc[
+            set_szn.szn.isin(forceperiods_write.loc[forceperiods_write.property!='load'].szn)]
 
     ###### Representative day peak demand hour linkage set for ndhydro PRM constraint
     h_szn_prm = pd.merge(load_out.groupby(['h'],as_index=False).sum(),h_szn,on='h')
@@ -2037,13 +2122,14 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
 
 
     ###### Quarterly (spri, summ, fall, wint) season weights for setting parameters
-    # according to traditional seasons --
-    quarters = make_equal_periods(4)[['hour','season']]
-    quartermap = DataFrame({'season':['szn1','szn2','szn3','szn4'],
-                            'quarter':['wint','spri','summ','fall']})
-    quarters = pd.merge(quarters,quartermap,on='season')
-    quarters = quarters.rename(columns={'hour':'h_8760'})
-    quarters = quarters[['h_8760','quarter']]
+    ### Use the ReEDS season definitions
+    h_dt_szn = pd.read_csv(os.path.join(basedir,'inputs','variability','h_dt_szn.csv'))
+    quarters = (
+        h_dt_szn.assign(h_8760=[f'h{i+1}' for i in range(len(h_dt_szn))])
+        .replace({'season':{'winter':'wint','spring':'spri','summer':'summ'}})
+        .rename(columns={'season':'quarter'})
+        .iloc[:8760][['h_8760','quarter']]
+    )
 
     frac_h_quarter_weights = hmap_1yr.copy()
     frac_h_quarter_weights['h_8760'] = 'h' + frac_h_quarter_weights['hour'].astype(str)
@@ -2063,28 +2149,78 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
     frac_h_quarter_weights = frac_h_quarter_weights[['h','quarter','weight']]
 
 
+    ###### Net trade with Canada for GSw_Canada=2
+    ### Read the 8760 net trade [MW], which is described at
+    ## https://github.nrel.gov/ReEDS/ReEDS-2.0_Input_Processing/tree/master/Exogenous_Canadian_Trade
+    can_8760 = (
+        pd.read_hdf(os.path.join(basedir,'inputs','canada_imports','can_trade_8760.h5'))
+        .rename(columns={'h':'hour'}).astype({'r':str}))
+    ## Drop the h
+    can_8760.hour = can_8760.hour.str.strip('h').astype('int')
+    ## Map 8760 hours to modeled hours
+    can_8760['h'] = can_8760.hour.map(hmap_1yr.h)
+
+    ### Sum by (r,h,t) to get net trade in MWh during modeled hours
+    can_out = can_8760.groupby(['r','h','t']).net.sum().rename('MWh').reset_index()
+    ## Only keep modeled regions
+    can_out = can_out.loc[can_out.r.isin(val_r)].copy()
+
+
+    #%%### Seasonal Canadian imports/exports for GSw_Canada=1
+    ### Same processing as in all_year_load.py; would be better to do it only once but
+    ### we need the new h_szn.
+    #%% Exports: Spread equally over hours by quarter.
+    can_exports_szn_frac = pd.read_csv(
+        os.path.join(basedir, 'inputs', 'canada_imports', 'can_exports_szn_frac.csv'),
+        header=0, names=['season','frac'], index_col='season', squeeze=True,
+    )
+    df = (
+        frac_h_quarter_weights.astype({'h':'str','quarter':'str'})
+        .replace({'weight':{0:np.nan}}).dropna(subset=['weight']).copy()
+    )
+    df = (
+        df.assign(frac_exports=df.quarter.map(can_exports_szn_frac))
+        .assign(season=df.h.map(h_szn.set_index('h').season))
+        .assign(hours=df.h.map(hours))
+    )
+    df['quarter_hours'] = df.hours * df.weight
+    df['hours_per_quarter'] = df.quarter.map(quarters.quarter.value_counts())
+    df['frac_weighted'] = df.frac_exports * df.quarter_hours / df.hours_per_quarter
+    can_exports_h_frac = df.groupby('h', as_index=False).frac_weighted.sum()
+    ### Make sure it sums to 1
+    assert can_exports_h_frac.frac_weighted.sum().round(5) == 1
+
+    #%% Imports: Spread over seasons by quarter.
+    can_imports_quarter_frac = pd.read_csv(
+        os.path.join(basedir, 'inputs', 'canada_imports', 'can_imports_szn_frac.csv'),
+        header=0, names=['season','frac'], index_col='season', squeeze=True,
+    )
+    hours_per_season = hmap_1yr.season.value_counts()
+    df = hmap_1yr.assign(quarter=quarters.quarter.values)
+    hours_per_quarter = df['quarter'].value_counts()
+    ## Fraction of quarter made up by each season (typically rep period)
+    quarter_season_weights = (
+        df.groupby(['quarter','season']).year.count()
+        .divide(hours_per_quarter, axis=0, level='quarter'))
+    can_imports_szn_frac = (
+        quarter_season_weights
+        .multiply(can_imports_quarter_frac, level='quarter')
+        .groupby('season').sum()
+        .rename('frac_weighted').reset_index().rename(columns={'season':'szn'}))
+    ### Make sure it sums to 1
+    assert can_imports_szn_frac.frac_weighted.sum().round(5) == 1
+
     # =============================================================================
     # Hour, Region, and Timezone Mapping
     # =============================================================================
 
     period_szn_write = (
-        period_szn
-        .assign(period='d'+period_szn['period'].astype(str))
-        .rename(columns={'season':'szn'})
+        period_szn.reset_index()
+        .assign(period=sw['GSw_HourlyType'][0]+period_szn.index.astype(str))
     ).copy()
 
-    periods = pd.date_range(
-        '{}-01-01'.format(select_year), '{}-12-31'.format(select_year),
-        freq='D',
-    ### Leap years are handled by dropping Dec 31
-    )[:365][::(1 if sw['GSw_HourlyType'] in ('day','year') else 5)]
-    medoid_idx_write = (
-        medoid_idx
-        .assign(date=periods[medoid_idx.yperiod-1])
-        .assign(season=(
-            d_szn_in.values if (sw['GSw_HourlyType']=='year')
-            else 'szn'+(medoid_idx.season+1).astype(str)))
-    )
+    rep_period_weights = (
+        period_szn.value_counts().reset_index().rename(columns={'index':'szn','szn':'weight'}))
 
     ###### Mapping from hourly resolution to GSw_HourlyChunkLength resolution
     ### Aggregation is performed as an average over the hours to be aggregated
@@ -2097,12 +2233,10 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
         '\nlen(hset) = {}\nGSw_HourlyChunkLength = {}'
     ).format(len(hset), sw['GSw_HourlyChunkLength'])
 
-    ### Map hours to chunks.
+    ### Map hours to chunks. Chunks are formatted as hour-ending.
     ## If GSw_HourlyChunkLength == 2,
-    ## h1-h2-h3-h4-h5-h6 is mapped to h1-h1-h2-h2-h3-h3.
-    ## We could instead map it to h1-h1-h3-h3-h5-h5, but we don't.
-    numchunks = len(hset) // int(sw['GSw_HourlyChunkLength'])
-    outchunks = ['h{}'.format(i+1) for i in range(numchunks)]
+    ## h1-h2-h3-h4-h5-h6 is mapped to h2-h2-h4-h4-h6-h6.
+    outchunks = hset[int(sw.GSw_HourlyChunkLength)-1::int(sw.GSw_HourlyChunkLength)]
     chunkmap = dict(zip(
         hset.values,
         np.ravel([[c]*int(sw['GSw_HourlyChunkLength']) for c in outchunks])
@@ -2113,70 +2247,52 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
     # =============================================================================
 
     ### Start hour is the lowest-numbered h in each season
-    szn2starth = 'h' + (
-        hmap_1yr
-        ## Change the hour column to integers: 'h1' -> 1
-        .assign(h=hmap_1yr.h.str.strip('h').astype(int))
-        [['season','h']].drop_duplicates()
-        ## Keep the lowest-numbered hour in each season
-        .groupby('season').h.min()
     ## End up with a series mapping season to start hour: {'szn1':'h1', ...}
-    ).astype(str)
+    szn2starth = hmap_1yr.drop_duplicates('season', keep='first').set_index('season').h
 
     ### End hour is the highest-numbered h in each season
-    szn2endh = 'h' + (
-        hmap_1yr
-        .assign(h=hmap_1yr.h.str.strip('h').astype(int))
-        [['season','h']].drop_duplicates()
-        .groupby('season').h.max()
-    ).astype(str)
+    szn2endh = hmap_1yr.drop_duplicates('season', keep='last').set_index('season').h
 
     # =============================================================================
     # Hour groups for eq_minloading
     # =============================================================================
 
-    hour_group = window_overlap(sw=sw, chunkmap=chunkmap)
+    hour_group = window_overlap(
+        sw=sw, chunkmap=chunkmap, rep_periods=rep_periods, hmap_1yr=hmap_1yr)
 
     # =============================================================================
-    # EFS-like demand
+    # Yearly demand
     # =============================================================================
 
-    if sw['GSw_EFS1_AllYearLoad'] != 'default':
-        ### Get the set of szn's and h's
-        szn_h = (
-            hmap_1yr
-            .drop_duplicates(['h','season'])
-            .sort_values(['season','hour']).reset_index(drop=True)
-            [['season','h']]
-            .assign(periodhour=np.ravel(
-                ([range(1,25)] * 365 if sw['GSw_HourlyType']=='year'
-                 else [range(1,hoursperperiod+1)] * len(sznset))
-            ))
-            .set_index(['season','periodhour']).h
-        ).copy()
+    load_in, load_all = get_yearly_demand(
+        sw=sw,  period_szn=period_szn, rep_periods=rep_periods,
+        val_r=val_r, hmap_1yr=hmap_1yr, set_szn=set_szn, 
+        basedir=basedir, inputs_case=inputs_case)
 
-        load_in, load_all = get_yearly_demand(
-            sw=sw,  period_szn=period_szn, representative_periods=medoid_idx.yperiod.values,
-            szn_h=szn_h, rfeas=rfeas, basedir=basedir, inputs_case=inputs_case)
+    ###### Get the peak demand in each (r,szn,year)
+    ### Procedure reproduced from all_year_load.get_season_peaks()
+    load_full_yearly = load_in.drop(['period','periodhour','season'], axis=1).stack('r').reset_index()
+    load_full_yearly.hour = 'h' + load_full_yearly.hour.astype(str)
 
-        ###### Get the peak demand in each (r,szn,year)
-        ### Procedure reproduced from all_year_load.get_season_peaks()
-        load_full_yearly = load_in.drop(['period','periodhour','season'], axis=1).stack('r').reset_index()
-        load_full_yearly.hour = 'h' + load_full_yearly.hour.astype(str)
+    hour2szn = hmap_1yr.assign(hour='h'+hmap_1yr.hour.astype(str)).set_index('hour').season
+    hierarchy = pd.read_csv(
+        os.path.join(inputs_case,'hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
 
-        years = pd.read_csv(
-            os.path.join(inputs_case,'modeledyears.csv')
-        ).columns.astype(int).values
+    years = pd.read_csv(
+        os.path.join(inputs_case,'modeledyears.csv')
+    ).columns.astype(int).values
 
-        peak_all = {}
-        for year in years:
-            peak_all[year] = get_season_peaks_hourly(
-                load=load_full_yearly[['r','hour',year]].rename(columns={year:'MW'}),
-                sw=sw, hierarchy=hierarchy, hour2szn=hour2szn)
-        peak_all = (
-            pd.concat(peak_all, names=['t','drop']).reset_index().drop('drop', axis=1)
-            [['r','szn','t','MW']]
-        ).copy()
+    peak_all = {}
+    for year in years:
+        peak_all[year] = get_season_peaks_hourly(
+            load=load_full_yearly[['r','hour',year]].rename(columns={year:'MW'}),
+            sw=sw, hierarchy=hierarchy, hour2szn=hour2szn)
+        print(f'determined season peaks for {year}')
+    peak_all = (
+        pd.concat(peak_all, names=['t','drop']).reset_index().drop('drop', axis=1)
+        [['r','szn','t','MW']]
+    ).copy()
 
 
     # =============================================================================
@@ -2184,50 +2300,59 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
     # =============================================================================
     write = {
         ### Contents are [dataframe, header, index, sep]
-        ## Load for all regions (h,r)
-        'load_hourly': [
-            (load_out.assign(h=load_out.h.map(chunkmap))
-             .groupby(['h','r'], as_index=False).value.mean()
+        ## Annual timeslice demand
+        'load_allyear': [
+            (load_all.reset_index().assign(h=load_all.reset_index().h.map(chunkmap))
+             .groupby(['r','h']).mean()
              .round(decimals)),
-            False, False, ','],
+            True, True, ','],
+        ## Seasonal peak demand
+        'peak_szn': [peak_all.round(decimals), False, False, ','],
         ## Capacity factors (i,r,h)
-        'cf_hourly': [
+        'cf_vre': [
             (cf_out.assign(h=cf_out.h.map(chunkmap))
-             .groupby(['i','r','h'], as_index=False).value.mean()),
+             .groupby(['i','r','h'], as_index=False).cf.mean().round(5)),
             False, False, ','],
-        ## Static Canadian trade (r,h,t)
-        'can_hourly': [
+        ## Static Canadian trade [MWh] (r,h,t)
+        'net_trade_can': [
             (can_out.assign(h=can_out.h.map(chunkmap))
-             .groupby(['r','h','t'], as_index=False).Val.mean()
+             .groupby(['r','h','t'], as_index=False).MWh.sum()
              .round(decimals)),
             False, False, ','],
+        ## Exports to Canada [fraction] (h)
+        'can_exports_h_frac': [
+            (can_exports_h_frac.assign(h=can_exports_h_frac.h.map(chunkmap))
+             .groupby('h', as_index=False).sum().round(6)),
+            False, False, ','],
+        ## Imports from Canada [fraction] (szn)
+        'can_imports_szn_frac': [can_imports_szn_frac.round(6), False, False, ','],
         ## Season-peak demand hour for each szn's representative day (h,szn)
-        'h_szn_prm_hourly': [
+        'h_szn_prm': [
             h_szn_prm.assign(h=h_szn_prm.h.map(chunkmap)),
             False, False, ','],
-        ## Peak demand for each season (r,szn)
-        'peak_dem_hourly_load': [peak_dem_hourly_load.round(decimals), False, False, ','],
         ## 8760 hour linkage set for Augur (h,szn,year,hour)
         'h_dt_szn': [
             hmap_7yr[['h','season','year','hour']].assign(h=hmap_7yr.h.map(chunkmap)),
             True, False, ','],
         ## Number of hours represented by each timeslice (h)
-        'hours_hourly': [
+        'numhours': [
             (hours.reset_index().assign(h=hours.index.map(chunkmap)).groupby('h').numhours.sum()
              .reset_index()),
             False, False, ','],
         ## Hours to season mapping (h,szn)
-        'h_szn_hourly': [
+        'h_szn': [
             h_szn.assign(h=h_szn.h.map(chunkmap)).drop_duplicates(),
             False, False, ','],
         ## h set for subsetting allh (h)
-        'hset_hourly': [
+        'set_h': [
             hset.map(chunkmap).drop_duplicates().to_frame(),
             False, False, ','],
         ## szn set for subsetting allszn (szn)
-        'sznset_hourly': [sznset, False, False, ','],
+        'set_szn': [set_szn, False, False, ','],
+        ## periods in which to apply operating reserve constraints (szn)
+        'opres_periods': [opres_periods, False, False, ','],
         ## Quarterly season weights for assigning summer/winter dependent parameters (h,szn)
-        'frac_h_quarter_weights_hourly': [
+        'frac_h_quarter_weights': [
             (frac_h_quarter_weights.assign(h=frac_h_quarter_weights.h.map(chunkmap))
              .groupby(['h','quarter'], as_index=False).weight.mean()
              .round(decimals+3)),
@@ -2235,26 +2360,42 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
         ## Day to season mapping for Osprey (day,szn)
         'd_szn': [period_szn_write, False, False, ','],
         ## first timeslice in season (szn,h)
-        'hourly_szn_start': [szn2starth.map(chunkmap).reset_index(), False, False, ','],
+        'h_szn_start': [szn2starth.map(chunkmap).reset_index(), False, False, ','],
         ## last timeslice in season (szn,h)
-        'hourly_szn_end': [szn2endh.map(chunkmap).reset_index(), False, False, ','],
+        'h_szn_end': [szn2endh.map(chunkmap).reset_index(), False, False, ','],
         ## minload hour windows with overlap (h,h)
         'hour_group': [hour_group, False, False, ' '],
-        ## representative periods for post-processing (yperiod,season,date)
-        'medoid_idx': [medoid_idx_write, True, False, ','],
+        ###### The next parameters are just diagnostics and are not actually used in ReEDS
+        ## Representative period weights for postprocessing (szn)
+        'rep_period_weights': [rep_period_weights, False, False, ','],
         ## Force-included periods
         'forceperiods': [forceperiods_write, True, False, ','],
+        ## Mapping from representative h to actual h
+        'hmap_1yr': [
+            hmap_1yr.assign(h=hmap_1yr.h.map(chunkmap)),
+            False, False, ','],
+        ## Mapping from representative period to actual period
+        'periodmap_1yr': [
+            hmap_1yr[['actual_period','season']].drop_duplicates(),
+            False, False, ','],
+        ###### The folowing parameters don't yet work for hourly resolution, so overwrite
+        ###### their old h17 inputs with empty dataframes
+        ## Canada/Mexico
+        'canmexload': [pd.DataFrame(columns=['*r','h']), True, False, ','],
+        ## GSw_DR
+        'dr_increase': [pd.DataFrame(columns=['*i','r','h']), True, False, ','],
+        'dr_decrease': [pd.DataFrame(columns=['*i','r','h']), True, False, ','],
+        'dr_shifts': [pd.DataFrame(columns=['*i','h','hh']), True, False, ','],
+        'dr_shed': [pd.DataFrame(columns=['*i']), True, False, ','],
+        ## GSw_EV
+        'ev_static_demand': [pd.DataFrame(columns=['*r','h','t']), True, False, ','],
+        ## GSw_EFS_Flex
+        'flex_frac_all': [pd.DataFrame(columns=['*flex_type','r','h','t']), True, False, ','],
+        'peak_h': [pd.DataFrame(columns=['*r','h','t','MW']), True, False, ','],
     }
-    if sw['GSw_EFS1_AllYearLoad'] != 'default':
-        write['load_all_hourly'] = [
-            (load_all.reset_index().assign(h=load_all.reset_index().h.map(chunkmap))
-             .groupby(['r','h']).mean()
-             .round(decimals)),
-            True, True, ',']
-        write['peak_all_hourly'] = [peak_all.round(decimals), False, False, ',']
 
 
-    print("\n\nWriting data CSVs: \n", flush=True)
+    print("Writing data CSVs")
     for f in write:
         ### Rename first column so GAMS reads it as a comment
         if not write[f][1]:
@@ -2262,13 +2403,20 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
                 columns={write[f][0].columns[0]: '*'+str(write[f][0].columns[0])},
                 inplace=True
             )
+        ### If the file already exists, add a '_h17' to the filename and save it
+        if debug and os.path.isfile(os.path.join(inputs_case, f+'.csv')):
+            shutil.copy(
+                os.path.join(inputs_case, f+'.csv'),
+                os.path.join(inputs_case, f+'_h17.csv'))
+        ### Write the new hourly parameters
         write[f][0].to_csv(
             os.path.join(inputs_case, f+'.csv'),
+            # os.path.join(inputs_case, f+f'{figpathtail}.csv'),
             index=write[f][2], sep=write[f][3])
 
     ###############################################################
     ### Map resulting annual capacity factor and deviation from h17
-    if make_plots:
+    if make_plots >= 1:
         try:
             plot_maps(sw, inputs_case, basedir, figpath)
         except Exception as err:
@@ -2285,11 +2433,6 @@ def main(sw, basedir, inputs_case, select_year=2012, make_plots=1):
 #%% PROCEDURE
 
 if __name__ == '__main__':
-    #%% direct print and errors to log file
-    import sys
-    sys.stdout = open('gamslog.txt', 'a')
-    sys.stderr = open('gamslog.txt', 'a')
-
     ###################
     #%% Argument inputs
     parser = argparse.ArgumentParser(
@@ -2305,9 +2448,10 @@ if __name__ == '__main__':
 
     # ################################
     # #%% Inputs for reproducing a run
-    # basedir = os.path.expanduser('~/github2/ReEDS-2.0/')
+    # basedir = os.path.expanduser('~/github/ReEDS-2.0/')
     # inputs_case = os.path.join(
-    #     basedir,'runs','v20220805_spurM0_Z40_ERCOT','inputs_case','')
+    #     basedir,'runs',
+    #     'v20230109_hourlymergeM0_Pacific','inputs_case','')
     # select_year = 2012
     # make_plots = 1
 
@@ -2323,9 +2467,6 @@ if __name__ == '__main__':
     # sw['GSw_Hourly'] = 1
     # sw['GSw_HourlyType'] = 'day'
     # sw['GSw_HourlyClusterMultiYear'] = 0
-    # sw['GSw_HourlyClusterAlgorithm'] = 'hierarchical'
-    # sw['GSw_HourlyNumClusters'] = 10
-    # sw['GSw_HourlyCenterType'] = 'medoid'
     # sw['GSw_HourlyWindow'] = 7
     # sw['GSw_HourlyOverlap'] = 2
     # sw['GSw_EFS1_AllYearLoad'] = 'Clean2035'
@@ -2333,8 +2474,13 @@ if __name__ == '__main__':
     # sw['GSw_HourlyChunkLength'] = 1
     # sw['GSw_HourlyClusterRegionLevel'] = 'country'
     # sw['GSw_HourlyClusterWeights'] = pd.Series({"load":1, "upv":0.5, "wind-ons":0.5})
-    # sw['GSw_HourlyMinRElevel'] = 'country'
-    # sw['GSw_HourlyPeakLevel'] = 'country'
+    # sw['GSw_HourlyClusterAlgorithm'] = 'optimized'
+    # sw['GSw_HourlyNumClusters'] = 50
+    # sw['GSw_HourlyMinRElevel'] = 'interconnect'
+    # sw['GSw_HourlyPeakLevel'] = 'interconnect'
+
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
     #################
     #%% Switch inputs
@@ -2349,12 +2495,33 @@ if __name__ == '__main__':
            .replace(':','":').replace(',',',"'))
         +'}'
     ))
+    ## Hard-code a GSw_CSP_Types switch as in LDC_prep.py
+    sw['GSw_CSP_Types'] = [1,2]
+    figpathtail = ''
 
     ##########
     #%% Run it
+    # make_plots = 1
+    # for GSw_HourlyClusterAlgorithm in ['optimized']:
+    #     for GSw_HourlyClusterRegionLevel in ['transreg']:
+    #         for GSw_HourlyType in ['day']:
+    #             for GSw_HourlyClusterTimestep in ['hour']:
+    #                 for GSw_HourlyNumClusters in range(26,51):
+    #                     sw.GSw_HourlyClusterAlgorithm = GSw_HourlyClusterAlgorithm
+    #                     sw.GSw_HourlyClusterRegionLevel = GSw_HourlyClusterRegionLevel
+    #                     sw.GSw_HourlyType = GSw_HourlyType
+    #                     sw.GSw_HourlyClusterTimestep = GSw_HourlyClusterTimestep
+    #                     sw.GSw_HourlyNumClusters = GSw_HourlyNumClusters
     main(
         sw=sw, basedir=basedir, inputs_case=inputs_case,
         select_year=select_year, make_plots=make_plots,
+        figpathtail='',
+        # figpathtail='_{}_{}_{}_{}{}'.format(
+        #     sw.GSw_HourlyClusterAlgorithm,
+        #     sw.GSw_HourlyClusterRegionLevel,
+        #     sw.GSw_HourlyClusterTimestep,
+        #     sw.GSw_HourlyType[0], sw.GSw_HourlyNumClusters,
+        # )
     )
 
     toc(tic=tic, year=0, process='input_processing/hourly_process.py', 

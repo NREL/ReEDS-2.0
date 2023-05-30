@@ -6,10 +6,6 @@ import os
 import itertools
 import argparse
 import copy
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 
 #%% Local imports
 import ferc_distadmin
@@ -287,7 +283,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
 
     #%% Start calculations
     # Load regions
-    regions_map = pd.read_csv(os.path.join(run_dir, 'inputs_case', 'regions.csv')).rename(columns={'p':'r','st':'state'})
+    regions_map = pd.read_csv(os.path.join(run_dir, 'inputs_case', 'regions.csv')).rename(columns={'st':'state'})
 
     # In some instances, both 'p' and 's' regions can be in the 'r' column. 
     # Renaming those columns 'region' to differentiate. 
@@ -2250,16 +2246,6 @@ def retail_plots(
 if __name__ == '__main__':
     mdir = os.path.dirname(os.path.abspath(__file__))
 
-    #%% Time the operation of this script
-    import site
-    site.addsitedir(os.path.join(mdir,os.pardir,os.pardir,'input_processing'))
-    try:
-        from ticker import toc
-        import datetime
-        tic = datetime.datetime.now()
-    except:
-        pass
-    
     parser = argparse.ArgumentParser(description='run retail rate module')
     parser.add_argument('rundir', type=str,
                         help="name of run directory (leave out 'runs' and directory separators)")
@@ -2274,6 +2260,18 @@ if __name__ == '__main__':
     run_dir = os.path.join(mdir, os.pardir, os.pardir, 'runs', args.rundir)
     plot_dollar_year = args.plot_dollar_year
     startyear = args.startyear
+
+    #%% Time the operation of this script
+    import site
+    site.addsitedir(os.path.join(mdir,os.pardir,os.pardir,'input_processing'))
+    try:
+        from ticker import toc, makelog
+        import datetime
+        tic = datetime.datetime.now()
+        #%% Set up logger
+        log = makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
+    except:
+        pass
 
     #%% Get and write the component revenues
     main(

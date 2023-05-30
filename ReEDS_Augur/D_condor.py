@@ -663,10 +663,20 @@ def get_marginal_storage_value(trans_region_curt):
 
     df_results = pd.concat([df_results, df_results_dr], sort=False)
 
+    # Append PSH water tech arbitrage value if applicable
+    if int(SwitchSettings.switches['gsw_watermain']):
+        pshmap = INPUTS['watertechs_psh'].get_data()
+        if not pshmap.empty:
+            psh_watertechs = pd.concat({
+                i: df_results.loc[df_results.i=='pumped-hydro'].copy()
+                for i in pshmap.i.values
+            }, axis=0).drop('i',axis=1).reset_index().rename(columns={'level_0':'i'})
+            df_results = df_results.append(psh_watertechs[['i','r','t','revenue']]) 
+
     condor_results = {
         'hourly_arbitrage_value': df_results.reindex(['i','r','t','revenue'], axis=1)
     }
-    #%%
+#%%
     return condor_results
 
 #%%

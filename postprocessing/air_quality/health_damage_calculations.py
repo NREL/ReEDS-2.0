@@ -38,6 +38,7 @@ import argparse
 import os
 import pandas as pd
 import sys
+#from input_processing.ticker import makelog
 
 # Automatic inputs
 reedspath = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -75,9 +76,8 @@ try:
         scenName = os.path.basename(args.scenario)
         scenarios[scenName] = args.scenario
 
-        # add printing/errors to existing log file
-        sys.stdout = open(os.path.join(args.scenario, 'gamslog.txt'), 'a')
-        sys.stderr = open(os.path.join(args.scenario, 'gamslog.txt'), 'a')
+        #%% Set up logger
+#        log = makelog(scriptname=__file__, logpath=os.path.join(args.scenario,'gamslog.txt'))
 
         # load deflator and marginal damages
         deflator = pd.read_csv(

@@ -114,11 +114,11 @@ def csp_dispatch(cfcsp, sm=2.4, storage_duration=10):
 
 
 #%% Main function
-def hourly_prep(basedir, inputs_case):
+def main(basedir, inputs_case):
     # #%% Settings for debugging ###
     # basedir = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
     # inputs_case = os.path.join(
-    #     basedir,'runs','v20220906_NTPm1_ercot_seq','inputs_case')
+    #     basedir,'runs','v20221209_hourlyM2_ERCOT_d21f0h4_EFShigh','inputs_case')
 
     #%% Fixed inputs
     GSw_CSP_Types = '1_2'
@@ -153,7 +153,7 @@ def hourly_prep(basedir, inputs_case):
     # -------- Datetime mapper --------
     hdtmap = pd.read_csv(os.path.join(inputs_case, 'h_dt_szn.csv'))
     ### EFS-style load only has one year of data
-    if (GSw_EFS1_AllYearLoad == 'default') or ('EER' in GSw_EFS1_AllYearLoad):
+    if (GSw_EFS1_AllYearLoad == 'historic') or ('EER' in GSw_EFS1_AllYearLoad):
         hdtmap_load = hdtmap
     else:
         hdtmap_load = hdtmap[hdtmap.year == 2012]
@@ -166,9 +166,8 @@ def hourly_prep(basedir, inputs_case):
     distloss = scalars['distloss']
 
     ### BAs present in the current run
-    ### valid_ba_list -> rfeas
-    rfeas = sorted(
-        pd.read_csv(os.path.join(inputs_case, 'valid_ba_list.csv'), squeeze=True, header=None)
+    val_r = sorted(
+        pd.read_csv(os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None)
         .tolist())
     ### Years in the current run
     solveyears = pd.read_csv(
@@ -195,7 +194,7 @@ def hourly_prep(basedir, inputs_case):
     r2ccreg = pd.concat([rb2ccreg,rs2ccreg], axis=0)
 
     # BA's and resource regions in the current run
-    rfeas_cap = rfeas + rb2rs.loc[rfeas].tolist()
+    val_r_cap = val_r + rb2rs.loc[val_r].tolist()
 
     # Get technology subsets
     tech_table = pd.read_csv(
@@ -311,7 +310,7 @@ def hourly_prep(basedir, inputs_case):
         chunksize = 1000
         df_ind = pd.concat(
             ### Weighted average CF = sum(capacity * CF) / sum(capacity)
-            [(df_ind.loc[i:i+chunksize-1].sum(axis=1, level=0)
+            [(df_ind.loc[i:i+chunksize-1].groupby(axis=1, level=0).sum()
                 / aggcapacity).astype(np.float16).fillna(0)
                 for i in np.arange(0, len(df_ind), chunksize)],
             axis=0,
@@ -415,38 +414,47 @@ def hourly_prep(basedir, inputs_case):
         os.path.join(inputs_case,'distPVCF.csv')).rename(columns={'Unnamed: 0':'resource'})
 
     # ------- Performing load modifications -------
-    if GSw_EFS1_AllYearLoad == "default":
-        load_profiles = pd.read_csv(
-            os.path.join(path_variability, folder, 'load.csv.gz'),
-            index_col=0, float_precision='round_trip')[rfeas]
-    else:
-        load_profiles = read_file(
-            os.path.join(path_variability,'EFS_Load',(GSw_EFS1_AllYearLoad+'_load_hourly')),
-            index_columns=2,
-        ).loc[solveyears,rfeas]
-
-    if GSw_EFS1_AllYearLoad == 'default':
+    if GSw_EFS1_AllYearLoad == "historic":
+        load_historical = read_file(
+            os.path.join(basedir,'inputs','loaddata','historic_load_hourly'))[val_r]
 
         #Importing timeslice hours for performing load scaling
         hours = pd.read_csv(
             os.path.join(inputs_case,'numhours.csv'), 
-            header=None, names=['h','numhours'], index_col='h', squeeze=True)
-        hours.index = hours.index.map(lambda x: x.upper())
+            header=0, names=['h','numhours'], index_col='h', squeeze=True)
 
         # Prepare a dataframe for scaling the load profiles
         # Scaling is done using the annual 2010 timeslice load by BA
-        load_TS_2010 = pd.read_csv(os.path.join(inputs_case,'load_2010.csv'), index_col='r')
+        load_TS_2010 = pd.read_csv(
+            os.path.join(inputs_case,'load_allyear.csv'), index_col=['r','h'])['2010'].unstack('h')
         # Get total load in each timeslice and region
         load_TS_2010 *= hours
         # Get annual load by region
         load_TS_2010_total = load_TS_2010.sum(1)
 
         ### Normalize load profiles with 2010 load timeslices
-        load_profiles.index = pd.MultiIndex.from_frame(hdtmap_load[['year','hour']])
+        load_historical.index = pd.MultiIndex.from_frame(hdtmap_load[['year','hour']])
         ## Scale 2007-2013 load profiles by (actual 2010 load) / (yearly profile load)
         ## so that all singe-year sums equal 2010 load
-        load_profiles *= (load_TS_2010_total / load_profiles.groupby('year').sum())
-        load_profiles.reset_index(level='year', drop=True, inplace=True)
+        load_historical *= (load_TS_2010_total / load_historical.groupby('year').sum())
+        load_historical.reset_index(level='year', drop=True, inplace=True)
+        load_historical.columns = load_historical.columns.rename('r')
+
+        #%% Scale up using load multiplier
+        load_multiplier_r = pd.read_csv(
+            os.path.join(inputs_case,'load_multiplier_r.csv'), index_col=['r','t'], squeeze=True,
+        ).loc[val_r]
+        ### Create scaled dataframe with (demandyear, weatherhour) index
+        load_profiles = (
+            (load_historical * load_multiplier_r)
+            .stack('t').reorder_levels(['t','hour']).sort_index())
+        load_profiles.index = load_profiles.index.rename(['year','hour'])
+
+    else:
+        load_profiles = read_file(
+            os.path.join(basedir,'inputs','loaddata',(GSw_EFS1_AllYearLoad+'_load_hourly')),
+            index_columns=2,
+        ).loc[solveyears,val_r]
 
     # Adjusting load profiles by distribution loss factor and load calibration factor
     load_profiles /= (1 - distloss)
@@ -517,7 +525,7 @@ def hourly_prep(basedir, inputs_case):
     # Filtering out profiles of resources not included in this run
     # and sorting to match the order of the rows in resources
     resources = resources[
-        resources['area'].isin(rfeas_cap)
+        resources['area'].isin(val_r_cap)
     ].sort_values(['resource','area'])
     recf = recf.reindex(labels=resources['resource'].drop_duplicates(), axis=1, copy=False)
 
@@ -547,7 +555,7 @@ def hourly_prep(basedir, inputs_case):
         .assign(i=csp_resources['tech'] + '_' + csp_resources['class'].astype(str))
         .assign(resource=csp_resources['tech'] + '_' + csp_resources['resource'])
         .assign(ccreg=csp_resources.r.map(r2ccreg))
-        .loc[csp_resources.r.isin(rfeas_cap)]
+        .loc[csp_resources.r.isin(val_r_cap)]
         [['i','r','resource','ccreg']]
     )
 
@@ -560,7 +568,7 @@ def hourly_prep(basedir, inputs_case):
     ## All CSP resource classes have the same duration for a given tech, so just take the first one
     durations = {tech: storage_duration[f'csp{tech.strip("csp")}_1'] for tech in csptechs}
     ### Run the dispatch simulation for modeled regions
-    keep = [c for c in cspcf if c.split('_')[1] in rfeas_cap]
+    keep = [c for c in cspcf if c.split('_')[1] in val_r_cap]
     csp_system_cf = pd.concat({
         tech: csp_dispatch(cspcf[keep], sm=sms[tech], storage_duration=durations[tech])
         for tech in csptechs
@@ -604,22 +612,17 @@ def hourly_prep(basedir, inputs_case):
     )
     ### Get number of days used in Augur/Osprey
     numdays = 365 * len(osprey_years.split(','))
-    ### Write the threads-to-days file
+    ### Make the threads-to-days table
     threadout = pd.Series(get_threaddays(threads=threads, numdays=numdays))
-    threadout.to_csv(
-        os.path.join(inputs_case, 'threads.txt'),
-        index=False, header=False,
-    )
 
-    #%%
-    # ------- Dump static data into HDF5 and csv files for future years -------
-
+    #%%### Write outputs
     load_profiles.astype(np.float32).to_hdf(
         os.path.join(inputs_case,'load.h5'), key='data', complevel=4, index=True)
     recf.astype(np.float16).to_hdf(
         os.path.join(inputs_case,'recf.h5'), key='data', complevel=4, index=True)
     resources.to_csv(os.path.join(inputs_case,'resources.csv'), index=False)
-
+    threadout.to_csv(
+        os.path.join(inputs_case, 'threads.txt'), index=False, header=False)
     ### Overwrite the original hierarchy.csv based on capcredit_hierarchy_level
     hierarchy.rename_axis('*r').to_csv(
         os.path.join(inputs_case, 'hierarchy.csv'), index=True, header=True)
@@ -629,12 +632,8 @@ def hourly_prep(basedir, inputs_case):
 
 #%% PROCEDURE ###
 if __name__ == '__main__':
-    #%% direct print and errors to log file
-    import sys
-    sys.stdout = open('gamslog.txt', 'a')
-    sys.stderr = open('gamslog.txt', 'a')
     # Time the operation of this script
-    from ticker import toc
+    from ticker import toc, makelog
     import datetime
     tic = datetime.datetime.now()
 
@@ -647,9 +646,12 @@ if __name__ == '__main__':
     basedir = args.basedir
     inputs_case = args.inputs_case
 
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+
     ### Run it
     print('Starting LDC_prep.py', flush=True)
-    hourly_prep(basedir, inputs_case)
+    main(basedir, inputs_case)
 
     toc(tic=tic, year=0, process='input_processing/LDC_prep.py',
         path=os.path.join(inputs_case,'..'))

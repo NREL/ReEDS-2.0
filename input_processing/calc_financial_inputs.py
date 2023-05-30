@@ -5,12 +5,9 @@ import os
 import csv
 import support_functions as sFuncs
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
+
 
 #%% Functions
 def calc_financial_inputs(basedir, inputs_case):
@@ -20,11 +17,8 @@ def calc_financial_inputs(basedir, inputs_case):
     - ptc_values.csv
     - ptc_value_scaled.csv
     - itc_fractions.csv
-    - regions.csv
     - depreciation_schedules.csv
     - inflation.csv
-    - valid_ba_list.csv
-    - valid_regions_list.csv
     - cap_cost_mult.csv
     - cap_cost_mult_noITC.csv
     - cap_cost_mult_for_ratebase.csv
@@ -76,12 +70,14 @@ def calc_financial_inputs(basedir, inputs_case):
 
     techs = pd.read_csv(
         os.path.join(input_dir, 'techs', 'techs_%s.csv' % switches['techs_suffix']))
+    techs = sFuncs.expand_GAMS_tech_groups(techs)
     vintage_definition = pd.read_csv(os.path.join(inputs_case, 'ivt.csv')).rename(columns={'Unnamed: 0':'i'})
 
     annual_degrade = pd.read_csv(
         os.path.join(input_dir,'degradation',
                      'degradation_annual_%s.csv' % switches['degrade_suffix']),
         header=None, names=['i','annual_degradation'])
+    annual_degrade = sFuncs.expand_GAMS_tech_groups(annual_degrade)
     ### Assign the PV+battery values to values for standalone batteries
     annual_degrade = sFuncs.append_pvb_parameters(
         dfin=annual_degrade, 
@@ -89,8 +85,8 @@ def calc_financial_inputs(basedir, inputs_case):
 
     years, modeled_years, year_map = sFuncs.ingest_years(
         inputs_case, switches['sys_eval_years'], switches['endyear'])
-    regions, valid_ba_list, valid_regions_list = sFuncs.ingest_regions(
-        switches['GSw_RegionLevel'], switches['GSw_Region'], scen_settings, NARIS=False)
+
+    val_r_cap = pd.read_csv(os.path.join(inputs_case,'val_r_cap.csv'), header = None)[0].tolist()
 
     df_ivt = sFuncs.build_dfs(years, techs, vintage_definition, year_map)
     print('df_ivt created for', inputs_case)
@@ -101,9 +97,9 @@ def calc_financial_inputs(basedir, inputs_case):
     # Import system-wide real discount rates, calculate present-value-factors, merge onto df's
     financials_sys = sFuncs.import_sys_financials(
         switches['financials_sys_suffix'], inflation_df, modeled_years, 
-        years, year_map, switches['sys_eval_years'], scen_settings)
+        years, year_map, switches['sys_eval_years'], scen_settings, scalars['co2_capture_incentive_length'])
     df_ivt = df_ivt.merge(
-        financials_sys[['t', 'pvf_capital', 'crf', 'd_real', 'd_nom', 'interest_rate_nom', 
+        financials_sys[['t', 'pvf_capital', 'crf', 'crf_co2_incentive', 'd_real', 'd_nom', 'interest_rate_nom', 
                         'tax_rate', 'debt_fraction', 'rroe_nom']], 
         on=['t'], how='left')
 
@@ -162,7 +158,7 @@ def calc_financial_inputs(basedir, inputs_case):
         inflation_df=inflation_df, scen_settings=scen_settings)
     df_ivt = df_ivt.merge(incentive_df, on=['i', 't', 'country'], how='left')
     df_ivt['safe_harbor_max'] = df_ivt['safe_harbor_max'].fillna(0.0)
-    df_ivt['co2_capture_value_monetized'] = df_ivt['co2_capture_value_monetized'].fillna(0.0)
+    df_ivt['co2_capture_value_monetized'] = df_ivt['co2_capture_value_monetized'].fillna(0.0) * (1 / (1 - df_ivt['tax_rate']))
     
     ### Calculate the tax impacts of the PTC, and calculate the adjustment to reflect the 
     # difference between the PTC duration and ReEDS evaluation period
@@ -281,7 +277,7 @@ def calc_financial_inputs(basedir, inputs_case):
     ### The transmission ITC is not meant to apply to currently-planned transmission.
     ### So for years before firstyear_trans, use cap_cost_mult_noITC;
     ### i.e. only start applying the ITC once the model switches to endogenous transmission.
-    firstyear_trans = int(scalars['firstyear_trans'])
+    firstyear_trans = int(scalars['firstyear_trans_longterm'])
     dftrans.loc[dftrans.t<firstyear_trans, 'cap_cost_mult'] = (
         dftrans.loc[dftrans.t<firstyear_trans, 'cap_cost_mult_noITC'])
 
@@ -320,8 +316,9 @@ def calc_financial_inputs(basedir, inputs_case):
         del mult_temp
     del reg_cap_cost_mult_csp
     
-    # Trim down to just the techs in this run
+    # Trim down to just the techs and regions in this run
     reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['i'].isin(list(techs['i']))]
+    reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['r'].isin(val_r_cap)]
 
 
     #%% Before writing outputs, change "x" to "newx" in [v]
@@ -392,6 +389,9 @@ def calc_financial_inputs(basedir, inputs_case):
     crf_df = financials_sys[financials_sys['t']==financials_sys['modeled_year']].copy()
     sFuncs.param_exporter(crf_df[['t', 'crf']], 'crf', 'crf', inputs_case)
 
+    # 12-year crf used in sequential case for calculating 12-year payback time of co2_captured_incentive
+    crf_co2_df = financials_sys[financials_sys['t']==financials_sys['modeled_year']].copy()
+    sFuncs.param_exporter(crf_df[['t', 'crf_co2_incentive']], 'crf_co2_incentive', 'crf_co2_incentive', inputs_case)
 
     # pvf_onm used in intertemporal
     pvf_onm_int = financials_sys[['modeled_year', 'pvf_onm']].groupby(by=['modeled_year']).sum()
@@ -403,15 +403,7 @@ def calc_financial_inputs(basedir, inputs_case):
     # pvf_cap (used in both seq and int modes)
     sFuncs.inv_param_exporter(df_ivt, modeled_years, 'pvf_capital', ['t'], 'pvf_cap', inputs_case)
 
-
-    # Export valid region lists
-    pd.Series(valid_ba_list).to_csv(
-        os.path.join(inputs_case, 'valid_ba_list.csv'), header=False, index=False)
-    pd.Series(valid_regions_list).to_csv(
-        os.path.join(inputs_case, 'valid_regions_list.csv'), header=False, index=False)
-
     # Copy input files into inputs_case
-    regions.to_csv(os.path.join(inputs_case, 'regions.csv'), index=False)
     depreciation_schedules.to_csv(
         os.path.join(inputs_case, 'depreciation_schedules.csv'), index=False)
     inflation_df.to_csv(os.path.join(inputs_case, 'inflation.csv'), index=False)
@@ -466,6 +458,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     basedir = args.basedir
     inputs_case = args.inputs_case
+
+    ### Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
     #%% Run it
     tic = datetime.datetime.now()

@@ -1,0 +1,74 @@
+case,Description,Default Value,Mid_Case_NoNascent,Mid_Case,Mid_Case_RefLoad,No_IRA,Low_NG_Price,High_NG_Price,Low_RE_Cost,High_RE_Cost,Low_AllClean_Cost,High_AllClean_Cost,Constrained,LII,HII,REF_Mid_Case_NoNascent,REF_Mid_Case,REF_Mid_Case_RefLoad,REF_Low_NG_Price,REF_High_NG_Price,REF_Low_RE_Cost,REF_High_RE_Cost,REF_Low_AllClean_Cost,REF_High_AllClean_Cost,REF_Constrained,REF_Mid_Case_StretchLoad
+ignore,"0=run this case, 1=ignore this case",0,,,,,,,,,,,,,,,,,,,,,,,,
+timetype,Sequential or Intertemporal,seq,,,,,,,,,,,,,,,,,,,,,,,,
+yearset_suffix,Set of years that are modeled,annual,,,,,,,,,,,,,,,,,,,,,,,,
+distpvscen,Setting for distpv scenario,StScen2022_Mid_Case_LMI,,,,StScen2022_Mid_Case_noIRA,,,StScen2022_Low_RE_Cost_LMI,StScen2022_High_RE_Cost_LMI,StScen2022_Low_RE_Cost_LMI,StScen2022_High_RE_Cost_LMI,,,,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA,StScen2022_Mid_Case_noIRA
+batteryscen,Battery cost and performance characteristics,battery_ATB_2022_moderate,,,,,,,battery_ATB_2022_advanced,battery_ATB_2022_conservative,battery_ATB_2022_advanced,battery_ATB_2022_conservative,,,,,,,,,battery_ATB_2022_advanced,battery_ATB_2022_conservative,battery_ATB_2022_advanced,battery_ATB_2022_conservative,,
+convscen,Conventional generators cost and performance characteristics,conv_ATB_2022,,,,,,,,,conv_ATB_2022_low_nuclear_and_ccs_cost,,,,,,,,,,,,conv_ATB_2022_low_nuclear_and_ccs_cost,,,
+cspscen,CSP cost and performance characteristics,csp_ATB_2022_moderate,,,,,,,csp_ATB_2022_advanced,csp_ATB_2022_conservative,csp_ATB_2022_advanced,csp_ATB_2022_conservative,,,,,,,,,csp_ATB_2022_advanced,csp_ATB_2022_conservative,csp_ATB_2022_advanced,csp_ATB_2022_conservative,,
+demandscen,Demand scenario,AEO_2022_reference,,,,,,,,,,,,,,,,,,,,,,,,
+geoscen,Geothermal cost projections,geo_ATB_2022_moderate,,,,,,,geo_ATB_2022_advanced,geo_ATB_2022_conservative,geo_ATB_2022_advanced,geo_ATB_2022_conservative,,,,,,,,,geo_ATB_2022_advanced,geo_ATB_2022_conservative,geo_ATB_2022_advanced,geo_ATB_2022_conservative,,
+geosupplycurve,Geothermal Supply Curve,ATB_2022,,,,,,,,,,,,,,,,,,,,,,,,
+geodiscov,Annual discover rates for new geothermal sites,BAU,,,,,,,TI,,TI,,,,,,,,,,TI,,TI,,,
+hydroscen,Hydropower cost setting,hydro_ATB_2019_mid,,,,,,,hydro_ATB_2019_low,,hydro_ATB_2019_low,,,,,,,,,,hydro_ATB_2019_low,,hydro_ATB_2019_low,,,
+ngscen,Natural gas price scenario,AEO_2022_reference,,,,,AEO_2022_HOG,AEO_2022_LOG,,,,,,,,,,,AEO_2022_HOG,AEO_2022_LOG,,,,,,
+upvscen,UPV cost and performance characteristics,upv_ATB_2022_moderate,,,,,,,upv_ATB_2022_advanced,upv_ATB_2022_conservative,upv_ATB_2022_advanced,upv_ATB_2022_conservative,,,,,,,,,upv_ATB_2022_advanced,upv_ATB_2022_conservative,upv_ATB_2022_advanced,upv_ATB_2022_conservative,,
+onswindscen,Onshore wind cost and performance characteristics,ons-wind_ATB_2022_moderate,,,,,,,ons-wind_ATB_2022_advanced,ons-wind_ATB_2022_conservative,ons-wind_ATB_2022_advanced,ons-wind_ATB_2022_conservative,,,,,,,,,ons-wind_ATB_2022_advanced,ons-wind_ATB_2022_conservative,ons-wind_ATB_2022_advanced,ons-wind_ATB_2022_conservative,,
+ofswindscen,Offshore wind cost and performance characteristics,ofs-wind_ATB_2022_moderate,ofs-wind_ATB_2022_moderate_noFloating,,,,,,ofs-wind_ATB_2022_advanced,ofs-wind_ATB_2022_conservative,ofs-wind_ATB_2022_advanced,ofs-wind_ATB_2022_conservative,,,,ofs-wind_ATB_2022_moderate_noFloating,,,,,ofs-wind_ATB_2022_advanced,ofs-wind_ATB_2022_conservative,ofs-wind_ATB_2022_advanced,ofs-wind_ATB_2022_conservative,,
+incentives_suffix,File suffix for incentive definition,ira,,,,biennial,,,,,,,,ira_lii,ira_hii,biennial,biennial,biennial,biennial,biennial,biennial,biennial,biennial,biennial,biennial,biennial
+GSw_AnnualCap,Turn on/off CO2 cap,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_AnnualCapScen,Scenario for CO2 cap pathway,default,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_BECCS,Turn on/off BECCS technology,0,,1,1,1,1,1,1,1,1,1,1,1,1,,1,1,1,1,1,1,1,1,1,1
+GSw_CCS,Turn on/off all CCS,0,,1,1,1,1,1,1,1,1,1,1,1,1,,1,1,1,1,1,1,1,1,1,1
+GSw_CO2_Detail,Switch to enable detailed representation CO2 transportation and storage,0,,1,1,1,1,1,1,1,1,1,1,1,1,,1,1,1,1,1,1,1,1,1,1
+GSw_MaxCaptureCCSTechs,Switch to enable max capture (_max) CCS techs in addition to _mod. Note that you’ll need to add your own cost and performance for Gas-CC-CCS_max and coal-CCS_max,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_DAC,"Turn on or off the representation of direct air capture [0 = off, 1 = BAU, 2 = conservative, 3 = BVRE projection specified with dacscen]",0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_DAC_Gas,"Turn on or off the representation of gas fueled direct air capture [0 = off, 1 = BVRE projection specified with GSw_DAC_Gas_Case]",0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_EFS_Flex,Switch for turning EFS load flexibility on or off,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_EFS1_AllYearLoad,"Switch to choose EFS profiles - e.g. historic, EPREFERENCE, EPMEDIUM, EPHIGH",EPMEDIUMStretch2046,,,historic,historic,,,,,,,,,,historic,historic,historic,historic,historic,historic,historic,historic,historic,historic,EPMEDIUMStretch2046
+GSw_EFS2_FlexCase,"Case used for EFS flex_type - format is {1}_{2}, where 1 in [EPREFERENCE, EPMEDIUM, EPHIGH] and 2 in [Baseflex, Currentflex, Enhancedflex]",EPMEDIUM_EnhancedflexStretch2046,,,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,,,,,,,,,,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,EPREFERENCE_Baseflex,EPMEDIUM_EnhancedflexStretch2046
+GSw_EV,Turn EV demand on/off,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_GasSector,Select sector scope of gas curves,electric_sector,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_Geothermal,"Geothermal can be turned off [0], left to the default representation [1], or have an extended representation [2]",1,,2,2,2,2,2,2,2,2,2,2,2,2,,2,2,2,2,2,2,2,2,2,2
+GSw_H2,Turn on/off the representation of the production of hydrogen at a national (1) or regional(2) level,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_H2_Transport,Switch to enable or disable H2 transport network (only valid with Sw_H2=2),0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_H2_Demand_Case,H2 demand case as indicated by the column headers in inputs/consume/h2_exogenous_demand.csv,None,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_NuclearSMR,Turn on [1] / off [0] Nuclear-SMR,0,,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+GSw_NukeNoRetire,Switch to prevent nuclear from retiring before the year in GSw_NukeNoRetireYear has passed,1,,,,0,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0
+GSw_NukeNoRetireYear,If GSw_NukeNoRetire is enabled nuclear cannot retire through the end of this year,2032,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_PVB,Turn on/off hybrid PV+Battery,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_RECT,Switch to turn on/off RECT and RECC techs,0,,1,1,1,1,1,1,1,1,1,1,1,1,,1,1,1,1,1,1,1,1,1,1
+GSw_ReducedResource,Turn on/off switch to reduce the RE resource available,0,,,,,,,,,,,1,,,,,,,,,,,,1,
+GSw_Retire,retirement switch,5,,,,,,,,,,,,,,3,3,3,3,3,3,3,3,3,3,3
+GSw_SitingUPV,"Specify the UPV siting scenario [reference, open, limited]",reference,,,,,,,,,,,limited,,,,,,,,,,,,limited,
+GSw_SitingWindOfs,"Specify the offshore wind siting scenario [open, limited]",open,,,,,,,,,,,limited,,,,,,,,,,,,limited,
+GSw_SitingWindOns,"Specify the onshore wind siting scenario [reference, open, limited, limitedplus]",reference,,,,,,,,,,,limited,,,,,,,,,,,,limited,
+GSw_TCPhaseout,"Switch for whether tax credit Phaseout is enabled (0=no, 1=yes)",1,,,,0,,,,,,,,,,0,0,0,0,0,0,0,0,0,0,0
+GSw_TCPhaseout_start,Earliest allowed Applicable Year for the tax credit phaseout. The tax credit phaseout schedule starts on the year following this year; or later if the emission threshold is not met by this year,2032,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_TCPhaseout_ref_year,The reference year used to determine whether the trigger for the tax credit phaseout threshold has been hit,2022,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_TCPhaseout_trigger_f,The fraction of emissions from the ref year used to determine whether the trigger for the tax credit phaseout has been hit,0.25,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_TCPhaseout_schedule,The schedule by which the tax credits phase out. This assumes that the phaseout schedule starts on the year after the threshold is met. The phaseout may still have a period of full credit after the trigger has been met depending on the policy definition. ,ira2022,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_TransRestrict,"hierarchy level within which to allow new transmission lines [country, interconnect, transreg, st, etc]",country,,,,,,,,,,,transreg,,,,,,,,,,,,transreg,
+GSw_TransScen,"Select Transmission Scenario [default, LCC_all, LCC_SeamsD3_certain, etc]",default,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_TransCostMult,Multiplier for bulk BA-BA transmission costs,1,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_VSC,Switch to turn on/off multi-terminal VSC HVDC macrogrid as an investment option,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_CO2_CostAdj,adjust costs for co2,1,,,,,,,,,,,2,,,,,,,,,,,,2,
+GSw_BioSupply,adjustment to biosupply capacity,1,,,,,,,,,,,0.5,,,,,,,,,,,,0.5,
+GSw_TransInterconnect,allow interconnection transmission builds,1,,,,,,,,,,,0,,,,,,,,,,,,0,
+endyear,final year,2040,,,,,,,,,,,,,,,,,,,,,,,,
+capcredit_szn_hours,,10,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_AugurCurtailment,,1,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_calc_powfrac,,1,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_CO2_pipeline_cost,,3000,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_CO2_pipeline_fom,,80,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_CO2_spurline_cost,,3000,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_CO2_spurline_fom,,80,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_CO2_Storage,,15,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_Hourly,,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_MinLoadTechs,,1,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_OpRes,,1,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_Storage,,1,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_Storage_in_Min,,1,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_Upgrades,,1,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_UpgradeATBCosts,Use ATB upgrade costs,0,,,,,,,,,,,,,,,,,,,,,,,,
+GSw_UpgradeCostMult,Upgrade Cost multiplier,2,,,,,,,,,1,2,,,,,,,,,,,1,2,,

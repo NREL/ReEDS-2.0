@@ -2,15 +2,17 @@
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import os, sys, math, site
+import os, sys, site, importlib
 
 import geopandas as gpd
 os.environ['PROJ_NETWORK'] = 'OFF'
 
 reedspath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 site.addsitedir(os.path.join(reedspath,'postprocessing'))
+site.addsitedir(os.path.join(reedspath,'input_processing'))
 import plots
 import reedsplots as rplots
+from ticker import makelog
 plots.plotparams()
 
 ##########
@@ -95,10 +97,8 @@ routes = args.routes
 
 #############
 #%% PROCEDURE
-#%% direct print and errors to log file
-import sys
-sys.stdout = open(os.path.join(casedir, 'gamslog.txt'), 'a')
-sys.stderr = open(os.path.join(casedir, 'gamslog.txt'), 'a')
+#%% Set up logger
+log = makelog(scriptname=__file__, logpath=os.path.join(casedir,'gamslog.txt'))
 
 #%% Make output directory
 savepath = os.path.join(casedir,'outputs','maps')
@@ -121,6 +121,8 @@ years = pd.read_csv(
     os.path.join(casedir,'inputs_case','modeledyears.csv')
 ).columns.astype(int).values
 yearstep = years[-1] - years[-2]
+val_r = pd.read_csv(
+    os.path.join(casedir, 'inputs_case', 'val_r.csv'), squeeze=True, header=None).tolist()
 
 #%% Transmission line map with disaggregated transmission types
 try:
@@ -215,7 +217,7 @@ try:
     )
     s2r = rsmap.set_index('rs').r
 
-    dfba = rplots.get_zonemap(casedir)
+    dfba = rplots.get_zonemap(casedir).loc[val_r]
     dfstates = dfba.dissolve('st')
     ### Case data
     dfcap = pd.read_csv(
@@ -317,8 +319,36 @@ try:
         plt.savefig(os.path.join(savepath,'map_agg-FERC-trans-{}.png'.format(year)))
     if interactive: plt.show()
     plt.close()
+
+    plt.close()
+    f,ax = rplots.map_agg(case=casedir, data='cap', width_step=yearstep, transmission=True)
+    if write:
+        plt.savefig(os.path.join(savepath,'map_agg-FERC-cap,trans-{}.png'.format(year)))
+    if interactive: plt.show()
+    plt.close()
 except Exception as err:
     print('map_agg failed:\n{}\n'.format(err))
+
+#%% Dispatch plots
+try:
+    plt.close()
+    f,ax = rplots.plot_dispatch_yearbymonth(case=casedir)
+    if write:
+        plt.savefig(os.path.join(savepath,f'plot-dispatch-yearbymonth-{sw.endyear}.png'))
+    if interactive: plt.show()
+    plt.close()
+except Exception as err:
+    print('plot_dispatch_yearbymonth failed:\n{}\n'.format(err))
+
+try:
+    plt.close()
+    f,ax = rplots.plot_dispatch_weightwidth(case=casedir)
+    if write:
+        plt.savefig(os.path.join(savepath,f'plot-dispatch-weightwidth-{sw.endyear}.png'))
+    if interactive: plt.show()
+    plt.close()
+except Exception as err:
+    print('plot_dispatch_weightwidth failed:\n{}\n'.format(err))
 
 #%% Hybrid-specific plots
 try:

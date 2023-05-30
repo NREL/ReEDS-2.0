@@ -9,6 +9,7 @@ from tqdm import tqdm, trange
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import scipy.optimize
+from input_processing.ticker import makelog
 
 ### Shared paths
 reedspath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,10 +52,8 @@ else:
 #     'outpath': os.path.expanduser('~/Desktop'),
 # }
 
-#%% direct print and errors to log file
-import sys
-sys.stdout = open(os.path.join(inp['outpath'],'hybrid_pvwind_minLCOE.log'), 'a')
-sys.stderr = open(os.path.join(inp['outpath'],'hybrid_pvwind_minLCOE.log'), 'a')
+#%% Set up logger
+log = makelog(scriptname=__file__, logpath=os.path.join(inp['case'],'gamslog.txt'))
 
 #################
 #%% HPC/SLURM ###
@@ -310,10 +309,10 @@ sitemap = pd.read_csv(
 sitemap['profile'] = sitemap.i.map(lambda x: x.split('_')[1]) + '_' + sitemap.r
 sitemap['tech'] = sitemap.i.map(lambda x: x.split('_')[0])
 ### Get list of valid regions and subset to those regions
-rfeas_cap = pd.read_csv(
-    os.path.join(inp['case'],'inputs_case','valid_regions_list.csv')
+val_r_cap = pd.read_csv(
+    os.path.join(inp['case'],'inputs_case','val_r_cap.csv')
 ).columns.values
-sitemap = sitemap.loc[sitemap.r.isin(rfeas_cap)].copy()
+sitemap = sitemap.loc[sitemap.r.isin(val_r_cap)].copy()
 ### Make lookup and a single-level column version to write out
 profilemap = sitemap.pivot(columns='tech',index='x',values=['profile','i','r']).dropna()
 profilemap_out = profilemap.copy()

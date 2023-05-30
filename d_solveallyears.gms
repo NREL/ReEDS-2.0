@@ -83,24 +83,24 @@ curt_excess(r,h,t) = 0 ;
 curt_scale(r,h,t) = 0 ;
 curt_mingen_int(r,h,t) = 0 ;
 
-oldVREgen(r,h,t)$[tload(t)$rfeas(r)] =
+oldVREgen(r,h,t)$tload(t) =
     sum{(i,v,rr)$[cap_agg(r,rr)$vre(i)$valcap(i,v,rr,t)],
           m_cf(i,v,rr,h,t) * CAP.l(i,v,rr,t)
        } ;
-oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) } ;
+oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) } ;
 
 *Sw_Int_Curt=0 means use average curtailment, and don't differentiate techs
 if(Sw_Int_Curt=0,
     curt_int(i,rr,h,t)$[tload(t)$valcap_irt(i,rr,t)$vre(i)$sum{r$cap_agg(r,rr), oldVREgen(r,h,t) + oldMINGEN(r,h,t) }] =
         sum{r$cap_agg(r,rr), curt_old_load(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) } ;
-    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
+    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
         curt_old_load(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) ;
 ) ;
 
 *For the remaining options we initially use marginal values for curt_int
 if(Sw_Int_Curt=1 or Sw_Int_Curt=2 or Sw_Int_Curt=3,
     curt_int(i,r,h,t)$[tload(t)$vre(i)$valcap_irt(i,r,t)] = curt_marg_load(i,r,h,t) ;
-    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = curt_mingen_load(r,h,t) ;
+    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)] = curt_mingen_load(r,h,t) ;
     curt_totmarg(r,h,t)$tload(t) =
         sum{(i,v,rr)$[cap_agg(r,rr)$valcap(i,v,rr,t)$vre(i)],
               m_cf(i,v,rr,h,t) * CAP.l(i,v,rr,t) * curt_int(i,rr,h,t)
@@ -123,7 +123,7 @@ if(Sw_Int_Curt=1,
 if(Sw_Int_Curt=2,
     curt_int(i,rr,h,t)$[tload(t)$valcap_irt(i,rr,t)$vre(i)$sum{r$cap_agg(r,rr), (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) }] =
         sum{r$cap_agg(r,rr), curt_totmarg(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) } ;
-    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
+    curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$(oldVREgen(r,h,t) + oldMINGEN(r,h,t))] =
         curt_totmarg(r,h,t) / (oldVREgen(r,h,t) + oldMINGEN(r,h,t)) ;
     curt_excess(r,h,t)$curt_totmarg(r,h,t) = curt_old_load(r,h,t) - curt_totmarg(r,h,t) ;
 ) ;
@@ -159,7 +159,7 @@ hourly_arbitrage_value(i,r,t) = 0 ;
 *Storage duration bin sizes by year
 sdbin_size(ccreg,szn,sdbin,t)$tload(t) = sdbin_size_load(ccreg,szn,sdbin,t) ;
 curt_stor(i,v,r,h,src,t)$[tload(t)$valcap(i,v,r,t)$storage_standalone(i)] = curt_stor_load(i,v,r,h,src,t) ;
-curt_tran(r,rr,h,t)$[tload(t)$rfeas(r)$rfeas(rr)$rb(r)$rb(rr)$(not sameas(r,rr))
+curt_tran(r,rr,h,t)$[tload(t)$rb(r)$rb(rr)$(not sameas(r,rr))
                      $sum{(n,nn,trtype)$routes_inv(n,nn,trtype,t), translinkage(r,rr,n,nn,trtype)}
                     ] = curt_tran_load(r,rr,h,t) ;
 
@@ -237,7 +237,7 @@ if(Sw_AVG_iter=1,
         curt_int(i,r,h,t)$[tload(t)$vre(i)$valcap_irt(i,r,t)] =
           (curt_int(i,r,h,t) + curt_iter(i,r,h,t,"%previter%")) / 2 ;
 
-        curt_mingen_int(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] =
+        curt_mingen_int(r,h,t)$Sw_Mingen$tload(t) =
           (curt_mingen_int(r,h,t) + curt_mingen_iter(r,h,t,"%previter%")) / 2 ;
     ) ;
 
@@ -301,7 +301,7 @@ curt_tot_iter(i,v,r,t,"%niter%")$[tload(t)$vre(i)$valcap(i,v,r,t)] = sum{h, m_cf
 $ifthene.postseconditer %niter%>1
 cc_change(i,v,r,szn,t)$[tload(t)$(vre(i) or storage(i))$valcap(i,v,r,t)] = cc_iter(i,v,r,szn,t,"%niter%") - cc_iter(i,v,r,szn,t,"%previter%") ;
 curt_change(i,r,h,t)$[tload(t)$vre(i)$valcap_irt(i,r,t)] = curt_iter(i,r,h,t,"%niter%") - curt_iter(i,r,h,t,"%previter%") ;
-curt_mingen_change(r,h,t)$[Sw_Mingen$tload(t)$rfeas(r)] = curt_mingen_iter(r,h,t,"%niter%") - curt_mingen_iter(r,h,t,"%previter%") ;
+curt_mingen_change(r,h,t)$Sw_Mingen$tload(t) = curt_mingen_iter(r,h,t,"%niter%") - curt_mingen_iter(r,h,t,"%previter%") ;
 $endif.postseconditer
 
 *=====================
@@ -317,14 +317,14 @@ $if not set ref_price $setglobal ref_price 'reeds'
 $ifthene.demrun %demand% == 1
 *recompute price as the real weighted-average of the marignal off the
 *supply-demand balance constraint plus retail adders
-  psupply(sec,r,t,h)$[tmodel(t)$rfeas(r)$pvf_onm(t)] = dmd_conv(sec) * (
+  psupply(sec,r,t,h)$[tmodel(t)$pvf_onm(t)] = dmd_conv(sec) * (
                         retail_adder(r,sec) +
                         (sum{hh, hours(hh) * load_exog(r,hh,t) * eq_loadcon.m(r,hh,t) } / sum{hh,hours(hh)*load_exog(r,hh,t)}) / pvf_onm(t)
                         ) ;
 
 *supply price for years that aren't solved still need to be passed over to the demand side
 *therefore, we linearly interpolate those values between solved years
-  psupply(sec,r,t,h)$[(yeart(t)<smax{tt$tmodel(tt), yeart(tt) })$(not tmodel(t))$rfeas(r)
+  psupply(sec,r,t,h)$[(yeart(t)<smax{tt$tmodel(tt), yeart(tt) })$(not tmodel(t))
                      $(sum{tt$t_after(t,tt), tt.val } -  sum{tt$t_before(t,tt), tt.val })] =
 *the price from the year before
                       sum{tt$t_before(t,tt) ,psupply(sec,r,tt,h) } +
@@ -336,25 +336,25 @@ $ifthene.demrun %demand% == 1
                       (sum{tt$t_after(t,tt), tt.val } -  sum{tt$t_before(t,tt), tt.val }) ;
 
 *price for years beyond those modeled is assumed to be the last modeled year
-  psupply(sec,r,t,h)$[(yeart(t)>smax{tt$tmodel(tt), yeart(tt) })$rfeas(r)] = sum{tt$tlast(tt), psupply(sec,r,tt,h) } ;
+  psupply(sec,r,t,h)$[(yeart(t)>smax{tt$tmodel(tt), yeart(tt) })] = sum{tt$tlast(tt), psupply(sec,r,tt,h) } ;
 
 *record the prices coming out the supply model as the "actual prices"
-  rep(sec,r,t,h,"%niter%","actual_price")$[tmodel(t)$rfeas(r)$pvf_onm(t)] = psupply(sec,r,t,h) ;
+  rep(sec,r,t,h,"%niter%","actual_price")$[tmodel(t)$pvf_onm(t)] = psupply(sec,r,t,h) ;
 
   repannual(t,"%niter%","actual_price")$tmodel(t) = sum{(r,h),load_exog(r,h,t)*psupply("res",r,t,h)}
                                                     / sum{(r,h),load_exog(r,h,t)} ;
 
 *if this is the first iteration, set price equal to that coming out of the supply side's reference solve
 $ifthene.demfirstiter %niter% == 0
-    psupply0(sec,r,t,h)$[tmodel(t)$rfeas(r)$pvf_onm(t)] = psupply(sec,r,t,h) ;
-    rep(sec,r,t,h,"%niter%","iterated_price")$[tmodel(t)$rfeas(r)$pvf_onm(t)] = psupply(sec,r,t,h) ;
+    psupply0(sec,r,t,h)$[tmodel(t)$pvf_onm(t)] = psupply(sec,r,t,h) ;
+    rep(sec,r,t,h,"%niter%","iterated_price")$[tmodel(t)$pvf_onm(t)] = psupply(sec,r,t,h) ;
 $endif.demfirstiter
 
 *convergence "algorithm" - just averaging price from one iteration to another
 $ifthene.demitercheck %niter%>0
 
 *average price over all last two iterations
-    psupply(sec,r,t,h)$rfeas(r) =
+    psupply(sec,r,t,h) =
         (rep(sec,r,t,h,"%previter%","actual_price")+rep(sec,r,t,h,"%niter%","actual_price")) / 2 ;
 
 $endif.demitercheck
@@ -362,12 +362,12 @@ $endif.demitercheck
 *record the iterated price following these adjustments to the price calculation
 *i.e. we want to record the price coming out of the model as actual_price
 *and the price going into the demand side as iterated_price
-  rep(sec,r,t,h,"%niter%","iterated_price")$[tmodel(t)$rfeas(r)$pvf_onm(t)] = psupply(sec,r,t,h) ;
+  rep(sec,r,t,h,"%niter%","iterated_price")$[tmodel(t)$pvf_onm(t)] = psupply(sec,r,t,h) ;
 
   repannual(t,"%niter%","iterated_price")$tmodel(t) = sum{(r,h), load_exog(r,h,t) * psupply("res",r,t,h) }
                                                       / sum{(r,h), load_exog(r,h,t) } ;
 *output the gdx file needed for the demand-side R script
-  Execute_Unload "temp_dmd%ds%price_iter_%case%_%niter%.gdx", psupply, psupply0, rfeas ;
+  Execute_Unload "temp_dmd%ds%price_iter_%case%_%niter%.gdx", psupply, psupply0 ;
 
 
 *cur.dir = Args[1]
@@ -386,29 +386,28 @@ $endif.demitercheck
   Execute_Load "%gams.curdir%%ds%temp_dmd%ds%dmd_iter_%output_lvl%_%ref_price%_%case%_%niter%.gdx", ResDmdNew = ResDmdNew ;
 
 * Calculate consumption from base stock devices
-  ResDmdBase(r,t,h)$[rfeas(r)$tmodel(t)] = sum{(y,u,d,obase)$use2dev2opt(u,d,obase), (ref_serv_dmd_device(y,r,t,h,u,d) *
+  ResDmdBase(r,t,h)$tmodel(t) = sum{(y,u,d,obase)$use2dev2opt(u,d,obase), (ref_serv_dmd_device(y,r,t,h,u,d) *
     ((psupply('res',r,t,h) / lambda(r,'2010',u,d,obase)) / (psupply0('res',r,t,h) / ref_eff(y,r,t,u,d)))**(-res_elas(y,u))) / lambda(r,'2010',u,d,obase) * base_stock(y,r,t,u,d,obase) } ;
 
 * Compute aggregate sectoral consumption
 * We are able to use the same conversion as price as we 'double-flip' from mmBTU to MWh
 * therefore, can still use the dmd_conv as a multiplier in the following conversions
-  DmdSec('res',r,t,h)$[tmodel(t)$rfeas(r)] = dmd_conv('res') * (sum{u,ResDmdNew(r,t,h,u)} + ResDmdBase(r,t,h)) ;
-  DmdSec('com',r,t,h)$[tmodel(t)$rfeas(r)] = dmd_conv('com') * ((ref_com_cons(r,t,h) * (psupply('com',r,t,h)/psupply0('com',r,t,h))**(-com_elas))$dflex(t) + ref_com_cons(r,t,h)$[not dflex(t)]) ;
-  DmdSec('ind',r,t,h)$[tmodel(t)$rfeas(r)] = dmd_conv('ind') * ((ref_ind_cons(r,t,h) * (psupply('ind',r,t,h)/psupply0('ind',r,t,h))**(-ind_elas))$dflex(t) + ref_ind_cons(r,t,h)$[not dflex(t)]) ;
+  DmdSec('res',r,t,h)$tmodel(t) = dmd_conv('res') * (sum{u,ResDmdNew(r,t,h,u)} + ResDmdBase(r,t,h)) ;
+  DmdSec('com',r,t,h)$tmodel(t) = dmd_conv('com') * ((ref_com_cons(r,t,h) * (psupply('com',r,t,h)/psupply0('com',r,t,h))**(-com_elas))$dflex(t) + ref_com_cons(r,t,h)$[not dflex(t)]) ;
+  DmdSec('ind',r,t,h)$tmodel(t) = dmd_conv('ind') * ((ref_ind_cons(r,t,h) * (psupply('ind',r,t,h)/psupply0('ind',r,t,h))**(-ind_elas))$dflex(t) + ref_ind_cons(r,t,h)$[not dflex(t)]) ;
 
-  DmdSec(sec,r,t,h)$[rfeas(r)$tmodel(t)] = DmdSec(sec,r,t,h) / hours(h) ;
+  DmdSec(sec,r,t,h)$tmodel(t) = DmdSec(sec,r,t,h) / hours(h) ;
 *pre-demand load vs post-demand load (computed below)
-  rep(sec,r,t,h,"%niter%","sec_load")$[tmodel(t)$rfeas(r)] = dmdsec(sec,r,t,h) * hours(h) ;
-  rep(sec,r,t,h,"%niter%","load_predem")$[tmodel(t)$rfeas(r)] = load_exog(r,h,t) * hours(h) ;
+  rep(sec,r,t,h,"%niter%","sec_load")$tmodel(t) = dmdsec(sec,r,t,h) * hours(h) ;
+  rep(sec,r,t,h,"%niter%","load_predem")$tmodel(t) = load_exog(r,h,t) * hours(h) ;
 
   repannual(t,"%niter%","load_predem")$tmodel(t) = sum{(sec,r,h), rep(sec,r,t,h,"%niter%","load_predem")} ;
 
 *re-compute load_exog
 *20180225 MB - no longer adjusting the first period's demand due to infeasibilities
-  load_exog(r,h,t)$[(not tfirst(t))$tmodel(t)$rfeas(r)$pvf_onm(t)] = sum{sec, DmdSec(sec,r,t,h) } ;
-  peakdem(r,szn,t) = peakdem_h17_ratio(r,szn,t) * load_exog(r,"h17",t) ;
+  load_exog(r,h,t)$[(not tfirst(t))$tmodel(t)$pvf_onm(t)] = sum{sec, DmdSec(sec,r,t,h) } ;
 
-  rep(sec,r,t,h,"%niter%","load_postdem")$[tmodel(t)$rfeas(r)] = load_exog(r,h,t) * hours(h) ;
+  rep(sec,r,t,h,"%niter%","load_postdem")$tmodel(t) = load_exog(r,h,t) * hours(h) ;
   repannual(t,"%niter%","load_postdem")$tmodel(t) = sum{(sec,r,h),rep(sec,r,t,h,"%niter%","load_postdem")} ;
 
   execute_unload 'gdxfiles%ds%demand_%case%_%niter%.gdx' load_exog, load_exog0, psupply, psupply0, rep ;

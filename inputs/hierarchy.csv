@@ -1,4 +1,4 @@
-*r,nercr,transreg,cendiv,st,interconnect,country,usda,aggreg
+*r,nercr,transreg,cendiv,st,interconnect,country,usda_region,aggreg
 p1,WECC_NWPP,NorthernGrid,PA,WA,western,USA,pacific,WA
 p2,WECC_NWPP,NorthernGrid,PA,WA,western,USA,pacific,WA
 p3,WECC_NWPP,NorthernGrid,PA,WA,western,USA,pacific,WA

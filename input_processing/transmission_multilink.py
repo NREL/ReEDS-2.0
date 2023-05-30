@@ -8,12 +8,8 @@ TODO:
 * Adapt VSC procedure to allow mixed VSC and non-VSC links (for example if we exclude
 certain links or converter sites due to economies of scale)
 """
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
@@ -27,7 +23,6 @@ import os
 import argparse
 import networkx as nx
 
-print('Starting transmission_multilink.py', flush=True)
 
 ##############
 #%% INPUTS ###
@@ -44,6 +39,9 @@ weight = 'cost'
 ### for energy and PRM trading, but it better represents historical additions between 2010-2024.
 networksource, trans_init_year = 'NARIS2024', 2024
 # networksource, trans_init_year = 'REFS2009', 2009
+### anchortype: 'load' sets rb with largest 2010 load as anchor reg;
+### 'size' sets largest rb as anchor reg
+anchortype = 'size'
 
 #%% Argument inputs
 parser = argparse.ArgumentParser(description="Format and write climate inputs")
@@ -56,7 +54,12 @@ inputs_case = args.inputs_case
 
 # #%% DEBUG
 # reedsdir = os.path.expanduser('~/github/ReEDS-2.0/')
-# inputs_case = os.path.join(reedsdir,'runs','v20221106_NTPm0_ercot_seq','inputs_case','')
+# inputs_case = os.path.join(reedsdir,'runs','tc5_ercot_seq','inputs_case','')
+
+#%% Set up logger
+log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+print('Starting transmission_multilink.py', flush=True)
+
 
 #%% Inputs from switches
 sw = pd.read_csv(
@@ -68,8 +71,17 @@ GSw_TransRestrict = sw.GSw_TransRestrict
 GSw_VSC = int(sw.GSw_VSC)
 GSw_TransSquiggliness = float(sw.GSw_TransSquiggliness)
 
+val_r = pd.read_csv(
+        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
+
 #################
 #%% FUNCTIONS ###
+
+# Function to filter to only the regions included in the run
+def val_r_filt(df,val_r):
+    df = df.loc[df['r'].isin(val_r) 
+               & df['rr'].isin(val_r)]
+    return df
 
 def get_multilink_paths(transmission_paths, weight='cost'):
     """
@@ -143,6 +155,10 @@ tline_data = pd.concat({
                 infiles[trtype])))
     for trtype in ['AC','LCC','B2B']
 }, axis=0).reset_index(level=0).rename(columns={'level_0':'trtype', 'length_miles':'miles'})
+
+### Filter data to just the regions that are included in the run
+tline_data = val_r_filt(tline_data,val_r)
+
 ### Apply the distance multiplier
 tline_data.miles *= GSw_TransSquiggliness
 
@@ -261,16 +277,21 @@ transmission_line_fom.round(2).rename_axis(('*r','rr','trtype')).to_csv(
 trancap_init_ac = pd.read_csv(
     os.path.join(
         reedsdir,'inputs','transmission',f'transmission_capacity_init_AC_{networksource}.csv'))
+## Filter to valid regions
+trancap_init_ac = val_r_filt(trancap_init_ac, val_r)
 trancap_init_ac['trtype'] = 'AC'
+
 ## DC capacity is only defined in one direction, so duplicate it for the opposite direction
 trancap_init_nonac_undup = pd.read_csv(
     os.path.join(reedsdir,'inputs','transmission',f'transmission_capacity_init_nonAC.csv'))
+## Filter to valid regions
+trancap_init_nonac_undup = val_r_filt(trancap_init_nonac_undup, val_r)
 trancap_init_nonac = pd.concat(
     [trancap_init_nonac_undup, trancap_init_nonac_undup.rename(columns={'r':'rr', 'rr':'r'})],
     axis=0
 )
 ### SPECIAL CASE: p19 is islanded with NARIS transmission data, so connect it manually
-if networksource == 'NARIS2024':
+if (networksource == 'NARIS2024') and ('p19' in val_r) and ('p20' in val_r):
     trancap_init_ac = trancap_init_ac.append(
         {'interface':'p19||p20', 'r':'p19', 'rr':'p20',
         'MW_f0':0.001, 'MW_r0':0.001, 'MW_f1':0, 'MW_r1':0, 'trtype':'AC'},
@@ -311,19 +332,23 @@ trancap_fut = pd.concat([
         pd.read_csv(os.path.join(
             reedsdir,'inputs','transmission','transmission_capacity_future_baseline.csv'))
         .drop(['Notes','notes','Note','note'], axis=1, errors='ignore')
-        .replace({'t':{0:int(scalars['firstyear_trans'])}})
+        .replace({'t':{0:int(scalars['firstyear_trans_longterm'])}})
     ),
     (
         pd.read_csv(os.path.join(
             reedsdir,'inputs','transmission','transmission_capacity_future_{}.csv').format(
                 GSw_TransScen))
         .drop(['Notes','notes','Note','note'], axis=1, errors='ignore')
-        .replace({'t':{0:int(scalars['firstyear_trans'])}})
+        .replace({'t':{0:int(scalars['firstyear_trans_longterm'])}})
     ),
 ], axis=0, ignore_index=True)
 
+### Filter to only regions in the run
+trancap_fut = val_r_filt(trancap_fut, val_r)
+                
 ### Drop prospective lines from years <= trans_init_year
 trancap_fut = trancap_fut.loc[trancap_fut.t > trans_init_year].copy()
+
 trancap_fut.rename(columns={'r':'*r'}).round(3).to_csv(
     os.path.join(inputs_case,'trancap_fut.csv'), index=False)
 
@@ -343,25 +368,33 @@ transmission_capacity = {
         pd.read_csv(os.path.join(
             reedsdir,'inputs','transmission','transmission_capacity_{}.csv'.format(ending)))
         .drop(['Project(s)','Notes','rnum','rrnum'], axis=1, errors='ignore')
-        .replace({'t':{0:int(scalars['firstyear_trans'])}})
+        .replace({'t':{0:int(scalars['firstyear_trans_longterm'])}})
     )
     for ending in ['future_baseline','future_{}'.format(GSw_TransScen)]
 }
+
+### Select only the regions that are included in the run
+transmission_capacity['future_baseline'] = val_r_filt(transmission_capacity['future_baseline'], val_r)
+
 transmission_capacity['initial'] = pd.concat([
     trancap_init_ac.assign(MW=trancap_init_ac[['MW_f0','MW_r0']].max(axis=1)),
     trancap_init_nonac_undup
 ], axis=0)[['r','rr','trtype','MW']].copy()
+
 for ending in transmission_capacity:
     transmission_capacity[ending.lower()]['r_rr'] = (
         transmission_capacity[ending.lower()].r + '_' + transmission_capacity[ending.lower()].rr)
+    
 transmission_capacity_future = pd.concat([
     transmission_capacity['future_baseline'],
     transmission_capacity['future_{}'.format(GSw_TransScen).lower()]
 ], axis=0, ignore_index=True)
+
 ### Drop VSC links for now (VSC is handled separately below)
 transmission_capacity_future = transmission_capacity_future.loc[
     transmission_capacity_future.trtype != 'VSC'
 ].copy()
+
 ### Drop prospective lines from years <= trans_init_year
 transmission_capacity_future = transmission_capacity_future.loc[
     transmission_capacity_future.t > trans_init_year].copy()
@@ -406,15 +439,28 @@ if drop_canmex:
 if int(sw['GSw_AggregateRegions']):
     rb2aggreg = hierarchy.aggreg.copy()
     #%%### Get the "anchor" zone for each aggregation region (same as aggregate_regions.py)
-    ## Get annual average load
-    load = pd.read_csv(
-        os.path.join(reedsdir, 'inputs', 'variability', 'multi_year', 'load.csv.gz'),
-        index_col=0,
-    ).mean().rename_axis('r').rename('MW').to_frame()
-    ## Add column for new regions
-    load['aggreg'] = load.index.map(rb2aggreg)
-    ## Take the original zone with largest demand
-    aggreg2anchorreg = load.groupby('aggreg').idxmax()['MW'].rename('rb')
+    if anchortype in ['load','demand','MW','MWh']:
+        ## Get annual average load
+        load = pd.read_csv(
+            os.path.join(reedsdir, 'inputs', 'variability', 'multi_year', 'load.csv.gz'),
+            index_col=0,
+        )[val_r].mean().rename_axis('r').rename('MW').to_frame()
+        ## Add column for new regions
+        load['aggreg'] = load.index.map(rb2aggreg)
+        ## Take the original zone with largest demand
+        aggreg2anchorreg = load.groupby('aggreg').idxmax()['MW'].rename('rb')
+    elif anchortype in ['size','km2','area']:
+        ### Take the "anchor" zone as the zone with the largest area [km2]
+        import geopandas as gpd
+        dfba = gpd.read_file(os.path.join(reedsdir,'inputs','shapefiles','US_PCA')).set_index('rb')
+        dfba['km2'] = dfba.area / 1e6
+        ## Add column for new regions
+        dfba['aggreg'] = dfba.index.map(rb2aggreg)
+        ## Take the original zone with largest area
+        aggreg2anchorreg = dfba.groupby('aggreg').km2.idxmax().rename('rb')
+    else:
+        raise ValueError(f'Invalid choice of anchortype: {anchortype}')
+
     anchorreg2aggreg = pd.Series(index=aggreg2anchorreg.values, data=aggreg2anchorreg.index)
 
     #%%### Map original regions to aggregated regions
@@ -617,9 +663,10 @@ vsc_links = pd.read_csv(
         reedsdir,'inputs','transmission',
         'transmission_capacity_future_{}.csv'.format(GSw_TransScen)),
     header=0,
-).replace({'t':{0:int(scalars['firstyear_trans'])}})
-### Only keep the VSC links
+).replace({'t':{0:int(scalars['firstyear_trans_longterm'])}})
+### Only keep the VSC links and the modeled regions
 vsc_links = vsc_links.loc[vsc_links.trtype=='VSC',['r','rr']].drop_duplicates()
+vsc_links = val_r_filt(vsc_links, val_r)
 
 ### Convert to aggregate regions if necessary
 if int(sw['GSw_AggregateRegions']):

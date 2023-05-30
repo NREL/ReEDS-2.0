@@ -221,17 +221,21 @@ def marginal_curtailment(curt_results):
         resource_device_utility['resource_device'] = (
             resource_device_utility['resource'].astype(str) 
             + '_' + resource_device_utility['device'])
+        if not resource_device_utility.empty:
         # Add source types to resource_device_utility and i_resource_r_utility
-        for tech in ['pv','wind']:
+            for tech in ['pv','wind']:
+                resource_device_utility.loc[
+                    resource_device_utility['i'].isin(techs[tech]), 'src'] = tech
+                i_resource_r_utility.loc[
+                    i_resource_r_utility['i'].isin(techs[tech]), 'src'] = tech
+            ### 'pvb' counts as 'pv'
             resource_device_utility.loc[
-                resource_device_utility['i'].isin(techs[tech]), 'src'] = tech
+                resource_device_utility['i'].isin(techs['pvb']), 'src'] = 'pv'
             i_resource_r_utility.loc[
-                i_resource_r_utility['i'].isin(techs[tech]), 'src'] = tech
-        ### 'pvb' counts as 'pv'
-        resource_device_utility.loc[
-            resource_device_utility['i'].isin(techs['pvb']), 'src'] = 'pv'
-        i_resource_r_utility.loc[
-            i_resource_r_utility['i'].isin(techs['pvb']), 'src'] = 'pv'
+                i_resource_r_utility['i'].isin(techs['pvb']), 'src'] = 'pv'
+        else:
+            resource_device_utility['src'] = None
+            i_resource_r_utility['src'] = None
     # Map each resource in a region to each DR device in the same region
     resource_dr_utility = pd.merge(left=i_resource_r_utility,
                                    right=cap_dr[['r', 'device']],
@@ -760,12 +764,12 @@ def marginal_curtailment(curt_results):
         # Merge in the reeds vintages that exist
     
         # Get the marginal vintage of each storage tech
-        ivt = pd.read_csv(os.path.join('inputs_case', 'ivt.csv'), index_col=0)
+        ivt = INPUTS['ivt'].get_data().pivot(index='i',columns='t',values='v_num')
         for i in marg_stor_props.index:
-            marg_stor_props.loc[i, 'v'] = 'new' + str(ivt.loc[i, str(year)])
-        ivt = pd.melt(ivt.reset_index(), id_vars = 'index')
+            marg_stor_props.loc[i, 'v'] = 'new' + str(int(ivt.loc[i, int(year)]))
+        ivt = pd.melt(ivt.reset_index(), id_vars = 'i').dropna()
         ivt.rename(columns = {'index':'i', 'variable':'t'}, inplace = True)
-        ivt['v'] = 'new' + ivt['value'].astype(str)
+        ivt['v'] = ivt.value.map(lambda x: f'new{int(x)}')
         ivt['t'] = pd.to_numeric(ivt['t'])
         ivt = ivt[ivt['t'] <= SwitchSettings.prev_year]
         ivt_stor = ivt[ivt['i'].isin(techs['storage_standalone'])]
@@ -1041,13 +1045,13 @@ def marginal_curtailment(curt_results):
         curt_dr = curt_dr[['i', 'v', 'r', 'h', 'src', 'value']]
 
         # Get the marginal vintage of each storage tech
-        ivt = pd.read_csv(os.path.join('inputs_case', 'ivt.csv'), index_col=0)
+        ivt = INPUTS['ivt'].get_data().pivot(index='i',columns='t',values='v_num')
         ivt = expand_star(ivt)
         for i in marg_stor_props.index:
-            marg_stor_props.loc[i, 'v'] = 'new' + str(ivt.loc[i, str(year)])
-        ivt = pd.melt(ivt.reset_index(), id_vars='index')
+            marg_stor_props.loc[i, 'v'] = 'new' + str(int(ivt.loc[i, int(year)]))
+        ivt = pd.melt(ivt.reset_index(), id_vars='index').dropna()
         ivt.rename(columns={'index': 'i', 'variable': 't'}, inplace=True)
-        ivt['v'] = 'new' + ivt['value'].astype(str)
+        ivt['v'] = ivt.value.map(lambda x: f'new{int(x)}')
         ivt['t'] = pd.to_numeric(ivt['t'])
         # Get the marginal vintage of each DR tech
         for i in [d for d in marg_dr_props.index if d in ivt.i.values]:
