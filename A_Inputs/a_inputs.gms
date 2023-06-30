@@ -1487,11 +1487,15 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rpo_tech.csv
 
     capmandate_tech_set(i)           "technology groups that can meet RE capacity mandates"
           /
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%capmandate_tech_set.csv
+$ondelim          
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%%RECapManTech_file%
+$offdelim
           /,
-    genmandate_tech_set(i)           "technology groups that can meet RE capacity mandates"
+    genmandate_tech_set(i)           "technology groups that can meet RE generation mandates"
           /
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%genmandate_tech_set.csv
+$ondelim          
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%%REGenManTech_file%
+$offdelim
           /
     ;
 

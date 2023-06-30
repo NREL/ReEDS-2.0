@@ -342,7 +342,7 @@
           ],
           "style": {
             "Plot Width (px)": "1000",
-            "Plot Height (px)": "800",
+            "Plot Height (px)": "1600",
             "Plot Title": "National timeslice generation and demand",
             "Y Title": "Dispatch (MW)"
           }
@@ -574,13 +574,16 @@
   "filter": {
     "year": {
       "filter_type": "less-or-equal",
-      "filter_val": "2030"
+      "filter_val": "2050"
     },
     "season": {
       "filter_type": "include",
       "filter_val": [
-        "Autumn",
-        "Rainy"
+        "Winter",
+        "Spring",
+        "Summer",
+        "Rainy",
+        "Autumn"
       ]
     }
   }
