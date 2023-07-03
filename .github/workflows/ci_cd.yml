@@ -73,10 +73,10 @@ jobs:
           echo "Deployment starting in dev environment!"
           ls
           ssh -i ~/.ssh/id_ed25519 ec2-user@172.18.7.44 "ls;
-          sudo service supervisord restart;
+          supervisord -c supervisord.conf;
           supervisorctl stop reeds_api;
           cd /home/ec2-user/reeds_india_api;
-          git pull origin develop;
+          git pull origin main;
           cd ~;
           supervisorctl start reeds_api"
           echo "Finished!"
@@ -90,7 +90,7 @@ jobs:
           echo "Deployment starting in prod environment!"
           ls
           ssh -i ~/.ssh/id_ed25519 ec2-user@172.17.25.248 "ls;
-          sudo service supervisord restart;
+          supervisord -c supervisord.conf;
           supervisorctl stop reeds_api;
           cd /home/ec2-user/reeds_india_api;
           git pull;
