@@ -67,7 +67,7 @@ jobs:
   deploy_dev:
     runs-on: self-hosted
     needs: [test]
-    if: contains( github.ref, 'develop' )
+    if: contains( github.ref, 'main' )
     steps:
       - run: |
           echo "Deployment starting in dev environment!"
