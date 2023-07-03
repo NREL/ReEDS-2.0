@@ -28,6 +28,7 @@ jobs:
           python3 -m venv env
           echo "Created environment successfully"
           source env/bin/activate
+          pip uninstall urllib3
           pip install -r requirements.txt
           echo "Requirements installed successfully"
           echo JWT_KEY=$JWT_KEY >> .env
