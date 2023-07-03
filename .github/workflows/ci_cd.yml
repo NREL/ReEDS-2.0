@@ -29,7 +29,7 @@ jobs:
           echo "Created environment successfully"
           source env/bin/activate
           pip install -r requirements.txt
-          pip uninstall urllib3
+          pip uninstall urllib3 --yes
           pip install 'urllib3<1.27'
           echo "Requirements installed successfully"
           echo JWT_KEY=$JWT_KEY >> .env
