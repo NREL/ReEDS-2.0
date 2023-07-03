@@ -28,8 +28,9 @@ jobs:
           python3 -m venv env
           echo "Created environment successfully"
           source env/bin/activate
-          pip uninstall urllib3
           pip install -r requirements.txt
+          pip uninstall urllib3
+          pip install 'urllib3<1.27'
           echo "Requirements installed successfully"
           echo JWT_KEY=$JWT_KEY >> .env
           echo DB_CONN_STRING=$DB_CONN_STRING >> .env
