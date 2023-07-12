@@ -1,10 +1,10 @@
-# ReEDS 2.0
+# ReEDS 2.0&trade;
 
 ![Image of NREL Logo](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/nrel-logo.png)
 
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
-This GitHub repository contains the source code for NREL&#39;s ReEDS model. Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS model can be downloaded or cloned from [https://github.com/NREL/ReEDS_OpenAccess](https://github.com/NREL/ReEDS_OpenAccess). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
+This GitHub repository contains the source code for NREL&#39;s ReEDS&trade; model. Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS model can be downloaded or cloned from [https://github.com/NREL/ReEDS_OpenAccess](https://github.com/NREL/ReEDS_OpenAccess). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
 
 A ReEDS training video (recorded in July 2020 and based on the 2019 version of ReEDS) is available on the NREL YouTube channel at https://youtu.be/Cdo27F18AZA. In addition, the Open-Access ReEDS Webinar from October 2019 gives an overview of the 2019 ReEDS model and how it works (https://www.youtube.com/watch?v=QpRtvs_0kkA).
 
