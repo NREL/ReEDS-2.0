@@ -71,6 +71,7 @@ Sw_StorHAV        "Switch to turn on hourly arbitrage value for storage"        
 Sw_FocusRegionZeroTXCost "Zero transmission capital cost between focus regions"    /%GSw_FocusRegionZeroTXCost%/,
 Sw_TxLimit               "Switch to enable transmission flow limits"    /%GSw_TxLimit%/,
 Sw_CurtLim				"Switch to enable curtailment limit"			/%GSw_CurtLim%/
+Sw_H2CT           "Switch to turn on/off H2CT and H2CC techs on [1] or off [0]"     /%GSw_H2CT%/
 ;
 
 *==========================
@@ -444,7 +445,7 @@ $offdelim
           /
 ;
 
-
+* (abarlas - updated tech_costs_atb22, tech_costs_itc22.csv files with US atb22 data. Need to update other scenarios.)
 * input tables
 table data_conv(allt,i,*)       "data for all technologies not defined in binned_capacity: cost_vom, cost_fom, cost_cap, heat_rate"  //
 
@@ -920,6 +921,7 @@ lmnt_region(region,h,t) = sum(r$r_region(r,region),lmnt(r,h,t))
 *==========================
 * --- Fuels ---
 *==========================
+
 set
     f              "fuel types"
           /
@@ -1112,6 +1114,7 @@ pvf_hav(i, t, dummy)$sum(storage(i)$(dummy.val >= t.val  and dummy.val<= t.val +
 *==========================
 * --- Costs---
 *==========================
+
 parameter
           vom_init(i,r)         "--INR per MWh-- variable OM" //
           /
@@ -1198,6 +1201,7 @@ cost_cap_fin_mult(i,rs,t)$[vre(i)$(cost_cap_fin_mult(i,rs,t)=0)] = 1;
 *======================================================
 * --- RE supply curves, capacity value and curtailment ---
 *======================================================
+
 set
     rscbin                            "Resource supply curves bins"
           /
@@ -1483,11 +1487,15 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rpo_tech.csv
 
     capmandate_tech_set(i)           "technology groups that can meet RE capacity mandates"
           /
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%capmandate_tech_set.csv
+$ondelim          
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%%RECapManTech_file%
+$offdelim
           /,
-    genmandate_tech_set(i)           "technology groups that can meet RE capacity mandates"
+    genmandate_tech_set(i)           "technology groups that can meet RE generation mandates"
           /
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%genmandate_tech_set.csv
+$ondelim          
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%%REGenManTech_file%
+$offdelim
           /
     ;
 
