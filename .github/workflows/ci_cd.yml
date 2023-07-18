@@ -12,6 +12,7 @@ env:
   REDIS_PASSWORD: qJACs1J0apruOOJCggOtkjB4c
   REDIS_PORT: 6379
   REEDS_SENDER: reeds-india@nrel.gov
+  REEDS_SUPERUSER: reedssuperuser
   REEDS_SUPERUSER_EMAIL: reeds-india@nrel.gov
   REEDS_SUPERUSER_PASSWORD: j6A{bU//gB
   S3_BUCKET: reeds-india
@@ -28,6 +29,8 @@ jobs:
           echo "Created environment successfully"
           source env/bin/activate
           pip install -r requirements.txt
+          pip uninstall urllib3 --yes
+          pip install 'urllib3<1.27'
           echo "Requirements installed successfully"
           echo JWT_KEY=$JWT_KEY >> .env
           echo DB_CONN_STRING=$DB_CONN_STRING >> .env
@@ -64,16 +67,16 @@ jobs:
   deploy_dev:
     runs-on: self-hosted
     needs: [test]
-    if: contains( github.ref, 'develop' )
+    if: contains( github.ref, 'main' )
     steps:
       - run: |
           echo "Deployment starting in dev environment!"
           ls
           ssh -i ~/.ssh/id_ed25519 ec2-user@172.18.7.44 "ls;
-          sudo service supervisord restart;
+          supervisord -c supervisord.conf;
           supervisorctl stop reeds_api;
           cd /home/ec2-user/reeds_india_api;
-          git pull origin develop;
+          git pull origin main;
           cd ~;
           supervisorctl start reeds_api"
           echo "Finished!"
@@ -87,7 +90,7 @@ jobs:
           echo "Deployment starting in prod environment!"
           ls
           ssh -i ~/.ssh/id_ed25519 ec2-user@172.17.25.248 "ls;
-          sudo service supervisord restart;
+          supervisord -c supervisord.conf;
           supervisorctl stop reeds_api;
           cd /home/ec2-user/reeds_india_api;
           git pull;
