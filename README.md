@@ -1,4 +1,4 @@
-# ReEDS 2.0&trade;
+# ReEDS&trade; 2.0
 
 ![Image of NREL Logo](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/nrel-logo.png)
 
