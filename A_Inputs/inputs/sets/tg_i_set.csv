@@ -6,9 +6,11 @@ hydro_pumped,HYDRO-PUMPED
 hydro_pondage,HYDRO-PONDAGE
 vre,UPV
 vre,DISTPV
-vre,WIND
+vre,ONSWIND
+vre,OFSWIND
 nuclear,NUCLEAR
-wind,WIND
+wind,ONSWIND
+wind,OFSWIND
 solar,UPV
 solar,DISTPV
 battery,BATTERY_2

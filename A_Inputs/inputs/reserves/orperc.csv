@@ -1,2 +1,2 @@
-ortype,or_load,or_wind,or_pv
-spin,0.05,0,0
+ortype,or_load,or_onswind,or_ofswind,or_pv
+spin,0.05,0,0,0

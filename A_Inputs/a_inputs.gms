@@ -266,7 +266,7 @@ cap_agg(rb,rb)$sameas(rb,rb) = yes;
 cap_agg(r,rs)$(r_rs(r,rs)$(not sameas(rs,"sk"))) = yes;
 
 rfeas_cap(r)$(rb(r) or rs(r)) = yes;
-
+*abarlas: added ofswind to generation technologies
 *=============================
 * --- Generation Technologies ---
 *=============================
@@ -303,7 +303,8 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%i_subtech_set.csv
     conv(i)      "conventional generation technologies",
     vre(i)       "variable renewable energy technologies",
     rsc_i(i)     "technologies based on resource supply curves",
-    wind(i)      "wind generation technologies",
+    onswind(i)      "onshore wind generation technologies",
+    ofswind(i)      "offshore wind generation technologies",
     upv(i)       "upv generation technologies",
     distpv(i)      "distpv generation technologies",
     storage(i)   "storage technologies",
@@ -373,7 +374,7 @@ loop(tt,
 
 *add 1 for each t item in the ivt set
 countnv(i,newv) = sum(t$ivt(i,newv,t),1);
-
+*abarlas: added wind ofs
 * --- define technology subsets ---
 COAL(i)     = YES$i_subsets(i,'COAL') ;
 GAS(i)      = YES$i_subsets(i,'GAS') ;
@@ -382,7 +383,8 @@ NUCLEAR(i)  = YES$i_subsets(i,'NUCLEAR');
 CONV(i)     = YES$i_subsets(i,'CONV') ;
 VRE(i)      = YES$i_subsets(i,'VRE') ;
 RSC_i(i)    = YES$i_subsets(i,'RSC') ;
-WIND(i)     = YES$i_subsets(i,'WIND') ;
+ONSWIND(i)     = YES$i_subsets(i,'ONSWIND') ;
+OFSWIND(i)     = YES$i_subsets(i,'OFSWIND') ;
 UPV(i)      = YES$i_subsets(i,'UPV') ;
 DISTPV(i)     = YES$i_subsets(i,'DISTPV') ;
 STORAGE(i)  = YES$i_subsets(i,'STORAGE') ;
