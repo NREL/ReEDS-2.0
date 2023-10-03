@@ -314,7 +314,8 @@ cost_cap_fin_mult(i,r,t)$pv(i) =
       round((1 + 0.052 * pv_age_residual_fraction(i,t)) * cost_cap_fin_mult(i,r,t), 4) ;
 
 *Cap the maximum CC in the first solve iteration
-cc_int(i,v,r,szn,t)$[rsc_i(i)$(cc_int(i,v,r,szn,t)>0.7)$wind(i)] = 0.7 ;
+cc_int(i,v,r,szn,t)$[rsc_i(i)$(cc_int(i,v,r,szn,t)>0.7)$onswind(i)] = 0.7 ;
+cc_int(i,v,r,szn,t)$[rsc_i(i)$(cc_int(i,v,r,szn,t)>0.7)$ofswind(i)] = 0.7 ;
 cc_int(i,v,r,szn,t)$[rsc_i(i)$(cc_int(i,v,r,szn,t)>0.5)$pv(i)] = 0.5 ;
 
 

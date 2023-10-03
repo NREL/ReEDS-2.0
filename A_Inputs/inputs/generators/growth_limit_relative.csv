@@ -1,4 +1,4 @@
-onswind,0.25
-ofswind,0.25
-solar,0.5
-hydro_pumped,0.5
+ONSWIND,0.25
+OFSWIND,0.25
+SOLAR,0.5
+HYDRO_PUMPED,0.5

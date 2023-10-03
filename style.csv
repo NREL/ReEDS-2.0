@@ -155,7 +155,8 @@ tech,BESS 8hr,#CC015C
 tech,BESS 10hr,#9B014F
 tech,Pumped hydro,darkblue
 tech,Solar PV,#FFC903
-tech,Wind,#00B6EF
+tech,Onshore Wind,#00B6EF
+tech,Offshore Wind,#00EFD9
 tech,CCGT-GAS,#52216B
 tech,Other,#A96235
 tech,Hydro,#187F94

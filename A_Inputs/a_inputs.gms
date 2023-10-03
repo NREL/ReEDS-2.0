@@ -1208,7 +1208,7 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rscbin.csv
     rscvar                            "Resource supply curve parameters (capacity and cost)"
           /cap "capacity available", cost "cost of capacity"/,
     src                                "sources of storage charging"
-          / pv, wind, old, other / ,
+          / pv, ons_wind, ofs_wind, old, other / ,
     rscfeas(r,rs,i,rscbin)            "feasibility set for r s i and bins", //calc from rsc_dat
     refurb_cond(i,v,r,rs,t,tt,rscbin) "set to indicate whether a tech and vintage combination from year tt can be refurbished in year t" // initialized below
     ;
@@ -1264,7 +1264,8 @@ remainder(i,r,rs) = sum(v, sum(t$tfirst(t), capacity_exog(i,v,r,rs,t)));
 
 set i_src(i,src) "linking set between i and src" ;
 i_src(i,"pv")$pv(i) = yes ;
-i_src(i,"wind")$wind(i) = yes ;
+i_src(i,"ons_wind")$onswind(i) = yes ;
+i_src(i,"ofs_wind")$ofswind(i) = yes ;
 
 parameter rsc_copy;
 rsc_copy(r,rs,i,rscbin,"cap")  = rsc_dat(r,rs,i,rscbin,"cap");
