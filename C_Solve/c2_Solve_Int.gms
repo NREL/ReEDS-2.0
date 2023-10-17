@@ -277,6 +277,7 @@ cc_int(i,v,r,szn,t)$[cc_int(i,v,r,szn,t) < 0.001] = 0 ;
 curt_int(i,r,h,t)$[curt_int(i,r,h,t) < 0.001] = 0 ;
 
 execute_unload '%casepath%%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int, curt_int, oldVREgen ;
+execute_unload '%casepath%%ds%augur_data%ds%ReEDS_augur_%case%_test.gdx' cc_int, curt_int, oldVREgen ;
 
 *following line will load in the level values if the switch is enabled
 *note that this is still within the conditional that we are now past the first iteration
@@ -334,6 +335,7 @@ solve %case% using lp minimizing z;
 
 if(Sw_Loadpoint = 1,
 execute_unload '%casepath%%ds%gdxfiles%ds%%case%_load.gdx';
+execute_unload '%casepath%%ds%augur_data%ds%ReEDS_augur_%case%_test.gdx';
 );
 
 *============================

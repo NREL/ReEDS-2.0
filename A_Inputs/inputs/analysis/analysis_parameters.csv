@@ -11,7 +11,7 @@ HYDRO-STORAGE,Hydro,Solar PV,#FFC903,BESS 10hr,,Delhi,Delhi,Delhi,77.21,28.67
 NUCLEAR,Nuclear,Sub-Coal,#222222,Pumped hydro,,Goa,Goa,Goa,73.94,15.28
 SUBCRITICAL-COAL,Sub-Coal,Super-Coal,#525352,Solar PV,,Gujarat,Gujarat,Gujarat,72.58,23.03
 SUBCRITICAL-LIGNITE,Sub-Coal,Onshore Wind,#00B6EF,Onshore Wind,,Haryana,Haryana,Haryana,77.3,28.38
-SUBCRITICAL-OIL,Other,Offshore Wind,#00EFD9,Offshore Wind,,Himachal_Pradesh,Himachal_Pradesh,Himachal Pradesh,77.16,31.11
+SUBCRITICAL-OIL,Other,Offshore Wind,#106BA7,Offshore Wind,,Himachal_Pradesh,Himachal_Pradesh,Himachal Pradesh,77.16,31.11
 SUPERCRITICAL-COAL,Super-Coal,BESS,#FF4A88,Hydro,,Jammu_Kashmir,Jammu_Kashmir,Jammu & Kashmir,74.79,34.09
 UPV,Solar PV,BESS 1hr,#FF7FBB,Naptha,,Jharkhand,Jharkhand,Jharkhand,85.33,23.36
 WHR,Other,BESS 2hr,#CC0079,Diesel,,Karnataka,Karnataka,Karnataka,77.56,12.97

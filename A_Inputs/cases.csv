@@ -70,3 +70,4 @@ GSw_StorHAV,Turn Hourly Arbitrage Value for storage on [1] or off [0],1,,,,,,,
 GSw_FocusRegionZeroTXCost,Zero transmission capital cost between focus regions,0,,,,,,,
 GSw_TxLimit,Switch to turn on transmission flow limits,1,,,,,,,
 GSw_CurtLim,Switch to turn on curtailment limit,0,,,,,,,
+GSw_OfsWind,Switch to turn on [1]/off [0] offshore wind,1,,,,,,,0

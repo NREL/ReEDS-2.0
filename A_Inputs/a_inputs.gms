@@ -70,7 +70,8 @@ Sw_SolarPlusStorage "Switch to turn on solar plus storage constraint"           
 Sw_StorHAV        "Switch to turn on hourly arbitrage value for storage"           /%GSw_StorHAV%/,
 Sw_FocusRegionZeroTXCost "Zero transmission capital cost between focus regions"    /%GSw_FocusRegionZeroTXCost%/,
 Sw_TxLimit               "Switch to enable transmission flow limits"    /%GSw_TxLimit%/,
-Sw_CurtLim				"Switch to enable curtailment limit"			/%GSw_CurtLim%/
+Sw_CurtLim				"Switch to enable curtailment limit"			/%GSw_CurtLim%/,
+Sw_OfsWind                    "Switch to turn on/off offshore wind"                 /%GSw_OfsWind%/
 ;
 
 *==========================
@@ -372,33 +373,56 @@ loop(tt,
    temps$((mod(tempt(tt),ypv)=0)$(temps<smax(newv,ord(newv)))) = temps + 1;
 );
 
+
+*ban - will remove the technology from being considered
+*bannew - will remove ability to invest in the tech
+
+set
+      ban(i) "ban from existing, prescribed, and new generation -- usually indicative of missing data or operational constraints"
+      /
+            OFSWIND
+      /,
+      
+      bannew(i) "banned from creating new capacity, usually due to lacking data or represention"
+      /
+            OFSWIND
+      /;
+      
+if(Sw_OfsWind = 0,
+      ban('OFSWIND') = yes;
+      bannew('OFSWIND') = yes;
+else
+      ban('OFSWIND') = no;
+      bannew('OFSWIND') = no;
+);
+
+
 *add 1 for each t item in the ivt set
 countnv(i,newv) = sum(t$ivt(i,newv,t),1);
 *abarlas: added wind ofs
 * --- define technology subsets ---
-COAL(i)     = YES$i_subsets(i,'COAL') ;
-GAS(i)      = YES$i_subsets(i,'GAS') ;
-GASCC(i)    = YES$i_subsets(i,'GASCC') ;
-NUCLEAR(i)  = YES$i_subsets(i,'NUCLEAR');
-CONV(i)     = YES$i_subsets(i,'CONV') ;
-VRE(i)      = YES$i_subsets(i,'VRE') ;
-RSC_i(i)    = YES$i_subsets(i,'RSC') ;
-ONSWIND(i)     = YES$i_subsets(i,'ONSWIND') ;
-OFSWIND(i)     = YES$i_subsets(i,'OFSWIND') ;
-UPV(i)      = YES$i_subsets(i,'UPV') ;
-DISTPV(i)     = YES$i_subsets(i,'DISTPV') ;
-STORAGE(i)  = YES$i_subsets(i,'STORAGE') ;
-BATTERY(i)  = YES$i_subsets(i,'BATTERY') ;
-HYDRO(i)    = YES$i_subsets(i,'HYDRO') ;
-HYDRO_D(i)  = YES$i_subsets(i,'HYDRO_D') ;
-HYDRO_ND(i) = YES$i_subsets(i,'HYDRO_ND') ;
-HYDRO_POND(i) =YES$i_subsets(i,'HYDRO_PONDAGE');
-HYDRO_STOR(i) =YES$i_subsets(i,'HYDRO_STORAGE');
-IMPORTS(i)  = YES$i_subsets(i,'IMPORTS');
+COAL(i)                 = YES$i_subsets(i,'COAL') ;
+GAS(i)                  = YES$i_subsets(i,'GAS') ;
+GASCC(i)                = YES$i_subsets(i,'GASCC') ;
+NUCLEAR(i)              = YES$i_subsets(i,'NUCLEAR');
+CONV(i)                 = YES$i_subsets(i,'CONV') ;
+VRE(i)                  = YES$i_subsets(i,'VRE') ;
+RSC_i(i)                = YES$i_subsets(i,'RSC') ;
+ONSWIND(i)              = YES$i_subsets(i,'ONSWIND') ;
+OFSWIND(i)$(not ban('OFSWIND')) = YES$i_subsets(i,'OFSWIND') ;  //enable switch to turn ofswind on/off
+UPV(i)                  = YES$i_subsets(i,'UPV') ;
+DISTPV(i)               = YES$i_subsets(i,'DISTPV') ;
+STORAGE(i)              = YES$i_subsets(i,'STORAGE') ;
+BATTERY(i)              = YES$i_subsets(i,'BATTERY') ;
+HYDRO(i)                = YES$i_subsets(i,'HYDRO') ;
+HYDRO_D(i)              = YES$i_subsets(i,'HYDRO_D') ;
+HYDRO_ND(i)             = YES$i_subsets(i,'HYDRO_ND') ;
+HYDRO_POND(i)           = YES$i_subsets(i,'HYDRO_PONDAGE');
+HYDRO_STOR(i)           = YES$i_subsets(i,'HYDRO_STORAGE');
+IMPORTS(i)              = YES$i_subsets(i,'IMPORTS');
 pv(i)$(UPV(i) or DISTPV(i)) = YES;
 
 rsc_agg(i,ii)$(rsc_i(i)$sameas(i,ii)) = yes;
-
 
 
 *===========================
