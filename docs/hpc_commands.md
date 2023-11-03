@@ -1,7 +1,7 @@
 # Instructions for first time setup and running ReEDS-India on the HPC
 
 ## Step 1. SSH into an HPC login node
-`ssh -m hmac-sha2-512 [hpc-username]@el2.hpc.nrel.gov`
+`ssh -m hmac-sha2-512 [hpc-username]@kestrel.hpc.nrel.gov`
 
 *Type your password and hit enter/return*
 
@@ -26,10 +26,10 @@
 `cd reeds_india_api` <br />
 `module purge` <br />
 `module use /nopt/nrel/apps/modules/centos74/modulefiles/` <br />
-`module load conda` <br />
+`module load anaconda3` <br />
 `module load gams` <br />
-`source deactivate` <br />
-`conda activate /lustre/eaglefs/projects/southasia/.conda-envs/reeds`
+`conda deactivate` <br />
+`conda activate /kfs2/projects/southasia/.conda-envs/reeds-india`
 
 ### Update srun_template.sh (for first time setup only)
 *Edit shfiles/srun_template.sh* <br />
