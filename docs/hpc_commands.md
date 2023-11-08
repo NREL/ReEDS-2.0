@@ -5,7 +5,16 @@
 
 *Type your password and hit enter/return*
 
-## Step 2. Setup a screen (for first time setup or if HPC restarts)
+## Step 2. Add a GAMS license (for first time setup or if GAMS license is renewed)
+> navigate to the appropriate directory
+`cd ../../home/[your username]` 
+> create folders to store the GAMS license
+`mkdir .local/share/GAMS`
+> Navigate to teh GAMS folder that was just created
+`cd .local/share/GAMS`
+> Upload the GAMS license file into this folder and name it as "gamslice.txt"
+
+## Step 3. Setup a screen (for first time setup or if HPC restarts)
 `screen -S reeds`
 
 > other useful commands for screens
@@ -41,7 +50,7 @@
 > - Mount the remote SSH directory to your machine using SFTP Drive
 
 
-## Step 3. Compile inputs and generate batch files
+## Step 4. Compile inputs and generate batch files
 *Type:*
 
 `python runmodel.py`
@@ -53,7 +62,7 @@
 > - Run model?: **NO. DO NOT RUN ON A LOGIN NODE. TYPE 0 AND HIT ENTER/RETURN.**
 > - Generate shell scripts to run on NREL HPC?: *type 1 and hit enter*
 
-## Step 4. Update batch file and submit run(s)
+## Step 5. Update batch file and submit run(s)
 *At this point you have everything needed to submit a run into the HPC queue. Before you do, double-check options in the .sh batch file for your run.* 
 - *Batch files fo runs are saved in folder:* `shfiles`  
 - *Ensure `--time=` is sufficient for each run.*
