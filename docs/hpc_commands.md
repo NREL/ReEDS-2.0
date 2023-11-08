@@ -25,7 +25,6 @@
 ### Setup environment (for first time setup or if HPC restarts)
 `cd reeds_india_api` <br />
 `module purge` <br />
-`module use /nopt/nrel/apps/modules/centos74/modulefiles/` <br />
 `module load anaconda3` <br />
 `module load gams` <br />
 `conda deactivate` <br />
