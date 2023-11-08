@@ -6,13 +6,16 @@
 *Type your password and hit enter/return*
 
 ## Step 2. Add a GAMS license (for first time setup or if GAMS license is renewed)
-> navigate to the appropriate directory
+*Navigate to the appropriate directory:*
 `cd ../../home/[your username]` 
-> create folders to store the GAMS license
+
+*Create folders to store the GAMS license:*
 `mkdir .local/share/GAMS`
-> Navigate to teh GAMS folder that was just created
+
+*Navigate to the GAMS folder that was just created:*
 `cd .local/share/GAMS`
-> Upload the GAMS license file into this folder and name it as "gamslice.txt"
+
+*Upload the GAMS license file into this folder and name it as "gamslice.txt"*
 
 ## Step 3. Setup a screen (for first time setup or if HPC restarts)
 `screen -S reeds`
