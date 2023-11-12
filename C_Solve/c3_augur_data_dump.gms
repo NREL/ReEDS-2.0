@@ -72,9 +72,9 @@ loop(t$[(yeart(t)>=%start_year%)$(yeart(t)<=%next_year%)],
 tcheckretonswind(t) = yes ;
 ) ;
 
-tcheckretoffswind(t) = no ;
+tcheckretofswind(t) = no ;
 loop(t$[(yeart(t)>=%start_year%)$(yeart(t)<=%next_year%)],
-tcheckretoffswind(t) = yes ;
+tcheckretofswind(t) = yes ;
 ) ;
 
 tcur(t) = no ;
@@ -124,16 +124,16 @@ retire_exog_tmp(i,v,rs,t)$[not sameas(rs,"sk")] = sum{r$r_rs(r,rs), retire_exog_
 * determine the total exogenous retirements that occur within the tcheckret set
 * this represents the retirements of all exogenous capacity between the end of the previous solve year and the end of the next solve year
 * note that wind capacity will be handled seperately because the vintage is tied to the build year
-retire_exog(i,v,r,"%cur_year%") = sum{tcheckret(tt)$(not (windons(i) or windofs(i))), retire_exog_tmp(i,v,r,tt)} ;
+retire_exog(i,v,r,"%cur_year%") = sum{tcheckret(tt)$(not (onswind(i) or ofswind(i))), retire_exog_tmp(i,v,r,tt)} ;
 
 * determine the capacity that will retire due to age within the tcheckret set
 * determine the lifetime retirements between the end of the last solve year and the end of the next solve year
 * note that wind capacity will be handled seperately because the vintage is tied to the build year
-ret_lifetime(i,v,r,"%cur_year%") = sum{(t,tt)$[tcheckret(tt)$(not (windons(i) or windofs(i)))], inv_tmp(i,v,r,t,tt)} ;
+ret_lifetime(i,v,r,"%cur_year%") = sum{(t,tt)$[tcheckret(tt)$(not (onswind(i) or ofswind(i)))], inv_tmp(i,v,r,t,tt)} ;
 
 * get the installed capacity minus upcoming retirements for all technologies except wind
 * For intertemporal or window solves: use the capacity from the PRIOR iteration of the CURRENT solve year for capacity credit for the NEXT iteration of the CURRENT solve year
-cap_export(i,v,r) = sum{t$[tcur(t)$valcap(i,v,r,t)$(not (windons(i) or windofs(i)))], CAP.l(i,v,r,t)} ;
+cap_export(i,v,r) = sum{t$[tcur(t)$valcap(i,v,r,t)$(not (onswind(i) or ofswind(i)))], CAP.l(i,v,r,t)} ;
 
 *cap_export can be less than zero if an exogenous retirement was taken early
 cap_export(i,v,r)$[cap_export(i,v,r) < 0] = 0 ;
