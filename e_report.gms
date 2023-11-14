@@ -762,7 +762,7 @@ curt_tech(i,rb,t)$[rfeas(rb)$tmodel_new(t)$vre(i)] =
           OPRES.l(ortype,i,v,rb,h,t) * hours(h) }
 ;
 
-curt_rate_tech(i,rb,t)$[rfeas(rb)$tmodel_new(t)$vre(i)$curt_tech(i,rb,t)$gen_out_ann(i,rb,t)] =
+curt_rate_tech(i,rb,t)$[rfeas(rb)$tmodel_new(t)$vre(i)$(gen_out_ann(i,rb,t) + curt_tech(i,rb,t))] =
     curt_tech(i,rb,t) / (gen_out_ann(i,rb,t) + curt_tech(i,rb,t))
 ;
 
