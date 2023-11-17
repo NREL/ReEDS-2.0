@@ -287,20 +287,23 @@ def prep_data(args):
 #     wind_scaling.loc[index_notwind,'scaling_factor'] = 1
     
     # Get a capacity weighted average scaling factor for all wind capacity
-    cap_wind = gdxin['cap_wind'].copy()
+    cap_onswind = gdxin['cap_onswind'].copy()
+    cap_ofswind = gdxin['cap_ofswind'].copy()
     #cap_wind = pd.merge(left=cap_wind, right=wind_scaling[['i','v','r','t','scaling_factor']].drop_duplicates(), on=['i','v','r','t'], how='left')
     #scale_factor = weighted_average(cap_wind, ['scaling_factor'], 'MW', ['i','r'], False, False)
    
     # Aggregate all wind capacity by resource region
-    cap_wind = cap_wind.rename(columns={'Value':'MW'})
-    cap_wind = cap_wind[['i','r','MW']].groupby(['i','r'], as_index=False).sum()
+    cap_onswind = cap_onswind.rename(columns={'Value':'MW'})
+    cap_ofswind = cap_ofswind.rename(columns={'Value':'MW'})
+    cap_onswind = cap_onswind[['i','r','MW']].groupby(['i','r'], as_index=False).sum()
+    cap_ofswind = cap_ofswind[['i','r','MW']].groupby(['i','r'], as_index=False).sum()
     
     # Get solar capacity. This includes csp-ns capacity, aggregated to the BA
     # level and assigned to the highest available UPV resource class in the BA.
     cap_solar = get_solar_cap(gdxin, r_rs, resources, techs, args)
     
     # Create a single DataFrame of all VRE capacity
-    cap_vre = pd.concat([cap_solar,cap_wind], sort=False).reset_index(drop=True)
+    cap_vre = pd.concat([cap_solar,cap_onswind,cap_ofswind], sort=False).reset_index(drop=True)
     cap_vre['i'] = cap_vre.i.str.upper()
     cap_vre['resource'] = cap_vre['i'] + '_' + cap_vre['r']
     cap_vre = pd.merge(left=resources[['tech','area','resource']].rename(columns={'tech':'i','area':'r'}), right=cap_vre, on=['i','r','resource'], how='left').fillna(0)
@@ -344,9 +347,11 @@ def prep_data(args):
     # Get the max generation from vre in each timeslice
     m_cf = gdxin['m_cf_filt'].copy()
     m_cf.loc[:,'i'] = m_cf.loc[:,'i'].str.lower()
-    vre_cap = gdxin['cap_wind']
-    vre_cap = vre_cap.rename(columns={'Value':'MW'})
-    vre_cap = pd.concat([vre_cap, get_cap(gdxin, 'cap_pv')], sort=False).reset_index(drop=True)
+    vre_cap_ons = gdxin['cap_onswind']
+    vre_cap_ofs = gdxin['cap_ofswind']
+    vre_cap_ons = vre_cap_ons.rename(columns={'Value':'MW'})
+    vre_cap_ofs = vre_cap_ofs.rename(columns={'Value':'MW'})
+    vre_cap = pd.concat([vre_cap_ons, vre_cap_ofs, get_cap(gdxin, 'cap_pv')], sort=False).reset_index(drop=True)
     vre_cap.loc[:,'i'] = vre_cap.loc[:,'i'].str.lower()
 
     vre_max_cf = pd.merge(left=vre_cap, right=m_cf, on=['i','v','r'], how='left')
