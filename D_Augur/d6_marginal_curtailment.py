@@ -60,7 +60,7 @@ def marginal_curtailment(args, marg_curt_data, osprey_results, curt_results):
     i_resource_r['i'] = i_resource_r['i'].str.lower()
 #%%
     # filter for utility-scale resources and distributed resources seperately
-    util_techs = [item for sublist in [techs[x] for x in ['UPV','WIND']] for item in sublist]
+    util_techs = [item for sublist in [techs[x] for x in ['UPV','ONSWIND','OFSWIND']] for item in sublist]
     i_resource_r_utility = i_resource_r[i_resource_r['i'].str.lower().isin(util_techs)].reset_index(drop=True)
     i_resource_r_dist = i_resource_r[i_resource_r['i'].str.lower().isin(techs['DISTPV'])].reset_index(drop=True)
     
@@ -388,9 +388,11 @@ def marginal_curtailment(args, marg_curt_data, osprey_results, curt_results):
     # Add source types to resource_device_utility and i_resource_r_utility
     pv_techs = [item for sublist in [techs[x] for x in ['UPV','DISTPV']] for item in sublist]
     resource_device_utility.loc[resource_device_utility['i'].isin(pv_techs),'src'] = 'pv'
-    resource_device_utility.loc[resource_device_utility['i'].isin(techs['WIND']),'src'] = 'wind'
+    resource_device_utility.loc[resource_device_utility['i'].isin(techs['ONSWIND']),'src'] = 'wind'
+    resource_device_utility.loc[resource_device_utility['i'].isin(techs['OFSWIND']),'src'] = 'wind'
     i_resource_r_utility.loc[i_resource_r_utility['i'].isin(pv_techs),'src'] = 'pv'
-    i_resource_r_utility.loc[i_resource_r_utility['i'].isin(techs['WIND']),'src'] = 'wind'
+    i_resource_r_utility.loc[i_resource_r_utility['i'].isin(techs['ONSWIND']),'src'] = 'wind'
+    i_resource_r_utility.loc[i_resource_r_utility['i'].isin(techs['OFSWIND']),'src'] = 'wind'
 #%%    
     # Take the average of curt_stor across source and device
     curt_stor = marg_curt_exist_stor_recovery_ratio.transpose().reset_index()
