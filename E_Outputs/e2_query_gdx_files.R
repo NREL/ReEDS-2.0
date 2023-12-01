@@ -120,7 +120,7 @@ re_name_cols(cap)
 # wind and solar capacity by resource region
 pull_gdx_data(type = 'variable', gdx.name = 'CAP', r.name = 'cap.rs')
 
-cap.rs = cap.rs[names %in% c('WIND','UPV','DISTPV'), .(value = sum(value)), by = .(names, names.2, names.3, scenario)]
+cap.rs = cap.rs[names %in% c('ONSWIND','OFSWIND','UPV','DISTPV'), .(value = sum(value)), by = .(names, names.2, names.3, scenario)]
 
 names(cap.rs) = c('Technology','rs','Year','scenario','capacity')
 cap.rs = merge(cap.rs, r.rs.map, by = 'rs', all.x = T)
@@ -320,7 +320,7 @@ re_name_cols(prescr.rsc)
 if("Technology" %in% names(prescr.rsc)){
   prescr.nonrsc = prescr.nonrsc[,!"temp"] ; prescr.rsc = prescr.rsc[,!"temp"]
   
-  #  prescr.rsc = prescr.rsc[!Technology %in% c('WIND','UPV','DISTPV')]
+  #  prescr.rsc = prescr.rsc[!Technology %in% c('ONSWIND','OFSWIND','UPV','DISTPV')]
   
   prescr.all = rbind(prescr.nonrsc, 
                      prescr.rsc[,.(prescribed=sum(prescribed)),by=.(Year,Technology,State,scenario)])
@@ -339,9 +339,9 @@ if("prescribed" %in% names(prescr.all)){
 }
 
 # identify RE investment (INV_RSC includes prescriptions)
-inv.all[Technology %in% c('WIND','UPV','DISTPV'), economic := inv.temp - prescribed]
+inv.all[Technology %in% c('ONSWIND','OFSWIND','UPV','DISTPV'), economic := inv.temp - prescribed]
 
-inv.all[!(Technology %in% c('WIND','UPV','DISTPV')), economic := inv.temp]
+inv.all[!(Technology %in% c('ONSWIND','OFSWIND','UPV','DISTPV')), economic := inv.temp]
 inv.all[,inv.temp := NULL]
 
 inv.all = melt(inv.all, id.vars = c('Year','Technology','State','scenario'),
@@ -607,9 +607,9 @@ cc_hydro[, season := factor(season, levels = unique(season),
 pull_gdx_data(type = 'param', gdx.name = 'cc_int', r.name = 'cc_int')
 
 if("i1" %in% names(cc_int)){
-  cc_int = cc_int[i1 %in% c('WIND','UPV','DUPV'), ]
+  cc_int = cc_int[i1 %in% c('ONSWIND','OFSWIND','UPV','DUPV'), ]
 }else if("i" %in% names(cc_int)){
-  cc_int = cc_int[i %in% c('WIND','UPV','DUPV'), ]
+  cc_int = cc_int[i %in% c('ONSWIND','OFSWIND','UPV','DUPV'), ]
 }
 names(cc_int) = c('Technology','class','rs','season','Year','value','scenario')
 
