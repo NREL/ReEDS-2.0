@@ -40,6 +40,7 @@ memoryemphasis 0
 *## have not yet been fully characterized, and some of them might do nothing. Use at your own risk.
 *## Some background details are available at
 *## https://www.slideshare.net/IEA-ETSAP/improving-the-solution-time-of-times-by-playing-with-cplexbarrier
+*## https://iea-etsap.org/webinar/CPLEX%20options%20for%20running%20TIMES%20models.pdf
 
 *** numericalemphasis (boolean): emphasizes precision in numerically unstable or difficult problems [default 0]
 * numericalemphasis 1
@@ -48,7 +49,8 @@ memoryemphasis 0
 * depind 3
 
 *** barcolnz (integer): specifies the number of entries in columns to be considered as dense [default 0]
-* barcolnz 30
+*** commenting this out (i.e., setting back to zero) can improve solve time when running with hydrogen transport (GSw_H2=2)
+barcolnz 30
 
 *** barorder (integer): row ordering algorithm selection. 1 = approximate minimum degree (AMD) [default 0]
 * barorder 1
@@ -61,3 +63,6 @@ memoryemphasis 0
 
 *** scaind (described above)
 * scaind 0
+
+*** Can use bardisplay=2 to print more diagnostics about the barrier method and choice of barcolnz
+* bardisplay 2

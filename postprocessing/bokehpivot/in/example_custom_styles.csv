@@ -1,15 +1,11 @@
 scenario,scenario_custom_colors,tech,tech_custom_colors
 "Moderate Tech, Reference Access",#1f77b4,nuclear,#820000
-"Moderate Tech, Open Access",#ff7f0e,nuclear-nsp,#820000
 "Moderate Tech, Limited Access",#2ca02c,coal,#222222
-"Advanced Tech, Reference Access",#d62728,coal-ccs-nsp,#707685
 "Advanced Tech, Open Access",#9467bd,cofire,#66C238
 "Advanced Tech, Limited Access",#8c564b,gas-cc,#52216B
-,,gas-cc-nsp,#52216B
 ,,gas-cc-ccs_mod,#5E1688
 ,,gas-cc-ccs_max,#70298D
 ,,gas-ct,#C2A1DB
-,,gas-ct-nsp,#C2A1DB
 ,,o-g-s,#3D3376
 ,,hydro,#187F94
 ,,geothermal,#A96235

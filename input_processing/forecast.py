@@ -9,10 +9,6 @@ If new files have been added to inputs_case, you'll need to add rows with
 processing directions to futurefiles.csv. 
 The column names should be self-explanatory; most likely there's also at least
 one similarly-formatted file in inputs_case that you can copy the settings for.
-* IMPORTANT NOTE FOR INTERTEMPORAL/WINDOWS RUNS: By default, we ignore cccurt_defaults.gdx
-to save time and space, as it is only used for intertemporal/windows runs.
-If you are running intertemporal/windows, change the 'ignore' value from 1 to 0
-for the three cccurt_dfaults.gdx rows in inputs/userinput/futurefiles.csv.
 """
 
 #%%########
@@ -24,11 +20,8 @@ import os, sys, csv, pickle, shutil
 import argparse
 from glob import glob
 from warnings import warn
-#%% Direct print and errors to log file
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
@@ -130,17 +123,20 @@ if __name__ == '__main__':
     #%%####################
     ### ARGUMENT INPUTS ###
     parser = argparse.ArgumentParser(description='Extend inputs to arbitrary future year')
-    parser.add_argument('basedir', help='path to ReEDS directory')
+    parser.add_argument('reeds_path', help='path to ReEDS directory')
     parser.add_argument('inputs_case', help='path to inputs_case directory')
 
     args = parser.parse_args()
-    basedir = args.basedir
+    reeds_path = args.reeds_path
     inputs_case = os.path.join(args.inputs_case, '')
 
     # #%%#########################
     # ### Settings for testing ###
-    # basedir = os.path.expanduser('~/github/ReEDS-2.0')
-    # inputs_case = os.path.join(basedir,'runs','v20220411_prmM0_USA2060','inputs_case')
+    # reeds_path = os.path.expanduser('~/github/ReEDS-2.0')
+    # inputs_case = os.path.join(reeds_path,'runs','v20220411_prmM0_USA2060','inputs_case')
+
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
     #%% Inputs from switches
     sw = pd.read_csv(
@@ -182,7 +178,7 @@ if __name__ == '__main__':
 
     ### Get the settings file
     futurefiles = pd.read_csv(
-        os.path.join(basedir, 'inputs', 'userinput', 'futurefiles.csv'),
+        os.path.join(reeds_path, 'inputs', 'userinput', 'futurefiles.csv'),
         dtype={
             'header':'category', 'ignore':int, 'wide':int,
             'year_col':str, 'fix_cols':str, 'clip_min':str, 'clip_max':str,
@@ -241,15 +237,6 @@ if __name__ == '__main__':
                 if verbose > 1:
                     print('EFS special case: {}'.format(filename), flush=True)
                 continue
-        ### if ignore == 3, use file-specific projection
-        elif futurefiles.loc[i, 'ignore'] == 3:
-            if filename == 'oddyears.csv':
-                out = [y for y in range(2010,endyear+1) if y%2 == 1]
-                pd.Series(out).to_csv(
-                    os.path.join(outpath, filename), header=False, index=False)
-            if verbose > 1:
-                print('special case: {}'.format(filename), flush=True)
-            continue
 
         ### If the file isn't in inputs_case, skip it
         if filename not in inputfiles:
@@ -326,10 +313,8 @@ if __name__ == '__main__':
             dfin.columns = list(range(num_indices+1))
         elif filetype == '.gdx':
             ### Read in the full gdx file, but only change the 'key' parameter
-            ### given in futurefiles. That's wasteful, but currently there's only
-            ### one gdx file (cccurt_defaults.gdx) and we ignore it by default since
-            ### it's only used for intertemporal/windows. To speed things up we could 
-            ### change that file to .csv.
+            ### given in futurefiles. That's wasteful, but there are currently no
+            ### active gdx files.
             dfall = gdxpds.to_dataframes(os.path.join(inputs_case, filename))
             dfin = dfall[key]
         else:
@@ -466,6 +451,6 @@ if __name__ == '__main__':
 ## infiles['filetype'] = infiles.filename.map(lambda x: os.path.splitext(x)[1])
 ## infiles.sort_values(['filetype','filename'], inplace=True)
 ## infiles.to_csv(
-##     os.path.join(basedir, 'inputs', 'userinput', 'futurefiles.csv'),
+##     os.path.join(reeds_path, 'inputs', 'userinput', 'futurefiles.csv'),
 ##     index=False
 ## )

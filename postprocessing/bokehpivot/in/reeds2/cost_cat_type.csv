@@ -8,7 +8,8 @@ inv_co2_network_spur,Capital
 inv_consume_capacity_costs,Capital
 inv_converter_costs,Capital
 inv_geothermal_investment,Capital
-inv_h2_network,Capital
+inv_growth_penalty,Capital
+inv_h2_pipeline,Capital
 inv_investment_capacity_costs,Capital
 inv_investment_refurbishment_capacity,Capital
 inv_investment_spurline_costs_rsc_technologies,Capital
@@ -16,8 +17,8 @@ inv_investment_water_access,Capital
 inv_itc_payments_negative_refurbishments,Capital
 inv_itc_payments_negative,Capital
 inv_pumpedhydro_investment,Capital
-inv_spurline_investment,Capital
 inv_substation_investment_costs,Capital
+inv_spurline_investment,Capital
 inv_transmission_intrazone_investment,Capital
 inv_transmission_line_investment,Capital
 op_acp_compliance_costs,Operation
@@ -34,7 +35,8 @@ op_fuelcosts_objfn,Operation
 op_gen_pol_costs,Operation
 op_h2_fuel_costs,Operation
 op_h2_revenue_exog,Operation
-op_h2_transport_storage,Operation
+op_h2_transport,Operation
+op_h2_storage,Operation
 op_h2_vom,Operation
 op_operating_reserve_costs,Operation
 op_ptc_payments_negative,Operation

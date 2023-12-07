@@ -5,13 +5,7 @@
     },
     "pipeline": [
         {
-            "supply-curve-aggregation": "./config_aggregation.json"
-        },
-        {
-            "supply-curve": "./config_supply-curve.json"
-        },
-	{
-	    "rep-profiles": "./config_rep-profiles.json"
-	}
+            "rep-profiles": "./config_rep-profiles_aggprof.json"
+        }
     ]
 }

@@ -7,7 +7,6 @@ raw,display
 "inv_refurb, eq_objfn_inv",Capital
 "inv_rsc, eq_objfn_inv",Supply Curve
 "upgrades, eq_objfn_inv",Capital
-"invsubstation, eq_objfn_inv","invsubstation, eq_objfn_inv"
 "invtran, eq_objfn_inv","invtran, eq_objfn_inv"
 "opres, eq_objfn_op",Operating Reserves
 eq_ab32_cap,eq_ab32_cap
@@ -27,7 +26,7 @@ eq_gasused,NG Fuel
 eq_gasaccounting_national,Variable O&M and Fuel
 eq_gasaccounting_regional,Variable O&M and Fuel
 eq_growthlimit_relative,eq_growthlimit_relative
-eq_invtran_vclimit,eq_invtran_vclimit
+eq_growthbin_limit,eq_growthbin_limit
 eq_mingen_lb,Curtailment Caused
 eq_mingen_ub,Curtailment Caused
 eq_minloading,eq_minloading
@@ -52,7 +51,6 @@ eq_storage_level,eq_storage_level
 eq_storage_in_min,Energy
 eq_storage_in_min_szn,Energy
 eq_storage_in_max,Curtailment Caused
-eq_substationaccounting,eq_substationaccounting
 eq_supply_demand_balance,Energy
 eq_loadcon,Energy
 eq_co2_capture,CO2 Capture and Storage

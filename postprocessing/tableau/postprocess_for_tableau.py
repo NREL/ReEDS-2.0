@@ -67,7 +67,7 @@ column_types = {
 'rb':               ["Balancing Area", SqlType.text()],
 'st':               ["State/Province", SqlType.text()],
 'transreg':         ["Transmission Region", SqlType.text()],
-'usda':             ["USDA (Biomass Supply Curve) Region", SqlType.text()],
+'usda_region':      ["USDA (Biomass Supply Curve) Region", SqlType.text()],
 "ortype":           ["Reserve Type", SqlType.text()],
 "trtype":           ["Transmission Type", SqlType.text()],
 "type":             ["Type", SqlType.text()],
@@ -107,23 +107,18 @@ plexos_param_names = {
 }
 
 
-def get_region_mapping(reeds_dir):
+def get_region_mapping(reeds_path):
     """
     Assemble a spatial mapping file with geometry columns using various csvs
     saved in the ReEDS repo.
     """
-    hier = pd.read_csv(Path(reeds_dir,'inputs','hierarchy.csv'),header=0,index_col=False)
+    hier = pd.read_csv(Path(reeds_path,'inputs','hierarchy.csv'),header=0,index_col=False)
     hier = hier.rename(columns={'*r':'r'})
-    r_rs = pd.read_csv(Path(reeds_dir,'inputs','rsmap.csv'))
-    r_rs.columns = ['r','rs']
-    r_rs = pd.merge(r_rs,hier,on='r',how='left')
-    r_rs = r_rs.rename(columns={'r':'rb','rs':'r'})
     hier['rb'] = hier['r']
-    hier = pd.concat([hier,r_rs],axis=0)
 
     # Pull in geometries for BA polygons and centroids/transmission endpoints
-    ba_polygons = pd.read_csv(Path(reeds_dir,'inputs','shapefiles','US_CAN_MEX_PCA_polygons.csv'))
-    ba_centroids = pd.read_csv(Path(reeds_dir,'inputs','shapefiles','US_transmission_endpoints_and_CAN_MEX_centroids.csv'))
+    ba_polygons = pd.read_csv(Path(reeds_path,'inputs','shapefiles','US_CAN_MEX_PCA_polygons.csv'))
+    ba_centroids = pd.read_csv(Path(reeds_path,'inputs','shapefiles','US_transmission_endpoints_and_CAN_MEX_centroids.csv'))
     hier = pd.merge(hier,ba_polygons[['WKT','rb']],on='rb',how='left')
     hier = pd.merge(hier,ba_centroids,left_on='rb',right_on='ba_str',how='left')
     hier = hier.rename(columns={i:column_types[i][0] for i in column_types})
@@ -342,52 +337,63 @@ def update_hyper_file_from_csv(table_def,csv_path,hyper_path,create_new=False):
 
 def main(raw_args=None):
     # -- Argument Block --
-    parser = argparse.ArgumentParser(description="""This script concatenates csv outputs from specified ReEDS runs and outputs them as csvs and a Tableau Hyper extract file.""")
-    parser.add_argument("-d","--runs_dir", help="full path to directory containing ReEDS runs")
-    parser.add_argument("-r","--reeds_dir", default=str(Path(__file__).resolve().parents[1]), help="full path to ReEDS repo")
-    parser.add_argument("-o","--output_dir", help="name of new directory to create to house outputs within ReEDS-2.0/runs")
-    parser.add_argument("-p","--pivot_dicts", type=lambda s: [x for x in s.split(',')], help="python list of keys to PIVOT_DEFS (in pivot_definitions.py) specifying which set of pivot tables to create")
-    parser.add_argument("-s","--scenarios", type=lambda s: [x for x in s.split(',')], help="Python list of scenario names to include")
-    parser.add_argument("-a","--all_scenarios", action='store_true', help="Flag to include all scenarios in runs_dir ")
-    parser.add_argument("-dy","--dollar_year", type=str, default=str(reeds_bokeh.DEFAULT_DOLLAR_YEAR), help="desired dollar year for outputs (!!!!note: only works for bokehpivot system cost outputs currently. All else still in 2004$")
+    # parser = argparse.ArgumentParser(description="""This script concatenates csv outputs from specified ReEDS runs and outputs them as csvs and a Tableau Hyper extract file.""")
+    # parser.add_argument("-d","--runs_dir", help="full path to directory containing ReEDS runs")
+    # parser.add_argument("-r","--reeds_path", default=str(Path(__file__).resolve().parents[1]), help="full path to ReEDS repo")
+    # parser.add_argument("-o","--output_dir", help="name of new directory to create to house outputs within ReEDS-2.0/runs")
+    # parser.add_argument("-p","--pivot_dicts", type=lambda s: [x for x in s.split(',')], help="python list of keys to PIVOT_DEFS (in pivot_definitions.py) specifying which set of pivot tables to create")
+    # parser.add_argument("-s","--scenarios", type=lambda s: [x for x in s.split(',')], help="Python list of scenario names to include")
+    # parser.add_argument("-a","--all_scenarios", action='store_true', help="Flag to include all scenarios in runs_dir ")
+    # parser.add_argument("-dy","--dollar_year", type=str, default=str(reeds_bokeh.DEFAULT_DOLLAR_YEAR), help="desired dollar year for outputs (!!!!note: only works for bokehpivot system cost outputs currently. All else still in 2004$")
 
-    args = parser.parse_args(raw_args)
-    runs_dir = args.runs_dir
-    reeds_dir = args.reeds_dir
-    output_dir = args.output_dir
-    pivot_dict = args.pivot_dicts
-    scenarios = args.scenarios
-    include_all_scenarios = args.all_scenarios
-    DOLLAR_YEAR = args.dollar_year
+    # args = parser.parse_args(raw_args)
+    # runs_dir = args.runs_dir
+    # reeds_path = args.reeds_path
+    # output_dir = args.output_dir
+    # pivot_dict = args.pivot_dicts
+    # scenarios = args.scenarios
+    # include_all_scenarios = args.all_scenarios
+    # DOLLAR_YEAR = args.dollar_year
 
-    if include_all_scenarios and scenarios is not None:
-        raise argparse.ArgumentTypeError("""
-            Either -a can be specified to include all ReEDS scenarios 
-            containing outputs within runs_dir, or -s can be specified 
-            with a list of scenarios to include, but not both.
-            """)
-    elif include_all_scenarios:
-        scenarios = os.listdir(runs_dir)
+    # if include_all_scenarios and scenarios is not None:
+    #     raise argparse.ArgumentTypeError("""
+    #         Either -a can be specified to include all ReEDS scenarios 
+    #         containing outputs within runs_dir, or -s can be specified 
+    #         with a list of scenarios to include, but not both.
+    #         """)
+    # elif include_all_scenarios:
+    #     scenarios = os.listdir(runs_dir)
     
-    if  include_all_scenarios is None and any([ f for f in scenarios if not (Path(runs_dir) / f).is_dir() ]):
-        print(f'Scenarios {[ f for f in scenarios if not (Path(runs_dir) / f).is_dir() ]} are not directories. Skipping them.')
-    scenarios = [ f for f in scenarios if (Path(runs_dir) / f).is_dir() ]
+    # if  include_all_scenarios is None and any([ f for f in scenarios if not (Path(runs_dir) / f).is_dir() ]):
+    #     print(f'Scenarios {[ f for f in scenarios if not (Path(runs_dir) / f).is_dir() ]} are not directories. Skipping them.')
+    # scenarios = [ f for f in scenarios if (Path(runs_dir) / f).is_dir() ]
 
-    incomplete_scenarios = [ f for f in scenarios if 'outputs' not in os.listdir(Path(runs_dir) / f) ] #grab only directories that contain "outputs"
-    incomplete_scenarios = [ f for f in scenarios if 'cap.csv' not in os.listdir(Path(runs_dir) / f / 'outputs') ] #check that outputs contains results
-    if incomplete_scenarios:
-        print(f'Scenarios {incomplete_scenarios} are incomplete. Skipping them.')
-    scenarios = [ f for f in scenarios if f not in incomplete_scenarios ]
+    # incomplete_scenarios = [ f for f in scenarios if 'outputs' not in os.listdir(Path(runs_dir) / f) ] #grab only directories that contain "outputs"
+    # incomplete_scenarios = [ f for f in scenarios if 'cap.csv' not in os.listdir(Path(runs_dir) / f / 'outputs') ] #check that outputs contains results
+    # if incomplete_scenarios:
+    #     print(f'Scenarios {incomplete_scenarios} are incomplete. Skipping them.')
+    # scenarios = [ f for f in scenarios if f not in incomplete_scenarios ]
 
 
     # # Test arguments:
     # runs_dir = '//nrelnas01/reeds/FY21-EMRE-BeyondVRE/runs/v20210825'	    runs_dir = '//nrelnas01/reeds/FY21-EMRE-BeyondVRE/runs/v20220514'
-    # reeds_dir = str(Path(__file__).resolve().parents[2])	    runs_dir = r'D:\mirish\ReEDS-2.0\runs'
-    # output_dir = "v20210825_results"	    reeds_dir = str(Path(__file__).resolve().parents[2])
+    # reeds_path = str(Path(__file__).resolve().parents[2])	    runs_dir = r'D:\mirish\ReEDS-2.0\runs'
+    # output_dir = "v20210825_results"	    reeds_path = str(Path(__file__).resolve().parents[2])
     # pivot_dicts = ['standard']	    output_dir = "v20220514_tableaupr_results"
     # scenarios = [ f for f in os.listdir(runs_dir) if 'x2' in f and 'outputs' in os.listdir(Path(runs_dir) / f) ] #grab this suite and only scens that contain "outputs"	    pivot_dicts = ['standard']
     # scenarios = [ f for f in scenarios if 'cap.csv' in os.listdir(Path(runs_dir) / f / 'outputs') ] #check that outputs contains results	    scenarios = [ f for f in os.listdir(runs_dir) if 'outputs' in os.listdir(Path(runs_dir) / f) ] #grab this suite and only scens that contain "outputs"
     # DOLLAR_YEAR = '2020'
+
+        # Test arguments:	    # Test arguments:
+    runs_dir = r'\\nrelnas01\ReEDS\Some Project\runs\Some Runs Folder' # file path to the folder that contains your runs
+    reeds_path = r'\\nrelnas01\ReEDS\Some Location\ReEDS-2.0' # file path to where your ReEDS repo is located
+    output_dir = r'\\nrelnas01\ReEDS\Some Location\tableau_report' # where you want the tableau results to output to
+    pivot_dicts = ['standard']	   
+    scenarios = [ f for f in os.listdir(runs_dir) ]
+    scenarios = [ f for f in scenarios if 'cap.csv' in os.listdir(Path(runs_dir) / f / 'outputs') ] #check that outputs contains results	    
+    # scenarios.remove('name of folder') quick way to remove a run if say, it failed
+    # scenarios = ['PTCFIX_v4_Mid_Case'] # quick test of only one scenario
+    DOLLAR_YEAR = '2020'
 
     # Create results directory in runs_dir/runs if it doesn't exist:
     output_path = (Path(runs_dir) / output_dir)
@@ -405,7 +411,7 @@ def main(raw_args=None):
     # -- Concatenate scenarios --
     
     # Load in Tableau table definitions for all specified csvs:
-    csv_paths, table_defs, columnname_defs = create_table_definitions(Path(reeds_dir,'postprocessing','tableau','tables_to_aggregate.csv'))
+    csv_paths, table_defs, columnname_defs = create_table_definitions(Path(reeds_path,'postprocessing','tableau','tables_to_aggregate.csv'))
 
     # -- Create pivot tables from concatenated csvs --
     # Set bokehpivot internals needed for cost calculations:
@@ -415,11 +421,11 @@ def main(raw_args=None):
                             'var_end_year': bmw.TextInput(title='Present Value End Year', value=str(END_YEAR), css_classes=['wdgkey-end_year', 'reeds-vars-drop'], visible=False)}
 
     # Read in regional mapping table as well as WKT line geometries:	
-    region_mapping = get_region_mapping(reeds_dir)	
-    line_geometries = pd.read_csv(Path(reeds_dir,'inputs','shapefiles','r_rr_lines_to_25_nearest_neighbors.csv')) #includes lines for 25 nearest neighbors--could include all but tabke would be 40k rows
-    cs_geometries = pd.read_csv(Path(reeds_dir,'inputs','shapefiles','ctus_cs_polygons_BVRE.csv')) #storage formation polygons
+    region_mapping = get_region_mapping(reeds_path)	
+    line_geometries = pd.read_csv(Path(reeds_path,'inputs','shapefiles','r_rr_lines_to_25_nearest_neighbors.csv')) #includes lines for 25 nearest neighbors--could include all but tabke would be 40k rows
+    cs_geometries = pd.read_csv(Path(reeds_path,'inputs','shapefiles','ctus_cs_polygons_BVRE.csv')) #storage formation polygons
     cs_geometries = cs_geometries[['Formation','Formation Deposition','Formation Depth (ft)','Formation Thickness (ft)','Formation Basin','Formation Lithology','Formation CO2 Storage Capacity (MMT CO2)','Formation Centroid State','Formation Polygon Geometry']]
-    r_cs_spurline_geometries = pd.read_csv(Path(reeds_dir,'inputs','shapefiles','ctus_r_cs_spurlines_200mi.csv')) #includes lines for 25 nearest neighbors--could include all but tabke would be 40k rows
+    r_cs_spurline_geometries = pd.read_csv(Path(reeds_path,'inputs','shapefiles','ctus_r_cs_spurlines_200mi.csv')) #includes lines for 25 nearest neighbors--could include all but tabke would be 40k rows
     r_cs_spurline_geometries['distance_m'] = r_cs_spurline_geometries['distance_m'] * 0.000621371 #m to mi
     r_cs_spurline_geometries = r_cs_spurline_geometries.rename(columns={'WKT':'Spur Line Geometry',
                                                                         'ba_str':'r',
@@ -427,7 +433,7 @@ def main(raw_args=None):
                                                                         'distance_m':'Spur Line Length (mi)'})
 
     # Read in table containing list of included csvs to get label values for each csv:
-    csv_list = pd.read_csv(Path(reeds_dir,'postprocessing','tableau','tables_to_aggregate.csv'))
+    csv_list = pd.read_csv(Path(reeds_path,'postprocessing','tableau','tables_to_aggregate.csv'))
 
     create_new = True #create a new .hyper file on the first iteration
     for pivot_dict in pivot_dicts:
@@ -457,13 +463,13 @@ def main(raw_args=None):
                 elif this_csv == 'prod_load':
                     this_df['i'] = 'Production Load'
                     this_col_list = [ x for x in this_df.columns if x not in pivot_info['id_columns'] ]
-                elif this_csv in ['prod_h2_price','prod_rect_cost']:
+                elif this_csv in ['prod_h2_price','prod_h2ct_cost']:
                     this_df = this_df.pivot_table(index=pivot_info['id_columns'], columns='p', aggfunc=np.sum).droplevel(0,axis=1).reset_index()
                     if this_csv == 'prod_h2_price':
                         this_col_list = {'DAC':'Direct Air CO2 Capture Price (2004 $/tonne)',
                                         'H2_blue':'Blue Hydrogen Price (2004 $/tonne)',
                                         'H2_green':'Green Hydrogen Price (2004 $/tonne)'}
-                    elif this_csv == 'prod_rect_cost':
+                    elif this_csv == 'prod_h2ct_cost':
                         this_col_list = {'H2_blue':'Blue Hydrogen Fuel Price (2004 $/MMBtu)',
                                         'H2_green':'Green Hydrogen Fuel Price (2004 $/MMBtu)'}
                     this_df = this_df.rename(columns=this_col_list)                
@@ -552,7 +558,7 @@ def main(raw_args=None):
                     this_df_list = []
                     
                     #Read in cost category mapping:
-                    cost_cat_map = pd.read_csv(Path(reeds_dir) / 'postprocessing' / 'bokehpivot' / 'in' / 'reeds2' / 'cost_cat_map.csv', header=0, names=['cost_cat','cost_cat_display'])
+                    cost_cat_map = pd.read_csv(Path(reeds_path) / 'postprocessing' / 'bokehpivot' / 'in' / 'reeds2' / 'cost_cat_map.csv', header=0, names=['cost_cat','cost_cat_display'])
                     
                     for this_scenario in scenarios:
                         # Keeping the table calculations below separate for each cost output (despite the code being a bit inefficient) to facilitate understanding of each cost calc.
@@ -563,10 +569,10 @@ def main(raw_args=None):
                         this_sc.loc[this_sc['Cost (Bil $)'] == 'Eps'] = 0
                         dfs = {'sc': this_sc,
                             'sw': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'switches.csv', header=None, names=['switch','value']),
-                            'valid_ba_list': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'valid_ba_list.csv'),
-                            'rsmap': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'rsmap.csv'),
+                            'val_r': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'val_r.csv',header=None),
                             'df_capex_init': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'df_capex_init.csv'),
-                            'crf': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'crf.csv', header=None, names=['year', 'crf'])}
+                            'crf': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'crf.csv', header=0, names=['year', 'crf']),
+                            'scalars': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'scalars.csv', header=None, usecols=[0,1], names=['scalar', 'value'])}
                         this_ann_df = pre_systemcost(dfs,annualize=True,shift_capital=True,maintain_ba_index=True) #this func is from reeds2.py, altered to keep BA
                         this_ann_df = this_ann_df.merge(cost_cat_map,on='cost_cat',how='left')
                         this_ann_df = this_ann_df.rename(columns={'Cost (Bil $)':f'Sys Cost Annualized - Undiscounted (Bil {DOLLAR_YEAR}$)',
@@ -578,7 +584,8 @@ def main(raw_args=None):
                         this_sc = this_sc.loc[this_sc['Cost (Bil $)'] != 'Undf']
                         this_sc.loc[this_sc['Cost (Bil $)'] == 'Eps'] = 0
                         dfs = {'sc': this_sc,
-                            'sw': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'switches.csv', header=None, names=['switch','value'])}
+                            'sw': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'switches.csv', header=None, names=['switch','value']),
+                            'scalars': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'scalars.csv', header=None, usecols=[0,1], names=['scalar', 'value'])}
                         this_trunc_df = pre_systemcost(dfs,shift_capital=True,maintain_ba_index=True)
                         this_trunc_df = this_trunc_df.merge(cost_cat_map,on='cost_cat',how='left')
                         this_trunc_df = this_trunc_df.rename(columns={'Cost (Bil $)':f'Sys Cost Truncated at Final Year - Undiscounted (Bil {DOLLAR_YEAR}$)',
@@ -590,7 +597,8 @@ def main(raw_args=None):
                         this_sc = this_sc.loc[this_sc['Cost (Bil $)'] != 'Undf']
                         this_sc.loc[this_sc['Cost (Bil $)'] == 'Eps'] = 0
                         dfs = {'sc': this_sc,
-                            'sw': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'switches.csv', header=None, names=['switch','value'])}
+                            'sw': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'switches.csv', header=None, names=['switch','value']),
+                            'scalars': pd.read_csv(Path(runs_dir) / this_scenario / 'inputs_case' / 'scalars.csv', header=None, usecols=[0,1], names=['scalar', 'value'])}
                         this_untrunc_df = pre_systemcost(dfs,shift_capital=True,maintain_ba_index=True)
                         this_untrunc_df = this_untrunc_df.merge(cost_cat_map,on='cost_cat',how='left')
                         this_untrunc_df = this_untrunc_df.rename(columns={'Cost (Bil $)':f'Sys Cost Beyond Final Year - Undiscounted (Bil {DOLLAR_YEAR}$)',
@@ -610,7 +618,7 @@ def main(raw_args=None):
                         if not (Path(runs_dir) / this_scenario / 'outputs' / 'retail' / 'retail_rate_components.csv').is_file():
                             print(f'Scenario {this_scenario} did not report retail rate module outputs.')
                         else:
-                            this_scen_df = retail_rate_calculations.get_dfplot(run_dir=str(Path(runs_dir) / this_scenario), inputpath=str(Path(reeds_dir) / 'postprocessing' / 'retail_rate_module' / 'inputs.csv'), plot_dollar_year=int(DOLLAR_YEAR),tableau_export=True)
+                            this_scen_df = retail_rate_calculations.get_dfplot(run_dir=str(Path(runs_dir) / this_scenario), inputpath=str(Path(reeds_path) / 'postprocessing' / 'retail_rate_module' / 'inputs.csv'), plot_dollar_year=int(DOLLAR_YEAR),tableau_export=True)
                             
                             this_scen_df = this_scen_df.rename(columns=retail_rate_calculations.tracelabels) #rename cost categories using the plotting dict in the retail rate module
                             this_scen_df = this_scen_df.rename(columns={'busbar_load':'Busbar Load (MWh)',
@@ -661,7 +669,7 @@ def main(raw_args=None):
                     this_col_def = [ TableDefinition.Column(col, SqlType.text(), NULLABLE) for col in this_col_list if col not in ['Line Geometry']]
                     this_col_def = this_col_def + [ TableDefinition.Column(col, SqlType.geography(), NULLABLE) for col in this_col_list if col in ['Line Geometry']]
                 elif this_csv in region_mapping.columns:
-                    this_df = pd.read_csv(Path(reeds_dir,'inputs','shapefiles','WKT_csvs',(this_csv + '_WKT.csv')))
+                    this_df = pd.read_csv(Path(reeds_path,'inputs','shapefiles','WKT_csvs',(this_csv + '_WKT.csv')))
                     this_df = this_df.rename(columns={'WKT':column_types[this_csv][0] + " Geometry"})
                     this_col_list = [ x for x in this_df.columns if x not in pivot_info['id_columns'] ]
                     this_df = this_df[[this_csv,column_types[this_csv][0] + " Geometry"]] #reorder to keep ID col first

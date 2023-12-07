@@ -26,5 +26,5 @@ lfill-gas ,0.4
 nuclear ,0.7
 nuclear-SMR ,0.2
 o-g-s ,0.5
-RE-CC,0.38
-RE-CT,0.42
+H2-CC,0.38
+H2-CT,0.42

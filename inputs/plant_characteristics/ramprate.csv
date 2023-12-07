@@ -25,8 +25,8 @@ CofireNew,0.02
 nuclear,0.02
 nuclear-SMR,0.02
 lfill-gas,0.04
-RE-CT,0.08
-RE-CC,0.08
+H2-CT,0.08
+H2-CC,0.08
 csp1_1*csp1_12,0.1
 csp2_1*csp2_12,0.1
 csp3_1*csp3_12,0.1

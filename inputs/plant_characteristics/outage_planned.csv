@@ -5,8 +5,8 @@ Gas-CC-CCS_max,0.1
 Gas-CC-CCS-F1,0.1
 Gas-CC-CCS-F2,0.1
 Gas-CC-CCS-F3,0.1
-RE-CT,0.07
-RE-CC,0.07
+H2-CT,0.07
+H2-CC,0.07
 CoalOldScr,0.12
 CoalOldUns,0.12
 coal-new,0.12

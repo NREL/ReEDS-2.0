@@ -9,48 +9,36 @@ but haven't done that yet.
 Created on Feb 24 2021
 @author: bstoll
 """
-# Imports
+#%% Imports
 import os
 import argparse
 import sys
 import shutil
 import pandas as pd
-
-# direct print and errors to log file
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
-if __name__ == "__main__":
+#%% Inputs
+decimals = 4
 
-    # Argument inputs
-    parser = argparse.ArgumentParser(
-        description="""This file produces the DR shiftability inputs""")
+#%% Functions
+def get_dr_shifts(sw, reeds_path, inputs_case, native_data=True,
+                  hmap_7yr=None, chunkmap=None, hours=None):
+    """
+    part of shift demand response handling compatible both with h17 and hourly ReEDS
+    hours, hmap_7yr, and chunkmap are needed for mapping hourly because there is no
+    fixed assumption for temporal structure of run
+    """
 
-    parser.add_argument("reeds_dir", help="ReEDS directory")
-    parser.add_argument("inputs_case", help="output directory")
-
-    args = parser.parse_args()
-    inputs_case = args.inputs_case
-
-    #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
-
-    GSw_DR = int(sw.GSw_DR)
-    drscen = sw.drscen
-
-    # Read in DR shifting for specified scenario
     dr_hrs = pd.read_csv(
-        os.path.join(args.reeds_dir, 'inputs', 'demand_response',
-                     'dr_shifts_{}.csv').format(drscen)
-        )
-    # write out dr_hrs for condor
-    dr_hrs.to_csv(os.path.join(inputs_case, 'dr_hrs.csv'),
-             index=False)
+        os.path.join(
+            reeds_path, 'inputs', 'demand_response', f"dr_shifts_{sw['drscen']}.csv")
+    )
+    
+    # write out dr_hrs for Augur
+    dr_hrs.to_csv(os.path.join(inputs_case, 'dr_hrs.csv'), index=False)
 
     dr_pos = dr_hrs[['dr_type', 'pos_hrs']].reindex(dr_hrs.index.repeat(dr_hrs.pos_hrs))
     dr_pos['shift'] = dr_pos['pos_hrs'] - dr_pos.groupby(['dr_type']).cumcount()
@@ -60,16 +48,28 @@ if __name__ == "__main__":
 
     dr_shifts = pd.concat([dr_pos.rename({'pos_hrs': 'hrs'}, axis=1),
                            dr_neg.rename({'neg_hrs': 'hrs'}, axis=1)])
+    
+    if native_data: #### native_data reads in inputs directly
+        hr_ts = pd.read_csv(
+            os.path.join(reeds_path, 'inputs', 'variability', 'h_dt_szn.csv'))
+        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
+        num_hrs = pd.read_csv(
+            os.path.join(reeds_path, 'inputs', 'numhours.csv'),
+            header=0, names=['h', 'numhours'], index_col='h', squeeze=True)
+        hr_ts = pd.read_csv(
+            os.path.join(inputs_case, 'h_dt_szn.csv'))
+        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
+        num_hrs = pd.read_csv(
+            os.path.join(inputs_case, 'numhours.csv'),
+            header=0, names=['h', 'numhours'], index_col='h', squeeze=True)
+    else: #otherwise reformat to hourly timeslice subsets
+        hr_ts = hmap_7yr[['h','season','year','hour']].assign(h=hmap_7yr.h.map(chunkmap))
+        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
+        num_hrs = (
+            hours.reset_index().assign(h=hours.index.map(chunkmap))
+            .groupby('h').numhours.sum().reset_index())
 
-    # Read in timeslice mapping and split off just 8760 hours
-    hr_ts = pd.read_csv(
-        os.path.join(args.reeds_dir, 'inputs', 'variability', 'h_dt_szn.csv'))
-    hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
-
-    num_hrs = pd.read_csv(os.path.join(args.reeds_dir, 'inputs', 'numhours.csv'),
-                          names=['h', 'numhours'], index_col='h', squeeze=True)
-
-    # Cross join shifts and timeslices
+    #### after here the rest is the same
     dr_shifts['key'] = 1
     hr_ts['key'] = 1
     hr_shifts = pd.merge(dr_shifts, hr_ts, on='key').drop('key', axis=1)
@@ -96,69 +96,71 @@ if __name__ == "__main__":
         .groupby(['dr_type', 'h', 'shifted_h'])
         .size()
         .reset_index()
-        )
+    )
 
     ts_shifts = pd.merge(hr_shifts2, num_hrs, on='h')
     ts_shifts['shift_frac'] = ts_shifts[0] / ts_shifts['numhours']
 
-    # Hack for H17 for now. Assume all of H17 comes out of H3 evenly
-    # Remove H17 hours from H3 fraction
-    ts_shifts.loc[ts_shifts.h == 'h3', 'shift_frac'] /= (1+num_hrs['h17']/num_hrs['h3'])
-    # Grab H3 fradtions as H17's
-    tmp1 = ts_shifts.loc[ts_shifts.h == 'h3', :].copy()
-    tmp1['h'] = 'h17'
-    # Grab shifts into H3 as H17's
-    tmp2 = ts_shifts.loc[ts_shifts.shifted_h == 'h3', :].copy()
-    tmp2['shifted_h'] = 'h17'
-    # Recombine
-    ts_shifts = pd.concat([ts_shifts, tmp1, tmp2])
-
     shift_out = ts_shifts.loc[ts_shifts['h'] != ts_shifts['shifted_h'], :]
     shift_out = shift_out.round(4)
-    shift_out[['dr_type', 'shifted_h', 'h', 'shift_frac']].to_csv(
-        os.path.join(inputs_case, 'dr_shifts.csv'), index=False, header=False)
 
-    # Write out shifting for Augur
-    day_shift = pd.merge(dr_shifts,
-                         pd.DataFrame({'hr': list(range(1, 25, 1)), 'key': [1]*24}),
-                         on='key')
-    day_shift['shifted_hr'] = day_shift['hr'] + day_shift['shift']
-    # Adjust hrs to be between 1 and 24
-    lt0 = day_shift.shifted_hr <= 0
-    gt24 = day_shift.shifted_hr > 24
-    day_shift.loc[lt0, 'shifted_hr'] += 24
-    day_shift.loc[gt24, 'shifted_hr'] -= 24
-    day_shift2 = day_shift.copy()
-    day_shift2['hr'] = day_shift2['hr'] + 24
-    day_shift2['shifted_hr'] = day_shift2['shifted_hr'] + 24
-    #day_shift = pd.concat([day_shift, day_shift2])
-    day_shift['h'] = 'hr' + day_shift['hr'].astype(str)
-    day_shift['hh'] = 'hr' + day_shift['shifted_hr'].astype(str)
-    day_shift = day_shift.round(4)
-    # Write out raw hour shifting for Augur
-    (day_shift[['dr_type', 'h', 'hh']]
-     .rename(columns={'dr_type': 'i'})
-     .drop_duplicates()
-     .to_csv(os.path.join(inputs_case, 'dr_shifts_augur.csv'),
-             index=False, header=False)
-     )
+    return shift_out, dr_shifts
 
 
-    # Read in DR shed for specified scenario
+#%% Procedure
+if __name__ == "__main__":
+
+    # Argument inputs
+    parser = argparse.ArgumentParser(
+        description="""This file produces the DR shiftability inputs""")
+
+    parser.add_argument("reeds_path", help="ReEDS directory")
+    parser.add_argument("inputs_case", help="output directory")
+
+    args = parser.parse_args()
+    inputs_case = args.inputs_case
+    reeds_path = args.reeds_path
+
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+
+    #%% Inputs from switches
+    sw = pd.read_csv(
+        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+
+    drscen = sw.drscen
+
+    ### Read in DR shed for specified scenario
     dr_shed = pd.read_csv(
-        os.path.join(args.reeds_dir, 'inputs', 'demand_response',
-                     'dr_shed_{}.csv').format(drscen)
-        )
-    # write out dr_shed
+        os.path.join(args.reeds_path, 'inputs', 'demand_response', f'dr_shed_{drscen}.csv'))
+
+    ### Profiles
+    dr_profile_increase = pd.read_csv(
+        os.path.join(reeds_path,'inputs','demand_response',f'dr_increase_profile_{sw.drscen}.csv'))
+    dr_profile_decrease = pd.read_csv(
+        os.path.join(reeds_path,'inputs','demand_response',f'dr_decrease_profile_{sw.drscen}.csv'))
+
+    ### Filter by regions
+    val_r = pd.read_csv(
+        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
+    dr_profile_increase = (
+        dr_profile_increase.loc[:,dr_profile_increase.columns.isin(['i','hour','year'] + val_r)])
+    dr_profile_decrease = (
+        dr_profile_decrease.loc[:,dr_profile_decrease.columns.isin(['i','hour','year'] + val_r)])
+
+
     dr_shed[['dr_type', 'yr_hrs']].to_csv(
         os.path.join(inputs_case, 'dr_shed.csv'), index=False, header=False)
-    dr_shed[['dr_type', 'day_hrs']].to_csv(
-        os.path.join(inputs_case, 'dr_shed_augur.csv'), index=False, header=False)
 
-    # Copy DR types to run folder
-    shutil.copy(os.path.join(args.reeds_dir, 'inputs', 'demand_response',
-                             'dr_types_{}.csv'.format(drscen)),
-                os.path.join(inputs_case, 'dr_types.csv'))
+    dr_profile_increase.to_csv(
+        os.path.join(inputs_case,'dr_inc.csv'),index=False)
+    dr_profile_decrease.to_csv(
+        os.path.join(inputs_case,'dr_dec.csv'),index=False)
+
+    # Copy DR types
+    shutil.copy(
+        os.path.join(args.reeds_path,'inputs','demand_response',f'dr_types_{drscen}.csv'),
+        os.path.join(inputs_case, 'dr_types.csv'))
     
     toc(tic=tic, year=0, process='input_processing/writedrshift.py', 
         path=os.path.join(inputs_case,'..'))

@@ -8,36 +8,14 @@ import shutil
 import csv
 import numpy as np
 import pandas as pd
-import numpy as np
 import subprocess
 from datetime import datetime
 import argparse
 from builtins import input
+from glob import glob
 
 #############
 #%% FUNCTIONS
-
-def scalar_csv_to_txt(path_to_scalar_csv):
-    """
-    Write a scalar csv to GAMS-readable text
-    Format of csv should be: scalar,value,comment
-    """
-    ### Load the csv
-    dfscalar = pd.read_csv(
-        path_to_scalar_csv,
-        header=None, names=['scalar','value','comment'], index_col='scalar').fillna(' ')
-    ### Create the GAMS-readable string (comments can only be 255 characters long)
-    scalartext = '\n'.join([
-        'scalar {:<30} "{:<5.255}" /{}/ ;'.format(
-            i, row['comment'], row['value'])
-        for i, row in dfscalar.iterrows()
-    ])
-    ### Write it to a file, replacing .csv with .txt in the filename
-    with open(path_to_scalar_csv.replace('.csv','.txt'), 'w') as w:
-        w.write(scalartext)
-
-    return dfscalar
-
 
 def writeerrorcheck(checkfile, errorcode=17):
     """
@@ -46,49 +24,48 @@ def writeerrorcheck(checkfile, errorcode=17):
     checkfile: Filename to check. If it does not exist, stop the run.
     errorcode: Value to return if check fails. Should be >0.
     """
-    if os.name!='posix':
-        return f'\nif not exist {checkfile} (\n echo file {checkfile} missing \n goto:eof \n) \n \n'
+    if os.name == 'posix':
+        return f'if [ ! -f {checkfile} ]; then echo "missing {checkfile}"; exit {errorcode}; fi\n'
     else:
-        return f'\nif [ ! -f {checkfile} ]; then \n    exit {errorcode}\nfi\n\n'
+        return f'\nif not exist {checkfile} (\n echo file {checkfile} missing \n goto:eof \n) \n \n'
 
-def writescripterrorcheck(errorcode=18):
+def writescripterrorcheck(script, errorcode=18):
     """
     """
     if os.name == 'posix':
-        return f'if [ $? != 0 ]; then echo "script returned $?"; exit {errorcode}; fi\n'
+        return f'if [ $? != 0 ]; then echo "{script} returned $?" >> gamslog.txt; exit {errorcode}; fi\n'
     else:
-        return f'if not %errorlevel% == 0 (echo script returned %errorlevel%\ngoto:eof\n)\n'
+        return f'if not %errorlevel% == 0 (echo {script} returned %errorlevel%\ngoto:eof\n)\n'
 
 
 def write_delete_file(checkfile, deletefile, PATH):
     if os.name=='posix':
-        PATH.writelines("if [ -f " + checkfile + " ]; then \n   rm " + deletefile + '\nfi\n\n' )
+        PATH.writelines(f"if [ -f {checkfile} ]; then rm {deletefile}; fi\n")
     else:
         PATH.writelines("if exist " + checkfile + " (del " + deletefile + ')\n' )
 
 
-def addMPSToOpt(optFileNum, case_dir):
-    #Modify the optfile to create an mps file.
-    if int(optFileNum) == 1:
-        origOptExt = 'opt'
-    elif int(optFileNum) < 10:
-        origOptExt = 'op' + optFileNum
-    else:
-        origOptExt = 'o' + optFileNum
-    #Add writemps statement to opt file
-    with open(case_dir + '/cplex.'+origOptExt, 'a') as file:
-        file.write('\nwritemps ReEDSmodel.mps')
+def comment(text, PATH):
+    commentchar = '#' if os.name == 'posix' else '::'
+    PATH.writelines(f'{commentchar} {text}\n')
 
 
-def get_ivt_numclass(InputDir, casedir, caseSwitches):
+def big_comment(text, PATH):
+    commentchar = '#' if os.name == 'posix' else '::'
+    PATH.writelines(f'\n{commentchar}\n')
+    comment(text, PATH)
+    PATH.writelines(f'{commentchar}\n')
+
+
+def get_ivt_numclass(reeds_path, casedir, caseSwitches):
     """
     Extend ivt if necessary and calculate numclass
     """
     ivt = pd.read_csv(
         os.path.join(
-            InputDir, 'inputs', 'userinput', 'ivt_{}.csv'.format(caseSwitches['ivt_suffix'])),
+            reeds_path, 'inputs', 'userinput', 'ivt_{}.csv'.format(caseSwitches['ivt_suffix'])),
         index_col=0)
-    ivt_step = pd.read_csv(os.path.join(InputDir, 'inputs', 'userinput', 'ivt_step.csv'), 
+    ivt_step = pd.read_csv(os.path.join(reeds_path, 'inputs', 'userinput', 'ivt_step.csv'),
                            index_col=0, squeeze=True)
     lastdatayear = max([int(c) for c in ivt.columns])
     addyears = list(range(lastdatayear + 1, int(caseSwitches['endyear']) + 1))
@@ -115,19 +92,365 @@ def get_ivt_numclass(InputDir, casedir, caseSwitches):
     return numclass
 
 
-#############
-#%% PROCEDURE 
+def check_compatibility(sw):
+    ### Hourly resolution
+    if (
+        (int(sw['endyear']) > 2050)
+        or int(sw['GSw_ClimateHydro'])
+        or int(sw['GSw_ClimateDemand'])
+        or int(sw['GSw_ClimateWater'])
+        or int(sw['GSw_EFS_Flex'])
+        or (float(sw['GSw_HydroWithinSeasFrac']) < 1)
+        or (float(sw['GSw_HydroPumpWithinSeasFrac']) < 1)
+        or (int(sw['GSw_Canada']) == 2)
+    ):
+        raise NotImplementedError(
+            'At least one of GSw_Canada, GSw_ClimateHydro, GSw_ClimateDemand, GSw_ClimateWater, '
+            'endyear, GSw_EFS_Flex, GSw_HydroWithinSeasFrac, GSw_HydroPumpWithinSeasFrac '
+            'are using a currently-unsupported setting.')
 
-def setupEnvironment(BatchName=False, cases_suffix=False, simult_runs=0, verbose=0, forcelocal=0):
+    if 24 % (int(sw['GSw_HourlyWindowOverlap']) * int(sw['GSw_HourlyChunkLengthRep'])):
+        raise ValueError(
+            ('24 must be divisible by GSw_HourlyWindowOverlap * GSw_HourlyChunkLengthRep:'
+            '\nGSw_HourlyWindowOverlap = {}\nGSw_HourlyChunkLengthRep = {}'.format(
+                sw['GSw_HourlyWindowOverlap'], sw['GSw_HourlyChunkLengthRep'])))
+
+    if int(sw['GSw_HourlyWindow']) <= int(sw['GSw_HourlyWindowOverlap']):
+        raise ValueError(
+            ('GSw_HourlyWindow must be greater than GSw_HourlyWindowOverlap:'
+            '\nGSw_HourlyWindow = {}\nGSw_HourlyWindowOverlap = {}'.format(
+                sw['GSw_HourlyWindow'], sw['GSw_HourlyWindowOverlap'])))
+
+    if ((sw['GSw_HourlyClusterAlgorithm'] not in ['hierarchical','optimized'])
+        and ('user' not in sw['GSw_HourlyClusterAlgorithm'])
+    ):
+        raise ValueError(
+            "GSw_HourlyClusterAlgorithm must be set to 'hierarhical' or 'optimized', or must "
+            "contain the substring 'user' and match a scenario in "
+            "inputs/variability/period_szn_user.csv"
+        )
+
+    if ('usa' not in sw['GSw_Region'].lower()) and (int(sw['GSw_GasCurve']) != 2):
+        raise ValueError(
+            'Should use GSw_GasCurve=2 (fixed prices) when running sub-nationally\n'
+            f"GSw_Region={sw['GSw_Region']}, GSw_GasCurve={sw['GSw_GasCurve']}"
+        )
+
+
+    ### Aggregation
+    if (not int(sw['GSw_AggregateRegions'])) and (
+        (int(sw['GSw_NumCSPclasses']) != 12)
+        or (int(sw['GSw_NumDUPVclasses']) != 7)
+    ):
+        raise NotImplementedError(
+            'Aggregated CSP/DUPV classes only work with aggregated regions. '
+            'At least one of GSw_NumCSPclasses and GSw_NumDUPVclasses are incompatible with '
+            'GSw_AggregateRegions=0')
+
+
+def solvestring_sequential(
+        batch_case, caseSwitches,
+        cur_year, next_year, prev_year, restartfile,
+        toLogGamsString=' logOption=4 logFile=gamslog.txt appendLog=1 ',
+        hpc=0, iteration=0, stress_year=None,
+    ):
+    """
+    Typical inputs:
+    * restartfile: batch_case if first solve year else {batch_case}_{prev_year}
+    * caseSwitches: loaded from {batch_case}/inputs_case/switches.csv
+    """
+    savefile = f"{batch_case}_{cur_year}i{iteration}"
+    _stress_year = f"{prev_year}i0" if stress_year == None else stress_year
+    out = (
+        "gams d_solveoneyear.gms"
+        + (" license=gamslice.txt" if hpc else '')
+        + " o=" + os.path.join("lstfiles", f"{savefile}.lst")
+        + " r=" + os.path.join("g00files", restartfile)
+        + " gdxcompress=1"
+        + " xs=" + os.path.join("g00files", savefile)
+        + toLogGamsString
+        + f" --case={batch_case}"
+        + f" --cur_year={cur_year}"
+        + f" --next_year={next_year}"
+        + f" --prev_year={prev_year}"
+        + f" --stress_year={_stress_year}"
+        + ''.join([f" --{s}={caseSwitches[s]}" for s in [
+            'GSw_SkipAugurYear',
+            'GSw_HourlyType', 'GSw_HourlyWrapLevel', 'GSw_ClimateWater',
+            'GSw_Canada', 'GSw_ClimateHydro',
+            'GSw_HourlyChunkLengthRep', 'GSw_HourlyChunkLengthStress',
+            'GSw_StateCO2ImportLevel',
+        ]])
+        + '\n'
+    )
+
+    return out
+
+
+def setup_sequential_year(
+        cur_year, prev_year, next_year,
+        caseSwitches, hpc,
+        solveyears, casedir, batch_case, toLogGamsString, OPATH, ticker,
+        restart_switches,
+    ):
+    ## Get save file (for this year) and restart file (from previous year)
+    savefile = f"{batch_case}_{cur_year}i0"
+    restartfile = batch_case if cur_year == min(solveyears) else f"{batch_case}_{prev_year}i0"
+
+    ## Run the ReEDS LP
+    if (
+        (not restart_switches['restart'])
+        or (cur_year > min(solveyears))
+        or (restart_switches['restart'] and not restart_switches['restart_Augur'])
+    ):
+        ## solve one year
+        OPATH.writelines(
+            solvestring_sequential(
+                batch_case, caseSwitches,
+                cur_year, next_year, prev_year, restartfile,
+                toLogGamsString, hpc,
+            ))
+        OPATH.writelines(writescripterrorcheck(f"d_solveoneyear.gms_{cur_year}"))
+        OPATH.writelines('python {t} --year={y}\n'.format(t=ticker, y=cur_year))
+
+        if int(caseSwitches['GSw_ValStr']):
+            OPATH.writelines("python valuestreams.py" + '\n')
+
+        ## check to see if the restart file exists
+        OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
+
+    ## Run Augur if it not the final solve year and if not skipping Augur
+    if ((
+        (cur_year < max(solveyears))
+        and (next_year > int(caseSwitches['GSw_SkipAugurYear']))
+    ) or (
+        (cur_year == max(solveyears)) and int(caseSwitches['osprey_finalyear'])
+    )):
+        OPATH.writelines(
+            f"\npython Augur.py {next_year} {cur_year} {casedir}\n")
+        ## Check to make sure Augur ran successfully; quit otherwise
+        OPATH.writelines(
+            writeerrorcheck(os.path.join(
+                "ReEDS_Augur", "augur_data", f"ReEDS_Augur_{cur_year}.gdx")))
+
+    ## delete the previous restart file unless we're keeping them
+    if (cur_year > min(solveyears)) and (not int(caseSwitches['keep_g00_files'])):
+        write_delete_file(
+            checkfile=os.path.join("g00files", savefile + ".g00"),
+            deletefile=os.path.join("g00files", restartfile + '.g00'),
+            PATH=OPATH,
+        )
+
+
+def setup_sequential(
+        caseSwitches, reeds_path, hpc,
+        solveyears, casedir, batch_case, toLogGamsString, OPATH, ticker,
+        restart_switches,
+    ):
+    ### loop over solve years
+    for i in range(len(solveyears)):
+        ## current year is the value in solveyears
+        cur_year = solveyears[i]
+
+        if cur_year < max(solveyears):
+            ## next year becomes the next item in the solveyears vector
+            next_year = solveyears[i+1]
+        ## Get previous year if after first year
+        if i:
+            prev_year = solveyears[i-1]
+        else:
+            if restart_switches['restart']:
+                prev_year = restart_switches['restart_year']
+            else:
+                prev_year = solveyears[i]
+
+        ### make an indicator in the batch file for what year is being solved
+        big_comment(f'Year: {cur_year}', OPATH)
+
+        ### Write the tax credit phaseout call
+        OPATH.writelines(f"python tc_phaseout.py {cur_year} {casedir}\n\n")
+
+        ### Write the GAMS LP and Augur calls
+        if (
+            int(caseSwitches['GSw_PRM_StressIterateMax'])
+            and int(caseSwitches['GSw_PRM_MaxStressPeriods'])
+        ):
+            OPATH.writelines(
+                f"python d_solve_iterate.py {casedir} {cur_year}\n"
+            )
+            OPATH.writelines(writescripterrorcheck(f"d_solve_iterate.py_{cur_year}"))
+        else:
+            setup_sequential_year(
+                cur_year, prev_year, next_year,
+                caseSwitches, hpc,
+                solveyears, casedir, batch_case, toLogGamsString, OPATH, ticker,
+                restart_switches,
+            )
+
+        ### Run Augur plots in background
+        OPATH.writelines(
+            f"python {os.path.join('ReEDS_Augur','G_plots.py')} "
+            f"--reeds_path={reeds_path} --casedir={casedir} --t={cur_year} &\n")
+
+
+def setup_intertemporal(
+        caseSwitches, startiter, niter, ccworkers,
+        solveyears, endyear, batch_case, toLogGamsString, yearset_augur, OPATH,
+    ):
+    ### beginning year is passed to augurbatch
+    begyear = min(solveyears)
+    ### first save file from d_solveprep is just the case name
+    savefile = batch_case
+    ### if this is the first iteration
+    if startiter == 0:
+        ## restart file becomes the previous calls save file
+        restartfile=savefile
+        ## if this is not the first iteration...
+    if startiter > 0:
+        ## restart file is now the case name plus the iteration number
+        restartfile = batch_case+"_"+startiter
+
+    ### per the instructions, iterations are
+    ### the number of iterations after the first solve
+    niter = niter+1
+
+    ### for the number of iterations we have...
+    for i in range(startiter,niter):
+        ## make an indicator in the batch file for what iteration is being solved
+        big_comment(f'Iteration: {i}', OPATH)
+        ## call the intertemporal solve
+        savefile = batch_case+"_"+str(i)
+
+        if i==0:
+            ## check to see if the restart file exists
+            ## only need to do this with the zeroth iteration
+            ## as the other checks will all be after the solves
+            OPATH.writelines(writeerrorcheck(os.path.join("g00files",restartfile + ".g*")))
+
+        OPATH.writelines(
+            "gams d_solveallyears.gms o="+os.path.join("lstfiles",batch_case + "_" + str(i) + ".lst")
+            +" r="+os.path.join("g00files",restartfile)
+            + " gdxcompress=1 xs="+os.path.join("g00files",savefile) + toLogGamsString
+            + " --niter=" + str(i) + " --case=" + batch_case
+            + " --demand=" + caseSwitches['demand']  + ' \n')
+
+        ## check to see if the save file exists
+        OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
+
+        ## start threads for cc/curt
+        ## no need to run cc curt scripts for final iteration
+        if i < niter-1:
+            ## batch out calls to augurbatch
+            OPATH.writelines(
+                "python augurbatch.py " + batch_case + " " + str(ccworkers) + " "
+                + yearset_augur + " " + savefile + " " + str(begyear) + " "
+                + str(endyear) + " " + caseSwitches['distpvscen'] + " "
+                + str(caseSwitches['calc_csp_cc']) + " "
+                + str(caseSwitches['GSw_DR']) + " "
+                + str(caseSwitches['timetype']) + " "
+                + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
+                + str(caseSwitches['marg_vre_mw']) + " "
+                + str(caseSwitches['marg_stor_mw']) + " "
+                + str(caseSwitches['marg_dr_mw']) + " "
+                + '\n')
+            ## merge all the resulting gdx files
+            ## the output file will be for the next iteration
+            nextiter = i+1
+            gdxmergedfile = os.path.join(
+                "ReEDS_Augur","augur_data","ReEDS_Augur_merged_" + str(nextiter))
+            OPATH.writelines(
+                "gdxmerge "+os.path.join("ReEDS_Augur","augur_data","ReEDS_Augur*")
+                + " output=" + gdxmergedfile  + ' \n')
+            ## check to make sure previous calls were successful
+            OPATH.writelines(writeerrorcheck(gdxmergedfile+".gdx"))
+
+        ## restart file becomes the previous save file
+        restartfile=savefile
+
+    if caseSwitches['GSw_ValStr'] != '0':
+        OPATH.writelines( "python valuestreams.py" + '\n')
+
+
+def setup_window(
+        caseSwitches, startiter, niter, ccworkers, reeds_path,
+        batch_case, toLogGamsString, yearset_augur, OPATH,
+    ):
+    ### load the windows
+    win_in = list(csv.reader(open(
+        os.path.join(
+            reeds_path,"inputs","userinput",
+            "windows_{}.csv".format(caseSwitches['windows_suffix'])),
+        'r'), delimiter=","))
+
+    restartfile = batch_case
+
+    ### for windows indicated in the csv file
+    for win in win_in[1:]:
+
+        ## beginning year is the first column (start)
+        begyear = win[1]
+        ## end year is the second column (end)
+        endyear = win[2]
+        ## for the number of iterations we have...
+        for i in range(startiter,niter):
+            big_comment(f'Window: {win}', OPATH)
+            comment(f'Iteration: {i}', OPATH)
+
+            ## call the window solve
+            savefile = batch_case+"_"+str(i)
+            ## check to see if the save file exists
+            OPATH.writelines(writeerrorcheck(os.path.join("g00files",restartfile + ".g*")))
+            ## solve via the window solve file
+            OPATH.writelines(
+                "gams d_solvewindow.gms o=" + os.path.join("lstfiles",batch_case + "_" + str(i) + ".lst")
+                +" r=" + os.path.join("g00files",restartfile)
+                + " gdxcompress=1 xs=g00files\\"+savefile + toLogGamsString + " --niter=" + str(i)
+                + " --maxiter=" + str(niter-1) + " --case=" + batch_case + " --window=" + win[0] + ' \n')
+            ## start threads for cc/curt
+            OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
+            OPATH.writelines(
+                "python augurbatch.py " + batch_case + " " + str(ccworkers) + " "
+                + yearset_augur + " " + savefile + " " + str(begyear) + " "
+                + str(endyear) + " " + caseSwitches['distpvscen'] + " "
+                + str(caseSwitches['calc_csp_cc']) + " "
+                + str(caseSwitches['GSw_DR']) + " "
+                + str(caseSwitches['timetype']) + " "
+                + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
+                + str(caseSwitches['marg_vre_mw']) + " "
+                + str(caseSwitches['marg_stor_mw']) + " "
+                + str(caseSwitches['marg_dr_mw']) + " "
+                + '\n')
+            ## merge all the resulting r2_in gdx files
+            ## the output file will be for the next iteration
+            nextiter = i+1
+            ## create names for then merge the curt and cc gdx files
+            gdxmergedfile = os.path.join(
+                "ReEDS_Augur","augur_data","ReEDS_Augur_merged_" + str(nextiter))
+            OPATH.writelines(
+                "gdxmerge " + os.path.join("ReEDS_Augur","augur_data","ReEDS_Augur*")
+                + " output=" + gdxmergedfile  + ' \n')
+            ## check to make sure previous calls were successful
+            OPATH.writelines(writeerrorcheck(gdxmergedfile+".gdx"))
+            restartfile=savefile
+        if caseSwitches['GSw_ValStr'] != '0':
+            OPATH.writelines( "python valuestreams.py" + '\n')
+
+
+#############
+#%% PROCEDURE
+
+def setupEnvironment(
+        BatchName=False, cases_suffix=False, simult_runs=0,
+        forcelocal=0, restart=False, skip_env_check=False):
     # #%% Inputs for debugging
-    # BatchName = 'v20220422_clusterM0_h8760_CL4_CF1_CC10_SD73_noH2_NSMR0_ERCOT'
-    # cases_suffix = 'hourly4'
+    # BatchName = 'v20230508_prasM0_Pacific'
+    # cases_suffix = 'test'
     # WORKERS = 1
-    # verbose = 1
     # forcelocal = 0
+    # restart = False
 
     #%% Automatic inputs
-    InputDir = os.getcwd()
+    reeds_path = os.path.dirname(__file__)
 
     #%% User inputs
     print(" ")
@@ -177,15 +500,42 @@ def setupEnvironment(BatchName=False, cases_suffix=False, simult_runs=0, verbose
         if not confirm_local in ['y','Y','yes','Yes','YES']:
             quit()
 
+    #%% Check whether the ReEDS conda environment is activated
+    if ('reeds' not in os.environ['CONDA_DEFAULT_ENV'].lower()) and not skip_env_check:
+        print(
+            "It looks like you haven't activated the 'reeds' conda environment from "
+            "environment.yml, so the python and julia parts of ReEDS might not work. "
+            "To build the environment for the first time, run: "
+            "    `conda env create -f environment.yml`"
+            "To activate the created environment, run: "
+            "    `conda activate reeds` (or `activate reeds` on Windows) "
+            "Do you want to continue without activating the environment?"
+        )
+        confirm_env = str(input("Continue? y/[n]: ") or 'n')
+        if not confirm_env in ['y','Y','yes','Yes','YES']:
+            quit()
+
     #%% Load specified case file, infer other settings from cases.csv
-    df_cases = pd.read_csv('cases.csv', dtype=object, index_col=0)
+    df_cases = pd.read_csv(
+        os.path.join(reeds_path, 'cases.csv'), dtype=object, index_col=0)
     cases_filename = 'cases.csv'
 
     #If we have a case suffix, use cases_[suffix].csv for cases.
     if cases_suffix not in ['','default']:
         df_cases = df_cases[['Choices', 'Default Value']]
         cases_filename = 'cases_' + cases_suffix + '.csv'
-        df_cases_suf = pd.read_csv(cases_filename, dtype=object, index_col=0)
+        df_cases_suf = pd.read_csv(
+            os.path.join(reeds_path, cases_filename), dtype=object, index_col=0)
+
+        #Check to make sure user-specified cases file has up-to-date switches
+        missing_switches = [s for s in df_cases_suf.index if s not in df_cases.index]
+        if len(missing_switches):
+            error = ("The following switches are in {} but have changed names or are no longer "
+                      "supported by ReEDS:\n\n{} \n\nPlease update your cases file; "
+                      "for the full list of available switches see cases.csv."
+                      "Note that switch names are case-sensitive."
+                    ).format(cases_filename, '\n'.join(missing_switches))
+            raise ValueError(error)
 
         #First use 'Default Value' from cases_[suffix].csv to fill missing switches
         #Later, we will also use 'Default Value' from cases.csv to fill any remaining holes.
@@ -217,7 +567,7 @@ def setupEnvironment(BatchName=False, cases_suffix=False, simult_runs=0, verbose
                 pass
             else:
                 i_choices = [
-                    str(j).strip() for j in 
+                    str(j).strip() for j in
                     np.ravel([i.split(',') for i in choices[i].split(';')]).tolist()
                 ]
                 if str(val) not in i_choices:
@@ -241,14 +591,33 @@ def setupEnvironment(BatchName=False, cases_suffix=False, simult_runs=0, verbose
         df_cases.loc['ignore'].loc[df_cases.loc['ignore']=='1'].index, axis=1, inplace=True)
 
     # Make sure the run folders don't already exist
-    outpaths = [os.path.join(InputDir,'runs','{}_{}'.format(BatchName,case)) for case in casenames]
+    outpaths = [os.path.join(reeds_path,'runs','{}_{}'.format(BatchName,case)) for case in casenames]
     existing_outpaths = [i for i in outpaths if os.path.isdir(i)]
-    if len(existing_outpaths):
-        error = (
-            'The following output directories already exist.\n'
-            'Please use a new batch name or case names.\n\n{}'
-        ).format('\n'.join([os.path.basename(i) for i in existing_outpaths]))
-        raise IsADirectoryError(error)
+    if len(existing_outpaths) and not restart:
+        print(
+            f'The following {len(existing_outpaths)} output directories already exist:\n'
+            + '⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄\n'
+            + '\n'.join([os.path.basename(i) for i in existing_outpaths])
+            + '\n⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃\n'
+        )
+        overwrite = str(input('Do you want to overwrite them? y/[n]: ') or 'n')
+        if overwrite in ['y','Y','yes','Yes','YES']:
+            for outpath in existing_outpaths:
+                shutil.rmtree(outpath)
+        else:
+            keep = [i for (i,c) in enumerate(outpaths) if c not in existing_outpaths]
+            caseList = [caseList[i] for i in keep]
+            casenames = [casenames[i] for i in keep]
+            caseSwitches = [caseSwitches[i] for i in keep]
+            print(
+                f"\nThe following {(len(keep))} output directories don't exist:\n"
+                + '⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄\n'
+                + '\n'.join([f'{BatchName}_{c}' for c in casenames])
+                + '\n⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃\n'
+            )
+            skip = str(input('Do you want to run them and skip the rest? y/[n]: ') or 'n')
+            if not (skip in ['y','Y','yes','Yes','YES']):
+                raise IsADirectoryError('\n'+'\n'.join(existing_outpaths))
 
     df_cases.drop(
         ['Choices','Description','Default Value'],
@@ -298,12 +667,12 @@ def setupEnvironment(BatchName=False, cases_suffix=False, simult_runs=0, verbose
         'BatchName': BatchName,
         'caseList': caseList,
         'caseSwitches': caseSwitches,
-        'InputDir' : InputDir,
+        'reeds_path' : reeds_path,
         'niter' : niter,
         'startiter' : startiter,
         'cases_filename': cases_filename,
-        'verbose': verbose,
         'hpc': hpc,
+        'restart': restart,
     }
 
     return envVar
@@ -323,16 +692,16 @@ def createmodelthreads(envVar):
                 options=ThreadInit['scen'],
                 caseSwitches=ThreadInit['caseSwitches'],
                 niter=ThreadInit['niter'],
-                InputDir=ThreadInit['InputDir'],
+                reeds_path=ThreadInit['reeds_path'],
                 ccworkers=ThreadInit['ccworkers'],
                 startiter=ThreadInit['startiter'],
                 BatchName=ThreadInit['BatchName'],
                 case=ThreadInit['casename'],
                 cases_filename=ThreadInit['cases_filename'],
-                verbose=envVar['verbose'],
                 hpc=envVar['hpc'],
+                restart=envVar['restart'],
             )
-            print(ThreadInit['lstfile'] + " has finished \n")
+            print(ThreadInit['batch_case'] + " has finished \n")
             q.task_done()
 
 
@@ -346,14 +715,15 @@ def createmodelthreads(envVar):
     for i in range(len(envVar['caseList'])):
         q.put({'scen': envVar['caseList'][i],
                'caseSwitches': envVar['caseSwitches'][i],
-               'lstfile':envVar['BatchName']+'_'+envVar['casenames'][i],
+               'batch_case':envVar['BatchName']+'_'+envVar['casenames'][i],
                'niter':envVar['niter'],
-               'InputDir':envVar['InputDir'],
+               'reeds_path':envVar['reeds_path'],
                'ccworkers':envVar['ccworkers'],
                'startiter':envVar['startiter'],
                'BatchName':envVar['BatchName'],
                'casename':envVar['casenames'][i],
                'cases_filename':envVar['cases_filename'],
+               'restart':envVar['restart'],
                })
 
     # block until all tasks are done
@@ -367,32 +737,35 @@ def createmodelthreads(envVar):
         t.join()
 
 
-def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
-             BatchName, case, cases_filename, verbose=0, hpc=False):
+def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
+             BatchName, case, cases_filename, hpc=False, restart=False):
     ### For debugging
     # caseSwitches = caseSwitches[0]
+    # options = caseList[0]
     ### Inferred inputs
-    lstfile = '{}_{}'.format(BatchName,case)
+    batch_case = '{}_{}'.format(BatchName,case)
     endyear = int(caseSwitches['endyear'])
 
-    casedir = os.path.join(InputDir,"runs",lstfile)
+    casedir = os.path.join(reeds_path,"runs",batch_case)
     inputs_case = os.path.join(casedir,"inputs_case")
 
-    if os.path.exists(os.path.join("runs",lstfile)):
-        print("Caution, case " + lstfile + " already exists in runs \n")
+    # indicate this run is a restart
+    if restart:
+        print("Restarting from previous run.")
+    else:
+        if os.path.exists(os.path.join(reeds_path,"runs",batch_case)):
+            print("Caution, case " + batch_case + " already exists in runs \n")
 
-    #%% Set up case-specific directory structure
-    os.makedirs(os.path.join("runs",lstfile), exist_ok=True)
-    os.makedirs(os.path.join("runs",lstfile,"g00files"), exist_ok=True)
-    os.makedirs(os.path.join("runs",lstfile,"lstfiles"), exist_ok=True)
-    os.makedirs(os.path.join("runs",lstfile,"outputs"), exist_ok=True)
-    os.makedirs(os.path.join("runs",lstfile,"outputs","tc_phaseout_data"), exist_ok=True)
-    os.makedirs(inputs_case, exist_ok=True)
+        #%% Set up case-specific directory structure
+        os.makedirs(os.path.join(reeds_path,"runs",batch_case), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,"runs",batch_case,"g00files"), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,"runs",batch_case,"lstfiles"), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,"runs",batch_case,"outputs"), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,"runs",batch_case,"outputs","tc_phaseout_data"), exist_ok=True)
+        os.makedirs(inputs_case, exist_ok=True)
 
-    #%% Coerce some switches based on model compatibility
-
-    #%% Record some metadata about this run
-    pd.Series(caseSwitches).to_csv(os.path.join(inputs_case,'switches.csv'), header=False)
+    #%% Stop now if any switches are incompatible
+    check_compatibility(caseSwitches)
 
     #%% Write the GAMS switches
     gswitches = pd.Series(caseSwitches)
@@ -413,13 +786,12 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
     ## Add a 'comment' column and write to csv and GAMS-readable text
     gswitches.reset_index().assign(comment='').to_csv(
         os.path.join(inputs_case,'gswitches.csv'), header=False, index=False)
-    scalar_csv_to_txt(os.path.join(inputs_case,'gswitches.csv'))
 
     #%% Information on reV supply curves associated with this run
-    shutil.copytree(os.path.join(InputDir,'inputs','supplycurvedata','metadata'),
-                    os.path.join(inputs_case,'supplycurve_metadata'))
+    shutil.copytree(os.path.join(reeds_path,'inputs','supplycurvedata','metadata'),
+                    os.path.join(inputs_case,'supplycurve_metadata'), dirs_exist_ok=True)
     revData = pd.read_csv(
-            os.path.join(InputDir,'inputs','supplycurvedata','metadata','rev_paths.csv')
+            os.path.join(reeds_path,'inputs','supplycurvedata','metadata','rev_paths.csv')
         )
 
     # separate techs with no associated switch
@@ -455,57 +827,47 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
     siteSwitches['eagle_path'] = siteSwitches['rev_path'].apply(lambda row: os.path.join(eagle_path, row))
     siteSwitches['rev_path'] = siteSwitches['rev_path'].apply(lambda row: os.path.join(rev_prefix, row))
     siteSwitches['sc_path'] = siteSwitches['sc_path'].apply(lambda row: os.path.join(rev_prefix, row))
-    siteSwitches[['tech', 'access_switch', 'access_case', 'bins','rev_case', 'rev_path', 'eagle_path', 'sc_path', 'eagle_sc_file']].to_csv(
-                                        os.path.join(inputs_case,'supplycurve_metadata','rev_supply_curves.csv'), index=False)
+    siteSwitches[['tech', 'access_switch', 'access_case', 'bins','rev_case', 
+                  'rev_path', 'eagle_path', 'sc_path', 'eagle_sc_file', 'original_rev_folder']
+                ].to_csv(os.path.join(inputs_case,'supplycurve_metadata','rev_supply_curves.csv'), index=False)
 
-    ticker = os.path.join(os.getcwd(),'input_processing','ticker.py')
+    #%% Set up the meta.csv file to track repo information and runtime
+    ticker = os.path.join(reeds_path,'input_processing','ticker.py')
     with open(os.path.join(casedir,'meta.csv'), 'w+') as METAFILE:
         ### Write some git metadata
-        METAFILE.writelines('computer,repo,branch,commit,\n')
+        METAFILE.writelines('computer,repo,branch,commit,description\n')
         try:
             import git
             import socket
             repo = git.Repo()
             try:
                 branch = repo.active_branch.name
+                description = repo.git.describe()
             except TypeError:
                 branch = 'DETACHED_HEAD'
+                description = ''
             METAFILE.writelines(
-                '{},{},{},{},\n'.format(
+                '{},{},{},{},{}\n'.format(
                     socket.gethostname(),
-                    repo.git_dir, branch, repo.head.object.hexsha))
+                    repo.git_dir, branch, repo.head.object.hexsha, description))
         except:
             ### In case the user hasn't installed GitPython (conda install GitPython)
             ### or isn't in a git repo or anything else goes wrong
-            METAFILE.writelines('None,None,None,None,\n')
+            METAFILE.writelines('None,None,None,None,None\n')
 
         ### Header for timing metadata
         METAFILE.writelines('#,#,#,#,#\n')
         METAFILE.writelines('year,process,starttime,stoptime,processtime\n')
 
-    ### Copy over the cases file and the files in filesforbatch.csv
-    shutil.copy2(os.path.join(InputDir, cases_filename), casedir)
-    with open('filesforbatch.csv', 'r') as f:
-        reader = csv.reader(f, delimiter = ',')
-        for row in reader:
-            filename = row[0]
-            if filename.split('/')[0] in ['inputs', 'postprocessing']:
-                dir_dst = inputs_case
-            else:
-                dir_dst = casedir
-            src_file = os.path.join(InputDir, filename)
-            if os.path.exists(src_file):
-                shutil.copy(src_file, dir_dst)
-
-    ### Rewrite the scalar table as GAMS-readable definitions
-    scalar_csv_to_txt(os.path.join(inputs_case,'scalars.csv'))
+    ### Copy over the cases file
+    shutil.copy2(os.path.join(reeds_path, cases_filename), casedir)
 
     ### Get hpc setting (used in Augur)
     caseSwitches['hpc'] = int(hpc)
     options += f' --hpc={int(hpc)}'
     ### Get numclass from the max value in ivt
     caseSwitches['numclass'] = get_ivt_numclass(
-        InputDir=InputDir, casedir=casedir, caseSwitches=caseSwitches)
+        reeds_path=reeds_path, casedir=casedir, caseSwitches=caseSwitches)
     options += ' --numclass={}'.format(caseSwitches['numclass'])
     ### Get numbins from the max of individual technology bins
     caseSwitches['numbins'] = max(
@@ -514,183 +876,33 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
         int(caseSwitches['numbins_upv']),
         15)
     options += ' --numbins={}'.format(caseSwitches['numbins'])
-    options += f' --basedir={InputDir}{os.sep} --casedir={casedir}'
+    options += f' --reeds_path={reeds_path}{os.sep} --casedir={casedir}'
+
+    #%% Record the switches for this run
+    pd.Series(caseSwitches).to_csv(
+        os.path.join(inputs_case,'switches.csv'), header=False)
 
     solveyears = pd.read_csv(
-        os.path.join('inputs','modeledyears.csv'),
-        usecols=[caseSwitches['yearset_suffix']], squeeze=True,
-    ).dropna().astype(int).tolist()
+        os.path.join(reeds_path, 'inputs','modeledyears.csv'),
+        usecols=[caseSwitches['yearset_suffix']],
+    ).squeeze(1).dropna().astype(int).tolist()
     solveyears = [y for y in solveyears if y <= endyear]
+
     yearset_augur = os.path.join('inputs_case','modeledyears.csv')
     toLogGamsString = ' logOption=4 logFile=gamslog.txt appendLog=1 '
 
-    if caseSwitches['GSw_ValStr'] != '0':
-        addMPSToOpt(caseSwitches['GSw_gopt'], casedir)
+    if not restart:
+        ## copy the ReEDS_Augur and input_processing folders
+        shutil.copytree(
+            os.path.join(reeds_path, 'ReEDS_Augur'),
+            os.path.join(casedir, 'ReEDS_Augur'))
+        shutil.copytree(
+            os.path.join(reeds_path, 'input_processing'),
+            os.path.join(casedir, 'input_processing'))
 
-    ###### Write run-specific files
-    ### Special-case files for individual sites
-    if int(caseSwitches['GSw_IndividualSites']):
-        shutil.copy(os.path.join(InputDir,'inputs','rsmap.csv'),
-                    inputs_case)
-        shutil.copy(os.path.join(InputDir,'inputs','capacitydata','wind-ons_prescribed_builds_site_{}.csv'.format(caseSwitches['GSw_SitingWindOns'])),
-                    os.path.join(inputs_case,'wind-ons_prescribed_builds.csv'))
-        shutil.copy(os.path.join(InputDir,'inputs','capacitydata','wind-ofs_prescribed_builds_site_{}.csv'.format(caseSwitches['GSw_SitingWindOfs'])),
-                    os.path.join(inputs_case,'wind-ofs_prescribed_builds.csv'))
-    else:
-        shutil.copy(os.path.join(InputDir,'inputs','rsmap_sreg.csv'),
-                    os.path.join(inputs_case,'rsmap.csv'))
-        shutil.copy(os.path.join(InputDir,'inputs','capacitydata','wind-ons_prescribed_builds_sreg_{}.csv'.format(caseSwitches['GSw_SitingWindOns'])),
-                    os.path.join(inputs_case,'wind-ons_prescribed_builds.csv'))
-        shutil.copy(os.path.join(InputDir,'inputs','capacitydata','wind-ofs_prescribed_builds_sreg_{}.csv'.format(caseSwitches['GSw_SitingWindOfs'])),
-                    os.path.join(inputs_case,'wind-ofs_prescribed_builds.csv'))
-
-    ### Specific versions of files
-    osprey_num_years = len(caseSwitches['osprey_years'].split(','))
-    shutil.copy(
-        os.path.join(
-            InputDir, 'inputs', 'variability', 'index_hr_map_{}.csv'.format(osprey_num_years)),
-        os.path.join(inputs_case, 'index_hr_map.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir, 'inputs', 'variability', 'd_szn_{}.csv'.format(osprey_num_years)),
-        os.path.join(inputs_case, 'd_szn.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir,'inputs','state_policies','offshore_req_{}.csv'.format(caseSwitches['GSw_OfsWindForceScen'])),
-        os.path.join(inputs_case,'offshore_req.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir,'inputs','consume',f"dac_gas_{caseSwitches['GSw_DAC_Gas_Case']}.csv"),
-        os.path.join(inputs_case,'dac_gas.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir,'inputs','carbonconstraints',f"capture_rates_{caseSwitches['GSw_CCS_Rate']}.csv"),
-        os.path.join(inputs_case,'capture_rates.csv')
-    )
-    shutil.copy(
-        os.path.join(
-            InputDir,'inputs','hierarchy{}.csv'.format(
-                '' if (caseSwitches['GSw_HierarchyFile'] == 'default')
-                else '_'+caseSwitches['GSw_HierarchyFile'])),
-        os.path.join(inputs_case,'hierarchy.csv')
-    )
-    for f in ['distPVCF','distPVcap','distPVCF_hourly']:
-        shutil.copy(
-            os.path.join(
-                InputDir,'inputs','dGen_Model_Inputs','{s}','{f}_{s}.csv').format(
-                    f=f, s=caseSwitches['distpvscen']),
-            os.path.join(inputs_case, f'{f}.csv')
-        )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','loaddata',f"demand_{caseSwitches['demandscen']}.csv"),
-    ).round(6).to_csv(os.path.join(inputs_case,'load_multiplier.csv'),index=False)
-
-    ### Files defined from case inputs
-    pd.DataFrame(
-        {'*pvb_type': ['pvb{}'.format(i) for i in range(1,4)],
-         'ilr': [np.around(float(c) / 100, 2) for c in caseSwitches['GSw_PVB_ILR'].split('_')]}
-    ).to_csv(os.path.join(inputs_case, 'pvb_ilr.csv'), index=False)
-
-    pd.DataFrame(
-        {'*pvb_type': ['pvb{}'.format(i) for i in range(1,4)],
-         'bir': [np.around(float(c) / 100, 2) for c in caseSwitches['GSw_PVB_BIR'].split('_')]}
-    ).to_csv(os.path.join(inputs_case, 'pvb_bir.csv'), index=False)
-
-    ### Constant value if input is float, otherwise named profile
-    try:
-        rate = float(caseSwitches['GSw_MethaneLeakageScen'])
-        pd.Series(index=range(2010,2051), data=rate, name='constant').rename_axis('*t').round(5).to_csv(
-            os.path.join(inputs_case,'methane_leakage_rate.csv'))
-    except ValueError:
-        pd.read_csv(
-            os.path.join(InputDir,'inputs','carbonconstraints','methane_leakage_rate.csv'),
-            index_col='t',
-        )[caseSwitches['GSw_MethaneLeakageScen']].rename_axis('*t').round(5).to_csv(
-            os.path.join(inputs_case,'methane_leakage_rate.csv'))
-
-
-    ### Single column from input table
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','carbonconstraints','ng_crf_penalty.csv'), index_col='t',
-    )[caseSwitches['GSw_NG_CRF_penalty']].rename_axis('*t').to_csv(
-        os.path.join(inputs_case,'ng_crf_penalty.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','carbonconstraints','co2_cap.csv'), index_col='t',
-    ).loc[caseSwitches['GSw_AnnualCapScen']].rename_axis('*t').to_csv(
-        os.path.join(inputs_case,'co2_cap.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','carbonconstraints','co2_tax.csv'), index_col='t',
-    )[caseSwitches['GSw_CarbTaxOption']].rename_axis('*t').round(2).to_csv(
-        os.path.join(inputs_case,'co2_tax.csv')
-    )
-    pd.DataFrame(columns=solveyears).to_csv(
-        os.path.join(inputs_case,'modeledyears.csv'), index=False)
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','national_generation','gen_mandate_trajectory.csv'),
-        index_col='GSw_GenMandateScen'
-    ).loc[caseSwitches['GSw_GenMandateScen']].rename_axis('*t').round(5).to_csv(
-        os.path.join(inputs_case,'gen_mandate_trajectory.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','national_generation','gen_mandate_tech_list.csv'),
-        index_col='*i',
-    )[caseSwitches['GSw_GenMandateList']].to_csv(
-        os.path.join(inputs_case,'gen_mandate_tech_list.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','climate','climate_heuristics_yearfrac.csv'),
-        index_col='*t',
-    )[caseSwitches['GSw_ClimateHeuristics']].round(3).to_csv(
-        os.path.join(inputs_case,'climate_heuristics_yearfrac.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','climate','climate_heuristics_finalyear.csv'),
-        index_col='*parameter',
-    )[caseSwitches['GSw_ClimateHeuristics']].round(3).to_csv(
-        os.path.join(inputs_case,'climate_heuristics_finalyear.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','capacitydata','upgrade_costs_ccs_coal.csv'),
-        index_col='t',
-    )[caseSwitches['ccs_upgrade_cost_case']].round(3).rename_axis('*t').to_csv(
-        os.path.join(inputs_case,'upgrade_costs_ccs_coal.csv')
-    )
-    pd.read_csv(
-        os.path.join(InputDir,'inputs','capacitydata','upgrade_costs_ccs_gas.csv'),
-        index_col='t',
-    )[caseSwitches['ccs_upgrade_cost_case']].round(3).rename_axis('*t').to_csv(
-        os.path.join(inputs_case,'upgrade_costs_ccs_gas.csv')
-    )
-
-    ### All files from the user input folder
-    userinputs = os.listdir(os.path.join(InputDir,"inputs","userinput"))
-
-    for file_name in userinputs:
-        full_file_name = os.path.join(InputDir,"inputs","userinput", file_name)
-        # ivt is now a special case written in calc_financial_inputs, so skip it here
-        if (os.path.isfile(full_file_name) and (file_name != 'ivt.csv')):
-            shutil.copy(full_file_name, inputs_case)
-
-    ### Legacy files - no longer used
-    if caseSwitches['unitdata'] == 'ABB':
-        nas = '//nrelnas01/ReEDS/FY18-ReEDS-2.0/data/'
-        out = os.path.join(InputDir,'inputs','capacitydata')
-        shutil.copy(os.path.join(nas,'ExistingUnits_ABB.gdx'), out)
-        shutil.copy(os.path.join(nas,'PrescriptiveBuilds_ABB.gdx'), out)
-        shutil.copy(os.path.join(nas,'PrescriptiveRetirements_ABB.gdx'), out)
-        shutil.copy(os.path.join(nas,'ReEDS_generator_database_final_ABB.gdx'), out)
-
-    #copy over the ReEDS_Augur folder
-    shutil.copytree(os.path.join(InputDir,"ReEDS_Augur"),os.path.join(casedir,'ReEDS_Augur'))
-
-    #make the augur_data folder
-    os.mkdir(os.path.join(casedir,'ReEDS_Augur','augur_data'))
+        #make the augur_data folder
+        os.makedirs(os.path.join(casedir,'ReEDS_Augur','augur_data'), exist_ok=True)
+        os.makedirs(os.path.join(casedir,'ReEDS_Augur','PRAS'), exist_ok=True)
 
     ###### Replace files according to 'file_replacements' in cases. Ignore quotes in input text.
     #<< is used to separate the file that is to be replaced from the file that is used
@@ -711,340 +923,189 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
                 print('FILE REPLACEMENT SUCCESS: Replaced "' + replaced_file + '" with "' + used_file + '"')
 
     ext = '.sh' if os.name == 'posix' else '.bat'
-    comment = '#' if os.name == 'posix' else '::'
 
-    with open(os.path.join(casedir, 'call_' + lstfile + ext), 'w+') as OPATH:
+    restart_switches = {'restart':restart}
+    if restart:
+        ### If restarting, get the year from the most recent .g00 file
+        g00files = glob(os.path.join(reeds_path,"runs",batch_case,"g00files",'*'))
+        g00years = []
+        for f in g00files:
+            try:
+                ### Keep it if it ends with _{year}
+                g00years.append(int(os.path.splitext(f)[0].split('_')[-1]))
+            except ValueError:
+                ### If we can't turn the piece after the '_' into an int, it's not a year
+                pass
+
+        ### Keep the first year -- this will be the last solve with a completely saved g00 file
+        restart_switches['restart_year'] = min(g00years)
+
+        ### Also get last Augur solve
+        Augurfiles = glob(os.path.join(reeds_path,"runs", batch_case, "ReEDS_Augur", "augur_data", "ReEDS_Augur_*.gdx"))
+        auguryears = [int(os.path.basename(f).split("_")[-1].split(".")[0]) for f in Augurfiles]
+
+        #  if there is an Augur solve for this year, start the model in next year after the restart
+        if restart_switches['restart_year'] in auguryears:
+            solveyears = [y for y in solveyears if y > restart_switches['restart_year']]
+            restart_switches['restart_Augur'] = False
+        else:
+        # if there is no Augur solve for this year, start with Augur in the year of the restart
+            solveyears = [y for y in solveyears if y >= restart_switches['restart_year']]
+            restart_switches['restart_Augur'] = True
+    else:
+        restart_switches['restart_Augur'] = False
+
+    # flag for a restart or an original one
+    call = 'call_restart_' if restart else 'call_'
+
+    #%% Write the call script
+    with open(os.path.join(casedir, call + batch_case + ext), 'w+') as OPATH:
+        OPATH.writelines(f"echo 'Running {batch_case}'\n")
         OPATH.writelines("cd " + casedir + '\n' + '\n' + '\n')
 
         if hpc:
-
-            OPATH.writelines(comment + " setting up nodal environment for run \n")
+            comment('Set up nodal environment for run', OPATH)
             OPATH.writelines(". $HOME/.bashrc \n")
             OPATH.writelines("module purge \n")
-            OPATH.writelines("module load conda \n")
+            #OPATH.writelines("module load conda \n")
             OPATH.writelines("conda activate reeds \n")
-            OPATH.writelines("module load gams \n")
+            OPATH.writelines("module load gams/34.3.0 \n")
             OPATH.writelines('export R_LIBS_USER="$HOME/rlib" \n\n\n')
 
-        #%% Write the input_processing script calls
-        OPATH.writelines(comment + " Input processing scripts\n")
-        tolog = ''
-        for s in [
-            'calc_financial_inputs',
-            'fuelcostprep',
-            'writecapdat',
-            'writesupplycurves',
-            'cfgather',
-            'writedrshift',
-            'plantcostprep',
-            'all_year_load',
-            'climateprep',
-            'LDC_prep',
-            'forecast',
-            'WriteHintage',
-            'transmission_multilink',
-            'hourly_process',
-            'aggregate_regions',
-        ]:
-            if verbose:
+        if restart:
+            #%% skip input_processing and model creation if restarting, and set restart file to last available
+            restartfile = f"{batch_case}_{restart_switches['restart_year']}"
+        else:
+            #%% Write the input_processing script calls
+            big_comment('Input processing', OPATH)
+            tolog = ''
+            for s in [
+                'copy_files',
+                'calc_financial_inputs',
+                'fuelcostprep',
+                'writecapdat',
+                'writesupplycurves',
+                'writedrshift',
+                'plantcostprep',
+                'climateprep',
+                'LDC_prep',
+                'forecast',
+                'WriteHintage',
+                'transmission',
+                'hourly_repperiods',
+                'aggregate_regions',
+            ]:
                 OPATH.writelines(f"echo 'starting {s}.py'\n")
+                OPATH.writelines(
+                    f"python {os.path.join(casedir,'input_processing',s)}.py {reeds_path} {inputs_case} {tolog}\n")
+                OPATH.writelines(writescripterrorcheck(s)+'\n')
+
             OPATH.writelines(
-                f"python {os.path.join(InputDir,'input_processing',s)}.py {InputDir} {inputs_case} {tolog}\n")
-            OPATH.writelines(writescripterrorcheck()+'\n')
+                "\ngams createmodel.gms gdxcompress=1 xs="+os.path.join("g00files",batch_case)
+                + (' license=gamslice.txt' if hpc else '')
+                + " o="+os.path.join("lstfiles","1_Inputs.lst") + options + " " + toLogGamsString + '\n')
+            OPATH.writelines('python {t}\n'.format(t=ticker))
+            restartfile = batch_case
+            OPATH.writelines(writeerrorcheck(os.path.join('g00files',restartfile + '.g*')))
 
-        OPATH.writelines(
-            "\ngams createmodel.gms gdxcompress=1 xs="+os.path.join("g00files",lstfile)
-            + (' license=gamslice.txt' if hpc else '')
-            + " o="+os.path.join("lstfiles","1_Inputs.lst") + options + " " + toLogGamsString + '\n')
-        OPATH.writelines('python {t}\n'.format(t=ticker))
-        restartfile = lstfile
-        OPATH.writelines(writeerrorcheck(os.path.join('g00files',restartfile + '.g*')))
+        ########################
+        #%% Core model setup ###
+        ########################
+        if caseSwitches['timetype'] == 'seq':
+            setup_sequential(
+                caseSwitches, reeds_path, hpc,
+                solveyears, casedir, batch_case, toLogGamsString, OPATH, ticker,
+                restart_switches,
+            )
+        elif caseSwitches['timetype'] == 'int':
+            setup_intertemporal(
+                caseSwitches, startiter, niter, ccworkers,
+                solveyears, endyear, batch_case, toLogGamsString, yearset_augur, OPATH,
+            )
+        elif caseSwitches['timetype'] == 'win':
+            setup_window(
+                caseSwitches, startiter, niter, ccworkers, reeds_path,
+                batch_case, toLogGamsString, yearset_augur, OPATH,
+            )
 
+        ##########################
+        # -- OUTPUT PROCESSING --
+        ##########################
 
-    #############################
-    # -- SEQUENTIAL SETUP --
-    #############################
-
-        if caseSwitches['timetype']=='seq':
-            #loop over solve years
-            for i in range(len(solveyears)):
-
-                #current year is the value in solveyears
-                cur_year = solveyears[i]
-                if cur_year < max(solveyears):
-                    #next year becomes the next item in the solveyears vector
-                    next_year = solveyears[i+1]
-                # Get previous year if after first year
-                if i:
-                    prev_year = solveyears[i-1]
-                else:
-                    prev_year = solveyears[i]
-                #make an indicator in the batch file for what year is being solved
-                OPATH.writelines('\n' + comment + ' \n')
-                OPATH.writelines(comment + " Year: " + str(cur_year)  + ' \n')
-                OPATH.writelines(comment  + ' \n')
-
-                #savefile is the lstfile plus the current name
-                savefile = lstfile+"_"+str(cur_year)
-
-                #Calc tax credit Phasedown
-                OPATH.writelines(f"python tc_phaseout.py {cur_year} {casedir}\n")
-
-                #solve one year
-                OPATH.writelines(
-                    "gams d_solveoneyear.gms"
-                    + (" license=gamslice.txt" if hpc else '')
-                    + " o="+os.path.join("lstfiles",savefile+".lst")
-                    + " r="+os.path.join("g00files",restartfile)
-                    + " gdxcompress=1 xs=" + os.path.join("g00files",savefile) + toLogGamsString
-                    + " --case=" + lstfile
-                    + " --cur_year=" + str(cur_year) + " --next_year=" + str(next_year)
-                    + " --prev_year=" + str(prev_year)
-                    + " --GSW_SkipAugurYear={}".format(caseSwitches['GSw_SkipAugurYear'])
-                    + " --GSw_IndividualSites={}".format(caseSwitches['GSw_IndividualSites'])
-                    + '\n')
-                OPATH.writelines(writescripterrorcheck())
-                OPATH.writelines('python {t} --year={y}\n'.format(t=ticker, y=cur_year))
-
-                if caseSwitches['GSw_ValStr'] != '0':
-                    OPATH.writelines( "python valuestreams.py" + '\n')
-
-                #check to see if the restart file exists
-                OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
-
-                # Run Augur if it not the final solve year and if not skipping Augur
-                if (
-                    ((cur_year < max(solveyears))
-                     and (next_year > int(caseSwitches['GSw_SkipAugurYear'])))
-                    or (str(cur_year) in caseSwitches['run_osprey_years'].split('_'))
-                ):
-                    OPATH.writelines(
-                        "python Augur.py {} {} {}\n".format(next_year, cur_year, lstfile))
-                    # Check to make sure Augur ran successfully; quit otherwise
-                    OPATH.writelines(
-                        writeerrorcheck(os.path.join(
-                            "ReEDS_Augur", "augur_data", "ReEDS_Augur_{}.gdx".format(cur_year))))
-
-                #since we are done with the previous solve file delete it
-                if cur_year > min(solveyears):
-                    #check to see if the most recent save file exists and if so, delete the previous restart file
-                    write_delete_file(
-                        checkfile=os.path.join("g00files", savefile + ".g00"),
-                        deletefile=os.path.join("g00files", restartfile + '.g00'),
-                        PATH=OPATH,
-                    )
-                #after solving, the restart file is now the save file
-                restartfile=savefile
-
-
-    #############################
-    # -- INTERTEMPORAL SETUP --
-    #############################
-
-        if caseSwitches['timetype']=='int':
-            #beginning year is passed to augurbatch
-            begyear = min(solveyears)
-            #first save file from d_solveprep is just the case name
-            savefile = lstfile
-            #if this is the first iteration
-            if startiter == 0:
-                #restart file becomes the previous calls save file
-                restartfile=savefile
-                #if this is not the first iteration...
-            if startiter > 0:
-                #restart file is now the case name plus the iteration number
-                restartfile = lstfile+"_"+startiter
-
-            #per the instructions, iterations are
-            #the number of iterations after the first solve
-            niter = niter+1
-
-            #for the number of iterations we have...
-            for i in range(startiter,niter):
-                #make an indicator in the batch file for what iteration is being solved
-                OPATH.writelines('\n' + comment  + ' \n')
-                OPATH.writelines(comment + " Iteration: " + str(i)  + ' \n')
-                OPATH.writelines(comment + ' \n \n')
-                #call the intertemporal solve
-                savefile = lstfile+"_"+str(i)
-
-                if i==0:
-                    #check to see if the restart file exists
-                    #only need to do this with the zeroth iteration
-                    #as the other checks will all be after the solves
-                    OPATH.writelines(writeerrorcheck(os.path.join("g00files",restartfile + ".g*")))
-
-                OPATH.writelines(
-                    "gams d_solveallyears.gms o="+os.path.join("lstfiles",lstfile + "_" + str(i) + ".lst")
-                    +" r="+os.path.join("g00files",restartfile)
-                    + " gdxcompress=1 xs="+os.path.join("g00files",savefile) + toLogGamsString
-                    + " --niter=" + str(i) + " --case=" + lstfile
-                    + " --demand=" + caseSwitches['demand']  + ' \n')
-
-                #check to see if the save file exists
-                OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
-
-                #start threads for cc/curt
-                #no need to run cc curt scripts for final iteration
-                if i < niter-1:
-                    #batch out calls to augurbatch
-                    OPATH.writelines(
-                        "python augurbatch.py " + lstfile + " " + str(ccworkers) + " "
-                        + yearset_augur + " " + savefile + " " + str(begyear) + " "
-                        + str(endyear) + " " + caseSwitches['distpvscen'] + " "
-                        + str(caseSwitches['calc_csp_cc']) + " "
-                        + str(caseSwitches['GSw_DR']) + " "
-                        + str(caseSwitches['timetype']) + " "
-                        + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
-                        + str(caseSwitches['marg_vre_mw']) + " "
-                        + str(caseSwitches['marg_stor_mw']) + " "
-                        + str(caseSwitches['marg_dr_mw']) + " "
-                        + '\n')
-                    #merge all the resulting gdx files
-                    #the output file will be for the next iteration
-                    nextiter = i+1
-                    gdxmergedfile = os.path.join(
-                        "ReEDS_Augur","augur_data","ReEDS_Augur_merged_" + str(nextiter))
-                    OPATH.writelines(
-                        "gdxmerge "+os.path.join("ReEDS_Augur","augur_data","ReEDS_Augur*")
-                        + " output=" + gdxmergedfile  + ' \n')
-                    #check to make sure previous calls were successful
-                    OPATH.writelines(writeerrorcheck(gdxmergedfile+".gdx"))
-
-                #restart file becomes the previous save file
-                restartfile=savefile
-
-            if caseSwitches['GSw_ValStr'] != '0':
-                OPATH.writelines( "python valuestreams.py" + '\n')
-
-
-    #####################
-    # -- WINDOW SETUP --
-    #####################
-
-        if caseSwitches['timetype']=='win':
-            #load in the windows
-            win_in = list(csv.reader(open(
-                os.path.join(
-                    InputDir,"inputs","userinput",
-                    "windows_{}.csv".format(caseSwitches['windows_suffix'])),
-                'r'), delimiter=","))
-
-            restartfile=lstfile
-
-            #for windows indicated in the csv file
-            for win in win_in[1:]:
-
-                #beginning year is the first column (start)
-                begyear = win[1]
-                #end year is the second column (end)
-                endyear = win[2]
-                #for the number of iterations we have...
-                for i in range(startiter,niter):
-                    OPATH.writelines(' \n' + comment + ' \n')
-                    OPATH.writelines(comment + " Window: " + str(win)  + ' \n')
-                    OPATH.writelines(comment + " Iteration: " + str(i)  + ' \n')
-                    OPATH.writelines(comment  + ' \n')
-
-                    #call the window solve
-                    savefile = lstfile+"_"+str(i)
-                    #check to see if the save file exists
-                    OPATH.writelines(writeerrorcheck(os.path.join("g00files",restartfile + ".g*")))
-                    #solve via the window solve file
-                    OPATH.writelines(
-                        "gams d_solvewindow.gms o=" + os.path.join("lstfiles",lstfile + "_" + str(i) + ".lst")
-                        +" r=" + os.path.join("g00files",restartfile)
-                        + " gdxcompress=1 xs=g00files\\"+savefile + toLogGamsString + " --niter=" + str(i)
-                        + " --maxiter=" + str(niter-1) + " --case=" + lstfile + " --window=" + win[0] + ' \n')
-                    #start threads for cc/curt
-                    OPATH.writelines(writeerrorcheck(os.path.join("g00files",savefile + ".g*")))
-                    OPATH.writelines(
-                        "python augurbatch.py " + lstfile + " " + str(ccworkers) + " "
-                        + yearset_augur + " " + savefile + " " + str(begyear) + " "
-                        + str(endyear) + " " + caseSwitches['distpvscen'] + " "
-                        + str(caseSwitches['calc_csp_cc']) + " "
-                        + str(caseSwitches['GSw_DR']) + " "
-                        + str(caseSwitches['timetype']) + " "
-                        + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
-                        + str(caseSwitches['marg_vre_mw']) + " " 
-                        + str(caseSwitches['marg_stor_mw']) + " " 
-                        + str(caseSwitches['marg_dr_mw']) + " "
-                        + '\n')
-                    #merge all the resulting r2_in gdx files
-                    #the output file will be for the next iteration
-                    nextiter = i+1
-                    #create names for then merge the curt and cc gdx files
-                    gdxmergedfile = os.path.join(
-                        "ReEDS_Augur","augur_data","ReEDS_Augur_merged_" + str(nextiter))
-                    OPATH.writelines(
-                        "gdxmerge " + os.path.join("ReEDS_Augur","augur_data","ReEDS_Augur*")
-                        + " output=" + gdxmergedfile  + ' \n')
-                    #check to make sure previous calls were successful
-                    OPATH.writelines(writeerrorcheck(gdxmergedfile+".gdx"))
-                    restartfile=savefile
-                if caseSwitches['GSw_ValStr'] != '0':
-                    OPATH.writelines( "python valuestreams.py" + '\n')
         #create reporting files
-        OPATH.writelines(
-            "gams e_report.gms o="+os.path.join("lstfiles","report_" + lstfile + ".lst")
-            + (' license=gamslice.txt' if hpc else '')
-            + ' r=' +os.path.join("g00files",restartfile) + toLogGamsString + " --fname=" + lstfile
-            + ' --GSw_calc_powfrac={} \n'.format(caseSwitches['GSw_calc_powfrac']))
+        big_comment('Output processing', OPATH)
+        ### TODO: Figure out a way to only run e_report.gms for the last-completed
+        ### iteration run. Currently it will run for both iteration 0 and 1 when using
+        ### stress-period iterations, which is dumb.
+        for iteration in range(int(caseSwitches['GSw_PRM_StressIterateMax'])+1):
+            OPATH.writelines(
+                "gams e_report.gms"
+                + " o="+os.path.join("lstfiles","report_" + batch_case + ".lst")
+                + (' license=gamslice.txt' if hpc else '')
+                + ' r=' +os.path.join("g00files", f"{batch_case}_{max(solveyears)}i{iteration}")
+                + ' gdxcompress=1'
+                + toLogGamsString
+                + "--fname=" + batch_case
+                + ' --GSw_calc_powfrac={} \n'.format(caseSwitches['GSw_calc_powfrac'])
+            )
         OPATH.writelines('python {t}\n'.format(t=ticker))
-        OPATH.writelines(
-            "gams e_report_dump.gms o="+os.path.join("lstfiles","report_dump_" + lstfile + ".lst")
-            + (' license=gamslice.txt' if hpc else '')
-            + toLogGamsString + " --fname=" + lstfile + ' \n')
-        OPATH.writelines('python {t}\n\n'.format(t=ticker))
+        OPATH.writelines('python e_report_dump.py {}\n\n'.format(casedir))
+
 
         ### Run the retail rate module
         OPATH.writelines(
-            f"python {os.path.join(os.getcwd(),'postprocessing','retail_rate_module','retail_rate_calculations.py')} {lstfile} -p\n\n"
+            f"python {os.path.join(reeds_path,'postprocessing','retail_rate_module','retail_rate_calculations.py')} {batch_case} -p\n\n"
         )
 
         ## Run air-quality and health damages calculation script
         if int(caseSwitches['GSw_HealthDamages']):
             OPATH.writelines(
-                f"python {os.path.join(os.getcwd(),'postprocessing','air_quality','health_damage_calculations.py')} {casedir}\n\n"
+                f"python {os.path.join(reeds_path,'postprocessing','air_quality','health_damage_calculations.py')} {casedir}\n\n"
             )
 
         ## ReEDS_to_rev processing
         if caseSwitches['reeds_to_rev'] == '1':
-            OPATH.writelines('cd {} \n\n'.format(InputDir))
-            OPATH.writelines(f'python hourlize/reeds_to_rev.py {InputDir} {casedir} "cost" -r\n')
+            OPATH.writelines('cd {} \n\n'.format(reeds_path))
+            OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "cost" -r\n\n')
 
         if caseSwitches['land_use_analysis'] == '1':
             # run the land-used characterization module
             OPATH.writelines(
-                f"python {os.path.join(os.getcwd(),'postprocessing','land_use','land_use_analysis.py')} {casedir}\n\n"
+                f"python {os.path.join(reeds_path,'postprocessing','land_use','land_use_analysis.py')} {casedir}\n\n"
             )
 
         ## Run Bokeh
-        bokehdir = os.path.join(os.getcwd(),"postprocessing","bokehpivot","reports")
+        bokehdir = os.path.join(reeds_path,"postprocessing","bokehpivot","reports")
         OPATH.writelines(
             'python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" '
-            + os.path.join(os.getcwd(),"runs",lstfile) + " all No none "
+            + os.path.join(reeds_path,"runs",batch_case) + " all No none "
             + os.path.join(bokehdir,"templates","reeds2","standard_report_reduced.py") + ' "html,excel,csv" one '
-            + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report-reduced") + ' no\n')
+            + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-reduced") + ' no\n')
         OPATH.writelines(
             'python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" '
-            + os.path.join(os.getcwd(),"runs",lstfile) + " all No none "
+            + os.path.join(reeds_path,"runs",batch_case) + " all No none "
             + os.path.join(bokehdir,"templates","reeds2","standard_report_expanded.py") + ' "html,excel" one '
-            + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report") + ' no\n\n')
+            + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report") + ' no\n')
         OPATH.writelines(
             'python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" '
-            + os.path.join(os.getcwd(),"runs",lstfile) + " all No none "
+            + os.path.join(reeds_path,"runs",batch_case) + " all No none "
             + os.path.join(bokehdir,"templates","reeds2","state_report.py") + ' "csv" one '
-            + os.path.join(os.getcwd(),"runs",lstfile,"outputs","reeds-report-state") + ' no\n\n')
-        OPATH.writelines('python postprocessing/vizit/vizit_prep.py ' + '"{}"'.format(os.path.join(casedir,'outputs')) + '\n')
+            + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-state") + ' no\n\n')
+        OPATH.writelines('python postprocessing/vizit/vizit_prep.py ' + '"{}"'.format(os.path.join(casedir,'outputs')) + '\n\n')
 
         # make script to unload all data to .gdx file
         command = (
             'gams dump_alldata.gms'
             + ' o='+os.path.join('lstfiles','dump_alldata_{}_{}.lst'.format(BatchName,case))
-            + ' r='+os.path.join('g00files','{}_{}_{}'.format(BatchName,case,solveyears[-1])))
+            + ' r='+os.path.join('g00files','{}_{}_{}i0'.format(BatchName,case,solveyears[-1])))
         with open(os.path.join(casedir,'dump_alldata'+ext),'w+') as datadumper:
-            datadumper.writelines('cd ' + os.path.join(os.getcwd(),'runs','{}_{}'.format(BatchName,case)) + '\n')
+            datadumper.writelines('cd ' + os.path.join(reeds_path,'runs','{}_{}'.format(BatchName,case)) + '\n')
+            for l in [
+                f"By default, this script dumps data for the first iteration of {solveyears[-1]}.",
+                "If more iterations were needed, increase the number at the end of the",
+                f"next line after 'i' (e.g. {solveyears[-1]}i0 -> {solveyears[-1]}i1)",
+            ]:
+                comment(l, datadumper)
             datadumper.writelines(command)
         if int(caseSwitches['dump_alldata']):
             OPATH.writelines(command+'\n')
@@ -1064,7 +1125,6 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
             OPATH.writelines('')
 
         if int(caseSwitches['transmission_maps']):
-            OPATH.writelines('cd {}\n'.format(InputDir))
             OPATH.writelines('python postprocessing/transmission_maps.py -c {} -y {}\n'.format(
                 casedir, (
                     solveyears[-1]
@@ -1072,92 +1132,83 @@ def runModel(options, caseSwitches, niter, InputDir, ccworkers, startiter,
                     else caseSwitches['transmission_maps'])
             ))
 
-        ##############################
-        # Call the Created Batch File
-        ##############################
+        ### Write the call to the R2X tests
+        pipe = '2>&1 | tee -a' if os.name == 'posix' else '>>'
+        OPATH.writelines(
+            f"\npytest -v -l tests --casepath {casedir} "
+            f"{pipe} {os.path.join(casedir,'gamslog.txt')}\n"
+        )
 
-        OPATH.close()
 
-        #if you're not running on eagle or AWS..
-        if (not hpc) & (not int(caseSwitches['AWS'])):
-            # start the command prompt similar to the sequential solve
-            # - waiting for it to finish before starting a new thread
-            if os.name!='posix':
-                if int(caseSwitches['keep_run_terminal']) == 1:
-                    terminal_keep_flag = ' /k '
-                else:
-                    terminal_keep_flag = ' /c '
-                os.system('start /wait cmd' + terminal_keep_flag + os.path.join(casedir, 'call_' + lstfile + ext))
-            if os.name=='posix':
-                print("Starting the run for case " + lstfile)
-                #give execution rights to the shell script
-                os.chmod(os.path.join(casedir, 'call_' + lstfile + ext), 0o777)
-                #open it up - note the in/out/err will be written to the shellscript parameter
-                if verbose:
-                    shellscript = subprocess.Popen(
-                        [os.path.join(casedir, 'call_' + lstfile + ext)], shell=True)
-                else:
-                    shellscript = subprocess.Popen(
-                        [os.path.join(casedir, 'call_' + lstfile + ext) + " >/dev/null"],
-                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL, shell=True)
-                #wait for it to finish before killing the thread
-                shellscript.wait()
+    ##############################
+    # Call the Created Batch File
+    ##############################
 
-        elif hpc:
-            # create a copy of srun_template in casedir as {lstfile}.sh
-            if caseSwitches['timetype']=="int":
-                shutil.copy("srun_template_int.sh", os.path.join(casedir, lstfile+".sh"))
+    #if you're not running on eagle or AWS..
+    if (not hpc) & (not int(caseSwitches['AWS'])):
+        # start the command prompt similar to the sequential solve
+        # - waiting for it to finish before starting a new thread
+        if os.name!='posix':
+            if int(caseSwitches['keep_run_terminal']) == 1:
+                terminal_keep_flag = ' /k '
             else:
-                shutil.copy("srun_template.sh", os.path.join(casedir, lstfile+".sh"))
-            with open(os.path.join(casedir, lstfile+".sh"), 'a') as SPATH:
-                #add the name for easy tracking of the case
-                SPATH.writelines("\n#SBATCH --job-name=" + lstfile + "\n\n")
-                #add the call to the sh file created throughout this function
-                SPATH.writelines("sh " + os.path.join(casedir, 'call_' + lstfile + ext))
-            #close the file
-            SPATH.close()
-            #call that file
-            batchcom = "sbatch " + os.path.join(casedir, lstfile + ".sh")
-            subprocess.Popen(batchcom.split())
-
-        elif int(caseSwitches['AWS']):
-            print("Starting the run for case " + lstfile)
+                terminal_keep_flag = ' /c '
+            os.system('start /wait cmd' + terminal_keep_flag + os.path.join(casedir, call + batch_case + ext))
+        if os.name=='posix':
+            print("Starting the run for case " + batch_case)
             #give execution rights to the shell script
-            os.chmod(os.path.join(casedir, 'call_' + lstfile + ext), 0o777)
-            #issue a nohup (no hangup) command and direct output to 
-            # case-specific txt files in the root of the repository
+            os.chmod(os.path.join(casedir, call + batch_case + ext), 0o777)
+            #open it up - note the in/out/err will be written to the shellscript parameter
             shellscript = subprocess.Popen(
-                ['nohup ' + os.path.join(casedir, 'call_' + lstfile + ext) + " > " +os.path.join(casedir,lstfile+ ".txt") ], 
-                 stdin=open(os.path.join(casedir,lstfile+"_in.txt"),'w'), 
-                 stdout=open(os.path.join(casedir,lstfile+"_out.txt"),'w'), 
-                 stderr=open(os.path.join(casedir,lstfile+"_err.log"),'w'),
-                 shell=True,preexec_fn=os.setpgrp)
-            # wait for it to finish before killing the thread
+                [os.path.join(casedir, call + batch_case + ext)], shell=True)
+            #wait for it to finish before killing the thread
             shellscript.wait()
 
-        ### Record the ending time
-        now = datetime.isoformat(datetime.now())
-        try:
-            with open(os.path.join(casedir,'meta.csv'), 'a') as METAFILE:
-                METAFILE.writelines('0,end,,{},\n'.format(now))
-        except:
-            print('meta.csv not found or not writeable')
-            pass
+    elif hpc:
+        # create a copy of srun_template in casedir as {batch_case}.sh
+        if caseSwitches['timetype']=="int":
+            shutil.copy("srun_template_int.sh", os.path.join(casedir, batch_case+".sh"))
+        else:
+            shutil.copy("srun_template.sh", os.path.join(casedir, batch_case+".sh"))
+        with open(os.path.join(casedir, batch_case+".sh"), 'a') as SPATH:
+            #add the name for easy tracking of the case
+            SPATH.writelines("\n#SBATCH --job-name=" + batch_case + "\n\n")
+            #add the call to the sh file created throughout this function
+            SPATH.writelines("sh " + os.path.join(casedir, call + batch_case + ext))
+        #close the file
+        SPATH.close()
+        #call that file
+        batchcom = "sbatch " + os.path.join(casedir, batch_case + ".sh")
+        subprocess.Popen(batchcom.split())
+
+    elif int(caseSwitches['AWS']):
+        print("Starting the run for case " + batch_case)
+        #give execution rights to the shell script
+        os.chmod(os.path.join(casedir, call + batch_case + ext), 0o777)
+        #issue a nohup (no hangup) command and direct output to
+        # case-specific txt files in the root of the repository
+        shellscript = subprocess.Popen(
+            ['nohup ' + os.path.join(casedir, call + batch_case + ext) + " > " +os.path.join(casedir,batch_case+ ".txt") ],
+                stdin=open(os.path.join(casedir,batch_case+"_in.txt"),'w'),
+                stdout=open(os.path.join(casedir,batch_case+"_out.txt"),'w'),
+                stderr=open(os.path.join(casedir,batch_case+"_err.log"),'w'),
+                shell=True,preexec_fn=os.setpgrp)
+        # wait for it to finish before killing the thread
+        shellscript.wait()
+
+    ### Record the ending time
+    now = datetime.isoformat(datetime.now())
+    try:
+        with open(os.path.join(casedir,'meta.csv'), 'a') as METAFILE:
+            METAFILE.writelines('0,end,,{},\n'.format(now))
+    except:
+        print('meta.csv not found or not writeable')
+        pass
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--BatchName', '-b', type=str, default='',
-                        help='Name for batch of runs')
-    parser.add_argument('--cases_suffix', '-c', type=str, default='',
-                        help='Suffix for cases CSV file')
-    parser.add_argument('--simult_runs', '-r', type=int, default=0,
-                        help='Number of simultaneous runs. If negative, run all simultaneously.')
-    parser.add_argument('-v', '--verbose', action='count', default=0,
-                        help='Indicate whether to print log to terminal')
-    parser.add_argument('-l', '--forcelocal', action='store_true',
-                        help='Force model to run locally instead of submitting a slurm job')
+def main(
+        BatchName='', cases_suffix='', simult_runs=0,
+        forcelocal=False, restart=False, skip_env_check=False):
     """
     Executes parallel solves based on cases in 'cases.csv'
     """
@@ -1180,16 +1231,34 @@ def main():
     print(" ")
     print(" ")
 
-    args=vars(parser.parse_args())
     #gather user inputs before calling GAMS programs
-    envVar = setupEnvironment(**args)
-
-    print(" ")
-
-    if not os.path.exists("runs"): os.mkdir("runs")
-
+    envVar = setupEnvironment(
+        BatchName=BatchName, cases_suffix=cases_suffix, simult_runs=simult_runs,
+        forcelocal=forcelocal, restart=restart, skip_env_check=skip_env_check)
     # threads are created which will handle each case individually
     createmodelthreads(envVar)
 
+
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--BatchName', '-b', type=str, default='',
+                        help='Name for batch of runs')
+    parser.add_argument('--cases_suffix', '-c', type=str, default='',
+                        help='Suffix for cases CSV file')
+    parser.add_argument('--simult_runs', '-r', type=int, default=0,
+                        help='Number of simultaneous runs. If negative, run all simultaneously.')
+    parser.add_argument('--forcelocal', '-l', action='store_true',
+                        help='Force model to run locally instead of submitting a slurm job')
+    parser.add_argument('--restart', action="store_true",
+                        help='Switch to restart existing ReEDS runs')
+    parser.add_argument('--skip_env_check', '-e', action="store_true",
+                        help="Don't check that the reeds environment is activated")
+
+    args = parser.parse_args()
+
+    main(
+        BatchName=args.BatchName, cases_suffix=args.cases_suffix,
+        simult_runs=args.simult_runs, forcelocal=args.forcelocal,
+        restart=args.restart, skip_env_check=args.skip_env_check,
+    )
+    

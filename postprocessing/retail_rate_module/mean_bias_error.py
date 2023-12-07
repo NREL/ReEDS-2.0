@@ -16,27 +16,30 @@ import argparse
 
 pd.options.display.max_columns = 200
 pd.options.display.max_rows = 50
-stdout, stderr = sys.stdout, sys.stderr
 
 
 #######################
 #%% Argument inputs ###
 parser = argparse.ArgumentParser(description="Calculate retail rate bias errors")
-parser.add_argument('-b', '--reeds_dir', help='ReEDS directory')
+parser.add_argument('-b', '--reeds_path', help='ReEDS directory')
 parser.add_argument('-r', '--run_dir', help='ReEDS run directory')
 parser.add_argument('-y', '--out_dollar_year', type=int, default=2019,
                     help='Dollar year in which to write results')
 
 args = parser.parse_args()
-reeds_dir = args.reeds_dir
+reeds_path = args.reeds_path
 run_dir = args.run_dir
 out_dollar_year = args.out_dollar_year
 
 # #%% Testing
-# reeds_dir = os.path.expanduser('~/github2/ReEDS-2.0/')
-# run_dir = os.path.join(reeds_dir,'runs','v20210716_main_Ref_2026')
+# reeds_path = os.path.expanduser('~/github2/ReEDS-2.0/')
+# run_dir = os.path.join(reeds_path,'runs','v20210716_main_Ref_2026')
 # out_dollar_year = 2019
 
+#%% Set up logger
+site.addsitedir(os.path.join(reeds_path,'input_processing'))
+from ticker import makelog
+log = makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
 
 ##############
 #%% Inputs ###
@@ -44,11 +47,11 @@ out_dollar_year = args.out_dollar_year
 validationyears = list(range(2010,2020))
 data_dollar_year = 2004
 
-retailmodulepath = os.path.join(reeds_dir,'postprocessing','retail_rate_module','')
+retailmodulepath = os.path.join(reeds_path,'postprocessing','retail_rate_module','')
 inputs_default_path = retailmodulepath+'inputs_default.csv'
 
 inflation = pd.read_csv(
-    os.path.join(reeds_dir,'inputs','financials','inflation_default.csv'),
+    os.path.join(reeds_path,'inputs','financials','inflation_default.csv'),
     index_col=['t'])
 inf_adjust = inflation.loc[
     data_dollar_year+1:out_dollar_year,
@@ -58,8 +61,6 @@ inf_adjust = inflation.loc[
 ### Import the retail rate module
 site.addsitedir(retailmodulepath)
 import retail_rate_calculations
-### reset the stdout and stderr (otherwise messages will be written to gamslog.txt)
-sys.stdout, sys.stderr = stdout, stderr
 
 
 #################

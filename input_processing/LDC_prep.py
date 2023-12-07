@@ -4,7 +4,6 @@ import os
 import pandas as pd
 import numpy as np
 import h5py
-import shutil
 
 #%% FUNCTIONS ###
 def read_file(filename, index_columns=1):
@@ -38,8 +37,42 @@ def read_file(filename, index_columns=1):
                 filename+'.csv.gz', index_col=list(range(index_columns)),
                 float_precision='round_trip',
             )
+    ### Some files are saved as float16, so convert to float32
+    ### to prevent issues with large/small numbers
+    return df.astype(np.float32)
 
-    return df
+
+def local_to_eastern(df, reeds_path, val_r, by_year=False):
+    """
+    Convert a wide dataframe from local to eastern time.
+    The column names are assumed to end with _{r}.
+    Inputs
+    ------
+    by_year: Indicate whether to roll by year (True) or to roll the whole
+    dataset at once (False)
+    """
+    ### Get some inputs
+    rb2tz = pd.read_csv(
+        os.path.join(reeds_path,'inputs','variability','reeds_ba_tz_map.csv'),
+        index_col='r')
+
+    rb2tz['hourshift'] = rb2tz.tz.map({'PT':+3, 'MT':+2, 'CT':+1, 'ET':0})
+    r2shift = pd.Series(val_r, name = 'r').map(rb2tz.hourshift).dropna().astype(int)
+    r2shift.index = pd.Series(val_r)
+    ### Roll the input columns according to the shift
+    if by_year:
+        dfout = pd.concat({
+            year: pd.DataFrame(
+                {col: np.roll(df.loc[year][col], r2shift[col.split('_')[-1]]) for col in df},
+                index=df.loc[year].index)
+            for year in df.index.get_level_values('year').unique()
+        }, axis=0, names=('year',))
+    else:
+        dfout = pd.DataFrame(
+            {col: np.roll(df[col], r2shift[col.split('_')[-1]]) for col in df},
+            index=df.index)
+
+    return dfout
 
 
 def csp_dispatch(cfcsp, sm=2.4, storage_duration=10):
@@ -113,30 +146,64 @@ def csp_dispatch(cfcsp, sm=2.4, storage_duration=10):
     return total_dispatch
 
 
+def get_distpv_profiles(inputs_case, recf):
+    """
+    We only have one year's profile (2012) for distributed PV. Because we want to
+    maintain weather coincidence between distpv and upv, we start with the lowest-cf
+    upv profile in each region, scale it by its CF ratio with distributed PV in that
+    region, and take that scaled profile as the distpv profile.
+    """
+    ### Get average CF (used to scale down UPV profiles to generate distpv profiles)
+    distpv_meancf = (
+        pd.read_csv(os.path.join(inputs_case,'distPVCF_hourly.csv'), index_col=0)
+        .mean(axis=1).rename_axis('r').rename('cf')
+    )
+
+    ### Get the worst upv resource in each region and use its profile for distpv,
+    ### scaled by the distpv/upv CF ratio
+    upv_cf = (
+        recf[[c for c in recf if c.startswith('upv')]].mean()
+        .rename_axis('resource').rename('cf').reset_index()
+    )
+    upv_cf['r'] = upv_cf.resource.map(lambda x: x.split('_')[-1])
+
+    worst_upv = (
+        upv_cf.sort_values(['r','cf'])
+        .drop_duplicates('r', keep='first').set_index('r').resource)
+
+    ### Get the distpv/upv CF ratio for those UPV resources
+    distpv_upv_cf_ratio = (
+        distpv_meancf / upv_cf.set_index('resource').loc[worst_upv].set_index('r').cf)
+
+    ### Scale UPV Profiles by distpv/upv CF ratio
+    distpv_profiles = (
+        recf[worst_upv].rename(columns=dict(zip(worst_upv,worst_upv.index)))
+        * distpv_upv_cf_ratio
+    ).clip(upper=1)
+    distpv_profiles.columns = 'distpv_' + distpv_profiles.columns
+
+    return distpv_profiles
+
+
 #%% Main function
-def hourly_prep(basedir, inputs_case):
+def main(reeds_path, inputs_case):
     # #%% Settings for debugging ###
-    # basedir = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+    # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
     # inputs_case = os.path.join(
-    #     basedir,'runs','v20220906_NTPm1_ercot_seq','inputs_case')
+    #     reeds_path,'runs','v20230227_augurM1_WECC','inputs_case')
 
     #%% Fixed inputs
     GSw_CSP_Types = '1_2'
 
     #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+    sw = pd.read_csv(os.path.join(inputs_case, 'switches.csv'), 
+                     header=None, index_col=0).squeeze('columns')
     GSw_EFS1_AllYearLoad = sw.GSw_EFS1_AllYearLoad
-    GSw_IndividualSites = int(sw.GSw_IndividualSites)
-    GSw_IndividualSiteAgg = sw.GSw_IndividualSiteAgg
-    filepath_individual_sites = sw.filepath_individual_sites
     GSw_SitingWindOns = sw.GSw_SitingWindOns
     GSw_SitingWindOfs = sw.GSw_SitingWindOfs
     GSw_SitingUPV = sw.GSw_SitingUPV
-    osprey_years = sw.osprey_years
     GSw_PVB_Types = sw.GSw_PVB_Types
     GSw_PVB = int(sw.GSw_PVB)
-    capcredit_hierarchy_level = sw.capcredit_hierarchy_level
 
     #%%### Load inputs
     ### Override GSw_PVB_Types if GSw_PVB is turned off
@@ -148,55 +215,42 @@ def hourly_prep(basedir, inputs_case):
 
     # -------- Define the file paths --------
     folder = 'multi_year'
-    path_variability = os.path.join(basedir,'inputs','variability')
+    path_variability = os.path.join(reeds_path,'inputs','variability')
 
     # -------- Datetime mapper --------
     hdtmap = pd.read_csv(os.path.join(inputs_case, 'h_dt_szn.csv'))
-    ### EFS-style load only has one year of data
-    if (GSw_EFS1_AllYearLoad == 'default') or ('EER' in GSw_EFS1_AllYearLoad):
-        hdtmap_load = hdtmap
-    else:
-        hdtmap_load = hdtmap[hdtmap.year == 2012]
 
     ###### Load the input parameters
-    scalars = pd.read_csv(
-        os.path.join(inputs_case,'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0, squeeze=True)
+    scalars = pd.read_csv(os.path.join(inputs_case,'scalars.csv'), 
+                          header=None, usecols=[0,1], index_col=0
+                          ).squeeze('columns')
     ### distloss
     distloss = scalars['distloss']
 
     ### BAs present in the current run
-    ### valid_ba_list -> rfeas
-    rfeas = sorted(
-        pd.read_csv(os.path.join(inputs_case, 'valid_ba_list.csv'), squeeze=True, header=None)
-        .tolist())
+    val_r = sorted(pd.read_csv(os.path.join(inputs_case, 'val_r.csv'), 
+                               header=None).squeeze('columns').tolist())
     ### Years in the current run
     solveyears = pd.read_csv(
         os.path.join(inputs_case,'modeledyears.csv'),
         header=0
     ).columns.astype(int).values
 
-    ### Map BAs to wind/CSP resource regions
-    rsmap = pd.read_csv(
-        os.path.join(inputs_case,'rsmap.csv')
-    ).rename(columns={'*r':'r'})
-    rb2rs = rsmap.set_index('r')['rs']
-    rs2rb = rsmap.set_index('rs')['r']
-
     ### Load spatial hierarchy
     hierarchy = pd.read_csv(
         os.path.join(inputs_case,'hierarchy.csv')
     ).rename(columns={'*r':'r'}).set_index('r')
     ### Add ccreg column with the desired hierarchy level
-    hierarchy['ccreg'] = hierarchy[capcredit_hierarchy_level].copy()
+    if sw['capcredit_hierarchy_level'] == 'r':
+        hierarchy['ccreg'] = hierarchy.index.copy()
+    else:
+        hierarchy['ccreg'] = hierarchy[sw.capcredit_hierarchy_level].copy()
     ### Map regions to new ccreg's
-    rb2ccreg = hierarchy['ccreg']
-    rs2ccreg = rs2rb.map(rb2ccreg)
-    r2ccreg = pd.concat([rb2ccreg,rs2ccreg], axis=0)
-
-    # BA's and resource regions in the current run
-    rfeas_cap = rfeas + rb2rs.loc[rfeas].tolist()
-
+    r2ccreg = hierarchy['ccreg']
+    # Map BAs to states and census divisions for use with AEO load multipliers
+    st2rb = hierarchy.reset_index(drop=False)[['r', 'st']]
+    cd2rb = hierarchy.reset_index(drop=False)[['r', 'cendiv']]
+    
     # Get technology subsets
     tech_table = pd.read_csv(
         os.path.join(inputs_case,'tech-subset-table.csv'), index_col=0).fillna(False).astype(bool)
@@ -239,153 +293,37 @@ def hourly_prep(basedir, inputs_case):
     #       - Scale distributed resource CF profiles by distribution loss factor and tiein loss factor
     # ------- Read in the static inputs for this run -------
 
-    def get_df_ind(tech, site_prefix, siting_case, sitemap_suffix, has_exog_cap):
-        ### Load the dataframe of hourly profiles for each site
-        with h5py.File(os.path.join(filepath_individual_sites,
-                                    '{}_site-{}.h5'.format(tech, siting_case)),'r') as f:
-            df_ind = pd.DataFrame(f['cf'][:])
-            df_ind.index = pd.Series(f['index']).values
-            df_ind.columns = [
-                tech + '_' + col
-                for col in pd.Series(f['columns']).map(
-                    lambda x: x if type(x) is str else x.decode('utf-8')).values]
+    df_windons = read_file(
+        os.path.join(path_variability, folder, 'wind-ons-{}'.format(GSw_SitingWindOns)))
+    df_windons.columns = ['wind-ons_' + col for col in df_windons]
+    ### Don't do aggregation in this case, so make a 1:1 lookup table
+    lookup = pd.DataFrame({'ragg':df_windons.columns.values})
+    lookup['r'] = lookup.ragg.map(lambda x: x.rsplit('_',1)[1])
+    lookup['i'] = lookup.ragg.map(lambda x: x.rsplit('_',1)[0])
 
-        ### Load the lookup table for site aggregation
-        lookup_siteagg = pd.read_csv(
-            os.path.join(basedir,'inputs','supplycurvedata','sitemap{}.csv'.format(sitemap_suffix)),
-            index_col='sc_point_gid'
-        )['ragg{}'.format(GSw_IndividualSiteAgg)]
-        lookup_siteagg.index = site_prefix + lookup_siteagg.index.astype(str)
-
-        ### Load the site capacities to calculate the site-capacity-weighted average profiles
-        supplycurvecapacity = pd.read_csv(
-            os.path.join(basedir,'inputs','supplycurvedata',
-                            '{}_supply_curve_site-{}.csv'.format(tech, siting_case)),
-            usecols=['region','class','capacity'], dtype={'capacity':np.float32}
-        )
-
-        ### Load exogenous capacity, which is removed from supply curve capacity in hourlize
-        if has_exog_cap:
-            exogenouscapacity = pd.read_csv(
-                os.path.join(basedir,'inputs','capacitydata',
-                                    '{}_exog_cap_site_{}.csv'.format(tech, siting_case)),
-            )
-            ### Only keep 2010 capacity (since exogenous records pre-2010 builds)
-            exogenouscapacity = exogenouscapacity.loc[exogenouscapacity.year==2010].copy()
-            ### Merge supply-curve and exogenous capacity to get total site capacity
-            sitecapacity = supplycurvecapacity.merge(
-                exogenouscapacity[['region','capacity']], on='region', suffixes=('','_exog'),
-                how='outer'
-            )
-            sitecapacity.capacity += sitecapacity.capacity_exog.fillna(0)
-        else:
-            sitecapacity = supplycurvecapacity.copy()
-
-        sitecapacity.index = (
-            tech + '_' + sitecapacity['class'].astype(str) + '_' + sitecapacity.region)
-
-        ### Multiply by site capacity
-        df_ind *= sitecapacity['capacity']
-
-        ### Expand the column indices
-        df_ind.columns = pd.MultiIndex.from_tuples(
-            ### (ragg,rs, i)
-            [(lookup_siteagg[c.rsplit('_',1)[1]], c.rsplit('_',1)[1], c.rsplit('_',1)[0]) 
-            for c in df_ind.columns]
-        )
-
-        ### Get the full lookup for later use
-        lookup = pd.DataFrame(
-            [list(c) for c in df_ind.columns.values],
-            columns=['ragg','rs','i']
-        )
-
-        ### Get available capacity per aggregated resource profile
-        aggcapacity = (
-            lookup
-            .merge(sitecapacity, left_on='rs', right_on='region')
-            .groupby('ragg')['capacity'].sum()
-        )
-
-        ### Average at aggregation level; chunk it for memory+speed
-        chunksize = 1000
-        df_ind = pd.concat(
-            ### Weighted average CF = sum(capacity * CF) / sum(capacity)
-            [(df_ind.loc[i:i+chunksize-1].sum(axis=1, level=0)
-                / aggcapacity).astype(np.float16).fillna(0)
-                for i in np.arange(0, len(df_ind), chunksize)],
-            axis=0,
-        )
-
-        ### Include the technology (without class) in the column name
-        df_ind.columns = [tech + '_' + c for c in df_ind.columns]
-        lookup['ragg'] = tech + '_' + lookup['ragg']
-
-        return df_ind, lookup, sitecapacity
-
-
-    if GSw_IndividualSites:
-        df_windons, lookupons, sitecapacity_ons = get_df_ind(
-            'wind-ons','i', GSw_SitingWindOns, '', True)
-        df_windofs, lookupofs, sitecapacity_ofs = get_df_ind(
-            'wind-ofs','o', GSw_SitingWindOfs, '_offshore', False)
-
-        ### Concatenate lookups because this is used later.
-        lookup = pd.concat([lookupons, lookupofs],sort=False,ignore_index=True)
-
-        ### Save the list of sites to include
-        rs_ls = (['s{}'.format(i) for i in range(1,455)]
-              + sitecapacity_ons.index.map(lambda x: x.split('_')[-1]).tolist()
-              + sitecapacity_ofs.index.map(lambda x: x.split('_')[-1]).tolist())
-        pd.Series(rs_ls).to_csv(
-            os.path.join(inputs_case, 'rs.csv'), index=False, header=False)
-        r_ls = ['p{}'.format(i) for i in range(1,206)] + rs_ls
-        pd.Series(r_ls).to_csv(
-            os.path.join(inputs_case, 'r.csv'), index=False, header=False)
-
-        ### Overwrite rsmap.csv, leaving out excluded sites
-        rsmap = pd.read_csv(os.path.join(inputs_case, 'rsmap.csv'))
-        rsmap.loc[
-            rsmap.rs.isin(sitecapacity_ons.region.values.tolist() +
-                          sitecapacity_ofs.region.values.tolist())
-            | rsmap.rs.map(lambda x: x.startswith('s'))
-        ].to_csv(
-            os.path.join(inputs_case, 'rsmap_filtered.csv'), index=False)
-
-    else:
-        df_windons = read_file(
-            os.path.join(path_variability, folder, 'wind-ons-{}'.format(GSw_SitingWindOns)))
-        df_windons.columns = ['wind-ons_' + col for col in df_windons]
-        ### Don't do aggregation in this case, so make a 1:1 lookup table
-        lookup = pd.DataFrame({'ragg':df_windons.columns.values})
-        lookup['rs'] = lookup.ragg.map(lambda x: x.rsplit('_',1)[1])
-        lookup['i'] = lookup.ragg.map(lambda x: x.rsplit('_',1)[0])
-        ### Copy over rsmap_filtered.csv
-        shutil.copy(
-            os.path.join(inputs_case, 'rsmap.csv'),
-            os.path.join(inputs_case, 'rsmap_filtered.csv'),
-        )
-        ### Offshore sreg
-        df_windofs = read_file(
-            os.path.join(path_variability, folder, 'wind-ofs-{}'.format(GSw_SitingWindOfs)))
-        df_windofs.columns = ['wind-ofs_' + col for col in df_windofs]
+    ### Offshore
+    df_windofs = read_file(
+        os.path.join(path_variability, folder, 'wind-ofs-{}'.format(GSw_SitingWindOfs)))
+    df_windofs.columns = ['wind-ofs_' + col for col in df_windofs]
 
     df_upv = read_file(
         os.path.join(path_variability, folder, 'upv-{}'.format(GSw_SitingUPV)))
     df_upv.columns = ['upv_' + col for col in df_upv]
 
-    df_dupv = read_file(
-        os.path.join(path_variability, folder, 'dupv'))
+    df_dupv = read_file(os.path.join(path_variability, folder, 'dupv'))
     df_dupv.columns = ['dupv_' + col for col in df_dupv]
 
     cspcf = read_file(
-        os.path.join(path_variability, folder, 'csp'))
+        os.path.join(path_variability, folder, 'csp-reference'))
+    
+    keep = [c for c in cspcf if c.split('_')[1] in val_r]
+    cspcf = cspcf[keep]
 
     #%% Format PV+battery profiles
     ### Get the PVB types
-    pvb_ilr = pd.read_csv(
-        os.path.join(inputs_case, 'pvb_ilr.csv'),
-        header=0, names=['pvb_type','ilr'], index_col='pvb_type', squeeze=True)
+    pvb_ilr = pd.read_csv(os.path.join(inputs_case, 'pvb_ilr.csv'), 
+                          header=0, names=['pvb_type','ilr'], 
+                          index_col='pvb_type').squeeze('columns')
     df_pvb = {}
     for pvb_type in GSw_PVB_Types:
         ilr = int(pvb_ilr['pvb{}'.format(pvb_type)] * 100)
@@ -403,121 +341,95 @@ def hourly_prep(basedir, inputs_case):
         sort=False, axis=1, copy=False)
 
     toadd = pd.DataFrame({'ragg': [c for c in recf.columns if c not in lookup.ragg.values]})
-    toadd['rs'] = [c.rsplit('_', 1)[1] for c in toadd.ragg.values]
+    toadd['r'] = [c.rsplit('_', 1)[1] for c in toadd.ragg.values]
     toadd['i'] = [c.rsplit('_', 1)[0] for c in toadd.ragg.values]
     resources = (
         pd.concat([lookup, toadd], axis=0, ignore_index=True)
-        .rename(columns={'ragg':'resource','rs':'area','i':'tech'})
+        .rename(columns={'ragg':'resource','r':'area','i':'tech'})
         .sort_values('resource').reset_index(drop=True)
     )
 
-    distpvCF = pd.read_csv(
-        os.path.join(inputs_case,'distPVCF.csv')).rename(columns={'Unnamed: 0':'resource'})
-
     # ------- Performing load modifications -------
-    if GSw_EFS1_AllYearLoad == "default":
-        load_profiles = pd.read_csv(
-            os.path.join(path_variability, folder, 'load.csv.gz'),
-            index_col=0, float_precision='round_trip')[rfeas]
+    if GSw_EFS1_AllYearLoad == 'historic':
+        load_historical = read_file(os.path.join(basedir, 'inputs', 'loaddata',
+                                                 'historic_load_hourly'))[val_r]
+        # Read load multipliers
+        load_multiplier = pd.read_csv(os.path.join(inputs_case, 'load_multiplier.csv'))
+        
+        if 'cendiv' in load_multiplier.columns:
+            # AEO multipliers at the Census division level are in a wide format so
+            # need to be changed to a long format
+            load_multiplier = pd.melt(load_multiplier, id_vars=['cendiv'], 
+                                      var_name='year', value_name='multiplier')
+            load_multiplier['year'] = load_multiplier['year'].astype(int)
+            # Map census division multipliers to BAs
+            load_multiplier = load_multiplier.merge(cd2rb, on=['cendiv'], how='outer'
+                                                    ).dropna(axis=0, how='any')
+        else:
+            # AEO multipliers at the state level are already in a long format
+            # Map state multipliers to BAs
+            load_multiplier = load_multiplier.merge(st2rb, on=['st'], how='outer'
+                                                    ).dropna(axis=0, how='any')
+        # Subset load multipliers for solve years only 
+        load_multiplier = load_multiplier[load_multiplier['year'].isin(solveyears)
+                                          ][['year', 'r', 'multiplier']]
+        # Reformat hourly load profiles to merge with load multipliers
+        load_historical.index = pd.MultiIndex.from_frame(hdtmap[['year','hour']])
+        load_historical.reset_index(drop=False, inplace=True)
+        load_historical = pd.melt(load_historical, id_vars=['year', 'hour'], 
+                                  var_name='r', value_name='load')
+        # Merge load multipliers into hourly load profiles 
+        load_historical = load_historical.merge(load_multiplier, on=['r'], 
+                                                how='outer', suffixes=('_w', '')
+                                                ).reset_index(drop=True)
+        load_historical.sort_values(by=['r', 'year'], ascending=True, inplace=True)
+        load_historical['load'] *= load_historical['multiplier']
+        load_historical = load_historical[['year', 'hour', 'r', 'load']]
+        # Hours should be 0-8759 (not 1-8760) for later use with hourly_repperiods.py
+        load_historical['hour'] -= 1
+        # Reformat hourly load profiles for GAMS
+        load_profiles = load_historical.pivot_table(index=['year', 'hour'], 
+                                                    columns='r', values='load'
+                                                    ).reset_index()
+        load_profiles = load_profiles.set_index(['year', 'hour'])
+        
     else:
         load_profiles = read_file(
-            os.path.join(path_variability,'EFS_Load',(GSw_EFS1_AllYearLoad+'_load_hourly')),
+            os.path.join(reeds_path,'inputs','loaddata',(GSw_EFS1_AllYearLoad+'_load_hourly')),
             index_columns=2,
-        ).loc[solveyears,rfeas]
-
-    if GSw_EFS1_AllYearLoad == 'default':
-
-        #Importing timeslice hours for performing load scaling
-        hours = pd.read_csv(
-            os.path.join(inputs_case,'numhours.csv'), 
-            header=None, names=['h','numhours'], index_col='h', squeeze=True)
-        hours.index = hours.index.map(lambda x: x.upper())
-
-        # Prepare a dataframe for scaling the load profiles
-        # Scaling is done using the annual 2010 timeslice load by BA
-        load_TS_2010 = pd.read_csv(os.path.join(inputs_case,'load_2010.csv'), index_col='r')
-        # Get total load in each timeslice and region
-        load_TS_2010 *= hours
-        # Get annual load by region
-        load_TS_2010_total = load_TS_2010.sum(1)
-
-        ### Normalize load profiles with 2010 load timeslices
-        load_profiles.index = pd.MultiIndex.from_frame(hdtmap_load[['year','hour']])
-        ## Scale 2007-2013 load profiles by (actual 2010 load) / (yearly profile load)
-        ## so that all singe-year sums equal 2010 load
-        load_profiles *= (load_TS_2010_total / load_profiles.groupby('year').sum())
-        load_profiles.reset_index(level='year', drop=True, inplace=True)
+        ).loc[solveyears,val_r]
+        ### If using EFS-style demand with only a single 2012 weather year, concat each profile
+        ### 7 times to match the 7-year VRE profiles
+        load_profiles_wide = load_profiles.unstack('year')
+        if len(load_profiles_wide) == 8760:
+            load_profiles = (
+                pd.concat([load_profiles_wide]*7, axis=0, ignore_index=True)
+                .rename_axis('hour').stack('year')
+                .reorder_levels(['year','hour']).sort_index(axis=0, level=['year','hour'])
+            )
 
     # Adjusting load profiles by distribution loss factor and load calibration factor
     load_profiles /= (1 - distloss)
 
 
     # ------- Performing resource modifications -------
-
-    # Getting all distpv resources and filtering out those not included in this run
-    distpv_resources = pd.DataFrame(distpvCF['resource'])
-    distpv_resources.loc[:,'tech'] = 'distpv'
-    distpv_resources.loc[:,'area'] = distpv_resources.loc[:,'resource']
-    distpv_resources.loc[:,'resource'] = (
-        distpv_resources.loc[:,'tech'] + '_' + distpv_resources.loc[:,'resource'])
-
-    # Adding distpv resources to resources
-    resources = pd.concat([resources,distpv_resources], sort=False, ignore_index=True)
-
-
-    # ------- Performing recf modifications -------
-
-    # There is only one year of data for distpv
-    # Create multi year distpv profiles by scaling dupv profiles
-    # Subset dupv resources
-    dupv_resource = ['dupv_' + str(n) for n in range(1,11)]
-    resource_temp = resources[resources['tech'].isin(dupv_resource)].reset_index(drop=True)
-    missing_dupv_bas = (
-        # Missing several BA's to scale by dupv; use upv instead
-        resources[~(resources.area.isin(resource_temp.area)) & (resources.tech.str.contains('upv'))]
-        .drop_duplicates(subset = 'area',keep = 'last')
-    )
-    resource_temp = resource_temp.drop_duplicates(subset=['area'], keep='last')
-    resource_temp = pd.concat([resource_temp,missing_dupv_bas]).sort_values('resource')
-
-    # Grab the resource profiles for each region to be scaled
-    distpv_profiles = recf[resource_temp['resource'].tolist()]
-    distpv_profiles.columns = resource_temp['area'].tolist()
-
-    # Aggregate to timeslices for scaling
-    distpv_profiles.index = hdtmap['h']
-    distpv_timeslice_cf = distpv_profiles.groupby('h').mean().transpose()
-
-    distpvCF.drop('H17', axis=1, inplace=True)
-    distpvCF.set_index('resource', inplace=True)
-    distpvCF.columns = ['h' + str(n) for n in range(1, 17)]
-    # Create and apply scaling factor for each timeslice
-    temp_scaling_factor = distpvCF / distpv_timeslice_cf
-    temp_scaling_factor = temp_scaling_factor.fillna(0)
-    temp_scaling_factor.replace(np.inf, 0, inplace=True)
-    temp_scaling_factor = temp_scaling_factor.transpose().reset_index().rename(columns={'index':'h'})
-    temp_scaling_factor = pd.merge(
-        left=pd.DataFrame(hdtmap['h']), right=temp_scaling_factor,
-        on='h', how='left').set_index('h')
-    distpv_profiles *= temp_scaling_factor
-    distpv_profiles = distpv_profiles.clip(upper=1.0) # Capacity factor must be < 1
-    distpv_cols = distpv_profiles.columns.tolist()
-    distpv_cols.sort()
-    distpv_profiles = distpv_profiles[distpv_cols]
-    distpv_cols_rename = ['distpv_' + col for col in distpv_cols]
-    distpv_profiles.columns = distpv_cols_rename
-    distpv_profiles = distpv_profiles.reset_index(drop=True)
+    #%%### Distributed PV (distpv)
+    ### Get distpv profiles
+    distpv_profiles = get_distpv_profiles(inputs_case, recf)
+    ### Get distpv resources and include in list of resources
+    distpv_resources = pd.DataFrame({'resource':distpv_profiles.columns, 'tech':'distpv'})
+    distpv_resources['area'] = distpv_resources.resource.map(lambda x: x.split('_')[-1])
 
     # Resetting indices before merging to assure there are no issues in the merge
-    recf.reset_index(drop=True, inplace=True)
+    resources = pd.concat([resources, distpv_resources], sort=False, ignore_index=True)
     recf = pd.merge(
-        left=recf, right=distpv_profiles,
+        left=recf.reset_index(drop=True), right=distpv_profiles.reset_index(drop=True),
         left_index=True, right_index=True, copy=False)
 
     # Filtering out profiles of resources not included in this run
     # and sorting to match the order of the rows in resources
     resources = resources[
-        resources['area'].isin(rfeas_cap)
+        resources['area'].isin(val_r)
     ].sort_values(['resource','area'])
     recf = recf.reindex(labels=resources['resource'].drop_duplicates(), axis=1, copy=False)
 
@@ -531,6 +443,8 @@ def hourly_prep(basedir, inputs_case):
     resources.rename(columns={'area':'r','tech':'i'}, inplace=True)
     resources = resources[['r','i','ccreg','resource']]
 
+
+    #%%### Concentrated solar thermal power (CSP)
     ### Create CSP resource label for each CSP type (labeled by "tech" as csp1, csp2, etc)
     csptechs = [f'csp{c}' for c in GSw_CSP_Types]
     csp_resources = pd.concat({
@@ -547,7 +461,7 @@ def hourly_prep(basedir, inputs_case):
         .assign(i=csp_resources['tech'] + '_' + csp_resources['class'].astype(str))
         .assign(resource=csp_resources['tech'] + '_' + csp_resources['resource'])
         .assign(ccreg=csp_resources.r.map(r2ccreg))
-        .loc[csp_resources.r.isin(rfeas_cap)]
+        .loc[csp_resources.r.isin(val_r)]
         [['i','r','resource','ccreg']]
     )
 
@@ -556,13 +470,13 @@ def hourly_prep(basedir, inputs_case):
     sms = {tech: scalars[f'csp_sm_{tech.strip("csp")}'] for tech in csptechs}
     ### Get storage durations
     storage_duration = pd.read_csv(
-        os.path.join(inputs_case,'storage_duration.csv'), header=None, index_col=0, squeeze=True)
+        os.path.join(inputs_case,'storage_duration.csv'), header=None, index_col=0).squeeze()
     ## All CSP resource classes have the same duration for a given tech, so just take the first one
     durations = {tech: storage_duration[f'csp{tech.strip("csp")}_1'] for tech in csptechs}
     ### Run the dispatch simulation for modeled regions
-    keep = [c for c in cspcf if c.split('_')[1] in rfeas_cap]
+    
     csp_system_cf = pd.concat({
-        tech: csp_dispatch(cspcf[keep], sm=sms[tech], storage_duration=durations[tech])
+        tech: csp_dispatch(cspcf, sm=sms[tech], storage_duration=durations[tech])
         for tech in csptechs
     }, axis=1)
     ## Collapse column labels to single strings
@@ -572,54 +486,24 @@ def hourly_prep(basedir, inputs_case):
     recf = pd.concat([recf, csp_system_cf.reset_index(drop=True)], axis=1)
     resources = pd.concat([resources, csp_resources], axis=0)
 
-    #%%### Make thread-to-days key for Osprey
-    def get_threaddays(threads=8, numdays=365):
-        """
-        Evenly apportion days to threads for efficient parallelization
-        """
-        base = numdays // threads
-        remainder = numdays % threads
-        threadnumdays = [base+1]*remainder + [base]*(threads-remainder)
-        threadnumdays = dict(zip(range(1,threads+1), threadnumdays))
 
-        ends, threadout = {}, {}
-        for thread in range(1,threads+1):
-            if thread == 1:
-                start = 1
-            else:
-                start = ends[thread-1]+1
-            ends[thread] = start + threadnumdays[thread] - 1
+    #%%### Convert from local time to Eastern time
+    recf_eastern = local_to_eastern(recf, reeds_path, val_r, by_year=False)
+    load_eastern = local_to_eastern(load_profiles, reeds_path, val_r, by_year=True)
+    cspcf_eastern = local_to_eastern(cspcf, reeds_path, val_r, by_year=False)
 
-            threadout[thread] = 'thread{}.(d{}*d{})'.format(
-                thread, start, ends[thread])
 
-        return threadout
-
-    ### Get number of threads used in Augur/Osprey
-    threads = int(
-        pd.read_csv(
-            os.path.join(inputs_case, '..', 'ReEDS_Augur', 'value_defaults.csv'),
-            index_col='key')
-        .loc['threads','value']
-    )
-    ### Get number of days used in Augur/Osprey
-    numdays = 365 * len(osprey_years.split(','))
-    ### Write the threads-to-days file
-    threadout = pd.Series(get_threaddays(threads=threads, numdays=numdays))
-    threadout.to_csv(
-        os.path.join(inputs_case, 'threads.txt'),
-        index=False, header=False,
-    )
-
-    #%%
-    # ------- Dump static data into HDF5 and csv files for future years -------
-
-    load_profiles.astype(np.float32).to_hdf(
+    #%%### Write outputs
+    load_eastern.astype(np.float32).to_hdf(
         os.path.join(inputs_case,'load.h5'), key='data', complevel=4, index=True)
-    recf.astype(np.float16).to_hdf(
+    recf_eastern.astype(np.float16).to_hdf(
         os.path.join(inputs_case,'recf.h5'), key='data', complevel=4, index=True)
     resources.to_csv(os.path.join(inputs_case,'resources.csv'), index=False)
-
+    ### Write the CSP solar field CF (no SM or storage) for hourly_writetimeseries.py
+    (cspcf_eastern[keep].rename(columns=dict(zip(keep, [f'csp_{i}' for i in keep])))
+     .astype(np.float32).reset_index(drop=True)
+    ).to_hdf(
+        os.path.join(inputs_case,'csp.h5'), key='data', complevel=4, index=False)
     ### Overwrite the original hierarchy.csv based on capcredit_hierarchy_level
     hierarchy.rename_axis('*r').to_csv(
         os.path.join(inputs_case, 'hierarchy.csv'), index=True, header=True)
@@ -629,28 +513,27 @@ def hourly_prep(basedir, inputs_case):
 
 #%% PROCEDURE ###
 if __name__ == '__main__':
-    #%% direct print and errors to log file
-    import sys
-    sys.stdout = open('gamslog.txt', 'a')
-    sys.stderr = open('gamslog.txt', 'a')
     # Time the operation of this script
-    from ticker import toc
+    from ticker import toc, makelog
     import datetime
     tic = datetime.datetime.now()
 
     ### Mandatory arguments
     parser = argparse.ArgumentParser(description='Create run-specific pickle files for capacity value')
-    parser.add_argument('basedir', type=str, help='Base directory for all batch runs')
+    parser.add_argument('reeds_path', type=str, help='Base directory for all batch runs')
     parser.add_argument('inputs_case', help='path to inputs_case directory')
 
     args = parser.parse_args()
-    basedir = args.basedir
+    reeds_path = args.reeds_path
     inputs_case = args.inputs_case
 
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+
     ### Run it
-    print('Starting LDC_prep.py', flush=True)
-    hourly_prep(basedir, inputs_case)
+    print('Starting LDC_prep.py')
+    main(reeds_path, inputs_case)
 
     toc(tic=tic, year=0, process='input_processing/LDC_prep.py',
         path=os.path.join(inputs_case,'..'))
-    print('Finished LDC_prep.py', flush=True)
+    print('Finished LDC_prep.py')

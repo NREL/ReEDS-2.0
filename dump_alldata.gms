@@ -1,2 +1,4 @@
+* turns on compression of gdx files
+$setenv GDXCOMPRESS 1
 execute_unload "alldata.gdx" ;
-execute '=gdxcopy -V7C -Replace *.gdx' ;
+

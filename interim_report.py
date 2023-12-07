@@ -18,7 +18,7 @@ with open(callfile, 'r') as f:
     for l in f:
         if (
             l.startswith('gams e_report.gms')
-            or l.startswith('gams e_report_dump.gms')
+            or l.startswith('python e_report_dump.py')
             or 'bokehpivot' in l
         ):
             runlines.append(l.strip())

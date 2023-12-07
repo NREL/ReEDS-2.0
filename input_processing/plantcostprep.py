@@ -2,29 +2,29 @@
 import pandas as pd
 import os
 import argparse
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
+import support_functions as sFuncs
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
 #%% Model Inputs
 parser = argparse.ArgumentParser(description="""This file processes plant cost data by tech""")
 
-parser.add_argument("reeds_dir", help="ReEDS directory")
+parser.add_argument("reeds_path", help="ReEDS directory")
 parser.add_argument("inputs_case", help="output directory")
 
 args = parser.parse_args()
 
-reeds_dir = args.reeds_dir
+reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Testing inputs
-# reeds_dir = os.path.expanduser('~/github2/ReEDS-2.0/')
-# inputs_case = os.path.join(reeds_dir,'runs','v20220421_prmM0_ercot_seq','inputs_case')
+# reeds_path = os.path.expanduser('~/github2/ReEDS-2.0/')
+# inputs_case = os.path.join(reeds_path,'runs','v20220421_prmM0_ercot_seq','inputs_case')
+
+#%% Set up logger
+log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
 #%% Inputs from switches
 sw = pd.read_csv(
@@ -42,7 +42,7 @@ geoscen = sw.geoscen
 hydroscen = sw.hydroscen
 beccsscen = sw.beccsscen
 ccsflexscen = sw.ccsflexscen
-rectscen = sw.rectscen
+h2ctscen = sw.h2ctscen
 dacscen = sw.dacscen
 upgradescen = sw.upgradescen
 degrade_suffix = sw.degrade_suffix
@@ -61,25 +61,16 @@ def deflate_func(data,case):
     return data
 
 #%% PROCEDURE
-inpath = os.path.join(reeds_dir,"inputs","plant_characteristics")
+inpath = os.path.join(reeds_path,"inputs","plant_characteristics")
 
 dollaryear = pd.concat([pd.read_csv(os.path.join(inpath,"dollaryear.csv")),
                         pd.read_csv(
-                            os.path.join(reeds_dir,"inputs","consume","dollaryear.csv"))])
+                            os.path.join(reeds_path,"inputs","consume","dollaryear.csv"))])
 deflator = pd.read_csv(
     os.path.join(inpath,"../deflator.csv"),
     header=0, names=['Dollar.Year','Deflator'], index_col='Dollar.Year', squeeze=True)
 
 dollaryear = dollaryear.merge(deflator,on="Dollar.Year",how="left")
-
-#%% Get reV settings. A reV run is specific to a given ATB year, so these parameters should
-### be double-chedked and updated if the supply-curve data and resource profiles are changed.
-rev_settings = pd.read_csv(
-    os.path.join(reeds_dir,'inputs','supplycurvedata','rev_settings.csv'),
-    index_col='parameter', squeeze=True)
-revcfyear = rev_settings['revcfyear']
-rev_onswindscen = rev_settings['rev_onswindscen']
-rev_ofswindscen = rev_settings['rev_ofswindscen']
 
 #%% Get ILR_ATB from scalars
 ### NOTE that as of 2021-11-15, the ILR assumed for the ATB is 1.34, but 1.3 is used in reV/ReEDS.
@@ -114,8 +105,8 @@ ccsflex = deflate_func(ccsflex,ccsflexscen)
 beccs = pd.read_csv(os.path.join(inpath,beccsscen+'.csv'))
 beccs = deflate_func(beccs,beccsscen)
 
-rect = pd.read_csv(os.path.join(inpath,rectscen+'.csv'))
-rect = deflate_func(rect,rectscen)
+h2ct = pd.read_csv(os.path.join(inpath,h2ctscen+'.csv'))
+h2ct = deflate_func(h2ct,h2ctscen)
 
 if upgradescen != 'default':
     upgrade = pd.read_csv(os.path.join(inpath,upgradescen+'.csv'))
@@ -125,36 +116,52 @@ if upgradescen != 'default':
     upgrade['upgradecost'] *= 1000
     upgrade['upgradecost'] = upgrade['upgradecost'].round(0).astype(int)
 
+#%% Onshore Wind
 onswinddata = pd.read_csv(os.path.join(inpath,onswindscen+'.csv'))
-onswinddata.columns= ['tech','trg','t','cf','capcost','fom','vom']
+if 'class' in onswinddata:
+    #ATB 2022 and prior style
+    onswinddata.columns= ['tech','class','t','cf_mult','capcost','fom','vom']
+else:
+    #ATB 2023 style
+    #We will have a 'turbine' column. For each turbine, we assume 10 classes
+    onswinddata.columns= ['turbine','t','cf_mult','capcost','fom','vom']
+    onswinddata['tech'] = 'ONSHORE'
+    class_bin_num = 10
+    turb_ls = []
+    for turb in onswinddata['turbine'].unique():
+        turb_ls += [turb]*class_bin_num
+    df_class_turb = pd.DataFrame({'turbine':turb_ls, 'class':range(1, len(turb_ls) + 1)})
+    onswinddata = onswinddata.merge(df_class_turb, on='turbine', how='inner')
+    onswinddata = onswinddata[['tech','class','t','cf_mult','capcost','fom','vom']]
 onswinddata = deflate_func(onswinddata,onswindscen)
 
-#%% Wind
-# the wind data changed format after 2019, so use the new format if using a 
-# newer dataset
-if '2019' in ofswindscen:
-    winddata = onswinddata.copy()
-else:
-    ofswinddata = pd.read_csv(os.path.join(inpath,ofswindscen+'.csv'))
-    ofswinddata.columns = ['tech','trg','t','cf','capcost','fom','vom']
-    ofswinddata = deflate_func(ofswinddata,ofswindscen)
-    winddata = pd.concat([onswinddata.copy(),ofswinddata.copy()])
+#%% Offshore Wind
+ofswinddata = pd.read_csv(os.path.join(inpath,ofswindscen+'.csv'))
+if 'rsc_mult' in ofswinddata: #This is the format starting ATB 2023
+    ofswind_rsc_mult = ofswinddata[['Year','Wind class','rsc_mult']].copy()
+    ofswind_rsc_mult['tech'] = 'wind-ofs_' + ofswind_rsc_mult['Wind class'].astype(str)
+    ofswind_rsc_mult = ofswind_rsc_mult.rename(columns={'Year':'t'})
+    ofswind_rsc_mult = ofswind_rsc_mult.pivot_table(index='t',columns='tech', values='rsc_mult')
+    ofswinddata = ofswinddata.drop(columns=['rsc_mult'])
+else: #This is the format for ATB 2022 and before
+    ofswind_rsc_mult = pd.read_csv(os.path.join(inpath,ofswindscen+'_rsc_mult.csv'),index_col=0).round(6)
+
+
+ofswinddata.columns = ['tech','class','t','cf_mult','capcost','fom','vom']
+ofswinddata = deflate_func(ofswinddata,ofswindscen)
+winddata = pd.concat([onswinddata.copy(),ofswinddata.copy()])
 
 winddata.loc[winddata['tech'].str.contains('ONSHORE'),'tech'] = 'wind-ons'
 winddata.loc[winddata['tech'].str.contains('OFFSHORE'),'tech'] = 'wind-ofs'
-winddata['i'] = winddata['tech'] + '_' + winddata['trg'].astype(str)
+winddata['i'] = winddata['tech'] + '_' + winddata['class'].astype(str)
 wind_stack = winddata[['t','i','capcost','fom','vom']].copy()
 
-rev_onswinddata = pd.read_csv(os.path.join(inpath,rev_onswindscen+'.csv'))
-rev_onswinddata.columns= ['tech','trg','t','cf','capcost','fom','vom']
-rev_onswinddata = deflate_func(rev_onswinddata,rev_onswindscen)
-rev_ofswinddata = pd.read_csv(os.path.join(inpath,rev_ofswindscen+'.csv'))
-rev_ofswinddata.columns= ['tech','trg','t','cf','capcost','fom','vom']
-rev_ofswinddata = deflate_func(rev_ofswinddata,rev_ofswindscen)
-rev_winddata = pd.concat([rev_onswinddata.copy(),rev_ofswinddata.copy()])
-rev_winddata.loc[rev_winddata['tech'].str.contains('ONSHORE'),'tech'] = 'wind-ons'
-rev_winddata.loc[rev_winddata['tech'].str.contains('OFFSHORE'),'tech'] = 'wind-ofs'
-rev_winddata['i'] = rev_winddata['tech'] + '_' + rev_winddata['trg'].astype(str)
+#%% Geothermal
+geodata = pd.read_csv(os.path.join(inpath,geoscen+'.csv'))
+geodata.columns = ['tech','class','depth','t','capcost','fom','vom']
+geodata['i'] = geodata['tech'] + '_' + geodata['depth'] + '_' + geodata['class'].astype(str)
+geodata = deflate_func(geodata,geoscen)
+geo_stack = geodata[['t','i','capcost','fom','vom']].copy()
 
 #%% CSP
 csp = pd.read_csv(os.path.join(inpath,cspscen+'.csv'))
@@ -181,7 +188,7 @@ caes = pd.read_csv(os.path.join(inpath,caesscen+'.csv'))
 caes = deflate_func(caes,caesscen)
 caes['i'] = 'caes'
 
-alldata = pd.concat([conv,upv_stack,wind_stack,csp_stack,battery,dr,caes,beccs,ccsflex,rect],sort=False)
+alldata = pd.concat([conv,upv_stack,wind_stack,geo_stack,csp_stack,battery,dr,caes,beccs,ccsflex,h2ct],sort=False)
 
 if upgradescen != 'default':
     alldata = pd.concat([alldata,upgrade])
@@ -208,24 +215,19 @@ outdata = (
 outdata = outdata.loc[outdata.variable.isin(['capcost','fom','vom','heatrate','upgradecost','rte'])]
 
 #%% wind capacity factors
-windcf = winddata[['t','i','cf']].set_index(['i','t'])['cf']
-rev_windcf = rev_winddata[['t','i','cf']].set_index(['i','t'])['cf']
-### Wind capacity factor from ATB is defined as a ratio with the reV CF
-windtechs = [i for i in winddata.i.unique() if i.startswith('wind')]
-for i in windtechs:
-	windcf.loc[i] = (windcf.loc[i] / rev_windcf.loc[i,int(revcfyear)]).values
-windcf = windcf.round(6)
-outwindcf = windcf.reset_index().pivot_table(index='t',columns='i', values='cf')
+windcfmult = winddata[['t','i','cf_mult']].set_index(['i','t'])['cf_mult']
+windcfmult = windcfmult.round(6)
+outwindcfmult = windcfmult.reset_index().pivot_table(index='t',columns='i', values='cf_mult')
 
 #%% Other technologies
-geo = pd.read_csv(os.path.join(inpath,geoscen+'.csv'),index_col=0).round(6)
-geofom = pd.read_csv(os.path.join(inpath,geoscen+'_FOM.csv'),index_col=0).round(6)
 ccsflex_perf = pd.read_csv(os.path.join(inpath,ccsflexscen+'_perf.csv'),index_col=0).round(6)
 hydro = pd.read_csv(os.path.join(inpath,hydroscen+'.csv'), index_col=0).round(6)
-ofswind_rsc_mult = pd.read_csv(os.path.join(inpath,ofswindscen+'_rsc_mult.csv'),index_col=0).round(6)
 degrade = pd.read_csv(
-	os.path.join(reeds_dir,"inputs","degradation",'degradation_annual_' + degrade_suffix + '.csv'),
-	index_col=0,header=None).round(6)
+	os.path.join(reeds_path,"inputs","degradation",'degradation_annual_' + degrade_suffix + '.csv'),
+	header=None)
+degrade.columns = ['i','rate']
+degrade = sFuncs.expand_GAMS_tech_groups(degrade)
+degrade = degrade.set_index('i').round(6)
 
 #%%### PV+battery cost model
 ### Get PVB designs
@@ -320,9 +322,11 @@ for i in range(1,4):
 pvb = pd.concat(pvb, axis=1)
 
 
-## Create DAC scenario output if the DAC scenario is set to anything other than "default":
-if dacscen != 'default':
-    dac = pd.read_csv(os.path.join(reeds_dir,"inputs","consume",f'dac_elec_{dacscen}.csv'))
+## Create Electric DAC scenario output
+# For electric DAC, we assume a sorbent system: https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a
+# FYI, for DAC-gas we assume a solvent system: https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987
+if dacscen:
+    dac = pd.read_csv(os.path.join(reeds_path,"inputs","consume",f'dac_elec_{dacscen}.csv'))
     dac = deflate_func(dac, f'dac_elec_{dacscen}')
 
     dac['capcost'] = dac['capcost'].round(0).astype(int)
@@ -345,13 +349,13 @@ if dacscen != 'default':
 #%% Write the outputs
 print('writing plant data to:', os.getcwd())
 pvb.to_csv(os.path.join(inputs_case,'pvbcapcostmult.csv'))
-geo.to_csv(os.path.join(inputs_case,'geocapcostmult.csv'))
-geofom.to_csv(os.path.join(inputs_case,'geo_fom_mult.csv'))
+geodata.to_csv(os.path.join(inputs_case,'geodataout.csv'))
+
 ccsflex_perf.to_csv(os.path.join(inputs_case,'ccsflex_perf.csv'))
 hydro.to_csv(os.path.join(inputs_case,'hydrocapcostmult.csv'))
 ofswind_rsc_mult.to_csv(os.path.join(inputs_case,'ofswind_rsc_mult.csv'))
 degrade.to_csv(os.path.join(inputs_case,'degradation_annual.csv'),header=False)
-outwindcf.to_csv(os.path.join(inputs_case,'windcfout.csv'))
+outwindcfmult.to_csv(os.path.join(inputs_case,'windcfmult.csv'))
 upv.cf_improvement.round(3).to_csv(os.path.join(inputs_case,'pv_cf_improve.csv'), header=False)
 outdata.to_csv(os.path.join(inputs_case,'plantcharout.csv'), index=False)
 

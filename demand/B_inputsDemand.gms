@@ -61,14 +61,10 @@ $include %gams.curdir%%ds%inputs%ds%demand%ds%processed data%ds%base-device-set.
 /
 $onlisting
          demr(r) "demand model regions"
-         /p1*p134/
-*         /p60*p65,p67/
 ;
 
-*demr(r)$(ord(r)<=134) = yes;
 * mapping sets
-demr(r) = no;
-demr(r)$rfeas(r) = yes;
+demr(r) = yes ;
 
 
 set      use2dev(u,d) "feasibility set for end-use and device class"
@@ -236,8 +232,8 @@ parameter
          ref_rtl_price(sec,r,t,h) "reference retail price"
 ;
 
-*psupply(s,r,t,h)$(rfeas(r)$tmodel(t)$pvf(t)) = 1;
-*psupply0(s,r,t,h)$(rfeas(r)$tmodel(t)$pvf(t)) = 1;
+*psupply(s,r,t,h)$(tmodel(t)$pvf(t)) = 1;
+*psupply0(s,r,t,h)$(tmodel(t)$pvf(t)) = 1;
 
 *demand side setup and assumptions
 parameter
@@ -281,7 +277,7 @@ lambda_test(r,t,u,d,o)$(use2dev2opt(u,d,o) and demr(r)) = lambda(r,t,u,d,o);
 ref_eff_test(y,r,t,u,d)$(use2dev(u,d) and demr(r)) = ref_eff(y,r,t,u,d)
 
 * export preprocessing data for R
-Execute_Unload "%gams.curdir%/temp_dmd/dmd_preprocess.gdx", demr, net_dvc_req, ref_serv_dmd_device, lambda_test, ref_eff_test, res_elas, rfeas;
+Execute_Unload "%gams.curdir%/temp_dmd/dmd_preprocess.gdx", demr, net_dvc_req, ref_serv_dmd_device, lambda_test, ref_eff_test, res_elas, r;
 
 Execute 'Rscript %gams.curdir%%ds%demand%ds%dmd_preprocess.R %gams.curdir%';
 

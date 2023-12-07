@@ -37,6 +37,9 @@ inputs/capacitydata/distpv/*.csv
 *.Rhistory
 *.RData
 
+# Julia stuff
+Manifest.toml
+
 # raw input files for retail rates
 retail_rate_module/inputs/EIA861/*
 postprocessing/retail_rate_module/inputs/EIA861/*
@@ -49,3 +52,6 @@ postprocessing/retail_rate_module/inputs/EIA861/*
 
 # IDE files
 *.vscode
+
+# NREL HPC files
+slurm*.out

@@ -14,7 +14,6 @@ National RPS,#ffbb78
 State RPS,#98df8a
 Emissions,#ff9896
 CO2 Capture and Storage,#c5b0d5
-"invsubstation, eq_objfn_inv",#c5b0d5
 "invtran, eq_objfn_inv",#c49c94
 eq_ab32_cap,#f7b6d2
 eq_batterymandate,#c7c7c7
@@ -26,7 +25,6 @@ eq_csapr_budget,#2ca02c
 eq_dhyd_dispatch,#d62728
 eq_forceprescription,#9467bd
 eq_growthlimit_relative,#8c564b
-eq_invtran_vclimit,#e377c2
 eq_minloading,#7f7f7f
 eq_orcap,#bcbd22
 eq_prmtradelimit,#17becf
@@ -40,7 +38,6 @@ eq_storage_duration,#f7b6d2
 eq_storage_level,#c7c7c7
 eq_storage_in_min,#dbdb8d
 eq_storage_in_max,#9edae5
-eq_substationaccounting,#1f77b4
 eq_transmission_limit,#ff7f0e
 kW,#2ca02c
 MWh,#d62728

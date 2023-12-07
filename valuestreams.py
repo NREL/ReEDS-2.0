@@ -24,11 +24,6 @@ sh.setFormatter(formatter)
 logger.addHandler(sh)
 
 df_var_map = pd.read_csv(vs_path+'/var_map.csv', dtype=object)
-df_hier = pd.read_csv(vs_path + '/rsmap.csv').rename(columns={'*r':'r'})
-df_rb2 = df_hier.drop_duplicates('r').copy()
-df_rb2['rs'] = df_rb2['r']
-df_hier = pd.concat([df_hier, df_rb2],sort=False,ignore_index=True)
-dict_hier = dict(zip(df_hier['rs'], df_hier['r']))
 var_list = df_var_map['var_name'].values.tolist()
 
 #common function for outputting to csv
@@ -67,10 +62,8 @@ def createValueStreams():
     df_lev = pd.DataFrame(df_lev_ls)
     df_lev.columns = cols
 
-    #Add ba column
-    df_lev['ba'] = df_lev['r'].map(dict_hier)
     #Fill missing values with 'none'
-    out_sets = ['i','v','ba','t','var_name','con_name']
+    out_sets = ['i','v','r','t','var_name','con_name']
     df_lev[out_sets] = df_lev[out_sets].fillna(value='none')
 
     #Reduce df_lev to columns of interest and groupby sum

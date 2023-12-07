@@ -4,6 +4,7 @@ import numpy as np
 import csv
 import os
 import sys
+import re
 import itertools
 
 # Turning off pandas' SettingWithCopyWarning for chained assignments 
@@ -86,32 +87,6 @@ def ingest_years(inputs_case, sys_eval_years, end_year):
 
 
 #%%
-def ingest_regions(GSw_RegionLevel, GSw_Region, scen_settings, NARIS=False):
-    ### Load the full regions list
-    hierarchy = pd.read_csv(
-        os.path.join(scen_settings.input_dir, 'hierarchy.csv')).rename(columns={'*r':'p','rs':'s'})
-    ### Load the rb-to-rs map
-    rsmap = pd.read_csv(
-        os.path.join(scen_settings.input_dir, 'rsmap_sreg.csv')).rename(columns={'*r':'p','rs':'s'})
-    ### Downselect to specified region in level
-    regions = (
-        hierarchy.loc[hierarchy[GSw_RegionLevel].str.lower() == str(GSw_Region).lower()]
-        .merge(rsmap, on='p', how='inner')
-    )
-    ### Change country column to lower case to match entries in financial inputs
-    regions.country = regions.country.str.lower()
-    ### Subset to US BAs if not modeling North America
-    if not NARIS:
-        regions = regions.loc[regions.country == 'usa'].copy()
-
-    ### Return regions and lists of valid 'p' and 's' regions
-    valid_ba_list = regions.p.unique().tolist()
-    valid_regions_list = valid_ba_list + regions.s.unique().tolist()
-
-    return regions, valid_ba_list, valid_regions_list
-
-
-#%%
 def build_dfs(years, techs, vintage_definition, year_map):
 
     ''' Build df_ivt (for calculating various parameters at subscript [i,v,t])
@@ -154,12 +129,9 @@ def build_dfs(years, techs, vintage_definition, year_map):
 
 
     ########################### Build df_inv ##################################
-    # Because investment happens on the resource region level, 's' techs have their 's' region for [r]
 
-    # Build the df_itr. Building in two steps, p regions then s regions
     df_it = pd.DataFrame(list(itertools.product(techs['i'], years)),
                             columns=['i', 't'])
-
 
     # Since df_inv only contains generators available for build, filter itc map down
     itv_map_inv = itv_map[itv_map['available_for_build']==True]
@@ -177,7 +149,7 @@ def build_dfs(years, techs, vintage_definition, year_map):
 
 #%%
 def import_sys_financials(financials_sys_suffix, inflation_df, modeled_years, 
-                          years, year_map, sys_eval_years, scen_settings):
+                          years, year_map, sys_eval_years, scen_settings,co2_incentive_length):
     '''
     Import system-wide financial parameters, and calculate discount rate from them
 
@@ -224,10 +196,11 @@ def import_sys_financials(financials_sys_suffix, inflation_df, modeled_years,
     # Calculate the capital recovery factor for each year (for pvf_onm for sequential mode).
     sys_financials['crf'] = calc_crf(sys_financials['d_real'], sys_eval_years)
 
+    sys_financials['crf_co2_incentive'] = calc_crf(sys_financials['d_real'], co2_incentive_length)
+
     # Merge on year_map for the model year column
     # As an inner merge, this removes any extraneous years, that weren't part of year_map
     sys_financials = sys_financials.merge(year_map, on='t')
-
 
     return sys_financials
 
@@ -570,25 +543,31 @@ def calc_financial_multipliers(df_inv, construction_schedules, depreciation_sche
     else:
         df_inv['Degradation_Adj'] = 1.0
 
-    # Instead of calculating a financial multiplier a priori, we hand the components 
-    # to ReEDS which puts them together
-#    # Calculate the financial multiplier
-#    df_inv['finMult'] = (
-#        df_inv['CCmult']
-#        / (1 - df_inv['tax_rate'])
-#        * (1 
-#           - df_inv['tax_rate'] * (1 - df_inv['itc_frac_monetized']/2) * df_inv['PV_fraction_of_depreciation'] 
-#           - df_inv['itc_frac_monetized'])
-#        * df_inv['Degradation_Adj']
-#    )
-#    df_inv['finMult_noITC'] = (
-#        df_inv['CCmult'] 
-#        / (1 - df_inv['tax_rate']) 
-#        * (1 - df_inv['tax_rate'] * df_inv['PV_fraction_of_depreciation'] ) 
-#        * df_inv['Degradation_Adj']
-#    )
+    # Calculate the financial multiplier
+    df_inv['finMult'] = (
+        df_inv['CCmult']
+        / (1 - df_inv['tax_rate'])
+        * (1 
+            - df_inv['tax_rate'] * (1 - df_inv['itc_frac_monetized']/2) * df_inv['PV_fraction_of_depreciation'] 
+            - df_inv['itc_frac_monetized'])
+        * df_inv['Degradation_Adj']
+    )
+    df_inv['finMult_noITC'] = (
+        df_inv['CCmult'] 
+        / (1 - df_inv['tax_rate']) 
+        * (1 - df_inv['tax_rate'] * df_inv['PV_fraction_of_depreciation'] ) 
+        * df_inv['Degradation_Adj']
+    )
 
     return df_inv
+
+def calc_final_capital_cost_multiplier(df, mult_type='finMult'):
+    final_cap_cost_mult = (
+        df[mult_type] * df['financing_risk_mult']
+        ## Scale the cost multiplier by the ratio of CRF(trans_crp) / CRF (sys_eval_years)
+        * df["crf_tech"] / df['crf']
+    )
+    return final_cap_cost_mult
 
 
 #%%
@@ -665,19 +644,19 @@ def param_exporter(df, parameter, file_name, output_dir):
 #%%
 def expand_GAMS_tech_groups(df):
     '''
-    GAMS has a convention for expanding rows (e.g. upv_1*upv_10 is expanded to upv_1, upv_2, etc)
+    GAMS has a convention for expanding rows (e.g. upv_1*upv_10 is expanded to upv_1, upv_2,..., upv_10)
     This function expands a df with the same convention, for the instances where a file is ingested
-    by both python and GAMS. 
+    by both python and GAMS. We assume the numbers we would like to enumerate occur at the end.
     '''
 
     tech_groups = [group for group in df['i'] if '*' in group]
 
     for tech_group in tech_groups:
-        tech_group_root = tech_group.split('*')[0]
-        tech_group_root = tech_group_root[:[pos for pos, char in enumerate(tech_group_root) if char == '_'][-1]]
-        tech_group_n = int(tech_group.split('_')[-1])
-        techs = ['%s_%s' % (tech_group_root, num) for num in np.arange(1,tech_group_n+1)]
-
+        tech_group_ls = tech_group.split('*')
+        num_start = int(re.search(r'(\d+)\s*$', tech_group_ls[0]).group(1))
+        num_end = int(re.search(r'(\d+)$', tech_group_ls[1]).group(1))
+        tech_group_root = re.sub(r'\d+\s*$', '', tech_group_ls[0])
+        techs = [f'{tech_group_root}{num}' for num in range(num_start,num_end+1)]
 
         df_subset = df[df['i']==tech_group] # Extract the tech group from the main df
         df = df[df['i'] != tech_group] # Drop the tech group from the main df

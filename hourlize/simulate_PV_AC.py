@@ -20,7 +20,7 @@ import h5py
 
 ### Filepaths
 revpath = os.path.expanduser(os.path.join('~','Projects','reV',''))
-reedspath = os.path.expanduser(os.path.join('~','github2','ReEDS-2.0',''))
+reeds_path = os.path.expanduser(os.path.join('~','github2','ReEDS-2.0',''))
 ### reV scenario
 path_sim = os.path.join(revpath,'scenarios_aux','scen_032_ed1','')
 profile_sim = 'dc_profiles'

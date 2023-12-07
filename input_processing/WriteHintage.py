@@ -36,12 +36,8 @@ BA combinations, is as follows:
 For testing - the default arguments are passed in to the main(...) function
 
 """
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
 import math
 
@@ -279,10 +275,10 @@ class grouping:
         return tdat
 
 # #%% DEBUGGING
-# cwd = "/users/mbrown1/Documents/GitHub/MI_R2"
+# reeds_path = "/users/mbrown1/Documents/GitHub/MI_R2"
 # inputs_case = "/users/mbrown1/Desktop"
 # %% MAIN
-def main(cwd, inputs_case):
+def main(reeds_path, inputs_case):
     #%% Read inputs from switches
     sw = pd.read_csv(
         os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
@@ -290,7 +286,6 @@ def main(cwd, inputs_case):
     nBin = sw.numhintage
     retscen = sw.retscen
     mindev = int(sw.mindev)
-    distpvscen = sw.distpvscen
     generatorfile = f'ReEDS_generator_database_final_{sw.unitdata}.csv'
     GSw_WaterMain = sw.GSw_WaterMain    
     GSw_CoalRetire = int(sw.GSw_CoalRetire)
@@ -311,12 +306,16 @@ def main(cwd, inputs_case):
                   ]
     }
     
-    # change directory to local ReEDS repo
-    os.chdir(cwd)
+    # valid regions for this run
+    val_r = pd.read_csv(
+            os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
 
     # read in generatorfile
-    indat = pd.read_csv(os.path.join(cwd, 'inputs', 'capacitydata',
-                                     '{}'.format(generatorfile)))
+    indat = pd.read_csv(os.path.join(reeds_path, 'inputs', 'capacitydata', '{}'.format(generatorfile)),
+                        low_memory=False)
+    
+    # Filter for valid regions
+    indat = indat.loc[indat['reeds_ba'].isin(val_r)]
 
     ### If aggregating regions, do so now (note that all other region aggregation
     ### is handled in aggregate_regions.py)
@@ -324,15 +323,21 @@ def main(cwd, inputs_case):
         hierarchy = pd.read_csv(
             os.path.join(inputs_case,'hierarchy.csv')
             ).rename(columns={'*r':'r'}).set_index('r')
-        rb2aggreg = hierarchy.aggreg.copy()
-        indat['reeds_ba'] = indat['reeds_ba'].map(rb2aggreg)
+        r2aggreg = hierarchy.aggreg.copy()
+        indat['reeds_ba'] = indat['reeds_ba'].map(r2aggreg)
 
     # include O&M of polution control upgrades into FOM
     indat['T_VOM'] = inflator * (indat.T_VOM + indat.TCOMB_V + indat.TSNCR_V
                                  + indat.TSCR_V + indat.T_FFV + indat.T_DSIV)
+
     indat['T_FOM'] = inflator * (indat.T_FOM + indat.T_CAPAD + indat.TCOMB_F
                                  + indat.TSNCR_F + indat.TSCR_F + indat.T_FFF
                                  + indat.T_DSIF)
+
+    # include O&M of polution control upgrades into FOM for upgrade statistics
+    indat['T_CCSV'] = indat.T_VOM + inflator * indat.T_CCSV
+
+    indat['T_CCSF'] = indat.T_FOM + inflator * indat.T_CCSF
 
     # concatenate tech names based on whether water analysis is on -or- leave
     # them alone
@@ -342,15 +347,19 @@ def main(cwd, inputs_case):
                   'coolingwatertech'] = indat.loc[indat['tech'].isin(TECH['no_cooling']),'tech']
         indat['tech'] = indat.coolingwatertech
 
-    ad = indat[["tech", "reeds_ba", "ctt", "resource_region", "cap", "TC_WIN", retscen,
-                "StartYear", "IsExistUnit", "HeatRate", "T_VOM", "T_FOM"]].copy()
+    ad = indat[["tech", "reeds_ba", "ctt", "cap", "TC_WIN", retscen,
+                "StartYear", "IsExistUnit", "HeatRate", "T_VOM", "T_FOM",
+                "T_CCSROV", "T_CCSF", "T_CCSV", "T_CCSHR", "T_CCSCAPA", "T_CCSLOC"]].copy() ### new addition for columns AO:AR, AW:AX in the plant file
 
     # rename Columns in ad
     rename = {}
-    newnames = ["TECH", "reeds_ba", "ctt", "resource.region", "Summer.capacity", "Winter.capacity",
-                "RetireYear", "onlineyear", "EXIST", "HR", "VOM", "FOM"]
+    newnames = ["TECH", "reeds_ba", "ctt", "Summer.capacity", "Winter.capacity",
+                "RetireYear", "onlineyear", "EXIST", "HR", "VOM", "FOM",
+                "CCS_Retro_OvernightCost", "CCS_Retro_FOM", "CCS_Retro_VOM", "CCS_Retro_HR", "CCS_Retro_CapAdjust", "CCS_Retro_LocFactor"] ### new addition 
+    
     for old, new in zip(ad.columns, newnames):
         rename[old] = new
+    
     ad.rename(columns=rename, inplace=True)
 
     # subset only generators that exist
@@ -376,8 +385,10 @@ def main(cwd, inputs_case):
                'RetireYear'] += coalretireyrs
 
     # group up similar generators
-    dat = df.groupby(['TECH', 'reeds_ba', 'HR', 'resource.region', 'onlineyear',
-                      'RetireYear', 'VOM', 'FOM']).sum().reset_index()
+    dat = df.groupby(['TECH', 'reeds_ba', 'HR', 'onlineyear', 
+                      'RetireYear', 'VOM', 'FOM',"CCS_Retro_OvernightCost", "CCS_Retro_FOM", 
+                      "CCS_Retro_VOM", "CCS_Retro_HR", "CCS_Retro_CapAdjust", "CCS_Retro_LocFactor"]).sum().reset_index()
+    
     dat.drop(columns=['EXIST'], inplace=True)
 
     # remove others category
@@ -400,16 +411,24 @@ def main(cwd, inputs_case):
     tdat['wVOM'] = tdat.VOM * tdat['Summer.capacity']
     tdat['wFOM'] = tdat.FOM * tdat['Summer.capacity']
     tdat['solveYearOnline'] = tdat.onlineyear * tdat['Summer.capacity']
+    tdat['wCCS_Retro_OvernightCost'] = tdat.CCS_Retro_OvernightCost * tdat['Summer.capacity']
+    tdat['wCCS_Retro_FOM'] = tdat.CCS_Retro_FOM * tdat['Summer.capacity']
+    tdat['wCCS_Retro_VOM'] = tdat.CCS_Retro_VOM * tdat['Summer.capacity']
+    tdat['wCCS_Retro_HR'] = tdat.CCS_Retro_HR * tdat['Summer.capacity']
+    tdat['wCCS_Retro_CapAdjust'] = tdat.CCS_Retro_CapAdjust * tdat['Summer.capacity']
+    tdat['wCCS_Retro_LocFactor'] = tdat.CCS_Retro_LocFactor * tdat['Summer.capacity']
 
     zout = pd.DataFrame()
-    level_cols = ['wHR', 'wVOM', 'wFOM', 'solveYearOnline']
+    level_cols = ['wHR', 'wVOM', 'wFOM', 'solveYearOnline','wCCS_Retro_OvernightCost',
+                  'wCCS_Retro_FOM','wCCS_Retro_VOM','wCCS_Retro_HR','wCCS_Retro_CapAdjust','wCCS_Retro_LocFactor']
+
     combine_cols = level_cols + ['Winter.capacity']
+
     # Adjust the hr, vom, fom, solveyearonline, and winter capacity
     for i in list(range(2010, tdat.RetireYear.max() + 1)):
         # subset on years earlier than i
-        ydat = tdat.loc[tdat.RetireYear > i,
-                        ['id', 'bin', 'Summer.capacity'] + combine_cols
-                        ]
+        ydat = tdat.loc[tdat.RetireYear > i, ['id', 'bin', 'Summer.capacity'] + combine_cols ]
+        
         # sum up the parameters by id and bin
         ydat = ydat.groupby(['id', 'bin']).sum()
 
@@ -421,7 +440,7 @@ def main(cwd, inputs_case):
         # paste dataframes together
         zout = pd.concat([zout, ydat])
         
-    # parse id
+    # Parse id
     zout.reset_index(inplace=True)
     if GSw_WaterMain == '1':
         zout['tech'] = zout.id.str.rsplit('_', n=1, expand=True)[0]
@@ -431,26 +450,32 @@ def main(cwd, inputs_case):
         zout['ba'] = zout.id.str.split('_', n=1, expand=True)[1]
     zout.drop(columns='id', inplace=True)
 
-    #    get dpv generators
-    dpv = (pd
-           .read_csv(os.path.join(cwd, 'inputs', 'dGen_Model_Inputs',
-                                  distpvscen,
-                                  'distPVcap_{}.csv'.format(distpvscen)
-                                  )
-                     )
-           .melt(id_vars='Unnamed: 0')
+    # Get dpv generators
+    dpv = (pd.read_csv(os.path.join(inputs_case,'distPVcap.csv'))
+           .set_index('Unnamed: 0')
            )
 
-    dpv.rename(columns=dict(zip(dpv.columns,
-                                ['ba', 'year', 'Summer.capacity'])),
+    # Fill in odd years' values for dpv (only add odd year data if that
+    # data does not already exist)
+    firstyr = int(dpv.columns.min())
+    lastyr = int(dpv.columns.max())
+    oddyrs = [str(x) for x in np.arange(firstyr,lastyr+1) if x % 2 != 0]
+    for yr in oddyrs:
+        if yr not in dpv.columns:
+            dpv[yr] = (dpv[str(int(yr)-1)] + dpv[str(int(yr)+1)]) / 2
+    dpv = pd.melt(dpv.reset_index(),id_vars=['Unnamed: 0'])
+    dpv.rename(columns=dict(zip(dpv.columns,['ba','year','Summer.capacity'])),
                inplace=True)
+    
+    # Filter dpv by valid regions
+    dpv = dpv.loc[dpv['ba'].isin(val_r)]
 
     ### Aggregate BAs if necessary
     if int(sw['GSw_AggregateRegions']):
-        dpv['ba'] = dpv['ba'].map(rb2aggreg)
+        dpv['ba'] = dpv['ba'].map(r2aggreg)
         dpv = dpv.groupby(['ba','year'], as_index=False).sum()
 
-    # initiate columns for dpv dataframe
+    # Initiate columns for dpv dataframe
     dpv['tech'] = 'distpv'
     dpv['wHR'] = 0
     dpv['wVOM'] = 0
@@ -459,23 +484,23 @@ def main(cwd, inputs_case):
     dpv['bin'] = 1
     dpv['solveYearOnline'] = 2010
 
-    # concat dpv and the output dataframes
+    # Concat dpv and the output dataframes
     zout = pd.concat([zout, dpv])
 
-    #get forced retirement dataframe and merge onto output dataframe
+    # Get forced retirement dataframe and merge onto output dataframe
     forced_retire = pd.read_csv(
-        os.path.join(cwd, "inputs", "state_policies", "forced_retirements.csv"),
+        os.path.join(reeds_path, "inputs", "state_policies", "forced_retirements.csv"),
         header=0, names=['tech','ba','retire_year'])
 
     zout = zout.merge(forced_retire,
                       how='left',
                       on=['tech', 'ba']).fillna(9000)
     
-    # zero out retired generators' capacity
+    # Zero out retired generators' capacity
     zout.loc[zout.solveYearOnline >= zout.retire_year, 'Summer.capacity'] = 0
     zout.loc[zout.solveYearOnline >= zout.retire_year, 'Winter.capacity'] = 0
     
-    # clean up output dataframe
+    # Clean up output dataframe
     zout['bin_int'] = zout['bin'] #keep integer bins in dataframe for ease of plotting
     zout['bin'] = 'init-' + zout['bin'].astype(str)
     zout['solveYearOnline'] = zout['solveYearOnline'].round()
@@ -492,10 +517,18 @@ def main(cwd, inputs_case):
     zout.wHR = zout.wHR.round(decimals=1)
     zout.wFOM = zout.wFOM.round(decimals=3)
     zout.wVOM = zout.wVOM.round(decimals=3)
-
+    zout.wCCS_Retro_OvernightCost = zout.wCCS_Retro_OvernightCost.round(decimals=3)
+    zout.wCCS_Retro_FOM = zout.wCCS_Retro_FOM.round(decimals=3)
+    zout.wCCS_Retro_VOM = zout.wCCS_Retro_VOM.round(decimals=3)
+    zout.wCCS_Retro_HR = zout.wCCS_Retro_HR.round(decimals=1)
+    zout.wCCS_Retro_CapAdjust = zout.wCCS_Retro_CapAdjust.round(decimals=3)
+    zout.wCCS_Retro_LocFactor = zout.wCCS_Retro_LocFactor.round(decimals=3)
+    
     # save output dataframe in inputs_case folder
     cols = ['TECH', 'bin', 'ba', 'yr', 'cap', 'wintercap', 'wHR',
-        'wFOM', 'wVOM', 'wOnlineYear']
+        'wFOM', 'wVOM', 'wOnlineYear',
+        'wCCS_Retro_OvernightCost','wCCS_Retro_FOM','wCCS_Retro_VOM', ### new addition: revised to include CCS retrofits
+        'wCCS_Retro_HR','wCCS_Retro_CapAdjust','wCCS_Retro_LocFactor']
 
     zout[cols].dropna().to_csv(os.path.join(inputs_case, 'hintage_data.csv'), index=False)
 
@@ -637,11 +670,16 @@ def main(cwd, inputs_case):
 if __name__ == '__main__':
     # %%
     parser = argparse.ArgumentParser()
-    parser.add_argument('cwd', type=str, help='Path to local ReEDS repo')
+    parser.add_argument('reeds_path', type=str, help='Path to local ReEDS repo')
     parser.add_argument('inputs_case', type=str)    
-
     args = parser.parse_args()
-    main(args.cwd, args.inputs_case)
+
+    #%% Set up logger
+    log = makelog(
+        scriptname=__file__, logpath=os.path.join(args.inputs_case,'..','gamslog.txt'))
+
+    main(args.reeds_path, args.inputs_case)
 
     toc(tic=tic, year=0, process='input_processing/WriteHintage.py', 
         path=os.path.join(args.inputs_case,'..'))
+  

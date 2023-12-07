@@ -6,10 +6,6 @@ import os
 import itertools
 import argparse
 import copy
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
 
 #%% Local imports
 import ferc_distadmin
@@ -31,8 +27,9 @@ tracelabels = {
     'op_vom_costs': 'Operation: Variable O&M',
     'op_operating_reserve_costs': 'Operation: Operating reserves',
     'op_fuelcosts_objfn': 'Operation: Fuel',
-    'op_rect_fuel_costs': 'Operation: RE-CT - Hydrogen',
-    'op_h2_transport_storage': 'Operation: Transport Storage - Hydrogen', 
+    'op_h2ct_fuel_costs': 'Operation: H2-CT - Hydrogen',
+    'op_h2_storage': 'Operation: Storage - Hydrogen', 
+    'op_h2_transport': 'Operation: Transport - Hydrogen', 
     'op_h2_fuel_costs': 'Operation: Fuel - Hydrogen', 
     'op_h2_vom': 'Operation: Variable O&M - Hydrogen',
     'op_co2_transport_storage': 'Operation: Transport Storage - CO2',
@@ -287,14 +284,9 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
 
     #%% Start calculations
     # Load regions
-    regions_map = pd.read_csv(os.path.join(run_dir, 'inputs_case', 'regions.csv')).rename(columns={'p':'r','st':'state'})
+    regions_map = pd.read_csv(os.path.join(run_dir, 'inputs_case', 'hierarchy.csv')).rename(columns={'*r':'r','st':'state'})
 
-    # In some instances, both 'p' and 's' regions can be in the 'r' column. 
-    # Renaming those columns 'region' to differentiate. 
     stacked_regions_map = regions_map[['r', 'state']].drop_duplicates().rename(columns={'r':'region'})
-    stacked_regions_map = pd.concat(
-        [stacked_regions_map, regions_map[['s', 'state']].drop_duplicates().rename(columns={'s':'region'})], 
-        ignore_index=True, sort=False)
     reedsregion2state = dict(zip(stacked_regions_map.region.values, stacked_regions_map.state.values))
     states = list(set(reedsregion2state.values()))
 
@@ -510,7 +502,8 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
 
     # Excluded costs
     op_costs_types_omitted = ['op_transmission_fom', 
-                              'op_h2_transport_storage', 
+                              'op_h2_storage',
+                              'op_h2_transport', 
                               'op_h2_fuel_costs', 
                               'op_h2_vom',
                               'op_consume_vom',
@@ -701,10 +694,10 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # Calculate the capital cost multipliers. This includes the construction interest multiplier 
     # and regional capital cost multipliers, but not other adjustments like the ITC or depreciation.
    
-    ccmult = read_file(os.path.join(run_dir, 'inputs_case', 'ccmult'))
-    reg_cap_cost_mult = read_file(os.path.join(run_dir, 'inputs_case', 'reg_cap_cost_mult'))
+    ccmult = pd.read_csv(os.path.join(run_dir, 'inputs_case', 'ccmult.csv'))
+    reg_cap_cost_mult = pd.read_csv(os.path.join(run_dir, 'inputs_case', 'reg_cap_cost_mult.csv'))
     cap_cost_mult = ccmult.merge(reg_cap_cost_mult, on='*i', how='outer')
-    cap_cost_mult[['CCmult', 'reg_cap_cost_mult']] = cap_cost_mult[['ccmult', 'reg_cap_cost_mult']].fillna(1.0)
+    cap_cost_mult[['CCmult', 'reg_cap_cost_mult']] = cap_cost_mult[['CCmult', 'reg_cap_cost_mult']].fillna(1.0)
     cap_cost_mult.rename(columns={'r':'region', '*i':'i'}, inplace=True)
     cap_cost_mult['cap_cost_mult_for_ratebase'] = cap_cost_mult['CCmult'] * cap_cost_mult['reg_cap_cost_mult']
 
@@ -788,7 +781,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
             emissions_r_fraction[col] = emissions_r[col] / emissions_r['Total']
         
         # Redistributing DAC costs by emissions fraction
-        cap_costs_dac = cost_cap[cost_cap['i']=='dac']
+        cap_costs_dac = cost_cap[cost_cap['i']=='dac'].fillna(0)
         cap_costs_dac.drop(['i', 'cap_cost_mult_for_ratebase'], axis=1, inplace=True)
         cap_costs_dac = cap_costs_dac.rename(columns={'region':'r'})
         cap_costs_dac = cap_costs_dac.reset_index(drop=True)
@@ -849,10 +842,8 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
 
     # Ingest evaluation period and tax depreciation schedule info for generators
     eval_period = read_file(os.path.join(run_dir, 'inputs_case', 'retail_eval_period'))
-    eval_period.rename(columns={'r':'region'}, inplace=True)
 
     depreciation_sch = read_file(os.path.join(run_dir,'inputs_case','retail_depreciation_sch'))
-    depreciation_sch.rename(columns={'r':'region'}, inplace=True)
     depreciation_sch['depreciation_sch'] = depreciation_sch['depreciation_sch'].astype(str)
 
     # Find tech-region-year combos for historical builds, 
@@ -862,23 +853,25 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # Expand eval_period for historical builds (assigning historical builds the earliest data)
     eval_period_init = init_irt.copy()
     eval_period_init = eval_period_init.merge(
-        eval_period[eval_period['t']==first_year][['i', 'region', 'eval_period']], 
-        on=['i', 'region'], how='left')
+        eval_period[eval_period['t']==first_year][['i', 'eval_period']], 
+        on='i', how='left')
     eval_period_init = eval_period_init[eval_period_init['t']<first_year]
-    eval_period = pd.concat([eval_period, eval_period_init], ignore_index=True, sort=False)
+    eval_period = pd.concat([eval_period, eval_period_init], ignore_index=True, sort=False).dropna()
 
     # Expand depreciation_sch for historical builds (assigning historical builds the earliest data)
     dep_sch_init = init_irt.copy()
     dep_sch_init = dep_sch_init.merge(
-        depreciation_sch[depreciation_sch['t']==first_year][['i', 'region', 'depreciation_sch']], 
-        on=['i', 'region'], how='left')
+        depreciation_sch[depreciation_sch['t']==first_year][['i', 'depreciation_sch']], 
+        on='i', how='left')
     dep_sch_init = dep_sch_init[dep_sch_init['t']<first_year]
-    depreciation_sch = pd.concat([depreciation_sch, dep_sch_init], ignore_index=True, sort=False)
+    depreciation_sch = pd.concat([depreciation_sch, dep_sch_init], ignore_index=True, sort=False).dropna()
 
     # Merge on eval_period, depreciation_sch, state, and cost category for generator capex
     df_gen_capex = df_gen_capex.merge(
         eval_period[['i', 'region', 't', 'eval_period']], 
         on=['i', 'region', 't'], how='left')
+    # Fill in any missing eval_period with the default 20 years
+    df_gen_capex['eval_period'].fillna(20, inplace = True)
     df_gen_capex = df_gen_capex.merge(
         depreciation_sch[['i', 'region', 't', 'depreciation_sch']], 
         on=['i', 'region', 't'], how='left')
@@ -898,7 +891,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         ], sort=False).reset_index(drop=True)
 
     #%% Add non-generator, within-ReEDS capital expenditures to df_capex
-    # Transmission, substations, converter, and intertie capital expenditures
+    # Transmission, converter, and intertie capital expenditures
     # These could be wrapped into various other cost types (intra-BA transmission,
     # distribution and transmission infrastructure, etc).
 
@@ -906,15 +899,14 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         columns=['cost_type', 'eval_period'],
         data=[[x,input_eval_periods[x]] for x in 
             ['inv_investment_spurline_costs_rsc_technologies','inv_transmission_line_investment',
-            'inv_converter_costs','inv_substation_investment_costs']])
+            'inv_converter_costs']])
 
     # Define and merge on the cost categories for these capital expenditures
     nongen_cost_cats = pd.DataFrame(
         columns=['i', 'cost_cat'],
         data = [['inv_investment_spurline_costs_rsc_technologies', 'cap_spurline'],
                 ['inv_transmission_line_investment', 'cap_transmission'],
-                ['inv_converter_costs', 'cap_converter'],
-                ['inv_substation_investment_costs', 'cap_substation']])
+                ['inv_converter_costs', 'cap_converter']])
 
     nongen_inv_cost_types = list(nongen_inv_eval_periods['cost_type'].drop_duplicates())
         
@@ -942,8 +934,9 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # allocate to states, and add to df_capex
 
     trans_cap_init = pd.read_csv(
-        os.path.join(run_dir, 'inputs_case', 'transmission_capacity_initial.csv'),
-        index_col=['r','rr','trtype'])[['MW']]
+        os.path.join(run_dir, 'inputs_case', 'trancap_init_energy.csv'),
+        index_col=['*r','rr','trtype'])[['MW']]
+    trans_cap_init.index.names = ['r','rr','trtype']
 
     trans_dist = pd.read_csv(
         os.path.join(run_dir, 'inputs_case', 'transmission_distance.csv')
@@ -1197,8 +1190,8 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     ### during overlap years. FERC trans_capex then roughly corresponds to intra-BA
     ### transmission, which isn't captured by ReEDS.
 
-    ### Get the ReEDS transmission (transmission, substation, and spur lines)
-    ### NOTE: cap_transmission and cap_substation have a 30-year eval_period,
+    ### Get the ReEDS transmission (transmission and spur lines)
+    ### NOTE: cap_transmission has a 30-year eval_period,
     ### while cap_spurline has a 20-year eval_period.
     trans_capex_reeds = (
         nongen_capex_distributed.groupby(['state','t'])['capex'].sum()
@@ -1585,7 +1578,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         # generation from generators that were built in that window. 
 
     ptc_values = pd.read_csv(
-        os.path.join(run_dir, 'inputs_case', 'ptc_values.csv')).rename(columns={'r':'region'})
+        os.path.join(run_dir, 'inputs_case', 'ptc_values.csv'))
     ### Reduce the PTC value by the tax equity penalty.
     ### Technically it would be more appropriate to treat the increased equity cost explicitly,
     ### but the final result is the same.
@@ -1605,13 +1598,6 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     ptc_values['ptc_value'] = ptc_values['ptc_value'] * ptc_values['tc_phaseout_mult']
     ptc_values['ptc_grossup_value'] = ptc_values['ptc_grossup_value'] * ptc_values['tc_phaseout_mult']
 
-    ptc_values = ptc_values.merge(
-        regions_map[['s', 'r']].rename(columns={'s':'region'}), on='region', how='left')
-    ptc_values['r'] = ptc_values['r'].fillna(ptc_values['region'])
-
-    # There are duplicate rows for areas where there are more than one resource region in a BA
-    ptc_values = ptc_values.drop_duplicates(['i', 'v', 'r', 't'], keep='first')
-
 
     # There is also a row for each year that a [i,v] combo was able to be built, but we can't
     #   apply each value to the full [i,v] generation each year. Very crudely just dividing
@@ -1621,10 +1607,10 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # ptc_values = (
     #     ptc_values.sort_values('t', ascending=False).drop_duplicates(['i', 'v', 'r'], keep='first'))
     ptc_values_count = (
-        ptc_values[['i','v','r','ptc_value']]
-        .groupby(['i', 'v', 'r'], as_index=False).count())
+        ptc_values[['i','v','ptc_value']]
+        .groupby(['i', 'v'], as_index=False).count())
     ptc_values = ptc_values.merge(
-        ptc_values_count.rename(columns={'ptc_value':'count'}), on=['i', 'v', 'r'], how='left')
+        ptc_values_count.rename(columns={'ptc_value':'count'}), on=['i', 'v'], how='left')
     ptc_values['ptc_value'] = ptc_values['ptc_value'] / ptc_values['count']
     ptc_values['ptc_grossup_value'] = ptc_values['ptc_grossup_value'] / ptc_values['count']
 
@@ -1642,7 +1628,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     ptc_values['t'] = ptc_values['t_start'] + ptc_values['ptc_year']
 
     # merge on the observed generation
-    ptc_values = ptc_values.merge(gen_ivrt, on=['i', 'v', 'r', 't'], how='left')
+    ptc_values = ptc_values.merge(gen_ivrt, on=['i', 'v', 't'], how='left')
 
     # Rows with nan's meant that there was a ptc available, but no [i,v] generation was there
     ptc_values = ptc_values[ptc_values['gen'].isnull()==False]
@@ -1677,7 +1663,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     trans_itc = pd.read_csv(os.path.join(run_dir, 'inputs_case', 'trans_itc_fractions.csv'))
     ### Multiply ITC fraction by transmission spending
     ##! NOTE: We're only applying the transmission ITC to inter-regional transmission line
-    ##! investment, because that's what is done in ReEDS. There's also substations,
+    ##! investment, because that's what is done in ReEDS. There's also 
     ##! converters, and FERC intra-regional transmission. Decide whether transmission ITC
     ##! should apply to those as well.
     if not len(trans_itc):
@@ -1728,8 +1714,9 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     stacked_country_map = regions_map[['r', 'country']].drop_duplicates().rename(columns={'r':'region'})
     stacked_country_map = pd.concat([
         stacked_country_map, 
-        regions_map[['s', 'country']].drop_duplicates().rename(columns={'s':'region'})
+        regions_map[['r', 'country']].drop_duplicates().rename(columns={'r':'region'})
         ], ignore_index=True, sort=False)
+    stacked_country_map['country'] = stacked_country_map['country'].str.lower()
     itc_value_df = df_gen_capex[['i', 'c', 'region', 't', 'capex', 'eval_period', 'state']].copy()
     itc_value_df = itc_value_df.merge(
         stacked_country_map[['region', 'country']], on='region', how='left')
@@ -1855,20 +1842,15 @@ def post_processing(dfplot):
     if 'special_costs' in dfplot:
         dfplot['op_admin'] += dfplot['special_costs']
         dfplot.drop('special_costs', axis=1, inplace=True)
-    ### Group 'op_rect_fuel_costs' into 'op_fuelcosts_objfn'
-    if 'op_rect_fuel_costs' in dfplot.columns:
-        dfplot['op_fuelcosts_objfn'] += dfplot['op_rect_fuel_costs']
-        dfplot.drop('op_rect_fuel_costs', axis=1, inplace=True)
-    ### Split substations 50/50 into transmission and distribution
+    ### Group 'op_h2ct_fuel_costs' into 'op_fuelcosts_objfn'
+    if 'op_h2ct_fuel_costs' in dfplot.columns:
+        dfplot['op_fuelcosts_objfn'] += dfplot['op_h2ct_fuel_costs']
+        dfplot.drop('op_h2ct_fuel_costs', axis=1, inplace=True)
     subcols = [
         'cap_{}_dep_expense','cap_{}_debt_interest',
         'cap_{}_equity_return','cap_{}_income_tax']
 
     for subcol in subcols:
-        if subcol.format('substation') in dfplot.columns:
-            dfplot[subcol.format('dist')] += (0.5 * dfplot[subcol.format('substation')])
-            dfplot[subcol.format('transmission')] += (0.5 * dfplot[subcol.format('substation')])
-            dfplot.drop(subcol.format('substation'), axis=1, inplace=True)
         ### Put AC/DC converters into transmission
         if subcol.format('converter') in dfplot:
             dfplot[subcol.format('transmission')] += dfplot[subcol.format('converter')]
@@ -2126,7 +2108,6 @@ def retail_plots(
         '_dist': 'Distribution',
         '_fom': 'Generation O&M,\noperating reserves',
         '_spurline': 'Spur lines',
-        '_substation': 'Substations',
         '_trans_FERC': 'Transmission:\nintra-region + O&M',
         '_transmission': 'Transmission: inter-region\n+ wind/solar spur lines',
         '_flow': 'Inter-state flows,\nworking capital',
@@ -2139,7 +2120,6 @@ def retail_plots(
         '_dist': plt.cm.RdYlBu(0.875),
         '_trans_FERC': plt.cm.RdYlBu(1.),
         '_spurline': plt.cm.RdYlBu(0.375),
-        '_substation': plt.cm.RdYlBu(0.375),
         '_transmission': plt.cm.RdYlBu(0.375),
         '_fom': plt.cm.RdYlBu(0.25),
         '_fuel': plt.cm.RdYlBu(0.125),
@@ -2177,7 +2157,7 @@ def retail_plots(
         + [
             mpl.patches.Patch(facecolor=catcolors[costcat], edgecolor='none', label=titles[costcat])
             for costcat in costcategories_ordered
-            if costcat not in ['_spurline', '_substation','op_']
+            if costcat not in ['_spurline', 'op_']
         ]
     )
     leg = ax.legend(
@@ -2250,16 +2230,6 @@ def retail_plots(
 if __name__ == '__main__':
     mdir = os.path.dirname(os.path.abspath(__file__))
 
-    #%% Time the operation of this script
-    import site
-    site.addsitedir(os.path.join(mdir,os.pardir,os.pardir,'input_processing'))
-    try:
-        from ticker import toc
-        import datetime
-        tic = datetime.datetime.now()
-    except:
-        pass
-    
     parser = argparse.ArgumentParser(description='run retail rate module')
     parser.add_argument('rundir', type=str,
                         help="name of run directory (leave out 'runs' and directory separators)")
@@ -2274,6 +2244,18 @@ if __name__ == '__main__':
     run_dir = os.path.join(mdir, os.pardir, os.pardir, 'runs', args.rundir)
     plot_dollar_year = args.plot_dollar_year
     startyear = args.startyear
+
+    #%% Time the operation of this script
+    import site
+    site.addsitedir(os.path.join(mdir,os.pardir,os.pardir,'input_processing'))
+    try:
+        from ticker import toc, makelog
+        import datetime
+        tic = datetime.datetime.now()
+        #%% Set up logger
+        log = makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
+    except:
+        pass
 
     #%% Get and write the component revenues
     main(

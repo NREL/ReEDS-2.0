@@ -19,8 +19,8 @@ import pandas as pd
 import numpy as np
 import os
 import sys
-import support_functions as sFuncs
-# import input_processing.support_functions as sFuncs
+import input_processing.support_functions as sFuncs
+from ReEDS_Augur.functions import makelog
 
 ##########
 #%% INPUTS
@@ -40,8 +40,8 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
         If tc phases to non-zero value, either enter that in the schedule or adjust code
     '''
     # #%% Debugging
-    # year = 2036
-    # case = os.path.expanduser('~/github2/ReEDS-2.0/runs/v20221109_ptcM0_ref_seq')
+    # year = 2035
+    # case = os.path.expanduser('~/github2/ReEDS-2.0/runs/v20230305_reccM0_ref_seq')
 
     #%% Get switches
     sw = pd.read_csv(
@@ -51,10 +51,6 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
     GSw_TCPhaseout_ref_year = int(sw.GSw_TCPhaseout_ref_year)
     GSw_TCPhaseout_start = int(sw.GSw_TCPhaseout_start)
     GSw_TCPhaseout_forceyear = int(sw.GSw_TCPhaseout_forceyear)
-
-    ### If not running for the whole US, turn off use_historical
-    if sw.GSw_Region.lower() != 'usa':
-        use_historical = False
 
     ### Set input/output path
     tc_file_dir = os.path.join(case, 'outputs', 'tc_phaseout_data')
@@ -153,8 +149,15 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
         # Calculate fraction of reference emissions
         df['emit_f'] = df['emit_nat'] / ref_emissions
 
+        print(f'ref_emissions: {ref_emissions}')
+        print('emit_nat / ref_emissions:')
+        print(df['emit_f'])
+
         # Identify which years fall below the trigger value
-        df_qual = df[df['emit_f']<=GSw_TCPhaseout_trigger_f].copy()
+        df_qual = df.loc[
+            (df['emit_f'] <= GSw_TCPhaseout_trigger_f)
+            & (df.index >= int(sw['GSw_StartMarkets']))
+        ].copy()
 
         # If at least one year fell below the trigger value,
         # identify it and find each tech's tc_phaseout_mult
@@ -218,9 +221,9 @@ if __name__ == '__main__':
     year = args.year
     case = args.case
 
-    #%% direct print and errors to log file
-    import sys
-    sys.stdout = open('gamslog.txt', 'a')
-    sys.stderr = open('gamslog.txt', 'a')
+    ### Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(case,'gamslog.txt'))
 
+    print(f'starting tc_phaseout.py for {year}')
     calc_tc_phaseout_mult(year, case, use_historical=use_historical)
+    print(f'finished tc_phaseout.py for {year}')

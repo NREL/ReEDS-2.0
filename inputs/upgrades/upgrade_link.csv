@@ -16,8 +16,8 @@ CoalOldScr_coal-CCS_max,CoalOldScr,coal-CCS_max
 CoalOldUns_coal-CCS_max,CoalOldUns,coal-CCS_max
 CofireNew_coal-CCS_max,CofireNew,coal-CCS_max
 CofireOld_coal-CCS_max,CofireOld,coal-CCS_max
-Gas-CT_RE-CT,Gas-CT,RE-CT
-Gas-CC_RE-CC,Gas-CC,RE-CC
+Gas-CT_H2-CT,Gas-CT,H2-CT
+Gas-CC_H2-CT,Gas-CC,H2-CT
 hydEND_hydED,hydEND,hydED
 hydED_pumped-hydro,hydED,pumped-hydro
 hydED_pumped-hydro-flex,hydED,pumped-hydro-flex

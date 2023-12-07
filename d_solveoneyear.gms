@@ -4,7 +4,6 @@ $ifthen.unix %system.filesys% == UNIX
 $setglobal ds /
 $endif.unix
 
-
 * globals needed for this file:
 * case : name of case you're running
 * cur_year : current year
@@ -12,13 +11,24 @@ $endif.unix
 *remove any load years
 tload(t) = no ;
 
+* --- reset tmodel ---
+tmodel(t) = no ;
+tmodel("%cur_year%") = yes ;
+
 $log 'Solving sequential case for...'
 $log '  Case: %case%'
 $log '  Year: %cur_year%'
 
+
+*** Define the h- and szn-dependent parameters
+$onMultiR
+$include d1_temporal_params.gms
+$offMulti
+
+
 * need to have values initialized before making adjustments
-* thus cannot perform m_rsc_dat adjustments until 2010 has solved
-$ifthene.rsccheck %cur_year%>2010
+* thus cannot perform these adjustments until 2010 has solved
+$ifthene.post2010 %cur_year%>2010
 * adjust the m_rsc_dat capacity upward to avoid infeasibilities
 * these are caused by floating point differences that occur in GAMS
 * which will report the model as infeasible before sending to CPLEX
@@ -30,8 +40,67 @@ m_rsc_dat(r,i,rscbin,"cap")$[m_rsc_dat(r,i,rscbin,"cap")] =
             INV_RSC.l(ii,v,r,rscbin,tt) * resourcescaler(ii) }
     ) ;
 
-$endif.rsccheck
+* set m_capacity_exog to the maximum of either its original amount
+* or the amount of upgraded capacity that has occurred in the past 20 years
+* to avoid forcing recently upgraded capacity into retirement
+if(Sw_Upgrades = 1,
 
+    m_capacity_exog(i,v,r,t)$[valcap(i,v,r,t)$sameas(t,"%cur_year%")
+                         $(sum{(ii,tt)$[(tt.val <= t.val)$(t.val - tt.val <= Sw_UpgradeLifespan)
+                                       $valcap(ii,v,r,tt)$upgrade_from(ii,i)], UPGRADES.l(ii,v,r,tt) } ) ] =
+* [maximum of] initial capacity recorded in d_solveprep
+                    max( m_capacity_exog0(i,v,r,t),
+* -or- capacity of upgrades that have occurred from this i v r t combination
+                    sum{(ii,tt)$[(tt.val <= t.val)$(t.val - tt.val <= Sw_UpgradeLifespan)
+                                 $valcap(ii,v,r,tt)$upgrade_from(ii,i)],
+                                 UPGRADES.l(ii,v,r,tt) / (1-upgrade_derate(ii,v,r,tt)) }
+    ) ;
+
+) ;
+
+* if the relative growth constraint is turned on, then calculate the growth
+* limits for each growth bin
+if(Sw_GrowthRelCon > 0,
+
+* Calculate the maximum deployment that could have been achieved in the last modeled
+* year. For example, if tmodel is 2023 and the prior two solve years were 2020 and 
+* 2015, then we are calculating the maximum deployment that could have occured in
+* 2020 at the growth rate specified in gbin1. This requires looking back to tprev
+* and the solve year before tprev, hence the need for the yeart(ttt).
+* The denominator is simply a discount term, and the multiplication is an associated
+* compounding term.
+    last_year_max_growth(st,tg,t)$tmodel(t) = 
+        sum{(i,v,r,tt)$[valinv(i,v,r,tt)$r_st(r,st)$tg_i(tg,i)$tprev(t,tt)],
+            INV.l(i,v,r,tt) } 
+        / sum{allt$[(allt.val>sum{tt$tprev(t,tt), sum{ttt$tprev(tt,ttt), yeart(ttt) } })
+                   $(allt.val<=sum{tt$tprev(t,tt), yeart(tt) })],
+              (growth_bin_size_mult("gbin1") ** (allt.val - sum{tt$tprev(t,tt), sum{ttt$tprev(tt,ttt), yeart(ttt) } } - 1)) }
+        * (growth_bin_size_mult("gbin1") ** ((sum{tt$tprev(t,tt), yeart(tt) - sum{ttt$tprev(tt,ttt), yeart(ttt) } }) - 1)) ;
+
+* Now calculate the growth bin size for the current solve year, assuming that the 
+* maximum growth allowed in gbin1 happens each year over the current solve period.
+    growth_bin_limit("gbin1",st,tg,t)$tmodel(t) = 
+        sum{allt$[(allt.val>sum{tt$tprev(t,tt), yeart(tt) })
+                 $(allt.val<=yeart(t))],
+            last_year_max_growth(st,tg,t) * growth_bin_size_mult("gbin1") ** (allt.val - sum{tt$tprev(t,tt), yeart(tt) }) }
+        / (yeart(t) - sum{tt$tprev(t,tt), yeart(tt) }) ;
+
+* Do not allow growth_bin_limit to decline over time (i.e., if a higher growth
+* rate was achieved in the past, allow the model to start from that higher level)
+    growth_bin_limit("gbin1",st,tg,t)$tmodel(t) = smax{tt, growth_bin_limit("gbin1",st,tg,tt) } ;
+   
+* If the calculated  gbin1 value is less than the minimum bin size, then set it to the minimum bin size
+    growth_bin_limit("gbin1",st,tg,t)$[tmodel(t)$(growth_bin_limit("gbin1",st,tg,t) < gbin_min(tg))$stfeas(st)] = gbin_min(tg) ;
+
+* Now set the size of the remaining bins
+    growth_bin_limit(gbin,st,tg,t)$[tmodel(t)$(not sameas(gbin,"gbin1"))] = 
+        growth_bin_limit("gbin1",st,tg,t) * (growth_bin_size_mult(gbin) - growth_bin_size_mult("gbin1")) ;
+
+    growth_bin_limit(gbin,st,tg,t)$growth_bin_limit(gbin,st,tg,t) = round(growth_bin_limit(gbin,st,tg,t),0) ;
+
+) ;
+
+$endif.post2010
 
 *load in results from the cc/curtailment scripts
 $ifthene.tcheck %cur_year%>%GSw_SkipAugurYear%
@@ -42,74 +111,25 @@ tload("%cur_year%") = yes ;
 *file written by ReEDS_Augur.py
 * loaddcr = domain check (dc) + overwrite values storage previously (r)
 $gdxin ReEDS_Augur%ds%augur_data%ds%ReEDS_Augur_%prev_year%.gdx
-$loaddcr curt_old_load = curt_old
-$loaddcr curt_mingen_load = curt_mingen
-$loaddcr curt_marg_load = curt_marg
 $loaddcr cc_old_load = cc_old
 $loaddcr cc_mar_load = cc_mar
 $loaddcr cc_dr_load = cc_dr
 $loaddcr sdbin_size_load = sdbin_size
-$loaddcr curt_stor_load = curt_stor
-$loadr curt_dr_load = curt_dr
-$loaddcr curt_tran_load = curt_tran
-$loaddcr storage_in_min_load = storage_in_min
-$loaddcr hourly_arbitrage_value_load = hourly_arbitrage_value
-$loaddcr net_load_adj_no_curt_h_load = net_load_adj_no_curt_h
-$loaddcr storage_starting_soc_load = storage_starting_soc
-$loaddcr cap_fraction_load = ret_frac
-$loaddcr curt_prod_load = curt_prod
 $gdxin
 
 *Note: these values are rounded before they are written to the gdx file, so no need to round them here
-cap_fraction(i,v,r,t)$tload(t) = cap_fraction_load(i,v,r,t) ;
-curt_old(r,h,t)$[tload(t)$Sw_AugurCurtailment] = curt_old_load(r,h,t) ;
-curt_mingen(r,h,t)$[tload(t)$Sw_AugurCurtailment] = curt_mingen_load(r,h,t) ;
-curt_marg(i,r,h,t)$[tload(t)$Sw_AugurCurtailment] = curt_marg_load(i,r,h,t) ;
 
-cc_old(i,rb,szn,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] = sum{ccreg$r_ccreg(rb,ccreg), cc_old_load(i,rb,ccreg,szn,t) } ;
-m_cc_mar(i,rb,szn,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] = sum{ccreg$r_ccreg(rb,ccreg), cc_mar_load(i,rb,ccreg,szn,t) } ;
+* assign old and marginal capacity credit parameters to those
+* corresponding to each balancing areas cc region
+cc_old(i,r,szn,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] =
+    sum{ccreg$r_ccreg(r,ccreg), cc_old_load(i,r,ccreg,szn,t) } ;
 
-cc_old(i,rs,szn,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] = sum{ccreg$rs_ccreg(rs,ccreg), cc_old_load(i,rs,ccreg,szn,t) } ;
-m_cc_mar(i,rs,szn,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] = sum{ccreg$rs_ccreg(rs,ccreg), cc_mar_load(i,rs,ccreg,szn,t) } ;
+m_cc_mar(i,r,szn,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] =
+    sum{ccreg$r_ccreg(r,ccreg), cc_mar_load(i,r,ccreg,szn,t) } ;
 
 m_cc_dr(i,r,szn,t)$[tload(t)$dr(i)] = cc_dr_load(i,r,szn,t) ;
 
 sdbin_size(ccreg,szn,sdbin,t)$tload(t) = sdbin_size_load(ccreg,szn,sdbin,t) ;
-
-curt_stor(i,v,r,h,src,t)$[tload(t)$Sw_AugurCurtailment$valcap(i,v,r,t)$(storage_standalone(i) or pvb(i))] = curt_stor_load(i,v,r,h,src,t) ;
-curt_dr(i,v,r,h,src,t)$[tload(t)$Sw_AugurCurtailment$valcap(i,v,r,t)$dr1(i)] = curt_dr_load(i,v,r,h,src,t) ;
-curt_tran(r,rr,h,t)$[tload(t)$Sw_AugurCurtailment$rfeas(r)$rfeas(rr)$rb(r)$rb(rr)$(not sameas(r,rr))
-                     $sum{(n,nn,trtype)$routes_inv(n,nn,trtype,t), translinkage(r,rr,n,nn,trtype)}
-                    ] = curt_tran_load(r,rr,h,t) ;
-
-storage_in_min(r,h,t)$[tload(t)$Sw_AugurCurtailment$sum{(i,v)$storage_standalone(i), valcap(i,v,r,t)}] = storage_in_min_load(r,h,t) ;
-* Ensure storage_in_min doesn't exceed max input capacity when input capacity < generation capacity
-* and when storage_duration_m < storage_duration. Multiple terms are necessary to allow for alternative
-* swich settings and cases when input capacity > generation capacity and/or storage_duration_m > storage_duration
-* TODO: Pass plant-specific input capacity and duration to Augur and use there
-storage_in_min(r,h,t)$storage_in_min(r,h,t) =
-    min(storage_in_min(r,h,t),
-* scaling by plant-specific pump capacity and storage duration
-        sum{(i,v) , ( (storage_duration_m(i,v,r) / storage_duration(i))$storage_duration(i) + 1$(not storage_duration(i)) )
-                    * avail(i,h) * sum{rr$cap_agg(r,rr), storinmaxfrac(i,v,rr) * sum{tt$tprev(t,tt), CAP.l(i,v,rr,tt)} } } ,
-* scaling by plant-specific storage duration
-        sum{(i,v) , ( (storage_duration_m(i,v,r) / storage_duration(i))$storage_duration(i) + 1$(not storage_duration(i)) )
-                    * avail(i,h) * sum{(rr,tt)$[tprev(t,tt)$cap_agg(r,rr)], CAP.l(i,v,rr,tt)} } ,
-* scaling by plant-specific pump capacity
-        sum{(i,v) , avail(i,h) * sum{rr$cap_agg(r,rr), storinmaxfrac(i,v,rr) * sum{tt$tprev(t,tt), CAP.l(i,v,rr,tt)} } }
-    ) ;
-hourly_arbitrage_value(i,r,t)$[tload(t)$valcap_irt(i,r,t)$(storage_standalone(i) or hyd_add_pump(i) or pvb(i))] = hourly_arbitrage_value_load(i,r,t) ;
-net_load_adj_no_curt_h(r,h,t)$[rfeas(r)$tload(t)$Sw_AugurCurtailment] = net_load_adj_no_curt_h_load(r,h,t) ;
-
-storage_soc_exog(i,v,r,h,t)$[storage(i)$Sw_Hourly$(not Sw_HourlyWrap)
-                            $starting_hour(h)$tload(t)$valcap(i,v,r,t)] =
-                    storage_starting_soc_load(i,v,r,h,t) ;
-
-*Upgrades - used for hydropower upgraded to add pumping
-curt_stor(i,v,r,h,src,t)$[tload(t)$Sw_AugurCurtailment$upgrade(i)$storage_standalone(i)$valcap(i,v,r,t)] =
-        smax(vv, sum{ii$upgrade_to(i,ii), curt_stor(ii,vv,r,h,src,t) } ) ;
-hourly_arbitrage_value(i,r,t)$[tload(t)$upgrade(i)$(storage_standalone(i) or hyd_add_pump(i))$valcap_irt(i,r,t)] =
-        sum{ii$upgrade_to(i,ii), hourly_arbitrage_value(ii,r,t) } ;
 
 * --- Assign hybrid PV+battery capacity credit ---
 $ontext
@@ -125,33 +145,9 @@ m_cc_mar(i,r,szn,t)$[tload(t)$pvb(i)] = min{ m_cc_mar(i,r,szn,t), 1 / ilr(i) - b
 
 * old capacity credit
 * (1) convert cc_old from MW to a fractional basis, (2) adjust the fractional value to be less than 1/ILR - BCR, (3) multiply by CAP to convert back to MW
-cc_old(i,r,szn,t)$[tload(t)$pvb(i)$sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)}] = min{ cc_old(i,r,szn,t) / sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)}, 1 / ilr(i) - bcr(i) } * sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)};
-
-* --- Assign hybrid PV+battery curtailment ---
-*curt_int is only used in the intertemporal solve, so ensure it is set to zero
-curt_int(i,r,h,t) = 0 ;
-
-curt_prod(r,h,t)$[rfeas(r)$tload(t)$Sw_AugurCurtailment] = min{1 , curt_prod_load(r,h,t) } ;
-
-*getting mingen level after accounting for retirements
-mingen_postret(r,szn,t)$[sum{tt$tprev(t,tt), MINGEN.l(r,szn,tt) }$tload(t)] =
-                  sum{tt$tprev(t,tt), MINGEN.l(r,szn,tt) }
-                  - sum{(i,v)$[sum{tt$tprev(t,tt), valgen(i,v,r,tt) }], cap_fraction(i,v,r,t)
-                  * smax{h$h_szn(h,szn), sum{tt$tprev(t,tt), GEN.l(i,v,r,h,tt) }  * minloadfrac(r,i,h) } } ;
-
-* Replacing h3 with h17 values - this was originally done in Augur to simplify hardcoding
-* note this depends on Sw_Flex given that we only want to replace these values with
-* the default, h17 temporal resolution and not representative days/weeks/...
-if(Sw_Hourly = 0,
- curt_marg(i,r,"h17",t)$[curt_marg(i,r,"h3",t)$tload(t)$rfeas_cap(r)] = curt_marg(i,r,"h3",t) ;
- curt_mingen(r,"h17",t)$[curt_mingen(r,"h3",t)$tload(t)$rfeas_cap(r)] = curt_mingen(r,"h3",t) ;
- curt_old(r,"h17",t)$[curt_old(r,"h3",t)$tload(t)$rfeas_cap(r)] = curt_old(r,"h3",t) ;
- curt_prod(r,"h17",t)$[rfeas(r)$tload(t)] = curt_prod(r,"h3",t) ;
- curt_stor(i,v,r,"h17",src,t)$[curt_stor(i,v,r,"h3",src,t)$tload(t)$rfeas_cap(r)] = curt_stor(i,v,r,"h3",src,t) ;
- curt_tran(r,rr,"h17",t)$[curt_tran(r,rr,"h3",t)$tload(t)$rfeas_cap(r)] = curt_tran(r,rr,"h3",t) ;
- net_load_adj_no_curt_h(r,"h17",t)$[tload(t)] = net_load_adj_no_curt_h(r,"h3",t) ;
- storage_in_min(r,"h17",t)$[storage_in_min(r,"h3",t)$tload(t)$rfeas_cap(r)] = storage_in_min(r,"h3",t) ;
-) ;
+cc_old(i,r,szn,t)$[tload(t)$pvb(i)$sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)}] =
+    min{ cc_old(i,r,szn,t) / sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)}, 1 / ilr(i) - bcr(i) }
+    * sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)};
 
 $endif.tcheck
 
@@ -171,30 +167,34 @@ if(Sw_TCPhaseout > 0,
 * the cur_year-available vintage but can be updated for vintages whose
 * first year hasn't solved yet. i.e. tc_phaseout_mult will remain constant for all
 * current and historically-buildable plants but future plants may get updated.
-tc_phaseout_mult(i,v,t)$[tload(t)$(firstyear_v(i,v)>=%cur_year%)] = 
+tc_phaseout_mult(i,v,t)$[tload(t)$(firstyear_v(i,v)>=%cur_year%)] =
     tc_phaseout_mult_t(i,t) ;
 );
 
 * --- Start calculations of cost_cap_fin_mult family of parameters --- *
 * These are calculated here because the ITC phaseout can influence these parameters,
 * and the timing of the phaseout is not known beforehand.
-cost_cap_fin_mult(i,r,t) = ccmult(i,t) / (1.0 - tax_rate(t)) 
+cost_cap_fin_mult(i,r,t) = ccmult(i,t) / (1.0 - tax_rate(t))
     * (1.0-tax_rate(t) * (1.0 - (itc_frac_monetized(i,t) * tc_phaseout_mult_t(i,t)/2.0) )
     * pv_frac_of_depreciation(i,t) - itc_frac_monetized(i,t) * tc_phaseout_mult_t(i,t))
-    * degradation_adj(i,t) * financing_risk_mult(i,t) * reg_cap_cost_mult(i,r) 
-    * eval_period_adj_mult(i,t) * (1.0+supply_chain_adj(t)) ;
+    * degradation_adj(i,t) * financing_risk_mult(i,t) * reg_cap_cost_mult(i,r)
+    * eval_period_adj_mult(i,t) ;
 
-cost_cap_fin_mult_noITC(i,r,t) = ccmult(i,t) / (1.0 - tax_rate(t)) 
-    * (1.0-tax_rate(t)*pv_frac_of_depreciation(i,t)) * degradation_adj(i,t) 
-    * financing_risk_mult(i,t) * reg_cap_cost_mult(i,r) * eval_period_adj_mult(i,t) 
-    * (1.0+supply_chain_adj(t) );
+cost_cap_fin_mult_noITC(i,r,t) = ccmult(i,t) / (1.0 - tax_rate(t))
+    * (1.0-tax_rate(t)*pv_frac_of_depreciation(i,t)) * degradation_adj(i,t)
+    * financing_risk_mult(i,t) * reg_cap_cost_mult(i,r) * eval_period_adj_mult(i,t) ;
 
-cost_cap_fin_mult_no_credits(i,r,t) = ccmult(i,t) * reg_cap_cost_mult(i,r) * (1.0+supply_chain_adj(t)) ;
+cost_cap_fin_mult_no_credits(i,r,t) = ccmult(i,t) * reg_cap_cost_mult(i,r) ;
 
 * Assign the PV portion of PVB the value of UPV
-cost_cap_fin_mult_pvb_p(i,r,t)$pvb(i) = sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_cap_fin_mult(ii,r,t) } ;
-cost_cap_fin_mult_pvb_p_noITC(i,r,t)$pvb(i) = sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_cap_fin_mult_noITC(ii,r,t) } ;
-cost_cap_fin_mult_pvb_p_no_credits(i,r,t)$pvb(i) = sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_cap_fin_mult_no_credits(ii,r,t) } ;
+cost_cap_fin_mult_pvb_p(i,r,t)$pvb(i) =
+    sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_cap_fin_mult(ii,r,t) } ;
+
+cost_cap_fin_mult_pvb_p_noITC(i,r,t)$pvb(i) =
+    sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_cap_fin_mult_noITC(ii,r,t) } ;
+
+cost_cap_fin_mult_pvb_p_no_credits(i,r,t)$pvb(i) =
+    sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_cap_fin_mult_no_credits(ii,r,t) } ;
 
 * In the financing module (python), PVB refers to the battery portion of the hybrid.
 * This convention is used to estimate the ITC benefit for the battery.
@@ -208,25 +208,25 @@ cost_cap_fin_mult_pvb_b_no_credits(i,r,t)$pvb(i) = cost_cap_fin_mult_no_credits(
 *   (1) the cost of each portion: PV=cost_cap_pvb_p; Battery=cost_cap_pvb_b
 *   (2) the relative size of each portion: PV=1; Battery=bcr
 * The "-1" and "+1" values are needed because the multipliers are adjustments off of 1.0
-cost_cap_fin_mult(i,r,t)$pvb(i) = ((cost_cap_fin_mult_pvb_p(i,r,t) - 1) * cost_cap_pvb_p(i,t)
-                                   + bcr(i) * (cost_cap_fin_mult_pvb_b(i,r,t) - 1) * cost_cap_pvb_b(i,t))
-                                   / (cost_cap_pvb_p(i,t) + bcr(i) * cost_cap_pvb_b(i,t)) + 1 ;
+cost_cap_fin_mult(i,r,t)$pvb(i) =
+    ( (cost_cap_fin_mult_pvb_p(i,r,t) - 1) * cost_cap_pvb_p(i,t)
+    + bcr(i) * (cost_cap_fin_mult_pvb_b(i,r,t) - 1) * cost_cap_pvb_b(i,t) )
+    / (cost_cap_pvb_p(i,t) + bcr(i) * cost_cap_pvb_b(i,t)) + 1 ;
 
-cost_cap_fin_mult_noITC(i,r,t)$pvb(i) = ((cost_cap_fin_mult_pvb_p_noITC(i,r,t) - 1) * cost_cap_pvb_p(i,t)
-                                        + bcr(i) * (cost_cap_fin_mult_pvb_b_noITC(i,r,t) - 1) * cost_cap_pvb_b(i,t))
-                                        / (cost_cap_pvb_p(i,t) + bcr(i) * cost_cap_pvb_b(i,t)) + 1 ;
+cost_cap_fin_mult_noITC(i,r,t)$pvb(i) =
+    ( (cost_cap_fin_mult_pvb_p_noITC(i,r,t) - 1) * cost_cap_pvb_p(i,t)
+    + bcr(i) * (cost_cap_fin_mult_pvb_b_noITC(i,r,t) - 1) * cost_cap_pvb_b(i,t) )
+    / (cost_cap_pvb_p(i,t) + bcr(i) * cost_cap_pvb_b(i,t)) + 1 ;
 
-cost_cap_fin_mult_no_credits(i,r,t)$pvb(i) = ((cost_cap_fin_mult_pvb_p_no_credits(i,r,t) - 1) * cost_cap_pvb_p(i,t)
-                                             + bcr(i) * (cost_cap_fin_mult_pvb_b_no_credits(i,r,t) - 1) * cost_cap_pvb_b(i,t))
-                                             / (cost_cap_pvb_p(i,t) + bcr(i) * cost_cap_pvb_b(i,t)) + 1 ;
-
-cost_cap_fin_mult_noITC(i,r,t)$geo(i) = cost_cap_fin_mult_noITC("geothermal",r,t) ;
-cost_cap_fin_mult_no_credits(i,r,t)$geo(i) = cost_cap_fin_mult_no_credits("geothermal",r,t) ;
+cost_cap_fin_mult_no_credits(i,r,t)$pvb(i) =
+    ((cost_cap_fin_mult_pvb_p_no_credits(i,r,t) - 1) * cost_cap_pvb_p(i,t)
+    + bcr(i) * (cost_cap_fin_mult_pvb_b_no_credits(i,r,t) - 1) * cost_cap_pvb_b(i,t))
+    / (cost_cap_pvb_p(i,t) + bcr(i) * cost_cap_pvb_b(i,t)) + 1 ;
 
 * --- Upgrades ---
 *Assign upgraded techs the same multipliers as the techs they are upgraded from
-cost_cap_fin_mult(i,r,t)$[upgrade(i)$rfeas(r)] = sum{ii$upgrade_from(i,ii), cost_cap_fin_mult(ii,r,t) } ;
-cost_cap_fin_mult_noITC(i,r,t)$[upgrade(i)$rfeas(r)] = sum{ii$upgrade_from(i,ii), cost_cap_fin_mult_noITC(ii,r,t) } ;
+cost_cap_fin_mult(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult(ii,r,t) } ;
+cost_cap_fin_mult_noITC(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult_noITC(ii,r,t) } ;
 
 if(Sw_WaterMain=1,
 cost_cap_fin_mult(i,r,t)$i_water_cooling(i) =
@@ -234,94 +234,60 @@ cost_cap_fin_mult(i,r,t)$i_water_cooling(i) =
 
 cost_cap_fin_mult_noITC(i,r,t)$i_water_cooling(i) =
     sum{(ii)$[ctt_i_ii(i,ii)], cost_cap_fin_mult_noITC(ii,r,t) } ;
+
+cost_cap_fin_mult_no_credits(i,r,t)$i_water_cooling(i) =
+    sum{(ii)$[ctt_i_ii(i,ii)], cost_cap_fin_mult_no_credits(ii,r,t) } ;
 ) ;
 
 * --- Nuclear Ban ---
 *Assign increased cost multipliers to regions with state nuclear bans
 if(Sw_NukeStateBan = 2,
-  cost_cap_fin_mult(i,r,t)$[nuclear(i)$nuclear_ba_ban(r)] = cost_cap_fin_mult(i,r,t) * nukebancostmult ;
-  cost_cap_fin_mult_noITC(i,r,t)$[nuclear(i)$nuclear_ba_ban(r)] = cost_cap_fin_mult_noITC(i,r,t) * nukebancostmult ;
+  cost_cap_fin_mult(i,r,t)$[nuclear(i)$nuclear_ba_ban(r)] =
+    cost_cap_fin_mult(i,r,t) * nukebancostmult ;
+
+  cost_cap_fin_mult_noITC(i,r,t)$[nuclear(i)$nuclear_ba_ban(r)] =
+    cost_cap_fin_mult_noITC(i,r,t) * nukebancostmult ;
 ) ;
 
 * Start by setting all multipliers to 1
 rsc_fin_mult(i,r,t)$[valcap_irt(i,r,t)$rsc_i(i)] = 1 ;
 rsc_fin_mult_noITC(i,r,t)$[valcap_irt(i,r,t)$rsc_i(i)] = 1 ;
 
-*Hydro, pumped-hydro, and geo have capital costs included in the supply curve, so change their multiplier to be the same as cost_cap_fin_mult
-rsc_fin_mult(i,r,t)$geo(i) = cost_cap_fin_mult('geothermal',r,t) ;
+*Hydro and pumped-hydrohave capital costs included in the supply curve,
+* so change their multiplier to be the same as cost_cap_fin_mult
 rsc_fin_mult(i,r,t)$hydro(i) = cost_cap_fin_mult('hydro',r,t) ;
 rsc_fin_mult(i,r,t)$psh(i) = cost_cap_fin_mult(i,r,t) ;
-rsc_fin_mult_noITC(i,r,t)$geo(i) = cost_cap_fin_mult_noITC('geothermal',r,t) ;
 rsc_fin_mult_noITC(i,r,t)$hydro(i) = cost_cap_fin_mult_noITC('hydro',r,t) ;
 rsc_fin_mult_noITC(i,r,t)$psh(i) = cost_cap_fin_mult_noITC(i,r,t) ;
 
-* Apply cost reduction multipliers
-rsc_fin_mult(i,r,t)$geo(i) = rsc_fin_mult(i,r,t) * sum{geotech$i_geotech(i,geotech), geocapmult(t,geotech) } ;
-rsc_fin_mult_noITC(i,r,t)$geo(i) = rsc_fin_mult_noITC(i,r,t) * sum{geotech$i_geotech(i,geotech), geocapmult(t,geotech) } ;
+* Apply cost reduction multipliers for geothermal hydro and offshore wind
 rsc_fin_mult(i,r,t)$[hydro(i) or psh(i)] = rsc_fin_mult(i,r,t) * hydrocapmult(t,i) ;
 rsc_fin_mult_noITC(i,r,t)$[hydro(i) or psh(i)] = rsc_fin_mult_noITC(i,r,t) * hydrocapmult(t,i) ;
 rsc_fin_mult(i,r,t)$ofswind(i) = rsc_fin_mult(i,r,t) * ofswind_rsc_mult(t,i) ;
 rsc_fin_mult_noITC(i,r,t)$ofswind(i) = rsc_fin_mult_noITC(i,r,t) * ofswind_rsc_mult(t,i) ;
 
-$ifthen.sregfin %GSw_IndividualSites% == 1
-* For individual sites, we add the following "_rb" parameters to calculate financial multipliers
-* at the BA-level, using a strict average of the resource regions within each BA. These BA-level
-* parameters are then applied uniformly to the individual sites within that BA.
-
-cost_cap_fin_mult_rb(i,rb,t)$sum{rr$[cap_agg(rb,rr)$cost_cap_fin_mult(i,rr,t)], 1 } =
-    sum{rr$[cap_agg(rb,rr)$cost_cap_fin_mult(i,rr,t)], cost_cap_fin_mult(i,rr,t) }
-   /sum{rr$[cap_agg(rb,rr)$cost_cap_fin_mult(i,rr,t)], 1 }
-;
-
-cost_cap_fin_mult_noITC_rb(i,rb,t)$sum{rr$[cap_agg(rb,rr)$cost_cap_fin_mult_noITC(i,rr,t)], 1 } =
-    sum{rr$[cap_agg(rb,rr)$cost_cap_fin_mult_noITC(i,rr,t)], cost_cap_fin_mult_noITC(i,rr,t) }
-   /sum{rr$[cap_agg(rb,rr)$cost_cap_fin_mult_noITC(i,rr,t)], 1 }
-;
-
-cost_cap_fin_mult_no_credits_rb(i,rb,t)$sum{rr$[cap_agg(rb,rr)$cost_cap_fin_mult_no_credits(i,rr,t)], 1 } =
-    sum{rr$[cap_agg(rb,rr)$cost_cap_fin_mult_no_credits(i,rr,t)], cost_cap_fin_mult_no_credits(i,rr,t) }
-   /sum{rr$[cap_agg(rb,rr)$cost_cap_fin_mult_no_credits(i,rr,t)], 1 }
-;
-
-rsc_fin_mult_rb(i,rb,t)$sum{rr$[cap_agg(rb,rr)$rsc_fin_mult(i,rr,t)], 1 } =
-    sum{rr$[cap_agg(rb,rr)$rsc_fin_mult(i,rr,t)], rsc_fin_mult(i,rr,t) }
-   /sum{rr$[cap_agg(rb,rr)$rsc_fin_mult(i,rr,t)], 1 }
-;
-
-rsc_fin_mult_noITC_rb(i,rb,t)$sum{rr$[cap_agg(rb,rr)$rsc_fin_mult_noITC(i,rr,t)], 1 } =
-    sum{rr$[cap_agg(rb,rr)$rsc_fin_mult_noITC(i,rr,t)], rsc_fin_mult_noITC(i,rr,t) }
-   /sum{rr$[cap_agg(rb,rr)$rsc_fin_mult_noITC(i,rr,t)], 1 }
-;
-
-cost_cap_fin_mult(i,r,t)$[wind(i)$valcap_irt(i,r,t)] = sum{rb$cap_agg(rb,r), cost_cap_fin_mult_rb(i,rb,t) } ;
-cost_cap_fin_mult_noITC(i,r,t)$[wind(i)$valcap_irt(i,r,t)] = sum{rb$cap_agg(rb,r), cost_cap_fin_mult_noITC_rb(i,rb,t) } ;
-cost_cap_fin_mult_no_credits(i,r,t)$[wind(i)$valcap_irt(i,r,t)] = sum{rb$cap_agg(rb,r), cost_cap_fin_mult_no_credits_rb(i,rb,t) } ;
-rsc_fin_mult(i,r,t)$[wind(i)$valcap_irt(i,r,t)] = sum{rb$cap_agg(rb,r), rsc_fin_mult_rb(i,rb,t) } ;
-rsc_fin_mult_noITC(i,r,t)$[wind(i)$valcap_irt(i,r,t)] = sum{rb$cap_agg(rb,r), rsc_fin_mult_noITC_rb(i,rb,t) } ;
-$endif.sregfin
-
 *trimming the cost_cap_fin_mult parameters to reduce file sizes
-cost_cap_fin_mult(i,r,t)$[(not valinv_irt(i,r,t))$(not upgrade(i))$(not sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) })
+cost_cap_fin_mult(i,r,t)$[(not valinv_irt(i,r,t))$(not upgrade(i))
+                         $(not sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) })
                          $(not sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) })] = 0 ;
 
 cost_cap_fin_mult_noITC(i,r,t)$[(not valinv_irt(i,r,t))$(not upgrade(i))
-                                $(not sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) })
-                                $(not sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) })] = 0 ;
+                               $(not sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) })
+                               $(not sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) })] = 0 ;
 
 cost_cap_fin_mult_no_credits(i,r,t)$[(not valinv_irt(i,r,t))$(not upgrade(i))
                                     $(not sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) })
                                     $(not sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) })] = 0 ;
 
 *round the cost_cap_fin_mult parameters, since they were re-calculated
-cost_cap_fin_mult(i,r,t)$[valinv_irt(i,r,t) or upgrade(i) or sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) }
-                         or sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) }] = round(cost_cap_fin_mult(i,r,t),3) ;
+cost_cap_fin_mult(i,r,t)$cost_cap_fin_mult(i,r,t)
+  = round(cost_cap_fin_mult(i,r,t),3) ;
 
-cost_cap_fin_mult_noITC(i,r,t)$[valinv_irt(i,r,t) or upgrade(i) or sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) }
-                               or sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) }] = round(cost_cap_fin_mult_noITC(i,r,t),3) ;
+cost_cap_fin_mult_noITC(i,r,t)$cost_cap_fin_mult_noITC(i,r,t)
+  = round(cost_cap_fin_mult_noITC(i,r,t),3) ;
 
-cost_cap_fin_mult_no_credits(i,r,t)$[valinv_irt(i,r,t) or upgrade(i) or sum{(v,rscbin), allow_cap_up(i,v,r,rscbin,t) }
-                                    or sum{(v,rscbin), allow_ener_up(i,v,r,rscbin,t) }]
-                            = round(cost_cap_fin_mult_no_credits(i,r,t),3) ;
+cost_cap_fin_mult_no_credits(i,r,t)$cost_cap_fin_mult_no_credits(i,r,t)
+  = round(cost_cap_fin_mult_no_credits(i,r,t),3) ;
 
 rsc_fin_mult(i,r,t)$rsc_fin_mult(i,r,t) = round(rsc_fin_mult(i,r,t),3) ;
 
@@ -329,11 +295,13 @@ rsc_fin_mult(i,r,t)$rsc_fin_mult(i,r,t) = round(rsc_fin_mult(i,r,t),3) ;
 *and zero carbon policy.
 cost_cap_fin_mult_out(i,r,t) = cost_cap_fin_mult(i,r,t) ;
 
-*Penalizing new gas built within cost recovery period of 20 years in Virginia
-cost_cap_fin_mult(i,r,t)$[gas(i)$r_st(r,'VA')] = cost_cap_fin_mult(i,r,t) * ng_lifetime_cost_adjust(t) ;
+*Penalizing new gas built within cost recovery period of 20 years for states that require fossil retirements
+cost_cap_fin_mult(i,r,t)$[gas(i)$valcap_irt(i,r,t)$sum{st$r_st(r,st), ng_crf_penalty_st(t,st) }] =
+    cost_cap_fin_mult(i,r,t) * sum{st$r_st(r,st), ng_crf_penalty_st(t,st) } ;
 
 *Penalizing new gas that can be upgraded to recover upgrade costs prior to upgrade within 20 years of a zero carbon policy
-cost_cap_fin_mult(i,r,t)$[gas(i)$(not ccs(i))] = cost_cap_fin_mult(i,r,t) * (((ng_carb_lifetime_cost_adjust(t) - 1) * .2) + 1) ;
+cost_cap_fin_mult(i,r,t)$[gas(i)$(not ccs(i))] =
+    cost_cap_fin_mult(i,r,t) * (((ng_carb_lifetime_cost_adjust(t) - 1) * .2) + 1) ;
 
 * --- End calculations of cost_cap_fin_mult family of parameters --- *
 
@@ -344,41 +312,61 @@ $ifthene %cur_year%==2010
 CAP.l(i,v,r,"2010")$[m_capacity_exog(i,v,r,"2010")] = m_capacity_exog(i,v,r,"2010") ;
 $endif
 
-* estimate vre generation potential (capacity factor * available capacity) from previous model year
-vre_gen_old(i,r,h,t)$[(vre(i) or pvb(i))$(sum{tt$tload(tt), tprev(tt,t) })$valcap_irt(i,r,t)] =
-    sum{(v,rr)$[cap_agg(r,rr)$valcap(i,v,rr,t)$rfeas_cap(rr)],
-         m_cf(i,v,rr,h,t) * CAP.l(i,v,rr,t) * hours(h) }
-;
+* Now that cost_cap_fin_mult is done, calculate cost_growth, which is
+* the minimum cost of that technology within a state
+if(Sw_GrowthRelCon > 0,
+*rsc_fin_mult holds the multipliers for hydro, psh, and geo techs, so don't include them here
+    cost_growth(i,st,t)$[tmodel(t)$sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)$(not (geo(i) or hydro(i) or psh(i)))] = 
+        smin{r$[valinv_irt(i,r,t)$r_st(r,st)$cost_cap_fin_mult(i,r,t)$cost_cap(i,t)],
+            cost_cap_fin_mult(i,r,t) * cost_cap(i,t) } ;
 
-* estimate "old" curtailment from hybrid PV+battery based share of generation potential
-curt_old_pvb(r,h,t)$[curt_old(r,h,t)$(sum{i$[vre(i) or pvb(i)], vre_gen_old(i,r,h,t)})] =
-  curt_old(r,h,t) * sum{i$pvb(i), vre_gen_old(i,r,h,t)} / sum{i$[vre(i) or pvb(i)], vre_gen_old(i,r,h,t)} ;
+*rsc_fin_mult holds the multipliers for hydro, psh, and geo techs
+    cost_growth(i,st,t)$[tmodel(t)$sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)$(geo(i) or hydro(i) or psh(i))] = 
+        smin{(r,rscbin)$[valinv_irt(i,r,t)$r_st(r,st)$rsc_fin_mult(i,r,t)$m_rsc_dat(r,i,rscbin,"cost")],
+            rsc_fin_mult(i,r,t) * m_rsc_dat(r,i,rscbin,"cost") } ;
 
-* estimate curtailment from hybrid PV+battery for previous model year ("lastyear")
-curt_old_pvb_lastyear(r,h) = sum{tt$tprev('%cur_year%',tt), curt_old_pvb(r,h,tt)} ;
-
-* --- reset tmodel ---
-
-tmodel(t) = no ;
-tmodel("%cur_year%") = yes ;
-
+    cost_growth(i,st,t)$cost_growth(i,st,t) = round(cost_growth(i,st,t),3) ;
+) ;
 
 * --- report data immediately before the solve statement---
-
 *execute_unload "data_%cur_year%.gdx" ;
 
 * ------------------------------
 * Solve the Model
 * ------------------------------
 
-tmodel(t) = no ;
-tmodel("%cur_year%") = yes ;
 solve ReEDSmodel minimizing z using lp ;
 
 *record objective function values right after solve
 z_rep(t)$tmodel(t) = Z.l ;
 z_rep_inv(t)$tmodel(t) = Z_inv.l(t) ;
 z_rep_op(t)$tmodel(t) = Z_op.l(t) ;
+
+if(Sw_Upgrades = 1,
+* note sum over tt required here as we want to only remove the incentive
+* from years beyond the current year if upgrades occurred in this solve year
+
+* extend the current-year incentive beyond current date to expiration date - only needed
+* when needing to specify beyond current amounts
+    co2_captured_incentive(i,v,r,t)$[sum{tt$tmodel(tt),upgrades.l(i,v,r,tt) }
+                                    $(not sum{tt$tfix(tt),upgrades.l(i,v,r,tt)})
+                                    $(year(t) < %cur_year% + co2_capture_incentive_length)
+                                    $(yeart(t) >= %cur_year%)
+                                    $valcap(i,v,r,t) ] = co2_captured_incentive(i,v,r,"%cur_year%") ;
+
+* remove co2 captured incentive after the length of time if upgrades occurred in this year
+    co2_captured_incentive(i,v,r,t)$[sum{tt$tmodel(tt),upgrades.l(i,v,r,tt) }
+                                    $(year(t) >= %cur_year% + co2_capture_incentive_length)
+                                    $valcap(i,v,r,t) ] = 0 ;
+
+* adjust fom of upgraded-from plant to updated cost for maintaining the CCS equipment
+    cost_fom(i,v,r,t)$[sum{(ii,tt)$[tmodel(tt)$upgrade_from(ii,i)],upgrades.l(ii,v,r,tt) }
+                                    $(year(t) >= %cur_year%)
+                                    $valcap(i,v,r,t) ] =
+        max(cost_fom(i,v,r,t),
+            sum{ii$upgrade_from(ii,i),cost_fom(ii,v,r,t) }
+           ) ;
+) ;
 
 *add the just-solved year to tfix and fix variables for next solve year
 tfix("%cur_year%") = yes ;
@@ -389,12 +377,40 @@ $include d3_augur_data_dump.gms
 
 *dump data for tax credit phaseout calculations
 parameter
-  emit_r_tc(r,t)                          "--million metric tons CO2-- co2 emissions, regional (note: units dependent on emit_scale)"
-  emit_nat_tc(t)                          "--million metric tons CO2-- co2 emissions, national (note: units dependent on emit_scale)"
+  emit_r_tc(r,t)  "--million metric tons CO2-- co2 emissions, regional (note: units dependent on emit_scale)"
+  emit_nat_tc(t)  "--million metric tons CO2-- co2 emissions, national (note: units dependent on emit_scale)"
 ;
 
-emit_r_tc(r,t)$[rfeas(r)$tmodel_new(t)] = emit.l("CO2",r,t) * emit_scale("CO2") ;
-emit_nat_tc(t)$tmodel_new(t) = sum{r$rfeas(r), emit_r_tc(r,t) } ;
+emit_r_tc(r,t)$tmodel_new(t) = EMIT.l("CO2",r,t) * emit_scale("CO2") ;
+emit_nat_tc(t)$tmodel_new(t) = sum{r, emit_r_tc(r,t) } ;
+* [kilotonne] * [1000 tonne / kilotonne] / ([MW] * [hours]) = [tonne/MWh]
+$ifthen.stateco2 %GSw_StateCO2ImportLevel% == 'r'
+    co2_emit_rate_r(r,t)$tmodel(t) = (
+        EMIT.l("CO2",r,t) * emit_scale("CO2")
+        / sum{(i,v,h)$[valgen(i,v,r,t)], hours(h) * GEN.l(i,v,r,h,t) }
+* Avoid division-by-zero errors
+    )$sum{(i,v,h)$[valgen(i,v,r,t)], hours(h) * GEN.l(i,v,r,h,t) } ;
+$else.stateco2
+* sum emissions and generation within the region
+    co2_emit_rate_regional(%GSw_StateCO2ImportLevel%,t)$tmodel(t) = (
+        sum{rr$r_%GSw_StateCO2ImportLevel%(rr,%GSw_StateCO2ImportLevel%),
+            EMIT.l("CO2",rr,t) } * emit_scale("CO2")
+        / sum{(i,v,rr,h)$[valgen(i,v,rr,t)
+                        $r_%GSw_StateCO2ImportLevel%(rr,%GSw_StateCO2ImportLevel%)],
+              hours(h) * GEN.l(i,v,rr,h,t) }
+* Avoid division-by-zero errors
+    )$sum{(i,v,rr,h)$[valgen(i,v,rr,t)
+                    $r_%GSw_StateCO2ImportLevel%(rr,%GSw_StateCO2ImportLevel%)],
+          hours(h) * GEN.l(i,v,rr,h,t) }
+    ;
+* broadcast the regional emissions rate to each r in the region
+    co2_emit_rate_r(r,t)$tmodel(t) =
+        sum{%GSw_StateCO2ImportLevel%
+            $r_%GSw_StateCO2ImportLevel%(r,%GSw_StateCO2ImportLevel%),
+            co2_emit_rate_regional(%GSw_StateCO2ImportLevel%,t) }
+    ;
+$endif.stateco2
+
 
 execute_unload "outputs%ds%tc_phaseout_data%ds%emit_for_tc_phaseout_calc_%cur_year%.gdx"
   emit_nat_tc, emit_r_tc

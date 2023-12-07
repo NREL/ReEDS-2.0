@@ -2,8 +2,8 @@ beccs_mod,0.06
 beccs_max,0.06
 biopower,0.06
 Gas-CT,0.06
-RE-CT,0.06
-RE-CC,0.06
+H2-CT,0.06
+H2-CC,0.06
 o-g-s,0.06
 Gas-CC,0.06
 Gas-CC-CCS_mod,0.06

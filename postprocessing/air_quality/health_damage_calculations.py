@@ -38,9 +38,12 @@ import argparse
 import os
 import pandas as pd
 import sys
+import site
 
 # Automatic inputs
-reedspath = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+reeds_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+site.addsitedir(os.path.join(reeds_path,'input_processing'))
+from ticker import makelog
 
 # Argument inputs
 parser = argparse.ArgumentParser(
@@ -64,10 +67,10 @@ try:
             scenarios[row["run"]] = row["path"]
 
         # load deflator and marginal damages
-        deflator = pd.read_csv(os.path.join(reedspath, 'inputs', 'deflator.csv'), index_col=0)
+        deflator = pd.read_csv(os.path.join(reeds_path, 'inputs', 'deflator.csv'), index_col=0)
         mds = pd.read_csv(
             os.path.join(
-                reedspath, 'postprocessing', 'air_quality',
+                reeds_path, 'postprocessing', 'air_quality',
                 'rcm_data', 'marginal_damages_by_ReEDS_BA.csv'))
 
     # if post-processing during a ReEDS run
@@ -75,9 +78,8 @@ try:
         scenName = os.path.basename(args.scenario)
         scenarios[scenName] = args.scenario
 
-        # add printing/errors to existing log file
-        sys.stdout = open(os.path.join(args.scenario, 'gamslog.txt'), 'a')
-        sys.stderr = open(os.path.join(args.scenario, 'gamslog.txt'), 'a')
+        #%% Set up logger
+        log = makelog(scriptname=__file__, logpath=os.path.join(args.scenario,'gamslog.txt'))
 
         # load deflator and marginal damages
         deflator = pd.read_csv(
@@ -85,7 +87,7 @@ try:
             index_col=0)
         mds = pd.read_csv(
             os.path.join(
-                reedspath, 'postprocessing', 'air_quality', 'rcm_data',
+                reeds_path, 'postprocessing', 'air_quality', 'rcm_data',
                 'marginal_damages_by_ReEDS_BA.csv'))
 
 except Exception as err:

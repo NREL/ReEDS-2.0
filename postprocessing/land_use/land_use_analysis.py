@@ -25,6 +25,7 @@ import sys
 import pandas as pd
 import argparse
 import time
+from input_processing.ticker import makelog
 
 #######################
 # Helper functions 
@@ -231,9 +232,8 @@ if __name__ == '__main__':
     scen = os.path.basename(args.scenario)
     scen_path = args.scenario
 
-    # add printing/errors to existing log file
-    sys.stdout = open(os.path.join(args.scenario, 'gamslog.txt'), 'a')
-    sys.stderr = open(os.path.join(args.scenario, 'gamslog.txt'), 'a')
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(args.scenario,'gamslog.txt'))
 
     print("\nRunning 'land_use_analysis.py' script.\n")
     

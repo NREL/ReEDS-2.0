@@ -1,4 +1,4 @@
-r,rr,status,trtype,t,MW
+r,rr,status,trtype,t,MW,notes
 p61,p62,Certain,AC,2010,1021
 p61,p63,Certain,AC,2010,387
 p12,p13,Certain,AC,2011,1262
@@ -52,5 +52,13 @@ p25,p26,Possible,AC,2024,2046
 p26,p33,Possible,AC,2024,1088
 p28,p31,Possible,AC,2025,3000
 p5,p15,Possible,AC,2026,1100
-p80,p104,Possible,AC,0,100000
-p104,p111,Possible,AC,0,100000
+### vvv The next lines are prospective lines; they were used for the National
+### Transmission Planning study but are turned off by default
+# p33,p34,Certain,AC,2030,3274,Colorado Power Pathway (2x 500 kV)
+# p12,p13,Certain,AC,2030,2000,Greenlink Nevada (525 kV)
+# p13,p25,Certain,AC,2030,1600,TransWest Express
+# p24,p25,Certain,LCC,2030,3000,TransWest Express
+# p5,p15,Certain,AC,2030,1732,Boardman to Hemingway
+### ^^^
+p80,p104,Possible,AC,0,100000,Allows Chicago to connect to rest of PJM
+p104,p111,Possible,AC,0,100000,Allows SW Michigan to connect to rest of PJM

@@ -129,7 +129,7 @@ if(firstrun==0){
 }
 
 
-ba.vec = setDT(rgdx.set(rfeasgdx, "rfeas",names=c("ba"), compress=T))
+ba.vec = setDT(rgdx.set(rfeasgdx, "r",names=c("ba"), compress=T))
 
 ba.vec <- ba.vec[, ba := as.integer(gsub("p","",ba))][[1]]
 

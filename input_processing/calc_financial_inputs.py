@@ -2,51 +2,42 @@
 import pandas as pd
 import numpy as np
 import os
-import csv
 import support_functions as sFuncs
 # Time the operation of this script
-from ticker import toc
+from ticker import toc, makelog
 import datetime
-#%% direct print and errors to log file
-import sys
-sys.stdout = open('gamslog.txt', 'a')
-sys.stderr = open('gamslog.txt', 'a')
+
 
 #%% Functions
-def calc_financial_inputs(basedir, inputs_case):
+def calc_financial_inputs(reeds_path, inputs_case):
     """
     Write the following files to runs/{batch_case}/inputs_case/:
     - ivt.csv
     - ptc_values.csv
     - ptc_value_scaled.csv
     - itc_fractions.csv
-    - regions.csv
     - depreciation_schedules.csv
     - inflation.csv
-    - valid_ba_list.csv
-    - valid_regions_list.csv
-    - cap_cost_mult.csv
     - cap_cost_mult_noITC.csv
-    - cap_cost_mult_for_ratebase.csv
     - crf.csv
     - pvf_onm_int.csv
     - pvf_cap.csv
-    - retail_cap_cost_mult.h5
+    - reg_cap_cost_mult.csv
     - retail_eval_period.h5
     - retail_depreciation_sch.h5
     """
     print('Starting calculation of financial parameters for', inputs_case)
 
     # #%% Inputs for testing
-    # basedir = '/Users/pbrown/github/ReEDS-2.0/'
-    # inputs_case = os.path.join(basedir,'runs','v20220621_NTPm0_ercot_seq_test','inputs_case')
+    # reeds_path = '/Users/pbrown/github/ReEDS-2.0/'
+    # inputs_case = os.path.join(reeds_path,'runs','v20220621_NTPm0_ercot_seq_test','inputs_case')
 
     #%% Input processing
     switches = pd.read_csv(
         os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True,
     )
 
-    input_dir = os.path.join(basedir, 'inputs')
+    input_dir = os.path.join(reeds_path, 'inputs')
     switches['endyear'] = int(switches['endyear'])
     switches['sys_eval_years'] = int(switches['sys_eval_years'])
 
@@ -76,12 +67,14 @@ def calc_financial_inputs(basedir, inputs_case):
 
     techs = pd.read_csv(
         os.path.join(input_dir, 'techs', 'techs_%s.csv' % switches['techs_suffix']))
+    techs = sFuncs.expand_GAMS_tech_groups(techs)
     vintage_definition = pd.read_csv(os.path.join(inputs_case, 'ivt.csv')).rename(columns={'Unnamed: 0':'i'})
 
     annual_degrade = pd.read_csv(
         os.path.join(input_dir,'degradation',
                      'degradation_annual_%s.csv' % switches['degrade_suffix']),
         header=None, names=['i','annual_degradation'])
+    annual_degrade = sFuncs.expand_GAMS_tech_groups(annual_degrade)
     ### Assign the PV+battery values to values for standalone batteries
     annual_degrade = sFuncs.append_pvb_parameters(
         dfin=annual_degrade, 
@@ -89,8 +82,8 @@ def calc_financial_inputs(basedir, inputs_case):
 
     years, modeled_years, year_map = sFuncs.ingest_years(
         inputs_case, switches['sys_eval_years'], switches['endyear'])
-    regions, valid_ba_list, valid_regions_list = sFuncs.ingest_regions(
-        switches['GSw_RegionLevel'], switches['GSw_Region'], scen_settings, NARIS=False)
+
+    val_r = pd.read_csv(os.path.join(inputs_case,'val_r.csv'), header = None)[0].tolist()
 
     df_ivt = sFuncs.build_dfs(years, techs, vintage_definition, year_map)
     print('df_ivt created for', inputs_case)
@@ -101,9 +94,9 @@ def calc_financial_inputs(basedir, inputs_case):
     # Import system-wide real discount rates, calculate present-value-factors, merge onto df's
     financials_sys = sFuncs.import_sys_financials(
         switches['financials_sys_suffix'], inflation_df, modeled_years, 
-        years, year_map, switches['sys_eval_years'], scen_settings)
+        years, year_map, switches['sys_eval_years'], scen_settings, scalars['co2_capture_incentive_length'])
     df_ivt = df_ivt.merge(
-        financials_sys[['t', 'pvf_capital', 'crf', 'd_real', 'd_nom', 'interest_rate_nom', 
+        financials_sys[['t', 'pvf_capital', 'crf', 'crf_co2_incentive', 'd_real', 'd_nom', 'interest_rate_nom', 
                         'tax_rate', 'debt_fraction', 'rroe_nom']], 
         on=['t'], how='left')
 
@@ -162,7 +155,7 @@ def calc_financial_inputs(basedir, inputs_case):
         inflation_df=inflation_df, scen_settings=scen_settings)
     df_ivt = df_ivt.merge(incentive_df, on=['i', 't', 'country'], how='left')
     df_ivt['safe_harbor_max'] = df_ivt['safe_harbor_max'].fillna(0.0)
-    df_ivt['co2_capture_value_monetized'] = df_ivt['co2_capture_value_monetized'].fillna(0.0)
+    df_ivt['co2_capture_value_monetized'] = df_ivt['co2_capture_value_monetized'].fillna(0.0) * (1 / (1 - df_ivt['tax_rate']))
     
     ### Calculate the tax impacts of the PTC, and calculate the adjustment to reflect the 
     # difference between the PTC duration and ReEDS evaluation period
@@ -247,41 +240,18 @@ def calc_financial_inputs(basedir, inputs_case):
         df_inv=dftrans, construction_schedules=construction_schedules,
         depreciation_schedules=depreciation_schedules, timetype=switches['timetype'],
     )
-    
-    ### Calculate the financial multiplier for transmission
-    dftrans['finMult'] = (
-        dftrans['CCmult']
-        / (1 - dftrans['tax_rate'])
-        * (1 
-           - dftrans['tax_rate'] * (1 - dftrans['itc_frac_monetized']/2) * dftrans['PV_fraction_of_depreciation'] 
-           - dftrans['itc_frac_monetized'])
-        * dftrans['Degradation_Adj']
-    )
-    dftrans['finMult_noITC'] = (
-        dftrans['CCmult'] 
-        / (1 - dftrans['tax_rate']) 
-        * (1 - dftrans['tax_rate'] * dftrans['PV_fraction_of_depreciation'] ) 
-        * dftrans['Degradation_Adj']
-    )
-    
+        
     ### Get the CRF for transmission
     dftrans['crf_tech'] = sFuncs.calc_crf(dftrans['d_real'], dftrans['eval_period'])
 
     ### Get the final capital cost multiplier (including the CRF scaler above)
-    dftrans['cap_cost_mult'] = (
-        dftrans['finMult'] * dftrans['financing_risk_mult']
-        ## Scale the cost multiplier by the ratio of CRF(trans_crp) / CRF (sys_eval_years)
-        * dftrans['crf_tech'] / dftrans['crf']
-    )
-    dftrans['cap_cost_mult_noITC'] = (
-        dftrans['finMult_noITC'] * dftrans['financing_risk_mult']
-        * dftrans['crf_tech'] / dftrans['crf']
-    )
+    dftrans['cap_cost_mult'] = sFuncs.calc_final_capital_cost_multiplier(dftrans)
+    dftrans['cap_cost_mult_noITC'] = sFuncs.calc_final_capital_cost_multiplier(dftrans, mult_type='finMult_noITC')
 
     ### The transmission ITC is not meant to apply to currently-planned transmission.
     ### So for years before firstyear_trans, use cap_cost_mult_noITC;
     ### i.e. only start applying the ITC once the model switches to endogenous transmission.
-    firstyear_trans = int(scalars['firstyear_trans'])
+    firstyear_trans = int(scalars['firstyear_trans_longterm'])
     dftrans.loc[dftrans.t<firstyear_trans, 'cap_cost_mult'] = (
         dftrans.loc[dftrans.t<firstyear_trans, 'cap_cost_mult_noITC'])
 
@@ -296,6 +266,60 @@ def calc_financial_inputs(basedir, inputs_case):
     ].round(6).to_csv(
         os.path.join(inputs_case, 'trans_itc_fractions.csv'), index=False)
 
+    #%%### Calculate financial multipliers for hydrogen network investments
+    ### Load hydroge data
+    dfhydrogen = pd.read_csv(
+        os.path.join(
+            input_dir, 'financials',
+            'financials_hydrogen.csv'),
+    )
+    ### Get hydrogen capital recovery period (CRP) from input scalars
+    # note that pipelines and compressors have different lifetimes
+    dfhydrogen['eval_period_pipeline'] = int(scalars['h2_crp_pipeline'])
+    dfhydrogen['eval_period_compressor'] = int(scalars['h2_crp_compressor'])
+    dfhydrogen['eval_period_storage'] = int(scalars['h2_crp_storage'])
+
+    ### Get online year
+    dfhydrogen['t'] = dfhydrogen.t_start_construction + dfhydrogen.construction_time
+    ### Get ITC monetization
+    dfhydrogen['itc_frac_monetized'] = dfhydrogen.itc_frac * (1 - dfhydrogen.itc_tax_equity_penalty)
+    ### Get sys financials
+    dfhydrogen = dfhydrogen.merge(financials_sys.dropna(how='any'), on='t', how='right')
+        
+    ### Get financial multipliers
+    dfhydrogen_pipeline = dfhydrogen.copy().rename(columns={"eval_period_pipeline":"eval_period"})
+    dfhydrogen_pipeline = sFuncs.calc_financial_multipliers(
+        df_inv=dfhydrogen_pipeline, construction_schedules=construction_schedules,
+        depreciation_schedules=depreciation_schedules, timetype=switches['timetype'],
+    )
+    dfhydrogen_compressor = dfhydrogen.copy().rename(columns={"eval_period_compressor":"eval_period"})
+    dfhydrogen_compressor = sFuncs.calc_financial_multipliers(
+        df_inv=dfhydrogen_compressor, construction_schedules=construction_schedules,
+        depreciation_schedules=depreciation_schedules, timetype=switches['timetype'],
+    )
+    dfhydrogen_storage = dfhydrogen.copy().rename(columns={"eval_period_storage":"eval_period"})
+    dfhydrogen_storage = sFuncs.calc_financial_multipliers(
+        df_inv=dfhydrogen_storage, construction_schedules=construction_schedules,
+        depreciation_schedules=depreciation_schedules, timetype=switches['timetype'],
+    )
+    
+    ### Get the CRF for h2 pipelines
+    dfhydrogen_pipeline['crf_tech'] = sFuncs.calc_crf(dfhydrogen_pipeline['d_real'], dfhydrogen_pipeline['eval_period'])
+    dfhydrogen_compressor['crf_tech'] = sFuncs.calc_crf(dfhydrogen_compressor['d_real'], dfhydrogen_compressor['eval_period'])
+    dfhydrogen_storage['crf_tech'] = sFuncs.calc_crf(dfhydrogen_storage['d_real'], dfhydrogen_storage['eval_period'])
+
+    ### Get the final capital cost multiplier (including the CRF scaler above)   
+    dfhydrogen_pipeline["cap_cost_mult_pipeline"] = sFuncs.calc_final_capital_cost_multiplier(dfhydrogen_pipeline)
+    dfhydrogen_compressor["cap_cost_mult_compressor"] = sFuncs.calc_final_capital_cost_multiplier(dfhydrogen_compressor)
+    dfhydrogen_storage["cap_cost_mult_storage"] = sFuncs.calc_final_capital_cost_multiplier(dfhydrogen_storage)
+    
+    ### Write it
+    dfhydrogen_pipeline.rename(columns={'t':'*t'})[['*t','cap_cost_mult_pipeline']].round(6).to_csv(
+        os.path.join(inputs_case, 'h2_pipeline_cap_cost_mult.csv'), index=False)
+    dfhydrogen_compressor.rename(columns={'t':'*t'})[['*t','cap_cost_mult_compressor']].round(6).to_csv(
+        os.path.join(inputs_case, 'h2_compressor_cap_cost_mult.csv'), index=False)    
+    dfhydrogen_storage.rename(columns={'t':'*t'})[['*t','cap_cost_mult_storage']].round(6).to_csv(
+        os.path.join(inputs_case, 'h2_storage_cap_cost_mult.csv'), index=False)
 
     #%%
     # Import regional capital cost multipliers, create multipliers for csp configurations
@@ -320,8 +344,9 @@ def calc_financial_inputs(basedir, inputs_case):
         del mult_temp
     del reg_cap_cost_mult_csp
     
-    # Trim down to just the techs in this run
+    # Trim down to just the techs and regions in this run
     reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['i'].isin(list(techs['i']))]
+    reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['r'].isin(val_r)]
 
 
     #%% Before writing outputs, change "x" to "newx" in [v]
@@ -392,6 +417,9 @@ def calc_financial_inputs(basedir, inputs_case):
     crf_df = financials_sys[financials_sys['t']==financials_sys['modeled_year']].copy()
     sFuncs.param_exporter(crf_df[['t', 'crf']], 'crf', 'crf', inputs_case)
 
+    # 12-year crf used in sequential case for calculating 12-year payback time of co2_captured_incentive
+    crf_co2_df = financials_sys[financials_sys['t']==financials_sys['modeled_year']].copy()
+    sFuncs.param_exporter(crf_df[['t', 'crf_co2_incentive']], 'crf_co2_incentive', 'crf_co2_incentive', inputs_case)
 
     # pvf_onm used in intertemporal
     pvf_onm_int = financials_sys[['modeled_year', 'pvf_onm']].groupby(by=['modeled_year']).sum()
@@ -403,15 +431,7 @@ def calc_financial_inputs(basedir, inputs_case):
     # pvf_cap (used in both seq and int modes)
     sFuncs.inv_param_exporter(df_ivt, modeled_years, 'pvf_capital', ['t'], 'pvf_cap', inputs_case)
 
-
-    # Export valid region lists
-    pd.Series(valid_ba_list).to_csv(
-        os.path.join(inputs_case, 'valid_ba_list.csv'), header=False, index=False)
-    pd.Series(valid_regions_list).to_csv(
-        os.path.join(inputs_case, 'valid_regions_list.csv'), header=False, index=False)
-
     # Copy input files into inputs_case
-    regions.to_csv(os.path.join(inputs_case, 'regions.csv'), index=False)
     depreciation_schedules.to_csv(
         os.path.join(inputs_case, 'depreciation_schedules.csv'), index=False)
     inflation_df.to_csv(os.path.join(inputs_case, 'inflation.csv'), index=False)
@@ -459,18 +479,21 @@ if __name__ == '__main__':
     #%% Argument inputs
     import argparse
     parser = argparse.ArgumentParser(description="calc_financial_inputs.py")
-    parser.add_argument("basedir",
+    parser.add_argument("reeds_path",
                         help="ReEDS-2.0 directory")
     parser.add_argument("inputs_case",
                         help="ReEDS-2.0/runs/{case}/inputs_case directory")
     args = parser.parse_args()
-    basedir = args.basedir
+    reeds_path = args.reeds_path
     inputs_case = args.inputs_case
+
+    ### Set up logger
+    #log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
     #%% Run it
     tic = datetime.datetime.now()
 
-    calc_financial_inputs(basedir, inputs_case)
+    calc_financial_inputs(reeds_path, inputs_case)
 
     toc(tic=tic, year=0, process='input_processing/calc_financial_inputs.py', 
         path=os.path.join(inputs_case,'..'))

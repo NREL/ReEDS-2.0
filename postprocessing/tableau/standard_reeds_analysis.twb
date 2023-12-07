@@ -845,7 +845,7 @@
             <value>&quot;Geo&quot;</value>
             <value>&quot;Hydro&quot;</value>
             <value>&quot;Nuclear&quot;</value>
-            <value>&quot;RE-CT&quot;</value>
+            <value>&quot;H2-CT&quot;</value>
           </bin>
           <bin default-name='false' value='&quot;Firm Fossil&quot;'>
             <value>&quot;Coal&quot;</value>
@@ -904,7 +904,6 @@
             <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
             <value>&quot;inv_ptc_payments_negative&quot;</value>
             <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-            <value>&quot;inv_substation_investment_costs&quot;</value>
             <value>&quot;inv_transmission_line_investment&quot;</value>
             <value>&quot;op_acp_compliance_costs&quot;</value>
             <value>&quot;op_emissions_taxes&quot;</value>
@@ -1228,7 +1227,7 @@
               <bucket>&quot;Gas-CC-CCS_97&quot;</bucket>
             </map>
             <map to='#c9ee43'>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
             </map>
             <map to='#cc2279'>
               <bucket>&quot;PHES&quot;</bucket>
@@ -1409,7 +1408,7 @@
                   <value>&quot;Geo&quot;</value>
                   <value>&quot;Hydro&quot;</value>
                   <value>&quot;Nuclear&quot;</value>
-                  <value>&quot;RE-CT&quot;</value>
+                  <value>&quot;H2-CT&quot;</value>
                 </bin>
                 <bin default-name='false' value='&quot;Firm Fossil&quot;'>
                   <value>&quot;Coal&quot;</value>
@@ -1468,7 +1467,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -1604,7 +1602,7 @@
               <groupfilter function='member' level='[Technology or Category (group)]' member='&quot;PV-Customer&quot;' />
               <groupfilter function='member' level='[Technology or Category (group)]' member='&quot;PV-Utility&quot;' />
               <groupfilter function='member' level='[Technology or Category (group)]' member='&quot;PV-Utility Distributed&quot;' />
-              <groupfilter function='member' level='[Technology or Category (group)]' member='&quot;RE-CT&quot;' />
+              <groupfilter function='member' level='[Technology or Category (group)]' member='&quot;H2-CT&quot;' />
               <groupfilter function='member' level='[Technology or Category (group)]' member='&quot;Wind-Offshore&quot;' />
               <groupfilter function='member' level='[Technology or Category (group)]' member='&quot;Wind-Onshore&quot;' />
             </groupfilter>
@@ -1624,7 +1622,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>
@@ -1775,7 +1773,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -2049,7 +2046,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -2192,7 +2188,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>
@@ -2368,7 +2364,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -2504,7 +2499,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>
@@ -2660,7 +2655,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -2805,7 +2799,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>
@@ -2981,7 +2975,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -3124,7 +3117,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>
@@ -3298,7 +3291,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -3436,7 +3428,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>
@@ -3581,7 +3573,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -3823,7 +3814,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -3959,7 +3949,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>
@@ -4099,7 +4089,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -4245,7 +4234,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>
@@ -4404,7 +4393,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -4546,7 +4534,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>
@@ -4819,7 +4807,6 @@
                   <value>&quot;inv_investment_spurline_costs_rsc_technologies&quot;</value>
                   <value>&quot;inv_ptc_payments_negative&quot;</value>
                   <value>&quot;inv_ptc_payments_negative_refurbishments&quot;</value>
-                  <value>&quot;inv_substation_investment_costs&quot;</value>
                   <value>&quot;inv_transmission_line_investment&quot;</value>
                   <value>&quot;op_acp_compliance_costs&quot;</value>
                   <value>&quot;op_emissions_taxes&quot;</value>
@@ -5022,7 +5009,7 @@
               <bucket>&quot;PV-Utility&quot;</bucket>
               <bucket>&quot;Wind-Offshore&quot;</bucket>
               <bucket>&quot;Wind-Onshore&quot;</bucket>
-              <bucket>&quot;RE-CT&quot;</bucket>
+              <bucket>&quot;H2-CT&quot;</bucket>
               <bucket>&quot;BECCS99&quot;</bucket>
               <bucket>&quot;Bio &amp; LFG&quot;</bucket>
               <bucket>&quot;OGS&quot;</bucket>

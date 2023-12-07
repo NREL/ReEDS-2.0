@@ -21,7 +21,6 @@ CoalOldScr,0
 CoalOldUns,0
 CofireNew,5
 CofireOld,0
-csp-ns,0
 distpv,0
 Gas-CC,5
 Gas-CC-CCS_mod,5
@@ -30,8 +29,8 @@ Gas-CC-CCS-F1,5
 Gas-CC-CCS-F2,5
 Gas-CC-CCS-F3,5
 Gas-CT,5
-RE-CT,5
-RE-CC,5
+H2-CT,5
+H2-CC,5
 geothermal,0
 Hydro,0
 lfill-gas,5
@@ -65,14 +64,6 @@ hydNPD,5
 hydNPND,5
 hydED,5
 hydEND,5
-deep-egs_pbinary_1*deep-egs_pbinary_8,0
-deep-egs_pflash_1*deep-egs_pflash_8,0
-geohydro_pbinary_1*geohydro_pbinary_8,0
-geohydro_pflash_1*geohydro_pflash_8,0
-NF-EGS_pbinary_1*NF-EGS_pbinary_8,0
-NF-EGS_pflash_1*NF-EGS_pflash_8,0
-undisc_pbinary_1*undisc_pbinary_8,0
-undisc_pflash_1*undisc_pflash_8,0
 electrolyzer,1
 smr,1
 smr_ccs,1
@@ -80,3 +71,6 @@ dac,1
 dac_gas,1
 hyded_pumped-hydro,5
 hyded_pumped-hydro-flex,5
+egs_allkm_1*egs_allkm_10,0
+geohydro_allkm_1*geohydro_allkm_10,0
+egs_nearfield_1*egs_nearfield_10,0

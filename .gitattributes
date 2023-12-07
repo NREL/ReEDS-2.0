@@ -3,3 +3,4 @@
 *.h5 filter=lfs diff=lfs merge=lfs -text
 *.gpkg filter=lfs diff=lfs merge=lfs -text
 *.ipynb filter=strip_ipynb_output
+*.shp filter=lfs diff=lfs merge=lfs -text

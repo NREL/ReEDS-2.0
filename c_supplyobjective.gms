@@ -39,9 +39,14 @@ eq_ObjFn_inv(t)$tmodel(t)..
                        cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INV(i,v,r,t)
                       }
 
+* --- growth penalties ---
+                  + sum{(gbin,i,st)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)],
+                        cost_growth(i,st,t) * growth_penalty(gbin) * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) }) * GROWTH_BIN(gbin,i,st,t)
+                       }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthRelCon$(yeart(t)<=Sw_GrowthConLastYear)]
+
 * --- cost of upgrading---
                   + sum{(i,v,r)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades],
-                         cost_upgrade(i,t) * cost_cap_fin_mult(i,r,t) * UPGRADES(i,v,r,t) }
+                         cost_upgrade(i,v,r,t) * cost_cap_fin_mult(i,r,t) * UPGRADES(i,v,r,t) }
 
 * --- costs of resource supply curve spur line investment if not modeling explicitly---
 *Note that cost_cap for hydro, pumped-hydro, and geo techs are zero
@@ -60,18 +65,21 @@ eq_ObjFn_inv(t)$tmodel(t)..
 
 * --- cost of intra-zone network reinforcement (a.k.a. point-of-interconnection capacity or POI)
 * Sw_TransIntraCost is in $/kW, so multiply by 1000 to convert to $/MW
-                  + sum{r$[rfeas(r)$Sw_TransIntraCost],
+                  + sum{r$[rb(r)$Sw_TransIntraCost],
                         trans_cost_cap_fin_mult(t) * Sw_TransIntraCost * 1000 * INV_POI(r,t) }
 
 * --- cost of water access---
                   + [ (8760/1E6) * sum{ (i,v,w,r)$[i_w(i,w)$valinv(i,v,r,t)], sum{wst$i_wst(i,wst),
                                      m_watsc_dat(wst,"cost",r,t) } * water_rate(i,w,r) *
-                                        ( INV(i,v,r,t) + INV_REFURB(i,v,r,t)$[refurbtech(i)$Sw_Refurb] )
-                                   }]$Sw_WaterMain
+                                        ( INV(i,v,r,t) + INV_REFURB(i,v,r,t)$[refurbtech(i)$Sw_Refurb] ) }
+                      + sum{(rscbin,i,v,r)$[m_rscfeas(r,i,rscbin)$psh(i)],
+                              sum{wst$i_wst(i,wst), m_watsc_dat(wst,"cost",r,t) } *
+                              ( INV_RSC(i,v,r,rscbin,t) * water_req_psh(r,rscbin) ) }$Sw_PSHwatercon
+                    ]$Sw_WaterMain
 
 *slack variable to update water source type (wst) in the unit database
 *Note that existing wst data is not consistent with availability of water source in the region
-                  + sum{(wst,r)$[rfeas(r)], 1E6 * WATER_CAPACITY_LIMIT_SLACK(wst,r,t) }$[Sw_WaterMain$Sw_WaterCapacity]
+                  + sum{(wst,r)$rb(r), 1E6 * WATER_CAPACITY_LIMIT_SLACK(wst,r,t) }$[Sw_WaterMain$Sw_WaterCapacity]
 
 * --- cost of refurbishments of RSC tech---
                   + sum{(i,v,r)$[Sw_Refurb$valinv(i,v,r,t)$refurbtech(i)],
@@ -83,16 +91,12 @@ eq_ObjFn_inv(t)$tmodel(t)..
                   + sum{(r,rr,trtype)$routes_inv(r,rr,trtype,t),
                         trans_cost_cap_fin_mult(t) * transmission_line_capcost(r,rr,trtype) * INVTRAN(r,rr,trtype,t) }
 
-*costs of substations
-                  + sum{(r,vc)$(rfeas(r)$tscfeas(r,vc)),
-                        trans_cost_cap_fin_mult(t) * cost_transub(r,vc) * InvSubstation(r,vc,t) }
-
 *cost of LCC AC/DC converter stations (each LCC DC line implicitly has two, one on each end of the line)
                   + sum{(r,rr)$routes_inv(r,rr,"LCC",t),
                         trans_cost_cap_fin_mult(t) * cost_acdc_lcc * 2 * INVTRAN(r,rr,"LCC",t) }
 
 *cost of VSC AC/DC converter stations
-                  + sum{r$rfeas(r),
+                  + sum{r$rb(r),
                         trans_cost_cap_fin_mult(t) * cost_acdc_vsc * INV_CONVERTER(r,t) }
 
 * --- storage capacity credit---
@@ -109,7 +113,10 @@ eq_ObjFn_inv(t)$tmodel(t)..
                             cost_cap_fin_mult(i,r,t) * INV_ENER_UP(i,v,r,rscbin,t) * cost_ener_up(i,v,r,rscbin,t) }
 
 * H2 transport network investment costs
-                  + sum{(r,rr)$h2_routes(r,rr), cost_h2_transport(r,rr) * H2_TRANSPORT_INV(r,rr,t) }$Sw_H2_Transport
+                  + sum{(r,rr)$h2_routes_inv(r,rr), cost_h2_transport_cap(r,rr,t) * H2_TRANSPORT_INV(r,rr,t) }$(Sw_H2 = 2)
+
+* H2 storage investment costs 
+                  + sum{(h2_stor,r)$h2_stor_r(h2_stor,r), cost_h2_storage_cap(h2_stor,t) * H2_STOR_INV(h2_stor,r,t) }$(Sw_H2 = 2)
 
 * CO2 pipeline investment costs
                   + sum{(r,rr)$co2_routes(r,rr), cost_co2_pipeline_cap(r,rr,t) * CO2_TRANSPORT_INV(r,rr,t)
@@ -136,15 +143,15 @@ eq_Objfn_op(t)$tmodel(t)..
 
 * --- variable O&M costs---
 * all technologies except hybrid PV+battery and DAC
-              sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$cost_vom(i,v,r,t)$(not pvb(i))],
+              sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom(i,v,r,t)$(not pvb(i))],
                    hours(h) * cost_vom(i,v,r,t) * GEN(i,v,r,h,t) }
 
 * hybrid PV+battery (PV)
-            + sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$cost_vom_pvb_p(i,v,r,t)$pvb(i)],
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_p(i,v,r,t)$pvb(i)],
                    hours(h) * cost_vom_pvb_p(i,v,r,t) * GEN_PVB_P(i,v,r,h,t) }$Sw_PVB
 
 * hybrid PV+battery (Battery)
-            + sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$cost_vom_pvb_b(i,v,r,t)$pvb(i)],
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_b(i,v,r,t)$pvb(i)],
                    hours(h) * cost_vom_pvb_b(i,v,r,t) * GEN_PVB_B(i,v,r,h,t) }$Sw_PVB
 
 * --- fixed O&M costs---
@@ -161,14 +168,14 @@ eq_Objfn_op(t)$tmodel(t)..
                     cost_acdc_lcc * 2 * trans_fom_frac * CAPTRAN_ENERGY(r,rr,trtype,t) }
 
 * VSC AC/DC converter stations
-              + sum{r$rfeas(r),
+              + sum{r$rb(r),
                     cost_acdc_vsc * trans_fom_frac * CAP_CONVERTER(r,t) }
 
 * spur lines modeled as part of supply curve
               + sum{(i,v,r,rscbin)
                     $[m_rscfeas(r,i,rscbin)$valcap(i,v,r,t)
                     $rsc_i(i)$(not spur_techs(i))$(not sccapcosttech(i))],
-                    m_rsc_dat(r,i,rscbin,"cost") * trans_fom_frac * CAP_RSC(i,v,r,rscbin,t) }
+                    m_rsc_dat(r,i,rscbin,"cost_trans") * trans_fom_frac * CAP_RSC(i,v,r,rscbin,t) }
 
 * spur lines modeled explicitly
               + sum{x$[Sw_SpurScen$xfeas(x)],
@@ -176,17 +183,9 @@ eq_Objfn_op(t)$tmodel(t)..
 
 * intra-zone network reinforcement (only for new capacity; don't include it for existing POI
 * capacity because it's not a great estimate of the actual FOM cost of all existing transmission)
-              + sum{r$[rfeas(r)$Sw_TransIntraCost],
+              + sum{r$[rb(r)$Sw_TransIntraCost],
                     Sw_TransIntraCost * 1000 * trans_fom_frac
                     * sum{tt$[(yeart(tt)<=yeart(t))$(tmodel(tt) or tfix(tt))], INV_POI(r,tt) } }
-
-* --- hourly arbitrage value for storage---
-              - sum{(i,v,r)$[valcap(i,v,r,t)$(storage_standalone(i) or pvb(i) or hyd_add_pump(i))],
-                   hourly_arbitrage_value(i,r,t) * Sw_StorageArbitrageMult * bcr(i) * CAP(i,v,r,t) }
-
-* ---hourly arbitrage value for dr---
-              - sum{(i,v,r)$[valinv(i,v,r,t)$dr(i)],
-                   hourly_arbitrage_value(i,r,t) * INV(i,v,r,t) }
 
 * --- penalty for retiring a technology (represents friction in retirements)---
               - sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
@@ -197,48 +196,49 @@ eq_Objfn_op(t)$tmodel(t)..
                    }
 
 * ---operating reserve costs---
-              + sum{(i,v,r,h,ortype)$[rfeas(r)$valgen(i,v,r,t)$cost_opres(i,ortype,t)$Sw_OpRes],
+              + sum{(i,v,r,h,ortype)$[Sw_OpRes$valgen(i,v,r,t)$cost_opres(i,ortype,t)$opres_model(ortype)$opres_h(h)],
                    hours(h) * cost_opres(i,ortype,t) * OpRes(ortype,i,v,r,h,t) }
 
-* --- cost of coal and nuclear fuel (except coal used for cofiring)---
-              + sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$(not gas(i))$heat_rate(i,v,r,t)
+* --- cost of coal, nuclear, and other fuels (except coal used for cofiring)---
+* includes H2 fuel costs when using exogenous fuel price (Sw_H2 = 0 and Sw_H2CT = 1)
+              + sum{(i,v,r,h)$[valgen(i,v,r,t)$(not gas(i))$heat_rate(i,v,r,t)
                               $(not bio(i))$(not cofire(i))],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN(i,v,r,h,t) }
 
 * --cofire coal consumption---
 * cofire bio consumption already accounted for in accounting of BIOUSED
-              + sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$cofire(i)$heat_rate(i,v,r,t)],
+              + sum{(i,v,r,h)$[valgen(i,v,r,t)$cofire(i)$heat_rate(i,v,r,t)],
                    (1-bio_cofire_perc) * hours(h) * heat_rate(i,v,r,t)
                    * fuel_price("coal-new",r,t) * GEN(i,v,r,h,t) }
 
 * --- cost of natural gas---
 *Sw_GasCurve = 2 (static natural gas prices)
 *first - gas consumed for electricity generation
-              + sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$gas(i)$heat_rate(i,v,r,t)$(Sw_GasCurve = 2)],
+              + sum{(i,v,r,h)$[valgen(i,v,r,t)$gas(i)$heat_rate(i,v,r,t)$(Sw_GasCurve = 2)],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN(i,v,r,h,t) }
 
 *second - gas consumed by gas-powered DAC
-              + sum{(v,r,h)$[valcap("dac_gas",v,r,t)$rfeas(r)$(Sw_GasCurve = 2)],
+              + sum{(v,r,h)$[valcap("dac_gas",v,r,t)$(Sw_GasCurve = 2)],
                    hours(h) * dac_gas_cons_rate("dac_gas",v,t) * PRODUCE("DAC","dac_gas",v,r,h,t) }$Sw_DAC_Gas
 
 *Sw_GasCurve = 0 (census division supply curves natural gas prices)
-              + sum{(cendiv,gb)$cdfeas(cendiv), sum{h,hours(h) * GASUSED(cendiv,gb,h,t) }
+              + sum{(cendiv,gb), sum{h,hours(h) * GASUSED(cendiv,gb,h,t) }
                    * gasprice(cendiv,gb,t)
                    }$(Sw_GasCurve = 0)
 
 *Sw_GasCurve = 3 (national supply curve for natural gas prices with census division multipliers)
-              + sum{(h,cendiv,gb)$cdfeas(cendiv),hours(h) * GASUSED(cendiv,gb,h,t)
+              + sum{(h,cendiv,gb), hours(h) * GASUSED(cendiv,gb,h,t)
                    * gasadder_cd(cendiv,t,h) + gasprice_nat_bin(gb,t)
                    }$(Sw_GasCurve = 3)
 
 *Sw_GasCurve = 1 (national and census division supply curves for natural gas prices)
 *first - anticipated costs of gas consumption given last year's amount
-              + (sum{(i,r,v,cendiv,h)$[rfeas(r)$valgen(i,v,r,t)$gas(i)$cdfeas(cendiv)],
+              + (sum{(i,r,v,cendiv,h)$[valgen(i,v,r,t)$gas(i)],
                    gasmultterm(cendiv,t) * szn_adj_gas(h) * cendiv_weights(r,cendiv) *
                    hours(h) * heat_rate(i,v,r,t) * GEN(i,v,r,h,t) }
 
 *second - adjustments based on changes from last year's consumption at the regional and national level
-              + sum{(fuelbin,cendiv)$cdfeas(cendiv),
+              + sum{(fuelbin,cendiv),
                    gasbinp_regional(fuelbin,cendiv,t) * VGASBINQ_REGIONAL(fuelbin,cendiv,t) }
 
               + sum{(fuelbin),
@@ -247,7 +247,7 @@ eq_Objfn_op(t)$tmodel(t)..
               )$[Sw_GasCurve = 1]
 
 * ---cost of biofuel consumption and biomass transport---
-              + sum{(r,bioclass)$[rfeas(r)$sum{(i,v)$(bio(i) or cofire(i)), valgen(i,v,r,t) }],
+              + sum{(r,bioclass)$[sum{(i,v)$(bio(i) or cofire(i)), valgen(i,v,r,t) }],
                    BIOUSED(bioclass,r,t) *
                    (sum{usda_region$r_usda(r,usda_region), biosupply(usda_region, bioclass, "price") } + bio_transport_cost) }
 
@@ -256,7 +256,7 @@ eq_Objfn_op(t)$tmodel(t)..
                    cost_hurdle(r,rr) * FLOW(r,rr,h,t,trtype) * hours(h) }
 
 * --- taxes on emissions---
-              + sum{(e,r)$rfeas(r), EMIT(e,r,t) * emit_tax(e,r,t) }
+              + sum{(e,r)$rb(r), EMIT(e,r,t) * emit_tax(e,r,t) }
 
 * --cost of CO2 transport and storage from CCS--
               + sum{(i,v,r,h)$[valgen(i,v,r,t)],
@@ -271,18 +271,30 @@ eq_Objfn_op(t)$tmodel(t)..
                               hours(h) * PRODUCE(p,i,v,r,h,t) * CO2_storage_cost }$[Sw_DAC$(not Sw_CO2_Detail)]
 
 * ---State RPS alternative compliance payments---
-              + sum{(RPSCat,st)$(stfeas(st) or sameas(st,"corporate")), acp_price(st,t) * ACP_PURCHASES(RPSCat,st,t)
+              + sum{(RPSCat,st)$(stfeas(st) or sameas(st,"voluntary")), acp_price(st,t) * ACP_PURCHASES(RPSCat,st,t)
                    }$[(yeart(t)>=RPS_StartYear)$Sw_StateRPS]
 
 * --- revenues from purchases of curtailed VRE---
-              - sum{(r,h)$rfeas(r), CURT(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
+              - sum{(r,h)$rb(r), CURT(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
+
+* --- dropped load (ONLY if before Sw_StartMarkets)
+              + sum{(r,h)$[rb(r)$(yeart(t)<Sw_StartMarkets)], DROPPED(r,h,t) * hours(h) * cost_dropped_load }
 
 * --- costs from producing products (for now DAC and/or H2)---
               + sum{(p,i,v,r,h)$[(h2(i) or dac(i))$valcap(i,v,r,t)$i_p(i,p)],
                     hours(h) * cost_prod(i,v,r,t) * PRODUCE(p,i,v,r,h,t) }$Sw_Prod
 
+* --- H2 transport network fixed OM costs (compute cumulative sum of investments to get total capacity)
+               + sum{(r,rr)$h2_routes_inv(r,rr), cost_h2_transport_fom(r,rr,t) 
+                              * sum{tt$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))],
+                                   H2_TRANSPORT_INV(r,rr,t) } }$(Sw_H2 = 2)
+
+* --- H2 storage fixed OM costs (compute cumulative sum of investments to get total capacity)
+               + sum{(h2_stor,r)$h2_stor_r(h2_stor,r),
+                     cost_h2_storage_fom(h2_stor,t) * H2_STOR_CAP(h2_stor,r,t) }$(Sw_H2=2)
+
 * --- CO2 pipeline fixed OM costs
-              + sum{(r,rr)$[co2_routes(r,rr)$rfeas(r)$rfeas(rr)], cost_co2_pipeline_fom(r,rr,t)
+              + sum{(r,rr)$co2_routes(r,rr), cost_co2_pipeline_fom(r,rr,t)
                               * sum{tt$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))],
                                    CO2_TRANSPORT_INV(r,rr,tt) } }$[Sw_CO2_Detail$(yeart(t)>=co2_detail_startyr)]
 
@@ -294,19 +306,17 @@ eq_Objfn_op(t)$tmodel(t)..
 * --- CO2 injection break even costs
               + sum{(r,cs,h)$r_cs(r,cs), hours(h) * CO2_STORED(r,cs,h,t) * cost_co2_stor_bec(cs,t) }$[Sw_CO2_Detail$(yeart(t)>=co2_detail_startyr)]
 
-* --- Curtailment slack penalty
-              + sum{(r,h)$[rfeas(r)], 1e10 * CURT_SLACK(r,h,t) }$[(yeart(t)<=model_builds_start_yr)$Sw_Hourly]
-
 * --- Tax credit for CO2 stored ---
-              - sum{(i,v,r,h)$[valgen(i,v,r,t)$co2_captured_incentive(i,v,t)],
-                              co2_captured_incentive(i,v,t) * hours(h) * capture_rate("CO2",i,v,r,t) * GEN(i,v,r,h,t)}
+* note conversion to 12-year CRF given length of CO2 captured incentive payments
+              - sum{(i,v,r,h)$[valgen(i,v,r,t)$co2_captured_incentive(i,v,r,t)],
+                              (crf(t) / crf_co2_incentive(t)) * co2_captured_incentive(i,v,r,t) * hours(h) * capture_rate("CO2",i,v,r,t) * GEN(i,v,r,h,t)}
 
 * --- Tax credit for CO2 stored for DAC ---
               - sum{(p,i,v,r,h)$[dac(i)$valcap(i,v,r,t)$i_p(i,p)],
-                              co2_captured_incentive(i,v,t) * hours(h) * PRODUCE(p,i,v,r,h,t)}
+                              (crf(t) / crf_co2_incentive(t)) * co2_captured_incentive(i,v,r,t) * hours(h) * PRODUCE(p,i,v,r,h,t)}
 
 * --- PTC value ---
-              - sum{(i,v,r,h)$[rfeas(r)$valgen(i,v,r,t)$ptc_value_scaled(i,v,t)],
+              - sum{(i,v,r,h)$[valgen(i,v,r,t)$ptc_value_scaled(i,v,t)],
                               hours(h) * ptc_value_scaled(i,v,t) * tc_phaseout_mult(i,v,t) * GEN(i,v,r,h,t) }
 
 *end multiplier for pvf_onm
