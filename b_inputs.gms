@@ -1796,6 +1796,7 @@ $onlisting
 $offempty
 
 * geothermal discovery factor based on class and region
+$onempty
 parameter geo_discovery_factor(i,r) "--fraction-- factor representing undiscovered geothermal"
 /
 $offlisting
@@ -1804,6 +1805,7 @@ $include inputs_case%ds%geo_discovery_factor.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 parameter geo_discovery_rate(allt) "--fraction-- fraction of undiscovered geothermal that has been 'discovered'"
 /
