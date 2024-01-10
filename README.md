@@ -160,6 +160,8 @@ You can verify that the environment was successfully created using the following
 conda env list
 ```
 
+**IMPORTANT:** Prior to creating the conda environment on Windows, you'll need to comment out the line to install julia in environment.yml. If you're looking to run ReEDS with PRAS and stress periods, you'll need to install julia manually from https://julialang.org/downloads/.
+
 <a name="ConfigGAMS"></a>
 ### GAMS Configuration
 
