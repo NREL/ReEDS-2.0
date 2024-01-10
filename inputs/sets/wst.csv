@@ -1,0 +1,7 @@
+fsu "fresh surface water that is unappropriated (formerly Unappropriated)",
+fsa "fresh surface water that is appropriated (formerly Appropriated)",
+fsl "fresh surface lake",
+fg  "fresh groundwater (formerly Potable Groundwater)",
+sg  "brackish or saline groundwater (formerly Brackish Groundwater)",
+ss  "saline surface water (new category)",
+ww  "wastewater effluent (formerly Wastewater)"

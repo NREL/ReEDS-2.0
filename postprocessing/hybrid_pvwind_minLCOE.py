@@ -268,8 +268,8 @@ def cfcorr(dspv, dswind):
 #%% Get run settings
 switches = pd.read_csv(
     os.path.join(inp['case'],'inputs_case','switches.csv'),
-    header=None, index_col=0, squeeze=True,
-)
+    header=None, index_col=0,
+).squeeze(1)
 scalars = pd.read_csv(
     os.path.join(inp['case'],'inputs_case','scalars.csv'),
     header=None, index_col=0
@@ -294,7 +294,7 @@ cfwind = pd.read_csv(
 timeindex = pd.concat([
     pd.Series(
         index=pd.date_range(
-            f'{y}-01-01 00:00', f'{y+1}-01-01 00:00', freq='H', closed='left')[:8760],
+            f'{y}-01-01 00:00', f'{y+1}-01-01 00:00', freq='H', inclusive='left')[:8760],
         dtype=float)
     for y in range(2007,2014)
 ]).index
@@ -321,9 +321,9 @@ profilemap_out.columns = ['_'.join(x) for x in profilemap_out.columns]
 #%% Get site-specific spur-line costs
 spurline_cost = pd.read_csv(
     os.path.join(inp['case'],'inputs_case','spurline_cost.csv'),
-    names=['x','trans_cap_cost_per_kw'], header=0, index_col='x', squeeze=True,
+    names=['x','trans_cap_cost_per_kw'], header=0, index_col='x',
 ## Convert to $/kW
-) / 1000
+).squeeze(1) / 1000
 
 #%% Get costs
 ## Current format
@@ -352,8 +352,8 @@ windfom = plantcharout.loc[
 #%% Get financial assumptions
 crf = pd.read_csv(
     os.path.join(inp['case'],'inputs_case','crf.csv'),
-    header=None, names=['t','crf'], index_col='t', squeeze=True,
-)
+    header=None, names=['t','crf'], index_col='t',
+).squeeze(1)
 cap_cost_mult = pd.read_csv(
     os.path.join(inp['case'],'inputs_case','cap_cost_mult.csv'),
     header=None, names=['i','r','t','ccmult'],
@@ -423,7 +423,7 @@ for x in tqdm(profilemap.index):
         'lcoe_opt': results[1],
     }
     corrout = cfcorr(dspv, dswind)
-    for k,v in corrout.iteritems():
+    for k,v in corrout.items():
         dictout[x][k] = v
     dictout[x]['cfopt'] = (
         dswind * dictout[x]['gir_wind'] + dspv * dictout[x]['gir_pv']

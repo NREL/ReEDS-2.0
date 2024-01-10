@@ -21,7 +21,6 @@ static_presets = [
     {'name': 'National OpRes Price ($/MW-h)', 'result': 'Requirement Prices and Quantities National', 'preset': 'OpRes Price Lines ($/MW-h)'},
     {'name': 'Final National OpRes Price by timeslice ($/MW-h)', 'result': 'Requirement Prices and Quantities National', 'preset': 'OpRes Price by Timeslice Final ($/MW-h)'},
     {'name': 'Final Regional Energy Price ($/MWh)', 'result': 'Requirement Prices and Quantities BA', 'preset': 'Energy Price Final BA Map ($/MWh)'},
-    {'name': 'National Seasonal Capacity Price ($/kW-yr)', 'result': 'Requirement Prices and Quantities National', 'preset': 'ResMarg Season Price Lines ($/kW-yr)'},
     {'name': 'National Annual Capacity Price ($/kW-yr)', 'result': 'Requirement Prices and Quantities National', 'preset': 'ResMarg Price Lines ($/kW-yr)'},
     {'name': 'Present Value of System Cost through 2050 (Bil $)', 'result': 'Sys Cost Annualized (Bil $)', 'preset': 'Discounted through 2050'},
     {'name': 'Emissions National (tonne)', 'result': 'Emissions National (tonne)', 'preset': 'Scenario Lines Over Time'},

@@ -51,20 +51,6 @@ cc_dr_load(i,r,szn,t) = sum{loadset, cc_dr_load2(loadset,i,r,szn,t) } ;
 
 sdbin_size_load(ccreg,szn,sdbin,t) = sum{loadset, sdbin_size_load2(loadset,ccreg,szn,sdbin,t) } ;
 
-*===========================
-* --- Begin Curtailment ---
-*===========================
-
-*Clear params before calculation
-oldVREgen(r,h,t) = 0 ;
-oldMINGEN(r,h,t) = 0 ;
-
-oldVREgen(r,h,t)$tload(t) =
-    sum{(i,v)$[vre(i)$valcap(i,v,r,t)],
-          m_cf(i,v,r,h,t) * CAP.l(i,v,r,t)
-       } ;
-oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) } ;
-
 *===============================
 * --- Begin Capacity Credit ---
 *===============================
@@ -134,7 +120,7 @@ cc_int(i,v,r,szn,t)$[cc_int(i,v,r,szn,t) < 0.001] = 0 ;
 
 cc_iter(i,v,r,szn,t,"%niter%")$cc_int(i,v,r,szn,t) = cc_int(i,v,r,szn,t) ;
 
-execute_unload 'ReEDS_Augur%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int, oldVREgen ;
+execute_unload 'ReEDS_Augur%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int ;
 
 *following line will load in the level values if the switch is enabled
 *note that this is still within the conditional that we are now past the first iteration
@@ -175,9 +161,6 @@ gen_iter(i,v,r,t,"%niter%")$valcap(i,v,r,t) = sum{h, GEN.l(i,v,r,h,t) * hours(h)
 gen_iter(i,v,r,t,"%niter%")$[vre(i)$valcap(i,v,r,t)] = sum{h, m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) } ;
 cap_firm_iter(i,v,r,szn,t,"%niter%")$cc_int(i,v,r,szn,t) = cc_int(i,v,r,szn,t) * CAP.l(i,v,r,t) ;
 cap_firm_iter(i,v,r,szn,t,"%niter%")$storage(i) = sum{sdbin, CAP_SDBIN.l(i,v,r,szn,sdbin,t) * cc_storage(i,sdbin) } ;
-$ifthene.postseconditer %niter%>1
-cc_change(i,v,r,szn,t)$[tload(t)$(vre(i) or storage(i))$valcap(i,v,r,t)] = cc_iter(i,v,r,szn,t,"%niter%") - cc_iter(i,v,r,szn,t,"%previter%") ;
-$endif.postseconditer
 
 *=====================
 * --- Demand Side ---

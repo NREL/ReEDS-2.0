@@ -5,6 +5,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from glob import glob
 import os, sys, math, site
+import platform
+import subprocess as sp
 
 import geopandas as gpd
 import shapely
@@ -60,12 +62,18 @@ parser.add_argument('--year', '-y', type=int, default=0,
                     help='year to run')
 parser.add_argument('--titleshorten', '-s', type=int, default=0,
                     help='characters to cut from start of case name')
+parser.add_argument('--skipbp', '-p', action='store_true',
+                    help='flag to prevent bokehpivot report from being generated')
+parser.add_argument('--bpreport', '-b', type=str, default='standard_report_reduced',
+                    help='which bokehpivot report to generate')
 
 args = parser.parse_args()
 casebase = args.casebase
 casecomp = args.casecomp
 year = args.year
 titleshorten = args.titleshorten
+bpreport = args.bpreport
+skipbp = args.skipbp
 
 # #%% Inputs for testing
 # casebase = os.path.join(reeds_path,'runs','v20230509_onelineM0_NEIAIL_No')
@@ -82,6 +90,27 @@ titleshorten = args.titleshorten
 # interactive = True
 
 #%%### Procedure
+casebase_name = os.path.basename(casebase)
+casecomp_name = os.path.basename(casecomp)
+#%% Create output folder if it doesn't exist
+outpath = f'{casecomp}/outputs/comparisons'
+os.makedirs(outpath, exist_ok=True)
+print(f'Saving results to {outpath}')
+
+#%% Create bokehpivot report as subprocess
+if not skipbp:
+    start_str = 'start ' if platform.system() == 'Windows' else ''
+    bp_path = f'{reeds_path}/postprocessing/bokehpivot'
+    bp_py_file = f'{bp_path}/reports/interface_report_model.py'
+    report_path = f'{bp_path}/reports/templates/reeds2/{bpreport}.py'
+    bp_outpath = f'{outpath}/{bpreport}-diff-with-{casebase_name}'
+    add_diff = 'Yes'
+    auto_open = 'Yes'
+    call_str = (
+        f'{start_str}python "{bp_py_file}" "ReEDS 2.0" "{casebase}|{casecomp}" all ' +
+        f'{add_diff} "{casebase_name}" "{report_path}" "html,excel" one "{bp_outpath}" {auto_open}'
+    )
+    sp.Popen(call_str, shell=True)
 
 #%% Set up powerpoint file and default figure-adding approach
 prs = pptx.Presentation(os.path.join(reeds_path,'postprocessing','template.pptx'))
@@ -105,7 +134,7 @@ def add_to_pptx(title, left=0, top=0.62, width=13.33, height=None):
 #%% Get the switches, overwriting values as necessary
 sw = pd.read_csv(
     os.path.join(casebase, 'inputs_case', 'switches.csv'),
-    header=None, index_col=0, squeeze=True)
+    header=None, index_col=0).squeeze(1)
 sw['reeds_path'] = reeds_path
 
 ### Get the solve years
@@ -198,7 +227,7 @@ try:
             cmap=plt.cm.gist_earth_r,
         )
         ax[0].annotate(
-            os.path.basename(casebase)[titleshorten:],
+            casebase_name[titleshorten:],
             (0.1,1), xycoords='axes fraction', fontsize=10)
 
         _,_,dfplot = reedsplots.plotdiffmaps(
@@ -207,7 +236,7 @@ try:
             cmap=plt.cm.gist_earth_r,
         )
         ax[1].annotate(
-            os.path.basename(casecomp)[titleshorten:],
+            casecomp_name[titleshorten:],
             (0.1,1), xycoords='axes fraction', fontsize=10)
 
         _,_,dfplot = reedsplots.plotdiffmaps(
@@ -218,8 +247,8 @@ try:
         # print(dfplot.CAP_diff.min(), dfplot.CAP_diff.max())
         ax[2].annotate(
             '{}\n– {}'.format(
-                os.path.basename(casecomp)[titleshorten:],
-                os.path.basename(casebase)[titleshorten:]), 
+                casecomp_name[titleshorten:],
+                casebase_name[titleshorten:]),
             (0.1,1), xycoords='axes fraction', fontsize=10)
 
         add_to_pptx(f'Capacity ({t})')
@@ -229,7 +258,13 @@ except Exception as err:
 
 #%% Save the powerpoint file
 savename = os.path.join(
-    casecomp, 'outputs', 'maps', f"diff-{os.path.basename(casebase)}.pptx"
+    outpath, f"diff-{casebase_name}.pptx"
 )
 prs.save(savename)
 print(savename)
+
+### Open it
+if sys.platform == 'darwin':
+    sp.run(f'open {savename}', shell=True)
+elif platform.system() == 'Windows':
+    sp.run(f'"{savename}"', shell=True)

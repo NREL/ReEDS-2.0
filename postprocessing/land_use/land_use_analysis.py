@@ -45,8 +45,8 @@ def totalLand(scen_path, upv_land_use, total_area):
     upv_land_use['built_capacity_MW'] = upv_land_use['built_capacity']
     upv_area = upv_land_use.groupby(['year'])[["built_capacity_MW", "built_area_sq_km"]].sum()
 
-    # TO DO: add in total non-excluded area (current total is only available for development)
-    # TO DO: modify to use multiple years of land-use data
+    # current total is area available for development, not total non-excluded area
+    # does not currently use multiple years of land-use data
     upv_area['avail_area_sq_km'] = total_area
 
     # save output
@@ -240,7 +240,7 @@ if __name__ == '__main__':
     try:
         # get path to relevant rev files and switch settings 
         rev_paths = pd.read_csv(
-            os.path.join(scen_path, "inputs_case", "supplycurve_metadata", "rev_supply_curves.csv"))
+            os.path.join(scen_path, "inputs_case", "rev_paths.csv"))
 
         # eventual plan is to add function calls for other techs (namely wind-ons)
         getLandUse(scen, scen_path, rev_paths, tech="upv")
@@ -252,4 +252,4 @@ if __name__ == '__main__':
 
     # debugging 
     # python postprocessing/land_use/land_use_analysis.py /Users/bsergi/Documents/Projects/Solar-siting/ReEDS-2.0/runs/2022_03_26_AllOptions_sites
-    # python /Users/bsergi/Documents/Projects/Solar-siting/ReEDS-2.0/postprocessing/bokehpivot/reports/interface_report_model.py "ReEDS 2.0" /Users/bsergi/Documents/Projects/Solar-siting/ReEDS-2.0/runs/2022_03_26_AllOptions_sites all No none /Users/bsergi/Documents/Projects/Solar-siting/ReEDS-2.0/postprocessing/bokehpivot/reports/templates/reeds2/land_use.py one /Users/bsergi/Documents/Projects/Solar-siting/ReEDS-2.0/runs/2022_03_26_AllOptions_sites/outputs/reeds-report-land no
+    # python /Users/bsergi/Documents/Projects/Solar-siting/ReEDS-2.0/postprocessing/bokehpivot/reports/interface_report_model.py "ReEDS 2.0" /Users/bsergi/Documents/Projects/Solar-siting/ReEDS-2.0/runs/2022_03_26_AllOptions_sites all No none /Users/bsergi/Documents/Projects/Solar-siting/ReEDS-2.0/postprocessing/bokehpivot/reports/templates/reeds2/land_use.py one /Users/bsergi/Documents/Projects/Solar-siting/ReEDS-2.0/runs/2022_03_26_AllOptions_sites/outputs/reeds-report-land No

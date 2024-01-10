@@ -1,11 +1,11 @@
 #%% Imports
 import ArgParse
-import CSV
 import DataFrames as DF
 import Logging
 import LoggingExtras
 import Dates
 import PRAS
+import HDF5
 try
     using Revise
 catch e
@@ -152,31 +152,29 @@ function run_pras(pras_system_path::String, args::Dict)
     ## Units are:
     ## * LOLE: event-h
     ## * EUE: MWh
-    ## * NEUE: fraction
     ## First for the whole modeled area (labeled as "USA" but if modeling a smaller
     ## region (speicified by GSw_Region) it will be for that modeled region)
     dfout = DF.DataFrame(
-        h=sys.timestamps,
         USA_LOLE=[PRAS.LOLE(short,h).lole.estimate for h in sys.timestamps],
         USA_EUE=[PRAS.EUE(short,h).eue.estimate for h in sys.timestamps],
-        USA_NEUE=[PRAS.EUE(short,h).eue.estimate / sum(sys.regions.load[:,j])
-                  for (j,h) in enumerate(sys.timestamps)],
     )
     ## Now for each constituent region
     for (i,r) in enumerate(sys.regions.names)
         dfout[!, "$(r)_LOLE"] = [PRAS.LOLE(short,r,h).lole.estimate for h in sys.timestamps]
         dfout[!, "$(r)_EUE"] = [PRAS.EUE(short,r,h).eue.estimate for h in sys.timestamps]
-        dfout[!, "$(r)_NEUE"] = [PRAS.EUE(short,r,h).eue.estimate / sum(sys.regions.load[i,j])
-                                 for (j,h) in enumerate(sys.timestamps)]
     end
 
     #%% Write it
     if args["include_samples"] == 1
-        outfile = replace(pras_system_path, ".pras"=>"-$(args["samples"]).csv")
+        outfile = replace(pras_system_path, ".pras"=>"-$(args["samples"]).h5")
     else
-        outfile = replace(pras_system_path, ".pras"=>".csv")
+        outfile = replace(pras_system_path, ".pras"=>".h5")
     end
-    CSV.write(outfile, dfout)
+    HDF5.h5open(outfile, "w") do f
+        for column in DF._names(dfout)
+            f["$column", compress=4] = convert(Array, dfout[!, column])
+        end
+    end
     @info("Wrote PRAS output to $(outfile)")
 
     #%%
@@ -236,18 +234,20 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__
     # #%% Inputs for debugging
     # args = Dict(
-    #     "reeds_path" => "/Users/pbrown/github2/ReEDS-2.0",
+    #     "reeds_path" => "/Users/pbrown/github/ReEDS-2.0",
     #     "reedscase" => (
-    #         "/Users/pbrown/github2/ReEDS-2.0/runs/"
-    #         *"v20230328_prasM0_WECC_SP_sh4msp30_so1smPslaM"),
-    #     "solve_year" => 2050,
+    #         "/Users/pbrown/github/ReEDS-2.0/runs/"
+    #         *"v20231111_stressM2_stress_WECC"),
+    #     "solve_year" => 2035,
     #     "weather_year" => 2007,
     #     "reeds2praspath" => "/Users/pbrown/github/ReEDS2PRAS",
     #     "samples" => 10,
+    #     "iteration" => 0,
     #     # "timesteps" => 8760,
     #     "timesteps" => 61320,
     #     "overwrite" => 1,
     #     "debug" => 0,
+    #     "include_samples" => 0,
     # )
 
     #%% Parse the command line arguments

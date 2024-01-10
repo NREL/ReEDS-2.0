@@ -31,7 +31,7 @@ outpath = os.path.join(reeds_path,'inputs','supplycurvedata')
 
 ### Indicate the scenarios to use
 scpaths = pd.read_csv(
-    os.path.join(reeds_path,'inputs','supplycurvedata','metadata','rev_paths.csv'),
+    os.path.join(reeds_path,'inputs','supplycurvedata','rev_paths.csv'),
     index_col=['tech','access_case'],
 )
 scens = {

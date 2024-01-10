@@ -327,8 +327,6 @@ def update_hyper_file_from_csv(table_def,csv_path,hyper_path,create_new=False):
                 command=f"COPY {table_def.table_name} from {escape_string_literal(str(csv_path))} with "
                 f"(format csv, NULL 'NULL', delimiter ',', header)") #include ", header" in string if header is present to skip it
 
-            # TODO: add an UPDATE query to add scenario names directly, allowing us to not have to make csvs first
-
             # print(f"The number of rows in table {table_def.table_name} is {count_in_table}.")
 
         # print("The connection to the Hyper file has been closed.")

@@ -14,13 +14,12 @@ positive variables
 
 * load variable - set equal to load_exog to compute holistic marginal price
   LOAD(r,allh,t)                  "--MW-- busbar load for each balancing region"
-  EVLOAD(r,allh,t)                "--MW-- busbar load specific to EVs"
   FLEX(flex_type,r,allh,t)        "--MW-- flexible load shifted to each timeslice"
-  PEAK_FLEX(r,allszn,t)           "--MW-- peak busbar load adjustment based on load flexibility"
+*   PEAK_FLEX(r,ccseason,t)          "--MW-- peak busbar load adjustment based on load flexibility"
   DROPPED(r,allh,t)               "--MW-- dropped load (only allowed before Sw_StartMarkets)"
 
 * capacity and investment variables
-  CAP_SDBIN(i,v,r,allszn,sdbin,t)  "--MW-- generation capacity by storage duration bin for relevant technologies"
+  CAP_SDBIN(i,v,r,ccseason,sdbin,t) "--MW-- generation capacity by storage duration bin for relevant technologies"
   CAP(i,v,r,t)                     "--MW-- total generation capacity in MWac (MWdc for PV); PV capacity of hybrid PV+battery"
   CAP_RSC(i,v,r,rscbin,t)          "--MW-- total generation capacity in MWac (MWdc for PV) for wind-ons and upv"
   GROWTH_BIN(gbin,i,st,t)          "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
@@ -48,6 +47,8 @@ positive variables
   DR_SHIFT(i,v,r,allh,allhh,t)        "--MWh-- annual demand response load shifted to timeslice h from timeslice hh"
   DR_SHED(i,v,r,allh,t)               "--MWh-- annual demand response load shed from timeslice h"
   LAST_HOUR_SOC(i,v,r,allh,t)         "--MWh-- last hour state of charge when running flex without infinite loop"
+  RAMPUP(i,v,r,allh,allhh,t)          "--MW-- upward change in generation from h to hh"
+  RAMPDOWN(i,v,r,allh,allhh,t)        "--MW-- downward change in generation from h to hh"
 
 * flexible CCS variables
   CCSFLEX_POW(i,v,r,allh,t)                "--avg MW-- average power consumed for CCS system"
@@ -58,7 +59,7 @@ positive variables
 * trade variables
   FLOW(r,rr,allh,t,trtype)        "--MW-- electricity flow on transmission lines in hour h"
   OPRES_FLOW(ortype,r,rr,allh,t)  "--MW-- interregional trade of operating reserves by operating reserve type"
-  PRMTRADE(r,rr,trtype,allszn,t)  "--MW-- planning reserve margin capacity traded from r to rr"
+  PRMTRADE(r,rr,trtype,ccseason,t) "--MW-- planning reserve margin capacity traded from r to rr"
 
 * operating reserve variables
   OPRES(ortype,i,v,r,allh,t)      "--MW-- operating reserves by type"
@@ -81,7 +82,7 @@ positive variables
   CAP_CONVERTER(r,t)                             "--MW-- VSC AC/DC converter capacity"
   INV_CONVERTER(r,t)                             "--MW-- investment in AC/DC converter capacity"
   CONVERSION(r,allh,intype,outtype,t)            "--MW-- conversion of AC->DC or DC->AC"
-  CONVERSION_PRM(r,allszn,intype,outtype,t)      "--MW-- planning reserve margin capacity sent through VSC AC/DC converters"
+  CONVERSION_PRM(r,ccseason,intype,outtype,t)     "--MW-- planning reserve margin capacity sent through VSC AC/DC converters"
   CAP_SPUR(x,t)                                  "--MW-- capacity of spur lines"
   INV_SPUR(x,t)                                  "--MW-- investment in spur line capacity"
   INV_POI(r,t)                                   "--MW-- investment in new POI capacity (for network reinforcement costs)"
@@ -121,13 +122,12 @@ EQUATION
 
 * load constraint to compute proper marginal value
  eq_loadcon(r,allh,t)                    "--MW-- load constraint used for computing the marginal energy price"
- eq_evloadcon(r,allszn,t)                "--MWh-- mapping of seasonal EV load to each timeslice"
 
 * load flexibility constraints
  eq_load_flex_day(flex_type,r,allszn,t)  "--MWh-- total flexible load in each season is equal to the exogenously-specified flexible load"
  eq_load_flex1(flex_type,r,allh,t)       "--MWh-- exogenously-specified flexible demand (load_exog_flex) must be served by flexible load (FLEX)"
  eq_load_flex2(flex_type,r,allh,t)       "--MWh-- flexible load (FLEX) can't exceed exogenously-specified flexible demand (load_exog_flex)"
- eq_load_flex_peak(r,allh,allszn,t)      "--MWh-- adjust peak demand as needed based on the load flexibility (FLEX)"
+*  eq_load_flex_peak(r,allh,ccseason,t)    "--MWh-- adjust peak demand as needed based on the load flexibility (FLEX)"
 
 * capital stock constraints
  eq_cap_init_noret(i,v,r,t)               "--MW-- Existing capacity that cannot be retired is equal to exogenously-specified amount"
@@ -153,8 +153,8 @@ EQUATION
  eq_growthlimit_absolute(tg,t)            "--MW-- absolute growth limit on technologies"
 
 * storage capacity credit supply curves
- eq_cap_sdbin_balance(i,v,r,allszn,t)     "--MW-- total binned storage capacity must be equal to total storage capacity"
- eq_sdbin_limit(ccreg,allszn,sdbin,t)     "--MW-- binned storage capacity cannot exceed storage duration bin size"
+ eq_cap_sdbin_balance(i,v,r,ccseason,t)    "--MW-- total binned storage capacity must be equal to total storage capacity"
+ eq_sdbin_limit(ccreg,ccseason,sdbin,t)    "--MW-- binned storage capacity cannot exceed storage duration bin size"
 
 * operation and reliability
  eq_site_cf(x,allh,t)                          "--MW-- generation at site x <= CF * capacity of constituent resources"
@@ -168,10 +168,12 @@ EQUATION
  eq_dhyd_dispatch_ann(i,v,r,t)                 "--MWh-- dispatchable hydro annual energy constraint (only when allowing seasonal energy shifting)"
  eq_dhyd_dispatch_szn(i,v,r,allszn,t)          "--MWh-- dispatchable hydro seasonal energy constraint"
  eq_min_cf(i,r,t)                              "--MWh-- minimum capacity factor constraint for each generator fleet, applied to (i,r)"
+ eq_mingen_fixed(i,v,r,allh,t)                 "--MW-- Generation in each timeslice must be greater than mingen_fixed * capacity"
  eq_mingen_lb(r,allh,allszn,t)                 "--MW-- lower bound on minimum generation level"
  eq_mingen_ub(r,allh,allszn,t)                 "--MW-- upper bound on minimum generation level"
  eq_minloading(i,v,r,allh,allhh,t)             "--MW-- minimum loading across same-season hours"
- eq_reserve_margin(r,allszn,t)                 "--MW-- planning reserve margin requirement"
+ eq_ramping(i,v,r,allh,allhh,t)                "--MW-- definition of RAMPUP and RAMPDOWN"
+ eq_reserve_margin(r,ccseason,t)               "--MW-- planning reserve margin requirement"
  eq_supply_demand_balance(r,allh,t)            "--MW-- supply demand balance"
  eq_vsc_flow(r,allh,t)                         "--MW-- DC power flow"
  eq_transmission_limit(r,rr,allh,t,trtype)     "--MW-- transmission flow limit"
@@ -241,7 +243,7 @@ EQUATION
  eq_CAPTRAN_ENERGY(r,rr,trtype,t)            "--MW-- capacity accounting for transmission capacity for energy trading"
  eq_CAPTRAN_PRM(r,rr,trtype,t)               "--MW-- capacity accounting for transmission capacity for PRM trading"
  eq_prescribed_transmission(r,rr,trtype,t)   "--MW-- investment in transmission up to first year allowed must be less than the exogenous possible transmission",
- eq_PRMTRADELimit(r,rr,trtype,allszn,t)      "--MW-- trading of PRM capacity cannot exceed the line's capacity"
+ eq_PRMTRADELimit(r,rr,trtype,ccseason,t)    "--MW-- trading of PRM capacity cannot exceed the line's capacity"
  eq_transmission_investment_max(t)           "--MWmile-- investment in transmission must be <= Sw_TransInvMax"
  eq_CAPTRAN_max(r,rr,trtype,t)               "--MW-- upper limit for transmission capacity of each trtype across individual interfaces"
  eq_CAPTRAN_max_total(r,rr,t)                "--MW-- upper limit for transmission capacity of all trtypes across individual interfaces"
@@ -249,12 +251,12 @@ EQUATION
  eq_CAP_SPUR(x,t)                            "--MW-- capacity accounting for spur lines"
  eq_converter_max(r,t)                       "--MW-- upper limit for VSC AC/DC converter capacity in individual BAs"
  eq_CONVERSION_limit_energy(r,allh,t)        "--MW-- AC/DC energy conversion is limited to converter capacity"
- eq_CONVERSION_limit_prm(r,allszn,t)         "--MW-- AC/DC PRM conversion is limited to converter capacity"
- eq_PRMTRADE_VSC(r,allszn,t)                 "--MW-- PRM capacity can flow through VSC lines but doesn't directly contribute to PRM"
+ eq_CONVERSION_limit_prm(r,ccseason,t)       "--MW-- AC/DC PRM conversion is limited to converter capacity"
+ eq_PRMTRADE_VSC(r,ccseason,t)               "--MW-- PRM capacity can flow through VSC lines but doesn't directly contribute to PRM"
  eq_POI_cap(r,t)                             "--MW-- POI capacity accounting (for network reinforcement costs)"
  eq_CAPTRAN_GRP(transgrp,transgrpp,t)        "--MW-- combined flow capacity between transmission groups"
  eq_transgrp_limit_energy(transgrp,transgrpp,allh,t) "--MW-- limit on combined interface energy flows"
- eq_transgrp_limit_prm(transgrp,transgrpp,allszn,t) "--MW-- limit on combined interface PRM flows"
+ eq_transgrp_limit_prm(transgrp,transgrpp,ccseason,t) "--MW-- limit on combined interface PRM flows"
 
 * storage-specific equations
  eq_storage_capacity(i,v,r,allh,t)                "--MW-- Second storage capacity constraint in addition to eq_capacity_limit"
@@ -266,7 +268,6 @@ EQUATION
  eq_storage_seas_szn(i,v,r,allszn,t)              "--MWh-- GEN in a season must be greater than a certain percentage of STORAGE_IN in that season"
  eq_storage_seas(i,v,r,t)                         "--MWh-- total STORAGE_IN must balance GEN across all time-slices"
  eq_storage_thermalres(i,v,r,allh,t)              "--MW-- thermal storage contribution to operating reserves is store_in only"
-
 
 * demand-response specific equations
  eq_dr_max_shed(i,v,r,allh,t)             "--MW-- total shed allowed by demand response technologies from timeslice h"
@@ -324,13 +325,17 @@ eq_loadcon(r,h,t)$[rb(r)$tmodel(t)]..
 * while net_trade can be negative and cause infeasibilities
     + can_exports_h(r,h,t)$[Sw_Canada=1]
 
-*[plus] load from EV charging
-    + EVLOAD(r,h,t)$Sw_EV
+*[plus] load from EV charging (baseline/unmanaged)
+    + evmc_baseline_load(r,h,t)$Sw_EVMC
+
+*[plus] shifted load from adopted EVMC
+    + sum{(i,v)$[evmc_shape(i)$valcap(i,v,r,t)], evmc_shape_load(i,r,h) * CAP(i,v,r,t)}
 
 *[plus] load shifted from other timeslices
     + sum{flex_type, FLEX(flex_type,r,h,t) }$Sw_EFS_flex
 
 *[plus] Load created by production activities
+* [tonne/hour] / [tonne/MWh] = [MW]
     + sum{(p,i,v)$[consume(i)$valcap(i,v,r,t)$i_p(i,p)$(not sameas(i,"dac_gas"))],
           PRODUCE(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) }$Sw_Prod
 
@@ -345,17 +350,6 @@ eq_loadcon(r,h,t)$[rb(r)$tmodel(t)]..
     + sum{rr$h2_routes(r,rr),
         h2_network_load("h2_compressor",t)
         * (( H2_FLOW(r,rr,h,t) + H2_FLOW(rr,r,h,t) ) / 2) }$Sw_H2_CompressorLoad
-;
-
-* ---------------------------------------------------------------------------
-
-eq_evloadcon(r,szn,t)$[rb(r)$tmodel(t)$Sw_EV]..
-
-    sum{h$h_szn(h,szn),hours(h) * EVLOAD(r,h,t) }
-
-    =e=
-
-    ev_dynamic_demand(r,szn,t)
 ;
 
 * ---------------------------------------------------------------------------
@@ -427,23 +421,24 @@ eq_load_flex2(flex_type,r,h,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
     FLEX(flex_type,r,h,t) * hours(h)
 ;
 
-* ---------------------------------------------------------------------------
+* * ---------------------------------------------------------------------------
+* This constraint and the associated PEAK_FLEX variable are not currently supported
+* but are left in the model in case someone decides to revive them.
+* eq_load_flex_peak(r,h,ccseason,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
+* *   peak demand EFS flexibility adjustment is greater than
+*     PEAK_FLEX(r,ccseason,t)$h_ccseason(h,ccseason)
 
-eq_load_flex_peak(r,h,szn,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
-*   peak demand EFS flexibility adjustment is greater than
-    PEAK_FLEX(r,szn,t)$h_szn(h,szn)
+*     =g=
 
-    =g=
+* *   the static peak in each timeslice
+*     peakdem_static_h(r,h,t)$h_ccseason(h,ccseason)
 
-*   the static peak in each timeslice
-    peakdem_static_h(r,h,t)$h_szn(h,szn)
+* *   PLUS the flexibile load served in each timeslice
+*     + sum{flex_type, FLEX(flex_type,r,h,t) }$h_ccseason(h,ccseason)
 
-*   PLUS the flexibile load served in each timeslice
-    + sum{flex_type, FLEX(flex_type,r,h,t) }$h_szn(h,szn)
-
-*   MINUS the static peak demand in the season corresponding to each timeslice
-    - peakdem_static_szn(r,szn,t)$h_szn(h,szn)
-;
+* *   MINUS the static peak demand in the season corresponding to each timeslice
+*     - peakdem_static_ccseason(r,ccseason,t)$h_ccseason(h,ccseason)
+* ;
 
 * ---------------------------------------------------------------------------
 
@@ -815,6 +810,8 @@ eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)$rsc_i(i)$m_rscfeas(r,i,rscbin)$m_rsc_con(
     + hyd_add_upg_cap(r,i,rscbin,t)$(Sw_HydroCapEnerUpgradeType=1)
 * available DR capacity
     + rsc_dr(i,r,"cap",rscbin,t)
+* available EVMC capacity
+    + rsc_evmc(i,r,"cap",rscbin,t)
 
     =g=
 
@@ -964,7 +961,7 @@ eq_spur_noclip(x,t)
 eq_capacity_limit(i,v,r,h,t)
     $[tmodel(t)$valgen(i,v,r,t)
     $(not spur_techs(i))
-    $(not storage_standalone(i))$(not pvb(i))$(not nondispatch(i))]..
+    $(not storage_standalone(i))$(not pvb(i))$(not nondispatch(i))$(not evmc_storage(i))]..
     
 *total amount of dispatchable, non-hydro capacity
     avail(i,h)$[dispatchtech(i)$(not hydro_d(i))]
@@ -990,6 +987,8 @@ eq_capacity_limit(i,v,r,h,t)
 *subtract energy that would be embedded in a capacity-only upsizing
                 - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
       )$[not dispatchtech(i)]
+*add EVMC shape generation
+    + (evmc_shape_gen(i,r,h) * CAP(i,v,r,t))
 
     =g=
 
@@ -1069,6 +1068,19 @@ eq_curt_gen_balance(r,h,t)$[rb(r)$tmodel(t)]..
 ;
 
 * ---------------------------------------------------------------------------
+* Generation in each timeslice must be greater than mingen_fixed * capacity
+eq_mingen_fixed(i,v,r,h,t)
+    $[Sw_MingenFixed$tmodel(t)$mingen_fixed(i)$valgen(i,v,r,t)
+    $(yeart(t)>=Sw_StartMarkets)]..
+
+    GEN(i,v,r,h,t)
+
+    =g=
+
+    mingen_fixed(i) * CAP(i,v,r,t)
+;
+
+* ---------------------------------------------------------------------------
 
 eq_mingen_lb(r,h,szn,t)$[rb(r)$h_szn(h,szn)$(yeart(t)>=mingen_firstyear)
                         $tmodel(t)$Sw_Mingen]..
@@ -1118,7 +1130,6 @@ eq_dhyd_dispatch(i,v,r,szn,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_seas
     * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],
                INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
              - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
-    * cap_hyd_szn_adj(i,szn,r)
     * m_cf_szn(i,v,r,szn,t)
 
     =g=
@@ -1148,7 +1159,6 @@ eq_dhyd_dispatch_ann(i,v,r,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_seas
             INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
             - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
 * [times] seasonal capacity adjustment
-        * cap_hyd_szn_adj(i,szn,r)
         * m_cf_szn(i,v,r,szn,t) }
     =g=
 
@@ -1190,7 +1200,6 @@ eq_dhyd_dispatch_szn(i,v,r,szn,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_
         sum{h$[h_szn(h,szn)], avail(i,h) * hours(h) }
         * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
            - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
-        * cap_hyd_szn_adj(i,szn,r)
         * (m_cf_szn(i,v,r,szn,t)$(m_cf_szn(i,v,r,szn,t) <= 1) + 1$(m_cf_szn(i,v,r,szn,t) > 1))
     )
 ;
@@ -1228,7 +1237,7 @@ eq_supply_demand_balance(r,h,t)$[rb(r)$tmodel(t)]..
     - (CONVERSION(r,h,"AC","VSC",t) / converter_efficiency_vsc)$[Sw_VSC$val_converter(r,t)]
 
 * [minus] storage charging; not Hybrid PV+Battery
-    - sum{(i,v)$[valcap(i,v,r,t)$(storage_standalone(i) or hyd_add_pump(i))], STORAGE_IN(i,v,r,h,t) }
+    - sum{(i,v)$[valcap(i,v,r,t)$(storage_standalone(i) or hyd_add_pump(i) or evmc_storage(i))], STORAGE_IN(i,v,r,h,t) }
 
 * [minus] energy into storage for hybrid pv+battery from grid
     - sum{(i,v)$[valcap(i,v,r,t)$pvb(i)], STORAGE_IN_PVB_G(i,v,r,h,t) }$Sw_PVB
@@ -1291,6 +1300,17 @@ eq_minloading(i,v,r,h,hh,t)$[valgen(i,v,r,t)$minloadfrac(r,i,hh)
     GEN(i,v,r,hh,t) * minloadfrac(r,i,hh)
 ;
 
+* RAMPUP is used in the calculation of startup/ramping costs
+eq_ramping(i,v,r,h,hh,t)
+    $[Sw_StartCost$tmodel(t)$startcost(i)$numhours_nexth(h,hh)$valgen(i,v,r,t)]..
+
+    GEN(i,v,r,hh,t)
+
+    =e=
+
+    GEN(i,v,r,h,t) + RAMPUP(i,v,r,h,hh,t) - RAMPDOWN(i,v,r,h,hh,t)
+;
+
 *=======================================
 * --- OPERATING RESERVE CONSTRAINTS ---
 *=======================================
@@ -1302,7 +1322,7 @@ eq_minloading(i,v,r,h,hh,t)$[valgen(i,v,r,t)$minloadfrac(r,i,hh)
 *ORPRES for storage is limited by the storage capacity per the constraint "eq_storage_capacity"
 eq_ORCap_large_res_frac(ortype,i,v,r,h,t)
     $[tmodel(t)$valgen(i,v,r,t)$Sw_OpRes$opres_model(ortype)$opres_h(h)
-    $(reserve_frac(i,ortype)>0.5)$(not storage_standalone(i))$(not hyd_add_pump(i))]..
+    $(reserve_frac(i,ortype)>0.5)$(not storage_standalone(i))$(not hyd_add_pump(i))$(not evmc_storage(i))]..
 
 *the reserve_frac times...
     reserve_frac(i,ortype) * (
@@ -1378,36 +1398,36 @@ eq_OpRes_requirement(ortype,r,h,t)
 * ---------------------------------------------------------------------------
 
 *trade of planning reserve margin capacity cannot exceed the transmission line's available capacity
-eq_PRMTRADELimit(r,rr,trtype,szn,t)
+eq_PRMTRADELimit(r,rr,trtype,ccseason,t)
     $[tmodel(t)
     $routes(r,rr,trtype,t)
     $routes_prm(r,rr)
     $Sw_PRM_CapCredit]..
 
 *[plus] transmission capacity
-    + CAPTRAN_PRM(r,rr,trtype,t) * sum{h$h_szn_prm(h,szn), (1 + trans_cap_delta(h,t)) }
+    + CAPTRAN_PRM(r,rr,trtype,t) * sum{h$h_ccseason_prm(h,ccseason), (1 + trans_cap_delta(h,t)) }
 
     =g=
 
 *[plus] firm capacity traded between regions
-    + PRMTRADE(r,rr,trtype,szn,t)
+    + PRMTRADE(r,rr,trtype,ccseason,t)
 ;
 
 * ---------------------------------------------------------------------------
 
-eq_PRMTRADE_VSC(r,szn,t)
+eq_PRMTRADE_VSC(r,ccseason,t)
     $[rb(r)
     $tmodel(t)
     $Sw_PRM_CapCredit
     $Sw_VSC]..
 
 *[plus] net VSC DC imports - exports of firm capacity with imports reduced by losses
-    + sum{rr$[routes(rr,r,"VSC",t)$routes_prm(rr,r)], (1-tranloss(rr,r,"VSC")) * PRMTRADE(rr,r,"VSC",szn,t) }
-    - sum{rr$[routes(r,rr,"VSC",t)$routes_prm(r,rr)], PRMTRADE(r,rr,"VSC",szn,t) }
+    + sum{rr$[routes(rr,r,"VSC",t)$routes_prm(rr,r)], (1-tranloss(rr,r,"VSC")) * PRMTRADE(rr,r,"VSC",ccseason,t) }
+    - sum{rr$[routes(r,rr,"VSC",t)$routes_prm(r,rr)], PRMTRADE(r,rr,"VSC",ccseason,t) }
 
 * [plus] net VSC AC/DC conversion
-    + (CONVERSION_PRM(r,szn,"AC","VSC",t) * converter_efficiency_vsc)$val_converter(r,t)
-    - (CONVERSION_PRM(r,szn,"VSC","AC",t) / converter_efficiency_vsc)$val_converter(r,t)
+    + (CONVERSION_PRM(r,ccseason,"AC","VSC",t) * converter_efficiency_vsc)$val_converter(r,t)
+    - (CONVERSION_PRM(r,ccseason,"VSC","AC",t) / converter_efficiency_vsc)$val_converter(r,t)
 
     =e=
 
@@ -1419,7 +1439,7 @@ eq_PRMTRADE_VSC(r,szn,t)
 
 * binned capacity for capacity credit must be the same as capacity
 * (except for CSP, which is treated like VRE for capacity credit)
-eq_cap_sdbin_balance(i,v,r,szn,t)
+eq_cap_sdbin_balance(i,v,r,ccseason,t)
     $[tmodel(t)$valcap(i,v,r,t)$storage(i)$(not csp(i))]..
 
 *total capacity in each region
@@ -1428,34 +1448,34 @@ eq_cap_sdbin_balance(i,v,r,szn,t)
     =e=
 
 *sum of all binned capacity within each region
-    sum{sdbin, CAP_SDBIN(i,v,r,szn,sdbin,t) }
+    sum{sdbin, CAP_SDBIN(i,v,r,ccseason,sdbin,t) }
 ;
 
 * ---------------------------------------------------------------------------
 
 *binned capacity cannot exceed sdbin size
-eq_sdbin_limit(ccreg,szn,sdbin,t)$tmodel(t)..
+eq_sdbin_limit(ccreg,ccseason,sdbin,t)$tmodel(t)..
 
 *sdbin size from CC script
-    sdbin_size(ccreg,szn,sdbin,t)
+    sdbin_size(ccreg,ccseason,sdbin,t)
 
     =g=
 
 *standalone storage capacity in each sdbin adjusted by the appropriate CC value
     sum{(i,v,r)$[r_ccreg(r,ccreg)$valcap(i,v,r,t)$(storage_standalone(i) or hyd_add_pump(i))],
-        CAP_SDBIN(i,v,r,szn,sdbin,t) * cc_storage(i,sdbin)
+        CAP_SDBIN(i,v,r,ccseason,sdbin,t) * cc_storage(i,sdbin)
         }
 
 *[plus] hybrid storage capacity in each sdbin adjusted by the appropriate CC value and the hybrid derate factor
     + sum{(i,v,r)$[r_ccreg(r,ccreg)
                  $valcap(i,v,r,t)$storage_hybrid(i)$(not csp(i))],
-          CAP_SDBIN(i,v,r,szn,sdbin,t) * cc_storage(i,sdbin) * hybrid_cc_derate(i,r,szn,sdbin,t)
+          CAP_SDBIN(i,v,r,ccseason,sdbin,t) * cc_storage(i,sdbin) * hybrid_cc_derate(i,r,ccseason,sdbin,t)
           }
 ;
 
 * ---------------------------------------------------------------------------
 
-eq_reserve_margin(r,szn,t)$[rb(r)$tmodel(t)$(yeart(t)>=model_builds_start_yr)$Sw_PRM_CapCredit]..
+eq_reserve_margin(r,ccseason,t)$[rb(r)$tmodel(t)$(yeart(t)>=model_builds_start_yr)$Sw_PRM_CapCredit]..
 
 * forced_retire is used here because forced_retire capacity is removed from valgen 
 * but not valcap. It remains in valcap to allow for upgrades, but if it is not upgraged
@@ -1465,90 +1485,93 @@ eq_reserve_margin(r,szn,t)$[rb(r)$tmodel(t)$(yeart(t)>=model_builds_start_yr)$Sw
 *[plus] sum of all non-rsc and non-storage capacity
     + sum{(i,v)$[valcap(i,v,r,t)$(not vre(i))$(not hydro(i))$(not storage(i))$(not dr(i))$(not consume(i))$(not forced_retire(i,r,t))],
           CAP(i,v,r,t)
-          * (1 + seas_cap_frac_delta(i,v,r,szn,t))
+          * (1 + ccseason_cap_frac_delta(i,v,r,ccseason,t))
          }
 
 *[plus] firm capacity from existing VRE or CSP
 *only used in sequential solve case (otherwise cc_old = 0)
     + sum{i$[(vre(i) or csp(i) or pvb(i))$(not forced_retire(i,r,t))],
-          cc_old(i,r,szn,t)
+          cc_old(i,r,ccseason,t)
          }
 
 *[plus] marginal capacity credit of VRE and csp times new investment
 *only used in sequential solve case (otherwise m_cc_mar = 0)
 *Note: new distpv is included with cc_old
     + sum{(i,v)$[(vre(i) or csp(i) or pvb(i))$valinv(i,v,r,t)$(not forced_retire(i,r,t))],
-          m_cc_mar(i,r,szn,t) * (INV(i,v,r,t) + INV_REFURB(i,v,r,t)$[refurbtech(i)$Sw_Refurb])
+          m_cc_mar(i,r,ccseason,t) * (INV(i,v,r,t) + INV_REFURB(i,v,r,t)$[refurbtech(i)$Sw_Refurb])
          }
 
 *[plus] firm capacity contribution from all binned storage capacity
 *battery, pumped-hydro, and CAES
 *excludes hydro upgraded to add pumps
     + sum{(i,v,sdbin)$[(storage_standalone(i) or hyd_add_pump(i))$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
-          cc_storage(i,sdbin) * CAP_SDBIN(i,v,r,szn,sdbin,t)
+          cc_storage(i,sdbin) * CAP_SDBIN(i,v,r,ccseason,sdbin,t)
          }
 *hybrid PV+battery
     + sum{(i,v,sdbin)$[storage_hybrid(i)$(not csp(i))$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
-          cc_storage(i,sdbin) * hybrid_cc_derate(i,r,szn,sdbin,t) * CAP_SDBIN(i,v,r,szn,sdbin,t)
+          cc_storage(i,sdbin) * hybrid_cc_derate(i,r,ccseason,sdbin,t) * CAP_SDBIN(i,v,r,ccseason,sdbin,t)
          }
 *[plus] firm capacity contribution from all DR
     + sum{(i,v)$[dr(i)$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
-          m_cc_dr(i,r,szn,t) * CAP(i,v,r,t)
+          m_cc_dr(i,r,ccseason,t) * CAP(i,v,r,t)
          }
 
 *[plus] average capacity credit times capacity of VRE and storage
 *used in rolling window and full intertemporal solve (otherwise cc_int = 0)
     + sum{(i,v)$[(vre(i) or storage(i))$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
-          cc_int(i,v,r,szn,t) * CAP(i,v,r,t)
+          cc_int(i,v,r,ccseason,t) * CAP(i,v,r,t)
          }
 
 *[plus] excess capacity credit
 *used in rolling window and full intertemporal solve when using marginals for cc_int (otherwise cc_excess = 0)
     + sum{i$[(vre(i) or storage(i))$(not forced_retire(i,r,t))],
-          cc_excess(i,r,szn,t)
+          cc_excess(i,r,ccseason,t)
          }
 
 *[plus] firm capacity of non-dispatchable hydro
 * nb: hydro_nd generation does not fluctuate
 * within a seasons set of hours
-    + sum{(i,v,h)$[hydro_nd(i)$valgen(i,v,r,t)$h_szn_prm(h,szn)],
+    + sum{(i,v,h)$[hydro_nd(i)$valgen(i,v,r,t)$h_ccseason_prm(h,ccseason)],
           GEN(i,v,r,h,t)
          }
 
 *[plus] dispatchable hydro firm capacity
 * include hydro upgraded to add pumps
     + sum{(i,v)$[(hydro_d(i) or hyd_add_pump(i))$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
-          CAP(i,v,r,t) * cap_hyd_szn_adj(i,szn,r) * (1 + hydro_capcredit_delta(i,t))
+          CAP(i,v,r,t) * cap_hyd_ccseason_adj(i,ccseason,r) * (1 + hydro_capcredit_delta(i,t))
          }
 
 *[plus] imports of firm capacity through AC and LCC DC lines
     + sum{(rr,trtype)$[routes(rr,r,trtype,t)$routes_prm(rr,r)$notvsc(trtype)],
-          (1 - tranloss(rr,r,trtype)) * PRMTRADE(rr,r,trtype,szn,t)
+          (1 - tranloss(rr,r,trtype)) * PRMTRADE(rr,r,trtype,ccseason,t)
          }
 
 *[minus] exports of firm capacity through AC and LCC DC lines
     - sum{(rr,trtype)$[routes(r,rr,trtype,t)$routes_prm(r,rr)$notvsc(trtype)],
-          PRMTRADE(r,rr,trtype,szn,t)
+          PRMTRADE(r,rr,trtype,ccseason,t)
          }
 
 *[plus] net AC/DC conversion of firm capacity through VSC converters
-    + (CONVERSION_PRM(r,szn,"VSC","AC",t) * converter_efficiency_vsc)$[Sw_VSC$val_converter(r,t)]
-    - (CONVERSION_PRM(r,szn,"AC","VSC",t) / converter_efficiency_vsc)$[Sw_VSC$val_converter(r,t)]
+    + (CONVERSION_PRM(r,ccseason,"VSC","AC",t) * converter_efficiency_vsc)$[Sw_VSC$val_converter(r,t)]
+    - (CONVERSION_PRM(r,ccseason,"AC","VSC",t) / converter_efficiency_vsc)$[Sw_VSC$val_converter(r,t)]
 
     =g=
 
 *[plus] the peak demand times the planning reserve margin
     + (
-        peakdem_static_szn(r,szn,t)
+        peakdem_static_ccseason(r,ccseason,t)
 
-        + PEAK_FLEX(r,szn,t)$Sw_EFS_flex
+*         + PEAK_FLEX(r,ccseason,t)$Sw_EFS_flex
 
-*[plus] only steam methane reforming technologies are assumed to increase peak demand
-* contribution to peak demand based on weighted-average across timeslices in each season
-     + (sum{(p,i,v,h)$[smr(i)$valcap(i,v,r,t)$h_szn(h,szn)
+* [plus] only steam methane reforming technologies are assumed to increase peak demand
+* contribution to peak demand based on weighted-average across timeslices in each ccseason
+* [tonne/hour] / [tonne/MWh] * [hours] / [hours] = [MW]
+     + (sum{(p,i,v,h)$[smr(i)$valcap(i,v,r,t)$frac_h_ccseason_weights(h,ccseason)
                      $(sameas(p,"H2"))$i_p(i,p)$(not sameas(i,"dac_gas"))$hours(h)],
-               PRODUCE(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) * hours(h)}
-        / sum{h$h_szn(h,szn), hours(h)}
+            PRODUCE(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t)
+            * hours(h) * frac_h_ccseason_weights(h,ccseason) }
+        / sum{h$frac_h_ccseason_weights(h,ccseason),
+              hours(h) * frac_h_ccseason_weights(h,ccseason) }
      )$Sw_Prod
 
       ) * (1 + prm(r,t))
@@ -1745,18 +1768,18 @@ eq_transgrp_limit_energy(transgrp,transgrpp,h,t)
 
 * ---------------------------------------------------------------------------
 
-eq_transgrp_limit_prm(transgrp,transgrpp,szn,t)
+eq_transgrp_limit_prm(transgrp,transgrpp,ccseason,t)
     $[tmodel(t)
     $Sw_TransGroupContraint
     $sum{(r,rr), routes_transgroup(transgrp,transgrpp,r,rr) }]..
 
     CAPTRAN_GRP(transgrp,transgrpp,t)
-    * sum{h$h_szn_prm(h,szn), (1 + trans_cap_delta(h,t)) }
+    * sum{h$h_ccseason_prm(h,ccseason), (1 + trans_cap_delta(h,t)) }
 
     =g=
 
     sum{(r,rr)$routes_transgroup(transgrp,transgrpp,r,rr),
-        PRMTRADE(r,rr,"AC",szn,t) }
+        PRMTRADE(r,rr,"AC",ccseason,t) }
 ;
 
 * ---------------------------------------------------------------------------
@@ -1809,7 +1832,7 @@ eq_CONVERSION_limit_energy(r,h,t)
 * ---------------------------------------------------------------------------
 
 * AC/DC PRM conversion cannot exceed the converter capacity
-eq_CONVERSION_limit_prm(r,szn,t)
+eq_CONVERSION_limit_prm(r,ccseason,t)
     $[rb(r)
     $tmodel(t)
     $val_converter(r,t)
@@ -1819,7 +1842,7 @@ eq_CONVERSION_limit_prm(r,szn,t)
 
     =g=
 
-    CONVERSION_PRM(r,szn,"AC","VSC",t) + CONVERSION_PRM(r,szn,"VSC","AC",t)
+    CONVERSION_PRM(r,ccseason,"AC","VSC",t) + CONVERSION_PRM(r,ccseason,"VSC","AC",t)
 ;
 
 * ---------------------------------------------------------------------------
@@ -1843,8 +1866,9 @@ eq_transmission_investment_max(t)
           $[((Sw_TransInvMaxTypes=2) or (Sw_TransInvMaxTypes=3))
           $valinv(i,v,r,t)$rsc_i(i)$m_rscfeas(r,i,rscbin)],
           INV_RSC(i,v,r,rscbin,t) * (
-              distance_reinforcement(i,r,rscbin))
+              distance_reinforcement(i,r,rscbin)
               + distance_spur(i,r,rscbin)$(Sw_TransInvMaxTypes=3)
+          )
     }
 ;
 
@@ -2477,7 +2501,7 @@ eq_biousedlimit(bioclass,usda_region,t)$tmodel(t)..
 
 *storage use cannot exceed capacity
 *this constraint does not apply to CSP+TES or hydro pump upgrades
-eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)$(storage_standalone(i) or pvb(i))$tmodel(t)]..
+eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)$(storage_standalone(i) or pvb(i))$tmodel(t) or evmc_storage(i)]..
 
 * [plus] Capacity of all storage technologies
     (CAP(i,v,r,t) * bcr(i) * avail(i,h)
@@ -2533,7 +2557,7 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r)
 *[plus] storage charging
     + storage_eff(i,t) *  hours_daily(h) * (
 *energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
-          STORAGE_IN(i,v,r,h,t)$[storage_standalone(i) or hyd_add_pump(i)]
+          STORAGE_IN(i,v,r,h,t)$[storage_standalone(i) or hyd_add_pump(i) or evmc_storage(i)]
 
 *energy into storage from CSP field
         + (CAP(i,v,r,t) * csp_sm(i) * m_cf(i,v,r,h,t)
@@ -2541,7 +2565,7 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r)
       )
 *[plus] water inflow energy available for hydropower that adds pumping
     + (CAP(i,v,r,t) * avail(i,h) * hours_daily(h) *
-        sum{szn$h_szn(h,szn), cap_hyd_szn_adj(i,szn,r) * m_cf_szn(i,v,r,szn,t) }
+        sum{szn$h_szn(h,szn), m_cf_szn(i,v,r,szn,t) }
         )$hyd_add_pump(i)
 
 *[plus] energy into hybrid PV+battery storage
@@ -2578,7 +2602,7 @@ eq_storage_seas(i,v,r,t)
 *[plus] annual storage charging
         storage_eff(i,t) * hours(h) * (
 *energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
-           STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i))
+           STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i) or evmc_storage(i))
 
 *** vvv within_seas_frac(i,v,r) is 1 for all techs besides PSH and dispatchable hydro,
 *** so these lines are never executed
@@ -2598,7 +2622,7 @@ eq_storage_seas(i,v,r,t)
 
 *[plus] annual water inflow energy available for hydropower that adds pumping
     + (CAP(i,v,r,t) * avail(i,h) * hours(h) *
-            sum{szn$h_szn(h,szn), cap_hyd_szn_adj(i,szn,r) * m_cf_szn(i,v,r,szn,t) }
+            sum{szn$h_szn(h,szn), m_cf_szn(i,v,r,szn,t) }
             )$hyd_add_pump(i)
     }
 
@@ -2626,7 +2650,7 @@ eq_storage_seas_szn(i,v,r,szn,t)
     sum{h$h_szn(h,szn),
         storage_eff(i,t) * hours(h) *
 *energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
-        (   STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i))
+        (   STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i) or evmc_storage(i))
 
 *** vvv within_seas_frac(i,v,r) is 1 for all techs besides PSH and dispatchable hydro,
 *** so these lines are never executed
@@ -2645,7 +2669,6 @@ eq_storage_seas_szn(i,v,r,szn,t)
 
 *[plus] seasonal water inflow energy available for hydropower that adds pumping
     + (CAP(i,v,r,t) * avail(i,h) * hours(h)
-            * cap_hyd_szn_adj(i,szn,r)
             * m_cf_szn(i,v,r,szn,t)
         )$hyd_add_pump(i)
     }
@@ -2656,7 +2679,7 @@ eq_storage_seas_szn(i,v,r,szn,t)
 *there must be sufficient energy in storage to provide operating reserves
 eq_storage_opres(i,v,r,h,t)
     $[valgen(i,v,r,t)$tmodel(t)$Sw_OpRes$opres_h(h)
-    $(storage_standalone(i) or pvb(i) or hyd_add_pump(i))]..
+    $(storage_standalone(i) or pvb(i) or hyd_add_pump(i) or evmc_storage(i))]..
 
 *[plus] initial storage level
     STORAGE_LEVEL(i,v,r,h,t)
@@ -2699,11 +2722,11 @@ eq_storage_thermalres(i,v,r,h,t)
 *seas_cap_frac_delta is not applied here because we assume that the storage energy capacity is
 *constant across the year.
 eq_storage_duration(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)
-                               $(battery(i) or CSP_Storage(i) or pvb(i) or psh(i))
+                               $(battery(i) or CSP_Storage(i) or pvb(i) or psh(i) or evmc_storage(i))
                                $tmodel(t)]..
 
 * [plus] storage duration times storage capacity
-    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$(battery(i) or pvb(i)))
+    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + 1$evmc_storage(i) + bcr(i)$(battery(i) or pvb(i)))
 
     =g=
 

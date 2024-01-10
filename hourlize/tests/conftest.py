@@ -19,6 +19,7 @@ NO_BINS_CONFIG_JSON_PATH = FROM_CONFIG_DATA_PATH.joinpath(
 )
 PRIORITY_INPUTS = FROM_CONFIG_DATA_PATH.joinpath("priority_inputs.json")
 MULTI_PRIORITY_INPUTS = FROM_CONFIG_DATA_PATH.joinpath("multiple_priority_inputs.json")
+WIND_ONS_6_MW_INPUTS = FROM_CONFIG_DATA_PATH.joinpath("wind-ons_6mw_inputs.json")
 EXPANDED_INPUTS = EXPANDED_DATA_PATH.joinpath("config.json")
 
 
@@ -131,6 +132,18 @@ def expanded_inputs_config_json_data():
     reeds_to_rev_cli.py from-config command.
     """
     with open(EXPANDED_INPUTS, "r") as f:
+        data = json.load(f)
+
+    return data
+
+
+@pytest.fixture
+def wind_ons_6mw_inputs_config_json_data():
+    """
+    Return data from wind-ons 6 mw inputs configuration json for the
+    reeds_to_rev_cli.py from-config command.
+    """
+    with open(WIND_ONS_6_MW_INPUTS, "r") as f:
         data = json.load(f)
 
     return data

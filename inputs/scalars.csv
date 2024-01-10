@@ -25,6 +25,7 @@ dupv_cost_cap_mult,1.29,"--fraction-- price premium for dupv over upv. Cost prem
 euros_dollar,1.124,"--USD/Euro-- dollars per euro exchange rate from treasury department (https://fiscal.treasury.gov/files/reports-statements/treasury-reporting-rates-exchange/ratesofexchangeasofdecember312019.pdf)"
 firstyear_trans_nearterm,2023,"first year transmission expansion within Sw_TransInvMaxNearterm is allowed"
 firstyear_trans_longterm,2028,"first year transmission expansion within Sw_TransInvMaxLongterm is allowed"
+firstyearmin,2025,"first year capacity can be built"
 gas_elasticity,0.76,"--fraction-- gas supply curve elasticity. long run price elasticity as estimated by: https://www.diw.de/documents/publikationen/73/diw_01.c.441773.de/dp1372.pdf"
 gas_scale,1000000,"--unitless-- conversion factor for gas-related parameters to help in scaling the problem"
 gasprice_ref_frac_adder,0.04,"--fraction-- fraction by which to multiply gasprice_ref for winter"
@@ -32,7 +33,7 @@ gassupplyscale,-0.5,"shifting of reference gas price bin. gassupply scale determ
 geothermal_availability,0.75,"--fraction-- Existing geothermal plants have a 75% availability rate based on historical capacity factors"
 h2_crp_compressor,15,"--years-- capital recovery period (i.e., financial lifetime / evaluation period) for hydrogen compressors."
 h2_crp_pipeline,40,"--years-- capital recovery period (i.e., financial lifetime / evaluation period) for hydrogen pipelines."
-h2_crp_storage,20,"--years-- capital recovery period (i.e., financial lifetime / evaluation period) for hydrogen storage facilities."
+h2_crp_storage,30,"--years-- capital recovery period (i.e., financial lifetime / evaluation period) for hydrogen storage facilities."
 h2_energy_intensity,60920,"--btu/lb-- H2 energy intensity (HHV, from https://www.engineeringtoolbox.com/fuels-higher-calorific-values-d_169.html)"
 h2_storage_duration,240,"--hours-- hours of H2 storage capacity associated with a given invesment in H2 storage capacity. Based on relationship in SERA of 10 days storage for a given tonnes/hour storage inflow (provided by Paige Jadun)."
 h2_tranloss,0.005,"--fraction-- H2 transmission losses for regional pipeline trade; based on DOE targets at https://www.energy.gov/eere/fuelcells/doe-technical-targets-hydrogen-delivery"
@@ -62,6 +63,7 @@ smr_co2_intensity,9.83,"--tonnes CO2 / tonnes H2-- emissions rate for SMR H2 pro
 state_cap_start_yr,2014,"--year-- state co2 cap start year"
 storage_eff_psh,0.8,"--fraction-- round-trip efficiency of PSH"
 storage_lifetime_cost_adjust_pvb,1.24,"--fraction-- The CRF_15 divided by CRF_20 to account for batteries only having a 15-year lifetime. It technically should change over time (if CRF changes over time), but is represented as a constant value here for simplicity"
+storage_vom_min,0.01,--2004$/MWh-- minimum VOM for storage technologies (included to avoid degeneracy with VRE curtailment)
 szn_adj_gas_winter,0.054,"--fraction-- seasonal adjustment for gas prices. calculated based on natural gas futures prices -- see documentation"
 topfuelbinwidth,2,"top fuel bin width"
 tranloss_permile_ac,0.00010,"--fraction per mile-- AC transmission losses for regional trade"
@@ -74,4 +76,3 @@ trans_fom_frac,0.015,"--fraction-- Transmission FOM cost expressed as fraction o
 trans_fom_region_mult,0,"--boolean-- indicate whether to use regional multipliers on transmission FOM (1) or just the base cost (0)"
 vom_hyd,1.0244,"--2004$/MWh-- hydropower VOM (only one for all hydro)"
 upgrade_inflator,1.72,inflator for 1987 cost values of upgrade costs in the generator database
-firstyearmin,2025,first year capacity can be built

@@ -7,9 +7,10 @@ H2 Revenue,#c7e9c0
 Gen & Stor Capex,#1f77b4
 Gen & Stor O&M,#ff7f0e
 Fuel,#d62728
-Trans Capex,#636363
-Interconnection,#969696
-Trans O&M,#D9D9D9
+Transmission Capex,#636363
+Transmission O&M,#969696
+Interconnection Capex,#bdbdbd
+Interconnection O&M,#d9d9d9
 CO2 T&S Capex,#8c564b
 CO2 T&S O&M,#c49c94
 H2 Prod Capex,#e377c2

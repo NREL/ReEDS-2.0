@@ -121,15 +121,15 @@ $gdxin
 
 * assign old and marginal capacity credit parameters to those
 * corresponding to each balancing areas cc region
-cc_old(i,r,szn,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] =
-    sum{ccreg$r_ccreg(r,ccreg), cc_old_load(i,r,ccreg,szn,t) } ;
+cc_old(i,r,ccseason,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] =
+    sum{ccreg$r_ccreg(r,ccreg), cc_old_load(i,r,ccreg,ccseason,t) } ;
 
-m_cc_mar(i,r,szn,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] =
-    sum{ccreg$r_ccreg(r,ccreg), cc_mar_load(i,r,ccreg,szn,t) } ;
+m_cc_mar(i,r,ccseason,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] =
+    sum{ccreg$r_ccreg(r,ccreg), cc_mar_load(i,r,ccreg,ccseason,t) } ;
 
-m_cc_dr(i,r,szn,t)$[tload(t)$dr(i)] = cc_dr_load(i,r,szn,t) ;
+m_cc_dr(i,r,ccseason,t)$[tload(t)$dr(i)] = cc_dr_load(i,r,ccseason,t) ;
 
-sdbin_size(ccreg,szn,sdbin,t)$tload(t) = sdbin_size_load(ccreg,szn,sdbin,t) ;
+sdbin_size(ccreg,ccseason,sdbin,t)$tload(t) = sdbin_size_load(ccreg,ccseason,sdbin,t) ;
 
 * --- Assign hybrid PV+battery capacity credit ---
 $ontext
@@ -141,12 +141,12 @@ Limit the capacity credit of hybrid PV such that the total capacity credit from 
                                      = 1/ILR - BCR
 $offtext
 * marginal capacity credit
-m_cc_mar(i,r,szn,t)$[tload(t)$pvb(i)] = min{ m_cc_mar(i,r,szn,t), 1 / ilr(i) - bcr(i) } ;
+m_cc_mar(i,r,ccseason,t)$[tload(t)$pvb(i)] = min{ m_cc_mar(i,r,ccseason,t), 1 / ilr(i) - bcr(i) } ;
 
 * old capacity credit
 * (1) convert cc_old from MW to a fractional basis, (2) adjust the fractional value to be less than 1/ILR - BCR, (3) multiply by CAP to convert back to MW
-cc_old(i,r,szn,t)$[tload(t)$pvb(i)$sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)}] =
-    min{ cc_old(i,r,szn,t) / sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)}, 1 / ilr(i) - bcr(i) }
+cc_old(i,r,ccseason,t)$[tload(t)$pvb(i)$sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)}] =
+    min{ cc_old(i,r,ccseason,t) / sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)}, 1 / ilr(i) - bcr(i) }
     * sum{(v,tt)$tprev(t,tt), CAP.l(i,v,r,tt)};
 
 $endif.tcheck
@@ -227,6 +227,7 @@ cost_cap_fin_mult_no_credits(i,r,t)$pvb(i) =
 *Assign upgraded techs the same multipliers as the techs they are upgraded from
 cost_cap_fin_mult(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult(ii,r,t) } ;
 cost_cap_fin_mult_noITC(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult_noITC(ii,r,t) } ;
+cost_cap_fin_mult_no_credits(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult_no_credits(ii,r,t) } ;
 
 if(Sw_WaterMain=1,
 cost_cap_fin_mult(i,r,t)$i_water_cooling(i) =
@@ -368,8 +369,6 @@ if(Sw_Upgrades = 1,
            ) ;
 ) ;
 
-*add the just-solved year to tfix and fix variables for next solve year
-tfix("%cur_year%") = yes ;
 $include d2_varfix.gms
 
 *dump data to be used by Augur

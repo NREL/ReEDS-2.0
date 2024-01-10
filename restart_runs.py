@@ -26,11 +26,11 @@ force = args.force
 more_copyfiles = [i for i in args.more_copyfiles.split(',') if len(i)]
 
 # #%% Inputs for debugging
-# batch_name = 'v20230524_ntpH0'
+# batch_name = 'v20231113_yamM0'
 # copy_cplex = 1
-# copy_srun_template = False
+# copy_srun_template = True
 # force = True
-# more_copyfiles = []
+# more_copyfiles = ['e_report.gms']
 
 ###### Procedure
 #%% Shared parameters
@@ -107,16 +107,21 @@ for case in runs_failed:
         os.path.join(case,'inputs_case','modeledyears.csv')
     ).columns.astype(int).tolist()
 
-    #%% Get last .lst file and restart from there
-    lastfile = sorted(glob(os.path.join(case,'lstfiles','*')))[-1]
-    restart_year = int(os.path.splitext(lastfile)[0].split('_')[-1].split('i')[0])
-
     #%% Make a backup copy of the original bash and sbatch scripts
     callfile = os.path.join(case,f'call_{casename}.sh')
     shutil.copy(callfile, os.path.join(case,f'ORIGINAL_call_{casename}.sh'))
 
     sbatchfile = os.path.join(case,f'{casename}.sh')
     shutil.copy(sbatchfile, os.path.join(case,f'ORIGINAL_{casename}.sh'))
+
+    #%% Get last .lst file and restart from there
+    lstfiles = sorted(glob(os.path.join(case,'lstfiles','*')))
+    if any([os.path.basename(i).startswith('report') for i in lstfiles]):
+        restart_tag = '# Output processing'
+    else:
+        lastfile = lstfiles[-1]
+        restart_year = int(os.path.splitext(lastfile)[0].split('_')[-1].split('i')[0])
+        restart_tag = f'# Year: {restart_year}'
 
     #%% Comment out the unnecessary lines
     writelines = []
@@ -126,8 +131,8 @@ for case in runs_failed:
             ## Start commenting at input processing
             if '# Input processing' in l:
                 comment = 1
-            ## Stop commenting at restart_year
-            if l.startswith(f'# Year: {restart_year}'):
+            ## Stop commenting at restart_tag
+            if l.startswith(restart_tag):
                 comment = 0
             ## Record it
             writelines.append(('# ' if comment else '') + l.strip())
@@ -151,5 +156,5 @@ for case in runs_failed:
     sbatchout = subprocess.run(sbatch, capture_output=True, shell=True)
 
     if len(sbatchout.stderr):
-        raise Exception(sbatchout.stderr.decode())
+        print(sbatchout.stderr.decode())
     print(f"{casename}: {sbatchout.stdout.decode()}")

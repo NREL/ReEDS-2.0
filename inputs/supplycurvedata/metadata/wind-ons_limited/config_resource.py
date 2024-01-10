@@ -47,7 +47,7 @@ subtract_exog = False
 ### More consistent config: This may not need to change for different runs
 resource_source_timezone = 0 #UTC would be 0, Eastern standard time would be -5
 class_bin_method = 'kmeans' #The bin method, either 'kmeans', 'equal_cap_cut', or 'equal_cap_man' (only used if class_bin = True)
-reg_col = 'cnty_fips' #region from supply curve file (sc_path). 'cnty_fips' for county, could be 'model_region' if it is already in the supply curve. TODO: Add cnty_fips to pv supply curves so we map to regions with "p" in front.
+reg_col = 'cnty_fips' #region from supply curve file (sc_path). 'cnty_fips' for county, could be 'model_region' if it is already in the supply curve.
 reg_map_path = this_dir_path + 'inputs/resource/county_map.csv' #This file maps counties to reeds regions and bas.
 existing_sites = this_dir_path + '../inputs/capacitydata/ReEDS_generator_database_final_EIA-NEMS.csv' #None or path to file with existing capacity
 state_abbrev = this_dir_path + 'inputs/resource/state_abbrev.csv'

@@ -12,7 +12,7 @@ report_path = r'\\nrelnas01\ReEDS\Some Location\some_report.py' #Path to report 
 html_num = 'one' #'one' or 'multiple'. 'one' will create one html file with all sections, and 'multiple' will create a separate html file for each section
 output_dir = r'\\nrelnas01\ReEDS\Some Location' #This is the directory that will be created to contain the report. It cannot already exist.
 report_format = 'html,excel' #'html', 'excel', or 'csv', or any combination separated by commas
-auto_open = 'yes' #'yes' or 'no'. Automatically open the resulting report excel and html files when they are created.
+auto_open = 'Yes' #'Yes' or 'No'. Automatically open the resulting report excel and html files when they are created.
 
 #DON'T EDIT THIS SECTION
 import os, sys

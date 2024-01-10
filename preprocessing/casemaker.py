@@ -129,8 +129,8 @@ def make_case(label, defaults, sw):
 #%% Load defaults
 defaults = pd.read_csv(
     os.path.join(reeds_path,'cases_NTPS_defaults.csv'),
-    index_col=0, squeeze=True,
-)
+    index_col=0,
+).squeeze(1)
 
 #%% Create the case names
 cases = (

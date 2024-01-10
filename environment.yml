@@ -1,33 +1,51 @@
-name: reeds
+name: reeds2
 channels:
   - defaults
   - conda-forge
 dependencies:
-  - python=3.9.7
-  - bokeh=2.4.2
-  - gitpython=3.1.18
-  - h5py=3.6.0
-  - matplotlib=3.5.0
-  - numpy=1.20.3
-  - openpyxl=3.0.9
-  - pandas=1.3.5
-  - pip=21.2.4
-  - pytables=3.6.1
-  - requests=2.26.0
-  - scikit-learn=1.0.1
-  - click=8.1.3
-  - julia>=1.7
-  - scipy
-  - ipykernel
-  - git-lfs
-  - tqdm
-  - networkx
-  - pytest
+  - python=3.11
+  - bokeh=3.2
+  - click=8.0
+  - git-lfs=2.13
+  - h5py=3.9
+  - numpy=1.26
+  - pandas=2.0
+  - pip=23.2
+  - pytables=3.8
+  - scikit-learn=1.2
+  - scipy=1.11
+  ### vvv The next packages are optional for default settings and may
+  ### vvv be excluded if you're having trouble building the environment.
+  - gitpython=3.1 # for complete run metadata
+  - ipykernel=6.25 # for interactive python in VS Code
+  - ipywidgets=8.0 # for jupyter notebooks
+  ## vvv Keep julia here if you're installing on the HPC.
+  ## vvv If you're installing on a local machine, it's suggested to comment out
+  ## vvv julia and install directly from https://julialang.org/downloads/.
+  ## vvv If you're on Windows, you MUST comment out julia and install directly.
+  - julia=1.8 # for PRAS and stress periods
+  ## ^^^
+  - mapclassify=2.5 # more mapping tools
+  - matplotlib=3.7 # for plots
+  - mscorefonts=0.0 # extra fonts for plotting (only relevant on linux/HPC)
+  - nb_conda=2.2 # for conda environments in jupyter notebooks
+  - networkx=3.1 # for uncommonly-used network analysis postprocessing
+  - notebook=6.5 # for jupyter notebooks
+  - openpyxl=3.0 # for reading/writing excel files
+  - pytest=7.4 # for testing ReEDS-to-X compatibility
+  - requests=2.31 # for vizit
+  - tqdm=4.65 # for progress bars
+  ### ^^^
   - pip:
-    - geopandas==0.10.2
-    - cmocean==2.0
-    - gdxpds==1.2.0
-    - shapely==1.8.0
-    - proj==0.2.0
-    - pyproj==3.3.0
-    - pulp==2.6.0
+    - gdxpds==1.4.0
+    - pulp==2.7.0
+    ### vvv The next packages are optional for default settings and may
+    ### vvv be excluded if you're having trouble building the environment.
+    - cmocean==3.0.3 # for more plotting colors
+    - folium==0.14.0 # for interactive maps
+    - geopandas==0.14.0 # for region aggregation and plotting maps
+    - proj==0.2.0 # for plotting maps
+    - pyproj==3.6.1 # for plotting maps
+    - python-pptx==0.6.22 # for postprocessing/compare_cases.py
+    - shapely==2.0.1 # for plotting maps
+    ### ^^^

@@ -52,7 +52,7 @@ def updates_setup():
             atb_first_year: First ATB year. This is 2 years prior to ATB year, for example, for the 2022 ATB the first year is 2020  
             atb_last_year: Last ATB year. This is set at 2050 for now.  
             dollar_yr_conv: dollar year conversion for historic data
-            cpryears: Capital recovery period. This is typically 20 years for ReEDS inputs.  
+            cpryears: Capital recovery period. This is typically 30 years for ReEDS inputs.  
             case: Core metric case. This is typically the "Market" case for ReEDS inputs.  
             atb_filters: Filters that will be used to extract data from the ATB input file.  
             atb_scenarios: ATB scenarios that will be used in ReEDS. These are typically "Moderate", "Advanced", and "Conservative"  
@@ -92,8 +92,8 @@ def updates_setup():
     #set atb_last_year
     atb_last_year = 2050
 
-    #Identify the capital recovery period. This is typically 20 years for ReEDS inputs.
-    crpyears = 20
+    #Identify the capital recovery period. This is typically 30 years for ReEDS inputs.
+    crpyears = 30
 
     #Set the core metric case. This is typically the "Market" case for ReEDS inputs.
     case = 'Market'
@@ -121,7 +121,7 @@ def batteries(input_dir, output_dir, df_atb, atb_year, atb_first_year, dollar_yr
         atb_year: atb_year
         atb_first_year: First ATB year. This is 2 years prior to ATB year, for example, for the 2022 ATB the first year is 2020  
         dollar_yr_conv: dollar year conversion for historic data
-        cpryears: Capital recovery period. This is typically 20 years for ReEDS inputs.  
+        cpryears: Capital recovery period. This is typically 30 years for ReEDS inputs.  
         case: Core metric case. This is typically the "Market" case for ReEDS inputs.            
     
     Returns:  
@@ -206,7 +206,7 @@ def conventional_generation(input_dir, output_dir, df_atb, atb_year, atb_first_y
         atb_year: atb year
         atb_first_year: First ATB year. This is 2 years prior to ATB year, for example, for the 2022 ATB the first year is 2020  
         dollar_yr_conv: dollar year conversion for historic data
-        cpryears: Capital recovery period. This is typically 20 years for ReEDS inputs.  
+        cpryears: Capital recovery period. This is typically 30 years for ReEDS inputs.  
         case: Core metric case. This is typically the "Market" case for ReEDS inputs.            
     
     Returns:  
@@ -288,7 +288,7 @@ def geothermal(output_dir, df_atb, atb_first_year, crpyears, case, atb_scenarios
         output_dir: output files directory  
         df_atb: Dataframe of atb  
         atb_first_year: First ATB year. This is 2 years prior to ATB year, for example, for the 2022 ATB the first year is 2020  
-        cpryears: Capital recovery period. This is typically 20 years for ReEDS inputs.  
+        cpryears: Capital recovery period. This is typically 30 years for ReEDS inputs.  
         case: Core metric case. This is typically the "Market" case for ReEDS inputs.            
         atb_scenarios: ATB scenarios that will be used in ReEDS. These are typically "Moderate", "Advanced", and "Conservative"
 
@@ -359,7 +359,7 @@ def geothermal_fom(input_dir, output_dir, df_atb, atb_year, atb_first_year, crpy
         df_atb: Dataframe of atb  
         atb_year: atb year
         atb_first_year: First ATB year. This is 2 years prior to ATB year, for example, for the 2022 ATB the first year is 2020  
-        cpryears: Capital recovery period. This is typically 20 years for ReEDS inputs.  
+        cpryears: Capital recovery period. This is typically 30 years for ReEDS inputs.  
         case: Core metric case. This is typically the "Market" case for ReEDS inputs.            
        
     Returns:  
@@ -801,7 +801,7 @@ def h2_combustion(hist_df_conv, df_conv, input_dir, output_dir, atb_year, atb_fi
     """    
    
     #read in h2ct PV technology format types
-    rect_char_format = pd.read_csv(os.path.join(input_dir,'h2-ct_plant_char_format.csv'))
+    h2ct_char_format = pd.read_csv(os.path.join(input_dir,'h2-ct_plant_char_format.csv'))
 
     #dictionary of technololgy in column names to map from conventional generation technologies to H2-CT technologies
     tech_dict = {'Gas-CT': 'H2-CT', 'Gas-CC': 'H2-CC'}

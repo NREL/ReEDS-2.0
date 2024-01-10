@@ -1,9 +1,4 @@
-'''
-Configuration file for resource.py
-
-For county-level supply curves set 'reg_out_col' to 'cnty_fips'
-
-'''
+'''Configuration file for resource.py'''
 
 import datetime
 import numpy as np
@@ -18,11 +13,13 @@ output_timezone = 'local' #'local' means convert to local standard time of the r
 start_1am = True #False means start at 12am
 select_year = 2012 #This is the year used for load and resource profile-derived inputs, although the profile outputs may still be multiyear (see multiyear)
 hourly_out_years = list(range(2007,2014)) #e.g. [2012] for just 2012 or list(range(2007,2014)) for 2007-2013
-#For running hourlize on the HPC 
+# remote path for supply curves
 hpc = True if ('NREL_CLUSTER' in os.environ) else False
 if hpc:
+    #For running hourlize on the HPC 
     remotepath = 'shared-projects/reeds' 
 else:
+    #For running locally
     remotepath = ('Volumes' if sys.platform == 'darwin' else '/nrelnas01') + '/ReEDS'
 logToTerminal = True
 ###### Specify the settings for hourly profile files
@@ -41,15 +38,15 @@ test_filters = {'region':['p97', 'p98']}
 tech = 'upv' #e.g. 'wind-ons', 'wind-ofs', 'upv', 'dupv'
 access_case = 'reference' #e.g. 'reference', 'limited'
 copy_to_reeds = True #Copy hourlize outputs to ReEDS inputs
-copy_to_shared = True #Copy hourlize outputs to the shared drive
+copy_to_shared = False #Copy hourlize outputs to the shared drive
 
-df_rev = pd.read_csv(this_dir_path + '../inputs/supplycurvedata/metadata/rev_paths.csv')
+df_rev = pd.read_csv(this_dir_path + '../inputs/supplycurvedata/rev_paths.csv')
 dct_rev = df_rev[(df_rev['tech'] == tech)&(df_rev['access_case'] == access_case)].squeeze().to_dict()
 rev_prefix = os.path.basename(dct_rev['rev_path'])
 #rev_cases_path should have files for each year with hourly generation data for each supply curve point or gen_gid, called [rev_prefix]_rep-profiles_[select_year].h5.
+rev_cases_path = f'/{remotepath}/Supply_Curve_Data/{dct_rev["rev_path"]}'
 rev_sc_path = f'/{remotepath}/Supply_Curve_Data/{dct_rev["sc_path"]}'
 rev_sc_file_path = f'/{remotepath}/Supply_Curve_Data/{dct_rev["sc_file"]}'
-rev_cases_path = f'/{remotepath}/Supply_Curve_Data/{dct_rev["rev_path"]}'
 
 #subtract_exog [default False]: Indicate whether to remove exogenous (pre-start_year) capacity from the supply curve
 subtract_exog = False
@@ -126,4 +123,5 @@ dtype = np.float16
 
 #Resource output directory
 tech_suffix = '_county' if reg_out_col == 'cnty_fips' else ''
+
 out_dir = tech + tech_suffix + '_' + access_case + '/'

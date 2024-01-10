@@ -8,6 +8,7 @@ DEFAULT_DATA_TYPE = 'ReEDS 2.0'
 
 import os
 import copy
+import platform
 import pandas as pd
 import collections
 import bokeh.models.widgets as bmw
@@ -63,7 +64,7 @@ def reeds_static(data_type, data_source, scenario_filter, diff, base, static_pre
         report_format (string): string that contains 'html', 'excel', 'csv', or a combination of these, specifying which reports to make.
         html_num (string): 'multiple' if we are building separate html reports for each section, and 'one' for one html report with all sections.
         output_dir (string): the directory into which the resulting reports will be saved.
-        auto_open (string): either "yes" to automatically open report files, or "no"
+        auto_open (string): either "Yes" to automatically open report files, or "No"
     Returns:
         Nothing: HTML and Excel files are created
     '''
@@ -545,12 +546,19 @@ def build_reeds_report(html_num='one'):
     scenario_filter_str = ','.join(str(e) for e in core.GL['widgets']['scenario_filter'].active)
     scenario_filter_str = '"' + scenario_filter_str + '"'
     if html_num == 'one':
-        auto_open = '"yes"'
+        auto_open = '"Yes"'
     else:
-        auto_open = '"no"'
-    start_str = 'start python'
+        auto_open = '"No"'
+
+    if platform.system() == 'Windows':
+        start_str = 'start python'
+    else:
+        start_str = 'python'
     if core.GL['widgets']['report_debug'].value == 'Yes':
-        start_str = 'start cmd /K python -m pdb '
+        if platform.system() == 'Windows':
+            start_str = 'start cmd /K python -m pdb '
+        else:
+            start_str = 'python -m pdb '
     sp.call(start_str + ' "' + this_dir_path + '/reports/interface_report_model.py" ' + data_type + ' ' + data_source + ' ' + scenario_filter_str + ' ' + diff + ' ' + base + ' ' + report_path + ' ' + report_format + ' "' + html_num + '" ' + output_dir + ' ' + auto_open, shell=True)
 
 def build_reeds_report_separate():
