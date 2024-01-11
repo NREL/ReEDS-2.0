@@ -160,6 +160,8 @@ tech,Offshore Wind,#00EFD9
 tech,CCGT-GAS,#52216B
 tech,Other,#A96235
 tech,Hydro,#187F94
+tech,H2 CT,#FF7FBB
+tech,H2 CC,#FFC903
 tech,Diesel,#853D65
 tech,Gas CT,#C2A1DB
 tech,Gas CC,#52216B

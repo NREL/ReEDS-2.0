@@ -1,11 +1,23 @@
 # Instructions for first time setup and running ReEDS-India on the HPC
 
 ## Step 1. SSH into an HPC login node
-`ssh -m hmac-sha2-512 [hpc-username]@el2.hpc.nrel.gov`
+`ssh -m hmac-sha2-512 [hpc-username]@kestrel.hpc.nrel.gov`
 
 *Type your password and hit enter/return*
 
-## Step 2. Setup a screen (for first time setup or if HPC restarts)
+## Step 2. Add a GAMS license (for first time setup or if GAMS license is renewed)
+*Navigate to the appropriate directory:*
+`cd ../../home/[your username]` 
+
+*Create folders to store the GAMS license:*
+`mkdir .local/share/GAMS`
+
+*Navigate to the GAMS folder that was just created:*
+`cd .local/share/GAMS`
+
+*Upload the GAMS license file into this folder and name it as "gamslice.txt"*
+
+## Step 3. Setup a screen (for first time setup or if HPC restarts)
 `screen -S reeds`
 
 > other useful commands for screens
@@ -25,11 +37,10 @@
 ### Setup environment (for first time setup or if HPC restarts)
 `cd reeds_india_api` <br />
 `module purge` <br />
-`module use /nopt/nrel/apps/modules/centos74/modulefiles/` <br />
-`module load conda` <br />
+`module load anaconda3` <br />
 `module load gams` <br />
-`source deactivate` <br />
-`conda activate /lustre/eaglefs/projects/southasia/.conda-envs/reeds`
+`conda deactivate` <br />
+`conda activate /kfs2/projects/southasia/.conda-envs/reeds-india`
 
 ### Update srun_template.sh (for first time setup only)
 *Edit shfiles/srun_template.sh* <br />
@@ -42,7 +53,7 @@
 > - Mount the remote SSH directory to your machine using SFTP Drive
 
 
-## Step 3. Compile inputs and generate batch files
+## Step 4. Compile inputs and generate batch files
 *Type:*
 
 `python runmodel.py`
@@ -54,7 +65,7 @@
 > - Run model?: **NO. DO NOT RUN ON A LOGIN NODE. TYPE 0 AND HIT ENTER/RETURN.**
 > - Generate shell scripts to run on NREL HPC?: *type 1 and hit enter*
 
-## Step 4. Update batch file and submit run(s)
+## Step 5. Update batch file and submit run(s)
 *At this point you have everything needed to submit a run into the HPC queue. Before you do, double-check options in the .sh batch file for your run.* 
 - *Batch files fo runs are saved in folder:* `shfiles`  
 - *Ensure `--time=` is sufficient for each run.*
