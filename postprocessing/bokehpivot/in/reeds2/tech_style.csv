@@ -41,6 +41,8 @@ battery_6,#DF5282
 battery_8,#CC015C
 battery_10,#9B014F
 dr,#B9CBF5
+evmc_storage,#a55194
+evmc_shape,#ce6dbd
 storage-h2,#FF7FBB
 pumped-hydro,#CC0079
 pumped-hydro-flex,#CC0079

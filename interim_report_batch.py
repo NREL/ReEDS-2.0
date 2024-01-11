@@ -51,7 +51,7 @@ for case in case_list:
                 # load environments 
                 SPATH.writelines("\nmodule purge\n")
                 SPATH.writelines("module load conda\n")
-                SPATH.writelines("conda activate reeds\n")
+                SPATH.writelines("conda activate reeds2\n")
                 SPATH.writelines("module load gams\n\n\n")
 
                 #add the call to the python file to run the report

@@ -14,11 +14,10 @@ Based on the Inflation Reduction Act of 2022
 ###########
 #%% IMPORTS
 import argparse
-import gdxpds
 import pandas as pd
 import numpy as np
+import gdxpds
 import os
-import sys
 import input_processing.support_functions as sFuncs
 from ReEDS_Augur.functions import makelog
 
@@ -46,7 +45,7 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
     #%% Get switches
     sw = pd.read_csv(
         os.path.join(case, 'inputs_case', 'switches.csv'),
-        header=None, index_col=0, squeeze=True)
+        header=None, index_col=0).squeeze(1)
     GSw_TCPhaseout_trigger_f = float(sw.GSw_TCPhaseout_trigger_f)
     GSw_TCPhaseout_ref_year = int(sw.GSw_TCPhaseout_ref_year)
     GSw_TCPhaseout_start = int(sw.GSw_TCPhaseout_start)
@@ -140,7 +139,7 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
         if use_historical:
             scalars = pd.read_csv(
                 os.path.join(case, 'inputs_case', 'scalars.csv'),
-                header=None, usecols=[0,1], index_col=0, squeeze=True)
+                header=None, usecols=[0,1], index_col=0).squeeze(1)
             ref_emissions = scalars['co2_emissions_2022'] * 1e6
         # Otherwise use modeled emissions
         else:

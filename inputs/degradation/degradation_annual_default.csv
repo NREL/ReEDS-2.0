@@ -57,3 +57,5 @@ geohydro_allkm_1*geohydro_allkm_10,0
 egs_nearfield_1*egs_nearfield_10,0
 dr1_1*dr1_20,0
 dr2_1*dr2_20,0
+evmc_storage_1*evmc_storage_10,0
+evmc_shape_1*evmc_shape_10,0

@@ -1,13 +1,15 @@
+*add the just-solved year to tfix and fix variables for next solve year
+tfix("%cur_year%") = yes ;
+
 *load variable
     LOAD.fx(r,h,tfix)$rb(r) = LOAD.l(r,h,tfix) ;
-    EVLOAD.fx(r,h,tfix)$[rb(r)$Sw_EV] = EVLOAD.l(r,h,tfix) ;
     FLEX.fx(flex_type,r,h,tfix)$[rb(r)$Sw_EFS_flex]  = FLEX.l(flex_type,r,h,tfix) ;
-    PEAK_FLEX.fx(r,szn,tfix)$[rb(r)$Sw_EFS_flex] = PEAK_FLEX.l(r,szn,tfix) ;
+*     PEAK_FLEX.fx(r,ccseason,tfix)$[rb(r)$Sw_EFS_flex] = PEAK_FLEX.l(r,ccseason,tfix) ;
     DROPPED.fx(r,h,tfix)$[rb(r)$(yeart(tfix)<Sw_StartMarkets)] = DROPPED.l(r,h,tfix) ;
 
 * capacity and investment variables
     CAP.fx(i,v,r,tfix)$[valcap(i,v,r,tfix)] = CAP.l(i,v,r,tfix) ;
-    CAP_SDBIN.fx(i,v,r,szn,sdbin,tfix)$[valcap(i,v,r,tfix)$(storage(i) or hyd_add_pump(i))$(not csp(i))] = CAP_SDBIN.l(i,v,r,szn,sdbin,tfix) ;
+    CAP_SDBIN.fx(i,v,r,ccseason,sdbin,tfix)$[valcap(i,v,r,tfix)$(storage(i) or hyd_add_pump(i))$(not csp(i))] = CAP_SDBIN.l(i,v,r,ccseason,sdbin,tfix) ;
     GROWTH_BIN.fx(gbin,i,st,tfix)$[sum{r$[r_st(r,st)], valinv_irt(i,r,tfix) }$stfeas(st)$Sw_GrowthRelCon$(yeart(tfix)<=Sw_GrowthConLastYear)] = GROWTH_BIN.l(gbin,i,st,tfix) ;
     INV.fx(i,v,r,tfix)$[valinv(i,v,r,tfix)] = INV.l(i,v,r,tfix) ;
     INV_REFURB.fx(i,v,r,tfix)$[valinv(i,v,r,tfix)$refurbtech(i)] = INV_REFURB.l(i,v,r,tfix) ;
@@ -32,6 +34,8 @@
     DR_SHIFT.fx(i,v,r,h,hh,tfix)$[valgen(i,v,r,tfix)$dr1(i)] = DR_SHIFT.l(i,v,r,h,hh,tfix) ;
     DR_SHED.fx(i,v,r,h,tfix)$[valgen(i,v,r,tfix)$dr2(i)] = DR_SHED.l(i,v,r,h,tfix) ;
     AVAIL_SITE.fx(x,h,tfix)$[Sw_SpurScen$xfeas(x)] = AVAIL_SITE.l(x,h,tfix) ;
+    RAMPUP.fx(i,v,r,h,hh,tfix)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen(i,v,r,tfix)] = RAMPUP.l(i,v,r,h,hh,tfix) ;
+    RAMPDOWN.fx(i,v,r,h,hh,tfix)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen(i,v,r,tfix)] = RAMPDOWN.l(i,v,r,h,hh,tfix) ;
 
 * flexible CCS variables
     CCSFLEX_POW.fx(i,v,r,h,tfix)$[ccsflex(i)$valgen(i,v,r,tfix)$(Sw_CCSFLEX_BYP OR Sw_CCSFLEX_STO OR Sw_CCSFLEX_DAC)] = CCSFLEX_POW.l(i,v,r,h,tfix) ;
@@ -42,7 +46,7 @@
 * trade variables
     FLOW.fx(r,rr,h,tfix,trtype)$routes(r,rr,trtype,tfix) = FLOW.l(r,rr,h,tfix,trtype) ;
     OPRES_FLOW.fx(ortype,r,rr,h,tfix)$[Sw_OpRes$opres_routes(r,rr,tfix)$opres_h(h)] = OPRES_FLOW.l(ortype,r,rr,h,tfix) ;
-    PRMTRADE.fx(r,rr,trtype,szn,tfix)$[routes(r,rr,trtype,tfix)$routes_prm(r,rr)] = PRMTRADE.l(r,rr,trtype,szn,tfix) ;
+    PRMTRADE.fx(r,rr,trtype,ccseason,tfix)$[routes(r,rr,trtype,tfix)$routes_prm(r,rr)] = PRMTRADE.l(r,rr,trtype,ccseason,tfix) ;
 
 * operating reserve variables
     OPRES.fx(ortype,i,v,r,h,tfix)$[Sw_OpRes$valgen(i,v,r,tfix)$reserve_frac(i,ortype)$opres_h(h)] = OPRES.l(ortype,i,v,r,h,tfix) ;
@@ -66,6 +70,7 @@
     INV_CONVERTER.fx(r,tfix)$[rb(r)$Sw_VSC] = INV_CONVERTER.l(r,tfix) ;
     CAP_CONVERTER.fx(r,tfix)$[rb(r)$Sw_VSC] = CAP_CONVERTER.l(r,tfix) ;
     CONVERSION.fx(r,h,intype,outtype,tfix)$[rb(r)$Sw_VSC] = CONVERSION.l(r,h,intype,outtype,tfix) ;
+    CONVERSION_PRM.fx(r,ccseason,intype,outtype,tfix)$[rb(r)$Sw_VSC] = CONVERSION_PRM.l(r,ccseason,intype,outtype,tfix) ;
     CAP_SPUR.fx(x,tfix)$[Sw_SpurScen$xfeas(x)] = CAP_SPUR.l(x,tfix) ;
     INV_SPUR.fx(x,tfix)$[Sw_SpurScen$xfeas(x)] = INV_SPUR.l(x,tfix) ;
     INV_POI.fx(r,tfix)$[rb(r)$Sw_TransIntraCost] = INV_POI.l(r,tfix) ;

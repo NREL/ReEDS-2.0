@@ -1,7 +1,6 @@
 
 import pandas as pd
 import numpy as np
-import csv
 import os
 import sys
 import re
@@ -15,11 +14,11 @@ pd.options.mode.chained_assignment = None
 #%%
 class scen_settings():
 
-    def __init__(self, dollar_year, tech_groups, input_dir, switches):
+    def __init__(self, dollar_year, tech_groups, input_dir, sw):
         self.dollar_year = dollar_year
         self.tech_groups = tech_groups
         self.input_dir = input_dir
-        self.switches = switches
+        self.sw = sw
 
 
 def calc_crf(discount_rate, financial_lifetime):
@@ -323,7 +322,7 @@ def append_pvb_parameters(dfin, tech_to_copy='battery_4', column_scaler=None, pv
         for col, scaler in column_scaler.items():
             append_pvb_params[col] = (append_pvb_params[col] * scaler).round(5)
     ### Append to the original dataframe and return
-    dfout = dfin.append(append_pvb_params, ignore_index=True)
+    dfout = pd.concat([dfin, append_pvb_params], ignore_index=True)
 
     return dfout
 
@@ -361,7 +360,7 @@ def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix,
     ### Apply the standalone battery construction times to hybrid PV batteries
     construction_times = append_pvb_parameters(
         dfin=construction_times, 
-        tech_to_copy='battery_{}'.format(scen_settings.switches['GSw_PVB_Dur']))
+        tech_to_copy='battery_{}'.format(scen_settings.sw['GSw_PVB_Dur']))
 
     construction_times['t_start_construction'] = (
         construction_times['t_online'].astype(int) 
@@ -376,7 +375,7 @@ def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix,
     ### Add the hybrid PV+battery incentives (in this case inherited from upv, not battery)
     incentive_df = append_pvb_parameters(
         dfin=incentive_df, tech_to_copy='upv_1', 
-        column_scaler={'itc_frac': float(scen_settings.switches['GSw_PVB_ITC_Qual_Award'])}
+        column_scaler={'itc_frac': float(scen_settings.sw['GSw_PVB_ITC_Qual_Award'])}
     )
     
     # Calculate total PTC and ITC value, taking into account bonus

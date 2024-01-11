@@ -11,13 +11,15 @@ The column names should be self-explanatory; most likely there's also at least
 one similarly-formatted file in inputs_case that you can copy the settings for.
 """
 
-#%%########
-### IMPORTS
-import gdxpds
+#%% ===========================================================================
+### --- IMPORTS ---
+### ===========================================================================
+
+import argparse
 import pandas as pd
 import numpy as np
-import os, sys, csv, pickle, shutil
-import argparse
+import gdxpds
+import os, shutil
 from glob import glob
 from warnings import warn
 # Time the operation of this script
@@ -29,9 +31,11 @@ tic = datetime.datetime.now()
 ### FIXED INPUTS ###
 decimals = 6
 
-#%%###############################
-### Functions and dictionaries ###
-the_unnamer = {'Unnamed: {}'.format(i): '' for i in range(1000)}
+#%% ===========================================================================
+### --- FUNCTIONS ---
+### ===========================================================================
+
+the_unnamer = {'Unnamed: {}'.format(i) : '' for i in range(1000)}
 
 def interpolate_missing_years(df, method='linear'):
     """
@@ -53,7 +57,9 @@ def interpolate_missing_years(df, method='linear'):
     )
     ### Switch back to integer-year column names
     dfout = dfinterp.rename(columns={c: c.year for c in dfinterp.columns})
+    
     return dfout
+
 
 def forecast(
         dfi, lastdatayear, addyears, forecast_fit,
@@ -114,14 +120,15 @@ def forecast(
         raise Exception(
             'forecast_fit == {} is not implemented; try constant, linear, or cagr'.format(
                 forecast_fit))
+    
     return dfo
 
-#%%##############
-### PROCEDURE ###
+#%% ===========================================================================
+### --- PROCEDURE ---
+### ===========================================================================
 if __name__ == '__main__':
 
-    #%%####################
-    ### ARGUMENT INPUTS ###
+    ### Parse arguments
     parser = argparse.ArgumentParser(description='Extend inputs to arbitrary future year')
     parser.add_argument('reeds_path', help='path to ReEDS directory')
     parser.add_argument('inputs_case', help='path to inputs_case directory')
@@ -130,20 +137,11 @@ if __name__ == '__main__':
     reeds_path = args.reeds_path
     inputs_case = os.path.join(args.inputs_case, '')
 
-    # #%%#########################
-    # ### Settings for testing ###
+    # #%% Settings for testing
     # reeds_path = os.path.expanduser('~/github/ReEDS-2.0')
     # inputs_case = os.path.join(reeds_path,'runs','v20220411_prmM0_USA2060','inputs_case')
 
-    #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
-
-    #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
-    endyear = int(sw.endyear)
-    distpvscen = sw.distpvscen
-    ###### Inputs related to debugging
+    #%% Settings for debugging
     ### Set debug == True to write to a new folder (inputs_case/future/), leaving original files
     ### intact. If debug == False (default), the original files are overwritten.
     debug = False
@@ -152,6 +150,15 @@ if __name__ == '__main__':
     ### verbose: 0, 1, 2
     verbose = 2
 
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+
+    #%% Inputs from switches
+    sw = pd.read_csv(
+        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+    endyear = int(sw.endyear)
+    distpvscen = sw.distpvscen
+    
     #%%####################################
     ### If endyear <= 2050, exit the script
     if endyear <= 2050:
@@ -168,7 +175,7 @@ if __name__ == '__main__':
 
     ### DEBUG: Make the outputs directory
     if debug:
-        outpath = os.path.join(inputs_case, 'future', '')
+        outpath = os.path.join(inputs_case,'future','')
         os.makedirs(outpath, exist_ok=True)
     else:
         outpath = inputs_case
@@ -178,7 +185,7 @@ if __name__ == '__main__':
 
     ### Get the settings file
     futurefiles = pd.read_csv(
-        os.path.join(reeds_path, 'inputs', 'userinput', 'futurefiles.csv'),
+        os.path.join(reeds_path,'inputs','userinput','futurefiles.csv'),
         dtype={
             'header':'category', 'ignore':int, 'wide':int,
             'year_col':str, 'fix_cols':str, 'clip_min':str, 'clip_max':str,
@@ -213,27 +220,27 @@ if __name__ == '__main__':
 
     #%% Loop it
     for i in futurefiles.index:
-        filename = futurefiles.loc[i, 'filename']
+        filename = futurefiles.loc[i,'filename']
         if futurefiles.loc[i,'ignore'] == 0:
             pass
         ### if ignore == 1, just copy the file to outpath and skip the rest
-        elif futurefiles.loc[i, 'ignore'] == 1:
+        elif futurefiles.loc[i,'ignore'] == 1:
             if debug:
-                shutil.copy(os.path.join(inputs_case, filename), os.path.join(outpath, filename))
+                shutil.copy(os.path.join(inputs_case,filename), os.path.join(outpath,filename))
             if verbose > 1:
                 print('ignored: {}'.format(filename), flush=True)
             continue
         ### if ignore == 2, need to project for EFS or copy otherwise
-        elif futurefiles.loc[i, 'ignore'] == 2:
+        elif futurefiles.loc[i,'ignore'] == 2:
             ### Read the file to determine if it's formatted for default or EFS load
-            dftest = pd.read_csv(os.path.join(inputs_case, filename), header=0, nrows=20)
+            dftest = pd.read_csv(os.path.join(inputs_case,filename), header=0, nrows=20)
             ### If it has more than 10 columns (indicating EFS), follow the directions
             if dftest.shape[1] > 10:
                 pass
             ### Otherwise (indicating default), just copy it
             else:
                 if debug:
-                    shutil.copy(os.path.join(inputs_case, filename), os.path.join(outpath, filename))
+                    shutil.copy(os.path.join(inputs_case,filename), os.path.join(outpath,filename))
                 if verbose > 1:
                     print('EFS special case: {}'.format(filename), flush=True)
                 continue
@@ -256,10 +263,10 @@ if __name__ == '__main__':
         ### (counting backwards from the last data year) to use for the projection.
         ### If set to 'constant', will use the value from the last data year for
         ### all future years.
-        forecast_fit = futurefiles.loc[i, 'forecast_fit']
+        forecast_fit = futurefiles.loc[i,'forecast_fit']
         ### fix_cols: indicate columns to use as for fields that should be projected
         ### independently to future years (e.g. r, szn, tech)
-        fix_cols = futurefiles.loc[i, 'fix_cols']
+        fix_cols = futurefiles.loc[i,'fix_cols']
         fix_cols = (list() if fix_cols == 'None' else fix_cols.split(','))
         ### wide: 1 if any parameters are in wide format, otherwise 0
         wide = futurefiles.loc[i, 'wide']
@@ -271,16 +278,16 @@ if __name__ == '__main__':
         filetype = futurefiles.loc[i, 'filetype']
         ### key: only used for gdx files, indicating the parameter name. 
         ### gdx files need a separate line in futurefiles.csv for each parameter.
-        key = futurefiles.loc[i, 'key']
+        key = futurefiles.loc[i,'key']
         efs = False
 
         ### Load it
-        if filetype in ['.csv', '.csv.gz']:
-            dfin = pd.read_csv(os.path.join(inputs_case, filename), header=header,)
+        if filetype in ['.csv','.csv.gz']:
+            dfin = pd.read_csv(os.path.join(inputs_case,filename), header=header,)
         elif filetype == '.h5':
             ### Currently load.h5 is the only h5 file we need to project forward, so the
             ### procedure is currently specific to that file
-            dfin = pd.read_hdf(os.path.join(inputs_case, filename))
+            dfin = pd.read_hdf(os.path.join(inputs_case,filename))
             if header == 'keepindex':
                 indexnames = list(dfin.index.names)
                 dfin.reset_index(inplace=True)
@@ -291,7 +298,7 @@ if __name__ == '__main__':
                 efs = True
             else:
                 if debug:
-                    shutil.copy(os.path.join(inputs_case, filename), os.path.join(outpath, filename))
+                    shutil.copy(os.path.join(inputs_case,filename), os.path.join(outpath,filename))
                 if verbose > 1:
                     print('ignored: {}'.format(filename), flush=True)
                 continue
@@ -315,7 +322,7 @@ if __name__ == '__main__':
             ### Read in the full gdx file, but only change the 'key' parameter
             ### given in futurefiles. That's wasteful, but there are currently no
             ### active gdx files.
-            dfall = gdxpds.to_dataframes(os.path.join(inputs_case, filename))
+            dfall = gdxpds.to_dataframes(os.path.join(inputs_case,filename))
             dfin = dfall[key]
         else:
             raise Exception('Unsupported filetype: {}'.format(filename))
@@ -442,6 +449,7 @@ if __name__ == '__main__':
 
     toc(tic=tic, year=0, process='input_processing/forecast.py', 
         path=os.path.join(inputs_case,'..'))
+    
     print('Finished forecast.py')
 
 ## ##############################

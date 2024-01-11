@@ -8,3 +8,6 @@ import sys
 
 HOURLIZE_PATH = Path(__file__).parent.parent
 sys.path.append(HOURLIZE_PATH.as_posix())
+
+TICKER_PATH = HOURLIZE_PATH.parent.joinpath("input_processing")
+sys.path.append(TICKER_PATH.as_posix())

@@ -7,12 +7,12 @@ Created on Mon Mar 16 16:30:25 2020
 
 #%% Imports
 import argparse
-import gdxpds
 import os
 import sys
 import subprocess
 import datetime
 import pandas as pd
+import gdxpds
 
 import ReEDS_Augur.A_prep_data as A_prep_data
 import ReEDS_Augur.E_capacity_credit as E_capacity_credit
@@ -64,29 +64,36 @@ def run_pras(
     print('Running ReEDS2PRAS and PRAS')
     tic = datetime.datetime.now()
     scriptpath = (sw['reeds_path'] if repo else casedir)
-    try:
-        result = subprocess.run([
-            "julia",
-            f"--project={sw['reeds_path']}",
-            f"--threads={sw['threads'] if sw['threads'] > 0 else 'auto'}",
-            f"{os.path.join(scriptpath, 'ReEDS_Augur','run_pras.jl')}",
-            f"--reeds_path={sw['reeds_path']}",
-            f"--reedscase={casedir}",
-            f"--solve_year={t}",
-            f"--weather_year=2007",
-            f"--timesteps=61320",
-            f"--iteration={iteration}",
-            f"--samples={sw['pras_samples']}",
-            f"--reeds2praspath={reeds2pras_path}",
-            f"--overwrite={int(overwrite)}",
-            f"--include_samples={int(include_samples)}",
-        ], capture_output=True)
-        for line in result.stderr.decode().split('\n'):
-            print(line)
-    except Exception as err:
-        print(err)
+    print(f'⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄ run_pras.jl {t}i{iteration} ⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄')
+    log = open(os.path.join(casedir, 'gamslog.txt'), 'a')
+    result = subprocess.run([
+        "julia",
+        f"--project={sw['reeds_path']}",
+        ### As of 20231113 there seems to be a problem with multithreading in julia on
+        ### mac M1 machines and Kestrel that causes multithreaded processes to hang
+        ### without resolution. So disable multithreading on those systems.
+        ('--threads=1' if (
+            (sys.platform == 'darwin') or (os.environ.get('NREL_CLUSTER') == 'kestrel')
+        ) else f"--threads={sw['threads'] if sw['threads'] > 0 else 'auto'}"),
+        f"{os.path.join(scriptpath, 'ReEDS_Augur','run_pras.jl')}",
+        f"--reeds_path={sw['reeds_path']}",
+        f"--reedscase={casedir}",
+        f"--solve_year={t}",
+        f"--weather_year=2007",
+        f"--timesteps=61320",
+        f"--iteration={iteration}",
+        f"--samples={sw['pras_samples']}",
+        f"--reeds2praspath={reeds2pras_path}",
+        f"--overwrite={int(overwrite)}",
+        f"--include_samples={int(include_samples)}",
+    ], stdout=log, stderr=log, text=True)
+    log.close()
+    print(f'⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃ run_pras.jl {t}i{iteration} ⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃')
+
     if recordtime:
         functions.toc(tic=tic, year=t, process='ReEDS_Augur/run_pras.jl')
+
+    return result
 
 
 #%% Main function
@@ -94,9 +101,9 @@ def main(t, tnext, casedir, iteration=0):
 
     # #%% To debug, uncomment these lines and update the run path
     # t = 2020
-    # tnext = 2023
+    # tnext = 2025
     # casedir = os.path.expanduser(
-    #     '~/github/ReEDS-2.0/runs/v20230511_prasM1_ERCOT')
+    #     '~/github/ReEDS-2.0/runs/v20231111_stressM0_stress_WECC')
     # iteration = 0
     # assert tnext >= t
     # os.chdir(casedir)
@@ -111,9 +118,12 @@ def main(t, tnext, casedir, iteration=0):
     augur_gdx, augur_csv, augur_h5 = A_prep_data.main(t, casedir)
     functions.toc(tic=tic, year=t, process='ReEDS_Augur/A_prep_data.py')
 
-    #%% Run Osprey if necessary
+    #%% Run Osprey if...
+    ## the user specifies to run Osprey or...
     if int(sw['osprey']) or (
-        int(sw['GSw_PRM_MaxStressPeriods'])
+        ## if we're using stress periods (not capacity credit) and using Osprey to
+        ## identify dropped-PRM periods (instead of PRAS to identify high-risk periods).
+        (not int(sw.GSw_PRM_CapCredit))
         and (sw['GSw_PRM_StressModel'].lower() == 'osprey')
     ):
         run_osprey(casedir, t, sw)
@@ -144,15 +154,22 @@ def main(t, tnext, casedir, iteration=0):
         2: True,
     }[int(sw['pras'])]
     if pras_this_solve_year or (
-        int(sw['GSw_PRM_MaxStressPeriods'])
+        (not int(sw.GSw_PRM_CapCredit))
         and (sw['GSw_PRM_StressModel'].lower() == 'pras')
     ):
-        run_pras(casedir, t, sw, iteration=iteration)
+        result = run_pras(casedir, t, sw, iteration=iteration)
+        ### If we need the PRAS results but there was an error, stop here
+        if (result.returncode
+            and (not int(sw.GSw_PRM_CapCredit))
+            and (sw['GSw_PRM_StressModel'].lower() == 'pras')
+        ):
+            raise Exception(f'run_pras.jl failed with return code {result.returncode}')
 
     #%% Identify stress periods
     print('identifying new stress periods...')
     tic = datetime.datetime.now()
-    keepdays_write = F_stress_periods.main(sw=sw, t=t, iteration=iteration)
+    if 'user' not in sw['GSw_PRM_StressModel'].lower():
+        keep_periods = F_stress_periods.main(sw=sw, t=t, iteration=iteration)
     functions.toc(tic=tic, year=t, process='ReEDS_Augur/F_stress_periods.py')
 
     # Write gdx file explicitly to ensure that all entries

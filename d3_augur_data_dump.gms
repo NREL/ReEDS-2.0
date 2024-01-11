@@ -37,7 +37,7 @@ cap_exist_ir(i,r)                  "--MW-- technology-region combinations with e
 cap_exist_iv(i,v)                  "--MW-- technology-vintage combinations with existing capacity in the current solve year"
 cap_exist(i,v,r)                   "--MW-- capacity that exists in the current solve year"
 cap_exog_filt(i,v,r)               "--MW-- exogenous capacity"
-cap_hyd_szn_adj_filt(i,allszn,r)   "--fraction-- seasonal hydro CF adjustment filtered for the previous solve year"
+cap_hyd_szn_adj_filt(i,allszn,r)   "--fraction-- seasonal hydro capacity adjustment filtered for the previous solve year"
 cap_init(i,v,r)                    "--MW-- initial capacity"
 cap_ivrt(i,v,r,t)                  "--MW-- generation capacity"
 cap_pvb(i,v,r)                     "--MW-- Hybrid PV+battery capacity (PV)"
@@ -70,7 +70,8 @@ repgasprice(cendiv,t)              "--$/mmBTU-- NG prices in ReEDS, the calculat
 repgasquant(cendiv,t)              "--mmBTU-- NG fuel usage in ReEDS - used to determine NG price"
 ret_ivrt(i,v,r,t)                  "--MW-- retirements of generation capacity"
 ret(i,v,r)                         "--MW-- retirements of generation capacity"
-rsc_dat_dr(i,r,sc_cat,rscbin)      "--varies-- resource supply curve data"
+rsc_dat_dr(i,r,sc_cat,rscbin)      "--varies-- DR resource supply curve data"
+rsc_dat_evmc(i,r,sc_cat,rscbin)    "--varies-- EVMC resource supply curve data"
 rsc_dat_filt(i,r,sc_cat,rscbin)    "--$/MW-- capital costs filtered for pumped-hydro so arbitrage value doesn't exceed capital costs"
 storage_eff_filt(i)                "--fraction-- storage efficiency filtered for the next solve year"
 upgrade_to_filt(i,ii)              "--set-- set linking upgrade techs to the tech the upgraded from filtered for existing upgrades"
@@ -261,6 +262,8 @@ rsc_dat_filt(i,r,"cost",rscbin)$[storage_standalone(i)$cap_exist_ir(i,r)] = rsc_
 
 rsc_dat_dr(i,r,"cost",rscbin)$dr(i)  = sum{t$tnext(t), rsc_dr(i,r,"cost",rscbin,t) };
 
+rsc_dat_evmc(i,r,"cost",rscbin)$evmc(i)  = sum{t$tnext(t), rsc_evmc(i,r,"cost",rscbin,t) };
+
 storage_eff_filt(i)$storage(i) = sum{t$tnext(t), storage_eff(i,t) } ;
 
 upgrade_to_filt(i,ii) = upgrade_to(i,ii)$cap_exist_i(i) ;
@@ -393,6 +396,7 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     ret_ivrt
     routes_filt
     rsc_dat_dr
+    rsc_dat_evmc
     rsc_dat_filt
     sdbin
     storage_duration

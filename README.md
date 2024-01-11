@@ -1,22 +1,25 @@
 # ReEDS 2.0
 
-![Image of NREL Logo](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/nrel-logo.png)
+![Image of NREL Logo](/images/nrel-logo.png)
 
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
-This GitHub repository contains the source code for NREL&#39;s ReEDS model. Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS model can be downloaded or cloned from [https://github.com/NREL/ReEDS_OpenAccess](https://github.com/NREL/ReEDS_OpenAccess). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
+This GitHub repository contains the source code for NREL&#39;s ReEDS model. The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS model can be downloaded or cloned from [https://github.com/NREL/ReEDS-2.0](https://github.com/NREL/ReEDS-2.0). 
 
-A ReEDS training video (recorded in July 2020 and based on the 2019 version of ReEDS) is available on the NREL YouTube channel at https://youtu.be/Cdo27F18AZA. In addition, the Open-Access ReEDS Webinar from October 2019 gives an overview of the 2019 ReEDS model and how it works (https://www.youtube.com/watch?v=QpRtvs_0kkA).
+A ReEDS training video (based on the 2020 version of ReEDS) is available on the NREL YouTube channel at https://youtu.be/aGj3Jnspk9M?si=iqCRNn5MbGZc8ZIO.
 
 ## Contents
 
 * [Introduction](#Introduction)
 * [Required Software](#Software)
-* [Setting up your computer to run ReEDS for the first time (for Microsoft Windows 10)](#Setup)
+* [Computer Setup for Microsoft Windows 10](#Setup)
   * [ReEDS Repository Configuration](#ConfigRepo)
   * [Python Configuration](#ConfigPy)
   * [GAMS Configuration](#ConfigGAMS)
-  * [R Configuration](#ConfigR)
+* [Computer Setup for MacOS](#Setup-Mac)
+  * [GAMS Configuration](#ConfigGAMS-Mac)
+  * [Python Configuration](#ConfigPy-Mac)
+  * [ReEDS Repository Configuration](#ConfigRepo-Mac)
 * [Executing the Model](#Execution)
   * [Prompts for user input during &quot;runbatch.py&quot;](#Prompts)
   * [Runbatch.py Execution Protocol](#RunBatch)
@@ -34,7 +37,6 @@ A ReEDS training video (recorded in July 2020 and based on the 2019 version of R
 * [Appendix](#Appendix)
   * [ReEDS Model Switches](#Switches)
   * [Tips for reducing solve time](#SolveTime)
-  * [Coding Conventions](#Code)
 
 <a name="Introduction"></a>
 # Introduction ([https://www.nrel.gov/analysis/reeds/](https://www.nrel.gov/analysis/reeds/)) 
@@ -58,17 +60,15 @@ NREL subscribes to the GAMS/CPLEX license for the LP solver, but open-source sol
 
 Python is &quot;an object-oriented programming language, comparable to Perl, Ruby, Scheme, or Java.&quot; [[3](https://wiki.python.org/moin/BeginnersGuide/Overview)] &quot; Python is developed under an OSI-approved open source license, making it freely usable and distributable, even for commercial use. Python&#39;s license is administered by the Python Software Foundation.&quot; [[4](https://www.python.org/about/)]. NREL uses Conda to build the python environment necessary for ReEDS. Conda is a &quot;package, dependency and environment management for any language.&quot; [[5](https://docs.conda.io/en/latest/)]
 
-&quot;R is a language and environment for statistical computing and graphics…R is available as Free Software under the terms of the Free Software Foundation&#39;s GNU General Public License in source code form.&quot; [[6](https://www.r-project.org/about.html)]
-
 Git is a version-control tool used to manage code repositories. Included in Git is a unix style command line emulator called Git Bash, which is used by ReEDS to perform some initial setup tasks.
 
 <a name="Setup"></a>
-# Setting up your computer to run ReEDS for the first time (for Microsoft Windows 10)
+# Computer Setup for Microsoft Windows 10
 
-The setup and execution of the ReEDS model can be accomplished using a command-line interpreter application and launching a command line interface (referred to as a &quot;terminal window&quot; in this document). For example, initiating the Windows Command Prompt application, i.e., cmd.exe, will launch a terminal window ([Figure 1](#Fig1)).
+The setup and execution of the ReEDS model can be accomplished using a command-line interpreter application and launching a command line interface (referred to as a &quot;terminal window&quot; in this document). For example, initiating the Windows Command Prompt application, i.e., cmd.exe, will launch a terminal window ([Figure 1](#Fig1)). (Note: If you have issues using command prompt, try using anaconda prompt or a git bash window)
 
 <a name="Fig1"></a>
-![Image of Command Prompt](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/cmd-prompt.png)
+![Image of Command Prompt](/images/cmd-prompt.png)
 
 *Figure 1. Screenshot of a Windows Command Prompt terminal window.*
 
@@ -77,192 +77,205 @@ The setup and execution of the ReEDS model can be accomplished using a command-l
 **IMPORTANT:** Users should exercise Administrative Privileges when installing software. For example, right click on the installer executable for one of the required software (e.g., Anaconda3-2019.07-Windows-x86\_64.exe) and click on &quot;Run as administrator&quot; ([Figure 2](#Fig2)). Alternatively, right click on the executable for the command line interface (e.g., Command Prompt) and click on &quot;Run as administrator&quot; ([Figure 3](#Fig3)). Then run the required software installer executables from the command line.
 
 <a name="Fig2"></a> 
-![Image of Run as Admin](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/run-as-admin.png)
+![Image of Run as Admin](/images/run-as-admin.png)
 
 *Figure 2. Screenshot of running an installer executable using &quot;Run as administrator&quot;.*
 
 <a name="Fig3"></a>
-![Image of Run as Admin 2](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/run-as-admin-2.png)
+![Image of Run as Admin 2](/images/run-as-admin-2.png)
  
 *Figure 3. Screenshot of running &quot;Command Prompt&quot; with &quot;Run as administrator&quot;.*
 
 <a name="ConfigRepo"></a>
 
-## Automatic ReEDS Repository Setup
-This method automatically sets up the user's machine to run be able to run ReEDS via `ReEDS.sh`.  It has only been tested in a Windows environment.
 
-#### GAMS
-Download and install the latest version of GAMS anywhere on the `C:\` drive. This method has only been tested with GAMS version 30.3 and later. Refer to the manual setup instructions if this method does not work with your version of GAMS. A valid GAMS licence is necessary for running the full ReEDS model.
 
-#### ReEDS Code Repository
-The ReEDS source code is hosted on GitHub: https://github.com/NREL/ReEDS_OpenAccess
-1. Request access to the ReEDS GitHub repository at [https://www.nrel.gov/analysis/reeds/request-access.html](https://www.nrel.gov/analysis/reeds/request-access.html).
-2. From the Git command line run the following command to enable large file storage.
+## ReEDS Repository Setup
+The ReEDS source code is hosted on GitHub: https://github.com/NREL/ReEDS-2.0
+
+1. From the Git command line run the following command to enable large file storage.
 ```
 git lfs install
 ```
-3. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop ([Figure 4](#Fig4)).
-
-4. Run `windows_setup.sh`. This can be done by either double-clicking on it from the file explorer or opening a gitbash window in root directory of your ReEDS repository and running `./windows_setup.sh`
-
-**Tip:** Once one ReEDS repository has been set up on a system, simply copy `.bashrc` from that repository into any other ReEDS repositories that exists on the system and presto! No more waiting for `windows_setup.sh` to run before using fresh repositories.
-
-5. If there are more than one GAMS instalations on the machine, `windows_setup.sh` will prompt the user to indicate which GAMS installation to use with ReEDS. Be sure to indicate the menu number of the desired GAMS installation (not the version number itself). NREL has only confirmed compatibilty with GAMS version 30.3 though newer versions are expected to also function without issue.
-
-Once `windows_setup.sh` completes, the ReEDS repository will contain a symbolic link to the GAMS installation with several python packages installed.
+2. Clone the ReEDS-2.0 repository on your desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
 
 <a name="Fig4"></a>
-![Image of GitHub Download](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/github-download.png)
+![Image of GitHub Download](/images/github-download.png)
  
 *Figure 4. Screenshot of GitHub links to clone the ReEDS repository or download ZIP of the ReEDS files.*
-
-## Manual ReEDS Repository Setup
-The ReEDS source code is hosted on GitHub: https://github.com/NREL/ReEDS_OpenAccess
-
-1. Request access to the ReEDS GitHub repository at [https://www.nrel.gov/analysis/reeds/request-access.html](https://www.nrel.gov/analysis/reeds/request-access.html).
-2. From the Git command line run the following command to enable large file storage.
-```
-git lfs install
-```
-3. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
 
 <a name="ConfigPy"></a>
 ### Python Configuration
 
-Install Anaconda: [https://www.anaconda.com/distribution/#download-section](https://www.anaconda.com/distribution/#download-section). NREL recommends Python 3.7, but has also used Python 3.6.5 and 3.7.1 successfully.
+Install Anaconda: [https://www.anaconda.com/download](https://www.anaconda.com/download).
 
 **IMPORTANT** : Be sure to download the Windows version of the installer.
 
 Add Python to the &quot;path&quot; environment variable
 
 1. In the Windows start menu, search for &quot;environment variables&quot; and click &quot;Edit the system environment variables&quot; ([Figure 5](#Fig5)). This will open the &quot;System Properties&quot; window ([Figure 6](#Fig6)).
+
+<a name="Fig5"></a>
+![Image of Search Environment Variable](/images/search-env-var.png)
+ 
+*Figure 5. Screenshot of a search for &quot;environment variables&quot; in the Windows start menu.*
+
+<a name="Fig6"></a> 
+![Image of System Properties Window](/images/sys-prop-win.png)
+ 
+*Figure 6. Screenshot of the &quot;System Properties&quot; window.*
+
 2. Click the &quot;Environment Variables&quot; button on the bottom right of the window ([Figure 6](#Fig6)). This will open the &quot;Environment Variables&quot; window ([Figure 7](#Fig7)).
+
+<a name="Fig7"></a> 
+![Image of Environment Variables Window](/images/env-var-win.png)
+ 
+*Figure 7. Edit the Path environment variable.*
+
 3. Highlight the Path variable and click &quot;Edit&quot; ([Figure 7](#Fig7)). This will open the &quot;Edit environment variable&quot; window ([Figure 8](#Fig8)).
+
+<a name="Fig8"></a>
+![Image of Edit Environment Variables Window](/images/edit-env-var-win.png)
+
+*Figure 8. Append the Path environment.*
+
 4. Click &quot;New&quot; ([Figure 8](#Fig8)) and add the directory locations for \Anaconda\ and \Anaconda\Scripts to the environment path.
 
 **IMPORTANT** : Test the Python installation from the command line by typing &quot;python&quot; (no quotes) in the terminal window. The Python program should initiate ([Figure 9](#Fig9)).
 
-It is highly recommended to run ReEDS using the conda environment provided in the repository. This environment (named `reeds`) is specified by the `environment.yml` and can be built with the following command: 
+<a name="Fig9"></a>
+![Image of Test Python](/images/py-test.png)
+
+*Figure 9. Screenshot of a test of Python in the terminal window.*
+
+It is highly recommended to run ReEDS using the conda environment provided in the repository. This environment (named `reeds2`) is specified by the `environment.yml` and can be built with the following command:
 
 ```
 conda env create -f environment.yml
 ```
 
-You can verify that the environment was successfully created using the following (you should see `reeds` in the list):
+You can verify that the environment was successfully created using the following (you should see `reeds2` in the list):
 
 ```
 conda env list
 ```
 
-<a name="Fig5"></a>
-![Image of Search Environment Variable](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/search-env-var.png)
- 
-*Figure 5. Screenshot of a search for &quot;environment variables&quot; in the Windows start menu.*
-
-<a name="Fig6"></a> 
-![Image of System Properties Window](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/sys-prop-win.png)
- 
-*Figure 6. Screenshot of the &quot;System Properties&quot; window.*
-
-<a name="Fig7"></a> 
-![Image of Environment Variables Window](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/env-var-win.png)
- 
-*Figure 7. Edit the Path environment variable.*
-
-<a name="Fig8"></a>
-![Image of Edit Environment Variables Window](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/edit-env-var-win.png)
-
-*Figure 8. Append the Path environment.*
-
-<a name="Fig9"></a>
-![Image of Test Python](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/py-test.png)
-
-*Figure 9. Screenshot of a test of Python in the terminal window.*
+**IMPORTANT:** Prior to creating the conda environment on Windows, you'll need to comment out the line to install julia in environment.yml. If you're looking to run ReEDS with PRAS and stress periods, you'll need to install julia manually from https://julialang.org/downloads/.
 
 <a name="ConfigGAMS"></a>
 ### GAMS Configuration
 
-Install GAMS: [https://www.gams.com/download-old/](https://www.gams.com/download-old/). NREL uses GAMS version 30.3. Older versions might also work, and newer versions have not been tested. A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
+Install GAMS: [https://www.gams.com/download/](https://www.gams.com/download/). NREL uses GAMS versions 45.2.0 and 34.3. Older versions might also work. A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
 
-If you are using GAMS 24.9 or newer, then GAMS will default to using the Python version that is included with GAMS. This GAMS version of Python needs some packages to be installed in order to work with ReEDS. To install those packages, navigate to the GMSPython directory in the GAMS folder (e.g., C:\GAMS\win64\30.3\GMSPython) in the terminal window. Install the packages using &quot;python -m pip install [package name]&quot;. The packages to install are gdxpds, xlrd, jinja2, and bokeh.
+Add GAMS to the &quot;path&quot; environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _gams.exe_ application (e.g., C:\GAMS\win64\34).
 
-Add GAMS to the &quot;path&quot; environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _gams.exe_ application (e.g., C:\GAMS\win64\30.3).
 
 **IMPORTANT** : Test the GAMS installation from the command line by typing &quot;gams&quot; (no quotes) in the terminal window. The GAMS program should initiate (Figure 10).
 
 <a name="Fig10"></a>
-![Image of Test GAMS](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/gams-test.png)
+![Image of Test GAMS](/images/gams-test.png)
 
 *Figure 10. Screenshot of a test of GAMS from the terminal window.*
 
-<a name="ConfigR"></a>
-### R Configuration
-**Note: R is only necessary for the ReEDS demand module. It is reccomended that this section be skipped unless that module is needed for your intended application of ReEDS**
+<a name="Setup-Mac"></a>
+# Computer Setup for MacOS
+<a name="ConfigGAMS-Mac"></a>
+### Download GAMS
 
-Install R 3.4.4: [https://cran.r-project.org/bin/windows/base/old/3.4.4/](https://cran.r-project.org/bin/windows/base/old/3.4.4/). NREL has observed compatibility issues with other versions of R. NREL has not tested R versions more recent than 3.4.4. Optionally, install RStudio: [https://www.rstudio.com/products/rstudio/download/#download](https://www.rstudio.com/products/rstudio/download/#download).
+Install GAMS: [https://www.gams.com/download/](https://www.gams.com/download/). A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
 
-Add R to the &quot;path&quot; environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _R.exe_ and _Rscript.exe_ applications (e.g., C:\Program Files\R\R-3.4.4\bin\).
+**IMPORTANT** When installing on Mac, on the 'Installlation Type' page, click 'customize' and ensure the box to 'Add GAMS to PATH' is checked.
+![Image of GAMS Install Mac](/images/gams-install-mac.png)
 
-**IMPORTANT** : Test the R installation from the command line by typing &quot;r&quot; (no quotes) in the terminal window. The R program should initiate ([Figure 11](#Fig11)).
+**To validate GAMS was installed properly** execute the following command from a new terminal (without quotes): "gams"
 
-Install R packages necessary for ReEDS from the command line. Navigate to the ReEDS directory in the terminal window and enter:
+GAMS should initiate, you should see something similar to [Figure 10](#Fig10).
+
+<a name="ConfigPy-Mac"></a>
+### Download Anaconda
+Download the latest version of Anaconda: [https://www.anaconda.com/download](https://www.anaconda.com/download)
+
+During Installation, select to install Anaconda for your machine only.
+
+![Image of Anaconda Install Mac](/images/anaconda-install-mac.png)
+
+To have the installer automatically add anaconda to PATH, ensure that you've selected the box to "Add conda initialization to the shell"
+
+![Image of Anaconda Install Mac - Customize Installation Type](/images/anaconda-custom-install-mac.png)
+
+**To validate Python was installed properly** execute the following command from a new terminal (without quotes): "python"
+
+Python should initiate, looking similar to [Figure 9](#Fig9).
+
+
+<a name="ConfigRepo-Mac"></a>
+### Clone the ReEDS Code Repository
+
+The ReEDS source code is hosted on GitHub: https://github.com/NREL/ReEDS-2.0
+
+1. From the Git command line run the following command to enable large file storage.
 ```
-rscript demand\packagesetup.R
-``` 
-The Rscript.exe program will install a suite of R packages ([Figure 12](#Fig12)).
+git lfs install
+```
+2. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
 
-<a name="Fig11"></a>
-![Image of Test R](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/r-test.png)
 
-*Figure 11. Screenshot of a test of R from the terminal window.*
+### Set up the ReEDS conda environment
+It is highly recommended to run ReEDS using the conda environment provided in the repository. This environment (named `reeds2`) is specified by the `environment.yml` and can be built with the following command - make sure you navigate to the ReEDS repository from terminal first: 
 
-<a name="Fig12"></a>
-![Image of Install R Packages](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/install-r-pack.png)
- 
-*Figure 12. Screenshot of installing R packages with packagesetup.R.*
+```
+conda env create -f environment.yml
+```
+
+You can verify that the environment was successfully created using the following (you should see `reeds2` in the list):
+
+```
+conda env list
+```
+
 
 <a name="Execution"></a>
 # Executing the Model
-A ReEDS case (also referred to as a &quot;run&quot;, &quot;scenario&quot; or &quot;instance&quot;) is executed through `ReEDS.sh` if the repository was installed using the automatic setup procedure above, or a python-based case batching program called `runbatch.py` if the repository was setup manually. The user can execute a single case or a batch of cases using this program.
+A ReEDS case (also referred to as a &quot;run&quot;, &quot;scenario&quot; or &quot;instance&quot;) is executed through a python-based case batching program called `runbatch.py` after the repository was setup. The user can execute a single case or a batch of cases using this program.
 
-**Step 1** : Specify the ReEDS case name(s) and configuration(s) in the case configuration file. ([Figure 13](#Fig13)). The default case configuration file name is called &quot;cases.csv&quot;, but the user may create custom case configuration files by using a suffix in the file name (e.g., &quot;cases\_test.csv&quot;). The file &quot;cases\_test.csv&quot; can be used to execute a &quot;test&quot; version of the model for the ERCOT system.
+**Step 1** : Specify the ReEDS case name(s) and configuration(s) in the case configuration file. ([Figure 11](#Fig11)). The default case configuration file name is called &quot;cases.csv&quot;, but the user may create custom case configuration files by using a suffix in the file name (e.g., &quot;cases\_test.csv&quot;). The file &quot;cases\_test.csv&quot; can be used to execute a &quot;test&quot; version of the model for the ERCOT system.
 
 Within &quot;cases.csv&quot;, The data in Column A are the model &quot;switches&quot; (also referred to as &quot;options&quot;). The data in Column B are brief descriptions of the switches. The data in Column C are the default values of the switches. The case configuration (or set of switches that define a case) begin with Column D. Each case configuration is represented by a single column. The case name is specified in Row 1. The value for each switch is specified beginning in Row 2. If a switch value is left blank, default value from Column C is used. A complete list of switches is provided in the Appendix of this document.
 
-<a name="Fig13"></a>
-![Image of Cases.csv](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/cases-csv.png) 
+<a name="Fig11"></a>
+![Image of Cases.csv](/images/cases-csv.png) 
 
-*Figure 13. Screenshot of cases.csv.*
+*Figure 11. Screenshot of cases.csv.*
 
 **Step 2** : Initiate the case batching program
 
-1. Navigate to the ReEDS model directory in the file explorer or gitbash window.
-2. Activate the `reeds` conda environment: `conda activate reeds`. For details on creating this environment, see the #ConfigPy section above. 
-3. Run `ReEDS.sh`. Alternatively, if ReEDS was set up using the manual procedure above, enter `python runbatch.py` in a command prompt (be sure to be in the ReEDS directory) to run the ReEDS case batching program ([Figure 14](#Fig14)).
-4. Provide responses to the suite of prompts in the command line ([Figure 15](#Fig15)). Please refer to the [Prompts for user input during runbatch.py](#Prompts) section below for more information about the prompts.
-5. Once all responses have been received, the batching program will execute the case(s) specified in the case configuration file (e.g., &quot;cases.csv&quot;). A separate terminal window will be launched for each case ([Figure 16](#Fig16)).
+1. Navigate to the ReEDS model directory in the file explorer or command prompt/window.
+2. Activate the `reeds2` conda environment: `conda activate reeds2`. For details on creating this environment, see the #ConfigPy section above. 
+3. Enter `python runbatch.py` in a command prompt (be sure to be in the ReEDS directory) to run the ReEDS case batching program ([Figure 12](#Fig12)).
+4. Provide responses to the suite of prompts in the command line ([Figure 13](#Fig13)). Please refer to the [Prompts for user input during runbatch.py](#Prompts) section below for more information about the prompts.
+5. Once all responses have been received, the batching program will execute the case(s) specified in the case configuration file (e.g., &quot;cases.csv&quot;). A separate terminal window will be launched for each case ([Figure 14](#Fig14)).
 
-**Step 3** : Wait for each case to finish, check for successful completion, and view outputs. Once a case has finished (either from successful completion or from an error), the case-specific terminal window will close and a message in the main terminal window (i.e., where &quot;runbatch.py&quot; was initiated) will appear stating that the case has completed ([Figure 17](#Fig17)).
+**Step 3** : Wait for each case to finish, check for successful completion, and view outputs. Once a case has finished (either from successful completion or from an error), the case-specific terminal window will close and a message in the main terminal window (i.e., where &quot;runbatch.py&quot; was initiated) will appear stating that the case has completed ([Figure 15](#Fig15)).
+
+ <a name="Fig12"></a>
+![Image of Execute RunBatch.py](/images/exe-runbatch.png) 
+
+*Figure 12. Screenshot of initiating &quot;runbatch.py&quot; from the command line.*
+
+ <a name="Fig13"></a>
+![Image of RunBatch.py Prompts](/images/prompts.png)  
+
+*Figure 13. Screenshot of prompts for user input during &quot;runbatch.py&quot;.*
 
  <a name="Fig14"></a>
-![Image of Execute RunBatch.py](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/exe-runbatch.png) 
+![Image of Case Window](/images/case-win.png) 
 
-*Figure 14. Screenshot of initiating &quot;runbatch.py&quot; from the command line.*
+*Figure 14. Screenshot of a separate terminal window being launched for a case.*
 
  <a name="Fig15"></a>
-![Image of RunBatch.py Prompts](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/prompts.png)  
+![Image of Case Finish Message](/images/case-finish.png)  
 
-*Figure 15. Screenshot of prompts for user input during &quot;runbatch.py&quot;.*
-
- <a name="Fig16"></a>
-![Image of Case Window](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/case-win.png) 
-
-*Figure 16. Screenshot of a separate terminal window being launched for a case.*
-
- <a name="Fig17"></a>
-![Image of Case Finish Message](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/case-finish.png)  
-
-*Figure 17. Screenshot of a message in the main terminal window stating when a case has finished.*
+*Figure 15. Screenshot of a message in the main terminal window stating when a case has finished.*
 
 <a name="Prompts"></a>
 ## Prompts for user input during &quot;runbatch.py&quot;
@@ -281,17 +294,17 @@ model {batch prefix}_{case} /all/ ;
 Therefore, &quot;batch prefix&quot; CANNOT begin with a numeric and SHOULD begin with an alpha character (e.g., a, A, b, B, …).
 
 - Entering a value of &quot;0&quot; (zero, no quotes) will assign the current date and time for the batch prefix in the form of _v{YYYYMMDD}\_{HHMM}_. Note the preceding letter vee &#39;v&#39; is necessary to ensure the batch prefix begins with an alpha character.  For example, if _batch prefix_=&quot;0&quot; and _case_=&quot;ref\_seq&quot; on September 30, 2019 at 3:00 PM (1500 hours military time), then all files and directories related to this case will be named _v20190930\_1500\_ref\_seq_
-- **WARNING! Avoid re-using a (batch prefix, case) pair**. If a directory &quot;\runs\{batch prefix}\_{case}&quot; already exists, a warning will be issued in the case-specific terminal window, but &quot;runbatch.py&quot; will overwrite data in the existing case directory ([Figure 18](#Fig18)). In some instances, the case execution will pause, and a message will appear in the case-specific terminal window &quot;mv: replace […] overriding mode 0666?&quot; ([Figure 19](#Fig19)). Pressing &quot;Enter/Return&quot; will continue the execution. NREL plans to address this overwriting issue in the future by requiring user approval to overwrite an existing case directory.
+- **WARNING! Avoid re-using a (batch prefix, case) pair**. If a directory &quot;\runs\{batch prefix}\_{case}&quot; already exists, a warning will be issued in the case-specific terminal window, but &quot;runbatch.py&quot; will overwrite data in the existing case directory ([Figure 16](#Fig16)). In some instances, the case execution will pause, and a message will appear in the case-specific terminal window &quot;mv: replace […] overriding mode 0666?&quot; ([Figure 17](#Fig17)). Pressing &quot;Enter/Return&quot; will continue the execution. NREL plans to address this overwriting issue in the future by requiring user approval to overwrite an existing case directory.
 
- <a name="Fig18"></a>
-![Image of Duplicate Case Warning](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/duplicate-case.png)  
+ <a name="Fig16"></a>
+![Image of Duplicate Case Warning](/images/duplicate-case.png)  
 
-*Figure 18. Screenshot of warning message that appears in the main terminal window when reusing a (batch prefix, case) pair.*
+*Figure 16. Screenshot of warning message that appears in the main terminal window when reusing a (batch prefix, case) pair.*
 
- <a name="Fig19"></a>
-![Image of Duplicate Case Warning 2](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/duplicate-case-2.png)  
+ <a name="Fig17"></a>
+![Image of Duplicate Case Warning 2](/images/duplicate-case-2.png)  
  
-*Figure 19. Screenshot of warning message that occurs in the case-specific terminal window when reusing a (batch prefix, case) pair.*
+*Figure 17. Screenshot of warning message that occurs in the case-specific terminal window when reusing a (batch prefix, case) pair.*
 
 **Case Suffix [string]**– Indicates which case configuration file—in the form &quot;cases\_{case suffix}.csv&quot;—is ingested into &quot;runbatch.py&quot; for processing.
 
@@ -362,7 +375,7 @@ Below are the key steps that occur when a user initiates &quot;runbatch.py&quot;
   1. Path: &quot;\runs\{batch\_prefix}\_{case}\g00files\{batch\_prefix}\_{case}.g00&quot;
   2. For more information about GAMS work files: [https://www.gams.com/latest/docs/UG\_SaveRestart.html](https://www.gams.com/latest/docs/UG_SaveRestart.html)
 
-**Execute the sequential solve structure** ([Figure 20](#Fig20))
+**Execute the sequential solve structure** ([Figure 18](#Fig18))
 
 For every year in the model horizon, execute d\_solveoneyear.gms:
 
@@ -373,12 +386,12 @@ For every year in the model horizon, execute d\_solveoneyear.gms:
   3. Execute REflow\_RTO\_3.gms – compute curtailment using the syntax and structure from ReEDS Heritage
   4. Execute d4\_Translate\_Variability.R – Translate the values from REflow\_RTO\_3.gms (ReEDS Heritage) back to the syntax and structure used in ReEDS 2.0
 
- <a name="Fig20"></a>
-![Image of Sequential Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/seq-flow.png)  
+ <a name="Fig18"></a>
+![Image of Sequential Flow](/images/seq-flow.png)  
  
-*Figure 20. Depiction of execution sequence for the &quot;sequential&quot; solve.*
+*Figure 18. Depiction of execution sequence for the &quot;sequential&quot; solve.*
 
-**Execute the intertemporal solve structure** ([Figure 21](#Fig21))
+**Execute the intertemporal solve structure** ([Figure 19](#Fig19))
 
 For each iteration (specified via the runbatch.py prompt),
 
@@ -388,10 +401,10 @@ For each iteration (specified via the runbatch.py prompt),
   2. Once all cc/curt calculations are done, files are merged via the GAMS gdxmerge utility
 3. Execute d5\_mergevariability.R – The resulting file from the gdxmerge execution is restructured for use in GAMS during the next iteration of the intertemporal solve.
 
- <a name="Fig21"></a>
-![Image of Intertemporal Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/inter-flow.png)  
+ <a name="Fig19"></a>
+![Image of Intertemporal Flow](/images/inter-flow.png)  
  
-*Figure 21. Depiction of execution sequence for the &quot;intertemporal&quot; solve.*
+*Figure 19. Depiction of execution sequence for the &quot;intertemporal&quot; solve.*
 
 <a name="Documentation"></a>
 # Documentation
@@ -448,48 +461,48 @@ Outage rates|Outage rates based on 2003–2007 Generating Availability Data Syst
 <a name="Modules"></a>
 ## Modules
 
-The ReEDS model is comprised of several modules with one and two-way data exchange between the modules. [Figure 22](#Fig22) depicts these modules, including linkages between the modules and directions of data exchange. The supply module is the core module for ReEDS. Within a ReEDS execution, the key data exchanges occur between (1) the Supply Module and the Variable Resource Renewable (VRR) Modules for estimating Capacity Credit and Curtailment; and (2) the Supply Module and the Demand Module. These module interactions are dictated by the model execution approach, i.e., _sequential_ solves, _sliding window_ solves, or _intertemporal_ solves. [Figure 23](#Fig23) illustrates the _sequential_ approach; [Figure 24](#Fig24) the sliding window and intertemporal approaches.
+The ReEDS model is comprised of several modules with one and two-way data exchange between the modules. [Figure 20](#Fig20) depicts these modules, including linkages between the modules and directions of data exchange. The supply module is the core module for ReEDS. Within a ReEDS execution, the key data exchanges occur between (1) the Supply Module and the Variable Resource Renewable (VRR) Modules for estimating Capacity Credit and Curtailment; and (2) the Supply Module and the Demand Module. These module interactions are dictated by the model execution approach, i.e., _sequential_ solves, _sliding window_ solves, or _intertemporal_ solves. [Figure 21](#Fig21) illustrates the _sequential_ approach; [Figure 22](#Fig22) the sliding window and intertemporal approaches.
+
+<a name="Fig20"></a>
+![Image of ReEDS Modules](/images/modules.png)  
+
+*Figure 20. Depiction of ReEDS modules; arrows indicate directions of data exchange.*
+
+<a name="Fig21"></a>
+![Image of Sequential Flow](/images/seq-flow-2.png)   
+
+*Figure 21. Schematic illustrating the model structure with a sequential solve.*
 
 <a name="Fig22"></a>
-![Image of ReEDS Modules](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/modules.png)  
+![Image of Intertemporal Flow](/images/inter-flow-2.png)   
 
-*Figure 22. Depiction of ReEDS modules; arrows indicate directions of data exchange.*
-
-<a name="Fig23"></a>
-![Image of Sequential Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/seq-flow-2.png)   
-
-*Figure 23. Schematic illustrating the model structure with a sequential solve.*
-
-<a name="Fig24"></a>
-![Image of Intertemporal Flow](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/inter-flow-2.png)   
-
-*Figure 24. Schematic illustrating the model structure with sliding window or intertemporal solves.*
+*Figure 22. Schematic illustrating the model structure with sliding window or intertemporal solves.*
 
 <a name="Stock"></a>
 ## Tracking Capital Stock
 
-Because ReEDS is a long-term capacity planning model, electricity generation capacity (capital stock) must be tracked over time, including initial capacity, new investments, refurbishment investments, lifetime retirements, and endogenous retirements. [Figure 25](#Fig25) depicts time resolution terminology and capital stock terminology. &quot;Historical&quot; years are 2010-2018, inclusive. &quot;Future&quot; years are 2019 and beyond. &quot;Pre-modeled&quot; years are years prior to 2010 and are not represented in the model decision making. &quot;Modeled&quot; years are years beginning in 2010, the first year of the model to the end of the model horizon. Users can specify the frequency of modeled years as depicted in [Figure 26](#Fig26) in &quot;\inputs\user\_input\modeledyears\_default.csv&quot; and the horizon is specified in &quot;cases.csv&quot;.
+Because ReEDS is a long-term capacity planning model, electricity generation capacity (capital stock) must be tracked over time, including initial capacity, new investments, refurbishment investments, lifetime retirements, and endogenous retirements. [Figure 23](#Fig23) depicts time resolution terminology and capital stock terminology. &quot;Historical&quot; years are 2010-2018, inclusive. &quot;Future&quot; years are 2019 and beyond. &quot;Pre-modeled&quot; years are years prior to 2010 and are not represented in the model decision making. &quot;Modeled&quot; years are years beginning in 2010, the first year of the model to the end of the model horizon. Users can specify the frequency of modeled years as depicted in [Figure 24](#Fig24) in &quot;\inputs\user\_input\modeledyears\_default.csv&quot; and the horizon is specified in &quot;cases.csv&quot;.
 
-<a name="Fig25"></a>
-![Image of Time and Stock](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/time-and-stock.jpg)   
+<a name="Fig23"></a>
+![Image of Time and Stock](/images/time-and-stock.jpg)   
 
-*Figure 25. Depiction of time resolution terminology and capital stock terminology*
+*Figure 23. Depiction of time resolution terminology and capital stock terminology*
 
-<a name="Fig26"></a>
-![Image of Model Years](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/model-years.png)   
+<a name="Fig24"></a>
+![Image of Model Years](/images/model-years.png)   
  
-*Figure 26. Depiction of user-specified model years.*
+*Figure 24. Depiction of user-specified model years.*
 
 Capital stock added during the model execution is tracked by a vintage classification based on the time frame when the capacity is installed (e.g., capacity installed between 2030 and 2035 could be defined as a vintage class). The user can specify the vintage class resolution by technology type to control the model size (see &quot;\inputs\userinput\ivt.csv&quot;). All capacity of a technology type (e.g., nuclear) within the same vintage class has the same operating characteristics. Regardless of the vintage class, new investments incur capital cost associated with the year that the investment occurs.
 
-Distinction is made between vintage classes for capacity built during the _pre-modeled_ years---i.e., the _initial_ vintage classes---and vintage classes for capacity built during the _modeled_ years, i.e., the _added_ vintage classes, ([Figure 25](#Fig25)). The _initial_ vintage classes are categorized based on plant performance, specifically, heat rate ([Figure 27](#Fig27)). Whereas, _added_ vintage classes are categorized based on when the capacity is installed.
+Distinction is made between vintage classes for capacity built during the _pre-modeled_ years---i.e., the _initial_ vintage classes---and vintage classes for capacity built during the _modeled_ years, i.e., the _added_ vintage classes, ([Figure 23](#Fig23)). The _initial_ vintage classes are categorized based on plant performance, specifically, heat rate ([Figure 25](#Fig25)). Whereas, _added_ vintage classes are categorized based on when the capacity is installed.
 
-_Initial_ capacity is tracked based on the capacity remaining in each model year after planned retirements have been removed. Planned capacity additions made during _historical modeled_ years, i.e., 2010-2018, are prescribed _exactly_, thus the model must build _exactly_ the prescribed amount. Planned capacity built during _future modeled years_, i.e.,  2019-2050, are prescribed as a _lower bound_ for new investments, thus the model must build _at least_ the prescribed amount ([Figure 25](#Fig25)).
+_Initial_ capacity is tracked based on the capacity remaining in each model year after planned retirements have been removed. Planned capacity additions made during _historical modeled_ years, i.e., 2010-2018, are prescribed _exactly_, thus the model must build _exactly_ the prescribed amount. Planned capacity built during _future modeled years_, i.e.,  2019-2050, are prescribed as a _lower bound_ for new investments, thus the model must build _at least_ the prescribed amount ([Figure 23](#Fig23)).
 
-<a name="Fig27"></a>
-![Image of Historical Bins](https://github.com/NREL/ReEDS_OpenAccess/blob/main/images/historical-bins.png)   
+<a name="Fig25"></a>
+![Image of Historical Bins](/images/historical-bins.png)   
 
-*Figure 27. Example of categorizing model plants for the existing fleet based on heat rate.*
+*Figure 25. Example of categorizing model plants for the existing fleet based on heat rate.*
 
 <a name="FAQ"></a>
 # Frequently Asked Questions
@@ -567,135 +580,5 @@ If you'd like to reduce the model solve time, consider making some of the follow
   * Turn off the sliding-window representation of minimum-generation limits
 * `GSw_HourlyNumClusters = 25` (or lower)
   * Reduce the number of representative periods
-* `GSw_AggregateRegions = 1` and `GSw_HierarchyFile = agg0`, `default`, or `agg2`
-  * Aggregate the native 134 zones and 356 resource regions into fewer, larger zones. `GSw_HierarchyFile = agg0` aggregates the 356 resource regions to 134 zones; `GSw_HierarchyFile = default` further aggregates the 134 zones into 69 zones (obeying state, interconnect, NERC, and FERC region boundaries); `GSw_HierarchyFile = agg2` aggregates the 134 zones into 54 zones (obeying state boundaries).
-
-<a name="Code"></a>
-## Coding Conventions
-
-Note: Because these conventions were not written until after the model development began you will notice that some of these conventions are violated in the current code base.  However, any new code contributed to the repo should follow these conventions.  The conventions are far from comprehensive.  Our hope is that with this light approach can help bring consistency to the model code without being burdensome to those writing the code.
-
-### Naming conventions
-* File names – GAMS files; input files; output files
-  * Folders are lower case
-  * Files are lower case with underscores separating words (atb_mid_wind_2018.csv)
-  * GAMS files are proceeded by a letter and underscore, with each letter representing a file category and letters in alpha-order of file execution whenever possible (a_write_data.gms). When there are multiple GAMS files in the same category, they should be numbered to show the order in which they are called (a1_write_data, a2_inputs, a3_inputs_demand)
-  * Output files start with a noun indicator for the general output category to make it easier to find (curt_marg rather than marg_curt, gen_ann rather than ann_gen)
-
-* Parameters
-  * Use lower case with underscores separating words
-  * Like the output files, the first word of parameters should be a noun indicator of the parameter type (curt_marg rather than marg_curt)
-  * Cost parameters should generally start with “cost” (e.g., cost_fom, cost_cap)
-
-* Variables
-  * Use capital letters (example: INV)
-  * Where possible, use the same naming for related variables (e.g., INV; INV_TRANS)
-  * The first indicator in a variable name should be a noun or noun abbreviation for the variable type or category
-
-* equations (model constraints)
-  * Begin with the prefix “eq_”
-  * Use all lower-case letters with underscores separating words (example: eq_reserve_margin)
-
-* switches
-  * Begin with the prefix “Sw_”
-  * Use descriptive names with upper camel case (e.g., Sw_RetireYear)
-  * For on/off switches, "OFF" = 0 and "ON" =1
-
-* indices/sets
-  * Use lower case
-  * Use short rather than descriptive (e.g., “i” instead of “tech”) – preference for one or two letter names.
-
-* aliases
-  * Use the same alpha character as the original set followed by a number (example: alias(r,r2))
-
-* subsets
-  * Use lowercase
-  * Use short but descriptive text
-  * example: conv(i) is the subset of technologies that are “conventional”
-
-* crosswalk sets
-  * Use the set names and separated by an underscore
-  * example: r_st(r,st) is the crosswalk between region “r” and state “st”
-
-* Choosing names for parameters and variables
-  * Names should be descriptive (e.g., “curt_marg” rather than “cm”)
-  * Shorter names are generally preferred (e.g., “curt_marg” rather than “curtailment_marginal”)
-
-### Coding conventions
-* Generally, each line in GAMS should be no longer than a standard page width (255 characters)
-
-* Declarations
-  * Blocks of declarations are preferred to individual line declarations
-  * Comments are required for each declaration
-    * Units should always be defined first (even if they are unitless) enclosed in "--"
-    * Example: cap_out(i,r,t)         "--MW-- capacity by region"
-  * Comments need not be comprehensive
-    * CAP(i,v,r,t) "--MW-- capacity by technology i of vintage v in region r in year t"
-    * CAP(i,v,r,t) "--MW-- capacity by technology"
-
-* Ordering of indices
-  * The following indices should always appear first in the following order: (1)ortype (2)i (3)v (4)r (5)h 
-  * The t (year) index should always be last
-  * Other sets should generally be ordered alphabetically, respecting the two conventions above
-
-* Qualifiers 
-  * Enclosed with brackets “[]”
-  * No space between qualifiers
-  * example: $[qual1$qual2]
-  * Parenthesis should be used to make order of operations explicit
-    * Incorrect: $[not qual1 $not qual2]
-    * Correct: $[(not qual1)$(not qual2)]
-  * Operators “and”, “not”, and “or” should be lower case
-
-* Equations (this applies to pre- and post-processing; model constraints)
-  * Each term should begin with a plus (+) or minus (-) sign, even the first term
-  * Summations
-    * Summation arguments should be bookended with braces “{}” sum{…}
-    * The summation will generally be separated into three parts that will appear on three different lines, with the closing } lining up with the opening {
-```
-[+/-] sum{ ([indices]) $ [qualifiers] ,
-                  [parameter] * [variable]
-                }
-```
-```
-+ sum{(i,c,r,t)$[Qual1$Qual2 … $Qual3], 
-      cv_avg(i,r,t) * CAP(i,c,r,t)
-     }
-```
-  * For equations, sums should generally be split with terms on multiple lines. In some cases it will be more readable to leave the sum on one line (e.g., a short sum inside of a long sum).
-  * Each term of an equation should be separated by a new line; white space should be inserted between terms
-  * When reasonable, only one parameter should be multiplied by one variable
-    * for example, “heatrate [MBtu/MWh] * emissions rate of fuel [tons CO2/MBtu] * GENERATION [MWh]” should be “emissions rate of plant [tons CO2/MWh] * GENERATION [MWh]”
-    * this will help us limit numerical issues that result from the multiplication of two small numbers
-  * When multiplying parameters and variables, parameters should appear on the left and variables on the right
-  * Keep one space on either end of a mathematical operator (\*, /, +, -). example: “curt_marg * GEN” rather than “curt_marg*GEN”
-
-* Do not use recursive calculations; new parameters should be created
-  * Example: “load = load * 1.053” should be written as “busbarload = enduseload * 1.053”
-  * This will create consistency between the units specified in the parameter declaration and the use of the parameter 
-
-* Comments
-  * Do not use inline comments (comments proceeded by //). This helps to make it easier to find comments
-  * Do not use $ontext/$offtext except for headers at the beginning of files
-  * Do not include a space after the “*” to start a comment
-  * Do not use a comment to note an issue.  Use GitHub to put the issue instead.
-  * Example: Don’t do this: 
-```
-*!!!! this will need to be updated to the tophrs designation after the 8760 cv/curt method is implemented   
-```
-* Other
-  * GAMS functions such as sum, max, smax, etc. should use {}; Example: avg_outage(i) = sum{h,hours(h)*outage(i,h)} / 8760 ;
-  * When including the semicolon on the end of a line there should be a space between the semicolon and the last character of the line (see previous example)
-  * Sums outside of equations (e.g., in e_reports) need not be split over multiple lines if they do not exceed the line limit
-  * Do not use hard-coded numbers in equations or calculations. Values should be assigned to an appropriate parameter name that is subsequently used in the code.
-  * Large input data tables should be loaded from individual data files for each table, preferably in *.csv format. Large data tables should not be manually written into the code but can be written dynamically by scripts or inserted with a $include statement.
-  * Compile-time conditionals should always use a tag (period + tag name) to clearly define the relationships between compile-time conditional statements. Failure to do so hurts readability sometimes leads to compilation errors. Example:
-``` 
-$ifthen.switch1 Sw_One==A
-  Do Something
-$elseif.switch1 Sw_One==B
-  Do Something
-$else.switch1 Sw_One==C
-  Do Something
-$endif.switch1
-```
+* `GSw_RegionResolution = aggreg` and `GSw_HierarchyFile = default`, or `agg2`
+  * Aggregate the native 134 zones into fewer, larger zones. `GSw_HierarchyFile = default` aggregates the 134 zones into 69 zones (obeying state, interconnect, NERC, and FERC region boundaries); `GSw_HierarchyFile = agg2` aggregates the 134 zones into 54 zones (obeying state boundaries).

@@ -1,4 +1,8 @@
 {
+  "ba_tz": {
+    "fname": "reeds_region_tz_map.csv",
+    "mandatory": true
+  },
   "online_capacity": {
     "fname": "cap_ivrt.csv",
     "column_mapping": {
@@ -374,8 +378,8 @@
     "mandatory": true,
     "input": true
   },
-  "hydro_cf_adj": {
-    "fname": "hydcfadj.csv",
+  "hydro_cap_adj": {
+    "fname": "hydcapadj.csv",
     "column_mapping": {
       "*i": "tech",
       "szn": "season",
@@ -387,7 +391,8 @@
       "season"
     ],
     "mandatory": true,
-    "input": true
+    "input": true,
+    "note": "Seasonal capacity adjustment. Renamed to hydcapadj.csv"
   },
   "ilr": {
     "fname": "ilr.csv",

@@ -58,6 +58,10 @@ eq_ObjFn_inv(t)$tmodel(t)..
                   + sum{(i,v,r,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$dr(i)],
                       rsc_dr(i,r,"cost",rscbin,t) * rsc_fin_mult(i,r,t) * INV_RSC(i,v,r,rscbin,t) }
 
+* ---cost of adopted EVMC---
+                  + sum{(i,v,r,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$evmc(i)],
+                      rsc_evmc(i,r,"cost",rscbin,t) * rsc_fin_mult(i,r,t) * INV_RSC(i,v,r,rscbin,t) }
+
 * ---cost of spur lines modeled explicitly---
 * NOTE: no rsc_fin_mult(i,r,t) here, but it's 1 for upv and wind-ons anyway
                   + sum{x$[Sw_SpurScen$xfeas(x)],
@@ -101,8 +105,8 @@ eq_ObjFn_inv(t)$tmodel(t)..
 
 * --- storage capacity credit---
 *small cost penalty to incentivize solver to fill shorter-duration bins first
-                  + sum{(i,v,r,szn,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))],
-                         bin_penalty(sdbin) * CAP_SDBIN(i,v,r,szn,sdbin,t) }
+                  + sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))],
+                         bin_penalty(sdbin) * CAP_SDBIN(i,v,r,ccseason,sdbin,t) }
 
 * cost of capacity upsizing
                   + sum{(i,v,r,rscbin)$allow_cap_up(i,v,r,rscbin,t),
@@ -204,6 +208,10 @@ eq_Objfn_op(t)$tmodel(t)..
               + sum{(i,v,r,h)$[valgen(i,v,r,t)$(not gas(i))$heat_rate(i,v,r,t)
                               $(not bio(i))$(not cofire(i))],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN(i,v,r,h,t) }
+
+* --- startup/ramping costs
+              + sum{(i,v,r,h,hh)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen(i,v,r,t)],
+                    startcost(i) * numhours_nexth(h,hh) * RAMPUP(i,v,r,h,hh,t) }
 
 * --cofire coal consumption---
 * cofire bio consumption already accounted for in accounting of BIOUSED

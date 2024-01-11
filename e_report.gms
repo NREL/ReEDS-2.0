@@ -47,6 +47,7 @@ sys_costs /
   op_ptc_payments_negative
   op_rect_fuel_costs
   op_spurline_fom
+  op_startcost
   op_transmission_fom
   op_transmission_hurdle_rate
   op_transmission_intrazone_fom
@@ -93,6 +94,7 @@ sys_costs_op(sys_costs) /
   op_operating_reserve_costs
   op_ptc_payments_negative
   op_spurline_fom
+  op_startcost
   op_transmission_fom
   op_transmission_hurdle_rate
   op_transmission_intrazone_fom
@@ -293,7 +295,8 @@ objfn_raw = z.l ;
 
 load_frac_rt(r,t)$sum{(rr,h), LOAD.l(rr,h,t) } = sum{h, hours(h) * LOAD.l(r,h,t) }/ sum{(rr,h), hours(h) * LOAD.l(rr,h,t) } ;
 
-*Load and operating reserve prices are $/MWh, and reserve margin price is $/kW-yr
+*Load and operating reserve prices are $/MWh, and reserve margin price is $/MW/rep-day for
+* capacity credit formulation and $/MW/stress-timeslice for stress period formulation.
 reqt_price('load','na',r,h,t)$[tmodel_new(t)$rb(r)] =
     (1 / cost_scale) * (1 / pvf_onm(t)) * eq_supply_demand_balance.m(r,h,t) / hours(h) ;
 
@@ -309,44 +312,46 @@ reqt_price('nat_gen','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
 reqt_price('annual_cap',e,r,'ann',t)$[tmodel_new(t)$rb(r)] =
     (1 / cost_scale) * (1 / pvf_onm(t)) * emit_scale(e) * eq_annual_cap.m(e,t) ;
 
-* Capacity prices are in $/kW but constraints are in MW so divide by 1000
-reqt_price('res_marg','na',r,allszn,t)$[tmodel_new(t)$rb(r)$szn_t(allszn,t)] =
-    (1 / cost_scale) * (1 / pvf_onm(t)) / 1000 * (
-* Capacity credit formulation
-        eq_reserve_margin.m(r,allszn,t)$Sw_PRM_CapCredit
-* Stress period formulation
-        + smax{allh$[h_stress_t(allh,t)$h_szn_t(allh,allszn,t)],
-               eq_supply_demand_balance.m(r,allh,t) }$[Sw_PRM_CapCredit=0]
-    ) ;
+* Capacity credit formulation ($/MW/rep-day)
+reqt_price('res_marg','na',r,ccseason,t)$[Sw_PRM_CapCredit$tmodel_new(t)$rb(r)] =
+    eq_reserve_margin.m(r,ccseason,t) * (1 / cost_scale) * (1 / pvf_onm(t));
+* Stress period formulation ($/MW/stress-timeslice)
+reqt_price('res_marg','na',r,allh,t)$[(Sw_PRM_CapCredit=0)$tmodel_new(t)$rb(r)$h_stress_t(allh,t)] =
+    eq_supply_demand_balance.m(r,allh,t) * (1 / cost_scale) * (1 / pvf_onm(t));
 
 reqt_price('res_marg_ann','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
-    sum{allszn$szn_t(allszn,t), reqt_price('res_marg','na',r,allszn,t) } ;
+* Capacity credit formulation ($/MW-yr)
+      sum{ccseason, reqt_price('res_marg','na',r,ccseason,t) }$Sw_PRM_CapCredit
+* Stress period formulation ($/MW-yr)
+    + sum{allh$h_stress_t(allh,t), reqt_price('res_marg','na',r,allh,t) }$(Sw_PRM_CapCredit=0)
+;
 
 
-*Load and operating reserve quantities are MWh, and reserve margin quantity is kW
+*Load and operating reserve quantities are MWh, and reserve margin quantity is MW
 * Demand from production activities (H2 and DAC) doesn't count toward electricity demand
 reqt_quant('load','na',r,h,t)$[tmodel_new(t)$rb(r)] =
     hours(h) * (
         LOAD.l(r,h,t)
         - sum{(p,i,v)$[consume(i)$valcap(i,v,r,t)$i_p(i,p)$Sw_Prod],
               PRODUCE.l(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) }
-*** Alternative formulation for the above three lines (following eq_loadcon):
-*         load_exog_static(r,h,t)
-*         + can_exports_h(r,h,t)$[Sw_Canada=1]
-*         + EVLOAD.l(r,h,t)$Sw_EV
-*         + sum{flex_type, FLEX.l(flex_type,r,h,t) }$Sw_EFS_flex
     ) ;
 
-reqt_quant('res_marg','na',r,allszn,t)$[tmodel_new(t)$rb(r)$szn_t(allszn,t)] = (
 * Capacity credit formulation
-    [(peakdem_static_szn(r,allszn,t) + PEAK_FLEX.l(r,allszn,t)) * (1+prm(r,t))]$Sw_PRM_CapCredit
+reqt_quant('res_marg','na',r,ccseason,t)$[Sw_PRM_CapCredit$tmodel_new(t)$rb(r)] =
+    (peakdem_static_ccseason(r,ccseason,t)
+*      + PEAK_FLEX.l(r,ccseason,t)
+    ) * (1 + prm(r,t)) ;
 * Stress period formulation
-    + smax{allh$[h_stress_t(allh,t)$h_szn_t(allh,allszn,t)],
-           LOAD.l(r,allh,t) }$[Sw_PRM_CapCredit=0]
-) * 1000 ;
+reqt_quant('res_marg','na',r,allh,t)$[(Sw_PRM_CapCredit=0)$tmodel_new(t)$rb(r)$h_stress_t(allh,t)] =
+    LOAD.l(r,allh,t) ;
 
+* Annual res_marg quantity is kind of meaningless, but maybe useful for weighting across regions?
 reqt_quant('res_marg_ann','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
-    sum{allszn$szn_t(allszn,t), reqt_quant('res_marg','na',r,allszn,t) } ;
+* Capacity credit formulation
+      sum{ccseason, reqt_quant('res_marg','na',r,ccseason,t) }$Sw_PRM_CapCredit
+* Stress period formulation
+    + sum{allh$h_stress_t(allh,t), reqt_quant('res_marg','na',r,allh,t) }$(Sw_PRM_CapCredit=0)
+;
 
 reqt_quant('oper_res',ortype,r,h,t)$[tmodel_new(t)$rb(r)] =
     hours(h) * (
@@ -392,6 +397,8 @@ reqt_quant('annual_cap',e,r,'ann',t)$[tmodel_new(t)$rb(r)] = emit_cap(e,t) * loa
 
 load_rt(r,t)$[tmodel_new(t)$rb(r)] = sum{h, hours(h) * load_exog(r,h,t) } ;
 
+load_stress(r,allh,t)$[tmodel_new(t)$h_stress_t(allh,t)] = LOAD.l(r,allh,t) ;
+
 co2_price(t)$tmodel_new(t) = (1 / cost_scale) * (1 / pvf_onm(t)) / emit_scale("CO2") * eq_annual_cap.m("CO2",t) ;
 
 rggi_price(t)$tmodel_new(t) = (1 / cost_scale) * (1 / pvf_onm(t)) / emit_scale("CO2") * eq_RGGI_cap.m(t) ;
@@ -404,10 +411,11 @@ state_cap_and_trade_quant(st,t)$[tmodel_new(t)] =
     state_cap(st,t) / emit_scale('CO2') ;
 
 *========================================
-* RPS AND CES CREDIT OUTPUTS
+* RPS, CES, AND TAX CREDIT OUTPUTS
 *========================================
 
 rec_outputs(RPSCat,i,st,ast,t)$[stfeas(st)$(stfeas(ast) or sameas(ast,"voluntary"))$tmodel_new(t)] = RECS.l(RPSCat,i,st,ast,t) ;
+ptc_out(i,v,t)$[tmodel_new(t)$ptc_value_scaled(i,v,t)] = ptc_value_scaled(i,v,t) * tc_phaseout_mult(i,v,t) ;
 
 *========================================
 * FUEL PRICES AND QUANTITIES
@@ -589,7 +597,6 @@ stor_in(i,v,r,h,t)$[storage(i)$valgen(i,v,r,t)$(not pvb(i))] = STORAGE_IN.l(i,v,
 stor_out(i,v,r,h,t)$[storage(i)$valgen(i,v,r,t)] = GEN.l(i,v,r,h,t) ;
 stor_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)] = STORAGE_LEVEL.l(i,v,r,h,t) ;
 
-
 *=====================================================================
 * WATER ACCOUNTING, CAPACITY, NEW CAPACITY, AND RETIRED CAPACITY
 *=====================================================================
@@ -655,12 +662,15 @@ curt_tech(i,r,t)$[tmodel_new(t)$vre(i)] =
           OPRES.l(ortype,i,v,r,h,t) * hours(h) }
 ;
 
-curt_rate_tech(i,rb,t)$[tmodel_new(t)$vre(i)$curt_tech(i,rb,t)$gen_ann(i,rb,t)] =
+curt_rate_tech(i,rb,t)$[tmodel_new(t)$vre(i)$(gen_ann(i,rb,t) + curt_tech(i,rb,t))] =
     curt_tech(i,rb,t) / (gen_ann(i,rb,t) + curt_tech(i,rb,t))
 ;
 
-curt_rate(t)$tmodel_new(t) = sum{r, curt_ann(r,t) } /
-      (sum{(i,r)$[vre(i) or pvb(i)], gen_ann(i,r,t) } + sum{r, curt_ann(r,t) }) ;
+curt_rate(t)
+    $[tmodel_new(t)
+    $(sum{(i,r)$[vre(i) or pvb(i)], gen_ann(i,r,t) } + sum{r, curt_ann(r,t) })]
+    = sum{r, curt_ann(r,t) }
+      / (sum{(i,r)$[vre(i) or pvb(i)], gen_ann(i,r,t) } + sum{r, curt_ann(r,t) }) ;
 
 losses_ann('storage',t)$tmodel_new(t) = sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_standalone(i)], STORAGE_IN.l(i,v,r,h,t) * hours(h) }
                           - sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_standalone(i)], GEN.l(i,v,r,h,t) * hours(h) } ;
@@ -749,6 +759,7 @@ cap_avail(i,r,t,rscbin)$[tmodel_new(t)$rsc_i(i)$m_rscfeas(r,i,rscbin)$m_rsc_con(
     m_rsc_dat(r,i,rscbin,"cap")
     + hyd_add_upg_cap(r,i,rscbin,t)$(Sw_HydroCapEnerUpgradeType=1)
     + rsc_dr(i,r,"cap",rscbin,t)
+    + rsc_evmc(i,r,"cap",rscbin,t)
 
 - (
     sum{(ii,v,tt)$[valinv(ii,v,r,tt)$(yeart(tt) < yeart(t))$rsc_agg(i,ii)$(not dr(i))],
@@ -780,7 +791,7 @@ ret_ivrt(i,v,r,t)$[abs(ret_ivrt(i,v,r,t)) < 1e-6] = 0 ;
 * BINNED STORAGE CAPACITY
 *==================================
 
-cap_sdbin_out(i,r,szn,sdbin,t)$valcap_irt(i,r,t) = sum{v, CAP_SDBIN.l(i,v,r,szn,sdbin,t)} ;
+cap_sdbin_out(i,r,ccseason,sdbin,t)$valcap_irt(i,r,t) = sum{v, CAP_SDBIN.l(i,v,r,ccseason,sdbin,t)} ;
 
 * energy capacity of storage
 stor_energy_cap(i,v,r,t)$[tmodel_new(t)$valcap(i,v,r,t)] =
@@ -790,36 +801,36 @@ stor_energy_cap(i,v,r,t)$[tmodel_new(t)$valcap(i,v,r,t)] =
 * CAPACITY CREDIT AND FIRM CAPACITY
 *==================================
 
-cc_all_out(i,v,r,szn,t)$tmodel_new(t) =
-    cc_int(i,v,r,szn,t)$[(vre(i) or csp(i) or storage(i) or pvb(i))$valcap(i,v,r,t)] +
-    m_cc_mar(i,r,szn,t)$[(vre(i) or csp(i) or storage(i) or pvb(i))$valinv(i,v,r,t)]+
-    m_cc_dr(i,r,szn,t)$[dr(i)$valinv(i,v,r,t)]
+cc_all_out(i,v,r,ccseason,t)$tmodel_new(t) =
+    cc_int(i,v,r,ccseason,t)$[(vre(i) or csp(i) or storage(i) or pvb(i))$valcap(i,v,r,t)] +
+    m_cc_mar(i,r,ccseason,t)$[(vre(i) or csp(i) or storage(i) or pvb(i))$valinv(i,v,r,t)]+
+    m_cc_dr(i,r,ccseason,t)$[dr(i)$valinv(i,v,r,t)]
 ;
 
-cap_new_cc(i,r,szn,t)$[(vre(i) or storage(i) or pvb(i))$valcap_irt(i,r,t)] = sum{v$ivt(i,v,t),cap_new_ivrt(i,v,r,t) } ;
+cap_new_cc(i,r,ccseason,t)$[(vre(i) or storage(i) or pvb(i))$valcap_irt(i,r,t)] = sum{v$ivt(i,v,t),cap_new_ivrt(i,v,r,t) } ;
 
-cc_new(i,r,szn,t)$[valcap_irt(i,r,t)$cap_new_cc(i,r,szn,t)] = sum{v$ivt(i,v,t), cc_all_out(i,v,r,szn,t) } ;
+cc_new(i,r,ccseason,t)$[valcap_irt(i,r,t)$cap_new_cc(i,r,ccseason,t)] = sum{v$ivt(i,v,t), cc_all_out(i,v,r,ccseason,t) } ;
 
-cap_firm(i,r,szn,t)$[valcap_irt(i,r,t)$[not consume(i)]$tmodel_new(t)] =
+cap_firm(i,r,ccseason,t)$[valcap_irt(i,r,t)$[not consume(i)]$tmodel_new(t)] =
       sum{v$[(not vre(i))$(not hydro(i))$(not storage(i))$(not pvb(i))$(not dr(i))$valcap(i,v,r,t)],
-          CAP.l(i,v,r,t) * (1 + seas_cap_frac_delta(i,v,r,szn,t)) }
-    + cc_old(i,r,szn,t)
+          CAP.l(i,v,r,t) * (1 + ccseason_cap_frac_delta(i,v,r,ccseason,t)) }
+    + cc_old(i,r,ccseason,t)
     + sum{v$[(vre(i) or csp(i) or pvb(i))$valinv(i,v,r,t)],
-         m_cc_mar(i,r,szn,t) * (INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb]) }
+         m_cc_mar(i,r,ccseason,t) * (INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb]) }
     + sum{v$[(vre(i) or csp(i) or pvb(i))$valcap(i,v,r,t)],
-            cc_int(i,v,r,szn,t) * CAP.l(i,v,r,t) }
+            cc_int(i,v,r,ccseason,t) * CAP.l(i,v,r,t) }
     + sum{v$dr(i),
-            m_cc_dr(i,r,szn,t) * CAP.l(i,v,r,t) }
-    + cc_excess(i,r,szn,t)$[(vre(i) or csp(i) or pvb(i))]
-    + sum{(v,h)$[hydro_nd(i)$valgen(i,v,r,t)$h_szn_prm(h,szn)],
+            m_cc_dr(i,r,ccseason,t) * CAP.l(i,v,r,t) }
+    + cc_excess(i,r,ccseason,t)$[(vre(i) or csp(i) or pvb(i))]
+    + sum{(v,h)$[hydro_nd(i)$valgen(i,v,r,t)$h_ccseason_prm(h,ccseason)],
          GEN.l(i,v,r,h,t) }
     + sum{v$[hydro_d(i)$valcap(i,v,r,t)],
-         CAP.l(i,v,r,t) * cap_hyd_szn_adj(i,szn,r) * (1 + hydro_capcredit_delta(i,t)) }
-    + sum{(v,sdbin)$[valcap(i,v,r,t)$(storage_standalone(i) or hyd_add_pump(i))], CAP_SDBIN.l(i,v,r,szn,sdbin,t) * cc_storage(i,sdbin) }
-    + sum{(v,sdbin)$[valcap(i,v,r,t)$storage_hybrid(i)], CAP_SDBIN.l(i,v,r,szn,sdbin,t) * cc_storage(i,sdbin) * hybrid_cc_derate(i,r,szn,sdbin,t) } ;
+         CAP.l(i,v,r,t) * cap_hyd_ccseason_adj(i,ccseason,r) * (1 + hydro_capcredit_delta(i,t)) }
+    + sum{(v,sdbin)$[valcap(i,v,r,t)$(storage_standalone(i) or hyd_add_pump(i))], CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) * cc_storage(i,sdbin) }
+    + sum{(v,sdbin)$[valcap(i,v,r,t)$storage_hybrid(i)], CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) * cc_storage(i,sdbin) * hybrid_cc_derate(i,r,ccseason,sdbin,t) } ;
 
 * Capacity trading to meet PRM
-captrade(r,rr,trtype,szn,t)$[routes(r,rr,trtype,t)$routes_prm(r,rr)$tmodel_new(t)] = PRMTRADE.l(r,rr,trtype,szn,t) ;
+captrade(r,rr,trtype,ccseason,t)$[routes(r,rr,trtype,t)$routes_prm(r,rr)$tmodel_new(t)] = PRMTRADE.l(r,rr,trtype,ccseason,t) ;
 
 *========================================
 * REVENUE LEVELS
@@ -832,8 +843,10 @@ revenue('load',i,r,t)$valgen_irt(i,r,t) = sum{(v,h)$valgen(i,v,r,t),
 revenue('charge',i,r,t)$[storage_standalone(i)$valgen_irt(i,r,t)] = - sum{(v,h)$valgen(i,v,r,t),
   STORAGE_IN.l(i,v,r,h,t) * hours(h) * reqt_price('load','na',r,h,t) } ;
 
-revenue('res_marg',i,r,t)$valgen_irt(i,r,t) = sum{szn,
-  cap_firm(i,r,szn,t) * reqt_price('res_marg','na',r,szn,t) * 1000 } ;
+revenue('res_marg',i,r,t)$[valgen_irt(i,r,t)$Sw_PRM_CapCredit] = sum{ccseason,
+  cap_firm(i,r,ccseason,t) * reqt_price('res_marg','na',r,ccseason,t) } ;
+revenue('res_marg',i,r,t)$[valgen_irt(i,r,t)$(Sw_PRM_CapCredit=0)] = sum{allh$h_stress_t(allh,t),
+  gen_h_stress(i,r,allh,t) * reqt_price('res_marg','na',r,allh,t) } ;
 
 revenue('oper_res',i,r,t)$valgen_irt(i,r,t) = sum{(ortype,v,h)$valgen(i,v,r,t),
   OPRES.l(ortype,i,v,r,h,t) * hours(h) * reqt_price('oper_res',ortype,r,h,t) } ;
@@ -844,15 +857,20 @@ revenue('rps',i,r,t)$valgen_irt(i,r,t) =
 
 revenue_nat(rev_cat,i,t)$tmodel_new(t) = sum{r, revenue(rev_cat,i,r,t) } ;
 
-revenue_en(rev_cat,i,r,t)$[tmodel_new(t)$sum{(v,h)$valgen(i,v,r,t), GEN.l(i,v,r,h,t)}$[not vre(i)]] =
-  revenue(rev_cat,i,r,t) / sum{(v,h)$valgen(i,v,r,t), GEN.l(i,v,r,h,t) * hours(h) } ;
+revenue_en(rev_cat,i,r,t)
+    $[tmodel_new(t)
+    $sum{(v,h)$valgen(i,v,r,t), GEN.l(i,v,r,h,t) * hours(h) }
+    $[not vre(i)]] =
+    revenue(rev_cat,i,r,t) / sum{(v,h)$valgen(i,v,r,t), GEN.l(i,v,r,h,t) * hours(h) } ;
 
 revenue_en(rev_cat,i,r,t)$[tmodel_new(t)$sum{(v,h)$[valcap(i,v,r,t)], m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) }$vre(i)] =
   revenue(rev_cat,i,r,t) / sum{(v,h)$valcap(i,v,r,t),
       m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) } ;
 
-revenue_en_nat(rev_cat,i,t)$[tmodel_new(t)$sum{(v,r,h)$valgen(i,v,r,t), GEN.l(i,v,r,h,t) }] =
-  revenue_nat(rev_cat,i,t) / sum{(v,r,h)$valgen(i,v,r,t), GEN.l(i,v,r,h,t) * hours(h) } ;
+revenue_en_nat(rev_cat,i,t)
+    $[tmodel_new(t)
+    $sum{(v,r,h)$valgen(i,v,r,t), GEN.l(i,v,r,h,t) * hours(h) }] =
+    revenue_nat(rev_cat,i,t) / sum{(v,r,h)$valgen(i,v,r,t), GEN.l(i,v,r,h,t) * hours(h) } ;
 
 revenue_cap(rev_cat,i,r,t)$[tmodel_new(t)$cap_out(i,r,t)] =
   revenue(rev_cat,i,r,t) / cap_out(i,r,t) ;
@@ -921,7 +939,7 @@ capex_ivrt(i,v,r,t)$valcap(i,v,r,t) =
                       INV.l(i,v,r,t) * (cost_cap_fin_mult_no_credits(i,r,t) * cost_cap(i,t) )
                       + sum{(rscbin)$m_rscfeas(r,i,rscbin),INV_RSC.l(i,v,r,rscbin,t) * m_rsc_dat(r,i,rscbin,"cost") * cost_cap_fin_mult_no_credits(i,r,t) }
                       + (INV_REFURB.l(i,v,r,t) * (cost_cap_fin_mult_no_credits(i,r,t) * cost_cap(i,t)))$[refurbtech(i)$Sw_Refurb]
-                      + UPGRADES.l(i,v,r,t) * (cost_upgrade(i,v,r,t) * cost_cap_fin_mult_out(i,r,t))$[upgrade(i)$Sw_Upgrades] ;
+                      + UPGRADES.l(i,v,r,t) * (cost_upgrade(i,v,r,t) * cost_cap_fin_mult_no_credits(i,r,t))$[upgrade(i)$Sw_Upgrades] ;
 
 *=========================
 * Tech|BA-Level SYSTEM COST: Capital
@@ -1125,6 +1143,12 @@ systemcost_techba('op_ptc_payments_negative',i,r,t)$tmodel_new(t) =
           hours(h) * ptc_value_scaled(i,v,t) * tc_phaseout_mult(i,v,t) * GEN.l(i,v,r,h,t) }
 ;
 
+* Startup/ramping costs
+systemcost_techba('op_startcost',i,r,t)$[tmodel_new(t)$Sw_StartCost$startcost(i)] =
+    sum{(v,h,hh)$[numhours_nexth(h,hh)$valgen(i,v,r,t)],
+        startcost(i) * numhours_nexth(h,hh) * RAMPUP.l(i,v,r,h,hh,t) }
+;
+
 
 *For bulk system costs present value as of model year, capital costs are unchanged,
 *while operation costs use pvf_onm_undisc
@@ -1145,7 +1169,9 @@ systemcost_ba(sys_costs,r,t) = sum{i,systemcost_techba(sys_costs,i,r,t)} ;
 
 systemcost_ba("inv_growth_penalty",r,t)$[tmodel_new(t)$(yeart(t)>=model_builds_start_yr)]  =
 *costs of growth penalties
-              sum{(gbin,i,st)$[valinv_irt(i,r,t)$stfeas(st)$r_st(r,st)],
+              sum{(gbin,i,st)
+                  $[valinv_irt(i,r,t)$stfeas(st)$r_st(r,st)
+                  $sum{(rr,h)$r_st(rr,st), reqt_quant('load','na',rr,h,t) * hours(h) }],
                         cost_growth(i,st,t) * growth_penalty(gbin) * GROWTH_BIN.l(gbin,i,st,t)
                         * sum{h, reqt_quant('load','na',r,h,t) * hours(h) }
                         / sum{(rr,h)$r_st(rr,st), reqt_quant('load','na',rr,h,t) * hours(h) }
@@ -1279,7 +1305,9 @@ systemcost_ba("op_h2_storage",r,t)$[tmodel_new(t)$(Sw_H2 = 2)] =
 
 systemcost_ba("op_acp_compliance_costs",r,t)$[tmodel_new(t)$(yeart(t)>=RPS_StartYear)]  =
 *plus ACP purchase costs, attributed to bas based on fraction of state requirement
-              + sum{(st,RPSCat)$[stfeas(st)$r_st(r,st)$RecPerc(RPSCat,st,t)],
+              + sum{(st,RPSCat)
+                    $[stfeas(st)$r_st(r,st)$RecPerc(RPSCat,st,t)
+                    $sum{rr$r_st(rr,st), reqt_quant('state_rps',RPSCat,rr,'ann',t) }],
                        acp_price(st,t) * ACP_PURCHASES.l(RPSCat,st,t) * reqt_quant('state_rps',RPSCat,r,'ann',t)
                        / sum{rr$r_st(rr,st), reqt_quant('state_rps',RPSCat,rr,'ann',t) }
                    }
@@ -1298,7 +1326,7 @@ systemcost_ba("op_co2_incentive_negative",r,t)$tmodel_new(t)  =
 ;
 
 
-*If the op_rect_fuel_costs are included in the systemcost_ba it will lead to double-counting
+*If the op_h2ct_fuel_costs are included in the systemcost_ba it will lead to double-counting
 *but these fuel costs are needed for the retail rate module. We therefore zero them out here.
 systemcost_ba_retailrate(sys_costs,r,t) = systemcost_ba(sys_costs,r,t) ;
 systemcost_ba("op_h2ct_fuel_costs",r,t) = 0 ;
@@ -1340,7 +1368,7 @@ raw_op_cost(t) = sum{sys_costs_op, systemcost(sys_costs_op,t) } ;
 error_check('z') = (z.l - sum{t$tmodel(t), cost_scale *
                              (pvf_capital(t) * raw_inv_cost(t) + pvf_onm(t) * raw_op_cost(t))
 *minus small penalty to move storage into shorter duration bins
-                             - pvf_capital(t) * sum{(i,v,r,szn,sdbin)$[valcap(i,v,r,t)$[storage(i) or hyd_add_pump(i)]], bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,szn,sdbin,t) }
+                             - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$[storage(i) or hyd_add_pump(i)]], bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) }
 *minus retirement penalty
                              - pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
                                   cost_fom(i,v,r,t) * retire_penalty(t) * (CAP.l(i,v,r,t) - INV.l(i,v,r,t) - INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb]) }
@@ -1362,7 +1390,7 @@ error_check('z') = (z.l - sum{t$tmodel(t), cost_scale *
 )/z.l;
 
 *Round error_check for z because of small number differences that always show up due to machine rounding and tolerances
-error_check('z') = round(error_check('z'), 5) ;
+error_check('z') = round(error_check('z'), 6) ;
 
 * Check to see is any generation or capacity from dissallowed resources
 error_check("gen") = sum{(i,v,r,h,t)$[not valgen(i,v,r,t)], GEN.l(i,v,r,h,t) } ;
@@ -1409,6 +1437,10 @@ tran_flow_out(r,rr,h,trtype,t)$[(ord(r) < ord(rr))$tmodel_new(t)$routes(rr,r,trt
 
 tran_flow_all(r,rr,h,trtype,t)$[tmodel_new(t)$routes(r,rr,trtype,t)] = FLOW.l(r,rr,h,t,trtype) ;
 
+tran_flow_stress(r,rr,allh,trtype,t)
+    $[tmodel_new(t)$routes(r,rr,trtype,t)$h_stress_t(allh,t)$(ord(r) < ord(rr))] =
+    FLOW.l(r,rr,allh,t,trtype) - FLOW.l(rr,r,allh,t,trtype) ;
+
 tran_flow_pos_out(r,rr,h,trtype,t)$[(ord(r) < ord(rr))$tmodel_new(t)$routes(rr,r,trtype,t)] = FLOW.l(r,rr,h,t,trtype) ;
 tran_flow_pos_out_ann(r,rr,trtype,t)$[(ord(r) < ord(rr))$tmodel_new(t)$routes(rr,r,trtype,t)] = sum{h, hours(h) * FLOW.l(r,rr,h,t,trtype) } ;
 
@@ -1451,9 +1483,10 @@ poi_capacity(r,t)$tmodel_new(t) =
 
 expenditure_flow('load',r,rr,t)$[tmodel_new(t)$sum{trtype, routes(r,rr,trtype,t) }] =
   sum{h, hours(h) * reqt_price('load','na',r,h,t) * sum{trtype, FLOW.l(r,rr,h,t,trtype) } } ;
-*res_marg prices are in $/kW-yr but captrade is in MW, so multiply by 1000
-expenditure_flow('res_marg_ann',r,rr,t)$[tmodel_new(t)$sum{trtype, routes(r,rr,trtype,t) }] =
-  sum{szn, reqt_price('res_marg','na',r,szn,t) * 1000 * sum{trtype, captrade(r,rr,trtype,szn,t) } } ;
+expenditure_flow('res_marg_ann',r,rr,t)$[tmodel_new(t)$Sw_PRM_CapCredit$sum{trtype, routes(r,rr,trtype,t) }] =
+  sum{ccseason, reqt_price('res_marg','na',r,ccseason,t) * sum{trtype, captrade(r,rr,trtype,ccseason,t) } } ;
+expenditure_flow('res_marg_ann',r,rr,t)$[tmodel_new(t)$(Sw_PRM_CapCredit=0)$routes_prm(r,rr)] =
+  sum{allh$h_stress_t(allh,t), reqt_price('res_marg','na',r,allh,t) * sum{trtype, FLOW.l(r,rr,allh,t,trtype) } } ;
 expenditure_flow('oper_res',r,rr,t)$[tmodel_new(t)$sum{trtype, routes(r,rr,trtype,t) }] =
   sum{(h,ortype), hours(h) * reqt_price('oper_res',ortype,r,h,t) * OPRES_FLOW.l(ortype,r,rr,h,t) } ;
 *unlike for the three services above, use the destination price rather than the sending price for calculating RPS expenditure flows
@@ -1474,7 +1507,7 @@ reduced_cost(i,v,r,t,rscbin,"INV_RSC")$[rsc_i(i)$valinv(i,v,r,t)$m_rscfeas(r,i,r
 * Flexible load
 *=========================
 flex_load_out(flex_type,r,h,t) = FLEX.l(flex_type,r,h,t) ;
-peak_load_adj(r,szn,t) = PEAK_FLEX.l(r,szn,t) ;
+* peak_load_adj(r,ccseason,t) = PEAK_FLEX.l(r,ccseason,t) ;
 
 dr_out(i,v,r,h,hh,t)$[dr1(i)$valgen(i,v,r,t)$allowed_shifts(i,h,hh)] = DR_SHIFT.l(i,v,r,h,hh,t) ;
 

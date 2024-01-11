@@ -234,7 +234,7 @@ def timeslice_to_timestamp(case, param):
     hs['timestamp'] = pd.concat([
         pd.Series(
             pd.date_range(
-                f'{y}-01-01',f'{y+1}-01-01',closed='left',freq='H',tz='EST'
+                f'{y}-01-01', f'{y+1}-01-01', inclusive='left', freq='H', tz='EST',
             )[:8760])
         for y in sw['GSw_HourlyWeatherYears']
     ]).values
@@ -244,6 +244,9 @@ def timeslice_to_timestamp(case, param):
     dfin_timeslice = pd.read_csv(
         os.path.join(case,'outputs',f'{param}.csv')
     ).rename(columns=rename)
+    ## check if empty
+    if dfin_timeslice.empty:
+        raise Exception(f'{param}.csv is empty; skipping timestamp processing')
     indices = [c for c in dfin_timeslice if c != 'Value']
     if 'h' not in indices:
         raise Exception(f"{param} does not have an h index: {indices}")
@@ -372,13 +375,14 @@ if __name__ == '__main__':
 
     #%% Special handling of particular outputs
     ## Hydrogen prices by month
-    # try:
-    #     dfin_timestamp = timeslice_to_timestamp(runname, 'h2_price_h')
-    #     dfout_month = timestamp_to_month(dfin_timestamp)
-    #     dfout_month.rename(columns={'Value':'$2004/kg'}).to_csv(
-    #         os.path.join(outpath, 'h2_price_month.csv'), index=False)
-    # except Exception as err:
-    #     print(traceback.format_exc())
+    try:
+        dfin_timestamp = timeslice_to_timestamp(runname, 'h2_price_h')
+        dfout_month = timestamp_to_month(dfin_timestamp)
+        dfout_month.rename(columns={'Value':'$2004/kg'}).to_csv(
+            os.path.join(outpath, 'h2_price_month.csv'), index=False)
+    except Exception as err:
+        if int(sw.GSw_H2):
+            print(traceback.format_exc())
 
     #%% All done
     print("Completed e_report_dump.py")

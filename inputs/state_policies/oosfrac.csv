@@ -1,12 +1,11 @@
 *st,value
-MA,0.62
-PA,0.47
 AZ,1
 CA,0.25
 CO,0.083
 CT,0.59
 DE,0.94
 IL,0.6
+MA,0.62
 MD,1
 ME,1
 MN,0.24
@@ -19,10 +18,11 @@ NV,0
 NY,0
 OH,0.573
 OR,1
+PA,0.47
 RI,0.77
+VA,0.25
 VT,1
 WA,0.43
 WI,0.41
-NS,1
-VA,0.25
 voluntary,1
+NS,1

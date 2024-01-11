@@ -173,6 +173,14 @@ $onlisting
 parameter numdays(allszn) "--number of days-- number of days for each season" ;
 numdays(szn) = sum{h$h_szn(h,szn),hours(h) } / 24 ;
 
+parameter numhours_nexth(allh,allhh) "--hours-- number of times hh follows h throughout year"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%numhours_nexth.csv
+$offdelim
+$onlisting
+/ ;
 
 parameter frac_h_quarter_weights(allh,quarter) "--unitless-- fraction of timeslice associated with each quarter"
 /
@@ -184,8 +192,22 @@ $offdelim
 $onlisting
 / ;
 
+parameter frac_h_ccseason_weights(allh,ccseason) "--unitless-- fraction of timeslice associated with each ccseason"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%frac_h_ccseason_weights.csv
+$include inputs_case%ds%stress%stress_year%%ds%frac_h_ccseason_weights.csv
+$offdelim
+$onlisting
+/ ;
+
 szn_quarter_weights(szn,quarter) =
     sum{h$h_szn(h,szn), frac_h_quarter_weights(h,quarter) }
+    / sum{h$h_szn(h,szn), 1} ;
+
+szn_ccseason_weights(szn,ccseason) =
+    sum{h$h_szn(h,szn), frac_h_ccseason_weights(h,ccseason) }
     / sum{h$h_szn(h,szn), 1} ;
 
 hours_daily(h_rep) = %GSw_HourlyChunkLengthRep% ;
@@ -401,7 +423,7 @@ cf_hyd(i,szn,r,t)$[hydro_d(i)$(yeart(t)>=Sw_ClimateStartYear)]  =
 $endif.climatehydro
 
 
-cap_hyd_szn_adj(i,szn,r) = sum{quarter, szn_quarter_weights(szn,quarter) * cap_hyd_szn_adj_quarter(i,quarter,r) } ;
+cap_hyd_szn_adj(i,szn,r) = sum{quarter, szn_quarter_weights(szn,quarter) * cap_hyd_quarter_adj(i,quarter,r) } ;
 
 
 * dispatchable hydro has a separate constraint for seasonal generation which uses m_cf_szn
@@ -435,6 +457,8 @@ m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ivt(i,newv,tt ) }$valcap
 * distpv capacity factor is divided by (1.0 - distloss) to provide a busbar equivalent capacity factor
 m_cf(i,v,r,h,t)$[distpv(i)$valcap(i,v,r,t)] = m_cf(i,v,r,h,t) / (1.0 - distloss) ;
 
+* Remove capacity when there is no corresponding capacity factor
+m_capacity_exog(i,v,r,t)$[initv(v)$cf_tech(i)$(not sum{h, m_cf(i,v,r,h,t) })] = 0 ;
 
 * Average CF by season
 m_cf_szn(i,v,r,szn,t)$[cf_tech(i)$valcap(i,v,r,t)$szn_rep(szn)] =
@@ -521,18 +545,9 @@ minloadfrac(r,i,h)$[(Sw_MinLoadTechs=4)$(not boiler(i))$(not hydro(i))] = 0 ;
 *=============================================
 * -- Electricity demand --
 *=============================================
-$onempty
-* EV demand
-parameter ev_static_demand(r,allh,allt) "--MW-- static electricity load from EV charging by timeslice"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%ev_static_demand.csv
-$offdelim
-$onlisting
-/ ;
 
 * Flexible demand
+$onempty
 parameter flex_frac_load(flex_type,r,allh,allt)
 /
 $offlisting
@@ -569,8 +584,36 @@ $include inputs_case%ds%dr_decrease.csv
 $offdelim
 $onlisting
 / ;
-$offempty
 
+* EV adoptable managed charging
+
+parameter evmc_baseline_load(r,allh,allt) "--fraction-- how much adopted shaped EV load is allowed to be shed in each timeslice h"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%evmc_baseline_load.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter evmc_shape_gen(i,r,allh) "--fraction-- how much adopted shaped EV load is allowed to be shed in each timeslice h"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%evmc_shape_generation.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter evmc_shape_load(i,r,allh) "--fraction-- how much adopted shaped EV load is added in each timeslice h"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%evmc_shape_load.csv
+$offdelim
+$onlisting
+/ ;
+$offempty
 
 * Written by hourly_writetimeseries.py
 parameter load_allyear(r,allh,allt) "--MW-- end-use load by region, timeslice, and year"
@@ -595,11 +638,6 @@ load_exog(r,h,t)$canmexload(r,h) = mex_growth_rate(t) * canmexload(r,h) ;
 load_exog(r,h,t)$sum{st$r_st(r,st),can_growth_rate(st,t) } =
       canmexload(r,h) * sum{st$r_st(r,st),can_growth_rate(st,t) } ;
 
-
-ev_dynamic_demand(r,szn,allt) =
-    sum{quarter,
-        szn_quarter_weights(szn,quarter) * ev_dynamic_demand_quarter(r,quarter,allt) } ;
-
 * Flexible load doesn't yet work with hourly resolution
 flex_h_corr1(flex_type,allh,allh) = no ;
 flex_h_corr2(flex_type,allh,allh) = no ;
@@ -607,9 +645,6 @@ flex_h_corr2(flex_type,allh,allh) = no ;
 * assign zero values to avoid unassigned parameter errors
 flex_demand_frac(flex_type,r,h,t) = 0 ;
 flex_demand_frac(flex_type,r,h,t)$Sw_EFS_Flex = flex_frac_load(flex_type,r,h,t) ;
-
-*static EV demand is added directly to load_exog
-load_exog(r,h,t)$(Sw_EV) = load_exog(r,h,t) + ev_static_demand(r,h,t) ;
 
 *initial values are set here (after SwI_Load has been accounted for)
 load_exog0(r,h,t) = load_exog(r,h,t) ;
@@ -629,31 +664,30 @@ maxload_szn(r,h,t,szn)
 
 
 
-set h_szn_prm(allh,allszn) "peak-load hour for the entire modeled system by season"
+set h_ccseason_prm(allh,ccseason) "peak-load hour for the entire modeled system by ccseason"
 /
 $offlisting
 $ondelim
-$include inputs_case%ds%h_szn_prm.csv
+$include inputs_case%ds%h_ccseason_prm.csv
 $offdelim
 $onlisting
 / ;
 
-peak_static_frac(r,szn,t) = 1 - sum{(flex_type,h)$h_szn_prm(h,szn), flex_demand_frac(flex_type,r,h,t) } ;
+peak_static_frac(r,ccseason,t) = 1 - sum{(flex_type,h)$h_ccseason_prm(h,ccseason), flex_demand_frac(flex_type,r,h,t) } ;
 
 
 
 * Written by hourly_writetimeseries.py
-parameter peak_szn(r,allszn,allt) "--MW-- end-use peak demand by region, season, year"
+parameter peak_ccseason(r,ccseason,allt) "--MW-- end-use peak demand by region, season, year"
 /
 $offlisting
 $ondelim
-$include inputs_case%ds%peak_szn.csv
-$include inputs_case%ds%stress%stress_year%%ds%peak_szn.csv
+$include inputs_case%ds%peak_ccseason.csv
 $offdelim
 $onlisting
 / ;
 *Dividing by (1-distloss) converts end-use load to busbar load
-peakdem_static_szn(r,szn,t) = peak_szn(r,szn,t) * peak_static_frac(r,szn,t) / (1.0 - distloss) ;
+peakdem_static_ccseason(r,ccseason,t) = peak_ccseason(r,ccseason,t) * peak_static_frac(r,ccseason,t) / (1.0 - distloss) ;
 
 
 $onempty
@@ -687,29 +721,6 @@ szn_adj_gas(h) = 1 ;
 szn_adj_gas(h)$frac_h_quarter_weights(h,"wint") =
     szn_adj_gas(h) + frac_h_quarter_weights(h,"wint") * szn_adj_gas_winter ;
 
-
-
-*=============================================
-* -- Capacity credit --
-*=============================================
-* Since PVBs are assumed to be loosely coupled (as of 10/11/2021)
-* they can be treated the same as standalone storage for capacity credit
-hybrid_cc_derate(i,r,szn,sdbin,t)$[pvb(i)$valcap_irt(i,r,t)] = 1 ;
-
-cc_old(i,r,szn,t) = 0 ;
-cc_int(i,v,r,szn,t) = 0 ;
-cc_dr(i,r,szn,t) = 0 ;
-
-cc_eqcf(i,v,r,t)$[vre(i)$valcap(i,v,r,t)$(sum{rscbin, rscfeas(i,r,rscbin) })] =
-  cf_adj_t(i,v,t) * sum{h,hours(h) * cf_rsc(i,v,r,h,t) } / sum{h,hours(h) } ;
-
-cc_mar(i,r,szn,t) = sum{v$ivt(i,v,t), cc_eqcf(i,v,r,t) } ;
-
-m_cc_mar(i,r,szn,t) = cc_mar(i,r,szn,t) ;
-m_cc_dr(i,r,szn,t) = cc_dr(i,r,szn,t) ;
-
-
-
 *=============================================
 * -- Round parameters for GAMS --
 *=============================================
@@ -724,7 +735,7 @@ minloadfrac(r,i,h)$minloadfrac(r,i,h) = round(minloadfrac(r,i,h),4) ;
 net_trade_can(r,h,t) = round(net_trade_can(r,h,t),3) ;
 szn_adj_gas(h)$szn_adj_gas(h) = round(szn_adj_gas(h), 3) ;
 cap_hyd_szn_adj(i,szn,r)$cap_hyd_szn_adj(i,szn,r) = round(cap_hyd_szn_adj(i,szn,r),5) ;
-peakdem_static_szn(r,szn,t)$peakdem_static_szn(r,szn,t) = round(peakdem_static_szn(r,szn,t),2) ;
+peakdem_static_ccseason(r,ccseason,t)$peakdem_static_ccseason(r,ccseason,t) = round(peakdem_static_ccseason(r,ccseason,t),2) ;
 seas_cap_frac_delta(i,v,r,szn,t)$seas_cap_frac_delta(i,v,r,szn,t) = round(seas_cap_frac_delta(i,v,r,szn,t),3) ;
 
 

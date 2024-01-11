@@ -66,3 +66,6 @@ barcolnz 30
 
 *** Can use bardisplay=2 to print more diagnostics about the barrier method and choice of barcolnz
 * bardisplay 2
+
+*** solutiontype (integer): type of solution (basic or non basic): 0 does basic with crossover, 2 skips crossover
+* solutiontype 2

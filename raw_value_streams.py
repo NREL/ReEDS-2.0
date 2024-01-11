@@ -3,8 +3,8 @@ This file can be used to combine an mps file (non-pre-solved) and associated mar
 from GAMS gdx solution file to produce value streams for the variables of the model.
 '''
 
-import gdxpds
 import pandas as pd
+import gdxpds
 from datetime import datetime
 import logging
 logger = logging.getLogger('')

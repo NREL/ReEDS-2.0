@@ -11,9 +11,8 @@ reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def check_slurm(forcelocal=False):
     """Check whether to submit slurm jobs (if on HPC) or run locally"""
     hpc = True if (int(os.environ.get('REEDS_USE_SLURM',0))) else False
-    hpc = False if forcelocal else hpc
     ### If on NREL HPC but NOT submitting slurm job, ask for confirmation
-    if ('NREL_CLUSTER' in os.environ) and (not hpc):
+    if ('NREL_CLUSTER' in os.environ) and (not hpc) and (not forcelocal):
         print(
             "It looks like you're running on the NREL HPC but the REEDS_USE_SLURM environment "
             "variable is not set to 1, meaning the model will run locally rather than being "
@@ -22,7 +21,7 @@ def check_slurm(forcelocal=False):
         confirm_local = str(input('Run job locally? y/[n]: ') or 'n')
         if not confirm_local in ['y','Y','yes','Yes','YES']:
             quit()
-    return hpc
+    return (hpc or forcelocal)
 
 
 def submit_job(case, year=0, samples=0, repo=False, r2ppath='', overwrite=False):
@@ -108,7 +107,7 @@ def main(case, year=0, samples=0, repo=False, r2ppath='', overwrite=False):
     ]
     if (
         any([not os.path.isfile(os.path.join(augur_data,f)) for f in files_expected])
-        and overwrite
+        or overwrite
     ):
         augur_gdx, augur_csv, augur_h5 = A_prep_data.main(t, case)
 

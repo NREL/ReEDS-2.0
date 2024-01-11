@@ -31,6 +31,17 @@ This python bokeh app creates multiple pivot charts from data. A helpful tutoria
 * Here is a breakdown of the contents of *Launch.bat*:
     * `bokeh serve . --sh`: Launch bokeh server and open browser window with the app. See https://docs.bokeh.org/en/latest/docs/user_guide/server.html for more info.
     * `--port 0`: This will allow bokehpivot to use an available port, and allows multiple simultaneous bokehpivot sessions (by launching multiple times).
+    
+## Running Bokehpivot (MacOS)
+In the bokehpivot directory in VSCode or terminal, launch bokehpivot by:
+```
+/.launch.sh
+```
+(if you run into an access/permission restricting issue, allow yourself access to launch.sh by running following command before ``` /.launch.sh ```:
+```
+chmod u+x launch.sh
+```
+a browser window with an interactive interface will pop up.
 
 ## Loading data
 After starting up the app in a browser window, you must enter a path in the *Data Source* field, either to a CSV file or to a Model run or set of runs:

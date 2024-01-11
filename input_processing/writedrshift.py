@@ -9,10 +9,11 @@ but haven't done that yet.
 Created on Feb 24 2021
 @author: bstoll
 """
-#%% Imports
+#%% ===========================================================================
+### --- IMPORTS ---
+### ===========================================================================
 import os
 import argparse
-import sys
 import shutil
 import pandas as pd
 # Time the operation of this script
@@ -20,10 +21,15 @@ from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
-#%% Inputs
+#%%#################
+### FIXED INPUTS ###
+
 decimals = 4
 
-#%% Functions
+#%% ===========================================================================
+### --- FUNCTIONS ---
+### ===========================================================================
+
 def get_dr_shifts(sw, reeds_path, inputs_case, native_data=True,
                   hmap_7yr=None, chunkmap=None, hours=None):
     """
@@ -48,21 +54,23 @@ def get_dr_shifts(sw, reeds_path, inputs_case, native_data=True,
 
     dr_shifts = pd.concat([dr_pos.rename({'pos_hrs': 'hrs'}, axis=1),
                            dr_neg.rename({'neg_hrs': 'hrs'}, axis=1)])
-    
-    if native_data: #### native_data reads in inputs directly
+
+    #### native_data reads in inputs directly
+    if native_data:
         hr_ts = pd.read_csv(
             os.path.join(reeds_path, 'inputs', 'variability', 'h_dt_szn.csv'))
         hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
         num_hrs = pd.read_csv(
             os.path.join(reeds_path, 'inputs', 'numhours.csv'),
-            header=0, names=['h', 'numhours'], index_col='h', squeeze=True)
+            header=0, names=['h', 'numhours'], index_col='h').squeeze(1)
         hr_ts = pd.read_csv(
             os.path.join(inputs_case, 'h_dt_szn.csv'))
         hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
         num_hrs = pd.read_csv(
             os.path.join(inputs_case, 'numhours.csv'),
-            header=0, names=['h', 'numhours'], index_col='h', squeeze=True)
-    else: #otherwise reformat to hourly timeslice subsets
+            header=0, names=['h', 'numhours'], index_col='h').squeeze(1)
+    # otherwise reformat to hourly timeslice subsets
+    else:
         hr_ts = hmap_7yr[['h','season','year','hour']].assign(h=hmap_7yr.h.map(chunkmap))
         hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
         num_hrs = (
@@ -83,17 +91,17 @@ def get_dr_shifts(sw, reeds_path, inputs_case, native_data=True,
     # Merge on hr_ts again to the shifted hours to see what timeslice DR
     # can move load into
     hr_shifts = pd.merge(hr_shifts,
-                         hr_ts.rename({'h': 'shifted_h', 'hour': 'shifted_hr',
-                                       'season': 'shifted_season'}, axis=1),
+                         hr_ts.rename({'h':'shifted_h', 'hour':'shifted_hr',
+                                       'season':'shifted_season'}, axis=1),
                          on='shifted_hr').drop('key', axis=1)
     # Only allow shifts within the same season
     hr_shifts = hr_shifts[hr_shifts.season == hr_shifts.shifted_season]
     hr_shifts.drop(['shifted_season'], axis=1, inplace=True)
 
     hr_shifts2 = (
-        hr_shifts[['dr_type', 'h', 'hour', 'shifted_h']]
+        hr_shifts[['dr_type','h','hour','shifted_h']]
         .drop_duplicates()
-        .groupby(['dr_type', 'h', 'shifted_h'])
+        .groupby(['dr_type','h','shifted_h'])
         .size()
         .reset_index()
     )
@@ -107,15 +115,16 @@ def get_dr_shifts(sw, reeds_path, inputs_case, native_data=True,
     return shift_out, dr_shifts
 
 
-#%% Procedure
-if __name__ == "__main__":
+#%% ===========================================================================
+### --- MAIN FUNCTION ---
+### ===========================================================================
 
-    # Argument inputs
-    parser = argparse.ArgumentParser(
-        description="""This file produces the DR shiftability inputs""")
+if __name__ == '__main__':
 
-    parser.add_argument("reeds_path", help="ReEDS directory")
-    parser.add_argument("inputs_case", help="output directory")
+    ### Parse arguments
+    parser = argparse.ArgumentParser(description='This file produces the DR shiftability inputs')
+    parser.add_argument('reeds_path', help='ReEDS directory')
+    parser.add_argument('inputs_case', help='output directory')
 
     args = parser.parse_args()
     inputs_case = args.inputs_case
@@ -123,10 +132,11 @@ if __name__ == "__main__":
 
     #%% Set up logger
     log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    print('Starting writedrshift.py')
 
     #%% Inputs from switches
     sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
 
     drscen = sw.drscen
 
@@ -139,14 +149,22 @@ if __name__ == "__main__":
         os.path.join(reeds_path,'inputs','demand_response',f'dr_increase_profile_{sw.drscen}.csv'))
     dr_profile_decrease = pd.read_csv(
         os.path.join(reeds_path,'inputs','demand_response',f'dr_decrease_profile_{sw.drscen}.csv'))
+    evmc_shape_profile_decrease = pd.read_hdf(
+        os.path.join(reeds_path,'inputs','demand_response',f'evmc_shape_decrease_profile_{sw.evmcscen}.h5'))
+    evmc_shape_profile_increase = pd.read_hdf(
+        os.path.join(reeds_path,'inputs','demand_response',f'evmc_shape_increase_profile_{sw.evmcscen}.h5'))
 
     ### Filter by regions
-    val_r = pd.read_csv(
-        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
+    val_r_all = pd.read_csv(
+        os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
     dr_profile_increase = (
-        dr_profile_increase.loc[:,dr_profile_increase.columns.isin(['i','hour','year'] + val_r)])
+        dr_profile_increase.loc[:,dr_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
     dr_profile_decrease = (
-        dr_profile_decrease.loc[:,dr_profile_decrease.columns.isin(['i','hour','year'] + val_r)])
+        dr_profile_decrease.loc[:,dr_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
+    evmc_shape_profile_decrease = (
+        evmc_shape_profile_decrease.loc[:,evmc_shape_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
+    evmc_shape_profile_increase = (
+        evmc_shape_profile_increase.loc[:,evmc_shape_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
 
 
     dr_shed[['dr_type', 'yr_hrs']].to_csv(
@@ -156,11 +174,17 @@ if __name__ == "__main__":
         os.path.join(inputs_case,'dr_inc.csv'),index=False)
     dr_profile_decrease.to_csv(
         os.path.join(inputs_case,'dr_dec.csv'),index=False)
+    evmc_shape_profile_decrease.to_csv(
+        os.path.join(inputs_case,'evmc_shape_profile_decrease.csv'),index=False)
+    evmc_shape_profile_increase.to_csv(
+        os.path.join(inputs_case,'evmc_shape_profile_increase.csv'),index=False)
 
     # Copy DR types
     shutil.copy(
         os.path.join(args.reeds_path,'inputs','demand_response',f'dr_types_{drscen}.csv'),
         os.path.join(inputs_case, 'dr_types.csv'))
     
+    print('Finished writedrshift.py')
+
     toc(tic=tic, year=0, process='input_processing/writedrshift.py', 
         path=os.path.join(inputs_case,'..'))

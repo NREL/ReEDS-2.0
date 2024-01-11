@@ -13,19 +13,31 @@ def met_threshold(casepath, t, iteration=0):
     """
     Determine whether the last iteration failed the threshold
     """
-    ### Get the total NEUE
-    neue = pd.read_csv(
-        os.path.join(casepath,'outputs','neue.csv'),
-        index_col=['t','iteration'], squeeze=True,
-    ).loc[t,iteration]
-
-    ### Only a simple criterion for now
     sw = get_switches(casepath)
-    if neue > float(sw.GSw_PRM_StressThreshold):
-        print(f"neue = {neue:.2f}, which is > {sw.GSw_PRM_StressThreshold}")
+
+    ### Get the latest NEUE data
+    neue = pd.read_csv(
+        os.path.join(casepath,'outputs',f'neue_{t}i{iteration}.csv'),
+        index_col=['level','metric','region'],
+    ).squeeze(1)
+
+    ### Get the threshold(s) and see if any of them failed
+    failed = 0
+    ## Example: GSw_PRM_StressThreshold = 'country_sum_5/transgrp_sum_10'
+    for threshold in sw.GSw_PRM_StressThreshold.split('/'):
+        ## Example: threshold = 'country_sum_10'
+        (hierarchy_level, period_agg_method, ppm) = threshold.split('_')
+        this_test = neue[hierarchy_level][period_agg_method]
+        if (this_test > float(ppm)).any():
+            print(f"GSw_PRM_StressThreshold={threshold} failed for:")
+            print(this_test.loc[this_test > float(ppm)])
+            failed = 1
+
+    if failed:
+        print(f"At least one of GSw_PRM_StressThreshold={sw.GSw_PRM_StressThreshold} failed")
         return False
     else:
-        print(f"neue = {neue:.2f}, which is <= {sw.GSw_PRM_StressThreshold}")
+        print(f"All of GSw_PRM_StressThreshold={sw.GSw_PRM_StressThreshold} passed")
         return True
 
 
@@ -58,8 +70,11 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
         #%% Get the command to run GAMS for this solve year
         batch_case = os.path.basename(casepath)
         ### Get the stress_year
+        ## If using user-defined stress periods, read the current year
+        if 'user' in sw.GSw_PRM_StressModel:
+            stress_year = f"{t}i0"
         ## If we're on iteration 0, use stress periods from the previous year
-        if not iteration:
+        elif not iteration:
             stress_year = f"{tprev[t]}i{iteration}"
         ## Otherwise use stress periods from this year from the previous iteration
         else:
@@ -107,7 +122,9 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
     #%%### Run Augur
     if (not onlygams) and (tnext[t] > int(sw.GSw_SkipAugurYear)):
         cmd_augur = f"python Augur.py {tnext[t]} {t} {casepath} --iteration={iteration}"
-        subprocess.run(cmd_augur, shell=True)
+        result = subprocess.run(cmd_augur, shell=True)
+        if result.returncode:
+            raise Exception(f'Augur.py failed with return code {result.returncode}')
 
         # ## Check to make sure Augur ran successfully; quit otherwise
         # cmd_errorcheck = runbatch.writeerrorcheck(
@@ -125,14 +142,15 @@ def main(casepath, t):
         #%% Run ReEDS and Augur
         run_reeds(casepath, t, iteration=iteration)
 
-        #%% Stop here if we're before GSw_SkipAugurYear...
-        if (t < int(sw['GSw_SkipAugurYear'])):
-            print(f'{t} < GSw_SkipAugurYear ({sw.GSw_SkipAugurYear}) so skipping Augur')
+        #%% Stop here if we're before GSw_StartMarkets...
+        if (t < int(sw['GSw_StartMarkets'])):
+            print(f'{t} < GSw_StartMarkets ({sw.GSw_StartMarkets}) so skipping iteration')
             break
         ### or if not iterating...
         elif (
             (not int(sw['GSw_PRM_StressIterateMax']))
-            or (not int(sw['GSw_PRM_MaxStressPeriods']))
+            or ('user' in sw.GSw_PRM_StressModel)
+            or int(sw.GSw_PRM_CapCredit)
         ):
             print('Not iterating, so moving to next solve year')
             break

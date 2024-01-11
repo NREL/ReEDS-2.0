@@ -31,6 +31,7 @@ import subprocess as sp
 import jinja2 as ji
 import reeds_bokeh as rb
 import logging
+import requests
 from pdb import set_trace as pdbst
 
 #Setup logger
@@ -48,8 +49,8 @@ DEFAULT_CUSTOM_SORTS = {} #Keys are column names and values are lists of values 
 DEFAULT_CUSTOM_COLORS = {} #Keys are column names and values are dicts that map column values to colors (hex strings)
 DATA_TYPE_OPTIONS = rb.DATA_TYPE_OPTIONS + ['CSV']
 DEFAULT_DATA_TYPE = rb.DEFAULT_DATA_TYPE
-PLOT_WIDTH = 300
-PLOT_HEIGHT = 300
+WIDTH = 300
+HEIGHT = 300
 PLOT_FONT_SIZE = 10
 PLOT_AXIS_LABEL_SIZE = 8
 PLOT_LABEL_ORIENTATION = 45
@@ -89,7 +90,7 @@ WDG_COL = ['x', 'y', 'x_group', 'series', 'explode', 'explode_group']
 #List of widgets that don't use columns as selector and share general widget update function
 WDG_NON_COL = ['chart_type', 'range', 'y_agg', 'adv_op', 'explode_grid', 'adv_col_base',
     'adv_op2', 'adv_col_base2', 'adv_op3', 'adv_col_base3', 'plot_title', 'plot_title_size',
-    'sort_data', 'plot_width', 'plot_height', 'opacity', 'sync_axes', 'x_min', 'x_max', 'x_scale',
+    'sort_data', 'width', 'height', 'opacity', 'sync_axes', 'x_min', 'x_max', 'x_scale',
     'x_title', 'series_limit', 'x_title_size', 'x_major_label_size', 'x_major_label_orientation',
     'y_min', 'y_max', 'y_scale', 'y_title', 'y_title_size', 'y_major_label_size', 'hist_num_bins', 'hist_weight',
     'circle_size', 'bar_width', 'cum_sort', 'line_width', 'range_show_glyphs', 'net_levels', 'bokeh_tools',
@@ -130,7 +131,7 @@ def initialize():
 
     #build widgets and plots
     GL['data_source_wdg'] = build_data_source_wdg(data_type, data_source)
-    GL['controls'] = bl.widgetbox(list(GL['data_source_wdg'].values()), css_classes=['widgets_section'])
+    GL['controls'] = bl.column(list(GL['data_source_wdg'].values()), css_classes=['widgets_section'])
     GL['plots'] = bl.column([], css_classes=['plots_section'])
     layout = bl.row(GL['controls'], GL['plots'], css_classes=['full_layout'])
 
@@ -167,14 +168,14 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
         report_format (string): string that contains 'html', 'excel', 'csv', or a combination of these, specifying which reports to make.
         html_num (string): 'multiple' if we are building separate html reports for each section, and 'one' for one html report with all sections.
         output_dir (string): the directory into which the resulting reports will be saved.
-        auto_open (string): either "yes" to automatically open report files, or "no"
+        auto_open (string): either "Yes" to automatically open report files, or "No"
         variant_wdg_config (list of dicts): After data source is set, this allows us to set any other variant_wdg values.
     Returns:
         Nothing: HTML and Excel files are created
     '''
     #build initial widgets and plots globals
     GL['data_source_wdg'] = build_data_source_wdg()
-    GL['controls'] = bl.widgetbox(list(GL['data_source_wdg'].values()))
+    GL['controls'] = bl.column(list(GL['data_source_wdg'].values()))
     GL['plots'] = bl.column([])
     #Update data source widget with input value
     GL['data_source_wdg']['data_type'].value = data_type
@@ -246,6 +247,7 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
     #for each preset, set the widgets in preset_wdg(). Gather plots into separate sections of the html report,
     #and gather data into separate sheets of excel report
     sec_i = 1
+    vizit_data = []
     for static_preset in static_presets:
         name = static_preset['name']
         try:
@@ -272,6 +274,13 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
                     with open(html_path, 'w') as f:
                         f.write(html)
                     contents_str += '<li><a href="' + html_file_name + '.html">' + str(sec_i) + '. ' + name + '</a></li>'
+            if 'html' in report_format:
+                #Vizit-related outputs (allowing download_full_source as well)
+                vizit_data.append({
+                    'sec_i': sec_i,
+                    'data': GL['df_source'] if download_full_source else GL['df_plots'],
+                    'preset': static_preset
+                })
             if 'excel' in report_format:
                 sheet_name = static_preset['sheet_name'] if 'sheet_name' in static_preset else str(sec_i) + '_' + name
                 sheet_name = re.sub(r"[\\/*\[\]:?]", '-', sheet_name) #replace disallowed sheet name characters with dash
@@ -293,14 +302,14 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
                 static_plots.append(bl.row(bmw.Div(text='<h2 id="section-' + str(sec_i) + '" class="error">' + str(sec_i) + '. ' + name + '. ERROR!</h2>')))
         sec_i += 1
     if 'excel' in report_format:
-        excel_report.save()
+        excel_report.close()
     if 'html' in report_format:
         if html_num == 'one':
             html = be.file_html(static_plots, resources=resources, template=template)
             html_path = output_dir + 'report.html'
             with open(html_path, 'w') as f:
                 f.write(html)
-            if auto_open == 'yes':
+            if auto_open == 'Yes':
                 sp.Popen(os.path.abspath(html_path), shell=True)
         elif html_num == 'multiple':
             contents_str += '</ul>'
@@ -308,9 +317,149 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
             html_path = output_dir + 'contents.html'
             with open(html_path, 'w') as f:
                 f.write(html)
-            if auto_open == 'yes':
+            if auto_open == 'Yes':
                 sp.Popen(os.path.abspath(html_path), shell=True)
+        vizit_report(data_type, data_source, vizit_data, output_dir, auto_open)
     logger.info('***Done building report')
+
+def vizit_report(data_type, data_source, vizit_data, output_dir, auto_open):
+    vizit_config = {'fileNames': [], 'globalStyleFile': 'vizit_styles.csv', 'dashboards':[]}
+    #map bokehpivot to vizit
+    widget_map = {
+        'explode': 'explode',
+        'x': 'x',
+        'y': 'y',
+        'series': 'name',
+    }
+    style_map = {
+        'width': 'Plot Width (px)',
+        'height': 'Plot Height (px)',
+        # 'x_major_label_size': 'X Tick Font Size (pt)',
+    }
+    chart_type_map = {
+        'Dot': 'dot',
+        'Line': 'line',
+        'Dot-Line': 'line dot',
+        'Bar': 'bar',
+        'Area': 'bar',
+        'Area Map': 'custom region map',
+        'Line Map': 'lat/lon/width line map',
+    }
+    data_dict = {}
+    for v in vizit_data:
+        if v['data'].empty:
+            continue
+        v = v.copy() #So I don't edit the input itself
+        #Remove Net Level column if it exists
+        if v['data'].columns[-1].startswith('Net Level'):
+            v['data'].drop(v['data'].columns[-1], axis=1, inplace=True)
+        sheet_name = v['preset']['sheet_name'] if 'sheet_name' in v['preset'] else str(v['sec_i']) + '_' + v['preset']['name']
+        sheet_name = re.sub(r'[\\/:"*?<>|]', '-', sheet_name) #replace disallowed sheet name characters with dash
+        vizit_config['fileNames'].append(f'{sheet_name}.csv')
+        if 'download_full_source' not in v['preset']:
+            if 'chart_type' not in v['preset']['config']:
+                v['preset']['config']['chart_type'] = 'Dot'
+            trace_config = {
+                'dataSource': f'{sheet_name}.csv',
+                'type': chart_type_map[v['preset']['config']['chart_type']],
+                'agg': 'sum',
+            }
+            style_config = {}
+            for w in widget_map:
+                if w in v['preset']['config']:
+                    trace_config[widget_map[w]] = v['preset']['config'][w]
+            for s in style_map:
+                if s in v['preset']['config']:
+                    style_config[style_map[s]] = v['preset']['config'][s]
+            #vizit doesn't support 'explode_group', so make a new concatenated column and set 'explode' to that
+            if 'explode_group' in v['preset']['config'] and v['preset']['config']['explode_group'] != 'None':
+                new_col = v['preset']['config']['explode'] + ' - ' + v['preset']['config']['explode_group']
+                cur_cols = v['data'].columns.tolist()
+                v['data'][new_col] = (
+                    v['data'][v['preset']['config']['explode']].astype(str) + ' - ' +
+                    v['data'][v['preset']['config']['explode_group']].astype(str)
+                )
+                #Put new_col at the beginning
+                v['data'] = v['data'][[new_col] + cur_cols].copy()
+                trace_config['explode'] = new_col
+            if v['preset']['config']['chart_type'] == 'Area Map':
+                reg = v['preset']['config']['x']
+                if reg == 'rb':
+                    geojson = 'https://raw.githubusercontent.com/mmowers/vizitfiles/main/US_PCA.json'
+                    featureidkey = 'properties.rb'
+                elif reg == 'st':
+                    geojson = 'https://raw.githubusercontent.com/mmowers/vizitfiles/main/us-states.json'
+                    featureidkey = 'properties.code'
+                #Replace 'y' key with 'z', and replace 'x' with 'locations'
+                trace_config['z'] = trace_config.pop('y')
+                trace_config['locations'] = trace_config.pop('x')
+                trace_config['geojson'] = geojson
+                trace_config['geojsonboundaries'] = geojson
+                trace_config['featureidkey'] = featureidkey
+                style_config['Map Zoom'] = '6'
+                style_config['Map Center Latitude'] = '40'
+                style_config['Map Center Longitude'] = '-96'
+                style_config['Colorscale (region)'] = 'Reds'
+            if 'sync_axes' not in v['preset']['config'] or v['preset']['config']['sync_axes'] == 'Yes':
+                if v['preset']['config']['chart_type'] == 'Area Map':
+                    style_config['Colorscale Min (region)'] = v['data'][trace_config['z']].min()
+                    style_config['Colorscale Max (region)'] = v['data'][trace_config['z']].max()
+                else:
+                    val_col = trace_config['y']
+                    if v['preset']['config']['chart_type'] in STACKEDTYPES and 'series' in v['preset']['config']:
+                        #sum across series for y_min and y_max
+                        ser_col = v['preset']['config']['series']
+                        df_pos = v['data'][v['data'][val_col] > 0].copy()
+                        df_neg = v['data'][v['data'][val_col] < 0].copy()
+                        df_pos = df_pos.drop(columns=ser_col)
+                        df_neg = df_neg.drop(columns=ser_col)
+                        groupby_cols = [c for c in df_pos.columns if c != val_col]
+                        df_pos = df_pos.groupby(groupby_cols, as_index=False)[val_col].sum()
+                        df_neg = df_neg.groupby(groupby_cols, as_index=False)[val_col].sum()
+                        y_min = df_neg[val_col].min() if df_neg[val_col].min() < 0 else 0
+                        y_max = df_pos[val_col].max() if df_pos[val_col].max() > 0 else 0
+                    else:
+                        y_min = v['data'][val_col].min() if v['data'][val_col].min() < 0 else 0
+                        y_max = v['data'][val_col].max() if v['data'][val_col].max() > 0 else 0
+                    style_config['Y Min'] = y_min
+                    style_config['Y Max'] = y_max
+            dashboard = {'title': v['preset']['name'], 'charts':[{'traces':[trace_config], 'style':style_config}]}
+            vizit_config['dashboards'].append(dashboard)
+        #Add the data itself (even if we're downloading the full source, so we can make charts with the full data)
+        data_dict[f'{sheet_name}.csv'] = v['data'].to_dict(orient='list')
+
+    bpStyleDir = f'{this_dir_path}/in/reeds2'
+    ls_df = []
+    #Read in styles from bokehpivot
+    for f in os.listdir(bpStyleDir):
+        if f.endswith('_style.csv'):
+            df = pd.read_csv(os.path.join(bpStyleDir,f))
+            df['column_name'] = f.replace('_style.csv','')
+            df = df.rename(columns={'order':'column_value'})
+            ls_df.append(df)
+    df_style = pd.concat(ls_df, ignore_index=True)
+    df_style = df_style[['column_name','column_value','color']].copy()
+    #Add styles from scenarios.csv if applicable
+    if data_type != 'CSV' and data_source.endswith('.csv'):
+        df_scen = pd.read_csv(data_source)
+        df_scen['column_name'] = 'scenario'
+        df_scen = df_scen.rename(columns={'name':'column_value'})
+        df_scen = df_scen[['column_name','column_value','color']].copy()
+        df_style = pd.concat([df_style, df_scen],sort=False,ignore_index=True)
+    data_dict['vizit_styles.csv'] = df_style.to_dict(orient='list')
+    vizit_config['fileNames'].append('vizit_styles.csv')
+
+    vizit_commit = 'a56981cebf1ed1920e5cbb3fed658cdbe21f6d10'
+    vizit_url = f'https://raw.githubusercontent.com/mmowers/vizit/{vizit_commit}/index.html'
+    f_out_str = requests.get(vizit_url).text
+    data_str = json.dumps(data_dict, separators=(',',':'))
+    config_str = json.dumps(vizit_config, separators=(',',':'))
+    f_out_str = re.sub('let config_load = .*;\n', f'let config_load = {config_str};\n', f_out_str, 1)
+    f_out_str = re.sub('let rawData = .*;\n', f'let rawData = {data_str};\n', f_out_str, 1)
+    with open(f'{output_dir}report_vizit.html', 'w') as f_out:
+        f_out.write(f_out_str)
+    if auto_open == 'Yes':
+        sp.Popen(os.path.abspath(f'{output_dir}report_vizit.html'), shell=True)
 
 def preset_wdg(preset, download_full_source=False):
     '''
@@ -323,7 +472,7 @@ def preset_wdg(preset, download_full_source=False):
     #First set all wdg_variant values, if they exist, in order that they appear in wdg_variant, an ordered dict.
     variant_presets = [key for key in list(GL['variant_wdg'].keys()) if key in preset]
     for key in variant_presets:
-        if isinstance(GL['widgets'][key], bmw.groups.Group):
+        if isinstance(GL['widgets'][key], bmw.groups.AbstractGroup):
             GL['widgets'][key].active = [GL['widgets'][key].labels.index(i) for i in preset[key]]
         elif isinstance(GL['widgets'][key], bmw.inputs.InputWidget):
             GL['widgets'][key].value = preset[key]
@@ -339,7 +488,7 @@ def preset_wdg(preset, download_full_source=False):
     wdg_resets = [i for i in wdg_defaults if i not in list(wdg_variant.keys())+['x', 'data', 'data_type', 'render_plots', 'auto_update']]
     #reset widgets if they are not default
     for key in wdg_resets:
-        if isinstance(wdg[key], bmw.groups.Group) and wdg[key].active != wdg_defaults[key]:
+        if isinstance(wdg[key], bmw.groups.AbstractGroup) and wdg[key].active != wdg_defaults[key]:
             wdg[key].active = wdg_defaults[key]
         elif isinstance(wdg[key], bmw.inputs.InputWidget) and wdg[key].value != wdg_defaults[key]:
             wdg[key].value = wdg_defaults[key]
@@ -347,7 +496,7 @@ def preset_wdg(preset, download_full_source=False):
     #Filters are handled separately, after that. x will be set at end, triggering render of chart.
     common_presets = [key for key in list(wdg.keys()) if key in preset and key not in list(wdg_variant.keys())+['x', 'filter']]
     for key in common_presets:
-        if isinstance(wdg[key], bmw.groups.Group):
+        if isinstance(wdg[key], bmw.groups.AbstractGroup):
             wdg[key].active = [wdg[key].labels.index(i) for i in preset[key]]
         elif isinstance(wdg[key], bmw.inputs.InputWidget):
             wdg[key].value = preset[key]
@@ -488,9 +637,9 @@ def build_report(html_num='one'):
     output_dir = '"' + out_path + '/report-' + time + '"'
     data_source = '"' + GL['widgets']['data'].value.replace('"', '') + '"'
     if html_num == 'one':
-        auto_open = '"yes"'
+        auto_open = '"Yes"'
     else:
-        auto_open = '"no"'
+        auto_open = '"No"'
     start_str = 'start python'
     if GL['widgets']['report_debug'].value == 'Yes':
         start_str = 'start cmd /K python -m pdb '
@@ -582,8 +731,8 @@ def build_widgets(df_source, cols, init_load=False, init_config={}, wdg_defaults
         wdg['filter_sel_all_'+str(j)].js_on_event(bk.events.ButtonClick, select_all_callback)
         wdg['filter_sel_none_'+str(j)].js_on_event(bk.events.ButtonClick, select_none_callback)
     wdg['adjustments'] = bmw.Div(text='Plot Adjustments', css_classes=['adjust-dropdown'])
-    wdg['plot_width'] = bmw.TextInput(title='Plot Width (px)', value=str(PLOT_WIDTH), css_classes=['wdgkey-plot_width', 'adjust-drop'], visible=False)
-    wdg['plot_height'] = bmw.TextInput(title='Plot Height (px)', value=str(PLOT_HEIGHT), css_classes=['wdgkey-plot_height', 'adjust-drop'], visible=False)
+    wdg['width'] = bmw.TextInput(title='Plot Width (px)', value=str(WIDTH), css_classes=['wdgkey-width', 'adjust-drop'], visible=False)
+    wdg['height'] = bmw.TextInput(title='Plot Height (px)', value=str(HEIGHT), css_classes=['wdgkey-height', 'adjust-drop'], visible=False)
     wdg['plot_title'] = bmw.TextInput(title='Plot Title', value='', css_classes=['wdgkey-plot_title', 'adjust-drop'], visible=False)
     wdg['plot_title_size'] = bmw.TextInput(title='Plot Title Font Size', value=str(PLOT_FONT_SIZE), css_classes=['wdgkey-plot_title_size', 'adjust-drop'], visible=False)
     wdg['opacity'] = bmw.TextInput(title='Opacity (0-1)', value=str(OPACITY), css_classes=['wdgkey-opacity', 'adjust-drop'], visible=False)
@@ -711,7 +860,7 @@ def save_wdg_defaults(wdg, wdg_defaults):
         Nothing: wdg_defaults is set for applicable keys in wdg
     '''
     for key in wdg:
-        if isinstance(wdg[key], bmw.groups.Group):
+        if isinstance(wdg[key], bmw.groups.AbstractGroup):
             wdg_defaults[key] = wdg[key].active
         elif isinstance(wdg[key], bmw.inputs.InputWidget):
             wdg_defaults[key] = wdg[key].value
@@ -1108,7 +1257,7 @@ def create_figure(df_exploded, df_plots, wdg, cols, custom_colors, explode_val=N
     TOOLS = [boxzoom_tool, wheelzoom_tool, pan_tool, hover_tool, reset_tool, save_tool]
 
     #Create figure with the ranges, titles, and tools, and adjust formatting and labels
-    p = bp.figure(plot_height=int(wdg['plot_height'].value), plot_width=int(wdg['plot_width'].value), tools=TOOLS, **kw)
+    p = bp.figure(height=int(wdg['height'].value), width=int(wdg['width'].value), tools=TOOLS, **kw)
     p.toolbar.active_drag = boxzoom_tool
     p.title.text_font_size = wdg['plot_title_size'].value + 'pt'
     p.xaxis.axis_label = wdg['x_title'].value
@@ -1468,8 +1617,8 @@ def create_map(map_type, df, ranges, region_boundaries, centroids, wdg, colors_f
     height = aspect_ratio * float(width)
     fig_map = bp.figure(
         title=title,
-        plot_height=int(height),
-        plot_width=int(width),
+        height=int(height),
+        width=int(width),
         x_range=(ranges['x_min'], ranges['x_max']),
         y_range=(ranges['y_min'], ranges['y_max']),
         x_axis_location=None,
@@ -1677,7 +1826,7 @@ def build_legend(labels, colors):
     legend_string = ''
     for i, txt in enumerate(labels):
         legend_string += '<div class="legend-entry"><span class="legend-color" style="background-color:' + str(colors[i]) + ';"></span>'
-        legend_string += '<span class="legend-text">' + str(txt) +'</span></div>'
+        legend_string += f'<span class="legend-text" style="color: {colors[i]};"><b>' + str(txt) +'</b></span></div>'
     return legend_string
 
 def display_config(wdg, wdg_defaults):
@@ -1696,7 +1845,7 @@ def display_config(wdg, wdg_defaults):
         if key not in ['data', 'chart_type']:
             label = key
             item_string = False
-            if isinstance(wdg[key], bmw.groups.Group) and wdg[key].active != wdg_defaults[key]:
+            if isinstance(wdg[key], bmw.groups.AbstractGroup) and wdg[key].active != wdg_defaults[key]:
                 if key.startswith('filter_'):
                     label = 'filter-' + wdg['heading_'+key].text
                 item_string = ''
@@ -1950,7 +2099,7 @@ def download_url(dir_path='', auto_open=True):
     wdg_defaults = GL['wdg_defaults']
     non_defaults = {}
     for key in wdg_defaults:
-        if isinstance(wdg[key], bmw.groups.Group) and wdg[key].active != wdg_defaults[key]:
+        if isinstance(wdg[key], bmw.groups.AbstractGroup) and wdg[key].active != wdg_defaults[key]:
             non_defaults[key] = wdg[key].active
         elif isinstance(wdg[key], bmw.inputs.InputWidget) and wdg[key].value != wdg_defaults[key] and key not in ['auto_update','presets','report_options','report_custom','report_format','report_base']:
             non_defaults[key] = wdg[key].value
@@ -1979,7 +2128,7 @@ def download_config(dir_path, auto_open, format):
         config_string = "('Preset Name', {"
     filter_string = "'filter': {"
     for key in wdg_defaults:
-        if isinstance(wdg[key], bmw.groups.Group) and wdg[key].active != wdg_defaults[key] and key not in ['scenario_filter']:
+        if isinstance(wdg[key], bmw.groups.AbstractGroup) and wdg[key].active != wdg_defaults[key] and key not in ['scenario_filter']:
             if key.startswith('filter_'):
                 title = wdg['heading_'+key].text
                 labels = ["'" + wdg[key].labels[i] + "'" for i in wdg[key].active]
@@ -2076,7 +2225,7 @@ def download_all():
     '''
     prefix, suffix = get_prefix_suffix()
     dir_path = out_path + '/' + prefix + 'view' + suffix
-    os.makedirs(dir_path, False)
+    os.makedirs(dir_path)
     download_csv(dir_path, False)
     download_url(dir_path, False)
     download_report(dir_path, False)

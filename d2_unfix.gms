@@ -1,11 +1,10 @@
 * load variable - set equal to load_exog to compute holistic marginal price
   LOAD.lo(r,h,t)$tmodel(t) = 0 ;
-    EVLOAD.lo(r,h,t)$tmodel(t) = 0 ;
     FLEX.lo(flex_type,r,h,t)$tmodel(t) = 0 ;
-    PEAK_FLEX.lo(r,allszn,t)$tmodel(t) = 0 ;
+    PEAK_FLEX.lo(r,ccseason,t)$tmodel(t) = 0 ;
 
 * capacity and investment variables
-  CAP_SDBIN.lo(i,v,r,allszn,sdbin,t)$tmodel(t) = 0 ;
+  CAP_SDBIN.lo(i,v,r,ccseason,sdbin,t)$tmodel(t) = 0 ;
     CAP.lo(i,v,r,t)$tmodel(t) = 0 ;
     INV.lo(i,v,r,t)$tmodel(t) = 0 ;
     EXTRA_PRESCRIP.lo(pcat,r,t)$tmodel(t) = 0 ;
@@ -40,7 +39,7 @@
 * trade variables
   FLOW.lo(r,rr,h,t,trtype)$tmodel(t) = 0 ;
     OPRES_FLOW.lo(ortype,r,rr,h,t)$tmodel(t) = 0 ;
-    PRMTRADE.lo(r,rr,trtype,allszn,t)$tmodel(t) = 0 ;
+    PRMTRADE.lo(r,rr,trtype,ccseason,t)$tmodel(t) = 0 ;
 
 * operating reserve variables
   OPRES.lo(ortype,i,v,r,h,t)$tmodel(t) = 0 ;
@@ -62,7 +61,7 @@
     CAP_CONVERTER.lo(r,t)$tmodel(t) = 0 ;
     INV_CONVERTER.lo(r,t)$tmodel(t) = 0 ;
     CONVERSION.lo(r,h,intype,outtype,t)$tmodel(t) = 0 ;
-    CONVERSION_PRM.lo(r,allszn,intype,outtype,t)$tmodel(t) = 0 ;
+    CONVERSION_PRM.lo(r,ccseason,intype,outtype,t)$tmodel(t) = 0 ;
 
 * hydrogen-specific variables
   H2_FLOW.lo(r,rr,p,h,t)$tmodel(t) = 0 ;
@@ -77,11 +76,10 @@
 
 
 LOAD.up(r,h,t)$tmodel(t) = +inf ;
-EVLOAD.up(r,h,t)$tmodel(t) = +inf ;
 FLEX.up(flex_type,r,h,t)$tmodel(t) = +inf ;
-PEAK_FLEX.up(r,allszn,t)$tmodel(t) = +inf ;
+PEAK_FLEX.up(r,ccseason,t)$tmodel(t) = +inf ;
 GROWTH_BIN(gbin,i,st,t).up$tmodel(t) = +inf ;
-CAP_SDBIN.up(i,v,r,allszn,sdbin,t)$tmodel(t) = +inf ;
+CAP_SDBIN.up(i,v,r,ccseason,sdbin,t)$tmodel(t) = +inf ;
 CAP.up(i,v,r,t)$tmodel(t) = +inf ;
 INV.up(i,v,r,t)$tmodel(t) = +inf ;
 EXTRA_PRESCRIP.up(pcat,r,t)$tmodel(t) = +inf ;
@@ -109,7 +107,7 @@ CCSFLEX_STO_STORAGE_LEVEL.up(i,v,r,h,t)$tmodel(t) = +inf ;
 CCSFLEX_STO_STORAGE_CAP.up(i,v,r,t)$tmodel(t) = +inf ;
 FLOW.up(r,rr,h,t,trtype)$tmodel(t) = +inf ;
 OPRES_FLOW.up(ortype,r,rr,h,t)$tmodel(t) = +inf ;
-PRMTRADE.up(r,rr,trtype,allszn,t)$tmodel(t) = +inf ;
+PRMTRADE.up(r,rr,trtype,ccseason,t)$tmodel(t) = +inf ;
 OPRES.up(ortype,i,v,r,h,t)$tmodel(t) = +inf ;
 GASUSED.up(cendiv,gb,h,t)$tmodel(t) = +inf ;
 VGASBINQ_NATIONAL.up(fuelbin,t)$tmodel(t) = +inf ;
@@ -123,7 +121,7 @@ INVTRAN.up(r,rr,trtype,t)$tmodel(t) = +inf ;
 CAP_CONVERTER.up(r,t)$tmodel(t) = +inf ;
 INV_CONVERTER.up(r,t)$tmodel(t) = +inf ;
 CONVERSION.up(r,h,intype,outtype,t)$tmodel(t) = +inf ;
-CONVERSION_PRM.up(r,allszn,intype,outtype,t)$tmodel(t) = +inf ;
+CONVERSION_PRM.up(r,ccseason,intype,outtype,t)$tmodel(t) = +inf ;
 H2_FLOW.up(r,rr,p,h,t)$tmodel(t) = +inf ;
 H2_TRANSPORT_INV.up(r,rr,t)$tmodel(t) = +inf ;
 WATCAP.up(i,v,r,t)$tmodel(t) = +inf ;

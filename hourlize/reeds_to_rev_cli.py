@@ -1,5 +1,6 @@
 """ReEDS to reV click command line interface"""
 import json
+import sys
 from pathlib import Path
 import logging
 import shutil
@@ -9,7 +10,65 @@ import click
 
 import reeds_to_rev
 
+logger = logging.getLogger("reeds_to_rev")
+
 CONTEXT_SETTINGS = {"max_content_width": 9999, "terminal_width": 9999}
+REQUIRED_CONFIG_KEYS = {
+    "reeds_path": Path,
+    "run_folder": Path,
+    "reduced_only": bool,
+    "tech_supply_curves": dict,
+    "constrain_to_bins": bool,
+    "priority": dict,
+    "new_incr_mw": dict,
+}
+
+
+def setup_logger(existing_logger, log_level=logging.INFO):
+    """
+    Sets up pre-existing ``logger`` with with a streamhandler
+    and messaging foramtting.
+    Parameters
+    ----------
+    existing_logger : logging.Logger
+        Pre-existing logger which will be setup.
+    log_level : int, optional
+        Logging level. By default logging.INFO (=20). For other valid values
+        see https://docs.python.org/3/library/logging.html#logging-levels
+    Returns
+    Returns
+    -------
+    logging.Logger
+        Configured logger. Note: if your existing_logger is a global,
+        this return variable can be discarded.
+    """
+
+    existing_logger.setLevel(log_level)
+    stream = logging.StreamHandler(sys.stdout)
+    stream.setLevel(log_level)
+    formatter = logging.Formatter("%(asctime)s - %(message)s")
+    stream.setFormatter(formatter)
+    existing_logger.addHandler(stream)
+
+    return existing_logger
+
+
+def add_filehandler(existing_logger, log_dir):
+    """
+    Adds a FileHanndler to an existing logger. This enables writing of log messages to
+    a file named ``reeds_to_rev.log`` in the specified ``log_dir``.
+    Parameters
+    ----------
+    existing_logger : logging.Logger
+        Existing logger instance.
+    log_dir : pathlib.Path
+        Path to directory in which filehandler will write log.
+    """
+    log_file = log_dir.joinpath("reeds_to_rev.log")
+    fh = logging.FileHandler(log_file, mode="w")
+    fh.setLevel(existing_logger.handlers[0].level)
+    fh.setFormatter(existing_logger.handlers[0].formatter)
+    existing_logger.addHandler(fh)
 
 
 class ConfigError(Exception):
@@ -19,14 +78,41 @@ class ConfigError(Exception):
     """
 
 
-REQUIRED_CONFIG_KEYS = {
-    "reeds_path": Path,
-    "run_folder": Path,
-    "reduced_only": bool,
-    "tech_supply_curves": dict,
-    "constrain_to_bins": bool,
-    "priority": dict,
-}
+def validate_new_incr_mw(new_incr_mw):
+    """
+    Validate an input "new_incr_mw" dictionary (e.g., from a configuration JSON).
+    Check that for each input key/value pair, the key (which will be interpreted as
+    a technology) is in the allowable set of valid technologies and that the value,
+    which (which will be interpreted as the increment size for new investments in that
+    tech) can be cast to a float.
+
+    Parameters
+    ----------
+    new_incr_mw : dict
+        Input new_incr_mw parameter.
+
+    Returns
+    -------
+    list
+        List of errors identified during validation. An empty list indicates no errors.
+    """
+
+    errs = []
+    if len(new_incr_mw) == 0:
+        errs.append("new_incr_mw is empty.")
+    for tech in new_incr_mw:
+        if tech not in reeds_to_rev.VALID_TECHS:
+            errs.append(
+                "Invalid tech specified in new_incr_mw. "
+                f"Keys must be one of {reeds_to_rev.VALID_TECHS}"
+            )
+        else:
+            try:
+                float(new_incr_mw[tech])
+            except ValueError:
+                errs.append("Invalid value for {tech}. Could not be cast to float")
+
+    return errs
 
 
 def validate_tech_supply_curves(tech_supply_curves):
@@ -39,7 +125,7 @@ def validate_tech_supply_curves(tech_supply_curves):
 
     Parameters
     ----------
-    pritech_supply_curvesority : dict
+    tech_supply_curves : dict
         Input tech_supply_curves parameter.
 
     Returns
@@ -143,6 +229,7 @@ def validate_config(config_data):
 
     errs += validate_tech_supply_curves(config_data["tech_supply_curves"])
     errs += validate_priority(config_data["priority"])
+    errs += validate_new_incr_mw(config_data["new_incr_mw"])
 
     if len(errs) > 0:
         err_message = "\n".join(errs)
@@ -214,88 +301,14 @@ def get_priority_from_config(config, cost_col):
 def main(ctx=None, verbose=False):
     """reeds_to_rev command line interface."""
     ctx.ensure_object(dict)
+
     if verbose:
-        ctx.obj["log_level"] = logging.DEBUG
+        setup_logger(logger, logging.DEBUG)
     else:
-        ctx.obj["log_level"] = logging.INFO
+        setup_logger(logger, logging.DEBUG)
 
 
 @main.command()
-@click.argument(
-    "reeds_path",
-    required=True,
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
-)
-@click.argument(
-    "run_folder",
-    required=True,
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
-)
-@click.option(
-    "--reduced_only",
-    "-r",
-    required=False,
-    type=bool,
-    is_flag=True,
-    default=False,
-    help="Switch if you only want the reduced outputs.",
-)
-@click.option(
-    "--tech",
-    "-t",
-    required=False,
-    type=click.Choice(reeds_to_rev.VALID_TECHS),
-    default=None,
-    help=(
-        "Technology to disaggregate. "
-        "This option is typically only passed when debugging."
-    ),
-)
-@click.option(
-    "--rev_case",
-    required=False,
-    type=str,
-    default=None,
-    help=(
-        "Which version of supply curve data to use. If not specified (default), "
-        "the most updated supply curve data available for each type. Note that the "
-        "script will fill in tech and bin information, so this only needs to be the "
-        "reV scenario name."
-    ),
-)
-@click.option(
-    "--sc_path",
-    default=None,
-    help=(
-        "Path to supply curve files where the specified version resides. "
-        "Does not need to be specified if the path is the same as the current "
-        "default."
-    ),
-)
-@click.pass_context
-def run(ctx, reeds_path, run_folder, reduced_only, tech, rev_case, sc_path):
-    """
-    Disaggregates ReEDS capacity to reV sites.
-    Input parameters match those of legacy reeds_to_rev.py with some
-    changes to default and/or allowable values.
-
-    REEDS_PATH
-        Path to existing ReEDS directory.
-
-    RUN_FOLDER
-        Path to existing folder containing ReEDS run.
-    """
-
-    reeds_to_rev.set_log_levels(reeds_to_rev.logger, ctx.obj.get("log_level"))
-    bins = None
-    priority = "cost"
-    reeds_to_rev.run(
-        reeds_path, run_folder, priority, reduced_only, tech, bins, rev_case, sc_path
-    )
-
-
-@main.command()
-@click.pass_context
 @click.argument(
     "json_path",
     required=True,
@@ -306,7 +319,7 @@ def run(ctx, reeds_path, run_folder, reduced_only, tech, rev_case, sc_path):
     required=True,
     type=click.Path(exists=False, file_okay=False, dir_okay=True, path_type=Path),
 )
-def from_config(ctx, json_path, out_path):
+def from_config(json_path, out_path):
     """
     Disaggregates ReEDS capacity to reV sites using input parameters provided
     via a JSON configuration file. Provides a greater range of options for
@@ -345,6 +358,12 @@ def from_config(ctx, json_path, out_path):
             # used to prioritize supply curve project sites during disaggregation.
             "*cost_col*": "ascending"
             "total_lcoe": "ascending"
+        },
+        "new_incr_mw": {
+            "upv": 1e10,
+            "wind-ofs": 1e10,
+            "wind-ons": 1e10,
+            "dupv": 1e10
         }
     }``
     More information about "priority":
@@ -358,10 +377,16 @@ def from_config(ctx, json_path, out_path):
      - Columns do not need to be costs; any column can be used. For example, to use the
      sites with the most developable area first, one could specify ``priority`` as
      ``{"Area_sq_km": "descending"}``.
+    More information about "new_incr_mw":
+    - This parameter can be used to configure incremental investments of new capacity
+     in each technology. For example, settings `"wind-ons": 6,` would result in
+     new investments being made 6 MW at a time for each project site, following the
+     "priority" site order, until all new investments have been made. All else equal,
+     this has the  effect of spreading out new investments across a larger number of
+     sites within a given region, resource class, and (if enabled) cost bin.
+     - Setting this number to an arbitrarily high number (e.g., 1e10) effectively
+     disables incremental investments and reproduces legacy behavior of ReEDS to reV.
     """
-
-    logger = reeds_to_rev.logger
-    reeds_to_rev.set_log_levels(logger, ctx.obj.get("log_level"))
 
     logger.info(f"Loading input configuration file {json_path}")
     config = load_config(json_path)
@@ -371,7 +396,7 @@ def from_config(ctx, json_path, out_path):
     out_path.mkdir(exist_ok=True, parents=False)
 
     logger.info("Adding log to output directory")
-    reeds_to_rev.add_filehandler(logger, out_path)
+    add_filehandler(logger, out_path)
 
     logger.info("Copying configuration to the output directory")
     out_config = out_path.joinpath("config.json")
@@ -399,7 +424,6 @@ def from_config(ctx, json_path, out_path):
         priority_cols = list(priority.keys())
 
         reeds_to_rev_data = reeds_to_rev.prepare_data(
-            config["reeds_path"],
             config["run_folder"],
             sc_file,
             tech,
@@ -414,6 +438,7 @@ def from_config(ctx, json_path, out_path):
         disagg_df = reeds_to_rev.disaggregate_reeds_to_rev(
             priority=priority,
             constrain_to_bins=config["constrain_to_bins"],
+            new_incr_mw=config["new_incr_mw"][tech],
             **reeds_to_rev_data,
         )
 

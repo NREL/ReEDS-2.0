@@ -21,7 +21,8 @@ def makelog(scriptname, logpath):
 
         def write(self, buf):
             for line in buf.rstrip().splitlines():
-                self.logger.log(self.level, line.rstrip())
+                if line.strip() != '^':
+                    self.logger.log(self.level, line.rstrip())
         
         def flush(self):
             pass

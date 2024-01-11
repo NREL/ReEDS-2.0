@@ -93,6 +93,8 @@ wind-ons*,wind-ons
 csp*,csp
 csp-ns*,csp
 dr*,dr
+evmc_storage*,evmc_storage
+evmc_shape*,evmc_shape
 hyd*,hydro
 egs_allkm_*,geothermal
 geohydro_allkm_*,geothermal

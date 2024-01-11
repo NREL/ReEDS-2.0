@@ -1,5 +1,5 @@
 #%%### Imports
-import sys, os, site, math, time
+import os, site
 import pandas as pd
 import numpy as np
 import matplotlib as mpl
@@ -24,7 +24,7 @@ savefig = True
 dispatchregions = [
     ('country','USA'),
     ('interconnect','western'),
-    ('interconnect','texas'),
+    ('interconnect','ercot'),
     ('interconnect','eastern'),
 ]
 
@@ -65,7 +65,7 @@ def group_techs(dfin, dfs, technamecol='i'):
 
 
 ### Input-formatting functions
-def get_gen(dfs, level='interconnect', region='texas'):
+def get_gen(dfs, level='interconnect', region='ercot'):
     """
     Return the sum of gen by tech for hierarchy level/region
     """
@@ -119,7 +119,7 @@ def get_load(sw, dfs, level='interconnect', region='western'):
     return load_out
 
 
-def get_stor_charge(sw, dfs, level='interconnect', region='texas'):
+def get_stor_charge(sw, dfs, level='interconnect', region='ercot'):
     """
     Return the sum of gen by tech for hierarchy level/region
     """
@@ -212,27 +212,20 @@ def get_inputs(sw):
     os.makedirs(sw['savepath'], exist_ok=True)
 
     ##### Load shared parameters
-    fulltimeindex = np.ravel([
-        pd.date_range(
-            '{}-01-01'.format(y),
-            '{}-01-01'.format(y+1),
-            freq='H', closed='left', tz='EST',
-        )[:8760]
-        for y in range(2007,2014)
-    ])
+    fulltimeindex = functions.make_fulltimeindex()
 
     if len(sw['osprey_years']) == 1:
         timeindex = pd.date_range(
             f"{sw['osprey_years'][0]}-01-01",
             f"{sw['osprey_years'][0]+1}-01-01",
-            freq='H', closed='left', tz='EST',
+            freq='H', inclusive='left', tz='EST',
         )[:8760]
     else:
         timeindex = np.ravel([
             pd.date_range(
                 '{}-01-01'.format(y),
                 '{}-01-01'.format(y+1),
-                freq='H', closed='left', tz='EST',
+                freq='H', inclusive='left', tz='EST',
             )[:8760]
             for y in sw['osprey_years']
         ])
@@ -243,7 +236,7 @@ def get_inputs(sw):
                     * sw['periodsperyear'] * 7))
         .assign(datetime=fulltimeindex)
     )
-    d_osprey = pd.read_csv(os.path.join(sw['casedir'],'inputs_case','d_osprey.csv'), header=None, squeeze=True)
+    d_osprey = pd.read_csv(os.path.join(sw['casedir'],'inputs_case','d_osprey.csv'), header=None).squeeze(1)
     h_dt_szn['d'] = pd.concat([d_osprey]*sw['hoursperperiod']).sort_values().values
 
     gdxreeds = gdxpds.to_dataframes(
@@ -266,16 +259,16 @@ def get_inputs(sw):
     newhydrotechs = [
         'hydd','hydnd','hydnpd','hydnpnd','hydsd','hydsnd','hydud','hydund',
     ]
-    tech_map = (
-        tech_map
-        .append(pd.Series(dict(zip(existinghydrotechs,['hydro_exist']*len(existinghydrotechs)))))
-        .append(pd.Series(dict(zip(newhydrotechs,['hydro_new']*len(newhydrotechs)))))
-    ).reset_index().drop_duplicates().set_index('index')[0].rename(None)
+    tech_map = pd.concat([
+        tech_map,
+        pd.Series(dict(zip(existinghydrotechs,['hydro_exist']*len(existinghydrotechs)))),
+        pd.Series(dict(zip(newhydrotechs,['hydro_new']*len(newhydrotechs)))),
+    ]).reset_index().drop_duplicates().set_index('index')[0].rename(None)
 
     tech_style = pd.read_csv(
         os.path.join(sw['reeds_path'],'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
-        index_col='order', squeeze=True,
-    )
+        index_col='order',
+    ).squeeze(1)
     tech_style.index = tech_style.index.str.lower()
     tech_style['dropped'] = '#d62728'
     for i in ['hydro_exist', 'hydro_new']:
@@ -286,10 +279,7 @@ def get_inputs(sw):
     # for i in [1,2,3]:
     #     tech_style[f'pvb{i}'] = tech_style['pvb']
 
-    hierarchy = pd.read_csv(
-        os.path.join(sw['casedir'],'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-    hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
+    hierarchy = functions.get_hierarchy(sw.casedir)
 
     resources = pd.read_csv(
         os.path.join(sw['casedir'],'inputs_case','resources.csv')
@@ -466,10 +456,9 @@ def get_inputs(sw):
 
     ### Load LOLE/EUE/NEUE from PRAS
     try:
-        pras = pd.read_csv(
+        pras = functions.read_pras_results(
             os.path.join(sw['casedir'], 'ReEDS_Augur', 'PRAS',
-                         f"PRAS_{sw.t}i{sw.iteration}.csv"),
-            index_col='h', parse_dates=True,
+                         f"PRAS_{sw.t}i{sw.iteration}.h5")
         )
         pras.index = fulltimeindex
     except FileNotFoundError as err:
@@ -547,24 +536,18 @@ def get_inputs(sw):
         print(err)
         prices = pd.DataFrame(index=timeindex)
 
-    ### Get top load hours by season
+    ### Get top load hours by ccseason
     hour2datetime = h_dt_szn.set_index('hour').datetime.copy()
     ### Use seasons appropriate to resolution
-    seasons = net_load_ccreg.index.get_level_values('season').unique()
-    if 'fall' in seasons:
-        seasons = ['winter','spring','summer','fall']
-    elif 'winter' in seasons:
-        seasons = ['winter','spring','summer','fall']
-    elif 'szn' in seasons[0]:
-        seasons = [f'szn{s}' for s in sorted([int(s.strip('szn')) for s in seasons])]
+    ccseasons = net_load_ccreg.index.get_level_values('ccseason').unique()
 
     ccregs = sorted(net_load_ccreg.columns)
     peakhours = {}
-    for season in seasons:
+    for ccseason in ccseasons:
         for ccreg in ccregs:
-            peakhours[season,ccreg] = (
-                net_load_ccreg.loc[season][ccreg]
-                .nlargest(int(sw['capcredit_szn_hours'])).index.get_level_values('hour'))
+            peakhours[ccseason,ccreg] = (
+                net_load_ccreg.loc[ccseason][ccreg]
+                .nlargest(int(sw['GSw_PRM_CapCreditHours'])).index.get_level_values('hour'))
 
     dfpeak = (
         pd.DataFrame(peakhours)
@@ -657,10 +640,7 @@ def plot_b1_dispatch_usa(sw, dfs):
     """
     Osprey hourly dispatch, full year full US
     """
-    if not (int(sw['osprey']) or (
-        int(sw['GSw_PRM_MaxStressPeriods'])
-        and (sw['GSw_PRM_StressModel'].lower() == 'osprey')
-    )):
+    if sw._no_osprey:
         return
     import plots
     savename = f"B1-dispatch-usa-wYEAR-{sw['t']}.png"
@@ -695,10 +675,7 @@ def plot_b1c1_profiles_usa(sw, dfs):
     """
     Table: Hourly profiles for USA
     """
-    if not (int(sw['osprey']) or (
-        int(sw['GSw_PRM_MaxStressPeriods'])
-        and (sw['GSw_PRM_StressModel'].lower() == 'osprey')
-    )):
+    if sw._no_osprey:
         return
     savename = f"B1C1-profiles-usa-{sw['t']}.csv.gz"
     ### Combine results
@@ -721,10 +698,7 @@ def plot_b1_load_duration(sw, dfs):
     """
     Load & generation duration curve
     """
-    if not (int(sw['osprey']) or (
-        int(sw['GSw_PRM_MaxStressPeriods'])
-        and (sw['GSw_PRM_StressModel'].lower() == 'osprey')
-    )):
+    if sw._no_osprey:
         return
     import plots
     top = 100
@@ -770,10 +744,7 @@ def plot_b1_netload_duration(sw, dfs):
     """
     Net load duration curve
     """
-    if not (int(sw['osprey']) or (
-        int(sw['GSw_PRM_MaxStressPeriods'])
-        and (sw['GSw_PRM_StressModel'].lower() == 'osprey')
-    )):
+    if sw._no_osprey:
         return
     import plots
     for top in [100,10,1]:
@@ -844,10 +815,7 @@ def plot_dispatch_maxmin_netload_weeks(sw, dfs):
     """
     Osprey hourly dispatch for max/min net load days ±3 days
     """
-    if not (int(sw['osprey']) or (
-        int(sw['GSw_PRM_MaxStressPeriods'])
-        and (sw['GSw_PRM_StressModel'].lower() == 'osprey')
-    )):
+    if sw._no_osprey:
         return
     import plots
     savename = f"B1-dispatch-maxmin_netload_weeks-{sw['t']}.png"
@@ -1168,7 +1136,7 @@ def plot_b1_dropped_load_timeseries_full(sw, dfs):
         'pras':dfs['pras']['USA_EUE']
     }
     timeindex_y = pd.date_range(
-        f"{sw['t']}-01-01", f"{sw['t']+1}-01-01", closed='left', freq='H',
+        f"{sw['t']}-01-01", f"{sw['t']+1}-01-01", inclusive='left', freq='H',
         tz='EST')[:8760]
     for model in ['osprey','pras']:
         if ((not dropped[model].sum()) or (dropped[model] == 9999).all()):
@@ -1278,7 +1246,7 @@ def plot_b1_dropped_load_duration(sw, dfs):
         plt.close()
 
 
-def map_dropped_load(sw, dfs):
+def map_dropped_load(sw, dfs, level='r'):
     """
     Annual EUE and NEUE by ReEDS zone
     """
@@ -1309,12 +1277,27 @@ def map_dropped_load(sw, dfs):
                 load = dfs['pras_load']
             if not dropped[model].sum().sum():
                 continue
+            ## Aggregate if necessary
+            if level not in ['r','rb','ba']:
+                dropped[model] = (
+                    dropped[model].rename(columns=dfs['hierarchy'][level])
+                    .groupby(level=0, axis=1).sum().copy()
+                )
+                load = (
+                    load.rename(columns=dfs['hierarchy'][level])
+                    .groupby(level=0, axis=1).sum().copy()
+                )
             for agg in ['max','sum','mean']:
                 if (metric,agg) not in units:
                     continue
-                savename = f"B1-dropped_load-map-{metric}_{agg}-{model}-{sw['t']}.png"
+                savename = f"B1-dropped_load-map-{metric}_{agg}-{model}-{level}-{sw['t']}.png"
 
                 dfplot = dfba.copy()
+                if level not in ['r','rb','ba']:
+                    dfplot[level] = dfs['hierarchy'][level]
+                    dfplot = dfplot.dissolve(level)
+                    dfplot['labelx'] = dfplot.geometry.centroid.x
+                    dfplot['labely'] = dfplot.geometry.centroid.y
                 if metric == 'EUE':
                     dfplot['val'] = dropped[model].agg(agg)
                 elif (metric == 'NEUE') and (agg == 'max'):
@@ -1336,9 +1319,10 @@ def map_dropped_load(sw, dfs):
                             (row.labelx, row.labely),
                             color='r', ha='center', va='top', fontsize=6, weight='bold')
                 ### Formatting
-                for r, row in dfba.iterrows():
-                    ax.annotate(r, (row.labelx, row.labely),
-                                ha='center', va='bottom', fontsize=6, color='C7')
+                if level in ['r','rb','ba']:
+                    for r, row in dfba.iterrows():
+                        ax.annotate(r, (row.labelx, row.labely),
+                                    ha='center', va='bottom', fontsize=6, color='C7')
                 ax.axis('off')
                 if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
                 if interactive: plt.show()
@@ -1859,30 +1843,22 @@ def plot_e_cc_mar(sw, dfs):
     dfplot = cc_results[param].drop('t',axis=1).copy()
     dfplot['tech'] = dfplot.i.map(lambda x: x.split('_')[0])
     techs = sorted(dfplot.tech.unique())
-    numrows = len(techs)
+    numcols = len(techs)
     bootstrap = 5
     squeeze = 0.7
     ### Use seasons appropriate to resolution
-    if 'wint' in dfplot.szn.values:
-        seasons = ['wint','spri','summ','fall']
-        histcolor = ['C0','C2','C1','C3']
-        xticklabels = seasons
-    elif 'szn' in dfplot.szn.values[0]:
-        seasons = [f'szn{s}' for s in sorted(dfplot.szn.str.strip('szn').astype(int).unique())]
-        histcolor = plots.rainbowmapper(seasons)
-        xticklabels = [s.strip('szn') for s in seasons]
-    else:
-        seasons = dfplot.szn.unique()
-        histcolor = plots.rainbowmapper(seasons)
-        xticklabels = seasons
+    ccseasons = ['cold', 'hot']
+    histcolor = ['C0', 'C1']
+    xticklabels = ccseasons
 
     plt.close()
-    f,ax = plt.subplots(numrows, figsize=(6,8), sharex=True, sharey=True)
+    f,ax = plt.subplots(
+        1, numcols, figsize=(len(techs)*1.2, 3.75), sharex=True, sharey=True)
     for row, tech in enumerate(techs):
         df = dfplot.loc[(dfplot.tech==tech)].copy()
         ### Each observation in the histogram is a (i,r) pair
         df['i_r'] = df.i + '_' + df.r
-        df = df.pivot(columns='szn',values='Value',index='i_r')[seasons]
+        df = df.pivot(columns='ccseason',values='Value',index='i_r')[ccseasons]
 
         plots.plotquarthist(
             ax[row], df, histcolor=histcolor,
@@ -1891,14 +1867,14 @@ def plot_e_cc_mar(sw, dfs):
         )
 
         ### Formatting
-        ax[row].set_ylabel(tech)
+        ax[row].set_title(tech)
         ax[row].yaxis.set_minor_locator(mpl.ticker.MultipleLocator(0.1))
-        ax[row].yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.5))
+        ax[row].yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.2))
         ax[row].set_ylim(0,1)
+        ax[row].set_xticklabels(xticklabels, rotation=90)
 
-    ax[0].set_title('{} {}'.format(sw['t'], param),
-                    weight='bold', fontsize='x-large')
-    ax[-1].set_xticklabels(xticklabels, rotation=90)
+    ax[0].set_ylabel(
+        f'{sw.t} {param} [fraction]', weight='bold', fontsize='x-large')
 
     plots.despine(ax)
     if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
@@ -2058,7 +2034,8 @@ def main(sw, augur_plots=1):
         print('plot_b1_dropped_load_duration() failed:', err)
 
     try:
-        map_dropped_load(sw, dfs)
+        for level in ['r','transreg']:
+            map_dropped_load(sw, dfs, level=level)
     except Exception as err:
         print('map_dropped_load() failed:', err)
 
@@ -2165,12 +2142,12 @@ if __name__ == '__main__':
     iteration = args.iteration
 
     # #%%### Inputs for debugging
-    # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0/')
-    # casedir = os.path.join(reeds_path,'runs','v20230414_prasM1_WECCh2_SP_sh4msp30_so1slaMspy2')
+    # reeds_path = os.path.expanduser('~/github/ReEDS-2.0/')
     # casedir = (
-    #     '/Volumes/ReEDS/FY22-NTP/Candidates/Archive/ReEDSruns/20230512/'
-    #     'v20230512_ntpH0_AC_DemMd_90by2035EP__core')
-    # t = 2035
+    #     '/Volumes/ReEDS/FY22-NTP/Candidates/Archive/ReEDSruns/'
+    #     '20230730/v20230730_ntpH0_AC_DemMd_90by2035EP__core')
+    # casedir = os.path.join(reeds_path,'runs','v20231115_capcreditM0_capcredit_WECC')
+    # t = 2030
     # interactive = True
     # iteration = -1
     # sw['reeds_path'] = reeds_path
@@ -2180,6 +2157,14 @@ if __name__ == '__main__':
     ### Switches
     sw = functions.get_switches(casedir)
     sw['t'] = t
+
+    ### Derivative switches
+    sw['_no_osprey'] = not (
+        int(sw['osprey']) or (
+            (not int(sw.GSw_PRM_CapCredit))
+            and (sw['GSw_PRM_StressModel'].lower() == 'osprey')
+        )
+    )
 
     ### Run for the latest iteration
     if iteration < 0:

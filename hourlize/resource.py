@@ -134,7 +134,7 @@ def get_supply_curve_and_preprocess(tech, rev_sc_file_path, rev_prefix, reg_col,
             df_exist_st = df_exist[df_exist['STATE'] == st].copy()
             df_cp_st = df_cp[df_cp['state'] == st].copy()
             for i_exist, r_exist in df_exist_st.iterrows():
-                #TODO: Need to fix lats and longs that don't exist
+                #Current way to deal with lats and longs that don't exist
                 if r_exist['LONG'] == 0:
                     continue
                 #Assume each lat is ~69 miles and each long is ~53 miles
@@ -302,8 +302,6 @@ def add_cost(df_sc, bin_col, reg_out_col):
         df_sc['supply_curve_cost_per_mw'] = df_sc['trans_adder_per_MW'] + df_sc['capital_adder_per_MW']
     elif bin_col == 'combined_off_ons_trans':
         # 'mean_export' and 'mean_array' are the $ costs for a full (unexcluded) offshore wind farm (600 MW = 15 MW/turbine x 40 turbines) at each site.
-        # TODO: Make the following equation more robust. For now, for simplicity should we just divide (df_sc['mean_export'] + df_sc['mean_array']) by 600 MW
-        # instead of multiplying by 1000/(df_sc['mean_system_capacity'] * 40), since df_sc['mean_system_capacity'] is always 15000 kW/turbine?
         df_sc['supply_curve_cost_per_mw'] = (df_sc['mean_export'] + df_sc['mean_array']) / (df_sc['mean_system_capacity'] * 40) * 1000 + df_sc['trans_cap_cost_per_mw'] + df_sc['reinforcement_cost_per_mw']
     elif bin_col == 'combined_trans':
         df_sc['supply_curve_cost_per_mw'] = df_sc['trans_cap_cost_per_mw'] + df_sc['reinforcement_cost_per_mw']
@@ -498,6 +496,7 @@ def save_time_outputs(reps_arr_out, df_rep, start_1am, out_dir, tech,
     logger.info('Done saving time-dependent outputs: '+ str(datetime.datetime.now() - startTime))
 
 def copy_outputs(dct_rev, out_dir, reeds_path, rev_sc_path, tech_suffix, copy_to_reeds, copy_to_shared):
+
     #Save outputs to the shared drive and to this reeds repo.
     logger.info('Copying outputs to shared drive and/or reeds repo')
     startTime = datetime.datetime.now()
@@ -607,11 +606,11 @@ def map_supplycurve(
     ms = {'wind-ofs':1.75, 'wind-ons':2.65, 'upv':2.65}[tech]
     
     labels = {
-        'capacity': 'Available capacity [MW]',
+        'capacity_mw': 'Available capacity [MW]',
         'trans_cap_cost_per_kw': 'Spur-line cost [$/kW]',
         'reinforcement_cost_per_kw': 'Reinforcement cost [$/kW]',
+        'interconnection_cost_per_kw': 'Interconnection cost [$/kW]',
         'land_cap_adder_per_kw': 'Land cost adder [$/kW]',
-        'combined_trans': 'Interconnection cost [$/kW]',
         'reg_mult': 'Regional multipler',
         'mean_cf': 'Capacity factor [.]',
         'dist_km': 'Spur-line distance [km]',
@@ -622,26 +621,27 @@ def map_supplycurve(
         'dist_to_coast': 'Distance to coast [km?]',
     }
     vmax = {
-        'capacity': {'wind-ons':400.,'wind-ofs':600.,'upv':4000.}[tech],
-        'trans_cap_cost_per_kw': 1000.,
-        'reinforcement_cost_per_kw': 1000.,
-        'land_cap_adder_per_kw': 1000.,
-        'combined_trans': 1000.,
+        ## use 402 for wind with 6 MW turbines
+        'capacity_mw': {'wind-ons':400.,'wind-ofs':600.,'upv':4000.}[tech],
+        'trans_cap_cost_per_kw': 2000.,
+        'reinforcement_cost_per_kw': 2000.,
+        'interconnection_cost_per_kw': 2000.,
+        'land_cap_adder_per_kw': 2000.,
         'reg_mult': 1.5,
         'mean_cf': 0.60,
-        'dist_km': 100.,
-        'reinforcement_dist_km': 100.,
+        'dist_km': 200.,
+        'reinforcement_dist_km': 200.,
         'area_sq_km': 11.5**2,
         'mean_lcoe': 100.,
         'lcot': 100.,
         'dist_to_coast': 437.,
     }
     vmin = {
-        'capacity': 0.,
+        'capacity_mw': 0.,
         'trans_cap_cost_per_kw': 0.,
         'reinforcement_cost_per_kw': 0.,
+        'interconnection_cost_per_kw': 0.,
         'land_cap_adder_per_kw': 0.,
-        'combined_trans': 0.,
         'reg_mult': 0.5,
         'mean_cf': 0.,
         'dist_km': 0.,
@@ -652,11 +652,11 @@ def map_supplycurve(
         'dist_to_coast': 0.,
     }
     background = {
-        'capacity': False,
+        'capacity_mw': False,
         'trans_cap_cost_per_kw': True,
         'reinforcement_cost_per_kw': True,
+        'interconnection_cost_per_kw': True,
         'land_cap_adder_per_kw': True,
-        'combined_trans': True,
         'reg_mult': True,
         'mean_cf': True,
         'dist_km': True,
@@ -676,10 +676,10 @@ def map_supplycurve(
                              'trans_cap_cost_per_mw_ac': 'trans_cap_cost_per_mw'}, inplace=True)
         
         # land use costs are $/MW-DC, convert to $/MW-AC
-        dfsc['land_cap_adder_per_mw'] = dfsc['land_cap_adder_per_mw'] * (dfsc['capacity_mw_dc'] / dfsc['capacity_mw_ac'])
-
-        # plot AC capacity even though ReEDS sees DC capacity 
-        dfsc['capacity'] = dfsc['capacity_mw_ac']
+        dfsc['land_cap_adder_per_mw'] = (
+            dfsc['land_cap_adder_per_mw']
+            * (dfsc['capacity_mw_dc'] / dfsc['capacity_mw_ac'])
+        )
 
     ### Convert to geopandas dataframe
     dfsc = plots.df2gdf(dfsc)
@@ -701,10 +701,17 @@ def map_supplycurve(
     lakes = gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','greatlakes.gpkg'))
 
     #%% Processing
-    dfplot = dfsc.copy()
+    dfplot = dfsc.rename(columns={
+        'capacity_mw_ac':'capacity_mw',
+        'mean_cf_ac':'mean_cf',
+        'trans_cap_cost_per_mw_ac':'trans_cap_cost_per_mw',
+        'reinforcement_cost_per_mw_ac':'reinforcement_cost_per_mw',
+    }).copy()
     ## Convert to $/kW
     dfplot['trans_cap_cost_per_kw'] = dfplot['trans_cap_cost_per_mw'] / 1000
     dfplot['reinforcement_cost_per_kw'] = dfplot['reinforcement_cost_per_mw'] / 1000
+    dfplot['interconnection_cost_per_kw'] = (
+        dfplot['trans_cap_cost_per_kw'] + dfplot['reinforcement_cost_per_kw'])
     dfplot['land_cap_adder_per_kw'] = dfplot['land_cap_adder_per_mw'] / 1000
     if 'dist_to_coast' in dfplot:
         dfplot['dist_to_coast'] /= 1000
@@ -712,6 +719,7 @@ def map_supplycurve(
     #%% Plot it
     for col in labels:
         if col not in dfplot:
+            logger.info(f"{col} is not in the supply curve table")
             continue
         plt.close()
         f,ax = plt.subplots(figsize=(12,9), dpi=dpi)
@@ -734,6 +742,7 @@ def map_supplycurve(
             vmin=vmin[col], vmax=vmax[col],
             orientation='horizontal', labelpad=2.1, cbarbottom=-0.06,
             cbarheight=0.7, log=False,
+            ## use nbins=68 for wind with 6 MW turbines
             nbins=101, histratio=2,
             ticklabel_fontsize=20, title_fontsize=24,
             extend='neither',

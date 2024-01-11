@@ -7,7 +7,6 @@ from collections import OrderedDict
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
-from conftest import temporary_parent_directory
 import path_fix as _
 
 import reeds_to_rev_cli
@@ -18,53 +17,6 @@ def test_main(test_cli_runner):
     """Test main() CLI command."""
     result = test_cli_runner.invoke(main)
     assert result.exit_code == 0
-
-
-def test_run(test_cli_runner, test_techs, integration_data_path):
-    """
-    Integration test of run() CLI command to ensure
-    it returns the expected outputs. This test covers the following techs:
-    upv, wind-ons, wind-ofs.
-
-    This is consistent with test_reeds_to_rev.test_reeds_to_rev_integration().
-    """
-
-    sc_path = integration_data_path.joinpath("supply_curves")
-    reeds_source_path = integration_data_path.joinpath("reeds")
-
-    with temporary_parent_directory(reeds_source_path) as temp_reeds:
-        reeds_path = Path(temp_reeds.name)
-        run_folder = reeds_path.joinpath("reeds")
-
-        for tech in test_techs:
-            result = test_cli_runner.invoke(
-                main,
-                [
-                    "run",
-                    reeds_path.as_posix(),
-                    run_folder.as_posix(),
-                    "--reduced_only",
-                    "--tech",
-                    tech,
-                    "--sc_path",
-                    sc_path.as_posix(),
-                ],
-            )
-            assert result.exit_code == 0, "Command encountered an error"
-
-            out_csv_name = f"df_sc_out_{tech}_reduced.csv"
-            result_csv_path = run_folder.joinpath("outputs", out_csv_name)
-            assert result_csv_path.exists()
-
-            expected_csv_path = integration_data_path.joinpath(
-                "expected_results", out_csv_name
-            )
-            assert expected_csv_path.exists()
-
-            result_df = pd.read_csv(result_csv_path)
-            expected_df = pd.read_csv(expected_csv_path)
-
-            assert_frame_equal(result_df, expected_df)
 
 
 def test_load_config_happy(standard_config_json_data):
@@ -162,6 +114,41 @@ def test_validate_tech_supply_curves_bad_path(standard_config_json_data):
     tech_supply_curves = standard_config_json_data["tech_supply_curves"]
     tech_supply_curves["upv"] = False
     errors = reeds_to_rev_cli.validate_tech_supply_curves(tech_supply_curves)
+    assert len(errors) == 1
+
+
+def test_validate_new_incr_mw_happy(standard_config_json_data):
+    """
+    Happy path test for validate_new_incr_mw. Check that no error messages are
+    returned when valid data is provided.
+    """
+
+    new_incr_mw = standard_config_json_data["new_incr_mw"]
+    errors = reeds_to_rev_cli.validate_new_incr_mw(new_incr_mw)
+    assert len(errors) == 0
+
+
+def test_validate_new_incr_mw_bad_tech(standard_config_json_data):
+    """
+    Test that validate_new_incr_mw returns an error message if an invalid
+    technology is provided.
+    """
+
+    new_incr_mw = standard_config_json_data["new_incr_mw"]
+    new_incr_mw["bicycle_power"] = 100
+    errors = reeds_to_rev_cli.validate_new_incr_mw(new_incr_mw)
+    assert len(errors) == 1
+
+
+def test_validate_new_incr_mw_bad_value(standard_config_json_data):
+    """
+    Test that validate_new_incr_mw returns an error message if an invalid
+    (i.e., non-float) value is provided for a technology.
+    """
+
+    new_incr_mw = standard_config_json_data["new_incr_mw"]
+    new_incr_mw["upv"] = "ten"
+    errors = reeds_to_rev_cli.validate_new_incr_mw(new_incr_mw)
     assert len(errors) == 1
 
 
@@ -421,6 +408,25 @@ def test_from_config_expanded_capacity(
         expanded_inputs_config_json_data,
         expanded_data_path,
         expanded_data_path.joinpath("expected_results"),
+    )
+
+
+def test_from_config_wind_ons_6_mw_inputs(
+    test_cli_runner,
+    wind_ons_6mw_inputs_config_json_data,
+    integration_data_path,
+    from_config_data_path,
+):
+    """
+    Integration test for from_config() CLI command. Ensure that it produces the expected
+    outputs when passed a configuration file with new_incr_mw set to 6 MW for wind-ons.
+    """
+
+    from_config_integration_helper(
+        test_cli_runner,
+        wind_ons_6mw_inputs_config_json_data,
+        integration_data_path,
+        from_config_data_path.joinpath("expected_results", "wind-ons_6mw_inputs"),
     )
 
 

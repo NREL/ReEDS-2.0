@@ -1,0 +1,57 @@
+﻿state,state_code,state_fips,CONUS
+Alabama,AL,01,TRUE
+Alaska,AK,02,FALSE
+American Samoa,AS,60,FALSE
+Arizona,AZ,04,TRUE
+Arkansas,AR,05,TRUE
+California,CA,06,TRUE
+Colorado,CO,08,TRUE
+Connecticut,CT,09,TRUE
+Delaware,DE,10,TRUE
+District of Columbia,DC,11,TRUE
+Florida,FL,12,TRUE
+Georgia,GA,13,TRUE
+Guam,GU,66,FALSE
+Hawaii,HI,15,FALSE
+Idaho,ID,16,TRUE
+Illinois,IL,17,TRUE
+Indiana,IN,18,TRUE
+Iowa,IA,19,TRUE
+Kansas,KS,20,TRUE
+Kentucky,KY,21,TRUE
+Louisiana,LA,22,TRUE
+Maine,ME,23,TRUE
+Maryland,MD,24,TRUE
+Massachusetts,MA,25,TRUE
+Michigan,MI,26,TRUE
+Minnesota,MN,27,TRUE
+Mississippi,MS,28,TRUE
+Missouri,MO,29,TRUE
+Montana,MT,30,TRUE
+Nebraska,NE,31,TRUE
+Nevada,NV,32,TRUE
+New Hampshire,NH,33,TRUE
+New Jersey,NJ,34,TRUE
+New Mexico,NM,35,TRUE
+New York,NY,36,TRUE
+North Carolina,NC,37,TRUE
+North Dakota,ND,38,TRUE
+Northern Mariana Islands,NP,69,FALSE
+Ohio,OH,39,TRUE
+Oklahoma,OK,40,TRUE
+Oregon,OR,41,TRUE
+Pennsylvania,PA,42,TRUE
+Puerto Rico,PR,72,FALSE
+Rhode Island,RI,44,TRUE
+South Carolina,SC,45,TRUE
+South Dakota,SD,46,TRUE
+Tennessee,TN,47,TRUE
+Texas,TX,48,TRUE
+Utah,UT,49,TRUE
+Vermont,VT,50,TRUE
+Virginia,VA,51,TRUE
+Virgin Islands,VI,78,FALSE
+Washington,WA,53,TRUE
+West Virginia,WV,54,TRUE
+Wisconsin,WI,55,TRUE
+Wyoming,WY,56,TRUE
