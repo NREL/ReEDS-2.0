@@ -420,7 +420,7 @@ If you have comments and/or questions, please contacts the ReEDS team:
 | <ul><li>*endyear*</li><ul> | integer | Last year to be modeled | 2047 |
 | **Scenario inputs** |
 | <ul><li>*FuelLimit_file*</li><ul> | string | File pointer for the gas fuel limit inputs | fuel_limit.csv |
-| <ul><li>*TechCost_file*</li><ul> | string | File pointer for the technology cost inputs (units: INR/MW) | tech_costs_atb22.csv |
+| <ul><li>*TechCost_file*</li><ul> | string | File pointer for the technology cost (units: INR/MW) and heat rate (units: kBtu/kWh) inputs | tech_costs_atb22.csv |
 | <ul><li>*MinLoad_file*</li><ul> | string | File name of the min loading limit inputs | minloadfrac0.csv |
 | <ul><li>*Hours_file*</li><ul> | string | File name of the hours in each time block | hours.csv |
 | <ul><li>*Load_file*</li><ul> | string | File name of the load in each time block | load.csv |
