@@ -274,9 +274,9 @@ def ProcessGdx():
     gen = gen[['Technology', 'State', 'Year', 'generation_MWh', 'scenario']]
 
     # VRE curtailment
-    gen_vre = gdxin['GEN'].loc[gdxin['GEN']['i'].isin(['WIND','UPV','DISTPV'])].drop(columns={'Marginal','Lower','Upper','Scale'})
+    gen_vre = gdxin['GEN'].loc[gdxin['GEN']['i'].isin(['ONSWIND','OFSWIND','UPV','DISTPV'])].drop(columns={'Marginal','Lower','Upper','Scale'})
     gen_vre = summarize(gen_vre, 'Level', ['i','r','h','t','scenario']).rename(columns={'Level':'Gen'})
-    cap_vre = gdxin['CAP'].loc[gdxin['CAP']['i'].isin(['WIND','UPV','DISTPV'])].drop(columns={'Marginal','Lower','Upper','Scale'})
+    cap_vre = gdxin['CAP'].loc[gdxin['CAP']['i'].isin(['ONSWIND','OFSWIND','UPV','DISTPV'])].drop(columns={'Marginal','Lower','Upper','Scale'})
     cap_vre = summarize(cap_vre, 'Level', ['i','r','t','scenario'])
     cap_vre = pd.merge(gdxin['m_cf'], cap_vre, on = ['i','r','scenario'])
     cap_vre['potential'] = cap_vre['Value'] * cap_vre['Level']

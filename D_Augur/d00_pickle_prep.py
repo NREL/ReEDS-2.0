@@ -99,3 +99,5 @@ if __name__ == '__main__':
     load_profiles.to_pickle(os.path.join(path_pickles,'load_{}.pkl'.format(scenario)), protocol=4)
     recf.to_pickle(os.path.join(path_pickles,'recf_{}.pkl'.format(scenario)), protocol=4)
     resources.to_pickle(os.path.join(path_pickles,'resources_{}.pkl'.format(scenario)), protocol=4)
+
+    print("successful")

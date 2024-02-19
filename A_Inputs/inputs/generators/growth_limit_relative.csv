@@ -1,4 +1,5 @@
-wind,0.25
+onswind,0.25
+ofswind,0.25
 solar,0.5
 hydro_pumped,0.5
 nuclear,0.5

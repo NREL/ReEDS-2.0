@@ -1090,7 +1090,7 @@ eq_co2_mass_limit(t)$[(yeart(t)>=CarbonPolicyStartYear)$tmodel(t)$Sw_CO2Limit]..
 * --- RE GEOGRAPHIC DIVERSITY CONSTRAINT ---
 *=========================
 
-eq_re_diversity(i,r,t)$[tmodel(t)$rs(r)$rfeas(r)$(wind(i) or upv(i))$Sw_REdiversity]..
+eq_re_diversity(i,r,t)$[tmodel(t)$rs(r)$rfeas(r)$(onswind(i) or ofswind(i) or upv(i))$Sw_REdiversity]..
 
 * sum of all investments multiplied by the diversity factor
     sum{(rr,v)$[rs(rr)$valinv(i,v,rr,t)], INV(i,v,rr,t)} * REdiversity

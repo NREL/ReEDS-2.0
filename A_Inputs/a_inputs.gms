@@ -34,44 +34,45 @@ $setglobal input_folder '%gams.curdir%%ds%inputs'
 * For binary switches, [0] is off and [1] is on.
 
 Scalar
-Sw_MinCF      "Switch to turn minimum CF for new capacity on [1] or off [0]"       /%GSw_MinCF%/,
-Sw_GrowthRel     "Switch for the relative growth constraint"                       /%GSw_GrowthRel%/,
-Sw_GrowthAbs     "Switch for the absolute growth constraint"                       /%GSw_GrowthAbs%/,
-Sw_OpRes         "Switch to turn on operating reserve constraint"                  /%GSw_OpRes%/,
-Sw_OpResTrade    "Switch to allow trading operating reserves between regions"      /%GSw_OpResTrade%/,
-Sw_Refurb        "Switch to allow refurbishments"                                  /%GSw_Refurb%/,
-Sw_PRMregion     "Switch to turn on regional planning reserve margin constraint"   /%GSw_PRMregion%/,
-Sw_PRMstate      "Switch to turn on state planning reserve margin constraint"      /%GSw_PRMstate%/,
-Sw_PRMTrade      "Switch to allow trading planning reserve margin between regions" /%GSw_PRMTrade%/,
-Sw_Storage       "Switch to allow storage"                                         /%GSw_Storage%/,
-Sw_CurtStorage   "Fraction of storage charging that counts toward reducing curtailment" /%GSw_CurtStorage%/,
-Sw_StorCC        "Turn storage contribution to reserve margin on [1] or off [0]"   /%GSw_StorCC%/,
-Sw_StorOpres     "Turn storage contribution to operating reserve on [1] or off [0]"  /%GSw_StorOpres%/,
-Sw_CurtFlow      "Switch to allow curtailment trading"                             /%GSw_CurtFlow%/,
-Sw_Int_CC        "Intertemporal CC method"                                         /%GSw_Int_CC%/,
-Sw_Int_Curt        "Intertemporal curt method"                                     /%GSw_Int_Curt%/,
-Sw_FuelSupply    "Switch for fuel supply constraint"                               /%GSw_FuelSupply%/,
-Sw_Prescribed    "Switch for prescribed capacity additions"                        /%GSw_Prescribed%/,
-Sw_RECapMandate  "Switch for RE capacity targets"                                  /%GSw_RECapMandate%/,
-Sw_RECapFracMandate  "Switch for RE capacity fraction targets"                     /%GSw_RECapFracMandate%/,
-Sw_REGenMandate  "Switch for RE generation targets"                                /%GSw_REGenMandate%/,
-Sw_TechPhaseOut  "Switch for forced phase out of select technologies"              /%GSw_TechPhaseOut%/,
-Sw_Retire        "Switch allowing endogenous retirements"                          /%GSw_Retire%/,
-Sw_REdiversity   "Switch for geographic diversity constraint for RE additions"     /%GSw_REdiversity%/,
-Sw_MinGen        "Switch for min loading constraint"                               /%GSw_MinGen%/,
-Sw_CarbonTax     "Switch for CO2 tax"                                              /%GSw_CarbonTax%/,
-Sw_CO2Limit      "Switch for national CO2 emissions limit"                         /%GSw_CO2Limit%/,
-Sw_SAsia_Trade   "Switch to allow trade with neighboring countries"                /%GSw_SAsia_Trade%/,
-Sw_SAsia_PRM     "Switch to allow neighboring countries to contribute to PRM"      /%GSw_SAsia_PRM%/,
-Sw_ValStr        "Switch for valuestreams analysis"                                /%GSw_ValStr%/,
-Sw_CCcurtAvg     "Switch to select method for average curt/CC calculations"        /%GSw_CCcurtAvg%/,
-Sw_Loadpoint     "Switch to use a loadpoint for the intertemporal case"            /%GSw_Loadpoint%/,
-Sw_SolarPlusStorage "Switch to turn on solar plus storage constraint"              /%GSw_SolarPlusStorage%/,
-Sw_StorHAV        "Switch to turn on hourly arbitrage value for storage"           /%GSw_StorHAV%/,
-Sw_FocusRegionZeroTXCost "Zero transmission capital cost between focus regions"    /%GSw_FocusRegionZeroTXCost%/,
-Sw_TxLimit               "Switch to enable transmission flow limits"    /%GSw_TxLimit%/,
-Sw_CurtLim				"Switch to enable curtailment limit"			/%GSw_CurtLim%/
-Sw_H2CT           "Switch to turn on/off H2CT and H2CC techs on [1] or off [0]"     /%GSw_H2CT%/
+Sw_MinCF                      "Switch to turn minimum CF for new capacity on [1] or off [0]"          /%GSw_MinCF%/,
+Sw_GrowthRel                  "Switch for the relative growth constraint"                             /%GSw_GrowthRel%/,
+Sw_GrowthAbs                  "Switch for the absolute growth constraint"                             /%GSw_GrowthAbs%/,
+Sw_OpRes                      "Switch to turn on operating reserve constraint"                        /%GSw_OpRes%/,
+Sw_OpResTrade                 "Switch to allow trading operating reserves between regions"            /%GSw_OpResTrade%/,
+Sw_Refurb                     "Switch to allow refurbishments"                                        /%GSw_Refurb%/,
+Sw_PRMregion                  "Switch to turn on regional planning reserve margin constraint"         /%GSw_PRMregion%/,
+Sw_PRMstate                   "Switch to turn on state planning reserve margin constraint"            /%GSw_PRMstate%/,
+Sw_PRMTrade                   "Switch to allow trading planning reserve margin between regions"       /%GSw_PRMTrade%/,
+Sw_Storage                    "Switch to allow storage"                                               /%GSw_Storage%/,
+Sw_CurtStorage                "Fraction of storage charging that counts toward reducing curtailment"  /%GSw_CurtStorage%/,
+Sw_StorCC                     "Turn storage contribution to reserve margin on [1] or off [0]"         /%GSw_StorCC%/,
+Sw_StorOpres                  "Turn storage contribution to operating reserve on [1] or off [0]"      /%GSw_StorOpres%/,
+Sw_CurtFlow                   "Switch to allow curtailment trading"                                   /%GSw_CurtFlow%/,
+Sw_Int_CC                     "Intertemporal CC method"                                               /%GSw_Int_CC%/,
+Sw_Int_Curt                   "Intertemporal curt method"                                             /%GSw_Int_Curt%/,
+Sw_FuelSupply                 "Switch for fuel supply constraint"                                     /%GSw_FuelSupply%/,
+Sw_Prescribed                 "Switch for prescribed capacity additions"                              /%GSw_Prescribed%/,
+Sw_RECapMandate               "Switch for RE capacity targets"                                        /%GSw_RECapMandate%/,
+Sw_RECapFracMandate           "Switch for RE capacity fraction targets"                               /%GSw_RECapFracMandate%/,
+Sw_REGenMandate               "Switch for RE generation targets"                                      /%GSw_REGenMandate%/,
+Sw_TechPhaseOut               "Switch for forced phase out of select technologies"                    /%GSw_TechPhaseOut%/,
+Sw_Retire                     "Switch allowing endogenous retirements"                                /%GSw_Retire%/,
+Sw_REdiversity                "Switch for geographic diversity constraint for RE additions"           /%GSw_REdiversity%/,
+Sw_MinGen                     "Switch for min loading constraint"                                     /%GSw_MinGen%/,
+Sw_CarbonTax                  "Switch for CO2 tax"                                                    /%GSw_CarbonTax%/,
+Sw_CO2Limit                   "Switch for national CO2 emissions limit"                               /%GSw_CO2Limit%/,
+Sw_SAsia_Trade                "Switch to allow trade with neighboring countries"                      /%GSw_SAsia_Trade%/,
+Sw_SAsia_PRM                  "Switch to allow neighboring countries to contribute to PRM"            /%GSw_SAsia_PRM%/,
+Sw_ValStr                     "Switch for valuestreams analysis"                                      /%GSw_ValStr%/,
+Sw_CCcurtAvg                  "Switch to select method for average curt/CC calculations"              /%GSw_CCcurtAvg%/,
+Sw_Loadpoint                  "Switch to use a loadpoint for the intertemporal case"                  /%GSw_Loadpoint%/,
+Sw_SolarPlusStorage           "Switch to turn on solar plus storage constraint"                       /%GSw_SolarPlusStorage%/,
+Sw_StorHAV                    "Switch to turn on hourly arbitrage value for storage"                  /%GSw_StorHAV%/,
+Sw_FocusRegionZeroTXCost      "Zero transmission capital cost between focus regions"                  /%GSw_FocusRegionZeroTXCost%/,
+Sw_TxLimit                    "Switch to enable transmission flow limits"                             /%GSw_TxLimit%/,
+Sw_CurtLim				"Switch to enable curtailment limit"			                  /%GSw_CurtLim%/,
+Sw_OfsWind                    "Switch to turn on/off offshore wind"                                   /%GSw_OfsWind%/,
+Sw_H2CT                       "Switch to turn on/off H2CT and H2CC techs on [1] or off [0]"           /%GSw_H2CT%/
 ;
 
 *==========================
@@ -304,7 +305,8 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%i_subtech_set.csv
     conv(i)      "conventional generation technologies",
     vre(i)       "variable renewable energy technologies",
     rsc_i(i)     "technologies based on resource supply curves",
-    wind(i)      "wind generation technologies",
+    onswind(i)      "onshore wind generation technologies",
+    ofswind(i)      "offshore wind generation technologies",
     upv(i)       "upv generation technologies",
     distpv(i)      "distpv generation technologies",
     storage(i)   "storage technologies",
@@ -372,32 +374,49 @@ loop(tt,
    temps$((mod(tempt(tt),ypv)=0)$(temps<smax(newv,ord(newv)))) = temps + 1;
 );
 
+
+*ban - will remove the technology from being considered
+*bannew - will remove ability to invest in the tech
+set
+ban(i)      "ban from existing, prescribed, and new generation -- usually indicative of missing data or operational constraints",
+bannew(i)   "banned from creating new capacity, usually due to lacking data or represention"
+;
+      
+if(Sw_OfsWind = 0,
+      ban('OFSWIND') = yes;
+      bannew('OFSWIND') = yes;
+else
+      ban('OFSWIND') = no;
+      bannew('OFSWIND') = no;
+);
+
+
 *add 1 for each t item in the ivt set
 countnv(i,newv) = sum(t$ivt(i,newv,t),1);
 
 * --- define technology subsets ---
-COAL(i)     = YES$i_subsets(i,'COAL') ;
-GAS(i)      = YES$i_subsets(i,'GAS') ;
-GASCC(i)    = YES$i_subsets(i,'GASCC') ;
-NUCLEAR(i)  = YES$i_subsets(i,'NUCLEAR');
-CONV(i)     = YES$i_subsets(i,'CONV') ;
-VRE(i)      = YES$i_subsets(i,'VRE') ;
-RSC_i(i)    = YES$i_subsets(i,'RSC') ;
-WIND(i)     = YES$i_subsets(i,'WIND') ;
-UPV(i)      = YES$i_subsets(i,'UPV') ;
-DISTPV(i)     = YES$i_subsets(i,'DISTPV') ;
-STORAGE(i)  = YES$i_subsets(i,'STORAGE') ;
-BATTERY(i)  = YES$i_subsets(i,'BATTERY') ;
-HYDRO(i)    = YES$i_subsets(i,'HYDRO') ;
-HYDRO_D(i)  = YES$i_subsets(i,'HYDRO_D') ;
+COAL(i) = YES$i_subsets(i,'COAL') ;
+GAS(i) = YES$i_subsets(i,'GAS') ;
+GASCC(i) = YES$i_subsets(i,'GASCC') ;
+NUCLEAR(i) = YES$i_subsets(i,'NUCLEAR');
+CONV(i) = YES$i_subsets(i,'CONV') ;
+VRE(i) = YES$i_subsets(i,'VRE') ;
+RSC_i(i) = YES$i_subsets(i,'RSC') ;
+ONSWIND(i) = YES$i_subsets(i,'ONSWIND') ;
+OFSWIND(i)$(not ban('OFSWIND')) = YES$i_subsets(i,'OFSWIND') ;
+UPV(i) = YES$i_subsets(i,'UPV') ;
+DISTPV(i) = YES$i_subsets(i,'DISTPV') ;
+STORAGE(i) = YES$i_subsets(i,'STORAGE') ;
+BATTERY(i) = YES$i_subsets(i,'BATTERY') ;
+HYDRO(i) = YES$i_subsets(i,'HYDRO') ;
+HYDRO_D(i) = YES$i_subsets(i,'HYDRO_D') ;
 HYDRO_ND(i) = YES$i_subsets(i,'HYDRO_ND') ;
-HYDRO_POND(i) =YES$i_subsets(i,'HYDRO_PONDAGE');
-HYDRO_STOR(i) =YES$i_subsets(i,'HYDRO_STORAGE');
-IMPORTS(i)  = YES$i_subsets(i,'IMPORTS');
+HYDRO_POND(i) = YES$i_subsets(i,'HYDRO_PONDAGE');
+HYDRO_STOR(i) = YES$i_subsets(i,'HYDRO_STORAGE');
+IMPORTS(i) = YES$i_subsets(i,'IMPORTS');
 pv(i)$(UPV(i) or DISTPV(i)) = YES;
 
 rsc_agg(i,ii)$(rsc_i(i)$sameas(i,ii)) = yes;
-
 
 
 *===========================
@@ -445,7 +464,7 @@ $offdelim
           /
 ;
 
-* (abarlas - updated tech_costs_atb22, tech_costs_itc22.csv files with US atb22 data. Need to update other scenarios.)
+
 * input tables
 table data_conv(allt,i,*)       "data for all technologies not defined in binned_capacity: cost_vom, cost_fom, cost_cap, heat_rate"  //
 
@@ -1210,7 +1229,7 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rscbin.csv
     rscvar                            "Resource supply curve parameters (capacity and cost)"
           /cap "capacity available", cost "cost of capacity"/,
     src                                "sources of storage charging"
-          / pv, wind, old, other / ,
+          / pv, ons_wind, ofs_wind, old, other / ,
     rscfeas(r,rs,i,rscbin)            "feasibility set for r s i and bins", //calc from rsc_dat
     refurb_cond(i,v,r,rs,t,tt,rscbin) "set to indicate whether a tech and vintage combination from year tt can be refurbished in year t" // initialized below
     ;
@@ -1266,7 +1285,8 @@ remainder(i,r,rs) = sum(v, sum(t$tfirst(t), capacity_exog(i,v,r,rs,t)));
 
 set i_src(i,src) "linking set between i and src" ;
 i_src(i,"pv")$pv(i) = yes ;
-i_src(i,"wind")$wind(i) = yes ;
+i_src(i,"ons_wind")$onswind(i) = yes ;
+i_src(i,"ofs_wind")$ofswind(i) = yes ;
 
 parameter rsc_copy;
 rsc_copy(r,rs,i,rscbin,"cap")  = rsc_dat(r,rs,i,rscbin,"cap");

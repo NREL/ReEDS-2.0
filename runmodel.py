@@ -486,6 +486,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 								 " r=" + str(os.path.join(OutputDir,"g00files",restartfile)) + " s=" +\
 								 str(os.path.join(OutputDir,"g00files",savefile)) + toLogGamsString +\
 								 " --niter=" + str(i) + " --case=" + lstfile  + " --modoptfile=" + str(modoptfile) + ' --casepath=' + OutputDir + '\n')
+			
 
 				#start threads for cc/curt
 				#no need to run cc curt scripts for final iteration or for one iteration
