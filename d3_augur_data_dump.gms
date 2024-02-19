@@ -108,6 +108,8 @@ hydro_nd(i) = hydro_nd(i)$(not ban(i)) ;
 nuclear(i) = nuclear(i)$(not ban(i)) ;
 dr1(i) = dr1(i)$(not ban(i)) ;
 dr2(i) = dr2(i)$(not ban(i)) ;
+evmc_shape(i) = evmc_shape(i)$(not ban(i)) ;
+evmc_storage(i) = evmc_storage(i)$(not ban(i)) ;
 storage_duration(i) = storage_duration(i)$(not ban(i)) ;
 storage_eff(i,t) = storage_eff(i,t)$(not ban(i)) ;
 storage_standalone(i) = storage_standalone(i)$(not ban(i)) ;
@@ -232,9 +234,9 @@ can_imports_szn_filt(r,szn) = sum{t$tcur(t), can_imports_szn(r,szn,t)} ;
 
 cap_hyd_szn_adj_filt(i,szn,r)$[cap_exist_ir(i,r)$hydro_d(i)] = cap_hyd_szn_adj(i,szn,r) ;
 
-cost_cap_filt(i,t)$[storage_standalone(i) or dr(i)] = cost_cap(i,t)$tnext(t) ;
+cost_cap_filt(i,t)$[storage_standalone(i) or dr(i) or evmc(i)] = cost_cap(i,t)$tnext(t) ;
 
-cost_cap_fin_mult_filt(i,r,t)$([storage_standalone(i) or dr(i)]) = cost_cap_fin_mult(i,r,t)$tnext(t) ;
+cost_cap_fin_mult_filt(i,r,t)$([storage_standalone(i) or dr(i) or evmc(i)]) = cost_cap_fin_mult(i,r,t)$tnext(t) ;
 
 cost_vom_filt(i,v,r)$cap_exist(i,v,r) = sum{t$tcur(t), cost_vom(i,v,r,t) } ;
 
@@ -292,7 +294,7 @@ flex_load_opt(r,h) = sum{(flex_type,t)$tcur(t), FLEX.l(flex_type,r,h,t) } ;
 * Extra consumption data
 *============================
 
-prod_filt(i,v,r,h)$[sum{t$tcur(t), valcap(i,v,r,t)}$consume(i)] =
+prod_filt(i,v,r,h)$[sum{t$tcur(t), valcap(i,v,r,t)}$consume(i)$hours(h)] =
                 sum{(p,t)$[i_p(i,p)$tcur(t)], PRODUCE.l(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) } ;
 
 *============================
@@ -355,6 +357,15 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     degrade_annual
     dr1
     dr2
+    dr_inc
+    dr_dec
+    evmc_shape
+    evmc_storage
+    evmc_shape_gen
+    evmc_shape_load
+    evmc_storage_discharge_frac
+    evmc_storage_charge_frac
+    evmc_storage_energy_hours
     emissions_price
     emit_rate_filt
     energy_price
@@ -400,6 +411,7 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     rsc_dat_filt
     sdbin
     storage_duration
+    storage_eff
     storage_eff_filt
     storage_standalone
     Sw_VSC

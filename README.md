@@ -12,14 +12,16 @@ A ReEDS training video (based on the 2020 version of ReEDS) is available on the 
 
 * [Introduction](#Introduction)
 * [Required Software](#Software)
-* [Computer Setup for Microsoft Windows 10](#Setup)
-  * [ReEDS Repository Configuration](#ConfigRepo)
-  * [Python Configuration](#ConfigPy)
-  * [GAMS Configuration](#ConfigGAMS)
-* [Computer Setup for MacOS](#Setup-Mac)
-  * [GAMS Configuration](#ConfigGAMS-Mac)
-  * [Python Configuration](#ConfigPy-Mac)
-  * [ReEDS Repository Configuration](#ConfigRepo-Mac)
+* [Computer Setup](#Setup)
+  * [For Microsoft Windows 10](#Setup-Windows)
+    * [ReEDS Repository Configuration](#ConfigRepo)
+    * [Python Configuration](#ConfigPy)
+    * [GAMS Configuration](#ConfigGAMS)
+  * [For MacOS](#Setup-Mac)
+    * [GAMS Configuration](#ConfigGAMS-Mac)
+    * [Python Configuration](#ConfigPy-Mac)
+    * [ReEDS Repository Configuration](#ConfigRepo-Mac)
+  * [Special Case Setup Requirements](#Special-Requirements)
 * [Executing the Model](#Execution)
   * [Prompts for user input during &quot;runbatch.py&quot;](#Prompts)
   * [Runbatch.py Execution Protocol](#RunBatch)
@@ -63,7 +65,10 @@ Python is &quot;an object-oriented programming language, comparable to Perl, Rub
 Git is a version-control tool used to manage code repositories. Included in Git is a unix style command line emulator called Git Bash, which is used by ReEDS to perform some initial setup tasks.
 
 <a name="Setup"></a>
-# Computer Setup for Microsoft Windows 10
+# Computer Setup
+
+<a name="Setup-Windows"></a>
+## For Microsoft Windows 10
 
 The setup and execution of the ReEDS model can be accomplished using a command-line interpreter application and launching a command line interface (referred to as a &quot;terminal window&quot; in this document). For example, initiating the Windows Command Prompt application, i.e., cmd.exe, will launch a terminal window ([Figure 1](#Fig1)). (Note: If you have issues using command prompt, try using anaconda prompt or a git bash window)
 
@@ -90,7 +95,7 @@ The setup and execution of the ReEDS model can be accomplished using a command-l
 
 
 
-## ReEDS Repository Setup
+### ReEDS Repository Setup
 The ReEDS source code is hosted on GitHub: https://github.com/NREL/ReEDS-2.0
 
 1. From the Git command line run the following command to enable large file storage.
@@ -160,8 +165,6 @@ You can verify that the environment was successfully created using the following
 conda env list
 ```
 
-**IMPORTANT:** Prior to creating the conda environment on Windows, you'll need to comment out the line to install julia in environment.yml. If you're looking to run ReEDS with PRAS and stress periods, you'll need to install julia manually from https://julialang.org/downloads/.
-
 <a name="ConfigGAMS"></a>
 ### GAMS Configuration
 
@@ -178,7 +181,7 @@ Add GAMS to the &quot;path&quot; environment variable. Follow the same instructi
 *Figure 10. Screenshot of a test of GAMS from the terminal window.*
 
 <a name="Setup-Mac"></a>
-# Computer Setup for MacOS
+## For MacOS
 <a name="ConfigGAMS-Mac"></a>
 ### Download GAMS
 
@@ -232,6 +235,15 @@ You can verify that the environment was successfully created using the following
 ```
 conda env list
 ```
+
+
+<a name="Special-Requirements"></a>
+## Special Case Setup Requirements
+
+Some additional data is required to run the ReEDS model at the 'county' spatial resolution. This is currently considered a special case and some data was required to be kept outside the ReEDS repository because the data is simply too large. The hourly renewable capacity factor data is now available to all at : https://data.openei.org/submissions/5986
+
+For users outside the NREL network, if you would like to run the model at county resolution, you are requested to download the files available from the link provided, unzip each folder, and place the files obtained, under inputs/variability/multi-year in the locally cloned ReEDS repository. The input_processing scripts have also been updated to check for these files for any county-level runs. For users within the NREL network, the scripts are designed to automatically copy the data from the network storage location. The 'cases_spatialflex.csv' file provides examples of specific switch settings to run ReEDS at county-level.
+
 
 
 <a name="Execution"></a>
@@ -567,6 +579,14 @@ If you have comments and/or questions, please contacts the ReEDS team:
 ## ReEDS Model Switches (specified by user in &quot;cases.csv&quot;)
 
 ReEDS model switches are set in the cases.csv file. The "Choices" column lists allowable options for that switch, with N/A meaning that no error checking is performed for the options selected.
+Additional notes on switch functionality are provided below.
+* `GSw_PRM_StressThreshold`: The default setting of 'transgrp_10_EUE_sum' means a threshold of "**10** ppm NEUE in each **transgrp**", with stress periods selected by the daily **sum** of **EUE** within each **transgrp**.
+  * The first argument can be selected from ['country', 'interconnect', 'nercr', 'transreg', 'transgrp', 'st', 'r'] and specifies the hierarchy level within which to compare RA performance against the threshold.
+  * The second argument can be any float and specifies the RA performance threshold in parts per million [ppm].
+  * The third argument can be 'NEUE' or 'EUE', specifying which metric to use when selecting stress periods. If set to 'NEUE' the model will add stress periods with the largest **fraction** of dropped load; if set to 'EUE' the model will add stress periods with the largest **absolute MWh** of dropped load.
+  * The fourth argument can be 'sum' or 'max', specifying whether to add stress periods in order of their daily per-hour max dropped load or by their daily sum of dropped load when selecting stress periods.
+  * If desired you can provide /-delimited entries like 'transgrp_10_EUE_sum/country_1_EUE_sum', meaning that each transgrp must have ≤10 ppm NEUE and the country overall must have ≤1 ppm NEUE.
+
 
 <a name="SolveTime"></a>
 ## Tips for reducing solve time

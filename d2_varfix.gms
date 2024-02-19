@@ -10,7 +10,7 @@ tfix("%cur_year%") = yes ;
 * capacity and investment variables
     CAP.fx(i,v,r,tfix)$[valcap(i,v,r,tfix)] = CAP.l(i,v,r,tfix) ;
     CAP_SDBIN.fx(i,v,r,ccseason,sdbin,tfix)$[valcap(i,v,r,tfix)$(storage(i) or hyd_add_pump(i))$(not csp(i))] = CAP_SDBIN.l(i,v,r,ccseason,sdbin,tfix) ;
-    GROWTH_BIN.fx(gbin,i,st,tfix)$[sum{r$[r_st(r,st)], valinv_irt(i,r,tfix) }$stfeas(st)$Sw_GrowthRelCon$(yeart(tfix)<=Sw_GrowthConLastYear)] = GROWTH_BIN.l(gbin,i,st,tfix) ;
+    GROWTH_BIN.fx(gbin,i,st,tfix)$[sum{r$[r_st(r,st)], valinv_irt(i,r,tfix) }$stfeas(st)$Sw_GrowthPenalties$(yeart(tfix)<=Sw_GrowthConLastYear)] = GROWTH_BIN.l(gbin,i,st,tfix) ;
     INV.fx(i,v,r,tfix)$[valinv(i,v,r,tfix)] = INV.l(i,v,r,tfix) ;
     INV_REFURB.fx(i,v,r,tfix)$[valinv(i,v,r,tfix)$refurbtech(i)] = INV_REFURB.l(i,v,r,tfix) ;
     INV_RSC.fx(i,v,r,rscbin,tfix)$[valinv(i,v,r,tfix)$rsc_i(i)$m_rscfeas(r,i,rscbin)] = INV_RSC.l(i,v,r,rscbin,tfix) ;
@@ -25,7 +25,7 @@ tfix("%cur_year%") = yes ;
     GEN_PVB_P.fx(i,v,r,h,tfix)$[pvb(i)$valgen(i,v,r,tfix)$Sw_PVB] = GEN_PVB_P.l(i,v,r,h,tfix) ;
     GEN_PVB_B.fx(i,v,r,h,tfix)$[pvb(i)$valgen(i,v,r,tfix)$Sw_PVB] = GEN_PVB_B.l(i,v,r,h,tfix) ;
     CURT.fx(r,h,tfix)$rb(r) = CURT.l(r,h,tfix) ;
-    MINGEN.fx(r,szn,tfix)$rb(r) = MINGEN.l(r,szn,tfix) ;
+    MINGEN.fx(r,szn,tfix)$[rb(r)$Sw_Mingen] = MINGEN.l(r,szn,tfix) ;
     STORAGE_IN.fx(i,v,r,h,tfix)$[valgen(i,v,r,tfix)$(storage_standalone(i) or hyd_add_pump(i))] = STORAGE_IN.l(i,v,r,h,tfix) ;
     STORAGE_IN_PVB_P.fx(i,v,r,h,tfix)$[valgen(i,v,r,tfix)$pvb(i)$Sw_PVB] = STORAGE_IN_PVB_P.l(i,v,r,h,tfix) ;
     STORAGE_IN_PVB_G.fx(i,v,r,h,tfix)$[valgen(i,v,r,tfix)$pvb(i)$Sw_PVB] = STORAGE_IN_PVB_G.l(i,v,r,h,tfix) ;
@@ -81,15 +81,15 @@ tfix("%cur_year%") = yes ;
     WATER_CAPACITY_LIMIT_SLACK.fx(wst,r,tfix)$[rb(r)$Sw_WaterMain$Sw_WaterCapacity] = WATER_CAPACITY_LIMIT_SLACK.l(wst,r,tfix) ;
 
 *H2 and DAC production variables
-    PRODUCE.fx(p,i,v,r,h,tfix)$[consume(i)$valcap(i,v,r,tfix)$Sw_Prod] = PRODUCE.l(p,i,v,r,h,tfix) ;
+    PRODUCE.fx(p,i,v,r,h,tfix)$[consume(i)$i_p(i,p)$valcap(i,v,r,tfix)$hours(h)$Sw_Prod] = PRODUCE.l(p,i,v,r,h,tfix) ;
     H2_FLOW.fx(r,rr,h,tfix)$[h2_routes(r,rr)$(Sw_H2 = 2)] = H2_FLOW.l(r,rr,h,tfix) ;
     H2_TRANSPORT_INV.fx(r,rr,tfix)$[h2_routes(r,rr)$(Sw_H2 = 2)] = H2_TRANSPORT_INV.l(r,rr,tfix) ;
     H2_STOR_INV.fx(h2_stor,r,tfix)$[(h2_stor_r(h2_stor,r))$(Sw_H2=2)] = H2_STOR_INV.l(h2_stor,r,tfix) ;
     H2_STOR_CAP.fx(h2_stor,r,tfix)$[(h2_stor_r(h2_stor,r))$(Sw_H2=2)] = H2_STOR_CAP.l(h2_stor,r,tfix) ;
     H2_STOR_IN.fx(h2_stor,r,h,tfix)$[(h2_stor_r(h2_stor,r))$(Sw_H2=2)] = H2_STOR_IN.l(h2_stor,r,h,tfix) ;
     H2_STOR_OUT.fx(h2_stor,r,h,tfix)$[(h2_stor_r(h2_stor,r))$(Sw_H2=2)] = H2_STOR_OUT.l(h2_stor,r,h,tfix) ;
-    H2_STOR_LEVEL.fx(h2_stor,r,allszn,h,tfix)$[(h2_stor_r(h2_stor,r))$(Sw_H2=2)$(Sw_H2_StorTimestep=2)] = H2_STOR_LEVEL.l(h2_stor,r,allszn,h,tfix) ;
-    H2_STOR_LEVEL_SZN.fx(h2_stor,r,allszn,tfix)$[(h2_stor_r(h2_stor,r))$(Sw_H2=2)$(Sw_H2_StorTimestep=1)] = H2_STOR_LEVEL_SZN.l(h2_stor,r,allszn,tfix) ;
+    H2_STOR_LEVEL.fx(h2_stor,r,actualszn,h,tfix)$[(h2_stor_r(h2_stor,r))$(Sw_H2=2)$(Sw_H2_StorTimestep=2)] = H2_STOR_LEVEL.l(h2_stor,r,actualszn,h,tfix) ;
+    H2_STOR_LEVEL_SZN.fx(h2_stor,r,actualszn,tfix)$[(h2_stor_r(h2_stor,r))$(Sw_H2=2)$(Sw_H2_StorTimestep=1)] = H2_STOR_LEVEL_SZN.l(h2_stor,r,actualszn,tfix) ;
 
 *CO2-related variables
     CO2_CAPTURED.fx(r,h,tfix)$[rb(r)$Sw_CO2_Detail] = CO2_CAPTURED.l(r,h,tfix) ;

@@ -1,9 +1,3 @@
-"""
-main contact: Patrick.Brown@nrel.gov
-Notes:
-* AC/DC converter costs and losses are bundled in with LCC DC and B2B lines, but are
-  disaggregated for VSC lines (since not every node in a VSC macrogrid needs a converter)
-"""
 #%% ===========================================================================
 ### --- IMPORTS ---
 ### ===========================================================================
@@ -232,8 +226,6 @@ nlevel = {
 }
 
 #%% Put some in dicts for easier access
-cost_acdc_lcc = scalars['cost_acdc_lcc']
-cost_acdc_vsc = scalars['cost_acdc_vsc']
 tranloss_permile = {
     'AC': scalars['tranloss_permile_ac'],
     ### B2B converters are AC-AC/DC-DC/AC-AC, so use AC per-mile losses

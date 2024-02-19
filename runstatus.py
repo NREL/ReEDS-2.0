@@ -58,6 +58,8 @@ dictruns = {
     'running': [os.path.join(reeds_path,'runs',os.path.basename(i)) for i in runs_running],
     'failed': [os.path.join(reeds_path,'runs',os.path.basename(i)) for i in runs_failed],
 }
+## Only keep running runs in the current repo
+dictruns['running'] = [i for i in dictruns['running'] if os.path.isdir(i)]
 
 #%%### Loop through categories and runs and report their status
 for key, runs in dictruns.items():
@@ -72,7 +74,10 @@ for key, runs in dictruns.items():
         case = os.path.basename(fullcase)
         if (key == 'finished'):
             if include_finished:
-                print(case)
+                import pandas as pd
+                duration = pd.read_csv(
+                    os.path.join(fullcase,'meta.csv'), skiprows=3).processtime.sum()
+                print(f"{case:<{longest}}: {datetime.timedelta(seconds=int(duration))}")
         else:
             ### Get last .lst file
             lstfiles = sorted(glob(os.path.join(fullcase,'lstfiles','*')))
@@ -105,6 +110,6 @@ for key, runs in dictruns.items():
 
             if verbose:
                 gamslog = os.path.join(fullcase,'gamslog.txt')
-                print('⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄')
+                print('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv')
                 subprocess.run(f'tail {gamslog} -n {verbose}', shell=True)
-                print('⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃\n')
+                print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')

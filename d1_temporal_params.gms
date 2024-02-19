@@ -182,6 +182,16 @@ $offdelim
 $onlisting
 / ;
 
+* Written by input_processing/hourly_writetimeseries.py
+parameter frac_h_month_weights(allh,month) "--unitless-- fraction of timeslice associated with each month"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%frac_h_month_weights.csv
+$offdelim
+$onlisting
+/ ;
+
 parameter frac_h_quarter_weights(allh,quarter) "--unitless-- fraction of timeslice associated with each quarter"
 /
 $offlisting
@@ -386,8 +396,15 @@ cf_in(i,r,h)$[i_water_cooling(i)$Sw_WaterMain] =
 *The DUPV capacity factors have already been adjusted by (1.0 - distloss)
 cf_rsc(i,v,r,h,t)$[cf_in(i,r,h)$cf_tech(i)$valcap(i,v,r,t)] = cf_in(i,r,h) ;
 
-cf_hyd(i,szn,r,t) = sum{quarter, szn_quarter_weights(szn,quarter) * cf_hyd_quarter(i,quarter,r,t) } ;
-
+* Written by input_processing/hourly_writetimeseries.py
+parameter cf_hyd(i,allszn,r,allt) "--fraction-- hydro capacity factors by season and year"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%cf_hyd.csv
+$offdelim
+$onlisting
+/ ;
 
 $ifthen.climatehydro %GSw_ClimateHydro% == 1
 
@@ -421,7 +438,6 @@ cf_hyd(i,szn,r,t)$[hydro_d(i)$(yeart(t)>=Sw_ClimateStartYear)]  =
     sum{allt$att(allt,t), cf_hyd(i,szn,r,t) * climate_hydro_annual(r,allt) } ;
 
 $endif.climatehydro
-
 
 cap_hyd_szn_adj(i,szn,r) = sum{quarter, szn_quarter_weights(szn,quarter) * cap_hyd_quarter_adj(i,quarter,r) } ;
 
@@ -457,6 +473,12 @@ m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ivt(i,newv,tt ) }$valcap
 * distpv capacity factor is divided by (1.0 - distloss) to provide a busbar equivalent capacity factor
 m_cf(i,v,r,h,t)$[distpv(i)$valcap(i,v,r,t)] = m_cf(i,v,r,h,t) / (1.0 - distloss) ;
 
+* doing this before calculating m_cf_szn to make sure 
+* m_cf_szn does not get populated with very small values
+m_cf(i,v,r,h,t)$[not valcap(i,v,r,t)] = 0 ;
+m_cf(i,v,r,h,t)$[(m_cf(i,v,r,h,t)<0.01)$valcap(i,v,r,t)] = 0 ;
+m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)] = round(m_cf(i,v,r,h,t),3) ;
+
 * Remove capacity when there is no corresponding capacity factor
 m_capacity_exog(i,v,r,t)$[initv(v)$cf_tech(i)$(not sum{h, m_cf(i,v,r,h,t) })] = 0 ;
 
@@ -480,9 +502,6 @@ m_cf_szn(i,v,r,szn,t)
 
 * Calculate daytime hours (for PVB) based on hours with nonzero PV CF
 dayhours(h)$[sum{(i,v,r,t)$[pv(i)$valgen(i,v,r,t)], m_cf(i,v,r,h,t) }] = yes ;
-
-m_cf(i,v,r,h,t)$[not valcap(i,v,r,t)] = 0 ;
-
 
 
 *=============================================
@@ -514,7 +533,7 @@ $onlisting
 *reducing problem size by removing h-hh combos that are the same
 hour_szn_group(h,hh)$sameas(h,hh) = no ;
 
-hydmin(i,r,szn) = sum{quarter, szn_quarter_weights(szn,quarter) * hydmin_quarter(i,r,quarter) } ;
+hydmin(i,r,szn) = round(sum{quarter, szn_quarter_weights(szn,quarter) * hydmin_quarter(i,r,quarter) }, 3) ;
 
 minloadfrac(r,i,h) = minloadfrac0(i) ;
 
@@ -610,6 +629,33 @@ parameter evmc_shape_load(i,r,allh) "--fraction-- how much adopted shaped EV loa
 $offlisting
 $ondelim
 $include inputs_case%ds%evmc_shape_load.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter evmc_storage_discharge_frac(i,r,allh,allt) "--fraction-- fraction of adopted EV storage discharge capacity that can be discharged (deferred charging) in each timeslice h"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%evmc_storage_discharge.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter evmc_storage_charge_frac(i,r,allh,allt) "--fraction-- fraction of adopted EV storage discharge capacity that can be charged (add back deferred charging) in each timeslice h"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%evmc_storage_charge.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter evmc_storage_energy_hours(i,r,allh,allt) "--hours-- Allowable EV storage SOC (quantity deferred EV charge) [MWh] divided by nameplate EVMC discharge capacity [MW]"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%evmc_storage_energy.csv
 $offdelim
 $onlisting
 / ;
@@ -724,17 +770,15 @@ szn_adj_gas(h)$frac_h_quarter_weights(h,"wint") =
 *=============================================
 * -- Round parameters for GAMS --
 *=============================================
-avail(i,h)$avail(i,h) = round(avail(i,h),4) ;
+avail(i,h)$avail(i,h) = round(avail(i,h),3) ;
 can_exports_h(r,h,t)$can_exports_h(r,h,t) = round(can_exports_h(r,h,t),3) ;
-h_weight_csapr(h)$h_weight_csapr(h) = round(h_weight_csapr(h),4) ;
+h_weight_csapr(h)$h_weight_csapr(h) = round(h_weight_csapr(h),3) ;
 load_exog(r,h,t)$load_exog(r,h,t) = round(load_exog(r,h,t),3) ;
 load_exog_static(r,h,t)$load_exog_static(r,h,t) = round(load_exog_static(r,h,t),3) ;
-m_cf(i,v,r,h,t)$[(m_cf(i,v,r,h,t)<0.001)$valcap(i,v,r,t)] = 0 ;
-m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)] = round(m_cf(i,v,r,h,t),5) ;
-minloadfrac(r,i,h)$minloadfrac(r,i,h) = round(minloadfrac(r,i,h),4) ;
+minloadfrac(r,i,h)$minloadfrac(r,i,h) = round(minloadfrac(r,i,h),3) ;
 net_trade_can(r,h,t) = round(net_trade_can(r,h,t),3) ;
 szn_adj_gas(h)$szn_adj_gas(h) = round(szn_adj_gas(h), 3) ;
-cap_hyd_szn_adj(i,szn,r)$cap_hyd_szn_adj(i,szn,r) = round(cap_hyd_szn_adj(i,szn,r),5) ;
+cap_hyd_szn_adj(i,szn,r)$cap_hyd_szn_adj(i,szn,r) = round(cap_hyd_szn_adj(i,szn,r),3) ;
 peakdem_static_ccseason(r,ccseason,t)$peakdem_static_ccseason(r,ccseason,t) = round(peakdem_static_ccseason(r,ccseason,t),2) ;
 seas_cap_frac_delta(i,v,r,szn,t)$seas_cap_frac_delta(i,v,r,szn,t) = round(seas_cap_frac_delta(i,v,r,szn,t),3) ;
 

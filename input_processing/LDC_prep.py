@@ -7,6 +7,7 @@ import h5py
 import numpy as np
 import os
 import pandas as pd
+import sys
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
@@ -200,11 +201,10 @@ def get_distpv_profiles(inputs_case, recf, rb2fips, agglevel):
 def main(reeds_path, inputs_case):
     print('Starting LDC_prep.py')
     
-    #%% Settings for testing
+    # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-    # reeds_path = os.getcwd()
     # inputs_case = os.path.join(
-    #     reeds_path,'runs','v20230227_augurM1_WECC','inputs_case')
+    #     reeds_path,'runs','v20240109_aggfixM1_Western_agg','inputs_case')
 
     #%% Inputs from switches
     sw = pd.read_csv(
@@ -216,7 +216,10 @@ def main(reeds_path, inputs_case):
     GSw_SitingUPV = sw.GSw_SitingUPV
     GSw_PVB_Types = sw.GSw_PVB_Types
     GSw_PVB = int(sw.GSw_PVB)
-    
+    GSw_LoadAdjust = int(sw.GSw_LoadAdjust)
+    GSw_LoadAdjust_Profiles=sw.GSw_LoadAdjust_Profiles
+    GSw_LoadAdjust_Adoption=sw.GSw_LoadAdjust_Adoption
+
     # ReEDS only supports a single entry for agglevel right now, so use the
     # first value from the list (copy_files.py already ensures that only one
     # value is present)
@@ -265,18 +268,30 @@ def main(reeds_path, inputs_case):
     hierarchy = pd.read_csv(
         os.path.join(inputs_case,'hierarchy.csv')
     ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy_original = (
+        pd.read_csv(os.path.join(reeds_path, 'inputs', 'hierarchy.csv'))
+        .rename(columns={'ba':'r'})
+        .drop(['*county','county_name'], axis=1).drop_duplicates()
+        .set_index('r')
+    )
     ### Add ccreg column with the desired hierarchy level
     if sw['capcredit_hierarchy_level'] == 'r':
         hierarchy['ccreg'] = hierarchy.index.copy()
+        hierarchy_original['ccreg'] = hierarchy_original.index.copy()
     else:
         hierarchy['ccreg'] = hierarchy[sw.capcredit_hierarchy_level].copy()
+        hierarchy_original['ccreg'] = hierarchy_original[sw.capcredit_hierarchy_level].copy()
     ### Map regions to new ccreg's
     rb2fips = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
-    r2ccreg = hierarchy['ccreg']
+    if agglevel =='county' :
+        r2ccreg = hierarchy['ccreg']
+    else:
+        r2ccreg = hierarchy_original['ccreg']
+
     # Map BAs to states and census divisions for use with AEO load multipliers
     st2rb = hierarchy.reset_index(drop=False)[['r', 'st']]
     cd2rb = hierarchy.reset_index(drop=False)[['r', 'cendiv']]
-    
+
     # Get technology subsets
     tech_table = pd.read_csv(
         os.path.join(inputs_case,'tech-subset-table.csv'), index_col=0).fillna(False).astype(bool)
@@ -452,9 +467,82 @@ def main(reeds_path, inputs_case):
                 .rename_axis('hour').stack('year')
                 .reorder_levels(['year','hour']).sort_index(axis=0, level=['year','hour'])
             )
+
+    # ------- Perform Load Adjustments based on GSw_LoadAdjust ------- #
+    if GSw_LoadAdjust:
+        # Splitting load adjustment profiles and adoption rates
+        GSw_LoadAdjust_Profiles = GSw_LoadAdjust_Profiles.split("__")
+        GSw_LoadAdjust_Adoption = GSw_LoadAdjust_Adoption.split("__")
+        # Checking for an equal # of load adjustment profiles and adoption rates
+        if len(GSw_LoadAdjust_Adoption) != len(GSw_LoadAdjust_Profiles):
+            sys.exit(
+                "Number of GSw load adjustment profiles does not equal the "
+                "same number of adoption rate profiles"
+            )
+        # Creating a list of load profile years and regions
+        load_profiles_years = load_profiles.reset_index().year.unique().tolist()
+        load_profiles_regions = load_profiles.columns.tolist()
+        # Creating a load profile with specified adoption rates
+        for i in range(len(GSw_LoadAdjust_Profiles)):
+            # Reading in the load adjustment profiles and adoption rates
+            profile = pd.read_csv(
+                os.path.join(
+                    reeds_path, "inputs", "loaddata", GSw_LoadAdjust_Profiles[i]
+                )
+            )
+            adoption = pd.read_csv(
+                os.path.join(
+                    reeds_path, "inputs", "loaddata", GSw_LoadAdjust_Adoption[i]
+                )
+            )
+            # Drop Years from adoption rates that are not in load profiles
+            adoption = adoption[adoption["year"].isin(load_profiles_years)]
+            # Reshape load adjustment profiles and adoption rates
+            profile = pd.melt(
+                profile, id_vars=["hour"], var_name="Regions", value_name="Amount"
+            )
+            adoption = pd.melt(
+                adoption,
+                id_vars=["year"],
+                var_name="Regions",
+                value_name="Adoption Rate",
+            )
+            # Merge adoption rates and load adjustment profiles on "Regions"
+            adoption_by_profile = pd.merge(adoption, profile, on="Regions")
+
+            # Calculate regional load adjustment (weighted by adoption rate)
+            adoption_by_profile["Load Value"] = (
+                adoption_by_profile["Adoption Rate"] * adoption_by_profile["Amount"]
+            )
+            #Drop unnecessary columns, filter regions, and create pivot table
+            adoption_by_profile = adoption_by_profile.drop(
+                columns=["Adoption Rate", "Amount"]
+            )
+            adoption_by_profile = adoption_by_profile[
+                adoption_by_profile["Regions"].isin(load_profiles_regions)
+            ]
+            adoption_by_profile = pd.pivot(
+                adoption_by_profile,
+                index=["year", "hour"],
+                columns="Regions",
+                values="Load Value",
+            )
+            # Shaping the data to match the 7-year VRE profiles
+            adoption_by_profile_wide = adoption_by_profile.unstack("year")
+            if len(adoption_by_profile_wide) == 8760:
+                adoption_by_profile = (
+                    pd.concat([adoption_by_profile_wide] * 7, axis=0, ignore_index=True)
+                    .rename_axis("hour")
+                    .stack("year")
+                    .reorder_levels(["year", "hour"])
+                    .sort_index(axis=0, level=["year", "hour"])
+                )
+            # Adding the regional load adjustment to load_profiles
+            load_profiles = pd.concat([load_profiles, adoption_by_profile])
+            load_profiles = load_profiles.groupby(["year", "hour"]).sum()
+
     # Adjusting load profiles by distribution loss factor
     load_profiles /= (1 - distloss)
-
 
     #%%%#############################################
     #    -- Performing Resource Modifications --    #
@@ -564,6 +652,22 @@ def main(reeds_path, inputs_case):
             axis=1,
         )
 
+    #%% Calculate coincident peak demand at different levels for convenience later
+    _peakload = {}
+    for _level in hierarchy.columns:
+        _peakload[_level] = (
+            ## Aggregate to level
+            load_eastern.rename(columns=hierarchy[_level])
+            .groupby(axis=1, level=0).sum()
+            ## Calculate peak
+            .groupby(axis=0, level='year').max()
+            .T
+        )
+    ## Also do it at r level
+    _peakload['r'] = load_eastern.groupby(axis=0, level='year').max().T
+    peakload = pd.concat(_peakload, names=['level','region']).round(3)
+
+
     #%%###########################
     #    -- Data Write-Out --    #
     ##############################
@@ -573,6 +677,7 @@ def main(reeds_path, inputs_case):
     recf_eastern.astype(np.float16).to_hdf(
         os.path.join(inputs_case,'recf.h5'), key='data', complevel=4, index=True)
     resources.to_csv(os.path.join(inputs_case,'resources.csv'), index=False)
+    peakload.to_csv(os.path.join(inputs_case,'peakload.csv'))
     ### Write the CSP solar field CF (no SM or storage) for hourly_writetimeseries.py
     (cspcf_eastern[keep]
         .rename(columns=dict(zip(keep, [f'csp_{i}' for i in keep])))

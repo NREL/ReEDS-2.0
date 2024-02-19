@@ -56,17 +56,16 @@ def run_osprey(casedir, t, sw):
 
 def run_pras(
         casedir, t, sw, iteration=0, recordtime=True,
-        repo=False, overwrite=True, include_samples=False):
+        repo=False, overwrite=True, include_samples=False,
+        write_flow=False, write_surplus=False, write_energy=False,
+    ):
     """
     """
     reeds2pras_path = os.path.expanduser(sw['reeds2pras_path'])
     ### Get the PRAS settings for this solve year
     print('Running ReEDS2PRAS and PRAS')
-    tic = datetime.datetime.now()
     scriptpath = (sw['reeds_path'] if repo else casedir)
-    print(f'⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄ run_pras.jl {t}i{iteration} ⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄')
-    log = open(os.path.join(casedir, 'gamslog.txt'), 'a')
-    result = subprocess.run([
+    command = [
         "julia",
         f"--project={sw['reeds_path']}",
         ### As of 20231113 there seems to be a problem with multithreading in julia on
@@ -79,19 +78,29 @@ def run_pras(
         f"--reeds_path={sw['reeds_path']}",
         f"--reedscase={casedir}",
         f"--solve_year={t}",
-        f"--weather_year=2007",
-        f"--timesteps=61320",
+        "--weather_year=2007",
+        "--timesteps=61320",
+        f"--write_flow={int(write_flow)}",
+        f"--write_surplus={int(write_surplus)}",
+        f"--write_energy={int(write_energy)}",
         f"--iteration={iteration}",
         f"--samples={sw['pras_samples']}",
         f"--reeds2praspath={reeds2pras_path}",
         f"--overwrite={int(overwrite)}",
         f"--include_samples={int(include_samples)}",
-    ], stdout=log, stderr=log, text=True)
+    ]
+    print(' '.join(command))
+    print(f'vvvvvvvvvvvvvvv run_pras.jl {t}i{iteration} vvvvvvvvvvvvvvv')
+    log = open(os.path.join(casedir, 'gamslog.txt'), 'a')
+    result = subprocess.run(command, stdout=log, stderr=log, text=True)
     log.close()
-    print(f'⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃ run_pras.jl {t}i{iteration} ⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃')
+    print(f'^^^^^^^^^^^^^^^ run_pras.jl {t}i{iteration} ^^^^^^^^^^^^^^^')
 
     if recordtime:
-        functions.toc(tic=tic, year=t, process='ReEDS_Augur/run_pras.jl')
+        try:
+            functions.write_last_pras_runtime(year=t)
+        except Exception as err:
+            print(err)
 
     return result
 
@@ -100,10 +109,10 @@ def run_pras(
 def main(t, tnext, casedir, iteration=0):
 
     # #%% To debug, uncomment these lines and update the run path
-    # t = 2020
-    # tnext = 2025
+    # t = 2035
+    # tnext = 2040
     # casedir = os.path.expanduser(
-    #     '~/github/ReEDS-2.0/runs/v20231111_stressM0_stress_WECC')
+    #     '~/github/ReEDS-2.0/runs/v20240118_stressM0_Z45_SP_5yr_H2_EI')
     # iteration = 0
     # assert tnext >= t
     # os.chdir(casedir)
@@ -157,23 +166,22 @@ def main(t, tnext, casedir, iteration=0):
         (not int(sw.GSw_PRM_CapCredit))
         and (sw['GSw_PRM_StressModel'].lower() == 'pras')
     ):
-        result = run_pras(casedir, t, sw, iteration=iteration)
-        ### If we need the PRAS results but there was an error, stop here
-        if (result.returncode
-            and (not int(sw.GSw_PRM_CapCredit))
-            and (sw['GSw_PRM_StressModel'].lower() == 'pras')
-        ):
-            raise Exception(f'run_pras.jl failed with return code {result.returncode}')
+        result = run_pras(
+            casedir, t, sw, iteration=iteration,
+            write_flow=(True if t == max(solveyears) else False),
+            write_energy=(True if t == max(solveyears) else False),
+        )
+        print(f"run_pras.jl returned code {result.returncode}")
 
     #%% Identify stress periods
     print('identifying new stress periods...')
     tic = datetime.datetime.now()
     if 'user' not in sw['GSw_PRM_StressModel'].lower():
-        keep_periods = F_stress_periods.main(sw=sw, t=t, iteration=iteration)
+        _eue_sorted_periods = F_stress_periods.main(sw=sw, t=t, iteration=iteration)
     functions.toc(tic=tic, year=t, process='ReEDS_Augur/F_stress_periods.py')
 
-    # Write gdx file explicitly to ensure that all entries
-    # (even empty dataframes) are written as parameters, not sets
+    #%% Write gdx file explicitly to ensure that all entries
+    ### (even empty dataframes) are written as parameters, not sets
     with gdxpds.gdx.GdxFile() as gdx:
         for key in cc_results:
             gdx.append(

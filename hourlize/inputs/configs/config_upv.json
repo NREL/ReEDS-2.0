@@ -1,0 +1,20 @@
+{
+    "cost_out": "combined_eos_trans" ,
+    "capacity_col": "capacity_mw_{upv_type}" ,
+    "class_bin_col": "mean_cf_{upv_type}",
+    "class_bin_num": 5,
+    "class_bin": true,
+    "class_path": null,
+    "cost_adder_components": ["trans_adder_per_MW", "capital_adder_per_MW"] ,
+    "distance_cols": ["dist_km", "reinforcement_dist_km"] ,
+    "filter_cols": {} ,
+    "min_cap": 5 ,
+    "profile_dir": "{access_case}_{upv_type}" ,
+    "profile_dset": "rep_profiles_0",
+    "profile_file_format": "{access_case}_{upv_type}_rep-profiles",
+    "profile_id_col": "sc_point_gid",
+    "profile_weight_col": "capacity",
+    "rev_jsons": ["config_aggregation.json", "config_pipeline.json", "config_supply-curve.json", "{access_case}_{upv_type}/config_rep-profiles_aggprof.json"],
+    "single_profile": false,
+    "upv_type": "dc"
+}

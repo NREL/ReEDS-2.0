@@ -17,6 +17,8 @@ parser.add_argument('--force', '-f', action='store_true',
                     help='Proceed without double-checking')
 parser.add_argument('--more_copyfiles', '-m', type=str, default='',
                     help=',-delimited list of additional files to copy from reedspath')
+parser.add_argument('--include_finished', '-i', action='store_true',
+                    help='Also restart finished runs (e.g. to redo postprocessing)')
 
 args = parser.parse_args()
 batch_name = args.batch_name
@@ -24,6 +26,7 @@ copy_cplex = args.copy_cplex
 copy_srun_template = args.copy_srun_template
 force = args.force
 more_copyfiles = [i for i in args.more_copyfiles.split(',') if len(i)]
+include_finished = args.include_finished
 
 # #%% Inputs for debugging
 # batch_name = 'v20231113_yamM0'
@@ -31,6 +34,7 @@ more_copyfiles = [i for i in args.more_copyfiles.split(',') if len(i)]
 # copy_srun_template = True
 # force = True
 # more_copyfiles = ['e_report.gms']
+# include_finished = False
 
 ###### Procedure
 #%% Shared parameters
@@ -53,7 +57,10 @@ runs_running = [
     if i.decode().startswith(batch_name)
 ]
 
-runs_failed = [i for i in runs_unfinished if os.path.basename(i) not in runs_running]
+runs_failed = [
+    i for i in (runs_all if include_finished else runs_unfinished)
+    if os.path.basename(i) not in runs_running
+]
 
 ### Take a look
 print('unfinished:', len(runs_unfinished))
@@ -66,7 +73,7 @@ if not force:
         print(os.path.basename(i))
     print(f'Restarting the {len(runs_failed)} runs listed above.')
     confirm_local = str(input('Proceed? [y]/n: ') or 'y')
-    if not confirm_local in ['y','Y','yes','Yes','YES']:
+    if confirm_local not in ['y','Y','yes','Yes','YES']:
         quit()
 
 
@@ -84,8 +91,8 @@ if copy_srun_template:
     srun_template = os.path.join(reedspath,'srun_template.sh')
     writelines_srun = list()
     with open(srun_template, 'r') as f:
-        for l in f:
-            writelines_srun.append(l.strip())
+        for line in f:
+            writelines_srun.append(line.strip())
 else:
     writelines_srun = list()
 
@@ -127,20 +134,20 @@ for case in runs_failed:
     writelines = []
     with open(callfile, 'r') as f:
         comment = 0
-        for l in f:
+        for line in f:
             ## Start commenting at input processing
-            if '# Input processing' in l:
+            if '# Input processing' in line:
                 comment = 1
             ## Stop commenting at restart_tag
-            if l.startswith(restart_tag):
+            if line.startswith(restart_tag):
                 comment = 0
             ## Record it
-            writelines.append(('# ' if comment else '') + l.strip())
+            writelines.append(('# ' if comment else '') + line.strip())
 
     ### Write it
     with open(callfile, 'w') as f:
-        for l in writelines:
-            f.writelines(l + '\n')
+        for line in writelines:
+            f.writelines(line + '\n')
 
     #%% Write the sbatch file with new header, if desired
     if copy_srun_template:
@@ -148,8 +155,8 @@ for case in runs_failed:
         writelines_srun_case.append(f"\n#SBATCH --job-name={casename}\n")
         writelines_srun_case.append(f"sh {callfile}")
         with open(sbatchfile, 'w') as f:
-            for l in writelines_srun_case:
-                f.writelines(l + '\n')
+            for line in writelines_srun_case:
+                f.writelines(line + '\n')
 
     #%% Run it
     sbatch = f'sbatch {sbatchfile}'

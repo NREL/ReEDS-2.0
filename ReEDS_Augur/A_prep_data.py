@@ -239,7 +239,7 @@ def main(t, casedir):
     gen_vre_r = gen_vre_r.groupby(axis=1, level='r').sum()
 
     ### Store generation by (i,r) for E_capacity_credit.py
-    vre_gen_exist = gen_vre_ir.reindex(resources[['i','r']], axis=1).fillna(0)
+    vre_gen_exist = gen_vre_ir.reindex(resources[['i','r']], axis=1).fillna(0).clip(lower=0)
     vre_gen_exist.columns = resources.resource
     vre_gen_exist.index = h_dt_szn.set_index(['ccseason','year','h','hour']).index
     h5out['vre_gen_exist'] = vre_gen_exist

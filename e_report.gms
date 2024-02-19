@@ -13,7 +13,6 @@ sys_costs /
   inv_co2_network_spur
   inv_converter_costs
   inv_dac
-  inv_growth_penalty
   inv_h2_pipeline
   inv_h2_production
   inv_h2_storage
@@ -59,7 +58,6 @@ sys_costs_inv(sys_costs) /
   inv_co2_network_spur
   inv_converter_costs
   inv_dac
-  inv_growth_penalty
   inv_h2_pipeline
   inv_h2_production
   inv_h2_storage
@@ -325,6 +323,10 @@ reqt_price('res_marg_ann','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
 * Stress period formulation ($/MW-yr)
     + sum{allh$h_stress_t(allh,t), reqt_price('res_marg','na',r,allh,t) }$(Sw_PRM_CapCredit=0)
 ;
+*The marginal on the total load constraint, eq_loadcon is converted to $/MW-yr.
+*We can't convert to $/MWh because stress periods have no hours.
+reqt_price('eq_loadcon','na',r,allh,t)$[tmodel_new(t)$rb(r)$h_t(allh,t)] =
+    (1 / cost_scale) * (1 / pvf_onm(t)) * eq_loadcon.m(r,allh,t) ;
 
 
 *Load and operating reserve quantities are MWh, and reserve margin quantity is MW
@@ -394,6 +396,8 @@ reqt_quant('nat_gen','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
     ) ;
 reqt_quant('annual_cap',e,r,'ann',t)$[tmodel_new(t)$rb(r)] = emit_cap(e,t) * load_frac_rt(r,t) ;
 
+*We keep quantity of eq_loadcon in MW
+reqt_quant('eq_loadcon','na',r,allh,t)$[tmodel_new(t)$rb(r)$h_t(allh,t)] = LOAD.l(r,allh,t) ;
 
 load_rt(r,t)$[tmodel_new(t)$rb(r)] = sum{h, hours(h) * load_exog(r,h,t) } ;
 
@@ -804,7 +808,7 @@ stor_energy_cap(i,v,r,t)$[tmodel_new(t)$valcap(i,v,r,t)] =
 cc_all_out(i,v,r,ccseason,t)$tmodel_new(t) =
     cc_int(i,v,r,ccseason,t)$[(vre(i) or csp(i) or storage(i) or pvb(i))$valcap(i,v,r,t)] +
     m_cc_mar(i,r,ccseason,t)$[(vre(i) or csp(i) or storage(i) or pvb(i))$valinv(i,v,r,t)]+
-    m_cc_dr(i,r,ccseason,t)$[dr(i)$valinv(i,v,r,t)]
+    m_cc_dr(i,r,ccseason,t)$[demand_flex(i)$valinv(i,v,r,t)]
 ;
 
 cap_new_cc(i,r,ccseason,t)$[(vre(i) or storage(i) or pvb(i))$valcap_irt(i,r,t)] = sum{v$ivt(i,v,t),cap_new_ivrt(i,v,r,t) } ;
@@ -812,14 +816,14 @@ cap_new_cc(i,r,ccseason,t)$[(vre(i) or storage(i) or pvb(i))$valcap_irt(i,r,t)] 
 cc_new(i,r,ccseason,t)$[valcap_irt(i,r,t)$cap_new_cc(i,r,ccseason,t)] = sum{v$ivt(i,v,t), cc_all_out(i,v,r,ccseason,t) } ;
 
 cap_firm(i,r,ccseason,t)$[valcap_irt(i,r,t)$[not consume(i)]$tmodel_new(t)] =
-      sum{v$[(not vre(i))$(not hydro(i))$(not storage(i))$(not pvb(i))$(not dr(i))$valcap(i,v,r,t)],
+      sum{v$[(not vre(i))$(not hydro(i))$(not storage(i))$(not pvb(i))$(not demand_flex(i))$valcap(i,v,r,t)],
           CAP.l(i,v,r,t) * (1 + ccseason_cap_frac_delta(i,v,r,ccseason,t)) }
     + cc_old(i,r,ccseason,t)
     + sum{v$[(vre(i) or csp(i) or pvb(i))$valinv(i,v,r,t)],
          m_cc_mar(i,r,ccseason,t) * (INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb]) }
     + sum{v$[(vre(i) or csp(i) or pvb(i))$valcap(i,v,r,t)],
             cc_int(i,v,r,ccseason,t) * CAP.l(i,v,r,t) }
-    + sum{v$dr(i),
+    + sum{v$demand_flex(i),
             m_cc_dr(i,r,ccseason,t) * CAP.l(i,v,r,t) }
     + cc_excess(i,r,ccseason,t)$[(vre(i) or csp(i) or pvb(i))]
     + sum{(v,h)$[hydro_nd(i)$valgen(i,v,r,t)$h_ccseason_prm(h,ccseason)],
@@ -1057,8 +1061,12 @@ systemcost_techba("op_vom_costs",i,r,t)$[tmodel_new(t)$consume(i)] = 0 ;
 
 systemcost_techba("op_fom_costs",i,r,t)$tmodel_new(t)  =
 *fixed O&M costs for generation capacity
-              + sum{v$[valcap(i,v,r,t)],
+              + sum{v$[valcap(i,v,r,t)$((not one_newv(i)) or retiretech(i,v,r,t))],
                    cost_fom(i,v,r,t) * cap_ivrt(i,v,r,t) * ilr(i) }
+*for technologies with only one newv that are not allowed to retire,
+*use the investments rather than the capacity to calculate FOM costs
+              + sum{(v,tt)$[inv_cond(i,v,r,t,tt)$one_newv(i)$(not retiretech(i,v,r,tt))],
+                   INV.l(i,v,r,tt) * cost_fom(i,v,r,tt) * ilr(i) }
 ;
 
 systemcost_techba("op_consume_fom",i,r,t)$[tmodel_new(t)$consume(i)] = systemcost_techba("op_fom_costs",i,r,t)$tmodel_new(t) ;
@@ -1167,17 +1175,6 @@ systemcost_ba(sys_costs,r,t) = sum{i,systemcost_techba(sys_costs,i,r,t)} ;
 
 * REPLICATION OF THE OBJECTIVE FUNCTION
 
-systemcost_ba("inv_growth_penalty",r,t)$[tmodel_new(t)$(yeart(t)>=model_builds_start_yr)]  =
-*costs of growth penalties
-              sum{(gbin,i,st)
-                  $[valinv_irt(i,r,t)$stfeas(st)$r_st(r,st)
-                  $sum{(rr,h)$r_st(rr,st), reqt_quant('load','na',rr,h,t) * hours(h) }],
-                        cost_growth(i,st,t) * growth_penalty(gbin) * GROWTH_BIN.l(gbin,i,st,t)
-                        * sum{h, reqt_quant('load','na',r,h,t) * hours(h) }
-                        / sum{(rr,h)$r_st(rr,st), reqt_quant('load','na',rr,h,t) * hours(h) }
-                 }
-;
-
 systemcost_ba("inv_transmission_line_investment",r,t)$tmodel_new(t)  =
 *costs of transmission lines
               sum{(rr,trtype)$[routes(r,rr,trtype,t)$routes_inv(r,rr,trtype,t)],
@@ -1208,10 +1205,10 @@ systemcost_ba("op_transmission_intrazone_fom",r,t)$[tmodel_new(t)$Sw_TransIntraC
 ;
 
 systemcost_ba("inv_converter_costs",r,t)$tmodel_new(t)  =
-*cost of LCC AC/DC converter stations (each LCC DC line implicitly has two, one on each end of the line)
+* LCC and B2B AC/DC converter stations (each interface has two, one on either side of the interface)
               sum{(rr,trtype)$[lcclike(trtype)$routes_inv(r,rr,trtype,t)],
                   trans_cost_cap_fin_mult(t) * cost_acdc_lcc * 2 * INVTRAN.l(r,rr,trtype,t) }
-*cost of VSCC AC/DC converter stations
+* VSC AC/DC converter stations
               + trans_cost_cap_fin_mult(t) * cost_acdc_vsc * INV_CONVERTER.l(r,t)
 ;
 
@@ -1365,29 +1362,61 @@ raw_op_cost(t) = sum{sys_costs_op, systemcost(sys_costs_op,t) } ;
 * Error Check
 *======================
 
-error_check('z') = (z.l - sum{t$tmodel(t), cost_scale *
-                             (pvf_capital(t) * raw_inv_cost(t) + pvf_onm(t) * raw_op_cost(t))
-*minus small penalty to move storage into shorter duration bins
-                             - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$[storage(i) or hyd_add_pump(i)]], bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) }
-*minus retirement penalty
-                             - pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
-                                  cost_fom(i,v,r,t) * retire_penalty(t) * (CAP.l(i,v,r,t) - INV.l(i,v,r,t) - INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb]) }
-*minus revenue from purchases of curtailed VRE
-                             - pvf_onm(t) * sum{(r,h), CURT.l(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
-* Minus penalty cost for dropped load before Sw_StartMarkets
-                             - pvf_onm(t) * sum{(r,h), DROPPED.l(r,h,t) * hours(h) * cost_dropped_load }
-*Account for difference in fixed O&M between model (CAP.l(i,v,r,t)) and outputs (cap_ivrt(i,v,r,t) * ilr(i))
-                             + pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)], cost_fom(i,v,r,t) * (CAP.l(i,v,r,t) - cap_ivrt(i,v,r,t) * ilr(i)) }
-*Account for difference in capital costs of objective, which use cost_cap_fin_mult, and outputs, which use cost_cap_fin_mult_out
-                             + pvf_capital(t) * (
-                                   sum{(i,v,r)$[valinv(i,v,r,t)], cost_cap(i,t) * INV.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
-                                 + sum{(i,v,r)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades], cost_upgrade(i,v,r,t) * UPGRADES.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
-                                 + sum{(i,v,r,rscbin)$allow_cap_up(i,v,r,rscbin,t), cost_cap_up(i,v,r,rscbin,t) * INV_CAP_UP.l(i,v,r,rscbin,t) * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
-                                 + sum{(i,v,r,rscbin)$allow_ener_up(i,v,r,rscbin,t), cost_ener_up(i,v,r,rscbin,t) * INV_ENER_UP.l(i,v,r,rscbin,t) * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
-                                 + sum{(i,v,r)$[Sw_Refurb$valinv(i,v,r,t)$refurbtech(i)], cost_cap(i,t) * INV_REFURB.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
-                             )
-                            }
-)/z.l;
+error_check('z') = (
+    z.l
+    - sum{t$tmodel(t),
+        cost_scale * (pvf_capital(t) * raw_inv_cost(t) + pvf_onm(t) * raw_op_cost(t))
+* minus cost of growth penalties
+        - pvf_capital(t) * sum{(gbin,i,st)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)],
+              cost_growth(i,st,t) * growth_penalty(gbin) * GROWTH_BIN.l(gbin,i,st,t)
+              * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) })
+        }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthPenalties$(yeart(t)<=Sw_GrowthConLastYear)]
+* minus small penalty to move storage into shorter duration bins
+        - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$[storage(i) or hyd_add_pump(i)]],
+            bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) }
+* minus retirement penalty
+        - pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
+            cost_fom(i,v,r,t) * retire_penalty(t)
+            * (CAP.l(i,v,r,t) - INV.l(i,v,r,t) - INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb]) }
+* minus revenue from purchases of curtailed VRE
+        - pvf_onm(t) * sum{(r,h), CURT.l(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
+* minus penalty cost for dropped load before Sw_StartMarkets
+        - pvf_onm(t) * sum{(r,h), DROPPED.l(r,h,t) * hours(h) * cost_dropped_load }
+* Account for difference in fixed O&M between model (CAP.l(i,v,r,t))
+* and outputs (cap_ivrt(i,v,r,t) * ilr(i)) for techs with more than one newv
+        + pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$((not one_newv(i)) or retiretech(i,v,r,t))],
+            cost_fom(i,v,r,t) * (CAP.l(i,v,r,t) - cap_ivrt(i,v,r,t) * ilr(i)) }
+* Account for difference in fixed O&M between model (CAP.l(i,v,r,t))
+* and outputs (based on INV.l) for techs with more only one newv that cannot retire
+        + pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$(one_newv(i))$(not retiretech(i,v,r,t))],
+            cost_fom(i,v,r,t) * CAP.l(i,v,r,t)
+            - sum{(tt)$[inv_cond(i,v,r,t,tt)$(not retiretech(i,v,r,tt))],
+                INV.l(i,v,r,tt) * cost_fom(i,v,r,tt) * ilr(i) } }
+* Account for difference in capital costs of objective, which use cost_cap_fin_mult,
+* and outputs, which use cost_cap_fin_mult_out
+        + pvf_capital(t) * (
+              sum{(i,v,r)$[valinv(i,v,r,t)],
+                  cost_cap(i,t) * INV.l(i,v,r,t)
+                  * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
+
+            + sum{(i,v,r)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades],
+                  cost_upgrade(i,v,r,t) * UPGRADES.l(i,v,r,t)
+                  * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
+
+            + sum{(i,v,r,rscbin)$allow_cap_up(i,v,r,rscbin,t),
+                  cost_cap_up(i,v,r,rscbin,t) * INV_CAP_UP.l(i,v,r,rscbin,t)
+                  * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
+
+            + sum{(i,v,r,rscbin)$allow_ener_up(i,v,r,rscbin,t),
+                  cost_ener_up(i,v,r,rscbin,t) * INV_ENER_UP.l(i,v,r,rscbin,t)
+                  * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
+
+            + sum{(i,v,r)$[Sw_Refurb$valinv(i,v,r,t)$refurbtech(i)],
+                  cost_cap(i,t) * INV_REFURB.l(i,v,r,t)
+                  * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
+        )
+    }
+) / z.l ;
 
 *Round error_check for z because of small number differences that always show up due to machine rounding and tolerances
 error_check('z') = round(error_check('z'), 6) ;
@@ -1623,13 +1652,13 @@ h2_inout(h2_stor,r,h,t,"out")$[(Sw_H2=2)$tmodel_new(t)$h2_stor_r(h2_stor,r)]
     = H2_STOR_OUT.l(h2_stor,r,h,t) ;
 
 * H2 storage level
-h2_storage_level(h2_stor,r,allszn,h,t)
-    $[(Sw_H2=2)$tmodel_new(t)$h_actualszn(h,allszn)$h2_stor_r(h2_stor,r)]
-    = H2_STOR_LEVEL.l(h2_stor,r,allszn,h,t) ;
+h2_storage_level(h2_stor,r,actualszn,h,t)
+    $[(Sw_H2=2)$tmodel_new(t)$h_actualszn(h,actualszn)$h2_stor_r(h2_stor,r)]
+    = H2_STOR_LEVEL.l(h2_stor,r,actualszn,h,t) ;
 
-h2_storage_level_szn(h2_stor,r,allszn,t)
+h2_storage_level_szn(h2_stor,r,actualszn,t)
     $[(Sw_H2=2)$tmodel_new(t)$h2_stor_r(h2_stor,r)]
-    = H2_STOR_LEVEL_SZN.l(h2_stor,r,allszn,t) ;
+    = H2_STOR_LEVEL_SZN.l(h2_stor,r,actualszn,t) ;
 
 * transport flow between BAs
 h2_trans_flow(r,rr,h,t)

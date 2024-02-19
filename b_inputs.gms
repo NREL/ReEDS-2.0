@@ -37,9 +37,9 @@ option profiletol = 0
 
 * --- supress .lst file printing ---
 * equations listed per block
-option limrow = 0 ;
+option limrow = %debug% ;
 * variables listed per block
-option limcol = 0 ;
+option limcol = %debug% ;
 * solver's solution output printed
 option solprint = off ;
 * solver's system output printed
@@ -286,6 +286,7 @@ set
   dr(i)                "demand response technologies",
   dr1(i)               "demand response storage technologies",
   dr2(i)               "demand response shed technologies",
+  demand_flex(i)       "demand flexibility technologies (includes DR and EVMC)",
   dupv(i)              "dupv generation technologies",
   evmc(i)              "ev flexibility technologies",
   evmc_storage(i)      "ev flexibility as direct load control",
@@ -403,9 +404,6 @@ $onlisting
 Sets
 eall "emission categories used in reporting" /CO2, SO2, NOX, HG, CH4, CO2e/
 e(eall) "emission categories used in model" /CO2, SO2, NOX, HG, CH4/
-
-quarter "original h17 seasons (four per year)" /summ, fall, wint, spri/
-ccseason "seasons used for capacity credit; cold is Oct 15-April 14 and hot is April 15-Oct 14" /cold, hot/
 
 nercr "NERC regions"
 * https://www.nerc.com/pa/RAPA/ra/Reliability%20Assessments%20DL/NERC_LTRA_2021.pdf
@@ -856,6 +854,7 @@ distpv(i)$(not ban(i))              = yes$i_subsets(i,'distpv') ;
 dr(i)$(not ban(i))                  = yes$i_subsets(i,'dr') ;
 dr1(i)$(not ban(i))                 = yes$i_subsets(i,'dr1') ;
 dr2(i)$(not ban(i))                 = yes$i_subsets(i,'dr2') ;
+demand_flex(i)$(not ban(i))         = yes$i_subsets(i,'demand_flex') ;
 dupv(i)$(not ban(i))                = yes$i_subsets(i,'dupv') ;
 evmc(i)$(not ban(i))                = yes$i_subsets(i,'evmc') ;
 evmc_storage(i)$(not ban(i))        = yes$i_subsets(i,'evmc_storage') ;
@@ -1290,6 +1289,13 @@ parameter countnc(i,newv) "number of years in each newv set" ;
 
 *add 1 for each t item in the ct_corr set
 countnc(i,newv) = sum{t$ivt(i,newv,t),1} ;
+
+set one_newv(i) "technologies that only have one vintage for new plants" ;
+
+* Only one vintage is present if there is a new1 for that technology...
+one_newv(i)$[sum{t, ivt(i,"new1",t) }] = yes ;
+* ...and there are no entries other than new1 for that technology
+one_newv(i)$sum{(v,t)$[not sameas(v,"new1")], ivt(i,v,t) } = no ;
 
 *=====================================
 *--- basic parameter declarations ---
@@ -2732,10 +2738,10 @@ $offempty
 
 RecStates(RPSCat,st,t)$[RecPerc(RPSCat,st,t) or sum{ast, rectable(ast,st) }] = yes ;
 
-*if both states have an RPS for the RPSCat and if they're allowed to trade, they can trade
+*If both states have an RPS for the RPSCat and if they're allowed to trade, they can trade
 RecTrade(RPSCat,st,ast,t)$((rectable(ast,st)=1)$RecStates(RPSCat,ast,t)) = yes ;
 
-*if both states have an RPS for the RPSCat and if they're allowed to trade, they can trade
+*If both states have an RPS for the RPSCat and if they're allowed to trade, they can trade
 RecTrade("RPS_bundled",st,ast,t)$[(rectable(ast,st)=2)$RecStates("RPS_all",ast,t)] = yes ;
 RecTrade("CES_bundled",st,ast,t)$[(rectable(ast,st)=2)$RecStates("CES",ast,t)] = yes ;
 
@@ -2748,8 +2754,8 @@ RPSCat_i("RPS_Wind",i,st)$[wind(i)$(not techs_banned_rps(i,st))$valcap_i(i)] = y
 *Assign eligible techs for RPS_Solar
 RPSCat_i("RPS_Solar",i,st)$[(pv(i) or pvb(i))$(not techs_banned_rps(i,st))$valcap_i(i)] = yes ;
 
-* We allow CCS techs and upgrades to be elgible for CES policies
-* CCS contribution is limited based on the amount of emissions captured later on down
+*We allow CCS techs and upgrades to be eligible for CES policies
+*CCS contribution is limited based on the amount of emissions captured later on down
 RPSCat_i("CES",i,st)$[(RPSCAT_i("RPS_All",i,st) or nuclear(i) or hydro(i) or ccs(i) or canada(i))
                      $(not techs_banned_ces(i,st))
                      $valcap_i(i)] = yes ;
@@ -2763,8 +2769,11 @@ RecTech("CES_Bundled",i,st,t)$[RecTech("CES",i,st,t)] = yes ;
 *Voluntary market RECs can come from any RE tech
 RecTech(RPSCat,i,"voluntary",t)$re(i) = yes ;
 
-*remove combinations that are not allowed by valgen
+*Remove combinations that are not allowed by valgen
 RecTech(RPSCat,i,st,t)$[not sum{(v,r)$r_st_rps(r,st), valgen(i,v,r,t) }] = no ;
+
+*Remove CCS techs if explicitly disallowed
+RecTech(RPSCat,i,st,t)$[ccs(i)$Sw_CCS_NotRecTech] = no ;
 
 $onempty
 table hydrofrac_policy(st,RPSCat) "fraction of hydro RPS or CES credits that can count towards policy targets"
@@ -3983,6 +3992,10 @@ $onlisting
 cost_fom(i,newv,r,t)$[valcap(i,newv,r,t)$countnc(i,newv)] =
   sum{tt$ivt(i,newv,tt), plant_char(i,newv,tt,'fom')  } / countnc(i,newv) ;
 
+* If there is only one vintage, do not use the average over the vintages
+* Just use the new1 vintage data instead
+cost_fom(i,'new1',r,t)$[valcap(i,'new1',r,t)$one_newv(i)$plant_char(i,'new1',t,'fom')] = plant_char(i,'new1',t,'fom') ;
+
 * Assign hybrid PV+battery to have the same value as UPV
 parameter cost_fom_pvb_p(i,v,r,t) "--2004$/MW-yr-- fixed OM for the PV portion of hybrid PV+battery " ;
 cost_fom_pvb_p(i,v,r,t)$pvb(i) =  sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_fom(ii,v,r,t) } ;
@@ -4156,25 +4169,6 @@ fuel_price(i,r,t)$[h2_ct(i)$Sw_H2$(yeart(t)>=Sw_H2_Demand_Start)] = 0 ;
 
 
 
-*==============================================
-* --- Capacity Factors ---
-*==============================================
-
-
-
-*created by /input_processing/writecapdat.py
-$onempty
-parameter cf_hyd_quarter(i,quarter,r,allt) "--fraction-- hydro capacity factors by quarter"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%hydcf.csv
-$offdelim
-$onlisting
-/ ;
-$offempty
-
-
 *=====================================================
 * -- Climate impacts on nondispatchable hydropower --
 *=====================================================
@@ -4182,7 +4176,6 @@ $offempty
 $ifthen.climatehydro %GSw_ClimateHydro% == 1
 parameter climate_hydro_annual(r,allt)  "annual dispatchable hydropower availability" ;
 $endif.climatehydro
-
 
 *created by /input_processing/writecapdat.py
 parameter cap_hyd_quarter_adj(i,quarter,r) "--fraction-- quarterly max capacity adjustment for dispatchable hydro"
@@ -4957,12 +4950,12 @@ gaslimit_nat("gb1",t) = gaslimit_nat("gb1",t)
 *final category gets a huge bonus so we make sure we do not run out of gas
 gaslimit_nat(gb,t)$(ord(gb)=smax(gbb,ord(gbb))) = 5 * gaslimit_nat(gb,t) ;
 
-*Penalizing new gas built within cost recovery period of 20 years for states that
+*Penalizing new gas built within cost recovery period of 30 years for states that
 * require fossil plants to retire in some future model period.
-* This value is calculated as the ratio of CRF_X / CRF_20 where X is the number of
+* This value is calculated as the ratio of CRF_X / CRF_30 where X is the number of
 * years until the required retirement year.
 $onempty
-parameter ng_crf_penalty_st(allt,st) "--unitless-- cost adjustment for NG in Virginia because al NG techs must be retired by 2045"
+parameter ng_crf_penalty_st(allt,st) "--unitless-- cost adjustment for NG in states where all NG techs must be retired by a certain year"
 /
 $offlisting
 $ondelim
@@ -5129,6 +5122,7 @@ storage_eff(psh,t) = storage_eff_psh ;
 storage_eff("ICE",t) = 1 ;
 storage_eff(i,t)$[storage(i)$plant_char0(i,t,'rte')] = plant_char0(i,t,'rte') ;
 storage_eff(i,t)$[dr1(i)$plant_char0(i,t,'rte')] = plant_char0(i,t,'rte') ;
+storage_eff(i,t)$[evmc_storage(i)$plant_char0(i,t,'rte')] = plant_char0(i,t,'rte') ;
 storage_eff(i,t)$pvb(i) = storage_eff("battery_%GSw_pvb_dur%",t) ;
 
 parameter storage_eff_pvb_p(i,t) "--fraction-- efficiency of hybrid PV+battery when charging from the coupled PV"
@@ -5693,10 +5687,12 @@ m_rsc_dat(r,i,"bin1","cap")$[(m_rsc_dat(r,i,"bin1","cap") < m_capacity_exog(i,"i
                             $geo(i)] = m_capacity_exog(i,"init-1",r,"2010") ;
 
 *Ensure sufficient resource is available to cover prescribed builds for techs where sameas(i,pcat). These may be costless.
-*Include a 0.001 buffer because of rounding issues
+*Round values first to make sure we don't end up with small number issues (these will be rounded again later along with
+*other parameters)
+m_rsc_dat(r,i,rscbin,"cap")$m_rsc_dat(r,i,rscbin,"cap") = round(m_rsc_dat(r,i,rscbin,"cap"),3) ;
 m_rsc_dat(r,i,"bin1","cap")$[rsc_i(i)$sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) }
-      $(sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } < (sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) } + .001))] =
-  sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) } - sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } + m_rsc_dat(r,i,"bin1","cap") + 0.001 ;
+      $(sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } < sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) })] =
+  sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) } - sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } + m_rsc_dat(r,i,"bin1","cap") ;
 
 *Geothermal is not a tech with sameas(i,pcat), so handle it separately here
 *Loop over regions that have geothermal prescribed builds
@@ -5935,8 +5931,9 @@ Parameter
     hours_daily(allh)                      "--hours-- number of hours represented by time-slice 'h' during one day"
     numhours_nexth(allh,allh)              "--hours-- number of times hh follows h throughout year"
 * Mapping to quarters
+    frac_h_month_weights(allh,month)       "--unitless-- fraction of timeslice associated with each month"
     frac_h_quarter_weights(allh,quarter)   "--fraction-- fraction of timeslice associated with each quarter"
-    frac_h_ccseason_weights(allh,ccseason)   "--fraction-- fraction of timeslice associated with each ccseason"
+    frac_h_ccseason_weights(allh,ccseason) "--fraction-- fraction of timeslice associated with each ccseason"
     szn_quarter_weights(allszn,quarter)    "--fraction-- fraction of season associated with each quarter"
     szn_ccseason_weights(allszn,ccseason)  "--fraction-- fraction of season associated with each ccseason"
 * Capacity factor
@@ -5975,9 +5972,9 @@ Parameter
     dr_dec(i,r,allh)                       "--fraction-- average capacity factor for dr increase in load in timeslice h"
     allowed_shifts(i,allh,allh)            "how much load each dr type is allowed to shift into h from hh"
 * EVMC storage
-    evmc_storage_discharge_frac(i,r,allh,allt) "--fraction-- fraction of max discharge capacity available in in timeslice h"
-    evmc_storage_charge_frac(i,r,allh,allt)    "--fraction-- fraction of max charge capacity available in in timeslice h"
-    evmc_storage_store_frac(i,r,allh,allt)     "--fraction-- fraction of max energy storage capacity available in in timeslice h"
+    evmc_storage_discharge_frac(i,r,allh,allt) "--fraction-- fraction of adopted EV storage discharge capacity that can be discharged (deferred charging) in each timeslice h"
+    evmc_storage_charge_frac(i,r,allh,allt)    "--fraction-- fraction of adopted EV storage discharge capacity that can be charged (add back deferred charging) in each timeslice h"
+    evmc_storage_energy_hours(i,r,allh,allt)    "--hours-- Allowable EV storage SOC (quantity deferred EV charge) [MWh] divided by nameplate EVMC discharge capacity [MW]"
 * EVMC load
     evmc_baseline_load(r,allh,allt)        "--MW-- baseline electricity load from EV charging by timeslice h and year t"
     evmc_immediate_load(i,r,allh,allt)     "--MW-- immediate charging electricity load from EV charging by timeslice"
@@ -6037,3 +6034,4 @@ cost_fom(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
 heat_rate(i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
 m_capacity_exog(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
 emit_rate(e,i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
+

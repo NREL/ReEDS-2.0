@@ -1,0 +1,55 @@
+{
+  "shared": {
+    "compression_opts": 4,
+    "filetype": "h5",
+    "output_timezone": "local",
+    "select_year": 2012,
+    "start_1am": true
+  },
+
+  "resource": {
+    "bin_group_cols": ["region","class"],
+    "bin_method": "equal_cap_cut",
+    "class_bin_method": "kmeans",
+    "copy_to_reeds": true,
+    "copy_to_shared": false,
+    "driver": "H5FD_CORE",
+    "dtype": "np.float16",
+    "existing_sites": "{reedspath}/inputs/capacitydata/ReEDS_generator_database_final_EIA-NEMS.csv",
+    "gather_method": "smart",
+    "hourly_out_years": "{eval_list(range(2007,2014))}",
+    "inputfiles": ["reg_map_file", "class_path"],
+    "reg_col": "cnty_fips",
+    "reg_map_file": "{hourlizepath}/inputs/resource/county_map.csv",
+    "resource_source_timezone": 0, 
+    "rev_id_cols": ["sc_point_gid"],
+    "rev_paths_file": "{reedspath}/inputs/supplycurvedata/rev_paths.csv",
+    "start_year": 2010,
+    "state_abbrev": "{hourlizepath}/inputs/resource/state_abbrev.csv",
+    "subsetvars": ["tech", "access_case"],
+    "subtract_exog": false,
+    "test_filters": {"region":["p97", "p98"]},
+    "test_mode": false
+  },
+
+  "load": {
+    "aeo_default": "{reedspath}/inputs/loaddata/demand_AEO_2023_reference.csv",
+    "ba_frac_path":"{hourlizepath}/inputs/load/load_participation_factors_st_to_ba.csv",
+    "ba_timezone_path":"{hourlizepath}/inputs/load/ba_timezone.csv",
+    "calibrate_path":"{hourlizepath}/inputs/load/EIA_loadbystate.csv",
+    "calibrate_type":"one_year",
+    "calibrate_year":2010,
+    "dtypeLoad":"np.float32",
+    "hierarchy_path":"{reedspath}/inputs/hierarchy.csv",
+    "hourly_out_years": "{eval_list(range(2021,2051))}",
+    "hourly_process":true,
+    "inputfiles": ["ba_timezone_path", "calibrate_path", "ba_frac_path", "hierarchy_path", "aeo_default"],
+    "load_source_hr_type":"begin",
+    "load_source_timezone":-5,
+    "load_source": "{remotepath}/Supply_Curve_Data/LOAD/2020_Update/plexos_to_reeds/outputs/load_hourly_ba_EST.csv",
+    "truncate_leaps":true,
+    "us_only":true,
+    "use_default_before_yr":2021
+  }
+  
+}

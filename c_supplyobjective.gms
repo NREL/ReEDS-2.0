@@ -42,7 +42,7 @@ eq_ObjFn_inv(t)$tmodel(t)..
 * --- growth penalties ---
                   + sum{(gbin,i,st)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)],
                         cost_growth(i,st,t) * growth_penalty(gbin) * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) }) * GROWTH_BIN(gbin,i,st,t)
-                       }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthRelCon$(yeart(t)<=Sw_GrowthConLastYear)]
+                       }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthPenalties$(yeart(t)<=Sw_GrowthConLastYear)]
 
 * --- cost of upgrading---
                   + sum{(i,v,r)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades],
@@ -95,9 +95,9 @@ eq_ObjFn_inv(t)$tmodel(t)..
                   + sum{(r,rr,trtype)$routes_inv(r,rr,trtype,t),
                         trans_cost_cap_fin_mult(t) * transmission_line_capcost(r,rr,trtype) * INVTRAN(r,rr,trtype,t) }
 
-*cost of LCC AC/DC converter stations (each LCC DC line implicitly has two, one on each end of the line)
-                  + sum{(r,rr)$routes_inv(r,rr,"LCC",t),
-                        trans_cost_cap_fin_mult(t) * cost_acdc_lcc * 2 * INVTRAN(r,rr,"LCC",t) }
+* LCC and B2B AC/DC converter stations (each interface has two, one on either side of the interface)
+                  + sum{(r,rr,trtype)$[lcclike(trtype)$routes_inv(r,rr,trtype,t)],
+                        trans_cost_cap_fin_mult(t) * cost_acdc_lcc * 2 * INVTRAN(r,rr,trtype,t) }
 
 *cost of VSC AC/DC converter stations
                   + sum{r$rb(r),
@@ -167,7 +167,7 @@ eq_Objfn_op(t)$tmodel(t)..
               + sum{(r,rr,trtype)$routes(r,rr,trtype,t),
                     transmission_line_fom(r,rr,trtype) * CAPTRAN_ENERGY(r,rr,trtype,t) }
 
-* LCC AC/DC converter stations
+* LCC and B2B AC/DC converter stations
               + sum{(r,rr,trtype)$[lcclike(trtype)$routes(r,rr,trtype,t)],
                     cost_acdc_lcc * 2 * trans_fom_frac * CAPTRAN_ENERGY(r,rr,trtype,t) }
 
@@ -275,7 +275,7 @@ eq_Objfn_op(t)$tmodel(t)..
                               hours(h) * smr_capture_rate * smr_co2_intensity * PRODUCE(p,"smr_ccs",v,r,h,t) * CO2_storage_cost }$[Sw_H2$(not Sw_CO2_Detail)]
 
 * --cost of CO2 transport and storage from DAC--
-              + sum{(p,i,v,r,h)$[dac(i)$valcap(i,v,r,t)],
+              + sum{(p,i,v,r,h)$[dac(i)$valcap(i,v,r,t)$i_p(i,p)],
                               hours(h) * PRODUCE(p,i,v,r,h,t) * CO2_storage_cost }$[Sw_DAC$(not Sw_CO2_Detail)]
 
 * ---State RPS alternative compliance payments---
@@ -295,7 +295,7 @@ eq_Objfn_op(t)$tmodel(t)..
 * --- H2 transport network fixed OM costs (compute cumulative sum of investments to get total capacity)
                + sum{(r,rr)$h2_routes_inv(r,rr), cost_h2_transport_fom(r,rr,t) 
                               * sum{tt$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))],
-                                   H2_TRANSPORT_INV(r,rr,t) } }$(Sw_H2 = 2)
+                                   H2_TRANSPORT_INV(r,rr,t) } }$[Sw_H2 = 2]
 
 * --- H2 storage fixed OM costs (compute cumulative sum of investments to get total capacity)
                + sum{(h2_stor,r)$h2_stor_r(h2_stor,r),

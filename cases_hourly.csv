@@ -11,8 +11,4 @@ GSw_HourlyType,day,,wek,year,,wek,year,,wek,year,year,,
 GSw_HourlyNumClusters,33,,,,,,,,20,,,,
 GSw_OpRes,1,,,0,,,0,,,0,0,,
 GSw_HourlyWrapLevel,season,,,,,,,,,,,,
-GSw_HourlyPeakLevel,interconnect,,,,FALSE,FALSE,,,,,,FALSE,FALSE
-GSw_HourlyMinRElevel,interconnect,,,,FALSE,FALSE,,,,,,FALSE,FALSE
-GSw_PRM_StressSeedLoadLevel,FALSE,,,,interconnect,interconnect,,,,,,interconnect,interconnect
-GSw_PRM_StressSeedMinRElevel,FALSE,,,,interconnect,interconnect,,,,,,interconnect,interconnect
 GSw_PRM_CapCredit,1,,,,0,0,,,,,,0,0

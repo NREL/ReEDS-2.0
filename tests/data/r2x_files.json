@@ -129,11 +129,11 @@
     "mandatory": true
   },
   "technology_class": {
-    "fname": "v.csv",
     "column_mapping": {
-      "*": "tech_class"
+      "uni": "tech_class"
     },
-    "mandatory": true,
+    "fname": "v.csv",
+    "optional": true,
     "input": false
   },
   "years": {
@@ -360,7 +360,7 @@
       "region",
       "season"
     ],
-    "mandatory": true,
+    "mandatory": false,
     "input": true
   },
   "hydro_min_gen": {

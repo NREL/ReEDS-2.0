@@ -20,7 +20,7 @@ positive variables
 
 * capacity and investment variables
   CAP_SDBIN(i,v,r,ccseason,sdbin,t) "--MW-- generation capacity by storage duration bin for relevant technologies"
-  CAP(i,v,r,t)                     "--MW-- total generation capacity in MWac (MWdc for PV); PV capacity of hybrid PV+battery"
+  CAP(i,v,r,t)                     "--MW-- total generation capacity in MWac (MWdc for PV); PV capacity of hybrid PV+battery; max native, flexible EV load for EVMC"
   CAP_RSC(i,v,r,rscbin,t)          "--MW-- total generation capacity in MWac (MWdc for PV) for wind-ons and upv"
   GROWTH_BIN(gbin,i,st,t)          "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
   INV(i,v,r,t)                     "--MW-- generation capacity add in year t"
@@ -100,8 +100,8 @@ positive variables
   H2_STOR_CAP(h2_stor,r,t)              "--tonnes-- hydrogen storage capacity"
   H2_STOR_IN(h2_stor,r,allh,t)          "--tonnes/hour-- injection of H2 into storage in a given timeslice"
   H2_STOR_OUT(h2_stor,r,allh,t)         "--tonnes/hour-- widthdrawal of H2 from storage in a given timeslice"
-  H2_STOR_LEVEL(h2_stor,r,allszn,allh,t) "--tonnes-- total storage level of H2 in a timeslice by storage type"
-  H2_STOR_LEVEL_SZN(h2_stor,r,allszn,t)  "--tonnes-- total storage level of H2 in a period by storage type"
+  H2_STOR_LEVEL(h2_stor,r,actualszn,allh,t) "--tonnes-- total storage level of H2 in a timeslice by storage type"
+  H2_STOR_LEVEL_SZN(h2_stor,r,actualszn,t)  "--tonnes-- total storage level of H2 in a period by storage type"
 
 * water climate variables
   WATCAP(i,v,r,t)                        "--million gallons/year; Mgal/yr-- total water access capacity available in terms of withdraw/consumption per year"
@@ -226,10 +226,10 @@ EQUATION
  eq_h2_storage_flowlimit(h2_stor,r,allh,t)            "--tonne/hour-- H2 storage injection or withdrawal cannot exceed cumulative storage investment"
  eq_h2_storage_capacity(h2_stor,r,t)                  "--tonnes-- H2 storage capacity is sum of H2 storage investments"
  eq_h2_min_storage_cap(r,t)                           "--tonnes-- H2 storage capacity must be ≥ Sw_H2_MinStorHours * H2 usage capacity"
- eq_h2_storage_caplimit(h2_stor,r,allszn,allh,t)      "--tonnes-- total H2 storage in a storage facility cannot exceed investment capacity"
- eq_h2_storage_level(h2_stor,r,allszn,allh,t)         "--tonnes-- tracks H2 storage level by storage type and BA within and across periods"
- eq_h2_storage_caplimit_szn(h2_stor,r,allszn,t)       "--tonnes-- total H2 storage in a storage facility cannot exceed investment capacity"
- eq_h2_storage_level_szn(h2_stor,r,allszn,t)          "--tonnes-- tracks H2 storage level by storage type and BA within and across periods"
+ eq_h2_storage_caplimit(h2_stor,r,actualszn,allh,t)   "--tonnes-- total H2 storage in a storage facility cannot exceed investment capacity"
+ eq_h2_storage_level(h2_stor,r,actualszn,allh,t)      "--tonnes-- tracks H2 storage level by storage type and BA within and across periods"
+ eq_h2_storage_caplimit_szn(h2_stor,r,actualszn,t)    "--tonnes-- total H2 storage in a storage facility cannot exceed investment capacity"
+ eq_h2_storage_level_szn(h2_stor,r,actualszn,t)       "--tonnes-- tracks H2 storage level by storage type and BA within and across periods"
 
 * CO2 capture and storage
  eq_co2_capture(r,allh,t)                    "--tonne-- accounting of CO2 captured from DAC and CCS technologies"
@@ -328,16 +328,16 @@ eq_loadcon(r,h,t)$[rb(r)$tmodel(t)]..
 *[plus] load from EV charging (baseline/unmanaged)
     + evmc_baseline_load(r,h,t)$Sw_EVMC
 
-*[plus] shifted load from adopted EVMC
+*[plus] shifted load from adopted EVMC shape resources
     + sum{(i,v)$[evmc_shape(i)$valcap(i,v,r,t)], evmc_shape_load(i,r,h) * CAP(i,v,r,t)}
 
 *[plus] load shifted from other timeslices
     + sum{flex_type, FLEX(flex_type,r,h,t) }$Sw_EFS_flex
 
-*[plus] Load created by production activities
+*[plus] Load created by production activities - only tracked during weighted (non-stress) hours
 * [tonne/hour] / [tonne/MWh] = [MW]
     + sum{(p,i,v)$[consume(i)$valcap(i,v,r,t)$i_p(i,p)$(not sameas(i,"dac_gas"))],
-          PRODUCE(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) }$Sw_Prod
+          PRODUCE(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) }$[Sw_Prod$hours(h)]
 
 *[plus] load for compressors associated with hydrogen storage injections or withdrawals
 * tonnes/hour * MWh/tonnes = MW
@@ -762,7 +762,7 @@ eq_forceprescription(pcat,r,t)$[tmodel(t)$force_pcat(pcat,t)$Sw_ForcePrescriptio
 eq_refurblim(i,r,t)$[tmodel(t)$refurbtech(i)$Sw_Refurb]..
 
 *investments that meet the refurbishment requirement (i.e. they've expired)
-    sum{(vv,tt)$[m_refurb_cond(i,vv,r,t,tt)$(tmodel(tt) or tfix(tt))],
+    sum{(vv,tt)$[m_refurb_cond(i,vv,r,t,tt)$(tmodel(tt) or tfix(tt))$valinv(i,vv,r,tt)],
          INV(i,vv,r,tt) }
 
 *[plus] exogenous decay in capacity
@@ -777,7 +777,7 @@ eq_refurblim(i,r,t)$[tmodel(t)$refurbtech(i)$Sw_Refurb]..
 *must exceed the total sum of investments in refurbishments
 *that have yet to expire - implying an investment can be refurbished more than once
 *if the first refurbishment has exceed its age limit
-    sum{(vv,tt)$[inv_cond(i,vv,r,t,tt)$(tmodel(tt) or tfix(tt))],
+    sum{(vv,tt)$[inv_cond(i,vv,r,t,tt)$(tmodel(tt) or tfix(tt))$valinv(i,vv,r,tt)],
          INV_REFURB(i,vv,r,tt)
        }
 ;
@@ -833,7 +833,7 @@ eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)$rsc_i(i)$m_rscfeas(r,i,rscbin)$m_rsc_con(
 eq_growthlimit_relative(i,st,t)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }
                                 $tmodel(t)
                                 $stfeas(st)
-                                $Sw_GrowthRelCon
+                                $Sw_GrowthPenalties
                                 $(yeart(t)<=Sw_GrowthConLastYear)
                                 $(yeart(t)>=model_builds_start_yr)]..
 
@@ -851,7 +851,7 @@ eq_growthlimit_relative(i,st,t)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }
 eq_growthbin_limit(gbin,st,tg,t)$[valinv_tg(st,tg,t)
                                  $tmodel(t)
                                  $stfeas(st)
-                                 $Sw_GrowthRelCon
+                                 $Sw_GrowthPenalties
                                  $(yeart(t)<=Sw_GrowthConLastYear)
                                  $(yeart(t)>=model_builds_start_yr)]..
 
@@ -957,11 +957,11 @@ eq_spur_noclip(x,t)
 *this constraint does not apply to storage nor hybrid PV+Battery
 *  limits for storage (including storage of hybrid PV+Battery) are tracked in eq_storage_capacity
 *  limits for PV of Hybrid PV+Battery are tracked in eq_pvb_energy_balance
-* limits for hybrid techs with shared spur lines are treated in eq_capacity_limit_hybrid
+*  limits for hybrid techs with shared spur lines are treated in eq_capacity_limit_hybrid
 eq_capacity_limit(i,v,r,h,t)
     $[tmodel(t)$valgen(i,v,r,t)
     $(not spur_techs(i))
-    $(not storage_standalone(i))$(not pvb(i))$(not nondispatch(i))$(not evmc_storage(i))]..
+    $(not storage_standalone(i))$(not pvb(i))$(not nondispatch(i))]..
     
 *total amount of dispatchable, non-hydro capacity
     avail(i,h)$[dispatchtech(i)$(not hydro_d(i))]
@@ -1237,7 +1237,7 @@ eq_supply_demand_balance(r,h,t)$[rb(r)$tmodel(t)]..
     - (CONVERSION(r,h,"AC","VSC",t) / converter_efficiency_vsc)$[Sw_VSC$val_converter(r,t)]
 
 * [minus] storage charging; not Hybrid PV+Battery
-    - sum{(i,v)$[valcap(i,v,r,t)$(storage_standalone(i) or hyd_add_pump(i) or evmc_storage(i))], STORAGE_IN(i,v,r,h,t) }
+    - sum{(i,v)$[valcap(i,v,r,t)$(storage_standalone(i) or hyd_add_pump(i))], STORAGE_IN(i,v,r,h,t) }
 
 * [minus] energy into storage for hybrid pv+battery from grid
     - sum{(i,v)$[valcap(i,v,r,t)$pvb(i)], STORAGE_IN_PVB_G(i,v,r,h,t) }$Sw_PVB
@@ -1322,7 +1322,7 @@ eq_ramping(i,v,r,h,hh,t)
 *ORPRES for storage is limited by the storage capacity per the constraint "eq_storage_capacity"
 eq_ORCap_large_res_frac(ortype,i,v,r,h,t)
     $[tmodel(t)$valgen(i,v,r,t)$Sw_OpRes$opres_model(ortype)$opres_h(h)
-    $(reserve_frac(i,ortype)>0.5)$(not storage_standalone(i))$(not hyd_add_pump(i))$(not evmc_storage(i))]..
+    $(reserve_frac(i,ortype)>0.5)$(not storage_standalone(i))$(not hyd_add_pump(i))]..
 
 *the reserve_frac times...
     reserve_frac(i,ortype) * (
@@ -1511,8 +1511,8 @@ eq_reserve_margin(r,ccseason,t)$[rb(r)$tmodel(t)$(yeart(t)>=model_builds_start_y
     + sum{(i,v,sdbin)$[storage_hybrid(i)$(not csp(i))$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
           cc_storage(i,sdbin) * hybrid_cc_derate(i,r,ccseason,sdbin,t) * CAP_SDBIN(i,v,r,ccseason,sdbin,t)
          }
-*[plus] firm capacity contribution from all DR
-    + sum{(i,v)$[dr(i)$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
+*[plus] firm capacity contribution from all demand flexibility
+    + sum{(i,v)$[demand_flex(i)$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
           m_cc_dr(i,r,ccseason,t) * CAP(i,v,r,t)
          }
 
@@ -2501,7 +2501,7 @@ eq_biousedlimit(bioclass,usda_region,t)$tmodel(t)..
 
 *storage use cannot exceed capacity
 *this constraint does not apply to CSP+TES or hydro pump upgrades
-eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)$(storage_standalone(i) or pvb(i))$tmodel(t) or evmc_storage(i)]..
+eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)$(storage_standalone(i) or pvb(i))$tmodel(t)]..
 
 * [plus] Capacity of all storage technologies
     (CAP(i,v,r,t) * bcr(i) * avail(i,h)
@@ -2510,15 +2510,15 @@ eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)$(storage_standalone(i) or pvb(i)
 
     =g=
 
-* [plus] Generation from storage, excluding hybrid PV+Battery
-    GEN(i,v,r,h,t)$(not pvb(i))
+* [plus] Generation from storage, excluding hybrid PV+Battery and adjusting evmc_storage for time-varying discharge (deferral) availability
+    GEN(i,v,r,h,t)$(not pvb(i)) / (1$(not evmc_storage(i)) + evmc_storage_discharge_frac(i,r,h,t)$evmc_storage(i))
 
 * [plus] Generation from battery of hybrid PV+Battery
     + GEN_PVB_B(i,v,r,h,t)$[pvb(i)$Sw_PVB]
 
 * [plus] Storage charging
-* not hybrid PV+Battery
-    + STORAGE_IN(i,v,r,h,t)$[not pvb(i)]
+* not hybrid PV+Battery and adjusting evmc_storage for time-varying charge (add back deferred EV load) availability
+    + STORAGE_IN(i,v,r,h,t)$[not pvb(i)] / (1$(not evmc_storage(i)) + evmc_storage_charge_frac(i,r,h,t)$evmc_storage(i))
 * hybrid PV+Battery: PV
     + STORAGE_IN_PVB_P(i,v,r,h,t)$[pvb(i)$dayhours(h)$Sw_PVB]
 * hybrid PV+Battery: Grid
@@ -2557,7 +2557,7 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r)
 *[plus] storage charging
     + storage_eff(i,t) *  hours_daily(h) * (
 *energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
-          STORAGE_IN(i,v,r,h,t)$[storage_standalone(i) or hyd_add_pump(i) or evmc_storage(i)]
+          STORAGE_IN(i,v,r,h,t)$[storage_standalone(i) or hyd_add_pump(i)]
 
 *energy into storage from CSP field
         + (CAP(i,v,r,t) * csp_sm(i) * m_cf(i,v,r,h,t)
@@ -2580,7 +2580,7 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r)
 *exclude hybrid PV+Battery because GEN refers to output from both the PV and the battery
     - hours_daily(h) * GEN(i,v,r,h,t)$[not pvb(i)]
 
-*[minus] Generation from Battery (dicharge) of hybrid PV+Battery
+*[minus] Generation from Battery (discharge) of hybrid PV+Battery
     - hours_daily(h) * GEN_PVB_B(i,v,r,h,t) $[pvb(i)$Sw_PVB]
 
 *[minus] losses from reg reserves (only half because only charging half
@@ -2602,7 +2602,7 @@ eq_storage_seas(i,v,r,t)
 *[plus] annual storage charging
         storage_eff(i,t) * hours(h) * (
 *energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
-           STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i) or evmc_storage(i))
+           STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i))
 
 *** vvv within_seas_frac(i,v,r) is 1 for all techs besides PSH and dispatchable hydro,
 *** so these lines are never executed
@@ -2650,7 +2650,7 @@ eq_storage_seas_szn(i,v,r,szn,t)
     sum{h$h_szn(h,szn),
         storage_eff(i,t) * hours(h) *
 *energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
-        (   STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i) or evmc_storage(i))
+        (   STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i))
 
 *** vvv within_seas_frac(i,v,r) is 1 for all techs besides PSH and dispatchable hydro,
 *** so these lines are never executed
@@ -2679,7 +2679,7 @@ eq_storage_seas_szn(i,v,r,szn,t)
 *there must be sufficient energy in storage to provide operating reserves
 eq_storage_opres(i,v,r,h,t)
     $[valgen(i,v,r,t)$tmodel(t)$Sw_OpRes$opres_h(h)
-    $(storage_standalone(i) or pvb(i) or hyd_add_pump(i) or evmc_storage(i))]..
+    $(storage_standalone(i) or pvb(i) or hyd_add_pump(i))]..
 
 *[plus] initial storage level
     STORAGE_LEVEL(i,v,r,h,t)
@@ -2726,7 +2726,10 @@ eq_storage_duration(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)
                                $tmodel(t)]..
 
 * [plus] storage duration times storage capacity
-    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + 1$evmc_storage(i) + bcr(i)$(battery(i) or pvb(i)))
+    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$(battery(i) or pvb(i)))
+
+* [plus] EVMC storage has time-varying energy capacity
+    + evmc_storage_energy_hours(i,r,h,t) * CAP(i,v,r,t) * (bcr(i)$evmc_storage(i))
 
     =g=
 
@@ -2742,9 +2745,11 @@ eq_storage_in_cap(i,v,r,h,t)$[(storage_standalone(i) or hyd_add_pump(i))$valgen(
                               $tmodel(t)$(storinmaxfrac(i,v,r) < 1)]..
 
 *[plus] maximum storage input capacity as a fraction of output capacity and accounting for availability
+* for evmc_storage this adjust for time-varying availability of charging (add back deferred EV load)
     avail(i,h) * storinmaxfrac(i,v,r)
     * CAP(i,v,r,t)
     * (1 + sum{szn, h_szn(h,szn) * seas_cap_frac_delta(i,v,r,szn,t)})
+    * (1$(not evmc_storage(i)) + evmc_storage_charge_frac(i,r,h,t)$evmc_storage(i))
 
     =g=
 
@@ -3021,7 +3026,12 @@ eq_water_use_limit(i,v,w,r,szn,t)$[i_water_cooling(i)$valgen(i,v,r,t)$tmodel(t)
 
 * ---------------------------------------------------------------------------
 
-eq_prod_capacity_limit(i,v,r,h,t)$[tmodel(t)$consume(i)$valcap(i,v,r,t)$Sw_Prod]..
+eq_prod_capacity_limit(i,v,r,h,t)
+    $[tmodel(t)
+    $consume(i)
+    $valcap(i,v,r,t)
+    $Sw_Prod
+    $hours(h)]..
 
 * available capacity [times] the conversion rate of tonne / MW
     CAP(i,v,r,t) * avail(i,h)
@@ -3066,17 +3076,17 @@ eq_h2_demand_regional(r,h,t)
         PRODUCE(p,i,v,r,h,t) }
     
 * net hydrogen trade with imports reduced by H2 transmission losses
-    + sum(rr$h2_routes(rr,r), H2_FLOW(rr,r,h,t)) * (1 - h2_tranloss)
-    - sum(rr$h2_routes(r,rr), H2_FLOW(r,rr,h,t))
+    + sum{rr$h2_routes(rr,r), H2_FLOW(rr,r,h,t) } * (1 - h2_tranloss)
+    - sum{rr$h2_routes(r,rr), H2_FLOW(r,rr,h,t) }
         
 * net storage injections / withdrawls in a BA
-    + sum(h2_stor, H2_STOR_OUT(h2_stor,r,h,t)$[h2_stor_r(h2_stor,r)])
-    - sum(h2_stor, H2_STOR_IN(h2_stor,r,h,t)$[h2_stor_r(h2_stor,r)])
+    + sum{h2_stor$h2_stor_r(h2_stor,r), H2_STOR_OUT(h2_stor,r,h,t) }
+    - sum{h2_stor$h2_stor_r(h2_stor,r), H2_STOR_IN(h2_stor,r,h,t) }
 
     =g=
 
 * annual demand in [tonnes/hour]
-    sum(p, h2_exogenous_demand_regional(r,p,h,t) )
+    sum{p, h2_exogenous_demand_regional(r,p,h,t) }
 
 * region-specific H2 consumption from H2-CTs
 * [MW] * [tonne/MMBtu] * [MMBtu/MWh] = [tonnes/hour]
@@ -3179,8 +3189,12 @@ eq_h2_min_storage_cap(r,t)$[tmodel(t)$(Sw_H2=2)$Sw_H2_MinStorHours]..
 
 * H2 storage investment capacity
 * [tonnes/hour]
-eq_h2_storage_flowlimit(h2_stor,r,h,t)$[h2_stor_r(h2_stor,r)$(yeart(t)>=Sw_H2_Demand_Start)
-                                     $tmodel(t)$(Sw_H2=2)]..
+eq_h2_storage_flowlimit(h2_stor,r,h,t)
+    $[tmodel(t)
+    $(Sw_H2=2)
+    $h2_stor_r(h2_stor,r)
+    $(yeart(t)>=Sw_H2_Demand_Start)
+    $hours(h)]..
 
 *storage capacity computed as cumulative investments of H2 storage up to the current year
 *H2 storage costs estimated for a fixed duration, so using this to link storage capacity and injection rates
@@ -3237,7 +3251,12 @@ eq_h2_storage_caplimit_szn(h2_stor,r,actualszn,t)
 *=================================
 
 
-eq_co2_capture(r,h,t)$[rb(r)$tmodel(t)$Sw_CO2_Detail$(yeart(t)>=co2_detail_startyr)]..
+eq_co2_capture(r,h,t)
+    $[rb(r)
+    $tmodel(t)
+    $Sw_CO2_Detail
+    $(yeart(t)>=co2_detail_startyr)
+    $hours(h)]..
 
     CO2_CAPTURED(r,h,t)
 

@@ -1,6 +1,6 @@
 *** https://www.gams.com/latest/docs/S_CPLEX.html
 *** threads (integer): global default thread count
-threads = 4
+threads = 8
 
 *** lpmethod (integer): algorithm to be used for LP problems [4 = barrier]
 lpmethod = 4

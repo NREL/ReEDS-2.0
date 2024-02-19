@@ -24,7 +24,7 @@ distloss,0.05,"--fraction-- distribution loss rate from bus to final consumption
 dupv_cost_cap_mult,1.29,"--fraction-- price premium for dupv over upv. Cost premium is the ratio of the 5 MW system cost to the 100 MW system cost from figure 28 of the U.S. Solar PV System Cost Benchmark: Q1 2018 (https://www.nrel.gov/docs/fy19osti/72399.pdf)"
 euros_dollar,1.124,"--USD/Euro-- dollars per euro exchange rate from treasury department (https://fiscal.treasury.gov/files/reports-statements/treasury-reporting-rates-exchange/ratesofexchangeasofdecember312019.pdf)"
 firstyear_trans_nearterm,2023,"first year transmission expansion within Sw_TransInvMaxNearterm is allowed"
-firstyear_trans_longterm,2028,"first year transmission expansion within Sw_TransInvMaxLongterm is allowed"
+firstyear_trans_longterm,2032,"first year transmission expansion within Sw_TransInvMaxLongterm is allowed (assuming 8 years for planning + construction based on MISO LRTP 2022 https://www.misoenergy.org/meet-miso/media-center/2022/miso-board-approves-$10.3-in-transmission-projects)"
 firstyearmin,2025,"first year capacity can be built"
 gas_elasticity,0.76,"--fraction-- gas supply curve elasticity. long run price elasticity as estimated by: https://www.diw.de/documents/publikationen/73/diw_01.c.441773.de/dp1372.pdf"
 gas_scale,1000000,"--unitless-- conversion factor for gas-related parameters to help in scaling the problem"

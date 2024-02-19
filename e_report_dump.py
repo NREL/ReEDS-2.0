@@ -13,15 +13,7 @@ import sys
 # Third-party packages
 import numpy as np
 import pandas as pd
-
-
-# Note this will allow us the new gams once it is widely available.
-try:
-    import gams.transfer as gt
-
-    gams_test = gt.Container()
-except (AttributeError, ModuleNotFoundError):
-    import gdxpds
+import gdxpds
 
 
 #%% Generic functions
@@ -34,7 +26,7 @@ def get_dtype(col):
         return "category"
 
 
-def dfdict_to_csv(dfdict, filepath, symbol_list=None, rename=dict()):
+def dfdict_to_csv(dfdict, filepath, symbol_list=None, rename=dict(), decimals=6):
     """
     Write dictionary of dataframes to individual .csv files
 
@@ -54,7 +46,7 @@ def dfdict_to_csv(dfdict, filepath, symbol_list=None, rename=dict()):
                 if "gdxpds" not in sys.modules
                 else dfdict[symbol]
             )
-        except:
+        except Exception:
             print(f"Missing {symbol} in gdx, skipping.")
             continue
 
@@ -70,7 +62,7 @@ def dfdict_to_csv(dfdict, filepath, symbol_list=None, rename=dict()):
         if df_out is None:
             df_out = pd.DataFrame()
 
-        df_out.to_csv(os.path.join(filepath, f"{file_out}.csv"), index=False)
+        df_out.round(decimals).to_csv(os.path.join(filepath, f"{file_out}.csv"), index=False)
 
 
 def dfdict_to_h5(
@@ -341,14 +333,9 @@ if __name__ == '__main__':
     # %%### Write results for each gdx file
     ### outputs gdx
     print("Loading outputs gdx")
-    if "gdxpds" not in sys.modules:
-        dict_out = gt.Container(
-            os.path.join(outpath, f"rep_{os.path.basename(runname)}.gdx")
-        ).data
-    else:
-        dict_out = gdxpds.to_dataframes(
-            os.path.join(outpath, f"rep_{os.path.basename(runname)}.gdx")
-        )
+    dict_out = gdxpds.to_dataframes(
+        os.path.join(outpath, f"rep_{os.path.basename(runname)}.gdx")
+    )
     print("Finished loading outputs gdx")
 
     write_dfdict(
@@ -380,7 +367,7 @@ if __name__ == '__main__':
         dfout_month = timestamp_to_month(dfin_timestamp)
         dfout_month.rename(columns={'Value':'$2004/kg'}).to_csv(
             os.path.join(outpath, 'h2_price_month.csv'), index=False)
-    except Exception as err:
+    except Exception:
         if int(sw.GSw_H2):
             print(traceback.format_exc())
 

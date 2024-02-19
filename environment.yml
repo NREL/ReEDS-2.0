@@ -49,3 +49,4 @@ dependencies:
     - python-pptx==0.6.22 # for postprocessing/compare_cases.py
     - shapely==2.0.1 # for plotting maps
     ### ^^^
+    - gamspy_base==45.7.0 # for running automated tests

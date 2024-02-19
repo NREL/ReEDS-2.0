@@ -153,6 +153,12 @@ if __name__ == '__main__':
         os.path.join(reeds_path,'inputs','demand_response',f'evmc_shape_decrease_profile_{sw.evmcscen}.h5'))
     evmc_shape_profile_increase = pd.read_hdf(
         os.path.join(reeds_path,'inputs','demand_response',f'evmc_shape_increase_profile_{sw.evmcscen}.h5'))
+    evmc_storage_profile_decrease = pd.read_hdf(
+        os.path.join(reeds_path,'inputs','demand_response',f'evmc_storage_decrease_profile_{sw.evmcscen}.h5'))
+    evmc_storage_profile_increase = pd.read_hdf(
+        os.path.join(reeds_path,'inputs','demand_response',f'evmc_storage_increase_profile_{sw.evmcscen}.h5'))
+    evmc_storage_energy = pd.read_hdf(
+        os.path.join(reeds_path,'inputs','demand_response',f'evmc_storage_energy_{sw.evmcscen}.h5'))
 
     ### Filter by regions
     val_r_all = pd.read_csv(
@@ -165,6 +171,12 @@ if __name__ == '__main__':
         evmc_shape_profile_decrease.loc[:,evmc_shape_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
     evmc_shape_profile_increase = (
         evmc_shape_profile_increase.loc[:,evmc_shape_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
+    evmc_storage_profile_decrease = (
+        evmc_storage_profile_decrease.loc[:,evmc_storage_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
+    evmc_storage_profile_increase = (
+        evmc_storage_profile_increase.loc[:,evmc_storage_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
+    evmc_storage_energy = (
+        evmc_storage_energy.loc[:,evmc_storage_energy.columns.isin(['i','hour','year'] + val_r_all)])
 
 
     dr_shed[['dr_type', 'yr_hrs']].to_csv(
@@ -178,6 +190,12 @@ if __name__ == '__main__':
         os.path.join(inputs_case,'evmc_shape_profile_decrease.csv'),index=False)
     evmc_shape_profile_increase.to_csv(
         os.path.join(inputs_case,'evmc_shape_profile_increase.csv'),index=False)
+    evmc_storage_profile_decrease.to_csv(
+        os.path.join(inputs_case,'evmc_storage_profile_decrease.csv'),index=False)
+    evmc_storage_profile_increase.to_csv(
+        os.path.join(inputs_case,'evmc_storage_profile_increase.csv'),index=False)
+    evmc_storage_energy.to_csv(
+        os.path.join(inputs_case,'evmc_storage_energy.csv'),index=False)
 
     # Copy DR types
     shutil.copy(

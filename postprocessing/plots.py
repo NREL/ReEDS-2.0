@@ -64,33 +64,38 @@ def plotparams():
     plt.rcParams['ytick.minor.size'] = 2.5 # default 2
 
 
-def get_latlonlabels(df, latlonlabels=None, columns=None):
-    if latlonlabels is not None:
-        latlabel, lonlabel = latlonlabels[0], latlonlabels[1]
+def get_latlonlabels(df, lat=None, lon=None, columns=None):
+    """Try to find latitude and longitude column names in a dataframe"""
+    ### Specify candidate column names to look for
+    lat_candidates = ['latitude', 'lat']
+    lon_candidates = ['longitude', 'lon', 'long']
     if columns is None:
         columns = df.columns
-        
-    if ('latitude' in columns) and ('longitude' in columns):
-        latlabel, lonlabel = 'latitude', 'longitude'
-    elif ('Latitude' in columns) and ('Longitude' in columns):
-        latlabel, lonlabel = 'Latitude', 'Longitude'
-    elif ('LATITUDE' in columns) and ('LONGITUDE' in columns):
-        latlabel, lonlabel = 'LATITUDE', 'LONGITUDE'
-    elif ('lat' in columns) and ('lon' in columns):
-        latlabel, lonlabel = 'lat', 'lon'
-    elif ('Lat' in columns) and ('Lon' in columns):
-        latlabel, lonlabel = 'Lat', 'Lon'
-    elif ('lat' in columns) and ('long' in columns):
-        latlabel, lonlabel = 'lat', 'long'
-    elif ('Lat' in columns) and ('Long' in columns):
-        latlabel, lonlabel = 'Lat', 'Long'
+
+    latlabel = None
+    lonlabel = None
+
+    if lat is not None:
+        latlabel = lat
+    else:
+        for col in columns:
+            if col.lower().strip() in lat_candidates:
+                latlabel = col
+                break
+
+    if lon is not None:
+        lonlabel = lon
+    else:
+        for col in columns:
+            if col.lower().strip() in lon_candidates:
+                lonlabel = col
+                break
     
     return latlabel, lonlabel
 
 
-def df2gdf(dfin, crs='ESRI:102008'):
-    """
-    """
+def df2gdf(dfin, crs='ESRI:102008', lat=None, lon=None):
+    """Convert a pandas dataframe with lat/lon columns to a geopandas dataframe of points"""
     ### Imports
     import os
     import geopandas as gpd
@@ -99,7 +104,7 @@ def df2gdf(dfin, crs='ESRI:102008'):
 
     ### Convert
     df = dfin.copy()
-    latlabel, lonlabel = get_latlonlabels(df)
+    latlabel, lonlabel = get_latlonlabels(df, lat=lat, lon=lon)
     df['geometry'] = df.apply(
         lambda row: shapely.geometry.Point(row[lonlabel], row[latlabel]), axis=1)
     df = gpd.GeoDataFrame(df, crs='EPSG:4326').to_crs(crs)
@@ -328,7 +333,7 @@ def addcolorbarhist(
     ### Vertical orientation
     elif orientation in ['vertical', 'vert', 'v', None]:
         caxleft = ax0width + ax0x0 + (ax0width * (cbarleft - 1))
-        caxbottom = (1 - cbarheight * ax0height) / 2
+        caxbottom = ax0y0 + ax0height * cbarbottom
         caxwidth = cbarwidth * ax0width
         caxheight = cbarheight * ax0height
 
@@ -1612,7 +1617,7 @@ def shorten_years(ax, start_shortening_in=2021):
     ax.set_xticklabels(newxticklabels)
 
 
-def annotate(ax, label, x, offset, decimals=0, **kwargs):
+def annotate(ax, label, x, offset, decimals=0, tail='', **kwargs):
     """
     Annotate a point on a line.
 
@@ -1650,7 +1655,7 @@ def annotate(ax, label, x, offset, decimals=0, **kwargs):
 
     ### Annotate it
     ax.annotate(
-        ('{:.'+str(decimals)+'f}').format(y),
+        ('{:.'+str(decimals)+'f}').format(y)+tail,
         xy=(x,y),
         textcoords='offset points',
         xytext=offset,

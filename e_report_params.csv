@@ -77,8 +77,8 @@ error_check(*),unitless,set of checks to determine if there is an error - values
 "h2_inout(h2_stor,r,allh,t,*)",tonnes/hour,H2 moving in/out of storage,,,
 "h2_price_h(r,allh,t)",$2004/kg,Marginal cost of H2 by region and timeslice,,,
 "h2_price_szn(r,allszn,t)",$2004/kg,Marginal cost of H2 by region and season,,,
-"h2_storage_level(h2_stor,r,allszn,allh,t)",tonnes,H2 storage level by timeslice,,,
-"h2_storage_level_szn(h2_stor,r,allszn,t)",tonnes,H2 storage level by season,,,
+"h2_storage_level(h2_stor,r,actualszn,allh,t)",tonnes,H2 storage level by timeslice,,,
+"h2_storage_level_szn(h2_stor,r,actualszn,t)",tonnes,H2 storage level by season,,,
 "h2_storage_cap(h2_stor,r,t)",tonnes,total H2 storage capacity by BA and type,,,
 "h2_trans_cap(r,rr,t)",tonnes/hour,H2 pipeline capacity between BAs,,,
 "h2_trans_flow(r,rr,allh,t)",tonnes/hour,net flow of H2 between BAs,,,
@@ -230,6 +230,7 @@ rsc_dat,,,,,1
 storage_duration,,,,,1
 storage_eff,,,,,1
 szn_stress_t,,,,,1
+tc_phaseout_mult,,,,,1
 tranloss,,,,,1
 v,,,,,1
 valcap_i,,,,,1

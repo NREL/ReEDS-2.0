@@ -8,6 +8,9 @@ i_subtech.csv,inputs/sets/i_subtech.csv,,ignore,ignore,,,,,,,1,set,i_subtech,tec
 sdbin.csv,inputs/sets/sdbin.csv,,ignore,ignore,,,,,,,1,set,sdbin,storage duration bins,done
 tg.csv,inputs/sets/tg.csv,,ignore,ignore,,,,,,,1,set,tg,tech groups for growth constraints,done
 pcat.csv,inputs/sets/pcat.csv,,ignore,ignore,,,,,,,1,set,pcat,prescribed capacity categories,done
+ccseason.csv,inputs/sets/ccseason.csv,,ignore,ignore,,,,,,,1,set,ccseason,seasons used for capacity credit; cold is Oct 15-April 14 and hot is April 15-Oct 14,done
+quarter.csv,inputs/sets/quarter.csv,,ignore,ignore,,,,,,,1,set,quarter,original h17 seasons (four per year),done
+month.csv,inputs/sets/month.csv,,ignore,ignore,,,,,,,1,set,month,calendar months in a year,done
 acp_disallowed.csv,inputs/state_policies/acp_disallowed.csv,.csv,ignore,ignore,*st,"RPSCat,val",,,0,,,,,,done
 acp_prices.csv,inputs/state_policies/acp_prices.csv,.csv,ignore,ignore,st,st,,1,0,,,,,,done
 agglevels.csv,,.csv,ignore,ignore,ignore,,,,0,,,,,,done
@@ -38,6 +41,7 @@ cd_beta0_allsector.csv,inputs/fuelprices/cd_beta0_allsector.csv,.csv,ignore,igno
 cendivweights.csv,inputs/fuelprices/cendivweights.csv,.csv,mean,uniform,r_cendiv,wide,,1,0,,,,,,Includes two region definitions; ‘ignore’ in disaggfunc because already at county resolution in inputs folder
 ces_fraction.csv,inputs/state_policies/ces_fraction.csv,.csv,ignore,ignore,st,st,,1,0,,,,,,done
 cf_vre.csv,,.csv,mean_cap,ignore,r,"*i,h",*i,0,0,,1,,,,'ignore’ in disaggfunc because data will be written in correct spatial resolution by hourly_writetimeseries in hourly_repperiods.py
+cf_hyd.csv,,.csv,mean,uniform,r,"*i,season,t",,0,0,,1,,,,done
 climate_heuristics_finalyear.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 climate_heuristics_yearfrac.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 climate_hydadjann.csv,,.csv,ignore,ignore,,r,,1,0,,,,,,not done but rarely used; ignore for now
@@ -100,6 +104,11 @@ evmc_shape_profile_decrease.csv,,.csv,mean,population,wide,"i,hour,year",,1,0,,1
 evmc_shape_generation.csv,,.csv,mean,population,r,"**i,h",,0,0,,1,,,,done
 evmc_shape_profile_increase.csv,,.csv,mean,population,wide,"i,hour,year",,1,0,,1,,,,done
 evmc_shape_load.csv,,.csv,mean,population,r,"**i,h",,0,0,,1,,,,done
+evmc_storage_charge.csv,,.csv,mean,population,r,"**i,h,t",,0,0,,1,,,,done
+evmc_storage_discharge.csv,,.csv,mean,population,r,"**i,h,t",,0,0,,1,,,,done
+evmc_storage_profile_increase.csv,,.csv,mean,population,wide,"i,hour,year",,1,0,,1,,,,done
+evmc_storage_profile_decrease.csv,,.csv,mean,population,wide,"i,hour,year",,1,0,,1,,,,done
+evmc_storage_energy.csv,,.csv,mean,population,r,"**i,h",,0,0,,1,,,,done
 eval_period_adj_mult.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 financing_risk_mult.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 firstyear.csv,inputs/capacitydata/firstyear.csv,.csv,ignore,ignore,,,,,0,,,,,,done
@@ -107,6 +116,7 @@ flex_frac_all.csv,,.csv,mean,population,r,"*flextype,h,wide",,1,0,,1,,,,done
 forced_retirements.csv,inputs/state_policies/forced_retirements.csv,.csv,min,uniform,r,"*i,t",,0,0,,,,,,done
 forceperiods.csv,,.csv,ignore,ignore,,,,,,,,,,,done
 fprice.csv,,.csv,mean,ignore,r,"t,wide",,1,0,,1,,,,'ignore’ in disaggfunc because according to Wesley the existing data will work for the input data that is at census division level
+frac_h_month_weights.csv,,.csv,ignore,ignore,,,,,,,,,,,done
 frac_h_ccseason_weights.csv,,.csv,ignore,ignore,,,,,,,,,,,done
 frac_h_quarter_weights.csv,,.csv,ignore,ignore,,,,,,,,,,,done
 fuel_price.csv,,.csv,ignore,ignore,,"i,r",,0,0,,,,,,done (ReEDS-to-PLEXOS output)
@@ -155,7 +165,7 @@ hours_hourly.csv,,.csv,ignore,ignore,,,,,,,,,,,done
 hset_hourly.csv,,.csv,ignore,ignore,,,,,,,,,,,done
 hyd_add_upg_cap.csv,inputs/supplycurvedata/hyd_add_upg_cap.csv,.csv,sum,hydroexist,r,"i,rscbin,wide",,1,0,,,,,,done
 hyd_fom.csv,inputs/hydrodata/hyd_fom.csv,.csv,mean,uniform,wide,i,,1,0,,,,,,Email from Wesley says to use uniform disaggfunc due to data coming from different places (can’t pull all required data from plant database like we wanted)
-hydcf.csv,,.csv,mean,uniform,r,"*i,szn,t",,0,0,,1,,,,‘ignore’ in disaggfunc because data will be written in county resolution by writecapdat.py
+hydcf.csv,,.csv,mean,uniform,r,"*i,month,t",,0,0,,1,,,,done
 hydcapadj.csv,,.csv,mean,uniform,r,"*i,szn",,0,0,,1,,,,‘ignore’ in disaggfunc because data will be written in county resolution by writecapdat.py
 hydro_mingen.csv,inputs/hydrodata/hydro_mingen.csv,.csv,mean,uniform,r,"*i,quarter",,0,0,,,,,,might be better to do something capacity-weighted
 hydrocapcostmult.csv,,.csv,ignore,ignore,,,,1,0,,,,,,done
@@ -211,6 +221,7 @@ outage_forced.csv,inputs/plant_characteristics/outage_forced.csv,.csv,ignore,ign
 outage_planned.csv,inputs/plant_characteristics/outage_planned.csv,.csv,ignore,ignore,,,,,0,,,,,,done
 peak_h.csv,,.csv,sum,ignore,r,"h,wide",,1,0,,1,,,,done
 peak_ccseason.csv,,.csv,sum,ignore,*r,"ccseason,t",,0,0,,1,,,,done (ok because it's load during peak NERC hour)
+peakload.csv,,.csv,ignore,ignore,,,,,0,,1,,,,done
 period_szn.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 period_weights.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 periodmap_1yr.csv,,.csv,ignore,ignore,,,,0,0,,,,,,done
@@ -280,6 +291,7 @@ storage_mandates.csv,inputs/state_policies/storage_mandates.csv,.csv,ignore,igno
 storinmaxfrac.csv,inputs/storagedata/storinmaxfrac.csv,.csv,mean,uniform,r,"*i,v",,0,0,,,,,,done
 superpeak_hour_mapper.csv,inputs/variability/superpeak_hour_mapper.csv,.csv,ignore,ignore,,,,,0,,,,,,done
 supply_chain_adjust.csv,inputs/financials/supply_chain_adjust.csv,.csv,ignore,ignore,,,,,0,,,,,,done
+stressperiods_seed.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 switches.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 tax_rate.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 tc_phaseout_schedule.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
@@ -311,7 +323,9 @@ unbundled_limit_rps.csv,inputs/state_policies/unbundled_limit_rps.csv,.csv,ignor
 upgrade_costs_ccs_coal.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 upgrade_costs_ccs_gas.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 upgrade_link.csv,inputs/upgrades/upgrade_link.csv,.csv,ignore,ignore,,,,,0,,,,,,done
-upgrade_mult_final.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
+upgrade_mult_final.csv,inputs/upgrades/upgrade_mult.csv,.csv,ignore,ignore,,,,,0,,,,,,done
+upgrade_mult.csv,inputs/upgrades/upgrade_mult.csv,.csv,ignore,ignore,,,,,0,,,,,,done
+upgrade_mult_reduced.csv,inputs/upgrades/upgrade_mult_reduced.csv,.csv,ignore,ignore,,,,,0,,,,,,done
 upgradelink_water.csv,inputs/upgrades/upgradelink_water.csv,.csv,ignore,ignore,,,,,0,,,,,,done
 upv_exog_cap.csv,,.csv,sum,ignore,r,"*i,rscbin,t",,0,0,,1,,,,handled in writesupplycurves.py
 unitdata.csv,,.csv,ignore,ignore,,,,,0,,,,,,done

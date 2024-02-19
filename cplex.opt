@@ -1,6 +1,6 @@
 *** https://www.gams.com/latest/docs/S_CPLEX.html
 *** threads (integer): global default thread count
-threads = 4
+threads = 8
 
 *** lpmethod (integer): algorithm to be used for LP problems [4 = barrier]
 lpmethod = 4
@@ -24,16 +24,16 @@ iis 1
 eprhs = 1e-5
 
 *** epopt (float): optimality tolerance [default = 1e-6]
-*epopt = 1e-5
+epopt = 1e-6
 
-*** memoryemphasis (boolean): reduces use of memory but writes large files to disk
+*** memoryemphasis (boolean): reduces use of memory but writes TBs of files to disk
 memoryemphasis 0
 
 *** epmrk (float): Markowitz pivot tolerance
 *epmrk = 0.1
 
 *** barepcomp (float): tolerance on complementarity for convergence of the barrier algorithm [default 1e-8]
-*barepcomp = 1e-7
+barepcomp = 1e-8
 
 *############################################################################################
 *## The settings below can reduce solve time substantially, but their impacts on the solution
@@ -49,13 +49,13 @@ memoryemphasis 0
 * depind 3
 
 *** barcolnz (integer): specifies the number of entries in columns to be considered as dense [default 0]
-*** commenting this out (i.e., setting back to zero) can improve solve time when running with hydrogen transport (GSw_H2=2)
+*** 0 lets CPLEX choose; values ranging from 30-300 can sometimes shorten runtime
 barcolnz 30
 
 *** barorder (integer): row ordering algorithm selection. 1 = approximate minimum degree (AMD) [default 0]
 * barorder 1
 
-*** baralg (integer): barrier algorithm selection. 1 = infeasibility-estimate start [default 0]
+*** baralg (integer): barrier algorithm selection. 1 = infeasibility-estimate start, 3 = standard barrier [default 0]
 * baralg 1
 
 *** barstartalg (integer): barrier starting point algorithm. 2 = default primal, estimate dual [default 1]

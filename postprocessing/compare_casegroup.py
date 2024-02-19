@@ -13,6 +13,7 @@ import subprocess as sp
 import platform
 from glob import glob
 from tqdm import tqdm
+import traceback
 import cmocean
 import pptx
 from pptx.util import Inches, Pt
@@ -33,60 +34,61 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument(
     'caselist', type=str,
-    help='comma-delimited list of cases to plot, OR shared casename prefix. First is base.')
+    help=('comma-delimited list of cases to plot, OR shared casename prefix, '
+          'OR csv file of cases. The first case is treated as the base case '
+          'unless a different one is provided via the --basecase/-b argument.'))
 parser.add_argument(
     '--casenames', '-n', type=str, default='',
     help='comma-delimited list of shorter case names to use in plots')
 parser.add_argument(
-    '--titleshorten', '-s', type=int, default=0,
+    '--titleshorten', '-s', type=str, default='',
     help='characters to cut from start of case name (only used if no casenames)')
 parser.add_argument(
     '--startyear', '-t', type=int, default=2020,
     help='First year to show')
 parser.add_argument(
     '--sharey', '-y', action='store_true',
-    help='Use same y-axis scale for absolute and difference plots',
-)
+    help='Use same y-axis scale for absolute and difference plots')
+parser.add_argument(
+    '--basecase', '-b', type=str, default='',
+    help='Substring of case path to use as default (if empty, uses first case in list)')
+parser.add_argument(
+    '--level', '-l', type=str, default='transreg',
+    choices=['interconnect','nercr','transreg','transgrp','st'],
+    help='hierarchy level at which to plot regional results')
 parser.add_argument(
     '--skipbp', '-p', action='store_true',
     help='flag to prevent bokehpivot report from being generated')
 parser.add_argument(
-    '--bpreport', '-b', type=str, default='standard_report_reduced',
+    '--bpreport', '-r', type=str, default='standard_report_reduced',
     help='which bokehpivot report to generate')
 
 args = parser.parse_args()
-caselist = args.caselist.split(',')
-titleshorten = args.titleshorten
-bpreport = args.bpreport
-skipbp = args.skipbp
-
-## If only a single path is provided, look for all runs starting with that string.
-## Note that the base case will be whichever one is first lexicographically.
-if len(caselist) == 1:
-    caselist = glob(caselist[0]+'*')
-    ## If no titleshorten is provided, use the provided prefix
-    if not titleshorten:
-        titleshorten = len(os.path.basename(args.caselist))
+_caselist = args.caselist.split(',')
+try:
+    titleshorten = int(args.titleshorten)
+except ValueError:
+    titleshorten = len(args.titleshorten)
+_basecase = args.basecase
 startyear = args.startyear
 sharey = True if args.sharey else 'row'
-casenames = (
-    args.casenames.split(',') if len(args.casenames)
-    else [os.path.basename(c)[titleshorten:] for c in caselist]
-)
+level = args.level
+bpreport = args.bpreport
+skipbp = args.skipbp
 interactive = False
 
 # #%% Inputs for testing
 # startyear = 2020
 # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # casepath = os.path.join(reeds_path,'runs')
-# caselist = [
+# _caselist = [
 #     os.path.join(casepath,'v20231215_casegroupM0_Pacific_lim'),
 #     os.path.join(casepath,'v20231215_casegroupM0_Pacific_ref'),
 #     os.path.join(casepath,'v20231215_casegroupM0_Pacific_open'),
 # ]
+# _basecase = _caselist[1]
 # titleshorten = len('v20231215_casegroupM0_Pacific_')
 # sharey = 'row'
-# casenames = [os.path.basename(c)[titleshorten:] for c in caselist]
 # interactive = True
 
 
@@ -181,22 +183,103 @@ def add_textbox(
 
 #%%### Procedure
 #%% Parse arguments
+use_table_casenames = False
+if len(_caselist) == 1:
+    ## If it's a .csv, read the cases to compare
+    if _caselist[0].endswith('.csv'):
+        dfcase = pd.read_csv(_caselist[0], header=None)
+        ## First check it's a simple csv with one case per row
+        if dfcase.shape[1] == 1:
+            caselist = dfcase[0].tolist()
+        ## Then check if it's a 2-column csv with [casepath,casename] header
+        elif (
+            (dfcase.shape[1] == 2)
+            and (dfcase.loc[0,[0,1]].tolist() == ['casepath', 'casename'])
+        ):
+            dfcase.columns = ['casepath','casename']
+            dfcase.drop(0, inplace=True)
+            caselist = dfcase.casepath.tolist()
+            use_table_casenames = True
+        ## Otherwise assume it's a copy of a cases_{batchname}.csv file in a case folder
+        ## This approach is less robust; the others are preferred.
+        else:
+            prefix_plus_tail = os.path.dirname(_caselist[0])
+            tails = [i for i in dfcase.iloc[0] if i not in ['Default Value',np.nan]]
+            prefix = prefix_plus_tail[:-len([i for i in tails if prefix_plus_tail.endswith(i)][0])]
+            caselist = [prefix+i for i in tails]
+    ## Otherwise look for all runs starting with the provided string
+    else:
+        caselist = sorted(glob(_caselist[0]+'*'))
+        ## If no titleshorten is provided, use the provided prefix
+        if not titleshorten:
+            titleshorten = len(os.path.basename(args.caselist))
+else:
+    caselist = _caselist
+
+## Remove cases that haven't finished yet
+caselist = [
+    i for i in caselist
+    if os.path.isfile(os.path.join(i,'outputs','reeds-report','report.xlsx'))
+]
+
+if use_table_casenames:
+    casenames = dfcase.casename.tolist()
+else:
+    casenames = (
+        args.casenames.split(',') if len(args.casenames)
+        else [os.path.basename(c)[titleshorten:] for c in caselist]
+    )
+
 if len(caselist) != len(casenames):
-    raise ValueError(
-        f"len(caselist) = {len(caselist)} but len(casenames) = {len(casenames)}")
+    err = (
+        f"len(caselist) = {len(caselist)} but len(casenames) = {len(casenames)}\n\n"
+        'caselist:\n' + '\n'.join(caselist) + '\n\n'
+        'casenames:\n' + '\n'.join(casenames) + '\n'
+    )
+    raise ValueError(err)
 
 cases = dict(zip(casenames, caselist))
-for case, path in cases.items():
-    if not os.path.exists(os.path.join(path,'outputs','reeds-report')):
-        print(f"{path} has no output report")
 
-basecase = list(cases.keys())[0]
+if not len(_basecase):
+    basecase = list(cases.keys())[0]
+else:
+    basepath = [c for c in cases.values() if c.endswith(_basecase)]
+    if len(basepath) == 0:
+        err = (
+            f"Use a basecase that matches one case.\nbasecase={_basecase} matches none of:\n"
+            + '\n'.join(basepath)
+        )
+        raise ValueError(err)
+    elif len(basepath) > 1:
+        err = (
+            f"Use a basecase that only matches one case.\nbasecase={_basecase} matches:\n"
+            + '\n'.join(basepath)
+        )
+        raise ValueError(err)
+    else:
+        basepath = basepath[0]
+        ## basecase is the short name; basepath is the full path
+        basecase = casenames[caselist.index(basepath)]
+        ## Put it first in the list
+        cases = {**{basecase:cases[basecase]}, **{k:v for k,v in cases.items() if k != basecase}}
+
+for case, path in cases.items():
+    print(f'{path} -> {case}' + (' (base)' if case == basecase else ''))
+
 colors = plots.rainbowmapper(cases)
 
 #%% Create output folder
 outpath = os.path.join(cases[basecase], 'outputs', 'comparisons')
 os.makedirs(outpath, exist_ok=True)
-print(f'Saving results to {outpath}')
+## clip name to max length and removing disallowed characters
+maxlength = os.pathconf(os.sep,'PC_NAME_MAX')
+savename = os.path.join(
+    outpath,
+    (f"results-{','.join(cases.keys())}"
+     .replace('/','').replace(' ','')
+     [:maxlength-len('.pptx')]) + '.pptx'
+)
+print(f'Saving results to {savename}')
 
 #%% Create bokehpivot report as subprocess
 if not skipbp:
@@ -239,6 +322,11 @@ hierarchy = hierarchy.loc[hierarchy.country.str.lower()=='usa'].copy()
 sw = pd.read_csv(
     os.path.join(cases[case],'inputs_case','switches.csv'),
     header=None, index_col=0).squeeze(1)
+
+scalars = pd.read_csv(
+    os.path.join(cases[case], 'inputs_case', 'scalars.csv'),
+    header=None, usecols=[0,1], index_col=0).squeeze(1)
+phaseout_trigger = float(scalars.co2_emissions_2022) * float(sw.GSw_TCPhaseout_trigger_f)
 
 #%% Colors
 bokehcostcolors = pd.read_csv(
@@ -304,6 +392,8 @@ for case in tqdm(cases, desc='national capacity'):
     ### Simplify techs
     dictin_cap[case].tech = dictin_cap[case].tech.map(lambda x: renametechs.get(x,x))
     dictin_cap[case] = dictin_cap[case].groupby(['tech','year'], as_index=False)['Capacity (GW)'].sum()
+    dictin_cap[case] = dictin_cap[case].loc[
+        ~dictin_cap[case].tech.isin(['electrolyzer','smr','smr-ccs'])].copy()
 
 dictin_gen = {}
 for case in tqdm(cases, desc='national generation'):
@@ -358,7 +448,7 @@ for case in tqdm(cases, desc='SCOE'):
         dictin_scoe[case].groupby(['cost_cat','year'], sort=False, as_index=False)
         ['Average cost ($/MWh)'].sum())
 
-pollutant = 'CO2e'
+pollutant = 'CO2'
 dictin_emissions = {}
 for case in tqdm(cases, desc='national emissions'):
     try:
@@ -385,10 +475,10 @@ for case in tqdm(cases, desc='regional transmission'):
     dictin_trans_r[case] = pd.read_csv(
         os.path.join(cases[case],'outputs','tran_out.csv')
     ).rename(columns={'Value':'MW'})
-    for level in ['interconnect','transreg','transgrp','st']:
-        dictin_trans_r[case][f'inter_{level}'] = (
-            dictin_trans_r[case].r.map(hierarchy[level])
-            != dictin_trans_r[case].rr.map(hierarchy[level])
+    for _level in ['interconnect','transreg','transgrp','st']:
+        dictin_trans_r[case][f'inter_{_level}'] = (
+            dictin_trans_r[case].r.map(hierarchy[_level])
+            != dictin_trans_r[case].rr.map(hierarchy[_level])
         ).astype(int)
 
 dictin_cap_r = {}
@@ -530,8 +620,9 @@ for legobj in leg.legend_handles:
     legobj.set_solid_capstyle('butt')
 ax[coords[list(aggtechsplot.keys())[0]]].set_xlim(startyear,lastyear)
 ax[coords[list(aggtechsplot.keys())[0]]].set_ylim(0)
-ax[coords[list(aggtechsplot.keys())[0]]].set_ylabel(
-    'Capacity [GW]', y=-0.075)
+ax[coords[list(aggtechsplot.keys())[0]]].set_ylabel('Capacity [GW]', y=-0.075)
+# for row in range(nrows):
+#     ax[row,0].set_ylabel('Capacity [GW]')
 ax[coords[list(aggtechsplot.keys())[0]]].set_ylim(0)
 
 plots.despine(ax)
@@ -723,7 +814,7 @@ add_to_pptx(slide=slide, top=7.5)
 
 #%%### Hodgepodge 2: SCOE, CO2 emissions, Transmission TW-miles
 plt.close()
-f,ax = plt.subplots(1, 3, figsize=(11, 5))
+f,ax = plt.subplots(1, 3, figsize=(10, 4.5))
 
 ### SCOE
 for case in cases:
@@ -758,11 +849,12 @@ for case in cases:
         color=colors[case], fontsize='medium',
     )
 ax[1].set_ylim(0)
+ax[1].axhline(phaseout_trigger, c='C7', ls='--', lw=0.75)
 ax[1].set_ylabel(f'{pollutant} emissions [MMT/yr]')
 
 ### Transmission TW-miles
 for case in cases:
-    df = dictin_trans[case].groupby('year').sum()['Amount (GW-mi)'].loc[years] / 1e3
+    df = dictin_trans[case].groupby('year').sum()['Amount (GW-mi)'].reindex(years) / 1e3
     ax[2].plot(df.index, df.values, label=case, color=colors[case])
     ## annotate the last value
     val = np.around(df.loc[max(years)], 0) + 0
@@ -1004,14 +1096,79 @@ for subtract_baseyear in [None, 2020]:
     if interactive:
         plt.show()
 
+#%% Transmission difference
+plt.close()
+f,ax = plt.subplots(
+    nrows, ncols, figsize=(13.33, 6.88),
+    gridspec_kw={'wspace':0.0,'hspace':-0.1},
+)
+for case in cases:
+    ax[coords[case]].set_title(case)
+    if case == basecase:
+        ### Plot absolute
+        reedsplots.plot_trans_onecase(
+            case=cases[case], pcalabel=False, wscale=wscale,
+            yearlabel=False, year=lastyear, simpletypes=None,
+            alpha=alpha, scalesize=8,
+            f=f, ax=ax[coords[case]], title=False,
+            subtract_baseyear=subtract_baseyear,
+            thickborders='transreg', drawstates=False, drawzones=False, 
+            label_line_capacity=10,
+            scale=(True if case == basecase else False),
+        )
+    else:
+        ### Plot the difference
+        reedsplots.plot_trans_diff(
+            casebase=cases[basecase], casecomp=cases[case],
+            pcalabel=False, wscale=wscale,
+            yearlabel=False, year=lastyear, simpletypes=None,
+            alpha=alpha,
+            f=f, ax=ax[coords[case]],
+            subtract_baseyear=subtract_baseyear,
+            thickborders='transreg', drawstates=False, drawzones=False, 
+            label_line_capacity=10,
+            scale=False,
+        )
+### Formatting
+title = 'Interzonal transmission difference'
+for row in range(nrows):
+    for col in range(ncols):
+        if nrows == 1:
+            ax[col].axis('off')
+        elif ncols == 1:
+            ax[row].axis('off')
+        else:
+            ax[row,col].axis('off')
+### Save it
+slide = add_to_pptx(title)
+if interactive:
+    plt.show()
+
+
+#%%### Interregional transfer capability to peak demand ratio
+try:
+    f, ax, dfplot = reedsplots.plot_interreg_transfer_cap_ratio(
+        case=list(cases.values()),
+        colors={v: colors[k] for k,v in cases.items()},
+        casenames={v:k for k,v in cases.items()},
+        level=level, tstart=startyear,
+        ymax=None,
+    )
+    ### Save it
+    slide = add_to_pptx('Interregional transmission / peak demand')
+    if interactive:
+        plt.show()
+
+except Exception:
+    print(traceback.format_exc())
+
 
 #%% Save the powerpoint file
-savename = os.path.join(outpath, f"results-{','.join(cases.keys())}.pptx")
 prs.save(savename)
 print(f'\ncompare_casegroup.py results saved to:\n{savename}')
 
 ### Open it
 if sys.platform == 'darwin':
-    sp.run(f'open {savename}', shell=True)
+    sp.run(f"open '{savename}'", shell=True)
 elif platform.system() == 'Windows':
     sp.run(f'"{savename}"', shell=True)
