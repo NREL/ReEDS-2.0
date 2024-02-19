@@ -5,6 +5,7 @@
 
   - ### [](#) 
     - #### [hourlize](#hourlize) 
+      - ##### [eer_to_reeds](#hourlize/eer_to_reeds) 
       - ##### [inputs](#hourlize/inputs) 
       - ##### [plexos_to_reeds](#hourlize/plexos_to_reeds) 
       - ##### [tests](#hourlize/tests) 
@@ -49,6 +50,7 @@
       - ##### [land_use](#postprocessing/land_use) 
       - ##### [plots](#postprocessing/plots) 
       - ##### [retail_rate_module](#postprocessing/retail_rate_module) 
+      - ##### [reValue](#postprocessing/reValue) 
       - ##### [tableau](#postprocessing/tableau) 
     - #### [preprocessing](#preprocessing) 
       - ##### [atb_updates_processing](#preprocessing/atb_updates_processing) 
@@ -89,9 +91,6 @@
     - **Description:** Contains the configuration settings for the Standard Scenarios ReEDS runs.
 ---
 
-  - [cases_stress.csv](/cases_stress.csv)
----
-
   - [cases_test.csv](/cases_test.csv)
     - **Description:** Contains the configuration settings for doing test runs including the default Pacific census division test case.
 ---
@@ -127,11 +126,6 @@
   - [EIA_loadbystate.csv](/hourlize/inputs/load/EIA_loadbystate.csv)
     - **Description:** Contains historical (2010-2022) EIA load information (GWh) with respect to each state in the US.
     - **Indices:** t,r
----
-
-  - [hierarchy.csv](/hourlize/inputs/load/hierarchy.csv)
-    - **Description:** Contains a hierarchy between BAs, Regional Transmission Operator (RTOs), states and country
-    - **Indices:** r
 ---
 
   - [load_participation_factors_st_to_ba.csv](/hourlize/inputs/load/load_participation_factors_st_to_ba.csv)
@@ -654,8 +648,13 @@
 ---
 
   - [ng_crf_penalty.csv](/inputs/carbonconstraints/ng_crf_penalty.csv)
-    - **Description:** cost adjustment for NG with zero emissions
+    - **File Type:** Inputs
+    - **Description:** Cost adjustment for NG techs in scenarios with national decarbonization targets
     - **Indices:** allt
+    - **Dollar year:** N/A
+
+    - **Citation:** [(https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220)]
+
 ---
 
   - [rggi_states.csv](/inputs/carbonconstraints/rggi_states.csv)
@@ -1345,6 +1344,15 @@
   - [evmc_shape_increase_profile_Baseline.h5](/inputs/demand_response/evmc_shape_increase_profile_Baseline.h5)
 ---
 
+  - [evmc_storage_decrease_profile_Baseline.h5](/inputs/demand_response/evmc_storage_decrease_profile_Baseline.h5)
+---
+
+  - [evmc_storage_energy_Baseline.h5](/inputs/demand_response/evmc_storage_energy_Baseline.h5)
+---
+
+  - [evmc_storage_increase_profile_Baseline.h5](/inputs/demand_response/evmc_storage_increase_profile_Baseline.h5)
+---
+
 
 #### [dGen_Model_Inputs](inputs/dGen_Model_Inputs) <a name='inputs/dGen_Model_Inputs'></a>
 
@@ -2018,6 +2026,12 @@
 
 
 #### [loaddata](inputs/loaddata) <a name='inputs/loaddata'></a>
+  - [Adoption_Trajectories_Commercial.csv](/inputs/loaddata/Adoption_Trajectories_Commercial.csv)
+---
+
+  - [Adoption_Trajectories_Residential.csv](/inputs/loaddata/Adoption_Trajectories_Residential.csv)
+---
+
   - [Baseline_load_hourly.h5](/inputs/loaddata/Baseline_load_hourly.h5)
 ---
 
@@ -2032,6 +2046,9 @@
 ---
 
   - [Clean2035clip1pct_load_hourly.h5](/inputs/loaddata/Clean2035clip1pct_load_hourly.h5)
+---
+
+  - [Commercial_GHP_Delta.csv](/inputs/loaddata/Commercial_GHP_Delta.csv)
 ---
 
   - [demand_AEO_2021_high.csv](/inputs/loaddata/demand_AEO_2021_high.csv)
@@ -2096,6 +2113,9 @@
 
   - [mex_growth_rate.csv](/inputs/loaddata/mex_growth_rate.csv)
     - **Description:** Mexico load growth multiplier
+---
+
+  - [Residential_GHP_Delta.csv](/inputs/loaddata/Residential_GHP_Delta.csv)
 ---
 
 
@@ -2746,8 +2766,12 @@
 
   - [ng_crf_penalty_st.csv](/inputs/state_policies/ng_crf_penalty_st.csv)
     - **File Type:** Inputs
-    - **Description:** cost adjustment for NG in Virginia because all NG techs must be retired by 2045
+    - **Description:** Cost adjustment for NG techs in states where all NG techs must be retired by a certain year
     - **Indices:** allt,st
+    - **Dollar year:** N/A
+
+    - **Citation:** [(https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220)]
+
 ---
 
   - [nuclear_ba_ban_list.csv](/inputs/state_policies/nuclear_ba_ban_list.csv)
@@ -3657,6 +3681,11 @@
 ---
 
   - [Table_9.8_Average_Retail_Prices_of_Electricity.xlsx](/postprocessing/retail_rate_module/inputs/Table_9.8_Average_Retail_Prices_of_Electricity.xlsx)
+---
+
+
+#### [reValue](postprocessing/reValue) <a name='postprocessing/reValue'></a>
+  - [scenarios.csv](/postprocessing/reValue/scenarios.csv)
 ---
 
 

@@ -68,6 +68,9 @@ evmc_shape_profile_decrease.csv,.csv,1,None,9999,None,9999,0,constant,None,None,
 evmc_shape_generation.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 evmc_shape_profile_increase.csv,.csv,1,None,9999,None,9999,0,constant,None,None,,constant
 evmc_shape_load.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
+evmc_storage_profile_decrease.csv,.csv,1,None,9999,None,9999,0,constant,None,None,,constant
+evmc_storage_profile_increase.csv,.csv,1,None,9999,None,9999,0,constant,None,None,,constant
+evmc_storage_energy.csv,.csv,1,None,9999,None,9999,0,constant,None,None,,constant
 firstyear.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 flex_frac_all.csv,.csv,0,None,wide,"flextype,r,h",1,0,constant,None,1,linear or constant? projection takes quite a while for this one,linear_5
 forced_retirements.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant

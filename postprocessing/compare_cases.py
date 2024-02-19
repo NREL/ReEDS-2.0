@@ -1,18 +1,17 @@
 #%% Imports
-import numpy as np
 import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-from glob import glob
-import os, sys, math, site
+import os
+import io
+import sys
+import site
 import platform
 import subprocess as sp
-
+import argparse
 import geopandas as gpd
-import shapely
-os.environ['PROJ_NETWORK'] = 'OFF'
-import pptx, io
+import pptx
 from pptx.util import Inches
+os.environ['PROJ_NETWORK'] = 'OFF'
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 remotepath = '/Volumes/ReEDS/' if sys.platform == 'darwin' else r'//nrelnas01/ReEDS/'
@@ -52,7 +51,6 @@ interactive = False
 
 
 #%% Argument inputs
-import argparse
 parser = argparse.ArgumentParser(description='run ReEDS2PRAS')
 parser.add_argument('casebase', type=str,
                     help='path to ReEDS run folder for base case')
@@ -60,8 +58,8 @@ parser.add_argument('casecomp', type=str,
                     help='path to ReEDS run folder for comparison case')
 parser.add_argument('--year', '-y', type=int, default=0,
                     help='year to run')
-parser.add_argument('--titleshorten', '-s', type=int, default=0,
-                    help='characters to cut from start of case name')
+parser.add_argument('--titleshorten', '-s', type=str, default='',
+                    help='characters to cut from start of case name (int or str)')
 parser.add_argument('--skipbp', '-p', action='store_true',
                     help='flag to prevent bokehpivot report from being generated')
 parser.add_argument('--bpreport', '-b', type=str, default='standard_report_reduced',
@@ -71,9 +69,12 @@ args = parser.parse_args()
 casebase = args.casebase
 casecomp = args.casecomp
 year = args.year
-titleshorten = args.titleshorten
 bpreport = args.bpreport
 skipbp = args.skipbp
+try:
+    titleshorten = int(args.titleshorten)
+except ValueError:
+    titleshorten = len(args.titleshorten)
 
 # #%% Inputs for testing
 # casebase = os.path.join(reeds_path,'runs','v20230509_onelineM0_NEIAIL_No')
@@ -124,10 +125,10 @@ def add_to_pptx(title, left=0, top=0.62, width=13.33, height=None):
     slide.shapes.title.text = title
     slide.shapes.add_picture(
         image,
-        left=(None if left == None else Inches(left)),
-        top=(None if top == None else Inches(top)),
-        width=(None if width == None else Inches(width)),
-        height=(None if height == None else Inches(height)),
+        left=(None if left is None else Inches(left)),
+        top=(None if top is None else Inches(top)),
+        width=(None if width is None else Inches(width)),
+        height=(None if height is None else Inches(height)),
     )
     return slide
 
@@ -154,7 +155,7 @@ for val in plotvals:
         plt.close()
         f, ax, leg, dfdiff, printstring = reedsplots.plotdiff(
             val, casebase, casecomp, onlytechs=None, titleshorten=titleshorten,
-            yearmin=yearmin, yearmax=yearmax,
+            yearmin=(2025 if 'NEUE' in val else yearmin), yearmax=yearmax,
             # plot_kwds={'figsize':(4,4), 'gridspec_kw':{'wspace':0.7}},
         )
         slide = add_to_pptx(val)
@@ -162,7 +163,8 @@ for val in plotvals:
             left=Inches(0), top=Inches(7),
             width=Inches(13.33), height=Inches(0.5))
         textbox.text_frame.text = printstring
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
     except Exception as err:
         print(err)
 
@@ -182,7 +184,8 @@ try:
     )
     # ax[0].set_xlim(-2.5e6,0.4e6)
     add_to_pptx(f'Transmission ({t})')
-    if interactive: plt.show()
+    if interactive:
+        plt.show()
 except Exception as err:
     print(err)
 
@@ -252,7 +255,8 @@ try:
             (0.1,1), xycoords='axes fraction', fontsize=10)
 
         add_to_pptx(f'Capacity ({t})')
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
 except Exception as err:
     print(err)
 

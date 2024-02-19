@@ -49,49 +49,63 @@ parameter
 *============================
 * --- Round parameters ---
 *============================
-
-acp_price(st,t)$acp_price(st,t) = round(acp_price(st,t),3) ;
+* As a general rule, costs or prices should be rounded to two decimal places
+* and all other parameter should be rounded to no more than 3 decimal places
+* Some exceptions might exist due to number scaling (e.g., emission rates)
+acp_price(st,t)$acp_price(st,t) = round(acp_price(st,t),2) ;
+avail_retire_exog_rsc(i,v,r,t)$valcap(i,v,r,t) = round(avail_retire_exog_rsc(i,v,r,t),3) ;
 batterymandate(st,t)$batterymandate(st,t) = round(batterymandate(st,t),2) ;
 bcr(i)$bcr(i) = round(bcr(i),4) ;
-derate_geo_vintage(i,v)$derate_geo_vintage(i,v) = round(derate_geo_vintage(i,v),4) ;
+biosupply(usda_region,bioclass,"price") = round(biosupply(usda_region,bioclass,"price"),2) ;
+biosupply(usda_region,bioclass,"cap") = round(biosupply(usda_region,bioclass,"cap"),3) ;
 cc_storage(i,sdbin)$cc_storage(i,sdbin) = round(cc_storage(i,sdbin),3) ;
 cendiv_weights(r,cendiv)$cendiv_weights(r,cendiv) = round(cendiv_weights(r,cendiv), 3) ;
-cost_cap(i,t)$cost_cap(i,t) = round(cost_cap(i,t),3) ;
-cost_fom(i,v,r,t)$cost_fom(i,v,r,t) = round(cost_fom(i,v,r,t),3) ;
-cost_h2_transport_cap(r,rr,t)$cost_h2_transport_cap(r,rr,t) = round(cost_h2_transport_cap(r,rr,t),3) ;
-cost_h2_transport_fom(r,rr,t)$cost_h2_transport_fom(r,rr,t) = round(cost_h2_transport_fom(r,rr,t),3) ;
-cost_opres(i,ortype,t)$cost_opres(i,ortype,t) = round(cost_opres(i,ortype,t),3) ;
-cost_prod(i,v,r,t)$cost_prod(i,v,r,t) = round(cost_prod(i,v,r,t), 3) ;
-cost_upgrade(i,v,r,t)$cost_upgrade(i,v,r,t) = round(cost_upgrade(i,v,r,t), 3) ;
-cost_vom(i,v,r,t)$cost_vom(i,v,r,t) = round(cost_vom(i,v,r,t),3) ;
-cost_vom_pvb_b(i,v,r,t)$cost_vom_pvb_b(i,v,r,t) = round(cost_vom_pvb_b(i,v,r,t), 3) ;
-cost_vom_pvb_p(i,v,r,t)$cost_vom_pvb_p(i,v,r,t) = round(cost_vom_pvb_p(i,v,r,t), 3) ;
-degrade(i,tt,t)$degrade(i,tt,t) = round(degrade(i,tt,t),4) ;
+cost_cap(i,t)$cost_cap(i,t) = round(cost_cap(i,t),2) ;
+co2_storage_cost = round(co2_storage_cost,2) ;
+cost_co2_pipeline_fom(r,rr,t) =round(cost_co2_pipeline_fom(r,rr,t),2) ;
+cost_co2_pipeline_cap(r,rr,t) =round(cost_co2_pipeline_cap(r,rr,t),2) ;
+cost_co2_spurline_fom(r,cs,t) =  round(cost_co2_spurline_fom(r,cs,t),2) ;
+cost_co2_spurline_cap(r,cs,t) =  round(cost_co2_spurline_cap(r,cs,t),2) ;
+cost_co2_stor_bec(cs,t) = round(cost_co2_stor_bec(cs,t),2) ;
+cost_fom(i,v,r,t)$cost_fom(i,v,r,t) = round(cost_fom(i,v,r,t),2) ;
+cost_h2_storage_cap(h2_st,t) = round(cost_h2_storage_cap(h2_st,t), 2) ;
+cost_h2_transport_cap(r,rr,t)$cost_h2_transport_cap(r,rr,t) = round(cost_h2_transport_cap(r,rr,t),2) ;
+cost_h2_transport_fom(r,rr,t)$cost_h2_transport_fom(r,rr,t) = round(cost_h2_transport_fom(r,rr,t),2) ;
+cost_opres(i,ortype,t)$cost_opres(i,ortype,t) = round(cost_opres(i,ortype,t),2) ;
+cost_prod(i,v,r,t)$cost_prod(i,v,r,t) = round(cost_prod(i,v,r,t), 2) ;
+cost_upgrade(i,v,r,t)$cost_upgrade(i,v,r,t) = round(cost_upgrade(i,v,r,t),2) ;
+cost_vom(i,v,r,t)$cost_vom(i,v,r,t) = round(cost_vom(i,v,r,t),2) ;
+cost_vom_pvb_b(i,v,r,t)$cost_vom_pvb_b(i,v,r,t) = round(cost_vom_pvb_b(i,v,r,t),2) ;
+cost_vom_pvb_p(i,v,r,t)$cost_vom_pvb_p(i,v,r,t) = round(cost_vom_pvb_p(i,v,r,t),2) ;
+degrade(i,tt,t)$degrade(i,tt,t) = round(degrade(i,tt,t),3) ;
+derate_geo_vintage(i,v)$derate_geo_vintage(i,v) = round(derate_geo_vintage(i,v),3) ;
 distance(r,rr,trtype)$distance(r,rr,trtype) = round(distance(r,rr,trtype),3) ;
 * non-CO2 emission/capture rates get small, here making sure accounting stays correct
 emit_rate(e,i,v,r,t)$[(not sameas(e,"co2"))$valgen(i,v,r,t)] = round(emit_rate(e,i,v,r,t),6) ;
 emit_rate(e,i,v,r,t)$(sameas(e,"co2")$valgen(i,v,r,t)) = round(emit_rate(e,i,v,r,t),4) ;
 capture_rate(e,i,v,r,t)$[(not sameas(e,"co2"))$valgen(i,v,r,t)] = round(capture_rate(e,i,v,r,t),6) ;
 capture_rate(e,i,v,r,t)$(sameas(e,"co2")$valgen(i,v,r,t)) = round(capture_rate(e,i,v,r,t),4) ;
-fuel_price(i,r,t)$fuel_price(i,r,t) = round(fuel_price(i,r,t),3) ;
-gasmultterm(cendiv,t)$gasmultterm(cendiv,t) = round(gasmultterm(cendiv,t), 3) ;
+fuel_price(i,r,t)$fuel_price(i,r,t) = round(fuel_price(i,r,t),2) ;
+gasmultterm(cendiv,t)$gasmultterm(cendiv,t) = round(gasmultterm(cendiv,t),3) ;
 heat_rate(i,v,r,t)$heat_rate(i,v,r,t) = round(heat_rate(i,v,r,t),2) ;
-avail_retire_exog_rsc(i,v,r,t)$valcap(i,v,r,t) = round(avail_retire_exog_rsc(i,v,r,t),4) ;
-m_capacity_exog(i,v,r,t)$valcap(i,v,r,t) = round(m_capacity_exog(i,v,r,t),4) ;
-m_rsc_dat(r,i,rscbin,"cap")$m_rsc_dat(r,i,rscbin,"cap") = round(m_rsc_dat(r,i,rscbin,"cap"),4) ;
-m_rsc_dat(r,i,rscbin,"cost")$m_rsc_dat(r,i,rscbin,"cost") = round(m_rsc_dat(r,i,rscbin,"cost"),3) ;
-prm(r,t)$prm(r,t) = round(prm(r,t),4) ;
-ptc_value_scaled(i,v,t)$ptc_value_scaled(i,v,t) = round(ptc_value_scaled(i,v,t),3) ;
-recperc(rpscat,st,t)$recperc(rpscat,st,t) = round(recperc(rpscat,st,t),4) ;
-rggi_cap(t)$rggi_cap(t) = round(rggi_cap(t),4) ;
-state_cap(st,t)$state_cap(st,t) = round(state_cap(st,t),4) ;
-storage_eff_pvb_g(i,t)$storage_eff_pvb_g(i,t) = round(storage_eff_pvb_g(i,t),4) ;
-storage_eff_pvb_p(i,t)$storage_eff_pvb_p(i,t) = round(storage_eff_pvb_p(i,t),4) ;
-tranloss(r,rr,trtype)$tranloss(r,rr,trtype) = round(tranloss(r,rr,trtype),4) ;
-transmission_line_capcost(r,rr,trtype)$transmission_line_capcost(r,rr,trtype) = round(transmission_line_capcost(r,rr,trtype),3) ;
+m_capacity_exog(i,v,r,t)$valcap(i,v,r,t) = round(m_capacity_exog(i,v,r,t),3) ;
+m_rsc_dat(r,i,rscbin,"cap")$m_rsc_dat(r,i,rscbin,"cap") = round(m_rsc_dat(r,i,rscbin,"cap"),3) ;
+m_rsc_dat(r,i,rscbin,"cost")$m_rsc_dat(r,i,rscbin,"cost") = round(m_rsc_dat(r,i,rscbin,"cost"),2) ;
+m_rsc_dat(r,i,rscbin,"cost_trans")$m_rsc_dat(r,i,rscbin,"cost_trans") = round(m_rsc_dat(r,i,rscbin,"cost_trans"),2) ;
+prm(r,t)$prm(r,t) = round(prm(r,t),3) ;
+prod_conversion_rate(i,v,r,t)$prod_conversion_rate(i,v,r,t) = round(prod_conversion_rate(i,v,r,t),6) ;
+ptc_value_scaled(i,v,t)$ptc_value_scaled(i,v,t) = round(ptc_value_scaled(i,v,t),2) ;
+recperc(rpscat,st,t)$recperc(rpscat,st,t) = round(recperc(rpscat,st,t),3) ;
+rggi_cap(t)$rggi_cap(t) = round(rggi_cap(t),0) ;
+state_cap(st,t)$state_cap(st,t) = round(state_cap(st,t),0) ;
+storage_eff_pvb_g(i,t)$storage_eff_pvb_g(i,t) = round(storage_eff_pvb_g(i,t),3) ;
+storage_eff_pvb_p(i,t)$storage_eff_pvb_p(i,t) = round(storage_eff_pvb_p(i,t),3) ;
+tranloss(r,rr,trtype)$tranloss(r,rr,trtype) = round(tranloss(r,rr,trtype),3) ;
+transmission_line_capcost(r,rr,trtype)$transmission_line_capcost(r,rr,trtype) = round(transmission_line_capcost(r,rr,trtype),2) ;
 transmission_line_fom(r,rr,trtype)$transmission_line_fom(r,rr,trtype) = round(transmission_line_fom(r,rr,trtype),3) ;
 trans_cost_cap_fin_mult(t) = round(trans_cost_cap_fin_mult(t),3) ;
 trans_cost_cap_fin_mult_noITC(t) = round(trans_cost_cap_fin_mult_noITC(t),3) ;
+upgrade_derate(i,v,r,t)$upgrade_derate(i,v,r,t) = round(upgrade_derate(i,v,r,t),3) ;
 winter_cap_frac_delta(i,v,r)$winter_cap_frac_delta(i,v,r) = round(winter_cap_frac_delta(i,v,r),3) ;
 
 

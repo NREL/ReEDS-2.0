@@ -180,7 +180,7 @@ def delete_csvs(sw):
         + glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"*_{sw['t']}.h5"))
         + glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"*_{sw['t']}.csv"))
         + glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"osprey_outputs_{sw['t']}.gdx"))
-        + glob(os.path.join(sw['casedir'],'ReEDS_Augur','PRAS',f"PRAS_{sw['t']}.pras"))
+        + glob(os.path.join(sw['casedir'],'ReEDS_Augur','PRAS',f"PRAS_{sw['t']}*.pras"))
     )
 
     for keyword in sw['keepfiles']:
@@ -188,6 +188,46 @@ def delete_csvs(sw):
 
     for f in dropfiles:
         os.remove(f)
+
+
+def write_last_pras_runtime(year, path=''):
+    """Write latest ReEDS2PRAS and PRAS runtimes from gamslog.txt to meta.csv"""
+    times = {
+        'start_ReEDS2PRAS': [],
+        'stop_ReEDS2PRAS': [],
+        'start_PRAS': [],
+        'stop_PRAS': [],
+    }
+    prefix = '[ Info: '
+    postfix = ' | '
+    with open(os.path.join(path,'gamslog.txt'),'r') as f:
+        for _line in f:
+            line = _line.strip()
+            if line.endswith('| Running ReEDS2PRAS with the following inputs:'):
+                times['start_ReEDS2PRAS'].append(line[len(prefix):line.index(postfix)])
+            elif line.endswith('| Finished ReEDS2PRAS'):
+                times['stop_ReEDS2PRAS'].append(line[len(prefix):line.index(postfix)])
+            elif line.endswith('| Running PRAS'):
+                times['start_PRAS'].append(line[len(prefix):line.index(postfix)])
+            elif line.endswith('| Finished PRAS'):
+                times['stop_PRAS'].append(line[len(prefix):line.index(postfix)])
+    for key, val in times.items():
+        times[key] = [pd.Timestamp(t) for t in val][-1]
+    durations = {
+        process: (times[f'stop_{process}'] - times[f'start_{process}']).total_seconds()
+        for process in ['ReEDS2PRAS','PRAS']
+    }
+    with open(os.path.join(path,'meta.csv'), 'a') as METAFILE:
+        for process in durations:
+            METAFILE.writelines(
+                '{},{},{},{},{}\n'.format(
+                    year,
+                    process,
+                    times[f'start_{process}'].isoformat(),
+                    times[f'stop_{process}'].isoformat(),
+                    durations[process],
+                )
+            )
 
 
 def toc(tic, year, process, path=''):
@@ -257,10 +297,8 @@ def dr_capacity_credit(hrs, eff, ts_length, poss_dr_changes, marg_peak, cols,
     # Sort and only take maximum allowed hours
     sort_shift = np.sort(peak_shift, axis=0)[::-1]
     sort_shift = sort_shift[0:int(min(maxhrs, ts_length)), :]
-
     # Get the ratio of reduced peak to total peak
-    results = pd.melt(
+    return pd.melt(
         pd.DataFrame(data=[np.round(sort_shift.sum(0) / marg_peak, decimals=5), ],
                      columns=cols)
         )
-    return results

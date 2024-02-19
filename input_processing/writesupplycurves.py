@@ -13,6 +13,17 @@ import argparse
 import numpy as np
 import os
 import pandas as pd
+import site
+### Typically this script is run from the version copied to the run folder, but the
+### alternative path is included in case it's run from the root of ReEDS during development
+try:
+    reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','..'))
+    site.addsitedir(os.path.join(reeds_path))
+    from hourlize.resource import get_bin
+except ImportError:
+    reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
+    site.addsitedir(os.path.join(reeds_path))
+    from hourlize.resource import get_bin
 
 #%%#################
 ### FIXED INPUTS ###
@@ -30,44 +41,6 @@ spur_cutoff = 1e7
 
 def concat_sc_point_gid(x):
     return x.astype(str).str.cat(sep=',')
-
-
-def get_bin(df_in, bin_num, bin_method='equal_cap_cut', bin_col='supply_curve_cost_per_mw'):
-    df = df_in.copy()
-    ser = df[bin_col]
-    #If we have less than or equal unique points than bin_num, we simply group the points with the same values.
-    if ser.unique().size <= bin_num:
-        bin_ser = ser.rank(method='dense')
-        df['bin'] = bin_ser.values
-    elif bin_method == 'equal_cap_man':
-        #using a manual method instead of pd.cut because i want the first bin to contain the
-        #first sc point regardless, even if its capacity is more than the capacity of the bin,
-        #and likewise for other bins, so i don't skip any bins.
-        orig_index = df.index
-        df.sort_values(by=[bin_col], inplace=True)
-        cumcaps = df['capacity'].cumsum().tolist()
-        totcap = df['capacity'].sum()
-        vals = df[bin_col].tolist()
-        bins = []
-        curbin = 1
-        for i,v in enumerate(vals):
-            bins.append(curbin)
-            if cumcaps[i] >= totcap*curbin/bin_num:
-                curbin += 1
-        df['bin'] = bins
-        df = df.reindex(index=orig_index) #we need the same index ordering for apply to work.
-    elif bin_method == 'equal_cap_cut':
-        #Use pandas.cut with cumulative capacity in each class. This will assume equal capacity bins
-        #to bin the data.
-        orig_index = df.index
-        df.sort_values(by=[bin_col], inplace=True)
-        df['cum_cap'] = df['capacity'].cumsum()
-        bin_ser = pd.cut(df['cum_cap'], bin_num, labels=False)
-        bin_ser = bin_ser.rank(method='dense')
-        df['bin'] = bin_ser.values
-        df = df.reindex(index=orig_index) #we need the same index ordering for apply to work.
-    df['bin'] = df['bin'].astype(int)
-    return df
 
 
 def agg_supplycurve(scpath, inputs_case, numbins_tech, reeds_path, sw, val_r_all,

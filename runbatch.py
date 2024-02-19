@@ -3,7 +3,6 @@
 ### ===========================================================================
 
 import os
-import sys
 import queue
 import threading
 import time
@@ -167,35 +166,33 @@ def check_compatibility(sw):
     reeds_path = os.path.dirname(__file__)
     hierarchy = pd.read_csv(os.path.join(reeds_path,'inputs','hierarchy.csv'))
 
-    for criterion in sw['GSw_PRM_StressCriteria'].split('/'):
-        ## Example: criterion = 'country_30_EUE_sum'
-        (
-            hierarchy_level, max_stress_periods, stress_metric, period_agg_method
-        ) = criterion.split('_')
-        if not (hierarchy_level in hierarchy):
-            raise ValueError("Fix hierarchy level in GSw_PRM_StressCriteria")
-        if not (int(max_stress_periods) >= 0):
-            raise ValueError("Fix max stress periods in GSw_PRM_StressCriteria")
-        if not (stress_metric.upper() in ['EUE','NEUE']):
-            raise ValueError("Fix stress metric in GSw_PRM_StressCriteria")
-        if not (period_agg_method.lower() in ['sum','max']):
-            raise ValueError("Fix period agg method in GSw_PRM_StressCriteria")
+    for threshold in sw['GSw_PRM_StressThreshold'].split('/'):
+        ## Example: threshold = 'transgrp_10_EUE_sum'
+        allowed_levels = ['country','interconnect','nercr','transreg','transgrp','st','r']
+        (hierarchy_level, ppm, stress_metric, period_agg_method) = threshold.split('_')
+        if hierarchy_level not in allowed_levels:
+            raise ValueError(
+                f"GSw_PRM_StressThreshold: level={hierarchy_level} but must be in:\n"
+                + '\n'.join(allowed_levels)
+            )
+        if period_agg_method.lower() not in ['sum','max']:
+            raise ValueError("Fix period agg method in GSw_PRM_StressThreshold")
+        if not (float(ppm) >= 0):
+            raise ValueError(
+                "ppm in GSw_PRM_StressThreshold must be a positive number "
+                f"but '{ppm}' was provided"
+            )
+        if stress_metric.upper() not in ['EUE','NEUE']:
+            raise ValueError(
+                "stress metric in GSw_PRM_StressThreshold must be 'EUE' or 'NEUE' "
+                f"but '{stress_metric}' was provided"
+            )
         if (sw['GSw_PRM_StressModel'].lower() != 'pras') and (stress_metric.upper() != 'EUE'):
             err = (
                 f"The combination of GSw_PRM_StressModel={sw['GSw_PRM_StressModel']} and "
-                f"stress_metric={stress_metric} is not yet supported."
+                f"stress_metric={stress_metric} is not supported."
             )
             raise NotImplementedError(err)
-
-    for threshold in sw['GSw_PRM_StressThreshold'].split('/'):
-        ## Example: threshold = 'country_sum_10'
-        (hierarchy_level, period_agg_method, ppm) = threshold.split('_')
-        if not (hierarchy_level in hierarchy):
-            raise ValueError("Fix hierarchy level in GSw_PRM_StressThreshold")
-        if not (period_agg_method.lower() in ['sum','max']):
-            raise ValueError("Fix period agg method in GSw_PRM_StressThreshold")
-        if not (float(ppm) >= 0):
-            raise ValueError("Fix ppm in GSw_PRM_StressThreshold")
 
     for bir in sw['GSw_PVB_BIR'].split('_'):
         if not (float(bir) >= 0):
@@ -219,7 +216,7 @@ def check_compatibility(sw):
 
     if '/' in sw['GSw_Region']:
         level, regions = sw['GSw_Region'].split('/')
-        if not (level in hierarchy):
+        if level not in hierarchy:
             raise ValueError("Fix level in GSw_Region")
         for region in regions.split('.'):
             if region.lower() not in hierarchy[level].str.lower().values:
@@ -229,8 +226,21 @@ def check_compatibility(sw):
         modeled_regions = pd.read_csv(
             os.path.join(reeds_path,'inputs','userinput','modeled_regions.csv')
         )
-        if not (sw['GSw_Region'] in modeled_regions):
+        if sw['GSw_Region'] not in modeled_regions:
             raise ValueError("No column in modeled_regions.csv matching GSw_Region")
+
+    ## Integer switches
+    for i in [
+        'debug',
+        'numbins_csp',
+        'numbins_upv',
+        'numbins_windofs',
+        'numbins_windons',
+    ]:
+        try:
+            int(sw[i])
+        except ValueError:
+            raise ValueError(f"{i} must be an integer but is {sw[i]}")
 
 
 def solvestring_sequential(
@@ -245,7 +255,7 @@ def solvestring_sequential(
     * caseSwitches: loaded from {batch_case}/inputs_case/switches.csv
     """
     savefile = f"{batch_case}_{cur_year}i{iteration}"
-    _stress_year = f"{prev_year}i0" if stress_year == None else stress_year
+    _stress_year = f"{prev_year}i0" if stress_year is None else stress_year
     out = (
         "gams d_solveoneyear.gms"
         + (" license=gamslice.txt" if hpc else '')
@@ -265,6 +275,7 @@ def solvestring_sequential(
             'GSw_Canada', 'GSw_ClimateHydro',
             'GSw_HourlyChunkLengthRep', 'GSw_HourlyChunkLengthStress',
             'GSw_StateCO2ImportLevel',
+            'debug',
         ]])
         + '\n'
     )
@@ -527,7 +538,8 @@ def setup_window(
 
 def setupEnvironment(
         BatchName=False, cases_suffix=False, simult_runs=0,
-        forcelocal=0, restart=False, skip_env_check=False, debug=False):
+        forcelocal=0, restart=False, skip_env_check=False,
+        debug=False, debugnode=False):
     # #%% Settings for testing
     # BatchName = 'v20230508_prasM0_Pacific'
     # cases_suffix = 'test'
@@ -586,7 +598,7 @@ def setupEnvironment(
             "submitted as a slurm job. Are you sure you want to run locally?"
         )
         confirm_local = str(input('Run job locally? y/[n]: ') or 'n')
-        if not confirm_local in ['y','Y','yes','Yes','YES']:
+        if confirm_local not in ['y','Y','yes','Yes','YES']:
             quit()
 
     #%% Check whether the ReEDS conda environment is activated
@@ -605,7 +617,7 @@ def setupEnvironment(
             "Do you want to continue without activating the environment?"
         )
         confirm_env = str(input("Continue? y/[n]: ") or 'n')
-        if not confirm_env in ['y','Y','yes','Yes','YES']:
+        if confirm_env not in ['y','Y','yes','Yes','YES']:
             quit()
 
     #%% Load specified case file, infer other settings from cases.csv
@@ -647,7 +659,7 @@ def setupEnvironment(
     # Initiate the empty lists which will be filled with info from cases
     caseList = []
     caseSwitches = [] #list of dicts, one dict for each case
-    casenames = [c for c in df_cases.columns if not c in ['Description','Default Value','Choices']]
+    casenames = [c for c in df_cases.columns if c not in ['Description','Default Value','Choices']]
     # Get the list of switch choices
     choices = df_cases.Choices.copy()
 
@@ -678,8 +690,11 @@ def setupEnvironment(
         if ',' in (df_cases[case].loc['GSw_Region']) :
             print("Please change the delimeter in the GSw_Region switch from ',' to '.'")
             quit()
-        
-        
+
+        # Propagate debug setting
+        if debug:
+            df_cases.loc['debug',case] = str(debug)
+
         # Add switch settings to list of options passed to GAMS
         shcom = ' --case=' + BatchName + "_" + case
         for i,v in df_cases[case].items():
@@ -700,9 +715,9 @@ def setupEnvironment(
     if len(existing_outpaths) and not restart:
         print(
             f'The following {len(existing_outpaths)} output directories already exist:\n'
-            + '⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄\n'
+            + 'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n'
             + '\n'.join([os.path.basename(i) for i in existing_outpaths])
-            + '\n⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃\n'
+            + '\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n'
         )
         overwrite = str(input('Do you want to overwrite them? y/[n]: ') or 'n')
         if overwrite in ['y','Y','yes','Yes','YES']:
@@ -715,12 +730,12 @@ def setupEnvironment(
             caseSwitches = [caseSwitches[i] for i in keep]
             print(
                 f"\nThe following {(len(keep))} output directories don't exist:\n"
-                + '⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄⌄\n'
+                + 'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n'
                 + '\n'.join([f'{BatchName}_{c}' for c in casenames])
-                + '\n⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃⌃\n'
+                + '\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n'
             )
             skip = str(input('Do you want to run them and skip the rest? y/[n]: ') or 'n')
-            if not (skip in ['y','Y','yes','Yes','YES']):
+            if skip not in ['y','Y','yes','Yes','YES']:
                 raise IsADirectoryError('\n'+'\n'.join(existing_outpaths))
 
     df_cases.drop(
@@ -777,7 +792,7 @@ def setupEnvironment(
         'cases_filename': cases_filename,
         'hpc': hpc,
         'restart': restart,
-        'debug': debug,
+        'debugnode': debugnode,
     }
 
     return envVar
@@ -805,7 +820,7 @@ def createmodelthreads(envVar):
                 cases_filename=ThreadInit['cases_filename'],
                 hpc=envVar['hpc'],
                 restart=envVar['restart'],
-                debug=envVar['debug'],
+                debugnode=envVar['debugnode'],
             )
             print(ThreadInit['batch_case'] + " has finished \n")
             q.task_done()
@@ -845,7 +860,7 @@ def createmodelthreads(envVar):
 
 
 def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
-             BatchName, case, cases_filename, hpc=False, restart=False, debug=False):
+             BatchName, case, cases_filename, hpc=False, restart=False, debugnode=False):
     ### For testing/debugging
     # caseSwitches = caseSwitches[0]
     # options = caseList[0]
@@ -882,7 +897,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             float(x)
             if '_' not in x:
                 return True
-        except:
+        except Exception:
             return False
     gswitches = gswitches.loc[
         gswitches.index.str.lower().str.startswith('gsw')
@@ -945,31 +960,37 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
 
     #%% Set up the meta.csv file to track repo information and runtime
     ticker = os.path.join(reeds_path,'input_processing','ticker.py')
-    with open(os.path.join(casedir,'meta.csv'),'w+') as METAFILE:
-        ### Write some git metadata
-        METAFILE.writelines('computer,repo,branch,commit,description\n')
+    loglines = ['computer,repo,branch,commit,description\n']
+    ### Get some git metadata
+    try:
+        import git
+        import socket
+        repo = git.Repo()
         try:
-            import git
-            import socket
-            repo = git.Repo()
-            try:
-                branch = repo.active_branch.name
-                description = repo.git.describe()
-            except TypeError:
-                branch = 'DETACHED_HEAD'
-                description = ''
-            METAFILE.writelines(
-                '{},{},{},{},{}\n'.format(
-                    socket.gethostname(),
-                    repo.git_dir, branch, repo.head.object.hexsha, description))
-        except:
-            ### In case the user hasn't installed GitPython (conda install GitPython)
-            ### or isn't in a git repo or anything else goes wrong
-            METAFILE.writelines('None,None,None,None,None\n')
+            branch = repo.active_branch.name
+            description = repo.git.describe()
+        except TypeError:
+            branch = 'DETACHED_HEAD'
+            description = ''
+        loglines.append(
+            '{},{},{},{},{}\n'.format(
+                socket.gethostname(),
+                repo.git_dir, branch, repo.head.object.hexsha, description))
+    except Exception:
+        ### In case the user hasn't installed GitPython (conda install GitPython)
+        ### or isn't in a git repo or anything else goes wrong
+        loglines.append('None,None,None,None,None\n')
 
+    with open(os.path.join(casedir,'meta.csv'),'a') as METAFILE:
         ### Header for timing metadata
+        for line in loglines:
+            METAFILE.writelines(line)
         METAFILE.writelines('#,#,#,#,#\n')
         METAFILE.writelines('year,process,starttime,stoptime,processtime\n')
+    ### Also write the git metadata to gamslog.txt for debugging
+    with open(os.path.join(casedir,'gamslog.txt'),'a') as LOGFILE:
+        for line in loglines:
+            LOGFILE.writelines(line)
 
     ### Write the environment info for debugging
     try:
@@ -1190,7 +1211,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             + f"--fname={batch_case}"
             + f" --GSw_calc_powfrac={caseSwitches['GSw_calc_powfrac']} \n"
         )
-        OPATH.writelines(writescripterrorcheck(f"e_report.gms"))
+        OPATH.writelines(writescripterrorcheck("e_report.gms"))
         if not LINUXORMAC:
             OPATH.writelines("endlocal\n")
         OPATH.writelines('python {t}\n'.format(t=ticker))
@@ -1206,6 +1227,27 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             OPATH.writelines(
                 f"python {os.path.join(reeds_path,'postprocessing','air_quality','health_damage_calculations.py')} {casedir}\n\n"
             )
+
+        ### Make script to unload all data to .gdx file
+        command = (
+            'gams dump_alldata.gms'
+            + ' o='+os.path.join('lstfiles','dump_alldata_{}_{}.lst'.format(BatchName,case))
+        )
+        command_write = (
+            command
+            + ' r='+os.path.join('g00files','{}_{}_{}i0'.format(BatchName,case,solveyears[-1]))
+        )
+        with open(os.path.join(casedir,'dump_alldata'+ext),'w+') as datadumper:
+            datadumper.writelines('cd ' + os.path.join(reeds_path,'runs','{}_{}'.format(BatchName,case)) + '\n')
+            for line in [
+                f"By default, this script dumps data for the first iteration of {solveyears[-1]}.",
+                "If more iterations were needed, increase the number at the end of the",
+                f"next line after 'i' (e.g. {solveyears[-1]}i0 -> {solveyears[-1]}i1)",
+            ]:
+                comment(line, datadumper)
+            datadumper.writelines(command_write)
+        if int(caseSwitches['dump_alldata']) or int(caseSwitches['debug']):
+            OPATH.writelines(command + (' r=$r' if LINUXORMAC else ' r=!r!') + '\n')
 
         ## ReEDS_to_rev processing
         if caseSwitches['reeds_to_rev'] == '1':
@@ -1241,23 +1283,6 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             + os.path.join(bokehdir,"templates","reeds2","state_report.py") + ' "csv" one '
             + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-state") + ' No\n\n')
         OPATH.writelines('python postprocessing/vizit/vizit_prep.py ' + '"{}"'.format(os.path.join(casedir,'outputs')) + '\n\n')
-
-        # Make script to unload all data to .gdx file
-        command = (
-            'gams dump_alldata.gms'
-            + ' o='+os.path.join('lstfiles','dump_alldata_{}_{}.lst'.format(BatchName,case))
-            + ' r='+os.path.join('g00files','{}_{}_{}i0'.format(BatchName,case,solveyears[-1])))
-        with open(os.path.join(casedir,'dump_alldata'+ext),'w+') as datadumper:
-            datadumper.writelines('cd ' + os.path.join(reeds_path,'runs','{}_{}'.format(BatchName,case)) + '\n')
-            for l in [
-                f"By default, this script dumps data for the first iteration of {solveyears[-1]}.",
-                "If more iterations were needed, increase the number at the end of the",
-                f"next line after 'i' (e.g. {solveyears[-1]}i0 -> {solveyears[-1]}i1)",
-            ]:
-                comment(l, datadumper)
-            datadumper.writelines(command)
-        if int(caseSwitches['dump_alldata']):
-            OPATH.writelines(command+'\n')
 
         if int(caseSwitches['delete_big_files']):
             for file in [
@@ -1317,16 +1342,16 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         shutil.copy("srun_template.sh", os.path.join(casedir, batch_case+".sh"))
         
         # option to run on a debug node on an hpc system
-        if debug:
+        if debugnode:
             writelines = []
             # comment out original time specification
             with open(os.path.join(casedir, batch_case+".sh"), 'r') as SPATH:
-                for l in SPATH:
-                    writelines.append(('# ' if '--time' in l else '') + l.strip())
+                for line in SPATH:
+                    writelines.append(('# ' if '--time' in line else '') + line.strip())
             # rewrite file with new time and debug partition
             with open(os.path.join(casedir, batch_case+".sh"), 'w') as SPATH:
-                for l in writelines:
-                    SPATH.writelines(l + '\n')
+                for line in writelines:
+                    SPATH.writelines(line + '\n')
                 SPATH.writelines("#SBATCH --time=01:00:00\n")
                 SPATH.writelines("#SBATCH --partition=debug\n")
 
@@ -1364,14 +1389,16 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
     try:
         with open(os.path.join(casedir,'meta.csv'), 'a') as METAFILE:
             METAFILE.writelines('0,end,,{},\n'.format(now))
-    except:
+    except Exception:
         print('meta.csv not found or not writeable')
         pass
 
 
 def main(
         BatchName='', cases_suffix='', simult_runs=0,
-        forcelocal=False, restart=False, skip_env_check=False, debug=False):
+        forcelocal=False, restart=False, skip_env_check=False,
+        debug=False, debugnode=False,
+    ):
     """
     Executes parallel solves based on cases in 'cases.csv'
     """
@@ -1397,7 +1424,9 @@ def main(
     # Gather user inputs before calling GAMS programs
     envVar = setupEnvironment(
         BatchName=BatchName, cases_suffix=cases_suffix, simult_runs=simult_runs,
-        forcelocal=forcelocal, restart=restart, skip_env_check=skip_env_check, debug=debug)
+        forcelocal=forcelocal, restart=restart, skip_env_check=skip_env_check,
+        debug=debug, debugnode=debugnode,
+    )
     # Threads are created which will handle each case individually
     createmodelthreads(envVar)
 
@@ -1415,7 +1444,9 @@ if __name__ == '__main__':
                         help='Switch to restart existing ReEDS runs')
     parser.add_argument('--skip_env_check', '-e', action="store_true",
                         help="Don't check that the reeds environment is activated")
-    parser.add_argument('--debug', '-d', action="store_true",
+    parser.add_argument('--debug', '-d', action='count', default=0,
+                        help="Run in debug mode (same behavior as debug switch in cases.csv)")
+    parser.add_argument('--debugnode', '-n', action="store_true",
                         help="Run using debug specifications for slurm on an hpc system")
 
     args = parser.parse_args()
@@ -1424,6 +1455,5 @@ if __name__ == '__main__':
         BatchName=args.BatchName, cases_suffix=args.cases_suffix,
         simult_runs=args.simult_runs, forcelocal=args.forcelocal,
         restart=args.restart, skip_env_check=args.skip_env_check,
-        debug=args.debug,
+        debug=args.debug, debugnode=args.debugnode,
     )
-    

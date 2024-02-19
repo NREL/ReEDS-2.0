@@ -2193,5 +2193,5 @@ if __name__ == '__main__':
         # functions.toc(tic=tic, year=t, process='ReEDS_Augur/G_plots.py')
 
     ### Remove intermediate csv files to save drive space
-    if not int(sw['keep_augur_files']):
+    if (not int(sw['keep_augur_files'])) and (not int(sw['debug'])):
         functions.delete_csvs(sw)

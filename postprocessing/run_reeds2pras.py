@@ -1,6 +1,7 @@
 #%% Imports
 import pandas as pd
-import os, site
+import os
+import site
 from glob import glob
 import subprocess
 ### Local imports
@@ -11,39 +12,47 @@ reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def check_slurm(forcelocal=False):
     """Check whether to submit slurm jobs (if on HPC) or run locally"""
     hpc = True if (int(os.environ.get('REEDS_USE_SLURM',0))) else False
-    ### If on NREL HPC but NOT submitting slurm job, ask for confirmation
-    if ('NREL_CLUSTER' in os.environ) and (not hpc) and (not forcelocal):
-        print(
-            "It looks like you're running on the NREL HPC but the REEDS_USE_SLURM environment "
-            "variable is not set to 1, meaning the model will run locally rather than being "
-            "submitted as a slurm job. Are you sure you want to run locally?"
-        )
-        confirm_local = str(input('Run job locally? y/[n]: ') or 'n')
-        if not confirm_local in ['y','Y','yes','Yes','YES']:
-            quit()
-    return (hpc or forcelocal)
+    hpc = False if forcelocal else hpc
+    return hpc
 
 
-def submit_job(case, year=0, samples=0, repo=False, r2ppath='', overwrite=False):
+def submit_job(
+        case, year=0, samples=0, repo=False, r2ppath='', overwrite=False,
+        write_flow=False, write_surplus=False, write_energy=False,
+    ):
     """
     """
     ### Make the run file
     jobname = f'PRAS-{os.path.basename(case)}-{samples}'
     ## Get the SLURM boilerplate
-    boilerplate = []
+    commands_header, commands_sbatch, commands_other = [], [], []
     with open(os.path.join(reeds_path,'srun_template.sh'), 'r') as f:
-        for l in f:
-            boilerplate.append(l.strip())
+        for line in f:
+            if line.strip().startswith('#!'):
+                commands_header.append(line.strip())
+            elif line.strip().startswith('#SBATCH'):
+                commands_sbatch.append(line.strip())
+            else:
+                commands_other.append(line.strip())
     ## Add the command for this run
-    slurm = boilerplate + [''] + [
-        f"#SBATCH --job-name={jobname}",
-        (
-            f"python run_reeds2pras.py {case} -y {year} -s {samples} --local"
-            + ' --repo' if repo else ''
-            + f' --r2ppath={r2ppath}' if len(r2ppath) else ''
-            + ' --overwrite' if overwrite else ''
-        ),
-    ]
+    slurm = (
+        commands_header
+        + commands_sbatch
+        + [f"#SBATCH --job-name={jobname}"]
+        + [f"#SBATCH --output={os.path.join(case, 'slurm-%j.out')}"]
+        + commands_other + ['']
+        + [(
+            f"python {os.path.join(reeds_path,'postprocessing','run_reeds2pras.py')}"
+            + f" {case}"
+            + f" -y {year} -s {samples} --local"
+            + (' --repo' if repo else '')
+            + (f' --r2ppath={r2ppath}' if len(r2ppath) else '')
+            + (' --overwrite' if overwrite else '')
+            + (' --flow' if write_flow else '')
+            + (' --surplus' if write_surplus else '')
+            + (' --energy' if write_energy else '')
+        )]
+    )
     ### Write the SLURM command
     callfile = os.path.join(case, 'call_pras.sh')
     with open(callfile, 'w+') as f:
@@ -56,7 +65,10 @@ def submit_job(case, year=0, samples=0, repo=False, r2ppath='', overwrite=False)
 
 
 #%% Main function
-def main(case, year=0, samples=0, repo=False, r2ppath='', overwrite=False):
+def main(
+        case, year=0, samples=0, repo=False, r2ppath='', overwrite=False,
+        write_flow=False, write_surplus=False, write_energy=False,
+    ):
     """
     Run A_prep_data, ReEDS2PRAS, and PRAS as necessary.
     If running PRAS, append the number of samples to the filename.
@@ -114,14 +126,24 @@ def main(case, year=0, samples=0, repo=False, r2ppath='', overwrite=False):
     ### Run ReEDS2PRAS
     Augur.run_pras(
         case, t, sw, iteration=iteration,
-        recordtime=False, repo=repo, overwrite=overwrite, include_samples=True)
+        recordtime=False, repo=repo, overwrite=overwrite, include_samples=True,
+        write_flow=write_flow, write_surplus=write_surplus, write_energy=write_energy,
+    )
 
 
 #%%### Procedure
 if __name__ == '__main__':
     #%% Argument inputs
     import argparse
-    parser = argparse.ArgumentParser(description='run ReEDS2PRAS')
+    description = """Run A_prep_data, ReEDS2PRAS, and PRAS as necessary.
+    Example usage on the HPC:
+    `case=/projects/reedsweto/github/ReEDS-2.0/runs/v20230524_ntpH0_Pacific`
+    `for s in 100 1000; do python postprocessing/run_reeds2pras.py $case -s $s -r; done`
+    """
+    parser = argparse.ArgumentParser(
+        description=description,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument('case', type=str,
                         help='path to ReEDS run folder')
     parser.add_argument('--year', '-y', type=int, default=0,
@@ -137,6 +159,12 @@ if __name__ == '__main__':
                         help='Run locally (not as SLURM job)')
     parser.add_argument('--overwrite', '-o', action='store_true',
                         help="Overwrite .pras file if it already exists")
+    parser.add_argument('--flow', '-f', action='store_true',
+                        help="Write hourly flow from PRAS")
+    parser.add_argument('--surplus', '-u', action='store_true',
+                        help="Write hourly surplus from PRAS")
+    parser.add_argument('--energy', '-e', action='store_true',
+                        help="Write hourly storage energy from PRAS")
 
     args = parser.parse_args()
     case = args.case
@@ -146,6 +174,9 @@ if __name__ == '__main__':
     r2ppath = args.r2ppath
     local = args.local
     overwrite = args.overwrite
+    write_flow = args.flow
+    write_surplus = args.surplus
+    write_energy = args.energy
 
     # #%% Inputs for testing
     # case = '/Users/pbrown/github2/ReEDS-2.0/runs/v20230605_ntpM1_Pacific'
@@ -155,6 +186,9 @@ if __name__ == '__main__':
     # r2ppath = ''
     # local = False
     # overwrite = False
+    # write_flow = False
+    # write_surplus = False
+    # write_energy = False
 
     #%% Determine whether to submit SLURM job
     hpc = check_slurm(forcelocal=local)
@@ -164,9 +198,11 @@ if __name__ == '__main__':
         submit_job(
             case=case, year=year, samples=samples, repo=repo,
             r2ppath=r2ppath, overwrite=overwrite,
+            write_flow=write_flow, write_surplus=write_surplus, write_energy=write_energy,
         )
     else:
         main(
             case=case, year=year, samples=samples, repo=repo,
             r2ppath=r2ppath, overwrite=overwrite,
+            write_flow=write_flow, write_surplus=write_surplus, write_energy=write_energy,
         )

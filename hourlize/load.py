@@ -1,64 +1,44 @@
-import pandas as pd
-import numpy as np
-from pdb import set_trace as pdbst
+"""
+Functions for processing load data for use in ReEDS.
+Run using "run_hourlize.py" -- see README for setup and details.
+"""
+
+#%% ===========================================================================
+### --- IMPORTS ---
+### ===========================================================================
+
+import argparse
 import datetime
-import os
-import sys
-import shutil
-import config_load as cf
-import logging
 import h5py
+import json
+import logging
+import numpy as np
+import os
+import pandas as pd
+import shutil
+import site
+import sys
+from collections import OrderedDict
+from types import SimpleNamespace 
 
-#Set load config in config_load.py. Then run 'python load.py' from the command prompt,
-#and the output will be in out/
-
-#Setup logger
-logger = logging.getLogger('')
-logger.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(message)s')
-if cf.logToTerminal:
-    sh = logging.StreamHandler(sys.stdout)
-    sh.setLevel(logging.DEBUG)
-    sh.setFormatter(formatter)
-    logger.addHandler(sh)
-logger.info('Load logger setup.')
-
-def setup(this_dir_path, out_dir, paths):
-    time = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    #Create output directory, creating backup if one already exists.
-    if os.path.exists(out_dir):
-        os.rename(out_dir, os.path.dirname(out_dir) + '-archive-'+time)
-    os.makedirs(out_dir)
-    os.makedirs(out_dir + 'inputs/')
-    os.makedirs(out_dir + 'results/')
-
-    #Add output file for logger
-    fh = logging.FileHandler(out_dir + 'log.txt', mode='w')
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-
-    #Copy inputs to outputs
-    shutil.copy2(this_dir_path + 'load.py', out_dir + 'inputs/')
-    shutil.copy2(this_dir_path + 'config_load.py', out_dir + 'inputs/')
-    for key in paths:
-        if paths[key] != False:
-            shutil.copy2(paths[key], out_dir + 'inputs/')
+#%% ===========================================================================
+### --- FUNCTIONS ---
+### ===========================================================================
 
 def get_hourly_load(load_source, us_only):
-    logger.info('Gathering and combining hourly inputs...')
+    print('Gathering and combining hourly inputs...')
     startTime = datetime.datetime.now()
     df = pd.read_csv(load_source, low_memory=False, index_col=0, parse_dates=True)
     if us_only:
         us_bas = ['p'+str(i+1) for i in range(134)]
         df = df[us_bas].copy()
     df = df.reindex(sorted(df.columns), axis=1)
-    logger.info('Done gathering hourly inputs: '+ str(datetime.datetime.now() - startTime))
+    print('Done gathering hourly inputs: '+ str(datetime.datetime.now() - startTime))
     return df
 
 def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, select_year, output_timezone, 
-                   truncate_leaps, calibrate_type, calibrate_year, use_default_before_yr, load_source_hr_type):
-    logger.info('Processing hourly data...')
+                   truncate_leaps, calibrate_type, calibrate_year, use_default_before_yr, load_source_hr_type, outpath):
+    print('Processing hourly data...')
     startTime = datetime.datetime.now()
     df_hr = df_hr_input.copy()
     df_hr.index.rename('datetime', inplace=True)
@@ -83,9 +63,9 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
         #First, combine the calibrated state-level energy with ba participation factors to calculate the calibrated energy by BA
         df_st_energy = pd.read_csv(paths['calibrate_path'])
         df_ba_frac = pd.read_csv(paths['ba_frac_path'])
-        df_hier = pd.read_csv(paths['hierarchy_path'], usecols=['n','st'])
+        df_hier = pd.read_csv(os.path.join(outpath, 'inputs', 'hierarchy.csv'), usecols=['ba','st'])
         df_hier.drop_duplicates(inplace=True)
-        df_ba_frac = pd.merge(left=df_ba_frac, right=df_hier, how='left', on=['n'], sort=False)
+        df_ba_frac = pd.merge(left=df_ba_frac, right=df_hier, how='left', on=['ba'], sort=False)
         df_ba_energy = pd.merge(left=df_ba_frac, right=df_st_energy, how='left', on=['st'], sort=False)
         df_ba_energy['GWh_cal'] = df_ba_energy['GWh'] * df_ba_energy['factor']
         df_ba_energy.drop(columns=['factor', 'st', 'GWh'], inplace=True)
@@ -99,13 +79,15 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
                 #Get annual load by BA
                 df_ann = (df_hr.copy().groupby(df_hr.index.year).sum().reset_index()
                           .rename(columns={'datetime':'year'}))
-                df_ann = pd.melt(df_ann, id_vars=['year'], var_name='n', value_name='GWh')
+                df_ann = pd.melt(df_ann, id_vars=['year'], var_name='ba', value_name='GWh')
                 df_ann['GWh'] /= 1000
-                df_scale = pd.merge(left=df_ann, right=df_ba_energy, on=['n', 'year'], how='left')
+                df_scale = pd.merge(left=df_ann, right=df_ba_energy, on=['ba', 'year'], how='left')
                 #Add columns for latest year's original projected and historical loads
                 df_temp = df_scale[df_scale['year']==year_cal
-                                   ][['n', 'GWh', 'GWh_cal']].copy().drop_duplicates()
-                df_scale = df_scale.merge(df_temp, on=['n'], how='left', 
+                                   ][['ba', 'GWh', 'GWh_cal']].copy().drop_duplicates()
+                if df_temp.empty:
+                    raise Exception("Error: 'df_temp' is empty. Check calibration year and calibrate_type setting.")
+                df_scale = df_scale.merge(df_temp, on=['ba'], how='left', 
                                           suffixes=('', f'_{year_cal}'))
                 del df_temp
                 # Get change in original projected load from latest year
@@ -122,23 +104,23 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
                 #Reformat hourly load to long format to merge with scaling factors
                 df_hr.insert(0, 'year', df_hr.index.year)                
                 df_hr = pd.melt(df_hr.reset_index(), id_vars=['datetime', 'year'], 
-                                var_name='n', value_name='load')
+                                var_name='ba', value_name='load')
                 #Merge hourly load with scaling factors
-                df_hr = df_hr.merge(df_scale[['year', 'n', 'factor']], on=['year', 'n'], how='left')
+                df_hr = df_hr.merge(df_scale[['year', 'ba', 'factor']], on=['year', 'ba'], how='left')
                 #Scale the profiles
                 df_hr['load'] *= df_hr['factor']
-                df_hr = df_hr[['datetime', 'n', 'load']]
+                df_hr = df_hr[['datetime', 'ba', 'load']]
                 #Reformat hourly load back to wide format
-                df_hr = df_hr.pivot_table(index=['datetime'], columns='n', values='load')
+                df_hr = df_hr.pivot_table(index=['datetime'], columns='ba', values='load')
             else:
                 df_hr_yr_ls = []
                 for year in df_hr.index.year.unique().tolist():
                     df_hr_yr = df_hr[df_hr.index.year == year].copy()
                     df_hr_sum = df_hr_yr.sum()/1e3
-                    df_hr_sum = df_hr_sum.reset_index().rename(columns={'index':'n', 0:'GWh_orig'})
-                    df_scale = pd.merge(left=df_hr_sum, right=df_ba_energy, how='left', on=['n'], sort=False)
+                    df_hr_sum = df_hr_sum.reset_index().rename(columns={'index':'ba', 0:'GWh_orig'})
+                    df_scale = pd.merge(left=df_hr_sum, right=df_ba_energy, how='left', on=['ba'], sort=False)
                     df_scale['factor'] = df_scale['GWh_cal'] / df_scale['GWh_orig']
-                    scales = dict(zip(df_scale['n'], df_scale['factor']))
+                    scales = dict(zip(df_scale['ba'], df_scale['factor']))
                     #Scale the profiles
                     for ba in df_hr:
                         df_hr_yr[ba] = df_hr_yr[ba] * scales[ba]
@@ -147,10 +129,10 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
         elif calibrate_type == 'one_year': #switch for calibrating to a single year and then using as coeffecient for additional years
             df_hr_yr = df_hr[df_hr.index.year == calibrate_year].copy()
             df_hr_sum = df_hr_yr.sum()/1e3
-            df_hr_sum = df_hr_sum.reset_index().rename(columns={'index':'n', 0:'GWh_orig'})
-            df_scale = pd.merge(left=df_hr_sum, right=df_ba_energy, how='left', on=['n'], sort=False)
+            df_hr_sum = df_hr_sum.reset_index().rename(columns={'index':'ba', 0:'GWh_orig'})
+            df_scale = pd.merge(left=df_hr_sum, right=df_ba_energy, how='left', on=['ba'], sort=False)
             df_scale['factor'] = df_scale['GWh_cal'] / df_scale['GWh_orig']
-            scales = dict(zip(df_scale['n'], df_scale['factor']))
+            scales = dict(zip(df_scale['ba'], df_scale['factor']))
             #Scale the profiles
             for ba in df_hr:
                 df_hr[ba] = df_hr[ba] * scales[ba]
@@ -168,10 +150,10 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
 
     #Splice in default data, for which the first entry is Jan 1, 1am hour ending, which is 12am-1am, which is 12am hour beginning.
     if use_default_before_yr != False:
-        logger.info('Splicing in default load before ' + str(use_default_before_yr))
+        print('Splicing in default load before ' + str(use_default_before_yr))
         #Read in hierarchy to map census division / state to BA
-        df_hier = pd.read_csv('../inputs/hierarchy.csv')
-        df_hier = df_hier.rename(columns= {'*r' : 'r'})
+        df_hier = pd.read_csv(os.path.join(outpath, 'inputs', 'hierarchy.csv'))
+        df_hier = df_hier.rename(columns= {'*county':'county', 'ba' : 'r'})
         #Read in load multipliers
         df_loadgrowth = pd.read_csv(cf.aeo_default)
         if 'cendiv' in df_loadgrowth.columns:
@@ -194,7 +176,7 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
         df_loadgrowth = df_loadgrowth[df_loadgrowth['year']<use_default_before_yr
                                       ][['year', 'r', 'multiplier']]
         df_loadgrowth['year'] = df_loadgrowth['year'].astype(int)
-        logger.info('Reading default load and selecting ' + str(select_year) + ' profiles')
+        print('Reading default load and selecting ' + str(select_year) + ' profiles')
         df_bau = pd.read_hdf('../inputs/loaddata/historic_load_hourly.h5')
         df_bau.index += -1 # Re-index to 0-8759 instead of 1-8760
         df_bau = df_bau[(df_bau.index >= 8760*(select_year-2007)) &
@@ -209,11 +191,11 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
         #Merge load growth multipliers to historical load
         df_loadgrowth = df_loadgrowth[df_loadgrowth['r'].isin(df_bau['r'].unique())]
         df_bau = df_bau.merge(df_loadgrowth, on=['r'], how='outer').reset_index(drop=True)
-        logger.info('Growing default load')
+        print('Growing default load')
         df_bau['value'] *= df_bau['multiplier']
-        logger.info('Reshaping default load')
+        print('Reshaping default load')
         df_bau = df_bau.pivot_table(index=['year','hour'], columns='r', values='value').reset_index()
-        logger.info('Concatenating with default load')
+        print('Concatenating with default load')
         ls_df_bau = []
         for year in range(2010,use_default_before_yr):
             df_yr = df_bau[df_bau['year'] == year].copy()
@@ -224,9 +206,9 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
         df_bau = pd.concat(ls_df_bau).round().astype(int)
         df_bau.index.rename('datetime', inplace=True)
         df_hr = pd.concat([df_bau,df_hr])
-        logger.info('Done splicing in default load')
+        print('Done splicing in default load')
 
-    logger.info('Done processing hourly: '+ str(datetime.datetime.now() - startTime))
+    print('Done processing hourly: '+ str(datetime.datetime.now() - startTime))
     return df_hr
 
 def roll_hourly_data(df_hr, paths, source_timezone, output_timezone, load_source_hr_type):
@@ -256,8 +238,8 @@ def shift_to_1am(df_hr):
     df_hr = pd.concat(df_hr_ls)
     return df_hr
 
-def save_outputs(df_hr, out_dir, compression_opts, dtypeLoad):
-    logger.info('Saving outputs...')
+def save_outputs(df_hr, outpath, compression_opts, dtypeLoad):
+    print('Saving outputs...')
     startTime = datetime.datetime.now()
     df_hr = df_hr.copy()
     #Reformat df_hr for outputting to h5 file
@@ -268,33 +250,52 @@ def save_outputs(df_hr, out_dir, compression_opts, dtypeLoad):
     df_hr = df_hr[new_cols].copy().sort_values(['year','hour'])
 
     #Write df_hr to h5 file with each table (year) being 8760 (hours) x 134 (regions)
-    f = h5py.File(os.path.join(out_dir, 'results', 'load_hourly.h5'), 'w')
+    f = h5py.File(os.path.join(outpath, 'results', 'load_hourly.h5'), 'w')
     f.create_dataset('columns', data=df_hr.columns[2:], dtype=h5py.special_dtype(vlen=str))
     for year in df_hr['year'].unique():
         df_h = df_hr[df_hr['year'] == year].copy()
         df_h.drop(columns=['year','hour'], inplace=True)
         f.create_dataset(str(year), data=df_h, dtype=dtypeLoad, compression='gzip')
     f.close()
-    logger.info('Done saving outputs: '+ str(datetime.datetime.now() - startTime))
+    print('Done saving outputs: '+ str(datetime.datetime.now() - startTime))
 
+#%% ===========================================================================
+### --- PROCEDURE ---
+### ===========================================================================
 
 if __name__== '__main__':
+
+    #%% load arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', '-c', type=str, default='', help='path to config file for this run')
+    args = parser.parse_args()
+    configpath = args.config
     startTime = datetime.datetime.now()
-    this_dir_path = os.path.dirname(os.path.realpath(__file__)) + '/'
-    out_dir = this_dir_path + 'out/load_' + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S-%f") + '/'
+
+    #%% load config information
+    with open(configpath, "r") as f:
+        config = json.load(f, object_pairs_hook=OrderedDict)
+    cf = SimpleNamespace(**config)
+
+    #%% setup logging
+    site.addsitedir(os.path.join(cf.reedspath, "input_processing"))
+    from ticker import toc, makelog
+    log = makelog(scriptname=__file__, logpath=os.path.join(cf.outpath, f'log_{cf.casename}.txt'))
+
+    # list of paths for passing to functions
     paths = {'ba_timezone_path':cf.ba_timezone_path,
              'calibrate_path':cf.calibrate_path,
              'ba_frac_path':cf.ba_frac_path,
              'hierarchy_path':cf.hierarchy_path,
              'aeo_multipliers':cf.aeo_default,
             }
-    setup(this_dir_path, out_dir, paths)
+    
     #If load source is a directory (as it is for EER load), the csv files inside need to be labeled like w2007.csv.
     if os.path.isdir(cf.load_source):
-        f = h5py.File(os.path.join(out_dir,'results','load_hourly_multi.h5'), 'w')
+        f = h5py.File(os.path.join(cf.outpath,'results','load_hourly_multi.h5'), 'w')
         ls_df_hr = []
         for year in list(range(2007,2014)):
-            logger.info('processing weather year ' + str(year) + '...')
+            print('processing weather year ' + str(year) + '...')
             df_hr_input = get_hourly_load(os.path.join(cf.load_source,'w'+str(year)+'.csv'), cf.us_only)
             if cf.hourly_process == False:
                 df_hr = df_hr_input.copy()
@@ -307,7 +308,7 @@ if __name__== '__main__':
             if year == cf.select_year:
                 if cf.start_1am:
                     df_hr = shift_to_1am(df_hr)
-                save_outputs(df_hr, out_dir, cf.compression_opts, cf.dtypeLoad)
+                save_outputs(df_hr, cf.outpath, cf.compression_opts, cf.dtypeLoad)
             else:
                 if cf.start_1am:
                     df_hr = shift_to_1am(df_hr)
@@ -331,9 +332,9 @@ if __name__== '__main__':
             df_hr = process_hourly(df_hr_input, cf.load_source_timezone, paths, 
                                    cf.hourly_out_years, cf.select_year, cf.output_timezone, 
                                    cf.truncate_leaps, cf.calibrate_type, cf.calibrate_year, 
-                                   cf.use_default_before_yr, cf.load_source_hr_type)
+                                   cf.use_default_before_yr, cf.load_source_hr_type, cf.outpath)
         #Compare df_hr and df_hr_input to see the combined effect of all the processing steps.
         if cf.start_1am:
             df_hr = shift_to_1am(df_hr)
-        save_outputs(df_hr, out_dir, cf.compression_opts, cf.dtypeLoad)
-    logger.info('All done! total time: '+ str(datetime.datetime.now() - startTime))
+        save_outputs(df_hr, cf.outpath, cf.compression_opts, cf.dtypeLoad)
+    print('All done! total time: '+ str(datetime.datetime.now() - startTime))

@@ -60,7 +60,7 @@ if(Sw_Upgrades = 1,
 
 * if the relative growth constraint is turned on, then calculate the growth
 * limits for each growth bin
-if(Sw_GrowthRelCon > 0,
+if(Sw_GrowthPenalties > 0,
 
 * Calculate the maximum deployment that could have been achieved in the last modeled
 * year. For example, if tmodel is 2023 and the prior two solve years were 2020 and 
@@ -127,7 +127,7 @@ cc_old(i,r,ccseason,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] =
 m_cc_mar(i,r,ccseason,t)$[tload(t)$(vre(i) or csp(i) or pvb(i))] =
     sum{ccreg$r_ccreg(r,ccreg), cc_mar_load(i,r,ccreg,ccseason,t) } ;
 
-m_cc_dr(i,r,ccseason,t)$[tload(t)$dr(i)] = cc_dr_load(i,r,ccseason,t) ;
+m_cc_dr(i,r,ccseason,t)$[tload(t)$demand_flex(i)] = cc_dr_load(i,r,ccseason,t) ;
 
 sdbin_size(ccreg,ccseason,sdbin,t)$tload(t) = sdbin_size_load(ccreg,ccseason,sdbin,t) ;
 
@@ -315,7 +315,7 @@ $endif
 
 * Now that cost_cap_fin_mult is done, calculate cost_growth, which is
 * the minimum cost of that technology within a state
-if(Sw_GrowthRelCon > 0,
+if(Sw_GrowthPenalties > 0,
 *rsc_fin_mult holds the multipliers for hydro, psh, and geo techs, so don't include them here
     cost_growth(i,st,t)$[tmodel(t)$sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)$(not (geo(i) or hydro(i) or psh(i)))] = 
         smin{r$[valinv_irt(i,r,t)$r_st(r,st)$cost_cap_fin_mult(i,r,t)$cost_cap(i,t)],
@@ -330,7 +330,9 @@ if(Sw_GrowthRelCon > 0,
 ) ;
 
 * --- report data immediately before the solve statement---
-*execute_unload "data_%cur_year%.gdx" ;
+$ifthene.debug %debug%>0
+execute_unload 'alldata_%stress_year%.gdx' ;
+$endif.debug
 
 * ------------------------------
 * Solve the Model

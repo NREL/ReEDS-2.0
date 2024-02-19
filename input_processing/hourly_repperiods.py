@@ -28,7 +28,6 @@ import json
 import numpy as np
 import os
 import pandas as pd
-import shutil
 import re
 from LDC_prep import read_file
 import hourly_writetimeseries
@@ -75,26 +74,27 @@ def szn2period(szn):
 #    -- Load Processing --    #
 ###############################
 
-def get_load(sw, inputs_case):
+def get_load(inputs_case, keep_modelyear=None, keep_weatheryears=[2012]):
     """
     """
     ### Subset to modeled regions
     load = read_file(os.path.join(inputs_case,'load'), index_columns=2)
-    ### Subset to cluster year; if it's not included, keep the latest year
-    loadyears = load.index.get_level_values('year').unique()
-    keepyear = (
-        int(sw['GSw_HourlyClusterYear']) if int(sw['GSw_HourlyClusterYear']) in loadyears
-        else max(loadyears))
-    load = load.loc[keepyear].copy()
+    ### Subset to keep_modelyear if provided
+    if keep_modelyear:
+        allyears = [keep_modelyear]
+        load = load.loc[keep_modelyear].copy()
+    else:
+        allyears = load.index.get_level_values('year').unique()
     ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
     scalars = pd.read_csv(
         os.path.join(inputs_case,'scalars.csv'),
         header=None, usecols=[0,1], index_col=0).squeeze(1)
     load *= (1 - scalars['distloss'])
 
-    ### Downselect to weather_years
-    load['year'] = np.ravel([[y]*8760 for y in range(2007,2014)])
-    load = load.loc[load.year.isin(sw.GSw_HourlyWeatherYears)].drop('year', axis=1)
+    ### Downselect to weather years if provided
+    if isinstance(keep_weatheryears, list):
+        load['wyear'] = np.ravel([[w]*8760 for y in allyears for w in range(2007,2014)])
+        load = load.loc[load.wyear.isin(keep_weatheryears)].drop('wyear', axis=1)
 
     return load
 
@@ -432,6 +432,8 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     val_r_all = pd.read_csv(
         os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
+    modelyears = pd.read_csv(
+        os.path.join(inputs_case, 'modeledyears.csv')).columns.astype(int)
     
     # ReEDS only supports a single entry for agglevel right now, so use the
     # first value from the list (copy_files.py already ensures that only one
@@ -551,8 +553,9 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     # to map regional data from BA/county (depending on desired spatial aggregation) 
     # to the spatial aggregation defined by sw['GSw_HourlyMinRElevel']
     rmap1 = r_ba if agglevel in ['ba','state','aggreg'] else r_county
-    ### Identify stress periods if necessary
-    if sw['GSw_HourlyMinRElevel'].lower() not in ['false','none']:
+    ### Identify outlying periods if using capacity credit instead of stress periods
+    if (int(sw.GSw_PRM_CapCredit)
+        and (sw['GSw_HourlyMinRElevel'].lower() not in ['false','none'])):
         forceperiods_minre = {
             tech: identify_min_periods(
                 df=recf, hierarchy=hierarchy, rmap1=rmap1,
@@ -578,12 +581,20 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     ### Load load data (Eastern time)
     print("Collecting 8760 load data")
-    load = get_load(sw=sw, inputs_case=inputs_case)
+    load = get_load(
+        inputs_case=inputs_case,
+        keep_modelyear=(int(sw['GSw_HourlyClusterYear'])
+                  if int(sw['GSw_HourlyClusterYear']) in modelyears
+                  else max(modelyears)),
+        keep_weatheryears=sw.GSw_HourlyWeatherYears,
+    )
     ## Add descriptive index
     load.index = timestamps_myr.set_index(['year','yperiod','h_of_period']).index
 
-    ### Identify stress periods if necessary
-    if sw['GSw_HourlyPeakLevel'].lower() not in ['false','none']:
+    ### Identify outlying periods if using capacity credit instead of stress periods
+    if (int(sw.GSw_PRM_CapCredit)
+        and (sw['GSw_HourlyPeakLevel'].lower() not in ['false','none'])
+    ):
         forceperiods_load = identify_peak_containing_periods(
             df=load, hierarchy=hierarchy, level=sw['GSw_HourlyPeakLevel'])
     else:
@@ -685,7 +696,9 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
 
     #%%### Identify a (potentially different) collection of periods to use as initial stress periods
-    if sw['GSw_PRM_StressSeedMinRElevel'].lower() not in ['false','none']:
+    if ((not int(sw.GSw_PRM_CapCredit))
+        and (sw['GSw_PRM_StressSeedMinRElevel'].lower() not in ['false','none'])
+    ):
         stressperiods_minre = {
             tech: identify_min_periods(
                 df=recf, hierarchy=hierarchy, rmap1=rmap1,
@@ -694,24 +707,44 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     else:
         stressperiods_minre = {'upv':set(), 'wind-ons':set()}
 
-    if sw['GSw_PRM_StressSeedLoadLevel'].lower() not in ['false','none']:
-        stressperiods_load = identify_peak_containing_periods(
-            df=load, hierarchy=hierarchy, level=sw['GSw_PRM_StressSeedLoadLevel'])
+    if ((not int(sw.GSw_PRM_CapCredit))
+        and (sw['GSw_PRM_StressSeedLoadLevel'].lower() not in ['false','none'])
+    ):
+        ## Get load for all model and weather years
+        load_allyears = get_load(inputs_case, keep_weatheryears='all').loc[modelyears]
+        ## Add descriptive index
+        load_allyears.index = (
+            pd.concat(
+                {y: timestamps for y in modelyears},
+                axis=0, names=['modelyear','h_of_modelyear']).reset_index()
+            .set_index(['modelyear','year','yperiod','h_of_period']).index
+        )
+        stressperiods_load = {
+            y: identify_peak_containing_periods(
+                df=load_allyears.loc[y], hierarchy=hierarchy,
+                level=sw['GSw_PRM_StressSeedLoadLevel'])
+            for y in modelyears
+        }
     else:
-        stressperiods_load = set()
+        stressperiods_load = {y: set() for y in modelyears}
 
-    stressperiods_write = pd.DataFrame(
-        [['load'] + list(i) for i in stressperiods_load]
-        + [[k]+list(i) for k,v in stressperiods_minre.items() for i in v],
-        columns=['property','region','reason','year','yperiod'],
-    )
+    ## Combine dicts of load and min-wind/solar stress periods into a dataframe with
+    ## (modelyear, property, region, reason) index and (weatheryear, period of year, szn)
+    ## values.
+    stressperiods_write = pd.concat(
+        {y: pd.DataFrame(
+            [['load'] + list(i) for i in stressperiods_load[y]]
+            + [[k]+list(i) for k,v in stressperiods_minre.items() for i in v],
+            columns=['property','region','reason','year','yperiod']
+         ).drop_duplicates(subset=['year','yperiod'])
+         for y in modelyears},
+        axis=0, names=['modelyear','index'],
+    ).reset_index(level='index', drop=True)
     stressperiods_write['szn'] = (
         'y' + stressperiods_write.year.astype(str)
         + ('d' if sw.GSw_HourlyType=='year' else sw.GSw_HourlyType[0])
         + stressperiods_write.yperiod.map('{:>03}'.format)
     )
-    ### Drop duplicates
-    stressperiods_write.drop_duplicates(subset=['year','yperiod'], inplace=True)
 
 
     #%%### Get the representative and force periods
@@ -738,13 +771,23 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
           else period_szn_write['actual_period']),
          's'+timestamps['period'].drop_duplicates()]
     )
+
     set_allh = pd.concat([timestamps['timestamp'], 's'+timestamps['timestamp']])
+
     set_actualszn = (
         period_szn_write['season'].drop_duplicates() if sw['GSw_HourlyType'] == 'year'
         else period_szn_write['actual_period'])
+
     stress_period_szn = (
         stressperiods_write.assign(rep_period=stressperiods_write.szn)
         [['rep_period','year','yperiod','szn']].rename(columns={'szn':'actual_period'})
+    )
+
+    stressperiods_seed = (
+        stressperiods_write
+        .assign(szn='s'+stressperiods_write.szn)
+        .reset_index().rename(columns={'modelyear':'t'})
+        [['t','szn']]
     )
 
 
@@ -823,13 +866,43 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     set_actualszn.to_csv(
         os.path.join(inputs_case, 'set_actualszn.csv'), header=False, index=False)
 
-    #%% Write the initial stress periods to use for the PRM constraint
-    os.makedirs(os.path.join(inputs_case, 'stress2010i0'), exist_ok=True)
-    stressperiods_write.to_csv(
-        os.path.join(inputs_case, 'stress2010i0', 'forceperiods.csv'), index=False)
-
-    stress_period_szn.to_csv(
-        os.path.join(inputs_case, 'stress2010i0', 'period_szn.csv'), index=False)
+    #%% Write the seed stress periods to use for the PRM constraint
+    if 'user' in sw.GSw_PRM_StressModel:
+        stressperiods_seed = pd.read_csv(
+            os.path.join(
+                reeds_path, 'inputs', 'variability',
+                f'stressperiods_{sw.GSw_PRM_StressModel}.csv')
+        )
+        _missing = [t for t in modelyears if t not in stressperiods_seed.t.unique()]
+        if len(_missing):
+            raise Exception(f"Missing user-defined stress periods for {','.join(_missing)}")
+        for t in modelyears:
+            ## Write the period_szn file
+            szns = stressperiods_seed.loc[stressperiods_seed.t==t, 'szn'].values
+            dfwrite = pd.DataFrame({
+                'rep_period': [i.strip('s') for i in szns],
+                'year': [int(i.strip('sy')[:4]) for i in szns],
+                'yperiod': [int(i[-3:]) for i in szns],
+                'actual_period': [i.strip('s') for i in szns],
+            })
+            os.makedirs(os.path.join(inputs_case, f'stress{t}i0'), exist_ok=True)
+            dfwrite.to_csv(os.path.join(inputs_case, f'stress{t}i0', 'period_szn.csv'), index=False)
+    else:
+        stressperiods_seed.to_csv(os.path.join(inputs_case, 'stressperiods_seed.csv'), index=False)
+        for t in modelyears:
+            os.makedirs(os.path.join(inputs_case, f'stress{t}i0'), exist_ok=True)
+            if stressperiods_write.empty:
+                pd.DataFrame(columns=['property','region','reason','year','yperiod','szn']).to_csv(
+                    os.path.join(inputs_case, f'stress{t}i0', 'forceperiods.csv'), index=False)
+            else:
+                stressperiods_write.loc[[t]].to_csv(
+                    os.path.join(inputs_case, f'stress{t}i0', 'forceperiods.csv'), index=False)
+            if stress_period_szn.empty:
+                pd.DataFrame(columns=['rep_period','year','yperiod','actual_period']).to_csv(
+                    os.path.join(inputs_case, f'stress{t}i0', 'period_szn.csv'), index=False)
+            else:
+                stress_period_szn.loc[[t]].to_csv(
+                    os.path.join(inputs_case, f'stress{t}i0', 'period_szn.csv'), index=False)
 
     #%% Write the set of days to model in Osprey (all possible stress periods)
     d_osprey.to_csv(
@@ -859,7 +932,7 @@ if __name__ == '__main__':
     # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # inputs_case = os.path.join(
     #     reeds_path,'runs',
-    #     'v20231117_prmtradeM1_stress_WECC','inputs_case','')
+    #     'v20240111_mainM1_Pacific_stress','inputs_case','')
     # make_plots = 0
     # interactive = True
 
@@ -916,53 +989,15 @@ if __name__ == '__main__':
 
     ############################################
     #%% Write timeseries data for stress periods
-    #%% If using user-defined stress periods, write them all
-    if 'user' in sw.GSw_PRM_StressModel:
-        stressperiods_user = pd.read_csv(
-            os.path.join(
-                reeds_path, 'inputs', 'variability',
-                f'stressperiods_{sw.GSw_PRM_StressModel}.csv')
-        )
-        for t in stressperiods_user.t.unique():
-            print(f'Writing user-defined stress periods for {t}')
-            ## Write the period_szn file
-            szns = stressperiods_user.loc[stressperiods_user.t==t, 'szn'].values
-            dfwrite = pd.DataFrame({
-                'rep_period': [i.strip('s') for i in szns],
-                'year': [int(i.strip('sy')[:4]) for i in szns],
-                'yperiod': [int(i[-3:]) for i in szns],
-                'actual_period': [i.strip('s') for i in szns],
-            })
-            outpath = os.path.join(inputs_case, f'stress{t}i0')
-            os.makedirs(outpath, exist_ok=True)
-            dfwrite.to_csv(os.path.join(outpath, 'period_szn.csv'), index=False)
-            ## Write the rest of the stress-period inputs
-            hourly_writetimeseries.main(
-                sw=sw, reeds_path=reeds_path, inputs_case=inputs_case,
-                periodtype=f'stress{t}i0',
-                make_plots=0, figpathtail=figpathtail,
-            )
-    else:
-        ### Otherwise only write the "seed" stress periods
+    modelyears = pd.read_csv(
+        os.path.join(inputs_case, 'modeledyears.csv')).columns.astype(int)
+    for t in modelyears:
+        print(f'Writing seed stress periods for {t}')
         hourly_writetimeseries.main(
             sw=sw, reeds_path=reeds_path, inputs_case=inputs_case,
-            periodtype='stress2010i0',
+            periodtype=f'stress{t}i0',
             make_plots=0, figpathtail=figpathtail,
         )
-        ### Copy the heuristic stress periods for the other pre-Osprey/PRAS years.
-        ### If not using stress-period RA formulation, copy for all years.
-        years = pd.read_csv(
-            os.path.join(inputs_case, 'modeledyears.csv')).columns.astype(int)
-        year_to_stop_copying = (
-            int(sw['GSw_SkipAugurYear']) if (not int(sw.GSw_PRM_CapCredit))
-            else max(years)+1)
-        for y in years:
-            if 2010 < y < year_to_stop_copying:
-                shutil.copytree(
-                    os.path.join(inputs_case,'stress2010i0'),
-                    os.path.join(inputs_case,f'stress{y}i0'),
-                    dirs_exist_ok=True,
-                )
 
     #%% All done
     toc(tic=tic, year=0, process='input_processing/hourly_repperiods.py', 

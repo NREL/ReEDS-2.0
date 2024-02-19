@@ -51,6 +51,21 @@ function parse_commandline()
             arg_type = Int
             default = 61320
             required = false
+        "--write_flow"
+            help = "Write the hourly interface flows"
+            arg_type = Int
+            default = 0
+            required = false
+        "--write_surplus"
+            help = "Write the hourly surplus"
+            arg_type = Int
+            default = 0
+            required = false
+        "--write_energy"
+            help = "Write the hourly storage energy"
+            arg_type = Int
+            default = 0
+            required = false
         "--iteration"
             help = "Solve-year iteration number (only used in file label)"
             arg_type = Int
@@ -123,32 +138,32 @@ function run_pras(pras_system_path::String, args::Dict)
     sys = PRAS.SystemModel(pras_system_path)
 
     #%% Run PRAS
-    short, flow, util, surplus = PRAS.assess(
+    short, flow, surplus, energy = PRAS.assess(
         sys,
         PRAS.SequentialMonteCarlo(
             samples=args["samples"], threaded=true, verbose=true, seed=1),
         PRAS.Shortfall(),
         PRAS.Flow(),
-        PRAS.Utilization(),
-        PRAS.Surplus()
+        PRAS.Surplus(),
+        PRAS.StorageEnergy()
     )
 
     #%% Print some results for the entire modeled region to show it worked
-    @info "LOLE is $(PRAS.LOLE(short)) event-h"
-    @info "EUE is $(PRAS.EUE(short)) MWh"
-    @info "NEUE is $(1e6 * PRAS.EUE(short).eue.estimate / sum(sys.regions.load)) ppm"
+    @info "$(PRAS.LOLE(short)) event-h"
+    @info "$(PRAS.EUE(short)) MWh"
+    @info "NEUE = $(1e6 * PRAS.EUE(short).eue.estimate / sum(sys.regions.load)) ppm"
 
     #%% Print some more detailed results if debugging
     for (i, reg) in enumerate(sys.regions.names)
-        @debug "$reg: LOLE is $(round(PRAS.LOLE(short,reg).lole.estimate)) event-h"
-        @debug "$reg: EUE  is $(round(PRAS.EUE(short,reg).eue.estimate)) MWh"
-        @debug "$reg: NEUE is $(round(
+        @debug "$reg: $(round(PRAS.LOLE(short,reg).lole.estimate)) event-h"
+        @debug "$reg: $(round(PRAS.EUE(short,reg).eue.estimate)) MWh"
+        @debug "$reg: NEUE = $(round(
             1e6 * PRAS.EUE(short,reg).eue.estimate
             / sum(sys.regions.load[i,:])
         )) ppm\n\n"
     end
 
-    #%% Record the outputs by region and timestep
+    #%% Record the EUE and LOLE outputs by region and timestep
     ## Units are:
     ## * LOLE: event-h
     ## * EUE: MWh
@@ -175,8 +190,57 @@ function run_pras(pras_system_path::String, args::Dict)
             f["$column", compress=4] = convert(Array, dfout[!, column])
         end
     end
-    @info("Wrote PRAS output to $(outfile)")
+    @info("Wrote PRAS EUE and LOLE to $(outfile)")
 
+    #%%### Record more operational details if desired
+    ### Flow
+    if args["write_flow"] == 1
+        dfflow = DF.DataFrame()
+        for i in flow.interfaces
+            ## Flow results are tuples of (mean, standard deviation). Keep the mean.
+            dfflow[!, "$(i)"] = [flow[i,h][1] for h in sys.timestamps]
+        end
+        ## Write it
+        flowfile = replace(outfile, ".h5"=>"-flow.h5")
+        HDF5.h5open(flowfile, "w") do f
+            for column in DF._names(dfflow)
+                f["$column", compress=4] = convert(Array, dfflow[!, column])
+            end
+        end
+        @info("Wrote PRAS flow to $(flowfile)")
+    end
+    ### Surplus
+    if args["write_surplus"] == 1
+        dfsurplus = DF.DataFrame()
+        for r in sys.regions.names
+            ## Surplus results are tuples of (mean, standard deviation). Keep the mean.
+            dfsurplus[!, "$(r)"] = [surplus[r,h][1] for h in sys.timestamps]
+        end
+        ## Write it
+        surplusfile = replace(outfile, ".h5"=>"-surplus.h5")
+        HDF5.h5open(surplusfile, "w") do f
+            for column in DF._names(dfsurplus)
+                f["$column", compress=4] = convert(Array, dfsurplus[!, column])
+            end
+        end
+        @info("Wrote PRAS surplus to $(surplusfile)")
+    end
+    ### Storage energy
+    if args["write_energy"] == 1
+        dfenergy = DF.DataFrame()
+        for i in sys.storages.names
+            ## Energy results are tuples of (mean, standard deviation). Keep the mean.
+            dfenergy[!, strip("$(i)", '_')] = [energy[i,h][1] for h in sys.timestamps]
+        end
+        ## Write it
+        energyfile = replace(outfile, ".h5"=>"-energy.h5")
+        HDF5.h5open(energyfile, "w") do f
+            for column in DF._names(dfenergy)
+                f["$column", compress=4] = convert(Array, dfenergy[!, column])
+            end
+        end
+        @info("Wrote PRAS storage energy to $(energyfile)")
+    end
     #%%
     return dfout
 end
@@ -216,14 +280,17 @@ function main(args::Dict)
             args["weather_year"],
         )
         ### Save the PRAS system
-        PRAS.savemodel(pras_system, pras_system_path)
-        @info "PRAS model saved to $(pras_system_path)"
+        ## Could use compression_level={integer} here but it doesn't really help
+        @info "Saving PRAS model to to $(pras_system_path)"
+        PRAS.savemodel(pras_system, pras_system_path, verbose=true)
+        @info "Finished ReEDS2PRAS"
     end
 
     #%% Run PRAS
     if args["samples"] > 0
         @info "Running PRAS"
         dfout = run_pras(pras_system_path, args)
+        @info "Finished PRAS"
         #%%
         return dfout
     end
@@ -237,14 +304,17 @@ if abspath(PROGRAM_FILE) == @__FILE__
     #     "reeds_path" => "/Users/pbrown/github/ReEDS-2.0",
     #     "reedscase" => (
     #         "/Users/pbrown/github/ReEDS-2.0/runs/"
-    #         *"v20231111_stressM2_stress_WECC"),
-    #     "solve_year" => 2035,
+    #         *"v20240118_stressM0_Z45_SP_5yr_H2_WECC"),
+    #     "solve_year" => 2050,
     #     "weather_year" => 2007,
     #     "reeds2praspath" => "/Users/pbrown/github/ReEDS2PRAS",
     #     "samples" => 10,
     #     "iteration" => 0,
     #     # "timesteps" => 8760,
     #     "timesteps" => 61320,
+    #     "write_flow" => 1,
+    #     "write_surplus" => 1,
+    #     "write_energy" => 1,
     #     "overwrite" => 1,
     #     "debug" => 0,
     #     "include_samples" => 0,

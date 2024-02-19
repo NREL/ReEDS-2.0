@@ -8,7 +8,6 @@ inv_co2_network_spur,CO2 T&S Capex,Capital
 inv_converter_costs,Transmission Capex,Capital
 inv_dac,DAC Capex,Capital
 inv_geothermal_investment,Gen & Stor Capex,Capital
-inv_growth_penalty,Gen & Stor Capex,Capital
 inv_h2_pipeline,H2 Prod Capex,Capital
 inv_h2_production,H2 Prod Capex,Capital
 inv_h2_storage,H2 Prod Capex,Capital

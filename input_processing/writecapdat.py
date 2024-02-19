@@ -53,10 +53,8 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing
-# reeds_path = os.path.join('D:\\','Vincent','ReEDS-2.0')
-# reeds_path = os.path.expanduser('~/github/ReEDS-2.0')
-# inputs_case = os.path.join(
-#     reeds_path,'runs','v20231013_pandas2M0_Pacific','inputs_case')
+# reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+# inputs_case = os.path.join(reeds_path,'runs','Oct19_test_USA','inputs_case')
 
 #%%#################
 ### FIXED INPUTS ###
@@ -548,12 +546,16 @@ wind_rets = (wind_rets.pivot_table(index = ['i','v','r'], columns = 't', values=
 #%%----------------------------------------------------------------------------
 #####################################
 #    -- HYDRO Capacity Factor --    #
-######################################
-hydcf = pd.read_csv(os.path.join(cappath, "hydcf.csv"))
+#####################################
+hydcf = pd.read_csv(os.path.join(cappath, "hydcf.csv"), header=[0,1], index_col=[0,1])
+# Convert to long format
+hydcf = pd.concat([
+    hydcf,
+    pd.concat({y: hydcf.loc[2020] for y in [i for i in years if i > 2020]}, names=['t','month'])
+]).stack().stack().rename('value').reorder_levels(['t','i','r','month']).reset_index()
 # filter down to modeled regions
 hydcf = hydcf[hydcf['r'].isin(val_r_all)]
-hydcf['value'] = hydcf['value'].round(6)
-hydcf.szn = hydcf.szn.map(quartershorten)
+hydcf['value'] = hydcf['value'].round(5)
 
 #hydro capacity adjustment by szn
 hydcapadj = pd.read_csv(os.path.join(cappath, "SeaCapAdj_hy.csv"))
@@ -561,6 +563,7 @@ hydcapadj = pd.read_csv(os.path.join(cappath, "SeaCapAdj_hy.csv"))
 hydcapadj = hydcapadj[hydcapadj['r'].isin(val_r_all)]
 hydcapadj['value'] = hydcapadj['value'].round(6)
 hydcapadj.szn = hydcapadj.szn.map(quartershorten)
+
 
 #%%----------------------------------------------------------------------------
 ########################################
@@ -677,7 +680,7 @@ poi_cap_init.to_csv(os.path.join(inputs_case,'poi_cap_init.csv'))
 cap_cspns.to_csv(os.path.join(inputs_case,'cap_cspns.csv'))
 rsc_wsc.to_csv(os.path.join(inputs_case,'rsc_wsc.csv'),index=False)
 ### Add '*' to first column name so GAMS reads it as a comment
-hydcf[['i','szn','r','t','value']] \
+hydcf[['i','month','r','t','value']] \
     .rename(columns={'i': '*i'}) \
     .to_csv(os.path.join(inputs_case,'hydcf.csv'), index=False)
 hydcapadj[['i','szn','r','value']] \

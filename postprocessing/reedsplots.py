@@ -1,13 +1,17 @@
-#%% Imports
+### Imports
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from glob import glob
-import os, sys, math, site
+import os
+import sys
+import site
+from tqdm import tqdm
 import openpyxl
 import geopandas as gpd
 import shapely
+import h5py
 os.environ['PROJ_NETWORK'] = 'OFF'
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,9 +23,11 @@ import plots
 plots.plotparams()
 site.addsitedir(os.path.join(reeds_path,'input_processing'))
 from hourly_writetimeseries import h2timestamp, timestamp2h
+site.addsitedir(os.path.join(reeds_path,'ReEDS_Augur'))
+import functions
 
 
-#%% Functions
+### Functions
 def get_zonemap(case):
     """
     Get geodataframe of model zones, applying aggregation if necessary
@@ -50,15 +56,21 @@ def get_zonemap(case):
         endpoints['y'] = endpoints.centroid.y
         dfba_in['x'] = dfba_in.index.map(endpoints.x)
         dfba_in['y'] = dfba_in.index.map(endpoints.y)
+        dfba_in['labelx'] = dfba_in.geometry.centroid.x
+        dfba_in['labely'] = dfba_in.geometry.centroid.y
         dfba_in.st = dfba_in.st.str.upper()
 
         dfba = dfba_in.copy()
 
         ###### Apply aggregation if necessary
-        # TODO: (Vincent) Discuss how to switch logic check from 'int(sw['GSw_AggregateRegions'])' to values in agglevels.csv
         if 'GSw_AggregateRegions' not in sw:
+            hierarchy = pd.read_csv(
+                os.path.join(case,'inputs_case','hierarchy.csv')
+            ).rename(columns={'*r':'r'}).set_index('r')
+            for col in hierarchy:
+                dfba[col] = dfba.index.map(hierarchy[col])
             return dfba
-        # TODO: (Vincent) Discuss how to switch logic check from 'int(sw['GSw_AggregateRegions'])' to values in agglevels.csv
+
         if int(sw['GSw_AggregateRegions']):
             ### Load original hierarchy file
             hierarchy = pd.read_csv(
@@ -106,8 +118,21 @@ def get_zonemap(case):
         dfcnty.rename(columns={'NAMELSAD':'county','STATE_x':'st'}, inplace=True)
 
         dfba = dfcnty
-    
+
     return dfba
+
+
+def get_dfmap(case):
+    dfba = get_zonemap(case)
+    dfmap = {}
+    for col in ['interconnect','nercr','transreg','transgrp','st','country']:
+        dfmap[col] = dfba.copy()
+        dfmap[col]['geometry'] = dfmap[col].buffer(0.)
+        dfmap[col] = dfmap[col].dissolve(col)
+        dfmap[col]['labelx'] = dfmap[col].centroid.x
+        dfmap[col]['labely'] = dfmap[col].centroid.y
+
+    return dfmap
 
 
 def simplify_techs(techs, condense_upgrades=True):
@@ -164,6 +189,14 @@ def get_report_sheetmap(case):
     return val2sheet
 
 
+def read_pras_results(filepath):
+    """Read a run_pras.jl output file"""
+    with h5py.File(filepath, 'r') as f:
+        keys = list(f)
+        df = pd.concat({c: pd.Series(f[c][...]) for c in keys}, axis=1)
+        return df
+
+
 def plotdiff(
         val, casebase, casecomp, onlytechs=None, titleshorten=0,
         yearmin=None, yearmax=2050, colors=None,
@@ -171,7 +204,6 @@ def plotdiff(
     ):
     """
     """
-    import openpyxl
     ### Shared inputs
     ycol = {
         'Generation (TWh)': 'Generation (TWh)',
@@ -589,6 +621,7 @@ def plotdiff(
 
 def plot_trans_diff(
         casebase, casecomp,
+        level='r',
         pcalabel=False, wscale=0.0003,
         year='last', yearlabel=True,
         colors={'+':'C3', '-':'C0',
@@ -599,9 +632,32 @@ def plot_trans_diff(
         trtypes=['AC','VSC','DC','LCC','AC_init','LCC_init','B2B_init'],
         f=None, ax=None, scale=True, label_line_capacity=True,
         titleshorten=0,
+        thickborders='none', thickness=0.5,
     ):
+    """Plot difference map of interzonal transmission"""
+    ### Load shapefiles
     dfba = get_zonemap(casebase)
     dfstates = dfba.dissolve('st')
+    hierarchy = pd.read_csv(
+        os.path.join(casebase,'inputs_case','hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
+    for col in hierarchy:
+        dfba[col] = dfba.index.map(hierarchy[col])
+    hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
+    ## Aggregate zones if necessary
+    dfzones = dfba.copy()
+    if level not in ['r','rb']:
+        dfzones.geometry = dfzones.buffer(0.)
+        dfzones = dfzones.dissolve(level)
+        dfzones['x'] = dfzones.centroid.x
+        dfzones['y'] = dfzones.centroid.y
+    ## Get thick borders if necessary
+    if thickborders not in [None,'','none','None',False]:
+        if thickborders in hierarchy:
+            dfthick = dfba.copy()
+            dfthick[thickborders] = hierarchy[thickborders]
+            dfthick.geometry = dfthick.buffer(0.)
+            dfthick = dfthick.dissolve(thickborders)
     
     cases = {'base': casebase, 'comp': casecomp}
     tran_out = {}
@@ -658,6 +714,8 @@ def plot_trans_diff(
             dfba.plot(ax=ax, edgecolor='0.5', facecolor='none', lw=0.1)
         if drawstates:
             dfstates.plot(ax=ax, edgecolor='0.25', facecolor='none', lw=0.2)
+        if thickborders not in [None,'','none','None',False]:
+            dfthick.plot(ax=ax, edgecolor='0.75', facecolor='none', lw=thickness)
         ax.axis('off')
         ### Diff
         for i, row in dfplot.iterrows():
@@ -1078,9 +1136,9 @@ def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path,
         plot_kwds = {'figsize':(10,7.5),'dpi':100,}
     ### Replace column names
     rep_i = {
-        'coaloldscr':'coal', 'coalolduns':'coal', 'coal-igcc':'coal', 'coal-igcc':'coal','coal-new':'coal',
+        'coaloldscr':'coal', 'coalolduns':'coal', 'coal-igcc':'coal', 'coal-new':'coal',
         'csp2':'csp','csp-ns':'csp',
-        'gas-cc':'gas-cc', 'gas-ct':'gas-ct', 'gas-cc':'gas-cc', 'gas-ct':'gas-ct',
+        'gas-cc':'gas-cc', 'gas-ct':'gas-ct',
         'beccs_mod':'beccs',
         'can-imports':'canada',
         'undisc':'geothermal',
@@ -1160,7 +1218,6 @@ def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path,
     
     ###### Plot the base
     if plot == 'base':
-        title = casebase
         dfplot = dfba.merge(
             dfbase.loc[(dfbase.i.str.startswith(i_plot))&(dfbase.t==year),['r',valcol]],
             left_index=True, right_on='r', how='left'
@@ -1171,7 +1228,6 @@ def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path,
 
     ###### Plot the comp
     elif plot == 'comp':
-        title = casecomp
         dfplot = dfba.merge(
             dfcomp.loc[(dfcomp.i.str.startswith(i_plot))&(dfcomp.t==year),['r',valcol]],
             left_index=True, right_on='r', how='left'
@@ -1182,7 +1238,6 @@ def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path,
 
     ###### Plot the pct diff
     elif plot in ['diff','pctdiff','pct_diff','diffpct','diff_pct','pct']:
-        title = '({} – {}) / {}'.format(casecomp, casebase, casebase)
         legend_kwds['label'] = '{} {} {}\n[% diff]'.format(valcol,i_plot,year)
 
         dfplot = dfba.merge(
@@ -1202,7 +1257,6 @@ def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path,
 
     ###### Plot the absolute diff
     elif plot in ['absdiff', 'abs_diff', 'diffabs', 'diff_abs']:
-        title = '{} – {}'.format(casecomp, casebase)
         legend_kwds['label'] = '{}diff {} [{}]'.format(valcol,i_plot,units)
 
         dfplot = dfba.merge(
@@ -1384,7 +1438,7 @@ def plot_transmission_utilization(
         / 8760
     ).reset_index()
 
-    #%%### Plot max utilization
+    ###### Plot max utilization
     dfplots = {
         'max': utilization.groupby(['r','rr','trtype'], as_index=False).fraction.max(),
         'mean': utilization_annual,
@@ -1613,11 +1667,6 @@ def plot_prmtrade(
         ).ccseason.unique()
     else:
         ccseasons = dfplot.ccseason.sort_values().unique()
-
-
-    nicelabels = {'wint':'Winter','spri':'Spring','summ':'Summer','fall':'Fall'}
-    if 'summ' in ccseasons:
-        ccseasons = ['wint','spri','summ','fall']
     nrows, ncols, coords = plots.get_coordinates(ccseasons)
     
     ### Plot it
@@ -1655,7 +1704,7 @@ def plot_prmtrade(
             )
             ax[coords[ccseason]].add_patch(arrow)
         ax[coords[ccseason]].axis('off')
-        ax[coords[ccseason]].set_title(nicelabels.get(ccseason,ccseason), y=0.9, fontsize='large')
+        ax[coords[ccseason]].set_title(ccseason, y=0.9, fontsize='large')
 
     plots.trim_subplots(ax=ax, nrows=nrows, ncols=ncols, nsubplots=len(ccseasons))
     return f, ax
@@ -1862,6 +1911,167 @@ def plot_average_flow(
     else:
         return f, ax
 
+
+def get_transfer_peak_fraction(case, level='transreg', tstart=2020, everything=False):
+    """Get ratio of interregional transfer capacity to peak demand by region level"""
+    ### Implied inputs
+    levell = level + level[-1]
+
+    ### Shared inputs
+    hierarchy = pd.read_csv(
+        os.path.join(case,'inputs_case','hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
+
+    dfmap = get_dfmap(case)
+
+    ## Plot regions from west to east
+    regions = dfmap[level].bounds.minx.sort_values().index
+
+    ### Run results
+    dfin_trans_r = pd.read_csv(
+        os.path.join(case,'outputs','tran_out.csv')
+    ).rename(columns={'Value':'MW'})
+    dfin_trans_r[f'inter_{level}'] = (
+        dfin_trans_r.r.map(hierarchy[level])
+        != dfin_trans_r.rr.map(hierarchy[level])
+    ).astype(int)
+
+    dftrans = dfin_trans_r.loc[
+        (dfin_trans_r.t >= tstart)
+        & (dfin_trans_r[f'inter_{level}'] == 1)
+    ].copy()
+    dftrans[level] = dftrans.r.map(hierarchy[level])
+    dftrans[levell] = dftrans.rr.map(hierarchy[level])
+
+    ### Get import/export capacity
+    transfercap = {}
+    for region in regions:
+        transfercap[region] = (
+            dftrans.loc[
+                (dftrans[level]==region) | (dftrans[levell]==region)
+            ].groupby('t').MW.sum())
+    transfercap = pd.concat(transfercap, axis=1)
+
+    ### Get peak load from hourly demand
+    try:
+        dfpeak = pd.read_csv(
+            os.path.join(case,'inputs_case','peakload.csv'), index_col=['level','region']
+        ).loc[level].T
+        dfpeak.index = dfpeak.index.astype(int)
+    except FileNotFoundError:
+        dfdemand = pd.read_hdf(os.path.join(case, 'inputs_case','load.h5'))
+        ## Aggregate to level
+        dfdemand = dfdemand.rename(columns=hierarchy[level]).groupby(axis=1, level=0).sum()
+        ## Calculate peak
+        dfpeak = dfdemand.groupby(axis=0, level='year').max()
+    ### Get the fraction
+    dfout = (transfercap / dfpeak.loc[tstart:])[regions]
+
+    if everything:
+        return {'fraction':dfout, 'transfercap':transfercap, 'peak':dfpeak.loc[tstart:]}
+    else:
+        return dfout
+
+
+def plot_interreg_transfer_cap_ratio(
+        case, colors=None, casenames=None,
+        level='transreg', tstart=2020,
+        f=None, ax=None,
+        grid=True, ymax=3,
+    ):
+    """Plot interregional transfer capability / peak demand over time"""
+    ### Inputs for debugging
+    # case = (
+    #     '/Users/pbrown/github2/ReEDS-2.0/runs/'
+    #     'v20240212_transopM0_WECC_CPNP_GP1_TFY2035_PTL2035_TRc_MITCg0p3')
+    # casenames = 'base'
+    # level = 'transreg'; tstart=2020;
+    # f=None; ax=None; grid=True; ymax=3; colors=None
+
+    ### Parse inputs
+    cases = case.split(',') if isinstance(case, str) else case
+    if casenames is None:
+        casenames = dict(zip(cases, [os.path.basename(c) for c in cases]))
+    elif isinstance(casenames, list):
+        casenames = dict(zip(cases, casenames))
+    elif isinstance(casenames, str):
+        casenames = dict(zip(cases, casenames.split(',')))
+
+    if colors is None:
+        colors = plots.rainbowmapper(cases)
+    elif isinstance(colors, list):
+        colors = dict(zip(cases, colors))
+    elif isinstance(colors, str):
+        colors = dict(zip(cases, colors.split(',')))
+
+    ### Get results
+    dfplot = {c: get_transfer_peak_fraction(c, level, tstart) for c in cases}
+    dfmap = get_dfmap(cases[0])
+
+    ### Implied inputs
+    regions = dfplot[cases[0]].columns
+    ncols = len(regions)
+    if ncols == 1:
+        raise NotImplementedError(
+            "Only one region modeled so can't plot interregional transmission")
+
+    if (f is None) and (ax is None):
+        plt.close()
+        f,ax = plt.subplots(
+            2, ncols, sharex='row', sharey='row', figsize=(1.35*ncols, 6),
+            gridspec_kw={'hspace':0.1, 'height_ratios':[0.2,1]},
+        )
+    for c in cases:
+        for col, region in enumerate(regions):
+            ax[1,col].plot(
+                dfplot[c].index, dfplot[c][region].values, color=colors[c],
+                label=casenames[c],
+            )
+    ## Formatting
+    for col, region in enumerate(regions):
+        ax[1,col].set_title(region, weight='bold')
+        ax[1,col].set_xlabel(None)
+        ax[1,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(20))
+        ax[1,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(10))
+        ax[1,col].yaxis.set_major_locator(mpl.ticker.MultipleLocator(0.5))
+        ax[1,col].yaxis.set_minor_locator(mpl.ticker.MultipleLocator(0.1))
+        if grid:
+            ax[1,col].grid(axis='y', which='major', ls=(0, (5, 5)), c='0.6', lw=0.3)
+            ax[1,col].grid(axis='y', which='minor', ls=(0, (5, 10)), c='0.85', lw=0.3)
+
+        ## Maps at top
+        dfmap[level].plot(ax=ax[0,col], facecolor='0.99', edgecolor='0.75', lw=0.2)
+        dfmap[level].loc[[region]].plot(ax=ax[0,col], facecolor='k', edgecolor='none')
+        ax[0,col].axis('off')
+        ax[0,col].patch.set_facecolor('none')
+
+    ### Custom legend
+    handles = ([
+        mpl.patches.Patch(
+            facecolor=colors[c], edgecolor='none', label=casenames[c])
+        for c in cases[::-1]
+    ])
+
+    _leg = ax[1,-1].legend(
+        handles=handles,
+        loc='upper left', bbox_to_anchor=(-0.05,1.02),
+        fontsize='large', frameon=True, edgecolor='none', framealpha=1,
+        handletextpad=0.3, handlelength=0.7,
+        ncol=1, labelspacing=0.5,
+    )
+
+    ## Formatting
+    ax[1,0].set_ylabel('Transfer capability\n/ peak demand [fraction]')
+    _ymax = 1 if ((ymax is None) and (ax[1,0].get_ylim()[1] < 1)) else ymax
+    ax[1,0].set_ylim(0, _ymax)
+    ax[1,0].set_xlim(dfplot[c].index.min(), dfplot[c].index.max())
+    plots.despine(ax)
+    plt.draw()
+    plots.shorten_years(ax[1,0], start_shortening_in=2021)
+
+    return f, ax, dfplot
+
+
 ###### Operations animation
 def animate_dispatch(
         case, year=2050, chunklength=4, nodeloc='centroid',
@@ -1878,7 +2088,6 @@ def animate_dispatch(
     height: bar height in [meters/GW]
     tscale: transmission linewidth in [points/GW]
     """
-    from tqdm import tqdm
     import subprocess
 
     ###### Define tech aggregations and colors
@@ -1892,11 +2101,6 @@ def animate_dispatch(
            'hydNPND':'hydro','hydED':'hydro','hydEND':'hydro'},
         **{'H2-CT':'h2','Gas-CT_H2-CT':'h2','Gas-CC_H2-CT':'h2'},
     }
-    techs = [
-        'nuclear','hydro','biopower','h2',
-        'wind-ons','wind-ofs','pv',
-        'battery','pumped-hydro',
-        ]
     try:
         bokehcolors = pd.read_csv(
             os.path.join(reeds_path,'bokehpivot','in','reeds2','tech_style.csv'),
@@ -2194,7 +2398,7 @@ def map_trans_agg(
         _wscale = wscale
 
     ###### Plot it
-    if (f == None) and (ax == None):
+    if (f is None) and (ax is None):
         plt.close()
         f,ax = plt.subplots(figsize=(12,8),dpi=dpi)
     ### Plot background
@@ -2396,7 +2600,7 @@ def map_agg(
         _wscale = wscale
 
     ###### Plot it
-    if (f == None) and (ax == None):
+    if (f is None) and (ax is None):
         plt.close()
         f,ax = plt.subplots(figsize=(12,8),dpi=dpi)
     ### Plot background
@@ -2467,7 +2671,7 @@ def map_agg(
             mpl.patches.Patch(facecolor=capcolors[i], edgecolor='none', label=i)
             for i in capcolors.index if i in dfplot.columns
         ]
-        leg = ax.legend(
+        _leg = ax.legend(
             handles=handles[::-1], loc='upper left', fontsize=6, ncol=1, frameon=False,
             bbox_to_anchor=((0.875,0.95) if transmission else (0.955,0.95)),
             handletextpad=0.3, handlelength=0.7, columnspacing=0.5, 
@@ -2593,7 +2797,6 @@ def map_capacity_markers(
         dfstates.plot(ax=ax, facecolor='none', edgecolor='k', lw=0.2)
     ### Units by zone
     if verbose:
-        from tqdm import tqdm
         iterator = tqdm(regions, desc=f'map_capacity_markers {level}')
     else:
         iterator = regions
@@ -2646,7 +2849,7 @@ def map_capacity_markers(
             markeredgewidth=0, lw=0, label=i)
         for i in tech_style.index if i in techs
     ][::-1]
-    leg = ax.legend(
+    _leg = ax.legend(
         handles=handles, loc='center left', bbox_to_anchor=(0.95,0.5), 
         fontsize='medium', ncol=1, frameon=False,
         handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
@@ -2684,12 +2887,6 @@ def map_transmission_lines(
         'B2B': trtype_style['B2B'],
         'LCC': trtype_style['DC, LCC'],
         'VSC': trtype_style['DC, VSC'],
-    }
-    lss = {
-        'AC':'-',
-        'B2B':'-.',
-        'LCC':':',
-        'VSC':'--',
     }
     ### Get inputs
     val_r = pd.read_csv(
@@ -2859,11 +3056,7 @@ def map_zone_capacity(
         dfba[col] = dfba.index.map(hierarchy[col])
     hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
 
-    dfmap = {}
-    for col in ['interconnect','transreg','transgrp','st','country']:
-        dfmap[col] = dfba.copy()
-        dfmap[col].geometry = dfmap[col].buffer(0.)
-        dfmap[col] = dfmap[col].dissolve(col)
+    dfmap = get_dfmap(case)
 
     ###### Case inputs
     ### Capacity
@@ -2884,7 +3077,7 @@ def map_zone_capacity(
         os.path.join(case,'outputs','tran_out.csv')
     ).rename(columns={'Value':'MW'})
 
-    if (f == None) and (ax == None):
+    if (f is None) and (ax is None):
         plt.close()
         f,ax = plt.subplots(figsize=(12, 9)) # (10, 6.88)
     ### Background
@@ -3076,7 +3269,7 @@ def map_zone_capacity(
                 mpl.patches.Patch(facecolor=transcolors[i], edgecolor='none', label=i)
                 for i in transcolors.index if i in dftrans
             ]
-            leg_trans = ax.legend(
+            _leg_trans = ax.legend(
                 handles=handles[::-1], loc='upper left', fontsize=6.5, frameon=False,
                 bbox_to_anchor=(1.16,0.92),
                 handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
@@ -3228,7 +3421,7 @@ def plot_retire_add(
         mpl.patches.Patch(facecolor=bokehcolors[i], edgecolor='none', label=i)
         for i in plotorder if i in dfcap
     ]
-    leg = ax.legend(
+    _leg = ax.legend(
         handles=handles[::-1], loc='center left', bbox_to_anchor=(1.0,0.5), 
         fontsize='large', ncol=1, frameon=False,
         handletextpad=0.3, handlelength=0.7, columnspacing=0.5, labelspacing=0.1,
@@ -3391,6 +3584,9 @@ def plot_dispatch_yearbymonth(
         index_col='order').squeeze(1)
 
     ### Load run files
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0).squeeze(1)
     hmap_myr = pd.read_csv(os.path.join(case, 'inputs_case', 'hmap_myr.csv'))
     gen_h = pd.read_csv(os.path.join(case, 'outputs', 'gen_h.csv'))
     gen_h.i = gen_h.i.map(
@@ -3402,7 +3598,7 @@ def plot_dispatch_yearbymonth(
         .unstack('i').fillna(0)
         / 1e3
     )
-    if techs != None:
+    if techs is not None:
         if isinstance(techs, list):
             dispatch = dispatch[[c for c in techs if c in dispatch]].copy()
         else:
@@ -3457,6 +3653,7 @@ def plot_dispatch_yearbymonth(
         lwforline=0, f=f, ax=ax, figsize=figsize)
 
     if highlight_rep_periods:
+        width = pd.Timedelta('5D') if sw['GSw_HourlyType'] == 'wek' else pd.Timedelta('1D')
         ylim = ax[0].get_ylim()
         for i, row in period_szn.iterrows():
             plottime = pd.Timestamp(2001, 1, row.timestamp.day)
@@ -3464,7 +3661,7 @@ def plot_dispatch_yearbymonth(
                 ## Draw an outline
                 box = mpl.patches.Rectangle(
                     xy=(plottime, ylim[0]),
-                    width=pd.Timedelta('1D'), height=(ylim[1]-ylim[0]),
+                    width=width, height=(ylim[1]-ylim[0]),
                     lw=0.75, edgecolor='k', facecolor='none', ls=':',
                     clip_on=False, zorder=2e6
                 )
@@ -3472,7 +3669,7 @@ def plot_dispatch_yearbymonth(
                 ## Wash out the dispatch
                 box = mpl.patches.Rectangle(
                     xy=(plottime, ylim[0]),
-                    width=pd.Timedelta('1D'), height=(ylim[1]-ylim[0]),
+                    width=width, height=(ylim[1]-ylim[0]),
                     lw=0.75, edgecolor='none', facecolor='w', alpha=0.4,
                     clip_on=False, zorder=1e6
                 )
@@ -3510,12 +3707,14 @@ def plot_dispatch_weightwidth(
         header=None, index_col=0).squeeze(1)
 
     ### Get some settings
-    if (sw.GSw_HourlyType == 'year'):
-        raise NotImplementedError('GSw_HourlyType = year is not yet implemented')
     GSw_HourlyChunkLength = int(sw.GSw_HourlyChunkLengthRep)
-    hours_per_period = {'day':24, 'wek':120, 'year':np.nan}[sw.GSw_HourlyType]
+    hours_per_period = {'day':24, 'wek':120, 'year':24}[sw.GSw_HourlyType]
     dfplot = dispatch[[c for c in bokehcolors.index if c in dispatch]].copy()
-    sznweights = hmap_myr.season.value_counts() // hours_per_period
+    sznweights = (
+        hmap_myr['actual_period' if sw.GSw_HourlyType == 'year' else 'season']
+        .value_counts()
+        // hours_per_period
+    )
 
     ### Plot it
     plt.close()
@@ -3524,16 +3723,17 @@ def plot_dispatch_weightwidth(
         gridspec_kw={'wspace':0, 'width_ratios':sznweights.values},
     )
     for col, szn in enumerate(sznweights.index):
-        date = pd.to_datetime(szn, format='y%Yd%j').strftime('%Y-%m-%d')
+        date = h2timestamp(szn).strftime('%Y-%m-%d')
         df = dfplot.loc[dfplot.index.str.startswith(szn)]
         plots.stackbar(df=df, ax=ax[col], colors=bokehcolors, align='edge', net=False)
-        ax[col].axvline(0, c='w', lw=0.25)
         ax[col].axhline(0, c='k', ls=':', lw=0.75)
-        ax[col].annotate(f'{date} ({sznweights[szn]})', (0,1), xycoords='axes fraction', rotation=45)
         if col:
             ax[col].axis('off')
+        if sw.GSw_HourlyType != 'year':
+            ax[col].axvline(0, c='w', lw=0.25)
+            ax[col].annotate(f'{date} ({sznweights[szn]})', (0,1), xycoords='axes fraction', rotation=45)
     ### Formatting
-    ax[0].set_xlim(0,24/GSw_HourlyChunkLength)
+    ax[0].set_xlim(0, hours_per_period / GSw_HourlyChunkLength)
     plots.despine(ax[0], bottom=False)
     ax[0].set_xticks([])
     ax[0].set_ylabel('Generation [GW]')
@@ -3541,7 +3741,25 @@ def plot_dispatch_weightwidth(
     return f, ax
 
 
-def plot_stressperiod_dispatch(case, tmin=2020, level='country', regions='USA'):
+def get_stressperiods(case):
+    """Get dataframe of stress periods sorted by year and iteration"""
+    inpaths = [
+        i for i in sorted(glob(os.path.join(case,'inputs_case','stress*')))
+        if os.path.isdir(i)
+    ]
+    dictin_stressperiods = {
+        tuple([int(x) for x in os.path.basename(f)[len('stress'):].split('i')]):
+        pd.read_csv(os.path.join(f,'set_szn.csv'), index_col='*szn').squeeze(1)
+        for f in inpaths
+    }
+    dfstress = pd.concat(dictin_stressperiods, names=['year','iteration']).sort_index()
+    dfstress['date'] = dfstress.index.get_level_values('*szn').map(
+        lambda x: h2timestamp(x.strip('s')+'h01').strftime('%Y-%m-%d')
+    )
+    return dfstress
+
+
+def plot_stressperiod_dispatch(case, tmin=2023, level='country', regions='USA'):
     """
     """
     ### Parse inputs
@@ -3572,7 +3790,6 @@ def plot_stressperiod_dispatch(case, tmin=2020, level='country', regions='USA'):
 
     years = pd.read_csv(
         os.path.join(case,'inputs_case','modeledyears.csv')).columns.astype(int).values
-    tprev = dict(zip(years[1:], years))
 
     ### Get model outputs
     gen_h_stress = pd.read_csv(
@@ -3583,17 +3800,7 @@ def plot_stressperiod_dispatch(case, tmin=2020, level='country', regions='USA'):
     gen_h_stress.i = gen_h_stress.i.str.lower()
 
     ### Get stress periods
-    stress_periods = {}
-    for y in years:
-        ## Get largest iteration
-        iteration = int(
-            os.path.splitext(
-                sorted(glob(os.path.join(case,'lstfiles',f'*{y}i*.lst')))[-1]
-            )[0]
-            .split(f'{y}i')[-1]
-        )
-        stress_periods[y] = pd.read_csv(
-            os.path.join(case,'inputs_case',f'stress{y}i{iteration}','period_szn.csv'))
+    dfstress = get_stressperiods(case)
 
     ### Aggregate
     dispatch_agg = gen_h_stress.copy()
@@ -3610,7 +3817,7 @@ def plot_stressperiod_dispatch(case, tmin=2020, level='country', regions='USA'):
     )
 
     ### Get plot settings
-    ncols = sum([int(c.split('_')[1]) for c in sw.GSw_PRM_StressCriteria.split('/')])
+    ncols = max([len(dfstress.loc[y].drop_duplicates()) for y in years])
     numh = (120 if sw.GSw_HourlyType == 'wek' else 24)//int(sw.GSw_HourlyChunkLengthStress)
 
     ts = sorted(dfplot.index.get_level_values('t').unique())
@@ -3624,8 +3831,9 @@ def plot_stressperiod_dispatch(case, tmin=2020, level='country', regions='USA'):
     )
     for row, t in enumerate(ts):
         dfyear = dfplot.loc[t]
-        ### Stress periods are plotted in calendar order.
-        stress_period_t = gen_h_stress.loc[gen_h_stress.t==t, 'h'].str.split('h').str[0].unique()
+        ### Plot "seed" stress periods first, then iteratively identified periods in order
+        dfstress_year = dfstress.loc[t].drop_duplicates()
+        stress_period_t = dfstress_year.index.get_level_values('*szn')
         for col in range(ncols):
             ### Turn off axis if unused
             if col >= len(stress_period_t):
@@ -3642,6 +3850,13 @@ def plot_stressperiod_dispatch(case, tmin=2020, level='country', regions='USA'):
         ax[row,0].annotate(
             t, (-0.8,0.5), xycoords='axes fraction', ha='right', va='center',
             weight='bold', fontsize=14)
+        ### Draw a line between each iteration
+        for col in range(dfstress_year.index.get_level_values('iteration').max()):
+            ax[row,len(dfstress_year.loc[:col])-1].annotate(
+                '', (1.075,0), xytext=(1.075,1), xycoords='axes fraction',
+                annotation_clip=False,
+                arrowprops={'arrowstyle':'-', 'color':'C7'},
+            )
     ### Formatting
     ax[0,0].set_xlim(0, numh)
     ax[0,0].xaxis.set_major_locator(
@@ -3756,6 +3971,155 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
     return f, ax
 
 
+def plot_stressperiod_evolution(case, level='transgrp', metric='sum', threshold=10):
+    """Plot NEUE by year and stress period iteration"""
+    ### Load NEUE results
+    sw = pd.read_csv(
+        os.path.join(case,'inputs_case','switches.csv'),
+        header=None, index_col=0).squeeze(1)
+    infiles = sorted(glob(os.path.join(case,'outputs','neue_*.csv')))
+    dictin_neue = {
+        tuple([int(x) for x in os.path.basename(f)[len('neue_'):-len('.csv')].split('i')]):
+        pd.read_csv(f, index_col=['level','metric','region'])
+        for f in infiles
+    }
+    ## Reshape to (year,iteration) x (region)
+    dfplot = (
+        pd.concat(dictin_neue, names=['year','iteration'])
+        .xs(level,0,'level')
+        .xs(metric,0,'metric')
+        .NEUE_ppm.unstack('region')
+    )
+    ### Load stress periods for labels
+    dfstress = get_stressperiods(case)
+    ### Plot setup
+    years = [
+        y for y in dfplot.index.get_level_values('year').unique()
+        if y >= int(sw.GSw_StartMarkets)
+    ]
+    ncols = len(years)
+    regions = dfplot.columns
+    colors = plots.rainbowmapper(regions)
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(1, ncols, sharey=True, figsize=(max(10,ncols*1.2),3))
+    for col, year in enumerate(years):
+        df = dfplot.loc[year]
+        for region in regions:
+            ax[col].plot(
+                df.index, df[region],
+                label=region, c=colors[region], marker='o', markersize=4,
+            )
+        ### Formatting
+        ax[col].set_title(year)
+        ax[col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(1))
+        ax[col].axhline(threshold, lw=0.75, ls='--', c='0.7', zorder=-1e6)
+        ## Annotate the stress periods
+        periods = dfstress.loc[year].drop_duplicates()
+        note = '\n___________\n'.join([
+            f'Iteration {i}:\n'
+            + '\n'.join([
+                f"{'+' if i else ''} {d}"
+                for d in periods.loc[i].date.values
+            ])
+            for i in periods.index.get_level_values('iteration').unique()
+        ])
+        ax[col].annotate(
+            note, (0,-0.15), xycoords='axes fraction',
+            fontsize=10, va='top',
+            annotation_clip=False,
+        )
+    ### Formatting
+    ax[-1].legend(
+        loc='upper left', bbox_to_anchor=(1,1), frameon=False,
+        handletextpad=0.3, handlelength=0.7,
+    )
+    ax[0].set_ylabel('NEUE [ppm]')
+    ax[0].set_ylim(0)
+    plots.despine(ax)
+
+    return f,ax
+
+
+def plot_neue_bylevel(
+        case, tmin=2023,
+        levels=['country','interconnect','transreg','transgrp'],
+        metrics=['sum','max'],
+        onlydata=False,
+    ):
+    """Plot regional NEUE over time"""
+    ### Get final iterations
+    year2iteration = (
+        get_stressperiods(case)
+        .reset_index()[['year','iteration']]
+        .drop_duplicates(subset='year', keep='last')
+        .set_index('year').iteration
+        .loc[tmin:]
+    )
+    ### Get NEUE
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0).squeeze(1)
+    sw['casedir'] = case
+    dictin_neue = {}
+    for t, iteration in year2iteration.items():
+        dictin_neue[t] = pd.read_csv(
+            os.path.join(case,'outputs',f'neue_{t}i{iteration}.csv'),
+            index_col=['level','metric','region']
+        ).squeeze(1)
+    dfin_neue = pd.concat(dictin_neue, axis=0, names=['year']).unstack('year')
+    if onlydata:
+        return dfin_neue
+    ### Plot settings
+    ncols = len(levels)
+    nrows = len(metrics)
+    colors = {
+        level: plots.rainbowmapper(
+            dfin_neue.xs(level,0,'level').reset_index().region.unique())
+        for level in levels
+    }
+    norm = {'sum':1, 'max':1e-4}
+    ylabel = {'sum': 'Sum of NEUE [ppm]', 'max':'Max NEUE [%]'}
+    thresholds = {
+        i.split('_')[0]: float(i.split('_')[1])
+        for i in sw.GSw_PRM_StressThreshold.split('/')
+    }
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(2*ncols, 3*nrows),
+        sharex=True, sharey=True,
+    )
+    for row, metric in enumerate(metrics):
+        for col, level in enumerate(levels):
+            for region, c in colors[level].items():
+                ax[row,col].plot(
+                    dfin_neue.columns,
+                    dfin_neue.loc[(level,metric,region)].values * norm[metric],
+                    c=c, label=region, marker='o', markersize=2,
+                )
+        ## Formatting
+        ax[row,0].set_ylabel(ylabel[metric])
+    ## Formatting
+    for col, level in enumerate(levels):
+        ax[0,col].set_title(level)
+        if (level in thresholds) and (not int(sw.GSw_PRM_CapCredit)):
+            ax[0,col].axhline(thresholds[level], c='k', ls=':', lw=0.75)
+        leg = ax[0,col].legend(
+            loc='upper left', frameon=False, fontsize=8,
+            handletextpad=0.3, handlelength=0.7, columnspacing=0.5, labelspacing=0.2,
+            ncol=(2 if len(colors[level]) >= 10 else 1),
+        )
+        for legobj in leg.legend_handles:
+            legobj.set_linewidth(6)
+            legobj.set_solid_capstyle('butt')
+
+    ax[0,0].set_ylim(0)
+    plots.despine(ax)
+
+    return f, ax, dfin_neue
+
+
 def map_h2_capacity(
         case, year=2050, wscale_h2=3, figheight=6, pipescale=10,
         legend_kwds={'shrink':0.6, 'pad':0, 'orientation':'horizontal', 'aspect':12},
@@ -3770,25 +4134,18 @@ def map_h2_capacity(
     miles = 300
 
     if disaggregate_types:
-        markers = {
-            'h2_storage_saltcavern':'s', 'h2_storage_hardrock':'D', 'h2_storage_undergroundpipe':'o',
-            'electrolyzer':'^', 'h2_turbine':'v',
-        }
         h2colors = {
             'h2_storage_saltcavern':'s', 'h2_storage_hardrock':'D', 'h2_storage_undergroundpipe':'o',
             'electrolyzer':'^', 'h2_turbine':'v',
         }
     else:
-        markers = {'h2_storage': 'o', 'electrolyzer': '^', 'h2_turbine': 'v'}
         h2colors = {'h2_storage': 'C1', 'electrolyzer': 'C0', 'h2_turbine': 'C3', 'h2_pipeline':'C9'}
 
     ### Get the BA map
     val_r = pd.read_csv(
         os.path.join(case,'inputs_case','val_r.csv'), header=None).squeeze(1).values
     dfba = get_zonemap(case).loc[val_r]
-    dfba['labelx'] = dfba.geometry.centroid.x
-    dfba['labely'] = dfba.geometry.centroid.y
-    dfstates = dfba.dissolve('st')
+    dfmap = get_dfmap(case)
 
     scalars = pd.read_csv(
         os.path.join(case,'inputs_case','scalars.csv'),
@@ -3841,8 +4198,8 @@ def map_h2_capacity(
     h2_trans_cap['rr_x'] = h2_trans_cap.rr.map(dfba.x)
     h2_trans_cap['rr_y'] = h2_trans_cap.rr.map(dfba.y)
 
-    #%% Plot as separate maps
-    bounds = dfba.dissolve('country').bounds.loc['usa']
+    ### Plot as separate maps
+    bounds = dfmap['country'].bounds.loc['USA']
     aspect = abs((bounds.maxx - bounds.minx) / (bounds.maxy - bounds.miny))
     plt.close()
     f,ax = plt.subplots(2,2,sharex=True,sharey=True,figsize=(figheight*aspect,figheight))
@@ -3850,7 +4207,7 @@ def map_h2_capacity(
     for row in range(2):
         for col in range(2):
             dfba.plot(ax=ax[row,col], edgecolor='0.5', facecolor='none', lw=0.1, zorder=1e4)
-            dfstates.plot(ax=ax[row,col], edgecolor='0.25', facecolor='none', lw=0.2, zorder=1e4)
+            dfmap['st'].plot(ax=ax[row,col], edgecolor='0.25', facecolor='none', lw=0.2, zorder=1e4)
             ax[row,col].axis('off')
     ### H2 turbines
     cap_h2turbine.plot(
@@ -3902,7 +4259,6 @@ def plot_h2_timeseries(
     h2_inout = pd.read_csv(os.path.join(case,'outputs','h2_inout.csv'))
     prod_produce = pd.read_csv(os.path.join(case,'outputs','prod_produce.csv'))
     h2_usage = pd.read_csv(os.path.join(case,'outputs','h2_usage.csv'))
-    h2_trans_flow = pd.read_csv(os.path.join(case,'outputs','h2_trans_flow.csv'))
     ### Timeseries data
     hmap_myr = pd.read_csv(os.path.join(case,'inputs_case','hmap_myr.csv'))
 
@@ -3915,7 +4271,7 @@ def plot_h2_timeseries(
     else:
         rmap = hierarchy[agglevel]
 
-    #%% Combine into one dataframe
+    ### Combine into one dataframe
     dfall = {
         'production': prod_produce.assign(r=prod_produce.r.map(rmap)).loc[
             prod_produce.i.isin(h2techs) & (prod_produce.t==year)
@@ -3933,11 +4289,11 @@ def plot_h2_timeseries(
     }
     dfall = pd.concat(dfall, axis=1).fillna(0)
     dfall['stor_dispatch'] = dfall['stor_discharge'] + dfall['stor_charge']
-    #%% Broadcast representative to actual
+    ### Broadcast representative to actual
     dffull = dfall.unstack('r').reindex(hmap_myr.h)
     dffull.index = (
-        hmap_myr.rename(columns={'actual_period':'allszn','actual_h':'allh'})
-        .set_index(['allszn','h']).index)
+        hmap_myr.rename(columns={'actual_period':'actualszn','actual_h':'allh'})
+        .set_index(['actualszn','h']).index)
     dffull = dffull.reorder_levels(['r',None],axis=1)
     ### Include storage level
     if len(h2_storage_level):
@@ -3945,7 +4301,7 @@ def plot_h2_timeseries(
             h2_storage_level.assign(r=h2_storage_level.r.map(rmap))
             .loc[(h2_storage_level.t==year)]
             .rename(columns={'allh':'h'})
-            .groupby(['r','allszn','h']).Value.sum()
+            .groupby(['r','actualszn','h']).Value.sum()
             .rename('stor_level').to_frame().unstack('r')
             .reorder_levels(['r',None], axis=1)
         )
@@ -3953,7 +4309,7 @@ def plot_h2_timeseries(
         storstack = (
             h2_storage_level_szn.assign(r=h2_storage_level_szn.r.map(rmap))
             .loc[(h2_storage_level_szn.t==year)]
-            .groupby(['r','allszn' ]).Value.sum()
+            .groupby(['r','actualszn' ]).Value.sum()
             .rename('stor_level').to_frame().unstack('r')
             .reorder_levels(['r',None], axis=1)
             .reindex(hmap_myr.actual_period.values).fillna(0)
@@ -3963,11 +4319,11 @@ def plot_h2_timeseries(
     ## Convert to kT
     dffull /= 1000
 
-    #%% Don't chunk it
+    ### Don't chunk it
     dfchunk = dffull.fillna(0).round(3).copy()
     timeindex = (hmap_myr.actual_h.map(h2timestamp)).values
 
-    #%%### Plot it
+    ###### Plot it
     rows = {
         'production':0,
         'stor_charge':1,
@@ -3986,7 +4342,7 @@ def plot_h2_timeseries(
     colors = plots.rainbowmapper(dfchunk.columns.get_level_values('r').unique())
     if len(colors) == 1:
         colors[list(colors.keys())[0]] = 'C0'
-    legend_kwds = {'loc':'upper left', 'bbox_to_anchor':(1,1)}
+
     ###### Plot it
     plt.close()
     f,ax = plt.subplots(len(rows), 1, sharex=True, sharey=False, figsize=figsize)
@@ -4025,3 +4381,137 @@ def plot_h2_timeseries(
     plots.despine(ax)
     
     return f, ax
+
+
+def plot_interface_flows(
+        case, year=2050,
+        source='pras', iteration=0, samples=None,
+        level='transreg', weatheryear=2012, decimals=0,
+        flowcolors={'forward':'C0', 'reverse':'C3'},
+        onlydata=False,
+    ):
+    """
+    """
+    fulltimeindex = functions.make_fulltimeindex()
+    hierarchy = pd.read_csv(
+        os.path.join(case,'inputs_case','hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
+
+    if source.lower() == 'pras':
+        infile = os.path.join(
+            case,'ReEDS_Augur','PRAS',
+            f'PRAS_{year}i{iteration}'
+            + (f'-{samples}' if samples is not None else '')
+            + '-flow.h5'
+        )
+        dfflow = read_pras_results(infile).set_index(fulltimeindex)
+        ## Filter out AC/DC converters from scenarios with VSC
+        dfflow = dfflow[[c for c in dfflow if '"DC_' not in c]].copy()
+        ## Normalize the interface names
+        renamer = {i: '→'.join(i.replace('"','').split(' => ')) for i in dfflow}
+    elif source.lower() == 'reeds':
+        ...
+    else:
+        raise ValueError(f"source must be 'pras' or 'reeds' but is '{source}'")
+
+    ### Group by hierarchy level
+    df = dfflow.rename(columns=renamer)
+    aggcols = {c: '→'.join([hierarchy[level][i] for i in c.split('→')]) for c in df}
+    df = df.rename(columns=aggcols).groupby(axis=1, level=0).sum()
+    df = df[[c for c in df if c.split('→')[0] != c.split('→')[1]]].copy()
+    ### Keep only a single direction
+    dflevel = {}
+    for c in df:
+        r, rr = c.split('→')
+        ## Sort alphabetically
+        if r < rr:
+            dflevel[f'{r}→{rr}'] = dflevel.get(f'{r}→{rr}', 0) + df[c]
+        else:
+            dflevel[f'{rr}→{r}'] = dflevel.get(f'{rr}→{r}', 0) - df[c]
+    dflevel = pd.concat(dflevel, axis=1)
+    ## Redefine the dominant direction as "forward"
+    toswap = {}
+    for c in dflevel:
+        if dflevel[c].mean() < 0:
+            dflevel[c] *= -1
+            toswap[c] = '→'.join(c.split('→')[::-1])
+    dfplot = dflevel.rename(columns=toswap)
+    if onlydata:
+        return dfplot
+
+    ###### Plot it
+    ## Sort interfaces by fraction of flow that is "forward"
+    forward_fraction = (
+        dfplot.clip(lower=0).sum() / dfplot.abs().sum()
+    ).sort_values(ascending=False)
+    interfaces = forward_fraction.index
+    nrows = len(interfaces)
+    if nrows == 0:
+        raise NotImplementedError(
+            "No interfaces to plot (expected if you're only modeling one hierarchy level)")
+    elif nrows == 1:
+        coords = {'distribution':{interfaces[0]: 0}, 'profile':{interfaces[0]: 1}}
+    else:
+        coords = {
+            'distribution': {interface: (row,0) for row, interface in enumerate(interfaces)},
+            'profile': {interface: (row,1) for row, interface in enumerate(interfaces)},
+        }
+    index = dfplot.loc[str(weatheryear)].index
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, 2, figsize=(10,nrows*0.5), sharex='col', sharey='row',
+        gridspec_kw={'width_ratios':[0.06,1], 'wspace':0.1},
+    )
+    for interface in interfaces:
+        ### Hourly
+        ## Positive
+        ax[coords['profile'][interface]].fill_between(
+            index,
+            dfplot.loc[str(weatheryear)][interface].clip(lower=0),
+            color=flowcolors['forward'], lw=0.1, label='Forward')
+        ## Negative
+        ax[coords['profile'][interface]].fill_between(
+            index,
+            dfplot.loc[str(weatheryear)][interface].clip(upper=0),
+            color=flowcolors['reverse'], lw=0.1, label='Reverse')
+        ### Distribution
+        ## Positive
+        ax[coords['distribution'][interface]].fill_between(
+            np.linspace(0,1,len(dfplot)),
+            dfplot[interface].sort_values(ascending=False).clip(lower=0),
+            color=flowcolors['forward'], lw=0,
+        )
+        ## Negative
+        ax[coords['distribution'][interface]].fill_between(
+            np.linspace(0,1,len(dfplot)),
+            dfplot[interface].sort_values(ascending=False).clip(upper=0),
+            color=flowcolors['reverse'], lw=0,
+        )
+        ### Formatting
+        ax[coords['profile'][interface]].axhline(0,c='C7',ls=':',lw=0.5)
+        ax[coords['distribution'][interface]].set_yticks([0])
+        ax[coords['distribution'][interface]].set_yticklabels([])
+        ax[coords['distribution'][interface]].set_ylabel(
+            f'{interface}\n({forward_fraction[interface]*100:.{decimals}f}% →)',
+            rotation=0, ha='right', va='center', fontsize='medium')
+    ### Formatting
+    ax[coords['distribution'][interfaces[-1]]].set_xticks([0,0.5,1])
+    ax[coords['distribution'][interfaces[-1]]].set_xticklabels([0,'','100%'])
+    ax[coords['profile'][interfaces[0]]].annotate(
+        'Forward ', (0.5,1), xycoords='axes fraction', ha='right', annotation_clip=False,
+        weight='bold', fontsize='large', color=flowcolors['forward'],
+    )
+    ax[coords['profile'][interfaces[0]]].annotate(
+        ' Reverse', (0.5,1), xycoords='axes fraction', ha='left', annotation_clip=False,
+        weight='bold', fontsize='large', color=flowcolors['reverse'],
+    )
+    ax[coords['profile'][interfaces[0]]].annotate(
+        f'{os.path.basename(case)}\nsystem year: {year}\nweather year: {weatheryear}',
+        (1,1), xycoords='axes fraction', ha='right', annotation_clip=False,
+    )
+    ## Full time range
+    ax[coords['profile'][interfaces[-1]]].set_xlim(index[0]-pd.Timedelta('1D'), index[-1])
+    ax[coords['profile'][interfaces[-1]]].xaxis.set_major_locator(mpl.dates.MonthLocator())
+    ax[coords['profile'][interfaces[-1]]].xaxis.set_major_formatter(mpl.dates.DateFormatter('%b'))
+    plots.despine(ax)
+    return f, ax, dfplot

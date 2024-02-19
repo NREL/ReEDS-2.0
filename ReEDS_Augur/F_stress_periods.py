@@ -5,7 +5,7 @@ import traceback
 import pandas as pd
 import numpy as np
 from glob import glob
-from distutils.dir_util import copy_tree
+import re
 ### Local imports
 import ReEDS_Augur.functions as functions
 
@@ -17,29 +17,24 @@ import ReEDS_Augur.functions as functions
 
 
 #%%### Functions
-def write_last_years_periods(t, sw, outpath):
-    """
-    Copy the stress periods from the last model year and use them for the next model year.
-    Used if there is no unmet PRM / dropped load.
-    """
-    last_stressperiod = sorted(glob(
-        os.path.join(sw['casedir'], 'inputs_case', 'stress*')))[-1]
-    copy_tree(
-        last_stressperiod,
-        os.path.join(sw['casedir'], 'inputs_case', outpath)
-    )
-
-
 def get_and_write_neue(sw, write=True):
     """
     Write dropped load across all completed years to outputs
-    so it can be plotted alongside other ReEDS outputs
+    so it can be plotted alongside other ReEDS outputs.
+
+    Notes
+    -----
+    * The denominator of NEUE is exogenous electricity demand; it does not include
+    endogenous load from losses or H2 production or exogenous H2 demand.
     """
-    infiles = sorted(glob(
-        os.path.join(sw['casedir'], 'ReEDS_Augur', 'PRAS', 'PRAS_*.h5')))
+    infiles = [
+        i for i in sorted(glob(
+            os.path.join(sw['casedir'], 'ReEDS_Augur', 'PRAS', 'PRAS_*.h5')))
+        if re.match(r"PRAS_[0-9]+i[0-9]+.h5", os.path.basename(i))
+    ]
     eue = {}
     for infile in infiles:
-        year_iteration = os.path.basename(infile).strip('PRAS_.h5').split('i')
+        year_iteration = os.path.basename(infile)[len('PRAS_'):-len('.h5')].split('i')
         year = int(year_iteration[0])
         iteration = int(year_iteration[1])
         eue[year,iteration] = functions.read_pras_results(infile)['USA_EUE'].sum()
@@ -51,7 +46,10 @@ def get_and_write_neue(sw, write=True):
     load = LDC_prep.read_file(os.path.join(sw['casedir'],'inputs_case','load'))
     loadyear = load.sum(axis=1).groupby('year').sum()
 
-    neue = (eue / loadyear * 1e6).rename('NEUE [ppm]').rename_axis(['t','iteration'])
+    neue = (
+        (eue / loadyear * 1e6).rename('NEUE [ppm]')
+        .rename_axis(['t','iteration']).sort_index()
+    )
 
     if write:
         neue.to_csv(os.path.join(sw['casedir'],'outputs','neue.csv'))
@@ -161,7 +159,7 @@ def get_stress_periods(
         ### Get load at hierarchy_level
         dfload = pd.read_hdf(
             os.path.join(
-                sw['casedir'],'ReEDS_Augur','augur_data',f'pras_load_{sw.t}.h5')
+                sw['casedir'],'ReEDS_Augur','augur_data',f'pras_load_{t}.h5')
         ).rename(columns=rmap).groupby(level=0, axis=1).sum()
         dfload.index = dfeue.index
 
@@ -207,23 +205,17 @@ def get_stress_periods(
 def get_annual_neue(sw, t, iteration=0):
     """
     """
-    ### Get the hierarchy
-    hierarchy = functions.get_hierarchy(sw.casedir)
-
     ### Get EUE from PRAS
     dfeue = get_pras_eue(sw=sw, t=t, iteration=iteration)
 
     ### Get load (for calculating NEUE)
     dfload = pd.read_hdf(
         os.path.join(
-            sw['casedir'],'ReEDS_Augur','augur_data',f'pras_load_{sw.t}.h5')
+            sw['casedir'],'ReEDS_Augur','augur_data',f'pras_load_{t}.h5')
     )
     dfload.index = dfeue.index
 
-    levels = (
-        hierarchy.drop(columns=['aggreg','ccreg'], errors='ignore').columns.tolist()
-        + ['r']
-    )
+    levels = ['country','interconnect','nercr','transreg','transgrp','st','r']
     _neue = {}
     for hierarchy_level in levels:
         ### Get the region aggregator
@@ -252,16 +244,12 @@ def main(sw, t, iteration=0):
     site.addsitedir(os.path.join(sw['reeds_path'],'input_processing'))
     import hourly_writetimeseries
 
-    savepath = os.path.join(sw['casedir'], 'outputs', 'Augur_plots')
-    os.makedirs(savepath, exist_ok=True)
-    outpath = f'stress{t}i{iteration}'
-
     #%% Write consolidated NEUE so far
     try:
-        neue_simple = get_and_write_neue(sw, write=True)
+        _neue_simple = get_and_write_neue(sw, write=True)
         neue = get_annual_neue(sw, t, iteration=iteration)
         neue.round(2).to_csv(
-            os.path.join(sw.casedir, 'outputs', f"neue_{outpath.strip('stre')}.csv")
+            os.path.join(sw.casedir, 'outputs', f"neue_{t}i{iteration}.csv")
         )
     except Exception as err:
         if int(sw['pras']) == 2:
@@ -269,103 +257,103 @@ def main(sw, t, iteration=0):
         if not int(sw.GSw_PRM_CapCredit):
             raise Exception(err)
 
-    #%% Stop here if not using stress periods
-    if int(sw.GSw_PRM_CapCredit):
+    #%% Stop here if not using stress periods or if before ReEDS can build new capacity
+    if int(sw.GSw_PRM_CapCredit) or (t < int(sw['GSw_StartMarkets'])):
         return None
 
-    #%% Get EUE for the last GSw_PRM_StressPrevYears solve years
-    solveyears = pd.read_csv(
-        os.path.join(sw['casedir'],'inputs_case','modeledyears.csv')
-    ).columns.astype(int)
-    thisyear = list(solveyears).index(sw['t'])
-    keepyears = solveyears[thisyear-int(sw['GSw_PRM_StressPrevYears'])+1:thisyear+1]
-
-    #%% Get the list of PRAS results to draw from
-    infiles = sorted(glob(
-        os.path.join(sw['casedir'], 'ReEDS_Augur', 'PRAS', 'PRAS_*.h5')))
-    keepfiles = [
-        i for i in infiles
-        if int(os.path.basename(i).split('_')[1].split('i')[0]) in keepyears]
+    #%% Load this year's stress periods so we don't duplicate
+    stressperiods_this_iteration = pd.read_csv(
+        os.path.join(
+            sw['casedir'], 'inputs_case', f'stress{t}i{iteration}', 'period_szn.csv')
+    )
 
     #%% Parse the stress-period selection criteria and keep the associated periods
-    _keep_periods = {}
+    _eue_sorted_periods = {}
+    failed = {}
+    _new_stress_periods = {}
+    for criterion in sw.GSw_PRM_StressThreshold.split('/'):
+        ## Example: criterion = 'transgrp_10_EUE_sum'
+        (hierarchy_level, ppm, stress_metric, period_agg_method) = criterion.split('_')
 
-    ## Example: sw.GSw_PRM_StressCriteria = 'country_25_EUE_sum/transreg_5_NEUE_max'
-    for criterion in sw.GSw_PRM_StressCriteria.split('/'):
-        ## Example: criterion = 'country_30_EUE_sum'
-        (hierarchy_level, _, stress_metric, period_agg_method) = criterion.split('_')
+        eue_periods = get_stress_periods(
+            sw=sw, t=t, iteration=iteration,
+            hierarchy_level=hierarchy_level,
+            stress_metric=stress_metric,
+            period_agg_method=period_agg_method,
+        )
 
-        _stress_periods = {}
-        for infile in keepfiles:
-            year_iteration = os.path.basename(infile).strip('PRAS_.h5').split('i')
-            year = int(year_iteration[0])
-            _iteration = int(year_iteration[1])
-            try:
-                _stress_periods[year,_iteration] = get_stress_periods(
-                    sw=sw, t=year, iteration=_iteration,
-                    hierarchy_level=hierarchy_level,
-                    stress_metric=stress_metric,
-                    period_agg_method=period_agg_method,
-                )
-            except FileNotFoundError as err:
-                print(err)
-
-        stress_periods = pd.concat(_stress_periods, names=['t','i'])
-
-        ### Sort in descending stress_metric order across all iterations
-        _keep_periods[criterion] = (
-            stress_periods
+        ### Sort in descending stress_metric order
+        _eue_sorted_periods[criterion] = (
+            eue_periods
             .sort_values(stress_metric, ascending=False)
-            ## Drop duplicate periods from different years, keeping the worst year
-            .drop_duplicates('actual_period', keep='first')
             .reset_index().set_index('actual_period')
         )
 
-    keep_periods = pd.concat(_keep_periods, names=['criterion'])
+        ### Get the threshold(s) and see if any of them failed
+        this_test = neue[hierarchy_level][period_agg_method]
+        if (this_test > float(ppm)).any():
+            failed[criterion] = this_test.loc[this_test > float(ppm)]
+            print(f"GSw_PRM_StressThreshold = {criterion} failed for:")
+            print(failed[criterion])
+            ### Add GSw_PRM_StressIncrement periods to the list of the next iteration
+            _new_stress_periods[criterion] = (
+                _eue_sorted_periods[criterion].loc[
+                    ## Only include new stress periods for the region(s) that failed
+                    _eue_sorted_periods[criterion].r.isin(failed[criterion].index)
+                    ## Don't repeat existing stress periods
+                    & ~(_eue_sorted_periods[criterion].index.isin(
+                        stressperiods_this_iteration.actual_period))
+                ]
+                ## Don't add dates more than once
+                .drop_duplicates(subset=['y','m','d'])
+                ## Keep the GSw_PRM_StressIncrement worst periods for each region.
+                ## If you instead want to keep the GSw_PRM_StressIncrement worst periods
+                ## overall, use .nlargest(int(sw.GSw_PRM_StressIncrement), stress_metric)
+                .groupby('r').head(int(sw.GSw_PRM_StressIncrement))
+            )
+            break
+        else:
+            print(f"GSw_PRM_StressThreshold = {criterion} passed")
 
-    #%% Process multiple criteria in order. If a period is used for one criterion,
-    ### it is removed from consideration for the following criteria.
-    final_periods = []
-    for criterion in sw.GSw_PRM_StressCriteria.split('/'):
-        (_, max_stress_periods, stress_metric, _) = criterion.split('_')
-        non_overlapping_periods = [
-            p for p in _keep_periods[criterion].index.tolist() if p not in final_periods
-        ]
-        final_periods += non_overlapping_periods[:int(max_stress_periods)]
-    final_periods = pd.Series(final_periods)
+    eue_sorted_periods = pd.concat(_eue_sorted_periods, names=['criterion'])
 
-    #%% Reproduce the format of inputs_case/stress_period_szn.csv
-    final_periods_write = pd.DataFrame({
-        'rep_period': final_periods,
-        'year': final_periods.map(
-            lambda x: int(x.strip('sy').split(sw['GSw_HourlyType'][0])[0])),
-        'yperiod': final_periods.map(
-            lambda x: int(x.strip('sy').split(sw['GSw_HourlyType'][0])[1])),
-        'actual_period': final_periods,
-    })
+    #%% Add them to the stress periods used for this year/iteration, then write
+    if len(_new_stress_periods):
+        new_stress_periods = pd.concat(
+            _new_stress_periods, names=['criterion','actual_period']).reset_index()
+        ## Reproduce the format of inputs_case/stress_period_szn.csv
+        new_stressperiods_write = pd.DataFrame({
+            'rep_period': new_stress_periods.actual_period,
+            'year': new_stress_periods.actual_period.map(
+                lambda x: int(x.strip('sy').split(sw['GSw_HourlyType'][0])[0])),
+            'yperiod': new_stress_periods.actual_period.map(
+                lambda x: int(x.strip('sy').split(sw['GSw_HourlyType'][0])[1])),
+            'actual_period': new_stress_periods.actual_period,
+        })
 
-    #%% If there are no days with dropped load, stop here and use last year's days
-    if not len(final_periods_write):
-        write_last_years_periods(t, sw, outpath)
-
-    else:
-        ### Write the stress periods
-        os.makedirs(os.path.join(sw['casedir'], 'inputs_case', outpath), exist_ok=True)
-        final_periods_write.to_csv(
-            os.path.join(sw['casedir'], 'inputs_case', outpath, 'period_szn.csv'),
+        combined_periods_write = pd.concat(
+            [stressperiods_this_iteration, new_stressperiods_write],
+            axis=0,
+        )
+        ### Write new stress periods
+        newstresspath = f'stress{t}i{iteration+1}'
+        os.makedirs(os.path.join(sw['casedir'], 'inputs_case', newstresspath), exist_ok=True)
+        combined_periods_write.to_csv(
+            os.path.join(sw['casedir'], 'inputs_case', newstresspath, 'period_szn.csv'),
             index=False,
         )
+
         ### Write timeseries data for stress periods for the next iteration of ReEDS
-        write_timeseries = hourly_writetimeseries.main(
+        _write_timeseries = hourly_writetimeseries.main(
             sw=sw, reeds_path=sw['reeds_path'],
             inputs_case=os.path.join(sw['casedir'], 'inputs_case'),
-            periodtype=outpath,
+            periodtype=newstresspath,
             make_plots=0, figpathtail='',
         )
-        ### Write keep_periods for debugging
-        keep_periods.round(2).rename(columns={'EUE':'EUE_MWh','NEUE':'NEUE_ppm'}).to_csv(
-            os.path.join(sw.casedir, 'inputs_case', outpath, 'stress_periods.csv')
+        ### Write eue_sorted_periods for debugging
+        eue_sorted_periods.round(2).rename(columns={'EUE':'EUE_MWh','NEUE':'NEUE_ppm'}).to_csv(
+            os.path.join(sw.casedir, 'inputs_case', newstresspath, 'stress_periods.csv')
         )
 
-    #%% Done; return _keep_periods for debugging
-    return keep_periods
+    #%% Done
+    return eue_sorted_periods

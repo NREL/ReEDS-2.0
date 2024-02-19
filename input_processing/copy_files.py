@@ -462,7 +462,7 @@ if agglevel == 'county':
                 missing_file_versions.append(f'{row["tech"]}-{access_case}_county.h5')
     # If any county-level file is missing from the inputs folder but a file_version.csv exists, 
     # then print out an error message to delete the file_version.csv and restart the run
-    if existing_fv and (present_in_fv > 1):
+    if (existing_fv) and (present_in_fv < 1):
         error = ("It appears that there is a file_version.csv present in\n"
             "/inputs/variability/multi-year/ despite a county-level file(s) missing\n"
             "from the folder. Delete file_version.csv from the folder and restart the run\n"
@@ -477,7 +477,7 @@ if agglevel == 'county':
             "Files:\n"
             +"\n".join(missing_file_versions)+"\n\n"
             +"OpenEI files link:\n"
-            "[Dummy Link]"
+            "[https://data.openei.org/submissions/5986]"
         )
         raise ValueError(error)   
     # Write out the new file version file if there are any updates

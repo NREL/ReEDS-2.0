@@ -449,7 +449,7 @@ def vizit_report(data_type, data_source, vizit_data, output_dir, auto_open):
     data_dict['vizit_styles.csv'] = df_style.to_dict(orient='list')
     vizit_config['fileNames'].append('vizit_styles.csv')
 
-    vizit_commit = 'a56981cebf1ed1920e5cbb3fed658cdbe21f6d10'
+    vizit_commit = '7011d363e40386264bedb3155629729b225fd22e'
     vizit_url = f'https://raw.githubusercontent.com/mmowers/vizit/{vizit_commit}/index.html'
     f_out_str = requests.get(vizit_url).text
     data_str = json.dumps(data_dict, separators=(',',':'))

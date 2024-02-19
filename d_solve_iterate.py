@@ -5,40 +5,8 @@ import argparse
 import pandas as pd
 import subprocess
 from glob import glob
-from input_processing.ticker import toc, makelog
+from input_processing.ticker import makelog
 from ReEDS_Augur.functions import get_switches
-
-#%% Functions
-def met_threshold(casepath, t, iteration=0):
-    """
-    Determine whether the last iteration failed the threshold
-    """
-    sw = get_switches(casepath)
-
-    ### Get the latest NEUE data
-    neue = pd.read_csv(
-        os.path.join(casepath,'outputs',f'neue_{t}i{iteration}.csv'),
-        index_col=['level','metric','region'],
-    ).squeeze(1)
-
-    ### Get the threshold(s) and see if any of them failed
-    failed = 0
-    ## Example: GSw_PRM_StressThreshold = 'country_sum_5/transgrp_sum_10'
-    for threshold in sw.GSw_PRM_StressThreshold.split('/'):
-        ## Example: threshold = 'country_sum_10'
-        (hierarchy_level, period_agg_method, ppm) = threshold.split('_')
-        this_test = neue[hierarchy_level][period_agg_method]
-        if (this_test > float(ppm)).any():
-            print(f"GSw_PRM_StressThreshold={threshold} failed for:")
-            print(this_test.loc[this_test > float(ppm)])
-            failed = 1
-
-    if failed:
-        print(f"At least one of GSw_PRM_StressThreshold={sw.GSw_PRM_StressThreshold} failed")
-        return False
-    else:
-        print(f"All of GSw_PRM_StressThreshold={sw.GSw_PRM_StressThreshold} passed")
-        return True
 
 
 #%% Main function
@@ -69,16 +37,7 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
     if not onlyaugur:
         #%% Get the command to run GAMS for this solve year
         batch_case = os.path.basename(casepath)
-        ### Get the stress_year
-        ## If using user-defined stress periods, read the current year
-        if 'user' in sw.GSw_PRM_StressModel:
-            stress_year = f"{t}i0"
-        ## If we're on iteration 0, use stress periods from the previous year
-        elif not iteration:
-            stress_year = f"{tprev[t]}i{iteration}"
-        ## Otherwise use stress periods from this year from the previous iteration
-        else:
-            stress_year = f"{t}i{iteration-1}"
+        stress_year = f"{t}i{iteration}"
         ### Get the restartfile (last iteration from previous year)
         if t == min(years):
             restartfile = batch_case
@@ -133,30 +92,46 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
 
 
 #%% Driver function
-def main(casepath, t):
+def main(casepath, t, overwrite=False):
     """
     """
     ### Get the run settings
     sw = get_switches(casepath)
-    for iteration in range(int(sw.GSw_PRM_StressIterateMax)+1):
+    for iteration in range(int(sw.GSw_PRM_StressIterateMax)):
+        #%% If not overwriting, skip iterations that have already finished
+        if (
+            (not overwrite)
+            ## Check if GAMS finished
+            and os.path.isfile(
+                os.path.join(
+                    sw.casedir, 'g00files',
+                    f"{os.path.basename(sw.casedir)}_{t}i{iteration}.g00"))
+            ## Check if the output of hourly_writetimeseries.py for this year/iteration
+            ## exists, indicating stress period calcluations finished (or that we're not
+            ## using stress periods)
+            and (
+                os.path.isfile(
+                    os.path.join(
+                        sw.casedir, 'inputs_case', f'stress{t}i{iteration+1}', 'cf_vre.csv'))
+                if not int(sw.GSw_PRM_CapCredit) else True)
+            ## Check if Augur finished
+            and os.path.isfile(
+                os.path.join(
+                    sw.casedir, 'ReEDS_Augur', 'augur_data', f'ReEDS_Augur_{t}.gdx'))
+        ):
+            print(f'Already ran {t}i{iteration} so continuing to next iteration')
+            continue
+
         #%% Run ReEDS and Augur
         run_reeds(casepath, t, iteration=iteration)
 
-        #%% Stop here if we're before GSw_StartMarkets...
-        if (t < int(sw['GSw_StartMarkets'])):
-            print(f'{t} < GSw_StartMarkets ({sw.GSw_StartMarkets}) so skipping iteration')
-            break
-        ### or if not iterating...
-        elif (
-            (not int(sw['GSw_PRM_StressIterateMax']))
-            or ('user' in sw.GSw_PRM_StressModel)
-            or int(sw.GSw_PRM_CapCredit)
+        #%% Stop here if there's no stress period data for the next iteration
+        ### (either because we're not iterating or because the threshold was met)
+        if not os.path.isfile(
+            os.path.join(
+                sw.casedir, 'inputs_case', f'stress{t}i{iteration+1}', 'period_szn.csv')
         ):
-            print('Not iterating, so moving to next solve year')
-            break
-        ### or if the threshold was met
-        elif met_threshold(casepath, t, iteration):
-            print('NEUE threshold was met, so moving to next solve year')
+            print('No new stress periods to add, so moving to next solve year')
             break
         ### Otherwise continue iterating
         else:
@@ -186,9 +161,11 @@ if __name__ == '__main__':
     parser.add_argument('--iteration', '-i', type=int, default=0,
                         help='iteration counter for this run')
     parser.add_argument('--onlygams', '-g', action='store_true',
-                        help='indicate whether to only run GAMS (skip Augur)')
+                        help='Only run GAMS (skip Augur)')
     parser.add_argument('--onlyaugur', '-a', action='store_true',
-                        help='indicate whether to only run Augur (skip GAMS)')
+                        help='Only run Augur (skip GAMS)')
+    parser.add_argument('--overwrite', '-o', action='store_true',
+                        help='Overwrite iterations that have already finished')
 
     args = parser.parse_args()
     casepath = args.casepath
@@ -196,6 +173,7 @@ if __name__ == '__main__':
     iteration = args.iteration
     onlygams = args.onlygams
     onlyaugur = args.onlyaugur
+    overwrite = args.overwrite
 
     #%% Switch to run folder
     os.chdir(casepath)
@@ -204,4 +182,4 @@ if __name__ == '__main__':
     log = makelog(scriptname=__file__, logpath=os.path.join(casepath,'gamslog.txt'))
 
     #%% Run it
-    main(casepath=casepath, t=t)
+    main(casepath=casepath, t=t, overwrite=overwrite)

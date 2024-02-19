@@ -3,3 +3,6 @@
 *.spyproject/
 *.vscode/
 *__pycache__/
+
+# Ignore everything in the out folder
+out/*

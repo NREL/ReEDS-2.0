@@ -1,11 +1,11 @@
 #%% IMPORTS
 import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-import os, sys, site, importlib
+import os
+import site
+import argparse
 import traceback
 
-import geopandas as gpd
 os.environ['PROJ_NETWORK'] = 'OFF'
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -80,8 +80,6 @@ write = True
 
 ###################
 #%% ARGUMENT INPUTS
-
-import argparse
 parser = argparse.ArgumentParser(description='transmission maps')
 parser.add_argument('--casedir', '-c', type=str,
                     help='path to ReEDS run folder')
@@ -95,15 +93,16 @@ casedir = args.casedir
 year = args.year
 routes = args.routes
 
-# #%% Inputs for testing
-# casedir = os.path.expanduser('~/github/ReEDS-2.0/runs/v20231012_startupM0_Pacific')
+#%% Inputs for testing
+# casedir = os.path.expanduser('~/github/ReEDS-2.0/runs/v20240111_stressM0_stress_WECC_crossover')
 # casedir = (
-#     '/Volumes/ReEDS/FY22-NTP/Candidates/Archive/ReEDSruns/20230910/'
-#     'v20230910_ntpH0_AC_DemMd_90by2035EP__core')
+#     '/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240112/'
+#     'v20240112_stresspaperE0_SP_DemHi_90by2035__core')
 # year = 2050
 # routes = False
 # interactive = True
 # write = False
+# import importlib
 # importlib.reload(rplots)
 
 #############
@@ -165,11 +164,13 @@ for subtract_baseyear in [None, 2020]:
             weight='bold', fontsize=15, color=colors['vsc'])
         end = f'-since{subtract_baseyear}' if subtract_baseyear else ''
         savename = f'map_translines_all-{year}{end}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-    except Exception as err:
+    except Exception:
         print('map_translines_all failed:')
         print(traceback.format_exc())
 
@@ -183,12 +184,14 @@ try:
             wscale=wscale_straight, alpha=1.0, cmap=cmap,
         )
         savename = f'map_transmission_utilization-{plottype}-{year}'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-except Exception as err:
-    print(f'map_transmission_utilization failed:')
+except Exception:
+    print('map_transmission_utilization failed:')
     print(traceback.format_exc())
 
 try:
@@ -197,12 +200,14 @@ try:
         case=casedir, year=year, wscale=wscale_routes*8e3,
     )
     savename = f'map_transmission_utilization-flowdirection-{year}.png'
-    if write: plt.savefig(os.path.join(savepath, savename))
-    if interactive: plt.show()
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
     plt.close()
     print(savename)
-except Exception as err:
-    print(f'map_transmission_utilization-flowdirection failed:')
+except Exception:
+    print('map_transmission_utilization-flowdirection failed:')
     print(traceback.format_exc())
 
 try:
@@ -211,12 +216,14 @@ try:
         case=casedir, year=year, wscale=wscale_straight*8e3,
     )
     savename = f'map_transmission_utilization-prmtrade-{year}.png'
-    if write: plt.savefig(os.path.join(savepath, savename))
-    if interactive: plt.show()
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
     plt.close()
     print(savename)
-except Exception as err:
-    print(f'map_transmission_utilization-prmtrade failed:')
+except Exception:
+    print('map_transmission_utilization-prmtrade failed:')
     print(traceback.format_exc())
 
 
@@ -229,11 +236,13 @@ try:
             alpha=1.0, miles=300,
         )
         savename = f'map_translines_vsc-{year}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-except Exception as err:
+except Exception:
     print('map_translines_vsc failed:')
     print(traceback.format_exc())
 
@@ -272,7 +281,7 @@ for vmax in ['each', 'shared']:
             dfval = dfcap.loc[
                 (dfcap.i==tech)
                 & (dfcap.t.astype(int)==year)
-            ].groupby('r').MW.sum()
+            ].groupby('r').MW.sum().round(3)
             dfplot = dfba.copy()
             dfplot['GW'] = (dfval / 1000).fillna(0)
 
@@ -295,11 +304,13 @@ for vmax in ['each', 'shared']:
             '{} ({})'.format(os.path.basename(casedir), year),
             x=0.1, ha='left', va='top')
         savename = f'map_capacity-{year}-{vmax}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-    except Exception as err:
+    except Exception:
         print('map_capacity failed:')
         print(traceback.format_exc())
 
@@ -313,11 +324,13 @@ try:
         alpha=transalpha, colors=transcolor, ms=ms,
     )
     savename = f'map_VREsites-{year}.png'
-    if write: plt.savefig(os.path.join(savepath, savename))
-    if interactive: plt.show()
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
     plt.close()
     print(savename)
-except Exception as err:
+except Exception:
     print('map_VREsites failed:')
     print(traceback.format_exc())
 
@@ -333,11 +346,13 @@ try:
         alpha=transalpha, colors=transcolor, ms=ms,
     )
     savename = f'map_VREsites-translines-{year}.png'
-    if write: plt.savefig(os.path.join(savepath, savename))
-    if interactive: plt.show()
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
     plt.close()
     print(savename)
-except Exception as err:
+except Exception:
     print('map_VREsites-translines failed:')
     print(traceback.format_exc())
 
@@ -347,27 +362,33 @@ try:
         plt.close()
         f,ax = rplots.map_agg(case=casedir, data=val, width_step=yearstep)
         savename = f'map_agg-FERC-{val}-{year}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
 
     plt.close()
     f,ax = rplots.map_trans_agg(case=casedir, wscale=1000, drawzones=0.05)
     savename = f'map_agg-FERC-trans-{year}.png'
-    if write: plt.savefig(os.path.join(savepath, savename))
-    if interactive: plt.show()
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
     plt.close()
     print(savename)
 
     plt.close()
     f,ax = rplots.map_agg(case=casedir, data='cap', width_step=yearstep, transmission=True)
     savename = f'map_agg-FERC-cap,trans-{year}.png'
-    if write: plt.savefig(os.path.join(savepath, savename))
-    if interactive: plt.show()
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
     plt.close()
     print(savename)
-except Exception as err:
+except Exception:
     print('map_agg failed:')
     print(traceback.format_exc())
 
@@ -386,11 +407,13 @@ try:
             case=casedir, t=year, highlight_rep_periods=v, techs=techs)
         endname = '' if not techs else f"-{','.join(techs)}"
         savename = f'plot_dispatch-yearbymonth-{v}-{year}{endname}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-except Exception as err:
+except Exception:
     print('plot_dispatch-yearbymonth failed:')
     print(traceback.format_exc())
 
@@ -398,11 +421,13 @@ try:
     plt.close()
     f,ax = rplots.plot_dispatch_weightwidth(case=casedir)
     savename = f'plot_dispatch-weightwidth-{sw.endyear}.png'
-    if write: plt.savefig(os.path.join(savepath, savename))
-    if interactive: plt.show()
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
     plt.close()
     print(savename)
-except Exception as err:
+except Exception:
     print('plot_dispatch-weightwidth failed:')
     print(traceback.format_exc())
 
@@ -413,12 +438,30 @@ try:
         plt.close()
         f,ax,eax = rplots.map_zone_capacity(case=casedir, year=year, sideplots=sideplots)
         savename = f'map_gencap_transcap-{year}{"-sideplots" if sideplots else ""}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-except Exception as err:
-    print(f'map_gencap_transcap failed:')
+except Exception:
+    print('map_gencap_transcap failed:')
+    print(traceback.format_exc())
+
+
+#%% Interregional transmission / peak demand
+try:
+    for level in ['transreg','nercr']:
+        f, ax, dfplot = rplots.plot_interreg_transfer_cap_ratio(case=casedir, level=level)
+        savename = f'plot_interreg_transfer_ratio-{level}.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+except Exception:
+    print('plot_interreg_transfer_ratio failed:')
     print(traceback.format_exc())
 
 
@@ -426,13 +469,15 @@ except Exception as err:
 try:
     plt.close()
     f,ax = rplots.plot_retire_add(case=casedir)
-    savename = f'bars_retirements_additions.png'
-    if write: plt.savefig(os.path.join(savepath, savename))
-    if interactive: plt.show()
+    savename = 'bars_retirements_additions.png'
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
     plt.close()
     print(savename)
-except Exception as err:
-    print(f'bars_retirements_additions failed:')
+except Exception:
+    print('bars_retirements_additions failed:')
     print(traceback.format_exc())
 
 
@@ -443,11 +488,13 @@ try:
         f,ax = rplots.map_h2_capacity(
             case=casedir, year=year, cmap=plt.cm.gist_earth_r, wscale_h2=0.2)
         savename = f'map_h2_capacity-{sw.endyear}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-except Exception as err:
+except Exception:
     print('map_h2_capacity failed:')
     print(traceback.format_exc())
 
@@ -462,12 +509,14 @@ try:
                 wscale=wscale_h2/1000, alpha=1.0, cmap=cmap, extent='modeled',
             )
             savename = f'map_pipeline_utilization-{plottype}-{year}.png'
-            if write: plt.savefig(os.path.join(savepath, savename))
-            if interactive: plt.show()
+            if write:
+                plt.savefig(os.path.join(savepath, savename))
+            if interactive:
+                plt.show()
             plt.close()
             print(savename)
-except Exception as err:
-    print(f'map_pipeline_utilization failed:')
+except Exception:
+    print('map_pipeline_utilization failed:')
     print(traceback.format_exc())
 
 try:
@@ -478,12 +527,14 @@ try:
             cm=plt.cm.magma_r, extent='modeled', wscale=wscale_h2*1e4,
         )
         savename = f'map_pipeline_utilization-flowdirection-{year}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-except Exception as err:
-    print(f'map_pipeline_utilization-flowdirection failed:')
+except Exception:
+    print('map_pipeline_utilization-flowdirection failed:')
     print(traceback.format_exc())
 
 
@@ -496,37 +547,93 @@ try:
         f, ax = rplots.plot_h2_timeseries(
             case=casedir, year=year, agglevel=agglevel, grid=0)
         savename = f'plot_h2_timeseries-{year}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-except Exception as err:
-    print(f'plot_h2_timeseries failed:')
+except Exception:
+    print('plot_h2_timeseries failed:')
     print(traceback.format_exc())
 
 
 #%% Stress periods
-try:
-    if not int(sw.GSw_PRM_CapCredit):
+if not int(sw.GSw_PRM_CapCredit):
+    try:
         plt.close()
         level, regions = 'country', ['USA']
         f,ax = rplots.plot_stressperiod_dispatch(case=casedir, level=level, regions=regions)
-        savename = f'plot-dispatch-stressperiods-{",".join(regions)}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        savename = f'plot_stressperiod_dispatch-{",".join(regions)}.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
+    except Exception:
+        print('plot_stressperiod_dispatch failed:')
+        print(traceback.format_exc())
 
+    try:
         plt.close()
         f,ax = rplots.plot_stressperiod_days(case=casedir)
-        savename = f'plot-stressperiod-dates.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        savename = 'plot_stressperiod_dates.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
-except Exception as err:
-    print('plot_stressperiod_dispatch failed:')
-    print(traceback.format_exc())
+    except Exception:
+        print('plot_stressperiod_days failed:')
+        print(traceback.format_exc())
+
+    try:
+        plt.close()
+        f, ax, _ = rplots.plot_interface_flows(case=casedir, year=year)
+        savename = 'plot_PRAS_flows.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+    except Exception:
+        print('plot_interface_flows failed:')
+        print(traceback.format_exc())
+
+    try:
+        metric = 'sum'
+        level = 'transgrp'
+        plt.close()
+        f,ax = rplots.plot_stressperiod_evolution(
+            case=casedir, level=level, metric=metric)
+        savename = f'plot_stressperiod_evolution-{metric}-{level}.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+    except Exception:
+        print('plot_stressperiod_evolution failed:')
+        print(traceback.format_exc())
+
+    try:
+        plt.close()
+        levels = ['country','interconnect','transreg','transgrp']
+        f, ax, _ = rplots.plot_neue_bylevel(case=casedir, levels=levels)
+        savename = f"plot_stressperiod_neue-{','.join(levels)}.png"
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+    except Exception:
+        print('plot_stressperiod_neue failed:')
+        print(traceback.format_exc())
 
 
 #%% Capacity markers
@@ -538,8 +645,10 @@ try:
         f,ax = rplots.map_capacity_markers(
             case=casedir, level=level, year=year, ms=ms[level])
         savename = f'map_units-gencap-{level}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
     ### Just transmission
@@ -549,8 +658,10 @@ try:
         f,ax = rplots.map_transmission_lines(
             case=casedir, level='r', year=year, subtract_baseyear=subtract_baseyear)
         savename = f'map_units-transcap{end}.png'
-        if write: plt.savefig(os.path.join(savepath, savename))
-        if interactive: plt.show()
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
         plt.close()
         print(savename)
     ### Both
@@ -558,12 +669,14 @@ try:
     f,ax = rplots.map_transmission_lines(
         case=casedir, level='r', year=year, alpha=0.5, lw=0.15)
     rplots.map_capacity_markers(case=casedir, level='r', year=year, f=f, ax=ax)
-    savename = f'map_units-gencap-transcap.png'
-    if write: plt.savefig(os.path.join(savepath, savename))
-    if interactive: plt.show()
+    savename = 'map_units-gencap-transcap.png'
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
     plt.close()
     print(savename)
-except Exception as err:
+except Exception:
     print('map_capacity_markers failed:')
     print(traceback.format_exc())
 
@@ -587,9 +700,11 @@ try:
                 markersize=10.75,
             )
             savename = f"map_hybrid-{val.replace('site_','')}-{tech}-{year}.png"
-            if write: plt.savefig(os.path.join(savepath, savename))
-            if interactive: plt.show()
+            if write:
+                plt.savefig(os.path.join(savepath, savename))
+            if interactive:
+                plt.show()
             print(savename)
-except Exception as err:
+except Exception:
     print('map_hybrids failed:')
     print(traceback.format_exc())

@@ -55,7 +55,7 @@ GSw_DUPV,0
 GSw_EFS1_AllYearLoad,EER_100by2050
 GSw_EFS2_FlexCase,EPMEDIUM_EnhancedflexStretch2046
 GSw_EFS_Flex,0
-GSw_EV,0
+GSw_EVMC,0
 GSw_ForcePrescription,1
 GSw_GasCurve,1
 GSw_GasSector,electric_sector
