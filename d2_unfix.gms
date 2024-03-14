@@ -28,7 +28,6 @@
     DR_SHIFT.lo(i,v,r,h,hh,t)$tmodel(t) = 0 ;
     DR_SHED.lo(i,v,r,h,t)$tmodel(t) = 0 ;
     PRODUCE.lo(p,i,v,r,h,t)$tmodel(t) = 0 ;
-    LAST_HOUR_SOC.lo(i,v,r,h,t)$tmodel(t) = 0 ;
 
 * flexible CCS variables
   CCSFLEX_POW.lo(i,v,r,h,t)$tmodel(t) = 0 ;
@@ -100,7 +99,6 @@ STORAGE_LEVEL.up(i,v,r,h,t)$tmodel(t) = +inf ;
 DR_SHIFT.up(i,v,r,h,hh,t)$tmodel(t) = +inf ;
 DR_SHED.up(i,v,r,h,t)$tmodel(t) = +inf ;
 PRODUCE.up(p,i,v,r,h,t)$tmodel(t) = +inf ;
-LAST_HOUR_SOC.up(i,v,r,h,t)$tmodel(t) = +inf ;
 CCSFLEX_POW.up(i,v,r,h,t)$tmodel(t) = +inf ;
 CCSFLEX_POWREQ.up(i,v,r,h,t)$tmodel(t) = +inf ;
 CCSFLEX_STO_STORAGE_LEVEL.up(i,v,r,h,t)$tmodel(t) = +inf ;

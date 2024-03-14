@@ -169,7 +169,7 @@ def main(t, tnext, casedir, iteration=0):
         result = run_pras(
             casedir, t, sw, iteration=iteration,
             write_flow=(True if t == max(solveyears) else False),
-            write_energy=(True if t == max(solveyears) else False),
+            write_energy=True,
         )
         print(f"run_pras.jl returned code {result.returncode}")
 

@@ -104,6 +104,16 @@ $offdelim
 $onlisting
 /
 
+nexth(allh,allh) "Mapping set between one timeslice (first) and the following (second)"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%nexth.csv
+$include inputs_case%ds%stress%stress_year%%ds%nexth.csv
+$offdelim
+$onlisting
+/
+
 ;
 
 * Record the stress periods for each model year
@@ -126,28 +136,6 @@ final_hour(h)$[sum{szn,h_szn(h,szn)$(smax(hh$h_szn(hh,szn),ord(hh))=ord(h)) }] =
 * note summing over szn to find the minimum/maximum ordered hour within that season
 starting_hour_nowrap(h)$[sum{szn, h_szn_start(szn,h) }$(not Sw_HourlyWrap)] = yes ;
 final_hour_nowrap(h)$[sum{szn, h_szn_end(szn,h) }$(not Sw_HourlyWrap)] = yes ;
-
-*remove all elements in nexth
-nexth(h,hh) = no ;
-*populate nexth for chronological sequences of hours
-nexth(h,hh)$[(ord(hh) = ord(h) + 1)] = yes ;
-
-$ifthen.h8760 '%GSw_HourlyType%%GSw_HourlyWrapLevel%' == 'yearyear'
-* If using chronological year, loop first and last hours
-    nexth(h,hh)$[final_hour(h)$starting_hour(hh)
-               $(ord(h) = smax(hhh$final_hour(hhh), ord(hhh)))
-               $(ord(hh) = smin(hhh$starting_hour(hhh), ord(hhh)))
-               $Sw_HourlyWrap] = yes ;
-$else.h8760
-* If using representative periods,
-* first remove hours from nexth that are not from the same season,
-    nexth(h,hh)$[not sum{szn$[h_szn(h,szn)$h_szn(hh,szn)], 1 }] = no ;
-* then loop the end of each representative period back to the start of that period.
-* Even though midnight varies by timezone, we use EST midnight for all regions.
-    nexth(h,hh)$[final_hour(h)$starting_hour(hh)
-               $Sw_HourlyWrap
-               $sum{szn$[h_szn(h,szn)$h_szn(hh,szn)],1 }] = yes ;
-$endif.h8760
 
 * Get the order of actual periods
 nextszn(actualszn,actualsznn)$[(ord(actualsznn) = ord(actualszn) + 1)] = yes ;
@@ -183,15 +171,6 @@ $onlisting
 / ;
 
 * Written by input_processing/hourly_writetimeseries.py
-parameter frac_h_month_weights(allh,month) "--unitless-- fraction of timeslice associated with each month"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%frac_h_month_weights.csv
-$offdelim
-$onlisting
-/ ;
-
 parameter frac_h_quarter_weights(allh,quarter) "--unitless-- fraction of timeslice associated with each quarter"
 /
 $offlisting
@@ -402,6 +381,7 @@ parameter cf_hyd(i,allszn,r,allt) "--fraction-- hydro capacity factors by season
 $offlisting
 $ondelim
 $include inputs_case%ds%cf_hyd.csv
+$include inputs_case%ds%stress%stress_year%%ds%cf_hyd.csv
 $offdelim
 $onlisting
 / ;
@@ -439,7 +419,17 @@ cf_hyd(i,szn,r,t)$[hydro_d(i)$(yeart(t)>=Sw_ClimateStartYear)]  =
 
 $endif.climatehydro
 
-cap_hyd_szn_adj(i,szn,r) = sum{quarter, szn_quarter_weights(szn,quarter) * cap_hyd_quarter_adj(i,quarter,r) } ;
+*created by /input_processing/writecapdat.py
+parameter cap_hyd_szn_adj(i,allszn,r) "--fraction-- seasonal max capacity adjustment for dispatchable hydro"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%cap_hyd_szn_adj.csv
+$include inputs_case%ds%stress%stress_year%%ds%cap_hyd_szn_adj.csv
+$offdelim
+$onlisting
+/ ;
+
 
 
 * dispatchable hydro has a separate constraint for seasonal generation which uses m_cf_szn

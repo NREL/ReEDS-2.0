@@ -44,6 +44,5 @@ op_rect_fuel_costs,Fuel,Operation
 op_spurline_fom,Interconnection O&M,Operation
 op_startcost,Gen & Stor O&M,Operation
 op_transmission_fom,Transmission O&M,Operation
-op_transmission_hurdle_rate,Transmission O&M,Operation
 op_transmission_intrazone_fom,Transmission O&M,Operation
 op_vom_costs,Gen & Stor O&M,Operation

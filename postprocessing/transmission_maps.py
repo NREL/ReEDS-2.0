@@ -93,12 +93,12 @@ casedir = args.casedir
 year = args.year
 routes = args.routes
 
-#%% Inputs for testing
-# casedir = os.path.expanduser('~/github/ReEDS-2.0/runs/v20240111_stressM0_stress_WECC_crossover')
+# #%% Inputs for testing
 # casedir = (
 #     '/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240112/'
 #     'v20240112_stresspaperE0_SP_DemHi_90by2035__core')
-# year = 2050
+# casedir = os.path.expanduser('~/github/ReEDS-2.0/runs/v20240218_stressstorM0_Z45_SP_5yr_H0_Southwest')
+# year = 2035
 # routes = False
 # interactive = True
 # write = False
@@ -451,7 +451,7 @@ except Exception:
 
 #%% Interregional transmission / peak demand
 try:
-    for level in ['transreg','nercr']:
+    for level in ['transreg']:
         f, ax, dfplot = rplots.plot_interreg_transfer_cap_ratio(case=casedir, level=level)
         savename = f'plot_interreg_transfer_ratio-{level}.png'
         if write:
@@ -590,20 +590,6 @@ if not int(sw.GSw_PRM_CapCredit):
         print(traceback.format_exc())
 
     try:
-        plt.close()
-        f, ax, _ = rplots.plot_interface_flows(case=casedir, year=year)
-        savename = 'plot_PRAS_flows.png'
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        plt.close()
-        print(savename)
-    except Exception:
-        print('plot_interface_flows failed:')
-        print(traceback.format_exc())
-
-    try:
         metric = 'sum'
         level = 'transgrp'
         plt.close()
@@ -633,6 +619,34 @@ if not int(sw.GSw_PRM_CapCredit):
         print(savename)
     except Exception:
         print('plot_stressperiod_neue failed:')
+        print(traceback.format_exc())
+
+    try:
+        plt.close()
+        f, ax, _ = rplots.plot_interface_flows(case=casedir, year=year)
+        savename = f'plot_PRAS_flows-{year}.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+    except Exception:
+        print('plot_interface_flows failed:')
+        print(traceback.format_exc())
+
+    try:
+        plt.close()
+        f, ax, _ = rplots.plot_storage_soc(case=casedir, year=year)
+        savename = f'plot_PRAS_storage-{year}.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+    except Exception:
+        print('plot_PRAS_storage failed:')
         print(traceback.format_exc())
 
 

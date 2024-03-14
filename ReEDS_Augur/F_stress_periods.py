@@ -57,6 +57,9 @@ def get_and_write_neue(sw, write=True):
 
 
 def get_osprey_eue(sw, t):
+    site.addsitedir(os.path.join(sw['reeds_path'],'input_processing'))
+    from hourly_writetimeseries import h2timestamp
+
     dfosprey = pd.read_csv(
         os.path.join(
             sw['casedir'], 'ReEDS_Augur', 'augur_data', f"dropped_load_{t}.csv")
@@ -64,7 +67,7 @@ def get_osprey_eue(sw, t):
     ## Parse the day/hour indices
     dfosprey['h'] = (
         (dfosprey.d + dfosprey.hr.map(lambda x: x.replace('hr','h')))
-        .map(functions.h2timestamp)
+        .map(h2timestamp)
     )
     dfeue = (
         dfosprey.set_index('h')
@@ -133,7 +136,9 @@ def get_stress_periods(
 
     Returns:
         pd.DataFrame: Table of periods sorted in descending order by stress metric.
-    """    
+    """
+    site.addsitedir(os.path.join(sw['reeds_path'],'input_processing'))
+    from hourly_writetimeseries import timestamp2h
     ### Get the region aggregator
     rmap = get_rmap(sw=sw, hierarchy_level=hierarchy_level)
 
@@ -195,7 +200,7 @@ def get_stress_periods(
     )
     ## Convert to timestamp, then to ReEDS period
     dfmetric_top['actual_period'] = [
-        functions.timestamp2h(pd.Timestamp(*d), sw['GSw_HourlyType']).split('h')[0]
+        timestamp2h(pd.Timestamp(*d), sw['GSw_HourlyType']).split('h')[0]
         for d in dfmetric_top.index.values
     ]
 
@@ -267,10 +272,25 @@ def main(sw, t, iteration=0):
             sw['casedir'], 'inputs_case', f'stress{t}i{iteration}', 'period_szn.csv')
     )
 
+    #%% Get storage state of charge (SOC) to use in selection of "shoulder" stress periods
+    dfenergy = functions.read_pras_results(
+        os.path.join(sw['casedir'], 'ReEDS_Augur', 'PRAS', f"PRAS_{t}i{iteration}-energy.h5")
+    )
+    fulltimeindex = functions.make_fulltimeindex()
+    dfenergy.index = fulltimeindex
+    ### Sum by region
+    dfenergy_r = (
+        dfenergy
+        .rename(columns={c: c.split('|')[1] for c in dfenergy.columns})
+        .groupby(axis=1, level=0).sum()
+    )
+    hierarchy = functions.get_hierarchy(sw.casedir)
+
     #%% Parse the stress-period selection criteria and keep the associated periods
     _eue_sorted_periods = {}
     failed = {}
-    _new_stress_periods = {}
+    high_eue_periods = {}
+    shoulder_periods = {}
     for criterion in sw.GSw_PRM_StressThreshold.split('/'):
         ## Example: criterion = 'transgrp_10_EUE_sum'
         (hierarchy_level, ppm, stress_metric, period_agg_method) = criterion.split('_')
@@ -295,8 +315,8 @@ def main(sw, t, iteration=0):
             failed[criterion] = this_test.loc[this_test > float(ppm)]
             print(f"GSw_PRM_StressThreshold = {criterion} failed for:")
             print(failed[criterion])
-            ### Add GSw_PRM_StressIncrement periods to the list of the next iteration
-            _new_stress_periods[criterion] = (
+            ###### Add GSw_PRM_StressIncrement periods to the list for the next iteration
+            high_eue_periods[criterion, f'high_{stress_metric}'] = (
                 _eue_sorted_periods[criterion].loc[
                     ## Only include new stress periods for the region(s) that failed
                     _eue_sorted_periods[criterion].r.isin(failed[criterion].index)
@@ -311,16 +331,79 @@ def main(sw, t, iteration=0):
                 ## overall, use .nlargest(int(sw.GSw_PRM_StressIncrement), stress_metric)
                 .groupby('r').head(int(sw.GSw_PRM_StressIncrement))
             )
+
+            ###### Include "shoulder periods" before or after each period if the storage
+            ###### state of charge is low.
+            if sw.GSw_PRM_StressStorageCutoff.lower() in ['off','0','false']:
+                print(
+                    f"GSw_PRM_StressStorageCutoff={sw.GSw_PRM_StressStorageCutoff} "
+                    "so not adding shoulder stress periods based on storage level"
+                )
+                break
+            cutofftype, cutoff = sw.GSw_PRM_StressStorageCutoff.lower().split('_')
+            periodhours = {'day':24, 'wek':24*5, 'year':24}[sw.GSw_HourlyType]
+
+            ## Aggregate storage energy to hierarchy_level
+            dfenergy_agg = (
+                dfenergy_r.rename(columns=hierarchy[hierarchy_level])
+                .groupby(axis=1, level=0).sum()
+            )
+            dfheadspace_MWh = dfenergy_agg.max() - dfenergy_agg
+            dfheadspace_frac = dfheadspace_MWh / dfenergy_agg.max()
+
+            for i, row in high_eue_periods[criterion, f'high_{stress_metric}'].iterrows():
+                day = pd.Timestamp('-'.join(row[['y','m','d']].astype(str).tolist()))
+
+                start_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'),row.r].iloc[0]
+                end_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'),row.r].iloc[-1]
+
+                start_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'),row.r].iloc[0]
+                end_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'),row.r].iloc[-1]
+
+                day_eue = high_eue_periods[criterion, f'high_{stress_metric}'].loc[i,'EUE']
+                day_index = np.where(
+                    fulltimeindex == dfenergy_agg.loc[day.strftime('%Y-%m-%d')].iloc[0].name
+                )[0][0]
+
+                day_before = fulltimeindex[day_index - periodhours]
+                day_after = fulltimeindex[day_index + periodhours]
+
+                if (
+                    ((cutofftype == 'eue') and (end_headspace_MWh / day_eue >= float(cutoff)))
+                    or ((cutofftype[:3] == 'cap') and (end_headspace_frac  >= float(cutoff)))
+                    or (cutofftype[:3] == 'abs')
+                ):
+                    shoulder_periods[criterion, f'after_{row.name}'] = pd.Series({
+                        'actual_period':day_after.strftime('y%Yd%j'),
+                        'y':day_after.year, 'm':day_after.month, 'd':day_after.day, 'r':row.r,
+                    }).to_frame().T.set_index('actual_period')
+                    print(f"Added {day_after} as shoulder stress period after {day}")
+
+                if (
+                    ((cutofftype == 'eue') and (start_headspace_MWh / day_eue >= float(cutoff)))
+                    or ((cutofftype[:3] == 'cap') and (start_headspace_frac  >= float(cutoff)))
+                    or (cutofftype[:3] == 'abs')
+                ):
+                    shoulder_periods[criterion, f'before_{row.name}'] = pd.Series({
+                        'actual_period':day_before.strftime('y%Yd%j'),
+                        'y':day_before.year, 'm':day_before.month, 'd':day_before.day, 'r':row.r,
+                    }).to_frame().T.set_index('actual_period')
+                    print(f"Added {day_before} as shoulder stress period before {day}")
+
+            ### Dealing with earlier criteria may also address later criteria, so stop here
             break
+
         else:
             print(f"GSw_PRM_StressThreshold = {criterion} passed")
 
     eue_sorted_periods = pd.concat(_eue_sorted_periods, names=['criterion'])
 
     #%% Add them to the stress periods used for this year/iteration, then write
-    if len(_new_stress_periods):
+    if len(failed):
         new_stress_periods = pd.concat(
-            _new_stress_periods, names=['criterion','actual_period']).reset_index()
+            {**high_eue_periods, **shoulder_periods}, names=['criterion','periodtype'],
+        ).reset_index().drop_duplicates(subset='actual_period', keep='first')
+
         ## Reproduce the format of inputs_case/stress_period_szn.csv
         new_stressperiods_write = pd.DataFrame({
             'rep_period': new_stress_periods.actual_period,
@@ -334,7 +417,7 @@ def main(sw, t, iteration=0):
         combined_periods_write = pd.concat(
             [stressperiods_this_iteration, new_stressperiods_write],
             axis=0,
-        )
+        ).drop_duplicates(keep='first')
         ### Write new stress periods
         newstresspath = f'stress{t}i{iteration+1}'
         os.makedirs(os.path.join(sw['casedir'], 'inputs_case', newstresspath), exist_ok=True)
@@ -350,9 +433,12 @@ def main(sw, t, iteration=0):
             periodtype=newstresspath,
             make_plots=0, figpathtail='',
         )
-        ### Write eue_sorted_periods for debugging
+        ### Write a few tables for debugging
         eue_sorted_periods.round(2).rename(columns={'EUE':'EUE_MWh','NEUE':'NEUE_ppm'}).to_csv(
             os.path.join(sw.casedir, 'inputs_case', newstresspath, 'stress_periods.csv')
+        )
+        new_stress_periods.round(2).rename(columns={'EUE':'EUE_MWh','NEUE':'NEUE_ppm'}).to_csv(
+            os.path.join(sw.casedir, 'inputs_case', newstresspath, 'new_stress_periods.csv')
         )
 
     #%% Done

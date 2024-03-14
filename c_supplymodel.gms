@@ -46,7 +46,6 @@ positive variables
   STORAGE_LEVEL(i,v,r,allh,t)         "--MWh per day-- storage level in hour h"
   DR_SHIFT(i,v,r,allh,allhh,t)        "--MWh-- annual demand response load shifted to timeslice h from timeslice hh"
   DR_SHED(i,v,r,allh,t)               "--MWh-- annual demand response load shed from timeslice h"
-  LAST_HOUR_SOC(i,v,r,allh,t)         "--MWh-- last hour state of charge when running flex without infinite loop"
   RAMPUP(i,v,r,allh,allhh,t)          "--MW-- upward change in generation from h to hh"
   RAMPDOWN(i,v,r,allh,allhh,t)        "--MW-- downward change in generation from h to hh"
 
@@ -310,7 +309,7 @@ EQUATION
 *determine the full price of electricity load
 *i.e. the price of load with consideration to operating
 *reserve and planning reserve margin considered
-eq_loadcon(r,h,t)$[rb(r)$tmodel(t)]..
+eq_loadcon(r,h,t)$tmodel(t)..
 
     LOAD(r,h,t)
 
@@ -368,7 +367,7 @@ eq_loadcon(r,h,t)$[rb(r)$tmodel(t)]..
 * in the DR CONSTRAINTS section for that representation
 
 * FLEX load in each season equals the total exogenously-specified flexible load in each season
-eq_load_flex_day(flex_type,r,szn,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
+eq_load_flex_day(flex_type,r,szn,t)$[tmodel(t)$Sw_EFS_flex]..
 
     sum{h$h_szn(h,szn), FLEX(flex_type,r,h,t) * hours(h) } / numdays(szn)
 
@@ -388,7 +387,7 @@ eq_load_flex_day(flex_type,r,szn,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
 * for the "adjacent" flex type: the amount of exogenously-specified load in timeslice "h"
 * must be served by FLEX load either in the timeslice h or a timeslice ADJACENT to h
 
-eq_load_flex1(flex_type,r,h,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
+eq_load_flex1(flex_type,r,h,t)$[tmodel(t)$Sw_EFS_flex]..
 
     FLEX(flex_type,r,h,t) * hours(h)
 
@@ -410,7 +409,7 @@ eq_load_flex1(flex_type,r,h,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
 * for the "adjacent" flex type: FLEX load in timeslice "h" cannot exceed the sum of
 * exogenously-specified load in timeslice h and the timeslices adjacent to h
 
-eq_load_flex2(flex_type,r,h,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
+eq_load_flex2(flex_type,r,h,t)$[tmodel(t)$Sw_EFS_flex]..
 
     load_exog_flex(flex_type,r,h,t) * hours(h)
 
@@ -424,7 +423,7 @@ eq_load_flex2(flex_type,r,h,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
 * * ---------------------------------------------------------------------------
 * This constraint and the associated PEAK_FLEX variable are not currently supported
 * but are left in the model in case someone decides to revive them.
-* eq_load_flex_peak(r,h,ccseason,t)$[rb(r)$tmodel(t)$Sw_EFS_flex]..
+* eq_load_flex_peak(r,h,ccseason,t)$[tmodel(t)$Sw_EFS_flex]..
 * *   peak demand EFS flexibility adjustment is greater than
 *     PEAK_FLEX(r,ccseason,t)$h_ccseason(h,ccseason)
 
@@ -1012,7 +1011,7 @@ eq_capacity_limit_hybrid(r,h,t)
     $Sw_SpurScen]..
 
 * Sum of available generation across reV sites in BA
-    sum{x$[x_rb(x,r)$xfeas(x)], AVAIL_SITE(x,h,t)}
+    sum{x$[x_r(x,r)$xfeas(x)], AVAIL_SITE(x,h,t)}
 
     =g=
 
@@ -1045,7 +1044,7 @@ eq_capacity_limit_nd(i,v,r,h,t)$[tmodel(t)$valgen(i,v,r,t)$nondispatch(i)]..
 
 * ---------------------------------------------------------------------------
 
-eq_curt_gen_balance(r,h,t)$[rb(r)$tmodel(t)]..
+eq_curt_gen_balance(r,h,t)$tmodel(t)..
 
 *total potential generation
     sum{(i,v)$[valcap(i,v,r,t)$(vre(i) or pvb(i))$(not nondispatch(i))],
@@ -1082,7 +1081,7 @@ eq_mingen_fixed(i,v,r,h,t)
 
 * ---------------------------------------------------------------------------
 
-eq_mingen_lb(r,h,szn,t)$[rb(r)$h_szn(h,szn)$(yeart(t)>=mingen_firstyear)
+eq_mingen_lb(r,h,szn,t)$[h_szn(h,szn)$(yeart(t)>=mingen_firstyear)
                         $tmodel(t)$Sw_Mingen]..
 
 *minimum generation level in a season
@@ -1096,7 +1095,7 @@ eq_mingen_lb(r,h,szn,t)$[rb(r)$h_szn(h,szn)$(yeart(t)>=mingen_firstyear)
 
 * ---------------------------------------------------------------------------
 
-eq_mingen_ub(r,h,szn,t)$[rb(r)$h_szn(h,szn)$(yeart(t)>=mingen_firstyear)
+eq_mingen_ub(r,h,szn,t)$[h_szn(h,szn)$(yeart(t)>=mingen_firstyear)
                         $tmodel(t)$Sw_Mingen]..
 
 *generation in each timeslice in a season
@@ -1216,7 +1215,7 @@ eq_dhyd_dispatch_szn(i,v,r,szn,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_
 * VSC DC lines are part of a multi-terminal DC network; DC power can flow through a node
 * without converting to AC and incurring DC/AC/DC losses. Power flow along VSC lines is
 * therefore treated separately through the CONVERSION variable and eq_vsc_flow equation.
-eq_supply_demand_balance(r,h,t)$[rb(r)$tmodel(t)]..
+eq_supply_demand_balance(r,h,t)$tmodel(t)..
 
 * generation from all sources, including storage discharge and DR
 *  for DR - GEN represents the reduction in load from shifting away
@@ -1260,8 +1259,7 @@ eq_supply_demand_balance(r,h,t)$[rb(r)$tmodel(t)]..
 * ---------------------------------------------------------------------------
 
 eq_vsc_flow(r,h,t)
-    $[rb(r)
-    $tmodel(t)
+    $[tmodel(t)
     $Sw_VSC]..
 
 * [plus] net VSC DC transmission with imports reduced by losses
@@ -1358,7 +1356,7 @@ eq_ORCap_small_res_frac(ortype,i,v,r,h,t)
 
 *operating reserves must meet the operating reserves requirement (by ortype)
 eq_OpRes_requirement(ortype,r,h,t)
-    $[rb(r)$tmodel(t)$Sw_OpRes$opres_model(ortype)$opres_h(h)]..
+    $[tmodel(t)$Sw_OpRes$opres_model(ortype)$opres_h(h)]..
 
 *operating reserves from technologies that can produce them (i.e. those w/ramp rates)
 
@@ -1369,7 +1367,7 @@ eq_OpRes_requirement(ortype,r,h,t)
     + sum{rr$opres_routes(rr,r,t), (1 - tranloss(rr,r,"AC")) * OPRES_FLOW(ortype,rr,r,h,t) }
     - sum{rr$opres_routes(r,rr,t), OPRES_FLOW(ortype,r,rr,h,t) }
 
-* [plus] dropped load (operating reserves) ONLY if before Sw_StartMarkets
+*[plus] dropped load (operating reserves) ONLY if before Sw_StartMarkets
     + DROPPED(r,h,t)$(yeart(t)<Sw_StartMarkets)
 
     =g=
@@ -1386,7 +1384,7 @@ eq_OpRes_requirement(ortype,r,h,t)
 *note that pv capacity is held at the balancing area
 *include the hybrid PV+battery PV capacity here
     + orperc(ortype,"or_pv") * sum{(i,v)$[(pv(i) or pvb(i))$valcap(i,v,r,t)],
-         CAP(i,v,r,t) }$dayhours(h)
+         CAP(i,v,r,t) / ilr(i) }$dayhours(h)
 ;
 
 * ---------------------------------------------------------------------------
@@ -1416,8 +1414,7 @@ eq_PRMTRADELimit(r,rr,trtype,ccseason,t)
 * ---------------------------------------------------------------------------
 
 eq_PRMTRADE_VSC(r,ccseason,t)
-    $[rb(r)
-    $tmodel(t)
+    $[tmodel(t)
     $Sw_PRM_CapCredit
     $Sw_VSC]..
 
@@ -1440,7 +1437,7 @@ eq_PRMTRADE_VSC(r,ccseason,t)
 * binned capacity for capacity credit must be the same as capacity
 * (except for CSP, which is treated like VRE for capacity credit)
 eq_cap_sdbin_balance(i,v,r,ccseason,t)
-    $[tmodel(t)$valcap(i,v,r,t)$storage(i)$(not csp(i))]..
+    $[tmodel(t)$valcap(i,v,r,t)$storage(i)$(not csp(i))$Sw_PRM_CapCredit]..
 
 *total capacity in each region
     bcr(i) * CAP(i,v,r,t)
@@ -1454,7 +1451,7 @@ eq_cap_sdbin_balance(i,v,r,ccseason,t)
 * ---------------------------------------------------------------------------
 
 *binned capacity cannot exceed sdbin size
-eq_sdbin_limit(ccreg,ccseason,sdbin,t)$tmodel(t)..
+eq_sdbin_limit(ccreg,ccseason,sdbin,t)$[tmodel(t)$Sw_PRM_CapCredit]..
 
 *sdbin size from CC script
     sdbin_size(ccreg,ccseason,sdbin,t)
@@ -1475,7 +1472,7 @@ eq_sdbin_limit(ccreg,ccseason,sdbin,t)$tmodel(t)..
 
 * ---------------------------------------------------------------------------
 
-eq_reserve_margin(r,ccseason,t)$[rb(r)$tmodel(t)$(yeart(t)>=model_builds_start_yr)$Sw_PRM_CapCredit]..
+eq_reserve_margin(r,ccseason,t)$[tmodel(t)$(yeart(t)>=model_builds_start_yr)$Sw_PRM_CapCredit]..
 
 * forced_retire is used here because forced_retire capacity is removed from valgen 
 * but not valcap. It remains in valcap to allow for upgrades, but if it is not upgraged
@@ -1670,8 +1667,7 @@ eq_prescribed_transmission(r,rr,trtype,t)
 * New point-of-interconnection (POI) intra-zone transmission capacity must be
 * added for new generation capacity
 eq_POI_cap(r,t)
-    $[rb(r)
-    $tmodel(t)
+    $[tmodel(t)
     $Sw_TransIntraCost]..
 
 * The sum of POI capacity...
@@ -1684,7 +1680,7 @@ eq_POI_cap(r,t)
     sum{(i,v)$[valcap(i,v,r,t)$(not spur_techs(i))], CAP(i,v,r,t) / ilr(i) }
 * and spur-line capacity if explicitly tracked (use total capacity, not just new investments,
 * to make sure we account for the existing spur line capacity already included in poi_cap_init)...
-    + sum{x$[xfeas(x)$x_rb(x,r)$Sw_SpurScen], CAP_SPUR(x,t) }
+    + sum{x$[xfeas(x)$x_r(x,r)$Sw_SpurScen], CAP_SPUR(x,t) }
 * and AC/DC converter capacity for VSC...
     + CAP_CONVERTER(r,t)
 * and LCC
@@ -1786,8 +1782,7 @@ eq_transgrp_limit_prm(transgrp,transgrpp,ccseason,t)
 
 * CAP_CONVERTER accumulates INV_CONVERTER from years <= t
 eq_CAP_CONVERTER(r,t)
-    $[rb(r)
-    $tmodel(t)
+    $[tmodel(t)
     $val_converter(r,t)
     $Sw_VSC]..
 
@@ -1817,8 +1812,7 @@ eq_CAP_SPUR(x,t)
 
 * AC/DC conversion cannot exceed the converter capacity
 eq_CONVERSION_limit_energy(r,h,t)
-    $[rb(r)
-    $tmodel(t)
+    $[tmodel(t)
     $val_converter(r,t)
     $Sw_VSC]..
 
@@ -1833,8 +1827,7 @@ eq_CONVERSION_limit_energy(r,h,t)
 
 * AC/DC PRM conversion cannot exceed the converter capacity
 eq_CONVERSION_limit_prm(r,ccseason,t)
-    $[rb(r)
-    $tmodel(t)
+    $[tmodel(t)
     $val_converter(r,t)
     $Sw_VSC]..
 
@@ -1905,8 +1898,7 @@ eq_CAPTRAN_max_total(r,rr,t)
 
 * Limit the total VSC AC/DC converter capacity in each BA to captran_max
 eq_converter_max(r,t)
-    $[rb(r)
-    $tmodel(t)
+    $[tmodel(t)
     $val_converter(r,t)
     $Sw_VSC
     $Sw_VSC_ConverterMax]..
@@ -1926,7 +1918,7 @@ eq_converter_max(r,t)
 
 * ---------------------------------------------------------------------------
 
-eq_emit_accounting(e,r,t)$[rb(r)$tmodel(t)]..
+eq_emit_accounting(e,r,t)$tmodel(t)..
 
     EMIT(e,r,t)
 
@@ -2055,10 +2047,10 @@ eq_annual_cap(e,t)$[sum{tt, emit_cap(e,tt) }$tmodel(t)$sameas(e,"CO2")$Sw_Annual
 
 *must exceed annual endogenous emissions
 * Direct CO2 emissions
-    sum{r$rb(r), EMIT(e,r,t) }
+    sum{r, EMIT(e,r,t) }
 * Methane emissions * global warming potential
 * [ton CH4] * [ton CO2 / ton CH4] * [emit scale CH4 / cmit scale CO2]
-    + sum{r$[rb(r)$Sw_AnnualCapCO2e],
+    + sum{r$Sw_AnnualCapCO2e,
           EMIT("CH4",r,t) * Sw_MethaneGWP * emit_scale("CH4") / emit_scale("CO2") }
 ;
 
@@ -2073,7 +2065,7 @@ eq_bankborrowcap(e)$[Sw_BankBorrowCap$sum{t, emit_cap(e,t) }]..
     =g=
 
 * must exceed weighted endogenous emissions
-    sum{(r,t)$[rb(r)$tmodel(t)$emit_cap(e,t)],
+    sum{(r,t)$[tmodel(t)$emit_cap(e,t)],
         yearweight(t) * EMIT(e,r,t) }
 ;
 
@@ -2167,13 +2159,13 @@ eq_REC_Requirement(RPSCat,st,t)$[RecPerc(RPSCat,st,t)$(not tfirst(t))
     + ACP_PURCHASES(rpscat,st,t)$(not acp_disallowed(st,RPSCat))
 
 * Exports to Canada are assumed to be clean, and therefore consume CES credits
-    - sum{(r,h)$[rb(r)$r_st(r,st)], can_exports_h(r,h,t) * hours(h) }$[(Sw_Canada=1)$sameas(RPSCat,"CES")]
+    - sum{(r,h)$[r_st(r,st)], can_exports_h(r,h,t) * hours(h) }$[(Sw_Canada=1)$sameas(RPSCat,"CES")]
 
     =g=
 
 * note here we do not pre-define the rec requirement since load_exog(r,h,t)
 * changes when sent to/from the demand side
-    RecPerc(RPSCat,st,t) * sum{(r,h)$[rb(r)$r_st_rps(r,st)], hours(h) *(
+    RecPerc(RPSCat,st,t) * sum{(r,h)$[r_st_rps(r,st)], hours(h) *(
 * RecStyle(st,RPSCat)=0 means end-use sales.
         ( (LOAD(r,h,t) - can_exports_h(r,h,t)$[Sw_Canada=1]
         - sum{v$valgen("distpv",v,r,t), GEN("distpv",v,r,h,t) }) * (1.0 - distloss)
@@ -2343,7 +2335,7 @@ eq_national_gen(t)$[tmodel(t)$national_gen_frac(t)$Sw_GenMandate]..
 * if Sw_GenMandate = 1, then apply the fraction to the bus bar load
     (
 * load
-    sum{(r,h)$rb(r), LOAD(r,h,t) * hours(h) }
+    sum{(r,h), LOAD(r,h,t) * hours(h) }
 * [plus] transmission losses
     + sum{(rr,r,h,trtype)$routes(rr,r,trtype,t), (tranloss(rr,r,trtype) * FLOW(rr,r,h,t,trtype) * hours(h)) }
 * [plus] storage losses
@@ -2352,7 +2344,7 @@ eq_national_gen(t)$[tmodel(t)$national_gen_frac(t)$Sw_GenMandate]..
     )$[Sw_GenMandate = 1]
 
 * if Sw_GenMandate = 2, then apply the fraction to the end use load
-    + (sum{(r,h)$rb(r),
+    + (sum{(r,h),
         hours(h) *
         ( (LOAD(r,h,t) - can_exports_h(r,h,t)$[Sw_Canada=1]) * (1.0 - distloss) - sum{v$valgen("distpv",v,r,t), GEN("distpv",v,r,h,t) })
        })$[Sw_GenMandate = 2]
@@ -2540,13 +2532,6 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r)
 
 *[plus] storage level in h+1
     sum{(hh)$[nexth(h,hh)], STORAGE_LEVEL(i,v,r,hh,t) }
-
-*When flex is enabled but there is no infinite loop, we still need to enforce this
-* constraint but there is no next-period storage_level that corresponds to this final hour
-* Thus we can add a slack variable that allows the end-of-day/week/etc energy balance
-* to be positive - avoiding certain errors and infeasibilities mainly with storage_in_min
-* associated with storage_in_min. final_hour also depends on Sw_HourlyWrap
-    + LAST_HOUR_SOC(i,v,r,h,t)$[final_hour_nowrap(h)]
 
     =e=
 
@@ -2994,7 +2979,7 @@ eq_water_capacity_total(i,v,r,t)$[tmodel(t)$valcap(i,v,r,t)
 * ---------------------------------------------------------------------------
 
 *total water access must not exceed supply
-eq_water_capacity_limit(wst,r,t)$[rb(r)$tmodel(t)$Sw_WaterMain$Sw_WaterCapacity]..
+eq_water_capacity_limit(wst,r,t)$[tmodel(t)$Sw_WaterMain$Sw_WaterCapacity]..
 
     m_watsc_dat(wst,"cap",r,t)
 
@@ -3252,8 +3237,7 @@ eq_h2_storage_caplimit_szn(h2_stor,r,actualszn,t)
 
 
 eq_co2_capture(r,h,t)
-    $[rb(r)
-    $tmodel(t)
+    $[tmodel(t)
     $Sw_CO2_Detail
     $(yeart(t)>=co2_detail_startyr)
     $hours(h)]..
@@ -3305,7 +3289,7 @@ eq_co2_spurline_caplimit(r,cs,h,t)$[Sw_CO2_Detail$r_cs(r,cs)$tmodel(t)$(yeart(t)
 
 * ---------------------------------------------------------------------------
 
-eq_co2_sink(r,h,t)$[rb(r)$tmodel(t)$Sw_CO2_Detail$(yeart(t)>=co2_detail_startyr)]..
+eq_co2_sink(r,h,t)$[tmodel(t)$Sw_CO2_Detail$(yeart(t)>=co2_detail_startyr)]..
 
 *the amount of co2 stored from r in all of its cs sites
     sum{cs$r_cs(r,cs), CO2_STORED(r,cs,h,t) }

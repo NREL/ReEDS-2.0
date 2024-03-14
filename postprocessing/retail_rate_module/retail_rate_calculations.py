@@ -412,10 +412,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         system_costs.loc[system_costs['region'].str.contains('s'), 'region'].map(s2r))
     system_costs = system_costs.groupby(
         by=['cost_type', 'region', 't'], as_index=False).agg({'cost':'sum'})
-    
-    # Drop transmission hurdle rate
-    system_costs = system_costs[~(system_costs['cost_type']=='op_transmission_hurdle_rate')].copy()
-    
+
     system_costs['cost'] = system_costs['cost'].replace('Undf',0).astype(float)
 
     # Merge on state

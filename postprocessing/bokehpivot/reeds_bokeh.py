@@ -21,17 +21,11 @@ if sys.version_info[0] == 2:
     import gdx2py
 import logging
 from pdb import set_trace as pdbst
+from defaults import (DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE, DEFAULT_END_YEAR)
 
 logger = logging.getLogger('')
 
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
-
-DEFAULT_DOLLAR_YEAR = 2022
-DEFAULT_PV_YEAR = 2022
-### Source for default discount rate:
-### https://www.whitehouse.gov/wp-content/uploads/2023/04/DraftCircularA-4.pdf
-DEFAULT_DISCOUNT_RATE = 0.017
-DEFAULT_END_YEAR = 2050
 
 #ReEDS globals
 #scenarios: each element is a dict with name of scenario and path to scenario

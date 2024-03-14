@@ -28,6 +28,8 @@ cangrowth.csv,inputs/loaddata/cangrowth.csv,.csv,ignore,ignore,st,,,1,0,,,,,,don
 canmexload.csv,,.csv,sum,ignore,*r,h,,0,0,,1,,,,done; ‘ignore’ in disaggfunc because spreadsheet says to ‘leave as is’
 cap_cost_mult_noITC.csv,,.csv,mean,uniform,r,"*i,t",,0,0,,1,,,,done
 cap_cspns.csv,,.csv,sum,ignore,*r,t,,0,0,,1,,,,'ignore’ in disaggfunc because pulled from plant database
+cap_hyd_ccseason_adj.csv,,.csv,mean,uniform,r,"*i,ccseason",,0,0,,1,,,,done
+cap_hyd_szn_adj.csv,,.csv,mean,uniform,r,"*i,szn",,0,0,,1,,,,done
 capnonrsc.csv,,.csv,sum,ignore,r,i,,0,0,,1,,,,‘ignore’ in disaggfunc because data will be written in county resolution by writecapdat.py
 cappayments_ba.csv,inputs/capacitydata/cappayments_ba.csv,.csv,ignore,ignore,,*r,,0,0,,,,,,not done but not used
 caprsc.csv,,.csv,sum,ignore,r,i,,0,0,,1,,,,‘ignore’ in disaggfunc because data will be written in county resolution by writecapdat.py
@@ -41,7 +43,7 @@ cd_beta0_allsector.csv,inputs/fuelprices/cd_beta0_allsector.csv,.csv,ignore,igno
 cendivweights.csv,inputs/fuelprices/cendivweights.csv,.csv,mean,uniform,r_cendiv,wide,,1,0,,,,,,Includes two region definitions; ‘ignore’ in disaggfunc because already at county resolution in inputs folder
 ces_fraction.csv,inputs/state_policies/ces_fraction.csv,.csv,ignore,ignore,st,st,,1,0,,,,,,done
 cf_vre.csv,,.csv,mean_cap,ignore,r,"*i,h",*i,0,0,,1,,,,'ignore’ in disaggfunc because data will be written in correct spatial resolution by hourly_writetimeseries in hourly_repperiods.py
-cf_hyd.csv,,.csv,mean,uniform,r,"*i,season,t",,0,0,,1,,,,done
+cf_hyd.csv,,.csv,mean,uniform,r,"*i,szn,t",,0,0,,1,,,,done
 climate_heuristics_finalyear.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 climate_heuristics_yearfrac.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 climate_hydadjann.csv,,.csv,ignore,ignore,,r,,1,0,,,,,,not done but rarely used; ignore for now
@@ -166,7 +168,7 @@ hset_hourly.csv,,.csv,ignore,ignore,,,,,,,,,,,done
 hyd_add_upg_cap.csv,inputs/supplycurvedata/hyd_add_upg_cap.csv,.csv,sum,hydroexist,r,"i,rscbin,wide",,1,0,,,,,,done
 hyd_fom.csv,inputs/hydrodata/hyd_fom.csv,.csv,mean,uniform,wide,i,,1,0,,,,,,Email from Wesley says to use uniform disaggfunc due to data coming from different places (can’t pull all required data from plant database like we wanted)
 hydcf.csv,,.csv,mean,uniform,r,"*i,month,t",,0,0,,1,,,,done
-hydcapadj.csv,,.csv,mean,uniform,r,"*i,szn",,0,0,,1,,,,‘ignore’ in disaggfunc because data will be written in county resolution by writecapdat.py
+hydcapadj.csv,,.csv,mean,uniform,r,"*i,month",,0,0,,1,,,,done
 hydro_mingen.csv,inputs/hydrodata/hydro_mingen.csv,.csv,mean,uniform,r,"*i,quarter",,0,0,,,,,,might be better to do something capacity-weighted
 hydrocapcostmult.csv,,.csv,ignore,ignore,,,,1,0,,,,,,done
 hydrofrac_policy.csv,inputs/state_policies/hydrofrac_policy.csv,.csv,ignore,ignore,st,"RPS_All,CES",,,0,,,,,,done
@@ -202,6 +204,7 @@ national_gen_frac_allScen.csv,inputs/national_generation/national_gen_frac_allSc
 national_rps_frac_allScen.csv,inputs/RPSdata/national_rps_frac_allScen.csv,.csv,ignore,ignore,,,,1,0,,,,,,done
 net_trade_can.csv,,.csv,sum,translinesize,*r,"h,t",,0,0,,1,,,,done
 nexth_actualszn.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
+nexth.csv,,.csv,ignore,ignore,,,,,0,,,,,,done
 ng_crf_penalty.csv,,.csv,ignore,ignore,,,,0,0,,,,,,done
 ng_crf_penalty_st.csv,inputs/state_policies/ng_crf_penalty_st.csv,.csv,ignore,ignore,st,"*t,value (CRF_X / CRF_20)",,0,0,,,,,,done
 ng_demand_elec.csv,,.csv,ignore,ignore,cendiv,,,1,0,,1,,,,done
