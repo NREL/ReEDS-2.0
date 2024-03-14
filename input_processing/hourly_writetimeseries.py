@@ -375,13 +375,13 @@ def get_yearly_flexibility(
 def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtail=''):
     """
     """
-    #%% Settings for testing
+    # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-    # inputs_case = os.path.join(reeds_path, 'runs', 'v20231113_capcreditM1_Pacific', 'inputs_case')
+    # inputs_case = os.path.join(reeds_path, 'runs', 'v20240218_stressstorM0_Z45_SP_5yr_H0_Southwest', 'inputs_case')
     # sw = pd.read_csv(
     #     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
     # periodtype = 'rep'
-    # periodtype = 'stress2010i0'
+    # periodtype = 'stress2035i1'
     # make_plots = int(sw.hourly_cluster_plots)
     # make_plots = 0
     # figpathtail = ''
@@ -438,6 +438,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             'h_szn': ['*h','season'],
             'h_dt_szn': ['h','season','ccseason','year','hour'],
             'numhours': ['*h','numhours'],
+            'nexth': ['*h','h'],
             'frac_h_ccseason_weights': ['*h','ccseason','weight'],
             'frac_h_quarter_weights': ['*h','quarter','weight'],
             'd_szn': ['*period','szn'],
@@ -449,6 +450,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             'load_allyear': ['*r','h','t','MW'],
             'peak_ccseason': ['*r','ccseason','t','MW'],
             'cf_vre': ['*i','r','h','cf'],
+            'cf_hyd': ['*i','szn','r','t','cf'],
+            'cap_hyd_szn_adj': ['*i','szn','r','value'],
             'net_trade_can': ['*r','h','t','MWh'],
             'can_exports_h_frac': ['*h','frac_weighted'],
             'can_imports_szn_frac': ['*szn','frac_weighted'],
@@ -744,6 +747,12 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         np.ravel([[c]*GSw_HourlyChunkLength for c in outchunks])
     ))
 
+    outchunks_7yr = hmap_7yr.actual_h[GSw_HourlyChunkLength-1::GSw_HourlyChunkLength]
+    chunkmap_7yr = dict(zip(
+        hmap_7yr.actual_h.values,
+        np.ravel([[c]*GSw_HourlyChunkLength for c in outchunks_7yr])
+    ))
+
     #%%### h_dt_szn for Augur
     if not len(hmap_myr) % 8760:
         ## Important: When modeling a single weather year, rep periods in the 7-year
@@ -806,7 +815,69 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         .reset_index().rename(columns={'nexth':'hh','actual_period':'hours'})
     )
 
-    #############################################
+    #%%### Adjacent hour linkages (including links across adjacent stress periods)
+    if periodtype == 'rep':
+        if (sw.GSw_HourlyType == 'year') and (sw.GSw_HourlyWrapLevel == 'year'):
+            nexth_unchunked = dict(zip(
+                hmap_myr.actual_h.values,
+                np.roll(hmap_myr.actual_h.values, -1)
+            ))
+        else:
+            nexth_unchunked = {}
+            for period in hmap_myr.season.unique():
+                hs = hmap_myr.loc[hmap_myr.season==period,'h'].values
+                nexth_unchunked = {
+                    **nexth_unchunked,
+                    **dict(zip(hs, np.roll(hs, -1)))
+                }
+    else:
+        ### Get runs of periods
+        ## Two copies in case it loops from 2013-12-31 to 2007-01-01
+        unique_periods = list(hmap_myr.actual_period.unique())*2
+        ## Map from each actual period to the next actual period
+        next_actual_period = dict(zip(
+            hmap_7yr.actual_period.drop_duplicates().values,
+            np.roll(hmap_7yr.actual_period.drop_duplicates().values, -1),
+        ))
+        _runs = []
+        for period in unique_periods:
+            ## Start a run for each period
+            this_run = [period]
+            for nextperiod in unique_periods:
+                ## If the next period is a stress period, add it to the run, then
+                ## do the same for the period after that (and so forth)
+                if next_actual_period[period] == nextperiod:
+                    this_run += [nextperiod]
+                    period = nextperiod
+            _runs.append(this_run)
+
+        runs = pd.Series(_runs).drop_duplicates()
+
+        ### For each period, get the longest run containing it
+        _longest_run = {}
+        for i, period in enumerate(unique_periods):
+            _longest_run[period] = []
+            for j, row in runs.items():
+                if (period in row) and (len(row) > len(_longest_run[period])):
+                    _longest_run[period] = row
+
+        longest_run = pd.Series(_longest_run.values()).drop_duplicates()
+
+        ### Cyclic boundary conditions within each run of periods
+        nexth_unchunked = {}
+        for i, row in longest_run.items():
+            hs = hmap_7yr.set_index('actual_period').loc[row,'h']
+            nexth_unchunked = {
+                **nexth_unchunked,
+                **dict(zip(hs, np.roll(hs, -1)))
+            }
+
+    nexth = pd.Series({
+        chunkmap_7yr[k]: chunkmap_7yr[v] for k,v in nexth_unchunked.items()
+    }).rename_axis('*h').rename('h')
+
+
+    #%%##########################################
     #    -- Hour groups for eq_minloading --    #
     #############################################
 
@@ -844,24 +915,52 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     
     ### Import and format hydro capacity factors
     h_szn_chunked = h_szn.assign(h=h_szn.h.map(chunkmap)).drop_duplicates()
-    
-    szn_month_weights = (frac_h_month_weights
-                           .merge(h_szn_chunked, on='h', how='inner')
-                           .drop('h',axis=1)
-                           .drop_duplicates()
-                           )[['season','month','weight']]
+
+    ## Calculate fraction of each month associated with each season.
+    szn_month_weights = (
+        frac_h_month_weights
+        .merge(h_szn_chunked, on='h', how='inner')
+        .drop('h',axis=1)
+        .drop_duplicates()
+        [['season','month','weight']]
+    )
  
-    ### Now get cf_hyd
-    cf_hyd = pd.read_csv(os.path.join(inputs_case,'hydcf.csv'),
-                         header=0)
-    ### Merge and calculate
+    cf_hyd = pd.read_csv(
+        os.path.join(inputs_case,'hydcf.csv'), header=0,
+    ).rename(columns={'value':'cf_month'})
+    ## Calculate the month-weighted-average capacity factor by season
     cf_hyd_out = szn_month_weights.merge(cf_hyd, on='month', how='outer')
-    cf_hyd_out['Value'] = cf_hyd_out['weight'] * cf_hyd_out['value']
-    cf_hyd_out = (cf_hyd_out
-                  .groupby(['*i','season','r','t']).sum()
-                  .drop(['month','weight','value'],axis=1)
-                  .rename({'Value':'weight'},axis=1)
-                  .reset_index())
+    cf_hyd_out['cf'] = cf_hyd_out['weight'] * cf_hyd_out['cf_month']
+    cf_hyd_out = (
+        cf_hyd_out
+        .groupby(['*i','season','r','t']).sum()
+        .drop(['month','weight','cf_month'], axis=1)
+        .cf
+        ## For rep periods, sum of season weights is 1, so the next line has no effect.
+        ## For full chronological year (GSw_HourlyType=year), we use four seasons,
+        ## so the sum of season weights is the number of months in that season and
+        ## we need to divide sum{cf*weight} by sum{weight}.
+        / szn_month_weights.groupby('season').weight.sum()
+    ).rename('cf').reset_index().rename(columns={'season':'szn'})
+    
+    ### Import and format monthly hydro capacity adjustment factors
+    hydcapadj = pd.read_csv(
+        os.path.join(inputs_case,'hydcapadj.csv'),header=0
+    ).rename(columns={'value':'cap_month'})
+    ## Calculate the month-weighted-average capacity factor by season
+    hydcapadj_out = szn_month_weights.merge(hydcapadj, on='month', how='outer')
+    hydcapadj_out['cap'] = hydcapadj_out['weight'] * hydcapadj_out['cap_month']
+    hydcapadj_out = (
+        hydcapadj_out
+        .groupby(['*i','season','r']).sum()
+        .drop(['month','weight','cap_month'], axis=1)
+        .cap
+        ## For rep periods, sum of season weights is 1, so the next line has no effect.
+        ## For full chronological year (GSw_HourlyType=year), we use four seasons,
+        ## so the sum of season weights is the number of months in that season and
+        ## we need to divide sum{cf*weight} by sum{weight}.
+        / szn_month_weights.groupby('season').weight.sum()        
+    ).rename('value').reset_index().rename(columns={'season':'szn'})
 
     #%% Calculate the peak demand timeslice of each ccseason.
     ### Used for hydro_nd PRM constraint.
@@ -968,14 +1067,12 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
              .groupby(['h','ccseason'], as_index=False).weight.mean()
              .round(decimals+3)),
             False, False],
-        ## Monthly season weights for assigning month-dependent parameters (h,month)
-        'frac_h_month_weights': [
-            (frac_h_month_weights.assign(h=frac_h_month_weights.h.map(chunkmap))
-             .groupby(['h','month'], as_index=False).weight.mean()
-             .round(decimals+3)),
-            False, False],
         ## Hydro capacity factors by szn
-        'cf_hyd': [cf_hyd_out, True, False],
+        'cf_hyd': [cf_hyd_out.round(decimals), True, False],
+        ## Hydro capacity adjustment factors by szn
+        'cap_hyd_szn_adj': [hydcapadj_out, True, False],
+        ## mapping from one timeslice to the next
+        'nexth': [nexth, True, True],
         ## Hours to actual season mapping (h,allszn)
         'h_actualszn': [h_actualszn, False, False],
         ## mapping from one timeslice to the next for actual periods

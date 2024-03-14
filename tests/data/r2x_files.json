@@ -351,14 +351,14 @@
     "fname": "hydcf.csv",
     "column_mapping": {
       "*i": "tech",
-      "szn": "season",
+      "month": "month",
       "value": "hydro_cf"
     },
     "column_index": [
       "year",
       "tech",
       "region",
-      "season"
+      "month"
     ],
     "mandatory": false,
     "input": true
@@ -382,17 +382,17 @@
     "fname": "hydcapadj.csv",
     "column_mapping": {
       "*i": "tech",
-      "szn": "season",
+      "month": "month",
       "value": "hydro_cf_adj"
     },
     "column_index": [
       "tech",
       "region",
-      "season"
+      "month"
     ],
     "mandatory": true,
     "input": true,
-    "note": "Seasonal capacity adjustment. Renamed to hydcapadj.csv"
+    "note": "Monthly capacity adjustment."
   },
   "ilr": {
     "fname": "ilr.csv",

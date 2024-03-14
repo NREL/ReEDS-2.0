@@ -625,11 +625,10 @@ def plot_trans_diff(
         pcalabel=False, wscale=0.0003,
         year='last', yearlabel=True,
         colors={'+':'C3', '-':'C0',
-                'AC':'C2', 'DC':'C1', 'LCC':'C1', 'VSC': 'C3',
-                'AC_init':plt.cm.tab20(5), 'LCC_init':plt.cm.tab20(3), 'B2B_init':plt.cm.tab20(11)},
+                'AC':'C2', 'DC':'C1', 'LCC':'C1', 'VSC':'C3', 'B2B':'C4'},
         alpha=0.75, dpi=None, drawzones=True, drawstates=True,
         simpletypes=None, subtract_baseyear=None,
-        trtypes=['AC','VSC','DC','LCC','AC_init','LCC_init','B2B_init'],
+        trtypes=['AC','B2B','LCC','VSC'],
         f=None, ax=None, scale=True, label_line_capacity=True,
         titleshorten=0,
         thickborders='none', thickness=0.5,
@@ -669,12 +668,9 @@ def plot_trans_diff(
             })
         )
         if simpletypes is None:
-            ### Add initial capacity to new capacity and plot initial capacity on top
             dicttran = {
                 i: tran_out[case].loc[tran_out[case].trtype==i].set_index(['r','rr','t']).MW
                 for i in trtypes}
-            for trtype in ['AC','LCC']:
-                dicttran[trtype] = dicttran[trtype].add(dicttran[trtype+'_init'], fill_value=0)
             tran_out[case] = pd.concat(dicttran, axis=0, names=['trtype','r','rr','t']).reset_index()
 
         if subtract_baseyear:
@@ -828,18 +824,15 @@ def plot_trans_onecase(
         level='r',
         pcalabel=False, wscale=0.0003,
         year='last', yearlabel=True,
-        colors={'AC':'C2', 'LCC':'C1', 'VSC': 'C3',
-                'AC_init':plt.cm.tab20(5), 'LCC_init':plt.cm.tab20(3),
-                'B2B_init':plt.cm.tab20(11), 'B2B':plt.cm.tab20(8)},
+        colors={'AC':'C2', 'LCC':'C1', 'VSC':'C3', 'B2B':'C4'},
         dpi=None,
-        trtypes=['AC_init','B2B_init','LCC_init','AC','B2B','LCC','VSC'],
+        trtypes=['AC','B2B','LCC','VSC'],
         simpletypes={'AC_init':'AC','LCC_init':'LCC','B2B_init':'B2B'},
-        zorders={'AC':1e3,'AC_init':2e3,'VSC':3e3,
-                 'LCC':4e3,'LCC_init':5e3,'B2B':7e3,'B2B_init':8e3},
+        zorders={'AC':1e3, 'VSC':3e3, 'LCC':4e3, 'B2B':7e3,},
         alpha=1, scalesize='x-large',
         f=None, ax=None, scale=True, title=True,
         routes=False, tolerance=1000,
-        subtract_baseyear=None, nest_trtypes=False,
+        subtract_baseyear=None,
         show_overlap=True, drawzones=True, show_converters=0.5,
         crs='ESRI:102008',
         thickborders='none', thickness=0.5, drawstates=True,
@@ -903,17 +896,7 @@ def plot_trans_onecase(
             dicttran = {
                 i: tran_out.loc[tran_out.trtype==i].set_index(['r','rr','t']).MW
                 for i in trtypes}
-            if nest_trtypes:
-                ### Stack the different trtypes to get total capacity
-                tran_out = (
-                    pd.concat(dicttran, axis=1, names=['trtype'])
-                    .fillna(0).cumsum(axis=1)[trtypes[::-1]].stack().rename('MW').reset_index())
-            else:
-                ### Add initial capacity to new capacity and plot initial capacity on top
-                for trtype in ['AC','LCC']:
-                    dicttran[trtype] = dicttran[trtype].add(dicttran[trtype+'_init'], fill_value=0)
-                tran_out = pd.concat(dicttran, axis=0, names=['trtype','r','rr','t']).reset_index()
-
+            tran_out = pd.concat(dicttran, axis=0, names=['trtype','r','rr','t']).reset_index()
         else:
             ### Group initial and new capacity together and only plot with the simple name
             tran_out = (
@@ -1977,7 +1960,7 @@ def plot_interreg_transfer_cap_ratio(
         case, colors=None, casenames=None,
         level='transreg', tstart=2020,
         f=None, ax=None,
-        grid=True, ymax=3,
+        grid=True, ymax=None,
     ):
     """Plot interregional transfer capability / peak demand over time"""
     ### Inputs for debugging
@@ -4063,10 +4046,16 @@ def plot_neue_bylevel(
     sw['casedir'] = case
     dictin_neue = {}
     for t, iteration in year2iteration.items():
-        dictin_neue[t] = pd.read_csv(
-            os.path.join(case,'outputs',f'neue_{t}i{iteration}.csv'),
-            index_col=['level','metric','region']
-        ).squeeze(1)
+        try:
+            dictin_neue[t] = pd.read_csv(
+                os.path.join(case,'outputs',f'neue_{t}i{iteration}.csv'),
+                index_col=['level','metric','region']
+            ).squeeze(1)
+        except FileNotFoundError:
+            dictin_neue[t] = pd.read_csv(
+                os.path.join(case,'outputs',f'neue_{t}i{iteration-1}.csv'),
+                index_col=['level','metric','region']
+            ).squeeze(1)
     dfin_neue = pd.concat(dictin_neue, axis=0, names=['year']).unstack('year')
     if onlydata:
         return dfin_neue
@@ -4385,7 +4374,7 @@ def plot_h2_timeseries(
 
 def plot_interface_flows(
         case, year=2050,
-        source='pras', iteration=0, samples=None,
+        source='pras', iteration='last', samples=None,
         level='transreg', weatheryear=2012, decimals=0,
         flowcolors={'forward':'C0', 'reverse':'C3'},
         onlydata=False,
@@ -4398,21 +4387,20 @@ def plot_interface_flows(
     ).rename(columns={'*r':'r'}).set_index('r')
 
     if source.lower() == 'pras':
-        infile = os.path.join(
-            case,'ReEDS_Augur','PRAS',
-            f'PRAS_{year}i{iteration}'
-            + (f'-{samples}' if samples is not None else '')
-            + '-flow.h5'
-        )
+        infile = sorted(glob(
+            os.path.join(
+                case, 'ReEDS_Augur', 'PRAS',
+                f"PRAS_{year}i{'*' if iteration in ['last','latest','final'] else iteration}"
+                + (f'-{samples}' if samples is not None else '')
+                + '-flow.h5')
+        ))[-1]
         dfflow = read_pras_results(infile).set_index(fulltimeindex)
         ## Filter out AC/DC converters from scenarios with VSC
         dfflow = dfflow[[c for c in dfflow if '"DC_' not in c]].copy()
         ## Normalize the interface names
         renamer = {i: '→'.join(i.replace('"','').split(' => ')) for i in dfflow}
-    elif source.lower() == 'reeds':
-        ...
     else:
-        raise ValueError(f"source must be 'pras' or 'reeds' but is '{source}'")
+        raise NotImplementedError(f"source must be 'pras' but is '{source}'")
 
     ### Group by hierarchy level
     df = dfflow.rename(columns=renamer)
@@ -4506,7 +4494,7 @@ def plot_interface_flows(
         weight='bold', fontsize='large', color=flowcolors['reverse'],
     )
     ax[coords['profile'][interfaces[0]]].annotate(
-        f'{os.path.basename(case)}\nsystem year: {year}\nweather year: {weatheryear}',
+        f'{os.path.basename(case)}\nsystem year: {year}i{iteration}\nweather year: {weatheryear}',
         (1,1), xycoords='axes fraction', ha='right', annotation_clip=False,
     )
     ## Full time range
@@ -4515,3 +4503,88 @@ def plot_interface_flows(
     ax[coords['profile'][interfaces[-1]]].xaxis.set_major_formatter(mpl.dates.DateFormatter('%b'))
     plots.despine(ax)
     return f, ax, dfplot
+
+
+def plot_storage_soc(
+        case, year=2050,
+        source='pras', iteration='last', samples=None,
+        level='transgrp',
+        onlydata=False,
+    ):
+    """Plot storage state of charge from PRAS"""
+    fulltimeindex = functions.make_fulltimeindex()
+    hierarchy = pd.read_csv(
+        os.path.join(case,'inputs_case','hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
+
+    ### Get storage state of charge
+    if source.lower() == 'pras':
+        infile = sorted(glob(
+            os.path.join(
+                case, 'ReEDS_Augur', 'PRAS',
+                f"PRAS_{year}i{'*' if iteration in ['last','latest','final'] else iteration}"
+                + (f'-{samples}' if samples is not None else '')
+                + '-energy.h5')
+        ))[-1]
+        _iteration = int(os.path.basename(infile).split('-')[0].split('_')[1].split('i')[1])
+        dfenergy = read_pras_results(infile).set_index(fulltimeindex)
+    else:
+        raise NotImplementedError(f"source must be 'pras' but is '{source}'")
+    ## Sum by hierarchy level
+    dfenergy_r = (
+        dfenergy
+        .rename(columns={c: c.split('|')[1] for c in dfenergy.columns})
+        .groupby(axis=1, level=0).sum()
+    )
+    dfenergy_agg = (
+        dfenergy_r.rename(columns=hierarchy[level])
+        .groupby(axis=1, level=0).sum()
+    )
+    # dfheadspace_MWh = dfenergy_agg.max() - dfenergy_agg
+    # dfheadspace_frac = dfheadspace_MWh / dfenergy_agg.max()
+    dfsoc_frac = dfenergy_agg / dfenergy_agg.max()
+    if onlydata:
+        return dfsoc_frac
+
+    ### Get stress periods
+    set_szn = pd.read_csv(
+        os.path.join(case, 'inputs_case', f'stress{year}i{_iteration}', 'set_szn.csv')
+    ).rename(columns={'*szn':'szn'})
+    set_szn['datetime'] = set_szn.szn.map(h2timestamp)
+    set_szn['date'] = set_szn.datetime.map(lambda x: x.strftime('%Y-%m-%d'))
+    set_szn['year'] = set_szn.datetime.map(lambda x: x.year)
+
+    ### Plot it
+    years = range(dfenergy.index.year.min(), dfenergy.index.year.max()+1)
+    colors = plots.rainbowmapper(dfsoc_frac.columns)
+    plt.close()
+    f,ax = plt.subplots(
+        len(years), 1, sharey=True, figsize=(13.33,8),
+        gridspec_kw={'hspace':1.0},
+    )
+    for row, y in enumerate(years):
+        df = dfsoc_frac.loc[str(y)]
+        for region, color in colors.items():
+            (df-1)[region].plot.area(
+                ax=ax[row], stacked=False, legend=False, lw=0.1, color=color, alpha=0.8)
+            # ax[row].fill_between(
+            #     df.index, df[region].values, 1, lw=0.1, color=color, label=region, alpha=0.8,
+            # )
+        for tstart in set_szn.loc[set_szn.year==y, 'datetime'].values:
+            ax[row].axvspan(tstart, tstart + pd.Timedelta('1D'), lw=0, color='k', alpha=0.15)
+        ax[row].set_ylim(-1,0)
+        # ax[row].set_ylim(0,1)
+    ax[0].set_yticks([])
+    # ax[-1].xaxis.set_minor_locator(mpl.dates.DayLocator())
+    ax[0].legend(
+        loc='upper left', bbox_to_anchor=(1,1),
+        frameon=False, columnspacing=0.5, handlelength=0.7, handletextpad=0.3,
+        title=f'Storage\nstate of charge\nby {level},\n{year}i{_iteration}\n[fraction]',
+        title_fontsize=12,
+    )
+    # ax[0].annotate(
+    #     f'{os.path.basename(case)}\nsystem year: {year}i{_iteration}',
+    #     (1,1.2), xycoords='axes fraction', ha='right', annotation_clip=False,
+    # )
+    plots.despine(ax, left=False)
+    return f, ax, dfsoc_frac

@@ -445,12 +445,12 @@ if agglevel == 'county':
                 print(f'Copying county-level hourly profiles for {row["tech"]}')
                 try:
                     shutil.copy(
-                        os.path.join(sc_path,f'{row["tech"]}_county_{access_case}','results',f'{row["tech"]}.h5'),
+                        os.path.join(sc_path,f'{row["tech"]}_{access_case}_county','results',f'{row["tech"]}.h5'),
                         os.path.join(reeds_path,'inputs','variability','multi_year',f'{row["tech"]}-{access_case}_county.h5')
                     )
                 except FileNotFoundError:
                     print("ERROR: cannot copy {}.\nCheck that you are connected to external drive ({}).".format(
-                        os.path.join(f'{row["tech"]}_county_{access_case}','results',f'{row["tech"]}.h5'),
+                        os.path.join(f'{row["tech"]}_{access_case}_county','results',f'{row["tech"]}.h5'),
                         sc_path))
                     sys.exit(1)
                 # Update the file version information

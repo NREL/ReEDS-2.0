@@ -4,6 +4,7 @@ import sys
 import logging
 from datetime import datetime
 import pandas as pd
+import traceback
 
 #%% Functions
 def makelog(scriptname, logpath):
@@ -169,7 +170,6 @@ if __name__ == '__main__':
 
     try:
         write_last_solve_time(args.path)
-    except Exception as _err:
+    except Exception:
         print('meta.csv not found or not writeable:')
-        print(_err)
-        pass
+        print(traceback.format_exc())

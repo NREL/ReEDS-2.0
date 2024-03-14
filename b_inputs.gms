@@ -376,14 +376,6 @@ $onlisting
 / ;
 
 * written by copy_files.py
-set rb(r) "model balancing regions"
-/
-$offlisting
-$include inputs_case%ds%val_r.csv
-$onlisting
-/ ;
-
-* written by copy_files.py
 $onempty
 set cs(*) "carbon storage sites"
 /
@@ -1921,8 +1913,8 @@ capacity_exog(i,"init-1",r,t)${[yeart(t)-sum{tt$tfirst(tt),yeart(tt) }<maxage(i)
 *in the data-writing files
 capacity_exog(i,v,r,t)$[initv(v)$(sum{(vv,rr)$[initv(vv)], binned_capacity(i,vv,rr,t) })] = 0 ;
 
-capacity_exog("hydED","init-1",r,t)$rb(r) = caprsc("hydED",r,"value") ;
-capacity_exog("hydEND","init-1",r,t)$rb(r) = caprsc("hydEND",r,"value") ;
+capacity_exog("hydED","init-1",r,t) = caprsc("hydED",r,"value") ;
+capacity_exog("hydEND","init-1",r,t) = caprsc("hydEND",r,"value") ;
 capacity_exog(i,v,r,t)$[sum{allt, binned_capacity(i,v,r,allt) }] =
                sum{allt$att(allt,t), binned_capacity(i,v,r,allt) } ;
 
@@ -1952,7 +1944,7 @@ capacity_exog("smr","init-1",r,t)$Sw_H2 = h2_existing_smr_cap(r,t) ;
 
 $ifthene.Canada %GSw_Canada% == 1
 *set Canadian imports as prescribed capacity
-capacity_exog("can-imports","init-1",rb,t) = can_imports_capacity(rb,t) ;
+capacity_exog("can-imports","init-1",r,t) = can_imports_capacity(r,t) ;
 $endif.Canada
 
 *if you've declined in value
@@ -2063,8 +2055,8 @@ Parameter m_required_prescriptions(pcat,r,t)  "--MW-- required prescriptions by 
 *following does not include wind
 *conditional here is due to no prescribed retirements for RSC tech
 *distpv is an rsc tech but is handled different via binned_capacity as explained above
-m_required_prescriptions(pcat,rb,t)$tmodel_new(t)
-          = sum{tt$[yeart(t)>=yeart(tt)], prescribednonrsc(tt,pcat,rb,"value") } ;
+m_required_prescriptions(pcat,r,t)$tmodel_new(t)
+          = sum{tt$[yeart(t)>=yeart(tt)], prescribednonrsc(tt,pcat,r,"value") } ;
 
 
 m_required_prescriptions(pcat,r,t)$[tmodel_new(t)
@@ -2111,7 +2103,7 @@ noncumulative_prescriptions(pcat,r,t)$tmodel_new(t)
                                         prescribednonrsc(tt,pcat,r,"value") + prescribedrsc(tt,pcat,r,"value")
                                       } ;
 
-prescription_check(i,newv,rb,t)$[sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,rb,t) }
+prescription_check(i,newv,r,t)$[sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,r,t) }
                                  $ivt(i,newv,t)$tmodel_new(t)$(not ban(i))] = yes ;
 
 *Extend feasibility for prescribed rsc capacity where there is no supply curve data.
@@ -2158,7 +2150,7 @@ $onlisting
 / ;
 
 * Written by writesupplycurves.py
-set x_r(x,r) "Mapping set from reV sites to BAs and resource regions"
+set x_r(x,r) "Mapping set from reV sites to model regions"
 /
 $offlisting
 $ondelim
@@ -2175,10 +2167,6 @@ $endif.spursites
 * Indicate which reV sites are included in the model
 set xfeas(x) "Sites to include in the model" ;
 xfeas(x)$sum{r$x_r(x,r), 1} = yes ;
-
-* Map from reV sites to BAs
-set x_rb(x,r) "Map from reV sites to BAs" ;
-x_rb(x,rb)$sum{r$[x_r(x,r)], 1} = yes ;
 
 
 *==========================================
@@ -2215,35 +2203,34 @@ valcap(i,v,r,t)$[sum{tt$[tt.val = Sw_UpgradeYear],m_capacity_exog(i,v,r,tt) }
 *the year also needs to be greater than the first year indicated
 *for that specific class (this is the summing over tt portion)
 *or it needs to be specified in prescriptivelink
-valcap(i,newv,rb,t)$[(not rsc_i(i))$tmodel_new(t)$(not ban(i))$(not bannew(i))
+valcap(i,newv,r,t)$[(not rsc_i(i))$tmodel_new(t)$(not ban(i))$(not bannew(i))
                     $(sum{tt$(yeart(tt)<=yeart(t)), ivt(i,newv,tt) })$(not upgrade(i))
                     ]  = yes ;
 
 *for rsc technologies, enabled if m_rscfeas is populated
-*similarly to non-rsc technologies except now all regions
-*can be populated (rb vs r) and there is the additional condition
-*that m_rscfeas must contain values in at least one rscbin
+*similarly to non-rsc technologies and there is the additional
+*condition that m_rscfeas must contain values in at least one rscbin
 valcap(i,newv,r,t)$[rsc_i(i)$tmodel_new(t)$(not ban(i))$(not bannew(i))
                     $sum{rscbin, m_rscfeas(r,i,rscbin) }$(not upgrade(i))
                     $sum{tt$(yeart(tt)<=yeart(t)), ivt(i,newv,tt) }
                     ]  = yes ;
 
 * Include DR technologies
-valcap(i,newv,rb,t)
+valcap(i,newv,r,t)
     $[dr(i)$tmodel_new(t)$(not ban(i))$(not bannew(i))
-    $sum{rscbin, rsc_dr(i,rb,'cap',rscbin,t) }$sum{tt$(yeart(tt)<=yeart(t)), ivt(i,newv,tt) }
+    $sum{rscbin, rsc_dr(i,r,'cap',rscbin,t) }$sum{tt$(yeart(tt)<=yeart(t)), ivt(i,newv,tt) }
     ] = yes ;
 
 * Include EVMC technologies
-valcap(i,newv,rb,t)
+valcap(i,newv,r,t)
     $[evmc(i)$tmodel_new(t)$(not ban(i))$(not bannew(i))
-    $sum{rscbin, rsc_evmc(i,rb,'cap',rscbin,t) }$sum{tt$(yeart(tt)<=yeart(t)), ivt(i,newv,tt) }
+    $sum{rscbin, rsc_evmc(i,r,'cap',rscbin,t) }$sum{tt$(yeart(tt)<=yeart(t)), ivt(i,newv,tt) }
     ] = yes ;
 
 *enable capacity if there is a required prescription in that region
 *first for non-rsc techs
-valcap(i,newv,rb,t)$[(not rsc_i(i))
-                    $(sum{pcat$prescriptivelink(pcat,i), m_required_prescriptions(pcat,rb,t) })
+valcap(i,newv,r,t)$[(not rsc_i(i))
+                    $(sum{pcat$prescriptivelink(pcat,i), m_required_prescriptions(pcat,r,t) })
                     $sum{tt$(yeart(tt)<=yeart(t)), ivt(i,newv,tt) }$(not ban(i))] = yes ;
 *then for rsc techs
 valcap(i,newv,r,t)$[rsc_i(i)$(sum{pcat$prescriptivelink(pcat,i), m_required_prescriptions(pcat,r,t) })
@@ -2364,7 +2351,7 @@ valinv(i,v,r,t) = no ;
 valinv(i,v,r,t)$[valcap(i,v,r,t)$ivt(i,v,t)] = yes ;
 
 * Do not allow investments in states where that technology is banned, expect for prescribed builds
-valinv(i,v,rb,t)$[sum{st$r_st(rb,st), tech_banned(i,st) }$(not sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,rb,t) })] = no ;
+valinv(i,v,r,t)$[sum{st$r_st(r,st), tech_banned(i,st) }$(not sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,r,t) })] = no ;
 
 *remove non-prescribed numeraire technologies that remain in valcap
 valinv(i,v,r,t)$[i_numeraire(i)$Sw_WaterMain$(not sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,r,t) })] = no ;
@@ -2372,12 +2359,12 @@ valinv(i,v,r,t)$[i_numeraire(i)$Sw_WaterMain$(not sum{pcat$prescriptivelink(pcat
 *upgrades are not allowed for the INV variable as they are the sum of UPGRADES
 valinv(i,v,r,t)$upgrade(i) = no ;
 
-valinv(i,v,rb,t)$[(yeart(t)<firstyear(i))
+valinv(i,v,r,t)$[(yeart(t)<firstyear(i))
 * Allow investments before firstyear(i) in technologies with prescribed capacity
-                 $(not sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,rb,t) })
+                 $(not sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,r,t) })
 * Allow investments before firstyear(i) in mandated technologies
-                 $(not [sum{st$r_st(rb,st), batterymandate(st,t) }  and battery(i)])
-                 $(not [sum{st$r_st(rb,st), offshore_cap_req(st,t)} and ofswind(i)])
+                 $(not [sum{st$r_st(r,st), batterymandate(st,t) }  and battery(i)])
+                 $(not [sum{st$r_st(r,st), offshore_cap_req(st,t)} and ofswind(i)])
                  ] = no ;
 
 * Add aggregations of valinv
@@ -2438,7 +2425,7 @@ inv_cond(i,newv,r,t,tt)$[Sw_WaterMain$sum{ctt$bannew_ctt(ctt),i_ctt(i,ctt) }$tmo
 
 co2_captured_incentive(i,v,r,t)$valcap(i,v,r,t) = co2_captured_incentive_in(i,v,t) ;
 
-co2_captured_incentive(i,v,r,t)$[upgrade(i)$rb(r)$valcap(i,v,r,t)] =
+co2_captured_incentive(i,v,r,t)$[upgrade(i)$valcap(i,v,r,t)] =
    sum{ii$upgrade_to(i,ii),co2_captured_incentive(ii,v,r,t) } ;
 
 co2_captured_incentive(i,v,r,t)$[i_water_cooling(i)$Sw_WaterMain] =
@@ -2686,17 +2673,19 @@ $onlisting
 $offempty
 
 $onempty
-Table CES_Perc(st,allt) "--fraction-- requirement for clean energy standard"
+parameter ces_fraction(allt,st) "--fraction-- requirement for clean energy standard"
+/
 $offlisting
 $ondelim
 $include inputs_case%ds%ces_fraction.csv
 $offdelim
 $onlisting
+/
 ;
 $offempty
 
 RecPerc(RPSCat,st,t) = sum{allt$att(allt,t), rps_fraction(allt,st,RPSCat) } ;
-RecPerc("CES",st,t) = CES_Perc(st,t) ;
+RecPerc("CES",st,t) = ces_fraction(t,st) ;
 
 * RE generation creates both CES and RPS credits, which can cause double-counting
 * if a state has an RPS but not a CES. By setting each state's CES as the maximum
@@ -3930,7 +3919,7 @@ cost_vom(i,initv,r,t)$[Sw_BinOM$(not cost_vom(i,initv,r,t))$valgen(i,initv,r,t)]
 cost_vom(i,newv,r,t)$[valgen(i,newv,r,t)$countnc(i,newv)] =
   sum{tt$ivt(i,newv,tt), plant_char(i,newv,tt,'vom') } / countnc(i,newv) ;
 
-cost_vom(i,v,rb,t)$[valcap(i,v,rb,t)$hydro(i)] = vom_hyd ;
+cost_vom(i,v,r,t)$[valcap(i,v,r,t)$hydro(i)] = vom_hyd ;
 
 * Assign hybrid PV+battery to have the same value as UPV
 parameter cost_vom_pvb_p(i,v,r,t) "--2004$/MWh-- variable OM for the PV portion of hybrid PV+battery " ;
@@ -4154,10 +4143,10 @@ $offdelim
 $onlisting
 ;
 
-fuel_price(i,r,t)$[sum{f$fuel2tech(f,i),1}$rb(r)] =
+fuel_price(i,r,t)$[sum{f$fuel2tech(f,i),1}] =
   sum{(f,allt)$[fuel2tech(f,i)$(year(allt)=yeart(t))], fprice(allt,r,f) } ;
 
-fuel_price(i,r,t)$[sum{f$fuel2tech(f,i),1}$rb(r)$(not fuel_price(i,r,t))] =
+fuel_price(i,r,t)$[sum{f$fuel2tech(f,i),1}$(not fuel_price(i,r,t))] =
   sum{rr$fuel_price(i,rr,t), fuel_price(i,rr,t) } / max(1,sum{rr$fuel_price(i,rr,t), 1 }) ;
 
 fuel_price(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), fuel_price(ii,r,t) } ;
@@ -4178,18 +4167,14 @@ parameter climate_hydro_annual(r,allt)  "annual dispatchable hydropower availabi
 $endif.climatehydro
 
 *created by /input_processing/writecapdat.py
-parameter cap_hyd_quarter_adj(i,quarter,r) "--fraction-- quarterly max capacity adjustment for dispatchable hydro"
+parameter cap_hyd_ccseason_adj(i,ccseason,r) "--fraction-- ccseason max capacity adjustment for dispatchable hydro"
 /
 $offlisting
 $ondelim
-$include inputs_case%ds%hydcapadj.csv
+$include inputs_case%ds%cap_hyd_ccseason_adj.csv
 $offdelim
 $onlisting
-/ ;
-
-parameter cap_hyd_ccseason_adj(i,ccseason,r) "--fraction-- ccseason max capacity adjustment for dispatchable hydro" ;
-cap_hyd_ccseason_adj(i,"cold",r) = cap_hyd_quarter_adj(i,"wint",r) ;
-cap_hyd_ccseason_adj(i,"hot",r) = cap_hyd_quarter_adj(i,"summ",r) ;
+/ ; 
 
 table wind_cf_adj_t(allt,i) "--unitless-- wind capacity factor adjustments by class, from ATB"
 $offlisting
@@ -4686,11 +4671,11 @@ prod_emit_rate(e,i,t)
 
 parameter emit_rate(eall,i,v,r,t) "--tons per MWh (CO2 in metric tons, others in short tons)-- emissions rate" ;
 
-emit_rate(e,i,v,r,t)$[emit_rate_fuel(i,e)$valcap(i,v,r,t)$rb(r)]
+emit_rate(e,i,v,r,t)$[emit_rate_fuel(i,e)$valcap(i,v,r,t)]
   = round(heat_rate(i,v,r,t) * emit_rate_fuel(i,e),6) ;
 
 *only emissions from the coal portion of cofire plants are considered
-emit_rate(e,i,v,r,t)$[sameas(i,"cofire")$emit_rate_fuel("coal-new",e)$valcap(i,v,r,t)$rb(r)]
+emit_rate(e,i,v,r,t)$[sameas(i,"cofire")$emit_rate_fuel("coal-new",e)$valcap(i,v,r,t)]
   = round((1-bio_cofire_perc) * heat_rate(i,v,r,t) * emit_rate_fuel("coal-new",e),6) ;
 
 * Upstream fuel emissions
@@ -4708,7 +4693,7 @@ emit_rate("CO2e",i,v,r,t) =
     emit_rate("CO2",i,v,r,t) + emit_rate("CH4",i,v,r,t) * Sw_MethaneGWP ;
 
 * calculate emissions capture rates (same logic as emissions calc above)
-capture_rate(e,i,v,r,t)$[capture_rate_fuel(i,e)$valcap(i,v,r,t)$rb(r)]
+capture_rate(e,i,v,r,t)$[capture_rate_fuel(i,e)$valcap(i,v,r,t)]
   = round(heat_rate(i,v,r,t) * capture_rate_fuel(i,e),6) ;
 
 capture_rate(e,i,v,r,t)$[upgrade(i)$capture_rate_fuel(i,e)] = round(heat_rate(i,v,r,t) * capture_rate_fuel(i,e),6) ;
@@ -5316,7 +5301,7 @@ $offdelim
 $onlisting
 / ;
 
-cost_fom("ICE",v,rb,t)$valcap("ICE",v,rb,t) = ice_fom(t) ;
+cost_fom("ICE",v,r,t)$valcap("ICE",v,r,t) = ice_fom(t) ;
 
 * --- minimum capacity factor ----
 parameter minCF(i,t)  "--fraction-- minimum annual capacity factor for each tech fleet, applied to (i,r)" ;
@@ -5625,7 +5610,7 @@ if(Sw_NukeNoRetire = 1,
 retiretech(i,v,r,t)$[(yeart(t)<Sw_Retireyear)] = no ;
 
 *Need to enable endogenous retirements for plants that can have persistent upgrades
-retiretech(i,v,r,t)$[(yeart(t)>=Sw_Upgradeyear)$(yeart(t)>=Sw_Retireyear)$(Sw_Upgrades = 2)$rb(r)
+retiretech(i,v,r,t)$[(yeart(t)>=Sw_Upgradeyear)$(yeart(t)>=Sw_Retireyear)$(Sw_Upgrades = 2)
                      $sum{ii$[upgrade_from(ii,i)$valcap(ii,v,r,t)], 1 }] = yes ;
 
 *=========================================
@@ -5931,7 +5916,6 @@ Parameter
     hours_daily(allh)                      "--hours-- number of hours represented by time-slice 'h' during one day"
     numhours_nexth(allh,allh)              "--hours-- number of times hh follows h throughout year"
 * Mapping to quarters
-    frac_h_month_weights(allh,month)       "--unitless-- fraction of timeslice associated with each month"
     frac_h_quarter_weights(allh,quarter)   "--fraction-- fraction of timeslice associated with each quarter"
     frac_h_ccseason_weights(allh,ccseason) "--fraction-- fraction of timeslice associated with each ccseason"
     szn_quarter_weights(allszn,quarter)    "--fraction-- fraction of season associated with each quarter"

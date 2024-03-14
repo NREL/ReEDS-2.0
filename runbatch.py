@@ -194,6 +194,26 @@ def check_compatibility(sw):
             )
             raise NotImplementedError(err)
 
+    if sw['GSw_PRM_StressStorageCutoff'].lower() not in ['off','0','false']:
+        metric, value = sw['GSw_PRM_StressStorageCutoff'].split('_')
+        if metric.lower()[:3] not in ['eue', 'cap', 'abs']:
+            raise ValueError(
+                "The first argument of GSw_PRM_StressStorageCutoff must be in "
+                f"['eue', 'cap', 'abs'] but {metric} was provided"
+            )
+        try:
+            float(value)
+        except ValueError:
+            raise ValueError(
+                "The second argument of GSw_PRM_StressStorageCutoff must be a number "
+                f"but {value} was provided"
+            )
+        if (metric.lower()[:3] == 'abs') and (int(value) != 1):
+            raise NotImplementedError(
+                "GSw_PRM_StressStorageCutoff: only abs_1 is implemented for abs but "
+                f"{metric}_{value} was provided"
+            )
+
     for bir in sw['GSw_PVB_BIR'].split('_'):
         if not (float(bir) >= 0):
             raise ValueError("Fix GSw_PVB_BIR")
@@ -229,18 +249,21 @@ def check_compatibility(sw):
         if sw['GSw_Region'] not in modeled_regions:
             raise ValueError("No column in modeled_regions.csv matching GSw_Region")
 
-    ## Integer switches
-    for i in [
-        'debug',
-        'numbins_csp',
-        'numbins_upv',
-        'numbins_windofs',
-        'numbins_windons',
-    ]:
-        try:
-            int(sw[i])
-        except ValueError:
-            raise ValueError(f"{i} must be an integer but is {sw[i]}")
+    ### Dependent model availability
+    if (
+        ((not int(sw['GSw_PRM_CapCredit'])) or (int(sw['pras']) == 2))
+        and (
+            (not os.path.exists(os.path.expanduser(sw['reeds2pras_path'])))
+            or (not os.path.isfile(os.path.join(reeds_path, 'Manifest.toml')))
+        )
+    ):
+        err = (
+            f"reeds2pras_path={sw['reeds2pras_path']} or Manifest.toml does not exist. "
+            "Please set up ReEDS2PRAS and julia by following the instructions at "
+            "https://github.nrel.gov/ReEDS/ReEDS-2.0/wiki/ReEDS2PRAS,-Julia,-and-stress-periods-setup "
+            "if you haven't already, or point reeds2pras_path to your ReEDS2PRAS repo."
+        )
+        raise Exception(err)
 
 
 def solvestring_sequential(
@@ -674,6 +697,24 @@ def setupEnvironment(
             ### Split choices by either '; ' or ','
             if choices[i] in ['N/A',None,np.nan]:
                 pass
+            elif choices[i].lower() in ['int','integer']:
+                try:
+                    int(val)
+                except ValueError:
+                    error = (
+                        f'Invalid entry for "{i}" for case "{case}".\n'
+                        f'Entered "{val}" but must be an integer.'
+                    )
+                    raise ValueError(error)
+            elif choices[i].lower() in ['float','numeric','number','num']:
+                try:
+                    float(val)
+                except ValueError:
+                    error = (
+                        f'Invalid entry for "{i}" for case "{case}".\n'
+                        f'Entered "{val}" but must be a float (number).'
+                    )
+                    raise ValueError(error)
             else:
                 i_choices = [
                     str(j).strip() for j in
@@ -681,9 +722,10 @@ def setupEnvironment(
                 ]
                 if str(val) not in i_choices:
                     error = (
-                        'Invalid entry for "{}" for case "{}".\n'
-                        'Entered "{}" but must be one of the following:\n\n{}'
-                    ).format(i, case, val, '\n'.join(i_choices))
+                        f'Invalid entry for "{i}" for case "{case}".\n'
+                        f'Entered "{val}" but must be one of the following:\n\n'
+                        + '\n'.join(i_choices)
+                    )
                     raise ValueError(error)
                 
         #Check GSw_Region switch and ask user to correct if commas are used instead of periods to list multiple regions

@@ -140,37 +140,6 @@ def get_switches(casedir):
     return sw
 
 
-def h2timestamp(h):
-    """
-    Map ReEDS timeslice to actual timestamp
-    """
-    y = int(h.strip('sy').split('d')[0])
-    hr = int(h.split('h')[1])-1
-    if 'd' in h:
-        d = int(h.split('d')[1].split('h')[0])
-    else:
-        w = int(h.split('w')[1].split('h')[0])
-        d = w * 5 + hr // 24
-    return pd.to_datetime(f'y{y}d{d}h{hr}', format='y%Yd%jh%H')
-
-
-def timestamp2h(ts, GSw_HourlyType='day'):
-    """
-    Map actual timestamp to ReEDS period
-    """
-    # ts = pd.Timestamp(year=2007, month=3, day=28)
-    y = ts.year
-    d = int(ts.strftime('%j').strip('0'))
-    if GSw_HourlyType == 'wek':
-        w = d // 5
-        h = (d % 5) * 24 + ts.hour + 1
-        out = f'y{y}w{w:>03}h{h:>03}'
-    else:
-        h = ts.hour + 1
-        out = f'y{y}d{d:>03}h{h:>03}'
-    return out
-
-
 def delete_csvs(sw):
     """
     Delete temporary csv, pkl, and h5 files

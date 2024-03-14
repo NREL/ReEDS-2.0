@@ -57,13 +57,13 @@ totgen(r,h,t)$tmodel_new(t) =
 Parameter A_upstream(rr,r,allh,t) "upstream power distribution matrix" ;
 * see equation (4) in Bialek (1996)
 A_upstream(rr,r,h,t)$tmodel_new(t) = 0 ;
-A_upstream(r,r,h,t)$[tmodel_new(t)$rb(r)] = 1 ;
+A_upstream(r,r,h,t)$tmodel_new(t) = 1 ;
 A_upstream(rr,r,h,t)$[(flow_ba2ba(r,rr,h,t)>0)$(flow_through(r,h,t)>0)$tmodel_new(t)] = - flow_ba2ba(r,rr,h,t) / flow_through(r,h,t) ;
 
 Parameter A_downstream(r,rr,allh,t) "downstream power distribution matrix" ;
 * see equation (10) in Bialek (1996)
 A_downstream(r,rr,h,t)$tmodel_new(t) = 0 ;
-A_downstream(r,r,h,t)$[tmodel_new(t)$rb(r)] = 1 ;
+A_downstream(r,r,h,t)$tmodel_new(t) = 1 ;
 A_downstream(r,rr,h,t)$[(flow_ba2ba(r,rr,h,t)>0)$(flow_through(rr,h,t)>0)$tmodel_new(t)] = -flow_ba2ba(r,rr,h,t) / flow_through(rr,h,t) ;
 
 * --- calculate the inverse of the upstream and downstream power matricies ---

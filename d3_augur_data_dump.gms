@@ -77,7 +77,7 @@ storage_eff_filt(i)                "--fraction-- storage efficiency filtered for
 upgrade_to_filt(i,ii)              "--set-- set linking upgrade techs to the tech the upgraded from filtered for existing upgrades"
 ;
 
-rfeas(r)$rb(r) = yes ;
+rfeas(r) = yes ;
 
 trange(t) = no ;
 loop(t$[(yeart(t)>%start_year%)$(yeart(t)<=%next_year%)],
@@ -214,7 +214,7 @@ repgasprice_r(r,t)$[(Sw_GasCurve = 1)$tcur(t)] =
 repgasprice_r(r,t)$[(repgasprice_r(r,t) = -inf or repgasprice_r(r,t) = inf)$tcur(t)] =
     smax{cendiv$r_cendiv(r,cendiv), gasprice_ref(cendiv,t) } ;
 
-repgasprice_filt(r)$rb(r) = sum{t$tcur(t), repgasprice_r(r,t) } ;
+repgasprice_filt(r) = sum{t$tcur(t), repgasprice_r(r,t) } ;
 
 *============================
 * Filter necessary input data

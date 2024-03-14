@@ -48,7 +48,6 @@ sys_costs /
   op_spurline_fom
   op_startcost
   op_transmission_fom
-  op_transmission_hurdle_rate
   op_transmission_intrazone_fom
   op_vom_costs
 /,
@@ -94,7 +93,6 @@ sys_costs_op(sys_costs) /
   op_spurline_fom
   op_startcost
   op_transmission_fom
-  op_transmission_hurdle_rate
   op_transmission_intrazone_fom
   op_vom_costs
 /,
@@ -295,29 +293,29 @@ load_frac_rt(r,t)$sum{(rr,h), LOAD.l(rr,h,t) } = sum{h, hours(h) * LOAD.l(r,h,t)
 
 *Load and operating reserve prices are $/MWh, and reserve margin price is $/MW/rep-day for
 * capacity credit formulation and $/MW/stress-timeslice for stress period formulation.
-reqt_price('load','na',r,h,t)$[tmodel_new(t)$rb(r)] =
+reqt_price('load','na',r,h,t)$tmodel_new(t) =
     (1 / cost_scale) * (1 / pvf_onm(t)) * eq_supply_demand_balance.m(r,h,t) / hours(h) ;
 
-reqt_price('oper_res',ortype,r,h,t)$[tmodel_new(t)$rb(r)] =
+reqt_price('oper_res',ortype,r,h,t)$tmodel_new(t) =
     (1 / cost_scale) * (1 / pvf_onm(t)) * eq_OpRes_requirement.m(ortype,r,h,t) / hours(h) ;
 
-reqt_price('state_rps',RPSCat,r,'ann',t)$[tmodel_new(t)$rb(r)] =
+reqt_price('state_rps',RPSCat,r,'ann',t)$tmodel_new(t) =
     (1 / cost_scale) * (1 / pvf_onm(t)) * sum{st$r_st(r,st), eq_REC_Requirement.m(RPSCat,st,t) } ;
 
-reqt_price('nat_gen','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
+reqt_price('nat_gen','na',r,'ann',t)$tmodel_new(t) =
     (1 / cost_scale) * (1 / pvf_onm(t)) * eq_national_gen.m(t) ;
 
-reqt_price('annual_cap',e,r,'ann',t)$[tmodel_new(t)$rb(r)] =
+reqt_price('annual_cap',e,r,'ann',t)$tmodel_new(t) =
     (1 / cost_scale) * (1 / pvf_onm(t)) * emit_scale(e) * eq_annual_cap.m(e,t) ;
 
 * Capacity credit formulation ($/MW/rep-day)
-reqt_price('res_marg','na',r,ccseason,t)$[Sw_PRM_CapCredit$tmodel_new(t)$rb(r)] =
+reqt_price('res_marg','na',r,ccseason,t)$[Sw_PRM_CapCredit$tmodel_new(t)] =
     eq_reserve_margin.m(r,ccseason,t) * (1 / cost_scale) * (1 / pvf_onm(t));
 * Stress period formulation ($/MW/stress-timeslice)
-reqt_price('res_marg','na',r,allh,t)$[(Sw_PRM_CapCredit=0)$tmodel_new(t)$rb(r)$h_stress_t(allh,t)] =
+reqt_price('res_marg','na',r,allh,t)$[(Sw_PRM_CapCredit=0)$tmodel_new(t)$h_stress_t(allh,t)] =
     eq_supply_demand_balance.m(r,allh,t) * (1 / cost_scale) * (1 / pvf_onm(t));
 
-reqt_price('res_marg_ann','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
+reqt_price('res_marg_ann','na',r,'ann',t)$tmodel_new(t) =
 * Capacity credit formulation ($/MW-yr)
       sum{ccseason, reqt_price('res_marg','na',r,ccseason,t) }$Sw_PRM_CapCredit
 * Stress period formulation ($/MW-yr)
@@ -325,13 +323,13 @@ reqt_price('res_marg_ann','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
 ;
 *The marginal on the total load constraint, eq_loadcon is converted to $/MW-yr.
 *We can't convert to $/MWh because stress periods have no hours.
-reqt_price('eq_loadcon','na',r,allh,t)$[tmodel_new(t)$rb(r)$h_t(allh,t)] =
+reqt_price('eq_loadcon','na',r,allh,t)$[tmodel_new(t)$h_t(allh,t)] =
     (1 / cost_scale) * (1 / pvf_onm(t)) * eq_loadcon.m(r,allh,t) ;
 
 
 *Load and operating reserve quantities are MWh, and reserve margin quantity is MW
 * Demand from production activities (H2 and DAC) doesn't count toward electricity demand
-reqt_quant('load','na',r,h,t)$[tmodel_new(t)$rb(r)] =
+reqt_quant('load','na',r,h,t)$tmodel_new(t) =
     hours(h) * (
         LOAD.l(r,h,t)
         - sum{(p,i,v)$[consume(i)$valcap(i,v,r,t)$i_p(i,p)$Sw_Prod],
@@ -339,23 +337,23 @@ reqt_quant('load','na',r,h,t)$[tmodel_new(t)$rb(r)] =
     ) ;
 
 * Capacity credit formulation
-reqt_quant('res_marg','na',r,ccseason,t)$[Sw_PRM_CapCredit$tmodel_new(t)$rb(r)] =
+reqt_quant('res_marg','na',r,ccseason,t)$[Sw_PRM_CapCredit$tmodel_new(t)] =
     (peakdem_static_ccseason(r,ccseason,t)
 *      + PEAK_FLEX.l(r,ccseason,t)
     ) * (1 + prm(r,t)) ;
 * Stress period formulation
-reqt_quant('res_marg','na',r,allh,t)$[(Sw_PRM_CapCredit=0)$tmodel_new(t)$rb(r)$h_stress_t(allh,t)] =
+reqt_quant('res_marg','na',r,allh,t)$[(Sw_PRM_CapCredit=0)$tmodel_new(t)$h_stress_t(allh,t)] =
     LOAD.l(r,allh,t) ;
 
 * Annual res_marg quantity is kind of meaningless, but maybe useful for weighting across regions?
-reqt_quant('res_marg_ann','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
+reqt_quant('res_marg_ann','na',r,'ann',t)$tmodel_new(t) =
 * Capacity credit formulation
       sum{ccseason, reqt_quant('res_marg','na',r,ccseason,t) }$Sw_PRM_CapCredit
 * Stress period formulation
     + sum{allh$h_stress_t(allh,t), reqt_quant('res_marg','na',r,allh,t) }$(Sw_PRM_CapCredit=0)
 ;
 
-reqt_quant('oper_res',ortype,r,h,t)$[tmodel_new(t)$rb(r)] =
+reqt_quant('oper_res',ortype,r,h,t)$tmodel_new(t) =
     hours(h) * (
         orperc(ortype,"or_load") * LOAD.l(r,h,t)
       + orperc(ortype,"or_wind") * sum{(i,v)$[wind(i)$valgen(i,v,r,t)],
@@ -363,7 +361,7 @@ reqt_quant('oper_res',ortype,r,h,t)$[tmodel_new(t)$rb(r)] =
       + orperc(ortype,"or_pv")   * sum{(i,v)$[pv(i)$valcap(i,v,r,t)],
            CAP.l(i,v,r,t) }$dayhours(h)
     ) ;
-reqt_quant('state_rps',RPSCat,r,'ann',t)$[tmodel_new(t)$rb(r)] =
+reqt_quant('state_rps',RPSCat,r,'ann',t)$tmodel_new(t) =
     sum{(st,h)$r_st_rps(r,st), RecPerc(RPSCat,st,t) * hours(h) *(
         ( (LOAD.l(r,h,t) - can_exports_h(r,h,t)$[Sw_Canada=1]
         - sum{v$valgen("distpv",v,r,t), GEN.l("distpv",v,r,h,t) }) * (1.0 - distloss)
@@ -380,7 +378,7 @@ reqt_quant('state_rps',RPSCat,r,'ann',t)$[tmodel_new(t)$rb(r)] =
         )$(RecStyle(st,RPSCat)=2)
     )} ;
 
-reqt_quant('nat_gen','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
+reqt_quant('nat_gen','na',r,'ann',t)$tmodel_new(t) =
     national_gen_frac(t) * (
 * if Sw_GenMandate = 1, then apply the fraction to the bus bar load
     (
@@ -394,12 +392,12 @@ reqt_quant('nat_gen','na',r,'ann',t)$[tmodel_new(t)$rb(r)] =
         ( (LOAD.l(r,h,t) - can_exports_h(r,h,t)) * (1.0 - distloss) - sum{v$valgen("distpv",v,r,t), GEN.l("distpv",v,r,h,t) })
        })$[Sw_GenMandate = 2]
     ) ;
-reqt_quant('annual_cap',e,r,'ann',t)$[tmodel_new(t)$rb(r)] = emit_cap(e,t) * load_frac_rt(r,t) ;
+reqt_quant('annual_cap',e,r,'ann',t)$tmodel_new(t) = emit_cap(e,t) * load_frac_rt(r,t) ;
 
 *We keep quantity of eq_loadcon in MW
-reqt_quant('eq_loadcon','na',r,allh,t)$[tmodel_new(t)$rb(r)$h_t(allh,t)] = LOAD.l(r,allh,t) ;
+reqt_quant('eq_loadcon','na',r,allh,t)$[tmodel_new(t)$h_t(allh,t)] = LOAD.l(r,allh,t) ;
 
-load_rt(r,t)$[tmodel_new(t)$rb(r)] = sum{h, hours(h) * load_exog(r,h,t) } ;
+load_rt(r,t)$tmodel_new(t) = sum{h, hours(h) * load_exog(r,h,t) } ;
 
 load_stress(r,allh,t)$[tmodel_new(t)$h_stress_t(allh,t)] = LOAD.l(r,allh,t) ;
 
@@ -408,11 +406,15 @@ co2_price(t)$tmodel_new(t) = (1 / cost_scale) * (1 / pvf_onm(t)) / emit_scale("C
 rggi_price(t)$tmodel_new(t) = (1 / cost_scale) * (1 / pvf_onm(t)) / emit_scale("CO2") * eq_RGGI_cap.m(t) ;
 rggi_quant(t)$tmodel_new(t) = RGGI_cap(t) / emit_scale('CO2') ;
 
-state_cap_and_trade_price(st,t)$[tmodel_new(t)] =
+state_cap_and_trade_price(st,t)$tmodel_new(t) =
     (1 / cost_scale) * (1 / pvf_onm(t))
     * eq_state_cap.m(st,t) / emit_scale("CO2") ;
-state_cap_and_trade_quant(st,t)$[tmodel_new(t)] =
+
+state_cap_and_trade_quant(st,t)$tmodel_new(t) =
     state_cap(st,t) / emit_scale('CO2') ;
+
+tran_hurdle_cost_ann(r,rr,trtype,t)$[tmodel_new(t)$routes(r,rr,trtype,t)$cost_hurdle(r,rr)] =
+    sum{h, hours(h) * cost_hurdle(r,rr) * FLOW.l(r,rr,h,t,trtype) } ;
 
 *========================================
 * RPS, CES, AND TAX CREDIT OUTPUTS
@@ -472,20 +474,20 @@ repgasprice(cendiv,t)$[(Sw_GasCurve = 2)$tmodel_new(t)$repgasquant(cendiv,t)] =
           hours(h)*heat_rate(i,v,r,t)*fuel_price(i,r,t)*GEN.l(i,v,r,h,t)
        } / (repgasquant(cendiv,t) * 1e9) ;
 
-repgasprice_r(rb,t)$[(Sw_GasCurve = 0 or Sw_GasCurve = 2)$tmodel_new(t)] = sum{cendiv$r_cendiv(rb,cendiv), repgasprice(cendiv,t) } ;
+repgasprice_r(r,t)$[(Sw_GasCurve = 0 or Sw_GasCurve = 2)$tmodel_new(t)] = sum{cendiv$r_cendiv(r,cendiv), repgasprice(cendiv,t) } ;
 
-repgasprice_r(rb,t)$[(Sw_GasCurve = 1)$tmodel_new(t)] =
+repgasprice_r(r,t)$[(Sw_GasCurve = 1)$tmodel_new(t)] =
               ( sum{(h,cendiv),
-                   gasmultterm(cendiv,t) * szn_adj_gas(h) * cendiv_weights(rb,cendiv) *
+                   gasmultterm(cendiv,t) * szn_adj_gas(h) * cendiv_weights(r,cendiv) *
                    hours(h) } / sum{h, hours(h) }
 
-              + smax((fuelbin,cendiv)$[VGASBINQ_REGIONAL.l(fuelbin,cendiv,t)$r_cendiv(rb,cendiv)], gasbinp_regional(fuelbin,cendiv,t) )
+              + smax((fuelbin,cendiv)$[VGASBINQ_REGIONAL.l(fuelbin,cendiv,t)$r_cendiv(r,cendiv)], gasbinp_regional(fuelbin,cendiv,t) )
 
               + smax(fuelbin$VGASBINQ_NATIONAL.l(fuelbin,t), gasbinp_national(fuelbin,t) )
               ) ;
 
 repgasprice(cendiv,t)$[(Sw_GasCurve = 1)$tmodel_new(t)$repgasquant(cendiv,t)] =
-    sum{(i,rb)$r_cendiv(rb,cendiv), repgasprice_r(rb,t) * repgasquant_irt(i,rb,t) } / repgasquant(cendiv,t) ;
+    sum{(i,r)$r_cendiv(r,cendiv), repgasprice_r(r,t) * repgasquant_irt(i,r,t) } / repgasquant(cendiv,t) ;
 
 repgasprice_nat(t)$[tmodel_new(t)$sum{cendiv, repgasquant(cendiv,t) }] =
     sum{cendiv, repgasprice(cendiv,t) * repgasquant(cendiv,t) }
@@ -666,8 +668,8 @@ curt_tech(i,r,t)$[tmodel_new(t)$vre(i)] =
           OPRES.l(ortype,i,v,r,h,t) * hours(h) }
 ;
 
-curt_rate_tech(i,rb,t)$[tmodel_new(t)$vre(i)$(gen_ann(i,rb,t) + curt_tech(i,rb,t))] =
-    curt_tech(i,rb,t) / (gen_ann(i,rb,t) + curt_tech(i,rb,t))
+curt_rate_tech(i,r,t)$[tmodel_new(t)$vre(i)$(gen_ann(i,r,t) + curt_tech(i,r,t))] =
+    curt_tech(i,r,t) / (gen_ann(i,r,t) + curt_tech(i,r,t))
 ;
 
 curt_rate(t)
@@ -1212,19 +1214,19 @@ systemcost_ba("inv_converter_costs",r,t)$tmodel_new(t)  =
               + trans_cost_cap_fin_mult(t) * cost_acdc_vsc * INV_CONVERTER.l(r,t)
 ;
 
-systemcost_ba("inv_spurline_investment",rb,t)$[tmodel_new(t)$Sw_SpurScen] =
+systemcost_ba("inv_spurline_investment",r,t)$[tmodel_new(t)$Sw_SpurScen] =
 * capital cost of spur lines modeled explicitly
-              sum{x$[xfeas(x)$x_rb(x,rb)], spurline_cost(x) * Sw_SpurCostMult * INV_SPUR.l(x,t) }
+              sum{x$[xfeas(x)$x_r(x,r)], spurline_cost(x) * Sw_SpurCostMult * INV_SPUR.l(x,t) }
 ;
 
-systemcost_ba("op_spurline_fom",rb,t)$[tmodel_new(t)] =
+systemcost_ba("op_spurline_fom",r,t)$tmodel_new(t) =
 * fixed O&M cost of spur lines modeled explicitly
-    sum{x$[Sw_SpurScen$xfeas(x)$x_rb(x,rb)], spurline_cost(x) * trans_fom_frac * CAP_SPUR.l(x,t) }
+    sum{x$[Sw_SpurScen$xfeas(x)$x_r(x,r)], spurline_cost(x) * trans_fom_frac * CAP_SPUR.l(x,t) }
 * fixed O&M cost of spur lines modeled as part of supply curve
     + sum{(i,v,rscbin)
-          $[m_rscfeas(rb,i,rscbin)$valcap(i,v,rb,t)
+          $[m_rscfeas(r,i,rscbin)$valcap(i,v,r,t)
           $rsc_i(i)$(not spur_techs(i))$(not sccapcosttech(i))],
-          m_rsc_dat(rb,i,rscbin,"cost_trans") * trans_fom_frac * CAP_RSC.l(i,v,rb,rscbin,t)
+          m_rsc_dat(r,i,rscbin,"cost_trans") * trans_fom_frac * CAP_RSC.l(i,v,r,rscbin,t)
     }
 ;
 
@@ -1253,13 +1255,6 @@ systemcost_ba("inv_h2_storage",r,t)$[tmodel_new(t)$(Sw_H2 = 2)] =
 *===============
 * BA-Level SYSTEM COST: Operational (the op_ prefix is used by the retail rate module to identify which costs are operational costs)
 *===============
-
-systemcost_ba("op_transmission_hurdle_rate",r,t)$[tmodel_new(t)]  =
-*plus hurdle costs for transmission flow
-              sum{(rr,h,trtype)$[routes(r,rr,trtype,t)$cost_hurdle(r,rr)],
-                   cost_hurdle(r,rr) * hours(h) * FLOW.l(r,rr,h,t,trtype)  }
-;
-
 
 systemcost_ba("op_co2_storage",r,t)$[tmodel_new(t)$Sw_CO2_Detail] =
               + sum{(h,cs)$r_cs(r,cs), hours(h) * CO2_STORED.l(r,cs,h,t) * cost_co2_stor_bec(cs,t) }
@@ -1380,6 +1375,8 @@ error_check('z') = (
             * (CAP.l(i,v,r,t) - INV.l(i,v,r,t) - INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb]) }
 * minus revenue from purchases of curtailed VRE
         - pvf_onm(t) * sum{(r,h), CURT.l(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
+* minus hurdle costs
+        - pvf_onm(t) * sum{(r,rr,trtype)$cost_hurdle(r,rr), tran_hurdle_cost_ann(r,rr,trtype,t) }
 * minus penalty cost for dropped load before Sw_StartMarkets
         - pvf_onm(t) * sum{(r,h), DROPPED.l(r,h,t) * hours(h) * cost_dropped_load }
 * Account for difference in fixed O&M between model (CAP.l(i,v,r,t))
@@ -1609,14 +1606,14 @@ h2_demand_by_sector("electricity",t) = sum{(i,v,r,h)$[valgen(i,v,r,t)$h2_ct(i)],
 * eq_h2_demand_regional is in [tonnes/hour], just like eq_supply_demand_balance
 * is in [MW] (or [MWh/hour]). So divide by hours(h) and kg/tonne:
 * [($·hour)/tonne] / [hour] / [1000 kg/tonne] = [$/kg]
-h2_price_h(r,h,t)$[tmodel_new(t)] =
+h2_price_h(r,h,t)$tmodel_new(t) =
     (1 / cost_scale) * (1 / pvf_onm(t))
     * eq_h2_demand_regional.m(r,h,t)
     / hours(h) / 1000
 ;
 
 * Marginal cost of H2 production by season [$/kg]
-h2_price_szn(r,szn,t)$[tmodel_new(t)] =
+h2_price_szn(r,szn,t)$tmodel_new(t) =
     sum{h$h_szn(h,szn), h2_price_h(r,h,t) * hours(h) }
     / sum{h$h_szn(h,szn), hours(h) }
 ;
@@ -1630,7 +1627,7 @@ load_cat("dist_loss",r,t)$tmodel_new(t)  = sum{h, hours(h) * load_exog(r,h,t) * 
 load_cat("trans_loss",r,t)$tmodel_new(t) = sum{(rr,h,trtype)$routes(r,rr,trtype,t), (tranloss(r,rr,trtype) * FLOW.l(r,rr,h,t,trtype) * hours(h)) } ;
 load_cat("stor_charge",r,t)$tmodel_new(t) = sum{(i,v), stor_inout(i,v,r,t,"in") } ;
 load_cat("h2_prod",r,t)$tmodel_new(t) = sum{i$h2(i), prod_load_ann(i,r,t) } ;
-load_cat("h2_network",r,t)$[tmodel_new(t)] = 
+load_cat("h2_network",r,t)$tmodel_new(t) = 
     sum{h, hours(h) * 
     (
       sum{h2_stor$h2_stor_r(h2_stor,r),

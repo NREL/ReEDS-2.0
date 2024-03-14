@@ -54,7 +54,7 @@ inputs_case = args.inputs_case
 
 # #%% Settings for testing
 # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-# inputs_case = os.path.join(reeds_path,'runs','Oct19_test_USA','inputs_case')
+# inputs_case = os.path.join(reeds_path,'runs','Feb8_final_Pacific','inputs_case')
 
 #%%#################
 ### FIXED INPUTS ###
@@ -553,16 +553,25 @@ hydcf = pd.concat([
     hydcf,
     pd.concat({y: hydcf.loc[2020] for y in [i for i in years if i > 2020]}, names=['t','month'])
 ]).stack().stack().rename('value').reorder_levels(['t','i','r','month']).reset_index()
-# filter down to modeled regions
+# Filter down to modeled regions
 hydcf = hydcf[hydcf['r'].isin(val_r_all)]
 hydcf['value'] = hydcf['value'].round(5)
 
-#hydro capacity adjustment by szn
+# Hydro capacity adjustment by month
 hydcapadj = pd.read_csv(os.path.join(cappath, "SeaCapAdj_hy.csv"))
 # filter down to modeled regions
 hydcapadj = hydcapadj[hydcapadj['r'].isin(val_r_all)]
-hydcapadj['value'] = hydcapadj['value'].round(6)
-hydcapadj.szn = hydcapadj.szn.map(quartershorten)
+hydcapadj['value'] = hydcapadj['value'].round(5)
+
+# Hydro capacity adjustment by ccseason
+hydcapadj_ccseason = hydcapadj.copy()
+hotcold_months = {'NOV':'cold', 'DEC':'cold', 'JAN':'cold', 'FEB':'cold', 
+                  'JUN':'hot',  'JUL':'hot',  'AUG':'hot'
+                  }
+hydcapadj_ccseason['ccseason'] = hydcapadj_ccseason['month'].map(hotcold_months)
+hydcapadj_ccseason = hydcapadj_ccseason[hydcapadj_ccseason['ccseason'].isin(['cold','hot'])].drop(columns='month')
+hydcapadj_ccseason = hydcapadj_ccseason.groupby(['i','r','ccseason']).mean().reset_index()
+hydcapadj_ccseason['value'] = hydcapadj_ccseason['value'].round(5)
 
 
 #%%----------------------------------------------------------------------------
@@ -683,9 +692,12 @@ rsc_wsc.to_csv(os.path.join(inputs_case,'rsc_wsc.csv'),index=False)
 hydcf[['i','month','r','t','value']] \
     .rename(columns={'i': '*i'}) \
     .to_csv(os.path.join(inputs_case,'hydcf.csv'), index=False)
-hydcapadj[['i','szn','r','value']] \
+hydcapadj[['i','month','r','value']] \
     .rename(columns={'i': '*i'}) \
     .to_csv(os.path.join(inputs_case,'hydcapadj.csv'), index=False)
+hydcapadj_ccseason[['i','ccseason','r','value']] \
+    .rename(columns={'i': '*i'}) \
+    .to_csv(os.path.join(inputs_case,'cap_hyd_ccseason_adj.csv'), index=False)
 can_imports_capacity.to_csv(os.path.join(inputs_case,'can_imports_capacity.csv'))
 
 toc(tic=tic, year=0, process='input_processing/writecapdat.py',

@@ -65,6 +65,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 _caselist = args.caselist.split(',')
+_casenames = args.casenames
 try:
     titleshorten = int(args.titleshorten)
 except ValueError:
@@ -77,24 +78,24 @@ bpreport = args.bpreport
 skipbp = args.skipbp
 interactive = False
 
-# #%% Inputs for testing
-# startyear = 2020
+#%% Inputs for testing
 # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# casepath = os.path.join(reeds_path,'runs')
-# _caselist = [
-#     os.path.join(casepath,'v20231215_casegroupM0_Pacific_lim'),
-#     os.path.join(casepath,'v20231215_casegroupM0_Pacific_ref'),
-#     os.path.join(casepath,'v20231215_casegroupM0_Pacific_open'),
-# ]
-# _basecase = _caselist[1]
-# titleshorten = len('v20231215_casegroupM0_Pacific_')
+# _caselist = [os.path.join(reeds_path,'postprocessing','comparegroup_20240207_single.csv')]
+# _caselist = [os.path.join(reeds_path,'postprocessing','comparegroup_20240207_small2large.csv')]
+# _casenames = ''
+# titleshorten = 0
+# startyear = 2020
 # sharey = 'row'
+# _basecase = ''
+# level = 'transreg'
+# skipbp = True
+# bpreport = 'standard_report_reduced'
 # interactive = True
 
 
 #%%### Fixed inputs
 cmap = cmocean.cm.rain
-cmap_diff = cmocean.cm.balance
+cmap_diff = plt.cm.RdBu_r
 
 techmap = {
     **{f'upv_{i}':'Utility PV' for i in range(20)},
@@ -198,6 +199,11 @@ if len(_caselist) == 1:
         ):
             dfcase.columns = ['casepath','casename']
             dfcase.drop(0, inplace=True)
+            ## Drop cases that haven't finished yet
+            dfcase = dfcase.loc[
+                dfcase.casepath.map(
+                    lambda x: os.path.isfile(os.path.join(x,'outputs','reeds-report','report.xlsx')))
+            ].copy()
             caselist = dfcase.casepath.tolist()
             use_table_casenames = True
         ## Otherwise assume it's a copy of a cases_{batchname}.csv file in a case folder
@@ -226,7 +232,7 @@ if use_table_casenames:
     casenames = dfcase.casename.tolist()
 else:
     casenames = (
-        args.casenames.split(',') if len(args.casenames)
+        _casenames.split(',') if len(_casenames)
         else [os.path.basename(c)[titleshorten:] for c in caselist]
     )
 
@@ -239,6 +245,7 @@ if len(caselist) != len(casenames):
     raise ValueError(err)
 
 cases = dict(zip(casenames, caselist))
+maxlength = max([len(c) for c in cases])
 
 if not len(_basecase):
     basecase = list(cases.keys())[0]
@@ -272,12 +279,12 @@ colors = plots.rainbowmapper(cases)
 outpath = os.path.join(cases[basecase], 'outputs', 'comparisons')
 os.makedirs(outpath, exist_ok=True)
 ## clip name to max length and removing disallowed characters
-maxlength = os.pathconf(os.sep,'PC_NAME_MAX')
+max_filename_length = os.pathconf(os.sep,'PC_NAME_MAX')
 savename = os.path.join(
     outpath,
     (f"results-{','.join(cases.keys())}"
      .replace('/','').replace(' ','')
-     [:maxlength-len('.pptx')]) + '.pptx'
+     [:max_filename_length-len('.pptx')]) + '.pptx'
 )
 print(f'Saving results to {savename}')
 
@@ -372,6 +379,13 @@ for i in bokehcolors.index:
         raise Exception(i)
 
 techcolors = {i: techcolors[i] for i in bokehcolors.index}
+
+trtype_map = pd.read_csv(
+    os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','trtype_map.csv'),
+    index_col='raw')['display']
+colors_trans = pd.read_csv(
+    os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','trtype_style.csv'),
+    index_col='order')['color']
 
 #%% Parse excel report sheet names
 val2sheet = reedsplots.get_report_sheetmap(cases[basecase])
@@ -502,12 +516,30 @@ for case in tqdm(cases, desc='runtime'):
     except FileNotFoundError:
         print(case)
 
+dictin_neue = {}
+for case in tqdm(cases, desc='NEUE'):
+    try:
+        dictin_neue[case] = (
+            pd.read_csv(os.path.join(cases[case],'outputs','neue.csv'))
+            .sort_values(['t','iteration'])
+            .drop_duplicates(subset='t', keep='last')
+            .set_index('t')['NEUE [ppm]']
+        )
+    except FileNotFoundError:
+        pass
+
 ### Model years
 years = sorted(dictin_cap[case].year.astype(int).unique())
 years = [y for y in years if y >= startyear]
 yearstep = years[-1] - years[-2]
 lastyear = max(years)
-
+## Years for which to add data notes
+startyear_sums = 2023
+allyears = range(startyear_sums,lastyear+1)
+noteyears = [2035, 2050]
+if all([lastyear < y for y in noteyears]):
+    noteyears = [lastyear]
+startyear_growth = 2035
 
 
 #%%### Plots ######
@@ -810,11 +842,10 @@ for col, datum in enumerate(handles):
     ax[col].axis('off')
 add_to_pptx(slide=slide, top=7.5)
 
-#%% Diff
 
-#%%### Hodgepodge 2: SCOE, CO2 emissions, Transmission TW-miles
+#%%### Hodgepodge 2: SCOE, CO2 emissions, NEUE
 plt.close()
-f,ax = plt.subplots(1, 3, figsize=(10, 4.5))
+f,ax = plt.subplots(1, 4, figsize=(11, 4.5), gridspec_kw={'wspace':0.6})
 
 ### SCOE
 for case in cases:
@@ -829,17 +860,12 @@ for case in cases:
     )
 ax[0].set_ylim(0)
 ax[0].set_ylabel('System cost of electricity [$/MWh]')
-leg = ax[0].legend(
-    loc='lower left', frameon=False, fontsize='large',
-    handletextpad=0.3, handlelength=0.8,
-)
-for legobj in leg.legend_handles:
-    legobj.set_linewidth(8)
-    legobj.set_solid_capstyle('butt')
 
 ### CO2 emissions
+note = []
 for case in cases:
     df = dictin_emissions[case].reindex(years).fillna(0)
+    df_allyears = df.reindex(allyears).interpolate('linear')
     ax[1].plot(df.index, df.values, label=case, color=colors[case])
     ## annotate the last value
     val = np.around(df.loc[max(years)], 0) + 0
@@ -848,26 +874,55 @@ for case in cases:
         (max(years), val), ha='left', va='center',
         color=colors[case], fontsize='medium',
     )
+    ## collect more notes
+    note.append(
+        f"{case:<{maxlength}}:"
+        + ','.join([f" {df_allyears[y]:.0f} MMT {y}" for y in noteyears])
+        + f"; {df_allyears.sum()/1e3:.2f} GT {startyear_sums}–{lastyear}"
+    )
 ax[1].set_ylim(0)
 ax[1].axhline(phaseout_trigger, c='C7', ls='--', lw=0.75)
 ax[1].set_ylabel(f'{pollutant} emissions [MMT/yr]')
+## Notes
+ax[1].annotate(
+    '\n'.join(note), (-0.2, -0.1), xycoords='axes fraction', va='top',
+    annotation_clip=False, fontsize=9, fontfamily='monospace',
+)
 
-### Transmission TW-miles
-for case in cases:
-    df = dictin_trans[case].groupby('year').sum()['Amount (GW-mi)'].reindex(years) / 1e3
-    ax[2].plot(df.index, df.values, label=case, color=colors[case])
-    ## annotate the last value
-    val = np.around(df.loc[max(years)], 0) + 0
-    ax[2].annotate(
-        f' {val:.0f}',
-        (max(years), val), ha='left', va='center',
-        color=colors[case], fontsize='medium',
-    )
-ax[2].set_ylim(0)
-ax[2].set_ylabel('Transmission capacity [TW-mi]')
+### NEUE
+if len(dictin_neue):
+    for case in cases:
+        if case in dictin_neue:
+            df = dictin_neue[case].reindex([y for y in years if y >= 2025])
+            ax[2].plot(df.index, df.values, label=case, color=colors[case])
+            ## annotate the last value
+            val = np.around(df.loc[max(years)], 0) + 0
+            ax[2].annotate(
+                f' {val:.0f}',
+                (max(years), val), ha='left', va='center',
+                color=colors[case], fontsize='medium',
+            )
+    ax[2].set_ylim(0)
+    if ax[2].get_ylim()[1] >= 10:
+        ax[2].axhline(10, c='C7', ls='--', lw=0.75)
+    ax[2].set_ylabel('NEUE [ppm]')
+else:
+    ax[2].axis('off')
+
+### Spare
+ax[3].axis('off')
+
+### Legend
+leg = ax[0].legend(
+    loc='upper left', bbox_to_anchor=(-0.3,-0.05), frameon=False, fontsize='large',
+    handletextpad=0.3, handlelength=0.7,
+)
+for legobj in leg.legend_handles:
+    legobj.set_linewidth(8)
+    legobj.set_solid_capstyle('butt')
 
 ### Formatting
-plt.tight_layout()
+# plt.tight_layout()
 plots.despine(ax)
 plt.draw()
 for col in range(3):
@@ -875,7 +930,109 @@ for col in range(3):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = add_to_pptx('Cost, emissions, and transmission')
+slide = add_to_pptx('Cost, emissions, reliability')
+if interactive:
+    plt.show()
+
+
+#%%### Transmission
+plt.close()
+f,ax = plt.subplots(1, 4, figsize=(11, 4.5), gridspec_kw={'wspace':0.6})
+
+### Transmission TW-miles over time
+for case in cases:
+    df = dictin_trans[case].groupby('year').sum()['Amount (GW-mi)'].reindex(years) / 1e3
+    ax[0].plot(df.index, df.values, label=case, color=colors[case])
+    ## annotate the last value
+    val = np.around(df.loc[max(years)], 0) + 0
+    ax[0].annotate(
+        f' {val:.0f}',
+        (max(years), val), ha='left', va='center',
+        color=colors[case], fontsize='medium',
+    )
+ax[0].set_ylim(0)
+ax[0].set_ylabel('Transmission capacity [TW-mi]')
+
+### Disaggregated transmission (for next two plots)
+dftrans = pd.concat({
+    case:
+    dictin_trans[case].groupby(['year','trtype'])['Amount (GW-mi)'].sum()
+    .unstack('trtype').reindex(allyears).interpolate('linear')
+    / 1e3
+    for case in cases
+}, axis=1)
+
+### Disaggregated final year transmission capacity
+df = dftrans.loc[lastyear].unstack('trtype')
+plots.stackbar(df=df, ax=ax[1], colors=colors_trans, width=0.8, net=False)
+ax[1].set_ylabel('Transmission capacity [TW-mi]')
+
+### Transmission growth
+df = (
+    (dftrans.loc[lastyear] - dftrans.loc[startyear_growth])
+    / (lastyear - startyear_growth)
+).unstack('trtype')
+plots.stackbar(df=df, ax=ax[2], colors=colors_trans, width=0.8, net=False)
+ax[2].set_ylabel(f'Transmission growth,\n{startyear_growth}–{lastyear} [TWmi/year]')
+## Scales
+ymax = ax[2].get_ylim()[1]
+scales = {
+    0.73: 'Max since 2014 (345+ kV)',
+    1.83: 'Max since 2014 (all kV)',
+    3.64: 'Max since 2009 (all kV)',
+    1476 * 6.3 / 1e3: '1× Rio Madeira per year',
+}
+for y, label in scales.items():
+    if y > ymax:
+        continue
+    ax[2].annotate(
+        label, xy=(len(cases), y), xytext=(len(cases)*1.15, y), annotation_clip=False,
+        arrowprops={'arrowstyle':'-|>', 'color':'k'},
+        ha='left', va='center', color='k', fontsize=11,
+    )
+    ax[2].axhline(
+        y, c='k', lw=0.5, ls='--',
+        path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.5)])
+
+### Spare
+ax[3].axis('off')
+
+### Legends
+## Traces
+_h, _l = ax[0].get_legend_handles_labels()
+leg = ax[0].legend(
+    # _h[::-1], _l[::-1],
+    loc='upper left', bbox_to_anchor=(-0.4,-0.05), frameon=False, fontsize='large',
+    handletextpad=0.3, handlelength=0.7,
+)
+for legobj in leg.legend_handles:
+    legobj.set_linewidth(8)
+    legobj.set_solid_capstyle('butt')
+## Transmission types
+handles = [
+    mpl.patches.Patch(facecolor=colors_trans[i], edgecolor='none', label=i)
+    for i in colors_trans.index if i in dftrans.columns.get_level_values('trtype')
+]
+leg = ax[2].legend(
+    handles=handles[::-1],
+    loc='upper left', bbox_to_anchor=(1,-0.05), frameon=False, fontsize='large',
+    handletextpad=0.3, handlelength=0.7,
+)
+
+### Formatting
+for col in [1,2]:
+    ax[col].set_xticks(range(len(cases)))
+    ax[col].set_xticklabels(cases.keys(), rotation=90)
+    ax[col].yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(5))
+
+plots.despine(ax)
+plt.draw()
+for col in [0]:
+    ax[col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+    ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
+    plots.shorten_years(ax[col])
+### Save it
+slide = add_to_pptx('Transmission')
 if interactive:
     plt.show()
 

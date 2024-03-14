@@ -17,6 +17,8 @@ import core
 import copy
 from pdb import set_trace as pdbst
 from itertools import product
+## Inherit the default present value year to use in plot definitions
+from defaults import DEFAULT_PV_YEAR
 
 rb_globs = {'output_subdir':'/outputs/', 'test_file':'cap.csv', 'report_subdir':'/reeds2'}
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -1923,9 +1925,9 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Monetized health damages over time',{'x':'year', 'y':'Total health damages (billion $)', 'series':'scenario', 'explode': 'model', 'explode_group':'cr', 'chart_type':'Line'}),
             ('Mortality over time',{'x':'year', 'y':'Total health damages (lives)', 'series':'scenario', 'explode': 'model', 'explode_group':'cr', 'chart_type':'Line'}),
-            ('Total undiscounted health damages through 2050',{'x':'scenario','y':'Health damages (billion $)', 'series':'e', 'explode': 'model', 'explode_group':'cr','chart_type':'Bar', 'filter': {'year': {'start':2023, 'end':2050}}}),
-            ('Total discounted health damages through 2050',{'x':'scenario','y':'Discounted health damages (billion $)', 'series':'e', 'explode': 'model', 'explode_group':'cr','chart_type':'Bar', 'filter': {'year': {'start':2023, 'end':2050}}}),
-            ('Total mortality through 2050',{'x':'scenario','y':'Health damages (lives)', 'series':'e', 'explode': 'model', 'explode_group':'cr','chart_type':'Bar', 'filter': {'year': {'start':2023, 'end':2050}}}),
+            ('Total undiscounted health damages through 2050',{'x':'scenario','y':'Health damages (billion $)', 'series':'e', 'explode': 'model', 'explode_group':'cr','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR, 'end':2050}}}),
+            ('Total discounted health damages through 2050',{'x':'scenario','y':'Discounted health damages (billion $)', 'series':'e', 'explode': 'model', 'explode_group':'cr','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR, 'end':2050}}}),
+            ('Total mortality through 2050',{'x':'scenario','y':'Health damages (lives)', 'series':'e', 'explode': 'model', 'explode_group':'cr','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR, 'end':2050}}}),
         )),
         }
     ),
@@ -2070,7 +2072,7 @@ results_meta = collections.OrderedDict((
         ],
         'presets': collections.OrderedDict((
             ('Total Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar'}),
-            ('2023-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'year': {'start':2023}}}),
+            (f'{DEFAULT_PV_YEAR}-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR}}}),
             ('Discounted by Year',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75'}),
             ('Undiscounted by Year',{'x':'year','y':'Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75'}),
         )),
@@ -2092,8 +2094,8 @@ results_meta = collections.OrderedDict((
         ],
         'presets': collections.OrderedDict((
             ('Total Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar'}),
-            ('Discounted through 2050',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'year': {'start':2023, 'end':2050}}}),
-            ('2023-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'year': {'start':2023}}}),
+            ('Discounted through 2050',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR, 'end':2050}}}),
+            (f'{DEFAULT_PV_YEAR}-end Discounted',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR}}}),
             ('Discounted by Year',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'1.75'}),
             ('Total Undiscounted',{'x':'scenario','y':'Cost (Bil $)','series':'cost_cat','chart_type':'Bar'}),
             ('Undiscounted by Year',{'x':'year','y':'Cost (Bil $)','series':'cost_cat','explode':'scenario','chart_type':'Bar', 'bar_width':'0.95'}),
@@ -2116,14 +2118,14 @@ results_meta = collections.OrderedDict((
         ],
         'presets': collections.OrderedDict((
             ('Total Discounted - BA',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'rb','chart_type':'Bar'}),
-            ('Discounted through 2050 - BA',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'rb','chart_type':'Bar', 'filter': {'year': {'start':2023, 'end':2050}}}),
-            ('2023-end Discounted - BA',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'rb','chart_type':'Bar', 'filter': {'year': {'start':2023}}}),
+            ('Discounted through 2050 - BA',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'rb','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR, 'end':2050}}}),
+            (f'{DEFAULT_PV_YEAR}-end Discounted - BA',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'rb','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR}}}),
             ('Discounted by Year - BA',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','explode_group':'rb','chart_type':'Bar', 'bar_width':'1.75'}),
             ('Total Undiscounted - BA',{'x':'scenario','y':'Cost (Bil $)','series':'cost_cat','explode':'rb','chart_type':'Bar'}),
             ('Undiscounted by Year - BA',{'x':'year','y':'Cost (Bil $)','series':'cost_cat','explode':'scenario','explode_group':'rb','chart_type':'Bar', 'bar_width':'0.95'}),
             ('Total Discounted - State',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'st','chart_type':'Bar'}),
-            ('Discounted through 2050 - State',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'st','chart_type':'Bar', 'filter': {'year': {'start':2023, 'end':2050}}}),
-            ('2023-end Discounted - State',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'st','chart_type':'Bar', 'filter': {'year': {'start':2023}}}),
+            ('Discounted through 2050 - State',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'st','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR, 'end':2050}}}),
+            (f'{DEFAULT_PV_YEAR}-end Discounted - State',{'x':'scenario','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'st','chart_type':'Bar', 'filter': {'year': {'start':DEFAULT_PV_YEAR}}}),
             ('Discounted by Year - State',{'x':'year','y':'Discounted Cost (Bil $)','series':'cost_cat','explode':'scenario','explode_group':'st','chart_type':'Bar', 'bar_width':'1.75'}),
             ('Total Undiscounted - State',{'x':'scenario','y':'Cost (Bil $)','series':'cost_cat','explode':'st','chart_type':'Bar'}),
             ('Undiscounted by Year - State',{'x':'year','y':'Cost (Bil $)','series':'cost_cat','explode':'scenario','explode_group':'st','chart_type':'Bar', 'bar_width':'0.95'}),        

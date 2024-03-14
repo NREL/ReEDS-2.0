@@ -69,7 +69,7 @@ eq_ObjFn_inv(t)$tmodel(t)..
 
 * --- cost of intra-zone network reinforcement (a.k.a. point-of-interconnection capacity or POI)
 * Sw_TransIntraCost is in $/kW, so multiply by 1000 to convert to $/MW
-                  + sum{r$[rb(r)$Sw_TransIntraCost],
+                  + sum{r$Sw_TransIntraCost,
                         trans_cost_cap_fin_mult(t) * Sw_TransIntraCost * 1000 * INV_POI(r,t) }
 
 * --- cost of water access---
@@ -83,7 +83,7 @@ eq_ObjFn_inv(t)$tmodel(t)..
 
 *slack variable to update water source type (wst) in the unit database
 *Note that existing wst data is not consistent with availability of water source in the region
-                  + sum{(wst,r)$rb(r), 1E6 * WATER_CAPACITY_LIMIT_SLACK(wst,r,t) }$[Sw_WaterMain$Sw_WaterCapacity]
+                  + sum{(wst,r), 1E6 * WATER_CAPACITY_LIMIT_SLACK(wst,r,t) }$[Sw_WaterMain$Sw_WaterCapacity]
 
 * --- cost of refurbishments of RSC tech---
                   + sum{(i,v,r)$[Sw_Refurb$valinv(i,v,r,t)$refurbtech(i)],
@@ -100,12 +100,12 @@ eq_ObjFn_inv(t)$tmodel(t)..
                         trans_cost_cap_fin_mult(t) * cost_acdc_lcc * 2 * INVTRAN(r,rr,trtype,t) }
 
 *cost of VSC AC/DC converter stations
-                  + sum{r$rb(r),
+                  + sum{r,
                         trans_cost_cap_fin_mult(t) * cost_acdc_vsc * INV_CONVERTER(r,t) }
 
 * --- storage capacity credit---
 *small cost penalty to incentivize solver to fill shorter-duration bins first
-                  + sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))],
+                  + sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit],
                          bin_penalty(sdbin) * CAP_SDBIN(i,v,r,ccseason,sdbin,t) }
 
 * cost of capacity upsizing
@@ -172,7 +172,7 @@ eq_Objfn_op(t)$tmodel(t)..
                     cost_acdc_lcc * 2 * trans_fom_frac * CAPTRAN_ENERGY(r,rr,trtype,t) }
 
 * VSC AC/DC converter stations
-              + sum{r$rb(r),
+              + sum{r,
                     cost_acdc_vsc * trans_fom_frac * CAP_CONVERTER(r,t) }
 
 * spur lines modeled as part of supply curve
@@ -187,7 +187,7 @@ eq_Objfn_op(t)$tmodel(t)..
 
 * intra-zone network reinforcement (only for new capacity; don't include it for existing POI
 * capacity because it's not a great estimate of the actual FOM cost of all existing transmission)
-              + sum{r$[rb(r)$Sw_TransIntraCost],
+              + sum{r$Sw_TransIntraCost,
                     Sw_TransIntraCost * 1000 * trans_fom_frac
                     * sum{tt$[(yeart(tt)<=yeart(t))$(tmodel(tt) or tfix(tt))], INV_POI(r,tt) } }
 
@@ -264,7 +264,7 @@ eq_Objfn_op(t)$tmodel(t)..
                    cost_hurdle(r,rr) * FLOW(r,rr,h,t,trtype) * hours(h) }
 
 * --- taxes on emissions---
-              + sum{(e,r)$rb(r), EMIT(e,r,t) * emit_tax(e,r,t) }
+              + sum{(e,r), EMIT(e,r,t) * emit_tax(e,r,t) }
 
 * --cost of CO2 transport and storage from CCS--
               + sum{(i,v,r,h)$[valgen(i,v,r,t)],
@@ -283,10 +283,10 @@ eq_Objfn_op(t)$tmodel(t)..
                    }$[(yeart(t)>=RPS_StartYear)$Sw_StateRPS]
 
 * --- revenues from purchases of curtailed VRE---
-              - sum{(r,h)$rb(r), CURT(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
+              - sum{(r,h), CURT(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
 
 * --- dropped load (ONLY if before Sw_StartMarkets)
-              + sum{(r,h)$[rb(r)$(yeart(t)<Sw_StartMarkets)], DROPPED(r,h,t) * hours(h) * cost_dropped_load }
+              + sum{(r,h)$[(yeart(t)<Sw_StartMarkets)], DROPPED(r,h,t) * hours(h) * cost_dropped_load }
 
 * --- costs from producing products (for now DAC and/or H2)---
               + sum{(p,i,v,r,h)$[(h2(i) or dac(i))$valcap(i,v,r,t)$i_p(i,p)],
