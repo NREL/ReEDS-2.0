@@ -1,0 +1,21 @@
+﻿nlcd_value,land_type
+11,water
+12,perennial ice/snow
+21,developed
+22,developed
+23,developed
+24,developed
+31,barren
+41,forest
+42,forest
+43,forest
+51,shrubland
+52,shrubland
+71,grassland
+72,wetland
+73,lichens
+74,moss
+81,hay/pasture
+82,cropland
+90,wetland
+95,wetland

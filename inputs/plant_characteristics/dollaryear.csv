@@ -32,9 +32,6 @@ conv_ATB_2021_very_low_smr,2019
 conv_ATB_2022,2020
 conv_ATB_2022_low_nuclear_and_ccs_cost,2020
 conv_ATB_2023,2021
-conv_ATB_2023_low_nuclear_cost,2021
-conv_ATB_2023_ccs_conservative,2021
-conv_ATB_2023_ccs_advanced,2021
 conv_ATB_2023_conservative,2021
 csp_ATB_2020_advanced,2018
 csp_ATB_2020_conservative,2018
@@ -121,4 +118,3 @@ upv_ATB_2023_conservative,2021
 upv_ATB_2023_moderate,2021
 wind_ATB_2020_moderate-land_advanced-offshore,2018
 wind_ATB_2020_moderate-land_conservative-offshore,2018
-ofs-wind_ATB_2023_moderate_noFloating,2021

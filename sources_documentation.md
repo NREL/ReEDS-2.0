@@ -20,6 +20,7 @@
       - ##### [demand](#inputs/demand) 
       - ##### [demand_response](#inputs/demand_response) 
       - ##### [dGen_Model_Inputs](#inputs/dGen_Model_Inputs) 
+      - ##### [disaggregation](#inputs/disaggregation) 
       - ##### [financials](#inputs/financials) 
       - ##### [fuelprices](#inputs/fuelprices) 
       - ##### [geothermal](#inputs/geothermal) 
@@ -30,6 +31,7 @@
       - ##### [plant_characteristics](#inputs/plant_characteristics) 
       - ##### [reserves](#inputs/reserves) 
       - ##### [RPSdata](#inputs/RPSdata) 
+      - ##### [sets](#inputs/sets) 
       - ##### [shapefiles](#inputs/shapefiles) 
       - ##### [state_policies](#inputs/state_policies) 
       - ##### [storagedata](#inputs/storagedata) 
@@ -44,7 +46,6 @@
     - #### [postprocessing](#postprocessing) 
       - ##### [air_quality](#postprocessing/air_quality) 
       - ##### [bokehpivot](#postprocessing/bokehpivot) 
-      - ##### [documentation_tools](#postprocessing/documentation_tools) 
       - ##### [land_use](#postprocessing/land_use) 
       - ##### [plots](#postprocessing/plots) 
       - ##### [retail_rate_module](#postprocessing/retail_rate_module) 
@@ -76,14 +77,17 @@
   - [cases_smaller.csv](/cases_smaller.csv)
 ---
 
+  - [cases_spatialflex.csv](/cases_spatialflex.csv)
+    - **Description:** Contains sample scenarios that use the spatial flexibility capabilities
+---
+
   - [cases_standardscenarios.csv](/cases_standardscenarios.csv)
     - **File Type:** StdScen Cases file
     - **Description:** Contains the configuration settings for the Standard Scenarios ReEDS runs.
 ---
 
   - [cases_test.csv](/cases_test.csv)
-    - **Description:** Contains the configuration settings for a test ReEDS run using ERCOT.
-    - **Dollar year:** 2007
+    - **Description:** Contains the configuration settings for doing test runs including the default Pacific census division test case.
 ---
 
   - [e_report_params.csv](/e_report_params.csv)
@@ -158,6 +162,56 @@
 #### [tests](hourlize/tests) <a name='hourlize/tests'></a>
 
 ##### [data](hourlize/tests/data) <a name='hourlize/tests/data'></a>
+
+###### [r2r_expanded](hourlize/tests/data/r2r_expanded) <a name='hourlize/tests/data/r2r_expanded'></a>
+
+####### [expected_results](hourlize/tests/data/r2r_expanded/expected_results) <a name='hourlize/tests/data/r2r_expanded/expected_results'></a>
+  - [df_sc_out_wind-ons_reduced.csv](/hourlize/tests/data/r2r_expanded/expected_results/df_sc_out_wind-ons_reduced.csv)
+---
+
+
+####### [reeds](hourlize/tests/data/r2r_expanded/reeds) <a name='hourlize/tests/data/r2r_expanded/reeds'></a>
+
+######## [inputs_case](hourlize/tests/data/r2r_expanded/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/reeds/inputs_case'></a>
+  - [maxage.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/maxage.csv)
+---
+
+  - [site_bin_map.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/site_bin_map.csv)
+---
+
+  - [switches.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/switches.csv)
+---
+
+
+######### [supplycurve_metadata](hourlize/tests/data/r2r_expanded/reeds/inputs_case/supplycurve_metadata) <a name='hourlize/tests/data/r2r_expanded/reeds/inputs_case/supplycurve_metadata'></a>
+  - [rev_paths.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/supplycurve_metadata/rev_paths.csv)
+---
+
+  - [rev_supply_curves.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/supplycurve_metadata/rev_supply_curves.csv)
+---
+
+
+######## [outputs](hourlize/tests/data/r2r_expanded/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/reeds/outputs'></a>
+  - [cap.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/cap.csv)
+---
+
+  - [cap_exog.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/cap_exog.csv)
+---
+
+  - [cap_new_bin_out.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/cap_new_bin_out.csv)
+---
+
+  - [cap_new_ivrt_refurb.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/cap_new_ivrt_refurb.csv)
+---
+
+  - [systemcost.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/systemcost.csv)
+---
+
+
+####### [supply_curves](hourlize/tests/data/r2r_expanded/supply_curves) <a name='hourlize/tests/data/r2r_expanded/supply_curves'></a>
+  - [wind-ons_supply_curve_raw.csv](/hourlize/tests/data/r2r_expanded/supply_curves/wind-ons_supply_curve_raw.csv)
+---
+
 
 ###### [r2r_from_config](hourlize/tests/data/r2r_from_config) <a name='hourlize/tests/data/r2r_from_config'></a>
 
@@ -243,13 +297,13 @@
   - [cap.csv](/hourlize/tests/data/r2r_integration/reeds/outputs/cap.csv)
 ---
 
+  - [cap_exog.csv](/hourlize/tests/data/r2r_integration/reeds/outputs/cap_exog.csv)
+---
+
   - [cap_new_bin_out.csv](/hourlize/tests/data/r2r_integration/reeds/outputs/cap_new_bin_out.csv)
 ---
 
   - [cap_new_ivrt_refurb.csv](/hourlize/tests/data/r2r_integration/reeds/outputs/cap_new_ivrt_refurb.csv)
----
-
-  - [m_capacity_exog.csv](/hourlize/tests/data/r2r_integration/reeds/outputs/m_capacity_exog.csv)
 ---
 
   - [systemcost.csv](/hourlize/tests/data/r2r_integration/reeds/outputs/systemcost.csv)
@@ -261,10 +315,10 @@
 ---
 
 
-######## [upv_1_moderate_reference](hourlize/tests/data/r2r_integration/supply_curves/upv_1_moderate_reference) <a name='hourlize/tests/data/r2r_integration/supply_curves/upv_1_moderate_reference'></a>
+######## [upv_reference](hourlize/tests/data/r2r_integration/supply_curves/upv_reference) <a name='hourlize/tests/data/r2r_integration/supply_curves/upv_reference'></a>
 
-######### [results](hourlize/tests/data/r2r_integration/supply_curves/upv_1_moderate_reference/results) <a name='hourlize/tests/data/r2r_integration/supply_curves/upv_1_moderate_reference/results'></a>
-  - [upv_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration/supply_curves/upv_1_moderate_reference/results/upv_supply_curve_raw.csv)
+######### [results](hourlize/tests/data/r2r_integration/supply_curves/upv_reference/results) <a name='hourlize/tests/data/r2r_integration/supply_curves/upv_reference/results'></a>
+  - [upv_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration/supply_curves/upv_reference/results/upv_supply_curve_raw.csv)
 ---
 
 
@@ -275,10 +329,10 @@
 ---
 
 
-######## [wind-ons_01_reference_moderate](hourlize/tests/data/r2r_integration/supply_curves/wind-ons_01_reference_moderate) <a name='hourlize/tests/data/r2r_integration/supply_curves/wind-ons_01_reference_moderate'></a>
+######## [wind-ons_reference](hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference) <a name='hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference'></a>
 
-######### [results](hourlize/tests/data/r2r_integration/supply_curves/wind-ons_01_reference_moderate/results) <a name='hourlize/tests/data/r2r_integration/supply_curves/wind-ons_01_reference_moderate/results'></a>
-  - [wind-ons_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration/supply_curves/wind-ons_01_reference_moderate/results/wind-ons_supply_curve_raw.csv)
+######### [results](hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference/results) <a name='hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference/results'></a>
+  - [wind-ons_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference/results/wind-ons_supply_curve_raw.csv)
 ---
 
 
@@ -287,13 +341,10 @@
 ---
 
   - [deflator.csv](/inputs/deflator.csv)
-    - **Description:** Annual price deflator
+    - **Description:** Dollar year deflator to convert values to 2004$
 ---
 
   - [hierarchy.csv](/inputs/hierarchy.csv)
----
-
-  - [hierarchy_agg0.csv](/inputs/hierarchy_agg0.csv)
 ---
 
   - [hierarchy_agg2.csv](/inputs/hierarchy_agg2.csv)
@@ -351,6 +402,12 @@
 ---
 
   - [demonstration_plants.csv](/inputs/capacitydata/demonstration_plants.csv)
+    - **File Type:** Prescribed capacity
+    - **Description:** Nuclear-smr demonstration plants; active when GSw_NuclearDemo=1
+    - **Indices:** t,r,i,coolingwatertech,ctt,wst,value
+
+    - **Citation:** [(See 'notes' column in the file)]
+
 ---
 
   - [firstyear.csv](/inputs/capacitydata/firstyear.csv)
@@ -387,46 +444,116 @@
   - [upgrade_costs_ccs_gas.csv](/inputs/capacitydata/upgrade_costs_ccs_gas.csv)
 ---
 
-  - [upv_exog_cap_limited.csv](/inputs/capacitydata/upv_exog_cap_limited.csv)
+  - [upv_exog_cap_limited_ba.csv](/inputs/capacitydata/upv_exog_cap_limited_ba.csv)
+    - **Description:** Exogenous (pre-2010) UPV capacity with limited siting assumptions at BA resolution
 ---
 
-  - [upv_exog_cap_open.csv](/inputs/capacitydata/upv_exog_cap_open.csv)
+  - [upv_exog_cap_limited_county.csv](/inputs/capacitydata/upv_exog_cap_limited_county.csv)
+    - **Description:** Exogenous (pre-2010) UPV capacity with limited siting assumptions at county resolution
 ---
 
-  - [upv_exog_cap_reference.csv](/inputs/capacitydata/upv_exog_cap_reference.csv)
+  - [upv_exog_cap_open_ba.csv](/inputs/capacitydata/upv_exog_cap_open_ba.csv)
+    - **Description:** Exogenous (pre-2010) UPV capacity with open siting assumptions at BA resolution
 ---
 
-  - [upv_prescribed_builds_limited.csv](/inputs/capacitydata/upv_prescribed_builds_limited.csv)
+  - [upv_exog_cap_open_county.csv](/inputs/capacitydata/upv_exog_cap_open_county.csv)
+    - **Description:** Exogenous (pre-2010) UPV capacity with open siting assumptions at county resolution
 ---
 
-  - [upv_prescribed_builds_open.csv](/inputs/capacitydata/upv_prescribed_builds_open.csv)
+  - [upv_exog_cap_reference_ba.csv](/inputs/capacitydata/upv_exog_cap_reference_ba.csv)
+    - **Description:** Exogenous (pre-2010) UPV capacity with reference siting assumptions at BA resolution
 ---
 
-  - [upv_prescribed_builds_reference.csv](/inputs/capacitydata/upv_prescribed_builds_reference.csv)
+  - [upv_exog_cap_reference_county.csv](/inputs/capacitydata/upv_exog_cap_reference_county.csv)
+    - **Description:** Exogenous (pre-2010) UPV capacity with reference siting assumptions at county resolution
 ---
 
-  - [wind-ofs_prescribed_builds_limited.csv](/inputs/capacitydata/wind-ofs_prescribed_builds_limited.csv)
+  - [upv_prescribed_builds_limited_ba.csv](/inputs/capacitydata/upv_prescribed_builds_limited_ba.csv)
+    - **Description:** UPV prescribed builds with limited siting assumptions at BA resolution
 ---
 
-  - [wind-ofs_prescribed_builds_open.csv](/inputs/capacitydata/wind-ofs_prescribed_builds_open.csv)
+  - [upv_prescribed_builds_limited_county.csv](/inputs/capacitydata/upv_prescribed_builds_limited_county.csv)
+    - **Description:** UPV prescribed builds with limited siting assumptions at county resolution
 ---
 
-  - [wind-ons_exog_cap_limited.csv](/inputs/capacitydata/wind-ons_exog_cap_limited.csv)
+  - [upv_prescribed_builds_open_ba.csv](/inputs/capacitydata/upv_prescribed_builds_open_ba.csv)
+    - **Description:** UPV prescribed builds with open siting assumptions at BA resolution
 ---
 
-  - [wind-ons_exog_cap_open.csv](/inputs/capacitydata/wind-ons_exog_cap_open.csv)
+  - [upv_prescribed_builds_open_county.csv](/inputs/capacitydata/upv_prescribed_builds_open_county.csv)
+    - **Description:** UPV prescribed builds with open siting assumptions at county resolution
 ---
 
-  - [wind-ons_exog_cap_reference.csv](/inputs/capacitydata/wind-ons_exog_cap_reference.csv)
+  - [upv_prescribed_builds_reference_ba.csv](/inputs/capacitydata/upv_prescribed_builds_reference_ba.csv)
+    - **Description:** UPV prescribed builds with reference siting assumptions at BA resolution
 ---
 
-  - [wind-ons_prescribed_builds_limited.csv](/inputs/capacitydata/wind-ons_prescribed_builds_limited.csv)
+  - [upv_prescribed_builds_reference_county.csv](/inputs/capacitydata/upv_prescribed_builds_reference_county.csv)
+    - **Description:** UPV prescribed builds with reference siting assumptions at county resolution
 ---
 
-  - [wind-ons_prescribed_builds_open.csv](/inputs/capacitydata/wind-ons_prescribed_builds_open.csv)
+  - [wind-ofs_prescribed_builds_limited_ba.csv](/inputs/capacitydata/wind-ofs_prescribed_builds_limited_ba.csv)
+    - **Description:** wind-ofs prescribed builds with limited siting assumptions at BA resolution
 ---
 
-  - [wind-ons_prescribed_builds_reference.csv](/inputs/capacitydata/wind-ons_prescribed_builds_reference.csv)
+  - [wind-ofs_prescribed_builds_limited_county.csv](/inputs/capacitydata/wind-ofs_prescribed_builds_limited_county.csv)
+    - **Description:** wind-ofs prescribed builds with limited siting assumptions at county resolution
+---
+
+  - [wind-ofs_prescribed_builds_open_ba.csv](/inputs/capacitydata/wind-ofs_prescribed_builds_open_ba.csv)
+    - **Description:** wind-ofs prescribed builds with open siting assumptions at BA resolution
+---
+
+  - [wind-ofs_prescribed_builds_open_county.csv](/inputs/capacitydata/wind-ofs_prescribed_builds_open_county.csv)
+    - **Description:** wind-ofs prescribed builds with open siting assumptions at county resolution
+---
+
+  - [wind-ons_exog_cap_limited_ba.csv](/inputs/capacitydata/wind-ons_exog_cap_limited_ba.csv)
+    - **Description:** Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at BA resolution
+---
+
+  - [wind-ons_exog_cap_limited_county.csv](/inputs/capacitydata/wind-ons_exog_cap_limited_county.csv)
+    - **Description:** Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at county resolution
+---
+
+  - [wind-ons_exog_cap_open_ba.csv](/inputs/capacitydata/wind-ons_exog_cap_open_ba.csv)
+    - **Description:** Exogenous (pre-2010) wind-ons capacity with open siting assumptions at BA resolution
+---
+
+  - [wind-ons_exog_cap_open_county.csv](/inputs/capacitydata/wind-ons_exog_cap_open_county.csv)
+    - **Description:** Exogenous (pre-2010) wind-ons capacity with open siting assumptions at county resolution
+---
+
+  - [wind-ons_exog_cap_reference_ba.csv](/inputs/capacitydata/wind-ons_exog_cap_reference_ba.csv)
+    - **Description:** Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at BA resolution
+---
+
+  - [wind-ons_exog_cap_reference_county.csv](/inputs/capacitydata/wind-ons_exog_cap_reference_county.csv)
+    - **Description:** Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at county resolution
+---
+
+  - [wind-ons_prescribed_builds_limited_ba.csv](/inputs/capacitydata/wind-ons_prescribed_builds_limited_ba.csv)
+    - **Description:** wind-ons prescribed builds with limited siting assumptions at BA resolution
+---
+
+  - [wind-ons_prescribed_builds_limited_county.csv](/inputs/capacitydata/wind-ons_prescribed_builds_limited_county.csv)
+    - **Description:** wind-ons prescribed builds with limited siting assumptions at county resolution
+---
+
+  - [wind-ons_prescribed_builds_open_ba.csv](/inputs/capacitydata/wind-ons_prescribed_builds_open_ba.csv)
+    - **Description:** wind-ons prescribed builds with open siting assumptions at BA resolution
+---
+
+  - [wind-ons_prescribed_builds_open_county.csv](/inputs/capacitydata/wind-ons_prescribed_builds_open_county.csv)
+    - **Description:** wind-ons prescribed builds with open siting assumptions at county resolution
+---
+
+  - [wind-ons_prescribed_builds_reference_ba.csv](/inputs/capacitydata/wind-ons_prescribed_builds_reference_ba.csv)
+    - **Description:** wind-ons prescribed builds with reference siting assumptions at BA resolution
+---
+
+  - [wind-ons_prescribed_builds_reference_county.csv](/inputs/capacitydata/wind-ons_prescribed_builds_reference_county.csv)
+    - **Description:** wind-ons prescribed builds with reference siting assumptions at county resolution
 ---
 
 
@@ -1308,6 +1435,20 @@
 ---
 
 
+#### [disaggregation](inputs/disaggregation) <a name='inputs/disaggregation'></a>
+  - [disagg_geosize.csv](/inputs/disaggregation/disagg_geosize.csv)
+---
+
+  - [disagg_hydroexist.csv](/inputs/disaggregation/disagg_hydroexist.csv)
+---
+
+  - [disagg_population.csv](/inputs/disaggregation/disagg_population.csv)
+---
+
+  - [disagg_translinesize.csv](/inputs/disaggregation/disagg_translinesize.csv)
+---
+
+
 #### [financials](inputs/financials) <a name='inputs/financials'></a>
   - [construction_schedules_default.csv](/inputs/financials/construction_schedules_default.csv)
 ---
@@ -1548,6 +1689,15 @@
 
 
 #### [geothermal](inputs/geothermal) <a name='inputs/geothermal'></a>
+  - [geo_discovery_BAU.csv](/inputs/geothermal/geo_discovery_BAU.csv)
+---
+
+  - [geo_discovery_factor.csv](/inputs/geothermal/geo_discovery_factor.csv)
+---
+
+  - [geo_discovery_TI.csv](/inputs/geothermal/geo_discovery_TI.csv)
+---
+
   - [geo_rsc_ATB_2023.csv](/inputs/geothermal/geo_rsc_ATB_2023.csv)
 ---
 
@@ -1768,6 +1918,9 @@
 ---
 
   - [conv_ATB_2023.csv](/inputs/plant_characteristics/conv_ATB_2023.csv)
+---
+
+  - [conv_ATB_2023_conservative.csv](/inputs/plant_characteristics/conv_ATB_2023_conservative.csv)
 ---
 
   - [cost_opres_default.csv](/inputs/plant_characteristics/cost_opres_default.csv)
@@ -2079,6 +2232,53 @@
 ---
 
 
+#### [sets](inputs/sets) <a name='inputs/sets'></a>
+  - [ctt.csv](/inputs/sets/ctt.csv)
+    - **File Type:** GAMS set
+    - **Description:** set of cooling technology types
+---
+
+  - [geotech.csv](/inputs/sets/geotech.csv)
+    - **File Type:** GAMS set
+    - **Description:** set of geothermal technology categories
+---
+
+  - [i.csv](/inputs/sets/i.csv)
+    - **File Type:** GAMS set
+    - **Description:** set of technologies
+---
+
+  - [i_subtech.csv](/inputs/sets/i_subtech.csv)
+    - **File Type:** GAMS set
+    - **Description:** set of categories for subtechs
+---
+
+  - [pcat.csv](/inputs/sets/pcat.csv)
+    - **File Type:** GAMS set
+    - **Description:** set of prescribed technology categories
+---
+
+  - [sdbin.csv](/inputs/sets/sdbin.csv)
+    - **File Type:** GAMS set
+    - **Description:** set of storage durage bins
+---
+
+  - [tg.csv](/inputs/sets/tg.csv)
+    - **File Type:** GAMS set
+    - **Description:** set of technology groups
+---
+
+  - [w.csv](/inputs/sets/w.csv)
+    - **File Type:** GAMS set
+    - **Description:** set of water withdrawal or consumption options for water techs
+---
+
+  - [wst.csv](/inputs/sets/wst.csv)
+    - **File Type:** GAMS set
+    - **Description:** set of water source types
+---
+
+
 #### [shapefiles](inputs/shapefiles) <a name='inputs/shapefiles'></a>
   - [ctus_cs_polygons_BVRE.csv](/inputs/shapefiles/ctus_cs_polygons_BVRE.csv)
 ---
@@ -2087,6 +2287,10 @@
 ---
 
   - [r_rr_lines_to_25_nearest_neighbors.csv](/inputs/shapefiles/r_rr_lines_to_25_nearest_neighbors.csv)
+---
+
+  - [state_fips_codes.csv](/inputs/shapefiles/state_fips_codes.csv)
+    - **Description:** Mapping of states to FIPS codes and postcal code abbreviations
 ---
 
   - [US_CAN_MEX_PCA_polygons.csv](/inputs/shapefiles/US_CAN_MEX_PCA_polygons.csv)
@@ -2217,7 +2421,12 @@
     - **Description:** Regional biomass supply and costs by resource class
 ---
 
-  - [csp_supply_curve-reference.csv](/inputs/supplycurvedata/csp_supply_curve-reference.csv)
+  - [csp_supply_curve-reference_ba.csv](/inputs/supplycurvedata/csp_supply_curve-reference_ba.csv)
+    - **Description:** CSP supply curve using reference siting assumptions at the BA resolution
+---
+
+  - [csp_supply_curve-reference_county.csv](/inputs/supplycurvedata/csp_supply_curve-reference_county.csv)
+    - **Description:** CSP supply curve using reference siting assumptions at the county resolution
 ---
 
   - [dollaryear.csv](/inputs/supplycurvedata/dollaryear.csv)
@@ -2337,28 +2546,68 @@
   - [trans_intra_cost_adder.csv](/inputs/supplycurvedata/trans_intra_cost_adder.csv)
 ---
 
-  - [upv_supply_curve-limited.csv](/inputs/supplycurvedata/upv_supply_curve-limited.csv)
+  - [upv_supply_curve-limited_ba.csv](/inputs/supplycurvedata/upv_supply_curve-limited_ba.csv)
+    - **Description:** UPV supply curve using limited siting assumptions at the BA resolution
 ---
 
-  - [upv_supply_curve-open.csv](/inputs/supplycurvedata/upv_supply_curve-open.csv)
+  - [upv_supply_curve-limited_county.csv](/inputs/supplycurvedata/upv_supply_curve-limited_county.csv)
+    - **Description:** UPV supply curve using limited siting assumptions at the county resolution
 ---
 
-  - [upv_supply_curve-reference.csv](/inputs/supplycurvedata/upv_supply_curve-reference.csv)
+  - [upv_supply_curve-open_ba.csv](/inputs/supplycurvedata/upv_supply_curve-open_ba.csv)
+    - **Description:** UPV supply curve using open siting assumptions at the BA resolution
 ---
 
-  - [wind-ofs_supply_curve-limited.csv](/inputs/supplycurvedata/wind-ofs_supply_curve-limited.csv)
+  - [upv_supply_curve-open_county.csv](/inputs/supplycurvedata/upv_supply_curve-open_county.csv)
+    - **Description:** UPV supply curve using open siting assumptions at the county resolution
 ---
 
-  - [wind-ofs_supply_curve-open.csv](/inputs/supplycurvedata/wind-ofs_supply_curve-open.csv)
+  - [upv_supply_curve-reference_ba.csv](/inputs/supplycurvedata/upv_supply_curve-reference_ba.csv)
+    - **Description:** UPV supply curve using reference siting assumptions at the BA resolution
 ---
 
-  - [wind-ons_supply_curve-limited.csv](/inputs/supplycurvedata/wind-ons_supply_curve-limited.csv)
+  - [upv_supply_curve-reference_county.csv](/inputs/supplycurvedata/upv_supply_curve-reference_county.csv)
+    - **Description:** UPV supply curve using reference siting assumptions at the county resolution
 ---
 
-  - [wind-ons_supply_curve-open.csv](/inputs/supplycurvedata/wind-ons_supply_curve-open.csv)
+  - [wind-ofs_supply_curve-limited_ba.csv](/inputs/supplycurvedata/wind-ofs_supply_curve-limited_ba.csv)
+    - **Description:** wind-ofs supply curve using limited siting assumptions at the BA resolution
 ---
 
-  - [wind-ons_supply_curve-reference.csv](/inputs/supplycurvedata/wind-ons_supply_curve-reference.csv)
+  - [wind-ofs_supply_curve-limited_county.csv](/inputs/supplycurvedata/wind-ofs_supply_curve-limited_county.csv)
+    - **Description:** wind-ofs supply curve using limited siting assumptions at the county resolution
+---
+
+  - [wind-ofs_supply_curve-open_ba.csv](/inputs/supplycurvedata/wind-ofs_supply_curve-open_ba.csv)
+    - **Description:** wind-ofs supply curve using open siting assumptions at the BA resolution
+---
+
+  - [wind-ofs_supply_curve-open_county.csv](/inputs/supplycurvedata/wind-ofs_supply_curve-open_county.csv)
+    - **Description:** wind-ofs supply curve using open siting assumptions at the county resolution
+---
+
+  - [wind-ons_supply_curve-limited_ba.csv](/inputs/supplycurvedata/wind-ons_supply_curve-limited_ba.csv)
+    - **Description:** wind-ons supply curve using limited siting assumptions at the BA resolution
+---
+
+  - [wind-ons_supply_curve-limited_county.csv](/inputs/supplycurvedata/wind-ons_supply_curve-limited_county.csv)
+    - **Description:** wind-ons supply curve using limited siting assumptions at the county resolution
+---
+
+  - [wind-ons_supply_curve-open_ba.csv](/inputs/supplycurvedata/wind-ons_supply_curve-open_ba.csv)
+    - **Description:** wind-ons supply curve using open siting assumptions at the BA resolution
+---
+
+  - [wind-ons_supply_curve-open_county.csv](/inputs/supplycurvedata/wind-ons_supply_curve-open_county.csv)
+    - **Description:** wind-ons supply curve using open siting assumptions at the county resolution
+---
+
+  - [wind-ons_supply_curve-reference_ba.csv](/inputs/supplycurvedata/wind-ons_supply_curve-reference_ba.csv)
+    - **Description:** wind-ons supply curve using reference siting assumptions at the BA resolution
+---
+
+  - [wind-ons_supply_curve-reference_county.csv](/inputs/supplycurvedata/wind-ons_supply_curve-reference_county.csv)
+    - **Description:** wind-ons supply curve using reference siting assumptions at the county resolution
 ---
 
 
@@ -2384,61 +2633,91 @@
   - [cost_hurdle_country.csv](/inputs/transmission/cost_hurdle_country.csv)
 ---
 
-  - [r_rr_adj.csv](/inputs/transmission/r_rr_adj.csv)
+  - [r_rr_adj_ba.csv](/inputs/transmission/r_rr_adj_ba.csv)
+    - **Description:** Set of adjacent regions at BA resolution
+---
+
+  - [r_rr_adj_county.csv](/inputs/transmission/r_rr_adj_county.csv)
+    - **Description:** Set of adjacent regions at county resolution
 ---
 
   - [rev_transmission_basecost.csv](/inputs/transmission/rev_transmission_basecost.csv)
 ---
 
-  - [routes_adjacent.csv](/inputs/transmission/routes_adjacent.csv)
+  - [transmission_capacity_future_ba_baseline.csv](/inputs/transmission/transmission_capacity_future_ba_baseline.csv)
+    - **Description:** Future transmission capacity additions for the baseline case at BA resolution
 ---
 
-  - [transmission_capacity_future_baseline.csv](/inputs/transmission/transmission_capacity_future_baseline.csv)
+  - [transmission_capacity_future_ba_default.csv](/inputs/transmission/transmission_capacity_future_ba_default.csv)
+    - **Description:** Future transmission capacity additions for the default case at BA resolution
 ---
 
-  - [transmission_capacity_future_default.csv](/inputs/transmission/transmission_capacity_future_default.csv)
+  - [transmission_capacity_future_ba_LCC_all.csv](/inputs/transmission/transmission_capacity_future_ba_LCC_all.csv)
 ---
 
-  - [transmission_capacity_future_LCC_1500miles.csv](/inputs/transmission/transmission_capacity_future_LCC_1500miles.csv)
+  - [transmission_capacity_future_ba_LCC_SeamsD2b.csv](/inputs/transmission/transmission_capacity_future_ba_LCC_SeamsD2b.csv)
 ---
 
-  - [transmission_capacity_future_LCC_20220808.csv](/inputs/transmission/transmission_capacity_future_LCC_20220808.csv)
+  - [transmission_capacity_future_ba_LCC_SeamsD3_certain.csv](/inputs/transmission/transmission_capacity_future_ba_LCC_SeamsD3_certain.csv)
 ---
 
-  - [transmission_capacity_future_LCC_all.csv](/inputs/transmission/transmission_capacity_future_LCC_all.csv)
+  - [transmission_capacity_future_ba_LCC_SeamsD3_possible.csv](/inputs/transmission/transmission_capacity_future_ba_LCC_SeamsD3_possible.csv)
 ---
 
-  - [transmission_capacity_future_LCC_SeamsD2b.csv](/inputs/transmission/transmission_capacity_future_LCC_SeamsD2b.csv)
+  - [transmission_capacity_future_ba_LCC_SeamsD3_possible_unconstrained.csv](/inputs/transmission/transmission_capacity_future_ba_LCC_SeamsD3_possible_unconstrained.csv)
 ---
 
-  - [transmission_capacity_future_LCC_SeamsD3_certain.csv](/inputs/transmission/transmission_capacity_future_LCC_SeamsD3_certain.csv)
+  - [transmission_capacity_future_ba_VSC_all.csv](/inputs/transmission/transmission_capacity_future_ba_VSC_all.csv)
 ---
 
-  - [transmission_capacity_future_LCC_SeamsD3_possible.csv](/inputs/transmission/transmission_capacity_future_LCC_SeamsD3_possible.csv)
+  - [transmission_capacity_future_county_baseline.csv](/inputs/transmission/transmission_capacity_future_county_baseline.csv)
+    - **Description:** Future transmission capacity additions for the baseline case at county resolution
 ---
 
-  - [transmission_capacity_future_LCC_SeamsD3_possible_unconstrained.csv](/inputs/transmission/transmission_capacity_future_LCC_SeamsD3_possible_unconstrained.csv)
+  - [transmission_capacity_future_county_default.csv](/inputs/transmission/transmission_capacity_future_county_default.csv)
+    - **Description:** Future transmission capacity additions for the default case at county resolution
 ---
 
-  - [transmission_capacity_future_VSC_all.csv](/inputs/transmission/transmission_capacity_future_VSC_all.csv)
+  - [transmission_capacity_future_LCC_1000miles_demand1_wind1_subferc_20230629.csv](/inputs/transmission/transmission_capacity_future_LCC_1000miles_demand1_wind1_subferc_20230629.csv)
 ---
 
-  - [transmission_capacity_init_AC_NARIS2024-r.csv](/inputs/transmission/transmission_capacity_init_AC_NARIS2024-r.csv)
+  - [transmission_capacity_init_AC_ba_NARIS2024.csv](/inputs/transmission/transmission_capacity_init_AC_ba_NARIS2024.csv)
+    - **Description:** Initial AC transmission capacity from the NARIS 2024 system at the BA resolution
 ---
 
-  - [transmission_capacity_init_AC_NARIS2024-transgrp.csv](/inputs/transmission/transmission_capacity_init_AC_NARIS2024-transgrp.csv)
+  - [transmission_capacity_init_AC_ba_REFS2009.csv](/inputs/transmission/transmission_capacity_init_AC_ba_REFS2009.csv)
 ---
 
-  - [transmission_capacity_init_AC_REFS2009-r.csv](/inputs/transmission/transmission_capacity_init_AC_REFS2009-r.csv)
+  - [transmission_capacity_init_AC_county_NARIS2024.csv](/inputs/transmission/transmission_capacity_init_AC_county_NARIS2024.csv)
+    - **Description:** Initial AC transmission capacity from the NARIS 2024 system at the county resolution
 ---
 
-  - [transmission_capacity_init_nonAC.csv](/inputs/transmission/transmission_capacity_init_nonAC.csv)
+  - [transmission_capacity_init_AC_transgrp_NARIS2024.csv](/inputs/transmission/transmission_capacity_init_AC_transgrp_NARIS2024.csv)
+    - **Description:** Initial AC transmission capacity from the NARIS 2024 system at the transgrp resolution
 ---
 
-  - [transmission_distance_cost_500kVac.csv](/inputs/transmission/transmission_distance_cost_500kVac.csv)
+  - [transmission_capacity_init_nonAC_ba.csv](/inputs/transmission/transmission_capacity_init_nonAC_ba.csv)
+    - **Description:** Initial non-AC transmission capacity at the BA resolution
 ---
 
-  - [transmission_distance_cost_500kVdc.csv](/inputs/transmission/transmission_distance_cost_500kVdc.csv)
+  - [transmission_capacity_init_nonAC_county.csv](/inputs/transmission/transmission_capacity_init_nonAC_county.csv)
+    - **Description:** Initial non-AC transmission capacity at the county resolution
+---
+
+  - [transmission_distance_cost_500kVac_ba.csv](/inputs/transmission/transmission_distance_cost_500kVac_ba.csv)
+    - **Description:** Transmission distance and costs for 500 kV AC at BA resolution
+---
+
+  - [transmission_distance_cost_500kVac_county.csv](/inputs/transmission/transmission_distance_cost_500kVac_county.csv)
+    - **Description:** Transmission distance and costs for 500 kV AC at county resolution
+---
+
+  - [transmission_distance_cost_500kVdc_ba.csv](/inputs/transmission/transmission_distance_cost_500kVdc_ba.csv)
+    - **Description:** Transmission distance and costs for 500 kV DC at BA resolution
+---
+
+  - [transmission_distance_cost_500kVdc_county.csv](/inputs/transmission/transmission_distance_cost_500kVdc_county.csv)
+    - **Description:** Transmission distance and costs for 500 kV DC at county resolution
 ---
 
 
@@ -2477,6 +2756,7 @@
 ---
 
   - [modeled_regions.csv](/inputs/userinput/modeled_regions.csv)
+    - **Description:** Sets of BA regions that a user can model in a run. Each column is a different region option and can be specified in cases using GSw_Region.
 ---
 
   - [windows_2100.csv](/inputs/userinput/windows_2100.csv)
@@ -2523,7 +2803,7 @@
   - [period_szn_user.csv](/inputs/variability/period_szn_user.csv)
 ---
 
-  - [reeds_ba_tz_map.csv](/inputs/variability/reeds_ba_tz_map.csv)
+  - [reeds_region_tz_map.csv](/inputs/variability/reeds_region_tz_map.csv)
 ---
 
   - [set_allszn.csv](/inputs/variability/set_allszn.csv)
@@ -2534,40 +2814,40 @@
 
 
 ##### [multi_year](inputs/variability/multi_year) <a name='inputs/variability/multi_year'></a>
-  - [csp-reference.h5](/inputs/variability/multi_year/csp-reference.h5)
+  - [csp-reference_ba.h5](/inputs/variability/multi_year/csp-reference_ba.h5)
 ---
 
-  - [dupv.h5](/inputs/variability/multi_year/dupv.h5)
+  - [dupv_ba.h5](/inputs/variability/multi_year/dupv_ba.h5)
 ---
 
-  - [upv-limited.h5](/inputs/variability/multi_year/upv-limited.h5)
+  - [upv-limited_ba.h5](/inputs/variability/multi_year/upv-limited_ba.h5)
 ---
 
-  - [upv-open.h5](/inputs/variability/multi_year/upv-open.h5)
+  - [upv-open_ba.h5](/inputs/variability/multi_year/upv-open_ba.h5)
 ---
 
-  - [upv-reference.h5](/inputs/variability/multi_year/upv-reference.h5)
+  - [upv-reference_ba.h5](/inputs/variability/multi_year/upv-reference_ba.h5)
 ---
 
-  - [upv_140AC-reference.h5](/inputs/variability/multi_year/upv_140AC-reference.h5)
+  - [upv_140AC_ba-reference.h5](/inputs/variability/multi_year/upv_140AC_ba-reference.h5)
 ---
 
-  - [upv_220AC-reference.h5](/inputs/variability/multi_year/upv_220AC-reference.h5)
+  - [upv_220AC_ba-reference.h5](/inputs/variability/multi_year/upv_220AC_ba-reference.h5)
 ---
 
-  - [wind-ofs-limited.h5](/inputs/variability/multi_year/wind-ofs-limited.h5)
+  - [wind-ofs-limited_ba.h5](/inputs/variability/multi_year/wind-ofs-limited_ba.h5)
 ---
 
-  - [wind-ofs-open.h5](/inputs/variability/multi_year/wind-ofs-open.h5)
+  - [wind-ofs-open_ba.h5](/inputs/variability/multi_year/wind-ofs-open_ba.h5)
 ---
 
-  - [wind-ons-limited.h5](/inputs/variability/multi_year/wind-ons-limited.h5)
+  - [wind-ons-limited_ba.h5](/inputs/variability/multi_year/wind-ons-limited_ba.h5)
 ---
 
-  - [wind-ons-open.h5](/inputs/variability/multi_year/wind-ons-open.h5)
+  - [wind-ons-open_ba.h5](/inputs/variability/multi_year/wind-ons-open_ba.h5)
 ---
 
-  - [wind-ons-reference.h5](/inputs/variability/multi_year/wind-ons-reference.h5)
+  - [wind-ons-reference_ba.h5](/inputs/variability/multi_year/wind-ons-reference_ba.h5)
 ---
 
 
@@ -2683,9 +2963,6 @@
   - [cost_cat_style.csv](/postprocessing/bokehpivot/in/reeds2/cost_cat_style.csv)
 ---
 
-  - [cost_cat_type.csv](/postprocessing/bokehpivot/in/reeds2/cost_cat_type.csv)
----
-
   - [ctt_map.csv](/postprocessing/bokehpivot/in/reeds2/ctt_map.csv)
 ---
 
@@ -2726,20 +3003,6 @@
 ---
 
   - [wst_style.csv](/postprocessing/bokehpivot/in/reeds2/wst_style.csv)
----
-
-
-#### [documentation_tools](postprocessing/documentation_tools) <a name='postprocessing/documentation_tools'></a>
-  - [local_sources_files_added.csv](/postprocessing/documentation_tools/local_sources_files_added.csv)
----
-
-  - [sources_files_added.csv](/postprocessing/documentation_tools/sources_files_added.csv)
----
-
-  - [sources_files_deleted.csv](/postprocessing/documentation_tools/sources_files_deleted.csv)
----
-
-  - [sources_untracked_files.csv](/postprocessing/documentation_tools/sources_untracked_files.csv)
 ---
 
 

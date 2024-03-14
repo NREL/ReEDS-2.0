@@ -86,140 +86,10 @@ $include inputs_case%ds%scalars.txt
 * --- Set Declarations ---
 *==========================
 
-set i "generation technologies"
-   /
-      ice
-      battery_2
-      battery_4
-      battery_6
-      battery_8
-      battery_10
-      biopower
-      beccs_mod
-      beccs_max
-      caes
-      can-imports
-      coal-CCS_mod
-      coal-CCS_max
-*flexible CCS technology options that use coal as fuel
-      coal-CCS-F1*coal-CCS-F3
-      Coal-IGCC
-      coal-new
-      CoalOldScr
-      CoalOldUns
-      CofireNew
-      CofireOld
-      csp-ns
-      distpv
-      Gas-CC
-      Gas-CC-CCS_mod
-      Gas-CC-CCS_max
-*flexible CCS technology options that use natural gas as fuel
-      Gas-CC-CCS-F1*Gas-CC-CCS-F3
-      Gas-CT
-      H2-CT
-      H2-CC
-      geothermal
-      Hydro
-      lfill-gas
-      MHKwave
-      Nuclear
-      Nuclear-SMR
-      Ocean
-      o-g-s
-      other
-      pumped-hydro
-      pumped-hydro-flex
-      unknown
-      upv_1*upv_10,
-      dupv_1*dupv_10,
-      pvb1_1 * pvb1_10  "hybrid pv+battery config 1"
-      pvb2_1 * pvb2_10  "hybrid pv+battery config 2"
-      pvb3_1 * pvb3_10  "hybrid pv+battery config 3"
-      wind-ofs_1*wind-ofs_15,
-      wind-ons_1*wind-ons_10,
-      csp1_1*csp1_12,
-      csp2_1*csp2_12,
-      csp3_1*csp3_12,
-      csp4_1*csp4_12,
-      dr1_1*dr1_20,
-      dr2_1*dr2_20,
-      hydD
-      hydND
-      hydSD
-      hydSND
-      hydUD
-      hydUND
-      hydNPD
-      hydNPND
-      hydED
-      hydEND
-      egs_allkm_1*egs_allkm_10
-      geohydro_allkm_1*geohydro_allkm_10
-      egs_nearfield_1*egs_nearfield_10
-*consuming technologies
-* electrolyzer == h2 production from electricity
-      electrolyzer
-* smr = steam methane reforming
-      smr
-      smr_ccs
-* dac == direct air capture
-      dac
-* dac_gas == direct air capture fueled by natural gas
-      dac_gas
-*upgrade technologies
-      Gas-CT_H2-CT
-      Gas-CC_H2-CT
-      CoalOldUns_CoalOldScr
-      CoalOldUns_CofireOld
-      CoalOldScr_CofireOld
-      coal-new_CofireNew
-      Gas-CC_Gas-CC-CCS_mod
-      Coal-IGCC_coal-CCS_mod
-      coal-new_coal-CCS_mod
-      CoalOldScr_coal-CCS_mod
-      CoalOldUns_coal-CCS_mod
-      CofireNew_coal-CCS_mod
-      CofireOld_coal-CCS_mod
-      Gas-CC_Gas-CC-CCS_max
-      Coal-IGCC_coal-CCS_max
-      coal-new_coal-CCS_max
-      CoalOldScr_coal-CCS_max
-      CoalOldUns_coal-CCS_max
-      CofireNew_coal-CCS_max
-      CofireOld_coal-CCS_max
-      hydEND_hydED
-      hydED_pumped-hydro
-      hydED_pumped-hydro-flex
-*water technologies
-$ifthene.ctech %GSw_WaterMain% == 1
-$include inputs_case%ds%i_coolingtech_watersource.csv
-$include inputs_case%ds%i_coolingtech_watersource_upgrades.csv
-$endif.ctech
-   /,
+* Written by copy_files.py
+$include b_sets.gms
 
-  ctt "cooling technology type"
-    /
-    o "once through",
-    r "recirculating",
-    d "dry cooled",
-    p "pond cooled",
-    n "no cooling (or generic placeholder)"
-    /,
-
-  wst "water source type"
-    /
-    fsu "fresh surface water that is unappropriated (formerly Unappropriated)",
-    fsa "fresh surface water that is appropriated (formerly Appropriated)",
-    fsl "fresh surface lake",
-    fg  "fresh groundwater (formerly Potable Groundwater)",
-    sg  "brackish or saline groundwater (formerly Brackish Groundwater)",
-    ss  "saline surface water (new category)",
-    ww  "wastewater effluent (formerly Wastewater)"
-    /,
-
-  w "form of water use (withdrawal or consumption)" / with, cons / ,
-
+sets
 *The following two sets:
 *ban - will remove the technology from being considered, anywhere
 *bannew - will remove the ability to invest in that technology
@@ -290,57 +160,7 @@ $endif.hydup2
     ss
   / ;
 
-*ban canadian imports as a technology if Sw_Canada is not equal to one
-ban('can-imports')$[Sw_Canada <> 1] = yes ;
-
 alias(i,ii,iii) ;
-
-if(Sw_BECCS = 0,
-ban('beccs_mod') = yes ;
-bannew('beccs_mod') = yes ;
-ban('beccs_max') = yes ;
-bannew('beccs_max') = yes ;
-) ;
-
-if(Sw_MaxCaptureCCSTechs = 0,
-ban('beccs_max') = yes ;
-bannew('beccs_max') = yes ;
-ban('coal-CCS_max') = yes ;
-bannew('coal-CCS_max') = yes ;
-ban('Gas-CC-CCS_max') = yes ;
-bannew('Gas-CC-CCS_max') = yes ;
-) ;
-
-if(Sw_CCSFLEX_BYP = 0,
-ban('Gas-CC-CCS-F1') = yes ;
-ban('coal-CCS-F1') = yes ;
-bannew('Gas-CC-CCS-F1') = yes ;
-bannew('coal-CCS-F1') = yes ;
-) ;
-
-if(Sw_CCSFLEX_STO = 0,
-ban('Gas-CC-CCS-F2') = yes ;
-ban('coal-CCS-F2') = yes ;
-bannew('Gas-CC-CCS-F2') = yes ;
-bannew('coal-CCS-F2') = yes ;
-) ;
-
-if(Sw_CCSFLEX_DAC = 0,
-ban('Gas-CC-CCS-F3') = yes ;
-ban('coal-CCS-F3') = yes ;
-bannew('Gas-CC-CCS-F3') = yes ;
-bannew('coal-CCS-F3') = yes ;
-) ;
-
-if(Sw_DAC_Gas = 0,
-ban("dac_gas") = yes ;
-bannew("dac_gas") = yes ;
-);
-
-if(Sw_NuclearSMR = 0,
-ban("Nuclear-SMR") = yes ;
-bannew("Nuclear-SMR") = yes ;
-) ;
 
 set i_water_cooling(i) "derived technologies from original technologies with cooling technologies other than just none",
 *Hereafter numeraire techs in cooling-water context mean original technologies,
@@ -400,25 +220,6 @@ i_wst(i,wst)$[sum{(ii,ctt)$i_ii_ctt_wst(i,ii,ctt,wst), 1 }] = YES ;
 wst_i_ii(i,ii)$[sum{(wst,ctt)$i_ii_ctt_wst(i,ii,ctt,wst), 1 }] = YES ;
 ctt_i_ii(i,ii)$[sum{(wst,ctt)$i_ii_ctt_wst(i,ii,ctt,wst), 1 }] = YES ;
 
-if(Sw_WaterMain = 1,
-*By default, ban new builds with bannew_ctt cooling techs for all i,
-bannew(i)$[sum{ctt$bannew_ctt(ctt), i_ctt(i,ctt) }] = YES ;
-
-* ban new builds of Nuclear and coal-CCS with dry cooling techs as cooling requirements
-* of nuclear and coal-CCS make dry cooling impractical
-bannew(i)$[sum{ctt_i_ii(i,'Nuclear'), i_ctt(i,'d') }] = YES ;
-bannew(i)$[sum{ctt_i_ii(i,'coal-CCS_mod'), i_ctt(i,'d') }] = YES ;
-bannew(i)$[sum{ctt_i_ii(i,'coal-CCS_max'), i_ctt(i,'d') }] = YES ;
-bannew(i)$[sum{ctt_i_ii(i,'Nuclear-SMR'), i_ctt(i,'d') }] = YES ;
-
-*ban and bannew all non-numeraire techs that are derived from ban numeraire techs
-ban(i)$sum{ii$ban(ii), ctt_i_ii(i,ii) } = YES ;
-bannew(i)$sum{ii$bannew(ii), ctt_i_ii(i,ii) } = YES ;
-
-* ban new builds of water sources included in bannew_wst for all i
-bannew(i)$[sum{wst$bannew_wst(wst), i_wst(i,wst) }] = YES ;
-* end parentheses for Sw_WaterMain = 1
-) ;
 set i_numeraire(i) "numeraire techs that need cooling" ;
 *i_numeraire(i) will be removed from valcap set as these technologies are ultimately
 *expanded to non-numeraire techs. valcap will have non-numeraire techs if Sw_WaterMain=1
@@ -449,13 +250,7 @@ $offdelim
 $onlisting
 ;
 
-set geotech "broader geothermal categories"
-  /
-   egs_allkm
-   geohydro_allkm
-   egs_nearfield
-  /,
-
+set
   i_geotech(i,geotech) "crosswalk between an individual geothermal technology and its category"
    /
       (egs_allkm_1*egs_allkm_10).egs_allkm,
@@ -464,153 +259,77 @@ set geotech "broader geothermal categories"
     /,
 
 *technology-specific subsets
-  bio(i)               "technologies that use only biofuel",
-  coal(i)              "technologies that use coal",
-  coal_ccs(i)          "technologies that use coal and have CCS",
-  gas(i)               "techs that use gas (but not o-g-s)",
-  gas_cc(i)            "techs that are gas combined cycle",
-  gas_cc_ccs(i)        "techs that are gas combined cycle and have CCS",
-  gas_ct(i)            "techs that are gas combustion turbine",
-  conv(i)              "conventional generation technologies",
-  ccs(i)               "CCS technologies",
-  ccsflex(i)           "Flexible CCS technologies",
-  ccsflex_byp(i)       "Flexible CCS technologies with bypass",
-  ccsflex_sto(i)       "Flexible CCS technologies with storage",
-  ccsflex_dac(i)       "Flexible CCS technologies with direct air capture",
+  battery(i)           "battery storage technologies",
   beccs(i)             "Bio with CCS",
-  re(i)                "renewable energy technologies",
-  vre(i)               "variable renewable energy technologies",
-  rsc_i(i)             "technologies based on Resource supply curves",
-  wind(i)              "wind generation technologies",
-  ofswind(i)           "offshore wind technologies",
-  onswind(i)           "onshore wind technologies",
-  upv(i)               "upv generation technologies",
-  dupv(i)              "dupv generation technologies",
+  bio(i)               "technologies that use only biofuel",
+  boiler(i)            "technologies that use steam boilers"
+  canada(i)            "Canadian imports",
+  ccs(i)               "CCS technologies",
+  ccsflex_byp(i)       "Flexible CCS technologies with bypass",
+  ccsflex_dac(i)       "Flexible CCS technologies with direct air capture",
+  ccsflex_sto(i)       "Flexible CCS technologies with storage",
+  ccsflex(i)           "Flexible CCS technologies",
+  cf_tech(i)           "technologies that have a specified capacity factor"
+  coal_ccs(i)          "technologies that use coal and have CCS",
+  coal(i)              "technologies that use coal",
+  cofire(i)            "cofire technologies",
+  consume(i)           "technologies that consume electricity and add to load",
+  conv(i)              "conventional generation technologies",
+  csp_storage(i)       "csp generation technologies with thermal storage",
+  csp(i)               "csp generation technologies",
+  csp1(i)              "csp-tes generation technologies 1",
+  csp2(i)              "csp-tes generation technologies 2",
+  csp3(i)              "csp-tes generation technologies 3",
+  csp4(i)              "csp-tes generation technologies 4",
+  dac(i)               "direct air capture technologies",
   distpv(i)            "distpv (i.e., rooftop PV) generation technologies",
+  dr(i)                "demand response technologies",
+  dr1(i)               "demand response storage technologies",
+  dr2(i)               "demand response shed technologies",
+  dupv(i)              "dupv generation technologies",
+  fossil(i)            "fossil technologies"
+  gas_cc_ccs(i)        "techs that are gas combined cycle and have CCS",
+  gas_cc(i)            "techs that are gas combined cycle",
+  gas_ct(i)            "techs that are gas combustion turbine",
+  gas(i)               "techs that use gas (but not o-g-s)",
+  geo_base(i)          "geothermal technologies typically considered in model runs",
+  geo_hydro(i)         "geothermal hydrothermal technologies",
+  geo_egs(i)           "geothermal enhanced geothermal systems technologies",
+  geo_extra(i)         "geothermal technologies not typically considered in model runs",
+  geo(i)               "geothermal technologies",
+  h2_ct(i)             "h2-ct and h2-cc technologies",
+  h2(i)                "hydrogen-producing technologies",
+  hyd_add_pump(i)      "hydro techs with an added pump",
+  hydro_d(i)           "dispatchable hydro technologies",
+  hydro_nd(i)          "non-dispatchable hydro technologies",
+  hydro(i)             "hydro technologies",
+  lfill(i)             "land-fill gas technologies",
+  nondispatch(i)       "technologies that are not dispatchable"
+  nuclear(i)           "nuclear technologies",
+  ofswind(i)           "offshore wind technologies",
+  ogs(i)               "oil-gas-steam technologies",
+  onswind(i)           "onshore wind technologies",
+  psh(i)               "pumped hydro storage technologies",
   pv(i)                "all PV generation technologies",
   pvb(i)               "hybrid pv+battery technologies",
   pvb1(i)              "pvb generation technologies 1",
   pvb2(i)              "pvb generation technologies 2",
   pvb3(i)              "pvb generation technologies 3",
-  csp(i)               "csp generation technologies",
-  csp_storage(i)       "csp generation technologies with thermal storage",
-  csp1(i)              "csp-tes generation technologies 1",
-  csp2(i)              "csp-tes generation technologies 2",
-  csp3(i)              "csp-tes generation technologies 3",
-  csp4(i)              "csp-tes generation technologies 4",
-  dr(i)                "demand response technologies",
-  dr1(i)               "demand response storage technologies",
-  dr2(i)               "demand response shed technologies",
-  storage(i)           "storage technologies",
+  re(i)                "renewable energy technologies",
+  refurbtech(i)        "technologies that can be refurbished",
+  rsc_i(i)             "technologies based on Resource supply curves",
+  smr(i)               "steam methane reforming technologies",
   storage_hybrid(i)    "hybrid VRE-storage technologies",
   storage_standalone(i) "stand alone storage technologies",
+  storage(i)           "storage technologies",
   thermal_storage(i)   "thermal storage technologies",
-  battery(i)           "battery storage technologies",
-  cofire(i)            "cofire technologies",
-  hydro(i)             "hydro technologies",
-  hydro_d(i)           "dispatchable hydro technologies",
-  hydro_nd(i)          "non-dispatchable hydro technologies",
-  psh(i)               "pumped hydro storage technologies",
-  geo(i)               "geothermal technologies",
-  geo_hydro(i)         "geothermal hydrothermal technologies",
-  geo_egs(i)           "geothermal enhanced geothermal systems technologies",
-  geo_base(i)          "geothermal technologies typically considered in model runs",
-  geo_extra(i)         "geothermal technologies not typically considered in model runs",
-  canada(i)            "Canadian imports",
+  upgrade(i)           "technologies that are upgrades from other technologies",
+  upv(i)               "upv generation technologies",
+  vre_distributed(i)   "distributed PV technologies",
   vre_no_csp(i)        "variable renewable energy technologies that are not csp",
   vre_utility(i)       "utility scale wind and PV technologies",
-  vre_distributed(i)   "distributed PV technologies",
-  upgrade(i)           "technologies that are upgrades from other technologies",
-  hyd_add_pump(i)      "hydro techs with an added pump",
-  nuclear(i)           "nuclear technologies",
-  ogs(i)               "oil-gas-steam technologies",
-  lfill(i)             "land-fill gas technologies",
-  consume(i)           "technologies that consume electricity and add to load",
-  h2(i)                "hydrogen-producing technologies",
-  smr(i)               "steam methane reforming technologies",
-  dac(i)               "direct air capture technologies",
-  h2_ct(i)             "h2-ct and h2-cc technologies",
-  refurbtech(i)        "technologies that can be refurbished",
-  cf_tech(i)           "technologies that have a specified capacity factor"
-  fossil(i)            "fossil technologies"
-  boiler(i)            "technologies that use steam boilers"
-  nondispatch(i)       "technologies that are not dispatchable"
-
-i_subtech "technology subset categories"
-   /
-      BIO
-      COAL
-      COAL_CCS
-      GAS
-      GAS_CC
-      GAS_CC_CCS
-      GAS_CT
-      CONV
-      CCS
-      CCSFLEX
-      CCSFLEX_BYP
-      CCSFLEX_STO
-      CCSFLEX_DAC
-      BECCS
-      RE
-      VRE
-      RSC
-      WIND
-      OFSWIND
-      ONSWIND
-      UPV
-      DUPV
-      distpv
-      PV
-      PVB
-      PVB1
-      PVB2
-      PVB3
-      CSP
-      CSP_STORAGE
-      CSP1
-      CSP2
-      CSP3
-      CSP4
-      DR
-      DR1
-      DR2
-      STORAGE
-      STORAGE_HYBRID
-      STORAGE_STANDALONE
-      THERMAL_STORAGE
-      BATTERY
-      COFIRE
-      HYDRO
-      HYDRO_D
-      HYDRO_ND
-      PSH
-      GEO
-      GEO_HYDRO
-      GEO_EGS
-      GEO_BASE
-      GEO_EXTRA
-      GEOTHERMAL_Base
-      GEOTHERMAL_Extended
-      CANADA
-      VRE_NO_CSP
-      VRE_UTILITY
-      VRE_DISTRIBUTED
-      UPGRADE
-      NUCLEAR
-      OGS
-      LFILL
-      CONSUME
-      h2
-      SMR
-      DAC
-      H2_CT
-      REFURBTECH
-      cf_tech
-      FOSSIL
-      BOILER
-      NONDISPATCH
-   /,
+  vre(i)               "variable renewable energy technologies",
+  wind(i)              "wind generation technologies",
 
 allt "all potential years" /1900*2500/,
 t(allt) "full set of years" /2010*%endyear%/,
@@ -631,8 +350,6 @@ initv(v) "inital technologies" /init-1*init-%numhintage%/,
 
 newv(v) "new tech set" /new1*new%numclass%/,
 
-sdbin "storage duration bins" /2,4,6,8,10,12,24,48,72,8760/
-
 * DAC == direct air capture
 * H2 == hydrogen
 * Note: no longer tracking H2 by color. This means ReEDS internalizes
@@ -646,26 +363,31 @@ p "products produced"  /DAC, H2/
 * --- Spatial / Temporal Sets ---
 *================================
 
+* written by copy_files.py
 set r "regions"
 /
 $offlisting
-$include inputs_case%ds%r.csv
+$include inputs_case%ds%val_r.csv
 $onlisting
 / ;
 
+* written by copy_files.py
 set rb(r) "model balancing regions"
 /
 $offlisting
-$include inputs_case%ds%rb.csv
+$include inputs_case%ds%val_r.csv
 $onlisting
 / ;
 
-set cs "carbon storage sites"
+* written by copy_files.py
+$onempty
+set cs(*) "carbon storage sites"
 /
 $offlisting
 $include inputs_case%ds%val_cs.csv
 $onlisting
 / ;
+$offempty
 
 * created in and mapped to hierarchy in ldc_prep.py
 set ccreg "capacity credit regions"
@@ -739,23 +461,7 @@ aggreg "Aggregated regions"
 $include inputs_case%ds%val_aggreg.csv
 /
 
-tg "tech groups for growth constraints" /wind-ons, wind-ofs, pv, csp, ccs, gas-uncontrolled, nuclear, storage, h2/,
-
 tg_i(tg,i) "technologies that belong in tech group tg"
-
-pcat "prescribed capacity categories"
-    /
-*seldom-used pound/hashtag populates
-*elements of this set with the indicated set
-#i
-    upv,
-    dupv,
-    pvb,
-    wind-ons,
-    wind-ofs,
-    csp-ws
-    /
-
 ;
 
 hyd_add_pump('hydED_pumped-hydro') = yes ;
@@ -837,9 +543,6 @@ set unitspec_upgrades(i) "upgraded technologies that get unit-specific character
                    /Gas-CC_Gas-CC-CCS_Mod, Coal-new_Coal-CCS_mod, Coal-IGCC_coal-CCS_mod,
                    CoalOldScr_coal-CCS_mod, CoalOldUns_coal-CCS_mod/ ;
 
-ban(i)$[upgrade(i)$(not Sw_Upgrades)] = yes ;
-bannew(i)$[upgrade(i)$(not Sw_Upgrades)] = yes ;
-
 * --- Read technology subset lookup table ---
 Table i_subsets(i,i_subtech) "technology subset lookup table"
 $offlisting
@@ -860,76 +563,333 @@ i_subsets(i,i_subtech)$[upgrade(i)$Sw_Upgrades] =
 i_subsets(i,i_subtech)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), i_subsets(ii,i_subtech) } ;
 
+** define tech bans so that they are not defined in the technology subsets below **
+* switch based gen tech bans (see cases file for details)
+if(Sw_BECCS = 0,
+  ban('beccs_mod') = yes ;
+  ban('beccs_max') = yes ;
+) ;
+
+if(Sw_Biopower = 0,
+  ban('biopower') = yes ;
+) ;
+
+if(Sw_Canada <> 1,
+  ban('can-imports') = yes ;
+) ;
+
+if(Sw_CCS = 0,
+  ban(i)$i_subsets(i,'ccs') = yes ;
+) ;
+
+if(Sw_CCSFLEX_BYP = 0,
+  ban('Gas-CC-CCS-F1') = yes ;
+  ban('coal-CCS-F1') = yes ;
+) ;
+
+if(Sw_CCSFLEX_STO = 0,
+  ban('Gas-CC-CCS-F2') = yes ;
+  ban('coal-CCS-F2') = yes ;
+) ;
+
+if(Sw_CCSFLEX_DAC = 0,
+  ban('Gas-CC-CCS-F3') = yes ;
+  ban('coal-CCS-F3') = yes ;
+) ;
+
+if(Sw_CSP = 0,
+  ban(i)$i_subsets(i,'csp') = yes ;
+) ;
+
+if(Sw_CSP = 1,
+  ban(i)$i_subsets(i,'csp2') = yes ;
+) ;
+
+if(Sw_CoalIGCC = 0,
+  ban('Coal-IGCC') = yes ;
+) ;
+
+if(Sw_CoalNew = 0,
+  ban('coal-new') = yes ;
+) ;
+
+if(Sw_CofireNew = 0,
+  ban('CofireNew') = yes ;
+) ;
+
+if(Sw_DAC = 0,
+  ban(i)$i_subsets(i,'dac') = yes ;
+) ;
+
+if(Sw_DAC_Gas = 0,
+  ban("dac_gas") = yes ;
+);
+
+if(Sw_DR = 0,
+  ban(i)$i_subsets(i,'dr') = yes ;
+) ;
+
+if(Sw_DUPV = 0,
+  ban(i)$i_subsets(i,'dupv') = yes ;
+) ;
+
+if(Sw_Geothermal = 0,
+  ban(i)$i_subsets(i,'geo') = yes ;
+) ;
+
+if(Sw_Geothermal = 1,
+  ban(i)$i_subsets(i,'geo_extra') = yes ;
+) ;
+
+if(Sw_H2 = 0,
+  ban(i)$i_subsets(i,'h2') = yes ;
+) ;
+
+if(Sw_H2_SMR = 0,
+  ban(i)$i_subsets(i,'smr') = yes ;
+) ;
+
+if(Sw_H2CT = 0,
+  ban(i)$i_subsets(i,'h2_ct') = yes ;
+) ;
+
+if(Sw_H2CTupgrade = 0,
+  ban(i)$[i_subsets(i,'h2_ct')$upgrade(i)] = yes ;
+) ;
+
+if(Sw_LfillGas = 0,
+  ban('lfill-gas') = yes ;
+) ;
+
+if(Sw_MaxCaptureCCSTechs = 0,
+  ban('beccs_max') = yes ;
+  ban('coal-CCS_max') = yes ;
+  ban('Gas-CC-CCS_max') = yes ;
+) ;
+
+if(Sw_Nuclear = 0,
+  bannew(i)$i_subsets(i,'nuclear') = yes ;
+) ;
+
+if(Sw_NuclearSMR = 0,
+  ban("Nuclear-SMR") = yes ;
+) ;
+
+if(Sw_OfsWind = 0,
+  ban(i)$i_subsets(i,'ofswind') = yes ;
+) ;
+
+if(Sw_OnsWind6to10 = 0,
+  bannew('wind-ons_6') = yes ;
+  bannew('wind-ons_7') = yes ;
+  bannew('wind-ons_8') = yes ;
+  bannew('wind-ons_9') = yes ;
+  bannew('wind-ons_10') = yes ;
+) ;
+
+* always allow PSH to use fresh surface water (fsa, fsu)
+* do not allow new PSH to use saline surface water
+bannew(i)$[sum{wst_i_ii(i,ii)$i_subsets(i,'psh'), i_wst(i,'ss') }] = YES ;
+$ifthen.pshwat %GSw_PSHwatertypes% == 0
+* do not allow saline ground water or wastewater effluent
+bannew(i)$[sum{wst_i_ii(i,ii)$i_subsets(i,'psh'), i_wst(i,'sg') }] = YES ;
+bannew(i)$[sum{wst_i_ii(i,ii)$i_subsets(i,'psh'), i_wst(i,'ww') }] = YES ;
+$elseif.pshwat %GSw_PSHwatertypes% == 1
+* option to also prohibit fresh groundwater
+bannew(i)$[sum{wst_i_ii(i,ii)$i_subsets(i,'psh'), i_wst(i,'sg') }] = YES ;
+bannew(i)$[sum{wst_i_ii(i,ii)$i_subsets(i,'psh'), i_wst(i,'ww') }] = YES ;
+bannew(i)$[sum{wst_i_ii(i,ii)$i_subsets(i,'psh'), i_wst(i,'fg') }] = YES ;
+$elseif.pshwat %GSw_PSHwatertypes% == 2
+* option 2 allows fresh/saline ground water and wastewater
+$else.pshwat
+$endif.pshwat
+
+*ban techs in hybrid PV+battery if the switch calls for it
+if(Sw_PVB=0,
+  ban(i)$i_subsets(i,'pvb') = yes ;
+  bannew(i)$i_subsets(i,'pvb') = yes ;
+) ;
+
+* Ban PVB_Types that aren't included in the model
+$ifthen.pvb123 %GSw_PVB_Types% == '1_2'
+    ban(i)$i_subsets(i,'pvb3') = yes ;
+$endif.pvb123
+$ifthen.pvb12 %GSw_PVB_Types% == '1'
+    ban(i)$i_subsets(i,'pvb2') = yes ;
+    ban(i)$i_subsets(i,'pvb3') = yes ;
+$endif.pvb12
+
+*** Restrict valcap for storage techs based on Sw_Storage switch
+* 0: Ban all storage
+if(Sw_Storage = 0,
+ ban(i)$i_subsets(i,'storage_standalone') = yes ;
+ Sw_BatteryMandate = 0 ;
+) ;
+* 3: Ban 2-, 6-, and 10-hour batteries (keep 4- and 8-hour batteries and PSH)
+if(Sw_Storage = 3,
+ ban(i)$[i_subsets(i,'storage_standalone')
+       $(sameas(i,'battery_2') or sameas(i,'battery_6') or sameas(i,'battery_10'))] = yes ;
+) ;
+* 4: Ban everything except 4-hour batteries
+if(Sw_Storage = 4,
+ ban(i)$[i_subsets(i,'storage_standalone')$(not sameas(i,'battery_4'))] = yes ;
+) ;
+
+* option to ban upgrades
+ban(i)$[upgrade(i)$(not Sw_Upgrades)] = yes ;
+bannew(i)$[upgrade(i)$(not Sw_Upgrades)] = yes ;
+
+if(Sw_WaterMain = 1,
+*By default, ban new builds with bannew_ctt cooling techs for all i,
+bannew(i)$[sum{ctt$bannew_ctt(ctt), i_ctt(i,ctt) }] = YES ;
+
+* ban new builds of Nuclear and coal-CCS with dry cooling techs as cooling requirements
+* of nuclear and coal-CCS make dry cooling impractical
+bannew(i)$[sum{ctt_i_ii(i,'Nuclear'), i_ctt(i,'d') }] = YES ;
+bannew(i)$[sum{ctt_i_ii(i,'coal-CCS_mod'), i_ctt(i,'d') }] = YES ;
+bannew(i)$[sum{ctt_i_ii(i,'coal-CCS_max'), i_ctt(i,'d') }] = YES ;
+bannew(i)$[sum{ctt_i_ii(i,'Nuclear-SMR'), i_ctt(i,'d') }] = YES ;
+
+*ban and bannew all non-numeraire techs that are derived from ban numeraire techs
+ban(i)$sum{ii$ban(ii), ctt_i_ii(i,ii) } = YES ;
+bannew(i)$sum{ii$bannew(ii), ctt_i_ii(i,ii) } = YES ;
+
+* ban new builds of water sources included in bannew_wst for all i
+bannew(i)$[sum{wst$bannew_wst(wst), i_wst(i,wst) }] = YES ;
+* end parentheses for Sw_WaterMain = 1
+) ;
+
+* Turn off canadian imports as an option when running NARIS
+$ifthen.naris %GSw_Region% == "naris"
+  ban(i)$i_subsets(i,'canada') = yes ;
+$endif.naris
+
+* Ban DUPV, CSP, and Geothermal resources that do not remain after aggregation
+set resourceclass "renewable resource classes" /0*20/ ;
+parameter resourceclassnum(resourceclass) "numeric value for resource class" ;
+resourceclassnum(resourceclass) = resourceclass.val ;
+set tech_resourceclass(i,resourceclass) "map from CSP/DUPV techs to resource classes"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%tech_resourceclass.csv
+$offdelim
+$onlisting
+/ ;
+* There are 12 CSP resource classes by default. If Sw_NumCSPclasses < 12, we ban the
+* CSP techs with resource class > Sw_NumCSPclasses
+if(Sw_NumCSPclasses < 12,
+ban(i)$[i_subsets(i,'csp')
+      $sum{resourceclass$tech_resourceclass(i,resourceclass),
+           resourceclassnum(resourceclass)>Sw_NumCSPclasses }] = yes ;
+) ;
+* There are 7 DUPV resource classes by default. If Sw_NumDUPVclasses < 7, we ban the
+* DUPV techs with resource class > Sw_NumDUPVclasses
+if(Sw_NumDUPVclasses < 7,
+ban(i)$[i_subsets(i,'dupv')
+      $sum{resourceclass$tech_resourceclass(i,resourceclass),
+           resourceclassnum(resourceclass)>Sw_NumDUPVclasses }] = yes ;
+) ;
+
+*Ban Geothermal resources that do not remain after aggregation
+if(Sw_NumGeoclasses < 10,
+ban(i)$[i_subsets(i,'geo')
+      $sum{resourceclass$tech_resourceclass(i,resourceclass),
+           resourceclassnum(resourceclass)>Sw_NumGeoclasses }] = yes ;
+) ;
+
+*Ingest list of new nuclear restricted BAs ('p' regions), ba list is consistent with NCSL restrictions.
+*https://www.ncsl.org/research/environment-and-natural-resources/states-restrictions-on-new-nuclear-power-facility.aspx
+$onempty
+set nuclear_ba_ban(r) "List of  BAs where new nuclear builds are restricted"
+/
+$offlisting
+$include inputs_case%ds%nuclear_ba_ban_list.csv
+$onlisting
+/ ;
+$offempty
+
+* techs banned by state (note that this only applies to valinv later)
+$onempty
+table tech_banned(i,st) "Banned technologies by state"
+$offlisting
+$ondelim
+$include inputs_case%ds%techs_banned.csv
+$offdelim
+$onlisting
+;
+$offempty
+
 * --- define technology subsets ---
-bio(i)$(not ban(i))                 = yes$i_subsets(i,'bio') ;
-coal(i)$(not ban(i))                = yes$i_subsets(i,'coal') ;
-coal_ccs(i)$(not ban(i))            = yes$i_subsets(i,'coal_ccs') ;
-gas(i)$(not ban(i))                 = yes$i_subsets(i,'gas') ;
-gas_ct(i)$(not ban(i))              = yes$i_subsets(i,'gas_ct') ;
-gas_cc(i)$(not ban(i))              = yes$i_subsets(i,'gas_cc') ;
-gas_cc_ccs(i)$(not ban(i))          = yes$i_subsets(i,'gas_cc_ccs') ;
-conv(i)$(not ban(i))                = yes$i_subsets(i,'conv') ;
-ccs(i)$(not ban(i))                 = yes$i_subsets(i,'ccs') ;
-ccsflex(i)$(not ban(i))             = yes$i_subsets(i,'ccsflex') ;
-ccsflex_byp(i)$(not ban(i))         = yes$i_subsets(i,'ccsflex_byp') ;
-ccsflex_sto(i)$(not ban(i))         = yes$i_subsets(i,'ccsflex_sto') ;
-ccsflex_dac(i)$(not ban(i))         = yes$i_subsets(i,'ccsflex_dac') ;
+battery(i)$(not ban(i))             = yes$i_subsets(i,'battery') ;
 beccs(i)$(not ban(i))               = yes$i_subsets(i,'beccs') ;
-re(i)$(not ban(i))                  = yes$i_subsets(i,'re') ;
-vre(i)$(not ban(i))                 = yes$i_subsets(i,'vre') ;
-rsc_i(i)$(not ban(i))               = yes$i_subsets(i,'rsc') ;
-wind(i)$(not ban(i))                = yes$i_subsets(i,'wind') ;
-ofswind(i)$(not ban(i))             = yes$i_subsets(i,'ofswind') ;
-onswind(i)$(not ban(i))             = yes$i_subsets(i,'onswind') ;
-upv(i)$(not ban(i))                 = yes$i_subsets(i,'upv') ;
-dupv(i)$(not ban(i))                = yes$i_subsets(i,'dupv') ;
-distpv(i)$(not ban(i))              = yes$i_subsets(i,'distpv') ;
-pv(i)$(not ban(i))                  = yes$i_subsets(i,'pv') ;
-pvb(i)$(not ban(i))                 = yes$i_subsets(i,'pvb') ;
-pvb1(i)$(not ban(i))                = yes$i_subsets(i,'pvb1') ;
-pvb2(i)$(not ban(i))                = yes$i_subsets(i,'pvb2') ;
-pvb3(i)$(not ban(i))                = yes$i_subsets(i,'pvb3') ;
+bio(i)$(not ban(i))                 = yes$i_subsets(i,'bio') ;
+boiler(i)$(not ban(i))              = yes$i_subsets(i,'boiler') ;
+canada(i)$(not ban(i))              = yes$i_subsets(i,'canada') ;
+ccs(i)$(not ban(i))                 = yes$i_subsets(i,'ccs') ;
+ccsflex_byp(i)$(not ban(i))         = yes$i_subsets(i,'ccsflex_byp') ;
+ccsflex_dac(i)$(not ban(i))         = yes$i_subsets(i,'ccsflex_dac') ;
+ccsflex_sto(i)$(not ban(i))         = yes$i_subsets(i,'ccsflex_sto') ;
+ccsflex(i)$(not ban(i))             = yes$i_subsets(i,'ccsflex') ;
+cf_tech(i)$(not ban(i))             = yes$i_subsets(i,'cf_tech') ;
+coal_ccs(i)$(not ban(i))            = yes$i_subsets(i,'coal_ccs') ;
+coal(i)$(not ban(i))                = yes$i_subsets(i,'coal') ;
+cofire(i)$(not ban(i))              = yes$i_subsets(i,'cofire') ;
+consume(i)$(not ban(i))             = yes$i_subsets(i,'consume') ;
+conv(i)$(not ban(i))                = yes$i_subsets(i,'conv') ;
+csp_storage(i)$(not ban(i))         = yes$i_subsets(i,'csp_storage') ;
 csp(i)$(not ban(i))                 = yes$i_subsets(i,'csp') ;
 csp1(i)$(not ban(i))                = yes$i_subsets(i,'csp1') ;
 csp2(i)$(not ban(i))                = yes$i_subsets(i,'csp2') ;
 csp3(i)$(not ban(i))                = yes$i_subsets(i,'csp3') ;
 csp4(i)$(not ban(i))                = yes$i_subsets(i,'csp4') ;
+dac(i)$(not ban(i))                 = yes$i_subsets(i,'dac') ;
+distpv(i)$(not ban(i))              = yes$i_subsets(i,'distpv') ;
 dr(i)$(not ban(i))                  = yes$i_subsets(i,'dr') ;
 dr1(i)$(not ban(i))                 = yes$i_subsets(i,'dr1') ;
 dr2(i)$(not ban(i))                 = yes$i_subsets(i,'dr2') ;
-storage(i)$(not ban(i))             = yes$i_subsets(i,'storage') ;
-storage_hybrid(i)$(not ban(i))      = yes$i_subsets(i,'storage_hybrid') ;
-storage_standalone(i)$(not ban(i))  = yes$i_subsets(i,'storage_standalone') ;
-thermal_storage(i)$(not ban(i))     = yes$i_subsets(i,'thermal_storage') ;
-battery(i)$(not ban(i))             = yes$i_subsets(i,'battery') ;
-cofire(i)$(not ban(i))              = yes$i_subsets(i,'cofire') ;
-hydro(i)$(not ban(i))               = yes$i_subsets(i,'hydro') ;
-hydro_d(i)$(not ban(i))             = yes$i_subsets(i,'hydro_d') ;
-hydro_nd(i)$(not ban(i))            = yes$i_subsets(i,'hydro_nd') ;
-psh(i)$(not ban(i))                 = yes$i_subsets(i,'psh') ;
-geo(i)$(not ban(i))                 = yes$i_subsets(i,'geo') ;
+dupv(i)$(not ban(i))                = yes$i_subsets(i,'dupv') ;
+fossil(i)$(not ban(i))              = yes$i_subsets(i,'fossil') ;
+gas_cc_ccs(i)$(not ban(i))          = yes$i_subsets(i,'gas_cc_ccs') ;
+gas_cc(i)$(not ban(i))              = yes$i_subsets(i,'gas_cc') ;
+gas_ct(i)$(not ban(i))              = yes$i_subsets(i,'gas_ct') ;
+gas(i)$(not ban(i))                 = yes$i_subsets(i,'gas') ;
+geo_base(i)$(not ban(i))            = yes$i_subsets(i,'geo_base') ;
 geo_hydro(i)$(not ban(i))           = yes$i_subsets(i,'geo_hydro') ;
 geo_egs(i)$(not ban(i))             = yes$i_subsets(i,'geo_egs') ;
-geo_base(i)$(not ban(i))            = yes$i_subsets(i,'geo_base') ;
 geo_extra(i)$(not ban(i))           = yes$i_subsets(i,'geo_extra') ;
-canada(i)$(not ban(i))              = yes$i_subsets(i,'canada') ;
+geo(i)$(not ban(i))                 = yes$i_subsets(i,'geo') ;
+h2_ct(i)$(not ban(i))               = yes$i_subsets(i,'h2_ct') ;
+h2(i)$(not ban(i))                  = yes$i_subsets(i,'h2') ;
+hydro_d(i)$(not ban(i))             = yes$i_subsets(i,'hydro_d') ;
+hydro_nd(i)$(not ban(i))            = yes$i_subsets(i,'hydro_nd') ;
+hydro(i)$(not ban(i))               = yes$i_subsets(i,'hydro') ;
+lfill(i)$(not ban(i))               = yes$i_subsets(i,'lfill') ;
+nondispatch(i)$(not ban(i))         = yes$i_subsets(i,'nondispatch') ;
+nuclear(i)$(not ban(i))             = yes$i_subsets(i,'nuclear') ;
+ofswind(i)$(not ban(i))             = yes$i_subsets(i,'ofswind') ;
+ogs(i)$(not ban(i))                 = yes$i_subsets(i,'ogs') ;
+onswind(i)$(not ban(i))             = yes$i_subsets(i,'onswind') ;
+psh(i)$(not ban(i))                 = yes$i_subsets(i,'psh') ;
+pv(i)$(not ban(i))                  = yes$i_subsets(i,'pv') ;
+pvb(i)$(not ban(i))                 = yes$i_subsets(i,'pvb') ;
+pvb1(i)$(not ban(i))                = yes$i_subsets(i,'pvb1') ;
+pvb2(i)$(not ban(i))                = yes$i_subsets(i,'pvb2') ;
+pvb3(i)$(not ban(i))                = yes$i_subsets(i,'pvb3') ;
+re(i)$(not ban(i))                  = yes$i_subsets(i,'re') ;
+refurbtech(i)$(not ban(i))          = yes$i_subsets(i,'refurbtech') ;
+rsc_i(i)$(not ban(i))               = yes$i_subsets(i,'rsc') ;
+smr(i)$(not ban(i))                 = yes$i_subsets(i,'smr') ;
+storage_hybrid(i)$(not ban(i))      = yes$i_subsets(i,'storage_hybrid') ;
+storage_standalone(i)$(not ban(i))  = yes$i_subsets(i,'storage_standalone') ;
+storage(i)$(not ban(i))             = yes$i_subsets(i,'storage') ;
+thermal_storage(i)$(not ban(i))     = yes$i_subsets(i,'thermal_storage') ;
+upv(i)$(not ban(i))                 = yes$i_subsets(i,'upv') ;
+vre_distributed(i)$(not ban(i))     = yes$i_subsets(i,'vre_distributed') ;
 vre_no_csp(i)$(not ban(i))          = yes$i_subsets(i,'vre_no_csp') ;
 vre_utility(i)$(not ban(i))         = yes$i_subsets(i,'vre_utility') ;
-vre_distributed(i)$(not ban(i))     = yes$i_subsets(i,'vre_distributed') ;
-nuclear(i)$(not ban(i))             = yes$i_subsets(i,'nuclear') ;
-ogs(i)$(not ban(i))                 = yes$i_subsets(i,'ogs') ;
-lfill(i)$(not ban(i))               = yes$i_subsets(i,'lfill') ;
-consume(i)$(not ban(i))             = yes$i_subsets(i,'consume') ;
-h2(i)$(not ban(i))                  = yes$i_subsets(i,'h2') ;
-smr(i)$(not ban(i))                 = yes$i_subsets(i,'smr') ;
-dac(i)$(not ban(i))                 = yes$i_subsets(i,'dac') ;
-csp_storage(i)$(not ban(i))         = yes$i_subsets(i,'csp_storage') ;
-h2_ct(i)$(not ban(i))               = yes$i_subsets(i,'h2_ct') ;
-refurbtech(i)$(not ban(i))          = yes$i_subsets(i,'refurbtech') ;
-cf_tech(i)$(not ban(i))             = yes$i_subsets(i,'cf_tech') ;
-fossil(i)$(not ban(i))              = yes$i_subsets(i,'fossil') ;
-boiler(i)$(not ban(i))              = yes$i_subsets(i,'boiler') ;
-nondispatch(i)$(not ban(i))         = yes$i_subsets(i,'nondispatch') ;
+vre(i)$(not ban(i))                 = yes$i_subsets(i,'vre') ;
+wind(i)$(not ban(i))                = yes$i_subsets(i,'wind') ;
 
 * Create mapping of technology groups to technologies
 tg_i('wind-ons',i)$onswind(i) = yes ;
@@ -957,44 +917,6 @@ pvb2.(pvb2_1, pvb2_2, pvb2_3, pvb2_4, pvb2_5, pvb2_6, pvb2_7, pvb2_8, pvb2_9, pv
 pvb3.(pvb3_1, pvb3_2, pvb3_3, pvb3_4, pvb3_5, pvb3_6, pvb3_7, pvb3_8, pvb3_9, pvb3_10)
 / ;
 
-*ban techs in hybrid PV+battery if the switch calls for it
-if(Sw_PVB=0,
-  ban(i)$pvb(i) = yes ;
-  bannew(i)$pvb(i) = yes ;
-) ;
-
-* Ban PVB_Types that aren't included in the model
-$ifthen.pvb123 %GSw_PVB_Types% == '1_2'
-    ban(i)$pvb3(i) = yes ;
-$endif.pvb123
-$ifthen.pvb12 %GSw_PVB_Types% == '1'
-    ban(i)$pvb2(i) = yes ;
-    ban(i)$pvb3(i) = yes ;
-$endif.pvb12
-
-* always allow PSH to use fresh surface water (fsa, fsu)
-* do not allow new PSH to use saline surface water
-bannew(i)$[sum{wst_i_ii(i,ii)$psh(i), i_wst(i,'ss') }] = YES ;
-$ifthen.pshwat %GSw_PSHwatertypes% == 0
-* do not allow saline ground water or wastewater effluent
-bannew(i)$[sum{wst_i_ii(i,ii)$psh(i), i_wst(i,'sg') }] = YES ;
-bannew(i)$[sum{wst_i_ii(i,ii)$psh(i), i_wst(i,'ww') }] = YES ;
-$elseif.pshwat %GSw_PSHwatertypes% == 1
-* option to also prohibit fresh groundwater
-bannew(i)$[sum{wst_i_ii(i,ii)$psh(i), i_wst(i,'sg') }] = YES ;
-bannew(i)$[sum{wst_i_ii(i,ii)$psh(i), i_wst(i,'ww') }] = YES ;
-bannew(i)$[sum{wst_i_ii(i,ii)$psh(i), i_wst(i,'fg') }] = YES ;
-$elseif.pshwat %GSw_PSHwatertypes% == 2
-* option 2 allows fresh/saline ground water and wastewater
-$else.pshwat
-$endif.pshwat
-
-if(Sw_H2_SMR = 0,
-ban(i)$smr(i) = yes ;
-bannew(i)$smr(i) = yes ;
-) ;
-
-
 *add non-numeraire CSPs in index i of already defined set tg_i(tg,i)
 tg_i("csp",i)$[(csp1(i) or csp2(i) or csp3(i) or csp4(i))$Sw_WaterMain] = yes ;
 
@@ -1007,6 +929,7 @@ ofs_fix.(wind-ofs_1*wind-ofs_7)
 ofs_float.(wind-ofs_8*wind-ofs_15)
 / ;
 
+$onempty
 table water_with_cons_rate(i,ctt,w,r) "--gal/MWh-- technology specific-cooling tech based water withdrawal and consumption data"
 $offlisting
 $ondelim
@@ -1014,6 +937,7 @@ $include inputs_case%ds%water_with_cons_rate.csv
 $offdelim
 $onlisting
 ;
+$offempty
 
 $onempty
 * Water requirement if all filling takes place in 1 year and minimum reservoir level is 15% of max volume
@@ -1060,7 +984,7 @@ set dispatchtech(i)                 "technologies that are dispatchable",
     inv_cond(i,v,r,t,tt)            "allows an investment in tech i of class v to be built in region r in year tt and usable in year t" ;
 
 noret_upgrade_tech(i)$hyd_add_pump(i) = yes ;
-dispatchtech(i)$[not(vre(i) or hydro_nd(i))] = yes ;
+dispatchtech(i)$[not(vre(i) or hydro_nd(i) or ban(i))] = yes ;
 sccapcosttech(i)$[geo(i) or hydro(i) or psh(i)] = yes ;
 
 *initialize sets to "no"
@@ -1191,16 +1115,6 @@ rsc_agg(i,ii)$tg_rsc_upvagg(i,ii) = yes ;
 *All PSH types use the same supply curve
 rsc_agg('pumped-hydro',ii)$psh(ii) = yes ;
 
-*ban techs in h2_ct and h2_cc if the switch calls for it
-$ifthene.banh2ct %GSw_H2CT% == 0
-ban(i)$h2_ct(i) = yes ;
-$endif.banh2ct
-
-*ban upgrades from gas-cc or gas-ct to h2-ct if the switch calls for it
-$ifthene.banh2ctupgrade %GSw_H2CTupgrade% == 0
-ban(i)$[h2_ct(i)$upgrade(i)] = yes ;
-$endif.banh2ctupgrade
-
 *============================
 * -- Demand flexibility setup --
 *============================
@@ -1261,9 +1175,6 @@ r_country(r,country)          $sum{(nercr,transreg,transgrp,cendiv,st,interconne
 r_usda(r,usda_region)         $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,            aggreg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,aggreg,ccreg),1} = yes ;
 r_aggreg(r,aggreg)            $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,       ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,aggreg,ccreg),1} = yes ;
 r_ccreg(r,ccreg)              $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,aggreg      ) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,aggreg,ccreg),1} = yes ;
-
-parameter num_interconnect(interconnect) "interconnection numbers" ;
-num_interconnect(interconnect) = ord(interconnect) ;
 
 
 *================================
@@ -1373,8 +1284,7 @@ countnc(i,newv) = sum{t$ivt(i,newv,t),1} ;
 *--- basic parameter declarations ---
 *=====================================
 
-parameter INr(r) "--unitless-- mapping of r regions to interconnection numbers",
-          crf(t) "--unitless-- capital recovery factor"
+parameter crf(t) "--unitless-- capital recovery factor"
 /
 $offlisting
 $ondelim
@@ -1443,7 +1353,6 @@ firstyear_v(i,v) = sum{t$[yeart(t)=smin(tt$ivt(i,v,tt),yeart(tt))],yeart(t) } ;
 * pvf_onm_undisc is based on intertemporal pvf_onm and pvf_capital,
 * and is used for bulk system cost outputs
 pvf_onm_undisc(t)$pvf_capital(t) = pvf_onm(t) / pvf_capital(t) ;
-INr(r) = sum{interconnect$r_interconnect(r,interconnect), num_interconnect(interconnect) } ;
 
 *==========================================
 *     --- Technology start years ---
@@ -1492,28 +1401,10 @@ firstyear_pcat("geothermal") = firstyear("geohydro_allkm_1") ;
 *if kept at 0, ercot is not a standalone census dvision
 *if kept at 1, the prices will be too low as it does not allow for the consumption of gas in other regions
 
-$ifthen.naris %GSw_Region% == "naris"
-* Turn off canadian imports as an option when running NARIS
-  ban(i)$canada(i) = yes ;
-$endif.naris
-
 *set the state and census division feasibility sets
 *determined by which regions are feasible
 stfeas(st)$[sum{r$r_st(r,st), 1 }] = yes ;
 countryfeas(country)$[sum{r$[r_country(r,country)], 1 }] = yes ;
-
-
-*Ingest list of new nuclear restricted BAs ('p' regions), ba list is consistent with NCSL restrictions.
-*https://www.ncsl.org/research/environment-and-natural-resources/states-restrictions-on-new-nuclear-power-facility.aspx
-$onempty
-set nuclear_ba_ban(r) "List of  BAs where new nuclear builds are restricted"
-/
-$offlisting
-$include inputs_case%ds%nuclear_ba_ban_list.csv
-$onlisting
-/ ;
-$offempty
-
 
 
 *==========================
@@ -1540,6 +1431,7 @@ $onlisting
 ;
 
 *created by /input_processing/writecapdat.py
+$onempty
 table caprsc(pcat,r,*) "--MW-- raw RSC capacity data, created by .\writecapdat.py"
 $offlisting
 $ondelim
@@ -1547,6 +1439,7 @@ $include inputs_case%ds%caprsc.csv
 $offdelim
 $onlisting
 ;
+$offempty
 
 *created by /input_processing/writecapdat.py
 * declared over allt to allow for external data files that extend beyond end_year
@@ -1718,7 +1611,17 @@ $offempty
 parameter r_offshore(r,t) "regions where offshore wind is required by a mandate" ;
 r_offshore(r,t)$[sum{st$r_st(r,st), offshore_cap_req(st,t) }] = 1 ;
 
-
+* initial smr capacity to ensure that exogenous H2 demand can be supplied, csv is written by writecapdat.py
+$onempty
+parameter h2_existing_smr_cap(r,t) "--MW-- capacity of existing SMR - used for meeting H2 demand before new H2 producing tech deployment is allowed to begin"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%h2_existing_smr_cap.csv
+$offdelim
+$onlisting
+/ ;
+$onempty
 
 *==========================================
 *     --- Canadian Imports/Exports ---
@@ -1735,7 +1638,7 @@ $offdelim
 $onlisting
 ;
 
-parameter can_imports_capacity(r,t) "--MW-- [Sw_Canada=1] Peak Canadian import capacity"
+parameter can_imports_capacity(r,allt) "--MW-- [Sw_Canada=1] Peak Canadian import capacity"
 /
 $offlisting
 $ondelim
@@ -1795,7 +1698,7 @@ $onlisting
 / ;
 $offempty
 
-* geothermal discovery factor based on class and region
+* Written by writesupplycurves.py
 $onempty
 parameter geo_discovery_factor(i,r) "--fraction-- factor representing undiscovered geothermal"
 /
@@ -1807,6 +1710,8 @@ $onlisting
 / ;
 $offempty
 
+* Written by writesupplycurves.py
+$onempty
 parameter geo_discovery_rate(allt) "--fraction-- fraction of undiscovered geothermal that has been 'discovered'"
 /
 $offlisting
@@ -1815,9 +1720,10 @@ $include inputs_case%ds%geo_discovery_rate.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 parameter geo_discovery(i,r,allt) "--fraction-- fraction of undiscovered geothermal that has been 'discovered'" ;
-geo_discovery(i,r,t) = (1 - geo_discovery_factor(i,r)) * geo_discovery_rate(t) + geo_discovery_factor(i,r) ;
+geo_discovery(i,r,t)$geo_hydro(i) = (1 - geo_discovery_factor(i,r)) * geo_discovery_rate(t) + geo_discovery_factor(i,r) ;
 
 * read data defining increase in hydropower upgrade availability over time. should only exist for hydUD and hydUND
 $onempty
@@ -2009,6 +1915,9 @@ capacity_exog("geothermal",v,r,t) = 0 ;
 *separately, therefore the general 'hydro' category is not needed
 capacity_exog("hydro",v,r,t) = 0 ;
 
+* set existing capacity for smr
+capacity_exog("smr","init-1",r,t)$Sw_H2 = h2_existing_smr_cap(r,t) ;
+
 $ifthene.Canada %GSw_Canada% == 1
 *set Canadian imports as prescribed capacity
 capacity_exog("can-imports","init-1",rb,t) = can_imports_capacity(rb,t) ;
@@ -2094,16 +2003,6 @@ parameter inv_distpv(r,t) "--MW-- capacity of distpv that is build in year t (i.
 inv_distpv(r,t) = sum{(i,v)$distpv(i),
                       m_capacity_exog(i,v,r,t) - sum{tt$tprev(t,tt), m_capacity_exog(i,v,r,tt) }
                      } ;
-
-$onempty
-table tech_banned(i,st) "Banned technologies by state"
-$offlisting
-$ondelim
-$include inputs_case%ds%techs_banned.csv
-$offdelim
-$onlisting
-;
-$offempty
 
 set valcap(i,v,r,t)            "i, v, r, and t combinations that are allowed for capacity",
     valcap_irt(i,r,t)          "i, r, and t combinations that are allowed for capacity",
@@ -2265,114 +2164,6 @@ tc_phaseout_mult_t(i,t)$tmodel_new(t) = 1 ;
 * first all available techs are included
 * then we remove those as specified
 
-* need to add H2 techs and/or DAC techs to ban(i)
-* before specification of valcap if those switches are disabled
-
-$ifthene.h2ban %GSw_H2% == 0
-ban(i)$h2(i) = yes ;
-$endif.h2ban
-
-$ifthene.dacban %GSw_DAC% == 0
-ban(i)$dac(i) = yes ;
-$endif.dacban
-
-$ifthene.cspban %GSw_CSP% == 0
-* Add csp(i) tech to ban(i)
-ban(i)$csp(i) = yes ;
-$endif.cspban
-
-$ifthene.cspban2 %GSw_CSP% == 1
-* Add csp2(i) tech to ban(i)
-ban(i)$csp2(i) = yes ;
-$endif.cspban2
-
-* Add ofswind(i) tech to ban(i)
-$ifthene.ofswindban %GSw_OfsWind% == 0
-ban(i)$ofswind(i) = yes ;
-$endif.ofswindban
-
-* turn off first 5 onshore wind technologies
-$ifthene.onswindban %GSw_OnsWind6to10% == 0
-bannew('wind-ons_6') = yes ;
-bannew('wind-ons_7') = yes ;
-bannew('wind-ons_8') = yes ;
-bannew('wind-ons_9') = yes ;
-bannew('wind-ons_10') = yes ;
-$endif.onswindban
-
-* turn off biopower technology
-$ifthene.biopowerban %GSw_Biopower% == 0
-ban('biopower') = yes ;
-$endif.biopowerban
-
-* turn off Coal-IGCC technology
-$ifthene.coaligccban %GSw_CoalIGCC% == 0
-ban('Coal-IGCC') = yes ;
-$endif.coaligccban
-
-* turn off CoFireNew technology
-$ifthene.cofirenewban %GSw_CofireNew% == 0
-ban('CofireNew') = yes ;
-$endif.cofirenewban
-
-* turn off lfill-gas technology
-$ifthene.lfillgasban %GSw_LfillGas% == 0
-ban('lfill-gas') = yes ;
-$endif.lfillgasban
-
-* exclude dupv
-$ifthene.dupvban %GSw_DUPV% == 0
-ban(i)$dupv(i) = yes ;
-$endif.dupvban
-
-* place coal-new to ban set
-$ifthene.coalnewban %GSw_CoalNew% == 0
-ban('coal-new') = yes ;
-$endif.coalnewban
-
-* add nuclear(i) to bannew(i)
-$ifthene.nuclearbannew %GSw_Nuclear% == 0
-bannew(i)$nuclear(i) = yes ;
-$endif.nuclearbannew
-
-* add nuclear-smr to ban(i)
-$ifthene.nuclearsmrban %GSw_NuclearSMR% == 0
-ban('Nuclear-SMR') = yes ;
-$endif.nuclearsmrban
-
-* Ban DUPV, CSP, and Geothermal resources that do not remain after aggregation
-set resourceclass "renewable resource classes" /0*20/ ;
-parameter resourceclassnum(resourceclass) "numeric value for resource class" ;
-resourceclassnum(resourceclass) = resourceclass.val ;
-set tech_resourceclass(i,resourceclass) "map from CSP/DUPV techs to resource classes"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%tech_resourceclass.csv
-$offdelim
-$onlisting
-/ ;
-* There are 12 CSP resource classes by default. If Sw_NumCSPclasses < 12, we ban the
-* CSP techs with resource class > Sw_NumCSPclasses
-if(Sw_NumCSPclasses < 12,
-ban(i)$[csp(i)
-      $sum{resourceclass$tech_resourceclass(i,resourceclass),
-           resourceclassnum(resourceclass)>Sw_NumCSPclasses }] = yes ;
-) ;
-* There are 7 DUPV resource classes by default. If Sw_NumDUPVclasses < 7, we ban the
-* DUPV techs with resource class > Sw_NumDUPVclasses
-if(Sw_NumDUPVclasses < 7,
-ban(i)$[dupv(i)
-      $sum{resourceclass$tech_resourceclass(i,resourceclass),
-           resourceclassnum(resourceclass)>Sw_NumDUPVclasses }] = yes ;
-) ;
-
-*Ban Geothermal resources that do not remain after aggregation
-if(Sw_NumGeoclasses < 10,
-ban(i)$[geo(i)
-      $sum{resourceclass$tech_resourceclass(i,resourceclass),
-           resourceclassnum(resourceclass)>Sw_NumGeoclasses }] = yes ;
-) ;
 * start with a blank slate
 valcap(i,v,r,t) = no ;
 
@@ -2458,55 +2249,6 @@ valcap(i,newv,r,t)$[Sw_WaterMain$sum{ctt$bannew_ctt(ctt),i_ctt(i,ctt) }$tmodel_n
                   $sum{(tt,pcat)$[(yeart(tt)<=yeart(t))$sameas(pcat,i)], m_required_prescriptions(pcat,r,tt) }
                   $sum{tt$(yeart(tt)<=yeart(t)), ivt(i,newv,tt) }] = yes ;
 
-* if switch is equal to zero, remove all geothermal technologies
-if(Sw_Geothermal = 0,
-  valcap(i,v,r,t)$geo(i) = no ;
-  ban(i)$geo(i) = yes ;
-) ;
-
-* if equal to one, only keep the non-extended default representation
-if(Sw_Geothermal = 1,
-  valcap(i,v,r,t)$geo_extra(i) = no ;
-  ban(i)$geo_extra(i) = yes ;
-) ;
-
-
-*** Restrict valcap for storage techs based on Sw_Storage switch
-* 0: Ban all storage
-if(Sw_Storage = 0,
- valcap(i,v,r,t)$storage_standalone(i) = no ;
- ban(i)$storage_standalone(i) = yes ;
- Sw_BatteryMandate = 0 ;
-) ;
-* 3: Ban 2-, 6-, and 10-hour batteries (keep 4- and 8-hour batteries and PSH)
-if(Sw_Storage = 3,
- valcap(i,v,r,t)$[storage_standalone(i)
-                $(sameas(i,'battery_2') or sameas(i,'battery_6') or sameas(i,'battery_10'))] = no ;
- ban(i)$[storage_standalone(i)
-       $(sameas(i,'battery_2') or sameas(i,'battery_6') or sameas(i,'battery_10'))] = yes ;
-) ;
-* 4: Ban everything except 4-hour batteries
-if(Sw_Storage = 4,
- valcap(i,v,r,t)$[storage_standalone(i)$(not sameas(i,'battery_4'))] = no ;
- ban(i)$[storage_standalone(i)$(not sameas(i,'battery_4'))] = yes ;
-) ;
-
-* Restrict valcap for DR techs based on Sw_DR switch
-if(Sw_DR = 0,
-  valcap(i,v,r,t)$dr(i) = no ;
-  ban(i)$[dr(i)] = yes ;
-) ;
-
-* Restrict valcap for ccs techs based on Sw_CCS switch
-if(Sw_CCS = 0,
-  valcap(i,v,r,t)$ccs(i) = no ;
-  ban(i)$ccs(i) = yes ;
-) ;
-
-*Restrict valcap for nuclear in BAs that are impacted By state nuclear bans
-if(Sw_NukeStateBan = 1,
-  valcap(i,v,r,t)$[nuclear(i)$newv(v)$nuclear_ba_ban(r)] = no ;
-) ;
 
 valcap(i,v,r,t)$[not tmodel_new(t)] = no ;
 valcap(i,newv,r,t)$[not sum{tt$ivt(i,newv,tt),tmodel_new(tt) }] = no ;
@@ -2555,6 +2297,11 @@ m_capacity_exog(i,v,r,t)$forced_retire(i,r,t) = 0 ;
 
 * remove upgrade technologies that are explicitly banned
 valcap(i,v,r,t)$[upgrade(i)$ban(i)] = no ;
+
+*Restrict valcap for nuclear in BAs that are impacted By state nuclear bans
+if(Sw_NukeStateBan = 1,
+  valcap(i,v,r,t)$[nuclear(i)$newv(v)$nuclear_ba_ban(r)] = no ;
+) ;
 
 $ifthene.hydEDban %GSw_hydED% == 0
 * Only leave hydED, turn off remaining hydro technologies
@@ -3714,19 +3461,17 @@ pipeline_distance(r,rr) = distance(r,rr,"AC") ;
 * we multiply here instead of divide (as in the calculation of m_capacity_exog("smr","init-1",r,t)) since MW is in the denominator
 * since we assume smrs only have forced_ourages (and no planned outages),
 * this is equivalent to using avail(h), but we do it here in b_inputs before defining
-* avail(h) to define these costs before we define h-dependent parameters
+* avail(h) to define these costs before we define h-dependent parameters 
 * the same conversion applies to FOM
-plant_char0(i,t,"capcost")$smr(i) = deflator("2018") * consume_char0(i,t,"cost_cap") /
+plant_char0(i,t,"capcost")$smr(i) = deflator("2018") * consume_char0(i,t,"cost_cap") / 
   consume_char0(i,t,"ele_efficiency") * (1000 * 24) * (1 - forced_outage("smr") ) ;
-plant_char0(i,t,"fom")$smr(i) = deflator("2018") * consume_char0(i,t,"fom") /
+plant_char0(i,t,"fom")$smr(i) = deflator("2018") * consume_char0(i,t,"fom") / 
   consume_char0(i,t,"ele_efficiency") * (1000 * 24) * (1 - forced_outage("smr") ) ;
 
 *electrolyzers capcost just need to go from $/kW to $/MW
 plant_char0("electrolyzer",t,"capcost") = deflator("2022") * consume_char0("electrolyzer",t,"cost_cap") * 1000 ;
 plant_char0("electrolyzer",t,"fom") = deflator("2022") * consume_char0("electrolyzer",t,"fom") * 1000 ;
 
-* TODO: MCI - convert all DAC inputs above into scenario csvs in inputs/consume a la inputs/plant_characteristics and format them within plantcostprep.py
-* Need to move the BAU and conservative case out of b_inputs and into their own scenario csvs.
 set consumecat "categories for consuming facility characteristics" / capcost, fom, vom, conversionrate / ;
 
 * capcost        - $/(tonne CO2/hr)
@@ -3911,6 +3656,7 @@ $offdelim
 $onlisting
 / ;
 
+$onempty
 parameter pipeline_cost_mult(r,rr) "--fraction-- route-dependent cost multiplier for pipelines"
 /
 $offlisting
@@ -3919,6 +3665,7 @@ $include inputs_case%ds%pipeline_cost_mult.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 * here computing capital and FOM costs as $/tonne-hour for all possible routes
 * including capital cost multipliers, which are different for pipelines and compressors
@@ -3944,32 +3691,6 @@ cost_h2_storage_fom(h2_st,allt)$h2_stor(h2_st) =
 
 * electric load from compressors in the h2 network
 h2_network_load(h2_st,allt) = h2_cost_inputs(h2_st,allt,"electric_load") ;
-
-* calculate initial smr capacity to ensure that exogenous H2 demand can be supplied
-
-*** TODO: Calculate in writecapdat.py and read in to b_inputs.gms directly
-* adjust capacity such that it matches regional demand
-* while also adjusting for timeslice-weighted availability assumptions
-m_capacity_exog("smr","init-1",r,t)$Sw_H2 =
-* regional exogenous demand (in tonnes)
-* note that with rounding of parameters in d_solveprep we need
-* to make a tiny adjustment upwards to avoid infeasibilities
-* this parameter is further updated below after the population
-* of the avail parameter - doing the initial calculations here
-* helps to avoid issues with valcap in the assignment of
-* consuming technology characteristics
-  1.0001 * (( sum{p, h2_exogenous_demand(p,"2020") * h2_share(r,t) }
-* adjusting for tonnes / MW
-  / (1 / consume_char0("smr","2010","ele_efficiency")) )
-* from annual to hourly
-  ) / 8760 ;
-
-* adjust upwards to account for smr availability
-* since we assume smrs only have forced_ourages (and no planned outages),
-* this is equivalent to using avail(h), but we do it here in b_inputs before defining
-* avail(h) since we want this capacity defined before we define h-dependent parameters
-m_capacity_exog("smr","init-1",r,t)$valcap_iv("smr","init-1")
-  = m_capacity_exog("smr","init-1",r,t) / (1 - forced_outage("smr") ) ;
 
 *==================================
 * --- Flexible CCS Parameters ---
@@ -4055,7 +3776,7 @@ $onlisting
 
 parameter ilr(i) "--unitless-- inverter loading ratio - used to convert DC capacity to AC capacity for PV" ;
 * assign a default value of 1.0 for every technology (used in e_report.gms)
-ilr(i) = 1 ;
+ilr(i)$[not ban(i)] = 1 ;
 ilr(i)$[upv(i) or dupv(i)] = ilr_utility ;
 ilr(i)$distpv(i) = ilr_dist ;
 * assign an ILR to hybrid PV+battery technologies based on the ILR for the configurations
@@ -4404,6 +4125,7 @@ fuel_price(i,r,t)$[h2_ct(i)$Sw_H2$(yeart(t)>=Sw_H2_Demand_Start)] = 0 ;
 
 
 *created by /input_processing/writecapdat.py
+$onempty
 parameter cf_hyd_quarter(i,quarter,r,allt) "--fraction-- hydro capacity factors by quarter"
 /
 $offlisting
@@ -4412,6 +4134,7 @@ $include inputs_case%ds%hydcf.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 
 *=====================================================
@@ -4428,7 +4151,7 @@ parameter cap_hyd_szn_adj_quarter(i,quarter,r) "--fraction-- quarterly max capac
 /
 $offlisting
 $ondelim
-$include inputs_case%ds%hydcfadj.csv
+$include inputs_case%ds%hydcapadj.csv
 $offdelim
 $onlisting
 / ;
@@ -4625,7 +4348,30 @@ $offdelim
 $onlisting
 / ;
 
+parameter startcost(i) "--$/MW-- linearized startup cost"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%startcost.csv
+$offdelim
+$onlisting
+/ ;
+startcost(i)$upgrade(i) = sum{ii$upgrade_to(i,ii), startcost(ii) } ;
+* Turn off startcost for some techs based on GSw_StartCost
+startcost(i)$[(Sw_StartCost=0)] = 0 ;
+startcost(i)$[(Sw_StartCost=1)$(not nuclear(i))] = 0 ;
+startcost(i)$[(Sw_StartCost=2)$(not nuclear(i))$(not ccs(i))$(not coal(i))] = 0 ;
+startcost(i)$[(Sw_StartCost=3)$(not ccs(i))$(not coal(i))] = 0 ;
+startcost(i)$[(Sw_StartCost=4)$(nuclear(i))] = 0 ;
 
+parameter mingen_fixed(i) "--fraction-- minimum generation level across all hours"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%mingen_fixed.csv
+$offdelim
+$onlisting
+/ ;
 
 *=========================================
 *              --- Load ---
@@ -4665,7 +4411,6 @@ $include inputs_case%ds%ev_dynamic_demand.csv
 $offdelim
 $onlisting
 / ;
-
 
 
 *==============================
@@ -4793,7 +4538,6 @@ $include inputs_case%ds%trans_cap_cost_mult_noITC.csv
 $offdelim
 $onlisting
 / ;
-
 
 
 * --- Hybrid PV+Battery ---
@@ -4981,8 +4725,8 @@ emit_rate_con(e,r,t) = no ;
 * Growth limits and penalties
 *============================
 
-set gbin "growth bins" /gbin1*gbin4/ ;
-
+set gbin "growth bins" /gbin1*gbin3/ ;
+        
 *absolute growth penalties based on greatest annual change of capacity for each tech group from 1990-2016
 parameter growth_limit_absolute(tg) "--MW-- growth limit for technology groups in absolute terms"
 /
@@ -5391,10 +5135,10 @@ $offempty
 
 $ifthen.storcap %GSw_HydroStorInMaxFrac% == "data"
 * Use data file for available PSH data
-storinmaxfrac(psh,v,r) = storinmaxfrac_data(psh,v,r) ;
+storinmaxfrac(i,v,r)$[valcap_ivr(i,v,r)$psh(i)] = storinmaxfrac_data(i,v,r) ;
 $else.storcap
 * Use numerical value from case file for PSH only
-storinmaxfrac(psh,v,r) = %GSw_HydroStorInMaxFrac% ;
+storinmaxfrac(i,v,r)$[valcap_ivr(i,v,r)$psh(i)] = %GSw_HydroStorInMaxFrac% ;
 $endif.storcap
 * Fill any gaps with values of 1
 storinmaxfrac(i,v,r)$[(storage_standalone(i) or hyd_add_pump(i))$(not storinmaxfrac(i,v,r))$valcap_ivr(i,v,r)] = 1 ;
@@ -5489,7 +5233,7 @@ $offempty
 storage_duration_m(i,v,r)$[storage_duration(i)$valcap_ivr(i,v,r)] = storage_duration(i) ;
 * Overwrite storage duration for existing PSH capacity when using datafile
 $ifthen %GSw_HydroPSHDurData% == 1
-storage_duration_m(psh,v,r)$storage_duration_pshdata(psh,v,r) = storage_duration_pshdata(psh,v,r) ;
+storage_duration_m(i,v,r)$[storage_duration_pshdata(i,v,r)$psh(i)$valcap_ivr(i,v,r)] = storage_duration_pshdata(i,v,r) ;
 $endif
 * Define fraction of energy that must be used within season. Use input parameters for dispatchable hydropower and PSH.
 within_seas_frac(i,v,r)$valcap_ivr(i,v,r) = 1 ;
@@ -5534,6 +5278,9 @@ cc_storage(i,sdbin)$upgrade(i) = sum{ii$upgrade_to(i,ii), cc_storage(ii,sdbin) }
 cost_fom(psh,v,r,t)$valcap(psh,v,r,t) = cost_fom_psh ;
 cost_vom(psh,v,r,t)$valcap(psh,v,r,t) = cost_vom_psh ;
 
+* Apply a minimum VOM cost for storage (to avoid degeneracy with curtailment)
+* Only apply the value to storage that does not have a VOM value
+cost_vom(i,v,r,t)$[storage(i)$valgen(i,v,r,t)$(not cost_vom(i,v,r,t))] = storage_vom_min ;
 
 * declared over allt to allow for external data files that extend beyond end_year
 parameter ice_fom(allt) "--$/MW-year -- Fixed O&M costs for ice storage"
@@ -5605,7 +5352,6 @@ cost_upgrade('coal-IGCC_coal-CCS_mod',v,r,t)$valcap('coal-IGCC_coal-CCS_mod',v,r
 cost_upgrade('coal-IGCC_coal-CCS_max',v,r,t)$valcap('coal-IGCC_coal-CCS_max',v,r,t) =
   cost_upgrade('coal-new_coal-CCS_max',v,r,t) ;
 
-* TODO: MI--potentially integrate the switches below into plantcostprep.py for explicit specification of upgrade costs.
 * Assign upgrade costs for hydro technology upgrades using values from cases file
 cost_upgrade('hydEND_hydED',v,r,t)$valcap('hydEND_hydED',v,r,t) = %GSw_HydroCostAddDispatch% ;
 cost_upgrade('hydED_pumped-hydro',v,r,t)$valcap('hydED_pumped-hydro',v,r,t) = %GSw_HydroCostAddPump% ;
@@ -5644,43 +5390,33 @@ cost_upgrade(i,v,r,t)$[initv(v)$hintage_data(i,v,r,t,"wCCS_Retro_OvernightCost")
 cost_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)] = max{0, cost_upgrade(i,v,r,t) } ;
 
 
-table upgrade_mult(i,allt) "--%-- cost adjustment for cost_upgrade techs based on ATB moderate case (Sw_UpgradeCost_Mult = 0)"
+table upgrade_mult(i,allt) "--%-- cost adjustment for cost_upgrade techs"
 $ondelim
-$include inputs_case%ds%upgrade_mult_atb23_ccs_mid.csv
+$include inputs_case%ds%upgrade_mult.csv
 $offdelim
 ;
 
-table upgrade_mult_advanced(i,allt) "--%-- cost adjustment for cost_upgrade techs based on ATB advanced case (Sw_UpgradeCost_Mult = 1)"
+table upgrade_mult_reduced(i,allt) "--%-- cost adjustment for cost_upgrade techs with reduced costs (Sw_UpgradeCost_Mult = 1)"
 $ondelim
-$include inputs_case%ds%upgrade_mult_atb23_ccs_adv.csv
-$offdelim
-;
-
-table upgrade_mult_conservative(i,allt) "--%-- cost adjustment for cost_upgrade techs based on ATB conservative case (Sw_UpgradeCost_Mult = 2)"
-$ondelim
-$include inputs_case%ds%upgrade_mult_atb23_ccs_con.csv
+$include inputs_case%ds%upgrade_mult_reduced.csv
 $offdelim
 ;
 
 upgrade_mult(i,t)$[not upgrade_mult(i,t)] = 1 ;
 
 if(Sw_UpgradeCost_Mult=1,
-  upgrade_mult(i,t) = upgrade_mult_advanced(i,t) ;
+  upgrade_mult(i,t) = upgrade_mult_reduced(i,t) ;
 ) ;
 
 if(Sw_UpgradeCost_Mult=2,
-  upgrade_mult(i,t) = upgrade_mult_conservative(i,t) ;
-) ;
-
-if(Sw_UpgradeCost_Mult=3,
   upgrade_mult(i,t) = 1;
 ) ;
 
-if(Sw_UpgradeCost_Mult=4,
+if(Sw_UpgradeCost_Mult=3,
   upgrade_mult(i,t) = 1 + (1-upgrade_mult(i,t)) ;
 ) ;
 
-if(Sw_UpgradeCost_Mult=5,
+if(Sw_UpgradeCost_Mult=4,
   upgrade_mult(i,t) = 1.2 ;
 ) ;
 
@@ -5827,6 +5563,70 @@ if(Sw_CarbTax = 1,
 emit_tax("CO2",r,t) = co2_tax(t) * emit_scale("CO2") ;
 ) ;
 
+*====================================
+* --- Endogenous Retirements ---
+*====================================
+
+set valret(i,v) "technologies and classes that can be retired",
+    noretire(i) "technologies that will never be retired" /distpv, can-imports/ ;
+
+* storage technologies are not appropriately attributing capacity value to CAP variable
+* therefore not allowing them to endogenously retire
+noretire(i)$[(storage_standalone(i) or hyd_add_pump(i))] = yes ;
+
+*all existings plants of any technology can be retired if Sw_Retire = 1
+valret(i,v)$[(Sw_Retire=1)$initv(v)$(not noretire(i))] = yes ;
+
+*only existing coal and gas are retirable if Sw_Retire = 2
+valret(i,v)$[(Sw_Retire=2)$initv(v)$(not noretire(i))
+            $(coal(i) or gas(i) or ogs(i))] = yes ;
+
+*All new and existing nuclear, coal, gas, and hydrogen are retirable if Sw_Retire = 3
+*Existing plants have to meet the min_retire_age before retiring
+valret(i,v)$[((Sw_Retire=3) or (Sw_Retire=5))$(not noretire(i))
+            $(coal(i) or gas(i) or nuclear(i) or ogs(i) or h2_ct(i))] = yes ;
+
+*new and existings plants of any technology can be retired if Sw_Retire = 4
+valret(i,v)$[(Sw_Retire=4)$(not noretire(i))] = yes ;
+
+retiretech(i,v,r,t)$[valret(i,v)$valcap(i,v,r,t)] = yes ;
+
+* when Sw_Retire = 3 ensure that plants do not retire before their minimum age
+retiretech(i,v,r,t)$[((Sw_Retire=3) or (Sw_Retire=5))$initv(v)$(not noretire(i))$(plant_age(i,v,r,t) <= min_retire_age(i))
+                    $(coal(i) or gas(i) or nuclear(i) or ogs(i) or h2_ct(i))] = no ;
+
+* for sw_retire=5, don't allow nuclear to retire until 2030
+retiretech(i,v,r,t)$[(Sw_Retire=5)$nuclear(i)$(yeart(t)<=2030)] = no ;
+
+*several states have subsidies for nuclear power, so do not allow nuclear to retire in these states
+*before the year specified (see https://www.eia.gov/todayinenergy/detail.php?id=41534)
+*Note that Ohio has since repealed their nuclear subsidy, so is no longer included
+$onempty
+parameter nuclear_subsidies(st) '--year-- the year a nuclear subsidy ends in a given state'
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%nuclear_subsidies.csv
+$offdelim
+$onlisting
+/
+;
+$offempty
+
+retiretech(i,initv,r,t)$[(yeart(t) < sum{st$r_st(r,st), nuclear_subsidies(st) })$valcap(i,initv,r,t)$nuclear(i)] = no ;
+
+* if Sw_NukeNoRetire is enabled, don't allow nuclear to retire through Sw_NukeNoRetireYear
+if(Sw_NukeNoRetire = 1,
+         retiretech(i,v,r,t)$[nuclear(i)$(yeart(t)<=Sw_NukeNoRetireYear)] = no ;
+) ;
+
+
+*Do not allow retirements before they are allowed
+retiretech(i,v,r,t)$[(yeart(t)<Sw_Retireyear)] = no ;
+
+*Need to enable endogenous retirements for plants that can have persistent upgrades
+retiretech(i,v,r,t)$[(yeart(t)>=Sw_Upgradeyear)$(yeart(t)>=Sw_Retireyear)$(Sw_Upgrades = 2)$rb(r)
+                     $sum{ii$[upgrade_from(ii,i)$valcap(ii,v,r,t)], 1 }] = yes ;
 
 *=========================================
 * BEGIN MODEL SPECIFIC PARAMETER CREATION
@@ -5876,9 +5676,44 @@ if (Sw_ReducedResource = 1,
 *adjust cost of PV+Battery interconnection [$/MWdc] based on the default ILR for utility-scale PV
 m_rsc_dat(r,i,rscbin,"cost")$pvb(i) = m_rsc_dat(r,i,rscbin,"cost") * ilr_utility / ilr(i) ;
 
-*Ensure sufficient resource is available to cover prescribed builds. These may be costless.
-m_rsc_dat(r,i,"bin1","cap")$[rsc_i(i)$(sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } < sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) })] =
-  sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) } - sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } + m_rsc_dat(r,i,"bin1","cap") ;
+*Ensure sufficient resource is available to cover existing capacity for wind and PV
+m_rsc_dat(r,i,rscbin,"cap")$[rsc_i(i)
+                            $(m_rsc_dat(r,i,rscbin,"cap")
+                              < sum{(ii,v,tt)$[tfirst(tt)$rsc_agg(i,ii)$(not dr(i))$exog_rsc(i)], capacity_exog_rsc(ii,v,r,rscbin,tt) })] =
+  sum{(ii,v,tt)$[tfirst(tt)$rsc_agg(i,ii)$(not dr(i))$exog_rsc(i)], capacity_exog_rsc(ii,v,r,rscbin,tt) } ;
+
+*Now do the same for geothermal
+m_rsc_dat(r,i,"bin1","cap")$[(m_rsc_dat(r,i,"bin1","cap") < m_capacity_exog(i,"init-1",r,"2010"))
+                            $geo(i)] = m_capacity_exog(i,"init-1",r,"2010") ;
+
+*Ensure sufficient resource is available to cover prescribed builds for techs where sameas(i,pcat). These may be costless.
+*Include a 0.001 buffer because of rounding issues
+m_rsc_dat(r,i,"bin1","cap")$[rsc_i(i)$sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) }
+      $(sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } < (sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) } + .001))] =
+  sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) } - sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } + m_rsc_dat(r,i,"bin1","cap") + 0.001 ;
+
+m_rsc_dat(r,i,"bin1","cap")$[rsc_i(i)$sum{(pcat,t)$[prescriptivelink(pcat,i)$(not sameas(pcat,i))$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) }
+      $(sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } < (sum{(pcat,t)$[prescriptivelink(pcat,i)$(not sameas(pcat,i))$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) } + .001))] =
+  sum{(pcat,t)$[prescriptivelink(pcat,i)$(not sameas(pcat,i))$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) } - sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } + m_rsc_dat(r,i,"bin1","cap") + 0.001 ;
+
+*Geothermal is not a tech with sameas(i,pcat), so handle it separately here
+*Loop over regions that have geothermal prescribed builds
+loop(r$sum{(i,t)$[prescriptivelink("geothermal",i)$tmodel_new(t)], noncumulative_prescriptions("geothermal",r,t) },
+*Then loop over eligible geothermal technologies
+  loop(i$[prescriptivelink("geothermal",i)$sum{(v,t)$newv(v), valcap(i,v,r,t) }$geo_discovery(i,r,"2010")],
+*If capacity is insufficient, add enough capacity to make the model feasible
+*Use the 2010 geothermal discovery (geo_discovery) rate for the caluclation. That will slightly
+*overestimate geothermal resource for any prescribed builds happening after the discovery rate
+*begins to increase (currently after 2021)
+    m_rsc_dat(r,i,"bin1","cap")$[((sum{(rscbin), m_rsc_dat(r,i,rscbin,"cap") } * (1$[not geo_hydro(i)] + geo_discovery(i,r,"2010")$geo_hydro(i))) < sum{t$tmodel_new(t), noncumulative_prescriptions("geothermal",r,t) })
+                                $(1$[not geo_hydro(i)] + geo_discovery(i,r,"2010")$geo_hydro(i))] =
+      (sum{t$tmodel_new(t), noncumulative_prescriptions("geothermal",r,t) }
+       - sum{(rscbin), m_rsc_dat(r,i,rscbin,"cap") }
+       + m_rsc_dat(r,i,"bin1","cap")
+      ) / (1$[not geo_hydro(i)] + geo_discovery(i,r,"2010")$geo_hydro(i)) ;
+    break ;
+  ) ;
+) ;
 
 * * Apply spur-line cost multplier for relevant technologies
 * m_rsc_dat(r,i,rscbin,"cost")$(pv(i) or pvb(i) or wind(i) or csp(i)) =
@@ -5903,7 +5738,7 @@ force_pcat(pcat,t)$[yeart(t) < firstyear_pcat(pcat)] = yes ;
 force_pcat(pcat,t)$[sum{r, noncumulative_prescriptions(pcat,r,t) }] = yes ;
 
 *=========================================
-* Decoupled Capacity/Energy Upgrades
+* Decoupled Capacity/Energy Upgrades for hydropower
 *=========================================
 Parameter
 cost_cap_up(i,v,r,rscbin,t)     "--2004$/MW-- capacity upgrade costs",
@@ -5947,10 +5782,18 @@ $endif.hydup2
 allow_cap_up(i,v,r,rscbin,t)$[valcap(i,v,r,t)$cap_cap_up(i,v,r,rscbin,t)$(t.val>=Sw_UpgradeYear)] = yes ;
 allow_ener_up(i,v,r,rscbin,t)$[valcap(i,v,r,t)$cap_ener_up(i,v,r,rscbin,t)$(t.val>=Sw_UpgradeYear)] = yes ;
 
+
+* Track the initial amount of m_rsc_dat capacity to compare in e_report
+* We adust upwards by small amounts given potential for infeasibilities
+* in very tiny amounts and thus track the extent of the adjustments
+parameter m_rsc_dat_init(r,i,rscbin) "--MW-- Inital amount of resource supply curve capacity to compare with final amounts after adjustments" ;
+m_rsc_dat_init(r,i,rscbin)$m_rsc_dat(r,i,rscbin,"cap") = m_rsc_dat(r,i,rscbin,"cap") ;
+
+
 *========================================
 * -- CO2 Capture and Storage Network --
 *========================================
-
+$onempty
 set csfeas(cs)         "carbon storage sites with available capacity"
     r_cs(r,cs)         "mapping from BA to carbon storage sites"
 /
@@ -5981,6 +5824,7 @@ $onlisting
 / ,
           min_co2_spurline_distance     "--mi-- minimum distance for a spur line (used to provide a floor for pipeline distances in r_cs_distance"
 ;
+$offempty
 
 * Wherever BA centroids fall within formation boundaries, assume some average spur line distance to connect a CCS or DAC plant with an injection site
 min_co2_spurline_distance = 20 ;
@@ -6020,8 +5864,6 @@ cost_co2_pipeline_fom(r,rr,t) =  %GSw_CO2_CostAdj% * cost_co2_pipeline_fom(r,rr,
 cost_co2_stor_bec(cs,t) =        %GSw_CO2_CostAdj% * cost_co2_stor_bec(cs,t) ;
 cost_co2_spurline_fom(r,cs,t) =  %GSw_CO2_CostAdj% * cost_co2_spurline_fom(r,cs,t) ;
 cost_co2_spurline_cap(r,cs,t) =  %GSw_CO2_CostAdj% * cost_co2_spurline_cap(r,cs,t) ;
-
-
 
 *================================================================================================
 *== h- and szn-dependent sets and parameters (declared here, populated in d1_temporal_params) ===
@@ -6087,6 +5929,7 @@ Parameter
     hours(allh)                            "--hours-- number of hours in each time block"
     numdays(allszn)                        "--days-- number of days for each season"
     hours_daily(allh)                      "--hours-- number of hours represented by time-slice 'h' during one day"
+    numhours_nexth(allh,allh)              "--hours-- number of times hh follows h throughout year"
 * Mapping to quarters
     frac_h_quarter_weights(allh,quarter)   "--fraction-- fraction of timeslice associated with each quarter"
     szn_quarter_weights(allszn,quarter)    "--fraction-- fraction of season associated with each quarter"
@@ -6136,9 +5979,7 @@ Parameter
     net_trade_can(r,allh,allt)             "--MW-- [Sw_Canada=2] static net trade with Canada"
 * Capacity credit
     sdbin_size(ccreg,allszn,sdbin,t)       "--MW-- available capacity by storage duration bin - used to bin the peaking power capacity contribution of storage by duration"
-    sdbin_size_load(ccreg,allszn,sdbin,t)  "--MW-- bin_size loading in from the cc_out gdx file"
     cc_old(i,r,allszn,t)                   "--MW-- capacity credit for existing capacity - used in sequential solve similar to heritage reeds"
-    cc_old_load(i,r,ccreg,allszn,t)        "--MW-- cc_old loading in from the cc_out gdx file"
     cc_mar(i,r,allszn,t)                   "--fraction--  cc_mar loading inititalized to some reasonable value for the 2010 solve"
     cc_int(i,v,r,allszn,t)                 "--fraction--  average fractional capacity credit - used in intertemporal solve"
     cc_excess(i,r,allszn,t)                "--MW-- this is the excess capacity credit when assuming marginal capacity credit in intertemporal solve"
@@ -6161,11 +6002,20 @@ Parameter
     szn_adj_gas(allh)                      "--fraction-- seasonal adjustment for gas prices"
 ;
 
-* Initialize storage bin sizes
-sdbin_size(ccreg,allszn,sdbin,"2010") = 1000 ;
-
 alias(allh,allhh,allhhh) ;
 alias(h,hh,hhh) ;
 alias(allszn,allsznn) ;
 alias(actualszn,actualsznn,actualsznnn) ;
 alias(szn,sznn) ;
+
+* Initialize some parameters
+sdbin_size(ccreg,allszn,sdbin,"2010") = 1000 ;
+cc_int(i,v,r,allszn,t) = 0 ;
+cc_excess(i,r,allszn,t) = 0 ;
+
+* Trim some of the largest matrices to reduce file sizes
+cost_vom(i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
+cost_fom(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
+heat_rate(i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
+m_capacity_exog(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
+emit_rate(e,i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;

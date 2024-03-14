@@ -67,7 +67,7 @@ def get_pras_eue(sw, t, iteration=0):
     fulltimeindex = np.ravel([
         pd.date_range(
             '{}-01-01'.format(y), '{}-01-01'.format(y+1),
-            freq='H', closed='left', tz='EST',
+            freq='H', inclusive='left', tz='EST',
         )[:8760]
         for y in range(2007,2014)
     ])
@@ -166,9 +166,10 @@ def main(sw, t, iteration=0):
     try:
         neue = get_and_write_neue(sw)
     except Exception as err:
+        if int(sw['pras']) == 2:
+            print(traceback.format_exc())
         if int(sw['GSw_PRM_MaxStressPeriods']):
             raise Exception(err)
-        print(traceback.format_exc())
 
     #%% Stop here if not using stress periods
     if not int(sw['GSw_PRM_MaxStressPeriods']):

@@ -48,6 +48,18 @@ def makelog(scriptname, logpath):
 
     return log
 
+def get_param_value(opt_file, param_name, dtype=float, assert_exists=True):
+    result = None
+    with open(opt_file, mode="r") as f:
+        line = f.readline()
+        while line:
+            if line.startswith(param_name):
+                result = line
+                break
+            line = f.readline()
+    if assert_exists:
+        assert result, f"{param_name=} not found in {opt_file=}"
+    return dtype(result.replace(param_name,"").replace("=","").strip())
 
 def get_switches(casedir):
     """
@@ -55,7 +67,7 @@ def get_switches(casedir):
     ### ReEDS switches
     rsw = pd.read_csv(
         os.path.join(casedir, 'inputs_case', 'switches.csv'),
-        index_col=0, header=None, squeeze=True)
+        index_col=0, header=None).squeeze(1)
     ### Augur-specific switches
     asw = pd.read_csv(
         os.path.join(casedir, 'ReEDS_Augur', 'augur_switches.csv'),
@@ -81,10 +93,7 @@ def get_switches(casedir):
     for key in ['osprey_years']:
         sw[key] = [int(y) for y in sw[key].split('_')]
     ### Get number of threads to use in Osprey/PRAS
-    threads_pattern = re.compile(r'threads\s*=\s*(\d+)')
-    with open(os.path.join(casedir,'cplex.opt')) as f:
-        text = f.read()
-    threads = int(threads_pattern.findall(text)[0])
+    threads = get_param_value(os.path.join(casedir, 'cplex.opt'), "threads", dtype=int)
     sw['threads'] = threads
     ### Determine whether run is on HPC
     sw['hpc'] = True if int(os.environ.get('REEDS_USE_SLURM',0)) else False

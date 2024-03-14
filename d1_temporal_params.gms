@@ -173,6 +173,14 @@ $onlisting
 parameter numdays(allszn) "--number of days-- number of days for each season" ;
 numdays(szn) = sum{h$h_szn(h,szn),hours(h) } / 24 ;
 
+parameter numhours_nexth(allh,allhh) "--hours-- number of times hh follows h throughout year"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%numhours_nexth.csv
+$offdelim
+$onlisting
+/ ;
 
 parameter frac_h_quarter_weights(allh,quarter) "--unitless-- fraction of timeslice associated with each quarter"
 /
@@ -435,6 +443,8 @@ m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ivt(i,newv,tt ) }$valcap
 * distpv capacity factor is divided by (1.0 - distloss) to provide a busbar equivalent capacity factor
 m_cf(i,v,r,h,t)$[distpv(i)$valcap(i,v,r,t)] = m_cf(i,v,r,h,t) / (1.0 - distloss) ;
 
+* Remove capacity when there is no corresponding capacity factor
+m_capacity_exog(i,v,r,t)$[initv(v)$cf_tech(i)$(not sum{h, m_cf(i,v,r,h,t) })] = 0 ;
 
 * Average CF by season
 m_cf_szn(i,v,r,szn,t)$[cf_tech(i)$valcap(i,v,r,t)$szn_rep(szn)] =

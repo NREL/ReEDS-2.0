@@ -1,5 +1,5 @@
 #%%### Imports
-import sys, os, site, math, time
+import os, site
 import pandas as pd
 import numpy as np
 import matplotlib as mpl
@@ -24,7 +24,7 @@ savefig = True
 dispatchregions = [
     ('country','USA'),
     ('interconnect','western'),
-    ('interconnect','texas'),
+    ('interconnect','ercot'),
     ('interconnect','eastern'),
 ]
 
@@ -65,7 +65,7 @@ def group_techs(dfin, dfs, technamecol='i'):
 
 
 ### Input-formatting functions
-def get_gen(dfs, level='interconnect', region='texas'):
+def get_gen(dfs, level='interconnect', region='ercot'):
     """
     Return the sum of gen by tech for hierarchy level/region
     """
@@ -119,7 +119,7 @@ def get_load(sw, dfs, level='interconnect', region='western'):
     return load_out
 
 
-def get_stor_charge(sw, dfs, level='interconnect', region='texas'):
+def get_stor_charge(sw, dfs, level='interconnect', region='ercot'):
     """
     Return the sum of gen by tech for hierarchy level/region
     """
@@ -216,7 +216,7 @@ def get_inputs(sw):
         pd.date_range(
             '{}-01-01'.format(y),
             '{}-01-01'.format(y+1),
-            freq='H', closed='left', tz='EST',
+            freq='H', inclusive='left', tz='EST',
         )[:8760]
         for y in range(2007,2014)
     ])
@@ -225,14 +225,14 @@ def get_inputs(sw):
         timeindex = pd.date_range(
             f"{sw['osprey_years'][0]}-01-01",
             f"{sw['osprey_years'][0]+1}-01-01",
-            freq='H', closed='left', tz='EST',
+            freq='H', inclusive='left', tz='EST',
         )[:8760]
     else:
         timeindex = np.ravel([
             pd.date_range(
                 '{}-01-01'.format(y),
                 '{}-01-01'.format(y+1),
-                freq='H', closed='left', tz='EST',
+                freq='H', inclusive='left', tz='EST',
             )[:8760]
             for y in sw['osprey_years']
         ])
@@ -243,7 +243,7 @@ def get_inputs(sw):
                     * sw['periodsperyear'] * 7))
         .assign(datetime=fulltimeindex)
     )
-    d_osprey = pd.read_csv(os.path.join(sw['casedir'],'inputs_case','d_osprey.csv'), header=None, squeeze=True)
+    d_osprey = pd.read_csv(os.path.join(sw['casedir'],'inputs_case','d_osprey.csv'), header=None).squeeze(1)
     h_dt_szn['d'] = pd.concat([d_osprey]*sw['hoursperperiod']).sort_values().values
 
     gdxreeds = gdxpds.to_dataframes(
@@ -266,16 +266,16 @@ def get_inputs(sw):
     newhydrotechs = [
         'hydd','hydnd','hydnpd','hydnpnd','hydsd','hydsnd','hydud','hydund',
     ]
-    tech_map = (
-        tech_map
-        .append(pd.Series(dict(zip(existinghydrotechs,['hydro_exist']*len(existinghydrotechs)))))
-        .append(pd.Series(dict(zip(newhydrotechs,['hydro_new']*len(newhydrotechs)))))
-    ).reset_index().drop_duplicates().set_index('index')[0].rename(None)
+    tech_map = pd.concat([
+        tech_map,
+        pd.Series(dict(zip(existinghydrotechs,['hydro_exist']*len(existinghydrotechs)))),
+        pd.Series(dict(zip(newhydrotechs,['hydro_new']*len(newhydrotechs)))),
+    ]).reset_index().drop_duplicates().set_index('index')[0].rename(None)
 
     tech_style = pd.read_csv(
         os.path.join(sw['reeds_path'],'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
-        index_col='order', squeeze=True,
-    )
+        index_col='order',
+    ).squeeze(1)
     tech_style.index = tech_style.index.str.lower()
     tech_style['dropped'] = '#d62728'
     for i in ['hydro_exist', 'hydro_new']:
@@ -1168,7 +1168,7 @@ def plot_b1_dropped_load_timeseries_full(sw, dfs):
         'pras':dfs['pras']['USA_EUE']
     }
     timeindex_y = pd.date_range(
-        f"{sw['t']}-01-01", f"{sw['t']+1}-01-01", closed='left', freq='H',
+        f"{sw['t']}-01-01", f"{sw['t']+1}-01-01", inclusive='left', freq='H',
         tz='EST')[:8760]
     for model in ['osprey','pras']:
         if ((not dropped[model].sum()) or (dropped[model] == 9999).all()):
@@ -1278,7 +1278,7 @@ def plot_b1_dropped_load_duration(sw, dfs):
         plt.close()
 
 
-def map_dropped_load(sw, dfs):
+def map_dropped_load(sw, dfs, level='r'):
     """
     Annual EUE and NEUE by ReEDS zone
     """
@@ -1309,12 +1309,27 @@ def map_dropped_load(sw, dfs):
                 load = dfs['pras_load']
             if not dropped[model].sum().sum():
                 continue
+            ## Aggregate if necessary
+            if level not in ['r','rb','ba']:
+                dropped[model] = (
+                    dropped[model].rename(columns=dfs['hierarchy'][level])
+                    .groupby(level=0, axis=1).sum().copy()
+                )
+                load = (
+                    load.rename(columns=dfs['hierarchy'][level])
+                    .groupby(level=0, axis=1).sum().copy()
+                )
             for agg in ['max','sum','mean']:
                 if (metric,agg) not in units:
                     continue
-                savename = f"B1-dropped_load-map-{metric}_{agg}-{model}-{sw['t']}.png"
+                savename = f"B1-dropped_load-map-{metric}_{agg}-{model}-{level}-{sw['t']}.png"
 
                 dfplot = dfba.copy()
+                if level not in ['r','rb','ba']:
+                    dfplot[level] = dfs['hierarchy'][level]
+                    dfplot = dfplot.dissolve(level)
+                    dfplot['labelx'] = dfplot.geometry.centroid.x
+                    dfplot['labely'] = dfplot.geometry.centroid.y
                 if metric == 'EUE':
                     dfplot['val'] = dropped[model].agg(agg)
                 elif (metric == 'NEUE') and (agg == 'max'):
@@ -1336,9 +1351,10 @@ def map_dropped_load(sw, dfs):
                             (row.labelx, row.labely),
                             color='r', ha='center', va='top', fontsize=6, weight='bold')
                 ### Formatting
-                for r, row in dfba.iterrows():
-                    ax.annotate(r, (row.labelx, row.labely),
-                                ha='center', va='bottom', fontsize=6, color='C7')
+                if level in ['r','rb','ba']:
+                    for r, row in dfba.iterrows():
+                        ax.annotate(r, (row.labelx, row.labely),
+                                    ha='center', va='bottom', fontsize=6, color='C7')
                 ax.axis('off')
                 if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
                 if interactive: plt.show()
@@ -2058,7 +2074,8 @@ def main(sw, augur_plots=1):
         print('plot_b1_dropped_load_duration() failed:', err)
 
     try:
-        map_dropped_load(sw, dfs)
+        for level in ['r','transreg']:
+            map_dropped_load(sw, dfs, level=level)
     except Exception as err:
         print('map_dropped_load() failed:', err)
 
@@ -2168,9 +2185,9 @@ if __name__ == '__main__':
     # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0/')
     # casedir = os.path.join(reeds_path,'runs','v20230414_prasM1_WECCh2_SP_sh4msp30_so1slaMspy2')
     # casedir = (
-    #     '/Volumes/ReEDS/FY22-NTP/Candidates/Archive/ReEDSruns/20230512/'
-    #     'v20230512_ntpH0_AC_DemMd_90by2035EP__core')
-    # t = 2035
+    #     '/Volumes/ReEDS/FY22-NTP/Candidates/Archive/ReEDSruns/'
+    #     '20230730/v20230730_ntpH0_AC_DemMd_90by2035EP__core')
+    # t = 2050
     # interactive = True
     # iteration = -1
     # sw['reeds_path'] = reeds_path

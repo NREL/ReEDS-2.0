@@ -58,22 +58,6 @@ cc_mar_load(i,r,szn,t) = sum{loadset, sum{ccreg$r_ccreg(r,ccreg), cc_mar_load2(l
 
 sdbin_size_load(ccreg,szn,sdbin,t) = sum{loadset, sdbin_size_load2(loadset,ccreg,szn,sdbin,t) } ;
 
-*===========================
-* --- Begin Curtailment ---
-*===========================
-
-*Clear params before calculation
-oldVREgen(r,h,t)$tload(t) = 0 ;
-oldMINGEN(r,h,t)$tload(t) = 0 ;
-
-
-oldVREgen(r,h,t)$tload(t) =
-    sum{(i,v)$[vre(i)$valcap(i,v,r,t)],
-          m_cf(i,v,r,h,t) * CAP.l(i,v,r,t)
-       } ;
-
-oldMINGEN(r,h,t)$[Sw_Mingen$tload(t)] = sum{h_szn(h,szn), MINGEN.l(r,szn,t) } ;
-
 *===============================
 * --- Begin Capacity Credit ---
 *===============================
@@ -142,7 +126,7 @@ cc_int(i,v,r,szn,t)$[cc_int(i,v,r,szn,t) < 0.001] = 0 ;
 
 cc_iter(i,v,r,szn,t,"%niter%")$cc_int(i,v,r,szn,t) = cc_int(i,v,r,szn,t) ;
 
-execute_unload 'ReEDS_Augur%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int, oldVREgen ;
+execute_unload 'ReEDS_Augur%ds%augur_data%ds%curtout_%case%_%niter%.gdx' cc_int ;
 
 *following line will load in the level values if the switch is enabled
 *note that this is still within the conditional that we are now past the first iteration

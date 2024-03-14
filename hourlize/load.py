@@ -291,7 +291,6 @@ if __name__== '__main__':
     setup(this_dir_path, out_dir, paths)
     #If load source is a directory (as it is for EER load), the csv files inside need to be labeled like w2007.csv.
     if os.path.isdir(cf.load_source):
-        #TODO: Should we move the following to a separate function, e.g. process_eer_style_load(out_dir, paths)?
         f = h5py.File(os.path.join(out_dir,'results','load_hourly_multi.h5'), 'w')
         ls_df_hr = []
         for year in list(range(2007,2014)):

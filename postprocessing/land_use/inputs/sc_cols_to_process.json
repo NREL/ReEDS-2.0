@@ -1,0 +1,7 @@
+{
+    "nlcd": {"colname": "nlcd_2019$", "newcolname":"nlcd_value", "mapping":"nlcd_combined_categories"},
+    "usgs_a1b": {"colname": "conus_a1b_y2050", "newcolname":"usgs_code", "mapping":"usgs_combined_categories"},
+    "usgs_a2": {"colname": "conus_a2_y2050", "newcolname":"usgs_code", "mapping":"usgs_combined_categories"},
+    "usgs_b1": {"colname": "conus_b1_y2050", "newcolname":"usgs_code", "mapping":"usgs_combined_categories"},
+    "usgs_b2": {"colname": "conus_b2_y2050", "newcolname":"usgs_code", "mapping":"usgs_combined_categories"}
+}

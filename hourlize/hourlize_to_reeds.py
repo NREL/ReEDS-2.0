@@ -61,7 +61,7 @@ if tech == 'load':
 else:
     # get supply curve path on nrelnas01 from supply curve metada file. 
     df_rev = pd.read_csv(os.path.join(this_dir_path, '../inputs/supplycurvedata/metadata/rev_paths.csv'))
-    df_rev = df_rev[(df_rev['tech'] == tech)&(df_rev['access_case'] == scenario)].squeeze()
+    df_rev = df_rev[(df_rev['tech'] == tech)&(df_rev['access_case'] == scenario)].squeeze(1)
     hourlize_base = os.path.join('ReEDS','Supply_Curve_Data', df_rev['sc_path'])
 
 ### Overwrite to a different path if desired

@@ -1,0 +1,226 @@
+{
+    "cf_dset": "cf_mean",
+    "data_layers": {
+        "nlcd_2019_90x90": {
+            "dset": "nlcd_2019_90x90",
+            "method": "category"
+        },
+        "SEI_2017_2020_30_Current_warped": {
+            "dset": "SEI_2017_2020_30_Current_warped",
+            "method": "category"
+        },
+        "nced_06232022_gap_3_4": {
+            "dset": "nced_06232022_gap_3_4",
+            "method": "sum"
+        },
+        "padus_09012022_gap_3_4": {
+            "dset": "padus_09012022_gap_3_4",
+            "method": "sum"
+        },
+        "fed_land_owner": {
+            "dset": "fed_land_owner",
+            "method": "category"
+        },
+        "nlcd_2016_treecanopy_2019_08_31_rev90m": {
+            "dset": "nlcd_2016_treecanopy_2019_08_31_rev90m",
+            "method": "mean"
+        },
+        "2016_30m_cdls_rev90m": {
+            "dset": "2016_30m_cdls_rev90m",
+            "method": "mean"
+        },
+        "landscan_usa_2020_conus_night": {
+            "dset": "landscan_usa_2020_conus_night",
+            "method": "sum"
+        },
+        "cdc_svi_2018_us_tract": {
+            "dset": "cdc_svi_2018_us_tract",
+            "method": "mean"
+        },
+        "resilient_and_connected_network": {
+            "dset": "resilient_and_connected_network",
+            "method": "category"
+        },
+        "aft_pvr_2016_rev": {
+            "dset": "aft_pvr_2016_rev",
+            "method": "mean"
+        },
+        "aft_state_best_ag_2016_rev": {
+            "dset": "aft_state_best_ag_2016_rev",
+            "method": "sum"
+        },
+        "nationally_significant_ag_land_2016_conus_rev": {
+            "dset": "nationally_significant_ag_land_2016_conus_rev",
+            "method": "sum"
+        },
+        "TNC_KeyWildlifeAreas": {
+            "dset": "TNC_KeyWildlifeAreas",
+            "method": "category"
+        },
+        "places_fmv_all_rev": {
+            "dset": "places_fmv_all_rev",
+            "method": "mean"
+        },
+        "ungulate_use_areas": {
+            "dset": "ungulate_use_areas",
+            "method": "sum"
+        },
+        "sagebrush_growth": {
+            "dset": "sagebrush_growth",
+            "method": "category"
+        },
+        "sagebrush_core": {
+            "dset": "sagebrush_core",
+            "method": "category"
+        },
+        "coal_closure_energy_communities": {
+            "dset": "coal_closure_energy_communities",
+            "method": "mean"
+        },
+        "coal_closure_energy_communities_census_tracts": {
+            "dset": "coal_closure_energy_communities_census_tract_with_coal_closure",
+            "method": "mean"
+        },
+        "coal_closure_energy_communities_adjoins_tracts": {
+            "dset": "coal_closure_energy_communities_directly_adjoins_tract_with_coal_closure",
+            "method": "mean"
+        },
+        "MSA_NMSA_FFE": {
+            "dset": "MSA_NMSA_FFE",
+            "method": "mean"
+        },
+        "conus_b1_y2050": {
+            "dset": "conus_b1_y2050",
+            "method": "category"
+        },
+        "nlcd_2019": {
+            "dset": "nlcd_2019",
+            "method": "category"
+        },
+        "nlcd_2021": {
+            "dset": "nlcd_2021",
+            "method": "category"
+        }
+    },
+    "log_directory": "./logs",
+    "excl_dict": {
+        "conus_landmass_interim": {
+            "exclude_values": 0
+        },
+        "icbm_2mile": {
+            "exclude_values": 1
+        },
+        "sage_grouse_phma_core_blm": {
+            "exclude_values": 7
+        },
+        "te_critical_habitat_usgs_subset": {
+            "exclude_values": 1
+        },
+        "hfld_oil_gas_wells": {
+            "exclude_values": 1
+        },
+        "conus_rail_percent": {
+            "use_as_weights": 1
+        },
+        "conus_roads_percent": {
+            "use_as_weights": 1
+        },
+        "conus_building_percent": {
+            "use_as_weights": 1
+        },
+        "conus_xmission_percent": {
+            "use_as_weights": 1
+        },
+        "conus_ng_pipeline_percent": {
+            "use_as_weights": 1
+        },
+        "dod_lands": {
+            "exclude_values": 1
+        },
+        "acec_9222022": {
+            "exclude_values": 1
+        },
+        "usfs_roadless_areas": {
+            "exclude_values": 1
+        },
+        "nced_06232022_gap_1_2": {
+            "exclude_values": 1
+        },
+        "padus_09012022_gap_1_2": {
+            "exclude_values": 1
+        },
+        "existing_bans": {
+            "exclude_values": 1
+        },
+        "srtm_slope": {
+            "include_range": [
+                0,
+                10
+            ]
+        },
+        "atlas_landform_elev_exclusion_albers": {
+            "exclude_values": 1
+        },
+        "ungulate_use_areas": {
+            "include_weights": {
+                "0": 1,
+                "1": 0.5
+            }
+        },
+        "setbacks_pipeline_reference": {
+            "use_as_weights": true
+        },
+        "setbacks_parcel_reference": {
+            "use_as_weights": true
+        },
+        "setbacks_rail_reference": {
+            "use_as_weights": true
+        },
+        "setbacks_road_reference": {
+            "use_as_weights": true
+        },
+        "setbacks_structure_reference": {
+            "use_as_weights": true
+        },
+        "setbacks_transmission_reference": {
+            "use_as_weights": true
+        },
+        "conus_b1_y2050": {
+            "exclude_values": [
+                1,
+                2,
+                15,
+                16
+            ]
+        }
+    },
+    "excl_fpath": [
+        "/shared-projects/rev/projects/weto/fy23/official_weto_seto/data/exclusions/PV_Exclusions_and_Characterizations.h5",
+        "/shared-projects/rev/projects/weto/fy23/official_weto_seto/data/setbacks/solar/PV_Setbacks_Reference.h5",
+        "/vast/shared-projects/rev/exclusions/Landuse_Exclusions.h5"
+    ],
+    "execution_control": {
+        "allocation": "wetosa",
+        "feature": "--qos=normal",
+        "memory": 78,
+        "nodes": 1,
+        "option": "eagle",
+        "walltime": 6
+    },
+    "gen_fpath": "/shared-projects/rev/projects/seto/fy23/climate_scenarios/rev/generation/4_nsrdb_solar_2012/4_nsrdb_solar_2012_generation.h5",
+    "lcoe_dset": "lcoe_fcr",
+    "power_density": 43,
+    "res_class_bins": null,
+    "res_class_dset": "ghi_mean",
+    "res_fpath": "/lustre/eaglefs/OLD-datasets/NSRDB/current/nsrdb_2012.h5",
+    "resolution": 128,
+    "tm_dset": "techmap_nsrdb_3_2_2",
+    "h5_dsets": [
+        "cf_mean",
+        "fixed_charge_rate",
+        "capital_cost",
+        "fixed_operating_cost",
+        "variable_operating_cost",
+        "system_capacity"
+    ]
+}

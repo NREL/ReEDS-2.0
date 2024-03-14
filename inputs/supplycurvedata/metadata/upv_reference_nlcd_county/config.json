@@ -1,0 +1,91 @@
+{
+    "access_case": "reference_nlcd",
+    "batchcase": "upv_reference_nlcd_county",
+    "bin_col": "combined_eos_trans",
+    "bin_group_cols": [
+        "region",
+        "class"
+    ],
+    "bin_method": "equal_cap_cut",
+    "capacity_col": "capacity_mw_dc",
+    "casename": "upv_reference_nlcd_county",
+    "class_bin": true,
+    "class_bin_col": "mean_cf",
+    "class_bin_method": "kmeans",
+    "class_bin_num": 5,
+    "class_path": null,
+    "compression_opts": 4,
+    "config_base": "usgs",
+    "config_tech": "usgs",
+    "copy_to_reeds": true,
+    "copy_to_shared": true,
+    "cost_adder_components": [
+        "trans_adder_per_MW",
+        "capital_adder_per_MW"
+    ],
+    "distance_cols": [
+        "dist_km",
+        "reinforcement_dist_km"
+    ],
+    "driver": "H5FD_CORE",
+    "dtype": "np.float16",
+    "existing_sites": "/kfs3/scratch/bsergi/ReEDS-2.0/inputs/capacitydata/ReEDS_generator_database_final_EIA-NEMS.csv",
+    "filetype": "h5",
+    "filter_cols": {},
+    "gather_method": "smart",
+    "hourlizepath": "/kfs3/scratch/bsergi/ReEDS-2.0/hourlize",
+    "hourly_out_years": [
+        2012
+    ],
+    "inputfiles": [
+        "reg_map_file",
+        "class_path"
+    ],
+    "logToTerminal": true,
+    "min_cap": 5,
+    "outpath": "/kfs3/scratch/bsergi/ReEDS-2.0/hourlize/out/upv_reference_nlcd_county",
+    "output_timezone": "local",
+    "profile_dir": "",
+    "profile_dset": "rep_profiles_0",
+    "profile_file_format": "04_solar_nlcd2019_nsrdb2012_rep_profiles",
+    "profile_id_col": "sc_point_gid",
+    "profile_weight_col": "capacity",
+    "reedspath": "/kfs3/scratch/bsergi/ReEDS-2.0",
+    "reg_col": "cnty_fips",
+    "reg_map_file": "/kfs3/scratch/bsergi/ReEDS-2.0/hourlize/inputs/resource/county_map.csv",
+    "reg_out_col": "cnty_fips",
+    "resource_source_timezone": 0,
+    "rev_id_cols": [
+        "sc_point_gid"
+    ],
+    "rev_jsons": [
+        "config_aggregation.json",
+        "config_pipeline.json",
+        "config_supply-curve.json",
+        "reference_nlcd/config_rep-profiles_aggprof.json"
+    ],
+    "rev_path": "/projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_11_02_LandCover/reV/04_solar_nlcd2019_nsrdb2012",
+    "rev_paths_file": "/kfs3/scratch/bsergi/ReEDS-2.0/inputs/supplycurvedata/metadata/rev_paths.csv",
+    "rev_prefix": "04_solar_nlcd2019_nsrdb2012",
+    "sc_file": "/projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_11_02_LandCover/reV/post_processed_supply_curves/04_solar_nlcd2019_nsrdb2012_supply_curve.csv",
+    "sc_path": "/projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_11_02_LandCover",
+    "select_year": 2012,
+    "single_profile": false,
+    "start_1am": true,
+    "start_year": 2010,
+    "state_abbrev": "/kfs3/scratch/bsergi/ReEDS-2.0/hourlize/inputs/resource/state_abbrev.csv",
+    "subsetvars": [
+        "tech",
+        "access_case"
+    ],
+    "subtract_exog": false,
+    "tech": "upv",
+    "test_filters": {
+        "region": [
+            "p97",
+            "p98"
+        ]
+    },
+    "test_mode": false,
+    "upv_type": "dc"
+}

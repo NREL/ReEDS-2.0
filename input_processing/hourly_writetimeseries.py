@@ -1,4 +1,6 @@
-#%% IMPORTS
+#%% ===========================================================================
+### --- IMPORTS ---
+### ===========================================================================
 import os
 import logging
 import shutil
@@ -10,15 +12,14 @@ import numpy as np
 ### Local imports
 from LDC_prep import read_file
 from writedrshift import get_dr_shifts
-
 ##% Time the operation of this script
 from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
 
-##########
-#%% INPUTS
+#%%#################
+### FIXED INPUTS ###
 decimals = 3
 ### Indicate whether to show plots interactively [default False]
 interactive = False
@@ -28,8 +29,9 @@ debug = True
 all_weatheryears = list(range(2007,2014))
 
 
-#############
-#%% FUNCTIONS
+#%% ===========================================================================
+### --- FUNCTIONS ---
+### ===========================================================================
 
 def h2timestamp(h, tz='EST'):
     """
@@ -69,7 +71,7 @@ def get_timeindex(firstyear=2007, lastyear=2013, tz='EST'):
     timeindex = np.ravel([
         pd.date_range(
             f'{y}-01-01', f'{y+1}-01-01',
-            freq='H', closed='left', tz=tz,
+            freq='H', inclusive='left', tz=tz,
         )[:8760]
         for y in range(firstyear, lastyear+1)
     ])
@@ -130,37 +132,49 @@ def make_8760_map(period_szn, sw):
     return hmap_7yr, hmap_myr
 
 
-def get_season_peaks_hourly(load, sw, hierarchy, h2szn):
+def get_season_peaks_hourly(load, sw, reeds_path, inputs_case, hierarchy, h2szn, val_r_all):
+    ### Get r to county map
+    r_county = pd.read_csv(
+        os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze(1)
+    
+    # ReEDS only supports a single entry for agglevel right now, so use the
+    # first value from the list (copy_files.py already ensures that only one
+    # value is present)
+    agglevel = pd.read_csv(
+            os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
     ### Aggregate demand by GSw_PRM_hierarchy_level
     if sw['GSw_PRM_hierarchy_level'] == 'r':
         rmap = pd.Series(hierarchy.index, index=hierarchy.index)
-    else:
+    elif agglevel == 'county':
         rmap = hierarchy[sw['GSw_PRM_hierarchy_level']]
+    elif agglevel in ['ba','state','aggreg']:
+        hierarchy_orig = (pd.read_csv(os.path.join(reeds_path,'inputs','hierarchy.csv'))
+                          .rename(columns={'*county':'county','st':'state'}))
+        rmap = (hierarchy_orig[hierarchy_orig['ba'].isin(val_r_all)]
+                              [['ba',sw['GSw_PRM_hierarchy_level']]]
+                              .drop_duplicates().set_index('ba')).squeeze()
+        #renaming index to 'r' for use in merge step later
+        rmap.index.names = ['r']
     load_agg = (
-        load
-        .assign(region=load.r.map(rmap))
+        load.assign(region=load.r.map(rmap))
         .groupby(['h','region']).MW.sum()
         .unstack('region').reset_index()
-    )
-    ### Get the peak hour by season
+        )
+    ### Get the peak hour by season for aggregated load
     load_agg['szn'] = load_agg.h.map(h2szn)
     peakhour_agg_byseason = load_agg.set_index('h').groupby('szn').idxmax()
     ### Get the BA demand during the peak hour of the associated GSw_PRM_hierarchy_level
-    seasons = h2szn.dropna().unique()
     peak_out = {}
-    for r in load.r.unique():
-        load_r = load.loc[load.r==r].set_index('h').MW
-        peak_szn = peakhour_agg_byseason[rmap[r]]
-        for szn in seasons:
-            ### When running for stress periods we might not have data for the periods
-            ### of interest, so allow for zeros
-            if szn in peak_szn.index:
-                peak_out[r,szn] = float(load_r[peak_szn[szn]])
-            else:
-                peak_out[r,szn] = 0
+    # Determination of season peaks: We merge the peak_agg_byseason dataframe to rmap and load.
+    # By changing the peak_agg_byseason to long format we are able to merge based on the aggregated GSw_PRM_hierarchy_level region 
+    # Then by merging the resultant dataframe to load based on 'r' and peak hour 'h',
+    # we get the peak hours for each region of interest at the desired region resolution by season.
     peak_out = (
-        pd.Series(peak_out).rename('MW')
-        .reset_index().rename(columns={'level_0':'r','level_1':'szn'}))
+        peakhour_agg_byseason.unstack().rename('h').reset_index()
+        .merge(rmap.rename('region').reset_index(), on='region')
+        .merge(load, on=['r','h'], how='left')
+        [['r','szn','MW']]
+    )
     return peak_out
 
 
@@ -220,19 +234,19 @@ def get_minloading_windows(sw, h_szn, chunkmap):
 
 
 def get_yearly_demand(
-        sw, val_r, hmap_myr, hmap_7yr, inputs_case,
+        sw, hmap_myr, hmap_7yr, inputs_case,
     ):
     """
     After clustering based on GSw_HourlyClusterYear and identifying the modeled days,
     reload the raw demand and extract the demand on the modeled days for each year.
     """
     ### Get original demand data, subset to cluster year
-    load_in = read_file(os.path.join(inputs_case,'load'), index_columns=2)[val_r].unstack(level=0)
+    load_in = read_file(os.path.join(inputs_case,'load'), index_columns=2).unstack(level=0)
     load_in.columns = load_in.columns.rename(['r','t'])
     ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
     scalars = pd.read_csv(
         os.path.join(inputs_case,'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0, squeeze=True)
+        header=None, usecols=[0,1], index_col=0).squeeze(1)
     load_in *= (1 - scalars['distloss'])
     ### Keep hours being considered (only has an effect when periodtype != 'rep')
     load_in = load_in.loc[hmap_7yr.hour0].copy()
@@ -308,7 +322,6 @@ def get_yearly_flexDR(
     )
     dr_dec['season'] = dr_dec.period.map(period_szn)
 
-
     ### If modeling a full year, keep everything
     if sw['GSw_HourlyType'] == 'year':
         dr_inc_out = dr_inc.drop(['period','periodhour','season'], axis=1)
@@ -340,22 +353,23 @@ def get_yearly_flexDR(
     return dr_inc_out,dr_dec_out
 
 
-# #%% Inputs for testing
-# reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-# inputs_case = os.path.join(reeds_path, 'runs', 'v20230210_prmM0_ERCOT_d10sIrh4sh2_y2012', 'inputs_case')
-# sw = pd.read_csv(
-#     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
-# periodtype = 'stress2010'
-# periodtype = 'rep'
-# make_plots = int(sw.hourly_cluster_plots)
-# make_plots = 0
-# figpathtail = ''
-
-
-#%% Main function
+#%% ===========================================================================
+### --- MAIN FUNCTION ---
+### ===========================================================================
 def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtail=''):
     """
     """
+    # #%% Settings for testing
+    # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+    # inputs_case = os.path.join(reeds_path, 'runs', 'v20230210_prmM0_ERCOT_d10sIrh4sh2_y2012', 'inputs_case')
+    # sw = pd.read_csv(
+    #     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+    # periodtype = 'stress2010'
+    # periodtype = 'rep'
+    # make_plots = int(sw.hourly_cluster_plots)
+    # make_plots = 0
+    # figpathtail = ''
+
     #%% Set up logger
     log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
@@ -378,8 +392,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     os.makedirs(figpath, exist_ok=True)
 
     #%%### Load shared files
-    val_r = pd.read_csv(
-        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
+    val_r_all = pd.read_csv(
+        os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
     hierarchy = pd.read_csv(
         os.path.join(inputs_case, 'hierarchy.csv')).rename(columns={'*r':'r'}).set_index('r')
 
@@ -475,7 +489,9 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ### Broadcast CSP values for all techs
     cf_rep = recf.loc[
         recf.index.map(lambda x: any([x.startswith(i) for i in rep_periods]))]
-    cf_rep = append_csp_profiles(cf_rep=cf_rep, sw=sw)
+    
+    if int(sw['GSw_CSP']) != 0:
+        cf_rep = append_csp_profiles(cf_rep=cf_rep, sw=sw)
 
     cf_out = cf_rep.rename_axis('h').copy()
     i = cf_rep.columns.map(resources.set_index('resource').i)
@@ -593,15 +609,15 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         / (len(sw['GSw_HourlyWeatherYears']) if periodtype == 'rep' else 1)
     ).reset_index()
     ## Only keep modeled regions
-    can_out = can_out.loc[can_out.r.isin(val_r)].copy()
+    can_out = can_out.loc[can_out.r.isin(val_r_all)].copy()
 
 
     #%%### Seasonal Canadian imports/exports for GSw_Canada=1
     #%% Exports: Spread equally over hours by quarter.
     can_exports_szn_frac = pd.read_csv(
         os.path.join(reeds_path, 'inputs', 'canada_imports', 'can_exports_szn_frac.csv'),
-        header=0, names=['season','frac'], index_col='season', squeeze=True,
-    )
+        header=0, names=['season','frac'], index_col='season',
+    ).squeeze(1)
     df = (
         frac_h_quarter_weights.astype({'h':'str','quarter':'str'})
         .replace({'weight':{0:np.nan}}).dropna(subset=['weight']).copy()
@@ -622,9 +638,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     #%% Imports: Spread over seasons by quarter.
     can_imports_quarter_frac = pd.read_csv(
         os.path.join(reeds_path, 'inputs', 'canada_imports', 'can_imports_szn_frac.csv'),
-        header=0, names=['season','frac'], index_col='season', squeeze=True,
-    )
-    hours_per_season = hmap_myr.season.value_counts()
+        header=0, names=['season','frac'], index_col='season',
+    ).squeeze(1)
     df = hmap_myr.assign(quarter=hmap_myr.yearhour.map(quarters))
     hours_per_quarter = df['quarter'].value_counts()
     ## Fraction of quarter made up by each season (typically rep period)
@@ -640,9 +655,9 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     if periodtype == 'rep':
         assert can_imports_szn_frac.frac_weighted.sum().round(5) == 1
 
-    # =============================================================================
-    # Hour, Region, and Timezone Mapping
-    # =============================================================================
+    ##################################################
+    #    -- Hour, Region, and Timezone Mapping --    #
+    ##################################################
 
     period_weights = (
         period_szn.rep_period.value_counts() / len(sw['GSw_HourlyWeatherYears'])
@@ -663,9 +678,9 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ### Map hours to chunks. Chunks are formatted as hour-ending.
     ## If GSw_HourlyChunkLength == 2,
     ## h1-h2-h3-h4-h5-h6 is mapped to h2-h2-h4-h4-h6-h6.
-    outchunks = hset[GSw_HourlyChunkLength-1::GSw_HourlyChunkLength]
+    outchunks = hmap_myr.actual_h[GSw_HourlyChunkLength-1::GSw_HourlyChunkLength]
     chunkmap = dict(zip(
-        hset.values,
+        hmap_myr.actual_h.values,
         np.ravel([[c]*GSw_HourlyChunkLength for c in outchunks])
     ))
 
@@ -690,9 +705,9 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     else:
         h_dt_szn = hmap_myr.copy()
 
-    # =============================================================================
-    # Season starting and ending hours
-    # =============================================================================
+    ################################################
+    #    -- Season starting and ending hours --    #
+    ################################################
 
     ### Start hour is the lowest-numbered h in each season
     ## End up with a series mapping season to start hour: {'szn1':'h1', ...}
@@ -718,18 +733,29 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         [['h',('season' if sw.GSw_HourlyType == 'year' else 'actual_period')]]
         .drop_duplicates())
 
-    # =============================================================================
-    # Hour groups for eq_minloading
-    # =============================================================================
+    ### Number of times one h follows another h (for startup/ramping costs)
+    numhours_nexth = (
+        hmap_myr.assign(h=hmap_myr.h.map(chunkmap))
+        [['actual_period','h']].drop_duplicates()).copy()
+    ## Roll to make a lookup table for GAMS
+    numhours_nexth = (
+        numhours_nexth.assign(nexth=np.roll(numhours_nexth['h'], -1))
+        .groupby(['h','nexth']).count()
+        .reset_index().rename(columns={'nexth':'hh','actual_period':'hours'})
+    )
+
+    #############################################
+    #    -- Hour groups for eq_minloading --    #
+    #############################################
 
     hour_szn_group = get_minloading_windows(sw=sw, h_szn=h_szn, chunkmap=chunkmap)
 
-    # =============================================================================
-    # Yearly demand
-    # =============================================================================
+    #############################
+    #    -- Yearly demand --    #
+    #############################
 
     load_in, load_h = get_yearly_demand(
-        sw=sw, val_r=val_r, hmap_myr=hmap_myr, hmap_7yr=hmap_7yr, inputs_case=inputs_case)
+        sw=sw, hmap_myr=hmap_myr, hmap_7yr=hmap_7yr, inputs_case=inputs_case)
 
     ###### Get the peak demand in each (r,szn,modelyear) for GSw_HourlyWeatherYears
     load_full_yearly = load_in.loc[
@@ -743,7 +769,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     for year in years:
         peak_all[year] = get_season_peaks_hourly(
             load=load_full_yearly[['r','h',year]].rename(columns={year:'MW'}),
-            sw=sw, hierarchy=hierarchy, h2szn=h2szn)
+            sw=sw, reeds_path=reeds_path, inputs_case=inputs_case, hierarchy=hierarchy, 
+            h2szn=h2szn, val_r_all=val_r_all)
         print(f'determined season peaks for {year}')
     peak_all = (
         pd.concat(peak_all, names=['t','drop']).reset_index().drop('drop', axis=1)
@@ -758,9 +785,9 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         .drop('MW', axis=1).sort_values('season')
     )
 
-    # =============================================================================
-    # Demand response
-    # =============================================================================
+    ###############################
+    #    -- Demand Response --    #
+    ###############################
 
     if int(sw.GSw_DR):
         dr_inc, dr_dec = get_yearly_flexDR(
@@ -776,9 +803,10 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         shift_out = pd.DataFrame(columns=['dr_type','shifted_h','h','shift_frac'])
 
 
-    # =============================================================================
-    ### Write outputs, aggregating hours to GSw_HourlyChunkLength if necessary
-    # =============================================================================
+    ######################################################################################
+    #    -- Write outputs, aggregating hours to GSw_HourlyChunkLength if necessary --    #
+    ######################################################################################
+
     write = {
         ### Contents are [dataframe, header, index]
         ## h set for representative timeslices
@@ -798,6 +826,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             (hours.reset_index().assign(h=hours.index.map(chunkmap)).groupby('h').numhours.sum()
              .reset_index().round(decimals+3)),
             False, False],
+        ## Number of times in actual year that one timeslice follows another (h,hh)
+        'numhours_nexth': [numhours_nexth, False, False],
         ## Quarterly season weights for assigning summer/winter dependent parameters (h,szn)
         'frac_h_quarter_weights': [
             (frac_h_quarter_weights.assign(h=frac_h_quarter_weights.h.map(chunkmap))
@@ -900,10 +930,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     for f in write:
         ### Rename first column so GAMS reads it as a comment
         if not write[f][1]:
-            write[f][0].rename(
-                columns={write[f][0].columns[0]: '*'+str(write[f][0].columns[0])},
-                inplace=True
-            )
+            write[f][0] = write[f][0].rename(
+                columns={write[f][0].columns[0]: '*'+str(write[f][0].columns[0])})
         ### If the file already exists and we're creating representative period data,
         ### add a '_h17' to the filename and save it as a backup
         if (debug
@@ -919,8 +947,10 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             index=write[f][2])
 
 
-    ###############################################################
-    ### Map resulting annual capacity factor and deviation from h17
+    ###########################################################################
+    #    -- Map resulting annual capacity factor and deviation from h17 --    #
+    ###########################################################################
+    
     if make_plots >= 1:
         try:
             import hourly_plots as plots_h

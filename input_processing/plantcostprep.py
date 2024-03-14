@@ -1,4 +1,7 @@
-#%% IMPORTS
+#%% ===========================================================================
+### --- IMPORTS ---
+### ===========================================================================
+
 import pandas as pd
 import os
 import argparse
@@ -8,28 +11,26 @@ from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
-#%% Model Inputs
+#%% Parse arguments
 parser = argparse.ArgumentParser(description="""This file processes plant cost data by tech""")
-
 parser.add_argument("reeds_path", help="ReEDS directory")
 parser.add_argument("inputs_case", help="output directory")
 
 args = parser.parse_args()
-
 reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
-# #%% Testing inputs
+# #%% Settings for testing
 # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0/')
 # inputs_case = os.path.join(reeds_path,'runs','v20220421_prmM0_ercot_seq','inputs_case')
 
 #%% Set up logger
 log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+print('Starting plantcostprep.py')
 
 #%% Inputs from switches
 sw = pd.read_csv(
-    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
-
+    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
 convscen = sw.convscen
 onswindscen = sw.onswindscen
 ofswindscen = sw.ofswindscen
@@ -49,18 +50,23 @@ degrade_suffix = sw.degrade_suffix
 caesscen = "caes_reference"
 GSw_PVB_Dur = int(sw.GSw_PVB_Dur)
 
-#%% FUNCTIONS
-#function for applying dollar year deflator
+#%% ===========================================================================
+### --- FUNCTIONS ---
+### ===========================================================================
+
 def deflate_func(data,case):
     deflate = dollaryear.loc[dollaryear['Scenario'] == case,'Deflator'].values[0]
     if 'capcost' in data.columns:
-        data.loc[:,'capcost'] = data['capcost'] * deflate
+        data['capcost'] *= deflate
     if 'fom' in data.columns:
-        data.loc[:,'fom'] = data['fom'] * deflate
-        data.loc[:,'vom'] = data['vom'] * deflate
+        data['fom'] *= deflate
+        data['vom'] *= deflate
     return data
 
-#%% PROCEDURE
+#%% ===========================================================================
+### --- PROCEDURE ---
+### ===========================================================================
+
 inpath = os.path.join(reeds_path,"inputs","plant_characteristics")
 
 dollaryear = pd.concat([pd.read_csv(os.path.join(inpath,"dollaryear.csv")),
@@ -68,24 +74,26 @@ dollaryear = pd.concat([pd.read_csv(os.path.join(inpath,"dollaryear.csv")),
                             os.path.join(reeds_path,"inputs","consume","dollaryear.csv"))])
 deflator = pd.read_csv(
     os.path.join(inpath,"../deflator.csv"),
-    header=0, names=['Dollar.Year','Deflator'], index_col='Dollar.Year', squeeze=True)
+    header=0, names=['Dollar.Year','Deflator'], index_col='Dollar.Year').squeeze(1)
 
 dollaryear = dollaryear.merge(deflator,on="Dollar.Year",how="left")
 
 #%% Get ILR_ATB from scalars
-### NOTE that as of 2021-11-15, the ILR assumed for the ATB is 1.34, but 1.3 is used in reV/ReEDS.
 scalars = pd.read_csv(
     os.path.join(inputs_case,'scalars.csv'),
     header=None, names=['scalar','value','comment'], index_col='scalar')['value']
 
-#%% PV
-#Adjust cost data to 2004$
+#%%###############
+#    -- PV --    #
+##################
+
+# Adjust cost data to 2004$
 upv = pd.read_csv(os.path.join(inpath,upvscen+'.csv'))
 upv = deflate_func(upv,upvscen).set_index('t')
 
-#Prior to ATB 2020, PV costs are in $/kW_DC
-#Starting with ATB 2020 cost inputs, PV costs are in $/kW_AC
-#ReEDS uses DC capacity, so divide by inverter loading ratio
+# Prior to ATB 2020, PV costs are in $/kW_DC
+# Starting with ATB 2020 cost inputs, PV costs are in $/kW_AC
+# ReEDS uses DC capacity, so divide by inverter loading ratio
 if not '2019' in upvscen:
     upv[['capcost','fom','vom']] = upv[['capcost','fom','vom']] / scalars['ilr_utility']
 
@@ -95,7 +103,10 @@ upv_stack = pd.concat(
     axis=0, names=['i','t']
 ).reset_index()
 
-#%% Other techs
+#%%########################
+#    -- Other Techs --    #
+###########################
+
 conv = pd.read_csv(os.path.join(inpath,convscen+'.csv'))
 conv = deflate_func(conv,convscen)
 
@@ -116,9 +127,12 @@ if upgradescen != 'default':
     upgrade['upgradecost'] *= 1000
     upgrade['upgradecost'] = upgrade['upgradecost'].round(0).astype(int)
 
-#%% Onshore Wind
+#%%#########################
+#    -- Onshore Wind --    #
+############################
+
 onswinddata = pd.read_csv(os.path.join(inpath,onswindscen+'.csv'))
-if 'class' in onswinddata:
+if 'Wind class' in onswinddata:
     #ATB 2022 and prior style
     onswinddata.columns= ['tech','class','t','cf_mult','capcost','fom','vom']
 else:
@@ -135,7 +149,10 @@ else:
     onswinddata = onswinddata[['tech','class','t','cf_mult','capcost','fom','vom']]
 onswinddata = deflate_func(onswinddata,onswindscen)
 
-#%% Offshore Wind
+#%%##########################
+#    -- Offshore Wind --    #
+#############################
+
 ofswinddata = pd.read_csv(os.path.join(inpath,ofswindscen+'.csv'))
 if 'rsc_mult' in ofswinddata: #This is the format starting ATB 2023
     ofswind_rsc_mult = ofswinddata[['Year','Wind class','rsc_mult']].copy()
@@ -156,14 +173,22 @@ winddata.loc[winddata['tech'].str.contains('OFFSHORE'),'tech'] = 'wind-ofs'
 winddata['i'] = winddata['tech'] + '_' + winddata['class'].astype(str)
 wind_stack = winddata[['t','i','capcost','fom','vom']].copy()
 
-#%% Geothermal
+#%%#######################
+#    -- Geothermal --    #
+##########################
+
 geodata = pd.read_csv(os.path.join(inpath,geoscen+'.csv'))
 geodata.columns = ['tech','class','depth','t','capcost','fom','vom']
 geodata['i'] = geodata['tech'] + '_' + geodata['depth'] + '_' + geodata['class'].astype(str)
 geodata = deflate_func(geodata,geoscen)
 geo_stack = geodata[['t','i','capcost','fom','vom']].copy()
 
-#%% CSP
+
+#%%################
+#    -- CSP --    #
+###################
+
+
 csp = pd.read_csv(os.path.join(inpath,cspscen+'.csv'))
 csp = deflate_func(csp,cspscen)
 
@@ -177,7 +202,10 @@ for n in range(1,13):
 
 csp_stack = csp_stack[['t','capcost','fom','vom','i']]
 
-#%% Storage
+#%%####################
+#    -- Storage --    #
+#######################
+
 battery = pd.read_csv(os.path.join(inpath,batteryscen+'.csv'))
 battery = deflate_func(battery,batteryscen)
 
@@ -187,6 +215,10 @@ dr = deflate_func(dr,'dr_'+drscen)
 caes = pd.read_csv(os.path.join(inpath,caesscen+'.csv'))
 caes = deflate_func(caes,caesscen)
 caes['i'] = 'caes'
+
+#%%############################
+#    -- Concat all data --    #
+###############################
 
 alldata = pd.concat([conv,upv_stack,wind_stack,geo_stack,csp_stack,battery,dr,caes,beccs,ccsflex,h2ct],sort=False)
 
@@ -214,12 +246,18 @@ outdata = (
 
 outdata = outdata.loc[outdata.variable.isin(['capcost','fom','vom','heatrate','upgradecost','rte'])]
 
-#%% wind capacity factors
+#%%##################################
+#    -- Wind Capacity Factors --    #
+#####################################
+
 windcfmult = winddata[['t','i','cf_mult']].set_index(['i','t'])['cf_mult']
 windcfmult = windcfmult.round(6)
 outwindcfmult = windcfmult.reset_index().pivot_table(index='t',columns='i', values='cf_mult')
 
-#%% Other technologies
+#%%###############################
+#    -- Other Technologies --    #
+##################################
+
 ccsflex_perf = pd.read_csv(os.path.join(inpath,ccsflexscen+'_perf.csv'),index_col=0).round(6)
 hydro = pd.read_csv(os.path.join(inpath,hydroscen+'.csv'), index_col=0).round(6)
 degrade = pd.read_csv(
@@ -229,23 +267,26 @@ degrade.columns = ['i','rate']
 degrade = sFuncs.expand_GAMS_tech_groups(degrade)
 degrade = degrade.set_index('i').round(6)
 
-#%%### PV+battery cost model
-### Get PVB designs
+#%%##################################
+#    -- PV+Battery Cost Model --    #
+#####################################
+
+# Get PVB designs
 pvb_ilr = pd.read_csv(
     os.path.join(inputs_case, 'pvb_ilr.csv'),
-    header=0, names=['pvb_type','ilr'], index_col='pvb_type', squeeze=True)
+    header=0, names=['pvb_type','ilr'], index_col='pvb_type').squeeze(1)
 pvb_bir = pd.read_csv(
     os.path.join(inputs_case, 'pvb_bir.csv'),
-    header=0, names=['pvb_type','bir'], index_col='pvb_type', squeeze=True)
-### Get PV and battery $/Wac costs for PVB
+    header=0, names=['pvb_type','bir'], index_col='pvb_type').squeeze(1)
+# Get PV and battery $/Wac costs for PVB
 battery_USDperWac = battery.loc[battery.i=='battery_{}'.format(GSw_PVB_Dur)].set_index('t').capcost
 UPV_defaultILR_USDperWac = upv.capcost * scalars['ilr_utility']
-### Get cost-sharing assumptions
+# Get cost-sharing assumptions
 pvbvalues = pd.read_csv(os.path.join(inpath,'pvb_'+pvbscen+'.csv'), index_col='parameter')
 fixed_ac_noninverter_cost_USDperWac = (
     pvbvalues.loc['fixed','value']
     * deflator[pvbvalues.loc['fixed','dollaryear']]
-    ### Input units are in $/Wac, so convert to $/MWac to match units used in ReEDS
+    # Input units are in $/Wac, so convert to $/MWac to match units used in ReEDS
     * 1000
 )
 
@@ -256,22 +297,22 @@ def get_pvb_cost(
         fixed_ac_noninverter_cost_USDperWac=0.0455,
         ILR_ATB=1.3,
 ):
-    ### Inverter cost is taken as a fixed fraction of UPV AC cost
+    # Inverter cost is taken as a fixed fraction of UPV AC cost
     inverter_USDperWac = UPV_defaultILR_USDperWac * inverter_cost_ac_fraction
-    ### Standalone PV $/Wdc is [$/Wac] * [Wac/Wdc], where [$/Wac] is the full
-    ### $/Wac minus the inverter cost and AC fixed costs
+    # Standalone PV $/Wdc is [$/Wac] * [Wac/Wdc], where [$/Wac] is the full
+    # $/Wac minus the inverter cost and AC fixed costs
     UPV_USDperWdc = (
         UPV_defaultILR_USDperWac
         - inverter_USDperWac
         - fixed_ac_noninverter_cost_USDperWac
     ) / ILR_ATB
-    ### Standalone PV $/Wac for the user-defined ILR: [$/Wac] + [$/Wdc] * ILR
+    # Standalone PV $/Wac for the user-defined ILR: [$/Wac] + [$/Wdc] * ILR
     UPV_USDperWac = (
         inverter_USDperWac
         + fixed_ac_noninverter_cost_USDperWac
         + UPV_USDperWdc * ILR_user
     )
-    ### PVB system cost
+    # PVB system cost
     PVB_USDperWac = (
         ## PV
         UPV_USDperWac
@@ -283,13 +324,13 @@ def get_pvb_cost(
             - inverter_USDperWac
         )
     )
-    ### Standalone system cost for two systems with same DC capacity;
-    ### here the battery needs its own inverter and AC fixed costs,
-    ### so we don't subtract them out as we did above for PVB
+    # Standalone system cost for two systems with same DC capacity;
+    # here the battery needs its own inverter and AC fixed costs,
+    # so we don't subtract them out as we did above for PVB
     standalone_USDperWac = (
-        ## PV
+        # PV
         UPV_USDperWac
-        ## Battery sized relative to PV
+        # Battery sized relative to PV
         + BIR_user * battery_USDperWac
     )
     ### Savings vs standalone
@@ -334,7 +375,6 @@ if dacscen:
     dac['vom'] = dac['vom'].round(8)
     dac['conversionrate'] = dac['conversionrate'].round(8)
 
-
     # Fill empty values with 0, melt to long format
     outdac = (
         dac.fillna(0)
@@ -345,20 +385,21 @@ if dacscen:
 
     outdac.to_csv(os.path.join(inputs_case,'consumechardac.csv'), index=False)
 
+#%%###########################
+#    -- Data Write-Out --    #
+##############################
 
-#%% Write the outputs
 print('writing plant data to:', os.getcwd())
-pvb.to_csv(os.path.join(inputs_case,'pvbcapcostmult.csv'))
-geodata.to_csv(os.path.join(inputs_case,'geodataout.csv'))
-
+outdata.to_csv(os.path.join(inputs_case,'plantcharout.csv'), index=False)
+upv.cf_improvement.round(3).to_csv(os.path.join(inputs_case,'pv_cf_improve.csv'), header=False)
+outwindcfmult.to_csv(os.path.join(inputs_case,'windcfmult.csv'))
 ccsflex_perf.to_csv(os.path.join(inputs_case,'ccsflex_perf.csv'))
 hydro.to_csv(os.path.join(inputs_case,'hydrocapcostmult.csv'))
 ofswind_rsc_mult.to_csv(os.path.join(inputs_case,'ofswind_rsc_mult.csv'))
 degrade.to_csv(os.path.join(inputs_case,'degradation_annual.csv'),header=False)
-outwindcfmult.to_csv(os.path.join(inputs_case,'windcfmult.csv'))
-upv.cf_improvement.round(3).to_csv(os.path.join(inputs_case,'pv_cf_improve.csv'), header=False)
-outdata.to_csv(os.path.join(inputs_case,'plantcharout.csv'), index=False)
+pvb.to_csv(os.path.join(inputs_case,'pvbcapcostmult.csv'))
 
 toc(tic=tic, year=0, process='input_processing/plantcostprep.py', 
     path=os.path.join(inputs_case,'..'))
-print('plantcostprep.py completed successfully')
+
+print('Finished plantcostprep.py')

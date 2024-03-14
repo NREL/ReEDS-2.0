@@ -103,7 +103,7 @@ PIVOT_DEFS = {'standard':          {'scen_i_r_t':             {'id_columns':  ['
                                                                 'csvs':       ['usda'],
                                                                 'operation':  ['custom']}
              },
-              'costs_i_t':         {'costs_i_t':              {'id_columns':  ['scenario','i','t','cost_cat_display','cost_cat'], #TODO: implemented in MI_BBB_post_syscost. Rolling window still has a bug.
+              'costs_i_t':         {'costs_i_t':              {'id_columns':  ['scenario','i','t','cost_cat_display','cost_cat'],
                                                                'csvs':        ['systemcost_ba'],
                                                                'operation':   ['custom']}
              },

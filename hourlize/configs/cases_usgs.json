@@ -1,0 +1,72 @@
+{
+    "upv_reference_nlcd_county": {
+        "tech": "upv", 
+        "access_case": "reference_nlcd",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    },
+    "upv_reference_a1b_county": {
+        "tech": "upv", 
+        "access_case": "reference_a1b",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    },
+    "upv_reference_a2_county": {
+        "tech": "upv", 
+        "access_case": "reference_a2",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    },
+    "upv_reference_b1_county": {
+        "tech": "upv", 
+        "access_case": "reference_b1",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    },
+    "upv_reference_b2_county": {
+        "tech": "upv", 
+        "access_case": "reference_b2",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    },
+    "wind-ons_reference_nlcd_county": {
+        "tech": "wind-ons", 
+        "access_case": "reference_nlcd",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    },
+    "wind-ons_reference_a1b_county": {
+        "tech": "wind-ons", 
+        "access_case": "reference_a1b",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    },
+    "wind-ons_reference_a2_county": {
+        "tech": "wind-ons", 
+        "access_case": "reference_a2",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    },
+    "wind-ons_reference_b1_county": {
+        "tech": "wind-ons", 
+        "access_case": "reference_b1",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    },
+    "wind-ons_reference_b2_county": {
+        "tech": "wind-ons", 
+        "access_case": "reference_b2",
+        "reg_out_col": "cnty_fips",
+        "config_base": "usgs",
+        "config_tech": "usgs"
+    }
+}

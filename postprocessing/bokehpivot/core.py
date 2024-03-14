@@ -48,8 +48,8 @@ DEFAULT_CUSTOM_SORTS = {} #Keys are column names and values are lists of values 
 DEFAULT_CUSTOM_COLORS = {} #Keys are column names and values are dicts that map column values to colors (hex strings)
 DATA_TYPE_OPTIONS = rb.DATA_TYPE_OPTIONS + ['CSV']
 DEFAULT_DATA_TYPE = rb.DEFAULT_DATA_TYPE
-PLOT_WIDTH = 300
-PLOT_HEIGHT = 300
+WIDTH = 300
+HEIGHT = 300
 PLOT_FONT_SIZE = 10
 PLOT_AXIS_LABEL_SIZE = 8
 PLOT_LABEL_ORIENTATION = 45
@@ -89,7 +89,7 @@ WDG_COL = ['x', 'y', 'x_group', 'series', 'explode', 'explode_group']
 #List of widgets that don't use columns as selector and share general widget update function
 WDG_NON_COL = ['chart_type', 'range', 'y_agg', 'adv_op', 'explode_grid', 'adv_col_base',
     'adv_op2', 'adv_col_base2', 'adv_op3', 'adv_col_base3', 'plot_title', 'plot_title_size',
-    'sort_data', 'plot_width', 'plot_height', 'opacity', 'sync_axes', 'x_min', 'x_max', 'x_scale',
+    'sort_data', 'width', 'height', 'opacity', 'sync_axes', 'x_min', 'x_max', 'x_scale',
     'x_title', 'series_limit', 'x_title_size', 'x_major_label_size', 'x_major_label_orientation',
     'y_min', 'y_max', 'y_scale', 'y_title', 'y_title_size', 'y_major_label_size', 'hist_num_bins', 'hist_weight',
     'circle_size', 'bar_width', 'cum_sort', 'line_width', 'range_show_glyphs', 'net_levels', 'bokeh_tools',
@@ -130,7 +130,7 @@ def initialize():
 
     #build widgets and plots
     GL['data_source_wdg'] = build_data_source_wdg(data_type, data_source)
-    GL['controls'] = bl.widgetbox(list(GL['data_source_wdg'].values()), css_classes=['widgets_section'])
+    GL['controls'] = bl.column(list(GL['data_source_wdg'].values()), css_classes=['widgets_section'])
     GL['plots'] = bl.column([], css_classes=['plots_section'])
     layout = bl.row(GL['controls'], GL['plots'], css_classes=['full_layout'])
 
@@ -174,7 +174,7 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
     '''
     #build initial widgets and plots globals
     GL['data_source_wdg'] = build_data_source_wdg()
-    GL['controls'] = bl.widgetbox(list(GL['data_source_wdg'].values()))
+    GL['controls'] = bl.column(list(GL['data_source_wdg'].values()))
     GL['plots'] = bl.column([])
     #Update data source widget with input value
     GL['data_source_wdg']['data_type'].value = data_type
@@ -293,7 +293,7 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
                 static_plots.append(bl.row(bmw.Div(text='<h2 id="section-' + str(sec_i) + '" class="error">' + str(sec_i) + '. ' + name + '. ERROR!</h2>')))
         sec_i += 1
     if 'excel' in report_format:
-        excel_report.save()
+        excel_report.close()
     if 'html' in report_format:
         if html_num == 'one':
             html = be.file_html(static_plots, resources=resources, template=template)
@@ -323,7 +323,7 @@ def preset_wdg(preset, download_full_source=False):
     #First set all wdg_variant values, if they exist, in order that they appear in wdg_variant, an ordered dict.
     variant_presets = [key for key in list(GL['variant_wdg'].keys()) if key in preset]
     for key in variant_presets:
-        if isinstance(GL['widgets'][key], bmw.groups.Group):
+        if isinstance(GL['widgets'][key], bmw.groups.AbstractGroup):
             GL['widgets'][key].active = [GL['widgets'][key].labels.index(i) for i in preset[key]]
         elif isinstance(GL['widgets'][key], bmw.inputs.InputWidget):
             GL['widgets'][key].value = preset[key]
@@ -339,7 +339,7 @@ def preset_wdg(preset, download_full_source=False):
     wdg_resets = [i for i in wdg_defaults if i not in list(wdg_variant.keys())+['x', 'data', 'data_type', 'render_plots', 'auto_update']]
     #reset widgets if they are not default
     for key in wdg_resets:
-        if isinstance(wdg[key], bmw.groups.Group) and wdg[key].active != wdg_defaults[key]:
+        if isinstance(wdg[key], bmw.groups.AbstractGroup) and wdg[key].active != wdg_defaults[key]:
             wdg[key].active = wdg_defaults[key]
         elif isinstance(wdg[key], bmw.inputs.InputWidget) and wdg[key].value != wdg_defaults[key]:
             wdg[key].value = wdg_defaults[key]
@@ -347,7 +347,7 @@ def preset_wdg(preset, download_full_source=False):
     #Filters are handled separately, after that. x will be set at end, triggering render of chart.
     common_presets = [key for key in list(wdg.keys()) if key in preset and key not in list(wdg_variant.keys())+['x', 'filter']]
     for key in common_presets:
-        if isinstance(wdg[key], bmw.groups.Group):
+        if isinstance(wdg[key], bmw.groups.AbstractGroup):
             wdg[key].active = [wdg[key].labels.index(i) for i in preset[key]]
         elif isinstance(wdg[key], bmw.inputs.InputWidget):
             wdg[key].value = preset[key]
@@ -582,8 +582,8 @@ def build_widgets(df_source, cols, init_load=False, init_config={}, wdg_defaults
         wdg['filter_sel_all_'+str(j)].js_on_event(bk.events.ButtonClick, select_all_callback)
         wdg['filter_sel_none_'+str(j)].js_on_event(bk.events.ButtonClick, select_none_callback)
     wdg['adjustments'] = bmw.Div(text='Plot Adjustments', css_classes=['adjust-dropdown'])
-    wdg['plot_width'] = bmw.TextInput(title='Plot Width (px)', value=str(PLOT_WIDTH), css_classes=['wdgkey-plot_width', 'adjust-drop'], visible=False)
-    wdg['plot_height'] = bmw.TextInput(title='Plot Height (px)', value=str(PLOT_HEIGHT), css_classes=['wdgkey-plot_height', 'adjust-drop'], visible=False)
+    wdg['width'] = bmw.TextInput(title='Plot Width (px)', value=str(WIDTH), css_classes=['wdgkey-width', 'adjust-drop'], visible=False)
+    wdg['height'] = bmw.TextInput(title='Plot Height (px)', value=str(HEIGHT), css_classes=['wdgkey-height', 'adjust-drop'], visible=False)
     wdg['plot_title'] = bmw.TextInput(title='Plot Title', value='', css_classes=['wdgkey-plot_title', 'adjust-drop'], visible=False)
     wdg['plot_title_size'] = bmw.TextInput(title='Plot Title Font Size', value=str(PLOT_FONT_SIZE), css_classes=['wdgkey-plot_title_size', 'adjust-drop'], visible=False)
     wdg['opacity'] = bmw.TextInput(title='Opacity (0-1)', value=str(OPACITY), css_classes=['wdgkey-opacity', 'adjust-drop'], visible=False)
@@ -711,7 +711,7 @@ def save_wdg_defaults(wdg, wdg_defaults):
         Nothing: wdg_defaults is set for applicable keys in wdg
     '''
     for key in wdg:
-        if isinstance(wdg[key], bmw.groups.Group):
+        if isinstance(wdg[key], bmw.groups.AbstractGroup):
             wdg_defaults[key] = wdg[key].active
         elif isinstance(wdg[key], bmw.inputs.InputWidget):
             wdg_defaults[key] = wdg[key].value
@@ -1108,7 +1108,7 @@ def create_figure(df_exploded, df_plots, wdg, cols, custom_colors, explode_val=N
     TOOLS = [boxzoom_tool, wheelzoom_tool, pan_tool, hover_tool, reset_tool, save_tool]
 
     #Create figure with the ranges, titles, and tools, and adjust formatting and labels
-    p = bp.figure(plot_height=int(wdg['plot_height'].value), plot_width=int(wdg['plot_width'].value), tools=TOOLS, **kw)
+    p = bp.figure(height=int(wdg['height'].value), width=int(wdg['width'].value), tools=TOOLS, **kw)
     p.toolbar.active_drag = boxzoom_tool
     p.title.text_font_size = wdg['plot_title_size'].value + 'pt'
     p.xaxis.axis_label = wdg['x_title'].value
@@ -1468,8 +1468,8 @@ def create_map(map_type, df, ranges, region_boundaries, centroids, wdg, colors_f
     height = aspect_ratio * float(width)
     fig_map = bp.figure(
         title=title,
-        plot_height=int(height),
-        plot_width=int(width),
+        height=int(height),
+        width=int(width),
         x_range=(ranges['x_min'], ranges['x_max']),
         y_range=(ranges['y_min'], ranges['y_max']),
         x_axis_location=None,
@@ -1677,7 +1677,7 @@ def build_legend(labels, colors):
     legend_string = ''
     for i, txt in enumerate(labels):
         legend_string += '<div class="legend-entry"><span class="legend-color" style="background-color:' + str(colors[i]) + ';"></span>'
-        legend_string += '<span class="legend-text">' + str(txt) +'</span></div>'
+        legend_string += f'<span class="legend-text" style="color: {colors[i]};"><b>' + str(txt) +'</b></span></div>'
     return legend_string
 
 def display_config(wdg, wdg_defaults):
@@ -1696,7 +1696,7 @@ def display_config(wdg, wdg_defaults):
         if key not in ['data', 'chart_type']:
             label = key
             item_string = False
-            if isinstance(wdg[key], bmw.groups.Group) and wdg[key].active != wdg_defaults[key]:
+            if isinstance(wdg[key], bmw.groups.AbstractGroup) and wdg[key].active != wdg_defaults[key]:
                 if key.startswith('filter_'):
                     label = 'filter-' + wdg['heading_'+key].text
                 item_string = ''
@@ -1950,7 +1950,7 @@ def download_url(dir_path='', auto_open=True):
     wdg_defaults = GL['wdg_defaults']
     non_defaults = {}
     for key in wdg_defaults:
-        if isinstance(wdg[key], bmw.groups.Group) and wdg[key].active != wdg_defaults[key]:
+        if isinstance(wdg[key], bmw.groups.AbstractGroup) and wdg[key].active != wdg_defaults[key]:
             non_defaults[key] = wdg[key].active
         elif isinstance(wdg[key], bmw.inputs.InputWidget) and wdg[key].value != wdg_defaults[key] and key not in ['auto_update','presets','report_options','report_custom','report_format','report_base']:
             non_defaults[key] = wdg[key].value
@@ -1979,7 +1979,7 @@ def download_config(dir_path, auto_open, format):
         config_string = "('Preset Name', {"
     filter_string = "'filter': {"
     for key in wdg_defaults:
-        if isinstance(wdg[key], bmw.groups.Group) and wdg[key].active != wdg_defaults[key] and key not in ['scenario_filter']:
+        if isinstance(wdg[key], bmw.groups.AbstractGroup) and wdg[key].active != wdg_defaults[key] and key not in ['scenario_filter']:
             if key.startswith('filter_'):
                 title = wdg['heading_'+key].text
                 labels = ["'" + wdg[key].labels[i] + "'" for i in wdg[key].active]

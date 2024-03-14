@@ -8,6 +8,7 @@ DEFAULT_DATA_TYPE = 'ReEDS 2.0'
 
 import os
 import copy
+import platform
 import pandas as pd
 import collections
 import bokeh.models.widgets as bmw
@@ -548,9 +549,16 @@ def build_reeds_report(html_num='one'):
         auto_open = '"yes"'
     else:
         auto_open = '"no"'
-    start_str = 'start python'
+
+    if platform.system() == 'Windows':    
+        start_str = 'start python'
+    else:
+        start_str = 'python'
     if core.GL['widgets']['report_debug'].value == 'Yes':
-        start_str = 'start cmd /K python -m pdb '
+        if platform.system() == 'Windows':
+            start_str = 'start cmd /K python -m pdb '
+        else:
+            start_str = 'python -m pdb '
     sp.call(start_str + ' "' + this_dir_path + '/reports/interface_report_model.py" ' + data_type + ' ' + data_source + ' ' + scenario_filter_str + ' ' + diff + ' ' + base + ' ' + report_path + ' ' + report_format + ' "' + html_num + '" ' + output_dir + ' ' + auto_open, shell=True)
 
 def build_reeds_report_separate():

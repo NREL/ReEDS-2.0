@@ -42,7 +42,7 @@ eq_ObjFn_inv(t)$tmodel(t)..
 * --- growth penalties ---
                   + sum{(gbin,i,st)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)],
                         cost_growth(i,st,t) * growth_penalty(gbin) * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) }) * GROWTH_BIN(gbin,i,st,t)
-                       }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthRelCon$(yeart(t)<=Sw_GrowthConLastYear)]
+                       }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthRelCon]
 
 * --- cost of upgrading---
                   + sum{(i,v,r)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades],
@@ -204,6 +204,10 @@ eq_Objfn_op(t)$tmodel(t)..
               + sum{(i,v,r,h)$[valgen(i,v,r,t)$(not gas(i))$heat_rate(i,v,r,t)
                               $(not bio(i))$(not cofire(i))],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN(i,v,r,h,t) }
+
+* --- startup/ramping costs
+              + sum{(i,v,r,h,hh)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen(i,v,r,t)],
+                    startcost(i) * numhours_nexth(h,hh) * RAMPUP(i,v,r,h,hh,t) }
 
 * --cofire coal consumption---
 * cofire bio consumption already accounted for in accounting of BIOUSED

@@ -22,10 +22,10 @@ The files used by PRAS are:
 """
 
 #%% General imports
-import gdxpds
 import os
 import pandas as pd
 import numpy as np
+import gdxpds
 ### Local imports
 import ReEDS_Augur.functions as functions
 
@@ -87,14 +87,15 @@ def get_gen_cost(gdxreeds, sw):
 
 #%%### Procedure
 def main(t, casedir):
-    #%%### Inputs for debugging
+    #%%### DEBUGGING: Inputs
     # t = 2020
     # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0')
     # casedir = os.path.join(reeds_path,'runs','v20230214_PRMaugurM0_Pacific_d7fIrh4_CC_y2012')
 
     #%%### Get inputs from ReEDS
-    gdxreeds = gdxpds.to_dataframes(
-        os.path.join(casedir,'ReEDS_Augur','augur_data',f'reeds_data_{t}.gdx'))
+    gdx_file = os.path.join(casedir,'ReEDS_Augur','augur_data',f'reeds_data_{t}.gdx')
+    gdxreeds = gdxpds.to_dataframes(gdx_file)
+    gdxreeds_dtypes = gdxpds.get_data_types(gdx_file)
     ### Use indices as multiindex
     for key in gdxreeds:
         # try:
@@ -121,6 +122,7 @@ def main(t, casedir):
     resources = pd.read_csv(os.path.join(inputs_case, 'resources.csv'))
 
     recf = pd.read_hdf(os.path.join(inputs_case, 'recf.h5')).astype(np.float32)
+    recf.fillna(0, inplace = True)
     recf.columns = recf.columns.map(
         resources.set_index('resource')[['i','r']].apply(lambda row: tuple(row), axis=1)
     ).rename(('i','r'))
@@ -129,26 +131,36 @@ def main(t, casedir):
 
 
     #%%### Set up the output containers and a few other inputs
-    gdxout, csvout, h5out =  {}, {}, {}
-
+    gdxout, gdxtypes, csvout, h5out = {}, {}, {}, {}
 
     #%%### Transmission routes, capacity, and losses
-    gdxout['routes'] = gdxreeds['routes_filt']
+    gdxout['routes'] = gdxreeds['routes_filt'].assign(Value=1)
+    gdxtypes['routes'] = gdxreeds_dtypes['routes_filt']
+
     gdxout['cap_converter'] = gdxreeds['cap_converter_filt']
+    gdxtypes['cap_converter'] = gdxreeds_dtypes['cap_converter_filt']
 
     if int(sw.pras_trans_contingency):
         gdxout['trancap'] = gdxreeds['cap_trans_prm']
+        gdxtypes['trancap'] = gdxreeds_dtypes['cap_trans_prm']
     else:
         gdxout['trancap'] = gdxreeds['cap_trans_energy']
+        gdxtypes['trancap'] = gdxreeds_dtypes['cap_trans_energy']
 
     gdxout['tranloss'] = gdxreeds['tranloss']
+    gdxtypes['tranloss'] = gdxreeds_dtypes['tranloss']
 
 
     #%%### Efficiencies and storage parameters
     gdxout['storage_eff'] = gdxreeds['storage_eff_filt']
+    gdxtypes['storage_eff'] = gdxreeds_dtypes['storage_eff_filt']
+
     gdxout['converter_efficiency_vsc'] = gdxreeds['converter_efficiency_vsc']
+    gdxtypes['converter_efficiency_vsc'] = gdxreeds_dtypes['converter_efficiency_vsc']
+    
     gdxout['duration'] = gdxreeds['storage_duration'].loc[
         gdxreeds['storage_duration'].i.isin(gdxreeds['storage_standalone'].i)].copy()
+    gdxtypes['duration'] = gdxreeds_dtypes['storage_duration']
 
 
     #%%### Generation cost
@@ -160,6 +172,7 @@ def main(t, casedir):
     ### Also done below for gdxout['cap'] and gdxout['avail_day'].
     gen_cost.loc[gen_cost.i.isin(gdxreeds['storage_standalone'].i), 'v'] = 'new1'
     gdxout['gen_cost'] = gen_cost.drop_duplicates()
+    gdxtypes['gen_cost'] = gdxpds.gdx.GamsDataType.Parameter
 
 
     #%%### Nameplate capacity
@@ -194,6 +207,7 @@ def main(t, casedir):
 
     ### Save it for Osprey, which only dispatches non-VRE generation capacity
     gdxout['cap'] = cap_nonvreh2dac
+    gdxtypes['cap'] = gdxpds.gdx.GamsDataType.Parameter
 
     cap_vre = (
         cap_ivr.loc[cap_ivr.i.str.lower().isin(vretechs_i)]
@@ -287,6 +301,7 @@ def main(t, casedir):
     avail_ivd.index = d_szn.d
     avail_div = avail_ivd.stack(['i','v'])
     gdxout['avail_day'] = avail_div.rename('Value').reset_index()
+    gdxtypes['avail_day'] = gdxpds.gdx.GamsDataType.Set
 
     ### For H2 production and DAC, include the seasonally-invariant availability in the capacity
     ### Filter out H2 and DAC capacity and report it separately
@@ -295,6 +310,7 @@ def main(t, casedir):
     avail_h2dac = avail_ivszn_all[cap_prod.index.get_level_values('i').unique()].mean() * 1.01
     cap_prod = cap_prod.multiply(avail_h2dac).groupby('r').sum().rename('MW').reset_index()
     gdxout['cap_prod'] = cap_prod
+    gdxtypes['cap_prod'] = gdxpds.gdx.GamsDataType.Parameter
 
 
     #%%### Energy budget
@@ -302,8 +318,7 @@ def main(t, casedir):
     ### equally over the constituent days
     ### Output is MWh
     hydro_avemw_ivrszn = (
-        gdxreeds['cap_hyd_szn_adj_filt'].set_index(['i','allszn','r']).Value
-        .multiply(gdxreeds['m_cf_szn_filt'].set_index(['i','v','r','allszn']).Value)
+        gdxreeds['m_cf_szn_filt'].set_index(['i','v','r','allszn']).Value
         .multiply(cap_nonvre.set_index(['i','v','r']).Value)
         .dropna()
         .unstack(['i','v','r'])
@@ -322,9 +337,10 @@ def main(t, casedir):
     )
     ## Reshape to match
     can_imports_avemw_ivrszn = can_imports_avemw_rszn.copy()
-    can_imports_avemw_ivrszn.columns = can_imports_avemw_ivrszn.columns.map(
-        lambda x: ('can-imports','init-1',x)
-    ).rename(('i','v','r'))
+    can_imports_avemw_ivrszn.columns = pd.MultiIndex.from_tuples(
+        can_imports_avemw_ivrszn.columns.map(lambda x: ('can-imports','init-1',x)),
+        names=('i','v','r'),
+    )
     ### Merge together
     avemw_ivrszn = pd.concat([hydro_avemw_ivrszn, can_imports_avemw_ivrszn], axis=1)
     ### Broadcast to the actual days represented by each szn
@@ -362,6 +378,7 @@ def main(t, casedir):
         .stack('r').rename('MWh').rename_axis(['d','r']).reset_index()
     )
     gdxout['prod_load'] = load_h2dac_flex_daily
+    gdxtypes['prod_load'] = gdxpds.gdx.GamsDataType.Parameter
 
     ### Inflexible H2/DAC load gets added to the net load profile below
     load_h2dac_inflex_hourly = (
@@ -447,11 +464,15 @@ def main(t, casedir):
         for key in gdxout:
             gdxwrite.append(
                 gdxpds.gdx.GdxSymbol(
-                    key, gdxpds.gdx.GamsDataType.Parameter,
+                    key, 
+                    gdxtypes[key],
                     dims=gdxout[key].columns[:-1].tolist(),
                 )
             )
-            gdxwrite[-1].dataframe = gdxout[key].round(int(sw['decimals']))
+            if (gdxtypes[key] == gdxpds.gdx.GamsDataType.Parameter):
+                gdxwrite[-1].dataframe = gdxout[key].round(int(sw['decimals']))
+            else:
+                gdxwrite[-1].dataframe = gdxout[key]
         gdxwrite.write(
             os.path.join(casedir, 'ReEDS_Augur', 'augur_data', f'osprey_inputs_{t}.gdx')
         )

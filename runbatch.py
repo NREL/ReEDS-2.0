@@ -1,4 +1,7 @@
-#%% IMPORTS
+#%% ===========================================================================
+### --- IMPORTS ---
+### ===========================================================================
+
 import os
 import sys
 import queue
@@ -14,8 +17,9 @@ import argparse
 from builtins import input
 from glob import glob
 
-#############
-#%% FUNCTIONS
+#%% ===========================================================================
+### --- FUNCTIONS ---
+### ===========================================================================
 
 def writeerrorcheck(checkfile, errorcode=17):
     """
@@ -66,7 +70,7 @@ def get_ivt_numclass(reeds_path, casedir, caseSwitches):
             reeds_path, 'inputs', 'userinput', 'ivt_{}.csv'.format(caseSwitches['ivt_suffix'])),
         index_col=0)
     ivt_step = pd.read_csv(os.path.join(reeds_path, 'inputs', 'userinput', 'ivt_step.csv'),
-                           index_col=0, squeeze=True)
+                           index_col=0).squeeze(1)
     lastdatayear = max([int(c) for c in ivt.columns])
     addyears = list(range(lastdatayear + 1, int(caseSwitches['endyear']) + 1))
     num_added_years = len(addyears)
@@ -138,14 +142,14 @@ def check_compatibility(sw):
 
 
     ### Aggregation
-    if (not int(sw['GSw_AggregateRegions'])) and (
+    if (sw['GSw_RegionResolution'] != 'aggreg') and (
         (int(sw['GSw_NumCSPclasses']) != 12)
         or (int(sw['GSw_NumDUPVclasses']) != 7)
     ):
         raise NotImplementedError(
             'Aggregated CSP/DUPV classes only work with aggregated regions. '
             'At least one of GSw_NumCSPclasses and GSw_NumDUPVclasses are incompatible with '
-            'GSw_AggregateRegions=0')
+            'GSw_RegionResolution != aggreg')
 
 
 def solvestring_sequential(
@@ -436,13 +440,14 @@ def setup_window(
             OPATH.writelines( "python valuestreams.py" + '\n')
 
 
-#############
-#%% PROCEDURE
+#%% ===========================================================================
+### --- PROCEDURE ---
+### ===========================================================================
 
 def setupEnvironment(
         BatchName=False, cases_suffix=False, simult_runs=0,
-        forcelocal=0, restart=False, skip_env_check=False):
-    # #%% Inputs for debugging
+        forcelocal=0, restart=False, skip_env_check=False, debug=False):
+    # #%% Settings for testing
     # BatchName = 'v20230508_prasM0_Pacific'
     # cases_suffix = 'test'
     # WORKERS = 1
@@ -480,6 +485,9 @@ def setupEnvironment(
     if BatchName == '0':
         BatchName = 'v' + time.strftime("%Y%m%d_%H%M%S")
 
+    #check for period in batchname and replace with underscore
+    BatchName = BatchName.replace('.', '_')
+
     if not cases_suffix:
         print("\n\nSpecify the suffix for the cases_suffix.csv file")
         print("A blank input will default to the cases.csv file\n")
@@ -501,14 +509,18 @@ def setupEnvironment(
             quit()
 
     #%% Check whether the ReEDS conda environment is activated
-    if ('reeds' not in os.environ['CONDA_DEFAULT_ENV'].lower()) and not skip_env_check:
+    if (not skip_env_check) and (
+        ('reeds2' not in os.environ['CONDA_DEFAULT_ENV'].lower())
+        or (not pd.__version__.startswith('2'))
+    ):
         print(
-            "It looks like you haven't activated the 'reeds' conda environment from "
-            "environment.yml, so the python and julia parts of ReEDS might not work. "
-            "To build the environment for the first time, run: "
-            "    `conda env create -f environment.yml`"
-            "To activate the created environment, run: "
-            "    `conda activate reeds` (or `activate reeds` on Windows) "
+            f"Your environment is {os.environ['CONDA_DEFAULT_ENV']} and your pandas "
+            f"version is {pd.__version__}.\nThe default environment is 'reeds2', with\n"
+            "pandas version 2.x, so the python parts of ReEDS are unlikely to work.\n"
+            "To build the environment for the first time, run:\n"
+            "    `conda env create -f environment.yml`\n"
+            "To activate the created environment, run:\n"
+            "    `conda activate reeds2` (or `activate reeds2` on Windows)\n"
             "Do you want to continue without activating the environment?"
         )
         confirm_env = str(input("Continue? y/[n]: ") or 'n')
@@ -520,14 +532,18 @@ def setupEnvironment(
         os.path.join(reeds_path, 'cases.csv'), dtype=object, index_col=0)
     cases_filename = 'cases.csv'
 
-    #If we have a case suffix, use cases_[suffix].csv for cases.
+    # If we have a case suffix, use cases_[suffix].csv for cases.
     if cases_suffix not in ['','default']:
         df_cases = df_cases[['Choices', 'Default Value']]
         cases_filename = 'cases_' + cases_suffix + '.csv'
         df_cases_suf = pd.read_csv(
             os.path.join(reeds_path, cases_filename), dtype=object, index_col=0)
+        # Replace periods and spaces in case names with _
+        df_cases_suf.columns = [
+            c.replace(' ','_').replace('.','_') if c != 'Default Value' else c
+            for c in df_cases_suf.columns]
 
-        #Check to make sure user-specified cases file has up-to-date switches
+        # Check to make sure user-specified cases file has up-to-date switches
         missing_switches = [s for s in df_cases_suf.index if s not in df_cases.index]
         if len(missing_switches):
             error = ("The following switches are in {} but have changed names or are no longer "
@@ -537,8 +553,8 @@ def setupEnvironment(
                     ).format(cases_filename, '\n'.join(missing_switches))
             raise ValueError(error)
 
-        #First use 'Default Value' from cases_[suffix].csv to fill missing switches
-        #Later, we will also use 'Default Value' from cases.csv to fill any remaining holes.
+        # First use 'Default Value' from cases_[suffix].csv to fill missing switches
+        # Later, we will also use 'Default Value' from cases.csv to fill any remaining holes.
         if 'Default Value' in df_cases_suf.columns:
             case_i = df_cases_suf.columns.get_loc('Default Value') + 1
             casenames = df_cases_suf.columns[case_i:].tolist()
@@ -547,7 +563,7 @@ def setupEnvironment(
         df_cases_suf.drop(['Choices','Default Value'], axis='columns',inplace=True, errors='ignore')
         df_cases = df_cases.join(df_cases_suf, how='outer')
 
-    # initiate the empty lists which will be filled with info from cases
+    # Initiate the empty lists which will be filled with info from cases
     caseList = []
     caseSwitches = [] #list of dicts, one dict for each case
     casenames = [c for c in df_cases.columns if not c in ['Description','Default Value','Choices']]
@@ -561,7 +577,7 @@ def setupEnvironment(
         if int(df_cases.loc['ignore',case]) == 1:
             continue
         # Check to make sure the switch setting is valid
-        for i, val in df_cases[case].iteritems():
+        for i, val in df_cases[case].items():
             ### Split choices by either '; ' or ','
             if choices[i] in ['N/A',None,np.nan]:
                 pass
@@ -576,9 +592,16 @@ def setupEnvironment(
                         'Entered "{}" but must be one of the following:\n\n{}'
                     ).format(i, case, val, '\n'.join(i_choices))
                     raise ValueError(error)
+                
+        #Check GSw_Region switch and ask user to correct if commas are used instead of periods to list multiple regions
+        if ',' in (df_cases[case].loc['GSw_Region']) :
+            print("Please change the delimeter in the GSw_Region switch from ',' to '.'")
+            quit()
+        
+        
         # Add switch settings to list of options passed to GAMS
         shcom = ' --case=' + BatchName + "_" + case
-        for i,v in df_cases[case].iteritems():
+        for i,v in df_cases[case].items():
             #exclude certain switches that don't need to be passed to GAMS
             if i not in ['file_replacements','keep_run_terminal']:
                 shcom = shcom + ' --' + i + '=' + v
@@ -591,7 +614,7 @@ def setupEnvironment(
         df_cases.loc['ignore'].loc[df_cases.loc['ignore']=='1'].index, axis=1, inplace=True)
 
     # Make sure the run folders don't already exist
-    outpaths = [os.path.join(reeds_path,'runs','{}_{}'.format(BatchName,case)) for case in casenames]
+    outpaths = [os.path.join(reeds_path,'runs',f'{BatchName}_{case}') for case in casenames]
     existing_outpaths = [i for i in outpaths if os.path.isdir(i)]
     if len(existing_outpaths) and not restart:
         print(
@@ -673,6 +696,7 @@ def setupEnvironment(
         'cases_filename': cases_filename,
         'hpc': hpc,
         'restart': restart,
+        'debug': debug,
     }
 
     return envVar
@@ -700,6 +724,7 @@ def createmodelthreads(envVar):
                 cases_filename=ThreadInit['cases_filename'],
                 hpc=envVar['hpc'],
                 restart=envVar['restart'],
+                debug=envVar['debug'],
             )
             print(ThreadInit['batch_case'] + " has finished \n")
             q.task_done()
@@ -713,18 +738,19 @@ def createmodelthreads(envVar):
         threads.append(t)
 
     for i in range(len(envVar['caseList'])):
-        q.put({'scen': envVar['caseList'][i],
-               'caseSwitches': envVar['caseSwitches'][i],
-               'batch_case':envVar['BatchName']+'_'+envVar['casenames'][i],
-               'niter':envVar['niter'],
-               'reeds_path':envVar['reeds_path'],
-               'ccworkers':envVar['ccworkers'],
-               'startiter':envVar['startiter'],
-               'BatchName':envVar['BatchName'],
-               'casename':envVar['casenames'][i],
-               'cases_filename':envVar['cases_filename'],
-               'restart':envVar['restart'],
-               })
+        q.put({
+            'scen': envVar['caseList'][i],
+            'caseSwitches': envVar['caseSwitches'][i],
+            'batch_case':envVar['BatchName']+'_'+envVar['casenames'][i],
+            'niter':envVar['niter'],
+            'reeds_path':envVar['reeds_path'],
+            'ccworkers':envVar['ccworkers'],
+            'startiter':envVar['startiter'],
+            'BatchName':envVar['BatchName'],
+            'casename':envVar['casenames'][i],
+            'cases_filename':envVar['cases_filename'],
+            'restart':envVar['restart'],
+            })
 
     # block until all tasks are done
     q.join()
@@ -738,30 +764,30 @@ def createmodelthreads(envVar):
 
 
 def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
-             BatchName, case, cases_filename, hpc=False, restart=False):
-    ### For debugging
+             BatchName, case, cases_filename, hpc=False, restart=False, debug=False):
+    ### For testing/debugging
     # caseSwitches = caseSwitches[0]
     # options = caseList[0]
     ### Inferred inputs
-    batch_case = '{}_{}'.format(BatchName,case)
+    batch_case = f'{BatchName}_{case}'
     endyear = int(caseSwitches['endyear'])
 
-    casedir = os.path.join(reeds_path,"runs",batch_case)
+    casedir = os.path.join(reeds_path,'runs',batch_case)
     inputs_case = os.path.join(casedir,"inputs_case")
 
-    # indicate this run is a restart
+    # Indicate this run is a restart
     if restart:
         print("Restarting from previous run.")
     else:
-        if os.path.exists(os.path.join(reeds_path,"runs",batch_case)):
-            print("Caution, case " + batch_case + " already exists in runs \n")
+        if os.path.exists(os.path.join(reeds_path,'runs',batch_case)):
+            print('Caution, case ' + batch_case + ' already exists in runs \n')
 
         #%% Set up case-specific directory structure
-        os.makedirs(os.path.join(reeds_path,"runs",batch_case), exist_ok=True)
-        os.makedirs(os.path.join(reeds_path,"runs",batch_case,"g00files"), exist_ok=True)
-        os.makedirs(os.path.join(reeds_path,"runs",batch_case,"lstfiles"), exist_ok=True)
-        os.makedirs(os.path.join(reeds_path,"runs",batch_case,"outputs"), exist_ok=True)
-        os.makedirs(os.path.join(reeds_path,"runs",batch_case,"outputs","tc_phaseout_data"), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,'runs',batch_case), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,'runs',batch_case,'g00files'), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,'runs',batch_case,'lstfiles'), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs'), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs','tc_phaseout_data'), exist_ok=True)
         os.makedirs(inputs_case, exist_ok=True)
 
     #%% Stop now if any switches are incompatible
@@ -794,26 +820,29 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             os.path.join(reeds_path,'inputs','supplycurvedata','metadata','rev_paths.csv')
         )
 
-    # separate techs with no associated switch
+    # Separate techs with no associated switch
     revDataSub = revData.loc[revData.access_switch == "none",:].copy()
     revData = revData.loc[revData.access_switch != "none",:]
 
-    # match possible supply curves with switches from this run
+    # Match possible supply curves with switches from this run
     siteSwitches = pd.DataFrame.from_dict({s:caseSwitches[s] for s in revData.access_switch.unique()},
                                 orient='index').reset_index().rename(columns={'index':'access_switch', 0:'access_case'})
     siteSwitches = siteSwitches.merge(revData, on=['access_switch', 'access_case'])
     siteSwitches = pd.concat([siteSwitches[revDataSub.columns.tolist()], revDataSub])
 
-    # get bin information
+    # Get bin information
     bins = {"wind-ons":"numbins_windons", "wind-ofs": "numbins_windofs", "upv":"numbins_upv"}
     binSwitches = pd.DataFrame.from_dict({b:caseSwitches[bins[b]] for b in bins},
                                 orient='index').reset_index().rename(columns={'index':'tech', 0:'bins'})
 
     siteSwitches = siteSwitches.merge(binSwitches, on=['tech'], how='left')
 
-    # expand on reV path based on where this run is happening
-    # To DO: add functionality for AWS
-    eagle_path = '/shared-projects/reeds/Supply_Curve_Data'
+    # Expand on reV path based on where this run is happening
+    #For running hourlize on the HPC link to shared-projects folder
+    if os.environ.get('NREL_CLUSTER') == 'kestrel':
+        eagle_path = '/projects/shared-projects-reeds/reeds/Supply_Curve_Data'
+    else: 
+        eagle_path = '/shared-projects/reeds/Supply_Curve_Data' 
     if hpc:
         rev_prefix = eagle_path
     else:
@@ -824,16 +853,16 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         rev_prefix = os.path.join(drive,'ReEDS','Supply_Curve_Data')
 
     siteSwitches['rev_case'] = siteSwitches['rev_path'].apply(lambda row: os.path.basename(row))
-    siteSwitches['eagle_path'] = siteSwitches['rev_path'].apply(lambda row: os.path.join(eagle_path, row))
-    siteSwitches['rev_path'] = siteSwitches['rev_path'].apply(lambda row: os.path.join(rev_prefix, row))
-    siteSwitches['sc_path'] = siteSwitches['sc_path'].apply(lambda row: os.path.join(rev_prefix, row))
-    siteSwitches[['tech', 'access_switch', 'access_case', 'bins','rev_case', 
-                  'rev_path', 'eagle_path', 'sc_path', 'eagle_sc_file', 'original_rev_folder']
+    siteSwitches['eagle_path'] = siteSwitches['rev_path'].apply(lambda row: os.path.join(eagle_path,row))
+    siteSwitches['rev_path'] = siteSwitches['rev_path'].apply(lambda row: os.path.join(rev_prefix,row))
+    siteSwitches['sc_path'] = siteSwitches['sc_path'].apply(lambda row: os.path.join(rev_prefix,row))
+    siteSwitches[['tech','access_switch','access_case','bins','rev_case', 
+                  'rev_path','eagle_path','sc_path','eagle_sc_file','original_rev_folder']
                 ].to_csv(os.path.join(inputs_case,'supplycurve_metadata','rev_supply_curves.csv'), index=False)
 
     #%% Set up the meta.csv file to track repo information and runtime
     ticker = os.path.join(reeds_path,'input_processing','ticker.py')
-    with open(os.path.join(casedir,'meta.csv'), 'w+') as METAFILE:
+    with open(os.path.join(casedir,'meta.csv'),'w+') as METAFILE:
         ### Write some git metadata
         METAFILE.writelines('computer,repo,branch,commit,description\n')
         try:
@@ -858,6 +887,16 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         ### Header for timing metadata
         METAFILE.writelines('#,#,#,#,#\n')
         METAFILE.writelines('year,process,starttime,stoptime,processtime\n')
+
+    ### Write the environment info for debugging
+    try:
+        environment = subprocess.run('conda list', capture_output=True, shell=True)
+        pd.Series(environment.stdout.decode().split('\n')).to_csv(
+            os.path.join(casedir,'lstfiles','environment.csv'),
+            header=False, index=False,
+        )
+    except Exception as err:
+        print(err)
 
     ### Copy over the cases file
     shutil.copy2(os.path.join(reeds_path, cases_filename), casedir)
@@ -894,19 +933,19 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
     if not restart:
         ## copy the ReEDS_Augur and input_processing folders
         shutil.copytree(
-            os.path.join(reeds_path, 'ReEDS_Augur'),
-            os.path.join(casedir, 'ReEDS_Augur'))
+            os.path.join(reeds_path,'ReEDS_Augur'),
+            os.path.join(casedir,'ReEDS_Augur'))
         shutil.copytree(
-            os.path.join(reeds_path, 'input_processing'),
-            os.path.join(casedir, 'input_processing'))
+            os.path.join(reeds_path,'input_processing'),
+            os.path.join(casedir,'input_processing'))
 
         #make the augur_data folder
         os.makedirs(os.path.join(casedir,'ReEDS_Augur','augur_data'), exist_ok=True)
         os.makedirs(os.path.join(casedir,'ReEDS_Augur','PRAS'), exist_ok=True)
 
     ###### Replace files according to 'file_replacements' in cases. Ignore quotes in input text.
-    #<< is used to separate the file that is to be replaced from the file that is used
-    #|| is used to separate multiple replacements.
+    # << is used to separate the file that is to be replaced from the file that is used
+    # || is used to separate multiple replacements.
     if caseSwitches['file_replacements'] != 'none':
         file_replacements = caseSwitches['file_replacements'].replace('"','').replace("'","").split('||')
         for file_replacement in file_replacements:
@@ -927,7 +966,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
     restart_switches = {'restart':restart}
     if restart:
         ### If restarting, get the year from the most recent .g00 file
-        g00files = glob(os.path.join(reeds_path,"runs",batch_case,"g00files",'*'))
+        g00files = glob(os.path.join(reeds_path,'runs',batch_case,'g00files','*'))
         g00years = []
         for f in g00files:
             try:
@@ -941,21 +980,21 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         restart_switches['restart_year'] = min(g00years)
 
         ### Also get last Augur solve
-        Augurfiles = glob(os.path.join(reeds_path,"runs", batch_case, "ReEDS_Augur", "augur_data", "ReEDS_Augur_*.gdx"))
+        Augurfiles = glob(os.path.join(reeds_path,'runs',batch_case,'ReEDS_Augur','augur_data','ReEDS_Augur_*.gdx'))
         auguryears = [int(os.path.basename(f).split("_")[-1].split(".")[0]) for f in Augurfiles]
 
-        #  if there is an Augur solve for this year, start the model in next year after the restart
+        #  If there is an Augur solve for this year, start the model in next year after the restart
         if restart_switches['restart_year'] in auguryears:
             solveyears = [y for y in solveyears if y > restart_switches['restart_year']]
             restart_switches['restart_Augur'] = False
         else:
-        # if there is no Augur solve for this year, start with Augur in the year of the restart
+        # If there is no Augur solve for this year, start with Augur in the year of the restart
             solveyears = [y for y in solveyears if y >= restart_switches['restart_year']]
             restart_switches['restart_Augur'] = True
     else:
         restart_switches['restart_Augur'] = False
 
-    # flag for a restart or an original one
+    # Flag for a restart or an original one
     call = 'call_restart_' if restart else 'call_'
 
     #%% Write the call script
@@ -967,14 +1006,22 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             comment('Set up nodal environment for run', OPATH)
             OPATH.writelines(". $HOME/.bashrc \n")
             OPATH.writelines("module purge \n")
-            #OPATH.writelines("module load conda \n")
-            OPATH.writelines("conda activate reeds \n")
-            OPATH.writelines("module load gams/34.3.0 \n")
+            
+            if os.environ.get('NREL_CLUSTER') == 'kestrel':
+                OPATH.writelines("source /nopt/nrel/apps/env.sh \n")
+                OPATH.writelines("module load anaconda3 \n")
+                OPATH.writelines("module use /nopt/nrel/apps/software/gams/modulefiles \n")
+                OPATH.writelines("module load gams/34.3.0 \n")
+            else:
+                OPATH.writelines("module load conda \n")
+                OPATH.writelines("module load gams \n")
+
+            OPATH.writelines("conda activate reeds2 \n")            
             OPATH.writelines('export R_LIBS_USER="$HOME/rlib" \n\n\n')
 
         if restart:
-            #%% skip input_processing and model creation if restarting, and set restart file to last available
-            restartfile = f"{batch_case}_{restart_switches['restart_year']}"
+            #%% Skip input_processing and model creation if restarting, and set restart file to last available
+            restartfile = f'{batch_case}_{restart_switches["restart_year"]}'
         else:
             #%% Write the input_processing script calls
             big_comment('Input processing', OPATH)
@@ -1008,9 +1055,9 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             restartfile = batch_case
             OPATH.writelines(writeerrorcheck(os.path.join('g00files',restartfile + '.g*')))
 
-        ########################
-        #%% Core model setup ###
-        ########################
+        ################################
+        #    -- CORE MODEL SETUP --    #
+        ################################
         if caseSwitches['timetype'] == 'seq':
             setup_sequential(
                 caseSwitches, reeds_path, hpc,
@@ -1028,15 +1075,14 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                 batch_case, toLogGamsString, yearset_augur, OPATH,
             )
 
-        ##########################
-        # -- OUTPUT PROCESSING --
-        ##########################
+        #################################
+        #    -- OUTPUT PROCESSING --    #
+        #################################
 
         #create reporting files
         big_comment('Output processing', OPATH)
-        ### TODO: Figure out a way to only run e_report.gms for the last-completed
-        ### iteration run. Currently it will run for both iteration 0 and 1 when using
-        ### stress-period iterations, which is dumb.
+        ### Currently e_report.gms will run for both iteration 0 and 1 when using
+        ### stress-period iterations.
         for iteration in range(int(caseSwitches['GSw_PRM_StressIterateMax'])+1):
             OPATH.writelines(
                 "gams e_report.gms"
@@ -1050,7 +1096,6 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             )
         OPATH.writelines('python {t}\n'.format(t=ticker))
         OPATH.writelines('python e_report_dump.py {}\n\n'.format(casedir))
-
 
         ### Run the retail rate module
         OPATH.writelines(
@@ -1066,10 +1111,15 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         ## ReEDS_to_rev processing
         if caseSwitches['reeds_to_rev'] == '1':
             OPATH.writelines('cd {} \n\n'.format(reeds_path))
-            OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "cost" -r\n\n')
-
+            OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "priority" ' 
+                             '-t "wind-ons" --new_incr_mw 6 -l "gamslog.txt" -r\n')
+            OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "priority" ' 
+                             '-t "wind-ofs" -l "gamslog.txt" -r\n')
+            OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "simultaneous" '
+                             '-t "upv" -l "gamslog.txt" -r\n\n')
+            
         if caseSwitches['land_use_analysis'] == '1':
-            # run the land-used characterization module
+            # Run the land-used characterization module
             OPATH.writelines(
                 f"python {os.path.join(reeds_path,'postprocessing','land_use','land_use_analysis.py')} {casedir}\n\n"
             )
@@ -1093,7 +1143,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-state") + ' no\n\n')
         OPATH.writelines('python postprocessing/vizit/vizit_prep.py ' + '"{}"'.format(os.path.join(casedir,'outputs')) + '\n\n')
 
-        # make script to unload all data to .gdx file
+        # Make script to unload all data to .gdx file
         command = (
             'gams dump_alldata.gms'
             + ' o='+os.path.join('lstfiles','dump_alldata_{}_{}.lst'.format(BatchName,case))
@@ -1139,14 +1189,13 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             f"{pipe} {os.path.join(casedir,'gamslog.txt')}\n"
         )
 
+    ### =====================================================================================
+    ### --- CALL THE CREATED BATCH FILE ---
+    ### =====================================================================================
 
-    ##############################
-    # Call the Created Batch File
-    ##############################
-
-    #if you're not running on eagle or AWS..
+    # If you're not running on eagle or AWS...
     if (not hpc) & (not int(caseSwitches['AWS'])):
-        # start the command prompt similar to the sequential solve
+        # Start the command prompt similar to the sequential solve
         # - waiting for it to finish before starting a new thread
         if os.name!='posix':
             if int(caseSwitches['keep_run_terminal']) == 1:
@@ -1156,36 +1205,58 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             os.system('start /wait cmd' + terminal_keep_flag + os.path.join(casedir, call + batch_case + ext))
         if os.name=='posix':
             print("Starting the run for case " + batch_case)
-            #give execution rights to the shell script
+            # Give execution rights to the shell script
             os.chmod(os.path.join(casedir, call + batch_case + ext), 0o777)
-            #open it up - note the in/out/err will be written to the shellscript parameter
+            # Open it up - note the in/out/err will be written to the shellscript parameter
             shellscript = subprocess.Popen(
                 [os.path.join(casedir, call + batch_case + ext)], shell=True)
-            #wait for it to finish before killing the thread
+            # Wait for it to finish before killing the thread
             shellscript.wait()
 
     elif hpc:
-        # create a copy of srun_template in casedir as {batch_case}.sh
+        # Create a copy of srun_template in casedir as {batch_case}.sh
         if caseSwitches['timetype']=="int":
             shutil.copy("srun_template_int.sh", os.path.join(casedir, batch_case+".sh"))
         else:
-            shutil.copy("srun_template.sh", os.path.join(casedir, batch_case+".sh"))
+            if caseSwitches['srun_template'] == "default":
+                shutil.copy("srun_template.sh", os.path.join(casedir, batch_case+".sh"))
+            else:
+                shutil.copy(f"srun_template_{caseSwitches['srun_template']}.sh", 
+                            os.path.join(casedir, batch_case+".sh"))
+        
+        # option to run on a debug node on an hpc system
+        if debug:
+            writelines = []
+            # comment out original time specification
+            with open(os.path.join(casedir, batch_case+".sh"), 'r') as SPATH:
+                for l in SPATH:
+                    writelines.append(('# ' if '--time' in l else '') + l.strip())
+            # rewrite file with new time and debug partition
+            with open(os.path.join(casedir, batch_case+".sh"), 'w') as SPATH:
+                for l in writelines:
+                    SPATH.writelines(l + '\n')
+                SPATH.writelines("#SBATCH --time=01:00:00\n")
+                SPATH.writelines("#SBATCH --partition=debug\n")
+
         with open(os.path.join(casedir, batch_case+".sh"), 'a') as SPATH:
-            #add the name for easy tracking of the case
-            SPATH.writelines("\n#SBATCH --job-name=" + batch_case + "\n\n")
-            #add the call to the sh file created throughout this function
+            # Add the name for easy tracking of the case
+            SPATH.writelines("#SBATCH --job-name=" + batch_case + "\n")
+            SPATH.writelines("#SBATCH --output=" + os.path.join(casedir, "slurm-%j.out") + "\n\n")
+            SPATH.writelines("#load your default settings\n")
+            SPATH.writelines(". $HOME/.bashrc" + "\n\n")
+            # Add the call to the sh file created throughout this function
             SPATH.writelines("sh " + os.path.join(casedir, call + batch_case + ext))
-        #close the file
+        # Close the file
         SPATH.close()
-        #call that file
+        # Call that file
         batchcom = "sbatch " + os.path.join(casedir, batch_case + ".sh")
         subprocess.Popen(batchcom.split())
 
     elif int(caseSwitches['AWS']):
         print("Starting the run for case " + batch_case)
-        #give execution rights to the shell script
+        # Give execution rights to the shell script
         os.chmod(os.path.join(casedir, call + batch_case + ext), 0o777)
-        #issue a nohup (no hangup) command and direct output to
+        # Issue a nohup (no hangup) command and direct output to
         # case-specific txt files in the root of the repository
         shellscript = subprocess.Popen(
             ['nohup ' + os.path.join(casedir, call + batch_case + ext) + " > " +os.path.join(casedir,batch_case+ ".txt") ],
@@ -1193,7 +1264,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                 stdout=open(os.path.join(casedir,batch_case+"_out.txt"),'w'),
                 stderr=open(os.path.join(casedir,batch_case+"_err.log"),'w'),
                 shell=True,preexec_fn=os.setpgrp)
-        # wait for it to finish before killing the thread
+        # Wait for it to finish before killing the thread
         shellscript.wait()
 
     ### Record the ending time
@@ -1208,7 +1279,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
 
 def main(
         BatchName='', cases_suffix='', simult_runs=0,
-        forcelocal=False, restart=False, skip_env_check=False):
+        forcelocal=False, restart=False, skip_env_check=False, debug=False):
     """
     Executes parallel solves based on cases in 'cases.csv'
     """
@@ -1231,13 +1302,12 @@ def main(
     print(" ")
     print(" ")
 
-    #gather user inputs before calling GAMS programs
+    # Gather user inputs before calling GAMS programs
     envVar = setupEnvironment(
         BatchName=BatchName, cases_suffix=cases_suffix, simult_runs=simult_runs,
-        forcelocal=forcelocal, restart=restart, skip_env_check=skip_env_check)
-    # threads are created which will handle each case individually
+        forcelocal=forcelocal, restart=restart, skip_env_check=skip_env_check, debug=debug)
+    # Threads are created which will handle each case individually
     createmodelthreads(envVar)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -1253,6 +1323,8 @@ if __name__ == '__main__':
                         help='Switch to restart existing ReEDS runs')
     parser.add_argument('--skip_env_check', '-e', action="store_true",
                         help="Don't check that the reeds environment is activated")
+    parser.add_argument('--debug', '-d', action="store_true",
+                        help="Run using debug specifications for slurm on an hpc system")
 
     args = parser.parse_args()
 
@@ -1260,5 +1332,6 @@ if __name__ == '__main__':
         BatchName=args.BatchName, cases_suffix=args.cases_suffix,
         simult_runs=args.simult_runs, forcelocal=args.forcelocal,
         restart=args.restart, skip_env_check=args.skip_env_check,
+        debug=args.debug,
     )
     

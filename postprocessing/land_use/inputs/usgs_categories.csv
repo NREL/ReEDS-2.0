@@ -1,0 +1,19 @@
+usgs_code,usgs_class
+1,water
+2,developed
+3,mechanically disturbed national forests
+4,mechanically disturbed other public lands
+5,mechanically disturbed private
+6,mining
+7,barren
+8,deciduous forest
+9,evergreen forest
+10,mixed forest
+11,grassland
+12,shrubland
+13,cropland
+14,hay/pasture
+15,herbaceous wetland
+16,woody wetland
+17,perennial ice/snow
+9999,unclassified

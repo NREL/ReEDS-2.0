@@ -1,0 +1,20 @@
+{
+    "bin_col": "combined_off_ons_trans" ,
+    "capacity_col": "capacity",
+    "class_bin_col": "mean_cf",
+    "class_bin_num": 10,
+    "class_bin": false,
+    "class_path": "{hourlizepath}/inputs/resource/{tech}_resource_classes.csv",
+    "cost_adder_components": [],
+    "distance_cols": ["dist_km","dist_to_coast","reinforcement_dist_km"] ,
+    "filter_cols": {"offshore": [":",1], "bathymetry": [">",-1300]},
+    "min_cap": 15,
+    "profile_dir": "",
+    "profile_dset": "rep_profiles_0",
+    "profile_file_format": "{rev_prefix}_rep-profiles",
+    "profile_id_col": "sc_point_gid",
+    "profile_weight_col": "capacity",
+    "rev_jsons": ["config_aggregation.json", "config_pipeline.json", "config_supply-curve.json", "config_rep-profiles.json"],
+    "single_profile": false,
+    "upv_type": null
+}

@@ -108,7 +108,7 @@ def main(case, year=0, samples=0, repo=False, r2ppath='', overwrite=False):
     ]
     if (
         any([not os.path.isfile(os.path.join(augur_data,f)) for f in files_expected])
-        and overwrite
+        or overwrite
     ):
         augur_gdx, augur_csv, augur_h5 = A_prep_data.main(t, case)
 

@@ -1,4 +1,6 @@
-#%% IMPORTS
+#%% ===========================================================================
+### --- IMPORTS ---
+### ===========================================================================
 import os
 import sys
 import math
@@ -13,12 +15,13 @@ import numpy as np
 from LDC_prep import read_file
 import hourly_repperiods
 
-################
-#%% SETTINGS ###
+#%%#################
+### FIXED INPUTS ###
 interactive = False
 
-#################
-#%% FUNCTIONS ###
+#%% ===========================================================================
+### --- FUNCTIONS ---
+### ===========================================================================
 
 def plot_unclustered_periods(profiles, sw, reeds_path, figpath):
     """
@@ -350,7 +353,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
         sw['GSw_HourlyNumClusters'], sw['GSw_HourlyClusterRegionLevel'],
         sw['GSw_HourlyPeakLevel'], sw['GSw_HourlyMinRElevel'],
         '__'.join(['_'.join([
-            str(i),str(v)]) for (i,v) in sw['GSw_HourlyClusterWeights'].iteritems()]))
+            str(i),str(v)]) for (i,v) in sw['GSw_HourlyClusterWeights'].items()]))
     techs = ['wind-ons','upv']
     colors = {'cf_full':'k', 'cf_hourly':'C1'}
     lss = {'cf_full':':', 'cf_hourly':'-'}
@@ -358,16 +361,22 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
 
     ### Get the CF data over all years, take the mean
     recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5')).mean()
-
+    
+    # ReEDS only supports a single entry for agglevel right now, so use the
+    # first value from the list (copy_files.py already ensures that only one
+    # value is present)
+    # The 'lvl' variable ensures that BA and larger spatial aggregations use BA data and methods
+    agglevel = pd.read_csv(
+        os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
+    lvl = 'ba' if agglevel in ['ba','state','aggreg'] else 'county'
+    
     ### Get supply curves
     dfsc = {}
     for tech in techs:
-        #Why is GSw_SitingWindOns used for all techs below??
         dfsc[tech] = pd.read_csv(
             os.path.join(
                 reeds_path,'inputs','supplycurvedata',
-                '{}_supply_curve-{}.csv'.format(
-                    tech,sw['GSw_SitingWindOns']))
+                f'{tech}_supply_curve-{sw["GSw_SitingWindOns"] if tech=="wind-ons" else sw["GSw_SitingUPV"]}_{lvl}.csv')
         ).rename(columns={'region':'r'})
         dfsc[tech]['i'] = tech + '_' + dfsc[tech]['class'].astype(str)
 
@@ -467,7 +476,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     ## load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
     scalars = pd.read_csv(
         os.path.join(inputs_case,'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0, squeeze=True)
+        header=None, usecols=[0,1], index_col=0).squeeze(1)
     load_raw *= (1 - scalars['distloss'])
     ### Get the representative data, take the mean for the cluster year
     load_allyear = (
@@ -540,7 +549,7 @@ def plot_8760(profiles, period_szn, rep_periods, sw, reeds_path, figpath):
 
     def get_profiles(regions, year):
         """Assemble 8760 profiles from original and representative days"""
-        timeindex = pd.date_range(f'{year}-01-01',f'{year+1}-01-01',freq='H',closed='left')[:8760]
+        timeindex = pd.date_range(f'{year}-01-01',f'{year+1}-01-01',freq='H',inclusive='left')[:8760]
         props = profiles.columns.get_level_values('property').unique()
         ### Original profiles
         dforig = {}
@@ -781,7 +790,7 @@ def plots_original(
 
     ### Plot daily profile for the US colored by representative period
     try:
-        ## TODO: Switch to actual months...
+        ### Create dictionary for assigning month,day to axes row,column
         nrows, ncols = (12, 31) if sw['GSw_HourlyType'] in ['day','year'] else (13,6)
         coords = dict(zip(
             range(1,periodsperyear+1),

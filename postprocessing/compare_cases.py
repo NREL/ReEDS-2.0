@@ -105,7 +105,7 @@ def add_to_pptx(title, left=0, top=0.62, width=13.33, height=None):
 #%% Get the switches, overwriting values as necessary
 sw = pd.read_csv(
     os.path.join(casebase, 'inputs_case', 'switches.csv'),
-    header=None, index_col=0, squeeze=True)
+    header=None, index_col=0).squeeze(1)
 sw['reeds_path'] = reeds_path
 
 ### Get the solve years

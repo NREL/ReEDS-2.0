@@ -3,13 +3,13 @@
 setuplog.txt
 setuperr.txt
 errors.log
-gams
 .bashrc
 
 # files in runs folder
 runs/*
-inout/variabilitycalculations/ldcfiles/
-inout/gdxfiles/*.gdx
+
+# files in bokehpivot output folder
+bokehpivot/out/*
 
 # temporary GAMS files
 *.~gm
@@ -30,7 +30,6 @@ inout/gdxfiles/*.gdx
 *.DS_Store
 
 # distpv csv input files
-inout/dSolar_Inputs/*.csv
 inputs/capacitydata/distpv/*.csv
 
 # R stuff
@@ -43,6 +42,10 @@ Manifest.toml
 # raw input files for retail rates
 retail_rate_module/inputs/EIA861/*
 postprocessing/retail_rate_module/inputs/EIA861/*
+
+# County-level hourly RE profiles (due to very large file size)
+inputs/variability/multi_year/*county*.h5
+inputs/variability/multi_year/file_version.csv
 
 # IDE stuff
 *.vscode

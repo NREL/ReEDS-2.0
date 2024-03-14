@@ -12,7 +12,7 @@ advind 0
 reslim 172800
 
 *** scaind (integer): matrix scaling on/off [1 = modified, more aggressive scaling method]
-scaind 1
+* scaind 1
 
 *** aggind (integer): aggregator on/off [5 = aggregator will be applied 5 times]
 aggind 5
@@ -62,7 +62,7 @@ barcolnz 100
 * barstartalg 2
 
 *** scaind (described above)
-* scaind 0
+scaind 0
 
 *** Can use bardisplay=2 to print more diagnostics about the barrier method and choice of barcolnz
 * bardisplay 2

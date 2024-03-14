@@ -156,6 +156,7 @@ GSw_RampRate_Gen,0
 GSw_ReducedResource,0
 GSw_Refurb,1
 GSw_Region,usa
+GSw_RegionResolution,ba
 GSw_ReserveMargin,1
 GSw_RetailAdderDAC,20.5
 GSw_Retire,5

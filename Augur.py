@@ -7,12 +7,11 @@ Created on Mon Mar 16 16:30:25 2020
 
 #%% Imports
 import argparse
-import gdxpds
 import os
-import sys
 import subprocess
 import datetime
 import pandas as pd
+import gdxpds
 
 import ReEDS_Augur.A_prep_data as A_prep_data
 import ReEDS_Augur.E_capacity_credit as E_capacity_credit

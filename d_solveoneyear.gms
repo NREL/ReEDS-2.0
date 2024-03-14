@@ -84,10 +84,6 @@ if(Sw_GrowthRelCon > 0,
                  $(allt.val<=yeart(t))],
             last_year_max_growth(st,tg,t) * growth_bin_size_mult("gbin1") ** (allt.val - sum{tt$tprev(t,tt), yeart(tt) }) }
         / (yeart(t) - sum{tt$tprev(t,tt), yeart(tt) }) ;
-
-* Do not allow growth_bin_limit to decline over time (i.e., if a higher growth
-* rate was achieved in the past, allow the model to start from that higher level)
-    growth_bin_limit("gbin1",st,tg,t)$tmodel(t) = smax{tt, growth_bin_limit("gbin1",st,tg,tt) } ;
    
 * If the calculated  gbin1 value is less than the minimum bin size, then set it to the minimum bin size
     growth_bin_limit("gbin1",st,tg,t)$[tmodel(t)$(growth_bin_limit("gbin1",st,tg,t) < gbin_min(tg))$stfeas(st)] = gbin_min(tg) ;
@@ -227,6 +223,7 @@ cost_cap_fin_mult_no_credits(i,r,t)$pvb(i) =
 *Assign upgraded techs the same multipliers as the techs they are upgraded from
 cost_cap_fin_mult(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult(ii,r,t) } ;
 cost_cap_fin_mult_noITC(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult_noITC(ii,r,t) } ;
+cost_cap_fin_mult_no_credits(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult_no_credits(ii,r,t) } ;
 
 if(Sw_WaterMain=1,
 cost_cap_fin_mult(i,r,t)$i_water_cooling(i) =

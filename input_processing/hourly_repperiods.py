@@ -14,32 +14,33 @@ General notes:
 * period: a day (if GSw_HourlyType=='day') or a wek (if GSw_HourlyType=='wek')
 * wek: A consecutive 5-day period (365 is only divisible by 1, 5, 73, and 365)
 
-TODO:
-* Add compatibility with climate impacts (climateprep.py)
-* Add compatibility with beyond-2050 modeling (forecast.py)
-# Add compatibility with flexible demand
+This script is currently not compatible with:
+* Climate impacts (climateprep.py)
+* Beyond-2050 modeling (forecast.py)
+* Flexible demand
 """
 
-#%% IMPORTS
-import os
+#%% ===========================================================================
+### --- IMPORTS ---
+### ===========================================================================
 import argparse
 import json
+import numpy as np
+import os
+import pandas as pd
 import shutil
 import re
-import pandas as pd
-import numpy as np
 from LDC_prep import read_file
-import hourly_plots as plots_h
 import hourly_writetimeseries
-
 ##% Time the operation of this script
 from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
 
 
-##########
-#%% INPUTS
+#%%#################
+### FIXED INPUTS ###
+
 decimals = 3
 ### Indicate whether to show plots interactively [default False]
 interactive = False
@@ -48,8 +49,9 @@ debug = True
 ### Indicate the full possible collection of weather years
 all_weatheryears = list(range(2007,2014))
 
-#############
-#%% FUNCTIONS
+#%% ===========================================================================
+### --- FUNCTIONS ---
+### ===========================================================================
 
 def szn2yearperiod(szn):
     """
@@ -69,13 +71,15 @@ def szn2period(szn):
     return int(period)
 
 
-########################
-# -- Load Processing --
-########################
+###############################
+#    -- Load Processing --    #
+###############################
 
-def get_load(val_r, sw, inputs_case):
+def get_load(sw, inputs_case):
+    """
+    """
     ### Subset to modeled regions
-    load = read_file(os.path.join(inputs_case,'load'), index_columns=2)[val_r]
+    load = read_file(os.path.join(inputs_case,'load'), index_columns=2)
     ### Subset to cluster year; if it's not included, keep the latest year
     loadyears = load.index.get_level_values('year').unique()
     keepyear = (
@@ -85,7 +89,7 @@ def get_load(val_r, sw, inputs_case):
     ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
     scalars = pd.read_csv(
         os.path.join(inputs_case,'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0, squeeze=True)
+        header=None, usecols=[0,1], index_col=0).squeeze(1)
     load *= (1 - scalars['distloss'])
 
     ### Downselect to weather_years
@@ -292,18 +296,18 @@ def identify_peak_containing_periods(df, hierarchy, level):
     return forceperiods
 
 
-def identify_min_periods(df, hierarchy, level, prefix=''):
+def identify_min_periods(df, hierarchy, rmap1, level, prefix=''):
     """
     Identify the period with the minimum average value.
     Set of (region,reason,year,yperiod), with yperiod starting from 1.
     """
     ### Map columns to level, then sum
     if level == 'r':
-        rmap = pd.Series(hierarchy.index, index=hierarchy.index)
+        rmap2 = pd.Series(hierarchy.index, index=hierarchy.index)
     else:
-        rmap = hierarchy[level]
+        rmap2 = hierarchy[level]
     dfmod = df[[c for c in df if c.startswith(prefix)]].copy()
-    dfmod.columns = dfmod.columns.map(lambda x: x.split('_')[-1]).map(rmap)
+    dfmod.columns = dfmod.columns.map(lambda x: x.split('_')[-1]).map(rmap1).map(rmap2)
     dfmod = dfmod.groupby(axis=1, level=0).sum()
     ### Get the mean value by (year,yperiod)
     dfmean = dfmod.groupby(['year','yperiod']).mean()
@@ -362,13 +366,15 @@ def cluster_profiles(profiles_fitperiods, sw, forceperiods_yearperiod):
             'szn': [f"y{i[0]}{sw['GSw_HourlyType'][0]}{i[1]:>03}"
                        for i in pd.Series(idx).map(nearest_period)]
         ### Add the force-include periods to the end of the list of seasons
-        }).append(
+        })
+        period_szn = pd.concat([
+            period_szn,
             pd.DataFrame({
                 'period': list(forceperiods_yearperiod),
                 'szn': [f"y{i[0]}{sw['GSw_HourlyType'][0]}{i[1]:>03}"
                         for i in forceperiods_yearperiod]
             })
-        ).sort_values('period').set_index('period').szn
+        ]).sort_values('period').set_index('period').szn
 
     elif sw['GSw_HourlyClusterAlgorithm'] in ['opt','optimized','optimize']:
         print("Performing optimized clustering")
@@ -383,11 +389,12 @@ def cluster_profiles(profiles_fitperiods, sw, forceperiods_yearperiod):
                 'Asked for {} representative periods but only needed {}'.format(
                     sw['GSw_HourlyNumClusters'], len(rweights)))
 
-        period_szn = a2r.reset_index().rename(columns={'act':'period','rep':'szn'}).append(
+        period_szn = pd.concat([
+            a2r.reset_index().rename(columns={'act':'period','rep':'szn'}),
             pd.DataFrame({'period':list(forceperiods_yearperiod),
                           'szn':list(forceperiods_yearperiod)})
             if len(forceperiods_yearperiod) else None
-        ).sort_values('period').set_index('period').szn
+        ]).sort_values('period').set_index('period').szn
         period_szn = period_szn.map(lambda x: f'y{x[0]}{sw.GSw_HourlyType[0]}{x[1]:>03}')
 
     elif 'user' in sw['GSw_HourlyClusterAlgorithm'].lower():
@@ -408,14 +415,14 @@ def cluster_profiles(profiles_fitperiods, sw, forceperiods_yearperiod):
     return rep_periods, period_szn
 
 
-###########################
-#    -- Main Function --  #
-###########################
+#%% ===========================================================================
+### --- MAIN FUNCTION ---
+### ===========================================================================
 
 def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     """
     """
-    ### Direct plots to outputs folder
+    #%% Direct plots to outputs folder
     figpath = os.path.join(inputs_case,'..','outputs',f'hourly{figpathtail}')
     os.makedirs(figpath, exist_ok=True)
 
@@ -423,13 +430,20 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     hoursperperiod = {'day':24, 'wek':120, 'year':24}
     periodsperyear = {'day':365, 'wek':73, 'year':365}
 
-    val_r = pd.read_csv(
-        os.path.join(inputs_case, 'val_r.csv'), squeeze=True, header=None).tolist()
+    val_r_all = pd.read_csv(
+        os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
+    
+    # ReEDS only supports a single entry for agglevel right now, so use the
+    # first value from the list (copy_files.py already ensures that only one
+    # value is present)
+    agglevel = pd.read_csv(os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
+    # The 'lvl' variable ensures that BA and larger spatial aggregations use BA data and procedure
+    lvl = 'ba' if agglevel in ['ba','state','aggreg'] else 'county'
 
     ### Get original seasons (for 8760)
     d_szn_in = pd.read_csv(
         os.path.join(reeds_path,'inputs','variability','d_szn_1.csv'),
-        index_col='*d', squeeze=True)
+        index_col='*d').squeeze(1)
 
     #%% Get map from yperiod, hour, and h_of_period to timestamp
     timestamps = pd.DataFrame({
@@ -478,31 +492,43 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     ### Get region hierarchy for use with GSw_HourlyClusterRegionLevel
     hierarchy = pd.read_csv(
         os.path.join(inputs_case,'hierarchy.csv')).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy_orig = pd.read_csv(
+        os.path.join(reeds_path,'inputs','hierarchy.csv'))
     if sw.GSw_HourlyClusterRegionLevel == 'r':
         rmap = pd.Series(hierarchy.index, index=hierarchy.index)
-    else:
+    elif agglevel == 'county':
         rmap = hierarchy[sw['GSw_HourlyClusterRegionLevel']]
+    elif agglevel in ['ba','state','aggreg']:
+        rmap = (hierarchy_orig.loc[hierarchy_orig['ba'].isin(val_r_all)]
+                [['ba',sw['GSw_HourlyClusterRegionLevel']]]
+                .drop_duplicates().set_index('ba')).squeeze()
+    ### Get r-to-county map
+    r_county = pd.read_csv(
+        os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze(1)
+    ### Get r-to-ba map
+    r_ba = pd.read_csv(
+        os.path.join(inputs_case,'r_ba.csv'), index_col='ba').squeeze(1)
 
     #%% Load supply curves to use for available capacity weighting
     sc = {
         'wind-ons': pd.read_csv(
             os.path.join(reeds_path,'inputs','supplycurvedata',
-            f"wind-ons_supply_curve-{sw['GSw_SitingWindOns']}.csv")
+            f"wind-ons_supply_curve-{sw['GSw_SitingWindOns']}_{lvl}.csv")
         ).groupby(['region','class'], as_index=False).capacity.sum(),
         'upv': pd.read_csv(
             os.path.join(reeds_path,'inputs','supplycurvedata',
-            f"upv_supply_curve-{sw['GSw_SitingUPV']}.csv")
+            f"upv_supply_curve-{sw['GSw_SitingUPV']}_{lvl}.csv")
         ).groupby(['region','class'], as_index=False).capacity.sum(),
     }
     sc = (
         pd.concat(sc, names=['tech','drop'], axis=0)
         .reset_index(level='drop', drop=True).reset_index())
     ### Downselect to modeled regions
-    sc = sc.loc[sc.region.isin(val_r)].copy()
+    sc = sc.loc[sc.region.isin(val_r_all)].copy()
     sc['i'] = sc.tech+'_'+sc['class'].astype(str)
     sc['resource'] = sc.i + '_' + sc.region
     sc['aggreg'] = sc.region.map(rmap)
-    ### TODO: Think about downselecting to better resource classes
+    ### Keep all resource classes for now
     useclass = {'upv': range(1,11), 'wind-ons': range(1,11)}
     for tech, classes in useclass.items():
         drop = sc.loc[(sc.tech==tech) & ~(sc['class'].isin(classes))].index
@@ -521,11 +547,15 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     recf = recf.loc[recf.year.isin(sw['GSw_HourlyWeatherYears'])].drop('year', axis=1)
     recf.index = timestamps_myr.set_index(['year','yperiod','h_of_period']).index
 
+    # rmap1 is used in conjuntion with rmap2 (created in identify_min_periods) 
+    # to map regional data from BA/county (depending on desired spatial aggregation) 
+    # to the spatial aggregation defined by sw['GSw_HourlyMinRElevel']
+    rmap1 = r_ba if agglevel in ['ba','state','aggreg'] else r_county
     ### Identify stress periods if necessary
     if sw['GSw_HourlyMinRElevel'].lower() not in ['false','none']:
         forceperiods_minre = {
             tech: identify_min_periods(
-                df=recf, hierarchy=hierarchy,
+                df=recf, hierarchy=hierarchy, rmap1=rmap1,
                 level=sw['GSw_HourlyMinRElevel'], prefix=tech)
             for tech in ['upv','wind-ons']
         }
@@ -534,11 +564,11 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     ### Aggregate to (tech,GSw_HourlyClusterRegionLevel)
     recf_agg = recf.copy()
-    columns = (
+    tmp = (
         pd.DataFrame({'resource':recf.columns}).set_index('resource')
         .merge(sc.set_index('resource')[['tech','region']], left_index=True, right_index=True)
-        .loc[recf.columns]
-    )
+        )
+    columns = tmp.loc[tmp.index.isin(recf.columns)]
     columns['region'] = columns.region.map(rmap)
     recf_agg.columns = pd.MultiIndex.from_frame(columns[['tech','region']])
     recf_agg = recf_agg.groupby(axis=1, level=['tech','region']).sum()
@@ -548,7 +578,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     ### Load load data (Eastern time)
     print("Collecting 8760 load data")
-    load = get_load(val_r=val_r, sw=sw, inputs_case=inputs_case)
+    load = get_load(sw=sw, inputs_case=inputs_case)
     ## Add descriptive index
     load.index = timestamps_myr.set_index(['year','yperiod','h_of_period']).index
 
@@ -616,6 +646,11 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         profiles_fitperiods = profiles_fitperiods_hourly.copy()
 
     #%% Plots
+    if make_plots:
+        try:
+            import hourly_plots as plots_h
+        except Exception as err:
+            print(f'import of hourlyPlots failed with the following error:\n{err}')
     if make_plots >= 3:
         try:
             plots_h.plot_unclustered_periods(profiles, sw, reeds_path, figpath)
@@ -653,7 +688,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     if sw['GSw_PRM_StressSeedMinRElevel'].lower() not in ['false','none']:
         stressperiods_minre = {
             tech: identify_min_periods(
-                df=recf, hierarchy=hierarchy,
+                df=recf, hierarchy=hierarchy, rmap1=rmap1,
                 level=sw['GSw_PRM_StressSeedMinRElevel'], prefix=tech)
             for tech in ['upv','wind-ons']}
     else:
@@ -715,8 +750,15 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     #%%### Get number of threads to use in Augur/Osprey
     d_osprey = 's'+timestamps['period'].drop_duplicates()
+    
+    ### If using less than the 7 years of weather data, reduce d_osprey to just
+    ### the relevant years
+    if len(sw.osprey_years.split('_')) < 7:
+        years = sw.osprey_years.split('_')
+        entries = ['y' + year for year in years]
+        d_osprey = d_osprey[d_osprey.str.contains('|'.join(entries))]
 
-    threads_pattern = re.compile(r'threads\s*=\s*(\d+)')
+    threads_pattern = re.compile(r'threads\s*=?\s*(-?\d+)')
     with open(os.path.join(inputs_case,'..','cplex.opt')) as f:
         text = f.read()
     threads = int(threads_pattern.findall(text)[0])
@@ -804,25 +846,23 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
 
 
-#############
-#%% PROCEDURE
+#%% ===========================================================================
+### --- PROCEDURE ---
+### ===========================================================================
 
 if __name__ == '__main__':
-    ###################
-    #%% Argument inputs
+
+    #%% Parse arguments
     parser = argparse.ArgumentParser(
-        description="Create the necessary 8760 and capacity factor data for hourly resolution")
-    parser.add_argument("reeds_path",
-                        help="ReEDS-2.0 directory")
-    parser.add_argument("inputs_case",
-                        help="ReEDS-2.0/runs/{case}/inputs_case directory")
+        description='Create the necessary 8760 and capacity factor data for hourly resolution')
+    parser.add_argument('reeds_path', help='ReEDS-2.0 directory')
+    parser.add_argument('inputs_case', help='ReEDS-2.0/runs/{case}/inputs_case directory')
 
     args = parser.parse_args()
     reeds_path = args.reeds_path
     inputs_case = args.inputs_case
 
-    # ################################
-    # #%% Inputs for reproducing a run
+    #%% Settings for testing
     # reeds_path = os.path.expanduser('~/github/ReEDS-2.0/')
     # inputs_case = os.path.join(
     #     reeds_path,'runs',
@@ -833,12 +873,10 @@ if __name__ == '__main__':
     #%% Set up logger
     log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
-    #################
-    #%% Switch inputs
+    #%% Inputs from switches
     sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True)
+        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
     make_plots = int(sw.hourly_cluster_plots)
-
     ## Parse some switches
     sw['GSw_HourlyClusterWeights'] = pd.Series(json.loads(
         '{"'

@@ -1,9 +1,8 @@
 #%% IMPORTS
 import os
-import gdxpds
 import numpy as np
 import pandas as pd
-from warnings import warn
+import gdxpds
 # import numba
 
 from ReEDS_Augur.functions import dr_capacity_credit
@@ -84,19 +83,19 @@ def set_marg_vre_step_size(t, sw, gdx, hierarchy):
 
     # aggregate by tech and then and compute average across the appropriate
     # geographic resolution - r for curtailment, ccreg for capacity credit
-    marg_vre_mw = {}
-    for level in ['ccreg']:
-        df = inv_vre.groupby([level, 't'], as_index=False).sum()
-        df = df.groupby(['t'], as_index=False).mean()
+    level = 'ccreg'
+    df = (
+        inv_vre.groupby([level, 't'], as_index=False).Value.sum()
+        .groupby(['t'], as_index=False).Value.mean()
+    )
+    # adjust each previous step by its relative step size
+    df = df.merge(relative_step_sizes, on='t')
+    df['Value'] *= df['step']
 
-        # adjust each previous step by its relative step size
-        df = df.merge(relative_step_sizes, on='t')
-        df['Value'] *= df['step']
+    # now get max across all previous steps and set as marg_vre_mw
+    marg_vre_mw = round(df['Value'].max(), 0)
 
-        # now get max across all previous steps and set as marg_vre_mw
-        marg_vre_mw[level] = round(df['Value'].max(), 0)
-
-    marg_vre_mw_cc = int(max(int(sw['marg_vre_mw']), marg_vre_mw['ccreg']))
+    marg_vre_mw_cc = int(max(int(sw['marg_vre_mw']), marg_vre_mw))
     print(f'marg_vre_mw_cc set to {marg_vre_mw_cc}')
 
     return marg_vre_mw_cc
@@ -133,8 +132,7 @@ def reeds_cc(t, tnext, casedir):
     cap_stor['duration'] = cap_stor.i.map(gdx['storage_duration'].set_index('i').Value)
     cap_stor['MWh'] = cap_stor['MW'] * cap_stor['duration']
     cap_stor_agg = cap_stor.merge(hierarchy[['r','ccreg']], on = 'r')
-    cap_stor_agg = cap_stor_agg.groupby('ccreg', as_index = False).sum()
-    cap_stor_agg.drop('duration', axis = 1, inplace = True)
+    cap_stor_agg = cap_stor_agg.groupby('ccreg', as_index=False)[['MW','MWh']].sum()
     sdb = gdx['sdbin'].rename(columns={'*':'bin'})[['bin']]
 
     # cap_dr = cap[cap['i'].isin(techs['dr1'])]
@@ -233,7 +231,7 @@ def reeds_cc(t, tnext, casedir):
 
         # Hourly profiles
         load_profile_ccreg = load_profiles[ccreg]
-        # DR profile - TODO: update to new Augur structure
+        # DR profile
         if int(sw['GSw_DR']):
             dr_reg = [r for r in resources_ccreg.r.drop_duplicates()
                       if r in drcf_inc.columns]
@@ -350,13 +348,14 @@ def reeds_cc(t, tnext, casedir):
                 storage=cap_stor_ccreg.copy(), pr=peak_reductions.copy(),
                 re=required_MWhs.copy(), sdb=sdb.copy(), log=log)
             # Store it
-            dict_sdbin_size[ccreg, season] = (
-                peaking_stor[['duration','MW']]
+            dict_sdbin_size[ccreg, season] = pd.concat([
+                peaking_stor[['duration','MW']],
                 ### Add the safety bin
-                .append(
-                    pd.Series(data=[safety_bin, float(sw['cc_safety_bin_size'])],
-                    index=['duration','MW']), ignore_index=True)
-            )
+                pd.DataFrame(
+                    {'duration': [safety_bin], 'MW': float(sw['cc_safety_bin_size'])}
+                ),
+            ], ignore_index=True)
+
             if int(sw['GSw_DR']):
                 # Pivot DR data
                 inc_timestamp = pd.pivot_table(
@@ -495,7 +494,7 @@ def cc_vg(vg_power, load, vg_marg_power, top_hours_n, cap_marg):
             length top_hours_n
         top_hours: argumnets for the highest load hours in load, length
             top_hours_n
-    To Do:
+    Notes:
         Currently only built for hourly profiles. Generalize to any duration
             timestep.
     '''
@@ -554,7 +553,6 @@ def cc_vg(vg_power, load, vg_marg_power, top_hours_n, cap_marg):
 
     # get the marg net load for each VG resource [hours x resources]
     load_marg = (
-        ###! TODO: Try to speed up this line
         np.tile(load_net.reshape(hours_n, 1), (1, vg_marg_power.shape[1]))
         - vg_marg_power)
 
@@ -562,7 +560,6 @@ def cc_vg(vg_power, load, vg_marg_power, top_hours_n, cap_marg):
     peak_net_load = np.transpose(np.array(
         ### np.partition returns the max top_hours_n values, unsorted; then np.sort sorts.
         ### So we only sort top_hours_n values instead of the whole array, saving time.
-        ###! TODO: Try to speed up this line further
         [np.sort(
             np.partition(load_marg[:,n], -top_hours_n)[-top_hours_n:]
          )[::-1]

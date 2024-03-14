@@ -108,7 +108,7 @@ for case in runs_failed:
     ).columns.astype(int).tolist()
 
     #%% Get last .lst file and restart from there
-    lastfile = sorted(glob(os.path.join(case,'lstfiles','*')))[-1]
+    lastfile = sorted(glob(os.path.join(case,'lstfiles','*.lst')))[-1]
     restart_year = int(os.path.splitext(lastfile)[0].split('_')[-1].split('i')[0])
 
     #%% Make a backup copy of the original bash and sbatch scripts

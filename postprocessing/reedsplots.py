@@ -26,57 +26,115 @@ def get_zonemap(case):
     """
     Get geodataframe of model zones, applying aggregation if necessary
     """
-    ###### Load original shapefiles
-    ### Model zones
-    dfba_in = (
-        gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','US_PCA'))
-        .set_index('rb')
-    )
-    ### Transmission endpoints
-    endpoints = (
-        gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','transmission_endpoints'))
-        .set_index('ba_str')
-    )
-    ### Keep transmission endpoints in model zones dataframe
-    endpoints['x'] = endpoints.centroid.x
-    endpoints['y'] = endpoints.centroid.y
-    dfba_in['x'] = dfba_in.index.map(endpoints.x)
-    dfba_in['y'] = dfba_in.index.map(endpoints.y)
-    dfba_in.st = dfba_in.st.str.upper()
-
-    dfba = dfba_in.copy()
-
-    ###### Apply aggregation if necessary
+    ### Check if resolution is at county level
     sw = pd.read_csv(
         os.path.join(case, 'inputs_case', 'switches.csv'),
-        header=None, index_col=0, squeeze=True)
+        header=None, index_col=0).squeeze(1)
+    if 'GSw_RegionResolution' not in sw:
+        sw['GSw_RegionResolution'] = 'ba'
 
-    if 'GSw_AggregateRegions' not in sw:
-        return dfba
-
-    if int(sw['GSw_AggregateRegions']):
-        ### Load original hierarchy file
-        hierarchy = pd.read_csv(
-            os.path.join(
-                reeds_path,'inputs','hierarchy{}.csv'.format(
-                    '' if (sw['GSw_HierarchyFile'] == 'default')
-                    else '_'+sw['GSw_HierarchyFile'])),
-            index_col='*r'
+    if sw.GSw_RegionResolution != 'county':
+        ###### Load original shapefiles
+        ### Model zones
+        dfba_in = (
+            gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','US_PCA'))
+            .set_index('rb')
         )
-        ### Load mapping from aggreg's to anchor regions
-        aggreg2anchorreg = pd.read_csv(
-            os.path.join(case, 'inputs_case', 'aggreg2anchorreg.csv'),
-            index_col='aggreg', squeeze=True)
-        ### Map original model regions to aggregs
-        r2aggreg = hierarchy.aggreg.copy()
-        dfba['aggreg'] = dfba.index.map(r2aggreg)
-        dfba = dfba.dissolve('aggreg')
-        ### Get the endpoints from the anchor regions
-        dfba['x'] = dfba.index.map(aggreg2anchorreg).map(endpoints.x)
-        dfba['y'] = dfba.index.map(aggreg2anchorreg).map(endpoints.y)
+        ### Transmission endpoints
+        endpoints = (
+            gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','transmission_endpoints'))
+            .set_index('ba_str')
+        )
+        ### Keep transmission endpoints in model zones dataframe
+        endpoints['x'] = endpoints.centroid.x
+        endpoints['y'] = endpoints.centroid.y
+        dfba_in['x'] = dfba_in.index.map(endpoints.x)
+        dfba_in['y'] = dfba_in.index.map(endpoints.y)
+        dfba_in.st = dfba_in.st.str.upper()
+
+        dfba = dfba_in.copy()
+
+        ###### Apply aggregation if necessary
+        # TODO: (Vincent) Discuss how to switch logic check from 'int(sw['GSw_AggregateRegions'])' to values in agglevels.csv
+        if 'GSw_AggregateRegions' not in sw:
+            return dfba
+        # TODO: (Vincent) Discuss how to switch logic check from 'int(sw['GSw_AggregateRegions'])' to values in agglevels.csv
+        if int(sw['GSw_AggregateRegions']):
+            ### Load original hierarchy file
+            hierarchy = pd.read_csv(
+                os.path.join(
+                    reeds_path,'inputs','hierarchy{}.csv'.format(
+                        '' if (sw['GSw_HierarchyFile'] == 'default')
+                        else '_'+sw['GSw_HierarchyFile'])),
+                index_col='*r'
+            )
+            ### Load mapping from aggreg's to anchor regions
+            aggreg2anchorreg = pd.read_csv(
+                os.path.join(case, 'inputs_case', 'aggreg2anchorreg.csv'),
+                index_col='aggreg').squeeze(1)
+            ### Map original model regions to aggregs
+            r2aggreg = hierarchy.aggreg.copy()
+            dfba['aggreg'] = dfba.index.map(r2aggreg)
+            dfba = dfba.dissolve('aggreg')
+            ### Get the endpoints from the anchor regions
+            dfba['x'] = dfba.index.map(aggreg2anchorreg).map(endpoints.x)
+            dfba['y'] = dfba.index.map(aggreg2anchorreg).map(endpoints.y)
+
+    else:
+        ### Get the county map
+        crs = 'ESRI:102008'
+        dfcnty = gpd.read_file(
+            os.path.join(reeds_path,'inputs','shapefiles','US_COUNTY_2022')
+        ).to_crs(crs)
+
+        ### format FIPS name
+        #dfcnty['r'] = 'p' + dfcnty['STATEFP'] + dfcnty['COUNTYFP']
+
+        ### Add US state code and drop states outside of CONUS
+        state_fips = pd.read_csv(
+            os.path.join(reeds_path,'inputs','shapefiles', "state_fips_codes.csv"), 
+            names=["STATE", "STCODE", "STATEFP", "CONUS"],
+            dtype={"STATEFP":"string"}, header=0)
+        state_fips = state_fips.loc[state_fips['CONUS'], :]
+        dfcnty = dfcnty.merge(state_fips, on="STATEFP")
+        dfcnty = dfcnty[['rb', 'NAMELSAD', 'STATE_x', 'geometry']].set_index('rb')
+
+        # add in centroids for later use in tx mapping
+        dfcnty['x'] = dfcnty.geometry.centroid.x
+        dfcnty['y'] = dfcnty.geometry.centroid.y
+
+        dfcnty.rename(columns={'NAMELSAD':'county','STATE_x':'st'}, inplace=True)
+
+        dfba = dfcnty
     
     return dfba
 
+def getcountymap():
+    ### Get the county map
+    crs = 'ESRI:102008'
+    dfcnty = gpd.read_file(
+        os.path.join(reeds_path,'inputs','shapefiles','US_COUNTY_2022')
+    ).to_crs(crs)
+
+    ### format FIPS name
+    #dfcnty['r'] = 'p' + dfcnty['STATEFP'] + dfcnty['COUNTYFP']
+
+    ### Add US state code and drop states outside of CONUS
+    state_fips = pd.read_csv(
+        os.path.join(reeds_path,'inputs','shapefiles', "state_fips_codes.csv"), 
+        names=["STATE", "STCODE", "STATEFP", "CONUS"],
+        dtype={"STATEFP":"string"}, header=0)
+    state_fips = state_fips.loc[state_fips['CONUS'], :]
+    dfcnty = dfcnty.merge(state_fips, on="STATEFP")
+    dfcnty = dfcnty[['rb', 'NAMELSAD', 'STATE_x', 'geometry']].set_index('rb')
+
+    # add in centroids for later use in tx mapping
+    dfcnty['x'] = dfcnty.geometry.centroid.x
+    dfcnty['y'] = dfcnty.geometry.centroid.y
+
+    dfcnty.rename(columns={'NAMELSAD':'county','STATE_x':'st'}, inplace=True)
+
+    return dfcnty
 
 def simplify_techs(techs, condense_upgrades=True):
     """
@@ -265,8 +323,8 @@ def plotdiff(
     colors_time = pd.read_csv(
         os.path.join(
             reeds_path,'postprocessing','bokehpivot','in','reeds2','process_style.csv'),
-        index_col='order', squeeze=True,
-    ).to_dict()
+        index_col='order',
+    ).squeeze(1).to_dict()
     colors_tech = pd.read_csv(
         os.path.join(
             reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
@@ -745,7 +803,7 @@ def plot_trans_onecase(
         show_overlap=True, drawzones=True, show_converters=0.5,
         crs='ESRI:102008',
         thickborders='none', thickness=0.5, drawstates=True,
-        label_line_capacity=0,
+        label_line_capacity=0, crossing_level='r',
     ):
     """
     Notes
@@ -795,6 +853,12 @@ def plot_trans_onecase(
             os.path.join(case,'outputs','tran_out.csv'),
             header=0, names=['r','rr','trtype','t','MW'],
         )
+        ## If necessary, subset to interregional lines
+        if crossing_level != 'r':
+            tran_out = tran_out.loc[
+                tran_out.r.map(hierarchy[crossing_level])
+                != tran_out.rr.map(hierarchy[crossing_level])
+            ].copy()
         if simpletypes is None:
             dicttran = {
                 i: tran_out.loc[tran_out.trtype==i].set_index(['r','rr','t']).MW
@@ -879,7 +943,7 @@ def plot_trans_onecase(
     if drawstates:
         dfstates.plot(ax=ax, edgecolor='0.25', facecolor='none', lw=0.2)
     if thickborders not in [None,'','none','None',False]:
-        dfthick.plot(ax=ax, edgecolor='C7', facecolor='none', lw=thickness)
+        dfthick.plot(ax=ax, edgecolor='0.75', facecolor='none', lw=thickness)
     ax.axis('off')
     ### Labels
     if pcalabel:
@@ -1299,8 +1363,8 @@ def plot_transmission_utilization(
             'trans_flow_power': pd.read_csv(os.path.join(case,'outputs','tran_flow_power.csv')),
         }
     val_r = pd.read_csv(
-        os.path.join(case,'inputs_case','val_r.csv'), header=None, squeeze=True,
-    ).values.tolist()
+        os.path.join(case,'inputs_case','val_r.csv'), header=None,
+    ).squeeze(1).values.tolist()
     ### Combine all transmission types
     for data in ['trans_flow_power','trans_cap']:
         dftrans[data]['trtype'] = 'all'
@@ -1322,11 +1386,11 @@ def plot_transmission_utilization(
     try:
         hours = pd.read_csv(
             os.path.join(case,'inputs_case','hours_hourly.csv'),
-            header=0, names=['h','hours'], index_col='h', squeeze=True)
+            header=0, names=['h','hours'], index_col='h').squeeze(1)
     except FileNotFoundError:
         hours = pd.read_csv(
             os.path.join(case,'inputs_case','numhours.csv'),
-            header=0, names=['h','hours'], index_col='h', squeeze=True)
+            header=0, names=['h','hours'], index_col='h').squeeze(1)
     utilization['Valh'] = utilization.apply(
         lambda row: hours[row.h] * abs(row.Val_flow),
         axis=1
@@ -1435,12 +1499,14 @@ def plot_vresites_transmission(
         lakes.plot(ax=ax, edgecolor='#2CA8E7', facecolor='#D3EFFA', lw=0.2, zorder=-1)
     except NameError:
         pass
+
     for tech in cap:
         legend_kwds = {
             'shrink':0.5, 'pad':0.05,
             'label':label[tech],
             'orientation':'horizontal',
         }
+
         dfplot = cap[tech].loc[cap[tech].year==year].sort_values('capacity_MW')
         dfplot['GW'] = dfplot['capacity_MW'] / 1000
 
@@ -1510,15 +1576,27 @@ def plot_prmtrade(
     """
     ### Get the BA map
     dfba = get_zonemap(os.path.join(case))
+
     ### Aggregate to states
     dfstates = dfba.dissolve('st')
-    endpoints = (
-        gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','transmission_endpoints'))
-        .set_index('ba_str'))
-    endpoints['x'] = endpoints.centroid.x
-    endpoints['y'] = endpoints.centroid.y
-    dfba['x'] = dfba.index.map(endpoints.x)
-    dfba['y'] = dfba.index.map(endpoints.y)
+    
+    ### Check if resolution is at county level
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0).squeeze(1)
+    if 'GSw_RegionResolution' not in sw:
+        sw['GSw_RegionResolution'] = 'ba'
+
+    if sw.GSw_RegionResolution == 'county':
+        pass
+    else:
+        endpoints = (
+            gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','transmission_endpoints'))
+            .set_index('ba_str'))
+        endpoints['x'] = endpoints.centroid.x
+        endpoints['y'] = endpoints.centroid.y
+        dfba['x'] = dfba.index.map(endpoints.x)
+        dfba['y'] = dfba.index.map(endpoints.y)
 
     ### Load results, aggregate over transmission types
     dfplot = pd.read_csv(
@@ -1602,19 +1680,30 @@ def plot_average_flow(
     ### Get the BA map
     dfba = get_zonemap(os.path.join(case))
     val_r = pd.read_csv(
-        os.path.join(case,'inputs_case','val_r.csv'), header=None, squeeze=True,
-    ).values.tolist()
+        os.path.join(case,'inputs_case','val_r.csv'), header=None,
+    ).squeeze(1).values.tolist()
     if extent.lower() not in ['usa','full','nation','us','country','all']:
         dfba = dfba.loc[val_r]
     ### Aggregate to states
     dfstates = dfba.dissolve('st')
-    endpoints = (
-        gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','transmission_endpoints'))
-        .set_index('ba_str'))
-    endpoints['x'] = endpoints.centroid.x
-    endpoints['y'] = endpoints.centroid.y
-    dfba['x'] = dfba.index.map(endpoints.x)
-    dfba['y'] = dfba.index.map(endpoints.y)
+
+    ### Check if resolution is at county level
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0).squeeze(1)
+    if 'GSw_RegionResolution' not in sw:
+        sw['GSw_RegionResolution'] = 'ba'
+
+    if sw.GSw_RegionResolution == 'county':
+        pass
+    else:
+        endpoints = (
+            gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','transmission_endpoints'))
+            .set_index('ba_str'))
+        endpoints['x'] = endpoints.centroid.x
+        endpoints['y'] = endpoints.centroid.y
+        dfba['x'] = dfba.index.map(endpoints.x)
+        dfba['y'] = dfba.index.map(endpoints.y)
 
     if thickborders not in [None,'','none','None',False]:
         hierarchy = pd.read_csv(
@@ -1630,8 +1719,8 @@ def plot_average_flow(
     ### Load results
     hours = pd.read_csv(
         os.path.join(case,'inputs_case','numhours.csv'),
-        header=0, names=['h','hours'], index_col='h', squeeze=True,
-    )
+        header=0, names=['h','hours'], index_col='h',
+    ).squeeze(1)
     if both_directions:
         if ('h2' in network.lower()) or ('hydrogen' in network.lower()):
             flow = pd.read_csv(
@@ -1649,10 +1738,10 @@ def plot_average_flow(
         dfplot = {}
         dfplot['pos'] = (
             flow.loc[flow.Valh >= 0]
-            .groupby(['r','rr','trtype','t'], as_index=False).sum())
+            .groupby(['r','rr','trtype','t'], as_index=False).Valh.sum())
         dfplot['neg'] = (
             flow.loc[flow.Valh < 0]
-            .groupby(['r','rr','trtype','t'], as_index=False).sum())
+            .groupby(['r','rr','trtype','t'], as_index=False).Valh.sum())
         dfplot = pd.concat(dfplot, axis=0, names=['direction','index'])
         ## Convert back to MW using hours in year
         dfplot = (
@@ -1680,7 +1769,7 @@ def plot_average_flow(
     if both_directions:
         primary_direction = []
         df = dfplot.set_index(['direction','r','rr']).Val
-        for (direction,r,rr), val in df.iteritems():
+        for (direction,r,rr), val in df.items():
             other_direction = 'pos' if direction == 'neg' else 'neg'
             try:
                 if abs(val) > abs(df.loc[other_direction,r,rr]):
@@ -1806,11 +1895,11 @@ def animate_dispatch(
     try:
         bokehcolors = pd.read_csv(
             os.path.join(reeds_path,'bokehpivot','in','reeds2','tech_style.csv'),
-            index_col='order', squeeze=True)
+            index_col='order').squeeze(1)
     except FileNotFoundError:
         bokehcolors = pd.read_csv(
             os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
-            index_col='order', squeeze=True)
+            index_col='order').squeeze(1)
     plotcolors = {
         'nuclear': bokehcolors['nuclear'],
         'hydro': bokehcolors['hydro'],
@@ -1830,7 +1919,7 @@ def animate_dispatch(
     ###### Create the index
     fulltimeindex = pd.date_range(
         '2012-01-01', '2013-01-01',
-        closed='left', freq='h', tz='Etc/GMT+5',
+        inclusive='left', freq='h', tz='Etc/GMT+5',
     )[:8760]
     if chunklength == 4:
         timeindex = fulltimeindex[2::chunklength]
@@ -1905,7 +1994,7 @@ def animate_dispatch(
         ymin, ymax = ax.get_ylim()
 
         ###### Transmission
-        for ((r,rr),GW) in transcap.iteritems():
+        for ((r,rr),GW) in transcap.items():
             ### Capacity
             ax.plot(
                 [dfba.loc[r,tpre+'x'], dfba.loc[rr,tpre+'x']],
@@ -2059,7 +2148,7 @@ def map_trans_agg(
     transcolors = pd.read_csv(
             os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','trtype_style.csv'),
             index_col='order')['color']
-    transcolors = transcolors.append(trtypes.map(transcolors))
+    transcolors = pd.concat([transcolors, trtypes.map(transcolors)])
 
     rename = ['AC_init','B2B_init','LCC_init','AC','LCC','VSC']
     for c in rename:
@@ -2225,7 +2314,7 @@ def map_agg(
     ### Get colors and simpler tech names
     capcolors = pd.read_csv(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
-        index_col='order', squeeze=True)
+        index_col='order').squeeze(1)
     tech_map = pd.read_csv(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'))
     tech_map.raw = tech_map.raw.map(
@@ -2423,6 +2512,7 @@ def map_capacity_markers(
 
         'hydro': 's',
         'nuclear': 'p', # '☢️',
+        'nuclear-smr': 'p',
         'biopower': (5,1,0),
         'lfill-gas': (5,1,0),
         'beccs_mod': (5,1,180),
@@ -2451,7 +2541,10 @@ def map_capacity_markers(
 
     ###### All in one
     ### Load the data
-    dfba = get_zonemap(case)
+    val_r = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'val_r.csv'), header=None,
+    ).squeeze(1).tolist()
+    dfba = get_zonemap(case).loc[val_r]
     dfstates = dfba.dissolve('st')
     hierarchy = pd.read_csv(
         os.path.join(case,'inputs_case','hierarchy.csv')
@@ -2594,7 +2687,10 @@ def map_transmission_lines(
         'VSC':'--',
     }
     ### Get inputs
-    dfba = get_zonemap(case)
+    val_r = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'val_r.csv'), header=None,
+    ).squeeze(1).tolist()
+    dfba = get_zonemap(case).loc[val_r]
     dfstates = dfba.dissolve('st')
     hierarchy = pd.read_csv(
         os.path.join(case,'inputs_case','hierarchy.csv')
@@ -2689,8 +2785,9 @@ def map_transmission_lines(
         title += f'\n(new since {subtract_baseyear})'
     leg = ax.legend(
         handles=handles, loc='lower left', bbox_to_anchor=(0.1,0.1), 
-        fontsize='medium', ncol=1, frameon=False,
+        fontsize='medium', ncol=1,
         handletextpad=0.4, handlelength=1, columnspacing=0.5,
+        frameon=True, edgecolor='none', framealpha=0.7,
         title=title,
     )
     ax.add_artist(leg)
@@ -2698,6 +2795,453 @@ def map_transmission_lines(
     ### Formatting
     ax.axis('off')
     return f,ax
+
+
+def map_zone_capacity(
+        case, year=2050, valscale=3e3, width=7e4,
+        center=True, linealpha=0.6,
+        scale=10, sideplots=True, legend=True,
+        f=None, ax=None,
+    ):
+    """
+    Inputs
+    ------
+    scale: [float] scalebar size in GW; if zero, don't plot scalebar
+    sideplots: Nationwide tranmsission, emissions, generation, and generation capacity
+    """
+    ###### Shared inputs
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0).squeeze(1)
+    years = pd.read_csv(
+        os.path.join(case,'inputs_case','modeledyears.csv')).columns.astype(int).values
+    yearstep = years[-1] - years[-2]
+    # tech_map = pd.read_csv(
+    #     os.path.join(
+    #         reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'),
+    #     index_col='raw').squeeze(1)
+    bokehcolors = pd.read_csv(
+        os.path.join(
+            reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
+        index_col='order').squeeze(1)
+    bokehcolors = pd.concat([
+        bokehcolors.loc['smr':'electrolyzer'],
+        pd.Series('#D55E00', index=['dac'], name='color'),
+        bokehcolors.loc[:'Canada'],
+    ])
+    bokehcolors['canada'] = bokehcolors['Canada']
+
+    trtype_map = pd.read_csv(
+        os.path.join(
+            reeds_path,'postprocessing','bokehpivot','in','reeds2','trtype_map.csv'),
+        index_col='raw')['display']
+    transcolors = pd.read_csv(
+        os.path.join(
+            reeds_path,'postprocessing','bokehpivot','in','reeds2','trtype_style.csv'),
+        index_col='order')['color']
+    transcolors = pd.concat([transcolors, trtype_map.map(transcolors)])
+    transcolors['LCC'] = transcolors['lcc']
+    transcolors['VSC'] = transcolors['vsc']
+
+    dfba = get_zonemap(case)
+    dfba['centroid_x'] = dfba.centroid.x
+    dfba['centroid_y'] = dfba.centroid.y
+
+    hierarchy = pd.read_csv(
+        os.path.join(case,'inputs_case','hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
+    for col in hierarchy:
+        dfba[col] = dfba.index.map(hierarchy[col])
+    hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
+
+    dfmap = {}
+    for col in ['interconnect','transreg','transgrp','st','country']:
+        dfmap[col] = dfba.copy()
+        dfmap[col].geometry = dfmap[col].buffer(0.)
+        dfmap[col] = dfmap[col].dissolve(col)
+
+    ###### Case inputs
+    ### Capacity
+    dfcap_in = pd.read_csv(
+        os.path.join(case,'outputs','cap.csv'),
+        names=['i','r','t','MW'], header=0,
+    )
+    dfcap_in.i = simplify_techs(dfcap_in.i)
+    dfcap = dfcap_in.loc[
+        (dfcap_in.t==year)
+    ].rename(columns={'MW':'GW'}).groupby(['i','r']).GW.sum().unstack('i') / 1e3
+    dfcap = (
+        dfcap[[c for c in bokehcolors.index if c in dfcap]]
+        .drop('electrolyzer', axis=1, errors='ignore')
+    ).copy()
+
+    tran_out = pd.read_csv(
+        os.path.join(case,'outputs','tran_out.csv')
+    ).rename(columns={'Value':'MW'})
+
+    if (f == None) and (ax == None):
+        plt.close()
+        f,ax = plt.subplots(figsize=(12, 9)) # (10, 6.88)
+    ### Background
+    dfba.plot(ax=ax, facecolor='none', edgecolor='0.8', lw=0.2)
+    dfmap['st'].plot(ax=ax, facecolor='none', edgecolor='0.7', lw=0.4)
+    dfmap['interconnect'].plot(ax=ax, facecolor='none', edgecolor='k', lw=1)
+
+    ### Plot transmission
+    transmap = tran_out.loc[
+        (tran_out.t==year)
+    ][['r','rr','trtype','MW']].rename(columns={'MW':'GW'}).copy()
+    transmap.GW /= 1e3
+    ## Add geographic data to the line capacity
+    key = dfba[['centroid_x','centroid_y']]
+    for col in ['r','rr']:
+        for i in ['x','y']:
+            transmap[f'{col}_{i}'] = transmap.apply(
+                lambda row: key.loc[row[col]]['centroid_'+i], axis=1)
+
+    ## Convert the line capacity dataframe to a geodataframe with linestrings
+    transmap['geometry'] = transmap.apply(
+        lambda row: shapely.geometry.LineString([(row.r_x, row.r_y), (row.rr_x, row.rr_y)]),
+        axis=1
+    )
+    transmap = gpd.GeoDataFrame(transmap).set_crs('ESRI:102008')
+
+    ## Buffer the lines into polygons
+    transmap['geometry'] = transmap.apply(
+        lambda row: row.geometry.buffer(row.GW*valscale/2), axis=1)
+
+    ## Plot it
+    for trtype in ['AC','B2B','LCC','VSC']:
+        if trtype in transmap.trtype.unique():
+            transmap.loc[transmap.trtype==trtype].dissolve().plot(
+                ax=ax, facecolor=transcolors[trtype], edgecolor='none', alpha=linealpha,
+            )
+
+    ### Plot generation capacity
+    plots.plot_region_bars(
+        dfzones=dfba, dfdata=dfcap, colors=bokehcolors,
+        ax=ax, valscale=valscale, width=width, center=center)
+
+    ### Add a scale bar
+    if scale:
+        ax.bar(
+            x=[-1.8e6], height=[valscale * scale], bottom=[-1.05e6], width=3.0e5,
+            align='center', color='k',
+        )
+        ax.annotate(
+            f'{scale:.0f} GW', (-1.8e6, -1.1e6), fontsize=12,
+            ha='center', va='top', weight='bold')
+
+    ###### Side plots
+    eax = None
+    if sideplots:
+        ###### Extra data
+        renametechs = {
+            'h2-cc_upgrade':'h2-cc',
+            'h2-ct_upgrade':'h2-ct',
+            'gas-cc-ccs_mod_upgrade':'gas-cc-ccs_mod',
+            'coal-ccs_mod_upgrade':'coal-ccs_mod',
+        }
+        dfgen_in = pd.read_excel(
+            os.path.join(case,'outputs','reeds-report','report.xlsx'),
+            sheet_name='3_Generation (TWh)', engine='openpyxl',
+        ).drop('scenario',axis=1)
+        dfgen_in.tech = dfgen_in.tech.map(lambda x: renametechs.get(x,x))
+        dfgen_in = (
+            dfgen_in.groupby(['tech','year'], as_index=False)['Generation (TWh)'].sum())
+
+        dfcap_nat = pd.read_excel(
+            os.path.join(case,'outputs','reeds-report','report.xlsx'),
+            sheet_name='4_Capacity (GW)',
+        ).drop('scenario',axis=1)
+        dfcap_nat.tech = dfcap_nat.tech.map(lambda x: renametechs.get(x,x))
+        dfcap_nat = (
+            dfcap_nat.groupby(['tech','year'], as_index=False)['Capacity (GW)'].sum())
+
+        emit_nat_tech = pd.read_csv(
+            os.path.join(case, 'outputs', 'emit_nat_tech.csv'),
+        header=0, names=['e','i','t','tonne'], index_col=['e','i','t'],
+        ).squeeze(1)
+
+        dfin_trans = pd.read_excel(
+            os.path.join(case,'outputs','reeds-report','report.xlsx'),
+            sheet_name='14_Transmission (GW-mi)', engine='openpyxl',
+        ).drop('scenario',axis=1)
+
+        ###### Make the side plots
+        alltechs = set()
+        axbounds = {
+            ## left, bottom, width, height
+            'Trans [TW-mi]': [0.92, 0.62, 0.1, 0.17],
+            'CO2e [MMT]': [0.92, 0.41, 0.1, 0.17],
+            'Cap [GW]': [0.83, 0.2, 0.1, 0.17],
+            'Gen [TWh]': [1.0, 0.2, 0.1, 0.17],
+        }
+        eax = {}
+        for a in axbounds:
+            eax[a] = f.add_axes(axbounds[a])
+            eax[a].set_ylabel(a)
+            plots.despine(eax[a])
+            eax[a].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+            eax[a].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
+            eax[a].set_xlim(2020-yearstep/2, 2050+yearstep/2)
+        ### Side plot of generation capacity over time
+        dfcapacity = dfcap_nat.pivot(index='year', columns='tech', values='Capacity (GW)')
+        dfcapacity = (
+            dfcapacity[[c for c in bokehcolors.index if c in dfcapacity]]
+            .round(3).replace(0,np.nan)
+            .dropna(axis=1, how='all')
+            .drop('electrolyzer', axis=1, errors='ignore')
+            .loc[2020:]
+        )
+        alltechs.update(dfcapacity.columns)
+        plots.stackbar(
+            df=dfcapacity, ax=eax['Cap [GW]'],
+            colors=bokehcolors, width=yearstep, net=False)
+
+        ### Side plot of generation over time
+        dfgen = dfgen_in.pivot(index='year', columns='tech', values='Generation (TWh)')
+        dfgen = (
+            dfgen[[c for c in bokehcolors.index if c in dfgen]]
+            .round(3).replace(0,np.nan)
+            .dropna(axis=1, how='all')
+            .loc[2020:]
+        )
+        alltechs.update(dfgen.columns)
+        plots.stackbar(
+            df=dfgen, ax=eax['Gen [TWh]'],
+            colors=bokehcolors, width=yearstep, net=False)
+        eax['Gen [TWh]'].axhline(0, c='k', ls=':', lw=0.75)
+
+        ### Side plot of transmission capacity over time
+        dftrans = dfin_trans.pivot(
+            index='year', columns='trtype', values='Amount (GW-mi)') / 1e3
+        dftrans = (
+            dftrans[[c for c in transcolors.index if c in dftrans]]
+            .round(3).replace(0,np.nan)
+            .dropna(axis=1, how='all')
+            .loc[2020:]
+        )
+        plots.stackbar(
+            df=dftrans, ax=eax['Trans [TW-mi]'],
+            colors=transcolors, width=yearstep, net=False)
+
+        ### Side plot of emissions over time
+        dfco2e = (
+            emit_nat_tech['CO2']
+            .add(emit_nat_tech['CH4']
+                / 1e3 * float(sw.GSw_MethaneGWP),
+                fill_value=0)
+            .unstack('i') / 1e3
+        )
+        dfco2e.columns = simplify_techs(dfco2e.columns)
+        dfco2e = dfco2e.groupby(axis=1, level='i').sum()
+        dfco2e = (
+            dfco2e[[c for c in bokehcolors.index if c in dfco2e]]
+            .round(3).replace(0,np.nan)
+            .dropna(axis=1, how='all').fillna(0)
+            .loc[2020:]
+        )
+        plots.stackbar(
+            df=dfco2e, ax=eax['CO2e [MMT]'],
+            colors=bokehcolors, width=yearstep, net=True,
+            markerfacecolor=(1,1,1,0.8), markersize=4.5)
+        eax['CO2e [MMT]'].axhline(0, c='k', ls=':', lw=0.75)
+
+        plt.draw()
+        for a in eax:
+            plots.shorten_years(eax[a])
+
+        ### Legend
+        if legend:
+            ### Generation
+            handles = [
+                mpl.patches.Patch(facecolor=bokehcolors[i], edgecolor='none', label=i)
+                for i in bokehcolors.index if i in alltechs
+            ]
+            leg_gen = ax.legend(
+                handles=handles[::-1], loc='lower left', fontsize=6.5, frameon=False,
+                bbox_to_anchor=(1.16,0.332),
+                handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
+            )
+            ## Draw it
+            ax.add_artist(leg_gen)
+            ### Transmission
+            handles = [
+                mpl.patches.Patch(facecolor=transcolors[i], edgecolor='none', label=i)
+                for i in transcolors.index if i in dftrans
+            ]
+            leg_trans = ax.legend(
+                handles=handles[::-1], loc='upper left', fontsize=6.5, frameon=False,
+                bbox_to_anchor=(1.16,0.92),
+                handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
+            )
+
+    ### Formatting
+    ax.axis('off')
+
+    return f, ax, eax
+
+
+def plot_retire_add(
+        case, yearstart=2020, width=0.25, peak=True,
+        plotyears=None, figsize=None,
+    ):
+    """
+    """
+    ### Colors
+    bokehcolors = pd.read_csv(
+        os.path.join(
+            reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
+        index_col='order').squeeze(1)
+    bokehcolors = pd.concat([
+        bokehcolors.loc['smr':'electrolyzer'],
+        pd.Series('#D55E00', index=['dac'], name='color'),
+        bokehcolors.loc[:'Canada'],
+    ])
+    bokehcolors['canada'] = bokehcolors['Canada']
+    bokehcolors = bokehcolors.to_dict()
+
+    ### For this particular plot we put storage below VRE
+    plotorder = (
+        list(bokehcolors.keys())[:list(bokehcolors.keys()).index('wind-ons')]
+        + list(bokehcolors.keys())[
+            list(bokehcolors.keys()).index('battery'):list(bokehcolors.keys()).index('Canada')]
+        + list(bokehcolors.keys())[
+            list(bokehcolors.keys()).index('wind-ons'):list(bokehcolors.keys()).index('battery')]
+        + list(bokehcolors.keys())[list(bokehcolors.keys()).index('Canada'):]
+    )
+
+    ### Case-specific inputs
+    years = pd.read_csv(
+        os.path.join(case,'inputs_case','modeledyears.csv')).columns.astype(int).values
+    if not plotyears:
+        _years = [y for y in years if y >= yearstart]
+    else:
+        _years = plotyears
+
+    if not figsize:
+        _figsize = (len(_years)*1.5, 5)
+    else:
+        _figsize = figsize
+
+    ## Nationwide capacity
+    dfcap_in = pd.read_excel(
+        os.path.join(case,'outputs','reeds-report','report.xlsx'),
+        sheet_name='4_Capacity (GW)',
+    ).drop('scenario', axis=1)
+    ## Simplify techs
+    renametechs = {
+        'h2-cc_upgrade':'h2-cc',
+        'h2-ct_upgrade':'h2-ct',
+        'gas-cc-ccs_mod_upgrade':'gas-cc-ccs_mod',
+        'coal-ccs_mod_upgrade':'coal-ccs_mod',
+    }
+    dfcap_in.tech = dfcap_in.tech.map(lambda x: renametechs.get(x,x))
+    dfcap_in = dfcap_in.groupby(['tech','year'], as_index=False)['Capacity (GW)'].sum()
+
+    ## Time index
+    fulltimeindex = np.ravel([
+        pd.date_range(
+            f'{y}-01-01', f'{y+1}-01-01',
+            freq='H', inclusive='left', tz='EST',
+        )[:8760]
+        for y in range(2007,2014)
+    ])
+
+    ## Peak coincident demand
+    if peak:
+        dfdemand = (
+            pd.read_hdf(os.path.join(case,'inputs_case','load.h5'))
+            .sum(axis=1).unstack('year').set_index(fulltimeindex)
+            / 1e3
+        )
+        dfpeak = dfdemand.max().loc[_years]
+
+    ### Calculate the retirements and additions
+    dfcap = (
+        dfcap_in
+        .pivot(index='year', columns='tech', values='Capacity (GW)')
+        .drop(columns=['Canada','electrolyzer'], errors='ignore')
+    )
+    dfcap = dfcap[[c for c in plotorder if c in dfcap]].copy()
+
+    difference = {}
+    retirements = {}
+    additions = {}
+    for i, year in enumerate(_years[:-1]):
+        difference[year] = dfcap.loc[_years[i+1]] - dfcap.loc[year]
+        retirements[year] = difference[year].loc[difference[year] < 0].copy()
+        additions[year] = difference[year].loc[difference[year] > 0].copy()
+
+
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(figsize=_figsize)
+    for x, year in enumerate(_years[:-1]):
+        ## First year
+        df = dfcap.loc[[year]]
+        df.index = [x]
+        plots.stackbar(
+            df=df, ax=ax, colors=bokehcolors, width=width, net=False,
+        )
+        bottom = df.sum().sum()
+        ## Retirements
+        df = retirements[year].rename(x+0.333).to_frame().T
+        plots.stackbar(
+            df=df, ax=ax, colors=bokehcolors, width=width, net=False, bottom=bottom,
+        )
+        bottom = bottom + df.sum().sum()
+        ## Additions
+        df = additions[year].rename(x+0.667).to_frame().T
+        plots.stackbar(
+            df=df, ax=ax, colors=bokehcolors, width=width, net=False, bottom=bottom,
+        )
+
+    ## Last year
+    df = dfcap.loc[[_years[-1]]]
+    df.index = [len(_years)-1]
+    plots.stackbar(
+        df=df, ax=ax, colors=bokehcolors, width=width, net=False,
+    )
+
+    ### US coincident peak demand
+    if peak:
+        ax.plot(
+            range(len(_years)), dfpeak.values,
+            marker='o', markerfacecolor='w', markeredgecolor='k', lw=0,
+        )
+        ax.annotate(
+            va='center', ha='left', annotation_clip=False, fontsize=12,
+            text='Peak\ndemand', xy=(0+width/3, dfpeak.iloc[0]),
+            xytext=(0+width*1.2, dfpeak.iloc[0]),
+            arrowprops={'arrowstyle':'-|>', 'color':'k'}
+        )
+
+    ### Legend
+    handles = [
+        mpl.patches.Patch(facecolor=bokehcolors[i], edgecolor='none', label=i)
+        for i in plotorder if i in dfcap
+    ]
+    leg = ax.legend(
+        handles=handles[::-1], loc='center left', bbox_to_anchor=(1.0,0.5), 
+        fontsize='large', ncol=1, frameon=False,
+        handletextpad=0.3, handlelength=0.7, columnspacing=0.5, labelspacing=0.1,
+    )
+
+    ### Formatting
+    xlabels = [[str(year),'retire','add'] for year in _years]
+    xlabels = [i for sublist in xlabels for i in sublist][:-2]
+    # ## Try making the years bigger
+    # xlabels[0] = mpl.text.Text(text='foo', fontsize='x-large', weight='bold')
+    ax.set_ylabel('Capacity [GW]')
+    ax.set_xticks(np.linspace(0, len(_years)-1, (len(_years)-1)*3 + 1))
+    ax.set_xticklabels(xlabels, rotation=45, ha='right', rotation_mode='anchor')
+    ax.set_xlim(-width/2 - 0.05, len(_years)-1 + width/2 + 0.05)
+    ax.yaxis.set_minor_locator(mpl.ticker.MultipleLocator(100))
+    plots.despine(ax)
+
+    return f, ax
 
 
 def map_hybrid_pv_wind(
@@ -2764,8 +3308,8 @@ def map_hybrid_pv_wind(
 
     val_r = pd.read_csv(
         os.path.join(case,'inputs_case','val_r.csv'),
-        header=None, squeeze=True,
-    ).values.tolist()
+        header=None,
+    ).squeeze(1).values.tolist()
 
     dfba = get_zonemap(case).loc[val_r]
 
@@ -2839,7 +3383,7 @@ def plot_dispatch_yearbymonth(
 
     tech_style = pd.read_csv(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
-        index_col='order', squeeze=True)
+        index_col='order').squeeze(1)
 
     ### Load run files
     hmap_myr = pd.read_csv(os.path.join(case, 'inputs_case', 'hmap_myr.csv'))
@@ -2950,15 +3494,15 @@ def plot_dispatch_weightwidth(
     dispatch = (
         pd.read_excel(
             os.path.join(case, 'outputs', 'reeds-report', 'report.xlsx'),
-            sheet_name=val)
+            sheet_name=val, engine='openpyxl')
         .drop(['scenario','Net Level Generation (GW)'], axis=1, errors='ignore')
         .pivot(index='timeslice',columns='tech',values='Generation (GW)'))
     bokehcolors = pd.read_csv(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
-        index_col='order', squeeze=True)
+        index_col='order').squeeze(1)
     sw = pd.read_csv(
         os.path.join(case, 'inputs_case', 'switches.csv'),
-        header=None, index_col=0, squeeze=True)
+        header=None, index_col=0).squeeze(1)
 
     ### Get some settings
     if (sw.GSw_HourlyType == 'year'):
@@ -3003,7 +3547,7 @@ def plot_stressperiod_dispatch(case, tmin=2020, level='country', regions='USA'):
 
     ### Get settings
     sw = pd.read_csv(
-        os.path.join(case,'inputs_case','switches.csv'), header=None, index_col=0, squeeze=True)
+        os.path.join(case,'inputs_case','switches.csv'), header=None, index_col=0).squeeze(1)
 
     tech_map = pd.read_csv(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'))
@@ -3013,8 +3557,8 @@ def plot_stressperiod_dispatch(case, tmin=2020, level='country', regions='USA'):
 
     tech_style = pd.read_csv(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
-        index_col='order', squeeze=True,
-    )
+        index_col='order',
+    ).squeeze(1)
 
     hierarchy = pd.read_csv(
         os.path.join(case,'inputs_case','hierarchy.csv')
@@ -3075,8 +3619,7 @@ def plot_stressperiod_dispatch(case, tmin=2020, level='country', regions='USA'):
     )
     for row, t in enumerate(ts):
         dfyear = dfplot.loc[t]
-        ### TODO: Would be better to plot them in decreasing order of stressfulness.
-        ### For now we just plot them in calendar order.
+        ### Stress periods are plotted in calendar order.
         stress_period_t = gen_h_stress.loc[gen_h_stress.t==t, 'h'].str.split('h').str[0].unique()
         for col in range(ncols):
             ### Turn off axis if unused
@@ -3113,7 +3656,7 @@ def plot_stressperiod_days(case):
     ### Get shared parameters
     sw = pd.read_csv(
         os.path.join(case,'inputs_case','switches.csv'),
-        header=None, index_col=0, squeeze=True)
+        header=None, index_col=0).squeeze(1)
     period_days = 1 if sw['GSw_HourlyType'] == 'day' else 5
     yplot = 2012
     timeindex = pd.date_range(
@@ -3124,7 +3667,7 @@ def plot_stressperiod_days(case):
     ).squeeze(1).sort_values()
     rep_starts = [h2timestamp(d+'h01') for d in szn_rep]
     rep_hours = np.ravel([
-        pd.date_range(h, h+pd.Timedelta(f'{period_days}D'), freq='H', closed='left')
+        pd.date_range(h, h+pd.Timedelta(f'{period_days}D'), freq='H', inclusive='left')
         for h in rep_starts
     ])
     dfrep = pd.Series(
@@ -3144,7 +3687,7 @@ def plot_stressperiod_days(case):
     years = sorted(gen_h_stress.t.unique())
     colors = plots.rainbowmapper(range(2007,2014))
     rep = f"rep ({sw.GSw_HourlyWeatherYears.replace('_',',')})"
-    colors[rep] = plt.cm.tab20(15)
+    colors[rep] = 'k'
 
     t2periods = gen_h_stress.groupby('t').szn.unique()
     t2starts = t2periods.map(
@@ -3162,7 +3705,7 @@ def plot_stressperiod_days(case):
             ]
             yearhours = np.ravel([
                 pd.date_range(
-                    h, h+pd.Timedelta(f'{period_days}D'), freq='H', closed='left')
+                    h, h+pd.Timedelta(f'{period_days}D'), freq='H', inclusive='left')
                 for h in yearstarts_aligned
             ])
             dictout[y] = pd.Series(
@@ -3227,7 +3770,7 @@ def map_h2_capacity(
 
     ### Get the BA map
     val_r = pd.read_csv(
-        os.path.join(case,'inputs_case','val_r.csv'), header=None, squeeze=True).values
+        os.path.join(case,'inputs_case','val_r.csv'), header=None).squeeze(1).values
     dfba = get_zonemap(case).loc[val_r]
     dfba['labelx'] = dfba.geometry.centroid.x
     dfba['labely'] = dfba.geometry.centroid.y
@@ -3235,7 +3778,7 @@ def map_h2_capacity(
 
     scalars = pd.read_csv(
         os.path.join(case,'inputs_case','scalars.csv'),
-        header=None, usecols=[0,1], index_col=0, squeeze=True)
+        header=None, usecols=[0,1], index_col=0).squeeze(1)
     h2_ct_intensity = 1e6 / scalars['h2_energy_intensity'] / scalars['lb_per_tonne']
 
     ### Load storage capacity
@@ -3273,10 +3816,6 @@ def map_h2_capacity(
     ].groupby('r').Value.sum().rename('kTperday') / 1000 * 24
     ## Merge with zone map
     cap_h2prod = dfba.merge(h2_prod_cap, left_index=True, right_index=True)
-    # cap_ivrt_in.loc[
-    #     cap_ivrt_in.i.str.lower().isin(['electrolyzer','smr','smr_ccs'])
-    #     & (cap_ivrt_in.t==year)
-    # ].groupby('r').Value.sum()
 
     ### Load pipeline capacity
     h2_trans_cap_in = pd.read_csv(os.path.join(case,'outputs','h2_trans_cap.csv'))
@@ -3287,60 +3826,6 @@ def map_h2_capacity(
     h2_trans_cap['r_y'] = h2_trans_cap.r.map(dfba.y)
     h2_trans_cap['rr_x'] = h2_trans_cap.rr.map(dfba.x)
     h2_trans_cap['rr_y'] = h2_trans_cap.rr.map(dfba.y)
-
-    # ### Plot it as a single map with markers
-    # plt.close()
-    # f,ax=plt.subplots(figsize=(14,8))
-
-    # ### Boundaries
-    # dfba.plot(ax=ax, edgecolor='0.5', facecolor='none', lw=0.1)
-    # dfstates.plot(ax=ax, edgecolor='0.25', facecolor='none', lw=0.2)
-    # ### H2 turbines
-    # ax.scatter(
-    #     cap_h2turbine.x.values, cap_h2turbine.y.values,
-    #     facecolor='none', edgecolor=h2colors['h2_turbine'],
-    #     s=((cap_h2turbine.kTperhour.values*wscale_h2)**2 * 3.14 / 4),
-    #     zorder=1E6, marker=markers['h2_turbine'],
-    # )
-    # ### Electrolyzers
-    # ax.scatter(
-    #     cap_h2prod.x.values, cap_h2prod.y.values,
-    #     facecolor='none', edgecolor=h2colors['electrolyzer'],
-    #     s=((cap_h2prod.kTperhour.values*wscale_h2)**2 * 3.14 / 4),
-    #     zorder=1E6, marker=markers['electrolyzer'],
-    # )
-    # ### Storage
-    # ax.scatter(
-    #     cap_storage.x.values, cap_storage.y.values,
-    #     facecolor='none', edgecolor=h2colors['h2_storage'],
-    #     s=((cap_storage.h2_storage.values*wscale_h2)**2 * 3.14 / 4),
-    #     zorder=1E6, marker=markers['h2_storage'],
-    # )
-    # ### Lines
-    # for i in h2_trans_cap.index:
-    #     row = h2_trans_cap.loc[i]
-    #     ax.plot(
-    #         [row['r_x'], row['rr_x']], [row['r_y'], row['rr_y']],
-    #         color='C2', lw=wscale_h2*row['kTperhour'], solid_capstyle='butt',
-    #         alpha=0.7,
-    #     )
-    # # if title:
-    # #     ax.annotate('{} ({})'.format(os.path.basename(case), year),
-    # #                 (0.1,1), xycoords='axes fraction', fontsize=10)
-
-    # # ### Scale
-    # # if scale:
-    # #     ax.plot(
-    # #         -1.75e6 + np.array([-1609/2*miles,1609/2*miles]),
-    # #         [-1.0e6, -1.0e6],
-    # #         color='C3', lw=wscale*10, solid_capstyle='butt'
-    # #     )
-    # #     ax.annotate(
-    # #         '10 GW\n{} miles'.format(miles), (-1.75e6, -1.1e6),
-    # #         ha='center', va='top', weight='bold', fontsize='x-large')
-
-    # ax.axis('off')
-    # plt.show()
 
     #%% Plot as separate maps
     bounds = dfba.dissolve('country').bounds.loc['usa']
@@ -3390,7 +3875,10 @@ def map_h2_capacity(
     return f,ax
 
 
-def plot_h2_timeseries(case, year=2050, agglevel='transreg', grid=0):
+def plot_h2_timeseries(
+        case, year=2050, agglevel='transreg', grid=0,
+        figsize=(12,8),
+    ):
     """
     """
     ### Load results in tonne and tonne/hour
@@ -3461,51 +3949,18 @@ def plot_h2_timeseries(case, year=2050, agglevel='transreg', grid=0):
     ## Convert to kT
     dffull /= 1000
 
-    #%% Chunk it
-    # dfchunk = (
-    #     dffull.iloc[int(sw['GSw_HourlyChunkLength'])-1::int(sw['GSw_HourlyChunkLength'])]
-    #     .fillna(0).copy()
-    # )
-    # timeindex = (
-    #     hmap_myr.actual_h
-    #     .iloc[::int(sw['GSw_HourlyChunkLength'])]
-    #     .map(rplots.h2timestamp)
-    # ).values
-    ### Or don't chunk it
+    #%% Don't chunk it
     dfchunk = dffull.fillna(0).round(3).copy()
     timeindex = (hmap_myr.actual_h.map(h2timestamp)).values
 
-    # #%% TEST: See how storage level lines up with cumsum of dispatch
-    # plt.close()
-    # f,ax = plt.subplots(figsize=(8,4))
-    # ### Storage level
-    # ax.plot(timeindex, dfchunk['USA','stor_level'].values, color='C0', label='stor_level')
-    # ### Cumsum
-    # ax.plot(
-    #     timeindex,
-    #     dfchunk['USA'][['production','usage']].sum(axis=1).cumsum().values,
-    #     color='C3', label='cumsum')
-    # ax.set_xlim(min(timeindex), max(timeindex))
-    # ax.legend(loc='upper right')
-    # plt.show()
-
-    # # #%% All in one
-    # # plt.close()
-    # # f,ax = plt.subplots(figsize=(13,7))
-    # # ax.fill_between(
-    # #     timeindex,
-    # #     # dfchunk['USA'][['production','usage','stor_dispatch']].sum(axis=1).values,
-    # #     # dfchunk['USA'][['production','usage']].sum(axis=1).values,
-    # #     # dfchunk['USA'][['production','usage']].sum(axis=1).cumsum().values,
-    # #     # dfchunk['USA'][['production','usage','stor_dispatch']].sum(axis=1).cumsum().values,
-    # #     dfchunk['USA'][['stor_dispatch']].sum(axis=1).cumsum().values,
-    # #     0, color='C3', label='net')
-    # # ax.set_xlim(min(timeindex), max(timeindex))
-    # # ax.legend(loc='upper right')
-    # # plt.show()
-
     #%%### Plot it
-    rows = {'production':0, 'stor_charge':1, 'stor_discharge':2, 'usage':3, 'stor_level':4}
+    rows = {
+        'production':0,
+        'stor_charge':1,
+        'stor_discharge':2,
+        'usage':3,
+        'stor_level':4,
+    }
     ylabels = {
         'production':'Production\n[kT/day]',
         'stor_charge':'Injection\n[kT/day]',
@@ -3515,10 +3970,12 @@ def plot_h2_timeseries(case, year=2050, agglevel='transreg', grid=0):
     }
     scale = {k: (24 if 'day' in v else 1) for k,v in ylabels.items()}
     colors = plots.rainbowmapper(dfchunk.columns.get_level_values('r').unique())
+    if len(colors) == 1:
+        colors[list(colors.keys())[0]] = 'C0'
     legend_kwds = {'loc':'upper left', 'bbox_to_anchor':(1,1)}
     ###### Plot it
     plt.close()
-    f,ax = plt.subplots(len(rows),1,sharex=True,sharey=False,figsize=(12,8))
+    f,ax = plt.subplots(len(rows), 1, sharex=True, sharey=False, figsize=figsize)
     ### Data
     for datum, row in rows.items():
         df = dfchunk.xs(datum, axis=1, level='datum') * scale[datum]
@@ -3547,6 +4004,10 @@ def plot_h2_timeseries(case, year=2050, agglevel='transreg', grid=0):
         ax[row].axhline(0, c='k', ls=':', lw=0.5)
         if grid:
             ax[row].grid(which='minor', axis='x', c='C7', ls=':', lw=grid)
+    ax[0].set_xlim(
+        df.index[0].strftime('%Y-%m-%d'),
+        df.index[-1].strftime('%Y-%m-%d') + ' 23:59'
+    )
     plots.despine(ax)
     
-    return f,ax
+    return f, ax

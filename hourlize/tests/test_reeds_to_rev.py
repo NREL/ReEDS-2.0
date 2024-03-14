@@ -52,43 +52,104 @@ def test_reeds_to_rev_integration(test_techs, integration_data_path, hourlize_pa
     sc_path = integration_data_path.joinpath("supply_curves")
     reeds_source_path = integration_data_path.joinpath("reeds")
 
+    out_formats = ["reduced", "full"]
+
     with temporary_parent_directory(reeds_source_path) as temp_reeds:
         reeds_path = Path(temp_reeds.name)
         run_folder = reeds_path.joinpath("reeds")
 
-        for tech in test_techs:
-            remove_stream_handlers("reeds_to_rev")
-            sys.argv = [
-                None,
-                reeds_path.as_posix(),
-                run_folder.as_posix(),
-                "cost",
-                "--reduced_only",
-                "--tech",
-                tech,
-                "--sc_path",
-                sc_path.as_posix(),
-            ]
-            try:
-                runpy.run_path(
-                    hourlize_path.joinpath("reeds_to_rev.py"), run_name="__main__"
+        for out_format in out_formats:
+            for tech in test_techs:
+                remove_stream_handlers("reeds_to_rev")
+                sys.argv = [
+                    None,
+                    reeds_path.as_posix(),
+                    run_folder.as_posix(),
+                    "cost",
+                    "--tech",
+                    tech,
+                    "--sc_path",
+                    sc_path.as_posix(),
+                ]
+                if out_format == "reduced":
+                    sys.argv.append("--reduced_only")
+
+                try:
+                    runpy.run_path(
+                        hourlize_path.joinpath("reeds_to_rev.py"), run_name="__main__"
+                    )
+                except SystemExit as e:
+                    assert e.code == 0, "reeds_to_rev.py encountered an error."
+
+                if out_format == "reduced":
+                    out_csv_name = f"df_sc_out_{tech}_reduced.csv"
+                else:
+                    out_csv_name = f"df_sc_out_{tech}.csv"
+
+                result_csv_path = run_folder.joinpath("outputs", out_csv_name)
+                assert result_csv_path.exists()
+
+                expected_csv_path = integration_data_path.joinpath(
+                    "expected_results", out_csv_name
                 )
-            except SystemExit as e:
-                assert e.code == 0, "reeds_to_rev.py encountered an error."
+                assert expected_csv_path.exists()
 
-            out_csv_name = f"df_sc_out_{tech}_reduced.csv"
-            result_csv_path = run_folder.joinpath("outputs", out_csv_name)
-            assert result_csv_path.exists()
+                result_df = pd.read_csv(result_csv_path)
+                expected_df = pd.read_csv(expected_csv_path)
 
-            expected_csv_path = integration_data_path.joinpath(
-                "expected_results", out_csv_name
+                assert_frame_equal(result_df, expected_df)
+
+
+def test_reeds_to_rev_6mw_wind_ons(
+    integration_data_path, hourlize_path, from_config_data_path
+):
+    """
+    Integration test of reeds_to_rev.py to ensure it returns the
+    expected outputs when new_incr_mw is changed from default. This test only covers
+    wind-ons since the behavior should be the same for other technologies.
+    """
+
+    sc_path = integration_data_path.joinpath("supply_curves")
+    reeds_source_path = integration_data_path.joinpath("reeds")
+
+    with temporary_parent_directory(reeds_source_path) as temp_reeds:
+        reeds_path = Path(temp_reeds.name)
+        run_folder = reeds_path.joinpath("reeds")
+
+        remove_stream_handlers("reeds_to_rev")
+        sys.argv = [
+            None,
+            reeds_path.as_posix(),
+            run_folder.as_posix(),
+            "cost",
+            "--reduced_only",
+            "--tech",
+            "wind-ons",
+            "--sc_path",
+            sc_path.as_posix(),
+            "--new_incr_mw",
+            "6",
+        ]
+        try:
+            runpy.run_path(
+                hourlize_path.joinpath("reeds_to_rev.py"), run_name="__main__"
             )
-            assert expected_csv_path.exists()
+        except SystemExit as e:
+            assert e.code == 0, "reeds_to_rev.py encountered an error."
 
-            result_df = pd.read_csv(result_csv_path)
-            expected_df = pd.read_csv(expected_csv_path)
+        out_csv_name = "df_sc_out_wind-ons_reduced.csv"
+        result_csv_path = run_folder.joinpath("outputs", out_csv_name)
+        assert result_csv_path.exists()
 
-            assert_frame_equal(result_df, expected_df)
+        expected_csv_path = from_config_data_path.joinpath(
+            "expected_results", "wind-ons_6mw_inputs", out_csv_name
+        )
+        assert expected_csv_path.exists()
+
+        result_df = pd.read_csv(result_csv_path)
+        expected_df = pd.read_csv(expected_csv_path)
+
+        assert_frame_equal(result_df, expected_df)
 
 
 if __name__ == "__main__":

@@ -86,6 +86,7 @@ error_check(*),unitless,set of checks to determine if there is an error - values
 "h2_usage(r,allh,t)",tonnes/hour,total H2 usage by hour (H2-CT and non-electric H2 consumption),,,
 "load_cat(loadtype,r,t)",MWh,Annual exogenous load by category,,,
 "load_rt(r,t)",MWh,Annual exogenous load,,,
+"load_stress(r,allh,t)",MW,Timeslice load during stress periods,,,
 "load_frac_rt(r,t)",fraction,Fraction of LOAD in each region,,,
 "invtran_out(r,rr,trtype,t)",MW,new transmission capacity,1,,
 "lcoe(i,v,r,t,rscbin)",$/MWh,levelized cost of electricity for all tech options,,,
@@ -171,6 +172,7 @@ tax_expenditure_ptc(t),2004$,PTC tax expenditure,,,
 "tran_flow_pos_out(r,rr,allh,trtype,t)",MW,positive transmission flows from region r to rr by time slice,,,
 "tran_flow_neg_out_ann(r,rr,trtype,t)",MWh,negative annual transmission flows from region r to rr,,,
 "tran_flow_neg_out(r,rr,allh,trtype,t)",MW,negative transmission flows from region r to rr by time slice (reported as negative value),,,
+"tran_flow_stress(r,rr,allh,trtype,t)",MW,transmission flows between regions during stress periods,,,
 "poi_capacity(r,t)",MW,total point-of-connection capacity (used for intra-zone transmission network reinforcement),,,
 "tran_mi_out(trtype,t)",MW-mi,total transmission capacity*distance for energy trading,,,
 "tran_prm_mi_out(trtype,t)",MW-mi,total transmission capacity*distance for capacity trading,,,
@@ -205,6 +207,7 @@ cap_hyd_szn_adj,,,,,1
 capture_rate,,,,,1
 cf_adj_t,,,,,1
 cf_hyd,,,,,1
+cost_cap,,,,,1
 cost_hurdle,,,,,1
 cost_vom,,,,,1
 cendiv,,,,,1
@@ -222,6 +225,7 @@ hydmin,,,,,1
 ilr,,,,,1
 planned_outage,,,,,1
 r,,,,,1
+rsc_dat,,,,,1
 storage_duration,,,,,1
 storage_eff,,,,,1
 tranloss,,,,,1

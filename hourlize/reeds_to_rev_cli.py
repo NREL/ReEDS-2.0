@@ -26,7 +26,45 @@ REQUIRED_CONFIG_KEYS = {
     "tech_supply_curves": dict,
     "constrain_to_bins": bool,
     "priority": dict,
+    "new_incr_mw": dict,
 }
+
+
+def validate_new_incr_mw(new_incr_mw):
+    """
+    Validate an input "new_incr_mw" dictionary (e.g., from a configuration JSON).
+    Check that for each input key/value pair, the key (which will be interpreted as
+    a technology) is in the allowable set of valid technologies and that the value,
+    which (which will be interpreted as the increment size for new investments in that
+    tech) can be cast to a float.
+
+    Parameters
+    ----------
+    new_incr_mw : dict
+        Input new_incr_mw parameter.
+
+    Returns
+    -------
+    list
+        List of errors identified during validation. An empty list indicates no errors.
+    """
+
+    errs = []
+    if len(new_incr_mw) == 0:
+        errs.append("new_incr_mw is empty.")
+    for tech in new_incr_mw:
+        if tech not in reeds_to_rev.VALID_TECHS:
+            errs.append(
+                "Invalid tech specified in new_incr_mw. "
+                f"Keys must be one of {reeds_to_rev.VALID_TECHS}"
+            )
+        else:
+            try:
+                float(new_incr_mw[tech])
+            except ValueError:
+                errs.append("Invalid value for {tech}. Could not be cast to float")
+
+    return errs
 
 
 def validate_tech_supply_curves(tech_supply_curves):
@@ -39,7 +77,7 @@ def validate_tech_supply_curves(tech_supply_curves):
 
     Parameters
     ----------
-    pritech_supply_curvesority : dict
+    tech_supply_curves : dict
         Input tech_supply_curves parameter.
 
     Returns
@@ -143,6 +181,7 @@ def validate_config(config_data):
 
     errs += validate_tech_supply_curves(config_data["tech_supply_curves"])
     errs += validate_priority(config_data["priority"])
+    errs += validate_new_incr_mw(config_data["new_incr_mw"])
 
     if len(errs) > 0:
         err_message = "\n".join(errs)
@@ -272,8 +311,26 @@ def main(ctx=None, verbose=False):
         "default."
     ),
 )
+@click.option(
+    "--new_incr_mw",
+    "-i",
+    required=False,
+    type=float,
+    default=reeds_to_rev.DEF_NEW_INCR_MW,
+    help=(
+        "Controls the incremental amount of capacity invested in each site. "
+        "The default value (1e10) has the effect of not making incremental "
+        "investments. Instead, each site is filled up before moving on to the next. "
+        "Setting this to a lower value (e.g., 6), will result in adding up to 6 MW to "
+        "each site (limited to the capacity available at the site) with a region, "
+        "resource class, and cost bin, in a round-robin fashion, and repeating until "
+        "all new capacity has been invested."
+    ),
+)
 @click.pass_context
-def run(ctx, reeds_path, run_folder, reduced_only, tech, rev_case, sc_path):
+def run(
+    ctx, reeds_path, run_folder, reduced_only, tech, rev_case, sc_path, new_incr_mw
+):
     """
     Disaggregates ReEDS capacity to reV sites.
     Input parameters match those of legacy reeds_to_rev.py with some
@@ -290,7 +347,15 @@ def run(ctx, reeds_path, run_folder, reduced_only, tech, rev_case, sc_path):
     bins = None
     priority = "cost"
     reeds_to_rev.run(
-        reeds_path, run_folder, priority, reduced_only, tech, bins, rev_case, sc_path
+        reeds_path,
+        run_folder,
+        priority,
+        reduced_only,
+        tech,
+        bins,
+        rev_case,
+        sc_path,
+        new_incr_mw,
     )
 
 
@@ -345,6 +410,12 @@ def from_config(ctx, json_path, out_path):
             # used to prioritize supply curve project sites during disaggregation.
             "*cost_col*": "ascending"
             "total_lcoe": "ascending"
+        },
+        "new_incr_mw": {
+            "upv": 1e10,
+            "wind-ofs": 1e10,
+            "wind-ons": 1e10,
+            "dupv": 1e10
         }
     }``
     More information about "priority":
@@ -358,6 +429,15 @@ def from_config(ctx, json_path, out_path):
      - Columns do not need to be costs; any column can be used. For example, to use the
      sites with the most developable area first, one could specify ``priority`` as
      ``{"Area_sq_km": "descending"}``.
+    More information about "new_incr_mw":
+    - This parameter can be used to configure incremental investments of new capacity
+     in each technology. For example, settings `"wind-ons": 6,` would result in
+     new investments being made 6 MW at a time for each project site, following the
+     "priority" site order, until all new investments have been made. All else equal,
+     this has the  effect of spreading out new investments across a larger number of
+     sites within a given region, resource class, and (if enabled) cost bin.
+     - Setting this number to an arbitrarily high number (e.g., 1e10) effectively
+     disables incremental investments and reproduces legacy behavior of ReEDS to reV.
     """
 
     logger = reeds_to_rev.logger
@@ -414,6 +494,7 @@ def from_config(ctx, json_path, out_path):
         disagg_df = reeds_to_rev.disaggregate_reeds_to_rev(
             priority=priority,
             constrain_to_bins=config["constrain_to_bins"],
+            new_incr_mw=config["new_incr_mw"][tech],
             **reeds_to_rev_data,
         )
 

@@ -29,6 +29,7 @@ def makelog(scriptname, logpath):
     logging.basicConfig(
         level=logging.INFO,
         format=(os.path.basename(scriptname)+' | %(asctime)s | %(levelname)s | %(message)s'),
+        datefmt="%Y-%m-%d %H:%M:%S",
         handlers=[logging.FileHandler(logpath, mode='a'), sh, eh],
     )
     log = logging.getLogger(__name__)

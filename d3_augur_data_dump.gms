@@ -37,7 +37,7 @@ cap_exist_ir(i,r)                  "--MW-- technology-region combinations with e
 cap_exist_iv(i,v)                  "--MW-- technology-vintage combinations with existing capacity in the current solve year"
 cap_exist(i,v,r)                   "--MW-- capacity that exists in the current solve year"
 cap_exog_filt(i,v,r)               "--MW-- exogenous capacity"
-cap_hyd_szn_adj_filt(i,allszn,r)   "--fraction-- seasonal hydro CF adjustment filtered for the previous solve year"
+cap_hyd_szn_adj_filt(i,allszn,r)   "--fraction-- seasonal hydro capacity adjustment filtered for the previous solve year"
 cap_init(i,v,r)                    "--MW-- initial capacity"
 cap_ivrt(i,v,r,t)                  "--MW-- generation capacity"
 cap_pvb(i,v,r)                     "--MW-- Hybrid PV+battery capacity (PV)"

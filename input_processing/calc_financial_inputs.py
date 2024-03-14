@@ -1,4 +1,8 @@
-#%% Imports
+#%% ===========================================================================
+### --- IMPORTS ---
+### ===========================================================================
+
+import argparse
 import pandas as pd
 import numpy as np
 import os
@@ -7,8 +11,10 @@ import support_functions as sFuncs
 from ticker import toc, makelog
 import datetime
 
+#%% ===========================================================================
+### --- FUNCTIONS ---
+### ===========================================================================
 
-#%% Functions
 def calc_financial_inputs(reeds_path, inputs_case):
     """
     Write the following files to runs/{batch_case}/inputs_case/:
@@ -28,29 +34,29 @@ def calc_financial_inputs(reeds_path, inputs_case):
     """
     print('Starting calculation of financial parameters for', inputs_case)
 
-    # #%% Inputs for testing
+    # #%% Settings for testing
     # reeds_path = '/Users/pbrown/github/ReEDS-2.0/'
     # inputs_case = os.path.join(reeds_path,'runs','v20220621_NTPm0_ercot_seq_test','inputs_case')
 
-    #%% Input processing
-    switches = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0, squeeze=True,
-    )
-
-    input_dir = os.path.join(reeds_path, 'inputs')
-    switches['endyear'] = int(switches['endyear'])
-    switches['sys_eval_years'] = int(switches['sys_eval_years'])
+    #%% Inputs from switches
+    sw = pd.read_csv(
+        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0,
+    ).squeeze(1)
+    sw['endyear'] = int(sw['endyear'])
+    sw['sys_eval_years'] = int(sw['sys_eval_years'])
 
     scalars = pd.read_csv(
         os.path.join(inputs_case,'scalars.csv'),
         header=None, names=['scalar','value','comment'], index_col='scalar')['value']
-
+    
+    input_dir = os.path.join(reeds_path, 'inputs')
+    
     #%% Import some general data and maps
 
     # Import inflation (which includes both historical and future inflation). 
     # Used for adjusting currency inputs to the specified dollar year, and financial calculations. 
     inflation_df = pd.read_csv(os.path.join(
-        input_dir, 'financials', 'inflation_%s.csv' % switches['inflation_suffix']))
+        input_dir, 'financials', 'inflation_%s.csv' % sw['inflation_suffix']))
 
     # Import tech groups. Used to expand data inputs 
     # (e.g., 'UPV' expands to all of the upv subclasses, like upv_1, upv_2, etc)
@@ -58,32 +64,32 @@ def calc_financial_inputs(reeds_path, inputs_case):
 
     # Set up scen_settings object
     scen_settings = sFuncs.scen_settings(
-        dollar_year=int(switches['dollar_year']), tech_groups=tech_groups, input_dir=input_dir,
-        switches=switches)
+        dollar_year=int(sw['dollar_year']), tech_groups=tech_groups, input_dir=input_dir,
+        sw=sw)
 
 
     #%% Ingest data, determine what regions have been specified, and build df_ivt
     # Build df_ivt (for calculating various parameters at subscript [i,v,t])
 
     techs = pd.read_csv(
-        os.path.join(input_dir, 'techs', 'techs_%s.csv' % switches['techs_suffix']))
+        os.path.join(input_dir, 'techs', 'techs_%s.csv' % sw['techs_suffix']))
     techs = sFuncs.expand_GAMS_tech_groups(techs)
     vintage_definition = pd.read_csv(os.path.join(inputs_case, 'ivt.csv')).rename(columns={'Unnamed: 0':'i'})
 
     annual_degrade = pd.read_csv(
         os.path.join(input_dir,'degradation',
-                     'degradation_annual_%s.csv' % switches['degrade_suffix']),
+                     'degradation_annual_%s.csv' % sw['degrade_suffix']),
         header=None, names=['i','annual_degradation'])
     annual_degrade = sFuncs.expand_GAMS_tech_groups(annual_degrade)
     ### Assign the PV+battery values to values for standalone batteries
     annual_degrade = sFuncs.append_pvb_parameters(
         dfin=annual_degrade, 
-        tech_to_copy='battery_{}'.format(scen_settings.switches['GSw_PVB_Dur']))
+        tech_to_copy='battery_{}'.format(scen_settings.sw['GSw_PVB_Dur']))
 
     years, modeled_years, year_map = sFuncs.ingest_years(
-        inputs_case, switches['sys_eval_years'], switches['endyear'])
+        inputs_case, sw['sys_eval_years'], sw['endyear'])
 
-    val_r = pd.read_csv(os.path.join(inputs_case,'val_r.csv'), header = None)[0].tolist()
+    val_r_all = pd.read_csv(os.path.join(inputs_case,'val_r_all.csv'), header = None)[0].tolist()
 
     df_ivt = sFuncs.build_dfs(years, techs, vintage_definition, year_map)
     print('df_ivt created for', inputs_case)
@@ -93,8 +99,8 @@ def calc_financial_inputs(reeds_path, inputs_case):
 
     # Import system-wide real discount rates, calculate present-value-factors, merge onto df's
     financials_sys = sFuncs.import_sys_financials(
-        switches['financials_sys_suffix'], inflation_df, modeled_years, 
-        years, year_map, switches['sys_eval_years'], scen_settings, scalars['co2_capture_incentive_length'])
+        sw['financials_sys_suffix'], inflation_df, modeled_years, 
+        years, year_map, sw['sys_eval_years'], scen_settings, scalars['co2_capture_incentive_length'])
     df_ivt = df_ivt.merge(
         financials_sys[['t', 'pvf_capital', 'crf', 'crf_co2_incentive', 'd_real', 'd_nom', 'interest_rate_nom', 
                         'tax_rate', 'debt_fraction', 'rroe_nom']], 
@@ -114,14 +120,14 @@ def calc_financial_inputs(reeds_path, inputs_case):
     
     ### Import financial assumptions
     financials_tech = sFuncs.import_data(
-        file_root='financials_tech', file_suffix=switches['financials_tech_suffix'], 
+        file_root='financials_tech', file_suffix=sw['financials_tech_suffix'], 
         indices=['i','country','t'], scen_settings=scen_settings)
     # Apply the values for standalone batteries to PV+B batteries
     financials_tech = sFuncs.append_pvb_parameters(
         dfin=financials_tech, 
-        tech_to_copy='battery_{}'.format(scen_settings.switches['GSw_PVB_Dur']))
+        tech_to_copy='battery_{}'.format(scen_settings.sw['GSw_PVB_Dur']))
     # If the battery in PV+B gets the ITC, it gets 5-year MACRS depreciation as well
-    if float(scen_settings.switches['GSw_PVB_ITC_Qual_Award']) >= 0.75:
+    if float(scen_settings.sw['GSw_PVB_ITC_Qual_Award']) >= 0.75:
         financials_tech.loc[
             financials_tech.i.str.startswith('pvb') & (financials_tech.country == 'usa'),
             'depreciation_sch'
@@ -132,7 +138,7 @@ def calc_financial_inputs(reeds_path, inputs_case):
         index=['i','country','depreciation_sch','eval_period','construction_sch'], 
         columns=['t'])['finance_diff_real']
     lastdatayear = max(financials_tech_projected.columns)
-    for addyear in range(lastdatayear+1, switches['endyear']+1):
+    for addyear in range(lastdatayear+1, sw['endyear']+1):
         financials_tech_projected[addyear] = financials_tech_projected[lastdatayear]
     # Overwrite with projected values
     financials_tech = financials_tech_projected.stack().rename('finance_diff_real').reset_index()
@@ -141,7 +147,7 @@ def calc_financial_inputs(reeds_path, inputs_case):
     
     # Calculate multipliers to account for evaluation periods. If a tech's eval period is
     # the system-wide default, this will be 1. If not, the capital costs are adjusted accordingly. 
-    financials_sys['sys_pvf_eval_period_sum'] = (1 - (1 / (financials_sys['d_real'])**(switches['sys_eval_years']-1))) / (financials_sys['d_real']-1.0) + 1
+    financials_sys['sys_pvf_eval_period_sum'] = (1 - (1 / (financials_sys['d_real'])**(sw['sys_eval_years']-1))) / (financials_sys['d_real']-1.0) + 1
     df_ivt['pvf_eval_period_sum'] = (1 - (1 / (df_ivt['d_real'])**(df_ivt['eval_period']-1))) / (df_ivt['d_real']-1.0) + 1
     df_ivt = df_ivt.merge(financials_sys[['sys_pvf_eval_period_sum', 't']], on='t', how='left')
     df_ivt['eval_period_adj_mult'] = df_ivt['sys_pvf_eval_period_sum'] / df_ivt['pvf_eval_period_sum']
@@ -150,8 +156,8 @@ def calc_financial_inputs(reeds_path, inputs_case):
     
     # Import incentives, shift eligibility by safe harbor, merge incentives
     incentive_df = sFuncs.import_and_mod_incentives(
-        incentive_file_suffix=switches['incentives_suffix'], 
-        construction_times_suffix=switches['construction_times_suffix'],
+        incentive_file_suffix=sw['incentives_suffix'], 
+        construction_times_suffix=sw['construction_times_suffix'],
         inflation_df=inflation_df, scen_settings=scen_settings)
     df_ivt = df_ivt.merge(incentive_df, on=['i', 't', 'country'], how='left')
     df_ivt['safe_harbor_max'] = df_ivt['safe_harbor_max'].fillna(0.0)
@@ -209,15 +215,15 @@ def calc_financial_inputs(reeds_path, inputs_case):
     # Import schedules for financial calculations
     construction_schedules = pd.read_csv(os.path.join(
         input_dir, 'financials', 
-        'construction_schedules_%s.csv' % switches['construction_schedules_suffix']))
+        'construction_schedules_%s.csv' % sw['construction_schedules_suffix']))
     depreciation_schedules = pd.read_csv(os.path.join(
         input_dir, 'financials', 
-        'depreciation_schedules_%s.csv' % switches['depreciation_schedules_suffix']))
+        'depreciation_schedules_%s.csv' % sw['depreciation_schedules_suffix']))
 
     ### Calculate financial multipliers
     print('Calculating financial multipliers for', inputs_case, '...')
     df_ivt = sFuncs.calc_financial_multipliers(
-        df_ivt, construction_schedules, depreciation_schedules, switches['timetype'])
+        df_ivt, construction_schedules, depreciation_schedules, sw['timetype'])
     
 
     #%%### Calculate financial multipliers for transmission
@@ -225,7 +231,7 @@ def calc_financial_inputs(reeds_path, inputs_case):
     dftrans = pd.read_csv(
         os.path.join(
             input_dir, 'financials',
-            'financials_transmission_{}.csv'.format(switches['financials_trans_suffix'])),
+            'financials_transmission_{}.csv'.format(sw['financials_trans_suffix'])),
     )
     ### Get transmission capital recovery period (CRP) from input scalars
     dftrans['eval_period'] = int(scalars['trans_crp'])
@@ -238,7 +244,7 @@ def calc_financial_inputs(reeds_path, inputs_case):
     ### Get financial multipliers
     dftrans = sFuncs.calc_financial_multipliers(
         df_inv=dftrans, construction_schedules=construction_schedules,
-        depreciation_schedules=depreciation_schedules, timetype=switches['timetype'],
+        depreciation_schedules=depreciation_schedules, timetype=sw['timetype'],
     )
         
     ### Get the CRF for transmission
@@ -290,17 +296,17 @@ def calc_financial_inputs(reeds_path, inputs_case):
     dfhydrogen_pipeline = dfhydrogen.copy().rename(columns={"eval_period_pipeline":"eval_period"})
     dfhydrogen_pipeline = sFuncs.calc_financial_multipliers(
         df_inv=dfhydrogen_pipeline, construction_schedules=construction_schedules,
-        depreciation_schedules=depreciation_schedules, timetype=switches['timetype'],
+        depreciation_schedules=depreciation_schedules, timetype=sw['timetype'],
     )
     dfhydrogen_compressor = dfhydrogen.copy().rename(columns={"eval_period_compressor":"eval_period"})
     dfhydrogen_compressor = sFuncs.calc_financial_multipliers(
         df_inv=dfhydrogen_compressor, construction_schedules=construction_schedules,
-        depreciation_schedules=depreciation_schedules, timetype=switches['timetype'],
+        depreciation_schedules=depreciation_schedules, timetype=sw['timetype'],
     )
     dfhydrogen_storage = dfhydrogen.copy().rename(columns={"eval_period_storage":"eval_period"})
     dfhydrogen_storage = sFuncs.calc_financial_multipliers(
         df_inv=dfhydrogen_storage, construction_schedules=construction_schedules,
-        depreciation_schedules=depreciation_schedules, timetype=switches['timetype'],
+        depreciation_schedules=depreciation_schedules, timetype=sw['timetype'],
     )
     
     ### Get the CRF for h2 pipelines
@@ -324,12 +330,13 @@ def calc_financial_inputs(reeds_path, inputs_case):
     #%%
     # Import regional capital cost multipliers, create multipliers for csp configurations
     reg_cap_cost_mult = sFuncs.import_data(
-        file_root='reg_cap_cost_mult', file_suffix=switches['reg_cap_cost_mult_suffix'], 
+        file_root=f'reg_cap_cost_mult', file_suffix=sw['reg_cap_cost_mult_suffix'], 
         indices=['i','r'], scen_settings=scen_settings)
+     
     # Apply the values for standalone batteries to PV+B batteries
     reg_cap_cost_mult = sFuncs.append_pvb_parameters(
         dfin=reg_cap_cost_mult, 
-        tech_to_copy='battery_{}'.format(scen_settings.switches['GSw_PVB_Dur']))
+        tech_to_copy=f'battery_{scen_settings.sw["GSw_PVB_Dur"]}')
 
     reg_cap_cost_mult_csp = reg_cap_cost_mult[reg_cap_cost_mult['i'].str.contains('csp1_')].copy()
     # Read in techs subset table to determine number of csp configurations
@@ -340,18 +347,17 @@ def calc_financial_inputs(reeds_path, inputs_case):
         configuration = 'csp' + str(i)
         mult_temp = reg_cap_cost_mult_csp.copy()
         mult_temp['i'] = mult_temp.i.replace({'csp1':configuration}, regex=True)
-        reg_cap_cost_mult = reg_cap_cost_mult.append(mult_temp)
+        reg_cap_cost_mult = pd.concat([reg_cap_cost_mult, mult_temp])
         del mult_temp
     del reg_cap_cost_mult_csp
     
     # Trim down to just the techs and regions in this run
     reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['i'].isin(list(techs['i']))]
-    reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['r'].isin(val_r)]
+    reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['r'].isin(val_r_all)]
 
 
     #%% Before writing outputs, change "x" to "newx" in [v]
     df_ivt['v'] = ['new%s' % v for v in df_ivt['v']]
-
 
     #%% Write the scenario-specific output files
     
@@ -412,7 +418,6 @@ def calc_financial_inputs(reeds_path, inputs_case):
         ['i', 'country', 't', 'itc_frac', 'itc_tax_equity_penalty']
     ].to_csv(os.path.join(inputs_case, 'itc_fractions.csv'), index=False)
 
-
     # CRF used in sequential case for calculating pvf_onm values (pvf)
     crf_df = financials_sys[financials_sys['t']==financials_sys['modeled_year']].copy()
     sFuncs.param_exporter(crf_df[['t', 'crf']], 'crf', 'crf', inputs_case)
@@ -427,7 +432,6 @@ def calc_financial_inputs(reeds_path, inputs_case):
     pvf_onm_int = pvf_onm_int.rename(columns={'modeled_year':'t'})
     sFuncs.param_exporter(pvf_onm_int, 'pvf_onm', 'pvf_onm_int', inputs_case)
 
-
     # pvf_cap (used in both seq and int modes)
     sFuncs.inv_param_exporter(df_ivt, modeled_years, 'pvf_capital', ['t'], 'pvf_cap', inputs_case)
 
@@ -439,14 +443,14 @@ def calc_financial_inputs(reeds_path, inputs_case):
     # Copy construction_times into inputs_case
     pd.read_csv(
         os.path.join(input_dir, 'financials', 
-                     'construction_times_%s.csv' % switches['construction_times_suffix'])
+                     'construction_times_%s.csv' % sw['construction_times_suffix'])
     ).to_csv(
         os.path.join(inputs_case, 'construction_times.csv'), index=False)
 
     # Copy tc_phaseout_schedule into inputs_case
     pd.read_csv(
         os.path.join(input_dir, 'financials', 
-                     'tc_phaseout_schedule_%s.csv' % switches['GSw_TCPhaseout_schedule'])
+                     'tc_phaseout_schedule_%s.csv' % sw['GSw_TCPhaseout_schedule'])
     ).to_csv(
         os.path.join(inputs_case, 'tc_phaseout_schedule.csv'), index=False)
 
@@ -463,8 +467,6 @@ def calc_financial_inputs(reeds_path, inputs_case):
         key='data', complevel=4, index=False, format='table')
 
 
-    print('Finished calculation of financial parameters for', inputs_case)
-
     #%% Write a dictionary of the results
     finance_dict = {
         'df_ivt': df_ivt,
@@ -473,22 +475,22 @@ def calc_financial_inputs(reeds_path, inputs_case):
 
     return finance_dict
 
-#%% Procedure
+#%% ===========================================================================
+### --- PROCEDURE ---
+### ===========================================================================
 if __name__ == '__main__':
-    ###################
-    #%% Argument inputs
-    import argparse
+
+    #%% Parse arguments
     parser = argparse.ArgumentParser(description="calc_financial_inputs.py")
-    parser.add_argument("reeds_path",
-                        help="ReEDS-2.0 directory")
-    parser.add_argument("inputs_case",
-                        help="ReEDS-2.0/runs/{case}/inputs_case directory")
+    parser.add_argument("reeds_path", help="ReEDS-2.0 directory")
+    parser.add_argument("inputs_case", help="ReEDS-2.0/runs/{case}/inputs_case directory")
+    
     args = parser.parse_args()
     reeds_path = args.reeds_path
     inputs_case = args.inputs_case
 
-    ### Set up logger
-    #log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    #%% Set up logger
+    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
     #%% Run it
     tic = datetime.datetime.now()
@@ -497,3 +499,5 @@ if __name__ == '__main__':
 
     toc(tic=tic, year=0, process='input_processing/calc_financial_inputs.py', 
         path=os.path.join(inputs_case,'..'))
+    
+    print('Finished calc_financial_inputs.py')

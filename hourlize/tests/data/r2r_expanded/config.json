@@ -8,5 +8,8 @@
     "run_folder": "DATA_PATH/reeds/",
     "tech_supply_curves": {
       "wind-ons": "DATA_PATH/supply_curves/wind-ons_supply_curve_raw.csv"
+    },
+    "new_incr_mw": {
+      "wind-ons": 1e10
     }
   }

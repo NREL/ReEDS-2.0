@@ -48,6 +48,8 @@ positive variables
   DR_SHIFT(i,v,r,allh,allhh,t)        "--MWh-- annual demand response load shifted to timeslice h from timeslice hh"
   DR_SHED(i,v,r,allh,t)               "--MWh-- annual demand response load shed from timeslice h"
   LAST_HOUR_SOC(i,v,r,allh,t)         "--MWh-- last hour state of charge when running flex without infinite loop"
+  RAMPUP(i,v,r,allh,allhh,t)          "--MW-- upward change in generation from h to hh"
+  RAMPDOWN(i,v,r,allh,allhh,t)        "--MW-- downward change in generation from h to hh"
 
 * flexible CCS variables
   CCSFLEX_POW(i,v,r,allh,t)                "--avg MW-- average power consumed for CCS system"
@@ -168,9 +170,11 @@ EQUATION
  eq_dhyd_dispatch_ann(i,v,r,t)                 "--MWh-- dispatchable hydro annual energy constraint (only when allowing seasonal energy shifting)"
  eq_dhyd_dispatch_szn(i,v,r,allszn,t)          "--MWh-- dispatchable hydro seasonal energy constraint"
  eq_min_cf(i,r,t)                              "--MWh-- minimum capacity factor constraint for each generator fleet, applied to (i,r)"
+ eq_mingen_fixed(i,v,r,allh,t)                 "--MW-- Generation in each timeslice must be greater than mingen_fixed * capacity"
  eq_mingen_lb(r,allh,allszn,t)                 "--MW-- lower bound on minimum generation level"
  eq_mingen_ub(r,allh,allszn,t)                 "--MW-- upper bound on minimum generation level"
  eq_minloading(i,v,r,allh,allhh,t)             "--MW-- minimum loading across same-season hours"
+ eq_ramping(i,v,r,allh,allhh,t)                "--MW-- definition of RAMPUP and RAMPDOWN"
  eq_reserve_margin(r,allszn,t)                 "--MW-- planning reserve margin requirement"
  eq_supply_demand_balance(r,allh,t)            "--MW-- supply demand balance"
  eq_vsc_flow(r,allh,t)                         "--MW-- DC power flow"
@@ -810,8 +814,8 @@ eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)$rsc_i(i)$m_rscfeas(r,i,rscbin)$m_rsc_con(
 
 *capacity indicated by the resource supply curve (with undiscovered geo available
 *at the "discovered" amount and hydro upgrade availability adjusted over time)
-    m_rsc_dat(r,i,rscbin,"cap") * (
-        1$[not geo_hydro(i)] + geo_discovery(i,r,t)$geo_hydro(i))
+    round(m_rsc_dat(r,i,rscbin,"cap") * (
+        1$[not geo_hydro(i)] + geo_discovery(i,r,t)$geo_hydro(i)),4)
     + hyd_add_upg_cap(r,i,rscbin,t)$(Sw_HydroCapEnerUpgradeType=1)
 * available DR capacity
     + rsc_dr(i,r,"cap",rscbin,t)
@@ -837,7 +841,6 @@ eq_growthlimit_relative(i,st,t)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }
                                 $tmodel(t)
                                 $stfeas(st)
                                 $Sw_GrowthRelCon
-                                $(yeart(t)<=Sw_GrowthConLastYear)
                                 $(yeart(t)>=model_builds_start_yr)]..
 
 *the annual growth limit
@@ -855,7 +858,6 @@ eq_growthbin_limit(gbin,st,tg,t)$[valinv_tg(st,tg,t)
                                  $tmodel(t)
                                  $stfeas(st)
                                  $Sw_GrowthRelCon
-                                 $(yeart(t)<=Sw_GrowthConLastYear)
                                  $(yeart(t)>=model_builds_start_yr)]..
 
 *the growth bin limit
@@ -870,8 +872,7 @@ eq_growthbin_limit(gbin,st,tg,t)$[valinv_tg(st,tg,t)
 * ---------------------------------------------------------------------------
 
 eq_growthlimit_absolute(tg,t)$[growth_limit_absolute(tg)$tmodel(t)
-                               $Sw_GrowthAbsCon$(yeart(t)<=Sw_GrowthConLastYear)
-                               $(yeart(t)>=model_builds_start_yr)]..
+                               $Sw_GrowthAbsCon$(yeart(t)>=model_builds_start_yr)]..
 
 * the absolute limit of growth (in MW)
      (sum{tt$[tprev(tt,t)], yeart(tt) } - yeart(t))
@@ -1069,6 +1070,19 @@ eq_curt_gen_balance(r,h,t)$[rb(r)$tmodel(t)]..
 ;
 
 * ---------------------------------------------------------------------------
+* Generation in each timeslice must be greater than mingen_fixed * capacity
+eq_mingen_fixed(i,v,r,h,t)
+    $[Sw_MingenFixed$tmodel(t)$mingen_fixed(i)$valgen(i,v,r,t)
+    $(yeart(t)>=Sw_StartMarkets)]..
+
+    GEN(i,v,r,h,t)
+
+    =g=
+
+    mingen_fixed(i) * CAP(i,v,r,t)
+;
+
+* ---------------------------------------------------------------------------
 
 eq_mingen_lb(r,h,szn,t)$[rb(r)$h_szn(h,szn)$(yeart(t)>=mingen_firstyear)
                         $tmodel(t)$Sw_Mingen]..
@@ -1118,7 +1132,6 @@ eq_dhyd_dispatch(i,v,r,szn,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_seas
     * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],
                INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
              - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
-    * cap_hyd_szn_adj(i,szn,r)
     * m_cf_szn(i,v,r,szn,t)
 
     =g=
@@ -1148,7 +1161,6 @@ eq_dhyd_dispatch_ann(i,v,r,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_seas
             INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
             - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
 * [times] seasonal capacity adjustment
-        * cap_hyd_szn_adj(i,szn,r)
         * m_cf_szn(i,v,r,szn,t) }
     =g=
 
@@ -1190,7 +1202,6 @@ eq_dhyd_dispatch_szn(i,v,r,szn,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_
         sum{h$[h_szn(h,szn)], avail(i,h) * hours(h) }
         * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
            - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
-        * cap_hyd_szn_adj(i,szn,r)
         * (m_cf_szn(i,v,r,szn,t)$(m_cf_szn(i,v,r,szn,t) <= 1) + 1$(m_cf_szn(i,v,r,szn,t) > 1))
     )
 ;
@@ -1289,6 +1300,17 @@ eq_minloading(i,v,r,h,hh,t)$[valgen(i,v,r,t)$minloadfrac(r,i,hh)
     =g=
 
     GEN(i,v,r,hh,t) * minloadfrac(r,i,hh)
+;
+
+* RAMPUP is used in the calculation of startup/ramping costs
+eq_ramping(i,v,r,h,hh,t)
+    $[Sw_StartCost$tmodel(t)$startcost(i)$numhours_nexth(h,hh)$valgen(i,v,r,t)]..
+
+    GEN(i,v,r,hh,t)
+
+    =e=
+
+    GEN(i,v,r,h,t) + RAMPUP(i,v,r,h,hh,t) - RAMPDOWN(i,v,r,h,hh,t)
 ;
 
 *=======================================
@@ -1843,8 +1865,9 @@ eq_transmission_investment_max(t)
           $[((Sw_TransInvMaxTypes=2) or (Sw_TransInvMaxTypes=3))
           $valinv(i,v,r,t)$rsc_i(i)$m_rscfeas(r,i,rscbin)],
           INV_RSC(i,v,r,rscbin,t) * (
-              distance_reinforcement(i,r,rscbin))
+              distance_reinforcement(i,r,rscbin)
               + distance_spur(i,r,rscbin)$(Sw_TransInvMaxTypes=3)
+          )
     }
 ;
 
@@ -2541,7 +2564,7 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r)
       )
 *[plus] water inflow energy available for hydropower that adds pumping
     + (CAP(i,v,r,t) * avail(i,h) * hours_daily(h) *
-        sum{szn$h_szn(h,szn), cap_hyd_szn_adj(i,szn,r) * m_cf_szn(i,v,r,szn,t) }
+        sum{szn$h_szn(h,szn), m_cf_szn(i,v,r,szn,t) }
         )$hyd_add_pump(i)
 
 *[plus] energy into hybrid PV+battery storage
@@ -2598,7 +2621,7 @@ eq_storage_seas(i,v,r,t)
 
 *[plus] annual water inflow energy available for hydropower that adds pumping
     + (CAP(i,v,r,t) * avail(i,h) * hours(h) *
-            sum{szn$h_szn(h,szn), cap_hyd_szn_adj(i,szn,r) * m_cf_szn(i,v,r,szn,t) }
+            sum{szn$h_szn(h,szn), m_cf_szn(i,v,r,szn,t) }
             )$hyd_add_pump(i)
     }
 
@@ -2645,7 +2668,6 @@ eq_storage_seas_szn(i,v,r,szn,t)
 
 *[plus] seasonal water inflow energy available for hydropower that adds pumping
     + (CAP(i,v,r,t) * avail(i,h) * hours(h)
-            * cap_hyd_szn_adj(i,szn,r)
             * m_cf_szn(i,v,r,szn,t)
         )$hyd_add_pump(i)
     }

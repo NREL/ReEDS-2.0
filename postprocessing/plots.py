@@ -1884,3 +1884,39 @@ def waterfall_span(
         ax.axhline(0, c=zero_color, ls=zero_style, lw=zero_width)
 
     return ax
+
+
+def plot_region_bars(
+        dfzones, dfdata, colors, ax=None,
+        valscale=3e3, width=5e4, center=False,
+    ):
+    """
+    Inputs
+    ------
+    dfzones: gpd.GeoDataFrame of zones or points labeled as (centroid_x, centroid_y)
+    dfdata: pd.DataFrame with index matching the index of dfzones and columns matching
+        the keys of colors
+    colors: dict or pd.Series with keys matching the columns of dfdata
+    valscale: [meters / (units of dfdata)]
+    width: [meters]
+    center: If True, bar center will be at centroid_y; otherwise bar base will be
+    """
+    ### Get centroids if necessary
+    if 'centroid_x' not in dfzones:
+        dfzones['centroid_x'] = dfzones.centroid.x
+        dfzones['centroid_y'] = dfzones.centroid.y
+    ### Plot it
+    for r in dfzones.index:
+        if r not in dfdata.index:
+            continue
+        ### Get coordinates
+        x0, bottom = dfzones.loc[r, ['centroid_x', 'centroid_y']]
+        ### Scale it
+        df = dfdata.loc[r].to_frame().T * valscale
+        df.index = [x0]
+        if center:
+            bottom -= df.sum().sum()/2
+        ### Plot it
+        stackbar(
+            df=df, ax=ax, colors=colors, width=width, net=False, bottom=bottom,
+        )

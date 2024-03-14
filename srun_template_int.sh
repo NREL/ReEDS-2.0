@@ -1,12 +1,8 @@
 #!/bin/bash
-#SBATCH --account=reedsos
+#SBATCH --account=[your HPC allocation]
 #SBATCH --time=48:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --mail-user=maxwell.brown@nrel.gov
+#SBATCH --mail-user=[your email address]
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mem=95000      # RAM in MB
-
-#load your default settings
-. $HOME/.bashrc
-
+#SBATCH --mem=250000      # RAM in MB

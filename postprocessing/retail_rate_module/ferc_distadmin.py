@@ -28,7 +28,7 @@ excludecells = {
     ('Southern California Edison Co', 2019): {
         'A&G Oper Injuries & Damages $': 'Total Admin & General Expenses $'},
     ### (Additional special exclusions can be added here)
-}
+    }
 
 ### Specify the state-to-region mapping to use for regional projections
 ### None of the region breakdowns in hierarchy.csv are completely aligned with state borders.
@@ -140,7 +140,7 @@ state2region = {
     'MA': 'ISONE',
     'CT': 'ISONE',
     'RI': 'ISONE',
-}
+    }
 
 ### Fill missing states based on utility name
 missingstates = {
@@ -148,7 +148,7 @@ missingstates = {
     'New York Transco LLC': 'NY',
     'Pioneer Transmission LLC': 'IN',
     'Prairie Wind Transmission LLC': 'KS',
-}
+    }
 
 #%% Sub-functions
 def get_inflatable(inflationpath=None):
@@ -195,7 +195,7 @@ def get_excluded_costs(excludecells=excludecells, inflationpath=None, dollar_yea
         out.append(df_opex.loc[
             (df_opex['Utility Name']==utility) & (df_opex['Year']==year),
             ['Utility Name', 'Year', 'State',] + outcols
-        ])
+            ])
     dfout = pd.concat(out, axis=0)
 
     #%% Inflate values to dollar_year
@@ -292,7 +292,7 @@ def get_ferc_costs(
 
     #%% Remove unnecessary columns and merge
     df_opex.drop(
-        df_opex.columns.difference([
+        columns = df_opex.columns.difference([
             'Year', 'Utility Name', 'State',
             'Trn Total Operation Expenses $',
             'Trn Total Maintenance Expenses $',
@@ -304,28 +304,28 @@ def get_ferc_costs(
             'Total Admin & General Expenses $',
             'Total Regional Trans & Mark Operation Exps  $',
             'A&G Total Operation Expenses $',
-        ]), 1, inplace=True)
+            ]), inplace=True)
 
     df_capex = df_capex[df_capex['Account Classification'] == 'Additions']
     df_capex.drop(
-        df_capex.columns.difference([
+        columns = df_capex.columns.difference([
             'Year', 'Utility Name', 'State',
             'Trn - Total Transmission Plant',
             'Dis - Total Distribution Plant',
             'Gen - Total General Plant',
-        ]), 1, inplace=True)
+            ]), inplace=True)
 
     df_sales.drop(
-        df_sales.columns.difference([
+        columns = df_sales.columns.difference([
             'Year', 'Utility Name', 'State',
             'Total Retail Sales MWh',
             'Total Electricity Customers'
-        ]), 1, inplace=True)
+            ]), inplace=True)
 
     dfall = df_capex.merge(df_opex, on=[ 'Year', 'Utility Name', 'State'], how='outer')
     dfall = dfall.merge(df_sales, on=[ 'Year', 'Utility Name', 'State'], how='outer')
 
-    #%%  calculate an adjustment factor to get the nominal $ inputs into stated dollar years (2004)
+    #%% Calculate an adjustment factor to get the nominal $ inputs into stated dollar years (2004)
     dfall.rename(columns={'Year':'t'}, inplace=True)
     dfall.rename(columns={
         'Trn - Total Transmission Plant':  'Trn - Total Transmission Plant $',
@@ -342,17 +342,17 @@ def get_ferc_costs(
         if input_dollar_year < dollar_year:
             inflation.loc[input_dollar_year, 'inflation_adj'] = np.array(
                 np.cumprod(inflation.loc[input_dollar_year+1:dollar_year,'inflation_rate'])
-            )[-1]
+                )[-1]
         elif input_dollar_year > dollar_year:
             inflation.loc[input_dollar_year, 'inflation_adj'] = (
                 1.0 / np.array(np.cumprod(
                     inflation.loc[dollar_year+1:input_dollar_year,'inflation_rate']
-                ))[-1])
+                    ))[-1])
 
     inflation = inflation.reset_index()
     dfall = dfall.merge(inflation[['t', 'inflation_adj']], on='t')
 
-    #%% apply inlfation adjustemnt to any column that has a $ in its name
+    #%% Apply inflation adjustment to any column that has a $ in its name
     dollar_cols = [col for col in dfall.columns if '$' in col]
     for dollar_col in dollar_cols:
         dfall[dollar_col] = dfall[dollar_col] * dfall['inflation_adj']
@@ -363,18 +363,18 @@ def get_ferc_costs(
     dfall['trans_opex'] = dfall[[
         'Trn Total Operation Expenses $',
         'Trn Total Maintenance Expenses $'
-    ]].sum(axis=1)
+        ]].sum(axis=1)
     dfall['dist_opex'] = dfall[[
         'Dis Total Operation Expenses $',
         'Dis Total Maintenance Expenses $'
-    ]].sum(axis=1)
+        ]].sum(axis=1)
     dfall['admin_opex'] = dfall[[
         'Total Admin & General Expenses $', # 'A&G Total Operation Expenses $',
         'Total Sales Expenses $',
         'Total Customer Srv & Information Expenses $',
         'CAE Total Customer Accounts Expenses $',
         'Total Regional Trans & Mark Operation Exps  $',
-    ]].sum(axis=1)
+        ]].sum(axis=1)
     dfall['trans_capex'] = dfall['Trn - Total Transmission Plant $']
     dfall['dist_capex']  = dfall['Dis - Total Distribution Plant $']
     dfall['admin_capex']  = dfall['Gen - Total General Plant $']
@@ -388,7 +388,7 @@ def get_ferc_costs(
             pd.read_csv(os.path.join(mdir,'inputs','overwrite-utility-energy_sales.csv'))
             .rename(columns={'utility_name':'Utility Name', 'year':'t'})
             .set_index(['Utility Name','t'])
-        )
+            )
         dfreplace = dfall.merge(
             overwrite, left_index=True, right_index=True, how='inner',
             suffixes=('_old','_new'))['energy_sales_new']
@@ -404,11 +404,11 @@ def get_ferc_costs(
         'dist_opex', 'dist_capex',
         'admin_opex', 'admin_capex',
         'trans_opex', 'trans_capex',
-    ]
+        ]
     ### Drop AK, HI, and 1993
     dfall = dfall.drop(dfall.loc[
         (dfall.t == 1993) | (dfall.state.isin(['AK','HI']))
-    ].index).reset_index(drop=True)
+        ].index).reset_index(drop=True)
     ### Assign DC to MD (since that's how ReEDS treats it)
     dfall.state.replace({'DC':'MD'}, inplace=True)
     ### Fill missing states
@@ -423,7 +423,7 @@ def get_ferc_costs(
     ### Number of years to project forward
     extend = {zone: 2050 - dfout.loc[dfout[aggregation]==zone,'t'].max() for zone in zones}
 
-    #%% calculate normalized costs on a per-MWh and per-customer basis
+    #%% Calculate normalized costs on a per-MWh and per-customer basis
     values = ['dist_opex', 'admin_opex', 'trans_opex', 'dist_capex', 'admin_capex', 'trans_capex']
     for val in values:
         # dfout['%s_per_cust' % val] = dfout[val] / dfout['cust']
@@ -448,8 +448,8 @@ def get_ferc_costs(
         'admin_opex', 'admin_capex',
         'trans_opex',
         # 'trans_capex',
-    ]
-    dfout.drop(dropcols, axis=1, inplace=True)
+        ]
+    dfout.drop(columns=dropcols, inplace=True)
 
     values_normalized = [
         # 'dist_opex_per_cust',
@@ -464,9 +464,9 @@ def get_ferc_costs(
         'dist_capex_per_mwh',
         'admin_capex_per_mwh',
         'trans_capex_per_mwh'
-    ]
+        ]
 
-    #%% generate dataframe for future years and create 'index' dummy variable
+    #%% Generate dataframe for future years and create 'index' dummy variable
     ### to set up diminishing trend
     for zone in zones:
         df_loop = dfout[dfout[aggregation] == zone]
@@ -478,10 +478,10 @@ def get_ferc_costs(
         df_extrapolate_dim['index'] = numprojyears - df_extrapolate_dim['index']
         df_extrapolate_dim['index'].values[df_extrapolate_dim['index'].values < 0] = 0
 
-        #list the years of historical data used for extrapolation
+        # List the years of historical data used for extrapolation
         slopeyears = np.array(df_loop['t'].tail(numslopeyears))
 
-        #project data forward
+        # Project data forward
         for value in values_normalized:
             if numprojyears == 0:
                 df_extrapolate_dim[value] = df_loop[value].iloc[-1]
@@ -495,13 +495,13 @@ def get_ferc_costs(
                         df_extrapolate_dim.loc[i-1, value]
                         + trend[0] * (df_extrapolate_dim.loc[i, 'index'] / numprojyears))
 
-        #drop absolute columns that were not extrapolated
+        # Drop absolute columns that were not extrapolated
         df_extrapolate_dim = df_extrapolate_dim.drop(['index'], axis=1)
 
-        #append projected data to historical data
-        dfout = dfout.append(df_extrapolate_dim, sort=False)
+        # Append projected data to historical data
+        dfout = pd.concat([dfout, df_extrapolate_dim])
 
-    #Assign rows as historical or projected
+    # Assign rows as historical or projected
     dfout.loc[dfout['t'] < current_t, 'entry_type'] = 'historical'
     dfout.loc[dfout['t'] >= current_t, 'entry_type'] = 'projected'
     # dfout = dfout[~dfout.isin([np.nan, np.inf, -np.inf]).any(1)]

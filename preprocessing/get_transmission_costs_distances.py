@@ -83,7 +83,7 @@ dfbuffer.geometry = dfbuffer.buffer(buffer)
 
 zones = [f'p{r+1}' for r in range(134)]
 adjacent = {}
-for r, zone in dfbuffer.geometry.iteritems():
+for r, zone in dfbuffer.geometry.items():
     adjacent[r] = dfbuffer.loc[dfbuffer.overlaps(zone)].index.values.tolist()
 
 dfwrite = pd.concat(

@@ -16,8 +16,8 @@ def met_threshold(casepath, t, iteration=0):
     ### Get the total NEUE
     neue = pd.read_csv(
         os.path.join(casepath,'outputs','neue.csv'),
-        index_col=['t','iteration'], squeeze=True,
-    ).loc[t,iteration]
+        index_col=['t','iteration'],
+    ).squeeze(1).loc[t,iteration]
 
     ### Only a simple criterion for now
     sw = get_switches(casepath)
@@ -125,9 +125,9 @@ def main(casepath, t):
         #%% Run ReEDS and Augur
         run_reeds(casepath, t, iteration=iteration)
 
-        #%% Stop here if we're before GSw_SkipAugurYear...
-        if (t < int(sw['GSw_SkipAugurYear'])):
-            print(f'{t} < GSw_SkipAugurYear ({sw.GSw_SkipAugurYear}) so skipping Augur')
+        #%% Stop here if we're before GSw_StartMarkets...
+        if (t < int(sw['GSw_StartMarkets'])):
+            print(f'{t} < GSw_StartMarkets ({sw.GSw_StartMarkets}) so skipping iteration')
             break
         ### or if not iterating...
         elif (

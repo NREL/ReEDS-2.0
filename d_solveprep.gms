@@ -1,5 +1,3 @@
-
-
 $setglobal ds \
 
 $ifthen.unix %system.filesys% == UNIX
@@ -33,123 +31,25 @@ execute_loadpoint "gdxfiles%ds%%gdxfin%.gdx" ;
 Option BRatio = 0.0 ;
 $endif.gdxin
 
-
-*====================================
-* --- Endogenous Retirements ---
-*====================================
-
-retiretech(i,v,r,t) = no ;
-
-set valret(i,v) "technologies and classes that can be retired",
-    noretire(i) "technologies that will never be retired" /distpv, can-imports/ ;
-
-* storage technologies are not appropriately attributing capacity value to CAP variable
-* therefore not allowing them to endogenously retire
-noretire(i)$[(storage_standalone(i) or hyd_add_pump(i))] = yes ;
-
-*all existings plants of any technology can be retired if Sw_Retire = 1
-valret(i,v)$[(Sw_Retire=1)$initv(v)$(not noretire(i))] = yes ;
-
-*only existing coal and gas are retirable if Sw_Retire = 2
-valret(i,v)$[(Sw_Retire=2)$initv(v)$(not noretire(i))
-            $(coal(i) or gas(i) or ogs(i))] = yes ;
-
-*All new and existing nuclear, coal, and gas are retirable if Sw_Retire = 3
-*Existing plants have to meet the min_retire_age before retiring
-valret(i,v)$[((Sw_Retire=3) or (Sw_Retire=5))$(not noretire(i))
-            $(coal(i) or gas(i) or nuclear(i) or ogs(i) or h2_ct(i) or h2(i))] = yes ;
-
-*new and existings plants of any technology can be retired if Sw_Retire = 4
-valret(i,v)$[(Sw_Retire=4)$(not noretire(i))] = yes ;
-
-retiretech(i,v,r,t)$[valret(i,v)$valcap(i,v,r,t)] = yes ;
-
-* when Sw_Retire = 3 ensure that plants do not retire before their minimum age
-retiretech(i,v,r,t)$[((Sw_Retire=3) or (Sw_Retire=5))$initv(v)$(not noretire(i))$(plant_age(i,v,r,t) <= min_retire_age(i))
-                    $(coal(i) or gas(i) or nuclear(i) or ogs(i) or h2_ct(i) or h2(i))] = no ;
-
-* for sw_retire=5, don't allow nuclear to retire until 2030
-retiretech(i,v,r,t)$[(Sw_Retire=5)$nuclear(i)$(yeart(t)<=2030)] = no ;
-
-*several states have subsidies for nuclear power, so do not allow nuclear to retire in these states
-*before the year specified (see https://www.eia.gov/todayinenergy/detail.php?id=41534)
-*Note that Ohio has since repealed their nuclear subsidy, so is no longer included
-$onempty
-parameter nuclear_subsidies(st) '--year-- the year a nuclear subsidy ends in a given state'
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%nuclear_subsidies.csv
-$offdelim
-$onlisting
-/
-;
-$offempty
-
-retiretech(i,initv,r,t)$[(yeart(t) < sum{st$r_st(r,st), nuclear_subsidies(st) })$valcap(i,initv,r,t)$nuclear(i)] = no ;
-
-* if Sw_NukeNoRetire is enabled, don't allow nuclear to retire through Sw_NukeNoRetireYear
-if(Sw_NukeNoRetire = 1,
-         retiretech(i,v,r,t)$[nuclear(i)$(yeart(t)<=Sw_NukeNoRetireYear)] = no ;
-) ;
-
-
-*Do not allow retirements before they are allowed
-retiretech(i,v,r,t)$[(yeart(t)<Sw_Retireyear)] = no ;
-
-*Need to enable endogenous retirements for plants that can have persistent upgrades
-retiretech(i,v,r,t)$[(yeart(t)>=Sw_Upgradeyear)$(yeart(t)>=Sw_Retireyear)$(Sw_Upgrades = 2)$rb(r)
-                     $sum{ii$[upgrade_from(ii,i)$valcap(ii,v,r,t)], 1 }] = yes ;
-
-*=============================
-* Capacity credit settings
-*=============================
+*================================================
+* --- Parameters only used when loading data ---
+*================================================
 
 set tload(t) "years in which data is loaded" ;
 tload(t) = no ;
 
-set cciter "placeholder for iteration number for tracking CC" /0*20/ ;
-set loadset "set used for loading in merged gdx files" / ReEDS_Augur_2010*ReEDS_Augur_%endyear% / ;
-
 parameter
-z_rep(t)                                       "--$-- objective function value by year"
-z_rep_inv(t)                                   "--$-- investment component of objective function by year"
-z_rep_op(t)                                    "--$-- operation component of objective function by year"
-cc_change(i,v,r,allszn,t)                      "--fraction-- Change of capacity credit between this and previous iteration"
-cc_dr_load(i,r,allszn,t)                       "--fraction--  cc_dr loading in from the cc_out gdx file"
-cc_dr_load2(loadset,i,r,allszn,t)              "--fraction--  cc_dr loading in from the cc_out gdx file"
-cc_iter(i,v,r,allszn,t,cciter)                 "--fraction-- Actual capacity value in iteration cciter"
-cc_mar_load(i,r,ccreg,allszn,t)                "--fraction-- cc_mar loading in from the cc_out gdx file"
-cc_mar_load2(loadset,i,r,allszn,t)             "--fraction-- cc_mar loading in from the cc_out gdx file"
-cc_old_load2(loadset,i,r,allszn,t)             "--MW-- cc_old loading in from the cc_out gdx file"
-cc_scale(i,r,allszn,t)                         "--unitless-- scaling of marginal capacity value levels in intertemporal runs to equal total capacity value"
-cc_totmarg(i,r,allszn,t)                       "--MW-- original estimate of total capacity value for intertemporal, based on marginals"
-hybrid_cc_load(pvb_config,r,allszn,sdbin,t)    "--fraction-- derate factor for the capacity credit of hybrid resources"
-oldMINGEN(r,allh,t)                            "--MW-- Minimum generation from the previous iteration"
-oldVREgen(r,allh,t)                            "--MW-- generation from endogenous VRE capacity that existed the year before, or iteration before"
-sdbin_size_load2(loadset,ccreg,allszn,sdbin,t) "--MW-- bin_size loading in from the cc_out gdx file"
+    cc_old_load(i,r,ccreg,allszn,t)        "--MW-- cc_old loading in from the cc_out gdx file"
+    sdbin_size_load(ccreg,allszn,sdbin,t)  "--MW-- bin_size loading in from the cc_out gdx file"
+    cc_mar_load(i,r,ccreg,allszn,t)        "--fraction-- cc_mar loading in from the cc_out gdx file"
+    cc_dr_load(i,r,allszn,t)               "--fraction--  cc_dr loading in from the cc_out gdx file"
 ;
 
-parameters powerfrac_upstream_(r,rr,allh,t)   "--unitless-- fraction of power at r that was generated at rr",
-           powerfrac_downstream_(rr,r,allh,t) "--unitless-- fraction of power generated at rr that serves load at r" ;
 
-*start the values at zero to avoid errors that
-*these values have not been assigned
-cc_int(i,v,r,allszn,t) = 0 ;
-cc_totmarg(i,r,allszn,t) = 0 ;
-cc_excess(i,r,allszn,t) = 0 ;
-cc_scale(i,r,allszn,t) = 0 ;
+*============================
+* --- Round parameters ---
+*============================
 
-*trimming the largest matrices to reduce file sizes
-cost_vom(i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
-cost_fom(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
-heat_rate(i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
-m_capacity_exog(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
-emit_rate(e,i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
-
-
-
-* round parameters
 acp_price(st,t)$acp_price(st,t) = round(acp_price(st,t),3) ;
 batterymandate(st,t)$batterymandate(st,t) = round(batterymandate(st,t),2) ;
 bcr(i)$bcr(i) = round(bcr(i),4) ;
@@ -157,8 +57,6 @@ derate_geo_vintage(i,v)$derate_geo_vintage(i,v) = round(derate_geo_vintage(i,v),
 cc_storage(i,sdbin)$cc_storage(i,sdbin) = round(cc_storage(i,sdbin),3) ;
 cendiv_weights(r,cendiv)$cendiv_weights(r,cendiv) = round(cendiv_weights(r,cendiv), 3) ;
 cost_cap(i,t)$cost_cap(i,t) = round(cost_cap(i,t),3) ;
-
-
 cost_fom(i,v,r,t)$cost_fom(i,v,r,t) = round(cost_fom(i,v,r,t),3) ;
 cost_h2_transport_cap(r,rr,t)$cost_h2_transport_cap(r,rr,t) = round(cost_h2_transport_cap(r,rr,t),3) ;
 cost_h2_transport_fom(r,rr,t)$cost_h2_transport_fom(r,rr,t) = round(cost_h2_transport_fom(r,rr,t),3) ;
@@ -197,33 +95,21 @@ trans_cost_cap_fin_mult_noITC(t) = round(trans_cost_cap_fin_mult_noITC(t),3) ;
 winter_cap_frac_delta(i,v,r)$winter_cap_frac_delta(i,v,r) = round(winter_cap_frac_delta(i,v,r),3) ;
 
 
-* Track the initial amount of m_rsc_dat capacity to compare in e_report
-* We adust upwards by small amounts given potential for infeasibilities
-* in very tiny amounts and thus track the extent of the adjustments
-parameter m_rsc_dat_init(r,i,rscbin) "--MW-- Inital amount of resource supply curve capacity to compare with final amounts after adjustments" ;
-m_rsc_dat_init(r,i,rscbin)$m_rsc_dat(r,i,rscbin,"cap") = m_rsc_dat(r,i,rscbin,"cap") ;
-
-*============================
-* --- Iteration Tracking ---
-*============================
-
-parameter cap_iter(i,v,r,t,cciter)             "--MW-- Capacity by iteration"
-          gen_iter(i,v,r,t,cciter)             "--MWh-- Annual uncurtailed generation by iteration"
-          cap_firm_iter(i,v,r,allszn,t,cciter) "--MW-- VRE Firm capacity by iteration"
-;
-cap_iter(i,v,r,t,cciter) = 0 ;
-gen_iter(i,v,r,t,cciter) = 0 ;
-
-
-* -- upgrade capacity tracking --
-parameter m_capacity_exog0(i,v,r,t) "--MW-- original value of m_capacity_exog used in d_solveoneyear to make sure upgraded capacity isnt forced into retirement" ;
-
-m_capacity_exog0(i,v,r,t) = m_capacity_exog(i,v,r,t) ;
-
 *================================================
 * --- SEQUENTIAL SETUP ---
 *================================================
 $ifthen.seq %timetype%=="seq"
+
+* Parameter tracking
+parameter
+    m_capacity_exog0(i,v,r,t) "--MW-- original value of m_capacity_exog used in d_solveoneyear to make sure upgraded capacity isnt forced into retirement"
+    z_rep(t)      "--$-- objective function value by year"
+    z_rep_inv(t)  "--$-- investment component of objective function by year"
+    z_rep_op(t)   "--$-- operation component of objective function by year"
+;
+
+* -- upgrade capacity tracking --
+m_capacity_exog0(i,v,r,t) = m_capacity_exog(i,v,r,t) ;
 
 * remove cc_int as it is only used in the intertemporal setting
 cc_int(i,v,r,allszn,t) = 0 ;
@@ -233,8 +119,33 @@ cc_int(i,v,r,allszn,t) = 0 ;
 pvf_capital(t) = 1 ;
 pvf_onm(t)$tmodel_new(t) = round(1 / crf(t),6) ;
 
-
 $endif.seq
+
+
+*================================================
+* --- INTERTEMPORAL AND WINDOW SETUP ---
+*================================================
+
+$ifthen.intwin ((%timetype%=="int") or (%timetype%=="win"))
+
+set
+    loadset "set used for loading in merged gdx files" / ReEDS_Augur_2010*ReEDS_Augur_%endyear% /
+;
+
+parameter
+    cc_dr_load2(loadset,i,r,allszn,t)  "--fraction--  cc_dr loading in from the cc_out gdx file"
+    cc_iter(i,v,r,allszn,t,cciter)     "--fraction-- Actual capacity value in iteration cciter"
+    cc_mar_load2(loadset,i,r,allszn,t) "--fraction-- cc_mar loading in from the cc_out gdx file"
+    cc_old_load2(loadset,i,r,allszn,t) "--MW-- cc_old loading in from the cc_out gdx file"
+    cc_scale(i,r,allszn,t)             "--unitless-- scaling of marginal capacity value levels in intertemporal runs to equal total capacity value"
+    cc_totmarg(i,r,allszn,t)           "--MW-- original estimate of total capacity value for intertemporal, based on marginals"
+    sdbin_size_load2(loadset,ccreg,allszn,sdbin,t) "--MW-- bin_size loading in from the cc_out gdx file"
+;
+
+cc_scale(i,r,allszn,t) = 0 ;
+cc_totmarg(i,r,allszn,t) = 0 ;
+
+$endif.intwin
 
 
 *================================================
@@ -242,6 +153,16 @@ $endif.seq
 *================================================
 
 $ifthen.int %timetype%=="int"
+
+* Iteration tracking
+set cciter "placeholder for iteration number for tracking CC" /0*20/ ;
+parameter cap_iter(i,v,r,t,cciter)             "--MW-- Capacity by iteration"
+          gen_iter(i,v,r,t,cciter)             "--MWh-- Annual uncurtailed generation by iteration"
+          cap_firm_iter(i,v,r,allszn,t,cciter) "--MW-- VRE Firm capacity by iteration"
+;
+cap_iter(i,v,r,t,cciter) = 0 ;
+gen_iter(i,v,r,t,cciter) = 0 ;
+
 
 *Assign csp3 and csp4 to use the same initial values as csp2_1
 cc_int(i,v,r,szn,t)$[csp3(i) or csp4(i)] = cc_int('csp2_1',v,r,szn,t) ;
@@ -276,10 +197,6 @@ t_after(t,tt)$tprev(tt,t) = yes ;
 parameter rep                  "reporting for all sectors/timeslices/regions"
           repannual(t,*,*)     "national and annual reporting"
 ;
-
-
-scalar    maxdev    "maximum deviation of price from one iteration to the next" /0.25/ ;
-
 
 $endif.int
 
