@@ -27,7 +27,7 @@ jobs:
           python-version: "3.11"
       
       - name: Set environment variable for internal or external build
-        run: echo "BASE_URL="https://github.com/NREL/ReEDS-2.0" >> $GITHUB_ENV
+        run: echo 'BASE_URL="https://github.com/NREL/ReEDS-2.0"' >> $GITHUB_ENV
       
       - name: Install dependencies
         run: |
