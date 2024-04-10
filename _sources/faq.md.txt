@@ -42,7 +42,7 @@ If you'd like to reduce the model solve time, consider making some of the follow
 ## How often are updates made to ReEDS?
 Every year we target June 1 for the bulk of model changes to be completed, which allows us to meet the hard deadline for having a working, updated version of the model by June 30. We typically make minor updates to the model over the summer and tag a final version for that year in August or September. This version is then used to produce the Standard Scenarios and Cambium data products. 
 
-Additionally, changes are made throughout the year and a new version is created and published roughly every month. You can find current and past ReEDS versions here: [ReEDS-2.0 Releases]({{github_releases_url}})
+Additionally, changes are made throughout the year and a new version is created and published roughly every month. You can find current and past ReEDS versions here: {{ github_releases_url }}
 
 If you would like to run ReEDS with a previous version, you can either download the source code directly or check out that version using the tag. 
 
