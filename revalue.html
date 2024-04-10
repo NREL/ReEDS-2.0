@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>reValue &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_information.html">Model Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">reValue</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/revalue.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <!--
+This is a reference to the bokeh pivot documentation that can be found in postprocessing/reValue/README.md
+-->
+<section id="revalue">
+<h1>reValue<a class="headerlink" href="#revalue" title="Link to this heading"></a></h1>
+<p>reValue has two main purposes:</p>
+<ol class="arabic simple">
+<li><p>Extract regional hourly prices from ReEDS scenarios and years</p></li>
+<li><p>(Optional) Use extracted prices to calculate value and competitiveness-related metrics for a set of regional generation or load profiles.</p></li>
+</ol>
+</section>
+<section id="instructions">
+<h1>Instructions<a class="headerlink" href="#instructions" title="Link to this heading"></a></h1>
+<ol class="arabic simple">
+<li><p>Edit scenarios.csv. The columns are:</p>
+<ul class="simple">
+<li><p><strong>name</strong>: A unique name for this scenario</p></li>
+<li><p><strong>activate</strong>: Whether or not to activate this scenario for the reValue run. 1 means activate and 0 means de-activate</p></li>
+<li><p><strong>tech</strong>:  <em>wind-ons</em> and <em>load</em> are currently the only supported technologies, and only one technology is allowed for a given run of reValue (use <em>activate=0</em> for other technologies). <em>wind-ons</em> will use reV supply curves and profiles, while <em>load</em> uses BA-level load profiles</p></li>
+<li><p><strong>year</strong>: The year to extract from the ReEDS run</p></li>
+<li><p><strong>color</strong>: This column is currently unused, but could be useful for scenario styling in output visualizations</p></li>
+<li><p><strong>reeds_run_path</strong>: The path to the ReEDS run</p></li>
+<li><p><strong>rev_sc_path</strong>: The path to a reV supply curve. Use <em>none</em> if not using reV site-level profiles, e.g. if using <em>load</em>.</p></li>
+<li><p><strong>profile_path</strong>: The path to a file containing generation profiles, or <em>none</em> if gathering only prices . For onshore wind reV data, this will be the path to an h5 file, and for BA-level load data, this will be a path to a csv file.</p></li>
+<li><p><strong>profile_timezone</strong>: The timezone of the profile relative to UTC (e.g. <em>-5</em> for EST), or <em>local</em> to indicate that the profiles are in local time of the associated balancing areas.</p></li>
+<li><p><strong>buildings_file</strong>: A file containing number of buildings and sqft by BA, used for calculating additional metrics of GHP-based load adjustments. Otherwise use <em>none</em></p></li>
+</ul>
+</li>
+<li><p>(Optional) Configure switches at the top of reValue.py:</p>
+<ul class="simple">
+<li><p><strong>output_prices</strong>: Set to <em>False</em> if you don’t care about the price outputs, otherwise <em>True</em>.</p></li>
+<li><p><strong>res_marg_style</strong>: <em>max_net_load_2012</em> is the only currently supported option, and assigns reserve margin prices equally to the peak net load hours. <em>max_load_price</em>, the other option, would assign reserve margin prices to the associated timeslice with max load prices, but this option only works on older versions of ReEDS.</p></li>
+<li><p><strong>netload_num_hrs</strong>: When <strong>res_marg_style</strong> = <em>max_net_load_2012</em>, this allows the user to specify the number of max net load hours to assign the reserve margin prices (default in ReEDS is 20, but the default here is 50 so that technologies don’t randomly align with peak net load hours as often). Higher <strong>netload_num_hrs</strong> mean lower reserve margin prices in each hour, such that total value of firm capacity stays constant.</p></li>
+<li><p><strong>netload_time_style</strong>: When <strong>res_marg_style</strong> = <em>max_net_load_2012</em>, This allows the user to keep reserve margin prices at the hour level (<strong>netload_time_style</strong>=<em>hour</em>), or to assign prices to the entire timeslice(s) containing the hour(s) (<strong>netload_time_style</strong>=<em>timeslice</em>).</p></li>
+</ul>
+</li>
+<li><p>Run activated scenarios with <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">reValue.py</span></code> (from the reeds2 conda environment).</p></li>
+<li><p>Gather price and value metric outputs from output folder at <em>ReEDS-2.0/postprocessing/reValue/outputs_[timestamp]</em>. Here are the main outputs:</p>
+<ul class="simple">
+<li><p><strong>reValue_out.csv</strong>: This file contains the various value metrics:</p>
+<ul>
+<li><p><em>LVOE</em>: Value per unit energy</p></li>
+<li><p><em>LVOE_load</em>: Value per unit energy (load, or energy requirement, component. For <em>load</em> technology, this includes influence on operating reserves, state rps, and all model requirements that are linked to the LOAD variable)</p></li>
+<li><p><em>LVOE_rm</em>: Value per unit energy (reserve margin component)</p></li>
+<li><p><em>LVOE_or</em>: Value per unit energy (operating reserve component, only present if tech is not <em>load</em>)</p></li>
+<li><p><em>LVOE_rps</em>: Value per unit energy (state rps component, only present if the tech is not <em>load</em>)</p></li>
+<li><p><em>Pb_load_loc</em>: A benchmark price for the load component at this location (assuming flat block technology).</p></li>
+<li><p><em>Pb_rm_loc</em>: A benchmark price for the reserve margin component at this location (assuming flat block technology).</p></li>
+<li><p><em>Pb_load_nat</em>: A national benchmark price for the load component (assuming flat block technology).</p></li>
+<li><p><em>Pb_rm_nat</em>: A national benchmark price for the reserve margin component (assuming flat block technology).</p></li>
+<li><p><em>VF</em>: Value factor (LVOE/Pb).</p></li>
+<li><p><em>VF_temporal</em>: Temporal component of value factor</p></li>
+<li><p><em>VF_spatial</em>: Spatial component of value factor</p></li>
+<li><p><em>VF_interaction</em>: Spatio-temporal interaction, where <em>VF=VF_temporal*VF_spatial*VF_interaction</em></p></li>
+</ul>
+</li>
+<li><p><strong>prices.csv</strong>: This file contains prices for each ReEDS run and model year considered. The <em>type</em> column reflects total price by hour, <em>tot</em>, as well as the breakdown by service.</p></li>
+</ul>
+</li>
+</ol>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Retail rate module &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_information.html">Model Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Retail rate module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/retail_rate_module.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <!--
+This is a reference to the bokeh pivot documentation that can be found in postprocessing/retail_rate_module/README.md
+-->
+<section id="retail-rate-module">
+<h1>Retail rate module<a class="headerlink" href="#retail-rate-module" title="Link to this heading"></a></h1>
+<p>This module can be used after finishing a ReEDS run to calculate retail electricity rates by state and year,
+where each state is served by its own investor-owned utility (IOU). The retail rate (in ¢/kWh) is given by
+the revenue target for the state IOU divided by the annual retail electricity demand within the state,
+where the revenue target is given by the sum of operating expenses, the return to capital, and income taxes.</p>
+<p>This module translates projected generation and transmission capacities and costs from ReEDS into IOU
+balance sheet expenditures, accounting for the distinction between operational and capitalized (or
+“rate-based”) expenditures, depreciation schedules, taxes, and other components. Distribution,
+administration, and intra-regional transmission costs are projected forward based on empirical trends over
+the past decade.</p>
+<p>Additional information about this module can be found here:
+Brown, Patrick R, Pieter J Gagnon, J Sean Corcoran, and Wesley J Cole. 2022. Retail Rate Projections for
+Long-Term Electricity System Models. Golden, CO: National Renewable Energy Laboratory. NREL/TP-6A20-78224.
+https://www.nrel.gov/docs/fy22osti/78224.pdf.</p>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cd</span></code> to the REEDS-2.0/postprocessing/retail_rate_module directory</p></li>
+<li><p>Run the retail_rate_calculations.py script, with the name of a run folder as a required argument input. For example:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">D:\username\ReEDS-2.0\postprocessing\retail_rate_module&gt;</span> <span class="pre">python</span> <span class="pre">retail_rate_calculations.py</span> <span class="pre">v20200806_retailtest_MidCase</span></code></p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="outputs">
+<h2>Outputs<a class="headerlink" href="#outputs" title="Link to this heading"></a></h2>
+<p>All outputs are written to the <code class="docutils literal notranslate"><span class="pre">outputs/retail/</span></code> folder within the provided run folder. Outputs include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">retail_rate_components.csv</span></code>: All monetary values are in 2004 dollars. To obtain the retail rate, divide the sum of the cost columns by the ‘retail_load’ column.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">costs_over_time.html</span></code>: Summary plots for national rates.</p></li>
+</ul>
+</section>
+<section id="caveats">
+<h2>Caveats<a class="headerlink" href="#caveats" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>The plotting portion of the script will currently fail if technologies are built that are not in the <code class="docutils literal notranslate"><span class="pre">map_i_to_tech.csv</span></code> file. The main <code class="docutils literal notranslate"><span class="pre">retail_rate_components.csv</span></code> file will still be produced as usual; this error only affects the production of the <code class="docutils literal notranslate"><span class="pre">costs_over_time.html</span></code> summary plots.</p></li>
+</ul>
+</section>
+<section id="accounting-approach">
+<h2>Accounting approach<a class="headerlink" href="#accounting-approach" title="Link to this heading"></a></h2>
+<p>Here we describe the accounting methods that we employ to translate yearly costs into estimates of the
+revenue to be collected from retail customers through electric bills. This approach is a simplified version
+of actual accounting practices for IOUs in the US.</p>
+<p>The retail rates provided by this module consist of two primary components:</p>
+<ul class="simple">
+<li><p>Annual retail electricity demand, which is an exogenously defined, static input to the ReEDS model</p></li>
+<li><p>Annual revenue target, which is the amount of revenue that an IOU would collect from ratepayers to cover its costs while achieving a target return to capital</p></li>
+</ul>
+<p>Cost components include capital expenditures (CAPEX) and operational expenditures (OPEX) for generation,
+transmission, distribution, and administration; inter-regional trades; and taxes. These costs are grouped
+into three categories: operational expenses, return to capital, and income taxes.</p>
+<section id="operational-expenses">
+<h3>Operational expenses<a class="headerlink" href="#operational-expenses" title="Link to this heading"></a></h3>
+<p>Operating expenses include all generation, distribution, transmission, and administrative OPEX, the
+depreciation of capital assets, and the costs of inter-state trading. For all of these expenses, we assume
+that each year’s expense is directly passed through to ratepayers during the year in which it is incurred.</p>
+<p>Operating expenses are equal to the sum of:</p>
+<ul class="simple">
+<li><p>Operations expenses</p></li>
+<li><p>Non-capitalized maintenance expenses</p></li>
+<li><p>Depreciation expenses</p></li>
+<li><p>Expenses incurred by purchasing power and other services</p></li>
+</ul>
+</section>
+<section id="return-to-capital">
+<h3>Return to capital<a class="headerlink" href="#return-to-capital" title="Link to this heading"></a></h3>
+<p>The return to capital is the compensation to shareholders and debtholders. It is driven primarily by an
+IOU’s rate base, which consists of the total net plant in service, plus working capital, minus any
+accumulated deferred income taxes, described here:</p>
+<ul class="simple">
+<li><p><strong>Net plant in service</strong>: Every capital asset has a net plant in service dollar value, where “plant” is a
+generic reference to a capital asset. A capital asset’s net plant in service is the original book value of
+the capital asset, minus the accumulated depreciation for that capital asset up to that point. Once a
+capital asset has fully depreciated its book value, it no longer contributes to the rate base.</p>
+<ul>
+<li><p>In  our implementation, the original plant investment, ongoing capitalized maintenance expenses,
+retrofits, and rebuilds are all tracked as separate investments and can have their own depreciation
+schedules if warranted.</p></li>
+</ul>
+</li>
+<li><p><strong>Working capital</strong>: Working capital is the net value of current assets minus current liabilities that
+the utility needs to conduct its operations — for example, the value of on-site fuel stocks and cash
+balances to manage day-to-day expenses.</p>
+<ul>
+<li><p>We estimate the total amount of working capital as the equivalent of 45 days of all operating
+expenses (i.e., 45/365 × annual operating expenses).</p></li>
+</ul>
+</li>
+<li><p><strong>Accumulated deferred income taxes (ADIT)</strong>: ADIT is the total value of any deferred income taxes, e.g.,
+from using a faster depreciation schedule for tax purposes than was used for calculating annual
+depreciation expenses.</p></li>
+</ul>
+<p>We assume that the rate base represents the total amount of capital required by the IOU, which is
+composed of both debt and equity. We calculate how much equity and debt are required according to the
+following equations:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Return</span> <span class="pre">to</span> <span class="pre">equity</span></code> = <code class="docutils literal notranslate"><span class="pre">rate</span> <span class="pre">base</span></code> * <code class="docutils literal notranslate"><span class="pre">equity</span> <span class="pre">fraction</span></code> * <code class="docutils literal notranslate"><span class="pre">equity</span> <span class="pre">rate</span> <span class="pre">of</span> <span class="pre">return</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Return</span> <span class="pre">to</span> <span class="pre">debt</span></code> = <code class="docutils literal notranslate"><span class="pre">rate</span> <span class="pre">base</span></code> * <code class="docutils literal notranslate"><span class="pre">debt</span> <span class="pre">fraction</span></code> * <code class="docutils literal notranslate"><span class="pre">interest</span> <span class="pre">rate</span></code></p></li>
+</ul>
+</section>
+<section id="income-taxes">
+<h3>Income taxes<a class="headerlink" href="#income-taxes" title="Link to this heading"></a></h3>
+<p>In practice, a corporation would calculate their net income to determine their income tax burden. However,
+we make the assumption that the only class of revenue collection that is not exactly offset by an equal
+expense is the return to equity, which greatly simplifies our accounting.</p>
+<p>With this assumption, we start with the year’s calculated return to equity, explained above, and subtract
+any income tax credits claimed that year. Then we use the following equation, where <em>T</em> is the effective
+tax rate, to calculate the additional amount of revenue that would need to be collected and directed
+towards income taxes to maintain the target return to capital while also covering costs:</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">return</span> <span class="pre">to</span> <span class="pre">equity</span></code> - <code class="docutils literal notranslate"><span class="pre">income</span> <span class="pre">tax</span> <span class="pre">credits</span></code>) * (${1 \over 1 - T} - 1$)</p>
+</section>
+</section>
+<section id="cost-components">
+<h2>Cost components<a class="headerlink" href="#cost-components" title="Link to this heading"></a></h2>
+<section id="generation">
+<h3>Generation<a class="headerlink" href="#generation" title="Link to this heading"></a></h3>
+<p>Generation CAPEX is derived from two sources:</p>
+<ul class="simple">
+<li><p>Historical capacity built from 2010–2019 and projected capacity built from 2020–2050 is provided by the ReEDS model, with annual cost assumptions taken from the ATB.</p></li>
+<li><p>Capacity and construction dates before 2010 are taken from the EIA NEMS database. As a simplifying assumption, ReEDS/ATB technology-specific CAPEX cost assumptions for 2010 are applied to all capacity built before 2010</p></li>
+</ul>
+<p>Generation OPEX includes multiple components, all derived from ReEDS model outputs:</p>
+<ul class="simple">
+<li><p>Fixed operations and maintenance (FOM)</p></li>
+<li><p>Fuel</p></li>
+<li><p>Variable operations and maintenance (VOM)</p></li>
+<li><p>Operating reserves</p></li>
+<li><p>Alternative compliance payments (ACP) for state renewable portfolio standards</p></li>
+</ul>
+<p>FOM costs are separated into capitalized and non-capitalized costs, which are treated separately in the
+accounting procedure detailed above. Capitalized costs include, for example, capital assets whose costs are
+recovered through depreciation over time, such as module replacement for a PV plant or boiler replacement
+for a thermal plant. Non-capitalized costs are expenses that are not capital assets, such as maintenance
+labor.</p>
+</section>
+<section id="transmission">
+<h3>Transmission<a class="headerlink" href="#transmission" title="Link to this heading"></a></h3>
+<p>Transmission capacity includes spur lines for wind and solar generators, substations, inter-BA transmission
+lines, and intra-BA transmission.</p>
+<p>Transmission CAPEX is derived from several sources:</p>
+<ul class="simple">
+<li><p>Spur line costs for candidate wind and solar sites are calculated in the Renewable Energy Potential (reV)
+model and used as inputs to ReEDS; spur line costs for constructed sites are then obtained from ReEDS
+outputs.</p></li>
+<li><p>Inter-BA transmission capacity is obtained from ReEDS projections. The cost of each inter-BA line is
+evenly split between the BAs it connects.</p></li>
+<li><p>Inter-BA transmission lines incur an additional, voltage-dependent substation cost, drawing from a supply
+curve of available substation capacity and cost by voltage within each BA.</p></li>
+<li><p>Intra-BA transmission capacity and cost (aside from wind/solar spur lines and substations) are not
+directly modeled in ReEDS. Intra-BA transmission costs are estimated using from the ABB Velocity Suite
+database of Federal Energy Regulatory Commission (FERC) Form 1 responses from 2010–2019.</p></li>
+</ul>
+<p>Existing transmission capacity is assumed to have been built uniformly over the previous 40 years using the
+same cost ($/kW-km) as new transmission in ReEDS.</p>
+<p>Annual transmission OPEX is similarly taken from FERC Form 1 responses.</p>
+</section>
+<section id="distribution-administration">
+<h3>Distribution &amp; Administration<a class="headerlink" href="#distribution-administration" title="Link to this heading"></a></h3>
+<p>Distribution and administration CAPEX are taken from the “Electric Plant in Service” schedule of FERC Form
+1.
+Distribution and administration OPEX are taken from the “Electric Operation and Maintenance Expenses”
+schedule schedule of FERC Form 1.</p>
+<p>The data in FERC Form 1 are not comprehensive; for some states (particularly those with a greater
+proportion of demand served by non-IOU entities), the data reported by IOUs in FERC Form 1 represent a
+small fraction of total retail demand in the state. Therefore, we calculate the ¢/kWh rate contributions
+for distribution CAPEX and OPEX, administration CAPEX and OPEX, and transmission OPEX by aggregating the
+data in FERC Form 1 across IOUs at three different levels of aggregation (state, region, and nation),
+calculating the complete retail rate for each state, and comparing the calculated state retail rate in
+2010–2019 to the historical annual state retail rate reported in EIA Form 861. The aggregation level
+(state, region, or nation) that minimizes the mean bias error (MBE) over 2010–2019 for each state is then
+used when calculating ¢/kWh rate contributions for distribution CAPEX/OPEX, administration CAPEX/OPEX, and
+transmission OPEX.</p>
+</section>
+<section id="interregional-expenditure-flows-and-tax-credits">
+<h3>Interregional expenditure flows and tax credits<a class="headerlink" href="#interregional-expenditure-flows-and-tax-credits" title="Link to this heading"></a></h3>
+<p>Inter-BA flows and accompanying expenses are tracked for energy, operating reserves, planning reserves, and
+RPS credits. Energy flows are also tracked between Canada and adjacent BAs in the US. Inter-regional
+expenditure flows are treated as operating expenditures in the importing BA and credits in the exporting
+BA, increasing the revenue target (and associated retail rate) in the importing BA and reducing the revenue
+target in the exporting BA.</p>
+<p>Federal tax credits reduce generation CAPEX/OPEX expenditures, thereby reducing utility expenditures and
+associated revenue targets and retail rates. The cost to the federal government of these tax incentives is
+not included in the rates reported here.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
