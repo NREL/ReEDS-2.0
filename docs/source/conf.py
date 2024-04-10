@@ -30,13 +30,15 @@ suppress_warnings = [
 
 # get BASE_URL from environment variable
 base_url = os.environ.get('BASE_URL', 'https://github.nrel.gov/ReEDS/ReEDS-2.0')
+github_releases_url = base_url + '/releases'
 
 myst_enable_extensions = [
     "substitution",
 ]
 
 myst_substitutions = {
-    "base_github_url": base_url
+    "base_github_url": base_url,
+    "github_releases_url": github_releases_url
 }
 
 # -- Options for HTML output -------------------------------------------------
