@@ -29,7 +29,7 @@ suppress_warnings = [
 ]
 
 # get BASE_URL from environment variable
-base_url = os.environ.get('BASE_URL', 'github.nrel.gov/ReEDS/ReEDS-2.0')
+base_url = os.environ.get('BASE_URL', 'https://github.nrel.gov/ReEDS/ReEDS-2.0')
 
 myst_enable_extensions = [
     "substitution",
