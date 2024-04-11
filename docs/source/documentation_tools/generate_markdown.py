@@ -36,7 +36,6 @@ if reedsPath != '':
 else: 
     reeds_path = os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
     reeds_path = reeds_path.replace("\\","/")
-#Conversion of latest version of sources.csv to markdown/readme format
 
 #dir_path = get_correct_directory_path(root_folder_name)
 dir_path = current_path.replace("\\","/")
@@ -125,8 +124,9 @@ with open(main_readme_file_path, "w") as main_file:
             file_name, file_ext, rel_file_path = file_data
             #Write file name with relative link
             rel_file_path = rel_file_path.replace(" ", "%20")
-            main_file.write(f"{indent}- [{file_name}{file_ext}]({rel_file_path})\n")
-            
+            main_file.write(f"{indent}- [{file_name}{file_ext}]({githubURL}{rel_file_path})\n")
+
+
             for row in data:
                 if row["RelativeFilePath"] == rel_file_path:
                     description = row["Description_new"]
