@@ -14,6 +14,7 @@ on:
   push:
     branches:
       - update-documentation    
+      
 
 jobs:
   build:
