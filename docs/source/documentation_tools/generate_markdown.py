@@ -10,9 +10,16 @@ import csv
 import pandas as pd
 from datetime import datetime
 import re
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--githubURL', '-g', type=str, default='', help='base github url')
+parser.add_argument('--reedsPath', '-r', type=str, default='', help='path to reeds directory' )
+args = parser.parse_args()
+githubURL = args.githubURL
+reedsPath = args.reedsPath
 
 #Conversion of latest version of sources.csv to markdown/readme format
-
 
 # Description holder file
 desc_holder = 'sources.csv'
@@ -24,8 +31,12 @@ desc_holder = desc_holder.replace("\\","/")
 # current_path = current_path.replace("\\","/")
 # current_path = current_path.replace("/postprocessing/documentation_tools","")
 current_path = os.getcwd()
-reeds_path = os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
-reeds_path = reeds_path.replace("\\","/")
+if reedsPath != '':
+    reeds_path = reedsPath
+else: 
+    reeds_path = os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
+    reeds_path = reeds_path.replace("\\","/")
+#Conversion of latest version of sources.csv to markdown/readme format
 
 #dir_path = get_correct_directory_path(root_folder_name)
 dir_path = current_path.replace("\\","/")
