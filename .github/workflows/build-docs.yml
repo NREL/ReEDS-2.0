@@ -39,9 +39,9 @@ jobs:
       - name: Set variables for public github repo
         run: |
           echo "BASE_URL=https://github.com/NREL/ReEDS-2.0" >> $GITHUB_ENV
-          cd docs/sources/documentation_tools
+          cd ${GITHUB_WORKSPACE}/docs/source/documentation_tools/
           sh generate_sources_md_file.sh
-          cd ../../../
+          cd ${GITHUB_WORKSPACE}
           python docs/source/documentation_tools/generate_markdown.py --githubURL "https://github.com/NREL/ReEDS-2.0/blob/main" --reedsPath "${GITHUB_WORKSPACE}"
 
       - name: Build Sphinx documentation
