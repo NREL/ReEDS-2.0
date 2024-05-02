@@ -146,8 +146,8 @@ GSw_PVB,0
 GSw_PVB_BIR,25_50_100
 GSw_PVB_Dur,4
 GSw_PVB_ILR,140_220_220
-GSw_PVB_ITC_Qual_Award,0
-GSw_PVB_ITC_Qual_Constraint,0
+GSw_PVB_BatteryITC,0
+GSw_PVB_Charge_Constraint,0
 GSw_PVB_Types,1
 GSw_RECT,1
 GSw_RECTupgrade,1

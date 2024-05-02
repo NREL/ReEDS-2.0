@@ -15,7 +15,7 @@ import datetime
 ### --- FUNCTIONS ---
 ### ===========================================================================
 
-def calc_financial_inputs(reeds_path, inputs_case):
+def calc_financial_inputs(inputs_case):
     """
     Write the following files to runs/{batch_case}/inputs_case/:
     - ivt.csv
@@ -49,36 +49,30 @@ def calc_financial_inputs(reeds_path, inputs_case):
         os.path.join(inputs_case,'scalars.csv'),
         header=None, names=['scalar','value','comment'], index_col='scalar')['value']
     
-    input_dir = os.path.join(reeds_path, 'inputs')
-    
     #%% Import some general data and maps
 
     # Import inflation (which includes both historical and future inflation). 
     # Used for adjusting currency inputs to the specified dollar year, and financial calculations. 
-    inflation_df = pd.read_csv(os.path.join(
-        input_dir, 'financials', 'inflation_%s.csv' % sw['inflation_suffix']))
+    inflation_df = pd.read_csv(os.path.join(inputs_case,'inflation.csv'))
 
     # Import tech groups. Used to expand data inputs 
     # (e.g., 'UPV' expands to all of the upv subclasses, like upv_1, upv_2, etc)
-    tech_groups = sFuncs.import_tech_groups(os.path.join(input_dir, 'tech-subset-table.csv'))
+    tech_groups = sFuncs.import_tech_groups(os.path.join(inputs_case, 'tech-subset-table.csv'))
 
     # Set up scen_settings object
     scen_settings = sFuncs.scen_settings(
-        dollar_year=int(sw['dollar_year']), tech_groups=tech_groups, input_dir=input_dir,
+        dollar_year=int(sw['dollar_year']), tech_groups=tech_groups, inputs_case=inputs_case,
         sw=sw)
 
 
     #%% Ingest data, determine what regions have been specified, and build df_ivt
     # Build df_ivt (for calculating various parameters at subscript [i,v,t])
 
-    techs = pd.read_csv(
-        os.path.join(input_dir, 'techs', 'techs_%s.csv' % sw['techs_suffix']))
+    techs = pd.read_csv(os.path.join(inputs_case,'techs.csv'))
     techs = sFuncs.expand_GAMS_tech_groups(techs)
     vintage_definition = pd.read_csv(os.path.join(inputs_case, 'ivt.csv')).rename(columns={'Unnamed: 0':'i'})
 
-    annual_degrade = pd.read_csv(
-        os.path.join(input_dir,'degradation',
-                     'degradation_annual_%s.csv' % sw['degrade_suffix']),
+    annual_degrade = pd.read_csv(os.path.join(inputs_case,'degradation_annual.csv'),
         header=None, names=['i','annual_degradation'])
     annual_degrade = sFuncs.expand_GAMS_tech_groups(annual_degrade)
     ### Assign the PV+battery values to values for standalone batteries
@@ -88,8 +82,6 @@ def calc_financial_inputs(reeds_path, inputs_case):
 
     years, modeled_years, year_map = sFuncs.ingest_years(
         inputs_case, sw['sys_eval_years'], sw['endyear'])
-
-    val_r_all = pd.read_csv(os.path.join(inputs_case,'val_r_all.csv'), header = None)[0].tolist()
 
     df_ivt = sFuncs.build_dfs(years, techs, vintage_definition, year_map)
     print('df_ivt created for', inputs_case)
@@ -127,7 +119,7 @@ def calc_financial_inputs(reeds_path, inputs_case):
         dfin=financials_tech, 
         tech_to_copy='battery_{}'.format(scen_settings.sw['GSw_PVB_Dur']))
     # If the battery in PV+B gets the ITC, it gets 5-year MACRS depreciation as well
-    if float(scen_settings.sw['GSw_PVB_ITC_Qual_Award']) >= 0.75:
+    if float(scen_settings.sw['GSw_PVB_BatteryITC']) >= 0.75:
         financials_tech.loc[
             financials_tech.i.str.startswith('pvb') & (financials_tech.country == 'usa'),
             'depreciation_sch'
@@ -213,12 +205,8 @@ def calc_financial_inputs(reeds_path, inputs_case):
 
     #%%
     # Import schedules for financial calculations
-    construction_schedules = pd.read_csv(os.path.join(
-        input_dir, 'financials', 
-        'construction_schedules_%s.csv' % sw['construction_schedules_suffix']))
-    depreciation_schedules = pd.read_csv(os.path.join(
-        input_dir, 'financials', 
-        'depreciation_schedules_%s.csv' % sw['depreciation_schedules_suffix']))
+    construction_schedules = pd.read_csv(os.path.join(inputs_case,'construction_schedules.csv'))
+    depreciation_schedules = pd.read_csv(os.path.join(inputs_case,'depreciation_schedules.csv'))
 
     ### Calculate financial multipliers
     print('Calculating financial multipliers for', inputs_case, '...')
@@ -228,11 +216,7 @@ def calc_financial_inputs(reeds_path, inputs_case):
 
     #%%### Calculate financial multipliers for transmission
     ### Load transmission data
-    dftrans = pd.read_csv(
-        os.path.join(
-            input_dir, 'financials',
-            'financials_transmission_{}.csv'.format(sw['financials_trans_suffix'])),
-    )
+    dftrans = pd.read_csv(os.path.join(inputs_case,'financials_transmission.csv'))
     ### Get transmission capital recovery period (CRP) from input scalars
     dftrans['eval_period'] = int(scalars['trans_crp'])
     ### Get online year
@@ -274,11 +258,7 @@ def calc_financial_inputs(reeds_path, inputs_case):
 
     #%%### Calculate financial multipliers for hydrogen network investments
     ### Load hydroge data
-    dfhydrogen = pd.read_csv(
-        os.path.join(
-            input_dir, 'financials',
-            'financials_hydrogen.csv'),
-    )
+    dfhydrogen = pd.read_csv(os.path.join(inputs_case,'financials_hydrogen.csv'))
     ### Get hydrogen capital recovery period (CRP) from input scalars
     # note that pipelines and compressors have different lifetimes
     dfhydrogen['eval_period_pipeline'] = int(scalars['h2_crp_pipeline'])
@@ -330,19 +310,22 @@ def calc_financial_inputs(reeds_path, inputs_case):
     #%%
     # Import regional capital cost multipliers, create multipliers for csp configurations
     reg_cap_cost_mult = sFuncs.import_data(
-        file_root=f'reg_cap_cost_mult', file_suffix=sw['reg_cap_cost_mult_suffix'], 
+        file_root='reg_cap_cost_mult', file_suffix=sw['reg_cap_cost_mult_suffix'], 
         indices=['i','r'], scen_settings=scen_settings)
-     
+    
     # Apply the values for standalone batteries to PV+B batteries
     reg_cap_cost_mult = sFuncs.append_pvb_parameters(
         dfin=reg_cap_cost_mult, 
         tech_to_copy=f'battery_{scen_settings.sw["GSw_PVB_Dur"]}')
 
+    # Initialize a copy of reg_cap_cost_mult that only include CSP data
     reg_cap_cost_mult_csp = reg_cap_cost_mult[reg_cap_cost_mult['i'].str.contains('csp1_')].copy()
     # Read in techs subset table to determine number of csp configurations
-    tech_subset_table = pd.read_csv(os.path.join(input_dir, 'tech-subset-table.csv'))
+    tech_subset_table = pd.read_csv(os.path.join(inputs_case, 'tech-subset-table.csv'))
     csp_configs =  int(len(tech_subset_table.query('CSP == "YES" and STORAGE == "YES"')))
     del tech_subset_table
+    # Iteratively copy and concat CSP data to reg_cap_cost_mult dataframe for each additional
+    # CSP configurations
     for i in range(2, csp_configs + 1):
         configuration = 'csp' + str(i)
         mult_temp = reg_cap_cost_mult_csp.copy()
@@ -351,9 +334,8 @@ def calc_financial_inputs(reeds_path, inputs_case):
         del mult_temp
     del reg_cap_cost_mult_csp
     
-    # Trim down to just the techs and regions in this run
+    # Trim down to just the techs in this run
     reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['i'].isin(list(techs['i']))]
-    reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['r'].isin(val_r_all)]
 
 
     #%% Before writing outputs, change "x" to "newx" in [v]
@@ -435,26 +417,6 @@ def calc_financial_inputs(reeds_path, inputs_case):
     # pvf_cap (used in both seq and int modes)
     sFuncs.inv_param_exporter(df_ivt, modeled_years, 'pvf_capital', ['t'], 'pvf_cap', inputs_case)
 
-    # Copy input files into inputs_case
-    depreciation_schedules.to_csv(
-        os.path.join(inputs_case, 'depreciation_schedules.csv'), index=False)
-    inflation_df.to_csv(os.path.join(inputs_case, 'inflation.csv'), index=False)
-
-    # Copy construction_times into inputs_case
-    pd.read_csv(
-        os.path.join(input_dir, 'financials', 
-                     'construction_times_%s.csv' % sw['construction_times_suffix'])
-    ).to_csv(
-        os.path.join(inputs_case, 'construction_times.csv'), index=False)
-
-    # Copy tc_phaseout_schedule into inputs_case
-    pd.read_csv(
-        os.path.join(input_dir, 'financials', 
-                     'tc_phaseout_schedule_%s.csv' % sw['GSw_TCPhaseout_schedule'])
-    ).to_csv(
-        os.path.join(inputs_case, 'tc_phaseout_schedule.csv'), index=False)
-
-
     # Output some values used in the retail rate module
     retail_eval_period = df_ivt[['i', 't', 'eval_period']].drop_duplicates(['i', 't'])
     retail_depreciation_sch = df_ivt[
@@ -495,7 +457,7 @@ if __name__ == '__main__':
     #%% Run it
     tic = datetime.datetime.now()
 
-    calc_financial_inputs(reeds_path, inputs_case)
+    calc_financial_inputs(inputs_case)
 
     toc(tic=tic, year=0, process='input_processing/calc_financial_inputs.py', 
         path=os.path.join(inputs_case,'..'))

@@ -8,20 +8,6 @@ from datetime import datetime
 # Third-party packages
 import pandas as pd
 
-DEFAULT_SET_MAP = {
-    "i": "tech",
-    "v": "tech_class",
-    "r": "region",
-    "*r": "region",
-    "*szn": "season",
-    "t": "year",
-    "*t": "year",
-    "allh": "h",
-    "allt": "year",
-    "f": "fuel",
-    "e": "pollutant",
-}
-
 
 def get_missing_columns(fpath: str, column_names: list) -> list:
     """List of missing columns from a csv file.
@@ -39,7 +25,6 @@ def get_missing_columns(fpath: str, column_names: list) -> list:
         df = (
             pd.read_csv(fpath, nrows=0)
             .rename(columns=str.lower)
-            .rename(columns=DEFAULT_SET_MAP)
         )
     except pd.errors.EmptyDataError:
         raise ValueError(f"Required file for R2X: {fpath} is empty!")
@@ -48,44 +33,17 @@ def get_missing_columns(fpath: str, column_names: list) -> list:
 
 
 def get_missing_files(
-    project_folder: str, file_list: Iterable, max_depth: int = 2
+    file_list: Iterable[os.PathLike]
 ) -> list:
-    """List missing required files from project folder.
-
-    This function looks recursively in the project folder. For safety we only
-    look 2 levels of folders
+    """Get missing files from reeds inputs_case/outputfolder.
 
     Args:
-        project_folder: Folder to look for the files
-        file_list: Iterable of files to check
-        max_depth: Level of subfolders to look.
+        file_list: Iterable object that contains Path's to check.
 
     Returns:
-        A list with the missing files or empty list
+        A list with the missing files or an empty list
     """
-    all_files = set()
-
-    # Initialize stack with the project folder and depth 0
-    input_folder = os.path.join(project_folder, "inputs_case")
-    output_folder = os.path.join(project_folder, "outputs")
-    stack: list[tuple[str, int]] = [(input_folder, 0), (output_folder, 0)]
-
-    while stack:
-        current_folder, current_depth = stack.pop()
-
-        if current_depth > max_depth:
-            continue
-
-        for root, dirs, dir_files in os.walk(current_folder):
-            for file_name in dir_files:
-                file_path = os.path.join(root, file_name)
-                all_files.add(os.path.basename(file_path))
-
-            for folder in dirs:
-                next_folder = os.path.join(root, folder)
-                stack.append((next_folder, current_depth + 1))
-    missing_files = [f for f in file_list if os.path.basename(f) not in all_files]
-    return missing_files
+    return [f for f in file_list if not os.path.exists(f)]
 
 
 #%% Imports

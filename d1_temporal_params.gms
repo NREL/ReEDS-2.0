@@ -147,13 +147,12 @@ nextszn(actualszn,actualsznn)
 $onOrder
 
 
-* hours are not defined for stress periods, which keeps them out of the operations
-* portion of the objective function, RPS/CES/emissions constraints, gas use, etc
 parameter hours(allh) "--hours-- number of hours in each time block"
 /
 $offlisting
 $ondelim
 $include inputs_case%ds%numhours.csv
+$include inputs_case%ds%stress%stress_year%%ds%numhours.csv
 $offdelim
 $onlisting
 / ;
@@ -473,7 +472,7 @@ m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)] = round(m_cf(i,v,r,h,t),3) ;
 m_capacity_exog(i,v,r,t)$[initv(v)$cf_tech(i)$(not sum{h, m_cf(i,v,r,h,t) })] = 0 ;
 
 * Average CF by season
-m_cf_szn(i,v,r,szn,t)$[cf_tech(i)$valcap(i,v,r,t)$szn_rep(szn)] =
+m_cf_szn(i,v,r,szn,t)$[cf_tech(i)$valcap(i,v,r,t)$(hydro_d(i) or hyd_add_pump(i))] =
     sum{h$h_szn(h,szn), hours(h) * m_cf(i,v,r,h,t) }
     / sum{h$h_szn(h,szn), hours(h) } ;
 
@@ -576,7 +575,7 @@ $offdelim
 $onlisting
 / ;
 
-parameter dr_inc(i,r,allh) "--unitless-- average capacity factor for dr reduction in load in timeslice h"
+parameter dr_increase(i,r,allh) "--unitless-- average capacity factor for dr reduction in load in timeslice h"
 /
 $offlisting
 $ondelim
@@ -585,7 +584,7 @@ $offdelim
 $onlisting
 / ;
 
-parameter dr_dec(i,r,allh) "--unitless-- average capacity factor for dr increase in load in timeslice h"
+parameter dr_decrease(i,r,allh) "--unitless-- average capacity factor for dr increase in load in timeslice h"
 /
 $offlisting
 $ondelim

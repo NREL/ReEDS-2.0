@@ -328,7 +328,14 @@ def main(t, casedir):
         gdxreeds['h_szn'].drop('Value', axis=1)
         .merge(gdxreeds['hours'], on='allh').groupby('allszn').Value.sum())
     ## Make sure the number of hours makes sense
-    assert int(np.around(sznhours.sum(), 0)) % 8760 == 0
+    if (
+        ((int(np.around(sznhours.sum(), 0)) % 8760) and int(sw.GSw_PRM_CapCredit))
+        or ((int(np.around(sznhours.sum(), 0)) % 8766) and not int(sw.GSw_PRM_CapCredit))
+    ):
+        raise ValueError(
+            f"sznhours.sum() = {sznhours.sum()} but should be divisible by 8760 "
+            "when using capacity credit and by 8766 when using stress periods"
+        )
     ## [MWh] / [h] = [MW] (average)
     can_imports_avemw_rszn = (
         gdxreeds['can_imports_szn_filt'].pivot(index='allszn',columns='r',values='Value')

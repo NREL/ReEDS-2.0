@@ -161,7 +161,7 @@ h2_usage_regional(r,h,t) =
     )
 ;
 
-fuel_price_filt(i,r)$[Sw_H2$h2_ct(i)$(sum{t$tcur(t),yeart(t) } >= Sw_H2_Demand_Start)$cap_exist_ir(i,r)] = 
+fuel_price_filt(i,r)$[Sw_H2$h2_ct(i)$(sum{t$tcur(t),yeart(t) } >= h2_demand_start)$cap_exist_ir(i,r)] = 
     sum{t$tcur(t),
         (1 / cost_scale) * (1 / pvf_onm(t)) * h2_ct_intensity * (
             eq_h2_demand.m('h2',t)$[Sw_H2=1]
@@ -357,8 +357,6 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     degrade_annual
     dr1
     dr2
-    dr_inc
-    dr_dec
     evmc_shape
     evmc_storage
     evmc_shape_gen

@@ -1,4 +1,4 @@
-*county,ba,nercr,transreg,transgrp,cendiv,st,interconnect,st_interconnect,country,usda_region,aggreg,county_name
+county,ba,nercr,transreg,transgrp,cendiv,st,interconnect,st_interconnect,country,usda_region,aggreg,county_name
 p53007,p1,WECC_NWPP,NorthernGrid,NorthernGrid_West,PA,WA,western,WA,USA,pacific,WA,chelan
 p53029,p1,WECC_NWPP,NorthernGrid,NorthernGrid_West,PA,WA,western,WA,USA,pacific,WA,island
 p53033,p1,WECC_NWPP,NorthernGrid,NorthernGrid_West,PA,WA,western,WA,USA,pacific,WA,king

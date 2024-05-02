@@ -134,10 +134,10 @@ sdbin_size(ccreg,ccseason,sdbin,t)$tload(t) = sdbin_size_load(ccreg,ccseason,sdb
 * --- Assign hybrid PV+battery capacity credit ---
 $ontext
 Limit the capacity credit of hybrid PV such that the total capacity credit from the PV and the battery do not exceed the inverter limit.
-  Example: PV = 130 MWdc, Battery = 65MW, Inverter = 100 MW (PVdc/Battery=0.5; PVdc/INVac=1.3)
-  Assuming the capacity credit of the Battery is 65MW, then capacity credit of the PV is limited to 35MW or 0.269 (35MW/130MW) on a relative basis.
-  Max capacity credit PV [MWac/MWdc] = (Inverter - Battery capcity credit) / PV_dc
-                                     = (P_dc / ILR - P_dc * BCR) / PV_dc
+  Example: PV = 130 MWdc, Battery = 65 MW, Inverter = 100 MW (PVdc/Battery=0.5; PVdc/INVac=1.3)
+  Assuming the capacity credit of the Battery is 65 MW, then capacity credit of the PV is limited to 35 MW or 0.269 (35MW/130MW) on a relative basis.
+  Max capacity credit PV [MWac/MWdc] = (Inverter - Battery capacity credit) / PV_dc
+                                     = (PV_dc / ILR - PV_dc * BCR) / PV_dc
                                      = 1/ILR - BCR
 $offtext
 * marginal capacity credit
@@ -339,7 +339,62 @@ $endif.debug
 * ------------------------------
 
 solve ReEDSmodel minimizing z using lp ;
+tsolved(t)$tmodel(t) = yes ;
 
+if(Sw_NewValCapShrink = 1,
+
+* remove newv dimensions for technologies that do not have capacity in this year
+* and if it is not a vintage you can build in future years 
+* and if the plant has not been upgraded
+* note since we're applying this only to new techs the upgrades portion 
+* needs to be present in combination with the ability to be built in future periods
+* said differently, we want to make sure the vintage cannot be built in future periods,
+* it hasn't been built yet, and it has no associated upgraded units
+* here the second year index tracks which year has just solved
+    valcap_remove(i,v,r,t,"%cur_year%")$[newv(v)$valcap(i,v,r,t)$ivt(i,v,"%cur_year%")
+* if there is no capacity..
+                       $(not CAP.l(i,v,r,"%cur_year%"))
+* if you have not invested in it..
+                       $(not sum(tt$[(yeart(tt)<=%cur_year%)], INV.l(i,v,r,tt) ))
+* if you cannot invest in the ivt combo in future years..
+                       $(not sum{tt$[tt.val>%cur_year%],ivt(i,v,tt)})
+                       $(not sum(tt$[valinv(i,v,r,tt)$(yeart(tt)>%cur_year%)],1))
+* if it has not been upgraded..
+* note the newv condition above allows for the capacity equations
+* of motion to still function - this would/does not work for initv vintanges without additional work
+                       $(not sum{(tt,ii)$[tsolved(tt)$upgrade_from(ii,i)$valcap(ii,v,r,tt)], 
+                                UPGRADES.l(ii,v,r,tt)})
+                       ] = yes ;
+    valcap(i,v,r,t)$valcap_remove(i,v,r,t,"%cur_year%") = no ;
+    valgen(i,v,r,t)$valcap_remove(i,v,r,t,"%cur_year%") = no ;
+    valinv(i,v,r,t)$valcap_remove(i,v,r,t,"%cur_year%") = no ;
+    inv_cond(i,v,r,t,"%cur_year%")$valcap_remove(i,v,r,t,"%cur_year%") = no ;
+    valcap_irt(i,r,t) = sum{v, valcap(i,v,r,t) } ;
+    valcap_iv(i,v)$sum{(r,t)$tmodel_new(t), valcap(i,v,r,t) } = yes ;
+    valcap_i(i)$sum{v, valcap_iv(i,v) } = yes ;
+    valcap_ivr(i,v,r)$sum{t, valcap(i,v,r,t) } = yes ;
+    valgen_irt(i,r,t) = sum{v, valgen(i,v,r,t) } ;
+    valinv_irt(i,r,t) = sum{v, valinv(i,v,r,t) } ;
+    valinv_tg(st,tg,t)$sum{(i,r)$[tg_i(tg,i)$r_st(r,st)], valinv_irt(i,r,t) } = yes ;
+
+) ; 
+
+
+
+$ontext
+* the removal of these computed sets would be more complete
+* but the vintage-agnostic approach does not allow for their proper representation
+* -however- these only apply as constraint generation conditions and
+* will not create free/unbounded variables within the model
+
+    valinv_irt(i,r,t)$[valinv_irt(i,r,t)$
+                      sum{v, valcap_remove(i,v,r,t,"%cur_year%")}] = no ;
+
+    valinv_tg(st,tg,t)$[valinv_tg(st,tg,t)
+                       $sum{(i,v,r)$[tg_i(tg,i)$r_st(r,st)], 
+                        valcap_remove(i,v,r,t,"%cur_year%")}] = no ;
+
+$offtext
 *record objective function values right after solve
 z_rep(t)$tmodel(t) = Z.l ;
 z_rep_inv(t)$tmodel(t) = Z_inv.l(t) ;

@@ -2,18 +2,21 @@
 ### --- IMPORTS ---
 ### ===========================================================================
 import os
-import sys
-import math
-import argparse
+import site
 import logging
+import pandas as pd
+import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib import patheffects as pe
+import geopandas as gpd
+import cmocean
+
+import hourly_repperiods
+
 ## Turn off logging for imported packages
 for i in ['matplotlib']:
     logging.getLogger(i).setLevel(logging.CRITICAL)
-import json
-import pandas as pd
-import numpy as np
-from LDC_prep import read_file
-import hourly_repperiods
 
 #%%#################
 ### FIXED INPUTS ###
@@ -26,9 +29,6 @@ interactive = False
 def plot_unclustered_periods(profiles, sw, reeds_path, figpath):
     """
     """
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    import site
     site.addsitedir(os.path.join(reeds_path,'postprocessing'))
     import plots
     plots.plotparams()
@@ -60,7 +60,8 @@ def plot_unclustered_periods(profiles, sw, reeds_path, figpath):
         ax[0].set_xlim(0, nhours)
         plots.despine(ax)
         plt.savefig(os.path.join(figpath,'profiles-day_hourly-{}.png'.format(label)))
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
         plt.close()
 
     ### Sequential days, unscaled and scaled
@@ -77,7 +78,8 @@ def plot_unclustered_periods(profiles, sw, reeds_path, figpath):
             ax[row].set_title('{} {}'.format(p,r),x=0.01,ha='left',va='top',pad=0)
         plots.despine(ax)
         plt.savefig(os.path.join(figpath,'profiles-year_hourly-{}.png'.format(label)))
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
         plt.close()
         ### Daily
         plt.close()
@@ -88,7 +90,8 @@ def plot_unclustered_periods(profiles, sw, reeds_path, figpath):
             ax[row].set_title('{} {}'.format(p,r),x=0.01,ha='left',va='top',pad=0)
         plots.despine(ax)
         plt.savefig(os.path.join(figpath,'profiles-year_daily-{}.png'.format(label)))
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -96,7 +99,6 @@ def plot_feature_scatter(profiles_fitperiods, reeds_path, figpath):
     """
     """
     import matplotlib.pyplot as plt
-    import matplotlib as mpl
     import site
     site.addsitedir(os.path.join(reeds_path,'postprocessing'))
     import plots
@@ -127,92 +129,8 @@ def plot_feature_scatter(profiles_fitperiods, reeds_path, figpath):
 
     plots.despine(ax)
     plt.savefig(os.path.join(figpath,'feature_scatter.png'))
-    if interactive: plt.show()
-    plt.close()
-
-
-def plot_clustered_days(
-        profiles_fitperiods_hourly, profiles, rep_periods,
-        forceperiods, sw, reeds_path, figpath):
-    """
-    """
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    import site
-    site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-    import plots
-    plots.plotparams()
-
-    ### Input processing
-    numclusters = int(sw['GSw_HourlyNumClusters'])
-    centroids = profiles.loc[rep_periods]
-    properties = profiles_fitperiods_hourly.columns.get_level_values('property').unique()
-    nhours = (len(profiles_fitperiods_hourly.columns.get_level_values('region').unique())
-              * (24 if sw['GSw_HourlyType']=='day' else 120))
-    ### Plot it
-    plt.close()
-    f,ax = plt.subplots(
-        len(properties), numclusters+len(forceperiods),
-        sharey='row', sharex=True, figsize=(nhours/12*numclusters/3,6))
-    for row, prop in enumerate(properties):
-        for col in range(numclusters):
-            profiles_fitperiods_hourly.loc[:,idx==col,:][prop].T.reset_index(drop=True).plot(
-                ax=ax[row,col], lw=0.2, legend=False)
-            centroids[prop].T[col].reset_index(drop=True).plot(
-                ax=ax[row,col], lw=1.5, ls=':', c='k', legend=False)
-            profiles_fitperiods_hourly.loc[:,nearest_period[col],:][prop].T.reset_index(drop=True).plot(
-                ax=ax[row,col], lw=1.5, c='k', legend=False)
-        for col, period in enumerate(forceperiods):
-            profiles.loc[:,period,:][prop].T.reset_index(drop=True).plot(
-                ax=ax[row,numclusters+col], lw=1.5, c='k', legend=False)
-            ax[0,numclusters+col].set_title('{} (d{})'.format(numclusters+col, period))
-        ax[row,0].set_ylabel(prop)
-    ### Formatting
-    label = ' | '.join(
-        profiles.columns.get_level_values('region').drop_duplicates().tolist())
-    ax[0,0].annotate(label,(0,1.25), xycoords='axes fraction', fontsize='large',)
-    ax[0,0].xaxis.set_major_locator(mpl.ticker.MultipleLocator(24))
-    ax[0,0].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(6))
-    ax[0,0].set_xlim(0, nhours)
-    for col in range(numclusters):
-        ax[0,col].set_title('{} ({})'.format(col, pd.Series(idx).value_counts()[col]))
-        ax[-1,col].tick_params(axis='x',labelsize=9)
-    for row in range(len(properties)):
-        ax[row,0].set_ylim(0)
-        for col in range(numclusters+len(forceperiods)):
-            for x in np.arange(0,nhours+1,24):
-                ax[row,col].axvline(x,c='k',ls=':',lw=0.3)
-    plots.despine(ax)
-    plt.savefig(os.path.join(figpath,'profiles-day_hourly-clustered.png'))
-    if interactive: plt.show()
-    plt.close()
-
-
-def plot_clusters_pca(profiles_fitperiods_hourly, sw, reeds_path, figpath):
-    """
-    """
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    import site
-    site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-    import plots
-    plots.plotparams()
-    import sklearn.decomposition
-
-    pca = sklearn.decomposition.PCA(n_components=2)
-    transformed = pd.DataFrame(pca.fit_transform(profiles_fitperiods_hourly))
-    colors = plots.rainbowmapper(range(int(sw['GSw_HourlyNumClusters'])))
-
-    plt.close()
-    f,ax = plt.subplots()
-    for y in colors:
-        ax.scatter(
-            transformed[0][idx==y], transformed[1][idx==y],
-            color=colors[y], lw=0, s=10)
-    plots.despine(ax)
-    plt.savefig(os.path.join(figpath,'clusters-pca-{}totaldays.png'.format(
-        sw['GSw_HourlyNumClusters'])))
-    if interactive: plt.show()
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -221,14 +139,9 @@ def plot_ldc(
         forceperiods_write, sw, reeds_path, figpath):
     """
     """
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    import site
     site.addsitedir(os.path.join(reeds_path,'postprocessing'))
     import plots
     plots.plotparams()
-
-    colors = plots.rainbowmapper(rep_periods, plt.cm.turbo)
 
     ### Get clustered load, repeating representative periods based on how many
     ### periods they represent
@@ -318,7 +231,8 @@ def plot_ldc(
         plots.despine(ax)
         plt.savefig(os.path.join(figpath,'ldc-{}-{}totaldays.png'.format(
             plotlabel, sw['GSw_HourlyNumClusters'])))
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -326,38 +240,38 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     """
     """
     ### Imports
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    import site
-    import geopandas as gpd
-    import shapely
     site.addsitedir(os.path.join(reeds_path,'postprocessing'))
     import plots
+    import reedsplots
     plots.plotparams()
     ### Settings
     cmaps = {
-        'cf_full':'turbo', 'cf_hourly':'turbo', 'cf_diff':'bwr',
-        'GW_full':'gist_earth_r', 'GW_hourly':'gist_earth_r',
-        'GW_diff':'bwr', 'GW_frac':'bwr', 'GW_pct':'bwr', 
+        'cf_actual':plt.cm.turbo, 'cf_rep':plt.cm.turbo, 'cf_diff':plt.cm.RdBu_r,
+        'GW_full':cmocean.cm.rain, 'GW_hourly':cmocean.cm.rain,
+        'GW_diff':plt.cm.RdBu_r, 'GW_frac':plt.cm.RdBu_r, 'GW_pct':plt.cm.RdBu_r, 
     }
     vm = {
-        'wind-ons':{'cf_full':(0,0.8),'cf_hourly':(0,0.8),'cf_diff':(-0.05,0.05)},
-        'upv':{'cf_full':(0,0.4),'cf_hourly':(0,0.4),'cf_diff':(-0.05,0.05)},
+        'wind-ons':{'cf_actual':(0,0.6),'cf_rep':(0,0.6),'cf_diff':(-0.05,0.05)},
+        'upv':{'cf_actual':(0,0.3),'cf_rep':(0,0.3),'cf_diff':(-0.05,0.05)},
     }
     vlimload = 0.05
     title = (
-        'Algorithm={}, NumClusters={}, RegionLevel={},\n'
-        'PeakLevel={}, MinRElevel={}, ClusterWeights={}'
+        '{}\n'
+        'Algorithm={}, NumClusters={}, RegionLevel={}, ClusterWeights={}'
     ).format(
+        os.path.abspath(os.path.join(inputs_case,'..')),
         sw['GSw_HourlyClusterAlgorithm'],
         sw['GSw_HourlyNumClusters'], sw['GSw_HourlyClusterRegionLevel'],
-        sw['GSw_HourlyPeakLevel'], sw['GSw_HourlyMinRElevel'],
         '__'.join(['_'.join([
             str(i),str(v)]) for (i,v) in sw['GSw_HourlyClusterWeights'].items()]))
     techs = ['wind-ons','upv']
-    colors = {'cf_full':'k', 'cf_hourly':'C1'}
-    lss = {'cf_full':':', 'cf_hourly':'-'}
-    zorders = {'cf_full':10, 'cf_hourly':9}
+    colors = {'cf_actual':'k', 'cf_rep':'C1'}
+    lss = {'cf_actual':':', 'cf_rep':'-'}
+    zorders = {'cf_actual':10, 'cf_rep':9}
+
+    hierarchy = pd.read_csv(
+        os.path.join(inputs_case, 'hierarchy.csv')).rename(columns={'*r':'r'}).set_index('r')
+    dfmap = reedsplots.get_dfmap(os.path.abspath(os.path.join(inputs_case,'..')))
 
     ### Get the CF data over all years, take the mean over weather years
     recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5'))
@@ -373,10 +287,6 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
         recf.index.map(lambda x: x.year in sw.GSw_HourlyWeatherYears)
     ].mean()
 
-    # ReEDS only supports a single entry for agglevel right now, so use the
-    # first value from the list (copy_files.py already ensures that only one
-    # value is present)
-    # The 'lvl' variable ensures that BA and larger spatial aggregations use BA data and methods
     agglevel = pd.read_csv(
         os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
     lvl = 'ba' if agglevel in ['ba','state','aggreg'] else 'county'
@@ -404,14 +314,12 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     dfsc['longitude'] = dfsc.sc_point_gid.map(sitemap.longitude)
     dfsc = plots.df2gdf(dfsc)
     dfsc['resource'] = dfsc.i + '_' + dfsc.r
-    dfsc['cf_full'] = dfsc.resource.map(recf)
+    dfsc['cf_actual'] = dfsc.resource.map(recf)
 
     ### Get the BA map
     dfba = gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','US_PCA')).set_index('rb')
     dfba['x'] = dfba.geometry.centroid.x
     dfba['y'] = dfba.geometry.centroid.y
-    ### Aggregate to states
-    dfstates = dfba.dissolve('st')
 
     ### Get the hourly data
     hours = pd.read_csv(
@@ -425,41 +333,101 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
             index=['i','r'],columns='h',values='cf')
         cf_hourly = (
             (cf_hourly * cf_hourly.columns.map(hours)).sum(axis=1) / hours.sum()
-        ).rename('cf_hourly').reset_index()
+        ).rename('cf_rep').reset_index()
         cf_hourly['resource'] = cf_hourly.i + '_' + cf_hourly.r
 
         ### Merge with supply curve, take the difference
         cfmap = dfsc.assign(
-            cf_hourly=dfsc.resource.map(cf_hourly.set_index('resource').cf_hourly)).loc[tech].copy()
-        cfmap['cf_diff'] = cfmap.cf_hourly - cfmap.cf_full
+            cf_rep=dfsc.resource.map(cf_hourly.set_index('resource').cf_rep)).loc[tech].copy()
+        cfmap['cf_diff'] = cfmap.cf_rep - cfmap.cf_actual
+
+        ### Calculate the difference at different resolutions
+        levels = ['r', 'st', 'transgrp', 'transreg', 'interconnect', 'country']
+        dfdiffs = {}
+        for col in levels:
+            if col != 'r':
+                cfmap[col] = cfmap.r.map(hierarchy[col])
+            dfdiffs[col] = dfmap[col].copy()
+            df = cfmap.copy()
+            for i in ['cf_actual','cf_rep']:
+                df['weighted'] = cfmap[i] * cfmap.capacity
+                dfdiffs[col][i] = (
+                    df.groupby(col).weighted.sum() / df.groupby(col).capacity.sum()
+                )
+            dfdiffs[col]['cf_diff'] = dfdiffs[col].cf_rep - dfdiffs[col].cf_actual
 
         ### Plot the difference map
+        nrows, ncols, coords = plots.get_coordinates([
+            'cf_actual', 'cf_rep', 'cf_diff',
+            'r', 'st', 'transgrp',
+            'transreg', 'interconnect', 'country',
+        ], aspect=1)
+
         plt.close()
-        f,ax = plt.subplots(1,3,figsize=(13,4),gridspec_kw={'wspace':-0.05})
-        for col in range(3):
-            dfstates.plot(ax=ax[col], facecolor='none', edgecolor='k', lw=0.25, zorder=10000)
-        for x,col in enumerate(['cf_full','cf_hourly','cf_diff']):
+        f,ax = plt.subplots(
+            nrows, ncols, figsize=(14,9), gridspec_kw={'wspace':-0.05, 'hspace':0},
+        )
+        ## Absolute and site difference
+        for col in ['cf_actual','cf_rep','cf_diff']:
             cfmap.plot(
-                ax=ax[x], column=col, cmap=cmaps[col],
-                marker='s', markersize=0.4, lw=0, legend=True,
-                legend_kwds={'shrink':0.75,'orientation':'horizontal',
-                            'label':'{} {}'.format(tech,col), 'pad':0},
+                ax=ax[coords[col]], column=col, cmap=cmaps[col],
+                marker='s', markersize=0.35, lw=0,
+                legend=False,
                 vmin=vm[tech][col][0], vmax=vm[tech][col][1],
             )
-            ax[x].axis('off')
-        ax[0].set_title(title, y=0.95, x=0.05, ha='left', fontsize=10)
-        plt.savefig(os.path.join(figpath,'cfmap-{}-{}totaldays.png'.format(
-            tech.replace('-',''), sw['GSw_HourlyNumClusters'])))
-        if interactive: plt.show()
+            dfmap['st'].plot(ax=ax[coords[col]], facecolor='none', edgecolor='k', lw=0.1, zorder=1e6)
+            ## Colorbar
+            plots.addcolorbarhist(
+                f=f, ax0=ax[coords[col]], data=cfmap[col]*100, nbins=51,
+                cmap=cmaps[col],
+                vmin=vm[tech][col][0]*100, vmax=vm[tech][col][1]*100,
+                cbarleft=0.95, cbarbottom=0.1, ticklabel_fontsize=7,
+            )
+        ## Regional differences
+        for level in levels:
+            dfdiffs[level].plot(
+                ax=ax[coords[level]], column='cf_diff', cmap=cmaps['cf_diff'],
+                vmin=vm[tech]['cf_diff'][0], vmax=vm[tech]['cf_diff'][1], 
+                lw=0, legend=False,
+            )
+            dfmap[level].plot(ax=ax[coords[level]], facecolor='none', edgecolor='k', lw=0.2)
+            ## Text differences
+            for r, row in (dfdiffs[level].assign(val=dfdiffs[level].cf_diff.abs()).sort_values('val')).iterrows():
+                decimals = 0 if abs(row.cf_diff) >= 1 else 1
+                ax[coords[level]].annotate(
+                    f"{row.cf_diff*100:+.{decimals}f}",
+                    [row.labelx, row.labely],
+                    ha='center', va='center', c='k', fontsize={'r':5}.get(level,7),
+                    path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.5)],
+                )
+            ## Colorbar
+            plots.addcolorbarhist(
+                f=f, ax0=ax[coords[level]], data=dfdiffs[level].cf_diff*100, nbins=51,
+                cmap=cmaps['cf_diff'],
+                vmin=vm[tech]['cf_diff'][0]*100, vmax=vm[tech]['cf_diff'][1]*100,
+                cbarleft=0.95, cbarbottom=0.1, ticklabel_fontsize=7,
+            )
+        ## Formatting
+        ax[0,0].annotate(title+f', tech={tech}', (0.05,1.05), xycoords='axes fraction', fontsize=10)
+        for level in coords:
+        # for row in range(nrows):
+        #     for col in range(ncols):
+                ax[coords[level]].set_title({'cf_diff':'site'}.get(level,level), y=0.9, weight='bold')
+                ax[coords[level]].axis('off')
+        savename = f"cfmap-{tech.replace('-','')}-{sw.GSw_HourlyNumClusters}totaldays.png"
+        print(savename)
+        plt.savefig(os.path.join(figpath,savename))
+        if interactive:
+            plt.show()
         plt.close()
 
         ### Plot the distribution of capacity factors
         plt.close()
         f,ax = plt.subplots()
-        for col in ['cf_full','cf_hourly']:
+        for col in ['cf_actual','cf_rep']:
             ax.plot(
                 np.linspace(0,100,len(cfmap)),
-                cfmap.sort_values('cf_full', ascending=False)[col].values,
+                cfmap.sort_values('cf_actual', ascending=False)[col].values,
                 label=col.split('_')[1],
                 color=colors[col], ls=lss[col], zorder=zorders[col],
             )
@@ -469,11 +437,14 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
         ax.legend(fontsize='large', frameon=False)
         ax.set_ylabel('{} capacity factor [.]'.format(tech))
         ax.set_xlabel('Percent of sites [%]')
-        ax.set_title(title.replace(' ','\n').replace(',',''), x=0, ha='left', fontsize=10)
+        ax.set_title(
+            '\n'.join(title.split('\n')[1:]).replace(' ','\n').replace(',',''),
+            x=0, ha='left', fontsize=10)
         plots.despine(ax)
         plt.savefig(os.path.join(figpath,'cfmapdist-{}-{}totaldays.png'.format(
             tech.replace('-',''), sw['GSw_HourlyNumClusters'])))
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
         plt.close()
 
     ###### Do it again for load
@@ -511,7 +482,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     plt.close()
     f,ax = plt.subplots(1,3,figsize=(13,4),gridspec_kw={'wspace':-0.05})
     for col in range(3):
-        dfstates.plot(ax=ax[col], facecolor='none', edgecolor='k', lw=0.25, zorder=10000)
+        dfmap['st'].plot(ax=ax[col], facecolor='none', edgecolor='k', lw=0.25, zorder=10000)
     for x,col in enumerate(['GW_full','GW_hourly','GW_frac']):
         dfmap.plot(
             ax=ax[x], column=col, cmap=cmaps[col], legend=True,
@@ -524,7 +495,8 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     ax[0].set_title(title, y=0.95, x=0.05, ha='left', fontsize=10)
     plt.savefig(os.path.join(figpath,'loadmap-{}totaldays.png'.format(
         sw['GSw_HourlyNumClusters'])))
-    if interactive: plt.show()
+    if interactive:
+        plt.show()
     plt.close()
 
     ### Plot the distribution of load by region
@@ -550,14 +522,12 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     plots.despine(ax)
     plt.savefig(os.path.join(figpath,'loadmapdist-{}totaldays.png'.format(
         sw['GSw_HourlyNumClusters'])))
-    if interactive: plt.show()
+    if interactive:
+        plt.show()
     plt.close()
 
 
-def plot_8760(profiles, period_szn, rep_periods, sw, reeds_path, figpath):
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    import site
+def plot_8760(profiles, period_szn, sw, reeds_path, figpath):
     site.addsitedir(os.path.join(reeds_path,'postprocessing'))
     import plots
     plots.plotparams()
@@ -614,7 +584,8 @@ def plot_8760(profiles, period_szn, rep_periods, sw, reeds_path, figpath):
                 '{}: {}'.format(prop,' | '.join(regions)),x=0,ha='left',fontsize=12)
         ax[0].legend(loc='lower left', bbox_to_anchor=(0,1.5), ncol=2, frameon=False)
         plt.savefig(os.path.join(figpath,f'8760-allregions-{year}.png'))
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
         plt.close()
 
         ### Load, wind, solar together; original
@@ -623,7 +594,8 @@ def plot_8760(profiles, period_szn, rep_periods, sw, reeds_path, figpath):
             dforig[['wind-ons','upv']], colors=['#0064ff','#ff0000'], alpha=0.5)
         plots.plotyearbymonth(dforig['load'], f=f, ax=ax, style='line', colors='k')
         plt.savefig(os.path.join(figpath,f'8760-allregions-original-{year}.png'))
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
         plt.close()
 
         ### Load, wind, solar together; representative
@@ -632,7 +604,8 @@ def plot_8760(profiles, period_szn, rep_periods, sw, reeds_path, figpath):
             dfrep[['wind-ons','upv']], colors=['#0064ff','#ff0000'], alpha=0.5)
         plots.plotyearbymonth(dfrep['load'], f=f, ax=ax, style='line', colors='k')
         plt.savefig(os.path.join(figpath,f'8760-allregions-representative-{year}.png'))
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
         plt.close()
 
         ###### Individual regions, original vs representative
@@ -654,18 +627,16 @@ def plot_8760(profiles, period_szn, rep_periods, sw, reeds_path, figpath):
                 ax[i*12+i].set_title('{}: {}'.format(prop,region),x=0,ha='left',fontsize=12)
             ax[0].legend(loc='lower left', bbox_to_anchor=(0,1.5), ncol=2, frameon=False)
             plt.savefig(os.path.join(figpath,f'8760-{region}-{year}.png'))
-            if interactive: plt.show()
+            if interactive:
+                plt.show()
 
 
 def plots_original(
         profiles, rep_periods, period_szn,
-        sw, reeds_path, figpath, make_plots,
+        sw, reeds_path, figpath,
     ):
     """
     """
-    import matplotlib.pyplot as plt
-    import matplotlib as mpl
-    import site
     site.addsitedir(os.path.join(reeds_path,'postprocessing'))
     import plots
     plots.plotparams()
@@ -677,22 +648,6 @@ def plots_original(
     centroid_profiles = centroids * profiles.stack('h_of_period').max()
 
     colors = plots.rainbowmapper(list(set(idx_reedsyr)), plt.cm.turbo)
-    hoursperperiod = {'day':24, 'wek':120, 'year':24}[sw['GSw_HourlyType']]
-    periodsperyear = {'day':365, 'wek':73, 'year':365}[sw['GSw_HourlyType']]
-
-    ### plot a dendrogram
-    if make_plots >= 3:
-        plt.close()
-        plt.figure(figsize=(12,9))
-        plt.title("Dendrogram of Time Clusters")
-        import scipy
-        dend = scipy.cluster.hierarchy.dendrogram(
-            scipy.cluster.hierarchy.linkage(profiles, method='ward'),
-            color_threshold=7,
-        )
-        plt.gcf().savefig(os.path.join(figpath,'dendrogram.png'))
-        if interactive: plt.show()
-        plt.close()
 
     ### PLOT ALL DAYS ON SAME X AXIS:
     try:
@@ -746,114 +701,10 @@ def plots_original(
         )
         plots.despine(ax)
         plt.savefig(os.path.join(figpath,'day_comparison_all.png'))
-        if interactive: plt.show()
+        if interactive:
+            plt.show()
         plt.close()
     except Exception as err:
         print('day_comparison_all.png failed with the following error:\n{}'.format(err))
 
 
-    ### PLOT LOAD FOR THE ENTIRE ReEDS YEAR COLORED BY CLUSTER AND MEDOID:
-    if make_plots >= 3:
-        try:
-            for year in sw['GSw_HourlyWeatherYears']:
-                plt.close()
-                f,ax = plt.subplots(figsize=(14,3.5))
-                plotted = [False for i in range(int(sw['GSw_HourlyNumClusters']))]
-                nationwide_reedsyr_load = profiles_long[
-                    (profiles_long['year']==year) & (profiles_long['property']=='load')
-                ].groupby(['year','yperiod','hour'],as_index=False).sum()
-                nationwide_reedsyr_load['hour_numeric'] = pd.to_numeric(
-                    nationwide_reedsyr_load['hour'].str.lstrip('h'))
-                nationwide_reedsyr_load.sort_values(['year','hour_numeric'],inplace=True)
-                for this_yperiod in nationwide_reedsyr_load.yperiod.unique():
-                    ax.fill_between(
-                        nationwide_reedsyr_load.loc[
-                            nationwide_reedsyr_load['yperiod']==this_yperiod,'hour_numeric'].to_numpy(),
-                        nationwide_reedsyr_load.loc[
-                            nationwide_reedsyr_load['yperiod'] == this_yperiod,'value'].to_numpy()/1e3,
-                        ls='-', color=colors[idx_reedsyr[this_yperiod-1]], lw=0, alpha=0.5,
-                        label=(
-                            '{} ({} periods)'.format(
-                                period_szn.loc[period_szn['period']==this_yperiod,'season'].iloc[0],
-                                sum(idx_reedsyr == idx_reedsyr[this_yperiod-1]))
-                            if not plotted[idx_reedsyr[this_yperiod-1]]
-                            else '_nolabel'
-                        )
-                    )
-                    plotted[idx_reedsyr[this_yperiod-1]] = True
-                ### Plot the medoid profiles
-                for i, (yperiod, row) in enumerate(medoid_profiles.iterrows()):
-                    ax.plot(
-                        list(range((yperiod-1)*hoursperperiod+1,(yperiod)*hoursperperiod+1)),
-                        row['load'].groupby('h_of_period').sum().values/1e3,
-                        color=colors[i], alpha=1, linewidth=1.5,
-                        label='{} Medoid'.format(period_szn.set_index('period').season[int(yperiod)])
-                    )
-                ax.set_xlim(0,8760)
-                ax.set_ylim(0)
-                ax.legend(
-                    loc='upper left', bbox_to_anchor=(1,1), ncol=len(colors)//9+1)
-                ax.set_ylabel('Conterminous US Load (GW)')
-                ax.set_title('Cluster and Medoid Definitions')
-                plots.despine(ax)
-                plt.savefig(os.path.join(figpath,f'year_clusters-load-{year}.png'))
-                if interactive: plt.show()
-                plt.close()
-        except Exception as err:
-            print('year_clusters.png failed with the following error:\n{}'.format(err))
-
-
-    ### Plot daily profile for the US colored by representative period
-    try:
-        ### Create dictionary for assigning month,day to axes row,column
-        nrows, ncols = (12, 31) if sw['GSw_HourlyType'] in ['day','year'] else (13,6)
-        coords = dict(zip(
-            range(1,periodsperyear+1),
-            [(row,col) for row in range(nrows) for col in range(ncols)]
-        ))
-        for year in sw['GSw_HourlyWeatherYears']:
-            for prop in ['load','upv','wind-ons']:
-                dfplot = profiles_long[
-                    (profiles_long['year']==year) & (profiles_long['property']==prop)
-                ].groupby(['year','yperiod','hour'],as_index=False).sum()
-                dfplot['hour_numeric'] = pd.to_numeric(
-                    dfplot['hour'].str.lstrip('h'))
-                dfplot.sort_values(['year','hour_numeric'],inplace=True)
-
-                plt.close()
-                f,ax = plt.subplots(
-                    nrows, ncols, sharex=True, sharey=True,
-                    gridspec_kw={'wspace':0, 'hspace':0,},
-                    figsize=(12,6),
-                )
-                for this_yperiod in range(1,periodsperyear+1):
-                    ax[coords[this_yperiod]].fill_between(
-                        range(hoursperperiod),
-                        dfplot.loc[
-                            dfplot['yperiod'] == this_yperiod,'value'].to_numpy()/1e3,
-                        ls='-', color=colors[idx_reedsyr[this_yperiod]], alpha=0.35,
-                    )
-                    ### Label the szn
-                    ax[coords[this_yperiod]].annotate(
-                        int(period_szn[this_yperiod][6:]),
-                        (0.5,0), xycoords='axes fraction', va='bottom', ha='center',
-                        fontsize=8, color=colors[idx_reedsyr[this_yperiod]],
-                    )
-                ### Plot the medoid profiles
-                for i, (yperiod, row) in enumerate(medoid_profiles.iterrows()):
-                    ax[coords[yperiod]].plot(
-                        range(hoursperperiod), row[prop].groupby('h_of_period').sum().values/1e3,
-                        color=colors[yperiod], alpha=1, linewidth=2,
-                    )
-                for row in range(nrows):
-                    for col in range(ncols):
-                        ax[row,col].axis('off')
-                ax[0,0].set_title('Cluster and Medoid Definitions', x=0, ha='left')
-                ax[0,0].set_ylim(0)
-                ax[0,0].set_xlim(-1,hoursperperiod+1)
-                plots.despine(ax)
-                plt.savefig(os.path.join(figpath,f'year_clusters_daily-{prop}.png'))
-                if interactive: plt.show()
-                plt.close()
-    except Exception as err:
-        print('year_clusters_daily.png failed with the following error:\n{}'.format(err))

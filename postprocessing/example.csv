@@ -1,0 +1,7 @@
+casepath,casename,color
+# /Volumes/ReEDS/Users/pbrown/ReEDSruns/20240115_transop/20240307/v20240307_transopK0_Restricted,Restricted,
+# /Volumes/ReEDS/Users/pbrown/ReEDSruns/20240115_transop/20240307/v20240307_transopK0_Permit_CoordLite38,Regional coord.,
+# /Volumes/ReEDS/Users/pbrown/ReEDSruns/20240115_transop/20240307/v20240307_transopK0_Permit_CoordFull,Interregional coord.,
+# /Volumes/ReEDS/Users/pbrown/ReEDSruns/20240115_transop/20240307/v20240307_transopK0_Permit_CoordFull_ITC,Interregional coord. + ITC,
+/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240313/v20240313_stresspaperE0_CC_DemHi_90by2035__core,Capacity credit,C4
+/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240313/v20240313_stresspaperE0_SP_DemHi_90by2035__core,Stress periods,plt.cm.tab10(1)

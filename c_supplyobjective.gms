@@ -146,17 +146,17 @@ eq_Objfn_op(t)$tmodel(t)..
          pvf_onm(t) * (
 
 * --- variable O&M costs---
-* all technologies except hybrid PV+battery and DAC
-              sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom(i,v,r,t)$(not pvb(i))],
+* all technologies except hybrid plant and DAC
+              sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom(i,v,r,t)$(not storage_hybrid(i)$(not csp(i)))],
                    hours(h) * cost_vom(i,v,r,t) * GEN(i,v,r,h,t) }
 
-* hybrid PV+battery (PV)
-            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_p(i,v,r,t)$pvb(i)],
-                   hours(h) * cost_vom_pvb_p(i,v,r,t) * GEN_PVB_P(i,v,r,h,t) }$Sw_PVB
+* hybrid plant (plant)
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_p(i,v,r,t)$storage_hybrid(i)$(not csp(i))],
+                   hours(h) * cost_vom_pvb_p(i,v,r,t) * GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
 
-* hybrid PV+battery (Battery)
-            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_b(i,v,r,t)$pvb(i)],
-                   hours(h) * cost_vom_pvb_b(i,v,r,t) * GEN_PVB_B(i,v,r,h,t) }$Sw_PVB
+* hybrid plant (Battery)
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_b(i,v,r,t)$storage_hybrid(i)$(not csp(i))],
+                   hours(h) * cost_vom_pvb_b(i,v,r,t) * GEN_STORAGE(i,v,r,h,t) }$Sw_HybridPlant
 
 * --- fixed O&M costs---
 * generation
@@ -200,18 +200,22 @@ eq_Objfn_op(t)$tmodel(t)..
                    }
 
 * ---operating reserve costs---
-              + sum{(i,v,r,h,ortype)$[Sw_OpRes$valgen(i,v,r,t)$cost_opres(i,ortype,t)$opres_model(ortype)$opres_h(h)],
-                   hours(h) * cost_opres(i,ortype,t) * OpRes(ortype,i,v,r,h,t) }
+              + sum{(i,v,r,h,ortype)$[Sw_OpRes$valgen(i,v,r,t)$cost_opres(i,ortype,t)$reserve_frac(i,ortype)$opres_model(ortype)$opres_h(h)],
+                   hours(h) * cost_opres(i,ortype,t) * OPRES(ortype,i,v,r,h,t) }
 
-* --- cost of coal, nuclear, and other fuels (except coal used for cofiring)---
-* includes H2 fuel costs when using exogenous fuel price (Sw_H2 = 0 and Sw_H2CT = 1)
-              + sum{(i,v,r,h)$[valgen(i,v,r,t)$(not gas(i))$heat_rate(i,v,r,t)
-                              $(not bio(i))$(not cofire(i))],
+
+* --- cost of coal, nuclear, and other fixed-price fuels (except coal used for cofiring),
+* plus cost of H2 fuel when using fixed price (Sw_H2=0) or during stress periods.
+* When using endogenous H2 price (Sw_H2=1 or Sw_H2=2), H2 fuel cost is captured elsewhere
+* via the capex + opex costs of H2 production and its associated electricity demand.
+              + sum{(i,v,r,h)$[valgen(i,v,r,t)$heat_rate(i,v,r,t)
+                             $(not gas(i))$(not bio(i))$(not cofire(i))
+                             $((not h2_ct(i)) or h2_ct(i)$[(Sw_H2=0) or h_stress(h)])],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN(i,v,r,h,t) }
 
 * --- startup/ramping costs
-              + sum{(i,v,r,h,hh)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen(i,v,r,t)],
-                    startcost(i) * numhours_nexth(h,hh) * RAMPUP(i,v,r,h,hh,t) }
+              + sum{(i,r,h,hh)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t)],
+                    startcost(i) * numhours_nexth(h,hh) * RAMPUP(i,r,h,hh,t) }
 
 * --cofire coal consumption---
 * cofire bio consumption already accounted for in accounting of BIOUSED
@@ -230,7 +234,7 @@ eq_Objfn_op(t)$tmodel(t)..
                    hours(h) * dac_gas_cons_rate("dac_gas",v,t) * PRODUCE("DAC","dac_gas",v,r,h,t) }$Sw_DAC_Gas
 
 *Sw_GasCurve = 0 (census division supply curves natural gas prices)
-              + sum{(cendiv,gb), sum{h,hours(h) * GASUSED(cendiv,gb,h,t) }
+              + sum{(cendiv,gb), sum{h, hours(h) * GASUSED(cendiv,gb,h,t) }
                    * gasprice(cendiv,gb,t)
                    }$(Sw_GasCurve = 0)
 
@@ -279,7 +283,8 @@ eq_Objfn_op(t)$tmodel(t)..
                               hours(h) * PRODUCE(p,i,v,r,h,t) * CO2_storage_cost }$[Sw_DAC$(not Sw_CO2_Detail)]
 
 * ---State RPS alternative compliance payments---
-              + sum{(RPSCat,st)$(stfeas(st) or sameas(st,"voluntary")), acp_price(st,t) * ACP_PURCHASES(RPSCat,st,t)
+              + sum{(RPSCat,st)$[(stfeas(st) or sameas(st,"voluntary"))$RecPerc(RPSCat,st,t)$(not acp_disallowed(st,RPSCat))],
+                    acp_price(st,t) * ACP_PURCHASES(RPSCat,st,t)
                    }$[(yeart(t)>=RPS_StartYear)$Sw_StateRPS]
 
 * --- revenues from purchases of curtailed VRE---
@@ -289,7 +294,7 @@ eq_Objfn_op(t)$tmodel(t)..
               + sum{(r,h)$[(yeart(t)<Sw_StartMarkets)], DROPPED(r,h,t) * hours(h) * cost_dropped_load }
 
 * --- costs from producing products (for now DAC and/or H2)---
-              + sum{(p,i,v,r,h)$[(h2(i) or dac(i))$valcap(i,v,r,t)$i_p(i,p)],
+              + sum{(p,i,v,r,h)$[(h2(i) or dac(i))$valcap(i,v,r,t)$i_p(i,p)$h_rep(h)],
                     hours(h) * cost_prod(i,v,r,t) * PRODUCE(p,i,v,r,h,t) }$Sw_Prod
 
 * --- H2 transport network fixed OM costs (compute cumulative sum of investments to get total capacity)
@@ -320,12 +325,14 @@ eq_Objfn_op(t)$tmodel(t)..
                               (crf(t) / crf_co2_incentive(t)) * co2_captured_incentive(i,v,r,t) * hours(h) * capture_rate("CO2",i,v,r,t) * GEN(i,v,r,h,t)}
 
 * --- Tax credit for CO2 stored for DAC ---
-              - sum{(p,i,v,r,h)$[dac(i)$valcap(i,v,r,t)$i_p(i,p)],
+              - sum{(p,i,v,r,h)$[dac(i)$valcap(i,v,r,t)$i_p(i,p)$h_rep(h)],
                               (crf(t) / crf_co2_incentive(t)) * co2_captured_incentive(i,v,r,t) * hours(h) * PRODUCE(p,i,v,r,h,t)}
 
 * --- PTC value ---
               - sum{(i,v,r,h)$[valgen(i,v,r,t)$ptc_value_scaled(i,v,t)],
-                              hours(h) * ptc_value_scaled(i,v,t) * tc_phaseout_mult(i,v,t) * GEN(i,v,r,h,t) }
+                    hours(h) * ptc_value_scaled(i,v,t) * tc_phaseout_mult(i,v,t) * 
+                    (GEN(i,v,r,h,t) - (STORAGE_IN_GRID(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[pvb(i)$Sw_PVB])
+                   }
 
 *end multiplier for pvf_onm
          )

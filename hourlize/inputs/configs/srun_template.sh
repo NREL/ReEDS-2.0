@@ -4,4 +4,4 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --mail-user=[your email]
 #SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mem=250000    # RAM in MB
+#SBATCH --mem=248000    # RAM in MB

@@ -14,10 +14,10 @@ pd.options.mode.chained_assignment = None
 #%%
 class scen_settings():
 
-    def __init__(self, dollar_year, tech_groups, input_dir, sw):
+    def __init__(self, dollar_year, tech_groups, inputs_case, sw):
         self.dollar_year = dollar_year
         self.tech_groups = tech_groups
-        self.input_dir = input_dir
+        self.inputs_case = inputs_case
         self.sw = sw
 
 
@@ -223,7 +223,7 @@ def import_data(file_root, file_suffix, indices, scen_settings, inflation_df=[],
     '''
 
     df = pd.read_csv(
-        os.path.join(scen_settings.input_dir, 'financials', '%s_%s.csv' % (file_root, file_suffix)))
+        os.path.join(scen_settings.inputs_case, f'{file_root}.csv'))
 
     # Expand tech groups, if there is an 'i' column and the argument is True
     if 'i' in df.columns and expand_tech_groups==True:
@@ -246,11 +246,11 @@ def import_data(file_root, file_suffix, indices, scen_settings, inflation_df=[],
     # Check if a currency_file_root file exists - it should exist if there are 
     # any columns with currency data. If currency data exists, adjust the dollar
     # year of the input data to the scen_settings's dollar year
-    if (os.path.isfile(os.path.join(scen_settings.input_dir, file_root, 'currency_%s.csv' % file_root))
+    if (os.path.isfile(os.path.join(scen_settings.inputs_case, file_root, f'currency_{file_root}.csv'))
         and (adjust_units==True)
     ):
         currency_meta = pd.read_csv(
-            os.path.join(scen_settings.input_dir, file_root, 'currency_%s.csv' % file_root), 
+            os.path.join(scen_settings.inputs_case, f'currency_{file_root}.csv'), 
             index_col='file')
         inflation_df = inflation_df.set_index('t')
 
@@ -308,7 +308,7 @@ def append_pvb_parameters(dfin, tech_to_copy='battery_4', column_scaler=None, pv
     -------
     dfout: pd.DataFrame consisting of PV+B parameters appended to input dataframe.
     """
-    ### Get the PVB classes from upv
+    ### Get the pvb classes from upv
     pvb_classes = [i.split('_')[1] for i in dfin.i.unique() if i.startswith('upv')]
     ### Get values for tech_to_copy
     copy_params = dfin.set_index('i').loc[[tech_to_copy]].reset_index(drop=True).copy()
@@ -372,17 +372,32 @@ def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix,
         file_root='incentives', file_suffix=incentive_file_suffix, 
         indices=['i','country','t'], 
         inflation_df=inflation_df, scen_settings=scen_settings)
-    ### Add the hybrid PV+battery incentives (in this case inherited from upv, not battery)
+    ### Add the hybrid PV+battery incentives
+    # Always inherit from upv; if upv takes the PTC, pvb will take the PTC on PV generation only,
+    # and if upv takes the ITC, pvb will take the ITC on all components
     incentive_df = append_pvb_parameters(
         dfin=incentive_df, tech_to_copy='upv_1', 
-        column_scaler={'itc_frac': float(scen_settings.sw['GSw_PVB_ITC_Qual_Award'])}
-    )
+        )
+    # Inherit from battery if GSw_PVB_BatteryITC = 1 so that the battery component of pvb
+    # can take the ITC even though the pv component takes the PTC
+    # Set copy_battery truth value here for use below dealing with duplicate incentives
+    copy_battery = (
+        (float(scen_settings.sw['GSw_PVB_BatteryITC']) > 0) &
+        (f'battery_{scen_settings.sw["GSw_PVB_Dur"]}' in incentive_df['i'].unique())
+        )
+    if copy_battery:
+        incentive_df = append_pvb_parameters(
+            dfin=incentive_df, tech_to_copy=f'battery_{scen_settings.sw["GSw_PVB_Dur"]}', 
+            column_scaler={'itc_frac': float(scen_settings.sw['GSw_PVB_BatteryITC'])}
+            )
     
     # Calculate total PTC and ITC value, taking into account bonus
     # ptc_perc_bonus is a multiplicative increase of the base ptc value. E.g. a value of 0.1 on a $10 ptc value equates to $11
     # itc_percpt_bonus is a additive increase of the base itc value. E.g. a value of 0.1 on a 0.3 itc value equates to a 0.4 itc value. 
     incentive_df['ptc_value'] = incentive_df['ptc_value'] * (1.0 + incentive_df['ptc_perc_bonus']) 
-    incentive_df['itc_frac'] = incentive_df['itc_frac'] + incentive_df['itc_percpt_bonus']
+    incentive_df.loc[incentive_df['itc_frac']>0,'itc_frac'] = (
+        incentive_df.loc[incentive_df['itc_frac']>0,'itc_frac'] + incentive_df.loc[incentive_df['itc_frac']>0,'itc_percpt_bonus']
+        )
 
     # Merge with construction start years
     incentive_df = incentive_df.merge(construction_times, on=['i', 't'], how='left')
@@ -438,7 +453,17 @@ def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix,
     # and selecting the highest. This is not meant to select between competing incentives, as we do not have the operational data
     # at this point to estimate their value. It is just a simple approach implemented here for lack of time to develop a better one. 
     incentive_df = incentive_df.sort_values('value', ascending=False)
-    incentive_df = incentive_df.drop_duplicates(['i', 'country', 't'], keep='first')
+    # Keep duplicate incentives for pvb if the battery takes the ITC
+    if copy_battery:
+        incentive_df_pvb = incentive_df[incentive_df['i'].str.contains('pvb')].copy()
+        incentive_df_pvb = (incentive_df_pvb.groupby(by=['i', 'country', 't'])
+                            .first().reset_index(drop=False))
+        incentive_df = (
+            incentive_df[~(incentive_df['i'].str.contains('pvb'))]
+            .drop_duplicates(['i', 'country', 't'], keep='first'))
+        incentive_df = pd.concat([incentive_df, incentive_df_pvb], ignore_index=True)
+    else:
+        incentive_df = incentive_df.drop_duplicates(['i', 'country', 't'], keep='first')
     
     incentive_df = incentive_df.fillna(0.0)
 

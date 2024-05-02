@@ -1,6 +1,7 @@
 # Full-line and line-end comments can be indicated with # (but use the comment column when possible)
 # This parameter list is in alphabetical order - please add new entries that way
 param,units,comment,reeds2x,output_rename,input
+"acp_purchases_out(rpscat,st,t)",MWh,Annual alternative compliance credits from the variable ACP_PURCHASES
 "avg_cf(i,v,r,t)",frac,Annual average capacity factor for rsc technologies,,,
 "avg_avail(i,v)",frac,Annual average avail factor,,,
 "bioused_out(bioclass,r,t)",dry tons (imperial),biomass used by class in each model region (-> bioused.csv),,,

@@ -478,6 +478,7 @@ alias(st,ast) ;
 alias(allt,alltt) ;
 alias(cendiv,cendiv2) ;
 alias(rscbin,arscbin) ;
+alias(nercr,nercrr) ;
 alias(transgrp,transgrpp) ;
 
 parameter yeart(t) "numeric value for year",
@@ -701,6 +702,26 @@ $elseif.pshwat %GSw_PSHwatertypes% == 2
 * option 2 allows fresh/saline ground water and wastewater
 $else.pshwat
 $endif.pshwat
+
+*** Restrict valcap for hybrid storage techs based on Sw_HybridPlant switch
+* 0: Ban all storage, including CSP
+if(Sw_HybridPlant = 0,
+ ban(i)$i_subsets(i,'storage_hybrid') = yes ;
+) ;
+* 1: Allow CSP, ban all other storage
+if(Sw_HybridPlant = 1,
+ ban(i)$[i_subsets(i,'storage_hybrid')$(not sameas(i,'csp_storage'))] = yes ;
+ ban(i)$i_subsets(i,'csp_storage') = no ;
+) ;
+* 2: Allow hybrid plants, excluding CSP
+if(Sw_HybridPlant = 2,
+ ban(i)$[i_subsets(i,'storage_hybrid')$(not sameas(i,'csp_storage'))] = no ;
+ ban(i)$i_subsets(i,'csp_storage') = yes ;
+) ;
+* 3: Allow CSP and all other hybrid plants (note csp_storage bans are controlled by Sw_CSP)
+if(Sw_HybridPlant = 3,
+ ban(i)$[i_subsets(i,'storage_hybrid')$(not sameas(i,'csp_storage'))] = no ;
+) ;
 
 *ban techs in hybrid PV+battery if the switch calls for it
 if(Sw_PVB=0,
@@ -1116,6 +1137,7 @@ rsc_agg(i,ii)$tg_rsc_cspagg(i,ii) = yes ;
 rsc_agg(i,ii)$tg_rsc_upvagg(i,ii) = yes ;
 *All PSH types use the same supply curve
 rsc_agg('pumped-hydro',ii)$psh(ii) = yes ;
+rsc_agg(i,ii)$[ban(i) or ban(ii)] = no ;
 
 *============================
 * -- Demand flexibility setup --
@@ -1188,10 +1210,12 @@ set tmodel(t) "years to include in the model",
     tfix(t) "years to fix variables over when summing over previous years",
     tprev(t,tt) "previous modeled tt from year t",
     countryfeas(country) "countries included in the model"
-    stfeas(st) "states to include in the model" ;
+    stfeas(st) "states to include in the model",
+    tsolved(t) "years that have solved" ;
 
 *following parameters get re-defined when the solve years have been declared
 parameter mindiff(t) "minimum difference between t and all other tt that are in tmodel(t)" ;
+
 
 tmodel(t) = no ;
 tfirst(t) = no ;
@@ -1200,6 +1224,7 @@ countryfeas(country) = no ;
 tfix(t) = no ;
 stfeas(st) = no ;
 tprev(t,tt) = no ;
+tsolved(t) = no ;
 
 
 *==============================
@@ -1354,7 +1379,7 @@ $onlisting
 ptc_value_scaled(i,v,t)$[i_water_cooling(i)$Sw_WaterMain] =
    sum{ii$ctt_i_ii(i,ii), ptc_value_scaled(ii,v,t) } ;
 
-parameter firstyear_v(i,v) "flag for first year of a new vintage" ;
+parameter firstyear_v(i,v) "flag for first year that a new new vintage can be built" ;
 
 firstyear_v(i,v) = sum{t$[yeart(t)=smin(tt$ivt(i,v,tt),yeart(tt))],yeart(t) } ;
 
@@ -1985,6 +2010,22 @@ $onlisting
 * h2_exogenous_demand.csv is in million tonnes so convert to tonnes
 h2_exogenous_demand(p,t) = 1e6 * h2_exogenous_demand(p,t) ;
 
+scalar h2_demand_start  "--year-- first year that h2 demand should be modeled"
+       h2_gen_firstyear "--year-- first year that h2 generation technologies are available"
+;
+
+* Identify the first year that hydrogen generation technologies are allowed
+h2_gen_firstyear = smin{i$[h2_ct(i)$(not ban(i))], firstyear(i) } ;
+
+* Set h2_demand_start to the first year that there is data
+* in h2_exogenous_demand
+h2_demand_start = smin{t$[sum{p, h2_exogenous_demand(p,t)}], yeart(t) } ;
+
+* If h2_gen_firstyear is smaller than h2_demand_start, set h2_demand_start
+* to be h2_gen_firstyear
+h2_demand_start$[h2_gen_firstyear<h2_demand_start] = h2_gen_firstyear ;
+
+
 parameter h2_share(r,allt) "--fraction-- regional share of national hydrogen demand"
 /
 $offlisting
@@ -2029,6 +2070,7 @@ inv_distpv(r,t) = sum{(i,v)$distpv(i),
                      } ;
 
 set valcap(i,v,r,t)            "i, v, r, and t combinations that are allowed for capacity",
+    valcap_remove(i,v,r,t,tt)  "i, v, r, t combination that are removed as the model progresses through time",
     valcap_irt(i,r,t)          "i, r, and t combinations that are allowed for capacity",
     valcap_i(i)                "i that are allowed for capacity",
     valcap_iv(i,v)             "i and v combinations that are allowed for capacity",
@@ -2263,12 +2305,24 @@ valcap(i,newv,r,t)$[
                    $(not ([r_offshore(r,t) and ofswind(i)] or [sum{st$r_st(r,st), batterymandate(st,t) } and battery(i)]))
                   ] = no ;
 
-*remove undisc geotechs until their first year since they are not able
-*to meet the requirement for geothermal prescriptions
+*therefore remove the consideration of valcap if...
+valcap(i,newv,r,t)$[
+*if there are no required prescriptions
+                   (not sum{pcat$prescriptivelink(pcat,i),
+                      m_required_prescriptions(pcat,r,t) } )
+*if the year is before the first year the technology is allowed
+                   $(yeart(t)<firstyear(i))
+*if there is not a mandate for that technology in the region
+                   $(not ([r_offshore(r,t) and ofswind(i)] or 
+                      [sum{st$r_st(r,st), batterymandate(st,t) } and battery(i)] ) )
+                  ] = no ;
 
 *remove any non-prescriptive build capabilities if they are not prescribed
-valcap(i,newv,r,t)$[(not sameas(i,'gas-ct'))$(yeart(t)<firstyear(i))$(not sum{tt$(yeart(tt)<=yeart(t)), prescription_check(i,newv,r,tt) })
-                   $(not ([r_offshore(r,t) and ofswind(i)] or [sum{st$r_st(r,st), batterymandate(st,t) }  and battery(i)]))] = no ;
+valcap(i,newv,r,t)$[(not sameas(i,'gas-ct'))$(yeart(t)<firstyear(i))
+                   $(not sum{tt$(yeart(tt)<=yeart(t)), prescription_check(i,newv,r,tt) })
+                   $(not ([r_offshore(r,t) and ofswind(i)] 
+                      or [sum{st$r_st(r,st), batterymandate(st,t) }  and battery(i)] ) ) ] 
+                   = no ;
 
 *enable prescribed builds of technologies that are earlier listed in bannew when Sw_WaterMain is ON
 valcap(i,newv,r,t)$[Sw_WaterMain$sum{ctt$bannew_ctt(ctt),i_ctt(i,ctt) }$tmodel_new(t)
@@ -2305,7 +2359,7 @@ valcap(i,newv,r,t)$[upgrade(i)$Sw_Upgrades$(yeart(t)>=Sw_UpgradeYear)
                    $(yeart(t)>=firstyear(i))
 *if it is a valid ivt combination which is duplicated from upgrade_to
                    $sum{tt$(yeart(tt)<=yeart(t)), ivt(i,newv,tt) }
-                   $(firstyear_v(i,newv)>=Sw_UpgradeYear)
+                   $(yeart(t)>=Sw_UpgradeYear)
                    ] = yes ;
 
 *remove any upgrade considerations if before the upgrade year
@@ -3173,6 +3227,15 @@ routes_transgroup(transgrp,transgrpp,r,rr)$[
     $(not sameas(r,rr))
 ] = yes ;
 
+set routes_nercr(nercr,nercrr,r,rr) "collection of routes between nercrs" ;
+routes_nercr(nercr,nercrr,r,rr)$[
+    sum{(t,trtype), routes(r,rr,trtype,t) }
+    $r_nercr(r,nercr)
+    $r_nercr(rr,nercrr)
+    $(not sameas(nercr,nercrr))
+    $(not sameas(r,rr))
+] = yes ;
+
 
 
 * --- transmission cost ---
@@ -3929,6 +3992,14 @@ cost_vom_pvb_p(i,v,r,t)$pvb(i) =  sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_vom(ii,v,
 parameter cost_vom_pvb_b(i,v,r,t) "--2004$/MWh-- variable OM for the battery portion of hybrid PV+battery " ;
 cost_vom_pvb_b(i,v,r,t)$pvb(i) =  cost_vom("battery_%GSw_pvb_dur%",v,r,t) ;
 
+* Assign hybrid plant to have the same value as UPV
+parameter cost_vom_hybrid_plant(i,v,r,t) "--2004$/MWh-- variable OM for the plant portion of hybrid" ;
+cost_vom_hybrid_plant(i,v,r,t)$[storage_hybrid(i)$(not csp(i))] =  sum{ii$[upv(ii)$rsc_agg(ii,i)], cost_vom(ii,v,r,t) } ;
+
+* Assign hybrid storage to have the same value as Battery_X
+parameter cost_vom_hybrid_storage(i,v,r,t) "--2004$/MWh-- variable OM for the storage portion of hybrid" ;
+cost_vom_hybrid_storage(i,v,r,t)$[storage_hybrid(i)$(not csp(i))] = cost_vom("battery_%GSw_pvb_dur%",v,r,t) ;
+
 *upgrade vom costs for initial classes are the vom costs for that tech
 *plus the delta between upgrade_to and upgrade_from for the initial year
 cost_vom(i,initv,r,t)$[upgrade(i)$Sw_Upgrades$valcap(i,initv,r,t)] =
@@ -4150,11 +4221,6 @@ fuel_price(i,r,t)$[sum{f$fuel2tech(f,i),1}$(not fuel_price(i,r,t))] =
   sum{rr$fuel_price(i,rr,t), fuel_price(i,rr,t) } / max(1,sum{rr$fuel_price(i,rr,t), 1 }) ;
 
 fuel_price(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), fuel_price(ii,r,t) } ;
-
-* fuel price for H2-CT is accounted for as the marginal off h2 demand equations
-* and thus can be removed when Sw_H2 = 1 and the year is beyond Sw_H2_Demand_Start
-* otherwise, if Sw_H2 = 0 and Sw_H2CT = 1 the model can use as much H2 as needed for H2CTs at this fuel price
-fuel_price(i,r,t)$[h2_ct(i)$Sw_H2$(yeart(t)>=Sw_H2_Demand_Start)] = 0 ;
 
 
 
@@ -4432,8 +4498,19 @@ $onlisting
 / ;
 
 parameter prm(r,t) "planning reserve margin by BA" ;
-
 prm(r,t) = sum{nercr$r_nercr(r,nercr), prm_nt(nercr,t) } ;
+
+$onempty
+parameter firm_transfer_limit(nercr,allt) "--MW-- limit on interregional firm transfers"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%firm_transfer_limit.csv
+$offdelim
+$onlisting
+/ ;
+$offempty
+
 
 * ===========================================================================
 * Regional and temporal capital cost multipliers
@@ -5168,8 +5245,8 @@ $onlisting
 *            = [cost(PV) + cost(B) * bcr ] * cap(PV)
 cost_cap(i,t)$pvb(i) = (cost_cap_pvb_p(i,t) + bcr(i) * cost_cap_pvb_b(i,t)) * sum{pvb_config$pvb_agg(pvb_config,i), pvbcapmult(t,pvb_config) } ;
 
-scalar pvb_itc_qual_frac "--fraction-- fraction of energy that must be charge from local PV for hybrid PV+battery" ;
-pvb_itc_qual_frac = %GSw_PVB_ITC_Qual_Constraint% ;
+scalar pvb_itc_qual_frac "--fraction-- fraction of energy that must be charged from local PV for hybrid PV+battery" ;
+pvb_itc_qual_frac = %GSw_PVB_Charge_Constraint% ;
 
 * --- CSP with storage ---
 
@@ -5416,7 +5493,7 @@ cost_upgrade(i,v,r,t)$[initv(v)$valcap(i,v,r,t)$sum{ii$upgrade_from(i,ii),cost_u
 * start with specifying upgrade_derate as zero
 upgrade_derate(i,v,r,t) = 0 ;
 
-upgrade_derate(i,initv,r,t)$[upgrade(i)$ccs(i)$unitspec_upgrades(i)
+upgrade_derate(i,initv,r,t)$[upgrade(i)$ccs(i)$unitspec_upgrades(i)$valcap(i,initv,r,t)
                             $sum{ii$upgrade_from(i,ii),hintage_data(ii,initv,r,t,"wCCS_Retro_HR") }] =
 * following calculation is from NEMS/EIA - stating the derate is 1 - [the original heat_rate] / [new heat rate]
 * take the max of it and zero
@@ -5425,12 +5502,17 @@ upgrade_derate(i,initv,r,t)$[upgrade(i)$ccs(i)$unitspec_upgrades(i)
 * set upgrade derate for new plants and existing plants without data
 * to the average across all values from NETL CCRD:
 * https://www.osti.gov/servlets/purl/1887588
-upgrade_derate(i,initv,r,t)$[upgrade(i)$ccs(i)$coal(i)$(not upgrade_derate(i,initv,r,t))] = 0.29 ;
-upgrade_derate(i,initv,r,t)$[upgrade(i)$ccs(i)$gas(i)$(not upgrade_derate(i,initv,r,t))] = 0.14 ;
+upgrade_derate(i,initv,r,t)$[upgrade(i)$ccs(i)$coal(i)
+                            $(not upgrade_derate(i,initv,r,t))
+                            $valcap(i,initv,r,t)] = 0.29 ;
+
+upgrade_derate(i,initv,r,t)$[upgrade(i)$ccs(i)$gas(i)
+                            $(not upgrade_derate(i,initv,r,t))
+                            $valcap(i,initv,r,t)] = 0.14 ;
 
 * same assumptions for new plants
-upgrade_derate(i,newv,r,t)$[upgrade(i)$ccs(i)$coal(i)] = 0.29 ;
-upgrade_derate(i,newv,r,t)$[upgrade(i)$ccs(i)$gas(i)] = 0.14 ;
+upgrade_derate(i,newv,r,t)$[upgrade(i)$ccs(i)$coal(i)$valcap(i,newv,r,t)] = 0.29 ;
+upgrade_derate(i,newv,r,t)$[upgrade(i)$ccs(i)$gas(i)$valcap(i,newv,r,t)] = 0.14 ;
 
 if((not Sw_UpgradeDerate),
  upgrade_derate(i,v,r,t) = 0
@@ -5952,8 +6034,8 @@ Parameter
     load_exog_flex(flex_type,r,allh,t)     "the amount of exogenous load that is flexibile"
     load_exog_static(r,allh,t)             "the amount of exogenous load that is static"
 * Demand response
-    dr_inc(i,r,allh)                       "--fraction-- average capacity factor for dr reduction in load in timeslice h"
-    dr_dec(i,r,allh)                       "--fraction-- average capacity factor for dr increase in load in timeslice h"
+    dr_increase(i,r,allh)                  "--fraction-- average capacity factor for dr reduction in load in timeslice h"
+    dr_decrease(i,r,allh)                  "--fraction-- average capacity factor for dr increase in load in timeslice h"
     allowed_shifts(i,allh,allh)            "how much load each dr type is allowed to shift into h from hh"
 * EVMC storage
     evmc_storage_discharge_frac(i,r,allh,allt) "--fraction-- fraction of adopted EV storage discharge capacity that can be discharged (deferred charging) in each timeslice h"

@@ -265,6 +265,11 @@ def check_compatibility(sw):
         )
         raise Exception(err)
 
+    ### Land use and reeds_to_rev
+    if (int(sw['land_use_analysis'])) and (not int(sw['reeds_to_rev'])):
+        raise ValueError(
+            "'reeds_to_rev' must be enable for land_use analysis to run."
+        )    
 
 def solvestring_sequential(
         batch_case, caseSwitches,
@@ -278,7 +283,7 @@ def solvestring_sequential(
     * caseSwitches: loaded from {batch_case}/inputs_case/switches.csv
     """
     savefile = f"{batch_case}_{cur_year}i{iteration}"
-    _stress_year = f"{prev_year}i0" if stress_year is None else stress_year
+    _stress_year = f"{cur_year}i0" if stress_year is None else stress_year
     out = (
         "gams d_solveoneyear.gms"
         + (" license=gamslice.txt" if hpc else '')
@@ -976,7 +981,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
     siteSwitches = siteSwitches.merge(binSwitches, on=['tech'], how='left')
 
     # Expand on reV path based on where this run is happening
-    #For running hourlize on the HPC link to shared-projects folder
+    # when running on the HPC this links to the shared-projects folder
     if os.environ.get('NREL_CLUSTER') == 'kestrel':
         hpc_path = '/projects/shared-projects-reeds/reeds/Supply_Curve_Data'
     else: 
@@ -995,9 +1000,12 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
 
     siteSwitches['rev_case'] = siteSwitches['rev_path'].apply(lambda row: os.path.basename(row))
     siteSwitches['sc_path'] = siteSwitches['sc_path'].apply(lambda row: os.path.join(rev_prefix,row))
-    siteSwitches['hpc_path'] = siteSwitches['rev_path'].apply(lambda row: os.path.join(hpc_path,row))
-    siteSwitches[['tech','access_switch','access_case','bins','rev_case', 
-                  'sc_path','hpc_path','hpc_sc_file','cf_path','original_rev_folder']
+    siteSwitches['hpc_rev_path'] = siteSwitches['rev_path'].apply(lambda row: os.path.join(hpc_path,row))
+    siteSwitches['hpc_sc_file'] = siteSwitches['sc_file'].apply(lambda row: "" if pd.isnull(row) else os.path.join(hpc_path,row))
+    siteSwitches['sc_file'] = siteSwitches['sc_file'].apply(lambda row: "" if pd.isnull(row) else os.path.join(rev_prefix,row))
+
+    siteSwitches[['tech','access_switch','access_case','bins','sc_path','rev_case', 
+                  'hpc_rev_path','sc_file','hpc_sc_file','cf_path','original_rev_folder']
                 ].to_csv(os.path.join(inputs_case,'rev_paths.csv'), index=False)
 
     #%% Set up the meta.csv file to track repo information and runtime
@@ -1188,7 +1196,9 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                 'hourly_repperiods',
                 'aggregate_regions',
             ]:
+                OPATH.writelines(f"echo {'-'*12+'-'*len(s)}\n")
                 OPATH.writelines(f"echo 'starting {s}.py'\n")
+                OPATH.writelines(f"echo {'-'*12+'-'*len(s)}\n")
                 OPATH.writelines(
                     f"python {os.path.join(casedir,'input_processing',s)}.py {reeds_path} {inputs_case} {tolog}\n")
                 OPATH.writelines(writescripterrorcheck(s)+'\n')

@@ -30,8 +30,8 @@ import numpy as np
 import os
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.ticker import (
-    AutoMinorLocator, MultipleLocator, AutoLocator, PercentFormatter)
+from matplotlib import patheffects as pe
+import cmocean
 
 ###################
 ### Plot formatting
@@ -118,15 +118,19 @@ def rainbowmapper(iterable, colormap=None, explicitcolors=False, categorical=Fal
         plt.cm.tab20(i) for i in [10,11,6,7,2,3,12,13,16,17,4,5,18,19,0,1,8,9,14,15,]
     ]
     if colormap is not None:
-        if type(colormap) is list:
+        if isinstance(colormap, list):
             colors=[colormap[i] for i in range(len(iterable))]
         else:
             colors=[colormap(i) for i in np.linspace(0,1,len(iterable))]
-    elif len(iterable) == 1: colors=['C3']
-    elif len(iterable) == 2: colors=['C3','C0']
-    elif len(iterable) == 3: colors=['C3','C2','C0']
-    elif len(iterable) == 4: colors=['C3','C1','C2','C0']
-    elif len(iterable) == 5: 
+    elif len(iterable) == 1:
+        colors=['C3']
+    elif len(iterable) == 2:
+        colors=['C3','C0']
+    elif len(iterable) == 3:
+        colors=['C3','C2','C0']
+    elif len(iterable) == 4:
+        colors=['C3','C1','C2','C0']
+    elif len(iterable) == 5:
         colors=['C3','C1','C2','C0','C4']
     elif len(iterable) == 6:
         colors=['C5','C3','C1','C2','C0','C4']
@@ -225,15 +229,14 @@ def addcolorbarhist(
     if extend == 'neither':
         data_hist = data
     elif extend == 'max':
-        data_hist = data.clip(max=vmax)
+        data_hist = data.clip(upper=vmax)
     elif extend == 'min':
-        data_hist = data.clip(min=vmin)
+        data_hist = data.clip(lower=vmin)
     elif extend == 'both':
-        data_hist = data.clip(min=vmin, max=vmax)
+        data_hist = data.clip(lower=vmin, upper=vmax)
 
     ######### Add colorbar
     norm = mpl.colors.Normalize(vmin=vmin, vmax=vmax)
-    colors = cmap(bins)
 
     ### Horizontal orientation
     if orientation in ['horizontal', 'h']:
@@ -244,7 +247,7 @@ def addcolorbarhist(
         
         cax = f.add_axes([caxleft, caxbottom, caxwidth, caxheight])
 
-        cb1 = mpl.colorbar.ColorbarBase(
+        _cb1 = mpl.colorbar.ColorbarBase(
             cax, cmap=cmap, norm=norm, orientation='horizontal',
             extend=extend, extendfrac=extendfrac)
         cax.xaxis.set_ticks_position('bottom')
@@ -339,7 +342,7 @@ def addcolorbarhist(
 
         cax = f.add_axes([caxleft, caxbottom, caxwidth, caxheight])
 
-        cb1 = mpl.colorbar.ColorbarBase(
+        _cb1 = mpl.colorbar.ColorbarBase(
             cax, cmap=cmap, norm=norm, orientation='vertical',
             extend=extend, extendfrac=extendfrac)
         cax.yaxis.set_ticks_position('left')
@@ -431,22 +434,22 @@ def plot2dhistarray(xdata, ydata, logcolor=True, bins=None,
         * ax[(1,1)]: Right y-axis histogram
     """
     ### Format inputs
-    if type(bins) == int:
+    if isinstance(bins, int):
         bins = [np.linspace(min(xdata), max(xdata), bins), 
                 np.linspace(min(ydata), max(ydata), bins)]
     elif type(bins) == tuple:
-        if (type(bins[0]) == int) and (type(bins[1]) == int):
+        if isinstance(bins[0], int) and isinstance(bins[1], int):
             bins = [np.linspace(min(xdata), max(xdata), bins[0]), 
                     np.linspace(min(ydata), max(ydata), bins[1])]
         elif (type(bins[0] == np.ndarray) and (type(bins[1]) == np.ndarray)):
             pass
     elif type(bins) == np.ndarray:
         bins = [bins, bins]
-    elif bins == None:
+    elif bins is None:
         bins = [np.linspace(min(xdata), max(xdata), 101), 
                 np.linspace(min(ydata), max(ydata), 101)]
 
-    if gridspec_kw == None:
+    if gridspec_kw is None:
         gridspec_kw = {'height_ratios': [1,6], 'width_ratios': [6,1], 
                        'hspace':0.02, 'wspace': 0.02}
     ### Procedure
@@ -513,11 +516,11 @@ def plotquarthist(
     * pad, if not None, overwrites histpad and quartpad
     """
     ### Interpret inputs
-    if flierprops == None:
+    if flierprops is None:
         flierprops={'markersize': 2, 'markerfacecolor': 'none',
                     'markeredgewidth': 0.25, 'markeredgecolor': '0.5'}
 
-    if hist_range == None:
+    if hist_range is None:
         hist_range = (dfplot.min().min(), dfplot.max().max())
     else:
         assert (len(hist_range)==2 or type(hist_range) in [float, int]) 
@@ -525,14 +528,14 @@ def plotquarthist(
     labels = list(dfplot.columns)
     data_sets = [dfplot[label].dropna().values for label in labels]
 
-    if x_locations == None:
+    if x_locations is None:
         x_locations = dfplot.columns.values
-        if any([type(col) == str for col in x_locations]):
+        if any([isinstance(col, str) for col in x_locations]):
             x_locations = range(len(x_locations))
 
-    if (pad != None) and (direction == 'right'):
+    if (pad is not None) and (direction == 'right'):
         histpad, quartpad = pad, -pad
-    elif (pad != None) and (direction == 'left'):
+    elif (pad is not None) and (direction == 'left'):
         histpad, quartpad = -pad, pad
 
     ###### Some shared quantities between quarts and hists
@@ -596,9 +599,9 @@ def plotquarthist(
         assert len(x_locations) == len(scaled_data_sets), "mismatched axes"
         for i in range(len(data_sets)):
             ### Set bar color
-            if type(histcolor) == list: 
+            if isinstance(histcolor, list):
                 c = histcolor[i]
-            elif type(histcolor) == dict:
+            elif isinstance(histcolor, dict):
                 c = histcolor[labels[i]]
             else: 
                 c = histcolor
@@ -635,8 +638,10 @@ def plotquarthist(
     ## Botstrapped 95% confidence intervals for median
     for i in range(len(data_sets)):
         ### Set median range color
-        if type(cicolor) == list: c = cicolor[i]
-        else: c = cicolor
+        if isinstance(cicolor, list):
+            c = cicolor[i]
+        else:
+            c = cicolor
         ### Plot median bars
         ax.plot(np.array([x_locations[i], x_locations[i]]) + (quartpad * xscale), 
                 [cilos[i], cihis[i]],
@@ -768,7 +773,7 @@ def subplotpercentiles(ax, dfplot, datacolumn, tracecolumn, subplotcolumn=None,
     if colordict is None:
         colors = ['C{}'.format(i%10) for i in range(len(tracevals))]
         colordict = dict(zip(tracevals, colors))
-    elif type(colordict) == list:
+    elif isinstance(colordict, list):
         colordict = dict(zip(tracevals, colordict))
     elif colordict in ['order', 'ordered', 'rainbow', 'sort']:
         colordict = rainbowmapper(tracevals)
@@ -797,7 +802,7 @@ def subplotpercentiles(ax, dfplot, datacolumn, tracecolumn, subplotcolumn=None,
                         color=colordict[traceval], **kwargs)
                 
         ax.set_xlim(0,100)
-        ax.xaxis.set_minor_locator(AutoMinorLocator(xdivs))
+        ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(xdivs))
         ax.tick_params(axis='both', which='major', direction='in', 
                        top=True, right=True, length=4)
         ax.tick_params(axis='x', which='minor', direction='in', 
@@ -809,8 +814,7 @@ def subplotpercentiles(ax, dfplot, datacolumn, tracecolumn, subplotcolumn=None,
     ### Set y limits based on ymin, ymax
     if ylimits is not None:
         assert len(ylimits) == 2, 'len(ylimits) must be 2 but is {}'.format(len(ylimits))
-        assert type(ylimits[0]) == type(ylimits[1])
-        if type(ylimits[0]) == str:
+        if isinstance(ylimits[0], str) and isinstance(ylimits[1], str):
             ymin = float(ylimits[0].replace('%','')) * 0.01
             ymax = float(ylimits[1].replace('%','')) * 0.01
             describe = dfplot[datacolumn].describe(percentiles=[ymin, ymax])
@@ -854,7 +858,7 @@ def plotpercentiles(dfplot, datacolumn, tracecolumn, subplotcolumn=None,
     if colordict is None:
         colors = ['C{}'.format(i%10) for i in range(len(tracevals))]
         colordict = dict(zip(tracevals, colors))
-    elif type(colordict) == list:
+    elif isinstance(colordict, list):
         colordict = dict(zip(tracevals, colordict))
     elif colordict in ['order', 'ordered', 'rainbow', 'sort']:
         colordict = rainbowmapper(tracevals)
@@ -872,7 +876,7 @@ def plotpercentiles(dfplot, datacolumn, tracecolumn, subplotcolumn=None,
                 ax[j].plot(x, y, label=tracevals[i],
                            c=colordict[tracevals[i]])
                 ax[j].set_xlim(0,100)
-                ax[j].xaxis.set_minor_locator(AutoMinorLocator(xdivs))
+                ax[j].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(xdivs))
                 ax[j].set_title(subplotvals[j], weight='bold', fontname='Arial')
                 ax[j].tick_params(
                     axis='both', which='major', direction='in', 
@@ -891,7 +895,7 @@ def plotpercentiles(dfplot, datacolumn, tracecolumn, subplotcolumn=None,
                 ax[-1].plot(x, y, label=tracevals[i],
                            c=colordict[tracevals[i]])
                 ax[-1].set_xlim(0,100)
-                ax[-1].xaxis.set_minor_locator(AutoMinorLocator(xdivs))
+                ax[-1].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(xdivs))
                 ax[-1].set_title('All', weight='bold', fontname='Arial')
                 ax[-1].tick_params(
                     axis='both', which='major', direction='in', 
@@ -911,7 +915,7 @@ def plotpercentiles(dfplot, datacolumn, tracecolumn, subplotcolumn=None,
             ax.plot(x, y, label=tracevals[i],
                        c=colordict[tracevals[i]])
             ax.set_xlim(0,100)
-            ax.xaxis.set_minor_locator(AutoMinorLocator(xdivs))
+            ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(xdivs))
             ax.tick_params(
                 axis='both', which='major', direction='in', 
                 top=True, right=True, length=4)
@@ -924,8 +928,7 @@ def plotpercentiles(dfplot, datacolumn, tracecolumn, subplotcolumn=None,
     ### Set y limits based on ymin, ymax
     if ylimits is not None:
         assert len(ylimits) == 2, 'len(ylimits) must be 2 but is {}'.format(len(ylimits))
-        assert type(ylimits[0]) == type(ylimits[1])
-        if type(ylimits[0]) == str:
+        if isinstance(ylimits[0], str) and isinstance(ylimits[1], str):
             ymin = float(ylimits[0].replace('%','')) * 0.01
             ymax = float(ylimits[1].replace('%','')) * 0.01
             describe = dfplot[datacolumn].describe(percentiles=[ymin, ymax])
@@ -1030,7 +1033,7 @@ def draw_screen_poly(poly, m,
 
 def plotusascattermap(
     dfplot, colorcolumn=None, sizecolumn=None, filterdict=None, sort=True, 
-    basemap=None, cmap=plt.cm.gist_earth_r, mappath=None,
+    basemap=None, cmap=cmocean.cm.rain, mappath=None,
     facecolor='w', edgecolor='w', latlonlabels=None,
     markersize=None, marker='o', figsize=(10,7.5), dpi=None,
     zrange=None, colors=None, maptype='scatter', contourlevels=100,
@@ -1053,9 +1056,9 @@ def plotusascattermap(
     import geopandas as gpd
     import shapely
     ### Set the map bounds based on input
-    if type(bounds) is dict:
+    if isinstance(bounds, dict):
         dictbounds = bounds
-    elif type(bounds) is list:
+    elif isinstance(bounds, list):
         dictbounds = dict(zip(
             ['lat_1','lat_2','lon_0','lat_0','width','height'],
             bounds
@@ -1124,10 +1127,11 @@ def plotusascattermap(
     if not basemap:
 
         ###### Download the map file if necessary
-        if (not os.path.exists(mappath)) and (downloadmap == False):
+        if (not os.path.exists(mappath)) and (downloadmap is False):
             raise Exception("No file at {}; try setting downloadmap=True".format(mappath))
-        if (not os.path.exists(mappath)) and (downloadmap == True):
-            import urllib.request, zipfile
+        if (not os.path.exists(mappath)) and (downloadmap is True):
+            import urllib.request
+            import zipfile
             ### Download it
             url = ('https://opendata.arcgis.com/datasets/bee7adfd918e4393995f64e155a1bbdf_0.zip?'
                    'outSR=%7B%22wkid%22%3A102100%2C%22latestWkid%22%3A3857%7D')
@@ -1188,8 +1192,7 @@ def plotusascattermap(
             zrangeplot = [datamin, datamax]
         else:
             assert len(zrange) == 2, "len(zrange) must be 2 but is {}".format(len(zrange))
-            assert type(zrange[0]) == type(zrange[1])
-            if type(zrange[0]) == str:
+            if isinstance(zrange[0], str) and isinstance(zrange[1], str):
                 assert (zrange[0].endswith('%') and zrange[1].endswith('%')), "zrange != %"
                 zmin = float(zrange[0].replace('%','')) * 0.01
                 zmax = float(zrange[1].replace('%','')) * 0.01
@@ -1211,7 +1214,7 @@ def plotusascattermap(
     if colorcolumn is not None:
         if colors is None:
             colordata = dfmap[colorcolumn].values
-        elif type(colors) == dict:
+        elif isinstance(colors, dict):
             colordata = dfmap[colorcolumn].map(lambda x: colors[x]).values
     elif colorcolumn is None:
         if colors is None:
@@ -1282,18 +1285,18 @@ def plotusascattermap(
     #     # x,y = m_in([-100],[40])
     #     m_in.scatter(x, y, color='none', ax=ax)
 
-    if (colorbarhist == True) and (colorcolumn is not None):
+    if (colorbarhist is True) and (colorcolumn is not None):
         ### Add legend if categorical
-        if type(colors) is dict:
+        if isinstance(colors, dict):
             patchlegend(colors, edgecolor=markeredgecolor, **colorbarkwargs)
         ### Add hist if not categorial
         else:
-            cax = addcolorbarhist(
+            _cax = addcolorbarhist(
                 f=f, ax0=ax, data=colordata, title=colorbartitle, cmap=cmap,
                 vmin=zrangeplot[0], vmax=zrangeplot[1],
                 # title_fontsize='x-large',
                 **colorbarkwargs)
-            returncax = True
+            _returncax = True
 
     return f, ax
     # return f, ((ax, cax) if (returncax and colorbarhist) else ax)
@@ -1320,7 +1323,7 @@ def sparkline(ax, dsplot, endlabels=True,
         ax.set_xticks(xticks)
 
     if minordivisions is not None:
-        ax.xaxis.set_minor_locator(AutoMinorLocator(minordivisions))
+        ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(minordivisions))
 
     ### Annotate the ends
     if endlabels:
@@ -1375,17 +1378,17 @@ def plotyearbymonth(dfs, plotcols=None, colors=None,
                     ax[i].fill_between(
                         dfplot.index, dfplot[plotcols].values, lw=0, alpha=alpha,
                         color=(colors if type(colors) in [str,mpl.colors.ListedColormap] 
-                               else ('C0' if colors == None else colors[0])))
+                               else ('C0' if colors is None else colors[0])))
                 elif style in ['line', 'l']:
                     ax[i].plot(
                         dfplot.index, dfplot[plotcols].values, lw=lwforline, alpha=alpha, ls=ls,
                         color=(colors if type(colors) in [str,mpl.colors.ListedColormap] 
-                               else ('C0' if colors == None else colors[0])))
+                               else ('C0' if colors is None else colors[0])))
                     
             elif isinstance(plotcols, list):
                 if isinstance(colors, str):
                     colors = [colors]*len(plotcols)
-                elif colors == None:
+                elif colors is None:
                     colors = ['C{}'.format(i%10) for i in range(len(plotcols))]
                 for j, plotcol in enumerate(plotcols):
                     dfplot = dfs.loc['{} {}'.format(month, dfs.index[0].year)][[plotcol]]
@@ -1487,10 +1490,14 @@ def _despine_sub(ax,
     direction='out'):
     """
     """
-    if not top: ax.spines['top'].set_visible(False)
-    if not right: ax.spines['right'].set_visible(False)
-    if not left: ax.spines['left'].set_visible(False)
-    if not bottom: ax.spines['bottom'].set_visible(False)
+    if not top:
+        ax.spines['top'].set_visible(False)
+    if not right:
+        ax.spines['right'].set_visible(False)
+    if not left:
+        ax.spines['left'].set_visible(False)
+    if not bottom:
+        ax.spines['bottom'].set_visible(False)
     ax.tick_params(axis='both', which='both',
                    direction=direction, 
                    top=top, right=right, 
@@ -1549,7 +1556,7 @@ def patchlegend(colors, edgecolor='none', alpha=1, reverse=False, **kwargs):
                    alpha=alpha,
                    label=i)
                for i in colors.keys()]
-    if reverse == True:
+    if reverse is True:
         leg = plt.legend(handles=patches[::-1], **kwargs)
     else:
         leg = plt.legend(handles=patches, **kwargs)
@@ -1559,7 +1566,7 @@ def patchlegend(colors, edgecolor='none', alpha=1, reverse=False, **kwargs):
 def _differentiate_lines_sub(ax, cycle=10, linestyles=['--',':','-.']):
     """
     """
-    if type(linestyles) is str:
+    if isinstance(linestyles, str):
         ls = [linestyles,linestyles,linestyles]
     else:
         ls = linestyles
@@ -1635,7 +1642,7 @@ def annotate(ax, label, x, offset, decimals=0, tail='', **kwargs):
     None
     """
     ### Get the point to plot
-    lineindex = [l._label for l in ax.get_lines()].index(label)
+    lineindex = [line._label for line in ax.get_lines()].index(label)
     try:
         pointindex = ax.get_lines()[lineindex]._xorig.tolist().index(x)
     except ValueError:
@@ -1654,8 +1661,13 @@ def annotate(ax, label, x, offset, decimals=0, tail='', **kwargs):
         noteprops[key] = kwargs[key]
 
     ### Annotate it
+    if isinstance(decimals, int):
+        _decimals = decimals
+    else:
+        _decimals = 0 if y < 100 else -1
+
     ax.annotate(
-        ('{:.'+str(decimals)+'f}').format(y)+tail,
+        f'{np.around(y, _decimals):.{max(_decimals, 0)}f}'+tail,
         xy=(x,y),
         textcoords='offset points',
         xytext=offset,
@@ -1663,6 +1675,149 @@ def annotate(ax, label, x, offset, decimals=0, tail='', **kwargs):
         va='bottom' if offset[1] > 0 else 'top' if offset[1] < 0 else 'center',
         **noteprops,
     )
+
+
+def optimize_label_positions(
+        ydata, mindistance, ypad=0, extend='above',
+        msg=False, debug=False,
+    ):
+    """Position non-overlapping y labels while minimizing difference from actual values
+
+    Args:
+        ydata (array): actual y data values for points to label
+        mindistance (numeric): minimum distance between labels, in data units
+        ypad (numeric): factor by which to expand the y data bounds to fit the y labels.
+            If 0, the label positions will all fall between the minimum and maximum values
+            of the data (or the optimization will be infeasible).
+            If extend=='above', labels can extend above the data by the specified factor.
+            If extend=='below', labels can extend below the data by the specified factor.
+            If extend=='both', labels can extend above and below the data by the specified factor.
+            For example, if set to -1.5, the highest label can be 25% higher than the
+            highest y value and the lowest label can be 25% lower.
+        msg (boolean): whether to print optimizer log
+        debug (boolean): return full model output as dictionary
+    """
+    if any([np.isnan(i) for i in ydata]):
+        raise ValueError("There are NaN entries in ydata")
+    import pulp
+    m = pulp.LpProblem("OptimizeLabelPositions", pulp.LpMinimize)
+
+    ### Sets
+    index = range(len(ydata))
+
+    ### Parameters
+    if ypad != 0 and extend not in ['above','up','below','down','both']:
+        raise ValueError(f"extend={extend} but must be in ['above','up','below','down','both']")
+    yspan = (max(ydata) - min(ydata)) * (1 + ypad)
+    if (ypad == 0) or (extend in ['above','up']):
+        ymax = min(ydata) + yspan
+        ymin = min(ydata)
+    elif extend in ['below','down']:
+        ymax = max(ydata)
+        ymin = max(ydata) - yspan
+    elif extend == 'both':
+        ymax = (max(ydata) + min(ydata))/2 + yspan/2
+        ymin = (max(ydata) + min(ydata))/2 - yspan/2
+
+    ### Variables
+    YLABEL = pulp.LpVariable.dicts(
+        'YLABEL', (i for i in index), lowBound=ymin, upBound=ymax, cat='Continuous')
+    ERROR_POS = pulp.LpVariable.dicts(
+        'ERROR_POS', (i for i in index), lowBound=0, cat='Continuous')
+    ERROR_NEG = pulp.LpVariable.dicts(
+        'ERROR_NEG', (i for i in index), lowBound=0, cat='Continuous')
+
+    ### Constraints
+    for i in index:
+        for j in index:
+            if i == j:
+                continue
+            ## ylabel positions can't be within mindistance of each other
+            if ydata[i] >= ydata[j]:
+                m += (YLABEL[i] - YLABEL[j] >= mindistance)
+            else:
+                m += (YLABEL[j] - YLABEL[i] >= mindistance)
+
+    ## Define the error terms
+    for i in index:
+        m += ERROR_POS[i] - ERROR_NEG[i] + YLABEL[i] == ydata[i]
+
+    ### Objective: Minimize the sum of absolute values of errors
+    m += pulp.lpSum([ERROR_POS[i] + ERROR_NEG[i] for i in index])
+
+    ### Solve it
+    m.solve(solver=pulp.PULP_CBC_CMD(msg=msg))
+
+    if m.status != 1:
+        raise ValueError('optimize_label_positions is infeasible; try a smaller mindistance')
+
+    ylabel = [YLABEL[i].varValue for i in index]
+        
+    if debug:
+        out = {
+            'ylabel': ylabel,
+            'error_pos': [ERROR_POS[i].varValue for i in index],
+            'error_neg': [ERROR_NEG[i].varValue for i in index],
+            'm': m,
+        }
+        return out
+    else:
+        return ylabel
+
+
+def label_last(
+        dfplot, ax,
+        mindistance=None, colors=None, extend='below', line=True,
+        head=' ', tail='', ha='left', path_effects=None,
+        fontsize='medium', xpad=1, decimals=0,
+        value=True, name=False,
+    ):
+    """
+    dfplot: dataframe with years as index and cases as columns
+    """
+    lastyear = dfplot.index[-1]
+    if colors is None:
+        colors = dict(zip(dfplot.columns, ['C7']*dfplot.shape[1]))
+
+    vals = dfplot.loc[lastyear].sort_values(ascending=False).rename('val').to_frame()
+
+    if mindistance is None:
+        mindistance = dfplot.max().max() * 0.033
+    _xpad = xpad if ha == 'left' else -xpad
+
+    try:
+        vals['ylabel'] = optimize_label_positions(
+            vals.values, mindistance=mindistance, ypad=1000, extend=extend,
+        )
+    except Exception as err:
+        print(err)
+        vals['ylabel'] = vals.val
+        line = False
+    for case, row in vals.iterrows():
+        ## line
+        if line:
+            ax.annotate(
+                '',
+                xy=(lastyear+_xpad/2, row.val),
+                xytext=(lastyear+_xpad, row.ylabel),
+                arrowprops={
+                    'arrowstyle':'-', 'shrinkA':0, 'shrinkB':0,
+                    'color':colors[case], 'lw':0.5},
+                annotation_clip=False,
+            )
+        ## label
+        if isinstance(decimals, int):
+            _decimals = decimals
+        else:
+            _decimals = 0 if row.val < 100 else -1
+        val = f'{np.around(row.val, _decimals):.{max(_decimals, 0)}f}'
+        text = ' '.join([val if value else '', case if name else '']).strip()
+        ax.annotate(
+            head+text+tail,
+            (lastyear+_xpad, row.ylabel), ha=ha, va='center',
+            color=colors[case], fontsize=fontsize, annotation_clip=False,
+            path_effects=path_effects,
+        )
 
 
 def stackbar(df, ax, colors, width=1, net=True, align='center', bottom=0, x0=0, **netargs):
@@ -1897,6 +2052,7 @@ def waterfall_span(
 def plot_region_bars(
         dfzones, dfdata, colors, ax=None,
         valscale=3e3, width=5e4, center=False,
+        zeroline=None,
     ):
     """
     Inputs
@@ -1908,17 +2064,14 @@ def plot_region_bars(
     valscale: [meters / (units of dfdata)]
     width: [meters]
     center: If True, bar center will be at centroid_y; otherwise bar base will be
+    zeroline: dictionary of kwargs to pass to ax.plot() for a zero line
     """
-    ### Get centroids if necessary
-    if 'centroid_x' not in dfzones:
-        dfzones['centroid_x'] = dfzones.centroid.x
-        dfzones['centroid_y'] = dfzones.centroid.y
     ### Plot it
     for r in dfzones.index:
         if r not in dfdata.index:
             continue
         ### Get coordinates
-        x0, bottom = dfzones.loc[r, ['centroid_x', 'centroid_y']]
+        x0, bottom = dfzones.loc[r, ['labelx', 'labely']]
         ### Scale it
         df = dfdata.loc[r].to_frame().T * valscale
         df.index = [x0]
@@ -1928,3 +2081,118 @@ def plot_region_bars(
         stackbar(
             df=df, ax=ax, colors=colors, width=width, net=False, bottom=bottom,
         )
+        if isinstance(zeroline, dict):
+            ax.plot(
+                [x0-width/2, x0+width/2], [bottom]*2,
+                **zeroline,
+            )
+
+
+def plot_segmented_arrow(
+        ax,
+        reversefrac=0.4, forwardfrac=0.3,
+        reversewidth=1e5, forwardwidth=2e5, midwidth=3e5,
+        reversecolor='C3', forwardcolor='C0', midcolor='0.7',
+        startx=-3e5, endx=3e5,
+        starty=1e5, endy=-2e5,
+        alpha=1, zorder=2e6,
+        headlengthfrac=0.25, headwidthfrac=1,
+        label='', labelweight='bold', labelfontsize=12,
+        labelborderlw=2.0, labelborderalpha=0.7,
+    ):
+    """Plot a three-segment arrow (usually on a map)
+    Examples inputs:
+        label=f"←{75.3257:.0f}%→",
+    """
+    ### Check inputs
+    if np.around(reversefrac + forwardfrac, -3) > 1:
+        raise ValueError(f"reversefrac + forwardfrac = {reversefrac + forwardfrac}")
+
+    ### Calculate intermediate values
+    delx = endx - startx
+    dely = endy - starty
+    hypotenuse = (delx**2 + dely**2)**0.5
+    midx = (startx + endx) / 2
+    midy = (starty + endy) / 2
+    anglerad = np.arctan((endy - starty) / (endx - startx))
+    angle = anglerad * 180 / np.pi
+    midfrac = np.around(1 - reversefrac - forwardfrac, -3)
+
+    tailxforward = endx - delx * forwardfrac
+    tailyforward = endy - dely * forwardfrac
+    lenxforward = delx * forwardfrac
+    lenyforward = dely * forwardfrac
+
+    tailxreverse = startx + delx * reversefrac
+    tailyreverse = starty + dely * reversefrac
+    lenxreverse = delx * reversefrac
+    lenyreverse = dely * reversefrac
+
+    ### Draw it
+    ## Forward
+    arrow = mpl.patches.FancyArrow(
+        tailxforward, tailyforward, lenxforward, lenyforward,
+        width=forwardwidth,
+        length_includes_head=True,
+        head_width=forwardwidth*headwidthfrac,
+        head_length=hypotenuse*forwardfrac*headlengthfrac,
+        alpha=alpha,
+        color=forwardcolor, lw=0,
+        zorder=zorder,
+        clip_on=False,
+    )
+    ax.add_patch(arrow)
+
+    ## Reverse
+    arrow = mpl.patches.FancyArrow(
+        tailxreverse, tailyreverse, -lenxreverse, -lenyreverse,
+        width=reversewidth,
+        length_includes_head=True,
+        head_width=reversewidth*headwidthfrac,
+        head_length=hypotenuse*reversefrac*headlengthfrac,
+        alpha=alpha,
+        color=reversecolor, lw=0,
+        zorder=zorder,
+        clip_on=False,
+    )
+    ax.add_patch(arrow)
+
+    ## Middle
+    if midwidth and (midfrac > 0):
+        arrow = mpl.patches.FancyArrow(
+            tailxreverse, tailyreverse,
+            (tailxforward - tailxreverse),
+            (tailyforward - tailyreverse),
+            width=midwidth,
+            length_includes_head=True,
+            head_width=midwidth,
+            head_length=0,
+            alpha=alpha,
+            color=midcolor, lw=0,
+            zorder=zorder,
+            clip_on=False,
+        )
+        ax.add_patch(arrow)
+
+    ## Label
+    if len(label):
+        ax.annotate(
+            label,
+            (midx, midy), rotation=angle,
+            ha='center', va='center',
+            zorder=1e7, weight=labelweight, fontsize=labelfontsize,
+            path_effects=[pe.withStroke(
+                linewidth=labelborderlw, foreground='w', alpha=labelborderalpha)],
+        )
+
+
+def wraptext(text, width, fontsize=14):
+    """
+    Inputs
+    width: Maximum text length in inches
+    """
+    numchars = int(np.around(width / fontsize * 90, 0))
+    numlines = len(text) // numchars + bool(len(text) % numchars)
+    outlist = [text[i*numchars:(i+1)*numchars] for i in range(numlines)]
+    out = '\n'.join(outlist)
+    return out
