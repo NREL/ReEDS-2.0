@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib import patheffects as pe
 from glob import glob
 import os
 import sys
@@ -12,6 +13,7 @@ import openpyxl
 import geopandas as gpd
 import shapely
 import h5py
+import cmocean
 os.environ['PROJ_NETWORK'] = 'OFF'
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -23,8 +25,18 @@ import plots
 plots.plotparams()
 site.addsitedir(os.path.join(reeds_path,'input_processing'))
 from hourly_writetimeseries import h2timestamp, timestamp2h
+import hourly_repperiods
 site.addsitedir(os.path.join(reeds_path,'ReEDS_Augur'))
 import functions
+
+
+###### Constants
+### Map fiddles
+zone_label_offset = {
+    'SPP_South': (0.1e6, 0.1e6),
+    'MISO_Central': (0.1e6, -0.1e6),
+    'MISO_North': (0, -0.1e6),
+}
 
 
 ### Functions
@@ -124,13 +136,14 @@ def get_zonemap(case):
 
 def get_dfmap(case):
     dfba = get_zonemap(case)
-    dfmap = {}
+    dfmap = {'r': dfba.copy()}
     for col in ['interconnect','nercr','transreg','transgrp','st','country']:
         dfmap[col] = dfba.copy()
         dfmap[col]['geometry'] = dfmap[col].buffer(0.)
         dfmap[col] = dfmap[col].dissolve(col)
-        dfmap[col]['labelx'] = dfmap[col].centroid.x
-        dfmap[col]['labely'] = dfmap[col].centroid.y
+        for prefix in ['','label']:
+            dfmap[col][prefix+'x'] = dfmap[col].centroid.x
+            dfmap[col][prefix+'y'] = dfmap[col].centroid.y
 
     return dfmap
 
@@ -197,8 +210,30 @@ def read_pras_results(filepath):
         return df
 
 
+def get_inflatable(inflationpath=None):
+    """Get an [inyear,outyear] lookup table for inflation"""
+    inflation = pd.read_csv(inflationpath, index_col='t')
+    ### Make the single-pair function
+    def inflatifier(inyear, outyear=2019, inflation=inflation):
+        if inyear < outyear:
+            return inflation.loc[inyear+1:outyear,'inflation_rate'].cumprod()[outyear]
+        elif inyear > outyear:
+            return 1 / inflation.loc[outyear+1:inyear,'inflation_rate'].cumprod()[inyear]
+        else:
+            return 1
+    ### Make the output table
+    inflatable = {}
+    for inyear in range(1960,2051):
+        for outyear in range(1960,2051):
+            inflatable[inyear,outyear] = inflatifier(inyear,outyear)
+    inflatable = pd.Series(inflatable)
+    return inflatable
+
+
 def plotdiff(
-        val, casebase, casecomp, onlytechs=None, titleshorten=0,
+        val, casebase, casecomp, 
+        casebase_name=None, casecomp_name=None,
+        onlytechs=None, titleshorten=0,
         yearmin=None, yearmax=2050, colors=None,
         **plot_kwds,
     ):
@@ -599,13 +634,13 @@ def plotdiff(
         for col in range(3):
             ax[col].xaxis.set_visible(False)
 
-    ax[0].set_title(os.path.basename(casebase)[titleshorten:], x=0, ha='left', size='large', weight='bold')
-    ax[1].set_title(os.path.basename(casecomp)[titleshorten:], x=0, ha='left', size='large', weight='bold')
+    _casebase_name = (casebase_name if casebase_name else os.path.basename(casebase)[titleshorten:])
+    _casecomp_name = (casecomp_name if casecomp_name else os.path.basename(casecomp)[titleshorten:])
+    ax[0].set_title(_casebase_name, x=0, ha='left', size='large', weight='bold')
+    ax[1].set_title(_casecomp_name, x=0, ha='left', size='large', weight='bold')
     for col in [2,3]:
         ax[col].set_title(
-            '{}\n– {}'.format(
-                os.path.basename(casecomp)[titleshorten:],
-                os.path.basename(casebase)[titleshorten:]),
+            f'{_casecomp_name}\n– {_casebase_name}',
             x=0, ha='left', size='large', weight='bold')
     ax[0].annotate(
         (tfix.get(val,val) 
@@ -835,7 +870,8 @@ def plot_trans_onecase(
         subtract_baseyear=None,
         show_overlap=True, drawzones=True, show_converters=0.5,
         crs='ESRI:102008',
-        thickborders='none', thickness=0.5, drawstates=True,
+        thickborders='none', thickness=0.5, thickcolor='0.75',
+        drawstates=True,
         label_line_capacity=0, crossing_level='r',
     ):
     """
@@ -962,11 +998,11 @@ def plot_trans_onecase(
     ###### Shared
     ### Boundaries
     if drawzones:
-        dfzones.plot(ax=ax, edgecolor='0.5', facecolor='none', lw=0.1)
+        dfzones.plot(ax=ax, edgecolor='0.8', facecolor='none', lw=0.1)
     if drawstates:
         dfstates.plot(ax=ax, edgecolor='0.25', facecolor='none', lw=0.2)
     if thickborders not in [None,'','none','None',False]:
-        dfthick.plot(ax=ax, edgecolor='0.75', facecolor='none', lw=thickness)
+        dfthick.plot(ax=ax, edgecolor=thickcolor, facecolor='none', lw=thickness)
     ax.axis('off')
     ### Labels
     if pcalabel:
@@ -1074,7 +1110,7 @@ def plot_trans_onecase(
         ax.annotate(
             '10 GW', (-1.75e6, -1.0e6), ha='center', va='top', weight='bold', fontsize=scalesize)
 
-    return f,ax
+    return f, ax, dfplot
 
 
 def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path, 
@@ -1254,7 +1290,7 @@ def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path,
                 0.1,
             )
 
-        dfplot.plot(ax=ax, column=valcol+'_diff', cmap=plt.cm.bwr, legend=True,
+        dfplot.plot(ax=ax, column=valcol+'_diff', cmap=plt.cm.RdBu_r, legend=True,
                     vmin=-zlim, vmax=+zlim, legend_kwds=legend_kwds)
 
     ### Finish and return
@@ -1267,7 +1303,7 @@ def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path,
 
 def plot_trans_vsc(
         case, year=2050, wscale=0.4, alpha=1.0, miles=300,
-        cmap=plt.cm.gist_earth_r, scale=True, title=True,
+        cmap=cmocean.cm.rain, scale=True, title=True,
         convertermax=None,
         f=None, ax=None,
     ):
@@ -1363,24 +1399,57 @@ def plot_trans_vsc(
 
 def plot_transmission_utilization(
         case, year=2050, plottype='mean', network='trans',
-        wscale=0.0004, alpha=1.0, cmap=plt.cm.gist_earth_r,
+        wscale=0.0004, alpha=1.0, cmap=cmocean.cm.rain,
         extent='modeled',
+        f=None, ax=None,
+        thicklevel='transreg',
     ):
     """
     # Inputs
     extent: 'modeled' for modeled area, 'usa' for contiguous US
     """
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0).squeeze(1)
     ### Get the output data
-    if ('h2' in network.lower()) or ('hydrogen' in network.lower()):
+    add_other_direction = False
+    hcol = 'h'
+    if any([k in network.lower() for k in ['h2','hydrogen']]):
         dftrans = {
             'trans_cap': pd.read_csv(os.path.join(case,'outputs','h2_trans_cap.csv')),
             'trans_flow_power': pd.read_csv(os.path.join(case,'outputs','h2_trans_flow.csv')),
         }
+        title = f'{plottype.title()} utilization [fraction]'
+        add_other_direction = True
+    elif any([k in network.lower() for k in ['stress','prm','ra','peak','resource adequacy']]):
+        dftrans = {
+            'trans_cap': pd.read_csv(os.path.join(case,'outputs','tran_cap_prm.csv')),
+        }
+        if int(sw.GSw_PRM_CapCredit):
+            dftrans['trans_flow_power'] = pd.read_csv(os.path.join(case,'outputs','captrade.csv'))
+            hcol = 'ccseason'
+        else:
+            dftrans['trans_flow_power'] = pd.read_csv(os.path.join(case,'outputs','tran_flow_stress.csv'))
+        title = f'{plottype.title()} utilization\nfor RA [fraction]'
     else:
         dftrans = {
             'trans_cap': pd.read_csv(os.path.join(case,'outputs','tran_out.csv')),
             'trans_flow_power': pd.read_csv(os.path.join(case,'outputs','tran_flow_power.csv')),
         }
+        title = f'{plottype.title()} utilization [fraction]'
+        add_other_direction = True
+    if add_other_direction:
+        ## Include both directions
+        dftrans['trans_cap'] = pd.concat([
+            dftrans['trans_cap'],
+            dftrans['trans_cap'].rename(columns={'r':'rr','rr':'r'}),
+        ], axis=0, ignore_index=True)
+    else:
+        ## Reorient negative values
+        dftrans['trans_flow_power'].loc[dftrans['trans_flow_power'].Value < 0, ['r','rr']] = (
+            dftrans['trans_flow_power'].loc[dftrans['trans_flow_power'].Value < 0, ['rr','r']].values
+        )
+        dftrans['trans_flow_power'].Value = dftrans['trans_flow_power'].Value.abs()
     val_r = pd.read_csv(
         os.path.join(case,'inputs_case','val_r.csv'), header=None,
     ).squeeze(1).values.tolist()
@@ -1393,12 +1462,12 @@ def plot_transmission_utilization(
             .groupby([c for c in dftrans[data] if c not in ['Value']], as_index=False)
             .sum()
             .drop('t', axis=1)
-        ).rename(columns={'allh':'h','Value':'Val','MW':'Val'})
+        ).rename(columns={'allh':'h', 'Value':'Val', 'MW':'Val', hcol:'h'})
     ### Get utilization by timeslice
     utilization = dftrans['trans_flow_power'].merge(
         dftrans['trans_cap'], on=['r','rr','trtype'], suffixes=('_flow','_cap'),
-        how='outer'
-    ).fillna(0)
+        how='right',
+    ).fillna({'Val_flow':0})
     utilization['fraction'] = utilization.Val_flow.abs() / utilization.Val_cap
     ### Get annual fractional utilization
     ## First try the hourly version; if it doesn't exist load the h17 version
@@ -1411,14 +1480,14 @@ def plot_transmission_utilization(
             os.path.join(case,'inputs_case','numhours.csv'),
             header=0, names=['h','hours'], index_col='h').squeeze(1)
     utilization['Valh'] = utilization.apply(
-        lambda row: hours[row.h] * abs(row.Val_flow),
+        lambda row: hours.get(row.get('h', 1), 1) * abs(row.Val_flow),
         axis=1
     )
     utilization_annual = (
         utilization.groupby(['r','rr','trtype']).Valh.sum()
         .divide(dftrans['trans_cap'].set_index(['r','rr','trtype']).Val)
         .fillna(0).rename('fraction')
-        / 8760
+        / utilization.h.drop_duplicates().map(lambda x: hours.get(x, 1)).sum()
     ).reset_index()
 
     ###### Plot max utilization
@@ -1427,11 +1496,17 @@ def plot_transmission_utilization(
         'mean': utilization_annual,
     }
     dfplot = dfplots[plottype.lower()]
+    ### Only keep the direction with the higher fraction, since it presumably drives investment
+    ### (if there is any)
+    dfplot.loc[dfplot.r > dfplot.rr, ['r','rr']] = dfplot.loc[dfplot.r > dfplot.rr, ['rr','r']].values
+    dfplot = dfplot.sort_values('fraction').drop_duplicates(subset=['r','rr'], keep='last')
+    if (dfplot.fraction > 1.01).any():
+        raise Exception(f'Fractions greater than 1: {dfplot.loc[dfplot.fraction > 1]}')
     ### Load geographic data
     dfba = get_zonemap(case)
     if extent.lower() not in ['usa','full','nation','us','country','all']:
         dfba = dfba.loc[val_r]
-    dfstates = dfba.dissolve('st')
+    dfmap = get_dfmap(case)
     ### Plot it
     dfplot = dfplot.merge(dftrans['trans_cap'], on=['r','rr','trtype'], how='left')
     dfplot['r_x'] = dfplot.r.map(dfba.x)
@@ -1439,10 +1514,13 @@ def plot_transmission_utilization(
     dfplot['rr_x'] = dfplot.rr.map(dfba.x)
     dfplot['rr_y'] = dfplot.rr.map(dfba.y)
     ### Plot it
-    plt.close()
-    f,ax = plt.subplots(figsize=(14,8))
-    dfba.plot(ax=ax, edgecolor='0.5', facecolor='none', lw=0.1)
-    dfstates.plot(ax=ax, edgecolor='0.25', facecolor='none', lw=0.2)
+    if (f is None) and (ax is None):
+        plt.close()
+        f,ax = plt.subplots(figsize=(14,8))
+    dfba.plot(ax=ax, edgecolor='0.75', facecolor='none', lw=0.1)
+    if thicklevel:
+        dfmap[thicklevel].plot(ax=ax, edgecolor='C7', facecolor='none', lw=0.2)
+    dfmap['interconnect'].plot(ax=ax, edgecolor='k', facecolor='none', lw=0.3)
     for i, row in dfplot.iterrows():
         ax.plot(
             [row['r_x'], row['rr_x']], [row['r_y'], row['rr_y']],
@@ -1451,17 +1529,15 @@ def plot_transmission_utilization(
         )
     plots.addcolorbarhist(
         f=f, ax0=ax, data=dfplot.fraction.values,
-        title=f'{plottype.title()} utilization [fraction]', cmap=cmap,
-        vmin=0., vmax=1.,
-        orientation='horizontal', labelpad=2.25, histratio=1.,
+        title=title, cmap=cmap,
+        vmin=0., vmax=1., nbins=51,
+        orientation='horizontal', labelpad=2.5, histratio=1.,
         cbarwidth=0.025, cbarheight=0.25,
         cbarbottom=0.15, cbarhoffset=-0.8,
     )
-    ax.annotate(
-        '{} ({})'.format(os.path.basename(case), year),
-        (0.1,1), xycoords='axes fraction', fontsize=10)
+    ax.set_title(f'{os.path.basename(case)} ({year})', fontsize=10)
     ax.axis('off')
-    return f,ax
+    return f, ax, dfplot
 
 
 def plot_vresites_transmission(
@@ -1476,7 +1552,7 @@ def plot_vresites_transmission(
         label={'wind-ons':'Land-based wind [GW]',
                'upv':'Photovoltaics [GW]',
                'wind-ofs':'Offshore wind [GW]'},
-        vmax={'upv':4.303, 'wind-ons':0.4, 'wind-ofs':0.6},
+        vmax={'upv':0.4, 'wind-ons':0.4, 'wind-ofs':0.6},
         trans_scale=True,
         show_transmission=True,
         title=True,
@@ -1538,7 +1614,7 @@ def plot_vresites_transmission(
 
         plots.addcolorbarhist(
             f=f, ax0=ax, data=dfplot.GW.values, title=legend_kwds['label'], cmap=cm[tech],
-            vmin=0., vmax=vmax[tech],
+            vmin=0., vmax=vmax[tech], nbins=101,
             orientation='horizontal', labelpad=2.25, cbarbottom=-0.01, histratio=1.,
             cbarwidth=0.025, cbarheight=0.25, cbarhoffset=cbarhoffset[tech],
         )
@@ -1586,9 +1662,8 @@ def plot_vresites_transmission(
 
 
 def plot_prmtrade(
-        case, year=2050,
+        case, year=2050, vmax=10e3,
         cm=plt.cm.inferno_r, wscale=7, alpha=0.8,
-        crs='ESRI:102008',
         f=None, ax=None, dpi=150,
     ):
     """
@@ -1628,7 +1703,9 @@ def plot_prmtrade(
     ### Get the BA map
     dfba = get_zonemap(os.path.join(case))
     ## Downselect to modeled regions
-    val_r = list(set(dfplot.r.unique().tolist() + dfplot.rr.unique().tolist()))
+    val_r = pd.read_csv(
+        os.path.join(case,'inputs_case','val_r.csv'), header=None,
+    ).squeeze(1).values.tolist()
     dfba = dfba.loc[val_r].copy()
     ## Aggregate to states
     dfstates = dfba.dissolve('st')
@@ -1643,10 +1720,10 @@ def plot_prmtrade(
         dfba['y'] = dfba.index.map(endpoints.y)
 
     ### Get scaling and layout
-    maxflow = dfplot.MW.abs().max()
+    _vmax = dfplot.MW.abs().max() if vmax in [None, 0, 0.] else vmax
     if int(sw.get('GSw_PRM_CapCredit', 1)):
         ccseasons = pd.read_csv(
-            os.path.join(reeds_path,'inputs','variability','h_dt_szn.csv')
+            os.path.join(case,'inputs_case','h_dt_szn.csv')
         ).ccseason.unique()
     else:
         ccseasons = dfplot.ccseason.sort_values().unique()
@@ -1680,7 +1757,7 @@ def plot_prmtrade(
                 length_includes_head=True,
                 head_width=abs(lineflow)*wscale*2.,
                 head_length=abs(lineflow)*wscale*1.0,
-                lw=0, color=cm(abs(lineflow)/maxflow), alpha=alpha,
+                lw=0, color=cm(abs(lineflow)/_vmax), alpha=alpha,
                 ## Plot the primary direction on bottom since it's thicker
                 zorder=(1e6 if primary_direction else 2e6),
                 clip_on=False,
@@ -2982,29 +3059,9 @@ def map_transmission_lines(
     return f,ax
 
 
-def map_zone_capacity(
-        case, year=2050, valscale=3e3, width=7e4,
-        center=True, linealpha=0.6,
-        scale=10, sideplots=True, legend=True,
-        f=None, ax=None,
-    ):
+def get_colors(reeds_path):
     """
-    Inputs
-    ------
-    scale: [float] scalebar size in GW; if zero, don't plot scalebar
-    sideplots: Nationwide tranmsission, emissions, generation, and generation capacity
     """
-    ###### Shared inputs
-    sw = pd.read_csv(
-        os.path.join(case, 'inputs_case', 'switches.csv'),
-        header=None, index_col=0).squeeze(1)
-    years = pd.read_csv(
-        os.path.join(case,'inputs_case','modeledyears.csv')).columns.astype(int).values
-    yearstep = years[-1] - years[-2]
-    # tech_map = pd.read_csv(
-    #     os.path.join(
-    #         reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'),
-    #     index_col='raw').squeeze(1)
     bokehcolors = pd.read_csv(
         os.path.join(
             reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
@@ -3012,8 +3069,8 @@ def map_zone_capacity(
     bokehcolors = pd.concat([
         bokehcolors.loc['smr':'electrolyzer'],
         pd.Series('#D55E00', index=['dac'], name='color'),
-        bokehcolors.loc[:'Canada'],
-    ])
+        bokehcolors.loc[:'smr'],
+    ]).reset_index().drop_duplicates().set_index('index').color
     bokehcolors['canada'] = bokehcolors['Canada']
 
     trtype_map = pd.read_csv(
@@ -3028,57 +3085,111 @@ def map_zone_capacity(
     transcolors['LCC'] = transcolors['lcc']
     transcolors['VSC'] = transcolors['vsc']
 
-    dfba = get_zonemap(case)
-    dfba['centroid_x'] = dfba.centroid.x
-    dfba['centroid_y'] = dfba.centroid.y
+    return bokehcolors, transcolors
 
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-    for col in hierarchy:
-        dfba[col] = dfba.index.map(hierarchy[col])
-    hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
 
-    dfmap = get_dfmap(case)
+def get_gen_capacity(case, year=2050, level='r', units='GW'):
+    """Get zonal generation capacity from a ReEDS run.
+    Returns:
+        Dataframe with index=zones and columns=techs
+    """
+    ### Check inputs
+    assert units in ['MW','GW','TW']
 
-    ###### Case inputs
-    ### Capacity
-    dfcap_in = pd.read_csv(
-        os.path.join(case,'outputs','cap.csv'),
-        names=['i','r','t','MW'], header=0,
-    )
+    ### Get data
+    try:
+        hierarchy = pd.read_csv(
+            os.path.join(case,'inputs_case','hierarchy.csv')
+        ).rename(columns={'*r':'r'}).set_index('r')
+    except (NotADirectoryError, FileNotFoundError):
+        hierarchy = pd.read_csv(
+            os.path.join(case.split(os.sep+'outputs')[0],'inputs_case','hierarchy.csv')
+        ).rename(columns={'*r':'r'}).set_index('r')
+
+    bokehcolors, transcolors = get_colors(reeds_path)
+
+    try:
+        dfcap_in = pd.read_csv(
+            os.path.join(case,'outputs','cap.csv'),
+            names=['i','r','t','MW'], header=0,
+        )
+    except (NotADirectoryError, FileNotFoundError):
+        dfcap_in = pd.read_csv(case, names=['i','r','t','MW'], header=0)
     dfcap_in.i = simplify_techs(dfcap_in.i)
     dfcap = dfcap_in.loc[
         (dfcap_in.t==year)
-    ].rename(columns={'MW':'GW'}).groupby(['i','r']).GW.sum().unstack('i') / 1e3
+    ].groupby(['i','r']).MW.sum().unstack('i')
+    if units != 'MW':
+        dfcap *= {'GW':1e-3, 'TW':1e-6}[units]
     dfcap = (
         dfcap[[c for c in bokehcolors.index if c in dfcap]]
         .drop('electrolyzer', axis=1, errors='ignore')
     ).copy()
+    ## Aggregate if necessary
+    if level != 'r':
+        dfcap.index = dfcap.index.map(hierarchy[level])
+        dfcap = dfcap.groupby(axis=0, level='r').sum()
 
-    tran_out = pd.read_csv(
-        os.path.join(case,'outputs','tran_out.csv')
-    ).rename(columns={'Value':'MW'})
+    return dfcap
 
-    if (f is None) and (ax is None):
-        plt.close()
-        f,ax = plt.subplots(figsize=(12, 9)) # (10, 6.88)
-    ### Background
-    dfba.plot(ax=ax, facecolor='none', edgecolor='0.8', lw=0.2)
-    dfmap['st'].plot(ax=ax, facecolor='none', edgecolor='0.7', lw=0.4)
-    dfmap['interconnect'].plot(ax=ax, facecolor='none', edgecolor='k', lw=1)
 
-    ### Plot transmission
+def get_trans_capacity(case, year=2050, level='r', units='GW'):
+    """Get zonal transmission capacity from a ReEDS run.
+    Returns:
+        Geodataframe with index=interfaces and geometry=linestrings
+    """
+    ### Check inputs
+    assert units in ['MW','GW','TW']
+
+    ### Get data
+    try:
+        hierarchy = pd.read_csv(
+            os.path.join(case,'inputs_case','hierarchy.csv')
+        ).rename(columns={'*r':'r'}).set_index('r')
+    except (NotADirectoryError, FileNotFoundError):
+        hierarchy = pd.read_csv(
+            os.path.join(case.split(os.sep+'outputs')[0],'inputs_case','hierarchy.csv')
+        ).rename(columns={'*r':'r'}).set_index('r')
+
+    try:
+        dfmap = get_dfmap(case)
+    except (NotADirectoryError, FileNotFoundError):
+        dfmap = get_dfmap(case.split(os.sep+'outputs')[0])
+
+    for r in zone_label_offset:
+        if r in dfmap[level].index:
+            dfmap[level].loc[r, 'labelx'] += zone_label_offset[r][0]
+            dfmap[level].loc[r, 'labely'] += zone_label_offset[r][1]
+
+    try:
+        tran_out = pd.read_csv(
+            os.path.join(case,'outputs','tran_out.csv')
+        ).rename(columns={'Value':'MW'})
+    except (NotADirectoryError, FileNotFoundError):
+        tran_out = pd.read_csv(case).rename(columns={'Value':'MW'})
+
     transmap = tran_out.loc[
         (tran_out.t==year)
-    ][['r','rr','trtype','MW']].rename(columns={'MW':'GW'}).copy()
-    transmap.GW /= 1e3
+    ][['r','rr','trtype','MW']].copy()
+    if units != 'MW':
+        transmap[units] = transmap.MW * {'GW':1e-3, 'TW':1e-6}[units]
+    ## Aggregate if necessary
+    if level != 'r':
+        transmap.r = transmap.r.map(hierarchy[level])
+        transmap.rr = transmap.rr.map(hierarchy[level])
+        for i, row in transmap.iterrows():
+            if row.r > row.rr:
+                transmap.loc[i,['r','rr']] = transmap.loc[i,['rr','r']].values
+        transmap = transmap.loc[
+            transmap.r != transmap.rr
+        ].groupby(['r','rr','trtype'], as_index=False)[units].sum()
+    transmap.index = (transmap.r + '|' + transmap.rr).rename('interface')
     ## Add geographic data to the line capacity
-    key = dfba[['centroid_x','centroid_y']]
+    key = dfmap[level][['labelx','labely']]
     for col in ['r','rr']:
         for i in ['x','y']:
             transmap[f'{col}_{i}'] = transmap.apply(
-                lambda row: key.loc[row[col]]['centroid_'+i], axis=1)
+                lambda row: key.loc[row[col]]['label'+i], axis=1)
 
     ## Convert the line capacity dataframe to a geodataframe with linestrings
     transmap['geometry'] = transmap.apply(
@@ -3087,11 +3198,63 @@ def map_zone_capacity(
     )
     transmap = gpd.GeoDataFrame(transmap).set_crs('ESRI:102008')
 
+    return transmap
+
+
+def map_zone_capacity(
+        case, year=2050, level='r',
+        valscale=3e3, width=7e4,
+        center=True, linealpha=0.6,
+        scale=10, sideplots=True, legend=True,
+        f=None, ax=None,
+        drawstates=True, drawinterconnects=True,
+    ):
+    """
+    Inputs
+    ------
+    scale: [float] scalebar size in GW; if zero, don't plot scalebar
+    sideplots: Nationwide tranmsission, emissions, generation, and generation capacity
+    """
+    ###### Shared inputs
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0).squeeze(1)
+
+    years = pd.read_csv(
+        os.path.join(case,'inputs_case','modeledyears.csv')).columns.astype(int).values
+    yearstep = years[-1] - years[-2]
+
+    bokehcolors, transcolors = get_colors(reeds_path)
+
+    dfmap = get_dfmap(case)
+    for r in zone_label_offset:
+        if r in dfmap[level].index:
+            dfmap[level].loc[r, 'labelx'] += zone_label_offset[r][0]
+            dfmap[level].loc[r, 'labely'] += zone_label_offset[r][1]
+
+    ###### Case inputs
+    dfcap = get_gen_capacity(case=case, year=year, level=level, units='GW')
+
+    transmap = get_trans_capacity(case=case, year=year, level=level, units='GW')
     ## Buffer the lines into polygons
     transmap['geometry'] = transmap.apply(
         lambda row: row.geometry.buffer(row.GW*valscale/2), axis=1)
 
-    ## Plot it
+    ###### Plot it
+    if (f is None) and (ax is None):
+        plt.close()
+        f,ax = plt.subplots(figsize=(12, 9))
+    ### Background
+    if level == 'r':
+        dfmap[level].plot(ax=ax, facecolor='none', edgecolor='0.8', lw=0.2)
+    else:
+        dfmap[level].plot(ax=ax, facecolor='none', edgecolor='0.3', lw=0.4)
+    if drawstates:
+        dfmap['st'].plot(ax=ax, facecolor='none', edgecolor='0.7', lw=0.4)
+    if drawinterconnects:
+        dfmap['interconnect'].plot(ax=ax, facecolor='none', edgecolor='k', lw=1)
+
+    ### Plot transmission capacity
     for trtype in ['AC','B2B','LCC','VSC']:
         if trtype in transmap.trtype.unique():
             transmap.loc[transmap.trtype==trtype].dissolve().plot(
@@ -3100,10 +3263,13 @@ def map_zone_capacity(
 
     ### Plot generation capacity
     plots.plot_region_bars(
-        dfzones=dfba, dfdata=dfcap, colors=bokehcolors,
-        ax=ax, valscale=valscale, width=width, center=center)
+        dfzones=dfmap[level], dfdata=dfcap, colors=bokehcolors,
+        ax=ax, valscale=valscale, width=width, center=center,
+        # zeroline={'c':'k', 'ls':':', 'lw':'0.5'},
+    )
 
-    ### Add a scale bar
+    ### Formatting
+    ax.axis('off')
     if scale:
         ax.bar(
             x=[-1.8e6], height=[valscale * scale], bottom=[-1.05e6], width=3.0e5,
@@ -3257,9 +3423,6 @@ def map_zone_capacity(
                 bbox_to_anchor=(1.16,0.92),
                 handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
             )
-
-    ### Formatting
-    ax.axis('off')
 
     return f, ax, eax
 
@@ -3429,7 +3592,7 @@ def map_hybrid_pv_wind(
         case, val='site_cap', year=2050,
         tech=None, vmax=None,
         markersize=10.75, #stretch=1.2,
-        cmap=plt.cm.gist_earth_r,
+        cmap=cmocean.cm.rain,
         f=None, ax=None, figsize=(6,6), dpi=None,
     ):
     """
@@ -3437,7 +3600,7 @@ def map_hybrid_pv_wind(
     cmap: Suggestions:
         val=site_cap, tech=wind-ons: plt.cm.Blues
         val=site_cap, tech=upv: plt.cm.Oranges
-        val=(site_hybridization,site_spurcap), tech=None: plt.cm.gist_earth_r
+        val=(site_hybridization,site_spurcap), tech=None: cmocean.cm.rain
         val=(site_pv_fraction,site_gir), tech=either: plt.cm.turbo
             or mpl.colors.LinearSegmentedColormap.from_list
                 'turboclip', [plt.cm.turbo(c) for c in np.linspace(0.1,0.91,101)])
@@ -3894,7 +4057,7 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
     ]
     colors = plots.rainbowmapper(range(2007,2014))
     rep = f"rep ({sw.GSw_HourlyWeatherYears.replace('_',',')})"
-    colors[rep] = 'k'
+    colors[rep] = repcolor
 
     t2periods = gen_h_stress.groupby('t').szn.unique()
     t2starts = t2periods.map(
@@ -3903,7 +4066,10 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
     # load = pd.read_hdf(os.path.join(case,'inputs_case','load.h5')).sum(axis=1)
     ## Use same procedure as dfpeak and G_plots.plot_e_netloadhours_timeseries()
     for t in years:
-        dictout = {rep: dfrep}
+        if repcolor in ['none', None, False]:
+            dictout = {}
+        else:
+            dictout = {rep: dfrep}
         for y in range(2007,2014):
             yearstarts = [i for i in t2starts[t] if i.year == y]
             yearstarts_aligned = [
@@ -3939,11 +4105,14 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
         ax[row].annotate(
             t,(0.005,0.95),xycoords='axes fraction',ha='left',va='top',
             weight='bold',fontsize='large')
-        ax[row].set_ylim(0)
+        if not sharey:
+            ax[row].set_ylim(0)
         ax[row].yaxis.set_major_locator(mpl.ticker.MultipleLocator(1))
         ax[row].yaxis.set_major_formatter(plt.NullFormatter())
 
     ### Formatting
+    if sharey:
+        ax[0].set_ylim(0)
     ylabel = (
         'Modeled stress periods' if repcolor in ['none', None, False]
         else 'Modeled periods (representative + stress)'
@@ -3954,7 +4123,10 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
     return f, ax
 
 
-def plot_stressperiod_evolution(case, level='transgrp', metric='sum', threshold=10):
+def plot_stressperiod_evolution(
+        case, level='transgrp', metric='sum', threshold=10,
+        figsize=None, scale_widths=False,
+    ):
     """Plot NEUE by year and stress period iteration"""
     ### Load NEUE results
     sw = pd.read_csv(
@@ -3984,8 +4156,15 @@ def plot_stressperiod_evolution(case, level='transgrp', metric='sum', threshold=
     regions = dfplot.columns
     colors = plots.rainbowmapper(regions)
     ### Plot it
+    if figsize is None:
+        figsize = (max(10, ncols*1.2), 3)
+    width_ratios = dfstress.reset_index().groupby('year').iteration.max().loc[years].values + 1
+    gridspec_kw = {'width_ratios':width_ratios} if scale_widths else None
     plt.close()
-    f,ax = plt.subplots(1, ncols, sharey=True, figsize=(max(10,ncols*1.2),3))
+    f,ax = plt.subplots(
+        1, ncols, sharey=True, figsize=figsize,
+        gridspec_kw=gridspec_kw,
+    )
     for col, year in enumerate(years):
         df = dfplot.loc[year]
         for region in regions:
@@ -3997,6 +4176,7 @@ def plot_stressperiod_evolution(case, level='transgrp', metric='sum', threshold=
         ax[col].set_title(year)
         ax[col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(1))
         ax[col].axhline(threshold, lw=0.75, ls='--', c='0.7', zorder=-1e6)
+        ax[col].set_xlim(-0.25, len(df)-0.75)
         ## Annotate the stress periods
         periods = dfstress.loc[year].drop_duplicates()
         note = '\n___________\n'.join([
@@ -4109,10 +4289,76 @@ def plot_neue_bylevel(
     return f, ax, dfin_neue
 
 
+def map_neue(
+        case, year=2050, iteration='last', samples=None, metric='sum',
+        vmax=10., cmap=cmocean.cm.rain, label=True,
+    ):
+    """
+    """
+    ### Parse inputs
+    assert metric in ['sum','max']
+
+    ### Get data
+    if iteration == 'last':
+        _, _iteration = get_last_iteration(
+            case=case, year=year, samples=samples)
+    else:
+        _iteration = iteration
+    infile = os.path.join(case, 'outputs', f'neue_{year}i{_iteration}.csv')
+    neue = pd.read_csv(infile)
+    neue = neue.loc[neue.metric==metric].set_index(['level','region']).NEUE_ppm
+
+    ### Set up plot
+    levels = ['interconnect','nercr','transreg','transgrp','st','r']
+    nrows, ncols, coords = plots.get_coordinates(levels, aspect=1.3)
+    dfmap = get_dfmap(case)
+
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(13.33, 6.88), sharex=True, sharey=True,
+        gridspec_kw={'hspace':-0.05, 'wspace':-0.05},
+    )
+    for level in levels:
+        ## Background
+        dfmap['country'].plot(
+            ax=ax[coords[level]], facecolor='none', edgecolor='k', lw=1.0, zorder=1e7)
+        dfmap[level].plot(
+            ax=ax[coords[level]], facecolor='none', edgecolor='k', lw=0.1, zorder=1e6)
+        ax[coords[level]].set_title(level, y=0.9, weight='bold')
+        ## Data
+        df = dfmap[level].copy()
+        df['NEUE_ppm'] = neue[level]
+        df.plot(ax=ax[coords[level]], column='NEUE_ppm', cmap=cmap, vmin=0, vmax=vmax)
+        ## Labels
+        # decimals = (0 if df.NEUE_ppm.max() >= 10 else 1)
+        decimals = (0 if level in ['st','r'] else 1)
+        for r, row in df.sort_values('NEUE_ppm').iterrows():
+            ax[coords[level]].annotate(
+                f"{row.NEUE_ppm:.{decimals}f}",
+                [row.labelx, row.labely],
+                ha='center', va='center', c='k',
+                fontsize={'r':5}.get(level,7),
+                path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.7)],
+            )
+    ### Formatting
+    plots.addcolorbarhist(
+        f=f, ax0=ax[coords[level]], data=df.NEUE_ppm,
+        cmap=cmap, vmin=0., vmax=vmax, histratio=0, extend='max',
+        cbarbottom=0.525, cbarheight=0.9,
+        
+    )
+    for row in range(nrows):
+        for col in range(ncols):
+            ax[row,col].axis('off')
+
+    return f, ax, neue, _iteration
+
+
 def map_h2_capacity(
-        case, year=2050, wscale_h2=3, figheight=6, pipescale=10,
+        case, year=2050, wscale_h2=10, figheight=6, pipescale=0.1,
         legend_kwds={'shrink':0.6, 'pad':0, 'orientation':'horizontal', 'aspect':12},
-        cmap=plt.cm.gist_earth_r, 
+        cmap=cmocean.cm.rain, 
     ):
     """
     H2 turbines, production (electrolyzer/SMR), pipelines, and storage
@@ -4372,6 +4618,26 @@ def plot_h2_timeseries(
     return f, ax
 
 
+def get_last_iteration(case, year=2050, datum=None, samples=None):
+    """Get the last iteration of PRAS for a given case/year"""
+    if datum not in [None,'flow','energy']:
+        raise ValueError(f"datum must be in [None,'flow','energy'] but is {datum}")
+    infile = sorted(glob(
+        os.path.join(
+            case, 'ReEDS_Augur', 'PRAS',
+            f"PRAS_{year}i*"
+            + (f'-{samples}' if samples is not None else '')
+            + (f'-{datum}' if datum is not None else '')
+            + '.h5'
+        )
+    ))[-1]
+    iteration = int(
+        os.path.splitext(os.path.basename(infile))[0]
+        .split('-')[0].split('_')[1].split('i')[1]
+    )
+    return infile, iteration
+
+
 def plot_interface_flows(
         case, year=2050,
         source='pras', iteration='last', samples=None,
@@ -4387,13 +4653,8 @@ def plot_interface_flows(
     ).rename(columns={'*r':'r'}).set_index('r')
 
     if source.lower() == 'pras':
-        infile = sorted(glob(
-            os.path.join(
-                case, 'ReEDS_Augur', 'PRAS',
-                f"PRAS_{year}i{'*' if iteration in ['last','latest','final'] else iteration}"
-                + (f'-{samples}' if samples is not None else '')
-                + '-flow.h5')
-        ))[-1]
+        infile, _iteration = get_last_iteration(
+            case=case, year=year, datum='flow', samples=samples)
         dfflow = read_pras_results(infile).set_index(fulltimeindex)
         ## Filter out AC/DC converters from scenarios with VSC
         dfflow = dfflow[[c for c in dfflow if '"DC_' not in c]].copy()
@@ -4507,7 +4768,7 @@ def plot_interface_flows(
 
 def plot_storage_soc(
         case, year=2050,
-        source='pras', iteration='last', samples=None,
+        source='pras', samples=None,
         level='transgrp',
         onlydata=False,
     ):
@@ -4519,14 +4780,8 @@ def plot_storage_soc(
 
     ### Get storage state of charge
     if source.lower() == 'pras':
-        infile = sorted(glob(
-            os.path.join(
-                case, 'ReEDS_Augur', 'PRAS',
-                f"PRAS_{year}i{'*' if iteration in ['last','latest','final'] else iteration}"
-                + (f'-{samples}' if samples is not None else '')
-                + '-energy.h5')
-        ))[-1]
-        _iteration = int(os.path.basename(infile).split('-')[0].split('_')[1].split('i')[1])
+        infile, _iteration = get_last_iteration(
+            case=case, year=year, datum='energy', samples=samples)
         dfenergy = read_pras_results(infile).set_index(fulltimeindex)
     else:
         raise NotImplementedError(f"source must be 'pras' but is '{source}'")
@@ -4588,3 +4843,571 @@ def plot_storage_soc(
     # )
     plots.despine(ax, left=False)
     return f, ax, dfsoc_frac
+
+
+def get_import_export(region, df):
+    """"""
+    firsts = [c for c in df if c.startswith(region)]
+    lasts = [c for c in df if c.endswith(region)]
+    net = df[firsts].sum(axis=1) - df[lasts].sum(axis=1)
+    exports = -net.clip(lower=0)
+    imports = net.clip(upper=0).abs()
+    return pd.concat({'net import':imports, 'net export':exports}, axis=1)
+
+
+def map_period_dispatch(
+        case, year=2050, level='transreg',
+        period='max load',
+        transmission=True, gen=True,
+        wscale='auto', width_total=1e5,
+        drawstates=0, drawzones=0, drawgrid=False, legend=True,
+        onlydata=False,
+        scale_val=100, scale_x=0.4e6, scale_y=-1.45e6,
+    ):
+    """
+    Notes
+    * Currently only works for stress periods
+    """
+    # ### Inputs for debugging
+    # case = os.path.join(
+    #     reeds_path,'runs',
+    #     'v20240212_transopM0_WECC_CPNP_GP1_TFY2035_PTL2035_TRc_MITCg0p3')
+    # case = (
+    #     '/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240115_transop/20240217/'
+    #     'v20240217_transopK0_CPNP_GP1_TFY32_PTL32_TRc_TCa1p0_MTCg0p3'
+    #     # 'v20240217_transopK1_CPNP_GP1_TFY35_PTL50_TRt_TCa1p15_MTCg0p0'
+    # )
+    # year = 2050
+    # level = 'transreg'
+    # transmission = False
+    # gen = True
+    # wscale='auto'
+    # width_total=1e5
+    # drawstates=0.
+    # drawzones=0.
+    # drawgrid=False
+    # legend=True
+    # periods = ['max gen','max load','min solar','min wind','min vre']
+    # periods = ['2009-01-15','2012-09-15']
+    # onlydata = False
+
+    ### Shared inputs
+    hierarchy = pd.read_csv(
+        os.path.join(case,'inputs_case','hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
+
+    dfba = get_zonemap(case)
+    dfmap = get_dfmap(case)
+
+    ## Region centers
+    _dfcenter = pd.read_csv(
+        os.path.join(reeds_path,'postprocessing','plots','transmission-interface-coords.csv'),
+        index_col=['level','region1','region2'],
+    ).drop('drop',axis=1).loc[level].reset_index()
+    _dfcenter[['x','y']] *= 1e6
+    dfcenter = (
+        _dfcenter
+        .loc[~_dfcenter.index.duplicated()]
+        .loc[_dfcenter.region1 == _dfcenter.region2]
+        .rename(columns={'region1':'aggreg'})
+        .drop(['region2','angle'], axis=1)
+        .set_index('aggreg')
+    )
+    ## Transmission interfaces, with reverse direction
+    dfcorridors = pd.concat([
+        _dfcenter,
+        _dfcenter.assign(region1=_dfcenter.region2).assign(region2=_dfcenter.region1)
+    ], axis=0).set_index(['region1','region2'])
+
+    dfcorridors = dfcorridors.loc[~dfcorridors.index.duplicated()].copy()
+
+    ## Colors
+    bokehcolors = pd.read_csv(
+        os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
+        index_col='order').squeeze(1)
+
+    # tech_map = pd.read_csv(
+    #     os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'),
+    #     index_col='raw').squeeze(1)
+        
+    bokehcolors = pd.concat([
+        bokehcolors.loc['smr':'electrolyzer'],
+        pd.Series('#D55E00', index=['dac'], name='color'),
+        bokehcolors.loc[:'Canada'],
+    ])
+
+    bokehcolors['canada'] = bokehcolors['Canada']
+    bokehcolors['net import'] = '0.7'
+    bokehcolors = pd.concat([pd.Series({'net export':'0.7'}, name='color'), bokehcolors])
+
+    ### Parse and check inputs
+    regions = hierarchy[level].unique()
+    if level != 'transreg':
+        raise NotImplementedError(f"level={level} but only level='transreg' works")
+    if len(dfcenter.drop_duplicates('x')) != len(dfcenter):
+        raise ValueError('Use unique x values in transmissioninterface-coords.csv')
+
+    ### Get outputs
+    gen_h_stress = pd.read_csv(
+        os.path.join(case,'outputs','gen_h_stress.csv'),
+        header=0, names=['i','r','h','t','GW'],
+    )
+    gen_h_stress.GW /= 1000
+    gen_h_stress.i = simplify_techs(gen_h_stress.i)
+
+    ## Aggregate transmission flows
+    tran_flow_stress = pd.read_csv(
+        os.path.join(case,'outputs','tran_flow_stress.csv'),
+    ).rename(columns={'Value':'GW', 'allh':'h'})
+    tran_flow_stress.GW /= 1e3
+
+    tran_flow_stress['aggreg'] = tran_flow_stress.r.map(hierarchy[level])
+    tran_flow_stress['aggregg'] = tran_flow_stress.rr.map(hierarchy[level])
+    tran_flow_stress['interface'] = tran_flow_stress.aggreg + '|' + tran_flow_stress.aggregg
+
+    tran_flow_stress_agg = (
+        tran_flow_stress
+        .loc[tran_flow_stress.aggreg != tran_flow_stress.aggregg]
+        .groupby(['t','h','interface']).GW.sum().unstack('interface').fillna(0)
+    )
+
+    ## Load
+    load_stress = pd.read_csv(
+        os.path.join(case,'outputs','load_stress.csv'),
+    ).rename(columns={'Value':'GW', 'allh':'h'})
+    load_stress.GW /= 1e3
+    dfload_allperiods = (
+        load_stress.assign(region=load_stress.r.map(hierarchy[level]))
+        .groupby(['t','region','h']).GW.sum()
+        .loc[year].unstack('region')
+    )
+    dfload_allperiods['szn'] = dfload_allperiods.index.map(lambda x: x.split('h')[0])
+    dfload_allperiods = dfload_allperiods.reset_index().set_index(['szn','h'])
+
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'), header=None, index_col=0).squeeze(1)
+    numsteps = 24 // int(sw['GSw_HourlyChunkLengthStress']) * (1 if sw['GSw_HourlyType'] == 'day' else 5)
+
+    ### Map dispatch to level
+    gen_h_stress['aggreg'] = gen_h_stress.r.map(hierarchy[level])
+    gen_h_stress_agg = (
+        gen_h_stress.loc[gen_h_stress.t==year]
+        .groupby(['aggreg','i','h'], as_index=False).GW.sum()
+    )
+    gen_h_stress_agg['szn'] = gen_h_stress_agg.h.str.split('h', expand=True)[0]
+    gen_h_stress_agg = gen_h_stress_agg.set_index(['szn','aggreg','h','i']).GW.unstack(['i']).fillna(0)
+
+    ### Keep a single day
+    if period == 'max gen':
+        top_periods = gen_h_stress_agg.groupby('szn').sum().sum(axis=1).sort_values(ascending=False)
+        keep_period = top_periods.index[0]
+    elif period == 'max load':
+        keep_period = dfload_allperiods.sum(axis=1).groupby('szn').max().nlargest(1).index[0]
+    elif period == 'min solar':
+        keep_period = (
+            gen_h_stress_agg
+            [[c for c in gen_h_stress_agg if (('pv' in c) or ('csp' in c))]].sum(axis=1)
+            .groupby('szn').sum()
+            .nsmallest(1)
+            .index[0]
+        )
+    elif period == 'min wind':
+        keep_period = (
+            gen_h_stress_agg
+            [[c for c in gen_h_stress_agg if ('wind' in c)]].sum(axis=1)
+            .groupby('szn').sum()
+            .nsmallest(1)
+            .index[0]
+        )
+    elif period == 'min vre':
+        keep_period = (
+            gen_h_stress_agg
+            [[c for c in gen_h_stress_agg if (('pv' in c) or ('csp' in c) or ('wind' in c))]].sum(axis=1)
+            .groupby('szn').sum()
+            .nsmallest(1)
+            .index[0]
+        )
+    ## Otherwise we're dealing with timestamps
+    else:
+        if period.startswith('sy'):
+            keep_period = period
+        else:
+            timestamp = pd.Timestamp(period)
+            keep_period = 's' + timestamp2h(timestamp).split('h')[0]
+
+    hours = sorted(list(set(sorted([i for i in gen_h_stress.h if i.startswith(keep_period)]))))
+    dfgen = gen_h_stress_agg.loc[keep_period].reindex(bokehcolors.index, axis=1).dropna(axis=1, how='all')
+    dfload = dfload_allperiods.loc[keep_period].copy()
+
+    ### Add imports and exports
+    if len(tran_flow_stress_agg):
+        dfimportexport = {}
+        for region in regions:
+            dfimportexport[region] = get_import_export(
+                region=region, df=tran_flow_stress_agg.loc[year].loc[hours]
+            )
+        dfimportexport = pd.concat(dfimportexport)
+        dfgen = pd.concat([dfgen, dfimportexport], axis=1)
+
+    ### Get transmission flows from westmost to eastmost region of each interface
+    if transmission:
+        dftrans = tran_flow_stress_agg.loc[year].loc[hours].copy()
+        regions_sorted = dfcenter.sort_values('x').index.tolist()
+        for interface in dftrans:
+            r1, r2 = interface.split('|')
+            if regions_sorted.index(r2) < regions_sorted.index(r1):
+                dftrans[interface] *= -1
+                dftrans = dftrans.rename(columns={interface:f'{r2}|{r1}'})
+        dftrans = dftrans.groupby(axis=1, level='interface').sum()
+    else:
+        dftrans = pd.DataFrame()
+
+    out = {'gen':dfgen, 'load':dfload, 'trans':dftrans}
+    if onlydata:
+        return out
+
+    ### Plot settings
+    width_step = width_total / numsteps * 2
+    if wscale in ['auto','scale','default',None,'','max']:
+        capmax = dfgen.groupby('h').sum().sum(axis=1).max()
+        _wscale = 3e6 / capmax * 0.95
+    else:
+        _wscale = wscale
+
+    ###### Plot it
+    plt.close()
+    f,ax = plt.subplots(figsize=(12,8))
+    ### Plot background
+    dfmap[level].plot(ax=ax, facecolor='none', edgecolor='k', lw=1.)
+    if drawstates:
+        dfmap['st'].plot(ax=ax, facecolor='none', edgecolor='0.5', lw=drawstates)
+    if drawzones:
+        dfba.plot(ax=ax, facecolor='none', edgecolor='0.5', lw=drawzones)
+
+    if gen:
+        for region in regions:
+            x, y = dfcenter.loc[region]
+            ### Dispatch stack
+            _dfgen = dfgen.loc[region] * _wscale
+            _dfgen.index = np.linspace(-1,1,numsteps+1)[:numsteps] * width_total
+            y -= _dfgen.sum(axis=1).max() / 2
+            plots.stackbar(
+                df=_dfgen,
+                ax=ax, colors=bokehcolors, width=width_step, net=False,
+                bottom=y, x0=x,
+            )
+            ax.plot(
+                x + _dfgen.index.values * (1 + width_step / width_total / 2),
+                [y]*len(_dfgen),
+                c='k', ls=':', lw=0.75)
+            ### Demand
+            _dfload = dfload[region] * _wscale
+            _dfload.index = _dfgen.index + x
+            for i, (x, val) in enumerate(_dfload.items()):
+                ax.plot(
+                    [x-width_step/2*0.85, x+width_step/2*0.85], [val+y]*2,
+                    c='k', ls='-', lw=1,
+                    solid_capstyle='butt',
+                )
+
+    if transmission:
+        for interface in dftrans:
+            r1, r2 = interface.split('|')
+            x, y , angle = dfcorridors.loc[(r1, r2)]
+            df = dftrans[interface] * _wscale
+            df.index = np.linspace(-1,1,numsteps+1)[:numsteps] * width_total
+            plots.stackbar(
+                df=df.rename('trans').to_frame(),
+                ax=ax, colors={'trans':'0.7'}, width=width_step, net=False,
+                bottom=y, x0=x,
+            )
+            ax.plot(
+                x + df.index.values * (1 + width_step / width_total / 2),
+                [y]*len(df),
+                c='k', ls=':', lw=0.75)
+
+    ###### Legend
+    if legend:
+        handles = [
+            mpl.patches.Patch(facecolor=bokehcolors[i], edgecolor='none', label=i)
+            for i in bokehcolors.index if i in dfgen.columns
+        ]
+        _leg = ax.legend(
+            handles=handles[::-1], loc='lower left', fontsize=9, ncol=1, frameon=False,
+            bbox_to_anchor=(0.9,0.02),
+            handletextpad=0.3, handlelength=0.7, columnspacing=0.5, 
+        )
+    ### Scale
+    if scale_val:
+        bottom = scale_y - (scale_val * _wscale / 2)
+        ## -1.3e6, -1.3e6
+        ax.bar(
+            x=[scale_x], height=[scale_val * _wscale], bottom=[bottom],
+            color='k', width=width_step,
+        )
+        ax.annotate(
+            # f"↕{scale_val} GW\n↔{sw.GSw_HourlyChunkLengthStress} hours",
+            f"↕{scale_val} GW",
+            (scale_x+0.04e6, scale_y), va='center', fontsize=16,
+        )
+        ax.annotate(
+            f"↔ {sw.GSw_HourlyChunkLengthStress} hours",
+            (scale_x-0.06e6, bottom), va='top', fontsize=16,
+        )
+
+    ###### Formatting
+    ax.axis('off')
+    timestring = h2timestamp(keep_period+'h01').strftime('%Y-%m-%d')
+    ax.annotate(
+        (timestring if period == timestring else f"{period}\n{timestring}"),
+        (0.2,0.2), xycoords='axes fraction', ha='right', va='top', fontsize=18,
+    )
+    ### Grid
+    if drawgrid:
+        ax.xaxis.set_major_locator(mpl.ticker.MultipleLocator(0.5e6))
+        ax.xaxis.set_minor_locator(mpl.ticker.MultipleLocator(0.1e6))
+        ax.yaxis.set_minor_locator(mpl.ticker.MultipleLocator(0.1e6))
+        ax.grid(which='major', ls=':', lw=0.75)
+        ax.grid(which='minor', ls=':', lw=0.25)
+        ax.axis('on')
+
+    return f, ax, out
+
+
+def plot_pras_eue_timeseries_full(
+        case, year=2050, iteration='last', samples=None, level='transgrp', ymax=None,
+        figsize=(6, 5)):
+    """
+    Dropped load timeseries
+    """
+    if iteration == 'last':
+        _, _iteration = get_last_iteration(
+            case=case, year=year, samples=samples)
+    else:
+        _iteration = iteration
+    infile = os.path.join(
+        case, 'ReEDS_Augur', 'PRAS',
+        f"PRAS_{year}i{_iteration}" + (f'-{samples}' if samples is not None else '') + '.h5'
+    )
+    dfpras = functions.read_pras_results(infile)
+    dfpras.index = functions.make_fulltimeindex()
+    ## Only keep EUE
+    dfpras = dfpras[[
+        c for c in dfpras if (c.endswith('EUE') and not c.lower().startswith('usa'))
+    ]].copy()
+
+    ### Sum by hierarchy level
+    hierarchy = pd.read_csv(
+        os.path.join(case,'inputs_case','hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
+    dfpras_agg = (
+        dfpras
+        .rename(columns={c: c[:-len('_EUE')] for c in dfpras})
+        .rename(columns=hierarchy[level])
+        .groupby(axis=1, level=0).sum()
+        / 1e3
+    )
+
+    wys = range(2007,2014)
+    colors = plots.rainbowmapper(dfpras_agg.columns)
+
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(len(wys), 1, sharex=False, sharey=True, figsize=figsize)
+    for row, y in enumerate(wys):
+        timeindex_y = pd.date_range(
+            f"{y}-01-01", f"{y+1}-01-01", inclusive='left', freq='H',
+            tz='EST')[:8760]
+        for region, color in colors.items():
+            ax[row].fill_between(
+                timeindex_y, dfpras_agg.loc[str(y),region:].sum(axis=1).values,
+                lw=1, color=color, label=region)
+        ### Formatting
+        ax[row].annotate(
+            y, (0.01,1), xycoords='axes fraction',
+            fontsize=14, weight='bold', va='top')
+        ax[row].set_xlim(
+            pd.Timestamp(f"{y}-01-01 00:00-05:00"),
+            pd.Timestamp(f"{y}-12-31 23:59-05:00"))
+        ax[row].xaxis.set_major_locator(mpl.dates.MonthLocator(tz='EST'))
+        ax[row].xaxis.set_minor_locator(mpl.dates.WeekdayLocator(byweekday=mpl.dates.SU))
+        if row == len(wys) - 1:
+            ax[row].xaxis.set_major_formatter(mpl.dates.DateFormatter('%b'))
+        else:
+            ax[row].set_xticklabels([])
+    ax[0].legend(
+        loc='upper left', bbox_to_anchor=(1,1),
+        frameon=False, columnspacing=0.5, handlelength=0.7, handletextpad=0.3,
+    )
+    ax[0].set_ylim(0, ymax)
+    ax[len(wys)-1].set_ylabel('Expected unserved energy [GWh/h]', y=0, ha='left')
+    plots.despine(ax)
+    return f, ax, dfpras, _iteration
+
+
+def plot_seed_stressperiods(
+    case, cmap=cmocean.cm.phase, startfrom=200,
+    alpha=0.7, fontsize=5, pealpha=0.8, pelinewidth=1.5,
+):
+    """
+    """
+    sw = pd.read_csv(
+        os.path.join(case,'inputs_case','switches.csv'),
+        header=None, index_col=0,
+    ).squeeze(1)
+
+    hierarchy = pd.read_csv(
+        os.path.join(case,'inputs_case','hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')
+    dfmap = get_dfmap(case)
+
+    years = pd.read_csv(
+        os.path.join(os.path.join(case,'inputs_case','modeledyears.csv'))
+    ).columns.astype(int).values
+    years = [y for y in years if y >= int(sw.GSw_StartMarkets)]
+
+    ### Get seed Stress periods
+    dictin_seed = {}
+    for year in years:
+        dictin_seed[year] = pd.read_csv(
+            os.path.join(case, 'inputs_case', f'stress{year}i0', 'forceperiods.csv')
+        )
+        dictin_seed[year]['timestamp'] = dictin_seed[year].szn.map(h2timestamp)
+        dictin_seed[year]['date'] = dictin_seed[year].timestamp.map(lambda x: x.strftime('%Y-%m-%d'))
+        dictin_seed[year]['monthday'] = dictin_seed[year].timestamp.map(lambda x: x.strftime('%m-%d'))
+
+    days_of_year = pd.date_range('2004-01-01','2004-12-31',freq='D')
+    monthdays = days_of_year.strftime('%m-%d')
+
+    ### Recalculate peak load days since we dropped duplicates above
+    load_allyears = hourly_repperiods.get_load(
+        os.path.join(case, 'inputs_case'),
+        keep_weatheryears='all').loc[years]
+    timestamps = pd.read_csv(os.path.join(case,'inputs_case','timestamps.csv'))
+    ## Add descriptive index
+    load_allyears.index = (
+        pd.concat(
+            {y: timestamps for y in years},
+            axis=0, names=['modelyear','h_of_modelyear']).reset_index()
+        .set_index(['modelyear','year','yperiod','h_of_period']).index
+    )
+    stressperiods_load = {
+        y: hourly_repperiods.identify_peak_containing_periods(
+            df=load_allyears.loc[y], hierarchy=hierarchy,
+            level=sw['GSw_PRM_StressSeedLoadLevel'])
+        for y in years
+    }
+
+    ### Put cold colors in winter
+    colorvals = (
+        list(np.linspace(0,1,len(monthdays))[startfrom:])
+        + list(np.linspace(0,1,len(monthdays))[:startfrom])
+    )
+    monthday2val = dict(zip(monthdays, colorvals))
+
+    # ### Test it
+    # step = 5
+    # plt.close()
+    # f,ax = plt.subplots(figsize=(12,3))
+    # for x, monthday in enumerate(monthdays[::step]):
+    #     color = cmap(monthday2val[monthday])
+    #     ax.plot([x], [0], color=color, marker='o')
+    #     ax.annotate(monthday, (x, 0.015), rotation=90, ha='center', va='center', color=color)
+    # ax.set_title(startfrom)
+    # plots.despine(ax)
+    # plt.show()
+
+
+    ### Plot it
+    ncols = 3
+    nrows = len(years) // ncols + 1
+    loadcoords = dict(zip(years, [(row+1,col) for row in range(nrows) for col in range(ncols)]))
+    minrecoords = {
+        'upv': (0, 1),
+        'wind-ons': (0, 2)
+    }
+    title = {'upv':'Solar','wind-ons':'Wind'}
+
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(2.9*ncols, 2*nrows),
+        gridspec_kw={'hspace':0, 'wspace':0},
+    )
+    ### Min RE
+    for tech, (row, col) in minrecoords.items():
+        ax[row,col].set_title(f'Min {title[tech]}', va='top', y=0.95, fontsize=11)
+        df = dfmap[sw.GSw_PRM_StressSeedMinRElevel].copy()
+        dates = (
+            dictin_seed[years[0]].loc[dictin_seed[years[0]].property==tech]
+            .set_index('region')
+        )
+        df['date'] = dates.date
+        df['monthday'] = dates.monthday
+        df['val'] = df.monthday.map(monthday2val)
+        df.plot(
+            ax=ax[row,col], facecolor='none', edgecolor='k', lw=0.2, zorder=1e6,
+        )
+        df.plot(
+            ax=ax[row,col], column='val', edgecolor='none', lw=0, cmap=cmap, alpha=alpha,
+            vmin=0, vmax=1,
+        )
+        for i, _row in df.iterrows():
+            ax[row,col].annotate(
+                _row.date, (_row.labelx, _row.labely),
+                ha='center', va='center', color='k', fontsize=fontsize,
+                path_effects=[pe.withStroke(linewidth=pelinewidth, foreground='w', alpha=pealpha)],
+            )
+
+
+    ### Max load
+    for year in years:
+        row, col = loadcoords[year]
+        ax[row,col].set_title(f'Peak load {year}', va='top', y=0.95, fontsize=11)
+        df = dfmap[sw.GSw_PRM_StressSeedLoadLevel].copy()
+        dates = (
+            dictin_seed[year].loc[dictin_seed[year].property=='load']
+            .set_index('region')
+        )
+        ## Look up missing values
+        lookup_days = pd.DataFrame(list(stressperiods_load[year])).set_index(0)
+        lookup_days['szn'] = 'y' + lookup_days[2].astype(str) + 'd' + lookup_days[3].map(lambda x: f'{x:0>3}')
+        lookup_days['timestamp'] = lookup_days.szn.map(h2timestamp)
+        lookup_days['date'] = lookup_days.timestamp.map(lambda x: x.strftime('%Y-%m-%d'))
+        lookup_days['monthday'] = lookup_days.timestamp.map(lambda x: x.strftime('%m-%d'))
+
+        df = df.merge(lookup_days[['date','monthday']], left_index=True, right_index=True)
+        # df['date'] = dates.date
+        # df['monthday'] = dates.monthday
+        df['val'] = df.monthday.map(monthday2val)
+
+        df.plot(
+            ax=ax[row,col], facecolor='none', edgecolor='k', lw=0.2,
+        )
+        df.plot(
+            ax=ax[row,col], column='val', edgecolor='none', lw=0, cmap=cmap, alpha=alpha,
+            vmin=0, vmax=1,
+        )
+        for i, _row in df.iterrows():
+            ax[row,col].annotate(
+                _row.date, (_row.labelx, _row.labely),
+                ha='center', va='center', color='k', fontsize=fontsize,
+                path_effects=[pe.withStroke(linewidth=pelinewidth, foreground='w', alpha=pealpha)],
+            )
+
+    ### Colorbar
+    row, col = 0, 0
+    for x, monthday in enumerate(monthdays):
+        color = cmap(monthday2val[monthday])
+        ax[row,col].plot([x], [0], color=color, marker='|', lw=0.1)
+        if monthday.endswith('15'):
+            ax[row,col].annotate(
+                days_of_year[x].strftime('%b'),
+                # monthday,
+                (x, 0.008), rotation=90, ha='center', va='bottom', color=color)
+
+    ### Formatting
+    for row in range(nrows):
+        for col in range(ncols):
+            ax[row,col].axis('off')
+
+    return f, ax

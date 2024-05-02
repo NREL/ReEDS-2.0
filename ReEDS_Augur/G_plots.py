@@ -1,13 +1,17 @@
 #%%### Imports
-import os, site
+import os
+import site
 import pandas as pd
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib import patheffects as pe
 from glob import glob
+import traceback
+import gdxpds
+import cmocean
 pd.options.display.max_rows = 20
 pd.options.display.max_columns = 200
-import gdxpds
 ### Local imports
 try:
     import ReEDS_Augur.functions as functions
@@ -172,11 +176,14 @@ def get_pras_system(sw, verbose=0):
         vals = {}
         for key in keys:
             vals[key] = list(f[key])
-            if verbose: print('{}:\n    {}\n'.format(key,','.join(vals[key])))
+            if verbose:
+                print(f"{key}:\n    {','.join(vals[key])}\n")
             for val in vals[key]:
                 pras[key,val] = pd.DataFrame(f[key][val][...])
-                if verbose: print('{}/{}: {}'.format(key,val,pras[key,val].shape))
-            if verbose: print('\n')
+                if verbose:
+                    print(f"{key}/{val}: {pras[key,val].shape}")
+            if verbose:
+                print('\n')
 
     ###### Combine into more easily-usable dataframes
     dfpras = {}
@@ -184,7 +191,7 @@ def get_pras_system(sw, verbose=0):
         ## our name: [pras key, pras capacity table name]
         'storcap': ['storages', 'dischargecapacity'],
         'gencap': ['generators', 'capacity'],
-        'genstorcap': ['generatorstorages', 'gridinjectioncapacity'],
+        # 'genstorcap': ['generatorstorages', 'gridinjectioncapacity'],
     }
     for key, val in keys.items():
         dfpras[key] = pras[val[0], val[1]]
@@ -666,8 +673,10 @@ def plot_b1_dispatch_usa(sw, dfs):
         )
         leg.set_title('Generation', prop={'size':'large'})
 
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename.replace('YEAR',str(y))))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename.replace('YEAR',str(y))))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -691,7 +700,8 @@ def plot_b1c1_profiles_usa(sw, dfs):
         'energy': dfs['stor_energy'],
     }, axis=1).round(1)
 
-    if savefig: dfout.to_csv(os.path.join(sw['savepath'],savename))
+    if savefig:
+        dfout.to_csv(os.path.join(sw['savepath'],savename))
 
 
 def plot_b1_load_duration(sw, dfs):
@@ -735,8 +745,10 @@ def plot_b1_load_duration(sw, dfs):
         columnspacing=0.5, handletextpad=0.5, handlelength=0.75,
     )
     plots.despine(ax)
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -783,8 +795,10 @@ def plot_b1_netload_duration(sw, dfs):
             columnspacing=0.5, handletextpad=0.5, handlelength=0.75,
         )
         plots.despine(ax)
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -806,8 +820,10 @@ def plot_netload_profile(sw, dfs):
             dfneg, colors=['C0'],
             f=f, ax=ax,
         )
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -932,7 +948,7 @@ def plot_dispatch_maxmin_netload_weeks(sw, dfs):
         ax[row*2+1].set_title(
             '{} min'.format(region), x=0.01, ha='left', va='top', y=1.0, weight='bold')
     ## Legend
-    leg = ax[0].legend(
+    ax[0].legend(
         loc='upper left', bbox_to_anchor=(1.02,1),
         fontsize=11, frameon=False, ncol=1,
         columnspacing=0.5, handletextpad=0.3, handlelength=0.7,
@@ -940,8 +956,10 @@ def plot_dispatch_maxmin_netload_weeks(sw, dfs):
     ax[0].set_ylabel('Generation [GW]', ha='right', y=1)
 
     plots.despine(ax)
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -965,8 +983,10 @@ def plot_b1_storage_energy(sw, dfs):
             title='Energy level',
             columnspacing=0.5, handletextpad=0.3, handlelength=0.7,
         )
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1002,8 +1022,10 @@ def plot_c1_curtailment_timeseries(sw, dfs):
             fontsize=11, frameon=False, ncol=1,
             columnspacing=0.5, handletextpad=0.3, handlelength=0.7,
         )
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1039,8 +1061,10 @@ def plot_c1_load_netload_curtailment_profile(sw, dfs):
         )
         ax.set_ylabel('TW (national total)')
         plots.despine(ax)
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1090,8 +1114,10 @@ def plot_c1_curtailment_duration(sw, dfs):
         columnspacing=0.5, handletextpad=0.3, handlelength=0.75,
     )
     plots.despine(ax)
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -1121,8 +1147,10 @@ def plot_b1_dropped_load_timeseries(sw, dfs):
             fontsize=11, frameon=False, ncol=1,
             columnspacing=0.5, handletextpad=0.3, handlelength=0.7,
         )
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1163,8 +1191,10 @@ def plot_b1_dropped_load_timeseries_full(sw, dfs):
         ax[0].set_ylim(0)
         ax[len(wys)-1].set_ylabel('Dropped load [GW]', y=0, ha='left')
         plots.despine(ax)
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1188,8 +1218,10 @@ def plot_b1_h2dac_load_timeseries(sw, dfs):
             dfplot.loc[str(y)].rename('H2/DAC\ndemand').abs().to_frame(),
             colors=['C9'], dpi=dpi,
         )
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1241,8 +1273,10 @@ def plot_b1_dropped_load_duration(sw, dfs):
             columnspacing=0.5, handletextpad=0.3, handlelength=0.7,
         )
         plots.despine(ax)
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1311,7 +1345,7 @@ def map_dropped_load(sw, dfs, level='r'):
                 ### Background
                 dfba.plot(ax=ax, facecolor='none', edgecolor='k', lw=0.2)
                 ### Data
-                dfplot.plot(ax=ax, column='val', cmap=plt.cm.gist_earth_r)
+                dfplot.plot(ax=ax, column='val', cmap=cmocean.cm.rain)
                 for r, row in dfplot.iterrows():
                     if row.val > 0:
                         ax.annotate(
@@ -1324,8 +1358,10 @@ def map_dropped_load(sw, dfs, level='r'):
                         ax.annotate(r, (row.labelx, row.labely),
                                     ha='center', va='bottom', fontsize=6, color='C7')
                 ax.axis('off')
-                if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-                if interactive: plt.show()
+                if savefig:
+                    plt.savefig(os.path.join(sw['savepath'],savename))
+                if interactive:
+                    plt.show()
                 plt.close()
 
 
@@ -1339,8 +1375,12 @@ def plot_pras_ICAP(sw, dfs):
     ### Collect the PRAS system capacities
     gencap = dfs['pras_system']['gencap'].groupby(axis=1, level=0).sum()
     storcap = dfs['pras_system']['storcap'].groupby(axis=1, level=0).sum()
-    genstorcap = dfs['pras_system']['genstorcap'].groupby(axis=1, level=0).sum()
-    cap = pd.concat([gencap, storcap, genstorcap], axis=1)
+    # genstorcap = dfs['pras_system']['genstorcap'].groupby(axis=1, level=0).sum()
+    cap = pd.concat([
+        gencap,
+        storcap,
+        # genstorcap,
+    ], axis=1)
     ## Drop any empties
     cap = cap.replace(0,np.nan).dropna(axis=1, how='all').fillna(0).astype(int)
     ## Get the colors
@@ -1387,8 +1427,10 @@ def plot_pras_ICAP(sw, dfs):
         )
         leg.set_title(f'ICAP {y}', prop={'size':'large'})
         ## Save it
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1405,10 +1447,14 @@ def plot_augur_pras_capacity(sw, dfs):
     ### Collect the PRAS system capacities
     gencap = dfs['pras_system']['gencap']
     storcap = dfs['pras_system']['storcap']
-    genstorcap = dfs['pras_system']['genstorcap']
-    load = dfs['pras_system']['load'] / 1e3
+    # genstorcap = dfs['pras_system']['genstorcap']
+    # load = dfs['pras_system']['load'] / 1e3
     cap = {}
-    cap['pras'] = pd.concat([gencap, storcap, genstorcap], axis=1) / 1e3
+    cap['pras'] = pd.concat([
+        gencap,
+        storcap,
+        # genstorcap,
+    ], axis=1) / 1e3
     ## Drop any empties
     cap['pras'] = cap['pras'].replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
     ## Aggregate by type
@@ -1451,7 +1497,7 @@ def plot_augur_pras_capacity(sw, dfs):
     )
     alltechs = set()
     for r in zones:
-        df = pd.concat({'A':cap['augur'].loc[r], 'P':cap['pras'].loc[r]}, axis=1).T
+        df = pd.concat({'A':cap['augur'].get(r,pd.Series()), 'P':cap['pras'].get(r,pd.Series())}, axis=1).T
         order = [c for c in tech_style.index if c in df]
         missing = [c for c in df if c not in order]
         if len(missing):
@@ -1479,8 +1525,10 @@ def plot_augur_pras_capacity(sw, dfs):
     ax[-1, 0].set_ylabel('Nameplate capacity [GW]', y=0, ha='left')
     plots.despine(ax)
     ## Save it
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -1501,9 +1549,13 @@ def plot_pras_ICAP_regional(sw, dfs, numdays=5):
     ### Collect the PRAS system capacities
     gencap = dfs['pras_system']['gencap']
     storcap = dfs['pras_system']['storcap']
-    genstorcap = dfs['pras_system']['genstorcap']
+    # genstorcap = dfs['pras_system']['genstorcap']
     load = dfs['pras_system']['load'] / 1e3
-    cap = pd.concat([gencap, storcap, genstorcap], axis=1) / 1e3
+    cap = pd.concat([
+        gencap,
+        storcap,
+        # genstorcap,
+    ], axis=1) / 1e3
     ## Drop any empties
     cap = cap.replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
     ## Get the colors
@@ -1558,8 +1610,10 @@ def plot_pras_ICAP_regional(sw, dfs, numdays=5):
         ax[-1, 0].set_ylabel('ICAP [GW]', y=0, ha='left')
         plots.despine(ax)
         ## Save it
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1572,11 +1626,16 @@ def plot_pras_unitsize_distribution(sw, dfs):
         return
     savename = f"B1-PRAS-unitcap-{sw['t']}.png"
     import plots
+    # import reedsplots
     gencap = dfs['pras_system']['gencap']
     storcap = dfs['pras_system']['storcap']
-    genstorcap = dfs['pras_system']['genstorcap']
+    # genstorcap = dfs['pras_system']['genstorcap']
     cap = (
-        pd.concat([gencap, storcap, genstorcap], axis=1)
+        pd.concat([
+            gencap,
+            storcap,
+            # genstorcap,
+        ], axis=1)
         .max().rename('MW').reset_index()
     )
     ## Get the colors
@@ -1584,13 +1643,17 @@ def plot_pras_unitsize_distribution(sw, dfs):
     tech_map.index = tech_map.index.str.lower()
     tech_map = tech_map.str.lower()
     tech_style = dfs['tech_style'].copy()
+    toadd = tech_style.loc[tech_style.index.str.endswith('_mod')]
+    toadd.index = toadd.index.str.replace('_mod','')
+    tech_style = pd.concat([tech_style,toadd])
     ## Aggregate by type
     cap.i = cap.i.map(
         lambda x: x if x.startswith('battery') else (x.strip('_01234567890*').lower()))
     cap.i = (
         cap.i
         .map(lambda x: tech_map.get(x,x))
-        .map(lambda x: ([i for i in tech_map.drop('hyd').index if x.startswith(i)]+[x])[0])
+        .str.replace('_upgrade','')
+        .str.replace('_mod','')
     )
     if 'new_blank_genstor' in cap.i.values:
         if (cap.loc[cap.i=='new_blank_genstor','MW'] == 0).all():
@@ -1605,21 +1668,26 @@ def plot_pras_unitsize_distribution(sw, dfs):
     )
     order = [i for i in tech_style.index if i in techs]
     others = [i for i in techs if ((i not in order) and (i not in nondisaggtechs))]
-    for i in others:
-        tech_style[i] = 'k'
+    # for i in others:
+    #     tech_style[i] = 'k'
 
+    ylabel = {0: {'scale':1, 'units':'MW'}, 1: {'scale':1e-3, 'units':'GW'}}
     plt.close()
-    f,ax = plt.subplots(1,2,figsize=(7,3.75))
+    f,ax = plt.subplots(1, 2, figsize=(7,3.75), gridspec_kw={'wspace':0.4})
     for i in (order+others)[::-1]:
-        df = cap.loc[cap.i==i]
+        df = cap.loc[cap.i==i].copy()
         col = 1 if i in nondisaggtechs else 0
+        df.MW = df.MW * ylabel[col]['scale']
         ax[col].plot(
-            range(len(df)), df.MW.sort_values().values, c=tech_style[i], label=i)
+            range(len(df)), df.MW.sort_values().values,
+            c=tech_style.get(i,'k'), label=i)
         ax[col].annotate(
-            f' {i}', (len(df), df.MW.max()), fontsize=10,
+            f' {i}', (len(df), df.MW.max()),
+            fontsize=10, color=tech_style.get(i,'k'),
+            path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.7)],
         )
     for col in range(2):
-        ax[col].set_ylabel('Unit size [MW]')
+        ax[col].set_ylabel(f"Unit size [{ylabel[col]['units']}]")
         ax[col].set_xlabel('Number of units')
         ax[col].set_xlim(0)
         ax[col].set_ylim(0)
@@ -1631,8 +1699,10 @@ def plot_pras_unitsize_distribution(sw, dfs):
     ax[1].set_title('Aggregated techs (PRAS FOR=0)')
     plots.despine(ax)
     ## Save it
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -1658,10 +1728,13 @@ def plot_b1_prices(sw, dfs):
                 '({}) (y = {:.0f}–{:.0f} $/MWh)'.format(
                     sw['t'],
                     dfs['prices'].min().min(), ymax))
-            if savefig: plt.savefig(os.path.join(
-                sw['savepath'],savename.replace('MAX',str(ymax)).replace('YEAR',str(y))
-            ))
-            if interactive: plt.show()
+            if savefig:
+                plt.savefig(os.path.join(
+                    sw['savepath'],
+                    savename.replace('MAX',str(ymax)).replace('YEAR',str(y))
+                ))
+            if interactive:
+                plt.show()
             plt.close()
 
 
@@ -1693,8 +1766,10 @@ def plot_b1_price_duration(sw, dfs):
         ax.xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
         ax.axhline(0,c='0.5',lw=0.5,ls='--')
         plots.despine(ax)
-        if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-        if interactive: plt.show()
+        if savefig:
+            plt.savefig(os.path.join(sw['savepath'],savename))
+        if interactive:
+            plt.show()
         plt.close()
 
 
@@ -1751,8 +1826,10 @@ def plot_b1_co2emissions(sw, dfs):
     ax.axhline(0,c='k',lw=0.75,ls='-',zorder=5)
     ax.set_ylabel('CO2 emissions')
     plots.despine(ax)
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -1820,8 +1897,10 @@ def plot_a_meritorder(sw, dfs):
     )
     plots.despine(ax, right=True)
 
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -1877,8 +1956,10 @@ def plot_e_cc_mar(sw, dfs):
         f'{sw.t} {param} [fraction]', weight='bold', fontsize='x-large')
 
     plots.despine(ax)
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -1905,9 +1986,9 @@ def plot_e_netloadhours_timeseries(sw, dfs):
             weight='bold',fontsize='large')
         if row < (len(years) - 1):
             ax[row].set_xticklabels([])
-    h,l = ax[0].get_legend_handles_labels()
+    handles, labels = ax[0].get_legend_handles_labels()
     ax[0].legend(
-        h[::-1], l[::-1],
+        handles[::-1], labels[::-1],
         columnspacing=0.5, handletextpad=0.3, handlelength=0.7,
         loc='upper left', bbox_to_anchor=(1,1), frameon=False, title='ccreg',
     )
@@ -1915,8 +1996,10 @@ def plot_e_netloadhours_timeseries(sw, dfs):
     # ax[-1].xaxis.set_major_locator(mpl.dates.MonthLocator())
     # ax[-1].xaxis.set_major_formatter(mpl.dates.DateFormatter('%b'))
     plots.despine(ax)
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -1960,17 +2043,19 @@ def plot_e_netloadhours_histogram(sw, dfs):
         rotation=35, ha='right', rotation_mode='anchor')
     # ax[2].tick_params(labelrotation=45)
     ### Formatting
-    h,l = ax[2].get_legend_handles_labels()
+    handles, labels = ax[2].get_legend_handles_labels()
     ax[2].legend(
-        h[::-1], l[::-1],
+        handles[::-1], labels[::-1],
         loc='center left', bbox_to_anchor=(1,0.5), frameon=False,
         title=sw['capcredit_hierarchy_level'],
         ncol=1, columnspacing=0.5, handletextpad=0.3, handlelength=0.7,
     )
     ax[0].set_ylabel('Net peak load instances [#]')
     plots.despine(ax)
-    if savefig: plt.savefig(os.path.join(sw['savepath'],savename))
-    if interactive: plt.show()
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
     plt.close()
 
 
@@ -1990,137 +2075,137 @@ def main(sw, augur_plots=1):
     #%% Make the plots
     try:
         plot_b1_dispatch_usa(sw, dfs)
-    except Exception as err:
-        print('plot_b1_dispatch_usa() failed:', err)
+    except Exception:
+        print('plot_b1_dispatch_usa() failed:', traceback.format_exc())
 
     try:
         plot_b1c1_profiles_usa(sw, dfs)
-    except Exception as err:
-        print('plot_b1c1_profiles_usa() failed:', err)
+    except Exception:
+        print('plot_b1c1_profiles_usa() failed:', traceback.format_exc())
 
     try:
         plot_b1_load_duration(sw, dfs)
-    except Exception as err:
-        print('plot_b1_load_duration() failed:', err)
+    except Exception:
+        print('plot_b1_load_duration() failed:', traceback.format_exc())
 
     try:
         plot_b1_netload_duration(sw, dfs)
-    except Exception as err:
-        print('plot_b1_netload_duration() failed:', err)
+    except Exception:
+        print('plot_b1_netload_duration() failed:', traceback.format_exc())
 
     try:
         plot_dispatch_maxmin_netload_weeks(sw, dfs)
-    except Exception as err:
-        print('plot_dispatch_maxmin_netload_weeks() failed:', err)
+    except Exception:
+        print('plot_dispatch_maxmin_netload_weeks() failed:', traceback.format_exc())
 
     try:
         plot_c1_curtailment_duration(sw, dfs)
-    except Exception as err:
-        print('plot_c1_curtailment_duration() failed:', err)
+    except Exception:
+        print('plot_c1_curtailment_duration() failed:', traceback.format_exc())
 
     try:
         plot_b1_dropped_load_timeseries(sw, dfs)
-    except Exception as err:
-        print('plot_b1_dropped_load_timeseries() failed:', err)
+    except Exception:
+        print('plot_b1_dropped_load_timeseries() failed:', traceback.format_exc())
 
     try:
         plot_b1_dropped_load_timeseries_full(sw, dfs)
-    except Exception as err:
-        print('plot_b1_dropped_load_timeseries_full() failed:', err)
+    except Exception:
+        print('plot_b1_dropped_load_timeseries_full() failed:', traceback.format_exc())
 
     try:
         plot_b1_dropped_load_duration(sw, dfs)
-    except Exception as err:
-        print('plot_b1_dropped_load_duration() failed:', err)
+    except Exception:
+        print('plot_b1_dropped_load_duration() failed:', traceback.format_exc())
 
     try:
         for level in ['r','transreg']:
             map_dropped_load(sw, dfs, level=level)
-    except Exception as err:
-        print('map_dropped_load() failed:', err)
+    except Exception:
+        print('map_dropped_load() failed:', traceback.format_exc())
 
     try:
         plot_pras_ICAP_regional(sw, dfs)
-    except Exception as err:
-        print('plot_pras_ICAP_regional() failed:', err)
+    except Exception:
+        print('plot_pras_ICAP_regional() failed:', traceback.format_exc())
 
     try:
         plot_pras_unitsize_distribution(sw, dfs)
-    except Exception as err:
-        print('plot_pras_unitsize_distribution() failed:', err)
+    except Exception:
+        print('plot_pras_unitsize_distribution() failed:', traceback.format_exc())
 
     try:
         plot_b1_price_duration(sw, dfs)
-    except Exception as err:
-        print('plot_b1_price_duration() failed:', err)
+    except Exception:
+        print('plot_b1_price_duration() failed:', traceback.format_exc())
 
     try:
         plot_b1_co2emissions(sw, dfs)
-    except Exception as err:
-        print('plot_b1_co2emissions() failed:', err)
+    except Exception:
+        print('plot_b1_co2emissions() failed:', traceback.format_exc())
 
     try:
         plot_e_cc_mar(sw, dfs)
-    except Exception as err:
-        print('plot_e_cc_mar() failed:', err)
+    except Exception:
+        print('plot_e_cc_mar() failed:', traceback.format_exc())
 
     try:
         plot_e_netloadhours_timeseries(sw, dfs)
-    except Exception as err:
-        print('plot_e_netloadhours_timeseries() failed:', err)
+    except Exception:
+        print('plot_e_netloadhours_timeseries() failed:', traceback.format_exc())
 
     try:
         plot_e_netloadhours_histogram(sw, dfs)
-    except Exception as err:
-        print('plot_e_netloadhours_histogram() failed:', err)
+    except Exception:
+        print('plot_e_netloadhours_histogram() failed:', traceback.format_exc())
 
     if int(sw['GSw_H2']) or int(sw['GSw_DAC']):
         try:
             plot_b1_h2dac_load_timeseries(sw, dfs)
-        except Exception as err:
-            print('plot_b1_h2dac_load_timeseries() failed:', err)
+        except Exception:
+            print('plot_b1_h2dac_load_timeseries() failed:', traceback.format_exc())
 
     if augur_plots >= 2:
         try:
             plot_augur_pras_capacity(sw, dfs)
-        except Exception as err:
-            print('plot_augur_pras_capacity() failed:', err)
+        except Exception:
+            print('plot_augur_pras_capacity() failed:', traceback.format_exc())
 
         try:
             plot_pras_ICAP(sw, dfs)
-        except Exception as err:
-            print('plot_pras_ICAP() failed:', err)
+        except Exception:
+            print('plot_pras_ICAP() failed:', traceback.format_exc())
 
         try:
             plot_netload_profile(sw, dfs)
-        except Exception as err:
-            print('plot_netload_profile() failed:', err)
+        except Exception:
+            print('plot_netload_profile() failed:', traceback.format_exc())
 
         try:
             plot_a_meritorder(sw, dfs)
-        except Exception as err:
-            print('plot_a_meritorder() failed:', err)
+        except Exception:
+            print('plot_a_meritorder() failed:', traceback.format_exc())
 
         try:
             plot_b1_storage_energy(sw, dfs)
-        except Exception as err:
-            print('plot_b1_storage_energy() failed:', err)
+        except Exception:
+            print('plot_b1_storage_energy() failed:', traceback.format_exc())
 
         try:
             plot_c1_load_netload_curtailment_profile(sw, dfs)
-        except Exception as err:
-            print('plot_c1_load_netload_curtailment_profile() failed:', err)
+        except Exception:
+            print('plot_c1_load_netload_curtailment_profile() failed:', traceback.format_exc())
 
         try:
             plot_b1_prices(sw, dfs)
-        except Exception as err:
-            print('plot_b1_prices() failed:', err)
+        except Exception:
+            print('plot_b1_prices() failed:', traceback.format_exc())
 
     if augur_plots >= 3:
         try:
             plot_c1_curtailment_timeseries(sw, dfs)
-        except Exception as err:
-            print('plot_c1_curtailment_timeseries() failed:', err)
+        except Exception:
+            print('plot_c1_curtailment_timeseries() failed:', traceback.format_exc())
 
 
 #%%### PROCEDURE
@@ -2142,21 +2227,23 @@ if __name__ == '__main__':
     iteration = args.iteration
 
     # #%%### Inputs for debugging
-    # reeds_path = os.path.expanduser('~/github/ReEDS-2.0/')
+    # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0/')
     # casedir = (
-    #     '/Volumes/ReEDS/FY22-NTP/Candidates/Archive/ReEDSruns/'
-    #     '20230730/v20230730_ntpH0_AC_DemMd_90by2035EP__core')
-    # casedir = os.path.join(reeds_path,'runs','v20231115_capcreditM0_capcredit_WECC')
-    # t = 2030
+    #     '/Volumes/ReEDS/Users/pbrown/ReEDSruns/'
+    #     '20240112_stresspaper/20240313/v20240313_stresspaperE1_SP_DemHi_90by2035__core'
+    # )
+    # t = 2050
     # interactive = True
     # iteration = -1
-    # sw['reeds_path'] = reeds_path
-    # sw['casedir'] = casedir
+    # augur_plots = 3
 
     #%%### INPUTS
     ### Switches
     sw = functions.get_switches(casedir)
     sw['t'] = t
+    ## Debugging
+    # sw['reeds_path'] = reeds_path
+    # sw['casedir'] = casedir
 
     ### Derivative switches
     sw['_no_osprey'] = not (
@@ -2187,9 +2274,9 @@ if __name__ == '__main__':
         # tic = datetime.datetime.now()
         try:
             main(sw)
-        except Exception as err:
+        except Exception as _err:
             print('G_plots.py failed with the following exception:')
-            print(err)
+            print(traceback.format_exc())
         # functions.toc(tic=tic, year=t, process='ReEDS_Augur/G_plots.py')
 
     ### Remove intermediate csv files to save drive space

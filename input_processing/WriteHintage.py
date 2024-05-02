@@ -519,6 +519,9 @@ def main(reeds_path, inputs_case):
         dpv = dpv[['Summer.capacity']]
         # Put back in original format
         dpv = dpv.reset_index().sort_values(['r','year'])
+
+        # Filter by regions again for cases when only a subset of a model balancing area is represented
+        dpv = dpv.loc[dpv['r'].isin(val_r_all)]
     elif agglevel in ['state','aggreg']: # or any other spatial resolution above 'BA'
         dpv['r'] = dpv['r'].map(r_ba)
         dpv = dpv.groupby(['r','year'], as_index=False).sum()

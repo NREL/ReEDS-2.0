@@ -143,7 +143,7 @@ def main(casepath, t, overwrite=False):
     ).columns.astype(int).values
     tprev = {**{years[0]:years[0]}, **dict(zip(years[1:], years))}
 
-    if not int(sw['keep_g00_files']) and (min(years) < t):
+    if ((not int(sw['keep_g00_files'])) and (not int(sw['debug']))) and (min(years) < t):
         g00files = glob(os.path.join(casepath, 'g00files', f'*{tprev[t]}i*.g00'))
         for i in g00files:
             os.remove(i)

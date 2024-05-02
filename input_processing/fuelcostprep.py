@@ -23,8 +23,8 @@ tic = datetime.datetime.now()
 #%% Parse arguments
 parser = argparse.ArgumentParser(description="""This file organizes fuel cost data by techonology""")
 
-parser.add_argument("reeds_path", help="ReEDS directory")
-parser.add_argument("inputs_case", help="output directory")
+parser.add_argument("reeds_path", help='ReEDS-2.0 directory')
+parser.add_argument("inputs_case", help='ReEDS-2.0/runs/{case}/inputs_case directory')
 
 args = parser.parse_args()
 reeds_path = args.reeds_path
@@ -46,20 +46,11 @@ sw = pd.read_csv(
 # Load valid regions
 val_r = pd.read_csv(
     os.path.join(inputs_case, 'val_r.csv'), header=None).squeeze(1).tolist()
-val_r_all = pd.read_csv(
-    os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
-
-# filter natural gas supply curve dimensions 
-# on val_cendiv, written by copy_files.py
-val_cendiv = pd.read_csv(os.path.join(inputs_case,"val_cendiv.csv"), 
-                         header=None).squeeze(1).tolist()
-
-input_dir = os.path.join(reeds_path,'inputs','fuelprices','')
 
 r_cendiv = pd.read_csv(os.path.join(inputs_case,"r_cendiv.csv"))
 
-dollaryear = pd.read_csv(os.path.join(input_dir, "dollaryear.csv"))
-deflator = pd.read_csv(os.path.join(reeds_path,'inputs','deflator.csv'))
+dollaryear = pd.read_csv(os.path.join(inputs_case, "dollaryear_fuel.csv"))
+deflator = pd.read_csv(os.path.join(inputs_case,'deflator.csv'))
 deflator.columns = ["Dollar.Year","Deflator"]
 dollaryear = dollaryear.merge(deflator,on="Dollar.Year",how="left")
 
@@ -70,7 +61,7 @@ dollaryear = dollaryear.merge(deflator,on="Dollar.Year",how="left")
 ####################
 #    -- Coal --    #
 ####################
-coal = pd.read_csv(os.path.join(input_dir, f'coal_{sw.coalscen}.csv'))
+coal = pd.read_csv(os.path.join(inputs_case, 'coal_price.csv'))
 coal = coal.melt(id_vars = ['year']).rename(columns={'variable':'cendiv'})
 
 # Adjust prices to 2004$
@@ -80,13 +71,12 @@ coal.loc[:,'value'] = coal['value'] * deflate
 coal = coal.merge(r_cendiv,on='cendiv',how='left')
 coal = coal.drop('cendiv', axis=1)
 coal = coal[['year','r','value']].rename(columns={'year':'t','value':'coal'})
-coal = coal.loc[coal['r'].isin(val_r_all)]
 coal.coal = coal.coal.round(6)
 
 #######################
 #    -- Uranium --    #
 #######################
-uranium = pd.read_csv(os.path.join(input_dir, f'uranium_{sw.uraniumscen}.csv'))
+uranium = pd.read_csv(os.path.join(inputs_case, 'uranium_price.csv'))
 
 # Adjust prices to 2004$
 deflate = dollaryear.loc[dollaryear['Scenario'] == sw.uraniumscen,'Deflator'].values[0]
@@ -99,7 +89,7 @@ uranium.uranium = uranium.uranium.round(6)
 #    -- H2-CT --    #
 #####################
 # note that these fuel inputs are not used when H2 production is run endogenously in ReEDS (GSw_H2 > 0)
-h2ct = pd.read_csv(os.path.join(input_dir, f'h2-ct_{sw.h2ctfuelscen}.csv'), index_col='year')
+h2ct = pd.read_csv(os.path.join(inputs_case, 'hydrogen_price.csv'), index_col='year')
 
 #Adjust prices to 2004$
 deflate = dollaryear.loc[dollaryear['Scenario'] == sw.h2ctfuelscen,'Deflator'].squeeze()
@@ -116,7 +106,7 @@ h2ct = (
 #    -- Natural Gas --    #
 ###########################
 
-ngprice = pd.read_csv(os.path.join(input_dir,f'ng_{sw.ngscen}.csv'))
+ngprice = pd.read_csv(os.path.join(inputs_case,'ng_price_cendiv.csv'))
 ngprice = ngprice.melt(id_vars=['year']).rename(columns={'variable':'cendiv'})
 
 # Adjust prices to 2004$
@@ -128,11 +118,10 @@ ngprice_cendiv = ngprice.copy()
 ngprice_cendiv = ngprice_cendiv.pivot_table(index='cendiv',columns='year',values='value')
 ngprice_cendiv = ngprice_cendiv.round(6)
 
-# Map cenus regions to BAs
+# Map cenus regions to model regions
 ngprice = ngprice.merge(r_cendiv,on='cendiv',how='left')
 ngprice = ngprice.drop('cendiv', axis=1)
 ngprice = ngprice[['year','r','value']].rename(columns={'year':'t','value':'naturalgas'})
-ngprice = ngprice.loc[ngprice['r'].isin(val_r_all)]
 ngprice.naturalgas = ngprice.naturalgas.round(6)
 
 # Combine all fuel data
@@ -145,25 +134,21 @@ fuel = fuel.sort_values(['t','r'])
 ### Natural Gas Demand Calculations ###
 
 # Natural Gas demand
-ngdemand = pd.read_csv(os.path.join(input_dir,f'ng_demand_{sw.ngscen}.csv'))
+ngdemand = pd.read_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
 ngdemand.index = ngdemand.year
 ngdemand = ngdemand.drop('year', axis=1)
 ngdemand = ngdemand.transpose()
 ngdemand = ngdemand.round(6)
 
 # Total Natural Gas demand
-ngtotdemand = pd.read_csv(os.path.join(input_dir, f'ng_tot_demand_{sw.ngscen}.csv'))
+ngtotdemand = pd.read_csv(os.path.join(inputs_case, 'ng_demand_tot.csv'))
 ngtotdemand.index = ngtotdemand.year
 ngtotdemand = ngtotdemand.drop('year', axis=1)
 ngtotdemand = ngtotdemand.transpose()
 ngtotdemand = ngtotdemand.round(6)
 
 ### Natural Gas Alphas (already in 2004$)
-if sw.GSw_GasSector == 'electric_sector':
-    alpha = pd.read_csv(os.path.join(input_dir, f'alpha_{sw.ngscen}.csv'))
-else:
-    alpha = pd.read_csv(
-        os.path.join(input_dir, f'alpha_{sw.ngscen}_{sw.GSw_EFS1_AllYearLoad}.csv'))
+alpha = pd.read_csv(os.path.join(inputs_case, 'alpha.csv'))
 alpha = alpha.round(6)
 
 #%%###################
@@ -171,11 +156,11 @@ alpha = alpha.round(6)
 ######################
 
 fuel.to_csv(os.path.join(inputs_case,'fprice.csv'),index=False)
-ngprice_cendiv.loc[val_cendiv].to_csv(os.path.join(inputs_case,'ng_price_cendiv.csv'))
+ngprice_cendiv.to_csv(os.path.join(inputs_case,'ng_price_cendiv.csv'))
 
-ngdemand.loc[val_cendiv].to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
-ngtotdemand.loc[val_cendiv].to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))
-alpha[['t']+val_cendiv].to_csv(os.path.join(inputs_case,'alpha.csv'),index=False)
+ngdemand.to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
+ngtotdemand.to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))
+alpha.to_csv(os.path.join(inputs_case,'alpha.csv'),index=False)
 
 toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
     path=os.path.join(inputs_case,'..'))

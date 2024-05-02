@@ -14,7 +14,6 @@ Created on Feb 24 2021
 ### ===========================================================================
 import os
 import argparse
-import shutil
 import pandas as pd
 # Time the operation of this script
 from ticker import toc, makelog
@@ -30,7 +29,7 @@ decimals = 4
 ### --- FUNCTIONS ---
 ### ===========================================================================
 
-def get_dr_shifts(sw, reeds_path, inputs_case, native_data=True,
+def get_dr_shifts(sw, inputs_case, native_data=True,
                   hmap_7yr=None, chunkmap=None, hours=None):
     """
     part of shift demand response handling compatible both with h17 and hourly ReEDS
@@ -40,7 +39,7 @@ def get_dr_shifts(sw, reeds_path, inputs_case, native_data=True,
 
     dr_hrs = pd.read_csv(
         os.path.join(
-            reeds_path, 'inputs', 'demand_response', f"dr_shifts_{sw['drscen']}.csv")
+            inputs_case, 'dr_shifts.csv')
     )
     
     # write out dr_hrs for Augur
@@ -58,14 +57,9 @@ def get_dr_shifts(sw, reeds_path, inputs_case, native_data=True,
     #### native_data reads in inputs directly
     if native_data:
         hr_ts = pd.read_csv(
-            os.path.join(reeds_path, 'inputs', 'variability', 'h_dt_szn.csv'))
-        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
-        num_hrs = pd.read_csv(
-            os.path.join(reeds_path, 'inputs', 'numhours.csv'),
-            header=0, names=['h', 'numhours'], index_col='h').squeeze(1)
-        hr_ts = pd.read_csv(
             os.path.join(inputs_case, 'h_dt_szn.csv'))
         hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
+
         num_hrs = pd.read_csv(
             os.path.join(inputs_case, 'numhours.csv'),
             header=0, names=['h', 'numhours'], index_col='h').squeeze(1)
@@ -129,6 +123,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     inputs_case = args.inputs_case
     reeds_path = args.reeds_path
+    
+    # Settings for testing
+    # reeds_path = os.getcwd()
+    # inputs_case = os.path.join(reeds_path,'runs','dr1_Pacific','inputs_case')
 
     #%% Set up logger
     log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
@@ -142,50 +140,52 @@ if __name__ == '__main__':
 
     ### Read in DR shed for specified scenario
     dr_shed = pd.read_csv(
-        os.path.join(args.reeds_path, 'inputs', 'demand_response', f'dr_shed_{drscen}.csv'))
+        os.path.join(inputs_case, 'dr_shed.csv'))
 
     ### Profiles
-    dr_profile_increase = pd.read_csv(
-        os.path.join(reeds_path,'inputs','demand_response',f'dr_increase_profile_{sw.drscen}.csv'))
-    dr_profile_decrease = pd.read_csv(
-        os.path.join(reeds_path,'inputs','demand_response',f'dr_decrease_profile_{sw.drscen}.csv'))
     evmc_shape_profile_decrease = pd.read_hdf(
-        os.path.join(reeds_path,'inputs','demand_response',f'evmc_shape_decrease_profile_{sw.evmcscen}.h5'))
+        os.path.join(inputs_case,'evmc_shape_decrease_profile.h5'))
     evmc_shape_profile_increase = pd.read_hdf(
-        os.path.join(reeds_path,'inputs','demand_response',f'evmc_shape_increase_profile_{sw.evmcscen}.h5'))
+        os.path.join(inputs_case,'evmc_shape_increase_profile.h5'))
     evmc_storage_profile_decrease = pd.read_hdf(
-        os.path.join(reeds_path,'inputs','demand_response',f'evmc_storage_decrease_profile_{sw.evmcscen}.h5'))
+        os.path.join(inputs_case,'evmc_storage_decrease_profile.h5'))
     evmc_storage_profile_increase = pd.read_hdf(
-        os.path.join(reeds_path,'inputs','demand_response',f'evmc_storage_increase_profile_{sw.evmcscen}.h5'))
+        os.path.join(inputs_case,'evmc_storage_increase_profile.h5'))
     evmc_storage_energy = pd.read_hdf(
-        os.path.join(reeds_path,'inputs','demand_response',f'evmc_storage_energy_{sw.evmcscen}.h5'))
+        os.path.join(inputs_case,'evmc_storage_energy.h5'))
 
     ### Filter by regions
     val_r_all = pd.read_csv(
         os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
-    dr_profile_increase = (
-        dr_profile_increase.loc[:,dr_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
-    dr_profile_decrease = (
-        dr_profile_decrease.loc[:,dr_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
-    evmc_shape_profile_decrease = (
-        evmc_shape_profile_decrease.loc[:,evmc_shape_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
-    evmc_shape_profile_increase = (
-        evmc_shape_profile_increase.loc[:,evmc_shape_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
-    evmc_storage_profile_decrease = (
-        evmc_storage_profile_decrease.loc[:,evmc_storage_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
-    evmc_storage_profile_increase = (
-        evmc_storage_profile_increase.loc[:,evmc_storage_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
-    evmc_storage_energy = (
-        evmc_storage_energy.loc[:,evmc_storage_energy.columns.isin(['i','hour','year'] + val_r_all)])
+    val_r = pd.read_csv(
+        os.path.join(inputs_case, 'val_r.csv'), header=None).squeeze(1).tolist()
+    if int(sw['GSw_EVMC']):
+        evmc_shape_profile_decrease = (
+            evmc_shape_profile_decrease.loc[
+                :,evmc_shape_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
+        evmc_shape_profile_increase = (
+            evmc_shape_profile_increase.loc[
+                :,evmc_shape_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
+        evmc_storage_profile_decrease = (
+            evmc_storage_profile_decrease.loc[
+                :,evmc_storage_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
+        evmc_storage_profile_increase = (
+            evmc_storage_profile_increase.loc[
+                :,evmc_storage_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
+        evmc_storage_energy = (
+            evmc_storage_energy.loc[
+                :,evmc_storage_energy.columns.isin(['i','hour','year'] + val_r_all)])
+    else:
+        evmc_shape_profile_decrease = pd.DataFrame(columns=['i','hour','year']+val_r)
+        evmc_shape_profile_increase = pd.DataFrame(columns=['i','hour','year']+val_r)
+        evmc_storage_profile_decrease = pd.DataFrame(columns=['i','hour','year']+val_r)
+        evmc_storage_profile_increase = pd.DataFrame(columns=['i','hour','year']+val_r)
+        evmc_storage_energy = pd.DataFrame(columns=['i','hour','year']+val_r)
 
 
     dr_shed[['dr_type', 'yr_hrs']].to_csv(
         os.path.join(inputs_case, 'dr_shed.csv'), index=False, header=False)
 
-    dr_profile_increase.to_csv(
-        os.path.join(inputs_case,'dr_inc.csv'),index=False)
-    dr_profile_decrease.to_csv(
-        os.path.join(inputs_case,'dr_dec.csv'),index=False)
     evmc_shape_profile_decrease.to_csv(
         os.path.join(inputs_case,'evmc_shape_profile_decrease.csv'),index=False)
     evmc_shape_profile_increase.to_csv(
@@ -196,11 +196,6 @@ if __name__ == '__main__':
         os.path.join(inputs_case,'evmc_storage_profile_increase.csv'),index=False)
     evmc_storage_energy.to_csv(
         os.path.join(inputs_case,'evmc_storage_energy.csv'),index=False)
-
-    # Copy DR types
-    shutil.copy(
-        os.path.join(args.reeds_path,'inputs','demand_response',f'dr_types_{drscen}.csv'),
-        os.path.join(inputs_case, 'dr_types.csv'))
     
     print('Finished writedrshift.py')
 

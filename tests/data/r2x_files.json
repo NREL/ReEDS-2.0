@@ -1,430 +1,338 @@
 {
   "ba_tz": {
     "fname": "reeds_region_tz_map.csv",
-    "mandatory": true
-  },
-  "online_capacity": {
-    "fname": "cap_ivrt.csv",
-    "column_mapping": {
-      "value": "capacity_MW"
-    },
-    "column_index": [
-      "year",
-      "tech",
-      "tech_class",
-      "region"
-    ],
-    "units": "MW",
-    "input": false,
-    "mandatory": true,
-    "description": "Online capacity in MW"
-  },
-  "new_capacity": {
-    "fname": "cap_new_ivrt.csv",
-    "column_mapping": {
-      "value": "reeds_capacity_MW"
-    },
-    "column_index": [
-      "year",
-      "tech",
-      "tech_class",
-      "region"
-    ],
-    "units": "MW",
-    "input": false,
-    "mandatory": true,
-    "description": "New online capacity prescribed by ReEDS."
-  },
-  "retirements": {
-    "fname": "ret_ivrt.csv",
-    "column_mapping": {
-      "value": "retired_MW"
-    },
-    "column_index": [
-      "year",
-      "tech",
-      "tech_class",
-      "region"
-    ],
-    "units": "MW",
-    "description": "Planned and decision retirements"
-  },
-  "hierarchy": {
-    "fname": "hierarchy.csv",
-    "column_mapping": {
-      "nercr": "nerc_region",
-      "transreg": "transmission_region"
-    },
-    "column_index": [
-      "region",
-      "cendiv",
-      "st"
-    ],
     "input": true,
-    "mandatory": true
+    "optional": true
   },
-  "tx_out": {
-    "fname": "tran_out.csv",
+  "bfuel_price": {
     "column_mapping": {
-      "region": "region_from",
-      "rr": "region_to",
-      "value": "flow_MW"
+      "r": "region",
+      "t": "year",
+      "value": "fuel_price"
     },
-    "column_index": [
-      "year",
-      "region_from",
-      "region_to",
-      "trtype"
-    ],
-    "units": "MW"
+    "fname": "repbioprice.csv",
+    "input": false,
+    "optional": false
   },
-  "tran_cap_energy": {
-    "fname": "tran_cap_energy.csv",
-    "column_mapping": {
-      "region": "region_from",
-      "rr": "region_to",
-      "value": "max_active_power"
-    },
-    "column_index": [
-      "year",
-      "region_from",
-      "region_to",
-      "trtype"
-    ],
-    "mandatory": true
+  "cf": {
+    "fname": "recf.h5",
+    "input": true,
+    "optional": false
   },
-  "tranloss": {
-    "fname": "tranloss.csv",
+  "cf_adjustment": {
     "column_mapping": {
-      "region": "region_from",
-      "rr": "region_to",
-      "loss": "transmission_loss"
+      "value": "cf_adj"
     },
-    "column_index": [
-      "region_from",
-      "region_to",
-      "trtype"
-    ],
-    "mandatory": true,
-    "input": true
+    "fname": "cf_adj_t.csv",
+    "input": false,
+    "optional": false
+  },
+  "cost_vom": {
+    "column_mapping": {
+      "i": "tech",
+      "r": "region",
+      "t": "year",
+      "v": "tech_vintage",
+      "value": "cost_vom"
+    },
+    "fname": "cost_vom.csv",
+    "input": false,
+    "optional": false
+  },
+  "emission_rates": {
+    "column_mapping": {
+      "eall": "emission_type",
+      "i": "tech",
+      "r": "region",
+      "t": "year",
+      "v": "tech_vintage",
+      "value": "rate"
+    },
+    "fname": "emit_rate.csv",
+    "input": false,
+    "optional": false
+  },
+  "forced_outages": {
+    "column_mapping": {
+      "i": "tech",
+      "value": "forced_outage_rate"
+    },
+    "fname": "forced_outage.csv",
+    "input": false,
+    "optional": false
+  },
+  "fuel_price": {
+    "column_mapping": {
+      "i": "tech",
+      "r": "region",
+      "t": "year",
+      "value": "fuel_price"
+    },
+    "fname": "fuel_price.csv",
+    "input": false,
+    "optional": false
+  },
+  "fuels": {
+    "column_mapping": {
+      "f": "fuel",
+      "i": "tech"
+    },
+    "fname": "fuel2tech.csv",
+    "input": false,
+    "optional": false
   },
   "generation": {
-    "fname": "gen_h.csv",
     "column_mapping": {
       "value": "dispatch_MW"
     },
-    "column_index": [
-      "year",
-      "tech",
-      "region",
-      "h"
-    ],
-    "units": "MW",
-    "dtype": {}
-  },
-  "technologies": {
-    "fname": "valcap_i.csv",
-    "units": "MW",
-    "input": true,
-    "mandatory": true
-  },
-  "technology_class": {
-    "column_mapping": {
-      "uni": "tech_class"
-    },
-    "fname": "v.csv",
-    "optional": true,
-    "input": false
-  },
-  "years": {
-    "fname": "modeledyears.csv",
-    "column_mapping": {},
-    "input": true,
-    "mandatory": true
-  },
-  "heat_rate": {
-    "fname": "heat_rate.csv",
-    "column_mapping": {
-      "value": "heat_rate"
-    },
-    "column_index": [
-      "year",
-      "tech",
-      "tech_class",
-      "region"
-    ],
-    "units": "MMBTu/MWh",
-    "input": true,
-    "mandatory": true
-  },
-  "bio_fuel_price": {
-    "fname": "repbioprice.csv",
-    "column_mapping": {
-      "value": "bfuel_price"
-    },
-    "column_index": [
-      "region",
-      "year"
-    ],
-    "mandatory": true,
-    "input": false
-  },
-  "ng_fuel_price": {
-    "fname": "repgasprice_r.csv",
-    "column_mapping": {
-      "value": "ng_fuel_price"
-    },
-    "column_index": [
-      "region",
-      "year"
-    ],
-    "mandatory": true,
-    "input": false
+    "fname": "gen_h.csv"
   },
   "h2_fuel_price": {
-    "fname": "h2_price_month.csv",
     "column_mapping": {
       "$2004/kg": "h2_price"
     },
-    "column_index": [
-      "region",
-      "year",
-      "month"
-    ],
-    "units": "$/kg"
-  },
-  "fuel_price": {
-    "fname": "fuel_price.csv",
-    "column_mapping": {
-      "value": "fuel_price"
-    },
-    "column_index": [
-      "year",
-      "tech",
-      "region"
-    ],
-    "units": "$/MMBtu",
-    "mandatory": true,
-    "input": true
-  },
-  "fuels": {
-    "fname": "fuel2tech.csv",
-    "column_mapping": {
-      "fuel": "fuels"
-    },
-    "mandatory": true,
-    "input": true
-  },
-  "pollutants": {
-    "fname": "e.csv",
-    "column_mapping": {
-      "eall": "pollutant"
-    },
-    "mandatory": true,
-    "input": true
-  },
-  "emission_rates": {
-    "fname": "emit_rate.csv",
-    "mandatory": true,
+    "fname": "h2_price_month.csv",
     "input": false,
-    "column_mapping": {
-      "value": "production_rate"
-    },
-    "column_index": [
-      "pollutant",
-      "tech",
-      "tech_class",
-      "region",
-      "year"
-    ]
+    "optional": true
   },
-  "cost_vom": {
-    "fname": "cost_vom.csv",
+  "heat_rate": {
     "column_mapping": {
-      "value": "cost_vom"
+      "i": "tech",
+      "r": "region",
+      "t": "year",
+      "v": "tech_vintage",
+      "value": "heat_rate"
     },
-    "column_index": [
-      "year",
-      "tech",
-      "tech_class",
-      "region"
-    ],
-    "mandatory": true,
+    "fname": "heat_rate.csv",
     "input": false,
-    "description": "Variable O&M in $/MWh",
-    "units": "$/MWh"
+    "optional": false
   },
-  "forced_outages": {
-    "fname": "outage_forced.csv",
-    "mandatory": true,
-    "columns": [
-      "tech",
-      "forced_outage_rate"
-    ],
-    "column_index": [
-      "tech"
-    ],
-    "input": true,
-    "dtype": {
-      "forced_outage_rate": "float32"
-    }
-  },
-  "planned_outages": {
-    "fname": "outage_planned.csv",
-    "columns": [
-      "tech",
-      "planned_outages"
-    ],
-    "column_index": [
-      "tech"
-    ],
-    "mandatory": true,
-    "input": true,
-    "dtype": {
-      "planned_outages": "float32"
-    }
-  },
-  "storage_durations": {
-    "fname": "storage_duration.csv",
-    "columns": [
-      "tech",
-      "duration"
-    ],
-    "column_index": [
-      "tech"
-    ],
-    "mandatory": true,
-    "input": true,
-    "dtype": {
-      "duration": "int32"
-    }
-  },
-  "storage_eff": {
-    "fname": "storage_eff.csv",
+  "hierarchy": {
     "column_mapping": {
-      "value": "storage_eff"
+      "nercr": "nerc_region",
+      "*r": "region",
+      "transreg": "transmission_region"
     },
-    "column_index": [
-      "tech",
-      "year"
-    ],
-    "mandatory": true,
-    "input": false
-  },
-  "opres_supply": {
-    "fname": "opRes_supply.csv",
-    "column_mapping": {
-      "value": "reserve_capacity_MW"
-    },
-    "column_index": [
-      "year",
-      "tech",
-      "region"
-    ],
-    "mandatory": false,
-    "input": false
-  },
-  "hours": {
-    "fname": "hours.csv",
+    "fname": "hierarchy.csv",
     "input": true,
-    "column_mapping": {
-      "value": "hour_weight"
-    },
-    "dtype": {
-      "h": "category"
-    }
+    "optional": false
   },
   "hour_map": {
-    "fname": "hmap_myr.csv",
-    "input": true,
     "column_mapping": {
       "*timestamp": "time_index"
     },
-    "dtype": {
-      "year": "str",
-      "season": "category",
-      "h": "category",
-      "hour": "int32"
-    }
+    "fname": "hmap_myr.csv",
+    "input": true,
+    "optional": false
   },
-  "hydro_cf": {
-    "fname": "hydcf.csv",
+  "hour_map_h17": {
+    "fname": "h_dt_szn.csv",
+    "input": true,
+    "optional": true
+  },
+  "hours": {
+    "column_mapping": {
+      "value": "hour_weight"
+    },
+    "fname": "hours.csv",
+    "input": false,
+    "optional": false
+  },
+  "hydro_cap_adj": {
     "column_mapping": {
       "*i": "tech",
+      "r": "region",
       "month": "month",
+      "value": "hydro_cf_adj"
+    },
+    "fname": "hydcapadj.csv",
+    "input": true,
+    "optional": false
+  },
+  "hydro_cf": {
+    "column_mapping": {
+      "*i": "tech",
+      "r": "region",
+      "month": "month",
+      "t": "year",
       "value": "hydro_cf"
     },
-    "column_index": [
-      "year",
-      "tech",
-      "region",
-      "month"
-    ],
-    "mandatory": false,
-    "input": true
+    "fname": "hydcf.csv",
+    "input": true,
+    "optional": false
   },
   "hydro_min_gen": {
-    "fname": "hydro_mingen.csv",
     "column_mapping": {
       "*i": "tech",
       "quarter": "season",
       "value": "hydro_minload"
     },
-    "column_index": [
-      "tech",
-      "region",
-      "season"
-    ],
-    "mandatory": true,
-    "input": true
-  },
-  "hydro_cap_adj": {
-    "fname": "hydcapadj.csv",
-    "column_mapping": {
-      "*i": "tech",
-      "month": "month",
-      "value": "hydro_cf_adj"
-    },
-    "column_index": [
-      "tech",
-      "region",
-      "month"
-    ],
-    "mandatory": true,
+    "fname": "hydro_mingen.csv",
     "input": true,
-    "note": "Monthly capacity adjustment."
+    "optional": true
   },
   "ilr": {
-    "fname": "ilr.csv",
     "column_mapping": {
       "value": "ilr"
     },
-    "column_index": [
-      "tech"
-    ]
+    "fname": "ilr.csv",
+    "input": false,
+    "optional": false
   },
-  "electrolyzer_load": {
-    "fname": "prod_load.csv",
+  "load": {
+    "fname": "load.h5",
+    "input": true,
+    "optional": false
+  },
+  "new_capacity": {
     "column_mapping": {
-      "value": "electrolizer_load_MW"
+      "value": "reeds_capacity_MW"
     },
-    "column_index": [
-      "tech",
-      "region",
-      "h",
-      "year"
-    ],
-    "units": "MW"
+    "fname": "cap_new_ivrt.csv",
+    "input": false,
+    "optional": false
+  },
+  "ng_fuel_price": {
+    "column_mapping": {
+      "value": "ng_fuel_price"
+    },
+    "fname": "repgasprice_r.csv",
+    "input": false,
+    "optional": false
+  },
+  "online_capacity": {
+    "column_mapping": {
+      "i": "tech",
+      "r": "region",
+      "t": "year",
+      "v": "tech_vintage",
+      "value": "rated_capacity"
+    },
+    "fname": "cap_ivrt.csv",
+    "input": false,
+    "optional": false
+  },
+  "opres_supply": {
+    "column_mapping": {
+      "value": "reserve_capacity_MW"
+    },
+    "fname": "opRes_supply_h.csv",
+    "input": false,
+    "optional": true
+  },
+  "planned_outages": {
+    "column_mapping": {
+      "i": "tech",
+      "value": "planned_outage_rate"
+    },
+    "fname": "planned_outage.csv",
+    "input": false,
+    "optional": false
+  },
+  "pollutants": {
+    "column_mapping": {
+      "eall": "pollutant"
+    },
+    "fname": "e.csv",
+    "input": false,
+    "optional": false
+  },
+  "retirements": {
+    "column_mapping": {
+      "value": "retired_MW"
+    },
+    "fname": "ret_ivrt.csv"
+  },
+  "rs_map": {
+    "fname": "rsmap.csv",
+    "input": true,
+    "optional": true
+  },
+  "storage_duration": {
+    "column_mapping": {
+      "i": "tech",
+      "value": "duration"
+    },
+    "fname": "storage_duration.csv",
+    "input": false,
+    "optional": false
+  },
+  "storage_eff": {
+    "column_mapping": {
+      "i": "tech",
+      "t": "year",
+      "value": "charge_efficiency"
+    },
+    "fname": "storage_eff.csv",
+    "input": false,
+    "optional": false
   },
   "switches": {
     "fname": "switches.csv",
-    "columns": [
-      "switch",
-      "value"
-    ],
-    "column_index": [
-      "switch"
-    ],
-    "mandatory": true
+    "input": true,
+    "optional": false
+  },
+  "technologies": {
+    "fname": "valcap_i.csv",
+    "input": false,
+    "optional": false
+  },
+  "technology_class": {
+    "column_mapping": {
+      "*": "tech_class"
+    },
+    "fname": "v.csv",
+    "input": false,
+    "optional": false
+  },
+  "tx_cap": {
+    "column_mapping": {
+      "r": "from_bus",
+      "rr": "to_bus",
+      "t": "year",
+      "trtype": "kind",
+      "value": "max_active_power"
+    },
+    "fname": "tran_cap_energy.csv",
+    "optional": false
+  },
+  "tx_losses": {
+    "column_mapping": {
+      "r": "from_bus",
+      "rr": "to_bus",
+      "trtype": "kind",
+      "value": "losses"
+    },
+    "fname": "tranloss.csv",
+    "input": false,
+    "optional": false
+  },
+  "tx_out": {
+    "column_mapping": {
+      "r": "region",
+      "rr": "region_to",
+      "t": "year",
+      "trtype": "kind",
+      "value": "flow_MW"
+    },
+    "fname": "tran_out.csv",
+    "optional": true
+  },
+  "upv_sc_out": {
+    "fname": "df_sc_out_upv_reduced.csv",
+    "optional": true
+  },
+  "wind-ofs_sc_out": {
+    "fname": "df_sc_out_wind-ofs_reduced.csv",
+    "optional": true
+  },
+  "wind-ons_sc_out": {
+    "fname": "df_sc_out_wind-ons_reduced.csv",
+    "optional": true
+  },
+  "years": {
+    "fname": "modeledyears.csv",
+    "input": true,
+    "optional": true
   }
 }

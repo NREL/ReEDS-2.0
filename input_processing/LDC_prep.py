@@ -271,7 +271,7 @@ def main(reeds_path, inputs_case):
     hierarchy_original = (
         pd.read_csv(os.path.join(reeds_path, 'inputs', 'hierarchy.csv'))
         .rename(columns={'ba':'r'})
-        .drop(['*county','county_name'], axis=1).drop_duplicates()
+        .drop(['county','county_name'], axis=1).drop_duplicates()
         .set_index('r')
     )
     ### Add ccreg column with the desired hierarchy level
@@ -382,9 +382,9 @@ def main(reeds_path, inputs_case):
     for pvb_type in GSw_PVB_Types:
         ilr = int(pvb_ilr['pvb{}'.format(pvb_type)] * 100)
         ### UPV uses ILR = 1.3, so use its profile if ILR = 1.3
-        infile = 'upv' if ilr == 130 else f'upv_{ilr}AC'
+        infile = f'upv-{GSw_SitingUPV}_ba' if ilr == 130 else f'upv_{ilr}AC_ba-reference'
         df_pvb[pvb_type] = read_file(
-            os.path.join(path_variability, 'multi_year', 'f{infile}-{GSw_SitingUPV}'))
+            os.path.join(path_variability, 'multi_year', infile))
         df_pvb[pvb_type].columns = [f'pvb{pvb_type}_{c}'
                                     for c in df_pvb[pvb_type].columns]
         df_pvb[pvb_type].index = df_upv.index.copy()
@@ -651,6 +651,8 @@ def main(reeds_path, inputs_case):
              for fips, row in fracdata.iterrows()},
             axis=1,
         )
+        # Filter by regions again for cases when only a subset of a model balancing area is represented
+        load_eastern = load_eastern.loc[:,load_eastern.columns.isin(val_r_all)].copy()
 
     #%% Calculate coincident peak demand at different levels for convenience later
     _peakload = {}

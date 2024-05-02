@@ -360,7 +360,7 @@ def get_pvb_cost(
 
 #%% Calculate PVB cost fraction for each PVB design
 pvb = {}
-for i in range(1,4):
+for i in sw['GSw_PVB_Types'].split('_'):
     pvb['pvb{}'.format(i)] = get_pvb_cost(
         UPV_defaultILR_USDperWac=UPV_defaultILR_USDperWac,
         battery_USDperWac=battery_USDperWac,

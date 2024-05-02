@@ -147,7 +147,7 @@ def get_ccseason_peaks_hourly(load, sw, reeds_path, inputs_case, hierarchy, h2cc
         rmap = hierarchy[sw['GSw_PRM_hierarchy_level']]
     elif agglevel in ['ba','state','aggreg']:
         hierarchy_orig = (pd.read_csv(os.path.join(reeds_path,'inputs','hierarchy.csv'))
-                          .rename(columns={'*county':'county','st':'state'}))
+                          .rename(columns={'st':'state'}))
         rmap = (hierarchy_orig[hierarchy_orig['ba'].isin(val_r_all)]
                               [['ba',sw['GSw_PRM_hierarchy_level']]]
                               .drop_duplicates().set_index('ba')).squeeze()
@@ -377,11 +377,11 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     """
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-    # inputs_case = os.path.join(reeds_path, 'runs', 'v20240218_stressstorM0_Z45_SP_5yr_H0_Southwest', 'inputs_case')
+    # inputs_case = os.path.join(reeds_path, 'runs', 'v20240318_stressweightM0_Pacific_stress', 'inputs_case')
     # sw = pd.read_csv(
     #     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
     # periodtype = 'rep'
-    # periodtype = 'stress2035i1'
+    # periodtype = 'stress2010i0'
     # make_plots = int(sw.hourly_cluster_plots)
     # make_plots = 0
     # figpathtail = ''
@@ -534,19 +534,14 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     hours = (
         hmap_myr.groupby('h').season.count().rename('numhours')
         / (len(sw['GSw_HourlyWeatherYears']) if periodtype == 'rep' else 1))
-    # hours = hmap_myr.groupby('h').season.count().rename('numhours')
-    # ## Representative periods are normalized by the number of modeled years (so that we can
-    # ## still act like we're modeling over a single year in ReEDS),
-    # ## but force-included periods are not; they're always treated as full single periods
-    # hours.loc[
-    #     ## exclude the hours that belong to force-included periods
-    #     hours.index.map(lambda x: not any([x.startswith(p) for p in forceperiods_prefix]))
-    # ] /= len(sw['GSw_HourlyWeatherYears'])
+    ## Stress period hours are scaled to sum to 6 hours, making 8766 hours (365.25 days) per year
+    if periodtype != 'rep':
+        hours = hours / hours.sum() * 6
     ### Make sure it lines up
     if periodtype == 'rep':
         assert int(np.around(hours.sum(), 0)) % 8760 == 0
     else:
-        assert int(np.around(hours.sum(), 0)) % len(hmap_myr) == 0
+        assert np.around(hours.sum(), 0) == 6
 
     # create the timeslice-to-season and timeslice-to-ccseason mappings
     h_szn = hmap_myr[['h','season']].drop_duplicates().reset_index(drop=True)
@@ -980,8 +975,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             hmap_1yr=hmap_myr, set_szn=set_szn, 
             inputs_case=inputs_case, drcat='dr')
         shift_out, dr_shifts = get_dr_shifts(
-            sw=sw, reeds_path=reeds_path, inputs_case=inputs_case,
-            native_data=False, hmap_7yr=hmap_7yr, hours=hours, chunkmap=chunkmap)
+            sw=sw, inputs_case=inputs_case, native_data=False,
+            hmap_7yr=hmap_7yr, hours=hours, chunkmap=chunkmap)
     else:
         dr_inc = pd.DataFrame(columns=['*i','r','h'])
         dr_dec = pd.DataFrame(columns=['*i','r','h'])

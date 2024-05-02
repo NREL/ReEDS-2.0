@@ -6,7 +6,9 @@ Created on Thu Mar  4 19:31:59 2021
 """
 #%%### Imports
 import numpy as np
-import os, sys, logging
+import os
+import sys
+import logging
 import pandas as pd
 import datetime
 import h5py
@@ -213,7 +215,7 @@ def toc(tic, year, process, path=''):
                     (now-tic).total_seconds()
                 )
             )
-    except:
+    except Exception:
         print('meta.csv not found or not writeable')
         pass
 

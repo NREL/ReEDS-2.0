@@ -153,7 +153,7 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
         print('Splicing in default load before ' + str(use_default_before_yr))
         #Read in hierarchy to map census division / state to BA
         df_hier = pd.read_csv(os.path.join(outpath, 'inputs', 'hierarchy.csv'))
-        df_hier = df_hier.rename(columns= {'*county':'county', 'ba' : 'r'})
+        df_hier = df_hier.rename(columns= {'ba' : 'r'})
         #Read in load multipliers
         df_loadgrowth = pd.read_csv(cf.aeo_default)
         if 'cendiv' in df_loadgrowth.columns:

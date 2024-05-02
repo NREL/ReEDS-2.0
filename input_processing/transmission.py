@@ -184,7 +184,47 @@ def get_trancap_init(valid_regions, agglevel, networksource='NARIS2024', level='
 ### --- PROCEDURE ---
 ### ===========================================================================
 
-### Get single-link distances and losses
+#%% Limits on PRMTRADE across nercr boundaries
+solveyears = pd.read_csv(
+    os.path.join(reeds_path,'inputs','modeledyears.csv'),
+    usecols=[sw['yearset_suffix']],
+).squeeze(1).dropna().astype(int).tolist()
+solveyears = [y for y in solveyears if y <= int(sw['endyear'])]
+
+val_nercr = pd.read_csv(
+    os.path.join(inputs_case,'val_nercr.csv'), header=None,
+).squeeze(1).values
+## Take the max over all years for each region and drop negative values
+planned_firm_transfers = pd.read_csv(
+    os.path.join(reeds_path,'inputs','reserves','net_firm_transfers_nerc.csv'),
+).pivot(index='t',columns='nercr',values='MW')[val_nercr].max().clip(lower=0).rename('MW')
+## Keep planned firm transfers for years before GSw_PRMTRADE_limit to use in the
+## eq_firm_transfer_limit / eq_firm_transfer_limit_cc constraints
+if any([y < int(sw.GSw_PRMTRADE_limit) for y in solveyears]):
+    firm_transfer_limit = pd.concat({
+        y: planned_firm_transfers
+        for y in solveyears
+        if y <= int(sw.GSw_PRMTRADE_limit)
+    }, names=['t']).reorder_levels(['nercr','t']).rename_axis(['*nercr','t'])
+## Otherwise, if GSw_PRMTRADE_limit is set to a value before all solve years (such as 0),
+## write an empty dataframe
+else:
+    firm_transfer_limit = pd.DataFrame(columns=['*nercr','t','MW']).set_index(['*nercr','t'])
+firm_transfer_limit.to_csv(os.path.join(inputs_case, 'firm_transfer_limit.csv'))
+
+### Planning reserve margin
+(
+    pd.read_csv(
+        os.path.join(reeds_path,'inputs','reserves','prm_annual.csv'),
+        index_col=['*nercr','t'])
+    [sw['GSw_PRM_scenario']]
+    ## Fill years before data begin with the first year's data
+    .unstack('*nercr').reindex(solveyears).fillna(method='bfill').stack('*nercr')
+    .reorder_levels(['*nercr','t']).loc[val_nercr].round(4)
+).to_csv(os.path.join(inputs_case,'prm_annual.csv'))
+
+
+#%% Get single-link distances and losses
 # Get single-link distances [miles]
 infiles = {'AC':'500kVac', 'LCC':'500kVdc', 'B2B':'500kVac'}
 tline_data = pd.concat({

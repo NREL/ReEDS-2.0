@@ -588,8 +588,10 @@ def map_supplycurve(
         logging.getLogger(i).setLevel(logging.CRITICAL)
     import pandas as pd
     import matplotlib.pyplot as plt
-    import os, site
+    import os
+    import site
     import geopandas as gpd
+    import cmocean
     os.environ['PROJ_NETWORK'] = 'OFF'
 
     site.addsitedir(os.path.join(reedspath,'postprocessing'))
@@ -599,7 +601,7 @@ def map_supplycurve(
 
     #%%### Format inputs
     if not cm:
-        cmap = plt.cm.gist_earth_r
+        cmap = cmocean.cm.rain
     else:
         cmap = cm
     ms = {'wind-ofs':1.75, 'wind-ons':2.65, 'upv':2.65}[tech]

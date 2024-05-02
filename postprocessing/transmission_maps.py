@@ -5,6 +5,7 @@ import os
 import site
 import argparse
 import traceback
+import cmocean
 
 os.environ['PROJ_NETWORK'] = 'OFF'
 
@@ -22,15 +23,13 @@ plots.plotparams()
 ## need to be reduced to avoid too much overlap in the plotted routes
 wscale_straight = 0.0004
 wscale_routes = 1.5
-wscale_h2 = 3
+wscale_h2 = 10
 routes = False
 ## Note that if you change the CRS you'll probably need to change
 ## the position of the annotations
 crs = 'ESRI:102008'
 ### For generation capacity map
-cmap = plt.cm.gist_earth_r
-# cmap = plt.cm.YlGnBu
-# cmap = plt.cm.PuBuGn
+cmap = cmocean.cm.rain
 ncols = 4
 techs = [
     'Utility PV', 'Land-based wind', 'Offshore wind', 'Electrolyzer',
@@ -81,7 +80,7 @@ write = True
 ###################
 #%% ARGUMENT INPUTS
 parser = argparse.ArgumentParser(description='transmission maps')
-parser.add_argument('--casedir', '-c', type=str,
+parser.add_argument('--case', '-c', type=str,
                     help='path to ReEDS run folder')
 parser.add_argument('--year', '-y', type=int, default=2050,
                     help='year to plot')
@@ -89,16 +88,16 @@ parser.add_argument('--routes', '-r', action='store_true',
                     help='if True, show actual transmission routes')
 
 args = parser.parse_args()
-casedir = args.casedir
+case = args.case
 year = args.year
 routes = args.routes
 
 # #%% Inputs for testing
-# casedir = (
-#     '/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240112/'
-#     'v20240112_stresspaperE0_SP_DemHi_90by2035__core')
-# casedir = os.path.expanduser('~/github/ReEDS-2.0/runs/v20240218_stressstorM0_Z45_SP_5yr_H0_Southwest')
-# year = 2035
+# case = os.path.expanduser('~/github/ReEDS-2.0/runs/v20240218_stressstorM0_Z45_SP_5yr_H0_Southwest')
+# case = (
+#     '/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240313/'
+#     'v20240313_stresspaperE0_SP_DemHi_90by2035__core')
+# year = 2050
 # routes = False
 # interactive = True
 # write = False
@@ -108,10 +107,10 @@ routes = args.routes
 #############
 #%% PROCEDURE
 #%% Set up logger
-log = makelog(scriptname=__file__, logpath=os.path.join(casedir,'gamslog.txt'))
+log = makelog(scriptname=__file__, logpath=os.path.join(case,'gamslog.txt'))
 
 #%% Make output directory
-savepath = os.path.join(casedir,'outputs','maps')
+savepath = os.path.join(case,'outputs','maps')
 os.makedirs(savepath, exist_ok=True)
 
 #%% Load colors
@@ -125,22 +124,22 @@ colors = pd.concat([colors, trtypes.map(colors)])
 
 #%% Load switches
 sw = pd.read_csv(
-    os.path.join(casedir, 'inputs_case', 'switches.csv'),
+    os.path.join(case, 'inputs_case', 'switches.csv'),
     header=None, index_col=0).squeeze(1)
 years = pd.read_csv(
-    os.path.join(casedir,'inputs_case','modeledyears.csv')
+    os.path.join(case,'inputs_case','modeledyears.csv')
 ).columns.astype(int).values
 yearstep = years[-1] - years[-2]
 val_r = pd.read_csv(
-    os.path.join(casedir, 'inputs_case', 'val_r.csv'), header=None).squeeze(1).tolist()
+    os.path.join(case, 'inputs_case', 'val_r.csv'), header=None).squeeze(1).tolist()
 
 #%% Transmission line map with disaggregated transmission types
 ### Plot both total capacity (subtract_baseyear=None) and new (subtract_baseyear=2020)
 for subtract_baseyear in [None, 2020]:
     try:
         plt.close()
-        f,ax = rplots.plot_trans_onecase(
-            case=casedir, pcalabel=False,
+        f, ax, _ = rplots.plot_trans_onecase(
+            case=case, pcalabel=False,
             routes=routes, simpletypes=None,
             wscale=(wscale_routes if routes else wscale_straight),
             yearlabel=False, year=year, alpha=1.0,
@@ -179,8 +178,8 @@ for subtract_baseyear in [None, 2020]:
 try:
     for plottype in ['mean','max']:
         plt.close()
-        f,ax = rplots.plot_transmission_utilization(
-            case=casedir, year=year, plottype=plottype,
+        f, ax, df = rplots.plot_transmission_utilization(
+            case=case, year=year, plottype=plottype,
             wscale=wscale_straight, alpha=1.0, cmap=cmap,
         )
         savename = f'map_transmission_utilization-{plottype}-{year}'
@@ -197,7 +196,7 @@ except Exception:
 try:
     plt.close()
     f,ax = rplots.plot_average_flow(
-        case=casedir, year=year, wscale=wscale_routes*8e3,
+        case=case, year=year, wscale=wscale_routes*8e3,
     )
     savename = f'map_transmission_utilization-flowdirection-{year}.png'
     if write:
@@ -213,7 +212,7 @@ except Exception:
 try:
     plt.close()
     f,ax = rplots.plot_prmtrade(
-        case=casedir, year=year, wscale=wscale_straight*8e3,
+        case=case, year=year, wscale=wscale_straight*8e3,
     )
     savename = f'map_transmission_utilization-prmtrade-{year}.png'
     if write:
@@ -232,7 +231,7 @@ try:
     if int(sw.GSw_VSC):
         plt.close()
         f,ax = rplots.plot_trans_vsc(
-            case=casedir, year=year, wscale=wscale_straight*1e3,
+            case=case, year=year, wscale=wscale_straight*1e3,
             alpha=1.0, miles=300,
         )
         savename = f'map_translines_vsc-{year}.png'
@@ -251,11 +250,11 @@ except Exception:
 ### Plot with tech-specific (vmax='each') and uniform (vmax='shared') color axis
 for vmax in ['each', 'shared']:
     try:
-        dfba = rplots.get_zonemap(casedir).loc[val_r]
+        dfba = rplots.get_zonemap(case).loc[val_r]
         dfstates = dfba.dissolve('st')
         ### Case data
         dfcap = pd.read_csv(
-            os.path.join(casedir,'outputs','cap.csv'),
+            os.path.join(case,'outputs','cap.csv'),
             names=['i','r','t','MW'], header=0,
         )
         dfcap.i = dfcap.i.str.lower().map(lambda x: techmap.get(x,x))
@@ -301,7 +300,7 @@ for vmax in ['each', 'shared']:
             )
             ax[coords[tech]].axis('off')
         ax[0,0].set_title(
-            '{} ({})'.format(os.path.basename(casedir), year),
+            '{} ({})'.format(os.path.basename(case), year),
             x=0.1, ha='left', va='top')
         savename = f'map_capacity-{year}-{vmax}.png'
         if write:
@@ -318,7 +317,7 @@ for vmax in ['each', 'shared']:
 try:
     plt.close()
     f,ax = rplots.plot_vresites_transmission(
-        casedir, year, crs=crs, cm=gen_cmap,
+        case, year, crs=crs, cm=gen_cmap,
         routes=False, wscale=wscale_straight, show_overlap=False,
         subtract_baseyear=None, show_transmission=False,
         alpha=transalpha, colors=transcolor, ms=ms,
@@ -339,7 +338,7 @@ except Exception:
 try:
     plt.close()
     f,ax = rplots.plot_vresites_transmission(
-        casedir, year, crs=crs, cm=gen_cmap,
+        case, year, crs=crs, cm=gen_cmap,
         routes=routes, show_overlap=False,
         wscale=wscale_routes,
         subtract_baseyear=None, show_transmission=True,
@@ -360,7 +359,7 @@ except Exception:
 try:
     for val in ['cap','gen']:
         plt.close()
-        f,ax = rplots.map_agg(case=casedir, data=val, width_step=yearstep)
+        f,ax = rplots.map_agg(case=case, data=val, width_step=yearstep)
         savename = f'map_agg-FERC-{val}-{year}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -370,7 +369,7 @@ try:
         print(savename)
 
     plt.close()
-    f,ax = rplots.map_trans_agg(case=casedir, wscale=1000, drawzones=0.05)
+    f,ax = rplots.map_trans_agg(case=case, wscale=1000, drawzones=0.05, width_step=yearstep)
     savename = f'map_agg-FERC-trans-{year}.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -380,7 +379,7 @@ try:
     print(savename)
 
     plt.close()
-    f,ax = rplots.map_agg(case=casedir, data='cap', width_step=yearstep, transmission=True)
+    f,ax = rplots.map_agg(case=case, data='cap', width_step=yearstep, transmission=True)
     savename = f'map_agg-FERC-cap,trans-{year}.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -404,7 +403,7 @@ try:
     for v in [0,1]:
         plt.close()
         f,ax = rplots.plot_dispatch_yearbymonth(
-            case=casedir, t=year, highlight_rep_periods=v, techs=techs)
+            case=case, t=year, highlight_rep_periods=v, techs=techs)
         endname = '' if not techs else f"-{','.join(techs)}"
         savename = f'plot_dispatch-yearbymonth-{v}-{year}{endname}.png'
         if write:
@@ -419,7 +418,7 @@ except Exception:
 
 try:
     plt.close()
-    f,ax = rplots.plot_dispatch_weightwidth(case=casedir)
+    f,ax = rplots.plot_dispatch_weightwidth(case=case)
     savename = f'plot_dispatch-weightwidth-{sw.endyear}.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -436,7 +435,7 @@ except Exception:
 try:
     for sideplots in [False, True]:
         plt.close()
-        f,ax,eax = rplots.map_zone_capacity(case=casedir, year=year, sideplots=sideplots)
+        f,ax,eax = rplots.map_zone_capacity(case=case, year=year, sideplots=sideplots)
         savename = f'map_gencap_transcap-{year}{"-sideplots" if sideplots else ""}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -452,7 +451,7 @@ except Exception:
 #%% Interregional transmission / peak demand
 try:
     for level in ['transreg']:
-        f, ax, dfplot = rplots.plot_interreg_transfer_cap_ratio(case=casedir, level=level)
+        f, ax, dfplot = rplots.plot_interreg_transfer_cap_ratio(case=case, level=level)
         savename = f'plot_interreg_transfer_ratio-{level}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -468,7 +467,7 @@ except Exception:
 #%% Differences betweens solve years
 try:
     plt.close()
-    f,ax = rplots.plot_retire_add(case=casedir)
+    f,ax = rplots.plot_retire_add(case=case)
     savename = 'bars_retirements_additions.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -486,7 +485,7 @@ try:
     if int(sw.GSw_H2):
         plt.close()
         f,ax = rplots.map_h2_capacity(
-            case=casedir, year=year, cmap=plt.cm.gist_earth_r, wscale_h2=0.2)
+            case=case, year=year, cmap=cmap, wscale_h2=wscale_h2)
         savename = f'map_h2_capacity-{sw.endyear}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -505,7 +504,7 @@ try:
         for plottype in ['mean','max']:
             plt.close()
             f,ax = rplots.plot_transmission_utilization(
-                case=casedir, year=year, plottype=plottype, network='h2',
+                case=case, year=year, plottype=plottype, network='h2',
                 wscale=wscale_h2/1000, alpha=1.0, cmap=cmap, extent='modeled',
             )
             savename = f'map_pipeline_utilization-{plottype}-{year}.png'
@@ -523,7 +522,7 @@ try:
     if int(sw['GSw_H2_Transport']):
         plt.close()
         f,ax = rplots.plot_average_flow(
-            case=casedir, year=year, network='h2',
+            case=case, year=year, network='h2',
             cm=plt.cm.magma_r, extent='modeled', wscale=wscale_h2*1e4,
         )
         savename = f'map_pipeline_utilization-flowdirection-{year}.png'
@@ -545,7 +544,7 @@ try:
         agglevel = ('r' if len(val_r) <= 20 else ('st' if len(val_r) <= 30 else 'transreg'))
         plt.close()
         f, ax = rplots.plot_h2_timeseries(
-            case=casedir, year=year, agglevel=agglevel, grid=0)
+            case=case, year=year, agglevel=agglevel, grid=0)
         savename = f'plot_h2_timeseries-{year}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -559,11 +558,25 @@ except Exception:
 
 
 #%% Stress periods
-if not int(sw.GSw_PRM_CapCredit):
+if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
+    try:
+        plt.close()
+        f,ax = rplots.plot_seed_stressperiods(case=case)
+        savename = 'map_stressperiod_seeds.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+    except Exception:
+        print('map_stressperiod_seeds failed:')
+        print(traceback.format_exc())
+
     try:
         plt.close()
         level, regions = 'country', ['USA']
-        f,ax = rplots.plot_stressperiod_dispatch(case=casedir, level=level, regions=regions)
+        f,ax = rplots.plot_stressperiod_dispatch(case=case, level=level, regions=regions)
         savename = f'plot_stressperiod_dispatch-{",".join(regions)}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -577,7 +590,7 @@ if not int(sw.GSw_PRM_CapCredit):
 
     try:
         plt.close()
-        f,ax = rplots.plot_stressperiod_days(case=casedir)
+        f,ax = rplots.plot_stressperiod_days(case=case, repcolor='none', sharey=True)
         savename = 'plot_stressperiod_dates.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -594,7 +607,7 @@ if not int(sw.GSw_PRM_CapCredit):
         level = 'transgrp'
         plt.close()
         f,ax = rplots.plot_stressperiod_evolution(
-            case=casedir, level=level, metric=metric)
+            case=case, level=level, metric=metric)
         savename = f'plot_stressperiod_evolution-{metric}-{level}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -609,7 +622,7 @@ if not int(sw.GSw_PRM_CapCredit):
     try:
         plt.close()
         levels = ['country','interconnect','transreg','transgrp']
-        f, ax, _ = rplots.plot_neue_bylevel(case=casedir, levels=levels)
+        f, ax, _ = rplots.plot_neue_bylevel(case=case, levels=levels)
         savename = f"plot_stressperiod_neue-{','.join(levels)}.png"
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -622,8 +635,26 @@ if not int(sw.GSw_PRM_CapCredit):
         print(traceback.format_exc())
 
     try:
+        level = 'transreg'
+        periods = ['max gen','max load','min solar','min wind','min vre']
+        for period in periods:
+            plt.close()
+            f, ax, _ = rplots.map_period_dispatch(
+                case=case, year=year, level=level, period=period, transmission=False,
+                )
+            savename = f"map_dispatch_stressperiod-{level}-{year}-{period.replace(' ','')}.png"
+            if write:
+                plt.savefig(os.path.join(savepath, savename))
+            if interactive:
+                plt.show()
+            plt.close()
+            print(savename)
+    except Exception:
+        print('map_period_dispatch failed:')
+
+    try:
         plt.close()
-        f, ax, _ = rplots.plot_interface_flows(case=casedir, year=year)
+        f, ax, _ = rplots.plot_interface_flows(case=case, year=year)
         savename = f'plot_PRAS_flows-{year}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -637,7 +668,7 @@ if not int(sw.GSw_PRM_CapCredit):
 
     try:
         plt.close()
-        f, ax, _ = rplots.plot_storage_soc(case=casedir, year=year)
+        f, ax, _ = rplots.plot_storage_soc(case=case, year=year)
         savename = f'plot_PRAS_storage-{year}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -649,6 +680,39 @@ if not int(sw.GSw_PRM_CapCredit):
         print('plot_PRAS_storage failed:')
         print(traceback.format_exc())
 
+    try:
+        level = 'transgrp'
+        iteration = 'last'
+        plt.close()
+        f, ax, df, i = rplots.plot_pras_eue_timeseries_full(
+            case=case, year=year, level=level, iteration=iteration)
+        savename = f'plot_PRAS_EUE-{level}-{year}i{i}.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+    except Exception:
+        print('plot_pras_eue_timeseries_full failed:')
+        print(traceback.format_exc())
+
+    try:
+        for y in [y for y in years if y >= 2025]:
+            plt.close()
+            # f, ax, neue, _iteration = rplots.map_neue(case=case, year=y, iteration=0)
+            f, ax, neue, _iteration = rplots.map_neue(case=case, year=y)
+            savename = f"map_PRAS_neue-{y}i{_iteration}.png"
+            if write:
+                plt.savefig(os.path.join(savepath, savename))
+            if interactive:
+                plt.show()
+            plt.close()
+            print(savename)
+    except Exception:
+        print('map_neue failed:')
+        print(traceback.format_exc())
+
 
 #%% Capacity markers
 try:
@@ -657,7 +721,7 @@ try:
     for level in ['r','st']:
         plt.close()
         f,ax = rplots.map_capacity_markers(
-            case=casedir, level=level, year=year, ms=ms[level])
+            case=case, level=level, year=year, ms=ms[level])
         savename = f'map_units-gencap-{level}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -670,7 +734,7 @@ try:
         end = f'-since{subtract_baseyear}' if subtract_baseyear else ''
         plt.close()
         f,ax = rplots.map_transmission_lines(
-            case=casedir, level='r', year=year, subtract_baseyear=subtract_baseyear)
+            case=case, level='r', year=year, subtract_baseyear=subtract_baseyear)
         savename = f'map_units-transcap{end}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -681,8 +745,8 @@ try:
     ### Both
     plt.close()
     f,ax = rplots.map_transmission_lines(
-        case=casedir, level='r', year=year, alpha=0.5, lw=0.15)
-    rplots.map_capacity_markers(case=casedir, level='r', year=year, f=f, ax=ax)
+        case=case, level='r', year=year, alpha=0.5, lw=0.15)
+    rplots.map_capacity_markers(case=case, level='r', year=year, f=f, ax=ax)
     savename = 'map_units-gencap-transcap.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -701,14 +765,14 @@ try:
         for (val,tech,cmap,vmax) in [
             ('site_cap','upv',plt.cm.Oranges,400),
             ('site_cap','wind-ons',plt.cm.Blues,400),
-            ('site_hybridization',None,plt.cm.gist_earth_r,1),
+            ('site_hybridization',None,cmap,1),
             ('site_pv_fraction',None,plt.cm.turbo,1),
-            ('site_spurcap',None,plt.cm.gist_earth_r,400),
+            ('site_spurcap',None,cmap,400),
             ('site_gir','upv',plt.cm.turbo,2),
             ('site_gir','wind-ons',plt.cm.turbo,2),
         ]:
             f,ax = rplots.map_hybrid_pv_wind(
-                case=casedir,
+                case=case,
                 year=year,
                 val=val, tech=tech, cmap=cmap, vmax=vmax,
                 markersize=10.75,

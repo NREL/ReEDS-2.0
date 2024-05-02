@@ -41,10 +41,9 @@ reeds_path = args.reeds_path
 inputs_case = os.path.join(args.inputs_case)
 
 # #%%## Settings for testing 
-# reeds_path = os.path.expanduser('~/github2/ReEDS-2.0')
-# reeds_path = os.getcwd()
+# reeds_path = reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # inputs_case = os.path.join(
-#     reeds_path,'runs','nd16_ND','inputs_case')
+#     reeds_path,'runs','v20240416_compareM0_USA_agg','inputs_case')
 
 #%% Settings for debugging
 ### Set debug == True to copy the original files to a new folder (inputs_case_original).
@@ -80,6 +79,13 @@ endyear = int(sw.endyear)
 # value is present)
 agglevel = pd.read_csv(
     os.path.join(inputs_case,'agglevels.csv')).squeeze(1).tolist()[0]
+
+# Regions present in the current run
+val_r_all = sorted(
+    pd.read_csv(
+         os.path.join(inputs_case, 'val_r_all.csv'), header=None,
+    ).squeeze(1).tolist()
+)
 
 #%% ===========================================================================
 ### --- FUNCTIONS AND DICTIONARIES ---
@@ -191,6 +197,14 @@ if agglevel in ['state','aggreg']:
     ## Add it to rscweight_nobin
     rscweight_nobin = rscweight.groupby(['i','r'], as_index=False).sum()
     rscweight_nobin = pd.concat([rscweight_nobin, distpvcap.reset_index().assign(i='distpv')], axis=0)
+    ## Remove duplicate CSP values for different solar multiples
+    rscweight_csp = rscweight_nobin.copy()
+    rscweight_csp.i.replace(
+        {f'csp{i+1}_{c+1}': f'csp_{c+1}'
+         for i in range(int(sw.GSw_CSP))
+         for c in range(int(sw.GSw_NumCSPclasses))},
+        inplace=True)
+    rscweight_csp.drop_duplicates(['i','r','rscbin'], inplace=True)
 
 #%% Get the mapping to reduced-resolution technology classes
 original_num_classes = {**{'dupv':7}, **{f'csp{i}':12 for i in range(1,5)}}
@@ -326,7 +340,7 @@ for filepath in inputfiles:
         # the case, then skip them.
         try:
             dfin = pd.read_csv(os.path.join(inputs_case, filepath), header=header)
-        except:
+        except Exception:
             continue
     elif filetype == '.h5':
         dfin = pd.read_hdf(os.path.join(inputs_case, filepath))
@@ -395,7 +409,7 @@ for filepath in inputfiles:
             ## Turn index into columns
             .reset_index()
         )
-        
+
     #%% If the file is empty, move on to the next one as there is nothing to aggregate
     if df.empty:
         if verbose > 1:
@@ -460,7 +474,7 @@ for filepath in inputfiles:
         ### Special case: If calculating capacity credit by r, replace ccreg with r
         if sw['capcredit_hierarchy_level'] == 'r':
             df1 = df1.assign(ccreg=df1.r).drop_duplicates()
-    elif aggfunc == 'recf':
+    elif aggfunc in ['recf','csp']:
         ### Special case: Region is embedded in the 'resources' column as {tech}_{region}
         col2r = dict(zip(columns, [c.split('_')[-1] for c in columns]))
         col2i = dict(zip(columns, ['_'.join(c.split('_')[:-1]) for c in columns]))
@@ -468,14 +482,18 @@ for filepath in inputfiles:
         df1['r'] = df1[region_col].map(col2r)
         df1['i'] = df1[region_col].map(col2i)
         ## Get capacities
-        df1 = df1.merge(rscweight_nobin, on=['r','i'], how='left')
+        df1 = df1.merge(
+            (rscweight_csp if aggfunc == 'csp' else rscweight_nobin),
+            on=['r','i'], how='left',
+        )
         ## Similar procedure as above for aggfunc == 'sc_cat'
         df1['i'] = df1['i'].map(lambda x: new_classes.get(x,x))
         df1 = (
-            df1.assign(r=df1.r.map(r_ba))
-               .assign(cap_times_cf=df1.cf*df1.MW)
-               .groupby(['index','i','r']).sum()
-            )
+            df1
+            .assign(r=df1.r.map(r_ba))
+            .assign(cap_times_cf=df1.cf*df1.MW)
+            .groupby(['index','i','r']).sum()
+        )
         df1.cf = df1.cap_times_cf / df1.MW
         df1 = df1.rename(columns={'cf':'value'}).reset_index()
         ## Remake the resources (column names) with new regions
@@ -483,7 +501,7 @@ for filepath in inputfiles:
         df1 = df1.set_index(['index','wide'])[['value']].astype(np.float16)
     elif aggfunc in ['sum','mean','first','min']:
         df1 = df1.groupby(fix_cols+region_cols).agg(aggfunc)
-        
+
     ### Disaggregation methods --------------------------------------------------------------------
     elif aggfunc == 'uniform':
         for rcol in region_cols:
@@ -498,7 +516,6 @@ for filepath in inputfiles:
         else:
             df1.set_index(region_cols,inplace=True)
     elif aggfunc in ['population','geosize','translinesize','hydroexist']:
-        
         if 'sc_cat' in columns:
             # Split cap and cost
             df1_cap = df1[df1['sc_cat']=='cap']
@@ -530,10 +547,9 @@ for filepath in inputfiles:
             df1_cost.rename(columns={'new_value':valcol,'FIPS':rcol},inplace=True)
             df1_cost.set_index(df1cols[:-1],inplace=True)
             df1_cost = df1_cost[[valcol]]           
-            
+
             # Combine cap and cost to get back into original format
             df1 = pd.concat([df1_cap, df1_cost])
-
 
         else:
             # Disaggregate cap using the selected aggfunc
@@ -557,7 +573,14 @@ for filepath in inputfiles:
     else:
         raise ValueError(f'Invalid choice of aggfunc: {aggfunc} for {filename}')
 
-        
+    ## Filter by regions again for cases when only a subset of a model balancing area is represented
+    if agglevel == 'county':
+        if region_col == '*r,rr':
+            df1 = df1.loc[df1.index.get_level_values('*r').isin(val_r_all)]
+            df1 = df1.loc[df1.index.get_level_values('rr').isin(val_r_all)]
+        else:
+            df1 = df1.loc[df1.index.get_level_values(region_col).isin(val_r_all)]
+
     #%%################################ 
     ### Put back in original format ###
 
