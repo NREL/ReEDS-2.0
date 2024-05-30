@@ -25,14 +25,14 @@ desc_holder = desc_holder.replace("\\","/")
 
 #Setting correct path to main ReEDS folder        
 current_path = os.getcwd()
-current_path = current_path.replace("\\","/")
-current_path = current_path.replace("/postprocessing/documentation_tools","")
+reeds_path = os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
+reeds_path = reeds_path.replace("\\","/")
+#current_path = current_path.replace("/postprocessing/documentation_tools","")
 
 
-#dir_path = get_correct_directory_path(root_folder_name)
-dir_path = current_path.replace("\\","/")
-            
-desc_file_path = os.path.join(dir_path, desc_holder).replace("\\","/")
+#dir_path = current_path.replace("\\","/")
+#Descriptor file path            
+desc_file_path = os.path.join(reeds_path, desc_holder).replace("\\","/")
 
 
 
@@ -43,7 +43,7 @@ extensions = ['.csv', '.h5', '.xlsx', 'csv.gz'] #['.csv', '.py', 'csv.gz', '.gms
 omit_folders = ['.git', '.github', 'runs']
 
 #Temp files to be ignored
-ignore_files = ['sources_interim', 'sources_{timestamp}']
+ignore_files = ['sources_interim', 'sources_{timestamp}', 'sources_files_added', 'sources_files_deleted', 'sources_untracked_files', 'local_sources_files_added']
 timestamp_pattern = re.compile(r'^sources_\d{12}$')
 
 
@@ -53,6 +53,7 @@ indices = {}
 citations = {}
 dollar_year = {}
 filetypes = {}
+units = {}
 
         
 #Use for reading sources.csv if re-running the script!        
@@ -67,19 +68,21 @@ with open(desc_file_path, "r") as csv_file:
         index = row["Indices"]
         dollar_yr = row["DollarYear"]
         citation = row["Citation"]
-        
-        filetype = row["type"]
+        filetype = row["Filetype"]
+        unit = row["Units"]
+
         descriptions[rel_path] = description
         indices[rel_path] = index
         citations[rel_path] = citation
         dollar_year[rel_path] = dollar_yr
         filetypes[rel_path] = filetype
+        units[rel_path] = unit
 
 
 
 #Saving the latest sources.csv for the interim
 interim_sources_csv = "sources_interim.csv"
-interim_sources_csv_path = os.path.join(dir_path, interim_sources_csv).replace("\\","/")
+interim_sources_csv_path = os.path.join(reeds_path, interim_sources_csv).replace("\\","/")
 
 
 #Open csv file to store new sources.csv data
@@ -87,11 +90,11 @@ with open(interim_sources_csv_path, "w", newline="") as csv_file:
     writer = csv.writer(csv_file)
     
     #Specifying headers
-    writer.writerow(["RelativeFilePath", "RelativeFolderPath", "FileName_new", "FileExtension", "Description_new", "Indices", "DollarYear", "Citation", "type"])
+    writer.writerow(["RelativeFilePath", "RelativeFolderPath", "FileName_new", "FileExtension", "Description_new", "Indices", "DollarYear", "Citation", "Filetype", "Units"])
     
     data = []
     #To navigate entire directory and subdirectories within it
-    for root, dirs, files in os.walk(dir_path, topdown=True):
+    for root, dirs, files in os.walk(reeds_path, topdown=True):
         
         dirs[:] = [d for d in dirs if d not in omit_folders]
 
@@ -104,7 +107,7 @@ with open(interim_sources_csv_path, "w", newline="") as csv_file:
             file_path = file_path.replace("\\", "/")
                        
             #Store relative paths
-            relative_path = os.path.relpath(file_path, dir_path)
+            relative_path = os.path.relpath(file_path, reeds_path)
             relative_path = "\\"+ relative_path
             relative_path = relative_path.replace("\\", "/")
             
@@ -125,8 +128,9 @@ with open(interim_sources_csv_path, "w", newline="") as csv_file:
                 citation = citations.get(relative_path, '')
                 dollar_yr = dollar_year.get(relative_path, '')
                 filetype = filetypes.get(relative_path, '')
+                unit = units.get(relative_path, '')
 
-                data.append({"RelativeFilePath" : relative_path, "RelativeFolderPath": rel_folder_path, "FileName_new": file_name, "FileExtension": file_ext, "Description_new": description, "Index": index, "DollarYear": dollar_yr, "Citation": citation, "FileType": filetype})
+                data.append({"RelativeFilePath" : relative_path, "RelativeFolderPath": rel_folder_path, "FileName_new": file_name, "FileExtension": file_ext, "Description_new": description, "Index": index, "DollarYear": dollar_yr, "Citation": citation, "Filetype": filetype, "Units": unit})
 
     sorted_data = sorted(data, key=lambda x: x["RelativeFilePath"].casefold())
 
@@ -139,9 +143,10 @@ with open(interim_sources_csv_path, "w", newline="") as csv_file:
         index = row["Index"]
         dollar_yr = row["DollarYear"]
         citation = row["Citation"]
-        filetype = row["FileType"]
+        filetype = row["Filetype"]
+        unit = row["Units"]
 
-        writer.writerow([relative_file_path, relative_folder_path, file_name, file_ext, description, index, dollar_yr, citation, filetype])
+        writer.writerow([relative_file_path, relative_folder_path, file_name, file_ext, description, index, dollar_yr, citation, filetype, unit])
             
 
             
@@ -179,7 +184,7 @@ compare_sources_csv(desc_file_path, interim_sources_csv_path)
 
 #Read the tracked files list which contains all the files committed to the branch
 tracked_file = "tracked_files_list.txt"
-tracked_file_path = os.path.join(dir_path, tracked_file).replace("\\","/")
+tracked_file_path = os.path.join(reeds_path, tracked_file).replace("\\","/")
 
 df_tracked_file_list = pd.read_csv(tracked_file_path, header=None, names=['RelativeFilePath'])
 df_tracked_file_list['RelativeFilePath'] = df_tracked_file_list['RelativeFilePath'].str.replace('\\', '/', regex=False)
@@ -205,10 +210,10 @@ compare_commited_files(df_sources_added_file, df_tracked_file_list)
 
 
 #Function to rename files
-def rename_file(dir_path, old_sources_csv, new_sources_csv):
-    old_file_path = os.path.join(dir_path, old_sources_csv).replace("\\", "/")
+def rename_file(reeds_path, old_sources_csv, new_sources_csv):
+    old_file_path = os.path.join(reeds_path, old_sources_csv).replace("\\", "/")
     
-    new_file_path = os.path.join(dir_path, new_sources_csv).replace("\\", "/")
+    new_file_path = os.path.join(reeds_path, new_sources_csv).replace("\\", "/")
     
     os.rename(old_file_path, new_file_path)
     
@@ -220,10 +225,10 @@ old_sources_csv = f"sources.csv"
 new_sources_csv = f"sources_{timestamp}.csv"
 
 #Renaming original sources to sources file with a timestamp; to be kept for comparison if needed
-rename_file(dir_path, old_sources_csv, new_sources_csv)
+rename_file(reeds_path, old_sources_csv, new_sources_csv)
 
 #Renaming latest sources.csv to take the place of the original sources.csv
-rename_file(dir_path, interim_sources_csv, old_sources_csv)
+rename_file(reeds_path, interim_sources_csv, old_sources_csv)
 
 
 #Removing the tracked files list generated by git comamnd

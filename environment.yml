@@ -49,4 +49,7 @@ dependencies:
     - python-pptx==0.6.22 # for postprocessing/compare_cases.py
     - shapely==2.0.1 # for plotting maps
     ### ^^^
+    - sphinx==7.2.6 # for building documentation
+    - myst-parser==2.0.0 # for building documentation
+    - sphinx_rtd_theme==2.0.0 # for documentation
     - gamspy_base==45.7.0 # for running automated tests

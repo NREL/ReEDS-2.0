@@ -10,9 +10,16 @@ import csv
 import pandas as pd
 from datetime import datetime
 import re
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--githubURL', '-g', type=str, default='', help='base github url')
+parser.add_argument('--reedsPath', '-r', type=str, default='', help='path to reeds directory' )
+args = parser.parse_args()
+githubURL = args.githubURL
+reedsPath = args.reedsPath
 
 #Conversion of latest version of sources.csv to markdown/readme format
-
 
 # Description holder file
 desc_holder = 'sources.csv'
@@ -20,15 +27,20 @@ desc_holder = desc_holder.replace("\\","/")
 
 
 #Setting correct path to main ReEDS folder        
+# current_path = os.getcwd()
+# current_path = current_path.replace("\\","/")
+# current_path = current_path.replace("/postprocessing/documentation_tools","")
 current_path = os.getcwd()
-current_path = current_path.replace("\\","/")
-current_path = current_path.replace("/postprocessing/documentation_tools","")
-
+if reedsPath != '':
+    reeds_path = reedsPath
+else: 
+    reeds_path = os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
+    reeds_path = reeds_path.replace("\\","/")
 
 #dir_path = get_correct_directory_path(root_folder_name)
 dir_path = current_path.replace("\\","/")
             
-desc_file_path = os.path.join(dir_path, desc_holder).replace("\\","/")
+desc_file_path = os.path.join(reeds_path, desc_holder).replace("\\","/")
 
 
 #Dataframe to store the newly generated sources.csv data
@@ -65,9 +77,9 @@ for row in sorted_data:
         
     current_folder["files"].append((file_name, file_ext, rel_file_path))
     
-#Generate readme for ReEDS 2.0 Sources files
+#Generate separate readme for ReEDS 2.0 Sources files
 main_readme_file = "sources_documentation.md"
-main_readme_file_path = os.path.join(dir_path, main_readme_file).replace("\\","/")
+main_readme_file_path = os.path.join(reeds_path, main_readme_file).replace("\\","/")
 
 #Open markdown file for entries
 with open(main_readme_file_path, "w") as main_file:
@@ -90,7 +102,7 @@ with open(main_readme_file_path, "w") as main_file:
                 
                 anchor_link = f"<a name='{anchor}'></a>"
                 
-                header_level = min(depth+1, 10)
+                header_level = min(depth+1, 7)
                 #Write folder name with anchor link
                 main_file.write(f"{indent}- {'#' + '#' * header_level} [{folder}](#{anchor}) \n")
                 
@@ -102,7 +114,8 @@ with open(main_readme_file_path, "w") as main_file:
     write_folder_hierarchy(folder_hierarchy)
     
     main_file.write(f"\n\n")
-    main_file.write(f"## Input Files\n\n")
+    main_file.write(f"## Input Files\n")
+    main_file.write(f"Note: If you see a '#' before a header it means there may be further subdirectories within it but the Markdown file is only capable of showing 6 levels, so the header sizes are capped to that level and they cannot be any smaller to visually reflect the further subdirectory hierarchy.\n\n")
     
     #Write file entries for each folder
     def write_file_entries(file_entries, indent):
@@ -111,15 +124,17 @@ with open(main_readme_file_path, "w") as main_file:
             file_name, file_ext, rel_file_path = file_data
             #Write file name with relative link
             rel_file_path = rel_file_path.replace(" ", "%20")
-            main_file.write(f"{indent}- [{file_name}{file_ext}]({rel_file_path})\n")
-            
+            main_file.write(f"{indent}- [{file_name}{file_ext}]({githubURL}{rel_file_path})\n")
+
+
             for row in data:
                 if row["RelativeFilePath"] == rel_file_path:
                     description = row["Description_new"]
                     citation = row["Citation"]
                     indices = row["Indices"]
                     dollar_yr = row["DollarYear"]
-                    file_type = row["type"]
+                    file_type = row["Filetype"]
+                    unit = row["Units"]
                     
                     if file_type:
                         main_file.write(f"{indent}  - **File Type:** {file_type}\n")
@@ -135,7 +150,11 @@ with open(main_readme_file_path, "w") as main_file:
                         
                     if citation:
                         citation_link = f"[({citation})]"
-                        main_file.write(f"\n{indent}  - **Citation:** {citation_link}\n\n")
+                        main_file.write(f"\n{indent}  - **Citation:** {citation_link}\n")
+
+                    if unit:
+                        main_file.write(f"{indent}  - **Units:** {unit}\n\n")
+
             main_file.write(f"---\n\n")
                             
             
@@ -151,7 +170,7 @@ with open(main_readme_file_path, "w") as main_file:
                 anchor = os.path.join(parent_folder, folder).replace("\\", "/").replace("//", "/") if parent_folder else folder
                 
                 anchor_link = f"<a name='{anchor}'></a>"
-                header_level = min(depth + 1, 10)
+                header_level = min(depth + 1, 7)
                 folder_path = f"{parent_folder}/{folder}" if parent_folder else folder
                 folder_path = folder_path.replace(" ", "%20")
                 folder_link = f"[{folder}]({folder_path})"
