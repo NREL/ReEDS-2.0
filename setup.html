@@ -60,10 +60,15 @@
 <li class="toctree-l3"><a class="reference internal" href="#id3">ReEDS Repository Setup</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#reeds2pras-julia-and-stress-periods-setup">ReEDS2PRAS, julia, and stress periods setup</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#troubleshooting-issues-with-julia-setup">Troubleshooting Issues with Julia Setup</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#executing-the-model">Executing the Model</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#understanding-the-cases-csv-file">Understanding the cases.csv file</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#calling-runbatch-py-to-run-reeds">Calling runbatch.py to run ReEDS</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#prompts-for-user-input-during-runbatch-py">Prompts for user input during runbatch.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#special-case-setup-requirements">Special Case Setup Requirements</a></li>
 </ul>
 </li>
 </ul>
@@ -181,6 +186,7 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">env</span> <span class="nb">list</span>
 </pre></div>
 </div>
+<p>When creating the reeds2 environment locally, you might run into an SSL error that looks like: <code class="docutils literal notranslate"><span class="pre">CondaSSLError:</span> <span class="pre">Encountered</span> <span class="pre">an</span> <span class="pre">SSL</span> <span class="pre">error.</span> <span class="pre">Most</span> <span class="pre">likely</span> <span class="pre">a</span> <span class="pre">certificate</span> <span class="pre">verification</span> <span class="pre">issue.</span></code> To resolve this issue, run the following command before creating the environment again: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">config</span> <span class="pre">--set</span> <span class="pre">ssl_verify</span> <span class="pre">false</span></code>.</p>
 </section>
 <section id="gams-configuration">
 <h3>GAMS Configuration<a class="headerlink" href="#gams-configuration" title="Link to this heading"></a></h3>
@@ -198,6 +204,7 @@
 <h3>ReEDS Repository Setup<a class="headerlink" href="#reeds-repository-setup" title="Link to this heading"></a></h3>
 <p>The ReEDS source code is hosted on GitHub: <a class="reference external" href="https://github.com/NREL/ReEDS-2.0">https://github.com/NREL/ReEDS-2.0</a></p>
 <ol class="arabic simple">
+<li><p>Install Git Large File Storage, instructions can be found here: <a class="reference external" href="https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage?platform=windows">Installing Git Large File Storage</a></p></li>
 <li><p>From the Git command line run the following command to enable large file storage.</p></li>
 </ol>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">lfs</span> <span class="n">install</span>
@@ -218,7 +225,11 @@
 <h2>Computer Setup for MacOS<a class="headerlink" href="#computer-setup-for-macos" title="Link to this heading"></a></h2>
 <section id="id1">
 <h3>Python Configuration<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
-<p>Download the latest version of Anaconda: <a class="reference external" href="https://www.anaconda.com/download">https://www.anaconda.com/download</a></p>
+<p>Download the latest <strong>Intel</strong> version of Anaconda: <a class="reference external" href="https://www.anaconda.com/download">https://www.anaconda.com/download</a></p>
+<p><strong>IMPORTANT</strong>: Make sure to download the Intel version even if your machine has an Apple Silicon / ARM processor.</p>
+<figure class="align-default" id="figure-anaconda-intel">
+<img alt="_images/anaconda-intel.png" src="_images/anaconda-intel.png" />
+</figure>
 <p>During Installation, select to install Anaconda for your machine only.</p>
 <figure class="align-default" id="figure-11-setup">
 <img alt="_images/anaconda-install-mac.png" src="_images/anaconda-install-mac.png" />
@@ -261,13 +272,71 @@
 <h3>ReEDS Repository Setup<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
 <p>The ReEDS source code is hosted on GitHub: <a class="reference external" href="https://github.com/NREL/ReEDS-2.0">https://github.com/NREL/ReEDS-2.0</a></p>
 <ol class="arabic simple">
+<li><p>Install Git Large File Storage, instructions can be found here: <a class="reference external" href="https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage?platform=mac">Installing Git Large File Storage</a></p></li>
 <li><p>From the Git command line run the following command to enable large file storage.</p></li>
 </ol>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">lfs</span> <span class="n">install</span>
 </pre></div>
 </div>
-<ol class="arabic simple" start="2">
+<ol class="arabic simple" start="3">
 <li><p>Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub (<a class="reference internal" href="#figure-10-setup">Figure 10</a>).</p></li>
+</ol>
+</section>
+</section>
+<section id="reeds2pras-julia-and-stress-periods-setup">
+<h2>ReEDS2PRAS, julia, and stress periods setup<a class="headerlink" href="#reeds2pras-julia-and-stress-periods-setup" title="Link to this heading"></a></h2>
+<p>Since ReEDS uses stress periods by default, julia will need to be installed and set up to run the model. To get julia and stress periods set up:</p>
+<ol class="arabic simple">
+<li><p>Install Julia. There are different procedures for mac/linux and windows.</p>
+<ol class="arabic simple">
+<li><p>[mac/linux]: Julia is included in the conda environment so you should be all set.</p></li>
+<li><p>[windows]: Install Julia from <a class="reference external" href="https://julialang.org/downloads/">https://julialang.org/downloads/</a>.</p></li>
+</ol>
+</li>
+<li><p>From the ReEDS-2.0 directory, run <code class="docutils literal notranslate"><span class="pre">julia</span> <span class="pre">--project=.</span> <span class="pre">instantiate.jl</span></code></p></li>
+</ol>
+<p>Set <code class="docutils literal notranslate"><span class="pre">GSw_PRM_CapCredit=0</span></code> in your ReEDS cases file to use the coupled ReEDS/PRAS stress periods model, or just set <code class="docutils literal notranslate"><span class="pre">pras=2</span></code> to run PRAS without necessarily using stress periods.</p>
+<section id="troubleshooting-issues-with-julia-setup">
+<h3>Troubleshooting Issues with Julia Setup<a class="headerlink" href="#troubleshooting-issues-with-julia-setup" title="Link to this heading"></a></h3>
+<p>When setting up julia on Windows, you may run into some issues when running <code class="docutils literal notranslate"><span class="pre">julia</span> <span class="pre">--project=.</span> <span class="pre">instantiate.jl</span></code>. The following steps can be followed to help resolve issues and get julia set up sucessfully:</p>
+<ol class="arabic simple">
+<li><p>Manually install <a class="reference external" href="https://github.com/JuliaRandom/Random123.jl">Random123</a></p></li>
+<li><p>Re-run <code class="docutils literal notranslate"><span class="pre">julia</span> <span class="pre">--project=.</span> <span class="pre">instantiate.jl</span></code></p></li>
+</ol>
+<p>If that doesn’t resolve the issue, the following may help:</p>
+<ol class="arabic simple">
+<li><p>If you previously installed julia, uninstall it: <code class="docutils literal notranslate"><span class="pre">winget</span> <span class="pre">uninstall</span> <span class="pre">julia</span></code></p></li>
+<li><p>Manually install <a class="reference external" href="https://julialang.org/downloads/oldreleases/#:~:text=ea85e0489c36324c4da62163aa1b82fcf2f52f72d173ee7dd213a3a92992cab7-,Windows,-x86_64">Julia 1.8.5</a></p></li>
+<li><p>Add the julia bin path to your environment PATH variable</p></li>
+<li><p>Install <a class="reference external" href="https://www.mingw-w64.org/downloads/">MinGW</a></p></li>
+<li><p>Open the julia interactive command line: <code class="docutils literal notranslate"><span class="pre">julia</span></code></p></li>
+<li><p>Enter the julia package manager by pressing <code class="docutils literal notranslate"><span class="pre">]</span></code>, then run the following commands:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">add</span> <span class="pre">Random123</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">registry</span> <span class="pre">add</span> <span class="pre">https://github.com/JuliaRegistries/General.git</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">registry</span> <span class="pre">add</span> <span class="pre">https://github.com/NREL/JuliaRegistires.git</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">instantiate</span></code></p></li>
+</ul>
+</li>
+<li><p>Leave the package manager by pressing backspace or Ctrl+C</p></li>
+<li><p>Run the following commands to finish setup:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">PRAS</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">TimeZones</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TimeZones.build()</span></code></p></li>
+</ul>
+</li>
+<li><p>You can then leave the julia command line by typing <code class="docutils literal notranslate"><span class="pre">exit()</span></code></p></li>
+</ol>
+<p><strong>If you’re experiencing issues on Mac, a possible solution is:</strong></p>
+<ol class="arabic simple">
+<li><p>Update the version of julia</p></li>
+<li><p>Create the ‘reeds2’ conda environment with the environment.yml file</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">julia</span></code> from the terminal to open the interactive command line</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">Pkg;</span> <span class="pre">Pkg.add(&quot;PRAS&quot;)</span></code></p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">Pkg.add(&quot;TimeZones&quot;)</span></code></p></li>
+<li><p>Exit julia with the command <code class="docutils literal notranslate"><span class="pre">exit()</span></code>, then run <code class="docutils literal notranslate"><span class="pre">julia</span> <span class="pre">instantiate.jl</span></code></p></li>
+<li><p>Manually move the Manifest.toml file from the julia environment (~/miniconda3/envs/reeds2/share/julia/environments/reeds2/Manifest.toml) to the ReEDS repo</p></li>
 </ol>
 </section>
 </section>
@@ -276,9 +345,10 @@
 <p>A ReEDS case (also referred to as a “run”, “scenario” or “instance”) is executed through a python-based case batching program called <code class="docutils literal notranslate"><span class="pre">runbatch.py</span></code> after the repository was setup. The user can execute a single case or a batch of cases using this program.</p>
 <section id="understanding-the-cases-csv-file">
 <h3>Understanding the cases.csv file<a class="headerlink" href="#understanding-the-cases-csv-file" title="Link to this heading"></a></h3>
-<p>ReEDS Model Switches are set in the cases.csv file and need to be specified by the user. The default case configuration file is called “cases.csv”.</p>
-<p>Within “cases.csv”, the data in column A are the model “switches”. Column B contains a brief description of each switch. Column C contains the choices available for the given switch (please not, this is not available for all switches). Column D contains the default value for the switch. Finally, the case configuration (or set of switches that define a case) is in column E.</p>
+<p>ReEDS model switches are set in the cases.csv file and need to be specified by the user. The default case configuration file is called “cases.csv”.</p>
+<p>Within “cases.csv”, the data in column A are the model “switches”. Column B contains a brief description of each switch. Column C contains the choices available for the given switch (please note, this is not available for all switches). Column D contains the default value for the switch. Finally, the case configuration (or set of switches that define a case) is in column E.</p>
 <p>Within column E, the case name is specified in row 1. The value for each switch is specified beginning in row 2. If a switch value is left blank, the default value from column D is used.</p>
+<p><strong>Note:</strong> all monetary switches should be entered in 2004 dollars.</p>
 <figure class="align-default" id="figure-14-setup">
 <img alt="_images/cases-csv.png" src="_images/cases-csv.png" />
 <figcaption>
@@ -288,7 +358,7 @@
 <p>There are additional cases_*.csv files that can also be used to run different ReEDS scenarios. The two most commonly used are:</p>
 <ul class="simple">
 <li><p>cases_standardscenarios.csv: contains all the scenarios that were used for Standard Scenarios</p></li>
-<li><p>cases_test.csv: contains a group of “test” cases that are smaller than the default case in “cases.csv”</p></li>
+<li><p>cases_test.csv: contains a group of “test” cases that vary specific settings within the model for testing various capabilities</p></li>
 </ul>
 <p>The user may also create custom case configuration files by using the suffix in the file name (e.g., “cases_smalltests.csv”). It should follow the same column formatting as cases.csv, but does not need to include all available switches.</p>
 </section>
@@ -341,6 +411,11 @@
 </li>
 <li><p><strong>WARNING! Be mindful about the amount of CPU and RAM usage needed for each case</strong></p></li>
 </ul>
+</section>
+<section id="special-case-setup-requirements">
+<h3>Special Case Setup Requirements<a class="headerlink" href="#special-case-setup-requirements" title="Link to this heading"></a></h3>
+<p>For non-NREL users, some additional data is required to run the ReEDS model at the ‘county’ spatial resolution. This is currently considered a special case and some data was required to be kept outside the ReEDS repository because the data is simply too large. The hourly renewable capacity factor data is now available to all at : https://data.openei.org/submissions/5986.</p>
+<p>If you would like to run the model at county resolution, you are requested to download the files available from the link provided, unzip each folder, and place the files obtained into inputs/variability/multi-year in your locally cloned ReEDS repository. The input_processing scripts have also been updated to check for these files for any county-level runs. The ‘cases_spatialflex.csv’ file provides examples of specific switch settings to run ReEDS at county-level.</p>
 </section>
 </section>
 </section>

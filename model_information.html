@@ -50,11 +50,6 @@
 <li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Model Information</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#execution-protocols">Execution Protocols</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#execution-protocol-for-runbatch-py">Execution Protocol for Runbatch.py</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#case-specific-batch-file-execution-protocol">Case-specific Batch File Execution Protocol</a></li>
-</ul>
-</li>
 <li class="toctree-l2"><a class="reference internal" href="#model-switches">Model Switches</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#hourly-process-py">hourly_process.py</a></li>
 </ul>
@@ -106,68 +101,8 @@
 <li><p>Operation and storage (VRE) module - this module calculates key parameters for assessing the
 value of VRE generators and storage</p></li>
 </ul>
-<p>The full, detailed documentation of the ReEDS model can be found in the latest version of the published documentation: <a class="reference external" href="https://www.nrel.gov/docs/fy21osti/78195.pdf">Regional Energy Deployment System (ReEDS) Model Documentation: Version 2020</a></p>
+<p>The full, detailed documentation of the ReEDS model can be found in the latest version of the published documentation: <a class="reference external" href="https://www.nrel.gov/docs/fy21osti/78195.pdf">Regional Energy Deployment System (ReEDS) Model Documentation: Version 2020</a>.</p>
 <p>Detailed documentation of ReEDS 2.0 input files are available <a class="reference internal" href="sources.html"><span class="std std-doc">here</span></a></p>
-</section>
-<section id="execution-protocols">
-<h2>Execution Protocols<a class="headerlink" href="#execution-protocols" title="Link to this heading"></a></h2>
-<section id="execution-protocol-for-runbatch-py">
-<h3>Execution Protocol for Runbatch.py<a class="headerlink" href="#execution-protocol-for-runbatch-py" title="Link to this heading"></a></h3>
-<p>When a user initiates “runbatch.py” the following key steps occur. Understanding these steps may help the user understand the source code of “runbatch.py” if modifications to the batching program are needed.</p>
-<ol class="arabic simple">
-<li><p>Input requested from the user through the command prompt (batch prefix, case suffix,, number of simultaneous runs, etc.)</p></li>
-<li><p>Case names and case switches are ingested from the user-specified case configuration file (e.g., cases.csv)</p></li>
-<li><p>Create a new diretory for each case (/runs/{batch_prefix}_{case})</p></li>
-<li><p>Create a batch file of execution statements for each case: /runs/{batch_prefix}<em>{case}/call</em>{batch_prefix}_{case}.bat</p>
-<ul class="simple">
-<li><p>If running on Mac or Linux, a shell script file will be created instead (*.sh)</p></li>
-</ul>
-</li>
-<li><p>All files from “runfiles.csv” are copied to “/runs/{batch_prefix}_{case}/”</p>
-<ul class="simple">
-<li><p>Any files from the root of the repository will be copied to “/runs/{batch_prefix}_{case}/”</p></li>
-<li><p>Any files from “/inputs/” will be copied to “/runs/{batch_prefix}_{case}/inputs_case”</p></li>
-</ul>
-</li>
-<li><p>Execute the batch file for each case. GAMS will produce files unique to each case that can help the user with error debugging (to learn more, see the <a class="reference internal" href="#troubleshooting"><span class="xref myst">troubleshooting section</span></a>).</p></li>
-<li><p>Build outputs and standard visualization reports for each case that completes successfully.</p>
-<ul class="simple">
-<li><p>Following a successful run, a suite of .csv output files are created in: /runs/{batch_prefix}_{case}/outputs/</p></li>
-<li><p>A standard .html visualization report is stored in: /runs/{batch_prefix}_{case}/outputs/reeds-report/</p></li>
-<li><p>A reduced .html visualization report is stored in: /runs/{batch_prefix}_{case}/outputs/reeds-report-reduced/</p></li>
-</ul>
-</li>
-</ol>
-</section>
-<section id="case-specific-batch-file-execution-protocol">
-<h3>Case-specific Batch File Execution Protocol<a class="headerlink" href="#case-specific-batch-file-execution-protocol" title="Link to this heading"></a></h3>
-<p><strong>Execute CreateModel.gms:</strong></p>
-<ol class="arabic simple">
-<li><p>Execute B_Inputs.gms – ingest data from the files created by the input_processing scripts and format the data to be useful for the GAMS execution</p></li>
-<li><p>Execute C_SupplyModel.gms – declare the variables and constraints for the linear program</p></li>
-<li><p>Execute C_SupplyObjective.gms – declare the objective function for the linear program, broken into two parts (investment and operations)</p></li>
-<li><p>Execute D_SolvePrep.gms – initiate the LP solve and compute parameters based on switch values in the case configuration file (e.g., “cases.csv”)</p></li>
-<li><p>Create a GAMS work file at the completion of CreateModel.gms</p></li>
-<li><p>Path: “\runs{batch_prefix}_{case}\g00files{batch_prefix}_{case}.g00”</p></li>
-<li><p>For more information about GAMS work files: <a class="reference external" href="https://www.gams.com/latest/docs/UG_SaveRestart.html">https://www.gams.com/latest/docs/UG_SaveRestart.html</a></p></li>
-</ol>
-<p><strong>Execute the sequential solve structure</strong> (<a class="reference internal" href="#figure-1">Figure 1</a>)</p>
-<p>For every year in the model horizon, execute d_solveoneyear.gms:</p>
-<ol class="arabic simple">
-<li><p>Execute solve</p></li>
-<li><p>Execute d_callreflow.gms – Compute capacity credit and curtailment:</p></li>
-<li><p>Execute ReEDS_capacity_credit.gms - compute the parameters necessary for ReEDS_capacity_credit.py (which computes the capacity credit)</p></li>
-<li><p>Execute REflow_RTO_2_params.gms – translate the parameters from ReEDS 2.0 into their equivalents from ReEDS Heritage</p></li>
-<li><p>Execute REflow_RTO_3.gms – compute curtailment using the syntax and structure from ReEDS Heritage</p></li>
-<li><p>Execute d4_Translate_Variability.R – Translate the values from REflow_RTO_3.gms (ReEDS Heritage) back to the syntax and structure used in ReEDS 2.0</p></li>
-</ol>
-<figure class="align-default" id="figure-1">
-<img alt="_images/seq-flow.png" src="_images/seq-flow.png" />
-<figcaption>
-<p><span class="caption-text">Figure 1. Depiction of execution sequence for the “sequential” solve</span><a class="headerlink" href="#figure-1" title="Link to this image"></a></p>
-</figcaption>
-</figure>
-</section>
 </section>
 <section id="model-switches">
 <h2>Model Switches<a class="headerlink" href="#model-switches" title="Link to this heading"></a></h2>
@@ -185,7 +120,7 @@ value of VRE generators and storage</p></li>
 <li><p>Switch to <code class="docutils literal notranslate"><span class="pre">GSw_HourlyType=wek</span></code>, which increases the length of the periods from 1 day to 5 days. If all the other switches are left at their defaults, switching to <code class="docutils literal notranslate"><span class="pre">wek</span></code> would increase the coverage from 42 days to 5*42=210 days.</p></li>
 <li><p>Reduce <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterRegionLevel</span></code> to something smaller than transreg (like <code class="docutils literal notranslate"><span class="pre">st</span></code>), and then increase <code class="docutils literal notranslate"><span class="pre">GSw_HourlyNumClusters</span></code></p></li>
 <li><p>Switch to <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusteAlgorithm=hierarchical</span></code> and then increase <code class="docutils literal notranslate"><span class="pre">GSw_HourlyNumClusters</span></code> (although that’s less desirable, because hierarchical clustering doesn’t do as good of a job of reproducing the actual spatial distribution of CF and load)</p></li>
-<li><p>Switch to <code class="docutils literal notranslate"><span class="pre">Gsw_HourlyType=year</span></code>. Although if you’re running for the whole US you’ll need to turn on region aggregation (<code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution=aggreg</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span></code> in [<code class="docutils literal notranslate"><span class="pre">agg1</span></code>, or <code class="docutils literal notranslate"><span class="pre">agg2</span></code>]) for it to solve.</p></li>
+<li><p>Switch to <code class="docutils literal notranslate"><span class="pre">Gsw_HourlyType=year</span></code>. Although if you’re running for the whole US you’ll need to turn on region aggregation (<code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution=aggreg</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span></code> in [<code class="docutils literal notranslate"><span class="pre">default</span></code> or <code class="docutils literal notranslate"><span class="pre">agg1</span></code>, or <code class="docutils literal notranslate"><span class="pre">agg2</span></code> or <code class="docutils literal notranslate"><span class="pre">agg3</span></code>]) for it to solve.</p></li>
 </ul>
 </li>
 </ul>
@@ -211,6 +146,15 @@ value of VRE generators and storage</p></li>
 </li>
 </ul>
 </li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_PRM_StressThreshold</span></code>: The default setting of ‘transgrp_10_EUE_sum’ means a threshold of “<strong>10</strong> ppm NEUE in each <strong>transgrp</strong>”, with stress periods selected by the daily <strong>sum</strong> of <strong>EUE</strong> within each <strong>transgrp</strong>.</p>
+<ul class="simple">
+<li><p>The first argument can be selected from [‘country’, ‘interconnect’, ‘nercr’, ‘transreg’, ‘transgrp’, ‘st’, ‘r’] and specifies the hierarchy level within which to compare RA performance against the threshold.</p></li>
+<li><p>The second argument can be any float and specifies the RA performance threshold in parts per million [ppm].</p></li>
+<li><p>The third argument can be ‘NEUE’ or ‘EUE’, specifying which metric to use when selecting stress periods. If set to ‘NEUE’ the model will add stress periods with the largest <strong>fraction</strong> of dropped load; if set to ‘EUE’ the model will add stress periods with the largest <strong>absolute MWh</strong> of dropped load.</p></li>
+<li><p>The fourth argument can be ‘sum’ or ‘max’, specifying whether to add stress periods in order of their daily per-hour max dropped load or by their daily sum of dropped load when selecting stress periods.</p></li>
+<li><p>If desired you can provide /-delimited entries like ‘transgrp_10_EUE_sum/country_1_EUE_sum’, meaning that each transgrp must have ≤10 ppm NEUE and the country overall must have ≤1 ppm NEUE.</p></li>
 </ul>
 </li>
 </ul>
@@ -253,7 +197,7 @@ value of VRE generators and storage</p></li>
 </li>
 <li><p>GAMS Listing Files</p>
 <ul>
-<li><p>Path: “/runs/{batch_prefix}_{case}/lstfiles/”</p></li>
+<li><p>Path: “/runs//{batch_prefix}_{case}/lstfiles/”</p></li>
 <li><p>Purpose: contains the listing files for GAMS executions</p></li>
 <li><p>What to look for:</p>
 <ul>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Model Information &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Sources and Data" href="sources.html" />
+    <link rel="prev" title="Getting Started" href="setup.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Model Information</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-switches">Model Switches</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#hourly-process-py">hourly_process.py</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#key-areas-for-error-checking">Key Areas for Error Checking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#re-running-a-failed-reeds-case">Re-running a Failed ReEDS Case</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Model Information</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/model_information.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="model-information">
+<h1>Model Information<a class="headerlink" href="#model-information" title="Link to this heading"></a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>ReEDS is a mathematical programming model of the electric power sector. Given a set of input assumptions, ReEDS models the evolution and operation of generation, storage, transmission, and production technologies.</p>
+<p>The model consists of two separate but interrelated modules:</p>
+<ul class="simple">
+<li><p>Supply module -  this module solves a linear program for the cost-minimizing levels of power sector investment</p></li>
+<li><p>Operation and storage (VRE) module - this module calculates key parameters for assessing the
+value of VRE generators and storage</p></li>
+</ul>
+<p>The full, detailed documentation of the ReEDS model can be found in the latest version of the published documentation: <a class="reference external" href="https://www.nrel.gov/docs/fy21osti/78195.pdf">Regional Energy Deployment System (ReEDS) Model Documentation: Version 2020</a>.</p>
+<p>Detailed documentation of ReEDS 2.0 input files are available <a class="reference internal" href="sources.html"><span class="std std-doc">here</span></a></p>
+</section>
+<section id="model-switches">
+<h2>Model Switches<a class="headerlink" href="#model-switches" title="Link to this heading"></a></h2>
+<section id="hourly-process-py">
+<h3>hourly_process.py<a class="headerlink" href="#hourly-process-py" title="Link to this heading"></a></h3>
+<section id="switches">
+<h4>Switches<a class="headerlink" href="#switches" title="Link to this heading"></a></h4>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_HourlyNumClusters</span></code> specifies the maximum number of representative periods.</p></li>
+<li><p>Two other switches, <code class="docutils literal notranslate"><span class="pre">GSw_HourlyPeakLevel</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HourlyMinRElevel</span></code>, indicate additional “outlying periods” that can be added (peak-load-containing periods for <code class="docutils literal notranslate"><span class="pre">GSw_HourlyPeakLevel</span></code>, minimum-average-PV-CF and minimum-average-wind-CF periods for <code class="docutils literal notranslate"><span class="pre">GSw_HourlyMinRElevel</span></code>). If running the US and both are set to “interconnect”, they add the 3 peak-load days, 3 minimum-wind days, and 3 minimum-PV days by interconnect, resulting in 33+9=42 by default if <code class="docutils literal notranslate"><span class="pre">GSw_HourlyNumClusters</span></code>=33. These “outlying periods” are only included when using capacity credit (<code class="docutils literal notranslate"><span class="pre">GSw_PRM_CapCredit=1</span></code>) instead of stress periods (<code class="docutils literal notranslate"><span class="pre">GSw_PRM_CapCredit=0</span></code>).</p></li>
+<li><p>When using <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm=optimized</span></code> (the default), then depending on the setting of <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterRegionLevel</span></code> there will be a maximum number of days it needs to reproduce the distribution of load/pv/wind. When <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterRegionLevel=transreg</span></code> (the default), there are 11 regions and 3 features, so it needs ~33 days to reproduce the distribution (like an eigenvalue problem).</p>
+<ul class="simple">
+<li><p>So turning up <code class="docutils literal notranslate"><span class="pre">GSw_HourlyNumClusters</span></code> on its own won’t increase the temporal coverage. If you want more temporal coverage, the options are:</p>
+<ul>
+<li><p>Switch to <code class="docutils literal notranslate"><span class="pre">GSw_HourlyType=wek</span></code>, which increases the length of the periods from 1 day to 5 days. If all the other switches are left at their defaults, switching to <code class="docutils literal notranslate"><span class="pre">wek</span></code> would increase the coverage from 42 days to 5*42=210 days.</p></li>
+<li><p>Reduce <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterRegionLevel</span></code> to something smaller than transreg (like <code class="docutils literal notranslate"><span class="pre">st</span></code>), and then increase <code class="docutils literal notranslate"><span class="pre">GSw_HourlyNumClusters</span></code></p></li>
+<li><p>Switch to <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusteAlgorithm=hierarchical</span></code> and then increase <code class="docutils literal notranslate"><span class="pre">GSw_HourlyNumClusters</span></code> (although that’s less desirable, because hierarchical clustering doesn’t do as good of a job of reproducing the actual spatial distribution of CF and load)</p></li>
+<li><p>Switch to <code class="docutils literal notranslate"><span class="pre">Gsw_HourlyType=year</span></code>. Although if you’re running for the whole US you’ll need to turn on region aggregation (<code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution=aggreg</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span></code> in [<code class="docutils literal notranslate"><span class="pre">default</span></code> or <code class="docutils literal notranslate"><span class="pre">agg1</span></code>, or <code class="docutils literal notranslate"><span class="pre">agg2</span></code> or <code class="docutils literal notranslate"><span class="pre">agg3</span></code>]) for it to solve.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm</span></code></p>
+<ul>
+<li><p>If set to ‘hierarchical’, then hierarchical clustering is used via</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sklearn</span><span class="o">.</span><span class="n">cluster</span><span class="o">.</span><span class="n">AgglomerativeClustering</span><span class="p">(</span>
+    <span class="n">n_clusters</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">sw</span><span class="p">[</span><span class="s1">&#39;GSw_HourlyNumClusters&#39;</span><span class="p">]),</span>
+    <span class="n">affinity</span><span class="o">=</span><span class="s1">&#39;euclidean&#39;</span><span class="p">,</span> <span class="n">linkage</span><span class="o">=</span><span class="s1">&#39;ward&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>If set to ‘optimized’, then a two-step custom optimization is performed using the <code class="docutils literal notranslate"><span class="pre">hourly_repperiods.optimize_period_weights()</span></code> and <code class="docutils literal notranslate"><span class="pre">hourly_repperiods.assign_representative_days()</span></code> functions to minimize the deviation in regional load and PV/wind CF between the weighted representative periods and the full year.</p></li>
+<li><p>If set to a string containing the substring ‘user’, then instead of optimizing the choice of representative periods for this run, we read them from the inputs/variability/period_szn_user.csv file.</p>
+<ul class="simple">
+<li><p>The scenario name is in the first column, labeled ‘scenario’. ReEDS will use rows with the same label as <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm</span></code>.</p>
+<ul>
+<li><p>So if you want to use the example period:szn map, just set <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm=user</span></code>.</p></li>
+<li><p>If you want to specify a different period:szn map, then add your mapping at the bottom of inputs/variability/period_szn_user.csv with a unique scenario name in the ‘scenario’ column, and set <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm</span></code> to your unique scenario name, <em>which must contain the substring ‘user’</em>. (For example, I could use a mapping called ‘user_myname_20230130’ by adding my period:szn map to inputs/variability/period_szn_user.csv with ‘user_myname_20230130’ in the ‘scenario’ column and setting <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm=user_myname_20230130</span></code>.)</p></li>
+<li><p>Make sure the settings for <code class="docutils literal notranslate"><span class="pre">GSw_HourlyType</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HourlyWeatherYears</span></code> match your user-defined map. For example, if your ‘user_myname_20230130’ map includes 365 representative days for weather year 2012, then set <code class="docutils literal notranslate"><span class="pre">GSw_HourlyType=day</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HourlyWeatherYears=2012</span></code>.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_PRM_StressThreshold</span></code>: The default setting of ‘transgrp_10_EUE_sum’ means a threshold of “<strong>10</strong> ppm NEUE in each <strong>transgrp</strong>”, with stress periods selected by the daily <strong>sum</strong> of <strong>EUE</strong> within each <strong>transgrp</strong>.</p>
+<ul class="simple">
+<li><p>The first argument can be selected from [‘country’, ‘interconnect’, ‘nercr’, ‘transreg’, ‘transgrp’, ‘st’, ‘r’] and specifies the hierarchy level within which to compare RA performance against the threshold.</p></li>
+<li><p>The second argument can be any float and specifies the RA performance threshold in parts per million [ppm].</p></li>
+<li><p>The third argument can be ‘NEUE’ or ‘EUE’, specifying which metric to use when selecting stress periods. If set to ‘NEUE’ the model will add stress periods with the largest <strong>fraction</strong> of dropped load; if set to ‘EUE’ the model will add stress periods with the largest <strong>absolute MWh</strong> of dropped load.</p></li>
+<li><p>The fourth argument can be ‘sum’ or ‘max’, specifying whether to add stress periods in order of their daily per-hour max dropped load or by their daily sum of dropped load when selecting stress periods.</p></li>
+<li><p>If desired you can provide /-delimited entries like ‘transgrp_10_EUE_sum/country_1_EUE_sum’, meaning that each transgrp must have ≤10 ppm NEUE and the country overall must have ≤1 ppm NEUE.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="conventions">
+<h4>Conventions<a class="headerlink" href="#conventions" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>Timestamps are formatted as <code class="docutils literal notranslate"><span class="pre">y{year}d{day</span> <span class="pre">of</span> <span class="pre">year}h{hour</span> <span class="pre">of</span> <span class="pre">day}</span></code> in hour-ending format in Eastern Standard Time. The numbering of days begins at 1. For example, the hour from 3am-4am on January 3, 2012 would be indicated as <code class="docutils literal notranslate"><span class="pre">y2012d003h004</span></code>.</p>
+<ul>
+<li><p>When using representative weks (5-day periods), timestamps are instead formatted as <code class="docutils literal notranslate"><span class="pre">y{year}w{wek</span> <span class="pre">of</span> <span class="pre">year}h{hour</span> <span class="pre">of</span> <span class="pre">wek}</span></code>. The numbering of weks begins at 1. In this format, the hour from 3am-4am on January 3, 2012 would be indicated as <code class="docutils literal notranslate"><span class="pre">y2012w001h052</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Representative and stress <strong>periods</strong> (indexed as <code class="docutils literal notranslate"><span class="pre">szn</span></code> within ReEDS) are labeled similarly to timestamps but without the <code class="docutils literal notranslate"><span class="pre">h{hour</span> <span class="pre">of</span> <span class="pre">day}</span></code> component…</p>
+<ul>
+<li><p><em>Except stress periods and stress timeslices have an ‘s’ prefix.</em> So if the time period above showed up as a stress period, it would be labeled as <code class="docutils literal notranslate"><span class="pre">h=sy2012d003h004</span></code> and <code class="docutils literal notranslate"><span class="pre">szn=sy2012d003</span></code> for represntative days (or <code class="docutils literal notranslate"><span class="pre">h=sy2012w001h052</span></code> and <code class="docutils literal notranslate"><span class="pre">szn=sy2012w001</span></code> for representative weks). Stress periods are modeled using different loads and transmission capacities than representative periods, so they need to be indexed separately.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<p>This section provides guidance on identifying and resolving common issues encountered during model execution. By checking the locations and files listed below, users can better pinpoint errors.</p>
+<section id="key-areas-for-error-checking">
+<h3>Key Areas for Error Checking<a class="headerlink" href="#key-areas-for-error-checking" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>GAMS Log File</p>
+<ul>
+<li><p>Path: “/runs/{batch_prefix}_{case}/gamslog.txt”</p></li>
+<li><p>Purpose: contains the log outputs for all execution statements from the case batch file</p></li>
+<li><p>What to look for:</p>
+<ul>
+<li><p>‘ERROR’: will provide more information into the specific file or line in the source code that failed or has an error</p></li>
+<li><p>‘LP status’ and ‘Status’: can provide more insight into the model run</p></li>
+<li><p>‘Cur_year’: can help you determine which year the model run failed in</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>GAMS Listing Files</p>
+<ul>
+<li><p>Path: “/runs//{batch_prefix}_{case}/lstfiles/”</p></li>
+<li><p>Purpose: contains the listing files for GAMS executions</p></li>
+<li><p>What to look for:</p>
+<ul>
+<li><p>‘1_inputs.lst’: errors will be preceded by ‘****’</p></li>
+<li><p>‘{batch_prefix}<em>{case}</em>{year}i0.lst’: there should be one file for each year of the model run</p></li>
+<li><p>‘Augur_errors_{year}’: this file will appear in the event that there is an augur-related issue</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>GAMS Workfiles</p>
+<ul>
+<li><p>Path: “/runs/{batch_prefix}_{case}/g00files/”</p></li>
+<li><p>Purpose: stores a snapshot of all the model information available to GAMS at that point in the case execution. More information about GAMS work files can be found here: <a class="reference external" href="https://www.gams.com/latest/docs/UG_SaveRestart.html">https://www.gams.com/latest/docs/UG_SaveRestart.html</a></p></li>
+<li><p>What to look for:</p>
+<ul>
+<li><p>‘{batch_prefix}<em>{case}</em>{last year run}i0.g00’: should exist for the last year run</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Output Directory</p>
+<ul>
+<li><p>Path: “/runs/{batch_prefix}_{case}/outputs/”</p></li>
+<li><p>Purpose: the outputs folder contains the generated output files from the model run</p></li>
+<li><p>What to look for:</p>
+<ul>
+<li><p>‘*.csv’ files: there should be many ‘.csv’ files in this folder</p>
+<ul>
+<li><p>these files should contain data, an error message “GDX file not found” indicates an issue with the reporting script at the end of the model</p></li>
+</ul>
+</li>
+<li><p>‘reeds-report/’ and ‘reeds-report-reduced/’: if these folders are not present, it can indicate a problem with the post-processing scripts</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Augur Data</p>
+<ul>
+<li><p>Path: “/runs/{batch_prefix}_{case}/ReEDS_Augur/augur_data/”</p></li>
+<li><p>What to look for:</p>
+<ul>
+<li><p>‘ReEDS_Augur_{year}.gdx’: there should be a file for each year of the model run =</p></li>
+<li><p>‘reeds_data_{year}.gdx’: there should be a file for each year of the model run</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Case Inputs</p>
+<ul>
+<li><p>Path: “/runs/{batch_prefix}_{case}/inputs_case/”</p></li>
+<li><p>What to look for:</p>
+<ul>
+<li><p>‘*.csv’ files: there should be many ‘.csv’ files in this folder, if there isn’t, it could indicate a problem with the pre-processing scripts</p></li>
+<li><p>‘inputs.gdx’: if this doesn’t exist, it could indicate a problem with the pre-processing scripts</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="re-running-a-failed-reeds-case">
+<h3>Re-running a Failed ReEDS Case<a class="headerlink" href="#re-running-a-failed-reeds-case" title="Link to this heading"></a></h3>
+<p>To re-run a failed case from the year it failed:</p>
+<ol class="arabic simple">
+<li><p>Comment out all the execution statements that completed successfully in “/runs/{batch_prefix}<em>{case}/call</em>{batch_prefix}_{case}.bat” (or *.sh file if on Mac)</p>
+<ul class="simple">
+<li><p>Shortcut for commenting multiple lines: Ctrl + ‘/’ (Command + ‘/’ if on Mac)</p></li>
+</ul>
+</li>
+<li><p>Re-run “/runs/{batch_prefix}<em>{case}/call</em>{batch_prefix}_{case}.bat”</p></li>
+</ol>
+<p>Additionally, ‘restart_runs.py’ is a helper script that can be used to restart any failed runs. For more information on how to use this script, see the section on <a class="reference internal" href="postprocessing_tools.html#helper-scripts-and-tools"><span class="std std-ref">Helper Scripts and Tools</span></a>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="setup.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sources.html" class="btn btn-neutral float-right" title="Sources and Data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

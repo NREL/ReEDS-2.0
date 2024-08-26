@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Post-Processing and Analysis Tools &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="FAQ" href="faq.html" />
+    <link rel="prev" title="Sources and Data" href="sources.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_information.html">Model Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Post-Processing and Analysis Tools</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#helper-scripts-and-tools">Helper Scripts and Tools</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#comparison">Comparison</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-management">Run Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#preprocessing">Preprocessing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tool-linkages">Tool Linkages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#visualization">Visualization</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#analysis-modules">Analysis Modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bokehpivot">BokehPivot</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#revalue">reValue</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#retail-rate-module">retail_rate_module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#analysis-of-reeds-in-tableau">Analysis of ReEDS in Tableau</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Post-Processing and Analysis Tools</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/postprocessing_tools.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="post-processing-and-analysis-tools">
+<h1>Post-Processing and Analysis Tools<a class="headerlink" href="#post-processing-and-analysis-tools" title="Link to this heading"></a></h1>
+<p>There are several tools that can be found in the ReEDS repository.</p>
+<section id="helper-scripts-and-tools">
+<h2>Helper Scripts and Tools<a class="headerlink" href="#helper-scripts-and-tools" title="Link to this heading"></a></h2>
+<section id="comparison">
+<h3>Comparison<a class="headerlink" href="#comparison" title="Link to this heading"></a></h3>
+<p><strong>postprocessing/compare_cases.py</strong></p>
+<p>Compare_cases.py will take two ReEDS case paths and create a powerpoint comparing the cases.</p>
+<p>Command to run this script: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">postprocessing/compare_cases.py</span> <span class="pre">[path</span> <span class="pre">to</span> <span class="pre">ReEDS</span> <span class="pre">run</span> <span class="pre">#1]</span> <span class="pre">[path</span> <span class="pre">to</span> <span class="pre">ReEDS</span> <span class="pre">run</span> <span class="pre">#2]</span></code></p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python postprocessing/compare_cases.py /Users/km/ReEDS-2.0/runs/v20231221_USA /Users/km/ReEDS-2.0/runs/v20231221_USA_ref
+</pre></div>
+</div>
+<p><strong>postprocessing/compare_casegroup.py</strong></p>
+<p>Compare_casegroup.py will take any number of ReEDS case paths and create a powerpoint comparing all cases. The only required argument is a comma-delimited list of ReEDS case paths.</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python postprocessing/compare_casegroup.py /Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_ref,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_lim,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_open,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_transgrp --casenames=Ref,Lim,Open,transgrp
+</pre></div>
+</div>
+<p>or similarly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python postprocessing/compare_casegroup.py /Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_ref,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_lim,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_open,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_transgrp --titleshorten=26
+</pre></div>
+</div>
+<p>Other optional arguments are:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="o">--</span><span class="n">casenames</span> <span class="n">CASENAMES</span><span class="p">,</span> <span class="o">-</span><span class="n">n</span> <span class="n">CASENAMES</span>
+      <span class="n">comma</span><span class="o">-</span><span class="n">delimited</span> <span class="nb">list</span> <span class="n">of</span> <span class="n">shorter</span> <span class="n">case</span> <span class="n">names</span> <span class="n">to</span> <span class="n">use</span> <span class="ow">in</span> <span class="n">plots</span> <span class="p">(</span><span class="n">default</span><span class="p">:</span> <span class="p">)</span>
+ <span class="o">--</span><span class="n">titleshorten</span> <span class="n">TITLESHORTEN</span><span class="p">,</span> <span class="o">-</span><span class="n">s</span> <span class="n">TITLESHORTEN</span>
+      <span class="n">characters</span> <span class="n">to</span> <span class="n">cut</span> <span class="kn">from</span> <span class="nn">start</span> <span class="n">of</span> <span class="n">case</span> <span class="n">name</span> <span class="p">(</span><span class="n">only</span> <span class="n">used</span> <span class="k">if</span> <span class="n">no</span> <span class="n">casenames</span><span class="p">)</span> <span class="p">(</span><span class="n">default</span><span class="p">:</span> <span class="mi">0</span><span class="p">)</span>
+ <span class="o">--</span><span class="n">startyear</span> <span class="n">STARTYEAR</span><span class="p">,</span> <span class="o">-</span><span class="n">y</span> <span class="n">STARTYEAR</span>
+      <span class="n">First</span> <span class="n">year</span> <span class="n">to</span> <span class="n">show</span> <span class="p">(</span><span class="n">default</span><span class="p">:</span> <span class="mi">2020</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="run-management">
+<h3>Run Management<a class="headerlink" href="#run-management" title="Link to this heading"></a></h3>
+<p><strong>runstatus.py</strong></p>
+<p>runstatus.py can be used to print details about runs that are currently running on the HPC.</p>
+<p>Command to run this script: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runstatus.py</span> <span class="pre">[batch</span> <span class="pre">prefix]</span></code></p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python runstatus.py v20231112
+</pre></div>
+</div>
+<p>Adding the <code class="docutils literal notranslate"><span class="pre">-f</span></code> flag will print the names of the finished runs: <code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">python</span> <span class="pre">runstatus.py</span> <span class="pre">v20231112</span> <span class="pre">-f</span></code></p>
+<p>If you increase the verbosity by adding <code class="docutils literal notranslate"><span class="pre">-v</span></code> flags, it prints a number of lines from the end of that run’s gamslog.txt equal to the number of v’s in the flag: <code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">python</span> <span class="pre">runstatus.py</span> <span class="pre">v20231112</span> <span class="pre">-vvvvv</span></code></p>
+<p><strong>restart_runs.py</strong></p>
+<p>restart_runs.py can be used to restart any failed runs for a given batch. <strong>This only works on HPC currently.</strong></p>
+<p>Command to run this script: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">restart_runs.py</span> <span class="pre">[batch</span> <span class="pre">prefix]</span></code></p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python restart_runs.py v20231112
+</pre></div>
+</div>
+<p><strong>interim_report.py</strong></p>
+<p>interim_report.py can be used to [<strong>todo: fill in additional details</strong>]</p>
+<p>Command to run this script: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">interim_report.py</span> <span class="pre">[path</span> <span class="pre">to</span> <span class="pre">ReEDS</span> <span class="pre">run]</span></code></p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python interim_report.py /Users/km/ReEDS-2.0/runs/v20231221_USA_ref
+</pre></div>
+</div>
+<p><strong>runs/{case}/meta.csv</strong></p>
+<p>The meta.csv file is generated for each run.</p>
+<p>Information found in the meta.csv file:</p>
+<ol class="arabic simple">
+<li><p>Computer &amp; Github information for the run (computer, repo, branch, commit, description)</p></li>
+<li><p>Information for each process of the run (year, process, starttime, stoptime, processtime)</p></li>
+</ol>
+</section>
+<section id="preprocessing">
+<h3>Preprocessing<a class="headerlink" href="#preprocessing" title="Link to this heading"></a></h3>
+<p><strong>preprocessing/casemaker.py</strong></p>
+<p><strong>[todo: add additional information]</strong></p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python casemaker.py ...
+</pre></div>
+</div>
+<p><strong>preprocessing/get_case_periods.py</strong></p>
+<p><strong>[todo: add additional information]</strong></p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python get_case_periods.py ...
+</pre></div>
+</div>
+</section>
+<section id="tool-linkages">
+<h3>Tool Linkages<a class="headerlink" href="#tool-linkages" title="Link to this heading"></a></h3>
+<p><strong>postprocessing/run_reeds2pras.py</strong></p>
+<p>run_reeds2pras.py can be used to [<strong>todo: fill in additional details</strong>]</p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python postprocessing/run_reeds2pras.py ...
+</pre></div>
+</div>
+</section>
+<section id="visualization">
+<h3>Visualization<a class="headerlink" href="#visualization" title="Link to this heading"></a></h3>
+<p><strong>postprocessing/plots.py</strong></p>
+<p><strong>[todo: add additional information]</strong></p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python postprocessing/plots.py
+</pre></div>
+</div>
+<p><strong>postprocessing/reedsplots.py</strong></p>
+<p><strong>[todo: add additional information]</strong></p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python postprocessing/reedsplots.py
+</pre></div>
+</div>
+<p><strong>postprocessing/transmission_maps.py</strong></p>
+<p><strong>[todo: add additional information]</strong></p>
+<p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python postprocessing/transmission_maps.py
+</pre></div>
+</div>
+</section>
+</section>
+<section id="analysis-modules">
+<h2>Analysis Modules<a class="headerlink" href="#analysis-modules" title="Link to this heading"></a></h2>
+<section id="bokehpivot">
+<h3>BokehPivot<a class="headerlink" href="#bokehpivot" title="Link to this heading"></a></h3>
+<p>Bokehpivot can be used for visualizing the outputs of ReEDS runs. For more information on how to use bokehpivot, see the <a class="reference internal" href="bokehpivot.html"><span class="std std-doc">bokehpivot guide</span></a>.</p>
+<p>If you’re new to BokehPivot, the following YouTube video will be a good starting point: <a class="reference external" href="https://www.youtube.com/watch?v=8Xi59M4bB6I&amp;amp;list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&amp;amp;index=3">Viewing ReEDS Outputs Using the BokehPivot Module</a></p>
+</section>
+<section id="revalue">
+<h3>reValue<a class="headerlink" href="#revalue" title="Link to this heading"></a></h3>
+<p>reValue is used for two main things:</p>
+<ul class="simple">
+<li><p>extracting regional hourly prices from ReEDS scenarios and years</p></li>
+<li><p>(Optional) using extracted prices to calculate value and competitiveness-related metrics for a set of regional generation or load profiles.</p></li>
+</ul>
+<p>More more information on reValue, see the <a class="reference internal" href="revalue.html"><span class="std std-doc">reValue documentation</span></a>.</p>
+</section>
+<section id="retail-rate-module">
+<h3>retail_rate_module<a class="headerlink" href="#retail-rate-module" title="Link to this heading"></a></h3>
+<p>The retail rate module can be used after finishing a ReEDS run to calculate retail electricity rates by state and year, where each state is served by its own investor-owned utility (IOU).</p>
+<p>For more information on this module, see the <a class="reference internal" href="retail_rate_module.html"><span class="std std-doc">retail_rate_module documentation</span></a>.</p>
+</section>
+<section id="analysis-of-reeds-in-tableau">
+<h3>Analysis of ReEDS in Tableau<a class="headerlink" href="#analysis-of-reeds-in-tableau" title="Link to this heading"></a></h3>
+<p>Tableau can be used for the analysis of ReEDS and ReEDS-to-PLEXOS results in Tableau.</p>
+<p>For more information on how to use Tableau with ReEDS, see the <a class="reference internal" href="tableau.html"><span class="std std-doc">Tableau documentation</span></a>.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="sources.html" class="btn btn-neutral float-left" title="Sources and Data" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="faq.html" class="btn btn-neutral float-right" title="FAQ" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,353 @@
+# Additional ReEDS Setup
+## Yampa Guide
+```{include} yampa_guide.md
+```
+
+## Cloud and HPC Environments
+### Running ReEDS on HPC
+This guide explains how to get ReEDS running on NREL's HPC platform Kestrel.
+#### Prerequisites
+If you are new to HPC environments, you may wish to first visit [NREL's HPC website](https://www.nrel.gov/hpc/index.html). There are also some [courses from the Computational Sciences Tutorial Team](https://teams.microsoft.com/l/entity/2a527703-1f6f-4559-a332-d8a7d288cd88/_djb2_msteams_prefix_1371960825?context=%7B%22channelId%22%3A%2219%3A6nLmPDt9QHQMEuLHVBaxfsitEZSGH6oXT6lyVauMvXY1%40thread.tacv2%22%7D&groupId=22ad3c7b-a45a-4880-b8b4-b70b989f1344&tenantId=a0f29d7e-28cd-4f54-8442-7885aee7c080) that might be useful.
+
+First, you will need a [user account](https://www.nrel.gov/hpc/user-accounts.html) on HPC. Then, you will need an [allocation](https://www.nrel.gov/hpc/resource-allocations.html). Your PI or mentor should tell you which allocation to use and add you to the relevant groups.
+
+After getting an account and allocation, there are a few different options for accessing the HPCs. Most users interact with the HPCs through a combination of [WinSCP](https://winscp.net/eng/index.php) and SSH with either GitBash or VSCode.
+
+If you plan to be using Eagle instead of Kestrel, you will also need to join the appropriate GAMS group. You will need to contact HPC support by emailing [hpc-help@nrel.gov](hpc-help@nrel.gov) to request access to the "gams" group. It normally takes about a day for the HPC support team to process this request.
+
+You should now be able to [SSH into Kestrel](https://www.nrel.gov/hpc/system-connection.html) with the command: 
+```
+$ ssh username@kestrel.hpc.nrel.gov
+```
+
+You will be prompted to enter your password, you will need to use for HPC password here.
+
+<!-- to be deleted after Eagle is retired -->
+If you're connecting to Eagle, you will use the following command: 
+```
+$ ssh username@eagle.hpc.nrel.gov
+```
+You can then type `groups` to ensure that you see your allocation and gams group. Then, to test your access to GAMS, run the following two commands: 
+* `module load gams`
+* `gams`
+
+<!-- ==================================== -->
+
+
+#### Setup
+<!-- to be deleted after Eagle is retired -->
+*Note: if you're looking to get started on Eagle, refer to the [Setup on Eagle section](#setup-on-eagle) below.
+<!-- ==================================== -->
+1. Load GAMS with the following commands: 
+   * `module use /nopt/nrel/apps/software/gams/modulefiles`
+   * `module load gams/34.3.0`
+
+2. Set up your SSH key with NREL github: 
+   * Copy the contents in `/home/[username]/.ssh/id_rsa.pub
+     * To print the contents of this file to the terminal, you can use the following command: `cat /home/[username]/.ssh/id_rsa.pub`
+   * Open [https://github.nrel.gov](https://github.nrel.gov) and open your account settings
+     * In the top right of the page, click on your git ID > Edit your Profile > SSH Keys > Add SSH Key
+     * Paste the copied contents of `id_rsa.pub` into the "Add an SSH Key" window
+
+3. Clone the repository
+   * ReEDS requires git-lfs to clone the repository. To install and load git-lfs, use the following commands: 
+      * `source /nopt/nrel/apps/env.sh`
+      * `module load git`
+      * `module load git-lfs`
+
+   * From the terminal that you connected to Kestrel with, run the following command to clone the ReEDS repo: `git clone git@github.nrel.gov:ReEDS/ReEDS-2.0.git`
+   * **Note:** some users have to run `git lfs pull` after this step as the hd5 files are incomplete
+
+4. Create the reeds2 environment
+   * From within your cloned repo, run the following commands: 
+     * `module load anaconda3`
+     * `conda env create -f environment.yml`
+   * Creating the environment can take several hours on Kestrel. If you don't want to wait that long, An has been testing an alternative approach for creating the environment:
+     *  Navigate to your project folder and stay there for the duration of these commands:  `cd /projects/[project-name]/ReEDS-2.0`
+     * create your own miniconda which allows you to install libmamba (since we cannot alter the base environment on Kestrel):
+      ```
+      curl -sL \  "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" > \   "Miniconda3.sh"
+      ```
+     * find out where your envs are stored: `conda list`
+     * change the conda environment path to your miniconda file paths:
+      ```
+      echo "export CONDA_ENVS_PATH=$SCRATCH/home/[username]/miniconda3/envs" >> ~/.bashrc
+      echo "export CONDA_ENVS_PATH=$SCRATCH/home/[username]/miniconda3/pkgs" >> ~/.bashrc
+      ```
+     * install libmamba on the base environment miniconda env: 
+      ```
+      conda install -n base conda-libmamba-solver
+      conda config --set solver libmamba
+      ```
+     * create the ReEDS environment:
+      ```
+      module load anaconda3
+      conda env create -f environment.yml
+      ```
+     * finally, activate it: `conda activate reeds2`
+
+5. Add `REEDS_USE_SLURM=1` to your list of environment variables at `~/.bashrc`. The commands below give an example of how to do so using the ‘nano’ text editor in bash.
+   * Open the `~/.bashrc` file using nano: `nano ~/.bashrc`
+   * At the end of the file add the following two lines:
+    ```
+    ## Indicate that ReEDS jobs should be submitted via SLURM
+    export REEDS_USE_SLURM=1
+    ```
+   * Write the file:	`^o ⏎`
+   * Exit nano: `^x`
+   * Run the `.bashrc file` (only needs to be done once; later it will run whenever you start a bash session): `source ~/.bashrc`
+
+6. Create a `gamslice.txt` file in the root of your ReEDS directory with the following contents (  You can do this using nano by typing `nano gamslice.txt`, then paste in the license text):
+
+  {{ '```\n {} \n```'.format(gamslice) }}
+
+7.	Edit the `ReEDS-2.0/srun_template.sh` file in your local copy of the ReEDS repo. Fields indicated by curly braces {} must be changed; you can edit fields with brackets [] based on your preferences for the runs you’re submitting (be sure to remove the {} and [] brackets):
+
+  ```
+	#!/bin/bash
+	#SBATCH --account={your HPC allocation}
+	#SBATCH --time=[walltime for your run; e.g., 2-00:00:00 = 2 days]
+	#SBATCH --nodes=1
+	#SBATCH --ntasks-per-node=1
+	#SBATCH --mail-user={your email address}
+	#SBATCH --mail-type=[BEGIN,END,FAIL]
+	#SBATCH --mem=[172000] # RAM in MB
+	### OPTIONAL next line if you want to redirect the slurm log file and keep your ReEDS root directly clean
+	# #SBATCH --output=/projects/{your HPC allocation}/logs/slurm-%j.out
+	
+	#load your default settings
+	. $HOME/.bashrc
+  ```
+
+8.	Edit the cplex.opt file to optimize performance on the HPC.
+   * If you’re running 1 task per node you can set threads = -1 to use all available cores for the job. (If you’re running a very large model, like hourly or individual sites, using all threads may lead to memory issues; in that case you may want to use 8 or 12.)
+   * You may want to remove reslim 50000, or set it to a higher value, to prevent long solve years from timing out
+
+
+ReEDS should now be usable in from the command line using the python script `runbatch.py`.
+
+<!-- to be deleted after Eagle is retired -->
+#### Setup on Eagle
+1. We first need to load the appropriate modules: 
+   * `module load conda`
+   * `module load gams`
+
+2. ReEDS-2.0 requires git-lfs to clone the repository. Using conda is the easiest way to install. We create a new conda environment, activate it and add the lfs extension to git:
+   * `conda create --name git -c conda-forge git git-lfs`
+   * `conda activate git`
+   * `git lfs install`
+
+3. Next clone the ReEDS-2.0 git repository (this may take a few minutes since the repo contains a large number of files and some of them are large):
+   * `git clone git@github.nrel.gov:ReEDS/ReEDS-2.0.git`
+   * There are several options for the location of the repo. You can clone it into your home folder. It is stable and doesn't require an allocation, but it is limited to 50 GB, and, because Conda environments tend to go in there, it can fill up rather quickly. You can also clone it to your scratch folder (/scratch/username). Like home, every user has one, and it doesn't require an allocation. It has unlimited storage, but files are deleted after some period of inactivity (we're unsure how long, the HPC help page says both 28 days and 60 days). Finally, you can clone the repo into a project folder associated with an allocation.
+
+4. Now we create the ReEDS conda environment and activate it. To do this, we will use the `environment.yml` file from the repository: 
+   * `cd ReEDS-2.0`
+   * `conda env create -f environment.yml`
+   * `conda activate reeds2`
+
+  If you already have the reeds environment but want to update it to the latest specifications, you can run `conda env update --file environment.yml`
+
+**Continue with steps 5-8 above in the general [Setup section](#setup).**
+
+<!-- ==================================== -->
+
+#### Running ReEDS
+Run ReEDS using runbatch.py the same way you would on any machine. Slurm jobs will be submitted for each case in the specified cases file. To understand the differences from a normal run, read the `if hpc` code blocks in runbatch.py.
+
+#### Notes
+##### Helpful shortcuts 
+The following commands can be added to your '~/.bashrc' file for your convenience. Please note, you should change 'your_alloc' to one of your own allocations, 'yourname' to your own HPC username, and the ReEDS directory to whatever path you've chosen for the repository.
+
+```
+## Format squeue output to include more information
+alias squ='squeue -u yourname -o "%.10i %.15P %.65j %.2t %.10M %.6D %R"'
+alias sq='squ; echo "running:" $(squ | grep " R" | wc -l) "| pending:" $(squ | grep " PD" | wc -l) "| total:" $(squ | grep ":" | wc -l)'
+
+## Switch to my main ReEDS project folder, activate ReEDS environment
+alias reeds='cd /projects/your_alloc/github/ReEDS-2.0 && module load conda && module load gams && conda activate reeds2'
+
+## Get a specified number of hours on a node
+sr () { srun -t "$1:00:00" -A your_alloc --pty "$SHELL"; }
+
+## Get memory and CPU usage for recently-completed jobs
+alias sacc='sacct --format="JobID,JobName,Partition,AllocCPUS,STATE,Elapsed,CPUTime,AveCPU,TotalCPU,NCPUS,MaxRSS" | grep "JobID\|--\|batch"'
+```
+
+After saving your changes, you'll need to run the following command once more to save your changes: `source ~/.bashrc`. You can then switch to your ReEDS directory and activate conda, gams, and your python environment by just typing reeds on login node.
+
+**To be able to access the HPC without entering your password every time**, paste the contents of the `~/.ssh/id_ed25519.pub` file on your laptop into the `/.ssh/authorized_keys` file on the HPC.
+
+##### GAMS
+In February 2023, there were some issues with getting access to the GAMS HPC group. The following is a workaround: 
+   * run `newgrp gams` on the login node before submitting your job
+   * you'll be put in a new special shell, so you'll need to run `source activate reeds` even if you previously activated the reeds environment
+      * Note: it will be `source activate reeds` and not `conda activate reeds2` as usual
+   * you should now be able to submit your job using runbatch.py as usual
+
+##### Files and File Transfers
+The supply curve data has been ported over to `projects/shared-projects-reeds/reeds/Supply_Curve_Data` for the time being, but the rev paths have not yet been updated so for now some features like `reeds_to_rev.py` won't work.
+
+If you need to transfer files between the HPC and your local machine, there are a few different options: 
+   * For file transfers on Windows: 
+      * WinSCP can be used to transfer files between a Windows machine and the HPC. Draco has WinSCP already installed. See [https://www.nrel.gov/hpc/winscp-file-transfer.html](https://www.nrel.gov/hpc/winscp-file-transfer.html) for information on using WinSCP to transfer files.
+   * For file transfers on Mac:
+      * FileZilla can be used to transfer files between a Mac and the HPC. You can download the FileZilla Client at [https://filezilla-project.org/](https://filezilla-project.org/).
+      * Host: '[username]@kestrel.hpc.nrel.gov'
+      * More information on how to use FileZilla can be found in the [Yampa guide](yampa_guide.md#transferring-data-from-yampa-to-your-machine).
+   * Using rsync: 
+      * You can also use rsync to transfer files; an example of a rsync transfer command: 
+      ```
+        rsync -aOP --exclude=**/225*/ --exclude=**/cpx*/ --exclude=*.dat --exclude=*.pkl --exclude=*.g00 --include=[batch_prefix]** --exclude=* --modify-window=5 --ignore-existing [hpc_user_name]@eagle.nrel.gov:[path_to_run_folder] [destination_path]
+      ```
+    
+You can also transfer individual files to your machine using VSCode by right-clicking a file and selecting "download."
+
+##### VSCode setup
+[This guide](https://code.visualstudio.com/docs/remote/ssh) provides a good overview of how to log on to a remote machine with VSCode. 
+
+To set up SSH keys so that you don't have to enter your password each time you log in (note: this works for mac; Windows should be similar but it hasn't been tested): 
+  1. Open a terminal on your computer (not the HPC!) and then type: 
+    ```
+    cd ~/.ssh
+    vim config
+    ```
+
+  2. Inside the config file type the following:
+    ```  
+    Host <nickname>
+    User <username on remote> 
+    Hostname kl1.hpc.nrel.gov
+    ```
+
+    Windows users should also add the following:
+    ```
+    MACs hmac-sha2-512
+    ```
+
+  3. Save the file, then generate RSA key in ~/.ssh: `ls ~/.ssh/id_rsa || ssh-keygen` [note: you can skip this step if you already have a key]
+
+  4. Lastly copy the key over to Kestrel: `ssh-copy-id <nickname>` (where nickname is whatever you've set for Kestrel in the config file above)
+
+
+##### Git
+The HPC now requires repositories to be cloned via SSH; if you have a repo that was cloned using HTTPS you may encounter issues configuring git. If you do want to preserve your cloned repository, you can update via the following:
+1. `nano .git/config`
+2. change `url: https://github.nrel.gov/ReEDS/ReEDS-2.0.git` to `url: git@github.nrel.gov:ReEDS/ReEDS-2.0.git`
+ 
+The HPC also has restrictions on the permissions for your github SSH key... you can change these to the correct settings via `chmod 600 ~/.ssh/id_rsa.pub`
+
+#### Troubleshooting
+##### Running on the HPC's 'debug' partition
+It can be helpful to kick off a test run on the HPC's `debug` partition before submitting a full set. The `debug` queue is limited to 1 hour and 2 nodes per user but a run will typically start running immediately. To submit a run to the `debug` queue  make the following changes to the `ReEDS-2.0/srun_template.sh` file:
+* Set the runtime to 1 hour: `#SBATCH --time=1:00:00`
+* Add the following line: `#SBATCH --partition=debug`
+
+##### Restarting a run from a previous solve year
+Failed runs can be restarted by adding a `--restart` flag to the runbatch.py call. The call should include the same cases file and batch name as the failed runs (e.g. `python runbatch.py -c [case] -b [batch] --restart`). The restart functionality picks up with the last GAMS restart file. Input files are not recopied.
+
+Alternately, an individual run can be restarted with the following steps:
+1. Navigate to the directory with the run: `cd runs/[batch]_[case]`
+
+2. Copy the original call shell script to a new call shell script: `cp call_[batch]_[case].sh call_[batch]_[case]_redo.sh` 
+
+3. Remove the lines in the new call shell script that have already successfully run. (This step is probably best done by opening the file with WinSCP and manually removing lines.)
+
+4. Open the sbatch shell script to edit: `nano [batch]_[case].sh`
+
+5. Insert the new call shell script where the original was:
+
+    Original:
+    ```
+    #SBATCH --job-name=[job name]
+    sh {your directory}/ReEDS-2.0/runs/[batch]_[case]/call_[batch]_[case].sh
+    ```
+     New:
+    ```
+    #SBATCH --job-name=[job name]
+    sh {your directory}/ReEDS-2.0/runs/[batch]_[case]/call_[batch]_[case]_redo.sh
+    ```
+
+6.	Save the sbash shell script
+
+7.	Re-submit the run: `sbatch [batch]_[case].sh`
+
+
+##### General HPC
+Make sure you have enough available storage in the directory where you are running ReEDS; otherwise the run will fail. The user directories on the HPC are very small; in general it's best to run ReEDS in a project folder.
+
+* You can check the storage quota for your project, and whether you're over it, using the procedure described here: [https://www.nrel.gov/hpc/project-storage-quotas.html](https://www.nrel.gov/hpc/project-storage-quotas.html)
+  * Run `lfs project -d /projects/YOUR_PROJECT` to get your project id number
+  * Run `lfs quota -h -p YOUR_PROJECT_ID /projects/YOUR_PROJECT` to get your current usage and quota
+
+
+##### Runs in a standby partition
+Currently runs in a standby partition won't show up with squeue unless you flag the partition (e.g., `squeue -u [username] -p standard-stdby`)
+
+
+
+### Running ReEDS on AWS
+To run ReEDS on AWS, you'll need to set up an account on Amazon Web Servies. Once you have done that, you will be able to run ReEDS on AWS's Elastic Compute Cloud (EC2), their virtual computation service. The goal here is to be able to flexibly scale computing power to the needs of the moment and to avoid bottlenecks presented by HPC downtime and limited server space.
+
+#### Requesting an allocation 
+First, somebody needs to request an allocation for a project. There's a regular allocation request period each spring for the upcoming fiscal year, but out-of-cycle (ad-hoc) allocation requests are also allowed through a similar process. Go to [CSC Cloud Portal](https://thesource.nrel.gov/cloud-computing) to read more.
+
+#### Getting an AWS account
+Request an AWS account by emailing CSC.CloudHelp@nrel.gov and including the name of the cloud project your account will be associated with. (Cloud projects are similar to HPC allocations and use a keyword identifier, e.g. UberNodalReEDS.)
+
+You may also want to join the Cloud Computing User Group on Microsoft Teams—just ask in your initial email to be added.
+
+CSC, the cloud computing team, has a [CSC Cloud Portal](https://thesource.nrel.gov/cloud-computing) site on theSOURCE that contains lots of useful information. You should read through the information there on sizing, pricing, billing, etc. It's quite useful.
+
+#### Running ReEDS scenarios on AWS
+To run ReEDS scenarios, we spin up at least one virtual machine—an "instance" in Amazon-speak—of AWS's EC2 service. Often, it makes sense to spin up multiple EC2 instances when you have multiple runs since costs scale nonlinearly as the size of your chosen EC2 machine increases in memory and CPU. For storage on hard disk, we create an Elastic Block Storage (EBS) drive and connect it to the EC2 instance.
+
+#### Launching your first instance
+CSC has set up a template Amazon Machine Image (AMI) that specifies required information about the EC2 instance and security settings that have been approved by NREL's cybersecurity team. CSC will set up an AMI template and give you a link to it.
+
+
+
+## Hourly Resolution and Additional Setups
+<!-- Hourly resolution quick start, PRAS, julia and stress periods setup, hourlize -->
+### Hourly resolution quick-start guide
+
+If you'd like to run the model with hourly resolution, here is the minimal set of switches to change in cases.csv:
+* `GSw_Hourly = 1`
+  * Turn on hourly resolution
+* `GSw_Canada = 2`
+  * Turn on hourly resolution for Canadian imports/exports
+* `GSw_AugurCurtailment = 0`
+  * Turn off the Augur calculation of curtailment
+* `GSw_StorageArbitrageMult = 0`
+  * Turn off the Augur calculation of storage arbitrage value
+* `GSw_Storage_in_Min = 0`
+  * Turn off the Augur calculation of storage charging
+* `capcredit_szn_hours = 3`
+  * The current default hourly representation is 18 representative 5-day weeks. Each representative period is treated as a 'season' and is thus active in the planning-reserve margin constraint. In h17 ReEDS we set `capcredit_szn_hours = 10`, giving 40 total hours considered for planning reserves (the top 10 hours in each of the 4 quarterly seasons). 18 'seasons' with 10 hours each would give 180 hours, so we switch to 3 hours per 'season' (for 54 hours total).
+
+If you'd like the model to solve in less than 2 days, you can also make the following changes:
+* `yearset_suffix = fiveyear`
+  * Solve in 5-year steps
+* `GSw_OpRes = 0`
+  * Turn off operating reserves
+* `GSw_MinLoading = 0`
+  * Turn off the sliding-window representation of minimum-generation limits
+* `GSw_PVB = 0`
+  * Turn off PV-battery hybrids
+* `GSw_calc_powfrac = 0`
+  * Turn off a post-processing calculation of power flows
+
+
+### ReEDS2PRAS, julia, and stress periods setup
+1. Install Julia. There are different procedures for mac/linux and windows.
+    1. [mac/linux]: Julia is included in the conda environment so you should be all set.
+    2. [windows]: Install Julia from [https://julialang.org/downloads/](https://julialang.org/downloads/).
+2. From the ReEDS-2.0 directory, run `julia --project=. instantiate.jl`
+
+Set `GSw_PRM_CapCredit=0` in your ReEDS cases file to use the coupled ReEDS/PRAS stress periods model, or just set `pras=2` to run PRAS without necessarily using stress periods.
+
+#### Troubleshooting
+1. On mac and linux we use the version of julia included in the `reeds2` conda environment, so make sure you haven't added a julia alias or modified the julia path in your ~/.bashrc or ~/.bash_profile
+
+### Hourlize
+Hourlize processes hourly resource and load data into ReEDS inputs. For more information on getting started with Hourlize, you can find more information here: [Using Hourlize](hourlize.md)

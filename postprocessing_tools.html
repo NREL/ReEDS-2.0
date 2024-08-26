@@ -141,7 +141,7 @@
 <p>Adding the <code class="docutils literal notranslate"><span class="pre">-f</span></code> flag will print the names of the finished runs: <code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">python</span> <span class="pre">runstatus.py</span> <span class="pre">v20231112</span> <span class="pre">-f</span></code></p>
 <p>If you increase the verbosity by adding <code class="docutils literal notranslate"><span class="pre">-v</span></code> flags, it prints a number of lines from the end of that run’s gamslog.txt equal to the number of v’s in the flag: <code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">python</span> <span class="pre">runstatus.py</span> <span class="pre">v20231112</span> <span class="pre">-vvvvv</span></code></p>
 <p><strong>restart_runs.py</strong></p>
-<p>restart_runs.py can be used to restart any failed runs for a given batch.</p>
+<p>restart_runs.py can be used to restart any failed runs for a given batch. <strong>This only works on HPC currently.</strong></p>
 <p>Command to run this script: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">restart_runs.py</span> <span class="pre">[batch</span> <span class="pre">prefix]</span></code></p>
 <p>Example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python restart_runs.py v20231112
