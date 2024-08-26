@@ -2,10 +2,13 @@ raw,display
 "cap, eq_objfn_op",Fixed O&M
 "inv, eq_objfn_op",Fixed O&M
 "gen, eq_objfn_op",Variable O&M and Fuel
+eq_ramping,Variable O&M and Fuel
 "inv, eq_objfn_inv",Capital
 "gen, eq_objfn_inv",Capital
 "inv_refurb, eq_objfn_inv",Capital
 "inv_rsc, eq_objfn_inv",Supply Curve
+eq_poi_cap,Supply Curve
+eq_rsc_inv_account,Supply Curve
 "upgrades, eq_objfn_inv",Capital
 "invtran, eq_objfn_inv","invtran, eq_objfn_inv"
 "opres, eq_objfn_op",Operating Reserves
@@ -43,7 +46,6 @@ eq_reserve_margin,Reserve Margin
 eq_cap_sdbin_balance,Reserve Margin
 eq_sdbin_limit,Reserve Margin
 eq_rps_ofswind,State RPS
-eq_rsc_inv_account,eq_rsc_inv_account
 eq_rsc_invlim,eq_rsc_invlim
 eq_storage_capacity,eq_storage_capacity
 eq_storage_duration,eq_storage_duration

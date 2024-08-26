@@ -1,0 +1,17 @@
+{
+    "logging": {
+        "log_file": null,
+        "log_level": "DEBUG"
+    },
+    "pipeline": [
+        {
+            "bespoke": "./config_bespoke.json5"
+        },
+        {
+            "collect": "./config_collect.json5"
+	    },
+        {
+            "supply-curve": "./config_supply_curve.json5"
+        }
+    ]
+}

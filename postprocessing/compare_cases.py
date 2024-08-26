@@ -61,6 +61,15 @@ parser.add_argument(
 parser.add_argument(
     '--detailed', '-d', action='store_true',
     help='Include more detailed plots')
+parser.add_argument(
+    '--forcemulti', '-m', action='store_true',
+    help='Always use multi-case plots (even for 2 cases)')
+parser.add_argument(
+    '--lesslabels', '-l', action='count',
+    help='Add less value labels to plots')
+parser.add_argument(
+    '--nowrap', '-w', action='store_true',
+    help="Don't wrap subplot titles")
 
 args = parser.parse_args()
 _caselist = args.caselist
@@ -75,6 +84,9 @@ sharey = True if args.sharey else 'row'
 bpreport = args.bpreport
 skipbp = args.skipbp
 detailed = args.detailed
+forcemulti = args.forcemulti
+lesslabels = args.lesslabels
+nowrap = args.nowrap
 interactive = False
 
 #%% Inputs for testing
@@ -88,6 +100,9 @@ interactive = False
 # skipbp = True
 # bpreport = 'standard_report_reduced'
 # interactive = True
+# forcemulti = False
+# lesslabels = 0
+# nowrap = False
 # detailed = False
 
 
@@ -420,21 +435,6 @@ if not skipbp:
 
 #%%### Load data
 #%% Shared
-## Determine if we're on a branch before or after county-level capability was merged
-countyreeds = (
-    True if os.path.isfile(os.path.join(reeds_path,'inputs','transmission','r_rr_adj_county.csv'))
-    else False
-)
-if countyreeds:
-    hierarchy = pd.read_csv(
-        os.path.join(reeds_path,'inputs','hierarchy.csv')
-    ).drop(['county','county_name'], axis=1).drop_duplicates().rename(columns={'ba':'r'}).set_index('r')
-else:
-    hierarchy = pd.read_csv(
-        os.path.join(reeds_path,'inputs','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')    
-hierarchy = hierarchy.loc[hierarchy.country.str.lower()=='usa'].copy()
-
 sw = pd.read_csv(
     os.path.join(cases[case],'inputs_case','switches.csv'),
     header=None, index_col=0).squeeze(1)
@@ -532,6 +532,21 @@ dictin_sw = {
     for case in cases
 }
 
+hierarchy = {}
+for case in cases:
+    hierarchy[case] = (
+        pd.read_csv(os.path.join(cases[case],'inputs_case','hierarchy.csv'))
+        .rename(columns={'*r':'r'}).set_index('r')
+    )
+    hierarchy[case] = hierarchy[case].loc[hierarchy[case].country.str.lower()=='usa'].copy()
+
+dictin_error = {}
+for case in tqdm(cases, desc='system cost error'):
+    dictin_error[case] = pd.read_csv(
+        os.path.join(cases[case], 'outputs', 'error_check.csv'),
+        index_col=0,
+    ).squeeze(1)
+
 dictin_cap = {}
 for case in tqdm(cases, desc='national capacity'):
     dictin_cap[case] = pd.read_excel(
@@ -544,7 +559,7 @@ for case in tqdm(cases, desc='national capacity'):
         dictin_cap[case].groupby(['tech','year'], as_index=False)
         ['Capacity (GW)'].sum())
     dictin_cap[case] = dictin_cap[case].loc[
-        ~dictin_cap[case].tech.isin(['electrolyzer','smr','smr-ccs'])].copy()
+        ~dictin_cap[case].tech.isin(['electrolyzer','smr','smr-ccs','dac'])].copy()
 
 dictin_gen = {}
 for case in tqdm(cases, desc='national generation'):
@@ -611,7 +626,7 @@ dictin_emissions = {}
 for case in tqdm(cases, desc='national emissions'):
     dictin_emissions[case] = pd.read_csv(
         os.path.join(cases[case], 'outputs', 'emit_nat.csv'),
-        header=0, names=['e','t','tonne'], index_col=['e','t'],
+        header=0, names=['e','t','ton'], index_col=['e','t'],
     ).squeeze(1).unstack('e')
 
 dictin_trans = {}
@@ -628,8 +643,8 @@ for case in tqdm(cases, desc='regional transmission'):
     ).rename(columns={'Value':'MW'})
     for _level in ['interconnect','transreg','transgrp','st']:
         dictin_trans_r[case][f'inter_{_level}'] = (
-            dictin_trans_r[case].r.map(hierarchy[_level])
-            != dictin_trans_r[case].rr.map(hierarchy[_level])
+            dictin_trans_r[case].r.map(hierarchy[case][_level])
+            != dictin_trans_r[case].rr.map(hierarchy[case][_level])
         ).astype(int)
 
 dictin_cap_r = {}
@@ -808,10 +823,13 @@ if detailed:
 
 
 #%% Model years and discount rates
-years = sorted(dictin_cap[case].year.astype(int).unique())
-years = [y for y in years if y >= startyear]
-yearstep = years[-1] - years[-2]
-lastyear = max(years)
+years = {}
+yearstep = {}
+for case in cases:
+    years[case] = sorted(dictin_cap[case].year.astype(int).unique())
+    years[case] = [y for y in years[case] if y >= startyear]
+    yearstep[case] = years[case][-1] - years[case][-2]
+lastyear = max(years[case])
 ## Years for which to add data notes
 startyear_sums = 2023
 allyears = range(startyear_sums,lastyear+1)
@@ -831,6 +849,56 @@ discounts = pd.Series(
 ### Set up powerpoint file
 prs = pptx.Presentation(os.path.join(reeds_path,'postprocessing','template.pptx'))
 blank_slide_layout = prs.slide_layouts[3]
+
+
+#%%### System cost error
+dfplot = pd.concat(dictin_error, axis=1).replace(0,np.nan).dropna(how='all').fillna(0)
+
+ncols = len(dfplot)
+data = {
+    'z': {'title': 'System cost [fraction]', 'scale':1},
+    'gen': {'title': 'Non-valgen generation [GWh]', 'scale':1e-3},
+    'cap': {'title': 'Non-valcap capacity [GW]', 'scale':1e-3},
+    'RPS': {'title': 'Non-RecMap RECS [GWh]', 'scale':1e-3},
+    'OpRes': {'title': 'Non-valgen opres [MWh]', 'scale':1},
+    'm_rsc_dat': {'title': 'Supply curve tweaks [GW]', 'scale':1e-3},
+    'dropped': {'title': 'Dropped load [GWh]', 'scale':1e-3},
+}
+data = {k:v for k,v in data.items() if k in dfplot.index}
+
+plt.close()
+f,ax = plt.subplots(
+    1, ncols,
+    figsize=(min(ncols*3.5, 13.33), max(3.75, 0.25*len(cases))),
+)
+for col, (datum, settings) in enumerate(data.items()):
+    if datum not in dfplot.index:
+        continue
+    vals = dfplot.loc[datum] * settings['scale']
+    _ax = ax if ncols == 1 else ax[col]
+    _ax.bar(
+        range(len(cases)),
+        vals.values, color=[colors[c] for c in cases],
+    )
+    ## Formatting
+    _ax.set_title(settings['title'], weight='bold', fontsize=14)
+    _ax.set_xticks(range(len(cases)))
+    _ax.set_xticklabels(cases.keys(), rotation=45, rotation_mode='anchor', ha='right')
+    if _ax.get_ylim()[0] < 0:
+        _ax.axhline(0, c='k', ls='--', lw=0.75)
+    ## Notes
+    for x, val in enumerate(vals):
+        text = f"{val:.1e}" if datum == 'z' else f"{val:.0f}"
+        _ax.annotate(text, (x, val), ha='center',
+        xytext=(0, 2), textcoords='offset points',
+    )
+plots.despine(ax)
+
+### Save it
+title = 'Error check'
+slide = add_to_pptx(title, width=None, height=6.88)
+if interactive:
+    plt.show()
 
 
 #%%### Generation capacity lines
@@ -895,7 +963,7 @@ for tech in aggtechsplot:
         else:
             df[tech,case] = dictin_cap[case].loc[
                 dictin_cap[case].tech.isin(aggtechsplot[tech])
-            ].groupby('year')[ycol].sum().reindex(years).fillna(0)
+            ].groupby('year')[ycol].sum().reindex(years[case]).fillna(0)
         ax[techcoords[tech]].plot(
             df[tech,case].index, df[tech,case].values,
             label=case, color=colors[case], ls='-',
@@ -963,7 +1031,7 @@ if interactive:
 
 
 #%%### Capacity and generation bars
-if len(cases) == 2:
+if (len(cases) == 2) and (not forcemulti):
     casebase, casecomp = list(cases.values())
     casebase_name, casecomp_name = list(cases.keys())
     for val in plotdiffvals:
@@ -1019,9 +1087,9 @@ else:
             if case == basecase:
                 dfbase[slidetitle] = dfplot.copy()
             alltechs.update(dfplot.columns)
-            plots.stackbar(df=dfplot, ax=ax[0,col], colors=data['colors'], width=yearstep, net=False)
+            plots.stackbar(df=dfplot, ax=ax[0,col], colors=data['colors'], width=yearstep[case], net=False)
             ax[0,col].set_title(
-                plots.wraptext(case, width=plotwidth+0.1, fontsize=14),
+                (case if nowrap else plots.wraptext(case, width=plotwidth*0.9, fontsize=14)),
                 fontsize=14, weight='bold', x=0, ha='left', pad=8,)
             ax[0,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
             ax[0,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
@@ -1058,7 +1126,7 @@ else:
             dfplot = dfplot.subtract(dfbase[slidetitle], fill_value=0)
             dfplot = dfplot[[c for c in data['colors'] if c in dfplot]].copy()
             alltechs.update(dfplot.columns)
-            plots.stackbar(df=dfplot, ax=ax[1,col], colors=data['colors'], width=yearstep, net=True)
+            plots.stackbar(df=dfplot, ax=ax[1,col], colors=data['colors'], width=yearstep[case], net=True)
 
         plots.despine(ax)
         plt.draw()
@@ -1265,7 +1333,8 @@ for col, (datum, data) in enumerate(toplot.items()):
     handles[datum] = plot_bars_abs_stacked(
         dfplot=dfplot, basecase=basemap,
         colors=techcolors, fontsize=8,
-        ax=ax, col=col, net=(True if datum == 'Generation' else False), label=True,
+        ax=ax, col=col, net=(True if datum == 'Generation' else False),
+        label=(False if lesslabels else True),
     )
 
 ### Total transmission
@@ -1283,7 +1352,8 @@ dftrans = pd.concat({
 handles['Transmission'] = plot_bars_abs_stacked(
     dfplot=dftrans, basecase=basemap,
     colors=colors_trans,
-    ax=ax, col=col, net=False, label=True,
+    ax=ax, col=col, net=False,
+    label=(False if lesslabels else True),
 )
 
 ### Runtime
@@ -1291,13 +1361,14 @@ col = 3
 ax[0,col].set_ylabel('Runtime [hours]', y=-0.075)
 dfplot = pd.concat(
     {case: dictin_runtime[case].groupby('process').processtime.sum() for case in cases},
-    axis=1).T
+    axis=1).T.fillna(0)
 dfplot = dfplot[[c for c in colors_time.index if c in dfplot]].copy()
 
 handles['Runtime'] = plot_bars_abs_stacked(
     dfplot=dfplot, basecase=basemap,
     colors=colors_time,
-    ax=ax, col=col, net=False, label=True,
+    ax=ax, col=col, net=False,
+    label=(False if lesslabels else True),
 )
 
 ### Formatting
@@ -1350,7 +1421,8 @@ if simple_npv:
 handles['NPV'] = plot_bars_abs_stacked(
     dfplot=dfcost_npv, basecase=basemap,
     colors=bokehcostcolors,
-    ax=ax, col=col, net=(not simple_npv), label=True,
+    ax=ax, col=col, net=(not simple_npv),
+    label=(False if lesslabels else True),
 )
 
 ### NPV of climate and health costs
@@ -1371,7 +1443,8 @@ dfsocial_npv = dfsocial.multiply(discounts, axis=0).dropna().sum().unstack('e')
 handles['social'] = plot_bars_abs_stacked(
     dfplot=dfsocial_npv, basecase=basemap,
     colors=colors_social,
-    ax=ax, col=col, net=True, label=True,
+    ax=ax, col=col, net=True,
+    label=(False if lesslabels else True),
 )
 
 ### Combined
@@ -1382,7 +1455,8 @@ dfcombo_npv = pd.concat([dfcost_npv, dfsocial_npv], axis=1)
 handles['combo'] = plot_bars_abs_stacked(
     dfplot=dfcombo_npv, basecase=basemap,
     colors={**bokehcostcolors.to_dict(), **colors_social},
-    ax=ax, col=col, net=True, label=True,
+    ax=ax, col=col, net=True,
+    label=(False if lesslabels else True),
 )
 
 ### Formatting
@@ -1450,12 +1524,14 @@ def twobars(dfplot, basecase, colors, ax, col=0, ypad=0.02):
         if ymin < 0:
             ax[row,col].set_ylim(ymin * (1+ypad))
         ## label net value
-        for x, case in enumerate(df.index):
-            val = df.loc[case].sum()
-            ax[row,col].annotate(
-                f'{val:.0f}', (x, val - _ypad), ha='center', va='top', color='k', size=9,
-                path_effects=[pe.withStroke(linewidth=2.0, foreground='w', alpha=0.7)],
-            )
+        if not lesslabels:
+            for x, case in enumerate(df.index):
+                val = df.loc[case].sum()
+                ax[row,col].annotate(
+                    f'{val:.0f}', (x, val - _ypad),
+                    ha='center', va='top', color='k', size=9,
+                    path_effects=[pe.withStroke(linewidth=2.0, foreground='w', alpha=0.7)],
+                )
 
 twobars(dfplot=dfcost_npv, basecase=basemap, colors=colors, ax=ax, col=col)
 
@@ -1513,7 +1589,7 @@ f,ax = plt.subplots(
 col = 0
 dfscoe = {}
 for case in cases:
-    dfscoe[case] = dictin_scoe[case].groupby('year')['Average cost ($/MWh)'].sum().loc[years]
+    dfscoe[case] = dictin_scoe[case].groupby('year')['Average cost ($/MWh)'].sum().loc[years[case]]
     ax[col].plot(dfscoe[case].index, dfscoe[case].values, label=case, color=colors[case])
 ax[col].set_ylim(0)
 ax[col].set_ylabel('System cost of electricity [$/MWh]')
@@ -1538,7 +1614,7 @@ col = 2
 dfneue = {}
 for case in cases:
     if case in dictin_neue:
-        dfneue[case] = dictin_neue[case].reindex([y for y in years if y >= 2025])
+        dfneue[case] = dictin_neue[case].reindex([y for y in years[case] if y >= 2025])
         ax[col].plot(dfneue[case].index, dfneue[case].values, label=case, color=colors[case])
 ax[col].set_ylim(0)
 if ax[col].get_ylim()[1] >= 10:
@@ -1615,7 +1691,7 @@ for col, pollutant in enumerate(['CO2','CO2e']):
     note = []
     df = {}
     for case in cases:
-        df[case] = dictin_emissions[case].reindex(years).fillna(0) / 1e6 # tonne->MMT
+        df[case] = dictin_emissions[case].reindex(years[case]).fillna(0) / 1e6 # metric ton->MMT
         emissions_allyears = df[case].reindex(allyears).interpolate('linear').loc[startyear_notes:]
         ax[col].plot(df[case].index, df[case][pollutant].values, label=case, color=colors[case])
         ## collect more notes
@@ -1645,7 +1721,7 @@ col = 2
 dfmort = {}
 for case in cases:
     if case in dictin_health_central_mort:
-        dfmort[case] = dictin_health_central_mort[case].loc[years]
+        dfmort[case] = dictin_health_central_mort[case].loc[years[case]]
         ax[col].plot(dfmort[case].index, dfmort[case].values, label=case, color=colors[case])
 ax[col].set_ylim(0)
 ax[col].set_ylabel('Mortality [lives/year]')
@@ -1658,7 +1734,7 @@ col = 3
 dfhealth = {}
 for case in cases:
     if case in dictin_health_central:
-        dfhealth[case] = dictin_health_central[case].loc[years]
+        dfhealth[case] = dictin_health_central[case].loc[years[case]]
         ax[col].plot(dfhealth[case].index, dfhealth[case].values, label=case, color=colors[case])
 ax[col].set_ylim(0)
 ax[col].set_ylabel('Health costs [$B/year]')
@@ -1895,16 +1971,16 @@ for interzonal_only in [False, True]:
             df = (
                 dictin_trans[case]
                 .loc[~dictin_trans[case].trtype.str.lower().isin(['spur','reinforcement'])]
-                .groupby('year')['Amount (GW-mi)'].sum().reindex(years) / 1e3
+                .groupby('year')['Amount (GW-mi)'].sum().reindex(years[case]) / 1e3
             )
         else:
-            df = dictin_trans[case].groupby('year').sum()['Amount (GW-mi)'].reindex(years) / 1e3
+            df = dictin_trans[case].groupby('year').sum()['Amount (GW-mi)'].reindex(years[case]) / 1e3
         ax[0].plot(df.index, df.values, label=case, color=colors[case])
         ## annotate the last value
-        val = np.around(df.loc[max(years)], 0) + 0
+        val = np.around(df.loc[max(years[case])], 0) + 0
         ax[0].annotate(
             f' {val:.0f}',
-            (max(years), val), ha='left', va='center',
+            (max(years[case]), val), ha='left', va='center',
             color=colors[case], fontsize='medium',
         )
     ax[0].set_ylim(0)
@@ -2033,10 +2109,10 @@ for col, interzonal_only in enumerate([False,True]):
             df[case] = (
                 dictin_trans[case]
                 .loc[~dictin_trans[case].trtype.str.lower().isin(['spur','reinforcement'])]
-                .groupby('year')['Amount (GW-mi)'].sum().reindex(years) / 1e3
+                .groupby('year')['Amount (GW-mi)'].sum().reindex(years[case]) / 1e3
             )
         else:
-            df[case] = dictin_trans[case].groupby('year').sum()['Amount (GW-mi)'].reindex(years) / 1e3
+            df[case] = dictin_trans[case].groupby('year').sum()['Amount (GW-mi)'].reindex(years[case]) / 1e3
         ax[col].plot(df[case].index, df[case].values, label=case, color=colors[case])
     ax[col].set_ylim(0)
     ax[col].set_ylabel(labelline)
@@ -2057,7 +2133,7 @@ for _col, level in enumerate(['transreg','interconnect']):
     for case in cases:
         df[case] = dictin_trans_r[case].loc[
             dictin_trans_r[case][f'inter_{level}'] == 1
-        ].groupby('t').MW.sum().reindex(years).fillna(0) / 1e3
+        ].groupby('t').MW.sum().reindex(years[case]).fillna(0) / 1e3
         ax[col].plot(df[case].index, df[case].values, label=case, color=colors[case])
     ax[col].set_ylim(0)
     ax[col].set_ylabel(ylabels[level])
@@ -2122,8 +2198,29 @@ except Exception:
     print(traceback.format_exc())
 
 
+#%%### Max firm imports
+try:
+    f, ax, dfplot = reedsplots.plot_max_imports(
+        case=list(cases.values()),
+        colors={v: colors[k] for k,v in cases.items()},
+        casenames={v:k for k,v in cases.items()},
+        level='nercr', tstart=startyear,
+    )
+    ### Save it
+    slide = add_to_pptx(
+        'Max net stress imports / peak demand',
+        height=(6.88 if ax.shape[1] <= 8 else None),
+        width=(13.33 if ax.shape[1] > 8 else None),
+    )
+    if interactive:
+        plt.show()
+
+except Exception:
+    print(traceback.format_exc())
+
+
 #%%### Transmission maps
-if len(cases) == 2:
+if (len(cases) == 2) and (not forcemulti):
     plt.close()
     f,ax = reedsplots.plot_trans_diff(
         casebase=casebase,
@@ -2247,7 +2344,7 @@ if detailed:
             hcol = 'h'
             df = dictin_load_stress[case].copy()
         df = (
-            df.assign(region=df.r.map(hierarchy[ralevel]))
+            df.assign(region=df.r.map(hierarchy[case][ralevel]))
             .groupby(['t','region',hcol]).GW.sum()
             .loc[lastyear].unstack('region')
         )
@@ -2265,8 +2362,8 @@ if detailed:
         else:
             df = dictin_tran_flow_stress[case].copy()
             hcol = 'h'
-        df['aggreg'] = df.r.map(hierarchy[ralevel])
-        df['aggregg'] = df.rr.map(hierarchy[ralevel])
+        df['aggreg'] = df.r.map(hierarchy[case][ralevel])
+        df['aggregg'] = df.rr.map(hierarchy[case][ralevel])
         df['interface'] = df.aggreg + '|' + df.aggregg
 
         df = (
@@ -2353,7 +2450,11 @@ if detailed:
                 )
 
             interfaces = tran_flow_stress_agg[case].columns
-            numdays = len(tran_flow_stress_agg[case]) * int(sw.GSw_HourlyChunkLengthStress) // 24
+            numdays = (
+                len(tran_flow_stress_agg[case])
+                * int(dictin_sw[case].GSw_HourlyChunkLengthStress)
+                // 24
+            )
 
             ### Head/tail length:
             gwh_forward = tran_flow_stress_agg[case].clip(lower=0).sum()
@@ -2421,9 +2522,10 @@ for case in cases:
 ### Shared data
 base = cases[list(cases.keys())[0]]
 val_r = dictin_cap_r[basecase].r.unique()
-dfba = reedsplots.get_zonemap(base).loc[val_r]
-dfstates = dfba.dissolve('st')
-if len(cases) == 2:
+dfmap = reedsplots.get_dfmap(base)
+dfba = dfmap['r']
+dfstates = dfmap['st']
+if (len(cases) == 2) and (not forcemulti):
     for i_plot in i_plots:
         plt.close()
         f,ax=plt.subplots(
@@ -2434,7 +2536,7 @@ if len(cases) == 2:
 
         _,_,dfplot = reedsplots.plotdiffmaps(
             val=mapdiff, i_plot=i_plot, year=lastyear, casebase=casebase, casecomp=casecomp,
-            reeds_path=reeds_path, plot='base', f=f, ax=ax[0], dfba=dfba, dfstates=dfstates,
+            reeds_path=reeds_path, plot='base', f=f, ax=ax[0],
             cmap=cmocean.cm.rain,
         )
         ax[0].annotate(
@@ -2443,7 +2545,7 @@ if len(cases) == 2:
 
         _,_,dfplot = reedsplots.plotdiffmaps(
             val=mapdiff, i_plot=i_plot, year=lastyear, casebase=casebase, casecomp=casecomp,
-            reeds_path=reeds_path, plot='comp', f=f, ax=ax[1], dfba=dfba, dfstates=dfstates,
+            reeds_path=reeds_path, plot='comp', f=f, ax=ax[1],
             cmap=cmocean.cm.rain,
         )
         ax[1].annotate(
@@ -2452,7 +2554,7 @@ if len(cases) == 2:
 
         _,_,dfplot = reedsplots.plotdiffmaps(
             val=mapdiff, i_plot=i_plot, year=lastyear, casebase=casebase, casecomp=casecomp,
-            reeds_path=reeds_path, plot='absdiff', f=f, ax=ax[2], dfba=dfba, dfstates=dfstates,
+            reeds_path=reeds_path, plot='absdiff', f=f, ax=ax[2],
             cmap=plt.cm.RdBu_r,
         )
         # print(dfplot.CAP_diff.min(), dfplot.CAP_diff.max())
@@ -2466,6 +2568,7 @@ if len(cases) == 2:
         if interactive:
             plt.show()
 else:
+    figwidth = 13.33
     #### Absolute maps
     if (nrows == 1) or (ncols == 1):
         legendcoords = max(nrows, ncols) - 1
@@ -2493,7 +2596,7 @@ else:
         ### Set up plot
         plt.close()
         f,ax = plt.subplots(
-            nrows, ncols, figsize=(13.33, 6.88),
+            nrows, ncols, figsize=(figwidth, 6.88),
             gridspec_kw={'wspace':0.0,'hspace':-0.1},
         )
         ### Plot it
@@ -2505,7 +2608,9 @@ else:
             dfplot = dfba.copy()
             dfplot['GW'] = (dfval / 1e3).fillna(0)
 
-            ax[coords[case]].set_title(case)
+            ax[coords[case]].set_title(
+                case if nowrap else plots.wraptext(case, width=figwidth/ncols*0.9, fontsize=14)
+            )
             dfba.plot(
                 ax=ax[coords[case]],
                 facecolor='none', edgecolor='k', lw=0.1, zorder=10000)
@@ -2563,7 +2668,7 @@ else:
         ### Set up plot
         plt.close()
         f,ax = plt.subplots(
-            nrows, ncols, figsize=(13.33, 6.88),
+            nrows, ncols, figsize=(figwidth, 6.88),
             gridspec_kw={'wspace':0.0,'hspace':-0.1},
         )
         ### Plot it
@@ -2571,7 +2676,9 @@ else:
             dfplot = dfba.copy()
             dfplot['GW'] = dfval[case] if case == basecase else dfdiff[case]
 
-            ax[coords[case]].set_title(case)
+            ax[coords[case]].set_title(
+                case if nowrap else plots.wraptext(case, width=figwidth/ncols*0.9, fontsize=14)
+            )
             dfba.plot(
                 ax=ax[coords[case]],
                 facecolor='none', edgecolor='k', lw=0.1, zorder=10000)

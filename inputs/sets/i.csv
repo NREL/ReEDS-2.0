@@ -4,6 +4,11 @@ battery_4
 battery_6
 battery_8
 battery_10
+battery_12
+battery_24
+battery_48
+battery_72
+battery_100
 biopower
 beccs_mod
 beccs_max
@@ -105,11 +110,6 @@ wind-ofs_7
 wind-ofs_8
 wind-ofs_9
 wind-ofs_10
-wind-ofs_11
-wind-ofs_12
-wind-ofs_13
-wind-ofs_14
-wind-ofs_15
 wind-ons_1
 wind-ons_2
 wind-ons_3

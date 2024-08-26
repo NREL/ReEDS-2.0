@@ -1,0 +1,205 @@
+---
+orphan: true
+---
+### List of Machines
+| Machine Name | RAM |
+| --- | --- |
+| constellation01.hpc.nrel.gov | 120 GB |
+| cepheus.hpc.nrel.gov | 250 GB |
+| corvus.hpc.nrel.gov | 250 GB |
+| delphinus.hpc.nrel.gov | 500 GB |
+| dorado.hpc.nrel.gov | 500 GB |
+
+### Getting Access to Machines
+Access to the servers is controlled through the "reedsos" allocation. To request an HPC account, complete this [request form](https://www.nrel.gov/hpc/user-accounts.html). When asked if you intend to request a new project/allocation, select "no" and request to join "reedsos". 
+
+```{figure} ../../../images/hpc_request_form.png
+:name: figure-1-yampa
+
+Figure 1. HPC account form, request to join "reedsos" allocation
+```
+
+If you have access issues after requesting an account, you can contact HPC help at [HPC-Help@nrel.gov](HPC-Help@nrel.gov). 
+
+
+### Getting Started
+#### Get started with Microsoft Remote Desktop
+Connections to the machines can be made using Microsoft Remote Desktop. To download: 
+* On Windows: 
+* On Mac: You can download Microsoft Remote Desktop from the app store. You will need to create an apple id using your nrel email to start using the app store.
+
+From the Remote Desktop client, you will need to click on the '+' then 'Add PC'. In the 'PC name' field, put the machine name that you would like to connect to, then click 'Add'.
+
+```{figure} ../../../images/yampa_add_machine.png
+:name: figure-2-yampa
+
+Figure 2. Example of how to add a new machine in Microsoft Remote Desktop
+```
+
+**Username and Password**: Same as HPC credentials. 
+
+**Note:** Check to make sure that nrel_nt is NOT inlcluded in your username, this sometimes gets added automatically to some users at first login by Microsoft Remote Desktop.
+
+
+#### Drive Configuration
+Unlike the old servers, storage is shared across the machines: as a result, you should only need to complete setup once, and it should be automatically reflected on other machines. There is a limited amount of space in your home directory with enforced storage limits. Only files essential to configuring your account should be kept here (e.g. path configurations).
+
+
+The rest of the data is stored in the following folders: 
+   * /data/shared/apps - contains programs
+   * /data/shared/projects - contains user project folders: you'll need to create one similar to the D: drives on the constellation machines
+
+Create a projects folder by running the following command: `mkdir /data/shared/projects/[your user name]`
+
+#### Initial Setup
+After getting connected to the machine and creating your projects directory, you'll need to do two additional steps to complete setup.
+
+##### Add installed programs to PATH
+To add installed programs to the $PATH environment variable, use the following command in the terminal: `gedit ~/.bashrc`
+
+This will open up a text editor with your .bashrc file which contains the path locations. Here you will need to add gams, anaconda, and smartgit to $PATH.
+
+Add the following line separated by colons to the path: 
+
+```
+/data/shared/apps/gams/gams45.2_linux_x64_64_sfx:/data/shared/apps/gams/gams45.2_linux_x64_64_sfx/studio:/data/shared/apps/anaconda3/bin:/data/shared/apps/GitAhead 
+```
+
+**Important:** Make sure you don't delete the original PATH contents or the ":$PATH" as part of PATH
+
+Once completed, your bashrc file should look like the following screenshot. Save the file, then log off and log back on to ensure $PATH settings are updated.
+
+
+```{figure} ../../../images/yampa_bashrc_file.png
+:name: figure-3-yampa
+
+Figure 3. Example of bashrc file with updated $PATH
+```
+
+##### Set up conda folders/environments
+You'll want to create a folder within your projects folder to store conda environments and packages. Run the following commands: 
+   * `mkdir /data/shared/projects/[username]/.conda`
+   * `mkdir /data/shared/projects/[usename]/.conda/pkgs`
+   * `mkdir /data/shared/projects/[username]/.conda/envs`
+
+Now, direct conda to look in these folders for packages and environments by running the following commands: 
+   * `conda config --add pkgs_dirs /data/shared/projects/[username]/.conda/pkgs`
+   * `conda config --add envs_dirs /data/shared/projects/[username]/.conda/envs`
+
+##### Create SSH key and add it to your GitHub account
+Follow the [ssh setup guide](ssh_setup.md) to create a new SSH key and add it to your GitHub account.
+
+### Applications
+#### Adding Links to Application Launcher
+You can add executables including programs and scripts to the application launcher by adding .desktop files to the directory "~/.local/share/applications". These follow a standard Linux format. More info can be found [here](https://wiki.archlinux.org/title/desktop_entries).
+
+We've prepopulated links for GAMS Studio, RStudio, and SmartGit kept in "/data/shared/apps/setup/application". You can copy these to your home directory using the following command: `rsync -avu /data/shared/apps/setup/applications ~/.local/share/ `
+
+#### GAMS Studio
+GAMS Studio is the IDE packaged with GAMS. It can be used for GAMS development and supports code markup and executing GAMS code from the developer environment. The other major application of GAMS Studio is to open .gdx files. 
+
+The GAMS studio executable is stored in the folder "/data/shared/apps/gams/gams34.3_linux_x64_64_sfx/studio/studio.AppImage".
+
+If the folder containing the executable was added to the path it can be run by using the following command from the terminal: `Studio.AppImage`
+
+Note: If if hasn't been added to your path, you can run the following command instead: `/data/shared/apps/gams/gams34.3_linux_x64_64_sfx/studio/studio.AppImage` 
+
+Navigate to postprocessing/bokehpivot and make sure your reeds environment has been activated.  
+
+Run this command (which is the contents of launch.sh): 
+
+`bokeh serve . --sh --port 0`` 
+
+Note that you can copy the file path using the “Copy Location” option in the drop-down menu from the filepath in Files.
+
+#### GitAhead
+Github desktop has compatibility issues on Linux with Github enterprise. For a GUI interface for git use smartgit. 
+
+GitAhead can be launched by running the following command in the command line if you included in in your path environmental variable. 
+
+`GitAhead`
+
+If it hasn’t been added to your path run the following 
+
+`/data/shared/apps/GitAhead/GitAhead` 
+
+#### Transferring Data to nrelnas01
+Since at this time we can’t use the Linux servers to talk to Yampa we’re going to use an the HPC file system as a reasonably fast intermediary. The following instructions are for how to transfer data from Yampa to nrelnas01 but could easily be reversed by switching the target and destination. 
+
+1. Install or get access to winscp if on Windows. This will make interacting with the HPC file system easier. Transfers will be limited by your connection speed to the nrel network. If you aren’t on campus I would recommend getting access to the GPAC Windows (Azure) VM. It’s primarily intended for PLEXOS use but you won’t have a problem getting access, and this use will not be burdensome. You can download winscp at the link below, if you don’t have admin rights you can download the portable executable which doesn’t require installation. 
+[https://winscp.net/eng/downloads.php](https://winscp.net/eng/downloads.php) 
+   * **Note:** If you are planning on connect to the Azure VM, Windows users may need to install a different client for the machine to appear in Workspaces. 
+   * To install, go to the link in the paragraph above, use the "Windows 64-bit" link to the installer. Download and run it.
+   * After installation, open Remote Desktop, and click the Subscribe button. The ASCR machine should show up if you've been added to the group "Constellation Azure Servers" group. - If you're not already a member, you will need to get added, then Unsubscribe via the dropdown in the General Workspaces tab and subscribe again
+
+2. You can connect to winscp using your hpc credentials and a valid host name (eagle.hpc.nrel.gov). Once connected you can see the file system. You will want to navigate to the root and then to the following directory: `/scratch/[username]` 
+   * All HPC users are allocated a reasonable amount of temporary space in this folder and it’s a useful place for performing a transfer. 
+
+3. Connect to Yampa and run the following command with your required changes: 
+   ```
+   rsync -avz -e ssh /data/shared/projects/[SOURCE FOLDER PATH]/ jho@eagle.nrel.gov:/scratch/[DESTINATION FOLDER PATH]/ 
+   ```
+
+   *  Here's an example: 
+   ```
+   rsync -avz -e ssh /data/shared/projects/jho/Target_Folder/ jho@eagle.nrel.gov:/scratch/jho/Destination_Folder/ 
+   ```
+
+4. Once executed, you'll get a login for the HPC. Once you've entered your credentials the transfer will start. 
+
+5. After the transfer is completed, the new files will be viewable on the HPC file system. They can then be transferred to a local files system including //nrelnas01/ReEDS/
+ 
+#### Transferring Data From Yampa to Your Machine
+If you want to directly transfer files between Yampa and your local machine, you can use the tool FileZilla. You can download the FileZilla Client at [https://filezilla-project.org/](https://filezilla-project.org/).
+
+Once downloaded, you can connect using the following settings: 
+   * Host: cepheus.hpc.nrel.gov (you can connect to any of the five VM hosts and filezilla will automatically add the connection protocol)
+   * Username: Your HPC username
+   * Password: Your HPC password
+   * Port: You can leave this blank (if you have issues connecting you can use '22' as the port)
+
+You can then transfer data between machines - local machine is on the left and remote machine is on the right. The common project folders are retained in '/data/shared/projects/...'
+
+#### Spyder
+Spyder is an open-source integrated development environment (IDE) that is very useful for interactively running Python scripts and viewing variables, pandas dataframes, plots, etc. in the middle of script execution. Python can be launched from the Anaconda-Navigator Launcher, which can be opened by running the following command in a Terminal: 
+
+`python /data/shared/apps/anaconda3/bin/anaconda-navigator` 
+
+This will open the Anaconda-Navigator Launcher. From there, you can use the dropdown in the upper center of the screen to choose a conda environment to work out of or install/launch Spyder.	 
+
+### General Tips
+#### Creating Shortcuts
+When opening the terminal, Linux defaults to your home directory as an initial starting location. You can create a shortcut to another folder for faster access using the following command: 
+
+`ln -s /data/shared/projects/[username] ~/projects`
+
+The general implementation of this is:  
+
+ln -s filepath linkpath 
+
+Once created you can use the shortcut as if it were a directory. 
+
+
+#### Sorting Folders Before Files
+
+If you want the file viewer to adopt sorting behavior where folders are sorted alphabetically before files. You can make that change by opening the preferences menu in the folder viewer. 
+
+```{figure} ../../../images/yampa_file_preferences.png
+:name: figure-4-yampa
+
+Figure 4. File preferences on Yampa
+```
+
+Then select the option for Sort Folders before Files. 
+
+#### Issues Activating Conda Environment
+If you're having issues activating the reeds2 conda environment, you can try one of these options: 
+   1. Use `source activate reeds2` instead of `conda activate reeds2`
+   2. Run the following command prior to running `conda activate reeds2` (note: if you don't want to run this command every time, do step 3): 
+   ```
+   source /data/shared/apps/anaconda3/etc/profile.d/conda.sh
+   ```
+   3. Add the following line to the bottom of your bashrc file with the following command (you can open your bashrc file with the command `gedit ~/.bashrc`): 
+   ```
+   $ source /data/shared/apps/anaconda3/etc/profile.d/conda.sh
+   ```

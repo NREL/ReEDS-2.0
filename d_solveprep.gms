@@ -20,9 +20,6 @@ $ifthen %solver%==CBC
 ReEDSmodel.tolinfeas = 1e-15 ;
 $endif
 
-$ifthen.valstr %GSw_ValStr% == 1
-OPTION savepoint = 1 ;
-$endif.valstr
 
 $if not set loadgdx $setglobal loadgdx 0
 
@@ -61,7 +58,6 @@ biosupply(usda_region,bioclass,"cap") = round(biosupply(usda_region,bioclass,"ca
 cc_storage(i,sdbin)$cc_storage(i,sdbin) = round(cc_storage(i,sdbin),3) ;
 cendiv_weights(r,cendiv)$cendiv_weights(r,cendiv) = round(cendiv_weights(r,cendiv), 3) ;
 cost_cap(i,t)$cost_cap(i,t) = round(cost_cap(i,t),2) ;
-co2_storage_cost = round(co2_storage_cost,2) ;
 cost_co2_pipeline_fom(r,rr,t) =round(cost_co2_pipeline_fom(r,rr,t),2) ;
 cost_co2_pipeline_cap(r,rr,t) =round(cost_co2_pipeline_cap(r,rr,t),2) ;
 cost_co2_spurline_fom(r,cs,t) =  round(cost_co2_spurline_fom(r,cs,t),2) ;
@@ -81,14 +77,12 @@ degrade(i,tt,t)$degrade(i,tt,t) = round(degrade(i,tt,t),3) ;
 derate_geo_vintage(i,v)$derate_geo_vintage(i,v) = round(derate_geo_vintage(i,v),3) ;
 distance(r,rr,trtype)$distance(r,rr,trtype) = round(distance(r,rr,trtype),3) ;
 * non-CO2 emission/capture rates get small, here making sure accounting stays correct
-emit_rate(e,i,v,r,t)$[(not sameas(e,"co2"))$valgen(i,v,r,t)] = round(emit_rate(e,i,v,r,t),6) ;
-emit_rate(e,i,v,r,t)$(sameas(e,"co2")$valgen(i,v,r,t)) = round(emit_rate(e,i,v,r,t),4) ;
-capture_rate(e,i,v,r,t)$[(not sameas(e,"co2"))$valgen(i,v,r,t)] = round(capture_rate(e,i,v,r,t),6) ;
-capture_rate(e,i,v,r,t)$(sameas(e,"co2")$valgen(i,v,r,t)) = round(capture_rate(e,i,v,r,t),4) ;
+emit_rate(e,i,v,r,t)$valgen(i,v,r,t) = round(emit_rate(e,i,v,r,t),6) ;
+capture_rate(e,i,v,r,t)$valgen(i,v,r,t) = round(capture_rate(e,i,v,r,t),6) ;
 fuel_price(i,r,t)$fuel_price(i,r,t) = round(fuel_price(i,r,t),2) ;
 gasmultterm(cendiv,t)$gasmultterm(cendiv,t) = round(gasmultterm(cendiv,t),3) ;
 heat_rate(i,v,r,t)$heat_rate(i,v,r,t) = round(heat_rate(i,v,r,t),2) ;
-m_capacity_exog(i,v,r,t)$valcap(i,v,r,t) = round(m_capacity_exog(i,v,r,t),3) ;
+m_capacity_exog(i,v,r,t)$[valcap(i,v,r,t)$(not sameas(i,"smr"))] = round(m_capacity_exog(i,v,r,t),3) ;
 m_rsc_dat(r,i,rscbin,"cap")$m_rsc_dat(r,i,rscbin,"cap") = round(m_rsc_dat(r,i,rscbin,"cap"),3) ;
 m_rsc_dat(r,i,rscbin,"cost")$m_rsc_dat(r,i,rscbin,"cost") = round(m_rsc_dat(r,i,rscbin,"cost"),2) ;
 m_rsc_dat(r,i,rscbin,"cost_trans")$m_rsc_dat(r,i,rscbin,"cost_trans") = round(m_rsc_dat(r,i,rscbin,"cost_trans"),2) ;
@@ -245,7 +239,7 @@ set blocks /start,stop/ ;
 
 table solvewindows(windows,blocks)
 $ondelim
-$include inputs_case%ds%windows_%windows_suffix%.csv
+$include inputs_case%ds%windows.csv
 $offdelim
 ;
 

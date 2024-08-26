@@ -6,8 +6,9 @@ import logging
 import shutil
 import pandas as pd
 import numpy as np
+import h5py
 ### Local imports
-from LDC_prep import read_file
+from ldc_prep import read_file
 from writedrshift import get_dr_shifts
 ##% Time the operation of this script
 from ticker import makelog
@@ -134,7 +135,7 @@ def make_8760_map(period_szn, sw):
     return hmap_7yr, hmap_myr
 
 
-def get_ccseason_peaks_hourly(load, sw, reeds_path, inputs_case, hierarchy, h2ccseason, val_r_all):
+def get_ccseason_peaks_hourly(load, sw, inputs_case, hierarchy, h2ccseason, val_r_all):
     # ReEDS only supports a single entry for agglevel right now, so use the
     # first value from the list (copy_files.py already ensures that only one
     # value is present)
@@ -146,8 +147,11 @@ def get_ccseason_peaks_hourly(load, sw, reeds_path, inputs_case, hierarchy, h2cc
     elif agglevel == 'county':
         rmap = hierarchy[sw['GSw_PRM_hierarchy_level']]
     elif agglevel in ['ba','state','aggreg']:
-        hierarchy_orig = (pd.read_csv(os.path.join(reeds_path,'inputs','hierarchy.csv'))
-                          .rename(columns={'st':'state'}))
+        hierarchy_orig = (
+            pd.read_csv(
+                os.path.join(inputs_case, 'hierarchy_original.csv'))
+            .rename(columns={'st':'state'})
+        )
         rmap = (hierarchy_orig[hierarchy_orig['ba'].isin(val_r_all)]
                               [['ba',sw['GSw_PRM_hierarchy_level']]]
                               .drop_duplicates().set_index('ba')).squeeze()
@@ -243,7 +247,7 @@ def get_yearly_demand(
     reload the raw demand and extract the demand on the modeled days for each year.
     """
     ### Get original demand data, subset to cluster year
-    load_in = read_file(os.path.join(inputs_case,'load'), index_columns=2).unstack(level=0)
+    load_in = read_file(os.path.join(inputs_case,'load.h5'), index_columns=2).unstack(level=0)
     load_in.columns = load_in.columns.rename(['r','t'])
     ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
     scalars = pd.read_csv(
@@ -303,7 +307,7 @@ def get_yearly_flexibility(
     shape = {}
     shape_out = {}
     
-    for stype in ['inc','dec','energy']:
+    for stype in ['increase','decrease','energy']:
         if stype == 'energy':
             if drcat.lower() == 'evmc_storage':
                 shape[stype] = pd.read_csv(
@@ -315,10 +319,10 @@ def get_yearly_flexibility(
                 os.path.join(inputs_case, f'dr_{stype}.csv'))
         elif drcat.lower() == 'evmc_shape':
             shape[stype] = pd.read_csv(
-                os.path.join(inputs_case, f'evmc_shape_profile_{stype}rease.csv'))
+                os.path.join(inputs_case, f'evmc_shape_profile_{stype}.csv'))
         elif drcat.lower() == 'evmc_storage':
             shape[stype] = pd.read_csv(
-                os.path.join(inputs_case, f'evmc_storage_profile_{stype}rease.csv'))
+                os.path.join(inputs_case, f'evmc_storage_profile_{stype}.csv'))
         else:
             raise ValueError(f"drcat must be in ['dr','evmc_shape','evmc_storage'] but is '{drcat}'")
 
@@ -364,9 +368,9 @@ def get_yearly_flexibility(
                 .rename(columns={'i':'*i','level_3':'r','year':'t',0:'Values'})[['*i','r','h','t','Values']])
             
     if 'energy' in shape.keys():
-        return shape_out['dec'], shape_out['inc'], shape_out['energy']
+        return shape_out['decrease'], shape_out['increase'], shape_out['energy']
     else:
-        return shape_out['dec'], shape_out['inc']
+        return shape_out['decrease'], shape_out['increase']
 
 
 #%% ===========================================================================
@@ -377,7 +381,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     """
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-    # inputs_case = os.path.join(reeds_path, 'runs', 'v20240318_stressweightM0_Pacific_stress', 'inputs_case')
+    # inputs_case = os.path.join(reeds_path, 'runs', 'v20240708_tforM3_Pacific', 'inputs_case')
     # sw = pd.read_csv(
     #     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
     # periodtype = 'rep'
@@ -392,8 +396,6 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     #%% Parse some switches
     if not isinstance(sw['GSw_HourlyWeatherYears'], list):
         sw['GSw_HourlyWeatherYears'] = [int(y) for y in sw['GSw_HourlyWeatherYears'].split('_')]
-    ## Hard-code a GSw_CSP_Types switch as in LDC_prep.py
-    sw['GSw_CSP_Types'] = [1,2]
     ## Designate where to write the outputs, and prefix for timestamps
     if 'rep' in periodtype.lower():
         prefix = ''
@@ -441,7 +443,6 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             'nexth': ['*h','h'],
             'frac_h_ccseason_weights': ['*h','ccseason','weight'],
             'frac_h_quarter_weights': ['*h','quarter','weight'],
-            'd_szn': ['*period','szn'],
             'h_szn_start': ['*season','h'],
             'h_szn_end': ['*season','h'],
             'hour_szn_group': ['*h','hh'],
@@ -452,7 +453,6 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             'cf_vre': ['*i','r','h','cf'],
             'cf_hyd': ['*i','szn','r','t','cf'],
             'cap_hyd_szn_adj': ['*i','szn','r','value'],
-            'net_trade_can': ['*r','h','t','MWh'],
             'can_exports_h_frac': ['*h','frac_weighted'],
             'can_imports_szn_frac': ['*szn','frac_weighted'],
             'period_weights': ['*szn','rep_period'],
@@ -460,6 +460,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
                          'periodhour','actual_period','actual_h','season','h'],
             'periodmap_1yr': ['*actual_period','season'],
             'canmexload': ['*r','h'],
+            'forcedoutage_h': ['*i','r','h'],
             'dr_increase': ['*i','r','h'],
             'dr_decrease': ['*i','r','h'],
             'dr_shifts': ['*i','h','hh'],
@@ -490,14 +491,14 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             hmap_7yr[col] = tprefix + hmap_7yr[col]
         for col in ['rep_period','actual_period']:
             period_szn[col] = tprefix + period_szn[col]
-        if sw['GSw_HourlyType'] != 'year':
+        if not ((sw['GSw_HourlyType'] == 'year') and (periodtype == 'rep')):
             period_szn['season'] = tprefix + period_szn['season']
         if len(forceperiods):
             for col in ['szn']:
                 forceperiods[col] = tprefix + forceperiods[col]
 
     ### Add ccseasons
-    h_dt_szn_h17 = pd.read_csv(os.path.join(reeds_path,'inputs','variability','h_dt_szn.csv'))
+    h_dt_szn_h17 = pd.read_csv(os.path.join(inputs_case,'h_dt_szn_h17.csv'))
     hmap_7yr['ccseason'] = h_dt_szn_h17.ccseason.values
 
     #%%### Load full hourly RE CF, for downselection below
@@ -557,7 +558,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ### List of periods in which to apply operating reserve constraints
     if (periodtype == 'rep') and ('user' in sw['GSw_HourlyClusterAlgorithm']):
         period_szn_user = pd.read_csv(
-            os.path.join(reeds_path,'inputs','variability','period_szn_user.csv')
+            os.path.join(inputs_case,'period_szn_user.csv')
         )
         opres_periods = period_szn_user.loc[
             (period_szn_user.scenario==sw['GSw_HourlyClusterAlgorithm'])
@@ -642,38 +643,11 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     ### Make sure it lines up
     assert (frac_h_month_weights.groupby('h').weight.sum().round(5) == 1).all()
-    
-    #%%### Net trade with Canada for GSw_Canada=2
-    ### Read the 8760 net trade [MW], which is described at
-    ## https://github.nrel.gov/ReEDS/ReEDS-2.0_Input_Processing/tree/master/Exogenous_Canadian_Trade
-    can_8760 = (
-        pd.read_hdf(os.path.join(reeds_path,'inputs','canada_imports','can_trade_8760.h5'))
-        .rename(columns={'h':'hour'}).astype({'r':str}))
-    ## Drop the h
-    can_8760.hour = can_8760.hour.str.strip('h').astype('int')
-
-    ## Concat for each weather year
-    can_weatheryears = can_8760.pivot(index='hour', columns=['t','r'], values='net')
-    can_weatheryears = pd.concat(
-        {y: can_weatheryears for y in all_weatheryears},
-        axis=0, ignore_index=True).loc[hmap_myr.hour0]
-    ## Map 8760 hours to modeled hours
-    can_weatheryears.index = hmap_myr.h
-
-    ### Sum by (r,h,t) to get net trade in MWh during modeled hours
-    can_out = (
-        can_weatheryears.stack(['r','t']).groupby(['r','h','t']).sum().rename('MWh')
-        ## Divide by number of weather years since we concatted that number of weather years
-        / (len(sw['GSw_HourlyWeatherYears']) if periodtype == 'rep' else 1)
-    ).reset_index()
-    ## Only keep modeled regions
-    can_out = can_out.loc[can_out.r.isin(val_r_all)].copy()
-
 
     #%%### Seasonal Canadian imports/exports for GSw_Canada=1
     #%% Exports: Spread equally over hours by quarter.
     can_exports_szn_frac = pd.read_csv(
-        os.path.join(reeds_path, 'inputs', 'canada_imports', 'can_exports_szn_frac.csv'),
+        os.path.join(inputs_case, 'can_exports_szn_frac.csv'),
         header=0, names=['season','frac'], index_col='season',
     ).squeeze(1)
     df = (
@@ -695,7 +669,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     #%% Imports: Spread over seasons by quarter.
     can_imports_quarter_frac = pd.read_csv(
-        os.path.join(reeds_path, 'inputs', 'canada_imports', 'can_imports_szn_frac.csv'),
+        os.path.join(inputs_case, 'can_imports_quarter_frac.csv'),
         header=0, names=['season','frac'], index_col='season',
     ).squeeze(1)
     df = hmap_myr.assign(quarter=hmap_myr.yearhour.map(quarters))
@@ -785,7 +759,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ### next timeslice
     nexth_actualszn = (
         hmap_myr.assign(h=hmap_myr.h.map(chunkmap))
-        [[('season' if sw.GSw_HourlyType == 'year' else 'actual_period'),'h']]
+        [[('season' if ((sw.GSw_HourlyType == 'year') and (periodtype == 'rep')) else 'actual_period'),'h']]
         .drop_duplicates()
         .rename(columns={'actual_period':'allszn', 'season':'allszn'})
     ).copy()
@@ -796,7 +770,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ### h-to-actual-period mapping for inter-period storage
     h_actualszn = (
         hmap_myr.assign(h=hmap_myr.h.map(chunkmap))
-        [['h',('season' if sw.GSw_HourlyType == 'year' else 'actual_period')]]
+        [['h',('season' if ((sw.GSw_HourlyType == 'year') and (periodtype == 'rep')) else 'actual_period')]]
         .drop_duplicates())
 
     ### Number of times one h follows another h (for startup/ramping costs)
@@ -897,7 +871,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     for year in years:
         peak_all[year] = get_ccseason_peaks_hourly(
             load=load_full_yearly[['r','h',year]].rename(columns={year:'MW'}),
-            sw=sw, reeds_path=reeds_path, inputs_case=inputs_case, hierarchy=hierarchy, 
+            sw=sw, inputs_case=inputs_case, hierarchy=hierarchy, 
             h2ccseason=h2ccseason, val_r_all=val_r_all)
     peak_all = (
         pd.concat(peak_all, names=['t','drop']).reset_index().drop('drop', axis=1)
@@ -905,7 +879,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ).copy()
 
     ##############################################
-    #    -- Hydro Month-to-Szn Adjustments --    #
+    #%%  -- Hydro Month-to-Szn Adjustments --    #
     ##############################################
     
     ### Import and format hydro capacity factors
@@ -923,6 +897,9 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     cf_hyd = pd.read_csv(
         os.path.join(inputs_case,'hydcf.csv'), header=0,
     ).rename(columns={'value':'cf_month'})
+    ## Filter for modeled years
+    buildyears = [y for y in np.arange(2010,2021)] + [y for y in years if y > 2020]
+    cf_hyd = cf_hyd.loc[cf_hyd['t'].isin(buildyears)]
     ## Calculate the month-weighted-average capacity factor by season
     cf_hyd_out = szn_month_weights.merge(cf_hyd, on='month', how='outer')
     cf_hyd_out['cf'] = cf_hyd_out['weight'] * cf_hyd_out['cf_month']
@@ -935,7 +912,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         ## For full chronological year (GSw_HourlyType=year), we use four seasons,
         ## so the sum of season weights is the number of months in that season and
         ## we need to divide sum{cf*weight} by sum{weight}.
-        / szn_month_weights.groupby('season').weight.sum()
+        / szn_month_weights.groupby('season').weight.sum()  
     ).rename('cf').reset_index().rename(columns={'season':'szn'})
     
     ### Import and format monthly hydro capacity adjustment factors
@@ -957,16 +934,44 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         / szn_month_weights.groupby('season').weight.sum()        
     ).rename('value').reset_index().rename(columns={'season':'szn'})
 
-    #%% Calculate the peak demand timeslice of each ccseason.
-    ### Used for hydro_nd PRM constraint.
+    ### Calculate the peak demand timeslice of each ccseason.
+    ## Used for hydro_nd PRM constraint.
     h_ccseason_prm = (
         pd.merge(load_h[max(years)].groupby('h').sum().rename('MW'), h_ccseason, on='h')
         .sort_values('MW').drop_duplicates('ccseason', keep='last')
         .drop('MW', axis=1).sort_values('ccseason')
     )
 
+
+    #%%### Outage rates ######
+    infile = os.path.join(inputs_case, 'forcedoutage_hourly.h5')
+    tz = 'Etc/GMT+5'
+    with h5py.File(infile, 'r') as f:
+        forcedoutage_hourly = pd.DataFrame(
+            index=pd.to_datetime(pd.Series(f['index']).map(lambda x: x.decode())),
+            columns=pd.Series(f['columns']).map(lambda x: x.decode()),
+            data=f['data'],
+        ).tz_localize('UTC').tz_convert(tz)
+
+    forcedoutage_hourly.columns = pd.MultiIndex.from_tuples(
+        forcedoutage_hourly.columns.map(lambda x: tuple(x.split('|'))),
+        names=['i','r'],
+    )
+
+    ### Aggregate to model resolution
+    aggmethod = 'mean' if periodtype == 'rep' else 'max'
+    forcedoutage_h = forcedoutage_hourly.loc[hmap_myr.timestamp].copy()
+    forcedoutage_h.index = hmap_myr.h.map(chunkmap)
+    forcedoutage_h = (
+        forcedoutage_h
+        .groupby(forcedoutage_h.index).agg(aggmethod)
+        .stack(['i','r']).reorder_levels(['i','r','h'])
+        .rename('forced_outage_rate')
+    ).reset_index()
+
+
     ###############################
-    #    -- Demand Response --    #
+    #%%  -- Demand Response --    #
     ###############################
 
     if int(sw.GSw_DR):
@@ -988,7 +993,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     if int(sw.GSw_EVMC):
         evmc_baseline_load = (
-            pd.read_hdf(os.path.join(reeds_path,'inputs','demand_response',f'ev_load_{sw.evmcscen}.h5'))
+            pd.read_hdf(os.path.join(inputs_case,'ev_baseline_load.h5'))
         .rename(columns={'h':'hour'}).astype({'r':str}))
         ## Drop the h
         evmc_baseline_load.hour = evmc_baseline_load.hour.str.strip('h').astype('int')
@@ -1065,18 +1070,13 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         ## Hydro capacity factors by szn
         'cf_hyd': [cf_hyd_out.round(decimals), True, False],
         ## Hydro capacity adjustment factors by szn
-        'cap_hyd_szn_adj': [hydcapadj_out, True, False],
+        'cap_hyd_szn_adj': [hydcapadj_out.round(decimals+2), True, False],
         ## mapping from one timeslice to the next
         'nexth': [nexth, True, True],
         ## Hours to actual season mapping (h,allszn)
         'h_actualszn': [h_actualszn, False, False],
         ## mapping from one timeslice to the next for actual periods
         'nexth_actualszn': [nexth_actualszn, False, False],
-        ## Day to season mapping for Osprey (day,szn)
-        'd_szn': [
-            (h_dt_szn.assign(d='s'+h_dt_szn.actual_period.str.strip('s'))
-             [['d','season']].drop_duplicates()),
-            False, False],
         ## first timeslice in season (szn,h)
         'h_szn_start': [szn2starth.map(chunkmap).reset_index(), False, False],
         ## last timeslice in season (szn,h)
@@ -1104,12 +1104,6 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             (cf_out.assign(h=cf_out.h.map(chunkmap))
              .groupby(['i','r','h'], as_index=False).cf.mean().round(5)),
             False, False],
-        ## Static Canadian trade [MWh] (r,h,t)
-        'net_trade_can': [
-            (can_out.assign(h=can_out.h.map(chunkmap))
-             .groupby(['r','h','t'], as_index=False).MWh.sum()
-             .round(decimals)),
-            False, False],
         ## Exports to Canada [fraction] (h)
         'can_exports_h_frac': [
             (can_exports_h_frac.assign(h=can_exports_h_frac.h.map(chunkmap))
@@ -1117,6 +1111,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             False, False],
         ## Imports from Canada [fraction] (szn)
         'can_imports_szn_frac': [can_imports_szn_frac.round(6), False, False],
+        ## Forced outage rates
+        'forcedoutage_h': [forcedoutage_h.round(3), False, False],
         ## Demand response
         'dr_increase': [
             (dr_inc.assign(h=dr_inc.h.map(chunkmap))

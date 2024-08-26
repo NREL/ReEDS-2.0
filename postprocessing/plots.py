@@ -1521,7 +1521,7 @@ def despine(ax=None,
         _despine_sub(ax, top, right, left, bottom, direction)
 
 
-def get_coordinates(keys, aspect=1.618):
+def get_coordinates(keys, aspect=None, nrows=None, ncols=None):
     """
     Get a grid of subplots from a list of plot keys, with an aspect ratio
     roughly defined by the `aspect` input.
@@ -1530,13 +1530,27 @@ def get_coordinates(keys, aspect=1.618):
     -------
     tuple: (nrows [int], ncols [int], coords [dict])
     """
-    ncols = max(min(int(np.around(np.sqrt(len(keys)) * aspect, 0)), len(keys)), 1)
-    nrows = len(keys) // ncols + int(bool(len(keys) % ncols))
-    if (ncols == 1) or (nrows == 1):
-        coords = dict(zip(keys, range(max(nrows, ncols))))
+    if (not aspect) and (not nrows) and (not ncols):
+        aspect = 1.618
+    if ncols:
+        _ncols = ncols
     else:
-        coords = dict(zip(keys, [(row,col) for row in range(nrows) for col in range(ncols)]))
-    return nrows, ncols, coords
+        if nrows:
+            _ncols = len(keys) // nrows + bool(len(keys) % nrows)
+        else:
+            _ncols = max(min(int(np.around(np.sqrt(len(keys)) * aspect, 0)), len(keys)), 1)
+
+    if nrows:
+        _nrows = nrows
+    else:
+        _nrows = len(keys) // _ncols + int(bool(len(keys) % _ncols))
+
+    if (_ncols == 1) or (_nrows == 1):
+        coords = dict(zip(keys, range(max(_nrows, _ncols))))
+    else:
+        coords = dict(zip(keys, [(row,col) for row in range(_nrows) for col in range(_ncols)]))
+
+    return _nrows, _ncols, coords
 
 
 def trim_subplots(ax, nrows, ncols, nsubplots):
@@ -1767,7 +1781,7 @@ def optimize_label_positions(
 
 def label_last(
         dfplot, ax,
-        mindistance=None, colors=None, extend='below', line=True,
+        mindistance=None, colors=None, extend='below', line=0.5,
         head=' ', tail='', ha='left', path_effects=None,
         fontsize='medium', xpad=1, decimals=0,
         value=True, name=False,
@@ -1802,7 +1816,7 @@ def label_last(
                 xytext=(lastyear+_xpad, row.ylabel),
                 arrowprops={
                     'arrowstyle':'-', 'shrinkA':0, 'shrinkB':0,
-                    'color':colors[case], 'lw':0.5},
+                    'color':colors[case], 'lw':line},
                 annotation_clip=False,
             )
         ## label
@@ -1811,7 +1825,7 @@ def label_last(
         else:
             _decimals = 0 if row.val < 100 else -1
         val = f'{np.around(row.val, _decimals):.{max(_decimals, 0)}f}'
-        text = ' '.join([val if value else '', case if name else '']).strip()
+        text = ' '.join([str(val) if value else '', str(case) if name else '']).strip()
         ax.annotate(
             head+text+tail,
             (lastyear+_xpad, row.ylabel), ha=ha, va='center',
@@ -1838,7 +1852,7 @@ def stackbar(df, ax, colors, width=1, net=True, align='center', bottom=0, x0=0, 
         poscols = [c for c in row.index if c not in negcols]
         dfneg = row[negcols]
         dfpos = row[poscols]
-        x = index if isinstance(index, (int,float)) else i
+        x = index if isinstance(index, (int,float,pd.Timestamp)) else i
         ### Positive
         if len(dfpos):
             ax.bar(
@@ -2071,7 +2085,7 @@ def plot_region_bars(
         if r not in dfdata.index:
             continue
         ### Get coordinates
-        x0, bottom = dfzones.loc[r, ['labelx', 'labely']]
+        x0, bottom = dfzones.loc[r, ['centroid_x', 'centroid_y']]
         ### Scale it
         df = dfdata.loc[r].to_frame().T * valscale
         df.index = [x0]
@@ -2086,6 +2100,77 @@ def plot_region_bars(
                 [x0-width/2, x0+width/2], [bottom]*2,
                 **zeroline,
             )
+
+
+def map_years_months(
+        dfzones, dfdata, cmap=cmocean.cm.rain, aggfunc='mean',
+        colwidth=1.2, rowheight=1.0, simplify=10000, mapbuffer=1.08,
+        vmin=0., vmax=None, outline=0.25,
+        **colorbarkwargs,
+    ):
+    """Array of small maps with years as rows and months as columns.
+    Index of dfzones must match columns of dfdata.
+    """
+    import geopandas as gpd
+    import shapely
+    ### Process input data
+    dfyearmonth = dfdata.groupby(
+        [dfdata.index.year, dfdata.index.month]
+    ).agg(aggfunc).rename_axis(['year','month'])
+    years = dfyearmonth.index.get_level_values('year').unique()
+    months = dfyearmonth.index.get_level_values('month').unique()
+    nrows = len(years)
+    ncols = len(months)
+    _vmin = dfyearmonth.min().min() if vmin is None else vmin
+    _vmax = dfyearmonth.max().max() if vmax is None else vmax
+    ### Process spatial data
+    r_base = dfzones.copy()
+    r_base['geometry'] = r_base['geometry'].simplify(simplify)
+
+    outline_base = dfzones.dissolve().copy()
+    outline_base['geometry'] = outline_base['geometry'].buffer(0.).simplify(simplify)
+
+    xstep = r_base.dissolve().bounds.loc[0,['minx','maxx']].diff().dropna().squeeze() * mapbuffer
+    ystep = -r_base.dissolve().bounds.loc[0,['miny','maxy']].diff().dropna().squeeze() * mapbuffer
+
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(figsize=(colwidth*ncols, rowheight*nrows))
+    for row, year in enumerate(years):
+        for col, month in enumerate(months):
+            if outline:
+                _outline = outline_base.copy()
+                _outline.geometry = gpd.GeoSeries([
+                    shapely.affinity.translate(outline_base.loc[r,'geometry'], col*xstep, row*ystep)
+                    for r in _outline.index
+                ]).values
+                _outline.plot(ax=ax, facecolor='none', edgecolor='k', lw=0.25, zorder=1e6)
+            ## Outage rate by region
+            dfplot = r_base.copy()
+            dfplot['data'] = dfyearmonth.loc[(year,month)]
+            dfplot.geometry = gpd.GeoSeries([
+                shapely.affinity.translate(r_base.loc[r,'geometry'], col*xstep, row*ystep)
+                for r in dfplot.index
+            ]).values
+            dfplot.plot(ax=ax, column='data', lw=0, cmap=cmap, vmin=_vmin, vmax=_vmax)
+    ## Colorbar
+    colorbarkwargs = {
+        **{
+            'nbins': 101,
+            'cbarleft': 1.025,
+            'cbarheight': 0.7,
+            'cbarbottom': 0.08,
+            'cbarwidth': 0.02,
+            'histratio': 2,
+        },
+        **colorbarkwargs,
+    }
+    addcolorbarhist(
+        f=f, ax0=ax, data=dfyearmonth.stack(), cmap=cmap, vmin=_vmin, vmax=_vmax,
+        **colorbarkwargs,
+    )
+    ax.axis('off')
+    return f, ax
 
 
 def plot_segmented_arrow(

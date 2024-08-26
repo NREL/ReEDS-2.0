@@ -83,6 +83,11 @@ battery_4,battery_4
 battery_6,battery_6
 battery_8,battery_8
 battery_10,battery_10
+battery_12,battery_12
+battery_24,battery_24
+battery_48,battery_48
+battery_72,battery_72
+battery_100,battery_100
 pumped-hydro_n*,pumped-hydro
 pumped-hydro-flex*,pumped-hydro-flex
 upv*,upv

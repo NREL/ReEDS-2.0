@@ -1,0 +1,12 @@
+{
+    "geohydro_reference_ba": {
+        "tech": "geohydro", 
+        "access_case": "reference",
+        "reg_out_col": "reeds_ba"
+    },
+    "egs_reference_county": {
+        "tech": "geohydro", 
+        "access_case": "reference",
+        "reg_out_col": "cnty_fips"
+    }
+}

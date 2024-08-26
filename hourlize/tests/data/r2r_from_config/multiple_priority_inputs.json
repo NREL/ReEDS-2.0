@@ -1,8 +1,8 @@
 {
   "constrain_to_bins": true,
   "priority": {
-    "dist_km": "ascending",
-    "area_sq_km": "descending",
+    "dist_spur_km": "ascending",
+    "area_developable_sq_km": "descending",
     "*cost_col*": "ascending"
   },
   "reduced_only": true,

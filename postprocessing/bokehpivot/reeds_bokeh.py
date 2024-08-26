@@ -379,7 +379,10 @@ def process_reeds_data(topwdg, custom_sorts, custom_colors, result_dfs):
     #apply joins
     for col in df.columns.values.tolist():
         if 'meta_join_'+col in topwdg and topwdg['meta_join_'+col].value != '':
-            df_join = pd.read_csv(topwdg['meta_join_'+col].value.replace('"',''))
+            join_file = topwdg['meta_join_'+col].value.replace('"','')
+            if col in reeds.columns_meta and 'join_in_run' in reeds.columns_meta[col] and reeds.columns_meta[col]['join_in_run'] == True:
+                join_file = f"{GL_REEDS['scenarios'][0]['path']}/{join_file}" #Using the first run's join file
+            df_join = pd.read_csv(join_file)
             #reduce columns and rename if specified in model (called "reeds" currently)
             if col in reeds.columns_meta and 'join_keep_cols' in reeds.columns_meta[col]:
                 keep_cols = [i for i in df_join.columns if i in reeds.columns_meta[col]['join_keep_cols']]
@@ -390,7 +393,8 @@ def process_reeds_data(topwdg, custom_sorts, custom_colors, result_dfs):
             #many to many instead of many to one. For example, if the source data regionality is state, texas will be
             #assigned to just one rto after removing duplicates, even though it is truly part of multiple rtos.
             df_join.drop_duplicates(subset=col, inplace=True)
-            #merge df_join into df
+            #merge df_join into df (for which all values have been lowercased)
+            df_join[col] = df_join[col].str.lower()
             df = pd.merge(left=df, right=df_join, on=col, sort=False)
 
     #Apply mappings, allowing wildcard *. Order matters here, the first match is used.

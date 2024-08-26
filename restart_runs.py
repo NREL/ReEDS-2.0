@@ -16,7 +16,7 @@ parser.add_argument('--copy_srun_template', '-s', action='store_true',
 parser.add_argument('--force', '-f', action='store_true',
                     help='Proceed without double-checking')
 parser.add_argument('--more_copyfiles', '-m', type=str, default='',
-                    help=',-delimited list of additional files to copy from reedspath')
+                    help=',-delimited list of additional files to copy from reeds_path')
 parser.add_argument('--include_finished', '-i', action='store_true',
                     help='Also restart finished runs (e.g. to redo postprocessing)')
 
@@ -38,9 +38,9 @@ include_finished = args.include_finished
 
 ###### Procedure
 #%% Shared parameters
-reedspath = os.path.dirname(os.path.abspath(__file__))
+reeds_path = os.path.dirname(os.path.abspath(__file__))
 #%% Get all runs
-runs_all = sorted(glob(os.path.join(reedspath,'runs',batch_name+'*')))
+runs_all = sorted(glob(os.path.join(reeds_path,'runs',batch_name+'*')))
 ### Identify finished runs
 runs_finished = [
     i for i in runs_all
@@ -80,15 +80,15 @@ if not force:
 #%% Get the cplex file to copy
 if copy_cplex:
     if copy_cplex == 1:
-        cplex_file = os.path.join(reedspath,'cplex.opt')
+        cplex_file = os.path.join(reeds_path,'cplex.opt')
     else:
-        cplex_file = os.path.join(reedspath,f'cplex.op{copy_cplex}')
+        cplex_file = os.path.join(reeds_path,f'cplex.op{copy_cplex}')
 else:
     cplex_file = None
 
 #%% Copy the header from the srun_template.sh file if desired
 if copy_srun_template:
-    srun_template = os.path.join(reedspath,'srun_template.sh')
+    srun_template = os.path.join(reeds_path,'srun_template.sh')
     writelines_srun = list()
     with open(srun_template, 'r') as f:
         for line in f:
@@ -107,7 +107,7 @@ for case in runs_failed:
 
     #%% Copy additional files if desired
     for f in more_copyfiles:
-        shutil.copy(os.path.join(reedspath,f), os.path.join(case,f))
+        shutil.copy(os.path.join(reeds_path,f), os.path.join(case,f))
 
     #%% Get solveyears
     solveyears = pd.read_csv(
@@ -125,6 +125,9 @@ for case in runs_failed:
     lstfiles = sorted(glob(os.path.join(case,'lstfiles','*')))
     if any([os.path.basename(i).startswith('report') for i in lstfiles]):
         restart_tag = '# Output processing'
+    elif len(lstfiles) == 2: 
+        ## if there are only 2 lst files, then one of them will be environment.csv and the other will be 1_inputs.lst so the run failed during the model compilation 
+        restart_tag = '# Compile model'
     else:
         lastfile = lstfiles[-1]
         restart_year = int(os.path.splitext(lastfile)[0].split('_')[-1].split('i')[0])

@@ -27,7 +27,7 @@ set rfeas(r)                 "list of feasible r regions - for use in Augur only
 ;
 
 parameter
-avail_filt(i,v,allszn)             "--fraction-- fraction of capacity available for generation by season"
+avail_filt(i,v,r,allszn)           "--fraction-- fraction of capacity available for generation by season"
 can_exports_h_filt(r,allh)         "--MW-- Canada exports by region and timeslice filtered for the previous solve year"
 can_imports_cap(i,v,r)             "--MW-- Canadian import max capacity"
 can_imports_szn_filt(r,allszn)     "--MWh-- Canada imports by region and season filtered for the previous solve year"
@@ -49,14 +49,14 @@ cost_cap_fin_mult_filt(i,r,t)      "--unitless-- capital cost financial multipli
 cost_vom_filt(i,v,r)               "--$/MWh-- VO&M costs filtered for the previous solve year and existing capacity"
 ctt_i_ii_filt(i,ii)                "--set-- set linking watercooling techs i to numeraire techs ii filtered for existing watercooling techs"
 ctt_i_ii_psh(i,ii)                 "--set-- set linking PSH techs with water i to numeraire techs ii filtered for valid capacity techs"
-emissions_price(e,r)               "--2004$/ton-- combined emissions taxes and marginal prices for emissions caps"
-emit_rate_filt(e,i,v,r)            "--ton/MWh-- emission rate for the previous solve year"
+emissions_price(e,r)               "--2004$/metric ton-- combined emissions taxes and marginal prices for emissions caps"
+emit_rate_filt(e,i,v,r)            "--metric tons/MWh-- emission rate for the previous solve year"
 energy_price(r,allh)               "--2004$/MWh-- energy price from the previous solve year"
 flex_load_opt(r,allh)              "--MW-- model results for optimizing flexible load"
 flex_load(r,allh)                  "--MW-- total exogenously defined flexible load"
 fuel_price_filt(i,r)               "--$/mmBTU-- fuel prices filtered for the previous solve year and existing capacity"
 heat_rate_filt(i,v,r)              "--MMBtu/MWh-- heat rate"
-h2_usage_regional(r,allh,t)        "--ton-- H2 usage by region"
+h2_usage_regional(r,allh,t)        "--metric tons-- H2 usage by region"
 inv_cond_filt(i,v,t)               "--set-- vintage-year mapping for investments by technology"
 inv_ivrt(i,v,r,t)                  "--MW-- investments in generation capacity"
 m_cf_filt(i,v,r,allh)              "--fraction-- capacity factor used in the model"
@@ -148,8 +148,8 @@ cap_exog_filt(i,v,r)$([not canada(i)]$valcap_ivr(i,v,r)) = sum{t$tnext(t), m_cap
 fuel_price_filt(i,r)$cap_exist_ir(i,r) = sum{t$tcur(t), fuel_price(i,r,t) } ;
 
 * populate the fuel price for H2-CT techs as the marginal off the
-* hydrogen demand constraint (in $/[tonne/hour]) divided by hours and 
-* times h2_ct_intensity (tonne / mmbtu) to get $ / mmbtu -- note there should
+* hydrogen demand constraint (in $/[metric tons/hour]) divided by hours and 
+* times h2_ct_intensity (metric tons / mmbtu) to get $ / mmbtu -- note there should
 * always be a positive value here since if an H2-CT is built it consumes hydrogen 
 * the equation from which we extract the marginal depends on whether
 * we have the national (Sw_H2 = 1) or regional (Sw_H2 = 2) constraint
@@ -220,7 +220,8 @@ repgasprice_filt(r) = sum{t$tcur(t), repgasprice_r(r,t) } ;
 * Filter necessary input data
 *============================
 
-avail_filt(i,v,szn)$[cap_exist_iv(i,v)$(not vre(i))] = smax{h$h_szn(h,szn), avail(i,h) * derate_geo_vintage(i,v) } ;
+avail_filt(i,v,r,szn)$[cap_exist_iv(i,v)$(not vre(i))] =
+    smax{h$h_szn(h,szn), avail(i,r,h) * derate_geo_vintage(i,v) } ;
 
 can_exports_h_filt(r,h) = sum{t$tcur(t), can_exports_h(r,h,t)} ;
 
@@ -298,11 +299,11 @@ prod_filt(i,v,r,h)$[sum{t$tcur(t), valcap(i,v,r,t)}$consume(i)$hours(h)] =
                 sum{(p,t)$[i_p(i,p)$tcur(t)], PRODUCE.l(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) } ;
 
 *============================
-* Get ReEDS emissions prices [$/ton]
+* Get ReEDS emissions prices [$/metric ton]
 *============================
 * NOT included: eq_emit_rate_limit (disabled by default), eq_CSAPR_Budget, eq_CSAPR_Assurance
 emissions_price(e,r) =
-    (1 / cost_scale / emit_scale(e))
+    (1 / cost_scale)
     * sum{t$tcur(t),
         (1 / pvf_onm(t)) * eq_annual_cap.m(e,t)
         + emit_tax(e,r,t)
@@ -311,7 +312,7 @@ emissions_price(e,r) =
 * Add marginal prices from CO2-specific constraints
 emissions_price("CO2",r) =
     emissions_price("CO2",r)
-    + (1 / cost_scale / emit_scale("CO2"))
+    + (1 / cost_scale)
         * sum{t$tcur(t),
             (1 / pvf_onm(t)) * [
                 eq_RGGI_cap.m(t)$RGGI_R(r)
@@ -369,7 +370,6 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     energy_price
     flex_load
     flex_load_opt
-    forced_outage
     fuel_price_filt
     fuel2tech
     geo

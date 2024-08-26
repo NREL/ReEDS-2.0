@@ -27,8 +27,8 @@ from glob import glob
 #######################
 
 # loads information on supply curve columns to process from input json
-def loadCategoriesToProcess(reedspath, jsonfilename="process_categories"):
-    configpath = os.path.join(reedspath, "postprocessing", "land_use", "inputs", f"{jsonfilename}.json")
+def loadCategoriesToProcess(reeds_path, jsonfilename="process_categories"):
+    configpath = os.path.join(reeds_path, "postprocessing", "land_use", "inputs", f"{jsonfilename}.json")
 
     with open(configpath, "r") as f:
         json_data = json.load(f, object_pairs_hook=OrderedDict)
@@ -42,11 +42,11 @@ def totalLand(scen_path, tech_land_use, total_area, tech, capacity_col):
     # check whether each supply curve point is full (within tolerance of 0.1 MW)
     tech_land_use['sc_full_bool'] = (abs(tech_land_use[capacity_col] - tech_land_use['built_capacity']) < 0.1)
     tech_land_use['fraction_built'] =  tech_land_use['built_capacity'] / tech_land_use[capacity_col]
-    tech_land_use['built_area_sq_km'] = tech_land_use['area_sq_km'] * tech_land_use['fraction_built']
+    tech_land_use['built_area_sq_km'] = tech_land_use['area_developable_sq_km'] * tech_land_use['fraction_built']
 
     # calculate total area
-    tech_land_use['built_capacity_MW'] = tech_land_use['built_capacity']
-    tech_area = tech_land_use.groupby(['year'])[["built_capacity_MW", "built_area_sq_km"]].sum()
+    tech_land_use['built_capacity_mw'] = tech_land_use['built_capacity']
+    tech_area = tech_land_use.groupby(['year'])[["built_capacity_mw", "built_area_sq_km"]].sum()
 
     # current total is area available for development, not total non-excluded area
     # does not currently use multiple years of land-use data
@@ -62,18 +62,18 @@ def calculateCapacityByUse(df, tag):
 
     # NAs indicate no cells or builds in that supply curve point
     # df = df.fillna(0)
-    df['built_capacity_MW'] = df['built_capacity_MW'].fillna(0)
+    df['built_capacity_mw'] = df['built_capacity_mw'].fillna(0)
     df['fraction_built'] = df['fraction_built'].fillna(0)
 
     frac_column = "fraction_sc_area"
     # this is the fraction of the land use category to the total supply curve
-    df[frac_column] =  df['area_sq_km_land_use'] / df['area_sq_km'] 
+    df[frac_column] =  df['area_sq_km_land_use'] / df['area_developable_sq_km'] 
     
     # amount of capacity built in each land class is (total capacity built in sc_point) x (share of land use / total sc point)
-    df[tag + '_built_capacity_MW'] = df[frac_column] *  df['built_capacity_MW']
+    df[tag + '_built_capacity_mw'] = df[frac_column] *  df['built_capacity_mw']
 
     # area used is a function of the fraction of total sc curve area used
-    df[tag + '_area_built_sq_km'] = df[frac_column] *  df['area_sq_km'] * df['fraction_built']
+    df[tag + '_area_built_sq_km'] = df[frac_column] *  df['area_developable_sq_km'] * df['fraction_built']
 
     # drop fraction column
     df.drop(frac_column, axis=1, inplace=True)
@@ -81,8 +81,8 @@ def calculateCapacityByUse(df, tag):
 
 
 # helper function to parse any columns with JSON data
-def parseJSON(df, col, var, reedspath, mapping=None, 
-              keepcols=["sc_point_gid", "latitude", "longitude", "cnty_fips", "area_sq_km"]):
+def parseJSON(df, col, var, reeds_path, mapping=None, 
+              keepcols=["sc_point_gid", "latitude", "longitude", "cnty_fips", "area_developable_sq_km"]):
 
     # select data based on column (can be a regular expression for multiple columns)
     jsondata = df.filter(regex=(col))
@@ -147,10 +147,10 @@ def parseJSON(df, col, var, reedspath, mapping=None,
     # add mapping details (files found in ReEDS postprocessing module)
     if mapping is not None:
         try:
-            df_map = pd.read_csv(os.path.join(reedspath, "postprocessing", "land_use", "inputs", mapping + ".csv"))
+            df_map = pd.read_csv(os.path.join(reeds_path, "postprocessing", "land_use", "inputs", mapping + ".csv"))
         except:
             print("Error: could not read specified mapping file. Check file path:"
-                  f"{os.path.join(reedspath, 'postprocessing', 'land_use', 'inputs', mapping + '.csv')}"
+                  f"{os.path.join(reeds_path, 'postprocessing', 'land_use', 'inputs', mapping + '.csv')}"
                   )
         try:    
             df_map_subset = df_map.loc[df_map[var].isin(codes_to_map)]
@@ -173,12 +173,12 @@ def parseJSON(df, col, var, reedspath, mapping=None,
     return out
 
 # this function processes land-use categories defined by JSONs
-def processLandUseJSON(df_name, tech, df_vals, scen_path, reedspath, rev_sc, tech_land_use=None, area_only=False):
+def processLandUseJSON(df_name, tech, df_vals, scen_path, reeds_path, rev_sc, tech_land_use=None, area_only=False):
 
     print("...processing %s classification." % df_name)
 
     # get land classifications
-    land_class = parseJSON(rev_sc, df_vals["colname"], df_vals["newcolname"], reedspath, mapping=df_vals["mapping"])
+    land_class = parseJSON(rev_sc, df_vals["colname"], df_vals["newcolname"], reeds_path, mapping=df_vals["mapping"])
 
     # if only running to get area (no capacity buildouts), save results and end here
     if area_only:
@@ -199,15 +199,15 @@ def processLandUseJSON(df_name, tech, df_vals, scen_path, reedspath, rev_sc, tec
 
         # merge buildout with land use categories
         # use outer join to include available land from areas with no capacity
-        land_use = land_class_merge.merge(tech_land_use_merge[['year', 'sc_point_gid', 'built_capacity_MW', 'fraction_built']], on=["sc_point_gid", "year"], how="outer")    
+        land_use = land_class_merge.merge(tech_land_use_merge[['year', 'sc_point_gid', 'built_capacity_mw', 'fraction_built']], on=["sc_point_gid", "year"], how="outer")    
 
         # allocate capacity to each land use category    
         land_use = calculateCapacityByUse(land_use, df_name)
 
         # rename some columns
         land_use.rename(columns={'area_sq_km_land_use': f'{df_name}_area_avail_sq_km',
-                                 'area_sq_km': 'sc_area_avail_sq_km',
-                                 'built_capacity_MW': 'sc_built_capacity_MW',
+                                 'area_developable_sq_km': 'sc_area_avail_sq_km',
+                                 'built_capacity_mw': 'sc_built_capacity_mw',
                                  'fraction_built': 'sc_fraction_built'}, inplace=True)
         
         # preserve leading zero in fips code
@@ -262,7 +262,7 @@ def getSpeciesImpact(tech, scen_path, rev_sc, tech_land_use, species_col_list):
     else:
         print(f"Found the following species colums: {species_cols}")
     
-    id_cols = ['year','region','sc_point_gid','sc_full_bool','fraction_built','area_sq_km','built_area_sq_km','built_capacity_MW']
+    id_cols = ['year','region','sc_point_gid','sc_full_bool','fraction_built','area_developable_sq_km','built_area_sq_km','built_capacity_mw']
     species_land_use = tech_land_use[id_cols]
 
     # using left join here for now but may want to revise to capture species habitat/range outside of built areas
@@ -283,12 +283,12 @@ def getSpeciesImpact(tech, scen_path, rev_sc, tech_land_use, species_col_list):
     species_land_use['species_area_sq_km'] = species_land_use['species_var_cells'] * cell_area
 
     # calculate density as a fraction of developable area (consider converting calculation to total area in sc point)
-    #species_land_use['species_density'] = species_land_use['species_area'] / species_land_use['area_sq_km']
+    #species_land_use['species_density'] = species_land_use['species_area'] / species_land_use['area_developable_sq_km']
 
     species_land_use.rename(columns={
-                                 'area_sq_km': 'sc_area_avail_sq_km',
+                                 'area_developable_sq_km': 'sc_area_avail_sq_km',
                                  'built_area_sq_km': 'sc_built_area_sq_km',
-                                 'built_capacity_MW': 'sc_built_capacity_MW'
+                                 'built_capacity_mw': 'sc_built_capacity_mw'
                                 }, inplace=True)
     
     species_land_use.drop("species_var_cells", axis=1, inplace=True)
@@ -297,7 +297,7 @@ def getSpeciesImpact(tech, scen_path, rev_sc, tech_land_use, species_col_list):
     species_land_use.to_csv(os.path.join(scen_path, "outputs", f"land_use_{tech}_species.csv.gz"), float_format='%.6f', index=False)
 
 # primary process function called by main loop for each tech
-def getLandUse(scen_path, jsonfile, rev_paths, reedspath, tech, capacity_col="capacity_mw_ac"):
+def getLandUse(scen_path, jsonfile, rev_paths, reeds_path, tech, capacity_col="capacity_mw_ac"):
 
     scenario = os.path.basename(scen_path)
     print("Getting %s land-use data for %s" % (tech, scenario))
@@ -334,16 +334,16 @@ def getLandUse(scen_path, jsonfile, rev_paths, reedspath, tech, capacity_col="ca
 
     # if using land-use features that change over time then merge on year, otherwise ignore year
     tech_land_use = builds_tech[['year','region','sc_point_gid','built_capacity']].merge(
-        rev_sc[['sc_point_gid', 'area_sq_km', capacity_col]], on=['sc_point_gid']
+        rev_sc[['sc_point_gid', 'area_developable_sq_km', capacity_col]], on=['sc_point_gid']
         )
     
     # estimate of total developable area from reV
-    total_area = rev_sc['area_sq_km'].sum()
+    total_area = rev_sc['area_developable_sq_km'].sum()
     # calculate total built area
     totalLand(scen_path, tech_land_use, total_area, tech, capacity_col)
     
     # load supply curve categories to process
-    json_data = loadCategoriesToProcess(reedspath, jsonfile)
+    json_data = loadCategoriesToProcess(reeds_path, jsonfile)
     
     # iterate over list of categories to process from input json file
     for df_name in json_data:    
@@ -354,7 +354,7 @@ def getLandUse(scen_path, jsonfile, rev_paths, reedspath, tech, capacity_col="ca
                 getSpeciesImpact(tech, scen_path, rev_sc, tech_land_use, json_data[df_name])
             # all other columns are assumed to have json information with the number of cells by land category
             else:
-                processLandUseJSON(df_name, tech, json_data[df_name], scen_path, reedspath, rev_sc, tech_land_use)
+                processLandUseJSON(df_name, tech, json_data[df_name], scen_path, reeds_path, rev_sc, tech_land_use)
         except Exception as err:
             print(f"Error processing {df_name}")
             print(err)
@@ -367,20 +367,20 @@ def getLandUse(scen_path, jsonfile, rev_paths, reedspath, tech, capacity_col="ca
 #######################
         
 # function to bypass ReEDS results and just summarize area for a supply curve
-def summarizeSupplyCurve(scpath, reedspath, jsonfile, techs):
+def summarizeSupplyCurve(scpath, reeds_path, jsonfile, techs):
     print("\nSummarizing supply curves via 'land_use_analysis.py' script.\n")
 
     # read in sc data
     rev_sc = pd.read_csv(scpath)
 
     # load supply curve categories to process
-    json_data = loadCategoriesToProcess(reedspath, jsonfile)
+    json_data = loadCategoriesToProcess(reeds_path, jsonfile)
 
     for df_name in json_data:    
         st = time.time()
         for tech in techs:
             try:
-                processLandUseJSON(df_name, tech, json_data[df_name], scpath, reedspath, rev_sc, area_only=True)
+                processLandUseJSON(df_name, tech, json_data[df_name], scpath, reeds_path, rev_sc, area_only=True)
             except Exception as err:
                 print(f"Error processing {df_name}")
                 #print(err)
@@ -389,7 +389,7 @@ def summarizeSupplyCurve(scpath, reedspath, jsonfile, techs):
         et = time.time()
         print("(elapsed time: %0.2f seconds)" % (et - st))
     
-def runLandUse(scen_path, reedspath, jsonfile, techs):
+def runLandUse(scen_path, reeds_path, jsonfile, techs):
     print("\nRunning 'land_use_analysis.py' script.\n")
 
     # dictionary of capacity colum to use by tech (depends on reV format)
@@ -406,7 +406,7 @@ def runLandUse(scen_path, reedspath, jsonfile, techs):
     # run land use analysis for each tech
     for tech in techs:
         try:
-            getLandUse(scen_path, jsonfile, rev_paths, reedspath, tech, capacity_cols[tech])
+            getLandUse(scen_path, jsonfile, rev_paths, reeds_path, tech, capacity_cols[tech])
         except Exception as err:
             print(err)
     
@@ -431,13 +431,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     thispath = os.path.dirname(os.path.realpath(__file__))
-    reedspath = os.path.abspath(os.path.join(thispath, "..",  ".."))
+    reeds_path = os.path.abspath(os.path.join(thispath, "..",  ".."))
 
     # Set up logger
     if args.debug:
         print("In debug mode, skipping logging")
     else:
-        site.addsitedir(os.path.join(reedspath,'input_processing'))
+        site.addsitedir(os.path.join(reeds_path,'input_processing'))
         from ticker import makelog
         log = makelog(scriptname=__file__, logpath=os.path.join(args.scenario,'gamslog.txt'))
 
@@ -448,6 +448,6 @@ if __name__ == '__main__':
         techs = [args.tech]
 
     if args.area_only:
-        summarizeSupplyCurve(args.scenario, reedspath, args.json, techs)
+        summarizeSupplyCurve(args.scenario, reeds_path, args.json, techs)
     else:
-        runLandUse(args.scenario, reedspath, args.json, techs)
+        runLandUse(args.scenario, reeds_path, args.json, techs)

@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Additional ReEDS Setup &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Developer Resources" href="developer_best_practices.html" />
+    <link rel="prev" title="Getting Started" href="../setup.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../setup.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Additional ReEDS Setup</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#yampa-guide">Yampa Guide</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#list-of-machines">List of Machines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#getting-access-to-machines">Getting Access to Machines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#getting-started">Getting Started</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#applications">Applications</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#general-tips">General Tips</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#cloud-and-hpc-environments">Cloud and HPC Environments</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#running-reeds-on-hpc">Running ReEDS on HPC</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#running-reeds-on-aws">Running ReEDS on AWS</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#hourly-resolution-and-additional-setups">Hourly Resolution and Additional Setups</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#hourly-resolution-quick-start-guide">Hourly resolution quick-start guide</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reeds2pras-julia-and-stress-periods-setup">ReEDS2PRAS, julia, and stress periods setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hourlize">Hourlize</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="developer_best_practices.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onboarding.html">Onboarding Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_documentation.html">Model Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html">Model Switches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Additional ReEDS Setup</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/internal/additional_setup.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="additional-reeds-setup">
+<h1>Additional ReEDS Setup<a class="headerlink" href="#additional-reeds-setup" title="Link to this heading"></a></h1>
+<section id="yampa-guide">
+<h2>Yampa Guide<a class="headerlink" href="#yampa-guide" title="Link to this heading"></a></h2>
+<section id="list-of-machines">
+<h3>List of Machines<a class="headerlink" href="#list-of-machines" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Machine Name</p></th>
+<th class="head"><p>RAM</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>constellation01.hpc.nrel.gov</p></td>
+<td><p>120 GB</p></td>
+</tr>
+<tr class="row-odd"><td><p>cepheus.hpc.nrel.gov</p></td>
+<td><p>250 GB</p></td>
+</tr>
+<tr class="row-even"><td><p>corvus.hpc.nrel.gov</p></td>
+<td><p>250 GB</p></td>
+</tr>
+<tr class="row-odd"><td><p>delphinus.hpc.nrel.gov</p></td>
+<td><p>500 GB</p></td>
+</tr>
+<tr class="row-even"><td><p>dorado.hpc.nrel.gov</p></td>
+<td><p>500 GB</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="getting-access-to-machines">
+<h3>Getting Access to Machines<a class="headerlink" href="#getting-access-to-machines" title="Link to this heading"></a></h3>
+<p>Access to the servers is controlled through the “reedsos” allocation. To request an HPC account, complete this <a class="reference external" href="https://www.nrel.gov/hpc/user-accounts.html">request form</a>. When asked if you intend to request a new project/allocation, select “no” and request to join “reedsos”.</p>
+<figure class="align-default" id="figure-1-yampa">
+<img alt="../_images/hpc_request_form.png" src="../_images/hpc_request_form.png" />
+<figcaption>
+<p><span class="caption-text">Figure 1. HPC account form, request to join “reedsos” allocation</span><a class="headerlink" href="#figure-1-yampa" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>If you have access issues after requesting an account, you can contact HPC help at <a class="reference internal" href="#HPC-Help&#64;nrel.gov"><span class="xref myst">HPC-Help&#64;nrel.gov</span></a>.</p>
+</section>
+<section id="getting-started">
+<h3>Getting Started<a class="headerlink" href="#getting-started" title="Link to this heading"></a></h3>
+<section id="get-started-with-microsoft-remote-desktop">
+<h4>Get started with Microsoft Remote Desktop<a class="headerlink" href="#get-started-with-microsoft-remote-desktop" title="Link to this heading"></a></h4>
+<p>Connections to the machines can be made using Microsoft Remote Desktop. To download:</p>
+<ul class="simple">
+<li><p>On Windows:</p></li>
+<li><p>On Mac: You can download Microsoft Remote Desktop from the app store. You will need to create an apple id using your nrel email to start using the app store.</p></li>
+</ul>
+<p>From the Remote Desktop client, you will need to click on the ‘+’ then ‘Add PC’. In the ‘PC name’ field, put the machine name that you would like to connect to, then click ‘Add’.</p>
+<figure class="align-default" id="figure-2-yampa">
+<img alt="../_images/yampa_add_machine.png" src="../_images/yampa_add_machine.png" />
+<figcaption>
+<p><span class="caption-text">Figure 2. Example of how to add a new machine in Microsoft Remote Desktop</span><a class="headerlink" href="#figure-2-yampa" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p><strong>Username and Password</strong>: Same as HPC credentials.</p>
+<p><strong>Note:</strong> Check to make sure that nrel_nt is NOT inlcluded in your username, this sometimes gets added automatically to some users at first login by Microsoft Remote Desktop.</p>
+</section>
+<section id="drive-configuration">
+<h4>Drive Configuration<a class="headerlink" href="#drive-configuration" title="Link to this heading"></a></h4>
+<p>Unlike the old servers, storage is shared across the machines: as a result, you should only need to complete setup once, and it should be automatically reflected on other machines. There is a limited amount of space in your home directory with enforced storage limits. Only files essential to configuring your account should be kept here (e.g. path configurations).</p>
+<p>The rest of the data is stored in the following folders:</p>
+<ul class="simple">
+<li><p>/data/shared/apps - contains programs</p></li>
+<li><p>/data/shared/projects - contains user project folders: you’ll need to create one similar to the D: drives on the constellation machines</p></li>
+</ul>
+<p>Create a projects folder by running the following command: <code class="docutils literal notranslate"><span class="pre">mkdir</span> <span class="pre">/data/shared/projects/[your</span> <span class="pre">user</span> <span class="pre">name]</span></code></p>
+</section>
+<section id="initial-setup">
+<h4>Initial Setup<a class="headerlink" href="#initial-setup" title="Link to this heading"></a></h4>
+<p>After getting connected to the machine and creating your projects directory, you’ll need to do two additional steps to complete setup.</p>
+<section id="add-installed-programs-to-path">
+<h5>Add installed programs to PATH<a class="headerlink" href="#add-installed-programs-to-path" title="Link to this heading"></a></h5>
+<p>To add installed programs to the $PATH environment variable, use the following command in the terminal: <code class="docutils literal notranslate"><span class="pre">gedit</span> <span class="pre">~/.bashrc</span></code></p>
+<p>This will open up a text editor with your .bashrc file which contains the path locations. Here you will need to add gams, anaconda, and smartgit to $PATH.</p>
+<p>Add the following line separated by colons to the path:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">apps</span><span class="o">/</span><span class="n">gams</span><span class="o">/</span><span class="n">gams45</span><span class="mf">.2</span><span class="n">_linux_x64_64_sfx</span><span class="p">:</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">apps</span><span class="o">/</span><span class="n">gams</span><span class="o">/</span><span class="n">gams45</span><span class="mf">.2</span><span class="n">_linux_x64_64_sfx</span><span class="o">/</span><span class="n">studio</span><span class="p">:</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">apps</span><span class="o">/</span><span class="n">anaconda3</span><span class="o">/</span><span class="nb">bin</span><span class="p">:</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">apps</span><span class="o">/</span><span class="n">GitAhead</span> 
+</pre></div>
+</div>
+<p><strong>Important:</strong> Make sure you don’t delete the original PATH contents or the “:$PATH” as part of PATH</p>
+<p>Once completed, your bashrc file should look like the following screenshot. Save the file, then log off and log back on to ensure $PATH settings are updated.</p>
+<figure class="align-default" id="figure-3-yampa">
+<img alt="../_images/yampa_bashrc_file.png" src="../_images/yampa_bashrc_file.png" />
+<figcaption>
+<p><span class="caption-text">Figure 3. Example of bashrc file with updated $PATH</span><a class="headerlink" href="#figure-3-yampa" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="set-up-conda-folders-environments">
+<h5>Set up conda folders/environments<a class="headerlink" href="#set-up-conda-folders-environments" title="Link to this heading"></a></h5>
+<p>You’ll want to create a folder within your projects folder to store conda environments and packages. Run the following commands:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mkdir</span> <span class="pre">/data/shared/projects/[username]/.conda</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mkdir</span> <span class="pre">/data/shared/projects/[usename]/.conda/pkgs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mkdir</span> <span class="pre">/data/shared/projects/[username]/.conda/envs</span></code></p></li>
+</ul>
+<p>Now, direct conda to look in these folders for packages and environments by running the following commands:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">config</span> <span class="pre">--add</span> <span class="pre">pkgs_dirs</span> <span class="pre">/data/shared/projects/[username]/.conda/pkgs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">config</span> <span class="pre">--add</span> <span class="pre">envs_dirs</span> <span class="pre">/data/shared/projects/[username]/.conda/envs</span></code></p></li>
+</ul>
+</section>
+<section id="create-ssh-key-and-add-it-to-your-github-account">
+<h5>Create SSH key and add it to your GitHub account<a class="headerlink" href="#create-ssh-key-and-add-it-to-your-github-account" title="Link to this heading"></a></h5>
+<p>Follow the <a class="reference internal" href="ssh_setup.html"><span class="std std-doc">ssh setup guide</span></a> to create a new SSH key and add it to your GitHub account.</p>
+</section>
+</section>
+</section>
+<section id="applications">
+<h3>Applications<a class="headerlink" href="#applications" title="Link to this heading"></a></h3>
+<section id="adding-links-to-application-launcher">
+<h4>Adding Links to Application Launcher<a class="headerlink" href="#adding-links-to-application-launcher" title="Link to this heading"></a></h4>
+<p>You can add executables including programs and scripts to the application launcher by adding .desktop files to the directory “~/.local/share/applications”. These follow a standard Linux format. More info can be found <a class="reference external" href="https://wiki.archlinux.org/title/desktop_entries">here</a>.</p>
+<p>We’ve prepopulated links for GAMS Studio, RStudio, and SmartGit kept in “/data/shared/apps/setup/application”. You can copy these to your home directory using the following command: <code class="docutils literal notranslate"><span class="pre">rsync</span> <span class="pre">-avu</span> <span class="pre">/data/shared/apps/setup/applications</span> <span class="pre">~/.local/share/</span> </code></p>
+</section>
+<section id="gams-studio">
+<h4>GAMS Studio<a class="headerlink" href="#gams-studio" title="Link to this heading"></a></h4>
+<p>GAMS Studio is the IDE packaged with GAMS. It can be used for GAMS development and supports code markup and executing GAMS code from the developer environment. The other major application of GAMS Studio is to open .gdx files.</p>
+<p>The GAMS studio executable is stored in the folder “/data/shared/apps/gams/gams34.3_linux_x64_64_sfx/studio/studio.AppImage”.</p>
+<p>If the folder containing the executable was added to the path it can be run by using the following command from the terminal: <code class="docutils literal notranslate"><span class="pre">Studio.AppImage</span></code></p>
+<p>Note: If if hasn’t been added to your path, you can run the following command instead: <code class="docutils literal notranslate"><span class="pre">/data/shared/apps/gams/gams34.3_linux_x64_64_sfx/studio/studio.AppImage</span></code></p>
+<p>Navigate to postprocessing/bokehpivot and make sure your reeds environment has been activated.</p>
+<p>Run this command (which is the contents of launch.sh):</p>
+<p>`bokeh serve . –sh –port 0``</p>
+<p>Note that you can copy the file path using the “Copy Location” option in the drop-down menu from the filepath in Files.</p>
+</section>
+<section id="gitahead">
+<h4>GitAhead<a class="headerlink" href="#gitahead" title="Link to this heading"></a></h4>
+<p>Github desktop has compatibility issues on Linux with Github enterprise. For a GUI interface for git use smartgit.</p>
+<p>GitAhead can be launched by running the following command in the command line if you included in in your path environmental variable.</p>
+<p><code class="docutils literal notranslate"><span class="pre">GitAhead</span></code></p>
+<p>If it hasn’t been added to your path run the following</p>
+<p><code class="docutils literal notranslate"><span class="pre">/data/shared/apps/GitAhead/GitAhead</span></code></p>
+</section>
+<section id="transferring-data-to-nrelnas01">
+<h4>Transferring Data to nrelnas01<a class="headerlink" href="#transferring-data-to-nrelnas01" title="Link to this heading"></a></h4>
+<p>Since at this time we can’t use the Linux servers to talk to Yampa we’re going to use an the HPC file system as a reasonably fast intermediary. The following instructions are for how to transfer data from Yampa to nrelnas01 but could easily be reversed by switching the target and destination.</p>
+<ol class="arabic">
+<li><p>Install or get access to winscp if on Windows. This will make interacting with the HPC file system easier. Transfers will be limited by your connection speed to the nrel network. If you aren’t on campus I would recommend getting access to the GPAC Windows (Azure) VM. It’s primarily intended for PLEXOS use but you won’t have a problem getting access, and this use will not be burdensome. You can download winscp at the link below, if you don’t have admin rights you can download the portable executable which doesn’t require installation.
+<a class="reference external" href="https://winscp.net/eng/downloads.php">https://winscp.net/eng/downloads.php</a></p>
+<ul class="simple">
+<li><p><strong>Note:</strong> If you are planning on connect to the Azure VM, Windows users may need to install a different client for the machine to appear in Workspaces.</p></li>
+<li><p>To install, go to the link in the paragraph above, use the “Windows 64-bit” link to the installer. Download and run it.</p></li>
+<li><p>After installation, open Remote Desktop, and click the Subscribe button. The ASCR machine should show up if you’ve been added to the group “Constellation Azure Servers” group. - If you’re not already a member, you will need to get added, then Unsubscribe via the dropdown in the General Workspaces tab and subscribe again</p></li>
+</ul>
+</li>
+<li><p>You can connect to winscp using your hpc credentials and a valid host name (eagle.hpc.nrel.gov). Once connected you can see the file system. You will want to navigate to the root and then to the following directory: <code class="docutils literal notranslate"><span class="pre">/scratch/[username]</span></code></p>
+<ul class="simple">
+<li><p>All HPC users are allocated a reasonable amount of temporary space in this folder and it’s a useful place for performing a transfer.</p></li>
+</ul>
+</li>
+<li><p>Connect to Yampa and run the following command with your required changes:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rsync</span> <span class="o">-</span><span class="n">avz</span> <span class="o">-</span><span class="n">e</span> <span class="n">ssh</span> <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="p">[</span><span class="n">SOURCE</span> <span class="n">FOLDER</span> <span class="n">PATH</span><span class="p">]</span><span class="o">/</span> <span class="n">jho</span><span class="nd">@eagle</span><span class="o">.</span><span class="n">nrel</span><span class="o">.</span><span class="n">gov</span><span class="p">:</span><span class="o">/</span><span class="n">scratch</span><span class="o">/</span><span class="p">[</span><span class="n">DESTINATION</span> <span class="n">FOLDER</span> <span class="n">PATH</span><span class="p">]</span><span class="o">/</span> 
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Here’s an example:</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rsync</span> <span class="o">-</span><span class="n">avz</span> <span class="o">-</span><span class="n">e</span> <span class="n">ssh</span> <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">jho</span><span class="o">/</span><span class="n">Target_Folder</span><span class="o">/</span> <span class="n">jho</span><span class="nd">@eagle</span><span class="o">.</span><span class="n">nrel</span><span class="o">.</span><span class="n">gov</span><span class="p">:</span><span class="o">/</span><span class="n">scratch</span><span class="o">/</span><span class="n">jho</span><span class="o">/</span><span class="n">Destination_Folder</span><span class="o">/</span> 
+</pre></div>
+</div>
+</li>
+<li><p>Once executed, you’ll get a login for the HPC. Once you’ve entered your credentials the transfer will start.</p></li>
+<li><p>After the transfer is completed, the new files will be viewable on the HPC file system. They can then be transferred to a local files system including //nrelnas01/ReEDS/</p></li>
+</ol>
+</section>
+<section id="transferring-data-from-yampa-to-your-machine">
+<h4>Transferring Data From Yampa to Your Machine<a class="headerlink" href="#transferring-data-from-yampa-to-your-machine" title="Link to this heading"></a></h4>
+<p>If you want to directly transfer files between Yampa and your local machine, you can use the tool FileZilla. You can download the FileZilla Client at <a class="reference external" href="https://filezilla-project.org/">https://filezilla-project.org/</a>.</p>
+<p>Once downloaded, you can connect using the following settings:</p>
+<ul class="simple">
+<li><p>Host: cepheus.hpc.nrel.gov (you can connect to any of the five VM hosts and filezilla will automatically add the connection protocol)</p></li>
+<li><p>Username: Your HPC username</p></li>
+<li><p>Password: Your HPC password</p></li>
+<li><p>Port: You can leave this blank (if you have issues connecting you can use ‘22’ as the port)</p></li>
+</ul>
+<p>You can then transfer data between machines - local machine is on the left and remote machine is on the right. The common project folders are retained in ‘/data/shared/projects/…’</p>
+</section>
+<section id="spyder">
+<h4>Spyder<a class="headerlink" href="#spyder" title="Link to this heading"></a></h4>
+<p>Spyder is an open-source integrated development environment (IDE) that is very useful for interactively running Python scripts and viewing variables, pandas dataframes, plots, etc. in the middle of script execution. Python can be launched from the Anaconda-Navigator Launcher, which can be opened by running the following command in a Terminal:</p>
+<p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">/data/shared/apps/anaconda3/bin/anaconda-navigator</span></code></p>
+<p>This will open the Anaconda-Navigator Launcher. From there, you can use the dropdown in the upper center of the screen to choose a conda environment to work out of or install/launch Spyder.</p>
+</section>
+</section>
+<section id="general-tips">
+<h3>General Tips<a class="headerlink" href="#general-tips" title="Link to this heading"></a></h3>
+<section id="creating-shortcuts">
+<h4>Creating Shortcuts<a class="headerlink" href="#creating-shortcuts" title="Link to this heading"></a></h4>
+<p>When opening the terminal, Linux defaults to your home directory as an initial starting location. You can create a shortcut to another folder for faster access using the following command:</p>
+<p><code class="docutils literal notranslate"><span class="pre">ln</span> <span class="pre">-s</span> <span class="pre">/data/shared/projects/[username]</span> <span class="pre">~/projects</span></code></p>
+<p>The general implementation of this is:</p>
+<p>ln -s filepath linkpath</p>
+<p>Once created you can use the shortcut as if it were a directory.</p>
+</section>
+<section id="sorting-folders-before-files">
+<h4>Sorting Folders Before Files<a class="headerlink" href="#sorting-folders-before-files" title="Link to this heading"></a></h4>
+<p>If you want the file viewer to adopt sorting behavior where folders are sorted alphabetically before files. You can make that change by opening the preferences menu in the folder viewer.</p>
+<figure class="align-default" id="figure-4-yampa">
+<img alt="../_images/yampa_file_preferences.png" src="../_images/yampa_file_preferences.png" />
+<figcaption>
+<p><span class="caption-text">Figure 4. File preferences on Yampa</span><a class="headerlink" href="#figure-4-yampa" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>Then select the option for Sort Folders before Files.</p>
+</section>
+<section id="issues-activating-conda-environment">
+<h4>Issues Activating Conda Environment<a class="headerlink" href="#issues-activating-conda-environment" title="Link to this heading"></a></h4>
+<p>If you’re having issues activating the reeds2 conda environment, you can try one of these options:</p>
+<ol class="arabic simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">activate</span> <span class="pre">reeds2</span></code> instead of <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">reeds2</span></code></p></li>
+<li><p>Run the following command prior to running <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">reeds2</span></code> (note: if you don’t want to run this command every time, do step 3):</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">shared</span><span class="o">/</span><span class="n">apps</span><span class="o">/</span><span class="n">anaconda3</span><span class="o">/</span><span class="n">etc</span><span class="o">/</span><span class="n">profile</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">conda</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Add the following line to the bottom of your bashrc file with the following command (you can open your bashrc file with the command <code class="docutils literal notranslate"><span class="pre">gedit</span> <span class="pre">~/.bashrc</span></code>):</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ source /data/shared/apps/anaconda3/etc/profile.d/conda.sh
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="cloud-and-hpc-environments">
+<h2>Cloud and HPC Environments<a class="headerlink" href="#cloud-and-hpc-environments" title="Link to this heading"></a></h2>
+<section id="running-reeds-on-hpc">
+<h3>Running ReEDS on HPC<a class="headerlink" href="#running-reeds-on-hpc" title="Link to this heading"></a></h3>
+<p>This guide explains how to get ReEDS running on NREL’s HPC platform Kestrel.</p>
+<section id="prerequisites">
+<h4>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h4>
+<p>If you are new to HPC environments, you may wish to first visit <a class="reference external" href="https://www.nrel.gov/hpc/index.html">NREL’s HPC website</a>. There are also some <a class="reference external" href="https://teams.microsoft.com/l/entity/2a527703-1f6f-4559-a332-d8a7d288cd88/_djb2_msteams_prefix_1371960825?context=%7B%22channelId%22%3A%2219%3A6nLmPDt9QHQMEuLHVBaxfsitEZSGH6oXT6lyVauMvXY1%40thread.tacv2%22%7D&amp;amp;groupId=22ad3c7b-a45a-4880-b8b4-b70b989f1344&amp;amp;tenantId=a0f29d7e-28cd-4f54-8442-7885aee7c080">courses from the Computational Sciences Tutorial Team</a> that might be useful.</p>
+<p>First, you will need a <a class="reference external" href="https://www.nrel.gov/hpc/user-accounts.html">user account</a> on HPC. Then, you will need an <a class="reference external" href="https://www.nrel.gov/hpc/resource-allocations.html">allocation</a>. Your PI or mentor should tell you which allocation to use and add you to the relevant groups.</p>
+<p>After getting an account and allocation, there are a few different options for accessing the HPCs. Most users interact with the HPCs through a combination of <a class="reference external" href="https://winscp.net/eng/index.php">WinSCP</a> and SSH with either GitBash or VSCode.</p>
+<p>If you plan to be using Eagle instead of Kestrel, you will also need to join the appropriate GAMS group. You will need to contact HPC support by emailing <a class="reference internal" href="#hpc-help&#64;nrel.gov"><span class="xref myst">hpc-help&#64;nrel.gov</span></a> to request access to the “gams” group. It normally takes about a day for the HPC support team to process this request.</p>
+<p>You should now be able to <a class="reference external" href="https://www.nrel.gov/hpc/system-connection.html">SSH into Kestrel</a> with the command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ssh username@kestrel.hpc.nrel.gov
+</pre></div>
+</div>
+<p>You will be prompted to enter your password, you will need to use for HPC password here.</p>
+<!-- to be deleted after Eagle is retired -->
+<p>If you’re connecting to Eagle, you will use the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ssh username@eagle.hpc.nrel.gov
+</pre></div>
+</div>
+<p>You can then type <code class="docutils literal notranslate"><span class="pre">groups</span></code> to ensure that you see your allocation and gams group. Then, to test your access to GAMS, run the following two commands:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span> <span class="pre">gams</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gams</span></code></p></li>
+</ul>
+<!-- ==================================== -->
+</section>
+<section id="setup">
+<h4>Setup<a class="headerlink" href="#setup" title="Link to this heading"></a></h4>
+<!-- to be deleted after Eagle is retired -->
+<p>*Note: if you’re looking to get started on Eagle, refer to the <a class="reference internal" href="#setup-on-eagle"><span class="xref myst">Setup on Eagle section</span></a> below.</p>
+<!-- ==================================== -->
+<ol class="arabic">
+<li><p>Load GAMS with the following commands:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">use</span> <span class="pre">/nopt/nrel/apps/software/gams/modulefiles</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span> <span class="pre">gams/34.3.0</span></code></p></li>
+</ul>
+</li>
+<li><p>Set up your SSH key with NREL github:</p>
+<ul class="simple">
+<li><p>Copy the contents in `/home/[username]/.ssh/id_rsa.pub</p>
+<ul>
+<li><p>To print the contents of this file to the terminal, you can use the following command: <code class="docutils literal notranslate"><span class="pre">cat</span> <span class="pre">/home/[username]/.ssh/id_rsa.pub</span></code></p></li>
+</ul>
+</li>
+<li><p>Open <a class="reference external" href="https://github.nrel.gov">https://github.nrel.gov</a> and open your account settings</p>
+<ul>
+<li><p>In the top right of the page, click on your git ID &gt; Edit your Profile &gt; SSH Keys &gt; Add SSH Key</p></li>
+<li><p>Paste the copied contents of <code class="docutils literal notranslate"><span class="pre">id_rsa.pub</span></code> into the “Add an SSH Key” window</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Clone the repository</p>
+<ul class="simple">
+<li><p>ReEDS requires git-lfs to clone the repository. To install and load git-lfs, use the following commands:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">/nopt/nrel/apps/env.sh</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span> <span class="pre">git</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span> <span class="pre">git-lfs</span></code></p></li>
+</ul>
+</li>
+<li><p>From the terminal that you connected to Kestrel with, run the following command to clone the ReEDS repo: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.nrel.gov:ReEDS/ReEDS-2.0.git</span></code></p></li>
+<li><p><strong>Note:</strong> some users have to run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">lfs</span> <span class="pre">pull</span></code> after this step as the hd5 files are incomplete</p></li>
+</ul>
+</li>
+<li><p>Create the reeds2 environment</p>
+<ul>
+<li><p>From within your cloned repo, run the following commands:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span> <span class="pre">anaconda3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">env</span> <span class="pre">create</span> <span class="pre">-f</span> <span class="pre">environment.yml</span></code></p></li>
+</ul>
+</li>
+<li><p>Creating the environment can take several hours on Kestrel. If you don’t want to wait that long, An has been testing an alternative approach for creating the environment:</p>
+<ul class="simple">
+<li><p>Navigate to your project folder and stay there for the duration of these commands:  <code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">/projects/[project-name]/ReEDS-2.0</span></code></p></li>
+<li><p>create your own miniconda which allows you to install libmamba (since we cannot alter the base environment on Kestrel):</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">curl</span> <span class="o">-</span><span class="n">sL</span> \  <span class="s2">&quot;https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh&quot;</span> <span class="o">&gt;</span> \   <span class="s2">&quot;Miniconda3.sh&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>find out where your envs are stored: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">list</span></code></p></li>
+<li><p>change the conda environment path to your miniconda file paths:</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">echo</span> <span class="s2">&quot;export CONDA_ENVS_PATH=$SCRATCH/home/[username]/miniconda3/envs&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
+<span class="n">echo</span> <span class="s2">&quot;export CONDA_ENVS_PATH=$SCRATCH/home/[username]/miniconda3/pkgs&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>install libmamba on the base environment miniconda env:</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="o">-</span><span class="n">n</span> <span class="n">base</span> <span class="n">conda</span><span class="o">-</span><span class="n">libmamba</span><span class="o">-</span><span class="n">solver</span>
+<span class="n">conda</span> <span class="n">config</span> <span class="o">--</span><span class="nb">set</span> <span class="n">solver</span> <span class="n">libmamba</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>create the ReEDS environment:</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">module</span> <span class="n">load</span> <span class="n">anaconda3</span>
+<span class="n">conda</span> <span class="n">env</span> <span class="n">create</span> <span class="o">-</span><span class="n">f</span> <span class="n">environment</span><span class="o">.</span><span class="n">yml</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>finally, activate it: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">reeds2</span></code></p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">REEDS_USE_SLURM=1</span></code> to your list of environment variables at <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code>. The commands below give an example of how to do so using the ‘nano’ text editor in bash.</p>
+<ul class="simple">
+<li><p>Open the <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code> file using nano: <code class="docutils literal notranslate"><span class="pre">nano</span> <span class="pre">~/.bashrc</span></code></p></li>
+<li><p>At the end of the file add the following two lines:</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">## Indicate that ReEDS jobs should be submitted via SLURM</span>
+<span class="n">export</span> <span class="n">REEDS_USE_SLURM</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Write the file:	<code class="docutils literal notranslate"><span class="pre">^o</span> <span class="pre">⏎</span></code></p></li>
+<li><p>Exit nano: <code class="docutils literal notranslate"><span class="pre">^x</span></code></p></li>
+<li><p>Run the <code class="docutils literal notranslate"><span class="pre">.bashrc</span> <span class="pre">file</span></code> (only needs to be done once; later it will run whenever you start a bash session): <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">~/.bashrc</span></code></p></li>
+</ul>
+</li>
+<li><p>Create a <code class="docutils literal notranslate"><span class="pre">gamslice.txt</span></code> file in the root of your ReEDS directory with the following contents (  You can do this using nano by typing <code class="docutils literal notranslate"><span class="pre">nano</span> <span class="pre">gamslice.txt</span></code>, then paste in the license text):</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  
+</pre></div>
+</div>
+<ol class="arabic simple" start="7">
+<li><p>Edit the <code class="docutils literal notranslate"><span class="pre">ReEDS-2.0/srun_template.sh</span></code> file in your local copy of the ReEDS repo. Fields indicated by curly braces {} must be changed; you can edit fields with brackets [] based on your preferences for the runs you’re submitting (be sure to remove the {} and [] brackets):</p></li>
+</ol>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  #!/bin/bash
+  #SBATCH --account={your HPC allocation}
+  #SBATCH --time=[walltime for your run; e.g., 2-00:00:00 = 2 days]
+  #SBATCH --nodes=1
+  #SBATCH --ntasks-per-node=1
+  #SBATCH --mail-user={your email address}
+  #SBATCH --mail-type=[BEGIN,END,FAIL]
+  #SBATCH --mem=[172000] # RAM in MB
+  ### OPTIONAL next line if you want to redirect the slurm log file and keep your ReEDS root directly clean
+  # #SBATCH --output=/projects/{your HPC allocation}/logs/slurm-%j.out
+  
+  #load your default settings
+  . $HOME/.bashrc
+</pre></div>
+</div>
+<ol class="arabic simple" start="8">
+<li><p>Edit the cplex.opt file to optimize performance on the HPC.</p></li>
+</ol>
+<ul class="simple">
+<li><p>If you’re running 1 task per node you can set threads = -1 to use all available cores for the job. (If you’re running a very large model, like hourly or individual sites, using all threads may lead to memory issues; in that case you may want to use 8 or 12.)</p></li>
+<li><p>You may want to remove reslim 50000, or set it to a higher value, to prevent long solve years from timing out</p></li>
+</ul>
+<p>ReEDS should now be usable in from the command line using the python script <code class="docutils literal notranslate"><span class="pre">runbatch.py</span></code>.</p>
+<!-- to be deleted after Eagle is retired -->
+</section>
+<section id="setup-on-eagle">
+<h4>Setup on Eagle<a class="headerlink" href="#setup-on-eagle" title="Link to this heading"></a></h4>
+<ol class="arabic simple">
+<li><p>We first need to load the appropriate modules:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span> <span class="pre">conda</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">module</span> <span class="pre">load</span> <span class="pre">gams</span></code></p></li>
+</ul>
+</li>
+<li><p>ReEDS-2.0 requires git-lfs to clone the repository. Using conda is the easiest way to install. We create a new conda environment, activate it and add the lfs extension to git:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">create</span> <span class="pre">--name</span> <span class="pre">git</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">git</span> <span class="pre">git-lfs</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">git</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">lfs</span> <span class="pre">install</span></code></p></li>
+</ul>
+</li>
+<li><p>Next clone the ReEDS-2.0 git repository (this may take a few minutes since the repo contains a large number of files and some of them are large):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.nrel.gov:ReEDS/ReEDS-2.0.git</span></code></p></li>
+<li><p>There are several options for the location of the repo. You can clone it into your home folder. It is stable and doesn’t require an allocation, but it is limited to 50 GB, and, because Conda environments tend to go in there, it can fill up rather quickly. You can also clone it to your scratch folder (/scratch/username). Like home, every user has one, and it doesn’t require an allocation. It has unlimited storage, but files are deleted after some period of inactivity (we’re unsure how long, the HPC help page says both 28 days and 60 days). Finally, you can clone the repo into a project folder associated with an allocation.</p></li>
+</ul>
+</li>
+<li><p>Now we create the ReEDS conda environment and activate it. To do this, we will use the <code class="docutils literal notranslate"><span class="pre">environment.yml</span></code> file from the repository:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">ReEDS-2.0</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">env</span> <span class="pre">create</span> <span class="pre">-f</span> <span class="pre">environment.yml</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">reeds2</span></code></p></li>
+</ul>
+</li>
+</ol>
+<p>If you already have the reeds environment but want to update it to the latest specifications, you can run <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">env</span> <span class="pre">update</span> <span class="pre">--file</span> <span class="pre">environment.yml</span></code></p>
+<p><strong>Continue with steps 5-8 above in the general <a class="reference internal" href="#setup"><span class="xref myst">Setup section</span></a>.</strong></p>
+<!-- ==================================== -->
+</section>
+<section id="running-reeds">
+<h4>Running ReEDS<a class="headerlink" href="#running-reeds" title="Link to this heading"></a></h4>
+<p>Run ReEDS using runbatch.py the same way you would on any machine. Slurm jobs will be submitted for each case in the specified cases file. To understand the differences from a normal run, read the <code class="docutils literal notranslate"><span class="pre">if</span> <span class="pre">hpc</span></code> code blocks in runbatch.py.</p>
+</section>
+<section id="notes">
+<h4>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h4>
+<section id="helpful-shortcuts">
+<h5>Helpful shortcuts<a class="headerlink" href="#helpful-shortcuts" title="Link to this heading"></a></h5>
+<p>The following commands can be added to your ‘~/.bashrc’ file for your convenience. Please note, you should change ‘your_alloc’ to one of your own allocations, ‘yourname’ to your own HPC username, and the ReEDS directory to whatever path you’ve chosen for the repository.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">## Format squeue output to include more information</span>
+<span class="n">alias</span> <span class="n">squ</span><span class="o">=</span><span class="s1">&#39;squeue -u yourname -o &quot;</span><span class="si">%.10i</span><span class="s1"> %.15P %.65j %.2t %.10M %.6D %R&quot;&#39;</span>
+<span class="n">alias</span> <span class="n">sq</span><span class="o">=</span><span class="s1">&#39;squ; echo &quot;running:&quot; $(squ | grep &quot; R&quot; | wc -l) &quot;| pending:&quot; $(squ | grep &quot; PD&quot; | wc -l) &quot;| total:&quot; $(squ | grep &quot;:&quot; | wc -l)&#39;</span>
+
+<span class="c1">## Switch to my main ReEDS project folder, activate ReEDS environment</span>
+<span class="n">alias</span> <span class="n">reeds</span><span class="o">=</span><span class="s1">&#39;cd /projects/your_alloc/github/ReEDS-2.0 &amp;&amp; module load conda &amp;&amp; module load gams &amp;&amp; conda activate reeds2&#39;</span>
+
+<span class="c1">## Get a specified number of hours on a node</span>
+<span class="n">sr</span> <span class="p">()</span> <span class="p">{</span> <span class="n">srun</span> <span class="o">-</span><span class="n">t</span> <span class="s2">&quot;$1:00:00&quot;</span> <span class="o">-</span><span class="n">A</span> <span class="n">your_alloc</span> <span class="o">--</span><span class="n">pty</span> <span class="s2">&quot;$SHELL&quot;</span><span class="p">;</span> <span class="p">}</span>
+
+<span class="c1">## Get memory and CPU usage for recently-completed jobs</span>
+<span class="n">alias</span> <span class="n">sacc</span><span class="o">=</span><span class="s1">&#39;sacct --format=&quot;JobID,JobName,Partition,AllocCPUS,STATE,Elapsed,CPUTime,AveCPU,TotalCPU,NCPUS,MaxRSS&quot; | grep &quot;JobID\|--\|batch&quot;&#39;</span>
+</pre></div>
+</div>
+<p>After saving your changes, you’ll need to run the following command once more to save your changes: <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">~/.bashrc</span></code>. You can then switch to your ReEDS directory and activate conda, gams, and your python environment by just typing reeds on login node.</p>
+<p><strong>To be able to access the HPC without entering your password every time</strong>, paste the contents of the <code class="docutils literal notranslate"><span class="pre">~/.ssh/id_ed25519.pub</span></code> file on your laptop into the <code class="docutils literal notranslate"><span class="pre">/.ssh/authorized_keys</span></code> file on the HPC.</p>
+</section>
+<section id="gams">
+<h5>GAMS<a class="headerlink" href="#gams" title="Link to this heading"></a></h5>
+<p>In February 2023, there were some issues with getting access to the GAMS HPC group. The following is a workaround:</p>
+<ul class="simple">
+<li><p>run <code class="docutils literal notranslate"><span class="pre">newgrp</span> <span class="pre">gams</span></code> on the login node before submitting your job</p></li>
+<li><p>you’ll be put in a new special shell, so you’ll need to run <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">activate</span> <span class="pre">reeds</span></code> even if you previously activated the reeds environment</p>
+<ul>
+<li><p>Note: it will be <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">activate</span> <span class="pre">reeds</span></code> and not <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">reeds2</span></code> as usual</p></li>
+</ul>
+</li>
+<li><p>you should now be able to submit your job using runbatch.py as usual</p></li>
+</ul>
+</section>
+<section id="files-and-file-transfers">
+<h5>Files and File Transfers<a class="headerlink" href="#files-and-file-transfers" title="Link to this heading"></a></h5>
+<p>The supply curve data has been ported over to <code class="docutils literal notranslate"><span class="pre">projects/shared-projects-reeds/reeds/Supply_Curve_Data</span></code> for the time being, but the rev paths have not yet been updated so for now some features like <code class="docutils literal notranslate"><span class="pre">reeds_to_rev.py</span></code> won’t work.</p>
+<p>If you need to transfer files between the HPC and your local machine, there are a few different options:</p>
+<ul>
+<li><p>For file transfers on Windows:</p>
+<ul class="simple">
+<li><p>WinSCP can be used to transfer files between a Windows machine and the HPC. Draco has WinSCP already installed. See <a class="reference external" href="https://www.nrel.gov/hpc/winscp-file-transfer.html">https://www.nrel.gov/hpc/winscp-file-transfer.html</a> for information on using WinSCP to transfer files.</p></li>
+</ul>
+</li>
+<li><p>For file transfers on Mac:</p>
+<ul class="simple">
+<li><p>FileZilla can be used to transfer files between a Mac and the HPC. You can download the FileZilla Client at <a class="reference external" href="https://filezilla-project.org/">https://filezilla-project.org/</a>.</p></li>
+<li><p>Host: ‘[username]&#64;kestrel.hpc.nrel.gov’</p></li>
+<li><p>More information on how to use FileZilla can be found in the <a class="reference internal" href="yampa_guide.html#transferring-data-from-yampa-to-your-machine"><span class="std std-ref">Yampa guide</span></a>.</p></li>
+</ul>
+</li>
+<li><p>Using rsync:</p>
+<ul class="simple">
+<li><p>You can also use rsync to transfer files; an example of a rsync transfer command:</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  <span class="n">rsync</span> <span class="o">-</span><span class="n">aOP</span> <span class="o">--</span><span class="n">exclude</span><span class="o">=**/</span><span class="mi">225</span><span class="o">*/</span> <span class="o">--</span><span class="n">exclude</span><span class="o">=**/</span><span class="n">cpx</span><span class="o">*/</span> <span class="o">--</span><span class="n">exclude</span><span class="o">=*.</span><span class="n">dat</span> <span class="o">--</span><span class="n">exclude</span><span class="o">=*.</span><span class="n">pkl</span> <span class="o">--</span><span class="n">exclude</span><span class="o">=*.</span><span class="n">g00</span> <span class="o">--</span><span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="n">batch_prefix</span><span class="p">]</span><span class="o">**</span> <span class="o">--</span><span class="n">exclude</span><span class="o">=*</span> <span class="o">--</span><span class="n">modify</span><span class="o">-</span><span class="n">window</span><span class="o">=</span><span class="mi">5</span> <span class="o">--</span><span class="n">ignore</span><span class="o">-</span><span class="n">existing</span> <span class="p">[</span><span class="n">hpc_user_name</span><span class="p">]</span><span class="nd">@eagle</span><span class="o">.</span><span class="n">nrel</span><span class="o">.</span><span class="n">gov</span><span class="p">:[</span><span class="n">path_to_run_folder</span><span class="p">]</span> <span class="p">[</span><span class="n">destination_path</span><span class="p">]</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p>You can also transfer individual files to your machine using VSCode by right-clicking a file and selecting “download.”</p>
+</section>
+<section id="vscode-setup">
+<h5>VSCode setup<a class="headerlink" href="#vscode-setup" title="Link to this heading"></a></h5>
+<p><a class="reference external" href="https://code.visualstudio.com/docs/remote/ssh">This guide</a> provides a good overview of how to log on to a remote machine with VSCode.</p>
+<p>To set up SSH keys so that you don’t have to enter your password each time you log in (note: this works for mac; Windows should be similar but it hasn’t been tested):</p>
+<ol class="arabic simple">
+<li><p>Open a terminal on your computer (not the HPC!) and then type:</p></li>
+</ol>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>```
+cd ~/.ssh
+vim config
+```
+</pre></div>
+</div>
+<ol class="arabic simple" start="2">
+<li><p>Inside the config file type the following:</p></li>
+</ol>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>```  
+Host &lt;nickname&gt;
+User &lt;username on remote&gt; 
+Hostname kl1.hpc.nrel.gov
+```
+
+Windows users should also add the following:
+```
+MACs hmac-sha2-512
+```
+</pre></div>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Save the file, then generate RSA key in ~/.ssh: <code class="docutils literal notranslate"><span class="pre">ls</span> <span class="pre">~/.ssh/id_rsa</span> <span class="pre">||</span> <span class="pre">ssh-keygen</span></code> [note: you can skip this step if you already have a key]</p></li>
+<li><p>Lastly copy the key over to Kestrel: <code class="docutils literal notranslate"><span class="pre">ssh-copy-id</span> <span class="pre">&lt;nickname&gt;</span></code> (where nickname is whatever you’ve set for Kestrel in the config file above)</p></li>
+</ol>
+</section>
+<section id="git">
+<h5>Git<a class="headerlink" href="#git" title="Link to this heading"></a></h5>
+<p>The HPC now requires repositories to be cloned via SSH; if you have a repo that was cloned using HTTPS you may encounter issues configuring git. If you do want to preserve your cloned repository, you can update via the following:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">nano</span> <span class="pre">.git/config</span></code></p></li>
+<li><p>change <code class="docutils literal notranslate"><span class="pre">url:</span> <span class="pre">https://github.nrel.gov/ReEDS/ReEDS-2.0.git</span></code> to <code class="docutils literal notranslate"><span class="pre">url:</span> <span class="pre">git&#64;github.nrel.gov:ReEDS/ReEDS-2.0.git</span></code></p></li>
+</ol>
+<p>The HPC also has restrictions on the permissions for your github SSH key… you can change these to the correct settings via <code class="docutils literal notranslate"><span class="pre">chmod</span> <span class="pre">600</span> <span class="pre">~/.ssh/id_rsa.pub</span></code></p>
+</section>
+</section>
+<section id="troubleshooting">
+<h4>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h4>
+<section id="running-on-the-hpc-s-debug-partition">
+<h5>Running on the HPC’s ‘debug’ partition<a class="headerlink" href="#running-on-the-hpc-s-debug-partition" title="Link to this heading"></a></h5>
+<p>It can be helpful to kick off a test run on the HPC’s <code class="docutils literal notranslate"><span class="pre">debug</span></code> partition before submitting a full set. The <code class="docutils literal notranslate"><span class="pre">debug</span></code> queue is limited to 1 hour and 2 nodes per user but a run will typically start running immediately. To submit a run to the <code class="docutils literal notranslate"><span class="pre">debug</span></code> queue  make the following changes to the <code class="docutils literal notranslate"><span class="pre">ReEDS-2.0/srun_template.sh</span></code> file:</p>
+<ul class="simple">
+<li><p>Set the runtime to 1 hour: <code class="docutils literal notranslate"><span class="pre">#SBATCH</span> <span class="pre">--time=1:00:00</span></code></p></li>
+<li><p>Add the following line: <code class="docutils literal notranslate"><span class="pre">#SBATCH</span> <span class="pre">--partition=debug</span></code></p></li>
+</ul>
+</section>
+<section id="restarting-a-run-from-a-previous-solve-year">
+<h5>Restarting a run from a previous solve year<a class="headerlink" href="#restarting-a-run-from-a-previous-solve-year" title="Link to this heading"></a></h5>
+<p>Failed runs can be restarted by adding a <code class="docutils literal notranslate"><span class="pre">--restart</span></code> flag to the runbatch.py call. The call should include the same cases file and batch name as the failed runs (e.g. <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runbatch.py</span> <span class="pre">-c</span> <span class="pre">[case]</span> <span class="pre">-b</span> <span class="pre">[batch]</span> <span class="pre">--restart</span></code>). The restart functionality picks up with the last GAMS restart file. Input files are not recopied.</p>
+<p>Alternately, an individual run can be restarted with the following steps:</p>
+<ol class="arabic">
+<li><p>Navigate to the directory with the run: <code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">runs/[batch]_[case]</span></code></p></li>
+<li><p>Copy the original call shell script to a new call shell script: <code class="docutils literal notranslate"><span class="pre">cp</span> <span class="pre">call_[batch]_[case].sh</span> <span class="pre">call_[batch]_[case]_redo.sh</span></code></p></li>
+<li><p>Remove the lines in the new call shell script that have already successfully run. (This step is probably best done by opening the file with WinSCP and manually removing lines.)</p></li>
+<li><p>Open the sbatch shell script to edit: <code class="docutils literal notranslate"><span class="pre">nano</span> <span class="pre">[batch]_[case].sh</span></code></p></li>
+<li><p>Insert the new call shell script where the original was:</p>
+<p>Original:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">#SBATCH --job-name=[job name]</span>
+<span class="n">sh</span> <span class="p">{</span><span class="n">your</span> <span class="n">directory</span><span class="p">}</span><span class="o">/</span><span class="n">ReEDS</span><span class="o">-</span><span class="mf">2.0</span><span class="o">/</span><span class="n">runs</span><span class="o">/</span><span class="p">[</span><span class="n">batch</span><span class="p">]</span><span class="n">_</span><span class="p">[</span><span class="n">case</span><span class="p">]</span><span class="o">/</span><span class="n">call_</span><span class="p">[</span><span class="n">batch</span><span class="p">]</span><span class="n">_</span><span class="p">[</span><span class="n">case</span><span class="p">]</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<p>New:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">#SBATCH --job-name=[job name]</span>
+<span class="n">sh</span> <span class="p">{</span><span class="n">your</span> <span class="n">directory</span><span class="p">}</span><span class="o">/</span><span class="n">ReEDS</span><span class="o">-</span><span class="mf">2.0</span><span class="o">/</span><span class="n">runs</span><span class="o">/</span><span class="p">[</span><span class="n">batch</span><span class="p">]</span><span class="n">_</span><span class="p">[</span><span class="n">case</span><span class="p">]</span><span class="o">/</span><span class="n">call_</span><span class="p">[</span><span class="n">batch</span><span class="p">]</span><span class="n">_</span><span class="p">[</span><span class="n">case</span><span class="p">]</span><span class="n">_redo</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+</li>
+<li><p>Save the sbash shell script</p></li>
+<li><p>Re-submit the run: <code class="docutils literal notranslate"><span class="pre">sbatch</span> <span class="pre">[batch]_[case].sh</span></code></p></li>
+</ol>
+</section>
+<section id="general-hpc">
+<h5>General HPC<a class="headerlink" href="#general-hpc" title="Link to this heading"></a></h5>
+<p>Make sure you have enough available storage in the directory where you are running ReEDS; otherwise the run will fail. The user directories on the HPC are very small; in general it’s best to run ReEDS in a project folder.</p>
+<ul class="simple">
+<li><p>You can check the storage quota for your project, and whether you’re over it, using the procedure described here: <a class="reference external" href="https://www.nrel.gov/hpc/project-storage-quotas.html">https://www.nrel.gov/hpc/project-storage-quotas.html</a></p>
+<ul>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">lfs</span> <span class="pre">project</span> <span class="pre">-d</span> <span class="pre">/projects/YOUR_PROJECT</span></code> to get your project id number</p></li>
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">lfs</span> <span class="pre">quota</span> <span class="pre">-h</span> <span class="pre">-p</span> <span class="pre">YOUR_PROJECT_ID</span> <span class="pre">/projects/YOUR_PROJECT</span></code> to get your current usage and quota</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="runs-in-a-standby-partition">
+<h5>Runs in a standby partition<a class="headerlink" href="#runs-in-a-standby-partition" title="Link to this heading"></a></h5>
+<p>Currently runs in a standby partition won’t show up with squeue unless you flag the partition (e.g., <code class="docutils literal notranslate"><span class="pre">squeue</span> <span class="pre">-u</span> <span class="pre">[username]</span> <span class="pre">-p</span> <span class="pre">standard-stdby</span></code>)</p>
+</section>
+</section>
+</section>
+<section id="running-reeds-on-aws">
+<h3>Running ReEDS on AWS<a class="headerlink" href="#running-reeds-on-aws" title="Link to this heading"></a></h3>
+<p>To run ReEDS on AWS, you’ll need to set up an account on Amazon Web Servies. Once you have done that, you will be able to run ReEDS on AWS’s Elastic Compute Cloud (EC2), their virtual computation service. The goal here is to be able to flexibly scale computing power to the needs of the moment and to avoid bottlenecks presented by HPC downtime and limited server space.</p>
+<section id="requesting-an-allocation">
+<h4>Requesting an allocation<a class="headerlink" href="#requesting-an-allocation" title="Link to this heading"></a></h4>
+<p>First, somebody needs to request an allocation for a project. There’s a regular allocation request period each spring for the upcoming fiscal year, but out-of-cycle (ad-hoc) allocation requests are also allowed through a similar process. Go to <a class="reference external" href="https://thesource.nrel.gov/cloud-computing">CSC Cloud Portal</a> to read more.</p>
+</section>
+<section id="getting-an-aws-account">
+<h4>Getting an AWS account<a class="headerlink" href="#getting-an-aws-account" title="Link to this heading"></a></h4>
+<p>Request an AWS account by emailing CSC.CloudHelp&#64;nrel.gov and including the name of the cloud project your account will be associated with. (Cloud projects are similar to HPC allocations and use a keyword identifier, e.g. UberNodalReEDS.)</p>
+<p>You may also want to join the Cloud Computing User Group on Microsoft Teams—just ask in your initial email to be added.</p>
+<p>CSC, the cloud computing team, has a <a class="reference external" href="https://thesource.nrel.gov/cloud-computing">CSC Cloud Portal</a> site on theSOURCE that contains lots of useful information. You should read through the information there on sizing, pricing, billing, etc. It’s quite useful.</p>
+</section>
+<section id="running-reeds-scenarios-on-aws">
+<h4>Running ReEDS scenarios on AWS<a class="headerlink" href="#running-reeds-scenarios-on-aws" title="Link to this heading"></a></h4>
+<p>To run ReEDS scenarios, we spin up at least one virtual machine—an “instance” in Amazon-speak—of AWS’s EC2 service. Often, it makes sense to spin up multiple EC2 instances when you have multiple runs since costs scale nonlinearly as the size of your chosen EC2 machine increases in memory and CPU. For storage on hard disk, we create an Elastic Block Storage (EBS) drive and connect it to the EC2 instance.</p>
+</section>
+<section id="launching-your-first-instance">
+<h4>Launching your first instance<a class="headerlink" href="#launching-your-first-instance" title="Link to this heading"></a></h4>
+<p>CSC has set up a template Amazon Machine Image (AMI) that specifies required information about the EC2 instance and security settings that have been approved by NREL’s cybersecurity team. CSC will set up an AMI template and give you a link to it.</p>
+</section>
+</section>
+</section>
+<section id="hourly-resolution-and-additional-setups">
+<h2>Hourly Resolution and Additional Setups<a class="headerlink" href="#hourly-resolution-and-additional-setups" title="Link to this heading"></a></h2>
+<!-- Hourly resolution quick start, PRAS, julia and stress periods setup, hourlize -->
+<section id="hourly-resolution-quick-start-guide">
+<h3>Hourly resolution quick-start guide<a class="headerlink" href="#hourly-resolution-quick-start-guide" title="Link to this heading"></a></h3>
+<p>If you’d like to run the model with hourly resolution, here is the minimal set of switches to change in cases.csv:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_Hourly</span> <span class="pre">=</span> <span class="pre">1</span></code></p>
+<ul>
+<li><p>Turn on hourly resolution</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_Canada</span> <span class="pre">=</span> <span class="pre">2</span></code></p>
+<ul>
+<li><p>Turn on hourly resolution for Canadian imports/exports</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_AugurCurtailment</span> <span class="pre">=</span> <span class="pre">0</span></code></p>
+<ul>
+<li><p>Turn off the Augur calculation of curtailment</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_StorageArbitrageMult</span> <span class="pre">=</span> <span class="pre">0</span></code></p>
+<ul>
+<li><p>Turn off the Augur calculation of storage arbitrage value</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_Storage_in_Min</span> <span class="pre">=</span> <span class="pre">0</span></code></p>
+<ul>
+<li><p>Turn off the Augur calculation of storage charging</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">capcredit_szn_hours</span> <span class="pre">=</span> <span class="pre">3</span></code></p>
+<ul>
+<li><p>The current default hourly representation is 18 representative 5-day weeks. Each representative period is treated as a ‘season’ and is thus active in the planning-reserve margin constraint. In h17 ReEDS we set <code class="docutils literal notranslate"><span class="pre">capcredit_szn_hours</span> <span class="pre">=</span> <span class="pre">10</span></code>, giving 40 total hours considered for planning reserves (the top 10 hours in each of the 4 quarterly seasons). 18 ‘seasons’ with 10 hours each would give 180 hours, so we switch to 3 hours per ‘season’ (for 54 hours total).</p></li>
+</ul>
+</li>
+</ul>
+<p>If you’d like the model to solve in less than 2 days, you can also make the following changes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">yearset_suffix</span> <span class="pre">=</span> <span class="pre">fiveyear</span></code></p>
+<ul>
+<li><p>Solve in 5-year steps</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_OpRes</span> <span class="pre">=</span> <span class="pre">0</span></code></p>
+<ul>
+<li><p>Turn off operating reserves</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_MinLoading</span> <span class="pre">=</span> <span class="pre">0</span></code></p>
+<ul>
+<li><p>Turn off the sliding-window representation of minimum-generation limits</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_PVB</span> <span class="pre">=</span> <span class="pre">0</span></code></p>
+<ul>
+<li><p>Turn off PV-battery hybrids</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_calc_powfrac</span> <span class="pre">=</span> <span class="pre">0</span></code></p>
+<ul>
+<li><p>Turn off a post-processing calculation of power flows</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="reeds2pras-julia-and-stress-periods-setup">
+<h3>ReEDS2PRAS, julia, and stress periods setup<a class="headerlink" href="#reeds2pras-julia-and-stress-periods-setup" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Install Julia. There are different procedures for mac/linux and windows.</p>
+<ol class="arabic simple">
+<li><p>[mac/linux]: Julia is included in the conda environment so you should be all set.</p></li>
+<li><p>[windows]: Install Julia from <a class="reference external" href="https://julialang.org/downloads/">https://julialang.org/downloads/</a>.</p></li>
+</ol>
+</li>
+<li><p>From the ReEDS-2.0 directory, run <code class="docutils literal notranslate"><span class="pre">julia</span> <span class="pre">--project=.</span> <span class="pre">instantiate.jl</span></code></p></li>
+</ol>
+<p>Set <code class="docutils literal notranslate"><span class="pre">GSw_PRM_CapCredit=0</span></code> in your ReEDS cases file to use the coupled ReEDS/PRAS stress periods model, or just set <code class="docutils literal notranslate"><span class="pre">pras=2</span></code> to run PRAS without necessarily using stress periods.</p>
+<section id="id1">
+<h4>Troubleshooting<a class="headerlink" href="#id1" title="Link to this heading"></a></h4>
+<ol class="arabic simple">
+<li><p>On mac and linux we use the version of julia included in the <code class="docutils literal notranslate"><span class="pre">reeds2</span></code> conda environment, so make sure you haven’t added a julia alias or modified the julia path in your ~/.bashrc or ~/.bash_profile</p></li>
+</ol>
+</section>
+</section>
+<section id="hourlize">
+<h3>Hourlize<a class="headerlink" href="#hourlize" title="Link to this heading"></a></h3>
+<p>Hourlize processes hourly resource and load data into ReEDS inputs. For more information on getting started with Hourlize, you can find more information here: <a class="reference internal" href="hourlize.html"><span class="std std-doc">Using Hourlize</span></a></p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../setup.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="developer_best_practices.html" class="btn btn-neutral float-right" title="Developer Resources" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -185,7 +185,7 @@ if __name__ == '__main__':
 
     ### Get the settings file
     futurefiles = pd.read_csv(
-        os.path.join(reeds_path,'inputs','userinput','futurefiles.csv'),
+        os.path.join(inputs_case,'futurefiles.csv'),
         dtype={
             'header':'category', 'ignore':int, 'wide':int,
             'year_col':str, 'fix_cols':str, 'clip_min':str, 'clip_max':str,

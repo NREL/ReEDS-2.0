@@ -4,15 +4,15 @@ import numpy as np
 import h5py
 import os
 import sys
-from pdb import set_trace as b
 import datetime
 import shutil
 
 #User inputs
 output_prices = True
 res_marg_style = 'max_net_load_2012' # 'max_net_load_2012' is the only currently supported option. 'max_load_price', the other option, only works on older versions of ReEDS
-netload_num_hrs = 50 #Number of hours to include for each season. Only relevant if res_marg_style='max_net_load_2012'
+netload_num_hrs = 20 #Number of hours to include for each season. Only relevant if res_marg_style='max_net_load_2012'
 netload_time_style = 'hour' #'hour' or 'timeslice'. 'Timeslice' means apply reserve margin price to all hours of the timeslice(s) with the peak net load hour(s).
+rep_gen = True #If True, use generation during representative days only for all value calculations except reserve margin. If False, use full generation profile for all value calculations.
 
 #Global inputs
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -22,10 +22,7 @@ output_dir = f'{this_dir_path}/outputs_{time}'
 os.makedirs(output_dir)
 shutil.copy2(f'{this_dir_path}/reValue.py', output_dir)
 shutil.copy2(f'{this_dir_path}/scenarios.csv', output_dir)
-ira_incentive = 17.39 #(2019$/MWh). 12.85 2004$/MWh from ReEDS alldata.gdx, converted to 2019$ using ReEDS deflator.csv (0.7389)
 dollar_year_conv = 1.353388734 #ReEDS is in 2004$ and rev is in 2019$. Converting ReEDS data to 2019$ using ReEDS deflator.csv
-rev_county_path = f'{this_dir_path}/../../hourlize/inputs/resource/county_map.csv'
-df_rev_county = pd.read_csv(rev_county_path, usecols=['cnty_fips','reeds_ba'])
 df_ba_tz = pd.read_csv(f'{this_dir_path}/../../hourlize/inputs/load/ba_timezone.csv')
 ba_tz_map = dict(zip(df_ba_tz['ba'], df_ba_tz['timezone']))
 rev_year = 2012
@@ -46,9 +43,6 @@ def get_prices():
     df_pq = df_pq.fillna(0)
     #Restrict to year in question
     df_pq = df_pq[df_pq['year']==year].copy()
-    #Gather hmaps
-    df_hmap = pd.read_csv(f'{reeds_run_path}/inputs_case/hmap_myr.csv')
-    # df_hmap_7yr = pd.read_csv(f'{reeds_run_path}/inputs_case/hmap_7yr.csv')
     df_h_num_hrs = df_hmap.groupby('h')['hour'].count().reset_index().rename(columns={'hour':'num_hrs'})
     #Gather region map for mapping of bas to ccreg for reserve_margin
     df_ba_cc_map = df_hier_run[['*r','ccreg']].copy()
@@ -146,6 +140,7 @@ def get_prices():
         df_p_rm_h = df_hmap[['h']].merge(df_p_rm, on=['h'], how='left').drop(columns=['h'])
     df_p_rm_h = df_p_rm_h.reindex(columns=df_p_load_h.columns).fillna(0)
 
+    #Note that 'load' uses the linked load constraint (eq_loadcon) prices, which include operating reserves and state RPS influences.
     if r['tech'] != 'load':
         print('- Operating reserve prices')
         #Already in $/MWh
@@ -235,120 +230,127 @@ def calculate_benchmarks():
     #we would do if using load-weighted prices instead of flat-block prices (to be symmetric). To be symmetric between space
     #and time for flat-block prices, we could also take the strict average across regions.
     p_h = df_p_h_ba_bench.mul(load_ba).sum(axis='columns').div(load_nat)
-    return p_ba, p_ba_load, p_ba_rm, p_nat, p_nat_load, p_nat_rm, p_h
+    p_h_load = df_p_h_serv['load'].mul(load_ba).sum(axis='columns').div(load_nat)
+    p_h_rm = df_p_h_serv['rm'].mul(load_ba).sum(axis='columns').div(load_nat)
+    return p_ba, p_ba_load, p_ba_rm, p_nat, p_nat_load, p_nat_rm, p_h, p_h_load, p_h_rm
 
 def get_profiles():
-    df_rev_sc = None
-    if r['rev_sc_path'] != 'none':
-        print('Reading supply curve')
-        rev_sc_path = r['rev_sc_path'].replace('"', '')
+    print('Reading profile file and associated metadata')
+    df_meta = None
+    if r['meta_path'] != 'none':
+        meta_path = r['meta_path'].replace('"', '')
         #Profile hours start at 12am UTC
-        df_rev_sc = pd.read_csv(rev_sc_path)
-        #Add/rename columns
-        df_rev_sc['MWh'] = df_rev_sc['annual_energy-means'] / 1000
-        df_rev_sc = df_rev_sc.rename(columns={'total_lcoe':'LCOE', 'capacity_mw':'MW'})
-        df_rev_sc = df_rev_sc.merge(df_rev_county, on='cnty_fips', how='left')
-
-    print('Reading profile file')
-    if r['tech'] == 'load':
-        df_profile = pd.read_csv(profile_path)
-        df_profile = df_profile.drop(columns=['hour'])
-        #Convert kW to MW and convert negative to positive
-        df_profile = -1 * df_profile/1000
-        #Roll load profiles to UTC (this will bring prices from end of year to beginning of year)
-        for col in df_profile:
-            profile_tz = ba_tz_map[col] if r['profile_timezone'] == 'local' else int(r['profile_timezone'])
-            df_profile[col] = np.roll(df_profile[col], -1 * profile_tz)
+        df_meta = pd.read_csv(meta_path)
+        #Add a 'site_id' column and 'reeds_county' column with the state (2-digit) and
+        #county (3-digit) FIPS codes,preceded by 'p'
+        if r['tech'] in ['wind-ons','wind-ofs','upv']:
+            df_meta['site_id'] = df_meta['sc_point_gid'].astype(str)
+            #Add leading p, and pad with leading zero (zfill) to 5 total digits
+            df_meta['reeds_county'] = 'p' +  df_meta['cnty_fips'].astype(str).str.zfill(5)
+            #Read in profile
+            h5_rev = h5py.File(profile_path, 'r')
+            df_profile = pd.DataFrame(h5_rev[f'cf_profile-{rev_year}'][:])
+            df_profile = df_profile/h5_rev[f'cf_profile-{rev_year}'].attrs['scale_factor']
+            df_rev_meta = pd.DataFrame(h5_rev['meta'][:])
+            h5_rev.close()
+            df_profile.columns = df_profile.columns.map(df_rev_meta['sc_point_gid'].astype(str))
+        elif r['tech'] == 'load':
+            df_meta['site_id'] = df_meta['bldg_id'].astype(str)
+            gcol = 'in.nhgis_county_gisjoin' if 'in.nhgis_county_gisjoin' in df_meta else 'in.county'
+            df_meta['reeds_county'] = 'p' + df_meta[gcol].str[1:3] + df_meta[gcol].str[4:7]
+            df_profile = pd.read_csv(profile_path)
+            df_profile = df_profile.drop(columns=['timestamp_EST'])
+        df_meta = df_meta.merge(df_county_map, on='reeds_county', how='left')
     else:
-        h5_rev = h5py.File(profile_path, 'r')
-        df_profile = pd.DataFrame(h5_rev[f'cf_profile-{rev_year}'][:])
-        df_profile = df_profile/h5_rev[f'cf_profile-{rev_year}'].attrs['scale_factor']
-        df_rev_meta = pd.DataFrame(h5_rev['meta'][:])
-        h5_rev.close()
-        df_profile.columns = df_profile.columns.map(df_rev_meta['sc_point_gid'])
+        if r['tech'] == 'load':
+            #TODO: Confirm that this profile data starts at 12am, not 1am.
+            df_profile = pd.read_csv(profile_path)
+            df_profile = df_profile.drop(columns=['hour'])
+            #Convert kW to MW and convert negative to positive
+            df_profile = -1 * df_profile/1000
+    #Roll load profiles to UTC (this will bring prices from end of year to beginning of year)
+    #NOTE: We assume raw profile data starts at 12am in the specified timezone.
+    for col in df_profile:
+        profile_tz = ba_tz_map[col] if r['profile_timezone'] == 'local' else int(r['profile_timezone'])
+        df_profile[col] = np.roll(df_profile[col], -1 * profile_tz)
 
-    return df_profile, df_rev_sc
+    return df_profile, df_meta
 
 def calculate_metrics():
     print('Reducing profiles to only those that can be mapped to prices')
     #First find list of BAs associated with ReEDS run
-    if sw_reg == 'ba':
-        bas = df_pq['reeds_ba'].unique().tolist()
-    else:
-        bas = df_hier[df_hier[sw_reg].isin(df_pq['reeds_ba'])]['ba'].tolist()
-    #Now restrict profile based on that list of bas
-    if r['tech'] == 'load':
-        #Assuming profiles are at the BA level
-        df_profile = df_profile_full[bas].copy()
-    else:
-        df_rev_sc = df_rev_sc_full[df_rev_sc_full['reeds_ba'].isin(bas)].copy()
-        df_profile = df_profile_full[df_rev_sc['sc_point_gid'].tolist()].copy()
+    reg_set = df_pq['reeds_ba'].unique().tolist()
+    bas =  reg_set if sw_reg == 'ba' else df_hier[df_hier[sw_reg].isin(reg_set)]['ba'].tolist()
     df_p_h_s = df_p_h_serv.copy() #Shallow copy so we don't duplicate so much data
-    if r['rev_sc_path'] != 'none':
-        print('Calculate price profile by reV site')
+    if r['meta_path'] != 'none':
+        df_meta = df_meta_full[df_meta_full['reeds_ba'].isin(bas)].copy()
+        df_profile = df_profile_full[df_meta['site_id'].tolist()].copy()
+        print('Calculate price profile by site')
         ls_serv = list(df_p_h_s.keys())
         for s in ls_serv:
-            df_p_h_s[f'{s}_site'] = df_p_h_s[s][df_rev_sc['reeds_ba'].tolist()]
-            df_p_h_s[f'{s}_site'].columns = df_rev_sc['sc_point_gid'].tolist()
+            df_p_h_s[f'{s}_site'] = df_p_h_s[s][df_meta['reeds_ba'].tolist()]
+            df_p_h_s[f'{s}_site'].columns = df_meta['site_id'].tolist()
+    else:
+        #Assuming profiles are at the BA level
+        df_profile = df_profile_full[bas].copy()
 
     print('Calculating metrics')
-    df = df_profile.sum().to_frame(name='MWh_ann')
+    if rep_gen:
+        #In this case use df_profile_rep for all value calculations except reserve margin
+        #To make df_profile_rep, reduce df_profile to just the representative hours and then duplicate the representative hours across the hours they represent.
+        df_hmap_rep = df_hmap[['periodhour','actual_period','season']].copy()
+        df_hmap_rep['actual_period_hour'] = df_hmap_rep['actual_period']+ '_' + df_hmap_rep['periodhour'].astype(str)
+        df_hmap_rep['season_hour'] = df_hmap_rep['season']+ '_' + df_hmap_rep['periodhour'].astype(str)
+        #Make the index of df_hmap_rep the UTC hour (like df_profile), assuming df_hmap starts at 12am EST (5am UTC)
+        df_hmap_rep.index = np.roll(df_hmap_rep.index, -5)
+        df_hmap_rep = df_hmap_rep.sort_index()
+        df_hmap_rep_only = df_hmap_rep[df_hmap_rep['actual_period_hour'] == df_hmap_rep['season_hour']][['season_hour']].copy()
+        df_profile_rep = df_profile.copy()
+        df_profile_rep = df_hmap_rep_only.merge(df_profile_rep, left_index=True, right_index=True, how='left')
+        df_profile_rep = df_hmap_rep[['season_hour']].merge(df_profile_rep, on='season_hour', how='left').drop(columns=['season_hour'])
+
+        #Calculate annual generation from the representative profile
+        df = df_profile_rep.sum().to_frame(name='MWh_ann')
+    else:
+        df = df_profile.sum().to_frame(name='MWh_ann')
     serv = [s for s in df_p_h_s.keys() if '_site' not in s]
-    for s in serv:
-        s_key = s if r['rev_sc_path'] == 'none' else f'{s}_site'
-        df[f'LVOE_{s}'] = df_profile.mul(df_p_h_s[s_key]).sum(axis='rows').div(df['MWh_ann'])
-    df = df.rename(columns={'LVOE_tot':'LVOE'})
-    df['LVOE_loc'] = p_ba if r['rev_sc_path'] == 'none' else p_ba[df_rev_sc['reeds_ba'].tolist()].to_list()
+    #If we are using rep days, we use df_profile_rep for load, or, and rps, while still using df_profile for rm.
+    df['LVOE'] = 0 #Initialize total LVOE at zero
+    serv_non_tot = [s for s in serv if s != 'tot']
+    for s in serv_non_tot:
+        s_key = s if r['meta_path'] == 'none' else f'{s}_site'
+        if rep_gen and s != 'rm':
+            df[f'LVOE_{s}'] = df_profile_rep.mul(df_p_h_s[s_key]).sum(axis='rows').div(df['MWh_ann'])
+        else:
+            df[f'LVOE_{s}'] = df_profile.mul(df_p_h_s[s_key]).sum(axis='rows').div(df['MWh_ann'])
+        df[f'LVOE'] = df['LVOE'] + df[f'LVOE_{s}']
+    df['LVOE_loc'] = p_ba if r['meta_path'] == 'none' else p_ba[df_meta['reeds_ba'].tolist()].to_list()
     #Output benchmark price components
-    df['Pb_load_loc'] = p_ba_load if r['rev_sc_path'] == 'none' else p_ba_load[df_rev_sc['reeds_ba'].tolist()].to_list()
-    df['Pb_rm_loc'] = p_ba_rm if r['rev_sc_path'] == 'none' else p_ba_rm[df_rev_sc['reeds_ba'].tolist()].to_list()
+    df['Pb_load_loc'] = p_ba_load if r['meta_path'] == 'none' else p_ba_load[df_meta['reeds_ba'].tolist()].to_list()
+    df['Pb_rm_loc'] = p_ba_rm if r['meta_path'] == 'none' else p_ba_rm[df_meta['reeds_ba'].tolist()].to_list()
     df['Pb_load_nat'] = p_nat_load
     df['Pb_rm_nat'] = p_nat_rm
-    df['LVOE_sys'] = df_profile.mul(p_h.tolist(), axis='rows').sum(axis='rows').div(df['MWh_ann'])
+    if rep_gen:
+        df['LVOE_sys_load'] = df_profile_rep.mul(p_h_load.tolist(), axis='rows').sum(axis='rows').div(df['MWh_ann'])
+    else:
+        df['LVOE_sys_load'] = df_profile.mul(p_h_load.tolist(), axis='rows').sum(axis='rows').div(df['MWh_ann'])
+    df['LVOE_sys_rm'] = df_profile.mul(p_h_rm.tolist(), axis='rows').sum(axis='rows').div(df['MWh_ann'])
+    df['LVOE_sys'] = df['LVOE_sys_load'] + df['LVOE_sys_rm']
     df['VF'] = df['LVOE']/p_nat
     df['VF_temporal'] = df['LVOE_sys']/p_nat
     df['VF_spatial'] = df['LVOE_loc']/p_nat
     df['VF_temporal_local'] = df['LVOE']/df['LVOE_loc']
     df['VF_spatial_simult'] = df['LVOE']/df['LVOE_sys']
     df['VF_interaction'] = df['VF_spatial_simult']/df['VF_spatial']
-    if r['tech'] == 'load' and r['buildings_file'] != 'none':
-        df_buildings = pd.read_csv(r['buildings_file'], index_col='ba')
-        df = df.merge(df_buildings, left_index=True, right_index=True)
-        for col in ['LVOE','LVOE_load','LVOE_rm']:
-            new_col = col.replace('LVOE','LVOB')
-            df[new_col] = df[col]*df['MWh_ann']/df['number']
-            new_col = col.replace('LVOE','LVOsqft')
-            df[new_col] = df[col]*df['MWh_ann']/df['sqft']
-    df = df.drop(columns=['LVOE_loc','LVOE_sys']).reset_index()
-
-    if r['rev_sc_path'] != 'none':
-        #Merge metrics with other supply curve columns
-        df = df.rename(columns={'index':'sc_point_gid'})
-        #Drop MWh_ann (annual MWh derived from 2012 CF profile) and replace with MWh derived from annual_energy-means (in kWh)
-        #from the supply curve, where mean_cf = annual_energy-means/(capacity_mw*8760*1000), which are multi-year averages.
-        df = df.drop(columns=['MWh_ann'])
-        #Merge into rev supply curve and calculate cost metrics
-        df = df_rev_sc[['sc_point_gid','latitude','longitude','MW','MWh','LCOE']].merge(df, on='sc_point_gid', how='left')
-        #TODO: Change the following to apply to more techs (currently works for just onshore wind)
-        if r['tech'] == 'wind-ons':
-            #Apply multipliers to LCOE over time: 2020: 1.44, 2030: 1, 2050: 0.80
-            if year <= 2030:
-                mult = 1.44 + (year - 2020)*(1 - 1.44)/(2030 - 2020)
-            else:
-                mult = 1 + (year - 2030)*(0.8 - 1)/(2050 - 2030)
-            df['LCOE'] = df['LCOE']*mult
-        #Apply IRA incentive
-        df['LCOE'] = df['LCOE'] - ira_incentive
-        df['ASP'] = (df['LVOE'] - df['LCOE'])*df['MWh']
-        df['BCR'] = df['LVOE'] / df['LCOE']
-        df['PLCOE'] = df['LCOE'] / df['VF']
+    df = df.drop(columns=['LVOE_loc','LVOE_sys','LVOE_sys_load','LVOE_sys_rm']).reset_index()
 
     #Add tech and scenario as the first two columns
     df.insert(loc=0, column='scenario', value=r['name'])
     df.insert(loc=0, column='tech', value=r['tech'])
     return df
 
-print(f'Starting reValue')
+#Main logic
+print('Starting reValue')
 df_scens = pd.read_csv(f'{this_dir_path}/scenarios.csv')
 df_scens = df_scens[df_scens['activate'] == 1].copy()
 if len(df_scens['tech'].unique()) > 1:
@@ -356,7 +358,7 @@ if len(df_scens['tech'].unique()) > 1:
 ls_metrics = []
 dct_prices = {} #Keys are tuples of (reeds_run_path, year). Values are tuples of (df_pq, df_q_load, df_p_h_serv)
 dct_benchmarks = {} #Keys are tuples of (reeds_run_path, year). Values are tuples of (p_ba, p_ba_load, p_ba_rm, p_nat, p_nat_load, p_nat_rm, p_h)
-dct_profiles = {} #Keys are profile_paths. Values are tuples of (df_profile_full, df_rev_sc_full).
+dct_profiles = {} #Keys are profile_paths. Values are tuples of (df_profile_full, df_meta_full).
 for i,r in df_scens.iterrows():
     print(f'\nProcessing {r["name"]}')
     profile_path = r['profile_path'].replace('"', '')
@@ -370,6 +372,10 @@ for i,r in df_scens.iterrows():
     hier_file = f'{this_dir_path}/../../inputs/hierarchy{hier_suffix}.csv'
     df_hier = pd.read_csv(hier_file, usecols=['ba',sw_reg]).drop_duplicates()
     df_hier_run = pd.read_csv(f'{reeds_run_path}/inputs_case/hierarchy.csv')
+    df_county_map = pd.read_csv(hier_file, usecols=['county','ba'])
+    df_county_map.columns = ['reeds_county', 'reeds_ba']
+    df_hmap = pd.read_csv(f'{reeds_run_path}/inputs_case/hmap_myr.csv')
+    # df_hmap_7yr = pd.read_csv(f'{reeds_run_path}/inputs_case/hmap_7yr.csv')
     #Only fetch prices if we haven't already for this reeds run and year
     #TODO: Include tech here in the dct_prices tuple key? For now I disallow multiple techs
     if (reeds_run_path, year) not in dct_prices:
@@ -381,15 +387,16 @@ for i,r in df_scens.iterrows():
         dct_benchmarks[(reeds_run_path, year)] = calculate_benchmarks()
     else:
         print('Already got benchmarks!')
-    p_ba, p_ba_load, p_ba_rm, p_nat, p_nat_load, p_nat_rm, p_h = dct_benchmarks[(reeds_run_path, year)]
+    p_ba, p_ba_load, p_ba_rm, p_nat, p_nat_load, p_nat_rm, p_h, p_h_load, p_h_rm = dct_benchmarks[(reeds_run_path, year)]
     if r['profile_path'] == 'none':
+        #In this case we care only about ReEDS prices, so continue to next iteration
         continue
     #Only grab profiles if we haven't already.
     if profile_path not in dct_profiles:
         dct_profiles[profile_path] = get_profiles()
     else:
         print('Already got profiles!')
-    df_profile_full, df_rev_sc_full = dct_profiles[profile_path]
+    df_profile_full, df_meta_full = dct_profiles[profile_path]
     df_metrics = calculate_metrics()
     ls_metrics.append(df_metrics)
 
@@ -402,7 +409,7 @@ if output_prices:
         for s in list(df_p_h_serv.keys()):
             #Round prices and keep only hours that have data for any BA
             df_p_out = df_p_h_serv[s].round(2)
-            df_p_out = df_p_out[df_p_out.sum(axis=1)>0]
+            df_p_out = df_p_out[(df_p_out != 0).any(axis=1)]
             df_p_out.index.name='hour_UTC'
             df_p_out = df_p_out.reset_index()
             df_p_out.insert(loc=0, column='type', value=s)

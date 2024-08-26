@@ -41,7 +41,7 @@ kinks = {
 #%% Load emissions for case
 emit_r = pd.read_csv(
     os.path.join(case,'outputs','emit_r.csv'),
-    header=0, names=['e','r','t','tonne'],
+    header=0, names=['e','r','t','metric tons'],
 )
 
 #%% Load static ReEDS inputs
@@ -58,7 +58,7 @@ for region in sorted(hierarchy[level].unique()):
     ### Get past emissions
     emissions = emit_r.loc[
         emit_r.r.isin(r) & (emit_r.e==e),
-    ].groupby('t').tonne.sum() / 1e6
+    ].groupby('t')['metric tons'].sum() / 1e6
     ### Make the label
     targetyears = list(kinks.keys())[2:]
     title = '{}_{}_ref{}_start{}_{}'.format(
@@ -105,9 +105,9 @@ for region in sorted(hierarchy[level].unique()):
 dfout = pd.concat(dfout, axis=1)
 
 #%% Write it to CO2 caps file in ReEDS
-## ReEDS CO2 caps are in metric tonnes so multiply by 1E6
+## ReEDS CO2 caps are in metric tons so multiply by 1E6
 dfwrite = pd.read_csv(
-    os.path.join(reeds_path,'inputs','carbonconstraints','co2_cap.csv'),
+    os.path.join(reeds_path,'inputs','emission_constraints','co2_cap.csv'),
     index_col=0,
 )
 dfwrite.columns = dfwrite.columns.astype(int)
@@ -118,7 +118,7 @@ dfwrite = (
     .round(0).fillna(0).astype(int)
 ).T
 dfwrite.index = dfwrite.index.rename('t')
-dfwrite.to_csv(os.path.join(reeds_path,'inputs','carbonconstraints','co2_cap.csv'))
+dfwrite.to_csv(os.path.join(reeds_path,'inputs','emission_constraints','co2_cap.csv'))
 
 
 
@@ -211,9 +211,9 @@ ax.legend()
 plt.show()
 
 #%% Write it to CO2 caps file in ReEDS
-## ReEDS CO2 caps are in tonnes so multiply by 1E6
+## ReEDS CO2 caps are in metric tons so multiply by 1E6
 dfwrite = pd.read_csv(
-    os.path.join(reeds_path,'inputs','carbonconstraints','co2_cap.csv'),
+    os.path.join(reeds_path,'inputs','emission_constraints','co2_cap.csv'),
     index_col=0,
 )
 dfwrite.columns = dfwrite.columns.astype(int)
@@ -224,7 +224,7 @@ dfwrite = (
     .round(0).fillna(0).astype(int)
 ).T
 dfwrite.index = dfwrite.index.rename('t')
-dfwrite.to_csv(os.path.join(reeds_path,'inputs','carbonconstraints','co2_cap.csv'))
+dfwrite.to_csv(os.path.join(reeds_path,'inputs','emission_constraints','co2_cap.csv'))
 
 
 
@@ -290,7 +290,7 @@ for st in states[:50]:
     ax[coords[st]].annotate(st,(2000,0),weight='bold',fontsize='large')
     ax[coords[st]].set_ylim(0)
 
-ax[-1,0].set_ylabel('Electricity-sector CO2 emissions\n[million metric tonnes CO2]', y=0, ha='left')
+ax[-1,0].set_ylabel('Electricity-sector CO2 emissions\n[million metric tons CO2]', y=0, ha='left')
 plots.despine(ax)
 plt.show()
 
@@ -357,10 +357,10 @@ ax.legend()
 plt.show()
 
 #%% Write it to CO2 caps file in ReEDS
-## ReEDS CO2 caps are in tonnes so multiply by 1E6
+## ReEDS CO2 caps are in metric tons so multiply by 1E6
 dfout = pd.read_csv(
-    os.path.join(reeds_path,'inputs','carbonconstraints','co2_cap.csv'),
+    os.path.join(reeds_path,'inputs','emission_constraints','co2_cap.csv'),
     index_col='t',
 )
 dfout[title] = (caps.loc[dfout.index]*1E6).round(0).astype(int)
-dfout.to_csv(os.path.join(reeds_path,'inputs','carbonconstraints','co2_cap.csv'))
+dfout.to_csv(os.path.join(reeds_path,'inputs','emission_constraints','co2_cap.csv'))

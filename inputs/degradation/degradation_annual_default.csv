@@ -8,6 +8,11 @@ battery_4,0
 battery_6,0
 battery_8,0
 battery_10,0
+battery_12,0
+battery_24,0
+battery_48,0
+battery_72,0
+battery_100,0
 biopower,0
 beccs_mod,0
 beccs_max,0
@@ -47,7 +52,7 @@ hydNPD,0
 hydNPND,0
 hydED,0
 hydEND,0
-wind-ofs_1*wind-ofs_15,0.0027
+wind-ofs_1*wind-ofs_10,0.0027
 csp1_1*csp1_12,0
 csp2_1*csp2_12,0
 csp3_1*csp3_12,0

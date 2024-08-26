@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exploding Pivot Charts &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_information.html">Model Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Exploding Pivot Charts</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/bokehpivot.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <!--
+This is a reference to the bokeh pivot documentation that can be found in postprocessing/bokehpivot/README.md
+-->
+<section id="exploding-pivot-charts">
+<h1>Exploding Pivot Charts<a class="headerlink" href="#exploding-pivot-charts" title="Link to this heading"></a></h1>
+<section id="intro">
+<h2>Intro<a class="headerlink" href="#intro" title="Link to this heading"></a></h2>
+<p>This python bokeh app creates multiple pivot charts from data. A helpful tutorial is here: https://youtu.be/8Xi59M4bB6I. Note that some of this documentation might be outdated.</p>
+</section>
+<section id="installing-bokeh">
+<h2>Installing Bokeh<a class="headerlink" href="#installing-bokeh" title="Link to this heading"></a></h2>
+<ol class="arabic">
+<li><p>You can check if you already have bokeh by going to
+command line and simply entering:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bokeh</span>
+</pre></div>
+</div>
+<p>If you get a message that says</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ERROR</span><span class="p">:</span> <span class="n">Must</span> <span class="n">specify</span> <span class="n">subcommand</span><span class="o">...</span>
+</pre></div>
+</div>
+<p>you already have Bokeh. If not, here are the Bokeh installation instructions:
+http://bokeh.pydata.org/en/latest/docs/installation.html. The easiest way is to use conda,
+e.g. from the command line:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="n">bokeh</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="running-bokehpivot-windows">
+<h2>Running Bokehpivot (Windows)<a class="headerlink" href="#running-bokehpivot-windows" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>In the ReEDS repo, simply double click on bokehpivot/launch.bat to launch the tool. This will start a bokeh server in a terminal window and a browser window with an interactive interface.</p></li>
+<li><p>After the tool is launched, go to the <em>Loading Model data</em> section below.</p></li>
+<li><p>When done, simply close the terminal window that is running the server.</p></li>
+</ol>
+<ul>
+<li><p>If you’re curious about the contents of the .bat files, you can open the <em>Launch.bat</em> in a text editor. The contents will look like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">call</span> <span class="n">bokeh</span> <span class="n">serve</span> <span class="o">.</span> <span class="o">--</span><span class="n">sh</span> <span class="o">--</span><span class="n">port</span> <span class="mi">0</span>
+</pre></div>
+</div>
+</li>
+<li><p>Here is a breakdown of the contents of <em>Launch.bat</em>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bokeh</span> <span class="pre">serve</span> <span class="pre">.</span> <span class="pre">--sh</span></code>: Launch bokeh server and open browser window with the app. See https://docs.bokeh.org/en/latest/docs/user_guide/server.html for more info.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--port</span> <span class="pre">0</span></code>: This will allow bokehpivot to use an available port, and allows multiple simultaneous bokehpivot sessions (by launching multiple times).</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="running-bokehpivot-macos">
+<h2>Running Bokehpivot (MacOS)<a class="headerlink" href="#running-bokehpivot-macos" title="Link to this heading"></a></h2>
+<p>In the bokehpivot directory in VSCode or terminal, launch bokehpivot by:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">/.</span><span class="n">launch</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<p>(if you run into an access/permission restricting issue, allow yourself access to launch.sh by running following command before <code class="docutils literal notranslate"><span class="pre">/.launch.sh</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">chmod</span> <span class="n">u</span><span class="o">+</span><span class="n">x</span> <span class="n">launch</span><span class="o">.</span><span class="n">sh</span>
+</pre></div>
+</div>
+<p>a browser window with an interactive interface will pop up.</p>
+</section>
+<section id="loading-data">
+<h2>Loading data<a class="headerlink" href="#loading-data" title="Link to this heading"></a></h2>
+<p>After starting up the app in a browser window, you must enter a path in the <em>Data Source</em> field, either to a CSV file or to a Model run or set of runs:</p>
+<ul class="simple">
+<li><p><em>CSV</em>: Enter a path to a csv file. This file must be properly formatted, with column headers but no row headers. You can <em>Shift+Right Click</em> on a csv file, then select <em>Copy as Path</em> to get the full path to a file. After that, see the <em>Core Pivot Functionality</em> section below.</p></li>
+<li><p><em>Model Run(s)</em>: Here are the options:</p>
+<ul>
+<li><p>Enter a path to a Model run folder. This works using shared drives too. For example,  <em>\nrelqnap01d\ReEDS\someProject\runs\someRun</em>.</p></li>
+<li><p>Enter a path to a folder containing run folders. For example,  <em>\nrelqnap01d\ReEDS\someProject\runs</em>.</p></li>
+<li><p>Enter any number of the path types above, each separated by a | (pipe) symbol</p></li>
+<li><p>Enter a path to a csv file that contains a list of runs. Using this method allows scenarios to be ordered as desired and colors to be specified as well. See <em>in/reeds_scenarios.csv</em> for an example. It’s easiest to just copy <em>reeds_scenarios.csv</em> to some other location and edit/use the copy. Note that the file name must end with <em>reeds_scenarios.csv</em>.</p></li>
+<li><p>After entering one of the above, see the <em>ReEDS Widgets</em> and <em>Core Pivot Functionality</em> sections below.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="model-widgets">
+<h2>Model Widgets<a class="headerlink" href="#model-widgets" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Model Variables</strong>: Click the <em>Model Variables</em> section to expand, and update any model variables, e.g. dollar year and present value reference and end years.</p></li>
+<li><p><strong>Meta</strong>: Click the <em>Meta</em> section to expand, and see the files used for some default <em>maps</em> (to rename and aggregate different output categories), <em>styles</em> (to reorder categories and style them), and <em>merges</em> (to join more columns, e.g. to add regional aggregations). If you’d like to update any of these files, simply edit the file (only if you’re working locally), or point to a new file. When changing mappings, note that all set elements have been lowercased!</p></li>
+<li><p><strong>Filter Scenarios</strong>: A list of scenarios will be fetched after entering a path in <em>Runs</em>. Use the <em>Filter Scenarios</em> section to reduce the scenarios from which the app will fetch output data. Note that this filter does not have an effect after the data has already been fetched. To do further filtering of scenarios when building/updating figures, use the “scenario” filter in the “Filters” dropdown (described below).</p></li>
+<li><p><strong>Build Report</strong>: Build an HTML/Excel report based on a python file with a list of bokehpivot configurations. A select widget allows any of the reports in the <em>reports\templates\</em> folder to be chosen, or the path to a custom report may be entered in a text widget (for example, one that is exported using the <em>Export Report Config</em> button described below). If the report references a base case, this may be chosen with a select widget. Click the <em>Build Report</em> button to create one html file and excel file with results for that report, or click <em>Build Separate Reports</em> to split each report configuration into its own html file. In either case, a separate and independent process is initiated each time one of these buttons is clicked. Note that <em>Filter Scenarios</em> may be used to limit the scenarios included in the report.</p></li>
+<li><p><strong>Result</strong>: Select a result from the <em>Result</em> select box. It may take a few seconds to fetch the data, depending on the number of scenarios being analyzed. After the result data is fetched, the following widgets will appear</p></li>
+<li><p><strong>Presets</strong>: You may select a preset result from the <em>Preset</em> select box, and a set of widgets will be automatically set for you. For example, for <em>Generation</em>, <em>Stacked Generation</em> is a preset result. Note that after selecting a preset, you may make further modifications to the widgets.</p></li>
+<li><p>See the <em>Core Pivot Functionality</em> section below for the rest of the available widgets.</p></li>
+</ul>
+</section>
+<section id="core-pivot-functionality">
+<h2>Core Pivot Functionality<a class="headerlink" href="#core-pivot-functionality" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Chart Type</strong>: <em>Dot</em>, <em>Line</em>, Bar, Area, or Map. Note that Map requires that a mapped region (i, n, r, rnew, rto, st) is chosen as x-axis</p></li>
+<li><p><strong>X-axis (required)</strong>: Select a column to use as x-axis</p></li>
+<li><p><strong>Group X By</strong>: Select a column to group the x-axis (if both x-axis and grouping columns are discrete).</p></li>
+<li><p><strong>Y-axis (required)</strong>: Select a column to use as y-axis</p></li>
+<li><p><strong>Y-Axis Aggregation</strong>: Select <em>Sum</em>, <em>Average</em>, or <em>Weighted Ave</em>, or <em>Weighted Ave Ratio</em>. <em>Weighted Ave</em> requires another field, the <em>Weighting Factor</em>, and <em>Weighted Ave Ratio</em>, a ratio of weighted averages, requires both <em>Weighting Factor</em> (for the numerator of the ratio) and <em>Denominator Weighting Factor</em>. For electricity price, for example, select <em>load</em> as the <em>Weighting Factor</em>.</p></li>
+<li><p><strong>Series</strong>: Pick a column to split the data into separate, color-coded series. If Chart Type (see Plot Adjustments
+below) is Area or Bar, series will automatically be stacked. If Chart Type is Line or Dot, the series will not be stacked.</p></li>
+<li><p><strong>Series Legend</strong>: Click on this to see the color and name of each series</p></li>
+<li><p><strong>Explode By</strong>: Select a discrete column to split into multiple charts. The charts’ titles will correspond to the
+exploded column values.</p></li>
+<li><p><strong>Group Exploded Charts By</strong>: Select a discrete column to group exploded charts. Play around with plot sizes (see below)
+and/or resize your browser screen to make a nice 2d array of charts.</p></li>
+<li><p><strong>Comparisons</strong>: This section allows comparisons across any dimension. You first select the <em>Operation</em>, then the column you’d like to <em>Operate Across</em>, then the <em>Base</em> that you’d like to compare to. Here are a couple examples for results:</p>
+<ul>
+<li><p>Generation differences: Select <em>Generation</em> as <em>Result</em>, and select <em>Stacked Gen</em> under <em>Presets</em>. Then, under <em>Comparisons</em>, select <em>Operation</em>=<em>Difference</em>, <em>Operate Across</em>=<em>scenario</em>, and <em>Base</em>=your-base-case.</p></li>
+<li><p>Generation Fraction: Select <em>Generation</em> as <em>Result</em>, and select <em>Stacked Gen</em> under <em>Presets</em>. Then, under <em>Comparisons</em>, select <em>Operation</em>=<em>Ratio</em>, <em>Operate Across</em>=<em>tech</em>, and <em>Base</em>=<em>Total</em>.</p></li>
+<li><p>Capacity Differences, solve-year-to-solve-year: Select <em>Capacity</em> as <em>Result</em>, and select <em>Stacked Capacity</em> under <em>Presets</em>. Then, under <em>Comparisons</em>, select <em>Operation</em>=<em>Difference</em>, <em>Operate Across</em>=<em>year</em>, and <em>Base</em>=<em>Consecutive</em>.</p></li>
+</ul>
+</li>
+<li><p><strong>Filters</strong>: Each column can be used to filter data with checkboxes. After selecting Filters, you must press the Update Filters button to apply the filters</p></li>
+<li><p><strong>Update Filters</strong>: This is used for updating the charts once filters have been changed</p></li>
+<li><p><strong>Plot Adjustments</strong>: Make additional figure modifications: Size, x-axis/y-axis limits and scale, etc.</p></li>
+<li><p><strong>Map Adjustments</strong>: By default, data is binned using the <em>Auto Equal Num</em> method, which tries to split the data evenly between bins. But bins can also be specified as having equal width, or they can be set fully manually, using comma separated breakpoints. The two auto binning methods can also accept a number of bins and min/max values. Finally, stylistic adjustments to the maps may be made. Different coloring palettes may be used from https://bokeh.pydata.org/en/latest/docs/reference/palettes.html as long as the number of bins is allowed in that palette.</p></li>
+<li><p><strong>Auto/Manual Update</strong>: Setting <em>Auto Update</em> to <em>Disable</em> will disallow plots and data to be updated automatically while widgets are altered. The <em>Manual Update</em> button can be used to manually update plots and data. Setting <em>Render plots</em> to <em>No</em> will disallow rendering of figures. This is useful if, for instance, rendering plots is taking a very long time, and you simply want to download the data for a given widget config.</p></li>
+<li><p><strong>Download/Export</strong>: Download any data you’re viewing with the <em>Download csv of View</em> and <em>Download html of View</em> buttons, or download all data for a given source/result with the <em>Download csv of Source</em> button. It will be downloaded into a timestamped file in the <em>bokehpivot\out\</em> folder, under your username. <em>Export URL</em> will save any non-default widget configuration as a URL query string (starting with “?”) and create a text file. At a later time, you will be able to load the same view by simply appending the URL query string to your bokehpivot URL (with your bokeh server running). If the URL is from Scorpio/Orion, you may access the URL from any computer connected to the NREL network (while the bokeh server on Scorpio/Orion is still running). <em>Export Report Config</em> will save config as a report section configuration dict in a python file, which can then be loaded as a custom file in the <em>Build Report</em> section above.</p></li>
+</ul>
+</section>
+<section id="creating-report-templates">
+<h2>Creating report templates:<a class="headerlink" href="#creating-report-templates" title="Link to this heading"></a></h2>
+<p>Report templates are in the <em>reports\templates\</em> folder. Each of these files consists of a list of configurations. Every configuration has these keys:</p>
+<ul class="simple">
+<li><p><em>name</em>: The title of this section of the report, shown in both the HTML and Excel sheets</p></li>
+<li><p><em>result</em> (optional): The result name (required if using the <em>preset</em> key).</p></li>
+<li><p><em>preset</em> (optional): The preset name.</p></li>
+<li><p><em>config</em> (optional): Full configuration if not using <em>result</em> or <em>preset</em> keys, or additional configuration to add. See <em>reports\templates\jobs_report.py</em> for examples of the <em>config</em> key used in addition to presets.</p></li>
+<li><p><em>modify</em> (optional): This allows comparison charts to be built when a base case has been specified. <em>‘modify’: ‘diff’</em> indicates that difference charts should be shown with the base case, while <em>‘modify’: ‘base_only’</em> indicates that the result should only be shown for the base case.</p></li>
+</ul>
+</section>
+<section id="tips">
+<h2>Tips<a class="headerlink" href="#tips" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Pressing <em>Alt</em> will collapse all expandable sections.</p></li>
+<li><p>Shift+Right Click on a file or folder in Windows Explorer will show the “Copy as Path” option, which may be pasted directly in the data source field.</p></li>
+<li><p>Shift+Right Click on a folder or in a folder in Windows Explorer will show the “Open Command Window Here” option, which is helpful when running the static report .py files.</p></li>
+<li><p>To suppress the automatic update of the plot while configuring the widgets, simply set <em>Auto-Update</em> to <em>Disable</em> to stop rendering of plots, then make your widget changes, then finally click the <em>Manual Update</em> button.</p></li>
+<li><p>You may interact with the bokeh server with multiple browser windows/tabs, and these interactions will be independent, so you can leave one result open in one tab while you load another in a separate tab, for example.</p></li>
+<li><p>The charts themselves have some useful features shown on the right-hand-side of each chart. For example, hovering over data on a chart will show you the series, x-value, and y-value of the data (not currently working for Area charts). You may also box-zoom or pan (and reset to go back to the initial view). Finally, the charts can be saved as pngs.</p></li>
+</ol>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>If the window becomes unresponsive, simply refresh the page (you may want to export config first).</p></li>
+<li><p>If a page refresh doesn’t work, then restart the bokeh server. If you have time, you can send Matt a screenshot of the error in the terminal window, if there is one.</p></li>
+</ol>
+</section>
+<section id="additional-resources">
+<h2>Additional Resources<a class="headerlink" href="#additional-resources" title="Link to this heading"></a></h2>
+<p>This tool uses bokeh, built on python:
+https://docs.bokeh.org/en/latest/.
+The site has good documentation in the User Guide and Reference.</p>
+<p>There is also an active google group for issues:
+https://discourse.bokeh.org</p>
+<p>And of course, python has good documentation too:
+https://docs.python.org/2.7/tutorial/</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

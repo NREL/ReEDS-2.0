@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReEDS-to-Tableau Postprocessing &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_information.html">Model Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">ReEDS-to-Tableau Postprocessing</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/tableau.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <!--
+This is a reference to the bokeh pivot documentation that can be found in postprocessing/tableau/README.md
+-->
+<section id="reeds-to-tableau-postprocessing">
+<h1>ReEDS-to-Tableau Postprocessing<a class="headerlink" href="#reeds-to-tableau-postprocessing" title="Link to this heading"></a></h1>
+<p>This directory contains files that facilitate the postprocessing and analysis of ReEDS and ReEDS-to-PLEXOS results in <a class="reference external" href="https://www.tableau.com/">Tableau</a>. Tableau is a commercial software that requires purchase of a license.</p>
+<p>You can run <code class="docutils literal notranslate"><span class="pre">postprocess_for_tableau.py</span></code> from the command line to assemble results, metadata, and supporting spatial files from multiple ReEDS (and optionally, ReEDS-to-PLEXOS) scenarios into a single Tableau extract (Tableau’s proprietary .hyper format, which is basically a self-contained SQL database), which is optimized for use within Tableau.</p>
+<p><code class="docutils literal notranslate"><span class="pre">postprocess_for_tableau.py</span></code> creates pivot tables of ReEDS outputs specified in the <code class="docutils literal notranslate"><span class="pre">PIVOT_DEFS</span></code> dictionary within <code class="docutils literal notranslate"><span class="pre">pivot_definitions.py</span></code>. You can specify which collections of pivot tables you want to include in your .hyper output file with the <code class="docutils literal notranslate"><span class="pre">-p</span></code> flag. Most of the outputs in each pivot table are simply the names of csvs created by <code class="docutils literal notranslate"><span class="pre">e_report_dump.py</span></code>, for which the column formats and the intended names of each as they’ll appear in Tableau are defined in <code class="docutils literal notranslate"><span class="pre">tables_to_aggregate.csv</span></code>. (If running <code class="docutils literal notranslate"><span class="pre">postprocess_for_tableau.py</span></code> throws an error The script assembles the pivot tables and combines them into a single Tableau .hyper extract file containing the pivotted tables for visualization and analysis in Tableau. It also creates a csv version of each pivot table.</p>
+<p>Before running this script for the first time, you’ll need to install the Tableau Hyper API via pip with:</p>
+<p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">tableauhyperapi</span></code></p>
+<p>Note that if you’re pulling ReEDS-to-PLEXOS results into Tableau, you’ll also need to have the <a class="reference external" href="https://github.com/NREL/h5plexos">h5plexos</a> package installed.</p>
+<section id="example-call">
+<h2>Example call:<a class="headerlink" href="#example-call" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>postprocess_for_tableau.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-d<span class="w"> </span><span class="s1">&#39;//nrelnas01/reeds/some_dir_containing_runs&#39;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-o<span class="w"> </span><span class="s1">&#39;//nrelnas01/reeds/some_directory_containing_runs/testbatch_suite&#39;</span><span class="w"> </span><span class="se">\ </span><span class="w">   </span>
+<span class="w">    </span>-s<span class="w"> </span>testbatch_refseq,testbatch_carbtax,testbatch,carbcap<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w"> </span>standard,plexos
+</pre></div>
+</div>
+<p>Run python postprocess_for_tableau.py –help for descriptions of the flags above and their expected arguments or simply look at the calls to argparse within in the script.</p>
+<p>Alternatively to explicitly specifying the names of scenarios directly with the <code class="docutils literal notranslate"><span class="pre">-s</span></code> flag as in the example above, you can automatically include all completed ReEDS scenarios by including the <code class="docutils literal notranslate"><span class="pre">-a</span></code> flag instead.</p>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">postprocess_for_tableau.py</span></code> creates a log file in the output directory called <code class="docutils literal notranslate"><span class="pre">tableau.txt</span></code> and redirects stdout and stderr there. Some error handling is present in the script, but if you encounter an error, the culprit is often an incorrect set of column definitions in <code class="docutils literal notranslate"><span class="pre">tables_to_aggregate.csv</span></code>. Sometimes the names of outputs and the order of sets they’re based on differ across branches of ReEDS. If columns you’ve defined in a pivot table within <code class="docutils literal notranslate"><span class="pre">pivot_definitions.py</span></code> aren’t appearing in the .hyper output, check that they’re correctly specified (including the correct path) in <code class="docutils literal notranslate"><span class="pre">tables_to_aggregate.csv</span></code> and <code class="docutils literal notranslate"><span class="pre">pivot_definitions.py</span></code>.</p>
+<p>Often, it’s best to run the script line-by-line in an IDE to diagnose and fix problems. One place to look is the long series of <code class="docutils literal notranslate"><span class="pre">elif</span></code> statements that define custom operations for any csvs defined in <code class="docutils literal notranslate"><span class="pre">pivot_definitions.py</span></code> that don’t follow the simple pattern of joining one new column to a pivot table per csv.</p>
+<p>You’ll notice a bunch of assignments to <code class="docutils literal notranslate"><span class="pre">col_defs</span></code> in <code class="docutils literal notranslate"><span class="pre">postprocess_for_tableau.py</span></code>. All dimensions and attributes (i.e. columns of tables) in Tableau must have data types defined, and we specify those to in a list with <code class="docutils literal notranslate"><span class="pre">col_defs</span></code>. These column types are passed to the <code class="docutils literal notranslate"><span class="pre">tableauhyperapi</span></code> function along with the location of the pivot table csv that we’ve just created in order for the pivot csv to be written into the Tableau .hyper file (which is really a SQL database under the hood). Those types are defined for all index sets in <code class="docutils literal notranslate"><span class="pre">column_types</span></code>, and the value column of csvs are by default assumed to be of type <code class="docutils literal notranslate"><span class="pre">SqlType.double()</span></code>. Where we need a different type, like a date or a geography for mapping, we define the <code class="docutils literal notranslate"><span class="pre">SqlType</span></code> explicitly in the logic within <code class="docutils literal notranslate"><span class="pre">main()</span></code>.</p>
+</section>
+<section id="adding-new-outputs-to-the-tableau-postprocessing">
+<h2>Adding new outputs to the Tableau postprocessing<a class="headerlink" href="#adding-new-outputs-to-the-tableau-postprocessing" title="Link to this heading"></a></h2>
+<p>Say you’ve got a new output csv that’s created in <code class="docutils literal notranslate"><span class="pre">e_report.gms</span></code> and <code class="docutils literal notranslate"><span class="pre">e_report_dump.py</span></code>, and you want to export it into Tableau, and it’s indexed on <code class="docutils literal notranslate"><span class="pre">(i,r,t)</span></code>. First, add it as a row in <code class="docutils literal notranslate"><span class="pre">tables_to_aggregate.csv</span></code>, along with its relative location within a ReEDS scenario directory, the name of the column as you’d like it to appear in Tableau, and the sets it’s indexed on, in the correct order. These index names tell the script the header names of each column in the csv, and they appear in Tableau as defined in <code class="docutils literal notranslate"><span class="pre">column_types</span></code> within <code class="docutils literal notranslate"><span class="pre">postprocess_for_tableau.py</span></code>. If you’re adding a new set name, add the set name and the name you’d like to appear in Tableau to that <code class="docutils literal notranslate"><span class="pre">column_types</span></code> dictionary.</p>
+<p>Next, you’d add the csv name as defined <code class="docutils literal notranslate"><span class="pre">tables_to_aggregate.csv</span></code> to the <code class="docutils literal notranslate"><span class="pre">csvs</span></code> list for whichever pivot tables you’d like it to appear in within <code class="docutils literal notranslate"><span class="pre">pivot_definitions.py</span></code>. You must also add a corresponding entry to <code class="docutils literal notranslate"><span class="pre">operation</span></code> to tell the script how to aggregate any index columns that appear in your csv beyond the index columns defined for that pivot table in <code class="docutils literal notranslate"><span class="pre">id_columns</span></code>. Entries of <code class="docutils literal notranslate"><span class="pre">sum</span></code> or <code class="docutils literal notranslate"><span class="pre">mean</span></code> will aggregate across any extra columns accordingly. For example, we could export our <code class="docutils literal notranslate"><span class="pre">(i,r,t)</span></code>-indexed csv to the <code class="docutils literal notranslate"><span class="pre">scen_r_t</span></code> pivot table with the <code class="docutils literal notranslate"><span class="pre">operation</span></code> set to <code class="docutils literal notranslate"><span class="pre">sum</span></code>, which would tell the script to eliminate the <code class="docutils literal notranslate"><span class="pre">i</span></code> column by summing across all <code class="docutils literal notranslate"><span class="pre">i</span></code>. You could also include any string in <code class="docutils literal notranslate"><span class="pre">operation</span></code> and then use that to explicitly define a custom operation within the series of <code class="docutils literal notranslate"><span class="pre">elif</span></code>s in the <code class="docutils literal notranslate"><span class="pre">main()</span></code> block of <code class="docutils literal notranslate"><span class="pre">postprocess_for_tableau.py</span></code>.</p>
+</section>
+<section id="tableau-analysis-templates">
+<h2>Tableau Analysis Templates<a class="headerlink" href="#tableau-analysis-templates" title="Link to this heading"></a></h2>
+<p>There’s also a Tableau template in this directory: <code class="docutils literal notranslate"><span class="pre">standard_reeds_analysis.twb</span></code>. A <code class="docutils literal notranslate"><span class="pre">.twb</span></code> file includes the structure of a Tableau notebook (i.e. the structure worksheets and dashboards), but not the data it refers to. The template is set up to connect to a <code class="docutils literal notranslate"><span class="pre">.hyper</span></code> extract created using this workflow. This way, you can open up <code class="docutils literal notranslate"><span class="pre">standard_reeds_analysis.twb</span></code> in Tableau, connect to the <code class="docutils literal notranslate"><span class="pre">.hyper</span></code> data extract you’ve created using the workflow above, and it will populate the sheets with your results. Note that once you’ve done that, you can always save your Tableau notebook as a <code class="docutils literal notranslate"><span class="pre">.twbx</span></code>, which packages both the <code class="docutils literal notranslate"><span class="pre">twb</span></code> and the <code class="docutils literal notranslate"><span class="pre">.hyper</span></code> into one file, making sharing your results easier.</p>
+</section>
+<section id="reeds-to-plexos">
+<h2>ReEDS-to-PLEXOS<a class="headerlink" href="#reeds-to-plexos" title="Link to this heading"></a></h2>
+<p>You can pull PLEXOS results into their own pivot tables and add them to the Tableau extract simply by including the “plexos” pivot table collection in your call to <code class="docutils literal notranslate"><span class="pre">postprocess_for_tableau.py</span></code>. The script is currently set up to identify each different directory within <code class="docutils literal notranslate"><span class="pre">&lt;scenario</span> <span class="pre">directory&gt;/plexos_export/solutions</span></code> as its own PLEXOS scenario, which will be differentiated by its name in a “PLEXOS Scenario” column in the Tableau pivot tables that are created.</p>
+</section>
+<section id="geospatial-mapping-in-tableau">
+<h2>Geospatial Mapping in Tableau<a class="headerlink" href="#geospatial-mapping-in-tableau" title="Link to this heading"></a></h2>
+<p>Several pivot tables containing geometry/geography columns are created in the <code class="docutils literal notranslate"><span class="pre">standard</span></code> pivot table collection. These can be used to create choropleth maps, etc. within Tableau. <code class="docutils literal notranslate"><span class="pre">region_mapping</span></code> contains the mapping heirarchy of ReEDS regions and BAs, and <code class="docutils literal notranslate"><span class="pre">line_mapping</span></code> contains straight-line paths between each BA and the 25 BAs closest to it. The pivot tables pull from csvs in <code class="docutils literal notranslate"><span class="pre">inputs/shapefiles</span></code> that each contain a WKT-formatted geometry column in the EPSG:4326 format.</p>
+</section>
+<section id="dollar-year-adjustments">
+<h2>Dollar-year Adjustments<a class="headerlink" href="#dollar-year-adjustments" title="Link to this heading"></a></h2>
+<p>Just as a note, <code class="docutils literal notranslate"><span class="pre">postprocess_for_tableau.py</span></code> converts any cost to the dollar year specified with the input argument <code class="docutils literal notranslate"><span class="pre">-dy</span> <span class="pre">&lt;year&gt;</span></code>, wherever a column is titled with the string “2004$”.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

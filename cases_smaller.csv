@@ -1,9 +1,9 @@
-,core,OR0,SC0,OR0_d25,OR0_d20,OR0_LCGBN0,OR0_y5,OR0_agg1,OR0_agg1_d25,OR0_agg1_d20,OR0_agg1_LCGBN0,OR0_agg1_y5,OR0_agg2,OR0_agg2_d25,OR0_agg2_d20,OR0_agg2_LCGBN0,OR0_agg2_y5
+,core,OR0,SC0,OR0_d25,OR0_d20,OR0_LCGBN0,OR0_y5,OR0_agg2,OR0_agg2_d25,OR0_agg2_d20,OR0_agg2_LCGBN0,OR0_agg2_y5,OR0_agg3,OR0_agg3_d25,OR0_agg3_d20,OR0_agg3_LCGBN0,OR0_agg3_y5
 ignore,,,,,,,,,,,,,,,,,
 GSw_OpRes,,0,,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 GSw_StartCost,,,0,,,,,,,,,,,,,,
 GSw_RegionResolution,,,,,,,,aggreg,aggreg,aggreg,aggreg,aggreg,aggreg,aggreg,aggreg,aggreg,aggreg
-GSw_HierarchyFile,,,,,,,,,,,,,agg2,agg2,agg2,agg2,agg2
+GSw_HierarchyFile,,,,,,,,agg2,agg2,agg2,agg2,agg2,agg3,agg3,agg3,agg3,agg3
 GSw_TransSquiggliness,,,,,,,,1.07,1.07,1.07,1.07,1.07,1.07,1.07,1.07,1.07,1.07
 GSw_HourlyNumClusters,,,,25,20,,,,25,20,,,,25,20,,
 GSw_LfillGas,,,,,,0,,,,,0,,,,,0,

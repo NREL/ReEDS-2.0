@@ -248,12 +248,12 @@ def calculate_load_delta(
     #%% Calculate hours per season
     # This code is currently incompatible with hourly ReEDS
     hhours = pd.read_csv(
-        os.path.join(reeds_path,'inputs','numhours.csv'),
+        os.path.join(inputs_case,'numhours.csv'),
         header=0, names=['h','hours'], index_col='h').squeeze(1)
     ### Get timeslice-to-season mapper
     h_dt_szn = (
         pd.read_csv(
-            os.path.join(reeds_path,'inputs', 'variability','h_dt_szn.csv'),
+            os.path.join(inputs_case,'h_dt_szn.csv'),
             index_col='hour')
         .replace({'winter':'wint','spring':'spri','summer':'summ'})
         .rename(columns={'season':'szn','year':'t7',})
@@ -312,7 +312,7 @@ def write_load_files(
 
     # Get the hour-mapper
     h_dt_szn = (
-        pd.read_csv(os.path.join(reeds_path,'inputs', 'variability','h_dt_szn.csv'), index_col='hour')
+        pd.read_csv(os.path.join(inputs_case,'h_dt_szn.csv'), index_col='hour')
         .replace({'winter':'wint','spring':'spri','summer':'summ'})
         .rename(columns={'season':'szn','year':'t7',})
     )
@@ -334,7 +334,7 @@ def write_load_files(
     lastdatayear = max(load_multiplier_r.columns)
     if endyear > lastdatayear:
         futurefiles = pd.read_csv(
-            os.path.join(reeds_path,'inputs','userinput','futurefiles.csv'),
+            os.path.join(inputs_case,'futurefiles.csv'),
             dtype={'header':'category','ignore':int,'wide':int,'year_col':str,'fix_cols':str,
                    'clip_min':str, 'clip_max':str,}
         ).set_index('filename')
@@ -349,16 +349,16 @@ def write_load_files(
             clip_min=clip_min, clip_max=clip_max)
 
     #%% Get the hourly demand
-    from LDC_prep import read_file
+    from ldc_prep import read_file
     # Historic
     if GSw_EFS1_AllYearLoad == 'historic':
         load_hourly_base = pd.read_hdf(
-            os.path.join(reeds_path,'inputs','loaddata','historic_load_hourly.h5')
+            os.path.join(reeds_path,'inputs','load','historic_load_hourly.h5')
         )[val_r_all]
     # EFS - only available for a single year, so concatenate it
     else:
         load_hourly_base = read_file(
-            os.path.join(reeds_path,'inputs','loaddata', f'{GSw_EFS1_AllYearLoad}_load_hourly'),
+            os.path.join(reeds_path,'inputs','load', f'{GSw_EFS1_AllYearLoad}_load_hourly.h5'),
             index_columns=2)[val_r_all]
     load_hourly_base.columns.name = 'r'
 
@@ -510,7 +510,7 @@ def write_load_files(
         ### Write the 7-year hourly load for Augur ###
 
         # If using historic hourly load data, 
-        # write load with normalization and distribution losses as in LDC_prep.py
+        # write load with normalization and distribution losses as in ldc_prep.py
         if GSw_EFS1_AllYearLoad == 'historic':
             if t in modelyears:
                 ### Get the year label

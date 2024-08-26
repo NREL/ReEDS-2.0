@@ -27,22 +27,22 @@ else:
     scpath = '//nrelnas01/ReEDS/Supply_Curve_Data/'
 ### Get the ReEDS-2.0 path from this file's path (ReEDS-2.0/hourlize/rev-site-aggregation.py)
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-outpath = os.path.join(reeds_path,'inputs','supplycurvedata')
+outpath = os.path.join(reeds_path,'inputs','supply_curve')
 
 ### Indicate the scenarios to use
 scpaths = pd.read_csv(
-    os.path.join(reeds_path,'inputs','supplycurvedata','rev_paths.csv'),
+    os.path.join(reeds_path,'inputs','supply_curve','rev_paths.csv'),
     index_col=['tech','access_case'],
 )
 scens = {
-    'windons_ref': os.path.join(scpath,scpaths.loc[('wind-ons','reference'),'sc_file']),
-    'windons_lim': os.path.join(scpath,scpaths.loc[('wind-ons','limited'),'sc_file']),
-    # 'windons_open': os.path.join(scpath,scpaths.loc[('wind-ons','open'),'sc_file']),
-    'upv_ref': os.path.join(scpath,scpaths.loc[('upv','reference'),'sc_file']),
-    'upv_lim': os.path.join(scpath,scpaths.loc[('upv','limited'),'sc_file']),
-    'upv_open': os.path.join(scpath,scpaths.loc[('upv','open'),'sc_file']),
-    'windofs_open': os.path.join(scpath,scpaths.loc[('wind-ofs','open'),'sc_file']),
-    'windofs_lim': os.path.join(scpath,scpaths.loc[('wind-ofs','limited'),'sc_file']),
+    'windons_ref': os.path.join(scpath,scpaths.loc[('wind-ons','reference'),'original_sc_file']),
+    'windons_lim': os.path.join(scpath,scpaths.loc[('wind-ons','limited'),'original_sc_file']),
+    # 'windons_open': os.path.join(scpath,scpaths.loc[('wind-ons','open'),'original_sc_file']),
+    'upv_ref': os.path.join(scpath,scpaths.loc[('upv','reference'),'original_sc_file']),
+    'upv_lim': os.path.join(scpath,scpaths.loc[('upv','limited'),'original_sc_file']),
+    'upv_open': os.path.join(scpath,scpaths.loc[('upv','open'),'original_sc_file']),
+    'windofs_open': os.path.join(scpath,scpaths.loc[('wind-ofs','open'),'original_sc_file']),
+    'windofs_lim': os.path.join(scpath,scpaths.loc[('wind-ofs','limited'),'original_sc_file']),
 }
 scens_use = ([i for i in scens.keys() if 'ofs' in i] if offshore
              else [i for i in scens.keys() if 'ofs' not in i])
@@ -75,13 +75,13 @@ dfkey.loc[dfkey.cnty_fips == '46102','county'] = 'Oglala Lakota'
 
 #%% Get ReEDS regions from county map
 reedsmap = pd.read_csv(
-    os.path.join(reeds_path,'hourlize','inputs','resource','county_map.csv'),
+    os.path.join(reeds_path,'hourlize','inputs','hierarchy.csv'),
 )
-reedsmap.cnty_fips = reedsmap.cnty_fips.map(lambda x: '{:0>5}'.format(int(x)))
+reedsmap.cnty_fips = reedsmap.county.map(lambda x: '{:0>5}'.format(int(x)))
 reedsmap = reedsmap.set_index('cnty_fips')
 
 #%% Map reV points to BAs
-dfkey['rb'] = dfkey.cnty_fips.map(reedsmap.reeds_ba)
+dfkey['rb'] = dfkey.cnty_fips.map(reedsmap.ba)
 
 #%%### Write it
 dfwrite = dfkey.copy()

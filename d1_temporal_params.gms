@@ -246,20 +246,6 @@ trans_cap_delta(h,t) =
 *=============================================
 * -- Mexico and Canada --
 *=============================================
-parameter net_trade_can(r,allh,allt) "--MW-- [Sw_Canada=2] static net trade with Canada"
-$onempty
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%net_trade_can.csv
-$offdelim
-$onlisting
-/ ;
-$offempty
-* net_trade_can.csv is in MWh, so divide by hours(h) to convert to MW for net_trade_can(r,h,t)
-net_trade_can(r,h,t)$[hours(h)] = net_trade_can(r,h,t) / hours(h) ;
-
-
 $ifthene.Canada %GSw_Canada% == 1
 parameter can_imports_szn_frac(allszn) "--unitless-- [Sw_Canada=1] fraction of annual imports that occur in each season"
 /
@@ -308,34 +294,57 @@ h_weight_csapr(h) =
 *=============================================
 * -- Availability (forced and planned outages) --
 *=============================================
-avail(i,h)$valcap_i(i) = 1 ;
+parameter forcedoutage_h(i,r,allh) "--fraction-- forced outage rate"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%forcedoutage_h.csv
+$include inputs_case%ds%stress%stress_year%%ds%forcedoutage_h.csv
+$offdelim
+$onlisting
+/ ;
+
+* Infer some forced outage rates from parent techs
+forcedoutage_h(i,r,h)$pvb(i) = forcedoutage_h("battery_%GSw_pvb_dur%",r,h) ;
+forcedoutage_h(i,r,h)$geo(i) = forcedoutage_h("geothermal",r,h) ;
+
+* Upgrade plants assume the same forced outage rate as what they're upgraded to
+forcedoutage_h(i,r,h)$upgrade(i) = sum{ii$upgrade_to(i,ii), forcedoutage_h(ii,r,h) } ;
+
+forcedoutage_h(i,r,h)$[i_water_cooling(i)$Sw_WaterMain] =
+    sum{ii$ctt_i_ii(i,ii), forcedoutage_h(ii,r,h) } ;
+
+* Calculate availability (includes forced and planned outage rates)
+avail(i,r,h)$valcap_i(i) = 1 ;
 
 * Assume no plant outages in the summer, adjust the planned outages to account for no planned outages in summer
 * 273 is the number of non-summer days
-avail(i,h)$[valcap_i(i)$(forced_outage(i) or planned_outage(i))] =
-    (1 - forced_outage(i))
+avail(i,r,h)$[valcap_i(i)$(forcedoutage_h(i,r,h) or planned_outage(i))] =
+    (1 - forcedoutage_h(i,r,h))
     * (1 - planned_outage(i)
            * sum{quarter$[not sameas(quarter,"summ")], frac_h_quarter_weights(h,quarter) }
            * 365 / 273) ;
 
 *upgrade plants assume the same availability of what they are upgraded to
-avail(i,h)$[upgrade(i)$valcap_i(i)] = sum{ii$upgrade_to(i,ii), avail(ii,h) } ;
+avail(i,r,h)$[upgrade(i)$valcap_i(i)] = sum{ii$upgrade_to(i,ii), avail(ii,r,h) } ;
 
 * In  eq_reserve_margin, thermal outages are captured through the PRM rather than through
 * forced/planned outages. If GSw_PRM_StressOutages is not true,
 * set the availability of thermal generator to 1 during stress periods.
-avail(i,h)
+avail(i,r,h)
     $[h_stress(h)$valcap_i(i)$(Sw_PRM_StressOutages=0)
     $(not vre(i))$(not hydro(i))$(not storage(i))$(not dr(i))$(not consume(i))
     ] = 1 ;
 
 * Geothermal is currently the only tech where derate_geo_vintage(i,v) != 1.
-* If other techs with a non-unity vintage-dependent derate are added, avail(i,h) may need to be
+* If other techs with a non-unity vintage-dependent derate are added, avail(i,r,h) may need to be
 * multiplied by derate_geo_vintage(i,v) in additional locations throughout the model.
 * Divide by (1 - outage rate) (i.e. avail) since geothermal_availability is defined
-* as the total product of derate_geo_vintage(i,v) * avail(i,h).
+* as the total product of derate_geo_vintage(i,v) * avail(i,r,h).
 derate_geo_vintage(i,initv)$[geo(i)$valcap_iv(i,initv)] =
-    geothermal_availability / (sum{h, avail(i,h) * hours(h) } / sum{h, hours(h) }) ;
+    geothermal_availability
+    / (sum{(r,h), avail(i,r,h) * hours(h) }
+       / sum{(r,h), hours(h) }) ;
 
 seas_cap_frac_delta(i,v,r,szn,t) =
     sum{quarter, szn_quarter_weights(szn,quarter) * quarter_cap_frac_delta(i,v,r,quarter,t) } ;
@@ -347,7 +356,7 @@ seas_cap_frac_delta(i,v,r,szn,t) =
 *=============================================
 * assign hydrogen demand by region and timeslice
 * we assumed demand is flat, i.e., timeslices w/ more hours 
-* have more demand in tonnes but the same rate in tonnes/hour
+* have more demand in metric tons but the same rate in metric tons/hour
 h2_exogenous_demand_regional(r,p,h,t)$[tmodel_new(t)]
     = h2_share(r,t) * h2_exogenous_demand(p,t) / 8760 ;
 
@@ -454,7 +463,7 @@ cap_hyd_szn_adj(i,szn,r)$[upgrade(i)$hydro_d(i)$(not cap_hyd_szn_adj(i,szn,r))] 
 m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)] =
     cf_rsc(i,v,r,h,t)
     * cf_adj_t(i,v,t)
-    * (avail(i,h)$[not pvb(i)] + 1$pvb(i)) ;
+    * (avail(i,r,h)$[not pvb(i)] + 1$pvb(i)) ;
 
 * can remove capacity factors for new vintages that have not been introduced yet
 m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ivt(i,newv,tt ) }$valcap(i,newv,r,t)] = 0 ;
@@ -759,13 +768,12 @@ szn_adj_gas(h)$frac_h_quarter_weights(h,"wint") =
 *=============================================
 * -- Round parameters for GAMS --
 *=============================================
-avail(i,h)$avail(i,h) = round(avail(i,h),3) ;
+avail(i,r,h)$avail(i,r,h) = round(avail(i,r,h),3) ;
 can_exports_h(r,h,t)$can_exports_h(r,h,t) = round(can_exports_h(r,h,t),3) ;
 h_weight_csapr(h)$h_weight_csapr(h) = round(h_weight_csapr(h),3) ;
 load_exog(r,h,t)$load_exog(r,h,t) = round(load_exog(r,h,t),3) ;
 load_exog_static(r,h,t)$load_exog_static(r,h,t) = round(load_exog_static(r,h,t),3) ;
 minloadfrac(r,i,h)$minloadfrac(r,i,h) = round(minloadfrac(r,i,h),3) ;
-net_trade_can(r,h,t) = round(net_trade_can(r,h,t),3) ;
 szn_adj_gas(h)$szn_adj_gas(h) = round(szn_adj_gas(h), 3) ;
 cap_hyd_szn_adj(i,szn,r)$cap_hyd_szn_adj(i,szn,r) = round(cap_hyd_szn_adj(i,szn,r),3) ;
 peakdem_static_ccseason(r,ccseason,t)$peakdem_static_ccseason(r,ccseason,t) = round(peakdem_static_ccseason(r,ccseason,t),2) ;

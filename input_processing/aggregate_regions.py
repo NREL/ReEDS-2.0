@@ -24,12 +24,23 @@ import os
 import pandas as pd
 import gdxpds
 import shutil
+import site
 from glob import glob
 from warnings import warn
 ## Time the operation of this script
 from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
+### Typically this script is run from the version copied to the run folder, but the
+### alternative path is included in case it's run from the root of ReEDS during development
+try:
+    reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','..'))
+    site.addsitedir(os.path.join(reeds_path, 'postprocessing'))
+    import reedsplots
+except ImportError:
+    reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
+    site.addsitedir(os.path.join(reeds_path, 'postprocessing'))
+    import reedsplots
 
 #%% Parse arguments
 parser = argparse.ArgumentParser(description='Extend inputs to arbitrary future year')
@@ -41,9 +52,10 @@ reeds_path = args.reeds_path
 inputs_case = os.path.join(args.inputs_case)
 
 # #%%## Settings for testing 
-# reeds_path = reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # inputs_case = os.path.join(
-#     reeds_path,'runs','v20240416_compareM0_USA_agg','inputs_case')
+#     reeds_path,'runs','v20240719_agg0M2_MA_county','inputs_case')
+
 
 #%% Settings for debugging
 ### Set debug == True to copy the original files to a new folder (inputs_case_original).
@@ -60,6 +72,8 @@ decimals = 6
 ### anchortype: 'load' sets rb with largest 2010 load as anchor reg;
 ### 'size' sets largest rb as anchor reg
 anchortype = 'size'
+### Types of cost data in files that use sc_cat
+sc_cost_types = ['cost', 'cost_cap', 'cost_trans']
 
 ######################
 ### DERIVED INPUTS ###
@@ -99,7 +113,6 @@ aggfuncmap = {
 
 def logprint(filepath, message):
     print('{:-<45}> {}'.format(filepath+' ', message))
-
 
 #%% DEBUG: Copy the original inputs_case files
 if debug and (agglevel != 'ba'):
@@ -191,12 +204,23 @@ if agglevel in ['state','aggreg']:
     
     ### Get distpv capacity to use in capacity-weighted averages
     distpvcap = pd.read_csv(
-        os.path.join(inputs_case, 'distPVcap.csv'), index_col=0
-    ### Need a single year so arbitrarily use 2036
-    )['2036'].rename_axis('r').rename('MW')
+        os.path.join(inputs_case, 'distpvcap.csv'), index_col=0
+    )
+    ## Keep a single year
+    distpvcap = distpvcap[
+        sw.GSw_HourlyClusterYear if sw.GSw_HourlyClusterYear in distpvcap
+        else str(int(sw.GSw_HourlyClusterYear) + 1)
+    ].rename_axis('r').rename('MW').copy()
     ## Add it to rscweight_nobin
-    rscweight_nobin = rscweight.groupby(['i','r'], as_index=False).sum()
+    rscweight_nobin = rscweight.groupby(['i','r'], as_index=False).MW.sum()
     rscweight_nobin = pd.concat([rscweight_nobin, distpvcap.reset_index().assign(i='distpv')], axis=0)
+    ## Add PVB values in case we need them
+    pvbtechs = [f'pvb{i}' for i in sw.GSw_PVB_Types.split('_')]
+    tocopy = rscweight_nobin.loc[rscweight_nobin.i.str.startswith('upv')].copy()
+    rscweight_nobin = pd.concat(
+        [rscweight_nobin]
+        + [tocopy.assign(i=tocopy.i.str.replace('upv',pvbtech)) for pvbtech in pvbtechs]
+    )
     ## Remove duplicate CSP values for different solar multiples
     rscweight_csp = rscweight_nobin.copy()
     rscweight_csp.i.replace(
@@ -204,7 +228,7 @@ if agglevel in ['state','aggreg']:
          for i in range(int(sw.GSw_CSP))
          for c in range(int(sw.GSw_NumCSPclasses))},
         inplace=True)
-    rscweight_csp.drop_duplicates(['i','r','rscbin'], inplace=True)
+    rscweight_csp.drop_duplicates(['i','r'], inplace=True)
 
 #%% Get the mapping to reduced-resolution technology classes
 original_num_classes = {**{'dupv':7}, **{f'csp{i}':12 for i in range(1,5)}}
@@ -230,6 +254,7 @@ aggfiles = (
     pd.read_csv(
         os.path.join(reeds_path, 'runfiles.csv'),
         dtype={'fix_cols':str}, index_col='filename',
+        comment='#',
     ).fillna({'fix_cols':''})
     .rename(columns={'wide (1 if any parameters are in wide format)':'wide',
                      'header (0 if file has column labels)':'header'})
@@ -263,6 +288,37 @@ if any(missingfiles):
             shutil.copy(os.path.join(inputs_case, f), os.path.join(inputs_case, f))
             print(f'copied {f}, which is missing from runfiles.csv')
 
+#%% Maps (special case)
+dfmap = reedsplots.get_dfmap(os.path.join(inputs_case,'..'))
+
+### Aggregate or disaggregate the 'r' map; none of the rest should change
+match agglevel:
+    case 'aggreg':
+        r2aggreg = pd.read_csv(
+            os.path.join(inputs_case, 'hierarchy_original.csv')
+        ).rename(columns={'ba':'r'}).set_index('r').aggreg
+    case 'county':
+        aggreg2anchorreg = r2aggreg = r_county.copy()
+
+dfmap_r_agg = dfmap['r'].reset_index().rename(columns={'rb':'r', 'ba':'r'})
+dfmap_r_agg.r = dfmap_r_agg.r.map(r2aggreg)
+dfmap_r_agg = dfmap_r_agg.dissolve('r').loc[aggreg2anchorreg.index].copy()
+
+## Map endpoints to anchor regions
+for j in ['x','y']:
+    dfmap_r_agg[j] = dfmap['r'][j].loc[dfmap_r_agg[j].index.map(aggreg2anchorreg)].values
+    dfmap_r_agg[f'centroid_{j}'] = dfmap_r_agg.centroid.x if j == 'x' else dfmap_r_agg.centroid.y
+
+## Overwrite the non-aggregated zone map
+dfmap['r'] = dfmap_r_agg.drop(columns='county', errors='ignore')
+
+## Write the aggregated maps
+mapsfile = os.path.join(inputs_case, 'maps.gpkg')
+if os.path.exists(mapsfile):
+    os.remove(mapsfile)
+for level in dfmap:
+    dfmap[level].drop(columns='aggreg', errors='ignore').to_file(mapsfile, layer=level)
+
 
 #%%############################################
 #    -- Aggregation/Disaggregation Loop --    #
@@ -282,7 +338,10 @@ for filepath in inputfiles:
             logprint(filepath, 'ignored')
         continue
     ### ensure the correct aggfunc/disaggfunc is chosen for the given agglevel
-    elif (agglevel in ['ba','state','aggreg'] and row['aggfunc']=='ignore') or (agglevel in ['county'] and row['disaggfunc']=='ignore'):
+    elif (
+        (agglevel in ['ba','state','aggreg'] and row['aggfunc']=='ignore')
+        or (agglevel in ['county'] and row['disaggfunc']=='ignore')
+    ):
         if verbose > 1:
             logprint(filepath, 'ignored')
         continue    
@@ -319,7 +378,8 @@ for filepath in inputfiles:
 
     ### wide: 1 if any parameters are in wide format, otherwise 0
     wide = int(row['wide'])
-    filetype = row['filetype']
+    ### Get the filetype of the input file from the filename string
+    filetype = os.path.splitext(filename)[1].strip('.')
     ### key: only used for gdx files, indicating the parameter name. 
     ### gdx files need a separate line in runfiles.csv for each parameter.
     key = row['key']
@@ -335,28 +395,31 @@ for filepath in inputfiles:
     #%%##################
     ### Load the file ###
 
-    if filetype in ['.csv', '.csv.gz']:
+    if filetype in ['csv', 'gz']:
         # Some csv files are empty and therefore cannot be opened.  If that is
         # the case, then skip them.
         try:
-            dfin = pd.read_csv(os.path.join(inputs_case, filepath), header=header)
-        except Exception:
+            dfin = pd.read_csv(
+                os.path.join(inputs_case, filepath), header=header,
+                dtype={'FIPS':str, 'fips':str, 'cnty_fips':str},
+            )
+        except pd.errors.EmptyDataError:
             continue
-    elif filetype == '.h5':
+    elif filetype == 'h5':
         dfin = pd.read_hdf(os.path.join(inputs_case, filepath))
         if header == 'keepindex':
             indexnames = list(dfin.index.names)
             if (len(indexnames) == 1) and (not indexnames[0]):
                 indexnames = ['index']
             dfin.reset_index(inplace=True)
-    elif filetype == '.gdx':
+    elif filetype == 'gdx':
         ### Read in the full gdx file, but only change the 'key' parameter
         ### given in aggfiles. That's wasteful, but there are currently no
         ### active gdx files.
         dfall = gdxpds.to_dataframes(os.path.join(inputs_case, filepath))
         dfin = dfall[key]
     else:
-        raise Exception('Unsupported filetype: {}'.format(filepath))
+        raise Exception(f'Unsupported filetype: {filepath}')
 
     dfin.rename(columns={c:str(c) for c in dfin.columns}, inplace=True)
     columns = dfin.columns.tolist()
@@ -430,13 +493,20 @@ for filepath in inputfiles:
             df1[i_col] = df1[i_col].map(lambda x: new_classes.get(x,x))
 
     if aggfunc == 'sc_cat':
-        ## Weight cost by cap
-        df1['cap_times_cost'] = df1['cap'] * df1['cost']
+        ## Weight cost by cap; if there's no cap, use 1 MW as weight
+        for cost_type in sc_cost_types:
+            ## Geothermal doesn't have all sc_cost_types
+            if cost_type not in df1:
+                continue
+            df1[f'cap_times_{cost_type}'] = df1['cap'].fillna(1).replace(0,1) * df1[cost_type]
         ## Sum everything
         df1 = df1.groupby(fix_cols+[region_col]).sum()
         ## Divide cost*cap by cap
-        df1['cost'] = df1['cap_times_cost'] / df1['cap']
-        df1.drop(['cap_times_cost'], axis=1, inplace=True)
+        for cost_type in sc_cost_types:
+            if cost_type not in df1:
+                continue
+            df1[cost_type] = df1[f'cap_times_{cost_type}'] / df1['cap'].fillna(1).replace(0,1)
+            df1.drop([f'cap_times_{cost_type}'], axis=1, inplace=True)
     elif aggfunc == 'trans_lookup':
         ## Get data for anchor zones
         for c in region_cols:
@@ -515,6 +585,7 @@ for filepath in inputfiles:
             df1.set_index([region_col,'wide'],inplace=True)
         else:
             df1.set_index(region_cols,inplace=True)
+
     elif aggfunc in ['population','geosize','translinesize','hydroexist']:
         if 'sc_cat' in columns:
             # Split cap and cost
@@ -570,14 +641,24 @@ for filepath in inputfiles:
                       .set_index(df1cols[:-1])
                   )
             df1 = df1[[valcol]]
+
+    elif aggfunc == 'special':
+        if (filename == 'county2zone.csv') and (agglevel == 'county'):
+            for r in region_cols:
+                df1[r] = 'p' + df1['FIPS'].map(lambda x: f"{x:0>5}")
+            df1 = df1.set_index(region_cols)
+
     else:
         raise ValueError(f'Invalid choice of aggfunc: {aggfunc} for {filename}')
 
     ## Filter by regions again for cases when only a subset of a model balancing area is represented
     if agglevel == 'county':
-        if region_col == '*r,rr':
-            df1 = df1.loc[df1.index.get_level_values('*r').isin(val_r_all)]
-            df1 = df1.loc[df1.index.get_level_values('rr').isin(val_r_all)]
+        if region_col.strip('*') == 'r,rr':
+            r, rr = region_col.split(',')
+            df1 = df1.loc[
+                df1.index.get_level_values(r).isin(val_r_all)
+                & df1.index.get_level_values(rr).isin(val_r_all)
+            ].copy()
         else:
             df1 = df1.loc[df1.index.get_level_values(region_col).isin(val_r_all)]
 
@@ -620,13 +701,13 @@ for filepath in inputfiles:
     #%%###################
     ### Data Write-Out ###
 
-    if filetype in ['.csv','.csv.gz']:
+    if filetype in ['csv','gz']:
         dfout.round(decimals).to_csv(
             os.path.join(inputs_case, filepath),
             header=(False if header is None else True),
             index=False,
         )
-    elif filetype == '.h5':
+    elif filetype == 'h5':
         if header == 'keepindex':
             dfwrite = dfout.sort_values(indexnames).set_index(indexnames)
             dfwrite.columns.name = None
@@ -634,7 +715,7 @@ for filepath in inputfiles:
             dfwrite = dfout
         dfwrite.to_hdf(
             os.path.join(inputs_case, filepath), key='data', complevel=4, format='table')
-    elif filetype == '.gdx':
+    elif filetype == 'gdx':
         ### Overwrite the projected parameter
         dfall[key] = dfout.round(decimals)
         ### Write the whole file

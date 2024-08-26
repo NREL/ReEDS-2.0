@@ -1,0 +1,143 @@
+---
+orphan: true
+---
+# SSH Key Setup
+If you're looking to set up a new SSH key on Yampa, jump to [Setting up a new SSH key on Yampa](#setting-up-a-new-ssh-key-on-yampa).
+
+## Generating a new SSH key
+1. Open Git Bash (Windows) or Terminal (Mac & Linux)
+
+2. Paste the following text to create a new SSH key: `ssh-keygen -t ed25519 -C "your_email@nrel.gov"`
+   * It will ask for a file to save the key, press **Enter** to accept the default location
+   * When asked for a passphrase, leave it empty and hit **Enter**. If you decide to use a passphrase, you will have to enter it any time you need to push or pull from GitHub.
+
+## Add SSH key to the ssh-agent
+Since the ssh-agent manages your keys, you now have to add the newly generated SSH key to the ssh-agent.
+
+### Windows
+1. Open a new admin elevated PowerShell window
+   * You can do this by clicking 'Start', typing 'PowerShell', and then right-clicking on it and selecting 'Run as Administrator'. 
+   * If you don't already have temporary admin access for your machine, you will need to contact IT and request this.
+
+2. Ensure the ssh-agent is running by running the following command: 
+   ```
+   Get-Service -Name ssh-agent | Set-Service -StartupType Manual
+   Start-Service ssh-agent
+   ```
+
+3. Open a new PowerShell window (open it normally, it doesn't need to have admin rights) and add your SSH key to the ssh-agent with the command: 
+    ```
+    ssh-add c:/Users/[your account name]/.ssh/id_ed25519
+    ```
+
+4. Copy the SSH key with the command: `clip < ~/.ssh/id_ed25519.pub`
+   * Note: this might fail on newer versions of Windows, if it does, use this command: `cat ~/.ssh/id_ed25519.pub | clip`
+
+### Mac
+1. Start the ssh-agent with the following command: `eval "$(ssh-agent -s)"`
+
+2. Modify your `~/.ssh/config` file to automatically load keys into the ssh-agent by following these steps: 
+   a. Check to see if the file exists: `open ~/.ssh/config`
+   b. If it does not exist, you can create it with this command: `touch ~/.ssh/config`
+   c. Open the file and modify the contents to contain the following lines (you can open it with the command `open ~/.ssh/config`): 
+    ```
+    Host github.com
+        AddKeysToAgent yes
+        IdentityFile ~/.ssh/id_ed25519
+    ```
+3. Add your SSH key to the ssh-agent with the following command: 
+    ```
+    ssh-add --apple-use-keychain ~/.ssh/id_ed25519
+    ```
+
+4. Copy the SSH key with the command: `pbcopy < ~/.ssh/id_ed25519.pub`
+
+## Add SSH key to your GitHub account
+Now that you have created a new SSH key and added it to the ssh-agent, you need to add the SSH key to your GitHub account.
+
+1. Log on to github.nrel.gov and go to your account settings
+```{figure} ../../../images/github_settings.png
+:name: figure-4
+
+Figure 4. GitHub account settings
+```
+
+
+2. Click on "SSH and GPG keys" on the left sidebar, then click on `New SSH key`
+```{figure} ../../../images/github_ssh_gpg_keys.png
+:name: figure-5
+
+Figure 5. GitHub SSH and GPG keys 
+```
+
+```{figure} ../../../images/github_add_ssh_key.png
+:name: figure-6
+
+Figure 6. GitHub Add New SSH Key
+```
+
+3. Create a title and paste the SSH key into the "Key" field
+
+
+## Setting up a new SSH key on Yampa
+1. Open a new terminal window
+
+2. Create a .ssh directory in your personal projects directory with the command: `mkdir /data/shared/projects/[username]/.ssh`
+
+3. Run the following command to create a new SSH key: `ssh-keygen -t ed25519 -C "[youremail@nrel.gov]"`
+
+4. When asked to enter the file in which to save the key, you can hit enter to accept the default. 
+   * The key will be saved in `/home/[username]/.ssh/id_ed25519`
+
+5. When asked to enter a passphrase, hit enter to skip this step. If you decide to create a passphrase, you will need to enter this passphrase upon every push/pull.
+
+6. Run the command: `ssh-add id_ed25519`
+
+7. Open the key in gedit with the command: `gedit /home/[username]/.ssh/id_ed25519.pub`. Then copy the text contents of this file to the clipboard with a Ctrl+C keyboard command.
+
+8. Log on to github.nrel.gov and go to your account settings
+   
+```{figure} ../../../images/github_settings.png
+:name: figure-4-repeat
+
+Figure 4. GitHub account settings
+```
+
+9. Click on "SSH and GPG keys" on the left sidebar, then click on `New SSH key`
+
+```{figure} ../../../images/github_ssh_gpg_keys.png
+:name: figure-5-repeat
+
+Figure 5. GitHub SSH and GPG keys 
+```
+
+```{figure} ../../../images/github_add_ssh_key.png
+:name: figure-6-repeat
+
+Figure 6. GitHub Add New SSH Key
+```
+
+10. Create a title for your key (e.g. yampa) and paste the text from the clipboard into the text box below, then click "Add SSH Key" to save.
+   * To check that your key was added, go back to the terminal on Yampa and run the command `ssh -T git@github.nrel.gov`. If successful, you should get the message "Hi [username]! You've successfully authenticated, but GitHub does not provide shell access."
+   * **Note:** you might get a message saying "The authenticity of host 'github.nrel.gov (<no hostip for proxy command>)' can't be established... Are you sure you want to continue connecting (yes/no/[fingerprint])?" Entering 'yes' will add github.nrel.gov to your list of know hosts, found in this file: '/home/[username]/.ssh/known_hosts
+
+11. You can now clone the ReEDS repository where you can then install the environments from the yml file.
+
+## Troubleshooting
+If you run into issues while setting up a new ssh key, see the GitHub docs for [Troubleshooting SSH](https://docs.github.com/en/authentication/troubleshooting-ssh)
+
+
+### What if I still can't push/pull from the command line after setting up the SSH key?
+After creating an SSH key and adding it to your GitHub account, you should be able to push/pull from the terminal without entering your github credentials.
+
+If you're still being asked for your credentials, it's likely due to the fact that you haven't configured the correct URL for the repo locally. To fix this: 
+1. Check what your remote URL is, run the command `git remote -v`
+    * This should list out your existing remote repositories
+    * If you're seeing them as "https://...." you will need to switch the remote URL from HTTPS to SSH
+
+2. To switch the remote URL, run the command `git remote set-url origin git@github.nrel.gov:ReEDS/ReEDS-2.0.git`
+
+3. Verify the remote URL has been changed, run the command `git remote -v` again
+    * You should not see the origin as "git@github...."
+
+More information on this can be found in the [GitHub Docs](https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories#switching-remote-urls-from-ssh-to-https)

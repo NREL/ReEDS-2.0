@@ -31,9 +31,9 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing
-#reeds_path = 'd:\\Danny_ReEDS\\ReEDS-2.0'
-#reeds_path = os.getcwd()
-#inputs_case = os.path.join('runs','nd5_ND','inputs_case')
+# reeds_path = 'd:\\Danny_ReEDS\\ReEDS-2.0'
+# reeds_path = os.getcwd()
+# inputs_case = os.path.join('runs','nd5_ND','inputs_case')
 
 #%% Set up logger
 log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
@@ -106,7 +106,7 @@ h2ct = (
 #    -- Natural Gas --    #
 ###########################
 
-ngprice = pd.read_csv(os.path.join(inputs_case,'ng_price_cendiv.csv'))
+ngprice = pd.read_csv(os.path.join(inputs_case,'natgas_price_cendiv.csv'))
 ngprice = ngprice.melt(id_vars=['year']).rename(columns={'variable':'cendiv'})
 
 # Adjust prices to 2004$
@@ -156,7 +156,7 @@ alpha = alpha.round(6)
 ######################
 
 fuel.to_csv(os.path.join(inputs_case,'fprice.csv'),index=False)
-ngprice_cendiv.to_csv(os.path.join(inputs_case,'ng_price_cendiv.csv'))
+ngprice_cendiv.to_csv(os.path.join(inputs_case,'gasprice_ref.csv'))
 
 ngdemand.to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
 ngtotdemand.to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))

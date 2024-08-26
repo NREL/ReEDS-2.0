@@ -12,13 +12,27 @@ import os
 import numpy as np
 import pandas as pd
 import argparse
+import h5py
 import shutil
 import subprocess
 import sys
+import site
+# Local Imports
+from ldc_prep import read_file
 # Time the operation of this script
 from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
+### Typically this script is run from the version copied to the run folder, but the
+### alternative path is included in case it's run from the root of ReEDS during development
+try:
+    reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..','..'))
+    site.addsitedir(os.path.join(reeds_path, 'postprocessing'))
+    import reedsplots
+except ImportError:
+    reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
+    site.addsitedir(os.path.join(reeds_path, 'postprocessing'))
+    import reedsplots
 
 #%% Parse arguments
 parser = argparse.ArgumentParser(description="Copy files needed for this run")
@@ -30,9 +44,8 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing ###
-# reeds_path = os.getcwd()
-# reeds_path = os.path.join('/Users','jcarag','ReEDS','ReEDS-2.0')
-# inputs_case = os.path.join(reeds_path,'runs','Mar29_megacopyfilestest_Pacific','inputs_case','')
+#reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+#inputs_case = os.path.join(reeds_path,'runs','test_Pacific','inputs_case','')
 
 #%% Set up logger
 log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
@@ -42,13 +55,11 @@ print('Starting copy_files.py')
 sw = pd.read_csv(
     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
 # Create switch dictionary that has certain switches evaluated for the values ReEDS actually uses
-sw_expanded = {**sw, **{'osprey_num_years':str(len(sw['osprey_years'].split('_')))}}
+sw_expanded = {**sw, **{'num_resource_adequacy_years':str(len(sw['resource_adequacy_years'].split('_')))}}
 
-solveyears = pd.read_csv(
-    os.path.join(reeds_path,'inputs','modeledyears.csv'),
-    usecols=[sw['yearset_suffix']],
-).squeeze(1).dropna().astype(int).tolist()
-solveyears = [y for y in solveyears if y <= int(sw['endyear'])]
+scalars = pd.read_csv(
+    os.path.join(reeds_path, 'inputs', 'scalars.csv'),
+    header=None, names=['name','value','comment'], index_col='name')
 
 #%% Additional inputs
 casedir = os.path.dirname(inputs_case)
@@ -125,7 +136,8 @@ runfiles = (
         comment='#',
     ).fillna({'fix_cols':''})
     .rename(columns={'filepath (for input files only)':'filepath',
-                     'post_copy (files are created after copy_files)':'post_copy'})
+                     'post_copy (files are created after copy_files)':'post_copy',
+                     'GAMStype (for auto-imported files)':'GAMStype'})
 )
 
 # Non-region files that need copied either do not have an entry in region_col
@@ -154,7 +166,7 @@ for i,row in nonregionFiles.iterrows():
         dir_dst = inputs_case
     else:
         dir_dst = casedir    
-    
+
     # Replace '{switchnames}' in src_file with corresponding switch values
     src_file = os.path.join(reeds_path, row['filepath'])
     src_file = src_file.format(**sw_expanded)
@@ -168,8 +180,17 @@ for i,row in nonregionFiles.iterrows():
             ).round(6).to_csv(os.path.join(inputs_case,'load_multiplier.csv'),index=False)
         else:
             shutil.copy(src_file, os.path.join(dir_dst,row['filename']))
-            
-#%% Rewrite the scalar and switches tables as GAMS-readable definitions
+
+#%% Special-case handling of scalars.csv: turn years_until into firstyear
+toadd = scalars.loc[scalars.index.str.startswith('years_until')].copy()
+toadd.index = toadd.index.map(lambda x: x.replace('years_until','firstyear'))
+toadd.value += scalars.loc['this_year','value']
+scalars_write = pd.concat([scalars, toadd], axis=0)
+## Trim trailing decimal zeros
+scalars_write.value = scalars_write.value.astype(str).replace('\.0+$', '', regex=True)
+scalars_write.to_csv(os.path.join(inputs_case, 'scalars.csv'), header=False)
+
+### Rewrite the scalar and switches tables as GAMS-readable definitions
 scalar_csv_to_txt(os.path.join(inputs_case,'scalars.csv'))
 scalar_csv_to_txt(os.path.join(inputs_case,'gswitches.csv'))
 ### Do the same for the e_report parameters
@@ -185,9 +206,21 @@ hierarchy = pd.read_csv(
         '' if (sw['GSw_HierarchyFile'] == 'default')
         else '_'+sw['GSw_HierarchyFile']))
 )
+### Save the original hierarchy file: used in ldc_prep.py and hourly_*.py scripts
+hierarchy.to_csv(
+    os.path.join(inputs_case,'hierarchy_original.csv'),
+    index=False, header=True
+    )
 
 if not NARIS:
     hierarchy = hierarchy.loc[hierarchy.country.str.lower()=='usa'].copy()
+
+## Add a row for each county
+county2zone = pd.read_csv(
+    os.path.join(reeds_path, 'inputs', 'county2zone.csv'), dtype={'FIPS':str},
+)
+county2zone['county'] = 'p' + county2zone.FIPS
+hierarchy = hierarchy.merge(county2zone.drop(columns=['FIPS','state']), on='ba')
 
 # Read region resolution switch to determine agglevel
 agglevel = sw['GSw_RegionResolution'].lower()
@@ -248,6 +281,7 @@ hier_sub['r'][hier_sub['resolution']=='state'] = hier_sub['st'][hier_sub['resolu
 hier_sub['r'][hier_sub['resolution']=='aggreg'] = hier_sub['aggreg'][hier_sub['resolution']=='aggreg']
 
 # Write out a mapping of r to all counties
+r_county = hier_sub[['r','county']]
 hier_sub[['r','county']].to_csv(
     os.path.join(inputs_case, 'r_county.csv'), index=False)
 
@@ -309,7 +343,7 @@ pd.Series(val_st).to_csv(
     os.path.join(inputs_case, 'val_st.csv'), header=False, index=False)
 
 # Rename columns and save as hierarchy.csv
-hier_sub.rename(columns={'r':'*r'}).to_csv(
+hier_sub.rename(columns={'r':'*r'}).drop(columns='aggreg').to_csv(
     os.path.join(inputs_case, 'hierarchy.csv'), index=False)
 
 levels = list(hier_sub.columns)
@@ -317,6 +351,7 @@ valid_regions = {level: list(hier_sub[level].unique()) for level in levels}
 
 # Extract subsets for use in subsetting operations
 val_cendiv = valid_regions['cendiv']
+val_nercr = valid_regions['nercr']
 val_r = valid_regions['r']
 
 # Export region files
@@ -390,11 +425,11 @@ if agglevel == 'county':
             except:
                 # Set remote_url to 'no remote' if ReEDS was downloaded via zip file
                 remote_url = 'no remote'
+            access_case = row['access_case']
             # If NREL user, then attempt to copy data from the remote location defined in 
             # rev_paths.csv.
             if 'github.nrel.gov' in remote_url:
                 sc_path = row['sc_path']
-                access_case = row['access_case']
                 print(f'Copying county-level hourly profiles for {row["tech"]}')
                 try:
                     shutil.copy(
@@ -435,7 +470,9 @@ if agglevel == 'county':
         raise ValueError(error)   
     # Write out the new file version file if there are any updates
     if file_version_updates > 0:
-        file_version_new.to_csv(os.path.join(reeds_path,'inputs','variability','multi_year','file_version.csv'), index = False)
+        file_version_new.to_csv(
+            os.path.join(
+                reeds_path,'inputs','variability','multi_year','file_version.csv'), index = False)
 
 ### Files defined from case inputs ###
 
@@ -458,73 +495,166 @@ try:
         os.path.join(inputs_case,'methane_leakage_rate.csv'))
 except ValueError:
     pd.read_csv(
-        os.path.join(reeds_path,'inputs','carbonconstraints','methane_leakage_rate.csv'),
+        os.path.join(reeds_path,'inputs','emission_constraints','methane_leakage_rate.csv'),
         index_col='t',
     )[sw['GSw_MethaneLeakageScen']].rename_axis('*t').round(5).to_csv(
         os.path.join(inputs_case,'methane_leakage_rate.csv'))
+## Add this_year to years_until_endogenous to generate the tech-specific firstyear.csv file
+(
+    pd.read_csv(
+        os.path.join(inputs_case, 'years_until_endogenous.csv'),
+        index_col=0,
+    ).squeeze(1)
+    + int(scalars.loc['this_year','value'])
+).rename_axis('*i').rename('t').to_csv(os.path.join(inputs_case, 'firstyear.csv'))
 
 
 ### Single column from input table ###
 
 pd.read_csv(
-    os.path.join(reeds_path,'inputs','carbonconstraints','ng_crf_penalty.csv'), index_col='t',
+    os.path.join(reeds_path,'inputs','emission_constraints','ng_crf_penalty.csv'), index_col='t',
 )[sw['GSw_NG_CRF_penalty']].rename_axis('*t').to_csv(
     os.path.join(inputs_case,'ng_crf_penalty.csv')
 )
+
+## Calculate CO2 cap based on GSw_Region chosen (national or sub-national regions)
+# Read in national co2 cap
+em_nat = pd.read_csv(os.path.join(reeds_path,'inputs','emission_constraints','co2_cap.csv'), 
+                     index_col='t',).loc[sw['GSw_AnnualCapScen']].rename_axis('*t')
+em_nat.to_csv(os.path.join(inputs_case,'co2_cap.csv'))
+
+# Read in 2022 CO2 emission share by county calculated from 2022 eGrid emission data:
+em_share = pd.read_csv(os.path.join(reeds_path,'inputs','emission_constraints','county_co2_share_egrid_2022.csv'),
+                       index_col=0,)
+
+# Filter the counties that are in chosen GSw_Region
+val_county = pd.read_csv(os.path.join(inputs_case,'val_county.csv'),names=['r'])
+
+# Merge emission share by county with the counties in GSw_Region and calculate emission share of GSw_Region
+region_em_share = val_county.merge(em_share, on='r', how='left').fillna(0)
+region_em_share = region_em_share['share'].sum()
+
+# Apply the emission share to national cap to get the emission cap trajectory of GSw_Region
+em_reg = em_nat*region_em_share
+em_reg.to_csv(os.path.join(inputs_case,'co2_cap_reg.csv'))
+
+## CO2 tax
 pd.read_csv(
-    os.path.join(reeds_path,'inputs','carbonconstraints','co2_cap.csv'), index_col='t',
-).loc[sw['GSw_AnnualCapScen']].rename_axis('*t').to_csv(
-    os.path.join(inputs_case,'co2_cap.csv')
-)
-pd.read_csv(
-    os.path.join(reeds_path,'inputs','carbonconstraints','co2_tax.csv'), index_col='t',
+    os.path.join(reeds_path,'inputs','emission_constraints','co2_tax.csv'), index_col='t',
 )[sw['GSw_CarbTaxOption']].rename_axis('*t').round(2).to_csv(
     os.path.join(inputs_case,'co2_tax.csv')
 )
+
+solveyears = pd.read_csv(
+    os.path.join(reeds_path,'inputs','modeledyears.csv'),
+    usecols=[sw['yearset_suffix']],
+).squeeze(1).dropna().astype(int).tolist()
+solveyears = [y for y in solveyears if y <= int(sw['endyear'])]
 pd.DataFrame(columns=solveyears).to_csv(
     os.path.join(inputs_case,'modeledyears.csv'), index=False)
+
 pd.read_csv(
     os.path.join(reeds_path,'inputs','national_generation','gen_mandate_trajectory.csv'),
     index_col='GSw_GenMandateScen'
 ).loc[sw['GSw_GenMandateScen']].rename_axis('*t').round(5).to_csv(
     os.path.join(inputs_case,'gen_mandate_trajectory.csv')
 )
+
 pd.read_csv(
     os.path.join(reeds_path,'inputs','national_generation','gen_mandate_tech_list.csv'),
     index_col='*i',
 )[sw['GSw_GenMandateList']].to_csv(
     os.path.join(inputs_case,'gen_mandate_tech_list.csv')
 )
+
 pd.read_csv(
     os.path.join(reeds_path,'inputs','climate','climate_heuristics_yearfrac.csv'),
     index_col='*t',
 )[sw['GSw_ClimateHeuristics']].round(3).to_csv(
     os.path.join(inputs_case,'climate_heuristics_yearfrac.csv')
 )
+
 pd.read_csv(
     os.path.join(reeds_path,'inputs','climate','climate_heuristics_finalyear.csv'),
     index_col='*parameter',
 )[sw['GSw_ClimateHeuristics']].round(3).to_csv(
     os.path.join(inputs_case,'climate_heuristics_finalyear.csv')
 )
+
 pd.read_csv(
-    os.path.join(reeds_path,'inputs','capacitydata','upgrade_costs_ccs_coal.csv'),
+    os.path.join(reeds_path,'inputs','upgrades','upgrade_costs_ccs_coal.csv'),
     index_col='t',
 )[sw['ccs_upgrade_cost_case']].round(3).rename_axis('*t').to_csv(
     os.path.join(inputs_case,'upgrade_costs_ccs_coal.csv')
 )
+
 pd.read_csv(
-    os.path.join(reeds_path,'inputs','capacitydata','upgrade_costs_ccs_gas.csv'),
+    os.path.join(reeds_path,'inputs','upgrades','upgrade_costs_ccs_gas.csv'),
     index_col='t',
 )[sw['ccs_upgrade_cost_case']].round(3).rename_axis('*t').to_csv(
     os.path.join(inputs_case,'upgrade_costs_ccs_gas.csv')
 )
+
 pd.read_csv(
     os.path.join(reeds_path,'inputs','consume','h2_exogenous_demand.csv'),
     index_col=['p','t']
 )[sw['GSw_H2_Demand_Case']].round(3).rename_axis(['*p','t']).to_csv(
     os.path.join(inputs_case,'h2_exogenous_demand.csv')
 )
+
+prm = pd.read_csv(
+        os.path.join(reeds_path,'inputs','reserves','prm_annual.csv'),
+        index_col=['*nercr','t']
+    )[sw['GSw_PRM_scenario']]
+# Filter values to those that only include valide nercr regions while processing
+(prm[prm.index.get_level_values('*nercr').isin(val_nercr)]
+    .unstack('*nercr').reindex(solveyears)
+    .fillna(method='bfill').rename_axis('t').stack('*nercr')
+    .reorder_levels(['*nercr','t']).round(4)
+).to_csv(os.path.join(inputs_case,'prm_annual.csv'))
+
+### Inflation-adjusted inputs ###
+
+sources_dollaryear = pd.read_csv(
+    os.path.join(reeds_path,'sources.csv'),
+    usecols=["RelativeFilePath", "DollarYear"]
+)
+deflator = pd.read_csv(
+    os.path.join(reeds_path,'inputs','financials','deflator.csv'),
+    header=0, names=['Dollar.Year','Deflator'], index_col='Dollar.Year').squeeze(1)
+# Create a mapping between inputs' relative filepaths and their deflation
+# multipliers based on the dollar years their monetary values are in
+sources_dollaryear = (
+    # Filter out rows that don't contain a valid dollar year
+    sources_dollaryear[pd.to_numeric(sources_dollaryear['DollarYear'], errors='coerce').notnull()]
+    # Note: We must remove the backslash that prepends each relative filepath
+    # for compatibility with the 'os' package (otherwise it is treated as an absolute path)
+    .assign(RelativeFilePath=sources_dollaryear["RelativeFilePath"].str[1:])
+    .astype({"DollarYear": "int64"})
+    .rename(columns={"DollarYear": "Dollar.Year"})
+    .merge(deflator,on="Dollar.Year",how="left")
+)
+source_deflator_map = dict(zip(sources_dollaryear["RelativeFilePath"], sources_dollaryear["Deflator"]))
+
+# Deflate monetary values of each non-region, non-$2004 input before copying
+for relative_fpath in ["inputs/plant_characteristics/nuke_fom_adj.csv",
+                       "inputs/plant_characteristics/coal_fom_adj.csv"]:
+    fname = os.path.basename(relative_fpath)
+    (
+        pd.read_csv(os.path.join(reeds_path,relative_fpath),
+                    index_col='*t')
+        .mul(source_deflator_map[relative_fpath])
+        .round(0)
+        .to_csv(os.path.join(inputs_case,fname))
+    )
+
+#%% Maps
+mapsfile = os.path.join(inputs_case, 'maps.gpkg')
+if os.path.exists(mapsfile):
+    os.remove(mapsfile)
+dfmap = reedsplots.get_dfmap(os.path.join(inputs_case,'..'))
+for level in dfmap:
+    dfmap[level].to_file(mapsfile, layer=level)
 
 #%% Sets folder
 shutil.copytree(
@@ -550,10 +680,17 @@ with open(os.path.join(casedir,'b_sets.gms'), 'w') as f:
 #    -- Filter and copy data for files with regions --    #
 ###########################################################
 print('Copying region-indexed files: filtering for valid regions')
+
+# Add 'lvl' to the sw_expanded dictionary
+sw_expanded = {**sw_expanded, **{'lvl':lvl}}
+
 for i, row in regionFiles.iterrows():
     filepath = row['filepath']
     filename = row['filename']
-    filetype = row['filetype']
+    # Get the filetype of the input file from the filepath string 
+    filetype_in = os.path.splitext(filepath)[1].strip('.')
+    # Get the filetype of the output file from the filename string
+    filetype_out = os.path.splitext(filename)[1].strip('.')
     region_col = row['region_col']
     fix_cols = row['fix_cols'].split(',')
 
@@ -564,31 +701,47 @@ for i, row in regionFiles.iterrows():
     else:
         full_path = os.path.join(reeds_path,filepath)
 
-    # Add 'lvl' to the sw_expanded dictionary
-    sw_expanded = {**sw_expanded, **{'lvl':lvl}}
-    # Replace '{switchnames}' in src_file with corresponding switch values
+    # Replace '{switchnames}' in full_path with corresponding switch values
     full_path = full_path.format(**sw_expanded)
-        
-    # Read if file that needs filtered
-    if filetype == '.h5':
-        df = pd.read_hdf(full_path)
-    elif filetype == '.csv':
-        df = pd.read_csv(full_path)
-    else:
-        raise('filetype for {} is not .csv or .h5'.format(full_path))
 
-    # Filter data to valid regions
+    if filetype_in == 'h5':
+        df = read_file(full_path)
+        
+    elif filetype_in == 'csv':
+        df = pd.read_csv(full_path, dtype={'FIPS':str, 'fips':str, 'cnty_fips':str})
+        
+    else:
+        raise TypeError(f'filetype for {full_path} is not .csv or .h5')
+
+    #------- Filter data to valid regions -------#
     if region_col == 'wide':
         # Check to see if the regions are listed in the columns. If they are,
         # then use those columns
         if df.columns.isin(val_r_all).any():
             df = df.loc[:,df.columns.isin(fix_cols + val_r_all)]
-        # Otherwise just use a empty dataframe
         else:
-            df = pd.DataFrame()
+            # Checks if regions are in columns as '[class]_[region]' (e.g. in 8760 RECF data).
+            # This 'try' attempts to split each column name at the '_' and checks the second 
+            # value for any regions.
+            # If it can't do so, it will instead use a blank dataframe.
+            try:
+                df.columns.str.split('_',expand=True).get_level_values(1).isin(val_r_all).any()
+                column_mask = (df.columns.str.split('_',expand=True)
+                                .get_level_values(1)
+                                .isin(val_r_all)
+                                .tolist()
+                )
+                df = df.loc[:,column_mask]
+                # Empty h5 files cannot be read in, causing errors in ldc_prep.py.
+                # In the case that val_r_all filters out all columns, leaving an empty dataframe,
+                # fill a single column with NaN to preserve the file index for use in ldc_prep
+                if len(df.columns) == 0:
+                    df = pd.DataFrame(np.nan, index = df.index,columns = val_r_all)
+            except:
+                df = pd.DataFrame()
 
-    # If there is a region to region mapping set
-    elif region_col.strip('*') in ['r,rr','r,rs','rs,r']:
+    # If there is a region-to-region mapping set
+    elif region_col.strip('*') in ['r,rr','transgrp,transgrpp']:
         # make sure both the r and rr regions are in val_r
         r,rr = region_col.split(',')
         df = df.loc[df[r].isin(val_r_all) & df[rr].isin(val_r_all)]
@@ -613,37 +766,99 @@ for i, row in regionFiles.iterrows():
         df = df.loc[df['r'].isin(val_r_all)]
         df = df.loc[:,df.columns.isin(["r"] + val_cendiv)]
 
-    # Subset on val_st if region_col == st
-    elif region_col == 'wide_st':
-        # Check to see if the states are listed in the columns. If they are,
+    # Subset on val_{level} if region_col == 'wide_{level}'
+    elif (region_col.split('_')[0] == 'wide') and (region_col.split('_')[1] in valid_regions.keys()):
+        # Check to see if the region values are listed in the columns. If they are,
         # then use those columns
-        if df.columns.isin(val_st).any():
-            df = df.loc[:,df.columns.isin(fix_cols + val_st)]
-        # Otherwise just use a empty dataframe
+        val_reg = valid_regions[region_col.split('_')[1]]
+        if df.columns.isin(val_reg).any():
+            df = df.loc[:,df.columns.isin(fix_cols + val_reg)]
+        # Otherwise just use an empty dataframe
         else:
             df = pd.DataFrame()
-
+    
     # If region_col is not wide, st, or aliased..
     else:
         df = df.loc[df[region_col].isin(val_r_all)]
     
-    # Write data to inputs_case folder
-    if filetype == '.h5':
-        df.to_hdf(
-            os.path.join(inputs_case,filename), key='data', complevel=4, format='table')
+    #------- Write data to inputs_case folder -------#
+    if filetype_out == 'h5':
+        outfile = os.path.join(inputs_case,filename) 
+                
+        with h5py.File(outfile, 'w') as f:
+            # save index, either as a standalone or with a group for each level
+            # in a multi-index (with the format 'index{index order}_{index name}')
+            idx_val = 0
+            for idx_name in df.index.names:
+                if (idx_name is None) and (len(df.index.names) == 1):
+                    f.create_dataset('index', data=df.index, dtype=df.index.dtype)
+                else:
+                    if idx_name is None:
+                        idx_name = idx_val
+                    idx_values = df.index.get_level_values(idx_name)
+                    f.create_dataset(f'index{idx_val+1}_{idx_name}', data=idx_values, dtype=idx_values.dtype)
+                idx_val += 1
+            # save column names as string type
+            f.create_dataset('columns', data=df.columns, dtype=f'S{df.columns.map(len).max()}')
+
+            # save data
+            if len(df.dtypes.unique()) > 1:
+                raise Exception(f"Multiple data types detected in {filename}, unclear which one to use for re-saving h5.")
+            else:
+                dftype_out = df.dtypes.unique()[0]    
+            f.create_dataset('data', data=df.values, dtype=dftype_out, compression='gzip', compression_opts=4,)
     else:
+        # Special cases: These files' values need to be adjusted for inflation prior to copy
+        if filename in ['bio_supplycurve.csv', 'co2_site_char.csv']:
+            match filepath:
+                case "inputs/supply_curve/bio_supplycurve.csv":
+                    df['price'] = df['price'].astype(float) * source_deflator_map[filepath]
+                case "inputs/ctus/co2_site_char.csv":
+                    df[f"bec_{sw['GSw_CO2_BEC']}"] *= source_deflator_map[filepath]
+                case _:
+                    raise FileNotFoundError(filepath)
+
         df.to_csv(
             os.path.join(inputs_case,filename), index=False)
 
-### All files from the user input folder
-userinputs = os.listdir(os.path.join(reeds_path,"inputs","userinput"))
+#%% Handle special case inputs that are always at county-resolution
 
-for file_name in userinputs:
-    full_file_name = os.path.join(reeds_path,"inputs","userinput", file_name)
-    # ivt is now a special case written in calc_financial_inputs, so skip it here
-    if (os.path.isfile(full_file_name) and (file_name != 'ivt.csv')):
-        shutil.copy(full_file_name, inputs_case)
+### Map energy communities to regions and calculate the percentage of energy communities in a region to give a weighted bonus
+# Rename column in energy_communities.csv and map county to r, save as energy_communities.csv
+energy_communities = pd.read_csv(os.path.join(inputs_case, 'energy_communities.csv'))
+energy_communities.rename(columns={'County Region': 'county'}, inplace=True)
 
+# map energy communities to regions
+e_df = pd.merge(energy_communities, r_county, on='county', how='left').dropna()
+
+# group energy community regions and count the number of counties in each
+energy_county_counts = e_df.groupby('r')['county'].nunique()
+
+# group all regions and count the number of counties in each 
+total_county_counts = r_county.groupby('r')['county'].nunique()
+
+# calculate the percentage of counties that are energy communities in each region
+e_df = (energy_county_counts / total_county_counts).round(3).reset_index().dropna()
+
+# rename columns to from ['r','county'] to ['r','percentage_energy_communities']
+e_df.columns = ['r', 'percentage_energy_communities']
+
+e_df.to_csv(
+    os.path.join(inputs_case, 'energy_communities.csv'),
+    index=False
+)
+
+### Aggregate distpv capacity to ba resolution if not running county-level resolution
+if agglevel != 'county':
+    dpv = (pd.read_csv(os.path.join(inputs_case,'distpvcap.csv'))
+                .set_index('r')
+            )
+    # Merge county mapping to distpv capacity data and aggregate
+    dpv_ba = dpv.merge(r_county, left_index=True, right_on='county').drop('county', axis=1)
+    dpv_ba = dpv_ba.groupby('r').sum()
+
+    # Write out file
+    dpv_ba.to_csv(os.path.join(inputs_case,'distpvcap.csv'), index=True)
 
 #%% Special-case set modifications
 ## Expand i (technologies) set if modeling water use
@@ -665,23 +880,11 @@ if int(sw.GSw_WaterMain):
 ### Legacy files - no longer used
 if sw['unitdata'] == 'ABB':
     nas = '//nrelnas01/ReEDS/FY18-ReEDS-2.0/data/'
-    out = os.path.join(reeds_path,'inputs','capacitydata')
+    out = os.path.join(reeds_path,'inputs','capacity_exogenous')
     shutil.copy(os.path.join(nas,'ExistingUnits_ABB.gdx'), out)
     shutil.copy(os.path.join(nas,'PrescriptiveBuilds_ABB.gdx'), out)
     shutil.copy(os.path.join(nas,'PrescriptiveRetirements_ABB.gdx'), out)
     shutil.copy(os.path.join(nas,'ReEDS_generator_database_final_ABB.gdx'), out)
-
-### Make opt file change for value streams
-if sw['GSw_ValStr'] != '0':
-    if int(sw['GSw_gopt']) == 1:
-        origOptExt = 'opt'
-    elif int(sw['GSw_gopt']) < 10:
-        origOptExt = 'op' + sw['GSw_gopt']
-    else:
-        origOptExt = 'o' + sw['GSw_gopt']
-    #Add writemps statement to opt file
-    with open(casedir + '/cplex.'+origOptExt, 'a') as file:
-        file.write('\nwritemps ReEDSmodel.mps')
 
 toc(tic=tic, year=0, process='input_processing/copy_files.py',
     path=os.path.join(inputs_case,'..'))

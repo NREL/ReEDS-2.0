@@ -1,3 +1,20 @@
+'''
+This script handles the modifications of static inputs for the first solve year. These inputs
+include the 8760 load and 8760 renewable energy capacity factor (RECF) profiles. RECF and
+resource data for various technologies are combined into single files for output:
+
+Load:
+        - Scale load profiles by distribution loss factor and load calibration factor
+Resources:
+        - Creates a resource-to-(i,r,ccreg) lookup table for use in hourly_writesupplycurves.py 
+          and Augur
+        - Add the distributed PV resources
+RECF:
+        - Add the distributed PV recf profiles
+        - Sort the columns in recf to be in the same order as the rows in resources
+        - Scale distributed resource CF profiles by distribution loss factor and tiein loss factor
+'''
+
 #%% ===========================================================================
 ### --- IMPORTS ---
 ### ===========================================================================
@@ -7,49 +24,130 @@ import h5py
 import numpy as np
 import os
 import pandas as pd
+import re
 import sys
+
+import logging
+from pathlib import Path
+from pandas.api.types import is_float_dtype 
+
+logger = logging.getLogger(__file__)
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
 ### ===========================================================================
 
-def read_file(filename, index_columns=1):
+def read_h5py_file(filename: Path | str) -> pd.DataFrame:
+    """Return dataframe object for a h5py file.
+
+    This function returns a pandas dataframe of a h5py file. If the file has multiple dataset on it
+    means it has yearly index.
+
+    Parameters
+    ----------
+    filename
+        File path to read
+
+    Returns
+    -------
+    pd.DataFrame
+        Pandas dataframe of the file
     """
-    Read input file of various types (for backwards-compatibility)
+    
+    valid_data_keys = ["data", "cf", "load", "evload"]
+
+    with h5py.File(filename, "r") as f:
+        # Identify keys in h5 file and check for overlap with valid key set
+        keys = list(f.keys())
+        datakey = list(set(keys).intersection(valid_data_keys))
+
+        # Adding safety check to validate that it only returns one key
+        assert len(datakey) <= 1, f"Multiple keys={datakey} found for {filename}"
+        datakey = datakey[0] if datakey else None
+
+        # standard approach for data with one of the matching keys
+        if datakey in keys:
+            # load data
+            df = pd.DataFrame(f[datakey][:])
+            # check for indices
+            idx_cols = [c for c in keys if 'index' in c]
+            idx_cols.sort()
+            idx_cols_out = []
+            # loop over indices and add to data
+            if len(idx_cols) == 1 and idx_cols[0] == "index":
+                df.index = pd.Series(f["index"]).values
+            else:
+                for idx_col in idx_cols:
+                    # with multindex expecting the word 'index' plus a number indicating the order
+                    # based on format specified when writing out h5 files in copy_files
+                    idx_col_out = re.sub('index[0-9]*_', '', idx_col)
+                    idx_cols_out.append(idx_col_out)
+                    df[idx_col_out] = pd.Series(f[idx_col]).values
+                df = df.set_index(idx_cols_out)
+        # if none of these keys work, we're dealing with EER-formatted load
+        else:
+            years = [column for column in keys if column.isdigit()]
+            # Extract all the years and concat them in a single dataframe.
+            df = pd.concat({int(y): pd.DataFrame(f[y][...]) for y in years}, axis=0)
+            df.index = df.index.rename(["year", "hour"])
+        
+        # add columns to data if specified
+        if 'columns' in keys:
+            df.columns = (pd.Series(f["columns"]).map(lambda x: x if isinstance(x, str) else x.decode("utf-8")).values)
+
+    return df
+
+def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
+    """Return dataframe object of input file for multiple file formats.
+
+    This function read multiple file formats for h5 file sand returns a dataframe from the file. 
+
+    Parameters
+    ----------
+    filename
+        File path to read
+
+    Returns
+    -------
+    pd.DataFrame
+        Pandas dataframe of the file
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exists
     """
-    # Try reading a .h5 file written by pandas
+    if isinstance(filename, str):
+        filename = Path(filename)
+
+    if not filename.exists():
+        raise FileNotFoundError(f"Mandatory file {filename} does not exist.")
+
+    # We have two cases, either the data is contained as a single dataframe or we have multiple
+    # datasets that composes the h5 file. For a single dataset we use pandas (since it is the most
+    # convenient) and h5py for the custom h5 file.
     try:
-        df = pd.read_hdf(filename+'.h5')
-    # Try reading a .h5 file written by h5py
-    except (ValueError, TypeError, FileNotFoundError, OSError):
-        try:
-            with h5py.File(filename+'.h5', 'r') as f:
-                keys = list(f)
-                datakey = 'data' if 'data' in keys else ('cf' if 'cf' in keys else 'load')
-                ### If none of these keys work, we're dealing with EER-formatted load
-                if datakey not in keys:
-                    years = [int(y) for y in keys if y != 'columns']
-                    df = pd.concat(
-                        {y: pd.DataFrame(f[str(y)][...]) for y in years},
-                        axis=0)
-                    df.index = df.index.rename(['year','hour'])
-                else:
-                    df = pd.DataFrame(f[datakey][:])
-                    df.index = pd.Series(f['index']).values
-                df.columns = pd.Series(f['columns']).map(
-                    lambda x: x if type(x) is str else x.decode('utf-8')).values
-        # Fall back to .csv.gz
-        except (FileNotFoundError, OSError):
-            df = pd.read_csv(
-                filename+'.csv.gz', index_col=list(range(index_columns)),
-                float_precision='round_trip',
-            )
-    ### Some files are saved as float16, so convert to float32
-    ### to prevent issues with large/small numbers
-    return df.astype(np.float32)
+        df = pd.read_hdf(filename)
+
+    except ValueError:
+        df = read_h5py_file(filename)
+    
+    # All values being NaN indicates that the region filtering in copy_files.py removed all
+    # data, leaving an empty dataframe.
+    # Return an empty dataframe with the original file's index if all values are NaN
+    if all(df.isnull().all()):
+        df = df.drop(columns=df.columns)
+        return df
+
+    # NOTE: Some files are saved as float16, so we cast to float32 to prevent issues with
+    # large/small numbers
+    numeric_cols = [c for c in df if is_float_dtype(df[c].dtype)]
+    df = df.astype({column:np.float32 for column in numeric_cols})
+    
+    return df
 
 
-def local_to_eastern(df, reeds_path, by_year=False):
+def local_to_eastern(df, inputs_case, by_year=False):
     """
     Convert a wide dataframe from local to eastern time.
     The column names are assumed to end with _{r}.
@@ -60,7 +158,7 @@ def local_to_eastern(df, reeds_path, by_year=False):
     """
     ### Get some inputs
     r2tz = pd.read_csv(
-        os.path.join(reeds_path,'inputs','variability','reeds_region_tz_map.csv'),
+        os.path.join(inputs_case,'reeds_region_tz_map.csv'),
         index_col='r')
 
     r2tz['hourshift'] = r2tz.tz.map({'PT':+3, 'MT':+2, 'CT':+1, 'ET':0, 'AT':-1, 'NT': -2})
@@ -162,7 +260,7 @@ def get_distpv_profiles(inputs_case, recf, rb2fips, agglevel):
     """
     ### Get average CF (used to scale down UPV profiles to generate distpv profiles)
     distpv_meancf = (
-        pd.read_csv(os.path.join(inputs_case,'distPVCF_hourly.csv'), index_col=0)
+        pd.read_csv(os.path.join(inputs_case,'distpvcf_hourly.csv'), index_col=0)
           .mean(axis=1).rename_axis('ba').rename('cf')
         )
     ### Uniformly disaggregate regions if running at county level
@@ -199,21 +297,19 @@ def get_distpv_profiles(inputs_case, recf, rb2fips, agglevel):
 ### --- MAIN FUNCTION ---
 ### ===========================================================================
 def main(reeds_path, inputs_case):
-    print('Starting LDC_prep.py')
+    print('Starting ldc_prep.py')
     
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
     # inputs_case = os.path.join(
-    #     reeds_path,'runs','v20240109_aggfixM1_Western_agg','inputs_case')
+    #     reeds_path,'runs','v20240715_aggM0_ERCOT_county','inputs_case')
 
     #%% Inputs from switches
     sw = pd.read_csv(
         os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0,
     ).squeeze(1)
     GSw_EFS1_AllYearLoad = sw.GSw_EFS1_AllYearLoad
-    GSw_SitingWindOns = sw.GSw_SitingWindOns
-    GSw_SitingWindOfs = sw.GSw_SitingWindOfs
-    GSw_SitingUPV = sw.GSw_SitingUPV
+    GSw_CSP_Types = [int(i) for i in sw.GSw_CSP_Types.split('_')]
     GSw_PVB_Types = sw.GSw_PVB_Types
     GSw_PVB = int(sw.GSw_PVB)
     GSw_LoadAdjust = int(sw.GSw_LoadAdjust)
@@ -229,18 +325,6 @@ def main(reeds_path, inputs_case):
     lvl = 'ba' if agglevel in ['ba','state','aggreg'] else 'county'
 
     #%%### Load inputs
-    ### Override GSw_PVB_Types if GSw_PVB is turned off
-    GSw_PVB_Types = (
-        [int(i) for i in GSw_PVB_Types.split('_')] if int(GSw_PVB)
-        else []
-    )
-    
-    GSw_CSP_Types = '1_2'
-    GSw_CSP_Types = [int(i) for i in GSw_CSP_Types.split('_')]
-
-    # -------- Define the file paths --------
-    folder = 'multi_year'
-    path_variability = os.path.join(reeds_path,'inputs','variability')
 
     # -------- Datetime mapper --------
     hdtmap = pd.read_csv(os.path.join(inputs_case, 'h_dt_szn.csv'))
@@ -269,9 +353,8 @@ def main(reeds_path, inputs_case):
         os.path.join(inputs_case,'hierarchy.csv')
     ).rename(columns={'*r':'r'}).set_index('r')
     hierarchy_original = (
-        pd.read_csv(os.path.join(reeds_path, 'inputs', 'hierarchy.csv'))
+        pd.read_csv(os.path.join(inputs_case, 'hierarchy_original.csv'))
         .rename(columns={'ba':'r'})
-        .drop(['county','county_name'], axis=1).drop_duplicates()
         .set_index('r')
     )
     ### Add ccreg column with the desired hierarchy level
@@ -320,80 +403,64 @@ def main(reeds_path, inputs_case):
         techs[tech].extend(temp_save)
     vre_dist = techs['VRE_DISTRIBUTED']
 
-    '''
-    HANDLING STATIC INPUTS FOR THE FIRST SOLVE YEAR
-    Load
-          - Filter out load profiles not included in this run
-          - Scale load profiles by distribution loss factor and load calibration factor
-    Resources:
-          - Filter out all resources not included in this run
-          - Add the distributed PV resources
-    RECF:
-          - Add the distributed PV profiles
-          - Filter out all resources not included in this run
-          - Sort the columns in recf to be in the same order as the rows in resources
-          - Scale distributed resource CF profiles by distribution loss factor and tiein loss factor
-    '''
-    
     # ------- Read in the static inputs for this run -------
 
-    df_windons = read_file(
-        os.path.join(path_variability, folder, f'wind-ons-{GSw_SitingWindOns}_{lvl}'))
+    ### Onshore Wind
+    df_windons = read_file(os.path.join(inputs_case,'recf_wind-ons.h5'))
     df_windons.columns = ['wind-ons_' + col for col in df_windons]
     ### Don't do aggregation in this case, so make a 1:1 lookup table
     lookup = pd.DataFrame({'ragg':df_windons.columns.values})
     lookup['r'] = lookup.ragg.map(lambda x: x.rsplit('_',1)[1])
     lookup['i'] = lookup.ragg.map(lambda x: x.rsplit('_',1)[0])
 
-    ### Offshore
-    df_windofs = read_file(
-        os.path.join(path_variability, folder, f'wind-ofs-{GSw_SitingWindOfs}_{lvl}'))
+    ### Offshore Wind
+    df_windofs = read_file(os.path.join(inputs_case,'recf_wind-ofs.h5'))
     df_windofs.columns = ['wind-ofs_' + col for col in df_windofs]
 
-    df_upv = read_file(
-        os.path.join(path_variability, folder, f'upv-{GSw_SitingUPV}_{lvl}'))
+    ### UPV
+    df_upv = read_file(os.path.join(inputs_case,'recf_upv.h5'))
     df_upv.columns = ['upv_' + col for col in df_upv]
 
     # If DUPV is turned off, create an empty dataframe with the same index as df_dupv to concat
     if int(sw['GSw_DUPV']) == 0: 
         df_dupv = pd.DataFrame(index=df_upv.index)
     elif int(sw['GSw_DUPV']) == 1:
-        df_dupv = read_file(
-            os.path.join(path_variability, folder, f'dupv_{lvl}'))
+        df_dupv = read_file(os.path.join('recf_dupv.h5'))
         df_dupv.columns = ['dupv_' + col for col in df_dupv]
 
-    # CSP
-    cspcf = read_file(
-        os.path.join(path_variability, folder, f'csp-none_{lvl}'))
-    
+    ### CSP
+    cspcf = read_file(os.path.join(inputs_case,'recf_csp.h5'))
     # If CSP is turned off, create an empty dataframe with an appropriate index
     if int(sw['GSw_CSP']) == 0:
         cspcf = pd.DataFrame(index=cspcf.index)
-        
-    keep = [c for c in cspcf if c.split('_')[1] in val_r_all]
-    cspcf = cspcf[keep]
 
-    #%% Format PV+battery profiles
-    ### Get the PVB types
+    ### Format PV+battery profiles
+    # Get the PVB types
     pvb_ilr = pd.read_csv(
         os.path.join(inputs_case, 'pvb_ilr.csv'),
         header=0, names=['pvb_type','ilr'], index_col='pvb_type').squeeze(1)
     df_pvb = {}
+    # Override GSw_PVB_Types if GSw_PVB is turned off
+    GSw_PVB_Types = (
+        [int(i) for i in GSw_PVB_Types.split('_')] if int(GSw_PVB)
+        else []
+    )
     for pvb_type in GSw_PVB_Types:
         ilr = int(pvb_ilr['pvb{}'.format(pvb_type)] * 100)
-        ### UPV uses ILR = 1.3, so use its profile if ILR = 1.3
-        infile = f'upv-{GSw_SitingUPV}_ba' if ilr == 130 else f'upv_{ilr}AC_ba-reference'
-        df_pvb[pvb_type] = read_file(
-            os.path.join(path_variability, 'multi_year', infile))
+        # If PVB uses same ILR as UPV then use its profile
+        infile = 'recf_upv' if ilr == scalars['ilr_utility'] * 100 else f'recf_upv_{ilr}AC'
+        df_pvb[pvb_type] = read_file(os.path.join(inputs_case,infile+'.h5'))
         df_pvb[pvb_type].columns = [f'pvb{pvb_type}_{c}'
                                     for c in df_pvb[pvb_type].columns]
         df_pvb[pvb_type].index = df_upv.index.copy()
 
+    ### Concat RECF data
     recf = pd.concat(
         [df_windons, df_windofs, df_upv, df_dupv]
         + [df_pvb[pvb_type] for pvb_type in df_pvb],
         sort=False, axis=1, copy=False)
 
+    ### Add the other recf techs to the resources lookup table
     toadd = pd.DataFrame({'ragg': [c for c in recf.columns if c not in lookup.ragg.values]})
     toadd['r'] = [c.rsplit('_', 1)[1] for c in toadd.ragg.values]
     toadd['i'] = [c.rsplit('_', 1)[0] for c in toadd.ragg.values]
@@ -409,9 +476,8 @@ def main(reeds_path, inputs_case):
 
     if GSw_EFS1_AllYearLoad == 'historic':
         load_historical = read_file(
-            os.path.join(reeds_path, 'inputs', 'loaddata', 'historic_load_hourly')
+            os.path.join(inputs_case,'load_hourly.h5')
         )
-        load_historical = load_historical.loc[:,load_historical.columns.isin(val_r_all)]
         # Read load multipliers
         load_multiplier = pd.read_csv(os.path.join(inputs_case, 'load_multiplier.csv'))
         
@@ -454,16 +520,15 @@ def main(reeds_path, inputs_case):
         
     else:
         load_profiles = read_file(
-            os.path.join(reeds_path,'inputs','loaddata',(GSw_EFS1_AllYearLoad+'_load_hourly')),
-            index_columns=2,
+            os.path.join(inputs_case,'load_hourly.h5'),
         ).loc[solveyears]
-        load_profiles = load_profiles.loc[:,load_profiles.columns.isin(val_r_all)]
         ### If using EFS-style demand with only a single 2012 weather year, concat each profile
         ### 7 times to match the 7-year VRE profiles
+        num_years = 7
         load_profiles_wide = load_profiles.unstack('year')
         if len(load_profiles_wide) == 8760:
             load_profiles = (
-                pd.concat([load_profiles_wide]*7, axis=0, ignore_index=True)
+                pd.concat([load_profiles_wide] * num_years, axis=0, ignore_index=True)
                 .rename_axis('hour').stack('year')
                 .reorder_levels(['year','hour']).sort_index(axis=0, level=['year','hour'])
             )
@@ -471,10 +536,10 @@ def main(reeds_path, inputs_case):
     # ------- Perform Load Adjustments based on GSw_LoadAdjust ------- #
     if GSw_LoadAdjust:
         # Splitting load adjustment profiles and adoption rates
-        GSw_LoadAdjust_Profiles = GSw_LoadAdjust_Profiles.split("__")
-        GSw_LoadAdjust_Adoption = GSw_LoadAdjust_Adoption.split("__")
+        LoadAdjust_Profiles = GSw_LoadAdjust_Profiles.split("__")
+        LoadAdjust_Adoption = GSw_LoadAdjust_Adoption.split("__")
         # Checking for an equal # of load adjustment profiles and adoption rates
-        if len(GSw_LoadAdjust_Adoption) != len(GSw_LoadAdjust_Profiles):
+        if len(LoadAdjust_Adoption) != len(LoadAdjust_Profiles):
             sys.exit(
                 "Number of GSw load adjustment profiles does not equal the "
                 "same number of adoption rate profiles"
@@ -486,13 +551,11 @@ def main(reeds_path, inputs_case):
         for i in range(len(GSw_LoadAdjust_Profiles)):
             # Reading in the load adjustment profiles and adoption rates
             profile = pd.read_csv(
-                os.path.join(
-                    reeds_path, "inputs", "loaddata", GSw_LoadAdjust_Profiles[i]
+                os.path.join(inputs_case, f'ghp_delta_{GSw_LoadAdjust_Profiles[i]}.csv'
                 )
             )
             adoption = pd.read_csv(
-                os.path.join(
-                    reeds_path, "inputs", "loaddata", GSw_LoadAdjust_Adoption[i]
+                os.path.join(inputs_case, f'adoption_trajectories_{GSw_LoadAdjust_Adoption[i]}.csv'
                 )
             )
             # Drop Years from adoption rates that are not in load profiles
@@ -567,11 +630,8 @@ def main(reeds_path, inputs_case):
         wind_ofs_resource = ['wind-ofs_' + str(n) for n in range(1,16)]
         resources = resources[~resources['tech'].isin(wind_ofs_resource)]
     
-    # Filtering out profiles of resources not included in this run
-    # and sorting to match the order of the rows in resources
-    resources = resources[
-        resources['area'].isin(val_r_all)
-    ].sort_values(['resource','area'])
+    # Sorting profiles of resources to match the order of the rows in resources
+    resources = resources.sort_values(['resource','area'])
     recf = recf.reindex(labels=resources['resource'].drop_duplicates(), axis=1, copy=False)
 
     ### Scale up dupv and distpv by 1/(1-distloss)
@@ -602,7 +662,6 @@ def main(reeds_path, inputs_case):
         .assign(i=csp_resources['tech'] + '_' + csp_resources['class'].astype(str))
         .assign(resource=csp_resources['tech'] + '_' + csp_resources['resource'])
         .assign(ccreg=csp_resources.r.map(r2ccreg))
-        .loc[csp_resources.r.isin(val_r_all)]
         [['i','r','resource','ccreg']]
     )
 
@@ -629,9 +688,9 @@ def main(reeds_path, inputs_case):
 
 
     #%%### Convert from local time to Eastern time
-    recf_eastern = local_to_eastern(recf, reeds_path, by_year=False)
-    load_eastern = local_to_eastern(load_profiles, reeds_path, by_year=True).astype(np.float32)
-    cspcf_eastern = local_to_eastern(cspcf, reeds_path, by_year=False)
+    recf_eastern = local_to_eastern(recf, inputs_case, by_year=False)
+    load_eastern = local_to_eastern(load_profiles, inputs_case, by_year=True).astype(np.float32)
+    cspcf_eastern = local_to_eastern(cspcf, inputs_case, by_year=False)
     
     # Disaggregate load data here if running at county resolution
     if agglevel == 'county':
@@ -655,11 +714,12 @@ def main(reeds_path, inputs_case):
         load_eastern = load_eastern.loc[:,load_eastern.columns.isin(val_r_all)].copy()
 
     #%% Calculate coincident peak demand at different levels for convenience later
+    _hierarchy = hierarchy if sw['GSw_RegionResolution'] == 'county' else hierarchy_original
     _peakload = {}
-    for _level in hierarchy.columns:
+    for _level in _hierarchy.columns:
         _peakload[_level] = (
             ## Aggregate to level
-            load_eastern.rename(columns=hierarchy[_level])
+            load_eastern.rename(columns=_hierarchy[_level])
             .groupby(axis=1, level=0).sum()
             ## Calculate peak
             .groupby(axis=0, level='year').max()
@@ -680,9 +740,12 @@ def main(reeds_path, inputs_case):
         os.path.join(inputs_case,'recf.h5'), key='data', complevel=4, index=True)
     resources.to_csv(os.path.join(inputs_case,'resources.csv'), index=False)
     peakload.to_csv(os.path.join(inputs_case,'peakload.csv'))
+    ### Write peak demand by NERC region to use in firm net import constraint
+    peakload.loc['nercr'].stack('year').rename_axis(['*nercr','t']).rename('MW').to_csv(
+        os.path.join(inputs_case,'peakload_nercr.csv'))
     ### Write the CSP solar field CF (no SM or storage) for hourly_writetimeseries.py
-    (cspcf_eastern[keep]
-        .rename(columns=dict(zip(keep, [f'csp_{i}' for i in keep])))
+    (cspcf_eastern
+        .rename(columns=dict(zip(cspcf_eastern.columns, [f'csp_{i}' for i in cspcf_eastern.columns])))
         .astype(np.float32)
         .reset_index(drop=True)
     ).to_hdf(
@@ -719,7 +782,7 @@ if __name__ == '__main__':
     #%% Run it
     main(reeds_path=reeds_path, inputs_case=inputs_case)
 
-    toc(tic=tic, year=0, process='input_processing/LDC_prep.py',
+    toc(tic=tic, year=0, process='input_processing/ldc_prep.py',
         path=os.path.join(inputs_case,'..'))
     
-    print('Finished LDC_prep.py')
+    print('Finished ldc_prep.py')

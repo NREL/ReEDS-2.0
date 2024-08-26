@@ -6,4 +6,15 @@ include = '''
 )
 '''
 
+[project]
+name = "ReEDS"
+version = "2024.0.0"
+
+[project.optional-dependencies]
+docs = [
+    "sphinx",
+    "myst-parser",
+]
+
+
 

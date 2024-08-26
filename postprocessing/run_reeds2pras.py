@@ -17,7 +17,7 @@ def check_slurm(forcelocal=False):
 
 
 def submit_job(
-        case, year=0, samples=0, repo=False, r2ppath='', overwrite=False,
+        case, year=0, samples=0, repo=False, overwrite=False,
         write_flow=False, write_surplus=False, write_energy=False,
     ):
     """
@@ -46,7 +46,6 @@ def submit_job(
             + f" {case}"
             + f" -y {year} -s {samples} --local"
             + (' --repo' if repo else '')
-            + (f' --r2ppath={r2ppath}' if len(r2ppath) else '')
             + (' --overwrite' if overwrite else '')
             + (' --flow' if write_flow else '')
             + (' --surplus' if write_surplus else '')
@@ -66,11 +65,11 @@ def submit_job(
 
 #%% Main function
 def main(
-        case, year=0, samples=0, repo=False, r2ppath='', overwrite=False,
+        case, year=0, samples=0, repo=False, overwrite=False,
         write_flow=False, write_surplus=False, write_energy=False,
     ):
     """
-    Run A_prep_data, ReEDS2PRAS, and PRAS as necessary.
+    Run prep_data, ReEDS2PRAS, and PRAS as necessary.
     If running PRAS, append the number of samples to the filename.
     """
     ### Import Augur scripts
@@ -79,15 +78,13 @@ def main(
     else:
         site.addsitedir(case)
     import Augur
-    import ReEDS_Augur.A_prep_data as A_prep_data
+    import ReEDS_Augur.prep_data as prep_data
     import ReEDS_Augur.functions as functions
 
     ### Get the switches, overwriting values as necessary
     sw = functions.get_switches(case)
     sw['reeds_path'] = reeds_path
     sw['pras_samples'] = samples
-    if r2ppath:
-        sw['reeds2pras_path'] = r2ppath
 
     ### Get the solve years
     years = pd.read_csv(
@@ -106,12 +103,11 @@ def main(
         .split(f'{t}i')[-1]
     )
 
-    ### Check if A_prep_data.py outputs exist; if not, run it
+    ### Check if prep_data.py outputs exist; if not, run it
     augur_data = os.path.join(case,'ReEDS_Augur','augur_data')
     files_expected = [
         f'cap_converter_{t}.csv',
         f'energy_cap_{t}.csv',
-        f'forced_outage_{t}.csv',
         f'max_cap_{t}.csv',
         f'tran_cap_{t}.csv',
         f'pras_load_{t}.h5',
@@ -121,7 +117,7 @@ def main(
         any([not os.path.isfile(os.path.join(augur_data,f)) for f in files_expected])
         or overwrite
     ):
-        augur_gdx, augur_csv, augur_h5 = A_prep_data.main(t, case)
+        augur_csv, augur_h5 = prep_data.main(t, case)
 
     ### Run ReEDS2PRAS
     Augur.run_pras(
@@ -135,7 +131,7 @@ def main(
 if __name__ == '__main__':
     #%% Argument inputs
     import argparse
-    description = """Run A_prep_data, ReEDS2PRAS, and PRAS as necessary.
+    description = """Run prep_data, ReEDS2PRAS, and PRAS as necessary.
     Example usage on the HPC:
     `case=/projects/reedsweto/github/ReEDS-2.0/runs/v20230524_ntpH0_Pacific`
     `for s in 100 1000; do python postprocessing/run_reeds2pras.py $case -s $s -r; done`
@@ -153,8 +149,6 @@ if __name__ == '__main__':
     parser.add_argument('--repo', '-r', action='store_true',
                         help=('Import Augur scripts from local repo '
                               '(instead of from the case being rerun)'))
-    parser.add_argument('--r2ppath', '-p', type=str, default='',
-                        help=('path to ReEDS2PRAS if different from that used in case'))
     parser.add_argument('--local', '-l', action='store_true',
                         help='Run locally (not as SLURM job)')
     parser.add_argument('--overwrite', '-o', action='store_true',
@@ -171,7 +165,6 @@ if __name__ == '__main__':
     year = args.year
     samples = args.samples
     repo = args.repo
-    r2ppath = args.r2ppath
     local = args.local
     overwrite = args.overwrite
     write_flow = args.flow
@@ -183,7 +176,6 @@ if __name__ == '__main__':
     # year = 2026
     # samples = 0
     # repo = True
-    # r2ppath = ''
     # local = False
     # overwrite = False
     # write_flow = False
@@ -197,12 +189,12 @@ if __name__ == '__main__':
     if hpc:
         submit_job(
             case=case, year=year, samples=samples, repo=repo,
-            r2ppath=r2ppath, overwrite=overwrite,
+            overwrite=overwrite,
             write_flow=write_flow, write_surplus=write_surplus, write_energy=write_energy,
         )
     else:
         main(
             case=case, year=year, samples=samples, repo=repo,
-            r2ppath=r2ppath, overwrite=overwrite,
+            overwrite=overwrite,
             write_flow=write_flow, write_surplus=write_surplus, write_energy=write_energy,
         )

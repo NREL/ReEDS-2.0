@@ -29,16 +29,48 @@ $offMulti
 * need to have values initialized before making adjustments
 * thus cannot perform these adjustments until 2010 has solved
 $ifthene.post2010 %cur_year%>2010
-* adjust the m_rsc_dat capacity upward to avoid infeasibilities
-* these are caused by floating point differences that occur in GAMS
-* which will report the model as infeasible before sending to CPLEX
-* whereas CPLEX will still attempt to solve the model if the infeasibilities
-* are less than the eprhs option specified in cplex.opt (default 1e-6)
-m_rsc_dat(r,i,rscbin,"cap")$[m_rsc_dat(r,i,rscbin,"cap")] =
-    max(m_rsc_dat(r,i,rscbin,"cap"),
-        sum{(ii,v,tt)$[valinv(ii,v,r,tt)$(yeart(tt) <= yeart("%cur_year%"))$rsc_agg(i,ii)],
-            INV_RSC.l(ii,v,r,rscbin,tt) * resourcescaler(ii) }
-    ) ;
+* Here we calculate the RHS value of eq_rsc_INVlim because floating point
+* differences can cause small number issues that either make the model
+* infeasible or result in very tiny number (order 1e-16) in the matrix
+rhs_eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)$rsc_i(i)$m_rscfeas(r,i,rscbin)$m_rsc_con(r,i)] = 
+
+*capacity indicated by the resource supply curve (with undiscovered geo available
+*at the "discovered" amount and hydro upgrade availability adjusted over time)
+    m_rsc_dat(r,i,rscbin,"cap") * (
+        1$[not geo_hydro(i)] + geo_discovery(i,r,t)$geo_hydro(i))
+    + hyd_add_upg_cap(r,i,rscbin,t)$(Sw_HydroCapEnerUpgradeType=1)
+* available DR capacity
+    + rsc_dr(i,r,"cap",rscbin,t)
+* available EVMC capacity
+    + rsc_evmc(i,r,"cap",rscbin,t)
+*minus the cumulative invested capacity in that region/class/bin...
+*Note that yeart(tt) is stricly < here, while it is <= in eq_rsc_INVlim. That is because
+*values where yeart(tt)==yeart(t) are variables rather than parameters because they are not
+*values from prior solve years.
+    - sum{(ii,v,tt)$[valinv(ii,v,r,tt)$(yeart(tt) < yeart(t))$rsc_agg(i,ii)$(not dr(i))],
+         INV_RSC.l(ii,v,r,rscbin,tt) * resourcescaler(ii) }
+*minus exogenous (pre-start-year) capacity, using its level in the first year (tfirst)
+    - sum{(ii,v,tt)$[tfirst(tt)$rsc_agg(i,ii)$(not dr(i))$exog_rsc(i)],
+         capacity_exog_rsc(ii,v,r,rscbin,tt) }
+* note that the dr(i) term from eq_rsc_INVlim is not included here because the equation
+* sums over INV_RSC(t) rather than INV_RSC(tt), so it is not a parameter to be included
+* in the RHS.
+;
+
+
+flag_eq_rsc_INVlim(r,i,rscbin,t)$tmodel(t) = no ;
+
+* Identify instances when the RHS values are within rhs_tolerance of zero
+flag_eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)$rsc_i(i)$m_rscfeas(r,i,rscbin)$m_rsc_con(r,i)
+                                 $(rhs_eq_rsc_INVlim(r,i,rscbin,t) > -rhs_tolerance)
+                                 $(rhs_eq_rsc_INVlim(r,i,rscbin,t) < rhs_tolerance)] = yes ;
+
+* When RHS is 0 (or close enough), the eq_rsc_INVlim equation says that all relevant INV_RSC are 0.
+* Therefore we can set the INV_RSC variable to zero anywhere the flag_eq_rsc_INVlim is true
+loop(i$rsc_i(i),
+    INV_RSC.fx(ii,v,r,rscbin,t)$[tmodel(t)$m_rscfeas(r,i,rscbin)$m_rsc_con(r,i)
+                                $(flag_eq_rsc_INVlim(r,i,rscbin,t))$(valinv(ii,v,r,t)$rsc_agg(i,ii))] = 0 ;
+) ;
 
 * set m_capacity_exog to the maximum of either its original amount
 * or the amount of upgraded capacity that has occurred in the past 20 years
@@ -175,7 +207,7 @@ tc_phaseout_mult(i,v,t)$[tload(t)$(firstyear_v(i,v)>=%cur_year%)] =
 * These are calculated here because the ITC phaseout can influence these parameters,
 * and the timing of the phaseout is not known beforehand.
 cost_cap_fin_mult(i,r,t) = ccmult(i,t) / (1.0 - tax_rate(t))
-    * (1.0-tax_rate(t) * (1.0 - (itc_frac_monetized(i,t) * tc_phaseout_mult_t(i,t)/2.0) )
+    * (1.0-tax_rate(t) * (1.0 - (itc_frac_monetized(i,t) * itc_energy_comm_bonus(i,r) * tc_phaseout_mult_t(i,t)/2.0) )
     * pv_frac_of_depreciation(i,t) - itc_frac_monetized(i,t) * tc_phaseout_mult_t(i,t))
     * degradation_adj(i,t) * financing_risk_mult(i,t) * reg_cap_cost_mult(i,r)
     * eval_period_adj_mult(i,t) ;
@@ -264,8 +296,11 @@ rsc_fin_mult_noITC(i,r,t)$psh(i) = cost_cap_fin_mult_noITC(i,r,t) ;
 * Apply cost reduction multipliers for geothermal hydro and offshore wind
 rsc_fin_mult(i,r,t)$[hydro(i) or psh(i)] = rsc_fin_mult(i,r,t) * hydrocapmult(t,i) ;
 rsc_fin_mult_noITC(i,r,t)$[hydro(i) or psh(i)] = rsc_fin_mult_noITC(i,r,t) * hydrocapmult(t,i) ;
-rsc_fin_mult(i,r,t)$ofswind(i) = rsc_fin_mult(i,r,t) * ofswind_rsc_mult(t,i) ;
-rsc_fin_mult_noITC(i,r,t)$ofswind(i) = rsc_fin_mult_noITC(i,r,t) * ofswind_rsc_mult(t,i) ;
+
+* Create a new parameter to hold capital financing multipliers with and without ITC for OSW transmission costs inside the resource supply curve cost
+* Currently, OSW receives federal incentives in both its capital and transmission costs, hence this custom application for OSW
+rsc_fin_mult(i,r,t)$ofswind(i) = cost_cap_fin_mult(i,r,t) * ofswind_rsc_mult(t,i) ;
+rsc_fin_mult_noITC(i,r,t)$ofswind(i) = cost_cap_fin_mult_noITC(i,r,t) ;
 
 *trimming the cost_cap_fin_mult parameters to reduce file sizes
 cost_cap_fin_mult(i,r,t)$[(not valinv_irt(i,r,t))$(not upgrade(i))
@@ -337,6 +372,15 @@ $endif.debug
 * ------------------------------
 * Solve the Model
 * ------------------------------
+$ifthen.valstr %GSw_ValStr% == 1
+OPTION lp = convert ;
+ReEDSmodel.optfile = 1 ;
+$echo dumpgdx ReEDSmodel_jacobian.gdx > convert.opt
+solve ReEDSmodel minimizing z using lp ;
+OPTION lp = %solver% ;
+ReEDSmodel.optfile = %GSw_gopt% ;
+OPTION savepoint = 1 ;
+$endif.valstr
 
 solve ReEDSmodel minimizing z using lp ;
 tsolved(t)$tmodel(t) = yes ;
@@ -433,16 +477,46 @@ $include d3_augur_data_dump.gms
 
 *dump data for tax credit phaseout calculations
 parameter
-  emit_r_tc(r,t)  "--million metric tons CO2-- co2 emissions, regional (note: units dependent on emit_scale)"
-  emit_nat_tc(t)  "--million metric tons CO2-- co2 emissions, national (note: units dependent on emit_scale)"
+  emit_r_tc(r,t)  "--metric tons-- CO2 emissions, regional"
+  emit_nat_tc(t)  "--metric tons-- CO2 emissions, national"
 ;
 
-emit_r_tc(r,t)$tmodel_new(t) = EMIT.l("CO2",r,t) * emit_scale("CO2") ;
+* emit_r_tc is calculated the same as the EMIT variable in the model. We do not use
+* EMIT.l here because the emissions are only modeled for those in the emit_modeled
+* set.
+emit_r_tc(r,t)$tmodel_new(t) = 
+
+* Emissions from generation
+    sum{(i,v,h)$[valgen(i,v,r,t)$h_rep(h)],
+        hours(h) * emit_rate("CO2",i,v,r,t)
+        * (GEN.l(i,v,r,h,t)
+           + CCSFLEX_POW.l(i,v,r,h,t)$[ccsflex(i)$(Sw_CCSFLEX_BYP OR Sw_CCSFLEX_STO OR Sw_CCSFLEX_DAC)])
+       }
+
+* Plus emissions produced via production activities (SMR, SMR-CCS, DAC)
+* The "production" of negative CO2 emissions via DAC is also included here
+    + sum{(p,i,v,h)$[valcap(i,v,r,t)$i_p(i,p)$h_rep(h)],
+          hours(h) * prod_emit_rate("CO2",i,t)
+          * PRODUCE.l(p,i,v,r,h,t)
+         }
+
+*[minus] co2 reduce from flexible CCS capture
+*capture = capture per energy used by the ccs system * CCS energy
+
+* Flexible CCS - bypass
+    - (sum{(i,v,h)$[valgen(i,v,r,t)$ccsflex_byp(i)$h_rep(h)],
+        ccsflex_co2eff(i,t) * hours(h) * CCSFLEX_POW.l(i,v,r,h,t) })$Sw_CCSFLEX_BYP
+
+* Flexible CCS - storage
+    - (sum{(i,v,h)$[valgen(i,v,r,t)$ccsflex_sto(i)$h_rep(h)],
+        ccsflex_co2eff(i,t) * hours(h) * CCSFLEX_POWREQ.l(i,v,r,h,t) })$Sw_CCSFLEX_STO
+;
+
 emit_nat_tc(t)$tmodel_new(t) = sum{r, emit_r_tc(r,t) } ;
-* [kilotonne] * [1000 tonne / kilotonne] / ([MW] * [hours]) = [tonne/MWh]
+* [metric kiloton] * [1000 metric ton / metric kiloton] / ([MW] * [hours]) = [metric ton/MWh]
 $ifthen.stateco2 %GSw_StateCO2ImportLevel% == 'r'
     co2_emit_rate_r(r,t)$tmodel(t) = (
-        EMIT.l("CO2",r,t) * emit_scale("CO2")
+        emit_r_tc(r,t)
         / sum{(i,v,h)$[valgen(i,v,r,t)], hours(h) * GEN.l(i,v,r,h,t) }
 * Avoid division-by-zero errors
     )$sum{(i,v,h)$[valgen(i,v,r,t)], hours(h) * GEN.l(i,v,r,h,t) } ;
@@ -450,7 +524,7 @@ $else.stateco2
 * sum emissions and generation within the region
     co2_emit_rate_regional(%GSw_StateCO2ImportLevel%,t)$tmodel(t) = (
         sum{rr$r_%GSw_StateCO2ImportLevel%(rr,%GSw_StateCO2ImportLevel%),
-            EMIT.l("CO2",rr,t) } * emit_scale("CO2")
+            emit_r_tc(rr,t) }
         / sum{(i,v,rr,h)$[valgen(i,v,rr,t)
                         $r_%GSw_StateCO2ImportLevel%(rr,%GSw_StateCO2ImportLevel%)],
               hours(h) * GEN.l(i,v,rr,h,t) }
