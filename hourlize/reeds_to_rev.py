@@ -1745,21 +1745,8 @@ def get_sc_file_path(row):
         sc_file = os.path.join(row["sc_path"], "dupv_sc_naris_scaled.csv")
     elif row.tech == "csp":
         sc_file = os.path.join(row["sc_path"], "vision_sn2_csp_conus_2012.h5")
-    elif row.tech == "wind-ofs":
-        sc_file = os.path.join(
-            row["sc_path"],
-            f"{row['tech']}_{row['rev_case']}",
-            "results",
-            f"{row['tech']}_supply_curve_raw.csv",
-        )
     else:
-        sc_file = os.path.join(
-            row["sc_path"],
-            f"{row['tech']}_{row['access_case']}",
-            "results",
-            f"{row['tech']}_supply_curve_raw.csv",
-        )
-
+        sc_file = row["sc_file"]
     return sc_file
 
 

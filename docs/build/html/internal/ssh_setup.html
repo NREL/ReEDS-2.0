@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSH Key Setup &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="additional_setup.html">Additional ReEDS Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_best_practices.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onboarding.html">Onboarding Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_documentation.html">Model Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html">Model Switches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">SSH Key Setup</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/internal/ssh_setup.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="ssh-key-setup">
+<h1>SSH Key Setup<a class="headerlink" href="#ssh-key-setup" title="Link to this heading"></a></h1>
+<p>If you’re looking to set up a new SSH key on Yampa, jump to <a class="reference internal" href="#setting-up-a-new-ssh-key-on-yampa"><span class="xref myst">Setting up a new SSH key on Yampa</span></a>.</p>
+<section id="generating-a-new-ssh-key">
+<h2>Generating a new SSH key<a class="headerlink" href="#generating-a-new-ssh-key" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Open Git Bash (Windows) or Terminal (Mac &amp; Linux)</p></li>
+<li><p>Paste the following text to create a new SSH key: <code class="docutils literal notranslate"><span class="pre">ssh-keygen</span> <span class="pre">-t</span> <span class="pre">ed25519</span> <span class="pre">-C</span> <span class="pre">&quot;your_email&#64;nrel.gov&quot;</span></code></p>
+<ul class="simple">
+<li><p>It will ask for a file to save the key, press <strong>Enter</strong> to accept the default location</p></li>
+<li><p>When asked for a passphrase, leave it empty and hit <strong>Enter</strong>. If you decide to use a passphrase, you will have to enter it any time you need to push or pull from GitHub.</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="add-ssh-key-to-the-ssh-agent">
+<h2>Add SSH key to the ssh-agent<a class="headerlink" href="#add-ssh-key-to-the-ssh-agent" title="Link to this heading"></a></h2>
+<p>Since the ssh-agent manages your keys, you now have to add the newly generated SSH key to the ssh-agent.</p>
+<section id="windows">
+<h3>Windows<a class="headerlink" href="#windows" title="Link to this heading"></a></h3>
+<ol class="arabic">
+<li><p>Open a new admin elevated PowerShell window</p>
+<ul class="simple">
+<li><p>You can do this by clicking ‘Start’, typing ‘PowerShell’, and then right-clicking on it and selecting ‘Run as Administrator’.</p></li>
+<li><p>If you don’t already have temporary admin access for your machine, you will need to contact IT and request this.</p></li>
+</ul>
+</li>
+<li><p>Ensure the ssh-agent is running by running the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Get</span><span class="o">-</span><span class="n">Service</span> <span class="o">-</span><span class="n">Name</span> <span class="n">ssh</span><span class="o">-</span><span class="n">agent</span> <span class="o">|</span> <span class="n">Set</span><span class="o">-</span><span class="n">Service</span> <span class="o">-</span><span class="n">StartupType</span> <span class="n">Manual</span>
+<span class="n">Start</span><span class="o">-</span><span class="n">Service</span> <span class="n">ssh</span><span class="o">-</span><span class="n">agent</span>
+</pre></div>
+</div>
+</li>
+<li><p>Open a new PowerShell window (open it normally, it doesn’t need to have admin rights) and add your SSH key to the ssh-agent with the command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ssh</span><span class="o">-</span><span class="n">add</span> <span class="n">c</span><span class="p">:</span><span class="o">/</span><span class="n">Users</span><span class="o">/</span><span class="p">[</span><span class="n">your</span> <span class="n">account</span> <span class="n">name</span><span class="p">]</span><span class="o">/.</span><span class="n">ssh</span><span class="o">/</span><span class="n">id_ed25519</span>
+</pre></div>
+</div>
+</li>
+<li><p>Copy the SSH key with the command: <code class="docutils literal notranslate"><span class="pre">clip</span> <span class="pre">&lt;</span> <span class="pre">~/.ssh/id_ed25519.pub</span></code></p>
+<ul class="simple">
+<li><p>Note: this might fail on newer versions of Windows, if it does, use this command: <code class="docutils literal notranslate"><span class="pre">cat</span> <span class="pre">~/.ssh/id_ed25519.pub</span> <span class="pre">|</span> <span class="pre">clip</span></code></p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="mac">
+<h3>Mac<a class="headerlink" href="#mac" title="Link to this heading"></a></h3>
+<ol class="arabic">
+<li><p>Start the ssh-agent with the following command: <code class="docutils literal notranslate"><span class="pre">eval</span> <span class="pre">&quot;$(ssh-agent</span> <span class="pre">-s)&quot;</span></code></p></li>
+<li><p>Modify your <code class="docutils literal notranslate"><span class="pre">~/.ssh/config</span></code> file to automatically load keys into the ssh-agent by following these steps:
+a. Check to see if the file exists: <code class="docutils literal notranslate"><span class="pre">open</span> <span class="pre">~/.ssh/config</span></code>
+b. If it does not exist, you can create it with this command: <code class="docutils literal notranslate"><span class="pre">touch</span> <span class="pre">~/.ssh/config</span></code>
+c. Open the file and modify the contents to contain the following lines (you can open it with the command <code class="docutils literal notranslate"><span class="pre">open</span> <span class="pre">~/.ssh/config</span></code>):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Host</span> <span class="n">github</span><span class="o">.</span><span class="n">com</span>
+    <span class="n">AddKeysToAgent</span> <span class="n">yes</span>
+    <span class="n">IdentityFile</span> <span class="o">~/.</span><span class="n">ssh</span><span class="o">/</span><span class="n">id_ed25519</span>
+</pre></div>
+</div>
+</li>
+<li><p>Add your SSH key to the ssh-agent with the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ssh</span><span class="o">-</span><span class="n">add</span> <span class="o">--</span><span class="n">apple</span><span class="o">-</span><span class="n">use</span><span class="o">-</span><span class="n">keychain</span> <span class="o">~/.</span><span class="n">ssh</span><span class="o">/</span><span class="n">id_ed25519</span>
+</pre></div>
+</div>
+</li>
+<li><p>Copy the SSH key with the command: <code class="docutils literal notranslate"><span class="pre">pbcopy</span> <span class="pre">&lt;</span> <span class="pre">~/.ssh/id_ed25519.pub</span></code></p></li>
+</ol>
+</section>
+</section>
+<section id="add-ssh-key-to-your-github-account">
+<h2>Add SSH key to your GitHub account<a class="headerlink" href="#add-ssh-key-to-your-github-account" title="Link to this heading"></a></h2>
+<p>Now that you have created a new SSH key and added it to the ssh-agent, you need to add the SSH key to your GitHub account.</p>
+<ol class="arabic simple">
+<li><p>Log on to github.nrel.gov and go to your account settings</p></li>
+</ol>
+<figure class="align-default" id="figure-4">
+<img alt="../_images/github_settings.png" src="../_images/github_settings.png" />
+<figcaption>
+<p><span class="caption-text">Figure 4. GitHub account settings</span><a class="headerlink" href="#figure-4" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<ol class="arabic simple" start="2">
+<li><p>Click on “SSH and GPG keys” on the left sidebar, then click on <code class="docutils literal notranslate"><span class="pre">New</span> <span class="pre">SSH</span> <span class="pre">key</span></code></p></li>
+</ol>
+<figure class="align-default" id="figure-5">
+<img alt="../_images/github_ssh_gpg_keys.png" src="../_images/github_ssh_gpg_keys.png" />
+<figcaption>
+<p><span class="caption-text">Figure 5. GitHub SSH and GPG keys</span><a class="headerlink" href="#figure-5" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="figure-6">
+<img alt="../_images/github_add_ssh_key.png" src="../_images/github_add_ssh_key.png" />
+<figcaption>
+<p><span class="caption-text">Figure 6. GitHub Add New SSH Key</span><a class="headerlink" href="#figure-6" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<ol class="arabic simple" start="3">
+<li><p>Create a title and paste the SSH key into the “Key” field</p></li>
+</ol>
+</section>
+<section id="setting-up-a-new-ssh-key-on-yampa">
+<h2>Setting up a new SSH key on Yampa<a class="headerlink" href="#setting-up-a-new-ssh-key-on-yampa" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Open a new terminal window</p></li>
+<li><p>Create a .ssh directory in your personal projects directory with the command: <code class="docutils literal notranslate"><span class="pre">mkdir</span> <span class="pre">/data/shared/projects/[username]/.ssh</span></code></p></li>
+<li><p>Run the following command to create a new SSH key: <code class="docutils literal notranslate"><span class="pre">ssh-keygen</span> <span class="pre">-t</span> <span class="pre">ed25519</span> <span class="pre">-C</span> <span class="pre">&quot;[youremail&#64;nrel.gov]&quot;</span></code></p></li>
+<li><p>When asked to enter the file in which to save the key, you can hit enter to accept the default.</p>
+<ul class="simple">
+<li><p>The key will be saved in <code class="docutils literal notranslate"><span class="pre">/home/[username]/.ssh/id_ed25519</span></code></p></li>
+</ul>
+</li>
+<li><p>When asked to enter a passphrase, hit enter to skip this step. If you decide to create a passphrase, you will need to enter this passphrase upon every push/pull.</p></li>
+<li><p>Run the command: <code class="docutils literal notranslate"><span class="pre">ssh-add</span> <span class="pre">id_ed25519</span></code></p></li>
+<li><p>Open the key in gedit with the command: <code class="docutils literal notranslate"><span class="pre">gedit</span> <span class="pre">/home/[username]/.ssh/id_ed25519.pub</span></code>. Then copy the text contents of this file to the clipboard with a Ctrl+C keyboard command.</p></li>
+<li><p>Log on to github.nrel.gov and go to your account settings</p></li>
+</ol>
+<figure class="align-default" id="figure-4-repeat">
+<img alt="../_images/github_settings.png" src="../_images/github_settings.png" />
+<figcaption>
+<p><span class="caption-text">Figure 4. GitHub account settings</span><a class="headerlink" href="#figure-4-repeat" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<ol class="arabic simple" start="9">
+<li><p>Click on “SSH and GPG keys” on the left sidebar, then click on <code class="docutils literal notranslate"><span class="pre">New</span> <span class="pre">SSH</span> <span class="pre">key</span></code></p></li>
+</ol>
+<figure class="align-default" id="figure-5-repeat">
+<img alt="../_images/github_ssh_gpg_keys.png" src="../_images/github_ssh_gpg_keys.png" />
+<figcaption>
+<p><span class="caption-text">Figure 5. GitHub SSH and GPG keys</span><a class="headerlink" href="#figure-5-repeat" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="figure-6-repeat">
+<img alt="../_images/github_add_ssh_key.png" src="../_images/github_add_ssh_key.png" />
+<figcaption>
+<p><span class="caption-text">Figure 6. GitHub Add New SSH Key</span><a class="headerlink" href="#figure-6-repeat" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<ol class="arabic simple" start="10">
+<li><p>Create a title for your key (e.g. yampa) and paste the text from the clipboard into the text box below, then click “Add SSH Key” to save.</p></li>
+</ol>
+<ul class="simple">
+<li><p>To check that your key was added, go back to the terminal on Yampa and run the command <code class="docutils literal notranslate"><span class="pre">ssh</span> <span class="pre">-T</span> <span class="pre">git&#64;github.nrel.gov</span></code>. If successful, you should get the message “Hi [username]! You’ve successfully authenticated, but GitHub does not provide shell access.”</p></li>
+<li><p><strong>Note:</strong> you might get a message saying “The authenticity of host ‘github.nrel.gov (<no hostip for proxy command>)’ can’t be established… Are you sure you want to continue connecting (yes/no/[fingerprint])?” Entering ‘yes’ will add github.nrel.gov to your list of know hosts, found in this file: ‘/home/[username]/.ssh/known_hosts</p></li>
+</ul>
+<ol class="arabic simple" start="11">
+<li><p>You can now clone the ReEDS repository where you can then install the environments from the yml file.</p></li>
+</ol>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<p>If you run into issues while setting up a new ssh key, see the GitHub docs for <a class="reference external" href="https://docs.github.com/en/authentication/troubleshooting-ssh">Troubleshooting SSH</a></p>
+<section id="what-if-i-still-can-t-push-pull-from-the-command-line-after-setting-up-the-ssh-key">
+<h3>What if I still can’t push/pull from the command line after setting up the SSH key?<a class="headerlink" href="#what-if-i-still-can-t-push-pull-from-the-command-line-after-setting-up-the-ssh-key" title="Link to this heading"></a></h3>
+<p>After creating an SSH key and adding it to your GitHub account, you should be able to push/pull from the terminal without entering your github credentials.</p>
+<p>If you’re still being asked for your credentials, it’s likely due to the fact that you haven’t configured the correct URL for the repo locally. To fix this:</p>
+<ol class="arabic simple">
+<li><p>Check what your remote URL is, run the command <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">remote</span> <span class="pre">-v</span></code></p>
+<ul class="simple">
+<li><p>This should list out your existing remote repositories</p></li>
+<li><p>If you’re seeing them as “https://….” you will need to switch the remote URL from HTTPS to SSH</p></li>
+</ul>
+</li>
+<li><p>To switch the remote URL, run the command <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">remote</span> <span class="pre">set-url</span> <span class="pre">origin</span> <span class="pre">git&#64;github.nrel.gov:ReEDS/ReEDS-2.0.git</span></code></p></li>
+<li><p>Verify the remote URL has been changed, run the command <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">remote</span> <span class="pre">-v</span></code> again</p>
+<ul class="simple">
+<li><p>You should not see the origin as “git&#64;github….”</p></li>
+</ul>
+</li>
+</ol>
+<p>More information on this can be found in the <a class="reference external" href="https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories#switching-remote-urls-from-ssh-to-https">GitHub Docs</a></p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

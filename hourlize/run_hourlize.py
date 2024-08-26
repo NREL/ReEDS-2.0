@@ -29,9 +29,9 @@ def get_remote_path(local):
     if hpc:
         #For running hourlize on the HPC link to shared-projects folder
         if os.environ.get('NREL_CLUSTER') == 'kestrel':
-            remotepath = '/projects/shared-projects-reeds/reeds'
+            remotepath = '/kfs2/shared-projects/reeds' 
         elif os.environ.get('NREL_CLUSTER') == 'eagle':
-            remotepath = '/shared-projects/reeds' 
+            remotepath = '/shared-projects/reeds'
         else: 
             raise Exception(f"Detected {os.environ.get('NREL_CLUSTER')} as NREL Cluster; "
                             "only 'eagle' and 'kestrel' are supported")
@@ -66,7 +66,7 @@ def get_remote_path(local):
 # creates output case folder
 def make_output_dir(casename):
     ## setup output directory
-    outpath = os.path.join(hourlizepath, 'out', casename) 
+    outpath = os.path.join(hourlize_path, 'out', casename) 
     if os.path.exists(outpath):
         if args.overwrite:
             shutil.rmtree(outpath)
@@ -140,7 +140,7 @@ def load_base_config(config_base=None):
         config_base  = f"config_base_{config_base}.json"
     else:
         config_base = "config_base.json" 
-    cpathbase = os.path.join(hourlizepath, "inputs", "configs", config_base)
+    cpathbase = os.path.join(hourlize_path, "inputs", "configs", config_base)
     with open(cpathbase, "r") as f:
         config = json.load(f, object_pairs_hook=OrderedDict)
     
@@ -160,7 +160,7 @@ def launch_batch_file(casename, configpath, outpath, args):
             OPATH.writelines("module load conda \n")
             OPATH.writelines("conda activate reeds2 \n\n") 
         # run hourlize
-        OPATH.writelines(f"cd {hourlizepath}\n")
+        OPATH.writelines(f"cd {hourlize_path}\n")
         OPATH.writelines(f"python {args.mode}.py --config {configpath}\n")
 
     # launch run locally or submit to hpc
@@ -182,7 +182,7 @@ def launch_batch_file(casename, configpath, outpath, args):
                 shellscript.wait()
     else:
         # set up batch script              
-        shutil.copy(os.path.join(hourlizepath, "inputs", "configs", "srun_template.sh"), 
+        shutil.copy(os.path.join(hourlize_path, "inputs", "configs", "srun_template.sh"), 
                     os.path.join(outpath, casename+"_batch.sh"))
         
         # option for running on an hpc debug node
@@ -223,7 +223,7 @@ def launch_batch_file(casename, configpath, outpath, args):
 # function to copy relevant files to output folder
 def copy_files(casename, configout, outpath, args):
     # resource script
-    shutil.copy2(os.path.join(hourlizepath, f'{args.mode}.py'),
+    shutil.copy2(os.path.join(hourlize_path, f'{args.mode}.py'),
                  os.path.join(os.path.join(outpath, 'inputs')))
     
     # inputs (specified by 'inputfiles' in base config)
@@ -233,7 +233,7 @@ def copy_files(casename, configout, outpath, args):
 
     # add path info to final config
     configout.update({"casename": casename, "outpath":outpath, 
-                      "reedspath": reedspath, "hourlizepath": hourlizepath})
+                      "reeds_path": reeds_path, "hourlize_path": hourlize_path})
 
     # dump config file as json file
     configout = json.dumps(configout, indent=4, sort_keys=True)
@@ -263,7 +263,52 @@ def check_config_value(configs, entry, format=False, format_config={}):
         if format:
             output = string_formatter(output, format_config, args.verbose)
         return output
-                    
+    
+# check rev supply curve for columns needed by hourlize
+def check_cols(sc_file, req_cols=[], opt_cols=[]):
+    
+    # get supply curve columns 
+    if isinstance(sc_file, pd.DataFrame):
+        sc_cols = sc_file.columns.tolist()
+        sc_file = "provided"
+    else:
+        sc_cols = pd.read_csv(sc_file, nrows=0).columns.tolist()
+    
+    # for geothermal, create a mapping to change old column headers to new 
+    rev_sc_colnames = pd.read_csv(os.path.join("inputs", "resource", "rev_sc_columns.csv"))
+    rev_cols_mapping = dict(zip(rev_sc_colnames['legacy_colname'], rev_sc_colnames['new_colname']))
+
+    # update old column headers in sc_cols
+    sc_cols = [rev_cols_mapping.get(col, col) for col in sc_cols]
+
+    # create a list of columns to exclude these from missing columns check
+    exclude_cols = {'mean_cf','cost_spur_usd_per_mw', 'cost_poi_usd_per_mw', 'cost_export_usd_per_mw', 'cost_reinforcement_usd_per_mw', 'cost_total_trans_usd_per_mw', 'multiplier_cc_eos', 'multiplier_cc_regional', 'dist_reinforcement_km', 'dist_spur_km'}
+
+    # these are columns that are required by hourlize; if the supply curve is missing one
+    # of these an error will be thrown
+    req_missing = [c for c in req_cols if c not in sc_cols and c not in exclude_cols]
+          
+    # these are columns that are used but for which hourlize can make reasonable default
+    # assumption; if the supply curve is missing one of these warn the user but proceed
+    opt_missing = [c for c in opt_cols if c not in sc_cols]
+
+    if len(req_missing) > 0:
+        error_msg = (f"The rev supply curve file {sc_file} is missing the following columns "
+                     f"required by hourlize: {req_missing}. This run will not be executed; check supply curve file "
+                      "and column specifications in your hourlize config files."
+                    )
+        raise Exception(error_msg)
+    elif len(opt_missing) > 0:
+        warn_msg = (f"Warning: the rev supply curve file {sc_file} is missing the following columns "
+                    f"used by hourlize: {opt_missing}.\nThese columns can be filled in with default values " 
+                    "by hourlize, but if you are expecting values for these check your supply curve file."
+                    )
+        print(warn_msg)
+    else:
+        print("All columns needed by hourlize were found in the supply curve file.")
+
+    return req_missing, opt_missing
+        
 # function to set up and submit each resource case to run 
 def setup_resource_run(casename, case, args):
     if args.verbose:
@@ -280,7 +325,7 @@ def setup_resource_run(casename, case, args):
         configtech  = f"config_{case['tech']}_{case['config_tech']}.json"
     else:
         configtech = f"config_{case['tech']}.json" 
-    cpathtech = os.path.join(hourlizepath, "inputs", "configs", configtech)
+    cpathtech = os.path.join(hourlize_path, "inputs", "configs", configtech)
     with open(cpathtech, "r") as f:
         configtech = json.load(f, object_pairs_hook=OrderedDict)
             
@@ -302,7 +347,7 @@ def setup_resource_run(casename, case, args):
             raise Exception(f"{var} not specified in cases dictionary")
         df_rev_case = df_rev_case[(df_rev_case[var] == case[var])]
 
-    # check to make sure there is a valid rev_paths option and not more than 1 rev path has been matched     
+    # check to make sure there is a valid rev_paths option and not more than 1 rev path has been matched  
     if df_rev_case.shape[0] == 0:
         raise Exception(f"No rev_paths found; check definitions in rev_paths file and modify cases and subsetvars.")
     elif df_rev_case.shape[0] > 1:
@@ -312,10 +357,14 @@ def setup_resource_run(casename, case, args):
 
     # update relevant categories with full rev path information
     # rev_cases_path should have files for each year with hourly generation data for each supply curve point 
-    # or gen_gid, called [rev_prefix]_rep-profiles_[select_year].h5.
-    for rev_info in ['rev_path', 'sc_path', 'sc_file']:
-        case[rev_info] = os.path.join(remotepath, "Supply_Curve_Data", dct_rev[rev_info])
-    case['rev_prefix'] = os.path.basename(dct_rev['rev_path'])
+    # or gen_gid, called [rev_case]_rep-profiles_[select_year].h5.
+    #for rev_info in ['rev_path', 'sc_path']:
+    #    case[rev_info] = os.path.join(remotepath, "Supply_Curve_Data", dct_rev[rev_info])
+    case['rev_case'] = dct_rev['rev_case']
+    case['sc_path'] = os.path.join(remotepath, "Supply_Curve_Data", dct_rev['sc_path'])
+    case['rev_path'] = os.path.join(remotepath, "Supply_Curve_Data", dct_rev['sc_path'], "reV", dct_rev['rev_case'])
+    case['original_sc_file'] = os.path.join(remotepath, "Supply_Curve_Data", dct_rev['sc_path'], "reV", dct_rev['original_sc_file'])
+    case['sc_file'] = os.path.join(outpath, 'results', case['tech'] + '_supply_curve_raw.csv')
     case['rev_paths_file'] = rev_paths_file
 
     # create combined config for run (add tech config later after additional processing)
@@ -324,14 +373,38 @@ def setup_resource_run(casename, case, args):
     configout = {**config['shared'], **config['resource'], **configtech, **case}
     config_string_formatter(configout, args.verbose)
         
-    ## format strings in tech config (running again here to update paths)
-    #configout = {**configout, **configtech}
-    #config_string_formatter(configout, args.verbose)
+    ## this section checks the supply curve file for columns needed by hourlize 
 
-    # copy input files to run folder
+    # first identify any columns specified as needed by the config files
+    config_col_list = ['capacity_col', 'class_bin_col', 'distance_cols', 'profile_id_col', 'filter_cols']
+    config_cols = []
+    for cc in config_col_list:
+        if isinstance(configout[cc], list):
+            config_cols.extend(configout[cc])
+        elif isinstance(configout[cc], OrderedDict):
+            keys = configout[cc].copy()
+            # don't check for capacity from filter list since we add that column in later
+            if 'capacity' in keys: del keys['capacity']
+            if len(keys) > 0:
+                config_cols.extend(keys)
+        else:
+            config_cols.append(configout[cc])
+    
+    # next check for the coloumns that are always supposed to be present
+    rev_cols = pd.read_csv(os.path.join("inputs", "resource", "rev_sc_columns.csv"))
+    # subset to just the ones needed by hourlize or ReEDS
+    req_cols_all = rev_cols.loc[rev_cols.used_by_hourlize == "X", "new_colname"].to_list()
+
+    # now check for missing columns
+    if(not (case['tech']=='egs' or case['tech']=='geohydro')):
+        check_cols(case['original_sc_file'], config_cols + req_cols_all)
+    else:
+        print("Skipping column check for geothermal technologies as supply curve is aggregated from multiple files in resource.py")
+    
+    ## copy input files to run folder
     configpath = copy_files(casename, configout, outpath, args)
 
-    # launch case
+    ## launch case
     launch_batch_file(casename, configpath, outpath, args)
 
 # procedure for setting up resource.py runs   
@@ -340,10 +413,10 @@ def setup_resource(args):
     # load cases from json using specified suffix (default: "cases_default.json")
     if args.cases == "default":
         print("Loading cases from cases.json")
-        casepath = os.path.join(hourlizepath, "inputs", "configs", f"cases.json")
+        casepath = os.path.join(hourlize_path, "inputs", "configs", f"cases.json")
     else:
         print(f"Loading cases from cases_{args.cases}.json")
-        casepath = os.path.join(hourlizepath, "inputs", "configs", f"cases_{args.cases}.json")
+        casepath = os.path.join(hourlize_path, "inputs", "configs", f"cases_{args.cases}.json")
     # confirm that cases file exists 
     if not os.path.exists(casepath):
         raise Exception(f"Could not find cases json at {casepath}.")
@@ -357,6 +430,8 @@ def setup_resource(args):
 
     ## Main loop for running cases
     for casename in cases:
+        print("-"*65)
+        print(casename + '\n')
         try:
             setup_resource_run(casename, cases[casename], args)
         except Exception as err:
@@ -364,6 +439,7 @@ def setup_resource(args):
             traceback.print_exc() 
             print(f"\nSkipping {casename}.")
             continue
+    print("-"*65)
     print("All resource runs set up")
 
 # procedure for setting up load.py runs   
@@ -411,19 +487,19 @@ if __name__== '__main__':
     args = parser.parse_args()
 
     ## set paths
-    hourlizepath = os.path.dirname(os.path.realpath(__file__))
-    reedspath = os.path.abspath(os.path.join(hourlizepath, ".."))
+    hourlize_path = os.path.dirname(os.path.realpath(__file__))
+    reeds_path = os.path.abspath(os.path.join(hourlize_path, ".."))
     remotepath, args.local = get_remote_path(args.local)
 
     ## run setup
-    print(f"\nSetting up hourlize calls to {args.mode}.py\n")
+    print(f"\nSetting up hourlize calls to {args.mode}.py")
     if args.mode == "load":
         setup_load(args)
     elif args.mode == "resource":
         setup_resource(args)
     else:
         print("Unsupported method for hourlize")
-    print(f"\nHourlize setup for {args.mode}.py complete\n")
+    print(f"Hourlize setup for {args.mode}.py complete\n")
 
 
 

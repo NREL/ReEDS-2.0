@@ -1,7 +1,7 @@
 {
   "constrain_to_bins": true,
   "priority": {
-    "area_sq_km": "descending"
+    "area_developable_sq_km": "descending"
   },
   "reduced_only": true,
   "reeds_path": "DATA_PATH",

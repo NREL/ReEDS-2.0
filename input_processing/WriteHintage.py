@@ -44,11 +44,17 @@ import math
 import numpy as np
 import os
 import pandas as pd
+import warnings
 from sklearn.cluster import KMeans
+from sklearn.exceptions import ConvergenceWarning
 # Time the operation of this script
 from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
+
+# ignore ConvergenceWarnings that occur in this file from the kmeans function 
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
 
 #%% ===========================================================================
 ### --- FUNCTIONS AND CLASSES ---
@@ -201,7 +207,7 @@ class grouping:
                     # initialize the centroids - note that the
                     # random_state argument implies a static seed
                     # for the random processes/distribution-draws 
-                    # used in the kmeans function           
+                    # used in the kmeans function
                     centroids_obj = KMeans(
                         n_clusters=nbins, random_state=0, max_iter=1000, n_init=n_init,
                     ).fit(df[[col]].to_numpy(), sample_weight = df['Summer.capacity'].to_numpy())
@@ -297,7 +303,6 @@ def main(reeds_path, inputs_case):
     nBin = int(sw.numhintage)
     retscen = sw.retscen
     mindev = int(sw.mindev)
-    generatorfile = f'ReEDS_generator_database_final_{sw.unitdata}.csv'
     GSw_WaterMain = sw.GSw_WaterMain    
     GSw_CoalRetire = int(sw.GSw_CoalRetire)
     coalretireyrs = int(sw.coalretireyrs)
@@ -309,16 +314,18 @@ def main(reeds_path, inputs_case):
         pd.read_csv(os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()
     )[0]
 
-    # %%
-    inflator = 1.69 # Inflation factor 1987$ to 2004$
+    #%%
+    # Inflation factor 1987$ to 2004$
+    inflator = 1.69
     
     # Dictionary of relevant technology groups
     TECH = {
     # This is not all technologies that do not having cooling, but technologies
     # that are (or could be) in the plant database.
-    'no_cooling' : ['dupv', 'upv', 'pvb', 'gas-ct', 'geothermal',
+    'no_cooling':['dupv', 'upv', 'pvb', 'gas-ct', 'geohydro_allkm',
                     'battery_2', 'battery_4', 'battery_6', 'battery_8', 
-                    'battery_10', 'pumped-hydro', 'pumped-hydro-flex', 'hydUD', 
+                    'battery_10','battery_12','battery_24','battery_48',
+                    'battery_72','battery_100', 'pumped-hydro', 'pumped-hydro-flex', 'hydUD', 
                     'hydUND', 'hydD', 'hydND', 'hydSD', 'hydSND', 'hydNPD',
                     'hydNPND', 'hydED', 'hydEND', 'wind-ons', 'wind-ofs', 'caes'
                     ]
@@ -335,12 +342,11 @@ def main(reeds_path, inputs_case):
         os.path.join(inputs_case,'r_ba.csv'), index_col='ba',).squeeze()
 
     # Import generator database
-    indat = pd.read_csv(os.path.join(reeds_path, 'inputs', 'capacitydata', generatorfile),
+    indat = pd.read_csv(os.path.join(inputs_case,'unitdata.csv'),
                         low_memory=False
     )
 
-    # Filter for valid counties - then map those to actually modeled regions
-    indat = indat.loc[indat['FIPS'].isin(val_r_all)]
+    # Map counties to modeled regions
     indat['r'] = indat.FIPS.map(r_county)
 
     # Include O&M of pollution control upgrades into FOM
@@ -363,7 +369,7 @@ def main(reeds_path, inputs_case):
                   'coolingwatertech'] = indat.loc[indat['tech'].isin(TECH['no_cooling']),'tech']
         indat['tech'] = indat.coolingwatertech
 
-    ### NOTE: new addition for columns AO:AR, AW:AX in the plant file
+    ### NOTE: New addition for columns AO:AR, AW:AX in the plant file
     ad = indat[["tech", "r", "ctt", "resource_region", "cap", "TC_WIN", retscen,
                 "StartYear", "IsExistUnit", "HeatRate", "T_VOM", "T_FOM",
                 "T_CCSROV", "T_CCSF", "T_CCSV", "T_CCSHR", "T_CCSCAPA", "T_CCSLOC"]].copy() 
@@ -397,7 +403,7 @@ def main(reeds_path, inputs_case):
     # Only want those with a heat rate - all other binning is arbitrary
     # because the only data we get from generator database is the capacity and heat
     # rate but O&M costs are assumed
-    df = ad[(~ad.HR.isna()) & (~ad.TECH.isin(['geothermal', 'CofireNew']))]
+    df = ad[(~ad.HR.isna()) & (~ad.TECH.isin(['geohydro_allkm', 'CofireNew']))]
 
     # Adjust coal retirement dates based on switch
     tech_table = pd.read_csv(
@@ -485,10 +491,8 @@ def main(reeds_path, inputs_case):
     #    -- Get DPV Generators --    #
     ##################################
 
-    dpv = (pd.read_csv(os.path.join(inputs_case,'distPVcap.csv'))
-             .set_index('Unnamed: 0')
-           )
-
+    dpv = pd.read_csv(os.path.join(inputs_case,'distpvcap.csv')).set_index('r')
+           
     # Fill in odd years' values for dpv (only add odd year data if that
     # data does not already exist)
     firstyr = int(dpv.columns.min())
@@ -497,36 +501,14 @@ def main(reeds_path, inputs_case):
     for yr in oddyrs:
         if yr not in dpv.columns:
             dpv[yr] = (dpv[str(int(yr)-1)] + dpv[str(int(yr)+1)]) / 2
-    dpv = pd.melt(dpv.reset_index(),id_vars=['Unnamed: 0'])
+    dpv = pd.melt(dpv.reset_index(),id_vars=['r'])
     dpv.rename(columns=dict(zip(dpv.columns,['r','year','Summer.capacity'])),
                inplace=True)
-    
-    # Filter by valid regions
-    dpv = dpv.loc[dpv['r'].isin(val_r_all)]
 
-    ### Aggregate/Disaggregate if necessary
-    if agglevel == 'county':
-        # Disaggregate by population
-        fracdata = pd.read_csv(os.path.join(inputs_case,'disagg_population.csv'), 
-                   header=0)
-        dpv_cols_long= list(dpv.columns)
-        dpv = pd.merge(fracdata, dpv, left_on='PCA_REG', right_on='r', how='inner')
-        dpv['new_value'] = (dpv['fracdata'].multiply(dpv['Summer.capacity'], axis='index'))
-        dpv = (dpv.drop(columns=['Summer.capacity']+['r'])
-                  .rename(columns={'new_value':'Summer.capacity','FIPS':'r'})
-        )
-        dpv.set_index(dpv_cols_long[:-1], inplace=True)
-        dpv = dpv[['Summer.capacity']]
-        # Put back in original format
-        dpv = dpv.reset_index().sort_values(['r','year'])
-
-        # Filter by regions again for cases when only a subset of a model balancing area is represented
-        dpv = dpv.loc[dpv['r'].isin(val_r_all)]
-    elif agglevel in ['state','aggreg']: # or any other spatial resolution above 'BA'
+    ### Aggregate if necessary
+    if agglevel  in ['state','aggreg']: # or any other spatial resolution above 'BA'
         dpv['r'] = dpv['r'].map(r_ba)
         dpv = dpv.groupby(['r','year'], as_index=False).sum()
-    elif agglevel == 'ba':
-        pass
 
     # Initialize columns for dpv dataframe
     dpv['tech'] = 'distpv'
@@ -546,17 +528,15 @@ def main(reeds_path, inputs_case):
     ###############################################################################
 
     forced_retire = pd.read_csv(
-        os.path.join(reeds_path, "inputs", "state_policies", "forced_retirements.csv"),
+        os.path.join(inputs_case, 'forced_retirements.csv'),
         header=0, names=['tech','ba','retire_year'])
     
-    r2rb = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
+    r2ba = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
 
-    # forced retirements are at the ba level, so merge on the regions
-    forced_retire = pd.merge(forced_retire, r2rb, on='ba').drop(columns='ba').drop_duplicates()
+    # Forced retirements are at the ba level, so merge on the regions
+    forced_retire = pd.merge(forced_retire, r2ba, on='ba').drop(columns='ba').drop_duplicates()
 
-    zout = zout.merge(forced_retire,
-                      how='left',
-                      on=['tech', 'r']).fillna(9000)
+    zout = zout.merge(forced_retire, how='left', on=['tech', 'r']).fillna(9000)
     
     # Zero out retired generators' capacity
     zout.loc[zout.solveYearOnline >= zout.retire_year, 'Summer.capacity'] = 0

@@ -1,4 +1,4 @@
-year,sc_gid,sc_point_gid,latitude,longitude,region,class,bin,area_sq_km,built_capacity,investment_bool
+year,sc_gid,sc_point_gid,latitude,longitude,region,class,bin,area_developable_sq_km,built_capacity,investment_bool
 2009,16663,35117,42.202,-101.556,s116,3,4,60.6042,59.400000000000006,1
 2009,17593,36661,41.905,-97.982,s118,2,1,114.9714,8.910000000000025,1
 2009,16688,35145,42.302,-97.4,s118,2,4,36.6606,63.18000000000001,1

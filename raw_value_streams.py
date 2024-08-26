@@ -1,28 +1,30 @@
 '''
-This file can be used to combine an mps file (non-pre-solved) and associated marginals
+This file can be used to combine a coefficient matrix file (non-pre-solved) and associated marginals
 from GAMS gdx solution file to produce value streams for the variables of the model.
 '''
 
 import pandas as pd
 import gdxpds
+import subprocess
 from datetime import datetime
 import logging
 logger = logging.getLogger('')
 
-def get_value_streams(solution_file, mps_file, var_list=None, con_list=None):
+def get_value_streams(solution_file, problem_file, var_list=None, con_list=None, prob_file_type='jacobian'):
     '''
     Create dataframe of value streams for each variable of interest based on variable coefficients
-    in an mps file and constraint and variable marginals in the associated GAMS gdx solution file.
+    in a coefficient matrix file and constraint and variable marginals in the associated GAMS gdx solution file.
     Note that all strings are lowercased because GAMS is case insensitive.
     Args:
         solution_file (string): Full path to GAMS gdx solution file.
-        mps_file (string): Full path to the non-presolved mps file of the model associated with the solution file.
+        problem_file (string): Full path to the file of the model associated with the solution file.
         var_list (list of strings): List of lowercased variable names that are of interest. If no list is given,
             value streams will be created for all variables. If a list is given, variables not on the list will be
             filtered out.
         con_list (list of strings): List of lowercased constraint names that are of interest. If no list is given,
             value streams will be created for all constraints. If a list is given, constraints not on the list will be
             filtered out.
+        prob_file_type (string): Either 'jacobian' or 'mps'.
     Returns:
         df (pandas dataframe): Value streams of variables with these columns:
             var_name (string): Name of variable.
@@ -37,11 +39,14 @@ def get_value_streams(solution_file, mps_file, var_list=None, con_list=None):
             value_per_unit (float): Value per unit of the variable from that constraint (equal to coeff * var_marginal).
             value (float): Value that is produced by the variable from the constraint (equal to var_level * value_per_unit).
     '''
-    df_mps = get_df_mps(mps_file, var_list, con_list)
-    var_list_mps = df_mps['var_name'].unique()
-    con_list_mps = df_mps['con_name'].unique()
-    dfs_solution = get_df_solution(solution_file, var_list_mps, con_list_mps)
-    df = pd.merge(left=df_mps, right=dfs_solution['vars'], how='left', on=['var_name', 'var_set'], sort=False)
+    if prob_file_type == 'jacobian':
+        df_prob = get_df_jacobian(problem_file, var_list, con_list)
+    elif prob_file_type == 'mps':
+        df_prob = get_df_mps(problem_file, var_list, con_list)
+    var_list_prob = df_prob['var_name'].unique()
+    con_list_prob = df_prob['con_name'].unique()
+    dfs_solution = get_df_solution(solution_file, var_list_prob, con_list_prob)
+    df = pd.merge(left=df_prob, right=dfs_solution['vars'], how='left', on=['var_name', 'var_set'], sort=False)
     df = pd.merge(left=df, right=dfs_solution['cons'], how='left', on=['con_name', 'con_set'], sort=False)
     #The objective essentially has a con_marginal of -1
     df.loc[df['con_name']=='_obj','con_marginal'] = -1
@@ -125,14 +130,63 @@ def get_df_mps(mps_file, var_list=None, con_list=None):
     logger.info('mps read: ' + str(datetime.now() - start))
     return df_mps
 
-def get_df_solution(solution_file, var_list_mps, con_list_mps):
+def get_df_jacobian(jacobian_file, var_list=None, con_list=None):
+    '''
+    Create dataframe of coefficients for each variable in each constraint and objective function. Note that all
+    strings are lowercased because GAMS is case insensitive.
+    Args:
+        jacobian_file (string): Full path to the non-presolved jacobian gdx file of the model associated with the solution file.
+        var_list (list of strings): List of lowercased variable names that are of interest. If no list is given,
+            value streams will be created for all variables. If a list is given, variables not on the list will be
+            filtered out.
+        con_list (list of strings): List of lowercased constraint names that are of interest. If no list is given,
+            value streams will be created for all constraints. If a list is given, constraints not on the list will be
+            filtered out.
+    Returns:
+        df (pandas dataframe): Value streams of variables with these columns:
+            var_name (string): Name of variable.
+            var_set (string): Period-seperated sets of the variable.
+            con_name (string): Constraint name or '_obj' for objective coefficients.
+            con_set (string): Period-seperated sets of the constraint.
+            coeff (float): Coefficient of the variable in the constraint or objective.
+    '''
+    start = datetime.now()
+    df_A = gdxpds.to_dataframe(jacobian_file, 'A', old_interface=False)
+    for x in ['j','i']:
+        #For i (equation) and j (variable) sets, I need to dump to csv to get the Text column, ugh
+        x_file =  jacobian_file.replace('.gdx',f'_{x}.csv')
+        subprocess.Popen(f'gdxdump "{jacobian_file}" format=csv epsout=0 symb={x} output="{x_file}" CSVSetText').wait()
+        df_x = pd.read_csv(x_file)
+        df_x[['name','set']] = df_x['Text'].str.rstrip(')').str.replace(',','.').str.lower().str.split('(', expand=True, n=1)
+        if x == 'j':
+            #'j' means variable
+            name_col = 'var_name'
+            set_col = 'var_set'
+            lst = var_list
+        else:
+            #'i' means equation
+            name_col = 'con_name'
+            set_col = 'con_set'
+            lst = con_list
+        df_x = df_x.rename(columns={'Dim1':x, 'name':name_col, 'set':set_col})
+        df_x = df_x.drop(columns=['Text'])
+        if lst != None:
+            df_x = df_x[df_x[name_col].isin(lst)].copy()
+        #inner merge with df_A (note that map may be much faster)
+        df_A = df_A.merge(df_x, on=x, how='inner')
+    df_A = df_A.rename(columns={'Value':'coeff'})
+    df_A = df_A[['var_name','var_set','con_name','con_set','coeff']].copy()
+    logger.info('jacobian read: ' + str(datetime.now() - start))
+    return df_A
+
+def get_df_solution(solution_file, var_list_prob, con_list_prob):
     '''
     Create dataframes of marginals and levels of variables and constraints of interest.
     Note that all strings are lowercased because GAMS is case insensitive.
     Args:
         solution_file (string): Full path to GAMS gdx solution file.
-        var_list_mps (list of strings): List of lowercased variable names that are of interest.
-        con_list_mps (list of strings): List of lowercased constraint names that are of interest.
+        var_list_prob (list of strings): List of lowercased variable names that are of interest.
+        con_list_prob (list of strings): List of lowercased constraint names that are of interest.
     Returns:
         dict of two pandas dataframes, one for variables ('vars'), and one for constraints ('cons').
         Columns in the 'vars' dataframe:
@@ -151,9 +205,9 @@ def get_df_solution(solution_file, var_list_mps, con_list_mps):
     logger.info('solution read: ' + str(datetime.now() - start))
     start = datetime.now()
     dfs = {k.lower(): v for k, v in list(dfs.items())}
-    df_vars = get_df_symbols(dfs, var_list_mps)
+    df_vars = get_df_symbols(dfs, var_list_prob)
     df_vars = df_vars.rename(columns={"Level": "var_level", "Marginal": "var_marginal", 'sym_name':'var_name', 'sym_set': 'var_set'})
-    df_cons = get_df_symbols(dfs, con_list_mps)
+    df_cons = get_df_symbols(dfs, con_list_prob)
     df_cons = df_cons.rename(columns={"Level": "con_level", "Marginal": "con_marginal", 'sym_name':'con_name', 'sym_set': 'con_set'})
     logger.info('solution reformatted: ' + str(datetime.now() - start))
     return {'vars':df_vars, 'cons':df_cons}

@@ -1,0 +1,49 @@
+﻿legacy_colname,new_colname,used_by_hourlize,description
+sc_gid,sc_gid,X,Supply curve GID (Specific to this particular supply curve output)
+latitude,latitude,X,Supply curve point latitude (deg)
+longitude,longitude,X,Supply curve point longitude (deg)
+country,country,,Supply curve point county
+state,state,X,Supply curve point state
+county,county,,Supply curve point county
+elevation,elevation_m,,Supply curve point elevation (meters)
+timezone,timezone,,Supply curve point timezone
+sc_point_gid,sc_point_gid,X,Supply curve point GID (Invariant across supply curves)
+sc_row_ind,sc_row_ind,,Supply curve point row GID (Invariant across supply curves)
+sc_col_ind,sc_col_ind,,Supply curve point column GID (Invariant across supply curves)
+res_gids,res_gids,,List of resource GID's mapped to this supply curve point
+gen_gids,gen_gids,,List of generation GID's mapped to this supply curve point (None for bespoke outputs b/c no generation file exists)
+gid_counts,gid_counts,,Number of high-resolution cells corresponding to each generation GID for this supply curve point
+n_gids,n_gids,,Total number of not fully excluded pixels associated with the available resource/generation gids
+mean_res,resource,,"Included-area weighted resource (wind speed, ghi, etc.)  (defaults to `None`)"
+mean_cf,capacity_factor_ac,X,Included-area weighted AC capacity factor (0-1)
+-,capacity_factor_dc,,"Included-area weighted DC capacity factor (0-1/ILR) (Solar only - defaults to `None` for wind, geothermal, etc)"
+mean_lcoe,lcoe_site_usd_per_mwh,X,Included-area weighted resource LCOE ($/Mwh) (based on multi-year mean AEP)
+capacity,capacity_ac_mw,,Supply curve point AC capacity (MW) (given both with and solar)
+-,capacity_dc_mw,,"Supply curve point DC capacity (MW) (Solar only - defaults to `None` for wind, geothermal, etc)"
+area_sq_km,area_developable_sq_km,,Total developable area (km^2)
+trans_gid,trans_gid,,Tranmission connection feature GID
+trans_type,trans_type,,Transmission connection feature type
+dist_km,dist_spur_km,,Spur line length (km)
+-,dist_export_km,,"Export cable length (Offshore only - defaults to `None` for LBW, solar, geothermal, etc)"
+-,dist_reinforcement_km,,Reinforcement distance (km) (defaults to `None`)
+tie_line_cost_per_mw,cost_spur_usd_per_mw,X,Spur line cost ($/MW)
+-,cost_poi_usd_per_mw,X,Substation connection/upgrade/installation cost ($/MW)
+-,cost_export_usd_per_mw,X,"Export cable costs ($/MW) (Offshore only - defaults to `None`  for LBW, solar, geothermal, etc)"
+-,cost_reinforcement_usd_per_mw,X,Reinforcement costs ($/MW) (defaults to `None`)
+-,cost_total_trans_usd_per_mw,X,Total transmission capital cost (spur line + export cable (if any) + connection + reinforcement) ($/MW)
+lcot,lcot_usd_per_mwh,X,LCOT using the total transmission capital cost ($/MWh)
+total_lcoe,lcoe_all_in_usd_per_mwh,,Total LCOE ($/MWh) (Site + Transmission)
+eos_mult,multiplier_cc_eos,X,Economies of Scale (EOS) multiplier value (defaults to `1` if no EOS curve was specified)
+reg_mult,multiplier_cc_regional,X,"Regional capex multiplier value (defaults to `1` if no ""capital_cost_multiplier"" value specified)"
+-,annual_energy_site_mwh,,"Total annual energy for supply curve point (MWh) (computed using ""capacity_ac_mw"" and ""capacity_factor_ac"")"
+poi_lat,latitude_poi,,Spur line POI latitude (deg) (defaults to `None`)
+poi_lon,longitude_poi,,Spur line POI longitude (deg) (defaults to `None`)
+reinforcement_poi_lat,latitude_reinforcement_poi,,Reinforcement POI (substation) latitude (deg) (defaults to `None`)
+reinforcement_poi_lon,longitude_reinforcement_poi,,Reinforcement POI (substation) longitude (deg) (defaults to `None`)
+-,cost_base_occ_usd_per_ac_mw,,Included-area weighted overnight capital cost with no multipliers ($/MW AC) (defaults to `None` for non-LCOE runs)
+-,cost_site_occ_usd_per_ac_mw,,Included-area weighted overnight capital cost for supply curve point ($/MW AC) (defaults to `None` for non-LCOE runs)
+-,cost_base_foc_usd_per_ac_mw,,Included-area weighted fixed operating cost with no multipliers ($/MW AC) (defaults to `None` for non-LCOE runs)
+-,cost_site_foc_usd_per_ac_mw,,Included-area weighted fixed operating cost for supply curve point ($/MW AC) (defaults to `None` for non-LCOE runs)
+-,cost_base_voc_usd_per_ac_mw,,Included-area weighted variable operating cost with no multipliers ($/MW AC) (defaults to `None` for non-LCOE runs)
+-,cost_site_voc_usd_per_ac_mw,,Included-area weighted variable operating cost for supply curve point ($/MW AC) (defaults to `None` for non-LCOE runs)
+-,fixed_charge_rate,,Fixed charge rate used for LCOE compuation ($/MW AC) (defaults to `None` for non-LCOE runs)

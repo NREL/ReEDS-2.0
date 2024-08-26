@@ -60,7 +60,7 @@ if tech == 'load':
     hourlize_base = os.path.join('ReEDS','Supply_Curve_Data','LOAD','2022_Update','')
 else:
     # get supply curve path on nrelnas01 from supply curve metada file. 
-    df_rev = pd.read_csv(os.path.join(this_dir_path, '../inputs/supplycurvedata/rev_paths.csv'))
+    df_rev = pd.read_csv(os.path.join(this_dir_path, '../inputs/supply_curve/rev_paths.csv'))
     df_rev = df_rev[(df_rev['tech'] == tech)&(df_rev['access_case'] == scenario)].squeeze(1)
     hourlize_base = os.path.join('ReEDS','Supply_Curve_Data', df_rev['sc_path'])
 
@@ -101,7 +101,7 @@ if tech == 'load':
 #%% Supply curve
 shutil.copy(
     os.path.join(hourlize_path,'{}_supply_curve.csv'.format(tech)),
-    os.path.join(reeds_path,'inputs','supplycurvedata','{}_supply_curve{}-{}.csv'.format(
+    os.path.join(reeds_path,'inputs','supply_curve','{}_supply_curve{}-{}.csv'.format(
         tech, resolutionlabel, scenario))
 )
 
@@ -125,7 +125,7 @@ except FileNotFoundError:
 if tech == 'wind-ons':
     shutil.copy(
         os.path.join(hourlize_path,'{}_prescribed_builds.csv'.format(tech)),
-        os.path.join(reeds_path,'inputs','capacitydata','{}_prescribed_builds{}_{}.csv'.format(
+        os.path.join(reeds_path,'inputs','capacity_exogenous','{}_prescribed_builds{}_{}.csv'.format(
             tech, noresolutionlabel, scenario))
     )
 
@@ -134,7 +134,7 @@ if tech == 'wind-ons':
         df['bin'] = 'bin' + df['bin'].astype(str)
     df.rename(columns={df.columns[0]: '*'+str(df.columns[0])}, inplace=True)
     df.to_csv(
-        os.path.join(reeds_path,'inputs','capacitydata','{}_exog_cap{}_{}.csv'.format(
+        os.path.join(reeds_path,'inputs','capacity_exogenous','{}_exog_cap{}_{}.csv'.format(
             tech, noresolutionlabel, scenario)),
         index=False
     )
@@ -142,12 +142,12 @@ if tech == 'wind-ons':
 elif tech == 'wind-ofs':
     shutil.copy(
         os.path.join(hourlize_path,'{}_prescribed_builds.csv'.format(tech)),
-        os.path.join(reeds_path,'inputs','capacitydata','{}_prescribed_builds{}_{}.csv'.format(
+        os.path.join(reeds_path,'inputs','capacity_exogenous','{}_prescribed_builds{}_{}.csv'.format(
             tech, noresolutionlabel, scenario))
     )
     # shutil.copy(
     #     os.path.join(hourlize_path,'{}_exog_cap.csv'.format(tech)),
-    #     os.path.join(reeds_path,'inputs','capacitydata','{}_exog_cap{}_{}.csv'.format(
+    #     os.path.join(reeds_path,'inputs','capacity_exogenous','{}_exog_cap{}_{}.csv'.format(
     #         tech, noresolutionlabel, scenario))
     # )
 
@@ -160,7 +160,7 @@ metafiles = [
     'config_rep-profiles_aggprof.json', 'config_rep-profiles_repprof.json',
 ]
 outpath = os.path.join(
-    reeds_path,'inputs','supplycurvedata','metadata',
+    reeds_path,'inputs','supply_curve','metadata',
     '{}{}_{}'.format(tech, resolutionlabel, scenario))
 os.makedirs(outpath, exist_ok=True)
 
@@ -168,7 +168,7 @@ for metafile in metafiles:
     try:
         shutil.copy(
             os.path.join(hourlize_path,'..','inputs',metafile),
-            os.path.join(reeds_path,'inputs','supplycurvedata','metadata',outpath,''),
+            os.path.join(reeds_path,'inputs','supply_curve','metadata',outpath,''),
         )
     except FileNotFoundError as err:
         print(err)
@@ -178,7 +178,7 @@ for ext in ['.yaml', '.yml', '.md', '.txt', '']:
     try:
         shutil.copy2(
             os.path.join(hourlize_path,'..','inputs','readme'+ext),
-            os.path.join(reeds_path,'inputs','supplycurvedata','metadata',outpath,''),
+            os.path.join(reeds_path,'inputs','supply_curve','metadata',outpath,''),
         )
     except:
         pass

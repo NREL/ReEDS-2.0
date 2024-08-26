@@ -1,0 +1,19 @@
+{
+    "execution_control": {
+        "allocation": "wetosa",
+        "feature": "-p debug",
+        "option": "kestrel",
+        "nodes": 1,
+        "walltime": 1
+    },
+    "log_directory": "./logs",
+    "log_level": "INFO",
+    "trans_table": [
+        "/kfs2/projects/rev/data/transmission/north_america/conus/least_cost/onshore/reinforcement_states_5_14_24/transmission_reinforced_200MW_128.csv"
+    ],
+    "sc_points": "PIPELINE",
+    "sc_capacity_col": "capacity_ac_mw",
+    "simple": true,
+    "sort_on": "lcoe_all_in_usd_per_mwh",
+    "fixed_charge_rate": 0.07073
+}

@@ -137,14 +137,14 @@
               "type": "line",
               "agg": "sum",
               "x": "year",
-              "y": "Emissions (tonne)",
+              "y": "Emissions (metric tons)",
               "name": "scenario",
               "row": "st"
             }
           ],
           "style": {
             "Plot Title": "CO2 Emissions",
-            "Y Title": "Mtonne",
+            "Y Title": "Mton",
             "Y Scale": ".000001"
           }
         }

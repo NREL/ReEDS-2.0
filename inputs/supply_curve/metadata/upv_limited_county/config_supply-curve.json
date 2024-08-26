@@ -1,0 +1,17 @@
+{
+    "execution_control": {
+        "allocation": "setosa",
+        "feature": "--qos=normal",
+        "option": "kestrel",
+        "walltime": 1
+    },
+    "trans_table": [
+        "/projects/rev/data/transmission/north_america/conus/least_cost/onshore/reinforcement_states_5_14_24/transmission_reinforced_200MW_128.csv"
+    ],
+    "sc_points": "PIPELINE",
+    "sc_capacity_col": "capacity_ac_mw",
+    "simple": true,
+    "fixed_charge_rate": 0.0809,
+    "log_directory": "./logs",
+    "log_level": "DEBUG"
+}

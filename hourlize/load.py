@@ -177,7 +177,7 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
                                       ][['year', 'r', 'multiplier']]
         df_loadgrowth['year'] = df_loadgrowth['year'].astype(int)
         print('Reading default load and selecting ' + str(select_year) + ' profiles')
-        df_bau = pd.read_hdf('../inputs/loaddata/historic_load_hourly.h5')
+        df_bau = pd.read_hdf('../inputs/load/historic_load_hourly.h5')
         df_bau.index += -1 # Re-index to 0-8759 instead of 1-8760
         df_bau = df_bau[(df_bau.index >= 8760*(select_year-2007)) &
                         (df_bau.index < 8760*(select_year-2006))].reset_index(drop=True) #selecting select_year profiles, which have been scaled to 2010 totals
@@ -278,7 +278,7 @@ if __name__== '__main__':
     cf = SimpleNamespace(**config)
 
     #%% setup logging
-    site.addsitedir(os.path.join(cf.reedspath, "input_processing"))
+    site.addsitedir(os.path.join(cf.reeds_path, "input_processing"))
     from ticker import toc, makelog
     log = makelog(scriptname=__file__, logpath=os.path.join(cf.outpath, f'log_{cf.casename}.txt'))
 

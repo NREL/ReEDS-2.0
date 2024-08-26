@@ -17,15 +17,15 @@ stretch_groups = [
 
 data = {
     'timeslice_load': {
-        'input_file': os.path.join(inputs_dir_path, 'loaddata', load_switch + 'load.csv'),
-        'output_file': os.path.join(inputs_dir_path, 'loaddata', load_switch + new_suffix + 'load.csv'),
+        'input_file': os.path.join(inputs_dir_path, 'load', load_switch + 'load.csv'),
+        'output_file': os.path.join(inputs_dir_path, 'load', load_switch + new_suffix + 'load.csv'),
         'reshape': True,
         'round': True,
         'idx_cols': ['r','timeslice'],
     },
     'timeslice_flex': {
-        'input_file': os.path.join(inputs_dir_path, 'loaddata', flex_switch + '_frac.csv'),
-        'output_file': os.path.join(inputs_dir_path, 'loaddata', flex_switch + new_suffix + '_frac.csv'),
+        'input_file': os.path.join(inputs_dir_path, 'load', flex_switch + '_frac.csv'),
+        'output_file': os.path.join(inputs_dir_path, 'load', flex_switch + new_suffix + '_frac.csv'),
         'reshape': True,
         'round': False,
         'idx_cols': ['flextype','r','timeslice'],

@@ -1,0 +1,133 @@
+# Onboarding Guide
+Welcome to the team! 
+
+New ReEDS team members should go over this guide to get set up with ReEDS. This onboarding guide is designed to be walked through independently, but please don't hesitate to reach out to your PI if you run into issues or have questions.
+
+## General NREL Setup
+### Software Setup
+You'll need to get the following software installed by IT: 
+  * Anaconda ([https://www.anaconda.com/download](https://www.anaconda.com/download))
+  * VSCode ([https://code.visualstudio.com/download](https://code.visualstudio.com/download))
+  * GitHub Desktop ([https://desktop.github.com](https://desktop.github.com))
+  * GAMS ([https://www.gams.com/download/](https://www.gams.com/download/)) - IT might ask you if you want to purchase a license or for a charge code. This is NOT needed. We already have a license, IT just needs to install the software. 
+  * Git Bash
+  * Git ([https://git-scm.com/downloads](https://git-scm.com/downloads))
+
+To get software installed, you should follow this process to submit IT tickets: 
+  1. Go to the [IT Services Site](https://nrel.servicenowservices.com/sp)
+  2. Click on 'Get Help'
+    * Assistance Type: 'Order or install something new'
+    * Give them the website to the software that you need
+
+IT will reply to your ticket when they are ready to install it. Typically, then you give them a call and they will take over your computer and install it.
+
+
+### GitHub Setup
+NREL uses both github.com and github.nrel.gov (where ReEDS is). You will need both so please make accounts for both using your NREL email address.
+
+If you're unfamiliar with Git, you should start learning more about it. The following resources might be helpful: 
+  * [Git and GitHub Introduction](https://www.w3schools.com/git/git_intro.asp?remote=github)
+  * [Computational Sciences Tutorials: Intro to Git](https://nrel-my.sharepoint.com/personal/eharrell_nrel_gov/_layouts/15/stream.aspx?id=%2Fpersonal%2Feharrell%5Fnrel%5Fgov%2FDocuments%2FRecordings%2FESIF%5F%20Intro%20to%20Git%2Emp4&referrer=StreamWebApp%2EWeb&referrerScenario=AddressBarCopied%2Eview)
+
+### Mapping a Network Drive
+**On a Mac:** 
+  1. Open up Finder
+  2. Command + K
+  3. Type in 'smb://nrelnas01/reeds'
+  4. You are now connected!
+
+Make a folder in the drive that reflects your project work. Preffered format is "FYXX-{project}-{your initials}"
+
+**On a PC:** 
+  1. Start on your local computer -> go to 'This PC', right click and select 'Map network drive'
+
+  2. Chose whatever letter (it doesn't matter which one) you want as your drive name, then type '\\\\\nrelnas01\reeds' into the Folder. Press Finish.
+
+Make a folder in the drive that reflects your project work. Preffered format is "FYXX-{project}-{your initials}"
+
+### Additional Items
+The following items should be talked about with your PI:
+  * How to schedule a meeting in Teams
+  * How to book an on-campus room
+   
+
+## ReEDS Specific Setup & Learning
+Prior to getting ReEDS set up and running, you'll want to ensure you have access to the [ReEDS repo](https://github.nrel.gov/ReEDS/ReEDS-2.0). If you do not have access, reach out to your PI to get added to the repository.
+
+### ReEDS Training Videos
+NREL has a youtube channel that contains tutorial videos for ReEDS. The following are recommended videos for getting started with ReEDS: 
+  * Overview of ReEDS: [Introduction to the ReEDS Model: 2023 Version](https://www.youtube.com/watch?v=6SNxMWoBVr0&list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&index=11)
+  * Getting started with ReEDS: [2023 ReEDS Training for User Group Meeting](https://www.youtube.com/watch?v=tDLwqH6YZ_E&list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&index=12)
+  * How to change inputs: [Training on Changing and Adding Inputs](https://www.youtube.com/watch?v=QxwEs0ZC5ns&list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&index=9)
+  * Debugging of ReEDS: [Training on Debugging ReEDS](https://www.youtube.com/watch?v=4I0V5F8fzDU&list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&index=8)
+
+**Note: if you have further questions after watching these videos, please follow up with your PI**
+
+### Getting ReEDS Running Locally
+After watching the youtube trainings, you should have a better sense of how ReEDS works and how to use it. 
+
+To get ReEDS running on your local machine, follow the [setup guide](../setup.md). If you have questions, or run into issues with setup, please reach out to your PI.
+
+Finally, now that you have ReEDS setup, you can run default ReEDS by walking through the following steps: 
+  1. Open a new command line or terminal
+  2. Activate the ReEDS conda environment (can be doine with this command: `conda activate reeds2`)
+  3. Run runbatch.py (with the command: `python runbatch.py`)
+    * Enter the batch prefix (or batch name)
+    * Enter the case suffix - this will specify which scenario(s) should be run. You can leave this blank to use the default (cases.csv).
+
+**How do you make sure your ReEDS run was successful?**
+  * Are there outputs? 
+    * Check in the '/runs/[specific run name]/outputs' folder, are there csv files? If not, something went wrong with the run.
+  * Did the ReEDS reports build?
+    * Check in the '/runs/[specific run name]/outputs' folder, are are subfolders named 'reeds-report' and 'reeds-report-reduced'? 
+
+
+**Additional ReEDS Scenarios:**
+After running default ReEDS, you should take a look at some of the other common scenarios: 
+  * Cases_test: contains some basic test scenarios for ReEDS
+  * Cases_standardscenarios: contains the scenarios used for the Standard Scenarios report that is released yearly.
+
+
+### Getting ReEDS Running on Yampa
+Some ReEDS runs are large and take a decent amount of memory to run. The remote machines have significantly more memory and are often used for this purpose.
+
+To get started with Yampa, you'll have to get access. To do so, you can follow this guide: [Yampa Guide - Getting Access to Machines](yampa_guide.md#getting-access-to-machines)
+
+After you have access, you can continue with the [Yampa Guide](yampa_guide.md#getting-started) to get ReEDS set up and running on the remote machines.
+
+
+### Additional Setup
+#### Additional Software 
+There is other standard software available in the "Ivanti Portal Manager" if you would like to download them.
+  * On a PC, find the Portal Manager in the Windows Start menu under 'Ivanti'.
+  * On a Mac, go to Applications and then click 'Portal Manager'
+
+#### Running ReEDS on the HPC
+In additional to running locally and on Yampa, you can also run ReEDS on the HPC. Instructions for getting started with the HPC can be found here: [Advanced Setup - Running ReEDS on HPC](advanced_setup.md#running-reeds-on-hpc)
+
+#### VSCode Extensions
+The following extensions can be added to VSCode to make it easier to work with the ReEDS code: 
+  * Diff Folders
+  * Edit CSV
+  * Git History
+  * GitLens - Git supercharged
+  * Remote - SSH 
+  * Remote - SSH: Editing cofiguration
+  * Excel Viewer
+  * Python 
+  * vscode-copy-github-permalink
+  * gms (for GAMS syntax formatting)
+
+In order to improve bracket formatting in GAMS, you can copy "lolow.gams-0.0.1" from \\nrelnas01\ReEDS\Users\pbrown\lolow.gams-0.0.1 into your vscode extensions folder. Simply unzip this folder into C:\Users\\[username]\\.vscode\extensions.
+
+#### Set Up SSH Key
+In order to make commits to ReEDS, you will have to set up an SSH key. To do so, follow the [SSH Key Setup](ssh_setup.md) guide.
+
+## Additional Resources & Learning
+* [General information on ReEDS](https://www.nrel.gov/analysis/reeds/)
+* [ReEDS POC list](https://nrel.sharepoint.com/:w:/s/ReEDS/ES6GQTyzXo1DnnCPlnAhg5QB8cPY--_01HkQkiOnrPskxw?e=flEAtY)
+* [ReEDS detailed documentation](https://www.osti.gov/biblio/1788425)
+* [GitHub README](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/README.md)
+* [YouTube tutorials](https://www.youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC)
+* [GAMS language information](https://www.gams.com/latest/docs/UG_MAIN.html#UG_Language_Environment)
+* [Advanced ReEDS setup](advanced_setup.md)

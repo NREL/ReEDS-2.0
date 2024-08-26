@@ -1,0 +1,9 @@
+* capacity available
+cap
+* total supply curve cost
+cost
+* transmission component of supply curve cost
+cost_trans
+* generation capacity (e.g. economies of scale) component of supply curve cost
+cost_cap
+

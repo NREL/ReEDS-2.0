@@ -1,0 +1,8 @@
+{
+    "execution_control": {
+        "option": "local"
+    },
+    "log_directory": "./logs",
+    "log_level": "INFO",
+    "cmd": "python make_vpd_csv.py"
+}

@@ -108,7 +108,6 @@ def get_dr_shifts(sw, inputs_case, native_data=True,
 
     return shift_out, dr_shifts
 
-
 #%% ===========================================================================
 ### --- MAIN FUNCTION ---
 ### ===========================================================================
@@ -136,66 +135,30 @@ if __name__ == '__main__':
     sw = pd.read_csv(
         os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
 
-    drscen = sw.drscen
+    val_r = pd.read_csv(
+        os.path.join(inputs_case, 'val_r.csv'), header=None).squeeze(1).tolist()
 
     ### Read in DR shed for specified scenario
     dr_shed = pd.read_csv(
         os.path.join(inputs_case, 'dr_shed.csv'))
-
-    ### Profiles
-    evmc_shape_profile_decrease = pd.read_hdf(
-        os.path.join(inputs_case,'evmc_shape_decrease_profile.h5'))
-    evmc_shape_profile_increase = pd.read_hdf(
-        os.path.join(inputs_case,'evmc_shape_increase_profile.h5'))
-    evmc_storage_profile_decrease = pd.read_hdf(
-        os.path.join(inputs_case,'evmc_storage_decrease_profile.h5'))
-    evmc_storage_profile_increase = pd.read_hdf(
-        os.path.join(inputs_case,'evmc_storage_increase_profile.h5'))
-    evmc_storage_energy = pd.read_hdf(
-        os.path.join(inputs_case,'evmc_storage_energy.h5'))
-
-    ### Filter by regions
-    val_r_all = pd.read_csv(
-        os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
-    val_r = pd.read_csv(
-        os.path.join(inputs_case, 'val_r.csv'), header=None).squeeze(1).tolist()
-    if int(sw['GSw_EVMC']):
-        evmc_shape_profile_decrease = (
-            evmc_shape_profile_decrease.loc[
-                :,evmc_shape_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
-        evmc_shape_profile_increase = (
-            evmc_shape_profile_increase.loc[
-                :,evmc_shape_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
-        evmc_storage_profile_decrease = (
-            evmc_storage_profile_decrease.loc[
-                :,evmc_storage_profile_decrease.columns.isin(['i','hour','year'] + val_r_all)])
-        evmc_storage_profile_increase = (
-            evmc_storage_profile_increase.loc[
-                :,evmc_storage_profile_increase.columns.isin(['i','hour','year'] + val_r_all)])
-        evmc_storage_energy = (
-            evmc_storage_energy.loc[
-                :,evmc_storage_energy.columns.isin(['i','hour','year'] + val_r_all)])
-    else:
-        evmc_shape_profile_decrease = pd.DataFrame(columns=['i','hour','year']+val_r)
-        evmc_shape_profile_increase = pd.DataFrame(columns=['i','hour','year']+val_r)
-        evmc_storage_profile_decrease = pd.DataFrame(columns=['i','hour','year']+val_r)
-        evmc_storage_profile_increase = pd.DataFrame(columns=['i','hour','year']+val_r)
-        evmc_storage_energy = pd.DataFrame(columns=['i','hour','year']+val_r)
-
-
     dr_shed[['dr_type', 'yr_hrs']].to_csv(
         os.path.join(inputs_case, 'dr_shed.csv'), index=False, header=False)
 
-    evmc_shape_profile_decrease.to_csv(
-        os.path.join(inputs_case,'evmc_shape_profile_decrease.csv'),index=False)
-    evmc_shape_profile_increase.to_csv(
-        os.path.join(inputs_case,'evmc_shape_profile_increase.csv'),index=False)
-    evmc_storage_profile_decrease.to_csv(
-        os.path.join(inputs_case,'evmc_storage_profile_decrease.csv'),index=False)
-    evmc_storage_profile_increase.to_csv(
-        os.path.join(inputs_case,'evmc_storage_profile_increase.csv'),index=False)
-    evmc_storage_energy.to_csv(
-        os.path.join(inputs_case,'evmc_storage_energy.csv'),index=False)
+    ### Create empty EVMC data files if GSw_EVMC == 0:
+    evmc_files = [
+        'evmc_shape_profile_decrease',
+        'evmc_shape_profile_increase',
+        'evmc_storage_profile_decrease',
+        'evmc_storage_profile_increase',
+        'evmc_storage_energy'
+    ]
+    for file in evmc_files:
+        if int(sw['GSw_EVMC']):
+            pass
+        else:
+            # Overwrite empty dataframes created in copy_files.py
+            df = pd.DataFrame(columns=['i','hour','year']+val_r)
+            df.to_csv(os.path.join(inputs_case,file+'.csv'),index=False)
     
     print('Finished writedrshift.py')
 

@@ -295,9 +295,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     dfsc = {}
     for tech in techs:
         dfsc[tech] = pd.read_csv(
-            os.path.join(
-                reeds_path,'inputs','supplycurvedata',
-                f'{tech}_supply_curve-{sw["GSw_SitingWindOns"] if tech=="wind-ons" else sw["GSw_SitingUPV"]}_{lvl}.csv')
+            os.path.join(inputs_case, f'{tech}_supply_curve.csv')
         ).rename(columns={'region':'r'})
         dfsc[tech]['i'] = tech + '_' + dfsc[tech]['class'].astype(str)
 
@@ -306,7 +304,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
 
     ### Add geographic and CF information
     sitemap = pd.read_csv(
-        os.path.join(reeds_path,'inputs','supplycurvedata','sitemap.csv'),
+        os.path.join(inputs_case,'sitemap.csv'),
         index_col='sc_point_gid',
     )
 
@@ -396,7 +394,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
                 decimals = 0 if abs(row.cf_diff) >= 1 else 1
                 ax[coords[level]].annotate(
                     f"{row.cf_diff*100:+.{decimals}f}",
-                    [row.labelx, row.labely],
+                    [row.centroid_x, row.centroid_y],
                     ha='center', va='center', c='k', fontsize={'r':5}.get(level,7),
                     path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.5)],
                 )

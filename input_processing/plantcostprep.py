@@ -3,6 +3,7 @@
 ### ===========================================================================
 
 import pandas as pd
+import numpy as np
 import os
 import argparse
 import support_functions as sFuncs
@@ -48,6 +49,7 @@ beccsscen = sw.beccsscen
 ccsflexscen = sw.ccsflexscen
 h2ctscen = sw.h2ctscen
 dacscen = sw.dacscen
+GSw_DAC_Gas_Case = sw.GSw_DAC_Gas_Case
 upgradescen = sw.upgradescen
 degrade_suffix = sw.degrade_suffix
 caesscen = "caes_reference"
@@ -71,13 +73,12 @@ def deflate_func(data,case):
 ### --- PROCEDURE ---
 ### ===========================================================================
 
-inpath = os.path.join(reeds_path,"inputs","plant_characteristics")
-
-dollaryear = pd.concat([pd.read_csv(os.path.join(inpath,"dollaryear.csv")),
-                        pd.read_csv(
-                            os.path.join(reeds_path,"inputs","consume","dollaryear.csv"))])
+dollaryear = pd.concat(
+    [pd.read_csv(os.path.join(inputs_case,"dollaryear_plant.csv")),
+     pd.read_csv(os.path.join(inputs_case,"dollaryear_consume.csv"))]
+)
 deflator = pd.read_csv(
-    os.path.join(inpath,"../deflator.csv"),
+    os.path.join(inputs_case,"deflator.csv"),
     header=0, names=['Dollar.Year','Deflator'], index_col='Dollar.Year').squeeze(1)
 
 dollaryear = dollaryear.merge(deflator,on="Dollar.Year",how="left")
@@ -92,7 +93,7 @@ scalars = pd.read_csv(
 ##################
 
 # Adjust cost data to 2004$
-upv = pd.read_csv(os.path.join(inpath,upvscen+'.csv'))
+upv = pd.read_csv(os.path.join(inputs_case,'plantchar_upv.csv'))
 upv = deflate_func(upv,upvscen).set_index('t')
 
 # Prior to ATB 2020, PV costs are in $/kW_DC
@@ -111,20 +112,20 @@ upv_stack = pd.concat(
 #    -- Other Techs --    #
 ###########################
 
-conv = pd.read_csv(os.path.join(inpath,convscen+'.csv'))
+conv = pd.read_csv(os.path.join(inputs_case,'plantchar_conv.csv'))
 conv = deflate_func(conv,convscen)
 
-ccsflex = pd.read_csv(os.path.join(inpath,ccsflexscen+'_cost.csv'))
+ccsflex = pd.read_csv(os.path.join(inputs_case,'plantchar_ccsflex_cost.csv'))
 ccsflex = deflate_func(ccsflex,ccsflexscen)
 
-beccs = pd.read_csv(os.path.join(inpath,beccsscen+'.csv'))
+beccs = pd.read_csv(os.path.join(inputs_case,'plantchar_beccs.csv'))
 beccs = deflate_func(beccs,beccsscen)
 
-h2ct = pd.read_csv(os.path.join(inpath,h2ctscen+'.csv'))
+h2ct = pd.read_csv(os.path.join(inputs_case,'plantchar_h2ct.csv'))
 h2ct = deflate_func(h2ct,h2ctscen)
 
 if upgradescen != 'default':
-    upgrade = pd.read_csv(os.path.join(inpath,upgradescen+'.csv'))
+    upgrade = pd.read_csv(os.path.join(inputs_case,'plantchar_upgrades.csv'))
     upgrade = deflate_func(upgrade,upgradescen)
     upgrade = upgrade.rename(columns={'capcost':'upgradecost'})
     upgrade = upgrade[['i','t','upgradecost']]
@@ -135,40 +136,52 @@ if upgradescen != 'default':
 #    -- Onshore Wind --    #
 ############################
 
-onswinddata = pd.read_csv(os.path.join(inpath,onswindscen+'.csv'))
-if 'Wind class' in onswinddata:
-    #ATB 2022 and prior style
-    onswinddata.columns= ['tech','class','t','cf_mult','capcost','fom','vom']
-else:
-    #ATB 2023 style
-    #We will have a 'turbine' column. For each turbine, we assume 10 classes
-    onswinddata.columns= ['turbine','t','cf_mult','capcost','fom','vom']
-    onswinddata['tech'] = 'ONSHORE'
-    class_bin_num = 10
-    turb_ls = []
-    for turb in onswinddata['turbine'].unique():
-        turb_ls += [turb]*class_bin_num
-    df_class_turb = pd.DataFrame({'turbine':turb_ls, 'class':range(1, len(turb_ls) + 1)})
-    onswinddata = onswinddata.merge(df_class_turb, on='turbine', how='inner')
-    onswinddata = onswinddata[['tech','class','t','cf_mult','capcost','fom','vom']]
+onswinddata = pd.read_csv(os.path.join(inputs_case,'plantchar_onswind.csv'))
+#We will have a 'Turbine' column. For each turbine, we assume 10 classes
+onswinddata.columns= ['turbine','t','cf_mult','capcost','fom','vom']
+onswinddata['tech'] = 'ONSHORE'
+class_bin_num = 10
+turb_ls = []
+for turb in onswinddata['turbine'].unique():
+    turb_ls += [turb]*class_bin_num
+df_class_turb = pd.DataFrame({'turbine':turb_ls, 'class':range(1, len(turb_ls) + 1)})
+onswinddata = onswinddata.merge(df_class_turb, on='turbine', how='inner')
+onswinddata = onswinddata[['tech','class','t','cf_mult','capcost','fom','vom']]
 onswinddata = deflate_func(onswinddata,onswindscen)
 
 #%%##########################
 #    -- Offshore Wind --    #
 #############################
 
-ofswinddata = pd.read_csv(os.path.join(inpath,ofswindscen+'.csv'))
-if 'rsc_mult' in ofswinddata: #This is the format starting ATB 2023
+ofswinddata = pd.read_csv(os.path.join(inputs_case,'plantchar_ofswind.csv'))
+if 'Turbine' in ofswinddata:
+    #ATB 2024 style
+    #We will have a 'Turbine' column (fixed vs floating). For each turbine, we assume 5 classes
+    #(fixed = 1-5 and floating = 6-10)
+    ofswinddata.columns= ['turbine','t','cf_mult','capcost','fom','vom','rsc_mult']
+    ofswinddata['tech'] = 'OFFSHORE'
+    class_bin_num = 5
+    turb_ls = []
+    for turb in ofswinddata['turbine'].unique():
+        turb_ls += [turb]*class_bin_num
+    df_class_turb = pd.DataFrame({'turbine':turb_ls, 'class':range(1, len(turb_ls) + 1)})
+    ofswinddata = ofswinddata.merge(df_class_turb, on='turbine', how='inner')
+    ofswind_rsc_mult = ofswinddata[['t','class','rsc_mult']].copy()
+    ofswind_rsc_mult['tech'] = 'wind-ofs_' + ofswind_rsc_mult['class'].astype(str)
+    ofswind_rsc_mult = ofswind_rsc_mult.pivot_table(index='t',columns='tech', values='rsc_mult')
+    ofswinddata = ofswinddata[['tech','class','t','cf_mult','capcost','fom','vom']]
+else:
+    #ATB 2023 style
+    #We need to reduce to 5 classes for fixed and 5 for floating. We'll leave classes 1-5 alone (for fixed), remove classes 6,7,13, and 14, and then rename classes 8-12 to 6-10 (for floating)
+    ofswinddata = ofswinddata[~ofswinddata['Wind class'].isin([6,7,13,14])]
+    float_cond = ofswinddata['Wind class'] > 7
+    ofswinddata.loc[float_cond, 'Wind class'] = ofswinddata.loc[float_cond, 'Wind class'] - 2
     ofswind_rsc_mult = ofswinddata[['Year','Wind class','rsc_mult']].copy()
     ofswind_rsc_mult['tech'] = 'wind-ofs_' + ofswind_rsc_mult['Wind class'].astype(str)
     ofswind_rsc_mult = ofswind_rsc_mult.rename(columns={'Year':'t'})
     ofswind_rsc_mult = ofswind_rsc_mult.pivot_table(index='t',columns='tech', values='rsc_mult')
     ofswinddata = ofswinddata.drop(columns=['rsc_mult'])
-else: #This is the format for ATB 2022 and before
-    ofswind_rsc_mult = pd.read_csv(os.path.join(inpath,ofswindscen+'_rsc_mult.csv'),index_col=0).round(6)
-
-
-ofswinddata.columns = ['tech','class','t','cf_mult','capcost','fom','vom']
+    ofswinddata.columns = ['tech','class','t','cf_mult','capcost','fom','vom']
 ofswinddata = deflate_func(ofswinddata,ofswindscen)
 winddata = pd.concat([onswinddata.copy(),ofswinddata.copy()])
 
@@ -181,7 +194,7 @@ wind_stack = winddata[['t','i','capcost','fom','vom']].copy()
 #    -- Geothermal --    #
 ##########################
 
-geodata = pd.read_csv(os.path.join(inpath,geoscen+'.csv'))
+geodata = pd.read_csv(os.path.join(inputs_case,'plantchar_geo.csv'))
 geodata.columns = ['tech','class','depth','t','capcost','fom','vom']
 geodata['i'] = geodata['tech'] + '_' + geodata['depth'] + '_' + geodata['class'].astype(str)
 geodata = deflate_func(geodata,geoscen)
@@ -193,7 +206,7 @@ geo_stack = geodata[['t','i','capcost','fom','vom']].copy()
 ###################
 
 
-csp = pd.read_csv(os.path.join(inpath,cspscen+'.csv'))
+csp = pd.read_csv(os.path.join(inputs_case,'plantchar_csp.csv'))
 csp = deflate_func(csp,cspscen)
 
 csp_stack = pd.DataFrame(columns=csp.columns)
@@ -210,19 +223,19 @@ csp_stack = csp_stack[['t','capcost','fom','vom','i']]
 #    -- Storage --    #
 #######################
 
-battery = pd.read_csv(os.path.join(inpath,batteryscen+'.csv'))
+battery = pd.read_csv(os.path.join(inputs_case,'plantchar_battery.csv'))
 battery = deflate_func(battery,batteryscen)
 
-dr = pd.read_csv(os.path.join(inpath,'dr_'+drscen+'.csv'))
+dr = pd.read_csv(os.path.join(inputs_case,'plantchar_dr.csv'))
 dr = deflate_func(dr,'dr_'+drscen)
 
-evmc_storage = pd.read_csv(os.path.join(inpath,'evmc_storage_'+evmcscen+'.csv'))
+evmc_storage = pd.read_csv(os.path.join(inputs_case,'plantchar_evmc_storage.csv'))
 evmc_storage = deflate_func(evmc_storage,'evmc_storage_'+evmcscen)
 
-evmc_shape = pd.read_csv(os.path.join(inpath,'evmc_shape_'+evmcscen+'.csv'))
+evmc_shape = pd.read_csv(os.path.join(inputs_case,'plantchar_evmc_shape.csv'))
 evmc_shape = deflate_func(evmc_shape,'evmc_shape_'+evmcscen)
 
-caes = pd.read_csv(os.path.join(inpath,caesscen+'.csv'))
+caes = pd.read_csv(os.path.join(inputs_case,'plantchar_caes.csv'))
 caes = deflate_func(caes,caesscen)
 caes['i'] = 'caes'
 
@@ -264,14 +277,34 @@ windcfmult = winddata[['t','i','cf_mult']].set_index(['i','t'])['cf_mult']
 windcfmult = windcfmult.round(6)
 outwindcfmult = windcfmult.reset_index().pivot_table(index='t',columns='i', values='cf_mult')
 
+#%%###########################################################
+#    -- Electrolyzer Stack Replacement Cost Adjustment --    #
+##############################################################
+
+consume_char = pd.read_csv(os.path.join(reeds_path,'inputs','consume','consume_char_'+sw.GSw_H2_Inputs+'.csv'))
+
+# grab the electrolyzer cost 'h2_elec_stack_replace_year' years into the future
+current_year = datetime.date.today().year
+mask = (consume_char['*i'].isin(['electrolyzer'])) & (consume_char['parameter'].isin(['cost_cap']) & (consume_char['t'].isin([current_year+scalars['h2_elec_stack_replace_year']]))) 
+elec_cost_future = consume_char[mask]['value'].values[0]
+
+# read in financials_sys from inputs_case and take the average of all past years to get an average discount rate
+financials_sys = pd.read_csv(os.path.join(inputs_case,'financials_sys.csv')) 
+discount_rate = np.average(financials_sys[(financials_sys['t'] <= current_year)]['d_real'].values)
+
+# the capital cost of electrolyzers needs to be increased by the cost to replace the stack ('h2_elec_stack_replace_perc')
+# this replacement cost is represented as a percent of the capital cost of a new electrolyzer in that year. This cost occurs 'h2_elec_stack_replace_year' years in the future so we discount it.
+mask = (consume_char['*i'].isin(['electrolyzer'])) & (consume_char['parameter'].isin(['cost_cap'])) 
+consume_char.loc[mask, 'value'] = consume_char[mask]['value'] + round( (elec_cost_future * scalars['h2_elec_stack_replace_perc'])/(discount_rate**scalars['h2_elec_stack_replace_year']) ,3)
+
 #%%###############################
 #    -- Other Technologies --    #
 ##################################
 
-ccsflex_perf = pd.read_csv(os.path.join(inpath,ccsflexscen+'_perf.csv'),index_col=0).round(6)
-hydro = pd.read_csv(os.path.join(inpath,hydroscen+'.csv'), index_col=0).round(6)
+ccsflex_perf = pd.read_csv(os.path.join(inputs_case,'plantchar_ccsflex_perf.csv'),index_col=0).round(6)
+hydro = pd.read_csv(os.path.join(inputs_case,'plantchar_hydro.csv'), index_col=0).round(6)
 degrade = pd.read_csv(
-	os.path.join(reeds_path,"inputs","degradation",'degradation_annual_' + degrade_suffix + '.csv'),
+	os.path.join(inputs_case,'degradation_annual.csv'),
 	header=None)
 degrade.columns = ['i','rate']
 degrade = sFuncs.expand_GAMS_tech_groups(degrade)
@@ -292,7 +325,7 @@ pvb_bir = pd.read_csv(
 battery_USDperWac = battery.loc[battery.i=='battery_{}'.format(GSw_PVB_Dur)].set_index('t').capcost
 UPV_defaultILR_USDperWac = upv.capcost * scalars['ilr_utility']
 # Get cost-sharing assumptions
-pvbvalues = pd.read_csv(os.path.join(inpath,'pvb_'+pvbscen+'.csv'), index_col='parameter')
+pvbvalues = pd.read_csv(os.path.join(inputs_case,'plantchar_pvb.csv'), index_col='parameter')
 fixed_ac_noninverter_cost_USDperWac = (
     pvbvalues.loc['fixed','value']
     * deflator[pvbvalues.loc['fixed','dollaryear']]
@@ -376,31 +409,30 @@ pvb = pd.concat(pvb, axis=1)
 ## Create Electric DAC scenario output
 # For electric DAC, we assume a sorbent system: https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a
 # FYI, for DAC-gas we assume a solvent system: https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987
-if dacscen:
-    dac = pd.read_csv(os.path.join(reeds_path,"inputs","consume",f'dac_elec_{dacscen}.csv'))
-    dac = deflate_func(dac, f'dac_elec_{dacscen}')
+dac_elec = pd.read_csv(os.path.join(inputs_case,'dac_elec.csv'))
+dac_elec = deflate_func(dac_elec, f'dac_elec_{dacscen}').round(4)
+# Fill empty values with 0, melt to long format
+outdac_elec = (
+    dac_elec.fillna(0)
+    .melt(id_vars=['i','t'],value_vars=['capcost','fom','vom','conversionrate'])
+    ### Rename the columns so GAMS reads them as a comment
+    .rename(columns={'i':'*i'})
+)
 
-    dac['capcost'] = dac['capcost'].round(0).astype(int)
-    dac['fom'] = dac['fom'].round(0).astype(int)
-    dac['vom'] = dac['vom'].round(8)
-    dac['conversionrate'] = dac['conversionrate'].round(8)
 
-    # Fill empty values with 0, melt to long format
-    outdac = (
-        dac.fillna(0)
-        .melt(id_vars=['i','t'],value_vars=['capcost','fom','vom','conversionrate'])
-        ### Rename the columns so GAMS reads them as a comment
-        .rename(columns={'i':'*i'})
-    )
+## Create Gas DAC scenario output
+# For DAC-gas we assume a solvent system: https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987
+filename = f'dac_gas_{sw.GSw_DAC_Gas_Case}'
+dac_gas = pd.read_csv(os.path.join(reeds_path,'inputs','consume',f'{filename}.csv'))
+dac_gas = deflate_func(dac_gas, filename).round(4)
 
-    outdac.to_csv(os.path.join(inputs_case,'consumechardac.csv'), index=False)
 
 #%%###################################################
 #    -- Cost Adjustment for cost_upgrade Techs --    #
 ######################################################
-upgrade_mult_mid = pd.read_csv(os.path.join(reeds_path,"inputs","upgrades","upgrade_mult_atb23_ccs_mid.csv"))
-upgrade_mult_advanced = pd.read_csv(os.path.join(reeds_path,"inputs","upgrades","upgrade_mult_atb23_ccs_adv.csv"))
-upgrade_mult_conservative = pd.read_csv(os.path.join(reeds_path,"inputs","upgrades","upgrade_mult_atb23_ccs_con.csv"))
+upgrade_mult_mid = pd.read_csv(os.path.join(inputs_case,"upgrade_mult_mid.csv"))
+upgrade_mult_advanced = pd.read_csv(os.path.join(inputs_case,"upgrade_mult_advanced.csv"))
+upgrade_mult_conservative = pd.read_csv(os.path.join(inputs_case,"upgrade_mult_conservative.csv"))
 
 if GSw_UpgradeCost_Mult == 0:
     upgrade_mult = upgrade_mult_mid
@@ -424,11 +456,14 @@ outdata.to_csv(os.path.join(inputs_case,'plantcharout.csv'), index=False)
 upv.cf_improvement.round(3).to_csv(os.path.join(inputs_case,'pv_cf_improve.csv'), header=False)
 outwindcfmult.to_csv(os.path.join(inputs_case,'windcfmult.csv'))
 ccsflex_perf.to_csv(os.path.join(inputs_case,'ccsflex_perf.csv'))
+consume_char.to_csv(os.path.join(inputs_case,'consume_char.csv'),index=False)
 hydro.to_csv(os.path.join(inputs_case,'hydrocapcostmult.csv'))
 ofswind_rsc_mult.to_csv(os.path.join(inputs_case,'ofswind_rsc_mult.csv'))
 degrade.to_csv(os.path.join(inputs_case,'degradation_annual.csv'),header=False)
 pvb.to_csv(os.path.join(inputs_case,'pvbcapcostmult.csv'))
 upgrade_mult.round(4).to_csv(os.path.join(inputs_case,'upgrade_mult_final.csv'), index=False)
+outdac_elec.to_csv(os.path.join(inputs_case,'consumechardac.csv'), index=False)
+dac_gas.to_csv(os.path.join(inputs_case,'dac_gas.csv'), index=False)
 
 toc(tic=tic, year=0, process='input_processing/plantcostprep.py', 
     path=os.path.join(inputs_case,'..'))

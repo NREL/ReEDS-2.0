@@ -1,0 +1,27 @@
+{
+    "inputs": [
+        {
+            "name": "MTTR",
+            "description": "Mean Time to Recover for generators after failure",
+            "units": "hours",
+            "default_value": 24,
+            "value": 24
+        },
+        {
+            "name": "weather_years",
+            "description": "Valid ReEDS weather years for variable generation profiles",
+            "units": null,
+            "default_value": [2007,2008,2009,2010,2011,2012,2013],
+            "value": [2007,2008,2009,2010,2011,2012,2013]
+        }
+    ],
+    "disaggregation": [
+        {
+            "name": "unit_size",
+            "description": "Default unit size for technologies without match in ATB database",
+            "units": "MW",
+            "default_value": 500.0,
+            "value": 500.0
+        }
+    ]
+}

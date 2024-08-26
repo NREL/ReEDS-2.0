@@ -1,7 +1,6 @@
 var_name,i,v,r,h,t
 inv,0,1,2,,3
 inv_refurb,0,1,2,,3
-inv_rsc,0,1,2,,4
 upgrades,0,1,2,,3
 gen,0,1,2,3,4
 cap,0,1,2,,3
@@ -16,7 +15,6 @@ storage_in_pvb_p,0,1,2,3,4
 storage_in_pvb_g,0,1,2,3,4
 cap_sdbin,0,1,2,,5
 storage_level,0,1,2,3,4
-recs,1,,,,4
 gen_pvb_p,0,1,2,3,4
 gen_pvb_b,0,1,2,3,4
 produce,1,2,3,4,5

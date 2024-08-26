@@ -21,7 +21,10 @@ GSw_CCSFLEX_STO,0
 GSw_CCSFLEX_STO_LEVEL,1
 GSw_CCSFLEX_cap_max,90
 GSw_CCSFLEX_cost_mult,1
-GSw_CCS_Rate,default
+GSw_CCS_Rate_New_mod,0.95
+GSw_CCS_Rate_New_max,0.99
+GSw_CCS_Rate_Upgrade_mod,0.90
+GSw_CCS_Rate_Upgrade_max,0.99
 GSw_CO2_BEC,70
 GSw_CO2_Detail,0
 GSw_CO2_Storage,15
@@ -267,7 +270,7 @@ onswindscen,ons-wind_ATB_2022_moderate
 osprey_load_year,prev
 osprey_prm,1
 osprey_years,2012
-pshsupplycurve,10hr_15bin_may2022
+pshsupplycurve,8hr_ref_mar2024
 pvbscen,benchmark2020
 rectfuelscen,reference
 rectscen,re-ct_ATB_2022

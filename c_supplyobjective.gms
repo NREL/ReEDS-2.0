@@ -51,6 +51,8 @@ eq_ObjFn_inv(t)$tmodel(t)..
 * --- costs of resource supply curve spur line investment if not modeling explicitly---
 *Note that cost_cap for hydro, pumped-hydro, and geo techs are zero
 *but hydro and geo rsc_fin_mult is equal to the same value as cost_cap_fin_mult
+* Note: for OSW, export cable, inter-array and POI/substations are eligible for ITC. The rest are not. 
+* However we apply the ITC to all transmission costs to be consistent with LBW format
                   + sum{(i,v,r,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$rsc_i(i)$(not spur_techs(i))],
                       m_rsc_dat(r,i,rscbin,"cost") * rsc_fin_mult(i,r,t) * sum{ii$rsc_agg(i,ii), INV_RSC(ii,v,r,rscbin,t) } }
 
@@ -264,28 +266,28 @@ eq_Objfn_op(t)$tmodel(t)..
                    (sum{usda_region$r_usda(r,usda_region), biosupply(usda_region, bioclass, "price") } + bio_transport_cost) }
 
 * --- hurdle costs for transmission flow ---
-              + sum{(r,rr,h,trtype)$[routes(r,rr,trtype,t)$cost_hurdle(r,rr)],
-                   cost_hurdle(r,rr) * FLOW(r,rr,h,t,trtype) * hours(h) }
+              + sum{(r,rr,h,trtype)$[routes(r,rr,trtype,t)$cost_hurdle(r,rr,t)],
+                   cost_hurdle(r,rr,t) * FLOW(r,rr,h,t,trtype) * hours(h) }
 
 * --- taxes on emissions---
               + sum{(e,r), EMIT(e,r,t) * emit_tax(e,r,t) }
 
 * --cost of CO2 transport and storage from CCS--
               + sum{(i,v,r,h)$[valgen(i,v,r,t)],
-                              hours(h) * capture_rate("CO2",i,v,r,t) * GEN(i,v,r,h,t) * CO2_storage_cost }$[not Sw_CO2_Detail]
+                              hours(h) * capture_rate("CO2",i,v,r,t) * GEN(i,v,r,h,t) * Sw_CO2_Storage }$[not Sw_CO2_Detail]
 
 * --cost of CO2 transport and storage from SMR CCS--
               + sum{(p,v,r,h)$[i_p("smr_ccs",p)$valcap("smr_ccs",v,r,t)],
-                              hours(h) * smr_capture_rate * smr_co2_intensity * PRODUCE(p,"smr_ccs",v,r,h,t) * CO2_storage_cost }$[Sw_H2$(not Sw_CO2_Detail)]
+                              hours(h) * smr_capture_rate * smr_co2_intensity * PRODUCE(p,"smr_ccs",v,r,h,t) * Sw_CO2_Storage }$[Sw_H2$(not Sw_CO2_Detail)]
 
 * --cost of CO2 transport and storage from DAC--
               + sum{(p,i,v,r,h)$[dac(i)$valcap(i,v,r,t)$i_p(i,p)],
-                              hours(h) * PRODUCE(p,i,v,r,h,t) * CO2_storage_cost }$[Sw_DAC$(not Sw_CO2_Detail)]
+                              hours(h) * PRODUCE(p,i,v,r,h,t) * Sw_CO2_Storage }$[Sw_DAC$(not Sw_CO2_Detail)]
 
 * ---State RPS alternative compliance payments---
               + sum{(RPSCat,st)$[(stfeas(st) or sameas(st,"voluntary"))$RecPerc(RPSCat,st,t)$(not acp_disallowed(st,RPSCat))],
                     acp_price(st,t) * ACP_PURCHASES(RPSCat,st,t)
-                   }$[(yeart(t)>=RPS_StartYear)$Sw_StateRPS]
+                   }$[(yeart(t)>=firstyear_RPS)$Sw_StateRPS]
 
 * --- revenues from purchases of curtailed VRE---
               - sum{(r,h), CURT(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
@@ -302,9 +304,18 @@ eq_Objfn_op(t)$tmodel(t)..
                               * sum{tt$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))],
                                    H2_TRANSPORT_INV(r,rr,t) } }$[Sw_H2 = 2]
 
+* -- H2 intra-regional transport investment costs, levelized per kg of H2 produced --
+* Unit conversion: [hours] * [tonnes/hour] * [$/kg] * [kg/tonne] = [$]
+               + sum{(i,v,r,h)$[valcap(i,v,r,t)$newv(v)$i_p(i,"h2")$h_rep(h)], 
+                    hours(h) * PRODUCE("h2",i,v,r,h,t) * (Sw_H2_IntraReg_Transport * 1e3)}$[Sw_H2]
+
 * --- H2 storage fixed OM costs (compute cumulative sum of investments to get total capacity)
                + sum{(h2_stor,r)$h2_stor_r(h2_stor,r),
                      cost_h2_storage_fom(h2_stor,t) * H2_STOR_CAP(h2_stor,r,t) }$(Sw_H2=2)
+
+* --- Retail adder for electricity consuming technologies ---
+               + sum{(p,i,v,r,h)$[valcap(i,v,r,t)$i_p(i,p)$h_rep(h)$Sw_RetailAdder$Sw_Prod],
+                    hours(h) * Sw_RetailAdder * PRODUCE(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) }
 
 * --- CO2 pipeline fixed OM costs
               + sum{(r,rr)$co2_routes(r,rr), cost_co2_pipeline_fom(r,rr,t)
@@ -328,11 +339,18 @@ eq_Objfn_op(t)$tmodel(t)..
               - sum{(p,i,v,r,h)$[dac(i)$valcap(i,v,r,t)$i_p(i,p)$h_rep(h)],
                               (crf(t) / crf_co2_incentive(t)) * co2_captured_incentive(i,v,r,t) * hours(h) * PRODUCE(p,i,v,r,h,t)}
 
-* --- PTC value ---
+* --- PTC value for electric power generation ---
               - sum{(i,v,r,h)$[valgen(i,v,r,t)$ptc_value_scaled(i,v,t)],
                     hours(h) * ptc_value_scaled(i,v,t) * tc_phaseout_mult(i,v,t) * 
                     (GEN(i,v,r,h,t) - (STORAGE_IN_GRID(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[pvb(i)$Sw_PVB])
                    }
+
+* --- PTC value for hydrogen production ---
+* Note: all electrolyzers which produce H2 are assuming to be receiving the hydrogen production tax credit during eligible years  
+              - sum{(p,v,r,h)$[valcap("electrolyzer",v,r,t)$(sameas(p,"H2"))$h2_ptc("electrolyzer",v,r,t)$h_rep(h)],
+                  hours(h) * PRODUCE(p,"electrolyzer",v,r,h,t) *
+                   (crf(t) / crf_h2_incentive(t)) * h2_ptc("electrolyzer",v,r,t) * 1e3} 
+                   $[Sw_H2_PTC$Sw_H2$h2_ptc_years(t)$(yeart(t) >= h2_demand_start)]
 
 *end multiplier for pvf_onm
          )

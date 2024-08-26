@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Using Hourlize &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="additional_setup.html">Additional ReEDS Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_best_practices.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onboarding.html">Onboarding Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_documentation.html">Model Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html">Model Switches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Using Hourlize</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/internal/hourlize.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="using-hourlize">
+<h1>Using Hourlize<a class="headerlink" href="#using-hourlize" title="Link to this heading"></a></h1>
+<section class="tex2jax_ignore mathjax_ignore" id="hourlize">
+<h2>Hourlize<a class="headerlink" href="#hourlize" title="Link to this heading"></a></h2>
+<section id="overview">
+<h3>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h3>
+<p>Hourlize processes hourly resource and load data into ReEDS inputs. The vision is for this module to allow maximum flexibility
+temporally and spatially.</p>
+<p>Hourlize is run by a call to <code class="docutils literal notranslate"><span class="pre">run_hourlize.py</span></code>, which assembles information on the cases to run and then executes a call to either
+<code class="docutils literal notranslate"><span class="pre">resource.py</span></code> and <code class="docutils literal notranslate"><span class="pre">load.py</span></code>. The <code class="docutils literal notranslate"><span class="pre">run_hourlize.py</span></code> script can be used to set up jobs to submit to the HPC to run in parallel or to run hourlize jobs directly in sequence.</p>
+<section id="quickstart-resource">
+<h4>Quickstart: Resource<a class="headerlink" href="#quickstart-resource" title="Link to this heading"></a></h4>
+<ol class="arabic simple">
+<li><p>Copy any new reV supply curves to the supply curve folder and update the rev_paths file (<a class="reference internal" href="#setup-for-rev-supply-curves"><span class="xref myst">details</span></a>).</p></li>
+<li><p>Update settings in <code class="docutils literal notranslate"><span class="pre">config_base.json</span></code> as needed (<a class="reference internal" href="#config-jsons"><span class="xref myst">details</span></a>).</p></li>
+<li><p>Update settings in the relevant <code class="docutils literal notranslate"><span class="pre">config_[tech].json</span></code> files as needed (<a class="reference internal" href="#config-jsons"><span class="xref myst">details</span></a>).</p></li>
+<li><p>Specify cases to run in <code class="docutils literal notranslate"><span class="pre">cases.json</span></code> or create your own cases file (<a class="reference internal" href="#cases-json"><span class="xref myst">details</span></a>).</p></li>
+<li><p>If running on the HPC, specify run allocation or other submission settings in <code class="docutils literal notranslate"><span class="pre">hourlize/inputs/configs/srun_template.sh</span></code> (<a class="reference internal" href="#config-jsons"><span class="xref myst">details</span></a>).</p></li>
+<li><p>Run using <code class="docutils literal notranslate"><span class="pre">run_hourlize.py</span> <span class="pre">resource</span></code> (<a class="reference internal" href="#running-hourlize"><span class="xref myst">details</span></a>).</p></li>
+</ol>
+</section>
+<section id="quickstart-load">
+<h4>Quickstart: Load<a class="headerlink" href="#quickstart-load" title="Link to this heading"></a></h4>
+<ol class="arabic simple">
+<li><p>Update settings in <code class="docutils literal notranslate"><span class="pre">config_base.json</span></code> as needed (<a class="reference internal" href="#config-jsons"><span class="xref myst">details</span></a>).</p></li>
+<li><p>If running on the HPC, specify run allocation or other submission settings in <code class="docutils literal notranslate"><span class="pre">inputs/configs/srun_template.sh</span></code> (<a class="reference internal" href="#config-jsons"><span class="xref myst">details</span></a>).</p></li>
+<li><p>Run using <code class="docutils literal notranslate"><span class="pre">run_hourlize.py</span> <span class="pre">load</span></code> (<a class="reference internal" href="#running-hourlize"><span class="xref myst">details</span></a>).</p></li>
+</ol>
+<p>For more details and run options see further below.</p>
+</section>
+</section>
+<section id="setup-for-rev-supply-curves">
+<h3>Setup for reV supply curves<a class="headerlink" href="#setup-for-rev-supply-curves" title="Link to this heading"></a></h3>
+<p>If you don’t have new reV supply curves you can probably skip this section and go down to <a class="reference internal" href="#running-hourlize"><span class="xref myst">running hourlize</span></a>. However, if you are planning on pushing your supply curve outputs to the repo don’t forget to <a class="reference internal" href="#4-synchronize-shared-directories"><span class="xref myst">sync the shared directories</span></a>.</p>
+<section id="copy-rev-runs-to-reeds-shared-directory">
+<h4>1. Copy reV runs to reeds shared directory<a class="headerlink" href="#copy-rev-runs-to-reeds-shared-directory" title="Link to this heading"></a></h4>
+<p>Before running resource hourlize the reV runs should be copied from their original location to the shared folder. Currently reV data used in ReEDS (along with hourlize inputs and outputs) are stored in three places:</p>
+<ul class="simple">
+<li><p>on the nrelnas01 device at <code class="docutils literal notranslate"><span class="pre">\\nrelnas01\ReEDS\Supply_Curve_Data</span></code></p></li>
+<li><p>on Eagle at <code class="docutils literal notranslate"><span class="pre">/shared-projects/reeds/Supply_Curve_Data</span></code></p></li>
+<li><p>on Kestrel at <code class="docutils literal notranslate"><span class="pre">/projects/shared-projects-reeds/reeds/Supply_Curve_Data</span></code></p></li>
+</ul>
+<p>Under the appropriate tech folder (UPV, ONSHORE, OFFSHORE, etc.) create a directory with a descrptive name for the supply curves (e.g., 2023_06_06_Update). Then copy the reV supply curves and profiles into a folder called <code class="docutils literal notranslate"><span class="pre">reV</span></code>. A good approach is to use rsync; below is an example copying original reV files from Eagle to Kestrel:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rsync</span> <span class="o">-</span><span class="n">aPu</span> <span class="p">[</span><span class="n">username</span><span class="p">]</span><span class="nd">@eagle</span><span class="o">.</span><span class="n">hpc</span><span class="o">.</span><span class="n">nrel</span><span class="o">.</span><span class="n">gov</span><span class="p">:</span><span class="o">//</span><span class="n">shared</span><span class="o">-</span><span class="n">projects</span><span class="o">/</span><span class="n">rev</span><span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">seto</span><span class="o">/</span><span class="n">fy23</span><span class="o">/</span><span class="n">rev</span><span class="o">/</span><span class="n">standard_scenarios</span><span class="o">/</span><span class="n">aggregation</span><span class="o">/</span>  <span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">shared</span><span class="o">-</span><span class="n">projects</span><span class="o">-</span><span class="n">reeds</span><span class="o">/</span><span class="n">reeds</span><span class="o">/</span><span class="n">Supply_Curve_Data</span><span class="o">/</span><span class="n">UPV</span><span class="o">/</span><span class="mi">2023_06_06</span><span class="n">_Update</span><span class="o">/</span><span class="n">reV</span>
+</pre></div>
+</div>
+<p>Note that sometimes all the necessary files are in each supply curve folder and sometimes the reV team creates a separate “post_processed_supply_curves” folder that should also be copied.</p>
+</section>
+<section id="update-the-rev-paths-files">
+<h4>2. Update the rev_paths files<a class="headerlink" href="#update-the-rev-paths-files" title="Link to this heading"></a></h4>
+<p>Update the reV paths file at <code class="docutils literal notranslate"><span class="pre">ReEDS-2.0/inputs/supplycurvedata/rev_paths.csv</span></code>. Typically this means updating the information for whichever techs (e.g., upv, wind-ons, wind-ofs) and access cases (e.g., reference, open, limited) you want to run.</p>
+<p>Some details on the additional columns to update:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sc_path</span></code>: path to the supply curve folder on the shared drive; should be of the format tech/update_name (e.g. UPV/2023_06_06_Update, ONSHORE/2023_07_28_Update).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rev_case</span></code>: name of the reV case to be used for this scenario; this should reference a directory in the “reV” folder with the sc_path (e.g., if 02_limited is one of the rev_case values for upv, then there should be a folder called UPV/2023_06_06_Update/reV/02_limited).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">original_sc_file</span></code>: path to the original reV supply curve csv file (i.e., before hourlize pre-processing). Specified relative to the “reV” folder within the corresponding sc_path.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">original_rev_folder</span></code>: full path of the original location of the supply curves passed by the reV team. Not actively used but useful for debugging issues with the reV runs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cf_path</span></code>: full path to the generation file used for the reV runs. This can typically be found in the <code class="docutils literal notranslate"><span class="pre">config_aggregation.json</span></code> file from the reV run as <code class="docutils literal notranslate"><span class="pre">gen_fpath</span></code>. An exception is for bespoke wind runs, in which case this should point to the reV profiles. Needed for R2P.</p></li>
+</ul>
+</section>
+<section id="run-hourlize">
+<h4>3. Run hourlize<a class="headerlink" href="#run-hourlize" title="Link to this heading"></a></h4>
+<p>Follow setup details <a class="reference internal" href="#running-hourlize"><span class="xref myst">here</span></a>.</p>
+<p>Hourlize relies on a set of columns being in the reV supply curve. In some cases hourlize can fill in missing columns hourlize in a pre-processing step, but in others these missing columns can cause hourlize to fall. A list of required columns can be found in <code class="docutils literal notranslate"><span class="pre">hourlize/inputs/resource/rev_sc_columns_for_hourlize.csv</span></code></p>
+</section>
+<section id="synchronize-shared-directories">
+<h4>4. Synchronize shared directories<a class="headerlink" href="#synchronize-shared-directories" title="Link to this heading"></a></h4>
+<p>If you’re copying the hourlize outputs back to the shared repository (<code class="docutils literal notranslate"><span class="pre">copy_to_shared=True</span></code>) you’ll want to sync up the two shared folders, as the copy function currently only copies to one directory.</p>
+<p>When starting from the HPC be sure to open up permissions to the supply curve outputs you’ve just created (e.g., <code class="docutils literal notranslate"><span class="pre">chmod</span> <span class="pre">-R</span> <span class="pre">777</span> <span class="pre">UPV/2023_06_06_Update</span></code>). Then from your local computer use WinSCP or rsync to copy the files from Kestrel to nrelnas01:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rsync</span> <span class="o">-</span><span class="n">aPu</span> <span class="p">[</span><span class="n">username</span><span class="p">]</span><span class="nd">@kestrel</span><span class="o">.</span><span class="n">nrel</span><span class="o">.</span><span class="n">gov</span><span class="p">:</span><span class="o">//</span><span class="n">projects</span><span class="o">/</span><span class="n">shared</span><span class="o">-</span><span class="n">projects</span><span class="o">-</span><span class="n">reeds</span><span class="o">/</span><span class="n">reeds</span><span class="o">/</span><span class="n">Supply_Curve_Data</span><span class="o">/</span><span class="n">UPV</span><span class="o">/</span><span class="mi">2023_11_02</span><span class="n">_LandCover</span> <span class="o">/</span><span class="n">Volumes</span><span class="o">/</span><span class="n">ReEDS</span><span class="o">/</span><span class="n">Supply_Curve_Data</span><span class="o">/</span><span class="n">UPV</span>
+</pre></div>
+</div>
+<p>(back to <a class="reference internal" href="#overview"><span class="xref myst">overview</span></a>)</p>
+</section>
+</section>
+<section id="running-hourlize">
+<h3>Running hourlize<a class="headerlink" href="#running-hourlize" title="Link to this heading"></a></h3>
+<section id="run-hourlize-py">
+<h4>run_hourlize.py<a class="headerlink" href="#run-hourlize-py" title="Link to this heading"></a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">run_hourlize.py</span></code> script serves as a wrapper for calling either <code class="docutils literal notranslate"><span class="pre">load.py</span></code> or <code class="docutils literal notranslate"><span class="pre">resource.py</span></code>. It does the following:</p>
+<ul class="simple">
+<li><p>Collect run(s) configuration settings from the relevant config files to build a consolidated config file for each run.</p></li>
+<li><p>Runs formatting on config file entries.</p>
+<ul>
+<li><p>Entries with {variable} in the text will have the {variable} text replaced with the value referenced by ‘variable’, which typically refers to another config entry or a file path.</p></li>
+<li><p>Entries with {eval_expression} will evaluate ‘expression’ as a python expression; useful for creating lists using ranges.</p></li>
+<li><p>Combines all configs into a single config.json sent to resource.py.</p></li>
+</ul>
+</li>
+<li><p>Creates an output folder for the supply curve run in <code class="docutils literal notranslate"><span class="pre">hourlize/out/[casename]</span></code>, where casename is defined in the <code class="docutils literal notranslate"><span class="pre">cases.json</span> <span class="pre">file</span></code>.</p></li>
+<li><p>Creates a .sh or .bat script to run the case with a call to <code class="docutils literal notranslate"><span class="pre">resource.py</span></code>.</p></li>
+<li><p>Optionally submits jobs to the HPC or initiates the runs directly.</p></li>
+</ul>
+<p>Example calls:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">run_hourlize</span><span class="o">.</span><span class="n">py</span> <span class="n">load</span>                  <span class="c1"># run load.py</span>
+<span class="n">python</span> <span class="n">run_hourlize</span><span class="o">.</span><span class="n">py</span> <span class="n">resource</span>              <span class="c1"># run resource.py with default cases</span>
+<span class="n">python</span> <span class="n">run_hourlize</span><span class="o">.</span><span class="n">py</span> <span class="n">resource</span> <span class="o">-</span><span class="n">c</span> <span class="n">suffix</span>    <span class="c1"># run resource.py with cases from cases_suffix.json</span>
+<span class="n">python</span> <span class="n">run_hourlize</span><span class="o">.</span><span class="n">py</span> <span class="n">resource</span> <span class="o">--</span><span class="n">local</span>      <span class="c1"># if on HPC run all cases sequentially on current node without batch submission to slurm</span>
+<span class="n">python</span> <span class="n">run_hourlize</span><span class="o">.</span><span class="n">py</span> <span class="n">resource</span> <span class="o">--</span><span class="n">nosubmit</span>   <span class="c1"># if on HPC create launch scripts and input folders but don&#39;t submit runs</span>
+</pre></div>
+</div>
+<p>To see details on all command line arguments run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">run_hourlize.py</span> <span class="pre">-h</span></code>.</p>
+<p>After setting up the run, if specified <code class="docutils literal notranslate"><span class="pre">run_hourlize.py</span></code> will launch the .sh or .bat file which performs the following call to <code class="docutils literal notranslate"><span class="pre">resource.py</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">resource</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">config</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">hourlize</span><span class="o">/</span><span class="p">[</span><span class="n">casename</span><span class="p">]</span><span class="o">/</span><span class="n">inputs</span><span class="o">/</span><span class="n">config</span><span class="o">.</span><span class="n">json</span>
+</pre></div>
+</div>
+</section>
+<section id="config-jsons">
+<h4>Config jsons<a class="headerlink" href="#config-jsons" title="Link to this heading"></a></h4>
+<p>Hourlize uses a set of json config files to provide information on how to process the supply curves. These files are located in <code class="docutils literal notranslate"><span class="pre">hourlize/inputs/configs</span></code>:</p>
+<ul class="simple">
+<li><p><strong>Cases file</strong> (<code class="docutils literal notranslate"><span class="pre">cases.json</span></code>): list of resource cases to run (currently not applicable to load.py)</p></li>
+<li><p><strong>Tech config</strong> (<code class="docutils literal notranslate"><span class="pre">config_[tech].json</span></code>): tech specific settings for the <code class="docutils literal notranslate"><span class="pre">resource.py</span></code> script for upv, wind-ons, and wind-ofs</p></li>
+<li><p><strong>Base config</strong> (<code class="docutils literal notranslate"><span class="pre">config_base.json</span></code>): general hourlize settings (shared) as well as specific settings for the resource and load processes</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">run_hourlize.py</span></code> process will generate a final config (<code class="docutils literal notranslate"><span class="pre">config.json</span></code>) from the relevant base and tech configs for each run, as depicted in the figure below. In general the settings in the <code class="docutils literal notranslate"><span class="pre">cases.json</span></code> file unique to each run while the settings in the tech and base configs aren’t frequently changed. In the case of duplicated entries across configs hourlize uses the following order of precedence: cases &gt; tech &gt; base.</p>
+<p><img alt="hourlize_configs" src="https://media.github.nrel.gov/user/1374/files/e4c990fa-fa12-47c2-9b0c-0d7bdbc255d0" /></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">srun_template.sh</span></code> file is used to govern HPC submission settings. Update with your allocation, email, and any other slurm specifications before submitting jobs. There is also a command line argument to via <code class="docutils literal notranslate"><span class="pre">run_hourlize.py</span></code> for running jobs using the debug partition.</p>
+<p>For more details on the meaning of the different config settings see the tables at the bottom of this README (<a class="reference internal" href="#details-on-config-file-settings"><span class="xref myst">link</span></a>).</p>
+</section>
+<section id="cases-json">
+<h4>Cases json<a class="headerlink" href="#cases-json" title="Link to this heading"></a></h4>
+<p>The cases json provides a list of resource supply curve cases to process. The default cases file (<code class="docutils literal notranslate"><span class="pre">case.json</span></code>) includes all supply curves typically needed for ReEDS for BA- and county-resolution runs. Users can also build their own cases file of the format <code class="docutils literal notranslate"><span class="pre">cases_[case_suffix].json</span></code>.</p>
+<p>Each entry should be given a <code class="docutils literal notranslate"><span class="pre">casename</span></code> for the supply curve run in the format [<code class="docutils literal notranslate"><span class="pre">tech</span></code>]_[<code class="docutils literal notranslate"><span class="pre">access_case</span></code>]_[<code class="docutils literal notranslate"><span class="pre">resolution</span></code>].</p>
+<ul class="simple">
+<li><p>Supported values for <code class="docutils literal notranslate"><span class="pre">tech</span></code>: upv, wind-ofs, wind-ons.</p></li>
+<li><p>Supported values for <code class="docutils literal notranslate"><span class="pre">resolution</span></code>: ba, county.</p>
+<ul>
+<li><p>Make sure the entry for <code class="docutils literal notranslate"><span class="pre">resolution</span></code> aligns with the <code class="docutils literal notranslate"><span class="pre">reg_out_col</span></code> entry (ba: “ba”, county: “cnty_fips”).</p></li>
+</ul>
+</li>
+<li><p>Typical values for <code class="docutils literal notranslate"><span class="pre">access_case</span></code>: reference, open, or limited.</p>
+<ul>
+<li><p>Other values allowed but must match values in <code class="docutils literal notranslate"><span class="pre">access_case</span></code> column of the rev_paths file (typically at <code class="docutils literal notranslate"><span class="pre">ReEDS-2.0/inputs/supply_curve/rev_paths.csv</span></code> but can be specified in <code class="docutils literal notranslate"><span class="pre">config_base.json</span></code>).</p></li>
+</ul>
+</li>
+</ul>
+<p>To link a case to a custom set of config files users can add entries for <code class="docutils literal notranslate"><span class="pre">config_base</span></code> and <code class="docutils literal notranslate"><span class="pre">config_tech</span></code> in the case defintion. For example, adding <code class="docutils literal notranslate"><span class="pre">config_base:test</span></code> would link that case to the settings in <code class="docutils literal notranslate"><span class="pre">config_base_test.json</span></code> instead of the typical <code class="docutils literal notranslate"><span class="pre">config_base.json</span></code> file.</p>
+<p>Other key/value pairs in the <code class="docutils literal notranslate"><span class="pre">cases.json</span></code> file can also be used as subsetting variables for downselecting relevant rows from the corresponding rev_paths file. This can helpful when running hourlize for cases that don’t just differ by access and tech. To use this add the key/value pair from the rev_paths_file to the relevant cases and to the list of <code class="docutils literal notranslate"><span class="pre">subsetvars</span></code> in the base config.</p>
+<p>The current <code class="docutils literal notranslate"><span class="pre">cases.json</span></code> file in the repository contains all the settings to run the supply curves currently maintained by ReEDS.</p>
+</section>
+<section id="tips">
+<h4>Tips<a class="headerlink" href="#tips" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>If you want the hourlize runs to be copied back the shared supply curve folder, set <code class="docutils literal notranslate"><span class="pre">copy_to_shared</span> <span class="pre">=</span> <span class="pre">true</span></code>.</p>
+<ul>
+<li><p>Note: this script currently only copies to one of the shared folders (the HPC or nrelnas01), so you’ll need to sync up the two after copying.</p></li>
+</ul>
+</li>
+<li><p>By default hourlize is set up to copy outputs into the ReEDS repo (<code class="docutils literal notranslate"><span class="pre">copy_to_reeds</span> <span class="pre">=</span> <span class="pre">true</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reg_out_col</span></code>  is typically either ‘ba’ for ReEDS regions or ‘cnty_fips’ for county-level supply curves, but can also be set to any column in the file specified by <code class="docutils literal notranslate"><span class="pre">reg_map_path</span></code> (which will be merged to the supply curve file by county fips code) or to a column in the supply curve file itself.</p></li>
+</ul>
+<p>(back to <a class="reference internal" href="#overview"><span class="xref myst">overview</span></a>)</p>
+</section>
+</section>
+<section id="resource-logic-resource-py">
+<h3>Resource Logic (resource.py)<a class="headerlink" href="#resource-logic-resource-py" title="Link to this heading"></a></h3>
+<section id="inputs">
+<h4>Inputs<a class="headerlink" href="#inputs" title="Link to this heading"></a></h4>
+<p>The main inputs to hourlize are reV outputs for a given reV scenario:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sc_path</span></code> (in rev_paths.csv): a supply curve csv file for a given technology, with rows for each resource site and columns of metadata.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rev_path</span></code> (in rev_paths.csv): A directory that contains h5 file(s) with hourly generation profiles for each site of the supply curve file for weather years 2007-2013.</p></li>
+</ul>
+</section>
+<section id="outputs">
+<h4>Outputs<a class="headerlink" href="#outputs" title="Link to this heading"></a></h4>
+<p>By default, the outputs will be dumped to a subdirectory named <code class="docutils literal notranslate"><span class="pre">results</span></code> within <code class="docutils literal notranslate"><span class="pre">hourlize/out/[casename]</span></code>. In addition, with <code class="docutils literal notranslate"><span class="pre">copy_to_reeds</span></code> set to true (as is default), we’ll copy the results to the ReEDS repo containing this hourlize directory, and with<code class="docutils literal notranslate"><span class="pre">copy_to_shared</span></code> set to true (not default), we’ll copy to the shared drive (see Shared Drive Locations below).</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">{tech}_supply_curve.csv</span></code>: A supply curve with rows for each site and columns for region, class, available capacity, and costs. E.g. see <code class="docutils literal notranslate"><span class="pre">inputs/supply_curve/wind-ons_supply_curve-reference_ba.csv</span></code> (within ReEDS repo)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">{tech}_exog_cap.csv</span></code>: Exogenous (built pre-2010) capacity with columns for region, site and year. This is not capacity builds in each year, but rather cumulative capacity of each existing site over time. E.g. see <code class="docutils literal notranslate"><span class="pre">inputs/capacity_exogenous/wind-ons_exog_cap_reference_ba.csv</span></code> (within ReEDS repo)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">{tech}_prescribed_builds.csv</span></code>: Capacity prescribed builds (2010 - present) with columns for region, year, capacity. This is the installed capacity in each year rather than cumulative capacity over time. E.g. see <code class="docutils literal notranslate"><span class="pre">inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_ba.csv</span></code> (within ReEDS repo)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">{tech}_.h5</span></code>: An hourly (7 weather year) generation profile file with a separate profile for each region/class. E.g. see <code class="docutils literal notranslate"><span class="pre">inputs/variability/multi_year/wind-ons-reference_ba.h5</span></code> (within ReEDS repo)</p></li>
+</ul>
+</section>
+<section id="shared-drive-locations">
+<h4>Shared Drive Locations<a class="headerlink" href="#shared-drive-locations" title="Link to this heading"></a></h4>
+<p>Hourlize resource inputs and outputs in the same places as the copies of the reV supply curves (see details <a class="reference internal" href="#1-copy-rev-runs-to-reeds-shared-directory"><span class="xref myst">here</span></a>). Whereas the reV supply curves are stored within a folder called <code class="docutils literal notranslate"><span class="pre">reV</span></code>, the hourlize runs can be found directly in the corresponding tech folder (e.g., UPV, OFFSHORE, ONSHORE).</p>
+</section>
+<section id="logic">
+<h4>Logic<a class="headerlink" href="#logic" title="Link to this heading"></a></h4>
+<p>The <code class="docutils literal notranslate"><span class="pre">resource.py</span></code> script follows the following logic (in order of execution):</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">get_supply_curve_and_preprocess()</span></code></p>
+<ul class="simple">
+<li><p>The supply curve is filtered if necessary, based on <code class="docutils literal notranslate"><span class="pre">filter_cols</span></code>.</p></li>
+<li><p>A ‘region’ column is added to the supply curve and filled with the selected regionality (<code class="docutils literal notranslate"><span class="pre">reg_out_col</span></code>).</p></li>
+<li><p>Existing sites from a generator database (<code class="docutils literal notranslate"><span class="pre">existing_sites</span></code>) are assigned to supply curve points for exogenous and prescribed capacity outputs.</p></li>
+<li><p>If we have minimum capacity thresholds for the supply curve points, these are applied to further filter the supply curve.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_classes()</span></code></p>
+<ul class="simple">
+<li><p>A ‘class’ column is added to the supply curve and filled with the associated class. Classes can be based on statically defined conditions for columns in the supply curve (<code class="docutils literal notranslate"><span class="pre">class_path</span></code>). Otherwise (or layered on top of static class definitions), dynamic classes can be assigned (<code class="docutils literal notranslate"><span class="pre">class_bin</span></code>=true) using a binning method (<code class="docutils literal notranslate"><span class="pre">class_bin_method</span></code>, e.g. “kmeans”), a number of bins (<code class="docutils literal notranslate"><span class="pre">class_bin_num</span></code>), and the supply curve column to bin (<code class="docutils literal notranslate"><span class="pre">class_bin_col</span></code>). The binning logic itself is in <code class="docutils literal notranslate"><span class="pre">get_bin()</span></code>. The current default classes for onshore wind and utility-scale PV are based on national k-means clustering of average annual capacity factor (where higher class number corresponds with higher annual CF). Offshore wind, by contrast, uses statically defined classes from <code class="docutils literal notranslate"><span class="pre">hourlize/inputs/resource/wind-ofs_resource_classes.csv</span></code>.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_cost()</span></code></p>
+<ul class="simple">
+<li><p>A column of overall supply curve costs is added to the supply curve (<code class="docutils literal notranslate"><span class="pre">supply_curve_cost_per_mw</span></code>), as well as certain components of that cost (e.g. <code class="docutils literal notranslate"><span class="pre">trans_adder_per_mw</span></code> and <code class="docutils literal notranslate"><span class="pre">capital_adder_per_MW</span></code>). Logic for these costs depends on <code class="docutils literal notranslate"><span class="pre">tech</span></code>, and the value of <code class="docutils literal notranslate"><span class="pre">cost_out</span></code> in config (e.g. <code class="docutils literal notranslate"><span class="pre">combined_eos_trans</span></code> for onshore wind).</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">save_sc_outputs()</span></code></p>
+<ul class="simple">
+<li><p>Supply curve outputs are saved (<code class="docutils literal notranslate"><span class="pre">{tech}_supply_curve.csv</span></code>) as well as exogenous capacity (<code class="docutils literal notranslate"><span class="pre">{tech}_exog_cap.csv</span></code>), which is built pre-2010, and prescribed builds (<code class="docutils literal notranslate"><span class="pre">{tech}_prescribed_builds.csv</span></code>), which are built between 2010 and present day.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_profiles_allyears_weightedave()</span></code></p>
+<ul class="simple">
+<li><p>The hourly generation profiles are gathered, and capacity-weighted average profiles are calculated for each region/class.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">shift_timezones()</span></code></p>
+<ul class="simple">
+<li><p>Roll the hourly profiles from <code class="docutils literal notranslate"><span class="pre">resource_source_timezone</span></code> to <code class="docutils literal notranslate"><span class="pre">output_timezone</span></code>.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">save_time_outputs()</span></code></p>
+<ul class="simple">
+<li><p>Save the weighted average profiles by region/class to a <code class="docutils literal notranslate"><span class="pre">{tech}.h5</span></code> file.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">map_supplycurve()</span></code></p>
+<ul class="simple">
+<li><p>Create output maps for supply curve</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">copy_outputs()</span></code></p>
+<ul class="simple">
+<li><p>Copy outputs from the new directory within hourlize/out to the corresponding input files in the ReEDS repo (<code class="docutils literal notranslate"><span class="pre">copy_to_reeds</span></code>) and/or shared drive (<code class="docutils literal notranslate"><span class="pre">copy_to_shared</span></code>)</p></li>
+</ul>
+</li>
+</ol>
+</section>
+</section>
+<section id="load-logic-load-py-this-section-is-outdated">
+<h3>Load Logic (load.py, THIS SECTION IS OUTDATED)<a class="headerlink" href="#load-logic-load-py-this-section-is-outdated" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Hourly PLEXOS region load data is first converted into ReEDS BA-level data by <code class="docutils literal notranslate"><span class="pre">plexos_to_reeds/plexos_to_reeds.py</span></code></p>
+<ul>
+<li><p>See <code class="docutils literal notranslate"><span class="pre">plexos_to_reeds/README.md</span></code> for more details</p></li>
+</ul>
+</li>
+</ul>
+<ol class="arabic simple">
+<li><p>If specified, we reduce the hourly data to one year.</p></li>
+<li><p>If specified, we remove the final day from leap years.</p></li>
+<li><p>If specified, we shift the data into local time of each BA.</p></li>
+<li><p>If specified, we calibrate each year of hourly data to EIA 2010 load data by state combined with load participation factors by BA. These load participation factors are from heritage ReEDS load inputs, which I believe were derived from Ventyx 2006 county-level load data.</p></li>
+<li><p>For each BA we calculate average load by timeslice and peak load by season.</p></li>
+<li><p>The load profiles, means by timeslice, and peaks by season are sent to a new folder in <code class="docutils literal notranslate"><span class="pre">out/</span></code></p></li>
+</ol>
+<ul class="simple">
+<li><p>Current inputs and outputs are stored here: <code class="docutils literal notranslate"><span class="pre">\\nrelnas01\ReEDS\Supply_Curve_Data\LOAD\</span></code></p></li>
+</ul>
+<p>See comments in those files for more information.</p>
+<p>(back to <a class="reference internal" href="#overview"><span class="xref myst">overview</span></a>)</p>
+</section>
+<section id="details-on-config-file-settings">
+<h3>Details on config file settings<a class="headerlink" href="#details-on-config-file-settings" title="Link to this heading"></a></h3>
+<p>This section provides some descriptions and typical values for the settings in the config files (see <a class="reference internal" href="#config-jsons"><span class="xref myst">above</span></a> for a general overview of these config files).</p>
+<section id="shared-config">
+<h4>Shared config<a class="headerlink" href="#shared-config" title="Link to this heading"></a></h4>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-left"><p>Setting</p></th>
+<th class="head text-left"><p>Description</p></th>
+<th class="head text-left"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-left"><p>compression_opts</p></td>
+<td class="text-left"><p>file compression options. can select from 0-9: 0 is faster and larger, 9 is slower and smaller, 4 is default</p></td>
+<td class="text-left"><p>4</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>filetype</p></td>
+<td class="text-left"><p>output filetype: ‘csv’ or ‘h5’. Note that load.py uses h5 regardless for default (historical) and EER load</p></td>
+<td class="text-left"><p>‘h5’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>hierarchy_path</p></td>
+<td class="text-left"><p>Path to ReEDS hiearchy file. Typically used for region mapping for resource.py and calibration/variability outputs for load.py</p></td>
+<td class="text-left"><p>‘{reeds_path}/inputs/hierarchy.csv’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>output_timezone</p></td>
+<td class="text-left"><p>‘local’ means convert to local standard time of the respective region. UTC is 0. EST is -5.</p></td>
+<td class="text-left"><p>‘local’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>select_year</p></td>
+<td class="text-left"><p>this is the year used for load and resource profile-derived inputs, although the profile outputs may still be multiyear (see hourly_out_years)</p></td>
+<td class="text-left"><p>2012</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>start_1am</p></td>
+<td class="text-left"><p>False means start at 12am</p></td>
+<td class="text-left"><p>True</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="resource-config">
+<h4>Resource config<a class="headerlink" href="#resource-config" title="Link to this heading"></a></h4>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-left"><p>Setting</p></th>
+<th class="head text-left"><p>Description</p></th>
+<th class="head text-left"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-left"><p>bin_group_cols</p></td>
+<td class="text-left"><p></p></td>
+<td class="text-left"><p>[‘region’,’class’]</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>bin_method</p></td>
+<td class="text-left"><p>‘equal_cap_man’, ‘equal_cap_cut’. ‘kmeans’ currently commented out to prevent numpy depracation warnings from sklearn.</p></td>
+<td class="text-left"><p>‘equal_cap_cut’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>copy_to_reeds</p></td>
+<td class="text-left"><p>Copy hourlize outputs to ReEDS inputs</p></td>
+<td class="text-left"><p>True</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>copy_to_shared</p></td>
+<td class="text-left"><p>Copy hourlize outputs to the shared drive</p></td>
+<td class="text-left"><p>False</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>driver</p></td>
+<td class="text-left"><p>‘H5FD_CORE’, None. H5FD_CORE will load the h5 into memory for better perforamnce, but None must be used for low-memory machines.</p></td>
+<td class="text-left"><p>‘H5FD_CORE’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>dtype</p></td>
+<td class="text-left"><p>data type used to save hourly profiles</p></td>
+<td class="text-left"><p>np.float16</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>existing_sites</p></td>
+<td class="text-left"><p>None or path to file with existing capacity</p></td>
+<td class="text-left"><p>this_dir_path + ‘../inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>gather_method</p></td>
+<td class="text-left"><p>‘list’, ‘slice’, ‘smart’. This setting will take a slice of profile ids from the min to max, rather than using a list of ids, for improved performance when ids are close together for each group.</p></td>
+<td class="text-left"><p>‘smart’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>hourly_out_years</p></td>
+<td class="text-left"><p>e.g. [2012] for just 2012 or list(range(2007,2014)) for 2007-2013</p></td>
+<td class="text-left"><p>list(range(2007,2014))</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>inputfiles</p></td>
+<td class="text-left"><p>list of files to copy over to hourlize input folder</p></td>
+<td class="text-left"><p>[“reg_map_file”, “class_path”]</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>profile_id_col</p></td>
+<td class="text-left"><p>Unique identifier for reV supply curve and profiles</p></td>
+<td class="text-left"><p>‘sc_point_gid’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>reg_map_path</p></td>
+<td class="text-left"><p>This file maps counties to reeds regions. By default uses the ReEDS hiearchy file.</p></td>
+<td class="text-left"><p>‘{hierarchy_path}’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>resource_source_timezone</p></td>
+<td class="text-left"><p>UTC would be 0, Eastern standard time would be -5</p></td>
+<td class="text-left"><p>0</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>start_year</p></td>
+<td class="text-left"><p>The start year of the model, for existing and sites purposes.</p></td>
+<td class="text-left"><p>2010</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>state_abbrev</p></td>
+<td class="text-left"><p></p></td>
+<td class="text-left"><p>this_dir_path + ‘inputs/resource/state_abbrev.csv’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>subsetvars</p></td>
+<td class="text-left"><p>list of columns in the rev_paths file to use to select the appropriate rev_path</p></td>
+<td class="text-left"><p>[‘tech’, ‘access_case’]</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>subtract_exog</p></td>
+<td class="text-left"><p>Indicate whether to remove exogenous (pre-start_year) capacity from the supply curve [default False]</p></td>
+<td class="text-left"><p>False</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>test_filters</p></td>
+<td class="text-left"><p>dictionary definiting a set of columns and the corresponding values to subset the supply curve on</p></td>
+<td class="text-left"><p>{‘region’:[‘p97’, ‘p98’]}</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>test_mode</p></td>
+<td class="text-left"><p>This limits the supply curve based on the dictionary defined in test_filers</p></td>
+<td class="text-left"><p>False</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="tech-configs">
+<h4>Tech configs<a class="headerlink" href="#tech-configs" title="Link to this heading"></a></h4>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-left"><p>Setting</p></th>
+<th class="head text-left"><p>Description</p></th>
+<th class="head text-left"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-left"><p>cost_out</p></td>
+<td class="text-left"><p>‘combined_eos_trans’ is a computed column from economies of scale and transmission cost. To turn off economies of scale, use ‘trans_cap_cost’. ‘combined_off_ons_trans’ is a computed column from offshore (array and export) as well as onshore transmission cost.</p></td>
+<td class="text-left"><p>upv, wind-ons: ‘combined_eos_trans’<br>wind-ofs: ‘combined_off_ons_trans’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>capacity_col</p></td>
+<td class="text-left"><p>Format of the supply curve capacity column</p></td>
+<td class="text-left"><p>upv: ‘capacity_mw_{upv_type}’<br>wind-ofs: ‘capacity_mw’<br>wind-ons: ‘capacity’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>class_bin</p></td>
+<td class="text-left"><p>This will layer dynamic bins. If class_path != None, we add region-specific bins for each of the classes defined in class_path.</p></td>
+<td class="text-left"><p>upv, wind-ons: true<br>wind-ofs: false</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>class_bin_col</p></td>
+<td class="text-left"><p>The column to be binned (only used if class_bin = True)</p></td>
+<td class="text-left"><p>upv: ‘mean_cf_{upv_type}’<br>wind-ofs,wind-ons: ‘mean_cf’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>class_bin_method</p></td>
+<td class="text-left"><p>The bin method, either ‘kmeans’, ‘equal_cap_cut’, or ‘equal_cap_man’ (only used if class_bin = True)</p></td>
+<td class="text-left"><p>‘kmeans’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>class_bin_num</p></td>
+<td class="text-left"><p>The number of class bins (only used if class_bin = True)</p></td>
+<td class="text-left"><p>upv: 10<br> wind-ofs, wind-ons: 10</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>class_path</p></td>
+<td class="text-left"><p>null or path to class definitions file</p></td>
+<td class="text-left"><p>upv, wind-ons: null<br>wind-ofs: {hourlize_path}/inputs/resource/{tech}_resource_classes.csv</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>cost_adder_components</p></td>
+<td class="text-left"><p>Supply curve cost columns to carry over to outputs</p></td>
+<td class="text-left"><p>upv, wind-ons: [‘trans_adder_per_MW’, ‘capital_adder_per_MW’]<br>wind-ofs: []</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>distance_cols</p></td>
+<td class="text-left"><p>dist_to_coast is currently in meters, so we convert to km in get_supply_curve_and_preprocess()</p></td>
+<td class="text-left"><p>upv, wind-ons: [‘dist_km’,’reinforcement_dist_km’]<br>wind-ofs: [‘dist_km’,’dist_to_coast’,’reinforcement_dist_km’]</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>filter_cols</p></td>
+<td class="text-left"><p>{} means use the entire dataframe; {‘offshore’:[‘=’,0]} means filter the supply curve to rows for which offshore is 0.</p></td>
+<td class="text-left"><p>upv, wind-ons: {}<br>wind-ofs: {‘offshore’:[‘=’,0]}</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>min_cap</p></td>
+<td class="text-left"><p>MW  (LBNL utility-scale solar report &amp; NREL PV cost benchmarks define utility-scale as ≥5 MW)</p></td>
+<td class="text-left"><p>upv: 5, wind-ofs: 15, wind-ons: 0</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>profile_dir</p></td>
+<td class="text-left"><p>Use ‘’ if .h5 files are in same folder as metadata, else point to them, e.g. f’../{rev_case}’</p></td>
+<td class="text-left"><p>upv: ‘{access_case}_{upv_type}’<br>wind-ons, wind-ofs: ‘’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>profile_dset</p></td>
+<td class="text-left"><p>Name of hourly profiles in reV runs</p></td>
+<td class="text-left"><p>‘rep_profiles_0’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>profile_file_format</p></td>
+<td class="text-left"><p>Format for hourly profiles filename. Note: unused if single_profile</p></td>
+<td class="text-left"><p>upv: {rev_case}_rep-profiles<br>wind-ons, wind-ofs: ‘’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>profile_weight_col</p></td>
+<td class="text-left"><p>Name of column to use for weighted average of profiles. Using ‘capacity’ will link to whatever value is specified by ‘capacity_col’</p></td>
+<td class="text-left"><p>‘capacity’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>single_profile</p></td>
+<td class="text-left"><p>single_profile has different columns and a single h5 profile file (for all years).</p></td>
+<td class="text-left"><p>upv, wind-ofs: false, wind-ons: true</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>upv_type</p></td>
+<td class="text-left"><p>type of UPV capacity and profiles to use; options are ‘ac’ and ‘dc’</p></td>
+<td class="text-left"><p>upv: ‘dc’; wind-ons, wind-ofs: null</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>rev_jsons</p></td>
+<td class="text-left"><p>list of reV json files to copy over</p></td>
+<td class="text-left"><p>upv: [“config_aggregation.json”, “config_pipeline.json”, “config_supply-curve.json”, “{access_case}_{upv_type}/config_rep-profiles_aggprof.json”] <br>wind-ofs: [“config_aggregation.json”, “config_pipeline.json”, “config_supply-curve.json”, “config_rep-profiles.json”]<br>wind-ons: [“config_pipeline.json”, “config_supply-curve.json”, “sam.json”, “config_bespoke.json”]</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="load-config">
+<h4>Load config<a class="headerlink" href="#load-config" title="Link to this heading"></a></h4>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-left"><p>Setting</p></th>
+<th class="head text-left"><p>Description</p></th>
+<th class="head text-left"><p>Default</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-left"><p>aeo_default</p></td>
+<td class="text-left"><p>To calibrate data pre-use_default_before_yr</p></td>
+<td class="text-left"><p>os.path.join(‘..’,’inputs’,’load’,’demand_AEO_2023_reference.csv’)</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>ba_frac_path</p></td>
+<td class="text-left"><p>These are fractions of state load in each ba, unused if calibrate_path is False</p></td>
+<td class="text-left"><p>os.path.join(this_dir_path,’inputs’,’load’,’load_participation_factors_st_to_ba.csv’)</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>ba_timezone_path</p></td>
+<td class="text-left"><p>Should this be used for resource too, rather than site timezone?</p></td>
+<td class="text-left"><p>os.path.join(this_dir_path,’inputs’,’load’,’ba_timezone.csv’)</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>calibrate_path</p></td>
+<td class="text-left"><p>Enter path to calibration file or ‘False’ to leave uncalibrated</p></td>
+<td class="text-left"><p>os.path.join(this_dir_path,’inputs’,’load’,’EIA_loadbystate.csv’)</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>calibrate_type</p></td>
+<td class="text-left"><p>either ‘one_year’ or ‘all_years’. Unused if calibrate_path is False. ‘one_year’ means to only calibrate one year to the EIA data and then apply the same scaling factor to all years. ‘all_years’ will calibrate all each year to the EIA data.</p></td>
+<td class="text-left"><p>‘all_years’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>calibrate_year</p></td>
+<td class="text-left"><p>This is the year that the outputs of load.py represent, based on the EIA calibration year. Unused if calibrate_path is False.</p></td>
+<td class="text-left"><p>2010</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>dtypeLoad</p></td>
+<td class="text-left"><p>Use int if the file size ends up too large.</p></td>
+<td class="text-left"><p>np.float32</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>hourly_out_years</p></td>
+<td class="text-left"><p>e.g. list(range(2021,2051)) for 2021-2050; must be a list even if only one year</p></td>
+<td class="text-left"><p>list(range(2021,2051))</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>hourly_process</p></td>
+<td class="text-left"><p>If False, skip all hourly processing steps</p></td>
+<td class="text-left"><p>True</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>load_source</p></td>
+<td class="text-left"><p>The load source file’s first column should be datetime, starting at Jan 1, 12am, stepping by 1 hour, and one column for each BA. It should be a csv or a compressed csv.</p></td>
+<td class="text-left"><p>‘//nrelnas01/ReEDS/Supply_Curve_Data/LOAD/2020_Update/plexos_to_reeds/outputs/load_hourly_ba_EST.csv’</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>load_source_hr_type</p></td>
+<td class="text-left"><p>Use ‘end’ if load_source data hour-ending or ‘begin’ for hour-beginning. For instantaneous use ‘end’. For EER load use ‘begin’.</p></td>
+<td class="text-left"><p>‘begin’</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>load_source_timezone</p></td>
+<td class="text-left"><p>UTC would be 0, Eastern standard time would be -5</p></td>
+<td class="text-left"><p>-5</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>truncate_leaps</p></td>
+<td class="text-left"><p>Truncate leap years. This currently needs to be True for mapping properly to timeslices.</p></td>
+<td class="text-left"><p>True</p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p>us_only</p></td>
+<td class="text-left"><p>Run only US BAs.</p></td>
+<td class="text-left"><p>True</p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p>use_default_before_yr</p></td>
+<td class="text-left"><p>Either False or a year. If set to a year, this will pull in ReEDS default load data before that year (2012 weather year)</p></td>
+<td class="text-left"><p>2021</p></td>
+</tr>
+</tbody>
+</table>
+<p>(back to <a class="reference internal" href="#overview"><span class="xref myst">overview</span></a>)</p>
+</section>
+</section>
+</section>
+<p>For additional information on using Hourlize, you can watch the training video: <a class="reference external" href="https://nrel-my.sharepoint.com/:v:/r/personal/bsergi_nrel_gov/Documents/Misc/Recordings/Hourlize%20wind_solar%20resource%20preprocessing%20tutorial-20240212_150245-Meeting%20Recording.mp4?csf=1&amp;amp;web=1&amp;amp;e=vIds6r&amp;amp;nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D">Hourlize wind/solar resource preprocessing tutorial</a></p>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

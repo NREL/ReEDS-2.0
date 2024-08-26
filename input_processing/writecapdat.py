@@ -5,12 +5,13 @@ NEMS generator database and organize this data into various categories, such as:
     - Non-RSC Prescribed Capacity
     - RSC Existing Capacity
     - RSC Prescribed Capacity
+    - SMR Existing Capacity
     - Retirement Data
         - Generator Retirements
         - Wind Retirements
         - Non-RSC Retirements
-    - Hydro Capacity Factors
-    - waterconstraint indexing
+    - Hydro Capacity Adjustment Factors - ccseasons
+    - Waterconstraint Indexing
     - Canadian Imports
 The categorized datasets are then written out to various csv files for use
 throughout the ReEDS model.
@@ -25,7 +26,6 @@ Some notes on the NEMS database:
 ### ===========================================================================
 import argparse
 import datetime
-from itertools import product
 import numpy as np
 import os
 import pandas as pd
@@ -54,15 +54,7 @@ inputs_case = args.inputs_case
 
 # #%% Settings for testing
 # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-# inputs_case = os.path.join(reeds_path,'runs','Feb8_final_Pacific','inputs_case')
-
-#%%#################
-### FIXED INPUTS ###
-
-# Start year for ReEDS prescriptive builds (default: 2010):
-Sw_startyear = 2010
-# Generator database column seletions:
-Sw_onlineyearcol = 'StartYear'
+# inputs_case = os.path.join(reeds_path,'runs','v20240427_cleanupM0_Pacific','inputs_case')
 
 #%% Set up logger
 log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
@@ -71,7 +63,6 @@ print('Starting writecapdat.py')
 #%% Inputs from switches
 sw = pd.read_csv(
     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
-unitdata = sw.unitdata
 retscen = sw.retscen
 GSw_WaterMain = int(sw.GSw_WaterMain)
 GSw_DUPV = int(sw.GSw_DUPV)
@@ -98,10 +89,10 @@ else:
 
 quartershorten = {'spring':'spri','summer':'summ','fall':'fall','winter':'wint'}
 
-val_r_all = pd.read_csv(
-    os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
-val_r = pd.read_csv(
-    os.path.join(inputs_case, 'val_r.csv'), header=None).squeeze(1).tolist()
+hotcold_months = {'NOV':'cold', 'DEC':'cold', 'JAN':'cold', 'FEB':'cold', 
+                  'JUN':'hot',  'JUL':'hot',  'AUG':'hot'
+                  }
+
 years = pd.read_csv(
     os.path.join(inputs_case,'modeledyears.csv')
 ).columns.astype(int).values.tolist()
@@ -112,40 +103,48 @@ years = pd.read_csv(
 TECH = {
     'capnonrsc': [
         'coaloldscr', 'coalolduns', 'biopower', 'coal-igcc',
-        'coal-new', 'gas-cc', 'gas-ct', 'geothermal', 'lfill-gas',
+        'coal-new', 'gas-cc', 'gas-ct', 'lfill-gas',
         'nuclear', 'o-g-s', 'battery_2', 'battery_4', 'battery_6',
-        'battery_8', 'battery_10', 'pumped-hydro',
+        'battery_8', 'battery_10','battery_12','battery_24','battery_48',
+        'battery_72','battery_100', 'pumped-hydro'
     ],
     'prescribed_nonRSC': [
         'coal-new', 'lfill-gas', 'gas-ct', 'o-g-s', 'gas-cc', 
         'hydED', 'hydEND', 'hydND', 'hydNPND', 'hydUD', 'hydUND',
         'geothermal', 'biopower', 'coal-igcc', 'nuclear',
-        'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'pumped-hydro',
+        'battery_2', 'battery_4', 'battery_6', 'battery_8', 
+        'battery_10','battery_12','battery_24','battery_48',
+        'battery_72','battery_100', 'pumped-hydro',
         'coaloldscr',
     ],
-    'storage': [
-        'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'pumped-hydro',
+    'storage'  : ['battery_2', 'battery_4', 'battery_6', 'battery_8', 
+                  'battery_10','battery_12','battery_24','battery_48',
+                  'battery_72','battery_100', 'pumped-hydro'
     ],
     'rsc_all': ['dupv','upv','pvb','csp-ns'],
     'rsc_csp': ['csp-ns'],
-    'rsc_wsc': ['dupv','upv','pvb','csp-ns','csp-ws','wind-ons','wind-ofs'],
+    'rsc_wsc': ['dupv','upv','pvb','csp-ns','csp-ws','wind-ons','wind-ofs',
+                'geohydro_allkm','egs_allkm'],
     'prsc_all': ['dupv','upv','pvb','csp-ns','csp-ws'],
     'prsc_upv': ['dupv','upv','pvb'],
     'prsc_w': ['wind-ons','wind-ofs'],
     'prsc_csp': ['csp-ns','csp-ws'],
+    'prsc_geo': ['geohydro_allkm','egs_allkm'],
     'retirements': [
         'coalolduns', 'o-g-s', 'hydED', 'hydEND', 'gas-ct', 'lfill-gas',
         'coaloldscr', 'biopower', 'gas-cc', 'coal-new',
         'battery_2','nuclear', 'pumped-hydro', 'coal-igcc',
     ],
     'windret': ['wind-ons'],
+    'georet': ['geohydro_allkm','egs_allkm'],
     # This is not all technologies that do not having cooling, but technologies
     # that are (or could be) in the plant database.
     'no_cooling': [
-        'dupv', 'upv', 'pvb', 'gas-ct', 'geothermal',
+        'dupv', 'upv', 'pvb', 'gas-ct', 'geohydro_allkm','egs_allkm',
         'battery_2', 'battery_4', 'battery_6', 'battery_8',
-        'battery_10', 'pumped-hydro', 'pumped-hydro-flex', 'hydUD',
-        'hydUND', 'hydD', 'hydND', 'hydSD', 'hydSND', 'hydNPD',
+        'battery_10','battery_12','battery_24','battery_48',
+        'battery_72','battery_100', 'pumped-hydro', 'pumped-hydro-flex', 
+        'hydUD', 'hydUND', 'hydD', 'hydND', 'hydSD', 'hydSND', 'hydNPD',
         'hydNPND', 'hydED', 'hydEND', 'wind-ons', 'wind-ofs', 'caes',
     ],
 }
@@ -178,11 +177,19 @@ COLNAMES = {
         [Sw_onlineyearcol,r_col,'tech','ctt','wst','cap'],
         ['t','r','i','ctt','wst','value']
     ),
+    'prsc_geo': (
+        [Sw_onlineyearcol,r_col,'tech','cap'],
+        ['t','r','i','value']
+    ),
     'retirements': (
         [retscen,r_col,'tech','coolingwatertech','ctt','wst','cap'],
         ['t','r','i','coolingwatertech','ctt','wst','value']
     ),
     'windret': (
+        [r_col,'tech','RetireYear','cap'],
+        ['r','i','t','value']
+    ),
+    'georet': (
         [r_col,'tech','RetireYear','cap'],
         ['r','i','t','value']
     ),
@@ -192,14 +199,10 @@ COLNAMES = {
 ### --- PROCEDURE ---
 ### ===========================================================================
 
-cappath = os.path.join(reeds_path,'inputs','capacitydata')
-
 print('Importing generator database:')
-gdb_use = pd.read_csv(os.path.join(cappath,'ReEDS_generator_database_final_EIA-NEMS.csv'),
+gdb_use = pd.read_csv(os.path.join(inputs_case,'unitdata.csv'),
                       low_memory=False)
 
-### Make some initial modifications to the generator database:
-gdb_use = gdb_use.loc[gdb_use[r_col].isin(val_r_all)]
 
 # If DUPV is turned off, consider all DUPV as UPV for existing and prescribed builds.
 if GSw_DUPV == 0:
@@ -281,19 +284,6 @@ capnonrsc = capnonrsc[COLNAMES['capnonrsc'][0]]
 capnonrsc.columns = COLNAMES['capnonrsc'][1]
 capnonrsc = capnonrsc.groupby(COLNAMES['capnonrsc'][1][:-1]).sum().reset_index()
 
-# Create geoexist.csv and copy to inputs_case
-geoexist = gdb_use.loc[(gdb_use['tech'] == 'geothermal') &
-                       (gdb_use[Sw_onlineyearcol] < Sw_startyear) &
-                       (gdb_use['RetireYear']     > Sw_startyear)
-                       ]
-geoexist = (geoexist[['tech',r_col,'cap']]
-            .rename(columns={'tech':'*i',r_col:'r','cap':'MW'})
-            )
-geoexist = geoexist.groupby(['*i','r']).sum().reset_index()
-# Rename generic geothermal tech category to geohydro_allkm_1
-geoexist['*i'] = 'geohydro_allkm_1'
-geoexist.to_csv(os.path.join(inputs_case,'geoexist.csv'),index=False)
-
 #%%########################################
 #    -- non-RSC Prescribed Capacity --    #
 ###########################################
@@ -312,9 +302,8 @@ for j, row in prescribed_nonRSC.iterrows():
 
 if int(sw.GSw_NuclearDemo)==1:
     # Load in demo data and stack it on prescribed non-RSC 
-    demo = pd.read_csv(os.path.join(reeds_path,'inputs','capacitydata',
-                                    'demonstration_plants.csv')).drop("notes", axis=1)
-    demo = demo[demo['r'].isin(val_r_all)]
+    demo = pd.read_csv(
+        os.path.join(inputs_case,'demonstration_plants.csv')).drop("notes", axis=1)
     prescribed_nonRSC = pd.concat([prescribed_nonRSC,demo],sort=False)
 
 prescribed_nonRSC = (
@@ -377,6 +366,20 @@ for j,row in rsc_wsc.iterrows():
     if row['i'] in ['DUPV','UPV']:
         rsc_wsc.loc[j,'value'] *= scalars['ilr_utility']
 
+# Create geoexist.csv and copy to inputs_case
+geoexist = gdb_use.loc[(gdb_use['tech'].isin(['geohydro_allkm','egs_allkm'])) &
+                       (gdb_use[Sw_onlineyearcol] < Sw_startyear) &
+                       (gdb_use['RetireYear']     > Sw_startyear)
+                       ]
+geoexist = (geoexist[['tech',r_col,'cap']]
+            .rename(columns={'tech':'*i',r_col:'r','cap':'MW'})
+            )
+geoexist = geoexist.groupby(['*i','r']).sum().reset_index()
+# Rename generic geothermal tech categories, assuming a resource class of 1
+geoexist["*i"] = geoexist["*i"] + "_1"
+geoexist.to_csv(os.path.join(inputs_case,'geoexist.csv'),index=False)
+
+
 #%%####################################
 #    -- RSC Prescribed Capacity --    #
 #######################################
@@ -413,26 +416,34 @@ pcsp.columns = COLNAMES['prsc_csp'][1]
 if GSw_WaterMain == 1:
     pcsp['i'] = np.where(pcsp['i']=='csp-ws',pcsp['i']+'_'+pcsp['ctt']+'_'+pcsp['wst'],'csp-ws')
 
+# Load in geo builds:
+pgeo = gdb_use.loc[(gdb_use['tech'].isin(TECH['prsc_geo'])) &
+                    (gdb_use[Sw_onlineyearcol] >= Sw_startyear)
+                    ]
+pgeo = pgeo[COLNAMES['prsc_geo'][0]]
+pgeo.columns = COLNAMES['prsc_geo'][1]
+
+pgeo = pgeo.groupby(['t','r','i']).sum().reset_index()
+pgeo.sort_values(['t','r'], inplace=True)
 
 # Concat all RSC Existing Data to one dataframe:
-prescribed_rsc = pd.concat([pupv,pwind,pcsp],sort=False)
+prescribed_rsc = pd.concat([pupv,pwind,pcsp,pgeo],sort=False)
 
 #%%----------------------------------------------------------------------------
 ################################
-# -- SMR existing capacity --  #
+# -- SMR Existing Capacity --  #
 ################################
 print('Gathering SMR Existing Capacity...')
-# grab the first year for smr because that is when new capacity
-# can begin to be built (for smr, smr_ccs and electrolyzers)
+# Grab the first year for smr because that is when new capacity can begin to be built (for 
+# smr, smr_ccs and electrolyzers)
 firstyear = pd.read_csv(
-    os.path.join(cappath,'firstyear.csv'), header=None, names=['i','t'],
-    index_col='i',
-).squeeze(1)
+    os.path.join(inputs_case,'firstyear.csv'),
+).rename(columns={'*i':'i'}).set_index('i').squeeze(1)
 h2_prod_first_year = firstyear['smr']
 # Get exogenous H2 demand
 h2_exogenous_demand = (
     pd.read_csv(os.path.join(inputs_case,'h2_exogenous_demand.csv'))
-    .rename(columns={f'{sw.GSw_H2_Demand_Case}':'million_tonnes'},)
+    .rename(columns={f'{sw.GSw_H2_Demand_Case}':'million_tons'},)
     .drop(['*p'], axis=1).set_index('t').squeeze()
 )
 ### Get BA share of national H2 demand
@@ -441,71 +452,67 @@ h2_ba_share = pd.read_csv(
 ).rename(columns={'*r':'r'}).pivot(index='t', columns='r', values='fraction')
 ## h2_ba_share is only populated for 2021 and 2050, so need to fill the empty data
 h2_ba_share = h2_ba_share.reindex(sorted(list(set(years+[2021,2050]))))
-## if a region has no data for 2021, it's zero (GAMS convention)
+## If a region has no data for 2021, it's zero (GAMS convention)
 h2_ba_share.loc[2021] = h2_ba_share.loc[2021].fillna(0)
-## backfill before 2021
+## Backfill before 2021
 h2_ba_share.loc[:2021] = h2_ba_share.loc[:2021].fillna(method='bfill')
-## interpolate between 2021-2050
+## Interpolate between 2021-2050
 h2_ba_share.loc[2021:] = h2_ba_share.loc[2021:].interpolate('index')
-## only keep the modeled years
+## Only keep the modeled years
 h2_ba_share = h2_ba_share.loc[years].copy()
 
-# calculating the consumption characteristics
-# has columns i, t, parameter, value
+# Calculating the consumption characteristics (has columns i, t, parameter, value)
 consume_char0 = pd.read_csv(
-    os.path.join(reeds_path,'inputs','consume',f'consume_char_{sw.GSw_H2_Inputs}.csv')
-).rename(columns={'*i':'i'})
+    os.path.join(inputs_case,'consume_char.csv')).rename(columns={'*i':'i'})
 consume_char0['i'] = consume_char0['i'].str.lower()
 consume_char0 = consume_char0.set_index(['i','t','parameter']).value
 
-outage_forced = pd.read_csv(
-    os.path.join(reeds_path,'inputs','plant_characteristics','outage_forced.csv'),
-    header=None, index_col=0,
+outage_forced_static = pd.read_csv(os.path.join(inputs_case,'outage_forced_static.csv'),
+                            header=None, index_col=0,
 ).squeeze(1)
 
 smr_2010_ele_efficiency = consume_char0['smr',2010,'ele_efficiency']
-smr_outage_forced = outage_forced['smr']
+smr_outage_forced = outage_forced_static['smr']
 h2_demand_initial = h2_exogenous_demand[h2_prod_first_year]
 
-# now make some calculations to get the existing SMR capacity
-# hydrogen demand per r,t (million tonnes) * (10^9 kg/million ton) * (kWh/kg)
+# Now make some calculations to get the existing SMR capacity
+# Hydrogen demand per r,t (million metric tons) * (10^9 kg/million metric ton) * (kWh/kg)
 # / 8760 to convert kWh --> kW  / (10^3 kW/MW) / outage rate
 # * to make a tiny adjustment upwards to avoid infeasibilities
 h2_existing_smr_cap = (
     h2_ba_share.stack('r').reorder_levels(['r','t']).rename('fraction').reset_index())
-# if this was multiplied by the H2 demand per year, then we would be forcing
+# If this was multiplied by the H2 demand per year, then we would be forcing
 # existing SMR to meet exogenous H2 demand forever and we don't want that.
 # Only for it to meet 2023 demand
-h2_existing_smr_cap['million_tonnes'] = h2_existing_smr_cap['fraction'] * h2_demand_initial
+h2_existing_smr_cap['million_tons'] = h2_existing_smr_cap['fraction'] * h2_demand_initial
 h2_existing_smr_cap['value'] =  (
-    h2_existing_smr_cap['million_tonnes'] * 1e9 * smr_2010_ele_efficiency
+    h2_existing_smr_cap['million_tons'] * 1e9 * smr_2010_ele_efficiency
     / 8760 / 1000 / (1 - smr_outage_forced) * 1.0001)
-# make any value after h2_prod_first_year to be the same MW value as h2_prod_first_year
+# Make any value after h2_prod_first_year to be the same MW value as h2_prod_first_year
 # (aka we will not force model to build more SMR capacity in 2030 once it has already
 # met h2 demand in 2024). aka if model year is 2024, then from 2024-2050, the data
-# will be the same df with columns t, r, fraction, million tonnes,
+# will be the same df with columns t, r, fraction, million metric tons,
 # value for 134 different BAs in h2_prod_first_year
 h2_prod_first_year_df = h2_existing_smr_cap[
     h2_existing_smr_cap['t']==h2_prod_first_year
 ].drop(['t'], axis=1)
-# for any years after h2_prod_first_year
+# For any years after h2_prod_first_year
 after_h2_prod_first_year_df = h2_existing_smr_cap[
     h2_existing_smr_cap['t'] > h2_prod_first_year
-].drop(['fraction','million_tonnes','value'], axis=1)
-# new df from 2025 --> 2050 
+].drop(['fraction','million_tons','value'], axis=1)
+# New df from 2025 --> 2050 
 after_h2_prod_first_year_df = pd.merge(
     h2_prod_first_year_df,
     after_h2_prod_first_year_df,
     how='left', on=['r'],
 )
-# concat 2010-2024 df and 2025-->end of model
+# Concat 2010-2024 df and 2025-->end of model
 h2_existing_smr_cap = pd.concat([
     h2_existing_smr_cap[h2_existing_smr_cap['t']<=h2_prod_first_year],
     after_h2_prod_first_year_df
 ])
-# filter down to modeled regions and years (otherwise b_inputs will throw an error)
-h2_existing_smr_cap = (
-    h2_existing_smr_cap[h2_existing_smr_cap['r'].isin(val_r)]
+# Filter down to modeled regions and years (otherwise b_inputs will throw an error)
+h2_existing_smr_cap = (h2_existing_smr_cap
     .rename(columns={'r':'*r'})
     .sort_values(by=['t','*r'])
 )
@@ -543,40 +550,46 @@ wind_rets = (wind_rets.pivot_table(index = ['i','v','r'], columns = 't', values=
                       .fillna(0)
             )
 
+#================================
+#   --- Geothermal Retirements ---
+#================================
+print('Gathering Geothermal Retirement Data...')
+geo_retirements = gdb_use.loc[(gdb_use['tech'].isin(TECH['georet'])) &
+                   (gdb_use[Sw_onlineyearcol] <= Sw_startyear) &
+                   (gdb_use['RetireYear']     >  Sw_startyear) &
+                   (gdb_use['RetireYear']     <  Sw_startyear + 30)
+                   ]
+geo_retirements = geo_retirements[COLNAMES['georet'][0]]
+geo_retirements.columns = COLNAMES['georet'][1]
+geo_retirements['v'] = 'init-1'
+geo_retirements = geo_retirements.groupby(['i','v','r','t']).sum().reset_index()
+
+geo_retirements = (geo_retirements
+         .pivot_table(index = ['i','v','r'], columns = 't', values='value')
+         .reset_index()
+         .fillna(0)
+         )
+
+
 #%%----------------------------------------------------------------------------
-#####################################
-#    -- HYDRO Capacity Factor --    #
-#####################################
-hydcf = pd.read_csv(os.path.join(cappath, "hydcf.csv"), header=[0,1], index_col=[0,1])
-# Convert to long format
-hydcf = pd.concat([
-    hydcf,
-    pd.concat({y: hydcf.loc[2020] for y in [i for i in years if i > 2020]}, names=['t','month'])
-]).stack().stack().rename('value').reorder_levels(['t','i','r','month']).reset_index()
-# Filter down to modeled regions
-hydcf = hydcf[hydcf['r'].isin(val_r_all)]
-hydcf['value'] = hydcf['value'].round(5)
+#############################################################
+#    -- Hydro Capacity Adjustment Factors: CC-Seasaon --    #
+#############################################################
 
-# Hydro capacity adjustment by month
-hydcapadj = pd.read_csv(os.path.join(cappath, "SeaCapAdj_hy.csv"))
-# filter down to modeled regions
-hydcapadj = hydcapadj[hydcapadj['r'].isin(val_r_all)]
-hydcapadj['value'] = hydcapadj['value'].round(5)
-
-# Hydro capacity adjustment by ccseason
-hydcapadj_ccseason = hydcapadj.copy()
-hotcold_months = {'NOV':'cold', 'DEC':'cold', 'JAN':'cold', 'FEB':'cold', 
-                  'JUN':'hot',  'JUL':'hot',  'AUG':'hot'
-                  }
-hydcapadj_ccseason['ccseason'] = hydcapadj_ccseason['month'].map(hotcold_months)
-hydcapadj_ccseason = hydcapadj_ccseason[hydcapadj_ccseason['ccseason'].isin(['cold','hot'])].drop(columns='month')
-hydcapadj_ccseason = hydcapadj_ccseason.groupby(['i','r','ccseason']).mean().reset_index()
-hydcapadj_ccseason['value'] = hydcapadj_ccseason['value'].round(5)
+# Initialize with monthly hydropower capacity adjustment factor values
+hydcapadj_ccszn = pd.read_csv(os.path.join(inputs_case,'hydcapadj.csv'))
+# Map hot/cold values to ccseason months and filter for ccseason data
+hydcapadj_ccszn['ccseason'] = hydcapadj_ccszn['month'].map(hotcold_months)
+hydcapadj_ccszn = (hydcapadj_ccszn[hydcapadj_ccszn['ccseason'].isin(['cold','hot'])]
+                   .drop(columns='month'))
+# Average monthly data to get factor values by ccseason
+hydcapadj_ccszn = hydcapadj_ccszn.groupby(['*i','r','ccseason']).mean().reset_index()
+hydcapadj_ccszn['value'] = hydcapadj_ccszn['value'].round(5)
 
 
 #%%----------------------------------------------------------------------------
 ########################################
-#    -- waterconstraint indexing --    #
+#    -- Waterconstraint Indexing --    #
 ########################################
 
 rets['i'] = rets['i'].str.lower()
@@ -623,30 +636,29 @@ else:
 caprsc = caprsc.groupby(['i','r']).value.sum().reset_index()
 prescribed_rsc = prescribed_rsc.groupby(['t','i','r']).value.sum().reset_index()
 
+
 #%%----------------------------------------------------------------------------
 ################################
 #    -- Canadian Imports --    #
 ################################
 
-can_imports_year_mwh = pd.read_csv(
-    os.path.join(reeds_path,'inputs','canada_imports','can_imports.csv'),
-    index_col='r').reindex(val_r_all).dropna()
+can_imports_year_mwh = pd.read_csv(os.path.join(inputs_case,'can_imports.csv'),
+                                   index_col='r').dropna()
 can_imports_year_mwh.columns = can_imports_year_mwh.columns.astype(int)
 can_imports_year_mwh = can_imports_year_mwh.reindex(years, axis=1).dropna(axis=1)
 
-h_dt_szn = pd.read_csv(os.path.join(reeds_path,'inputs','variability','h_dt_szn.csv'))
+h_dt_szn = pd.read_csv(os.path.join(inputs_case,'h_dt_szn.csv'))
 quarterhours = h_dt_szn.loc[h_dt_szn.year==2012].groupby('quarter').year.count()
 quarterhours.index = quarterhours.index.map(lambda x: quartershorten.get(x,x)).rename('szn')
 
-can_imports_szn_frac = pd.read_csv(
-    os.path.join(reeds_path,'inputs','canada_imports','can_imports_szn_frac.csv'),
-    header=0, names=['szn','frac'], index_col='szn').squeeze(1)
-
+can_imports_quarter_frac = pd.read_csv(os.path.join(inputs_case,'can_imports_quarter_frac.csv'),
+                                   header=0, names=['szn','frac'], index_col='szn'
+                                   ).squeeze(1)
 can_imports_capacity = (
     ## Start with annual imports in MWh
     pd.concat({szn: can_imports_year_mwh for szn in quartershorten.values()}, axis=0, names=['szn','r'])
     ## Multiply by season frac to get MWh per season
-    .multiply(can_imports_szn_frac, axis=0, level='szn')
+    .multiply(can_imports_quarter_frac, axis=0, level='szn')
     ## Divide by hours per season to get average MW by season
     .divide(quarterhours, axis=0, level='szn')
     ## Keep the max value across seasons
@@ -654,7 +666,6 @@ can_imports_capacity = (
     ## Reshape for GAMS
     .stack().rename_axis(['*r','t']).rename('MW').round(3)
 )
-
 
 
 #%%----------------------------------------------------------------------------
@@ -685,18 +696,13 @@ wind_rets.to_csv(
     os.path.join(inputs_case,'wind_retirements.csv'),index=False)
 h2_existing_smr_cap[['*r','t','value']].to_csv(
     os.path.join(inputs_case,'h2_existing_smr_cap.csv'),index=False)
+geo_retirements.to_csv(
+    os.path.join(inputs_case,'geo_retirements.csv'),index=False)
 poi_cap_init.to_csv(os.path.join(inputs_case,'poi_cap_init.csv'))
 cap_cspns.to_csv(os.path.join(inputs_case,'cap_cspns.csv'))
 rsc_wsc.to_csv(os.path.join(inputs_case,'rsc_wsc.csv'),index=False)
 ### Add '*' to first column name so GAMS reads it as a comment
-hydcf[['i','month','r','t','value']] \
-    .rename(columns={'i': '*i'}) \
-    .to_csv(os.path.join(inputs_case,'hydcf.csv'), index=False)
-hydcapadj[['i','month','r','value']] \
-    .rename(columns={'i': '*i'}) \
-    .to_csv(os.path.join(inputs_case,'hydcapadj.csv'), index=False)
-hydcapadj_ccseason[['i','ccseason','r','value']] \
-    .rename(columns={'i': '*i'}) \
+hydcapadj_ccszn[['*i','ccseason','r','value']] \
     .to_csv(os.path.join(inputs_case,'cap_hyd_ccseason_adj.csv'), index=False)
 can_imports_capacity.to_csv(os.path.join(inputs_case,'can_imports_capacity.csv'))
 
@@ -705,5 +711,3 @@ toc(tic=tic, year=0, process='input_processing/writecapdat.py',
 
 print('Finished writecapdat.py')
 
-
-# %%

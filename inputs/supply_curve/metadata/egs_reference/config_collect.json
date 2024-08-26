@@ -1,0 +1,24 @@
+{
+    "log_directory": "./logs",
+    "execution_control": {
+        "allocation": "rev",
+        "feature": "-p debug",
+        "memory": 83,
+        "option": "kestrel",
+        "walltime": 1
+    },
+    "log_level": "INFO",
+    "dsets": [
+        "annual_energy",
+        "cf_mean",
+        "cf_profile",
+        "gen_profile",
+        "lcoe_fcr",
+        "nameplate",
+        "resource_depth",
+        "resource_temp",
+        "resource_potential"
+    ],
+    "collect_pattern": "PIPELINE",
+    "project_points": "/kfs2/projects/rev/projects/gto/fy23/runs_with_drill_cost_curves/inputs/volumetric_inputs/points_SMU_TAD_volumetric_2.5km_3500m_valid_flash_temps.csv"
+}

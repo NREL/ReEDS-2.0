@@ -74,10 +74,9 @@ def downselect_hvdc(case, year, cutoff, single_network):
         dfwrite = get_biggest_network(dfwrite)
 
     ### Write it
-    os.makedirs(os.path.join(reeds_path,'inputs','transmission','cases'), exist_ok=True)
     dfwrite[['r','rr','status','trtype','t','MW']].to_csv(
         os.path.join(
-            reeds_path,'inputs','transmission','cases',outfile,
+            reeds_path,'inputs','transmission',outfile,
         ),
         index=False,
     )

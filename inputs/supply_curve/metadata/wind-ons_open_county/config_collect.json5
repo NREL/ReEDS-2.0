@@ -1,0 +1,21 @@
+{
+    "execution_control": {
+        "option": "kestrel",
+        "allocation": "wetosa",
+        "walltime": 4,
+        "qos": "normal",
+        "memory": null,
+        "queue": null,
+        "feature": null,
+        "conda_env": null,
+        "module": null,
+        "sh_script": null
+    },
+    "log_directory": "./logs",
+    "log_level": "INFO",
+    "project_points": null,
+    "datasets": null,
+    "purge_chunks": false,
+    "clobber": true,
+    "collect_pattern": "PIPELINE"
+}

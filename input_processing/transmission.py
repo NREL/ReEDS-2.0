@@ -20,8 +20,8 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing ###
-# reeds_path = os.path.expanduser('~/github/ReEDS-2.0/')
-# inputs_case = os.path.join(reeds_path,'runs','mergetest2_western_st','inputs_case','')
+#reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+#inputs_case = os.path.join(reeds_path,'runs','hr_test_none_Pacific','inputs_case','')
 
 #%%#################
 ### FIXED INPUTS ###
@@ -32,18 +32,6 @@ dollar_year = 2004
 weight = 'cost'
 
 costcol = 'USD{}perMW'.format(dollar_year)
-
-### Indicate the source and year for the initial transmission capacity.
-### 'NARIS2024' is a better starting point for future-oriented studies, but it becomes
-### increasingly inaccurate for years earlier than 2024.
-### 'REFS2009' does not inclue direction-dependent capacities or differentiated capacities
-### for energy and PRM trading, but it better represents historical additions between 2010-2024.
-networksource, trans_init_year = 'NARIS2024', 2024
-# networksource, trans_init_year = 'REFS2009', 2009
-
-### anchortype: 'load' sets rb with largest 2010 load as anchor reg;
-### 'size' sets largest rb as anchor reg
-anchortype = 'size'
 
 #%% Set up logger
 log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
@@ -56,6 +44,13 @@ GSw_TransScen = sw.GSw_TransScen
 GSw_TransRestrict = sw.GSw_TransRestrict
 GSw_VSC = int(sw.GSw_VSC)
 GSw_TransSquiggliness = float(sw.GSw_TransSquiggliness)
+networksource = sw.GSw_TransNetworkSource
+GSw_TransHurdleLevel1 = sw.GSw_TransHurdleLevel1
+GSw_TransHurdleLevel2 = sw.GSw_TransHurdleLevel2
+GSw_TransHurdleRate = sw.GSw_TransHurdleRate
+
+## networksource must end in a 4-digit year indicating the year represented by the network
+trans_init_year = int(networksource[-4:])
 
 # ReEDS only supports a single entry for agglevel right now, so use the
 # first value from the list (copy_files.py already ensures that only one
@@ -75,32 +70,12 @@ for level in ['r','transgrp']:
             os.path.join(inputs_case, f'val_{level}.csv'), header=None).squeeze(1).tolist()
         
 #%% Process some inputs
-## If transmission_capacity_future_{GSw_TransScen}.csv is not in inputs/transmission,
-## look for it in inputs/transmission/cases.
 trans_cap_future_file = os.path.join(
-    reeds_path,'inputs','transmission',
-    f'transmission_capacity_future_{lvl}_{GSw_TransScen}.csv'
-)
-if not os.path.isfile(trans_cap_future_file):
-    trans_cap_future_file = os.path.join(
-        reeds_path,'inputs','transmission','cases',
-        f'transmission_capacity_future_{lvl}_{GSw_TransScen}.csv'
-    )
-if not os.path.isfile(trans_cap_future_file):
-    raise FileNotFoundError(trans_cap_future_file)
+    inputs_case, 'transmission_capacity_future.csv')
 
-
+#%% ===========================================================================
 ### --- FUNCTIONS ---
 ### ===========================================================================
-
-def val_r_filt(df, valid_regions, level='r'):
-    """Filter to only the regions included in the run"""
-    df = df.loc[
-        df[level].isin(valid_regions[level])
-        ## level+level[-1] turns 'r' into 'rr' and 'transgrp' into 'transgrpp'
-        & df[level+level[-1]].isin(valid_regions[level])
-    ].copy()
-    return df
 
 def finish(inputs_case=inputs_case):
     toc(tic=tic, year=0, process='input_processing/transmission.py', 
@@ -109,35 +84,21 @@ def finish(inputs_case=inputs_case):
     quit()
 
 
-def get_trancap_init(valid_regions, agglevel, networksource='NARIS2024', level='r'):
+def get_trancap_init(valid_regions, networksource='NARIS2024', level='r'):
     ### Get alias for level (e.g. rr, transgrpp)
     levell = level + level[-1]
-    if level == 'r':
-        # Use county-level data if running at county-level resolution
-        if agglevel == 'county':
-            agglevel_tran = 'county'
-        # Use ba-level resolution for any other model resolution
-        else:
-            agglevel_tran = 'ba'
-    # If not using the r level, then just use level
-    else:
-        agglevel_tran = level
+
     ### AC capacity is defined for each direction and calculated using the scripts at
     ### https://github.nrel.gov/pbrown/TSC
     trancap_init_ac = pd.read_csv(
         os.path.join(
-            reeds_path,'inputs','transmission',
-            f'transmission_capacity_init_AC_{agglevel_tran}_{networksource}.csv'))
-    ## Filter to valid regions
-    trancap_init_ac = val_r_filt(trancap_init_ac, valid_regions, level=level)
+            inputs_case,f'transmission_capacity_init_AC_{level}.csv'))
     trancap_init_ac['trtype'] = 'AC'
 
     ## DC capacity is only defined in one direction, so duplicate it for the opposite direction
     if level == 'r':
         trancap_init_nonac_undup = pd.read_csv(
-            os.path.join(reeds_path,'inputs','transmission',f'transmission_capacity_init_nonAC_{agglevel_tran}.csv'))
-        ## Filter to valid regions
-        trancap_init_nonac_undup = val_r_filt(trancap_init_nonac_undup, valid_regions, level='r')
+            os.path.join(inputs_case,'transmission_capacity_init_nonAC.csv'))
         trancap_init_nonac = pd.concat(
             [trancap_init_nonac_undup, trancap_init_nonac_undup.rename(columns={'r':'rr', 'rr':'r'})],
             axis=0
@@ -185,43 +146,54 @@ def get_trancap_init(valid_regions, agglevel, networksource='NARIS2024', level='
 ### ===========================================================================
 
 #%% Limits on PRMTRADE across nercr boundaries
-solveyears = pd.read_csv(
-    os.path.join(reeds_path,'inputs','modeledyears.csv'),
-    usecols=[sw['yearset_suffix']],
-).squeeze(1).dropna().astype(int).tolist()
-solveyears = [y for y in solveyears if y <= int(sw['endyear'])]
-
-val_nercr = pd.read_csv(
-    os.path.join(inputs_case,'val_nercr.csv'), header=None,
-).squeeze(1).values
-## Take the max over all years for each region and drop negative values
-planned_firm_transfers = pd.read_csv(
-    os.path.join(reeds_path,'inputs','reserves','net_firm_transfers_nerc.csv'),
-).pivot(index='t',columns='nercr',values='MW')[val_nercr].max().clip(lower=0).rename('MW')
-## Keep planned firm transfers for years before GSw_PRMTRADE_limit to use in the
-## eq_firm_transfer_limit / eq_firm_transfer_limit_cc constraints
-if any([y < int(sw.GSw_PRMTRADE_limit) for y in solveyears]):
-    firm_transfer_limit = pd.concat({
-        y: planned_firm_transfers
-        for y in solveyears
-        if y <= int(sw.GSw_PRMTRADE_limit)
-    }, names=['t']).reorder_levels(['nercr','t']).rename_axis(['*nercr','t'])
-## Otherwise, if GSw_PRMTRADE_limit is set to a value before all solve years (such as 0),
-## write an empty dataframe
+if not int(sw.GSw_PRM_NetImportLimit):
+    ## No limit
+    firm_import_limit = pd.DataFrame(columns=['*nercr','t','fraction']).set_index(['*nercr','t'])
 else:
-    firm_transfer_limit = pd.DataFrame(columns=['*nercr','t','MW']).set_index(['*nercr','t'])
-firm_transfer_limit.to_csv(os.path.join(inputs_case, 'firm_transfer_limit.csv'))
+    limits = pd.Series(
+        {int(i.split('_')[0]): i.split('_')[1] for i in sw.GSw_PRM_NetImportLimitScen.split('/')}
+    )
 
-### Planning reserve margin
-(
-    pd.read_csv(
-        os.path.join(reeds_path,'inputs','reserves','prm_annual.csv'),
-        index_col=['*nercr','t'])
-    [sw['GSw_PRM_scenario']]
-    ## Fill years before data begin with the first year's data
-    .unstack('*nercr').reindex(solveyears).fillna(method='bfill').stack('*nercr')
-    .reorder_levels(['*nercr','t']).loc[val_nercr].round(4)
-).to_csv(os.path.join(inputs_case,'prm_annual.csv'))
+    solveyears = pd.read_csv(
+        os.path.join(inputs_case,'modeledyears.csv')
+    ).columns.astype(int).tolist()
+    startyear = min(solveyears)
+    endyear = max(solveyears)
+    allyears = range(startyear, max(endyear, limits.index.max())+1)
+
+    ## Take the max over all years for each region and drop negative values
+    net_firm_transfers_nerc = pd.read_csv(
+        os.path.join(inputs_case,'net_firm_transfers_nerc.csv'),
+        index_col=['nercr','t']
+    )
+    net_firm_import_frac = (
+        net_firm_transfers_nerc.MW / net_firm_transfers_nerc.MW_TotalDemand
+    ).unstack('nercr').max().clip(lower=0)
+    nercrs = net_firm_import_frac.index
+
+    _dfout = {}
+    for key, val in limits.items():
+        ## If 'hist' is in GSw_PRM_NetImportLimitScen,
+        ## all years up until that year use the historical regional max
+        if val == 'hist':
+            for y in range(startyear, key+1):
+                _dfout[y] = net_firm_import_frac
+        ## If 'histmax', all prior years use the historical max across all regions
+        elif val == 'histmax':
+            for y in range(startyear, key+1):
+                _dfout[y] = net_firm_import_frac.clip(lower=net_firm_import_frac.max())
+        else:
+            ## Input values are percentages so convert to fractions
+            _dfout[key] = pd.Series(index=nercrs, data=float(val) / 100)
+    firm_import_limit = (
+        pd.concat(_dfout, names=('t',)).unstack('nercr')
+        ## Linear interpolation between values; flat projections before and after
+        .reindex(allyears).interpolate('linear').bfill().ffill()
+        .loc[solveyears]
+        .unstack('t').rename('fraction').rename_axis(['*nercr','t'])
+    )
+
+firm_import_limit.to_csv(os.path.join(inputs_case, 'firm_import_limit.csv'))
 
 
 #%% Get single-link distances and losses
@@ -229,13 +201,11 @@ firm_transfer_limit.to_csv(os.path.join(inputs_case, 'firm_transfer_limit.csv'))
 infiles = {'AC':'500kVac', 'LCC':'500kVdc', 'B2B':'500kVac'}
 tline_data = pd.concat({
     trtype: pd.read_csv(
-        os.path.join(
-            reeds_path,'inputs','transmission',f'transmission_distance_cost_{infiles[trtype]}_{lvl}.csv'))
+        os.path.join(inputs_case,f'transmission_distance_cost_{infiles[trtype]}.csv'),
+        dtype={'r':str, 'rr':str, 'trtype':str, 'length_miles':float, 'USD2004perMW':float},
+    )
     for trtype in ['AC','LCC','B2B']
 }, axis=0).reset_index(level=0).rename(columns={'level_0':'trtype','length_miles':'miles'})
-
-# Filter data to just the regions that are included in the run
-tline_data = val_r_filt(tline_data,valid_regions,level='r').copy()
 
 # Apply the distance multiplier
 tline_data['miles'] = tline_data['miles'] * GSw_TransSquiggliness
@@ -316,6 +286,8 @@ transfom_USDperMWmileyear = {
     )
     for trtype in ['AC','LCC']
 }
+### B2B is treated like (AC line)-(AC/DC converter)-(AC/DC converter)-(AC line) so uses AC line FOM
+transfom_USDperMWmileyear['B2B'] = transfom_USDperMWmileyear['AC']
 
 if trans_fom_region_mult:
     ### Multiply line-specific $/MW by FOM fraction to get $/MW/year
@@ -355,7 +327,7 @@ for captype, level in [
     ('transgroup', 'transgrp'),
 ]:
     trancap_init = get_trancap_init(
-        valid_regions=valid_regions, agglevel=agglevel, networksource=networksource, level=level)
+        valid_regions=valid_regions, networksource=networksource, level=level)
     trancap_init[nlevel[captype]].rename(columns={level:'*'+level}).round(3).to_csv(
         os.path.join(inputs_case,f'trancap_init_{captype}.csv'),
         index=False,
@@ -371,8 +343,8 @@ trancap_fut = pd.concat([
     (
         pd.read_csv(
             os.path.join(
-                reeds_path,'inputs','transmission',
-                f'transmission_capacity_future_{lvl}_baseline.csv'),
+                inputs_case,
+                'transmission_capacity_future_baseline.csv'),
             comment='#',
         )
         .drop(['Notes','notes','Note','note'], axis=1, errors='ignore')
@@ -384,20 +356,34 @@ trancap_fut = pd.concat([
         .replace({'t':{0:int(scalars['firstyear_trans_longterm'])}})
     ),
 ], axis=0, ignore_index=True)
-
-### Filter to only regions in the run
-trancap_fut = val_r_filt(trancap_fut, valid_regions, level='r')
                 
 ### Drop prospective lines from years <= trans_init_year
 trancap_fut = trancap_fut.loc[trancap_fut.t > trans_init_year].copy()
 
-trancap_fut.rename(columns={'r':'*r'}).round(3).to_csv(
+trancap_fut.rename(columns={'r':'*r'}).astype({'t':int}).round(3).to_csv(
     os.path.join(inputs_case,'trancap_fut.csv'), index=False)
 
 ### transmission_line_capcost
 tline_data[costcol].round(2).reset_index().rename(columns={'r':'*r'}).to_csv(
     os.path.join(inputs_case,'transmission_line_capcost.csv'), index=False)
 
+#%%#########################
+# -- cost_hurdle_rates --  #
+############################
+hurdle_levels = [1, 2]
+cost_hurdle_intra = (
+    pd.read_csv(os.path.join(inputs_case, 'cost_hurdle_intra.csv'))
+    .rename(columns={'t':'*t'}).set_index('*t').round(3)
+)
+cost_hurdle_rate = {
+    i: (
+        cost_hurdle_intra[sw[f'GSw_TransHurdleLevel{i}']] if int(sw.GSw_TransHurdleRate)
+        else pd.Series(name='region').rename_axis('*t')
+    )
+    for i in hurdle_levels
+}
+for i in hurdle_levels:
+    cost_hurdle_rate[i].to_csv(os.path.join(inputs_case, f'cost_hurdle_rate{i}.csv'))
 
 #%%#####################################################################
 #    -- Create the inputs for the VSC DC macrogrid, if necessary --    #
@@ -413,7 +399,6 @@ vsc_links = pd.read_csv(
 ).replace({'t':{0:int(scalars['firstyear_trans_longterm'])}})
 ### Only keep the VSC links and the modeled regions
 vsc_links = vsc_links.loc[vsc_links.trtype=='VSC',['r','rr']].drop_duplicates()
-vsc_links = val_r_filt(vsc_links, valid_regions, level='r')
 
 ### Add distance and losses (leaving out converter losses, which are treated separately)
 distance_lookup = (
@@ -453,6 +438,7 @@ pd.concat([
 ).to_csv(
     os.path.join(inputs_case,'transmission_distance.csv'), index=False, header=True
 )
+
 
 #%% Finish the timer
 finish()

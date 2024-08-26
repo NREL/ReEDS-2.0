@@ -37,7 +37,9 @@ op_h2_fuel_costs,H2 Prod O&M,Operation
 op_h2_revenue_exog,H2 Revenue,Operation
 op_h2_storage,H2 Prod O&M,Operation
 op_h2_transport,H2 Prod O&M,Operation
+op_h2_transport_intrareg,H2 Prod O&M,Operation
 op_h2_vom,H2 Prod O&M,Operation
+op_h2_ptc_payments_negative,H2 PTC,Operation
 op_operating_reserve_costs,Gen & Stor O&M,Operation
 op_ptc_payments_negative,PTC,Operation
 op_rect_fuel_costs,Fuel,Operation

@@ -34,7 +34,7 @@ import ferc_distadmin
 
 #%% Arguments
 init_cap_file = os.path.join(
-    '..', '..', 'inputs', 'capacitydata', 'ReEDS_generator_database_final_EIA-NEMS.csv')
+    '..', '..', 'inputs', 'capacity_exogenous', 'ReEDS_generator_database_final_EIA-NEMS.csv')
 ### First year of the ReEDS model run. If this is changed from 2010, the user should 
 ### ensure that the init_cap_file contains all of the builds through the first year
 first_year = 2010 

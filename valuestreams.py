@@ -12,7 +12,8 @@ this_dir_path = os.path.dirname(os.path.realpath(__file__))
 vs_path = this_dir_path + '/inputs_case'
 output_dir = this_dir_path + '/outputs'
 solution_file = this_dir_path + '/ReEDSmodel_p.gdx'
-mps_file = this_dir_path + '/ReEDSmodel.mps'
+problem_file = this_dir_path + '/ReEDSmodel_jacobian.gdx'
+# problem_file = this_dir_path + '/ReEDSmodel.mps'
 
 logger = logging.getLogger('')
 logger.setLevel(logging.DEBUG)
@@ -38,7 +39,7 @@ def add_concat_csv(df_in, csv_file):
 def createValueStreams():
     very_start = datetime.now()
     logger.info('Starting valuestreams.py')
-    df = rvs.get_value_streams(solution_file, mps_file, var_list)
+    df = rvs.get_value_streams(solution_file, problem_file, var_list)
     logger.info('Raw value streams completed: ' + str(datetime.now() - very_start))
 
     df = pd.merge(left=df, right=df_var_map, on='var_name', how='inner')
@@ -77,5 +78,8 @@ def createValueStreams():
 
 if __name__ == '__main__':
     createValueStreams()
-    os.remove(solution_file)
-    os.remove(mps_file)
+    x_files =  [problem_file.replace('.gdx',f'_{x}.csv') for x in ['i','j']]
+    files = x_files + [solution_file, problem_file]
+    for f in files:
+        if os.path.exists(f):
+            os.remove(f)

@@ -20,7 +20,10 @@ GSw_CCSFLEX_STO,0
 GSw_CCSFLEX_STO_LEVEL,1
 GSw_CCSFLEX_cap_max,90
 GSw_CCSFLEX_cost_mult,1
-GSw_CCS_Rate,default
+GSw_CCS_Rate_New_mod,0.95
+GSw_CCS_Rate_New_max,0.99
+GSw_CCS_Rate_Upgrade_mod,0.90
+GSw_CCS_Rate_Upgrade_max,0.99
 GSw_CO2_BEC,70
 GSw_CO2_CostAdj,1
 GSw_CO2_Detail,0
@@ -231,7 +234,7 @@ GSw_WaterUse,0
 GSw_calc_powfrac,0
 GSw_gopt,1
 GSw_hydED,1
-batteryscen,battery_ATB_2023_moderate
+batteryscen,battery_ATB_2024_moderate
 beccsscen,beccs_reference
 calc_csp_cc,0
 capcredit_hierarchy_level,transreg
@@ -297,7 +300,7 @@ pras,1
 pras_include_h2dac,0
 pras_samples,10
 pras_trans_contingency,0
-pshsupplycurve,8hr_ref_dec2022
+pshsupplycurve,8hr_ref_mar2024
 pvbscen,benchmark2020
 reeds2pras_path,~/github/ReEDS2PRAS
 reeds_to_rev,1
@@ -311,7 +314,7 @@ timetype,seq
 transmission_maps,2050
 unitdata,EIA-NEMS
 upgradescen,default
-upvscen,upv_ATB_2023_moderate
+upvscen,upv_ATB_2024_moderate
 uraniumscen,AEO_2023_reference
 windows_suffix,default
 yearset_suffix,5yr

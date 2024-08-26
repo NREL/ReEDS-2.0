@@ -22,12 +22,13 @@ from defaults import DEFAULT_PV_YEAR
 
 rb_globs = {'output_subdir':'/outputs/', 'test_file':'cap.csv', 'report_subdir':'/reeds2'}
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
-df_deflator = pd.read_csv(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'inputs/deflator.csv')), index_col=0)
+df_deflator = pd.read_csv(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'inputs/financials/deflator.csv')), index_col=0)
 coststreams = ['eq_gasaccounting_regional','eq_gasaccounting_national','eq_bioused','eq_gasused','eq_objfn_inv','eq_objfn_op']
 vf_valstreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
 # valuestreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_national_gen','eq_annual_cap','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min','eq_emit_accounting','eq_mingen_lb','eq_mingen_ub','eq_rps_ofswind']
 energy_valstreams = ['eq_supply_demand_balance','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
-cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','dupv','pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10']
+cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','dupv','pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']
+battery_techs=['battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']
 h2_techs = ['smr', 'smr-ccs', 'electrolyzer']
 prod_techs = h2_techs + ['dac']
 niche_techs =  ['hydro','csp','geothermal','beccs','lfill-gas','biopower']
@@ -168,10 +169,11 @@ def pre_systemcost(dfs, **kw):
                     columns={'t':'year'})
                 historical_capex = historical_capex.loc[
                     df_capex_init.region.isin(val_r)
-                ].groupby(['year','rb']).capex.sum().loc[:firstmodelyear-1,:] / 1e9
+                ].groupby(['year','region']).capex.sum().loc[:firstmodelyear-1,:] / 1e9
                 ### Convert to output dollar year
                 historical_capex = inflate_series(historical_capex)
                 historical_capex = pd.DataFrame(historical_capex)
+                historical_capex.rename(columns={'region':'rb'}, inplace=True)
                 ### Insert into full cost table
                 df = df.set_index('rb',append=True).join(historical_capex).reset_index('rb')
                 df.loc[:firstmodelyear-1,'inv_investment_capacity_costs'] = (
@@ -423,8 +425,8 @@ def pre_abatement_cost(dfs, **kw):
         df_co2['val'] = df_co2['val'] * df_co2['pvfonm']
         df_co2.drop(['pvfonm'], axis='columns',inplace=True)
         #Add type and cost_cat columns so we can concatenate
-        df_co2['type'] = 'CO2 (Bil metric ton)'
-        df_co2['cost_cat'] = 'CO2 (Bil metric ton)'
+        df_co2['type'] = 'CO2 (Bil metric tons)'
+        df_co2['cost_cat'] = 'CO2 (Bil metric tons)'
         #Concatenate costs and emissions
         df = pd.concat([df_sc, df_co2],sort=False,ignore_index=True)
 
@@ -441,8 +443,8 @@ def pre_abatement_cost(dfs, **kw):
         full_yrs = list(range(df_sc['year'].min(), df_sc['year'].max() + 1))
         df_co2 = df_co2.set_index('year').reindex(full_yrs).reset_index()
         df_co2['val'] = df_co2['val'].fillna(method='ffill')
-        df_co2['type'] = 'CO2 (Bil metric ton)'
-        df_co2['cost_cat'] = 'CO2 (Bil metric ton)'
+        df_co2['type'] = 'CO2 (Bil metric tons)'
+        df_co2['cost_cat'] = 'CO2 (Bil metric tons)'
         #Concatenate costs and emissions
         df = pd.concat([df_sc, df_co2],sort=False,ignore_index=True)
         #Add discounted value column
@@ -525,7 +527,7 @@ def pre_gen_w_load(dfs, **kw):
 
 def pre_val_streams(dfs, **kw):
     index_cols = ['tech', 'vintage', 'rb', 'year']
-    inv_vars = ['inv','inv_refurb','upgrades','invtran']
+    inv_vars = ['inv','inv_refurb','upgrades','invtran','inv_rsc']
     cap_vars = ['cap','captran']
     cum_vars = ['gen','cap','opres','storage_in','captran','flow','opres_flow','prmtrade','storage_in_pvb_p','storage_in_pvb_g','cap_sdbin','storage_level','recs','gen_pvb_p','gen_pvb_b','produce']
 
@@ -861,8 +863,8 @@ def pre_h2_cf(dfs, **kw):
     index_cols = ['tech', 'rb', 'year']
     dfs['cap'] =  dfs['cap'].groupby(index_cols, sort=False, as_index=False).sum()
     df = pd.merge(left=dfs['cap'], right=dfs['prod'], how='left',on=index_cols, sort=False)
-    df['Production (tonnes)']=df['Production (tonnes)'].fillna(0)
-    df['CF'] = df['Production (tonnes)']/(df['Capacity (tonnes)']*8760)
+    df['Production (metric tons)']=df['Production (metric tons)'].fillna(0)
+    df['CF'] = df['Production (metric tons)']/(df['Capacity (metric tons)']*8760)
     return df
 
 def pre_neue(dfs, **kw):
@@ -988,7 +990,7 @@ def rgba2hex(rgba):
 def pre_runtime(dictin, **kw):
     """
     ### Use the code below to redefine the colormap when new scripts are added
-    augur_start = df.index.tolist().index('ReEDS_Augur/A_prep_data.py')
+    augur_start = df.index.tolist().index('ReEDS_Augur/prep_data.py')
     for i, row in enumerate(df.index):
         if i < augur_start:
             colors[row.lower()] = rgba2hex(plt.cm.tab20b(i))
@@ -1024,7 +1026,7 @@ def pre_runtime(dictin, **kw):
 def net_co2(dfs, **kw):
     co2 = dfs['emit'].copy()
     co2['Cumulative CO2e (MMton)'] = co2.groupby(['e','tech'])['CO2e (MMton)'].cumsum()
-    # scale to million metric tonnes
+    # scale to million metric tons
     co2['CO2e (MMton)'] /= 1e6
     co2['Cumulative CO2e (MMton)'] /= 1e6
     return co2
@@ -1034,8 +1036,8 @@ def process_health_damage(df, **kw):
     # convert to billion $ and inflate series
     df['Health damages (billion $)'] = inflate_series(df['Health damages (billion $)']) * 1e-9
 
-    # convert emissions to thousand tonnes
-    df['Emissions (thousand tonnes)'] = df['Emissions (thousand tonnes)'] * 1e-3
+    # convert emissions to thousand metric tons
+    df['Emissions (thousand metric tons)'] = df['Emissions (thousand metric tons)'] * 1e-3
 
     # add column for discounted damages
     d = float(core.GL['widgets']['var_discount_rate'].value)
@@ -1063,7 +1065,7 @@ def process_health_damage(df, **kw):
 
     # sum over rb
     df_out = df_new.groupby(['model', 'cr', 'e', 'year'])[
-            'Emissions (thousand tonnes)', 'Health damages (billion $)', 
+            'Emissions (thousand metric tons)', 'Health damages (billion $)', 
             'Health damages (lives)', 'Discounted health damages (billion $)'
         ].sum().reset_index()
 
@@ -1146,11 +1148,11 @@ def pre_spur(dfs, **kw):
         ]
         .merge(spur_parameters, on=['i','r','rscbin'], how='left')
     )
-    spur = (cap_new_bin_out[['year','MW','dist_km']]
-        .rename(columns={'dist_km':'dist'})
+    spur = (cap_new_bin_out[['year','MW','dist_spur_km']]
+        .rename(columns={'dist_spur_km':'dist'})
         .assign(trtype='spur'))
-    reinforcement = (cap_new_bin_out[['year','MW','reinforcement_dist_km']]
-        .rename(columns={'reinforcement_dist_km':'dist'})
+    reinforcement = (cap_new_bin_out[['year','MW','dist_reinforcement_km']]
+        .rename(columns={'dist_reinforcement_km':'dist'})
         .assign(trtype='reinforcement'))
     tech_trans = pd.concat([spur, reinforcement], ignore_index=True)
     ### Sum total spur-line GW-mi by year
@@ -1200,9 +1202,10 @@ columns_meta = {
     },
     'rb':{
         'type':'string',
-        'join': this_dir_path + '/../../inputs/hierarchy.csv',
-        'join_keep_cols': ['ba','st','cendiv','interconnect','custreg'], #Allow an arbitrary 'custreg' column if desired.
-        'join_col_rename': {'ba':'rb'},
+        'join': 'inputs_case/hierarchy.csv',
+        'join_in_run': True, #Get the join file from the first run folder
+        'join_keep_cols': ['*r','st','cendiv','interconnect','custreg'], #Allow an arbitrary 'custreg' column if desired.
+        'join_col_rename': {'*r':'rb'},
     },
     'ts':{
         'type':'string',
@@ -1756,15 +1759,15 @@ results_meta = collections.OrderedDict((
 
     ('Capacity Factor H2 Production',
         {'sources': [
-            {'name': 'prod', 'file': 'prod_produce_ann.csv', 'columns': ['tech', 'rb', 'year','Production (tonnes)']},
-            {'name': 'cap', 'file': 'prod_cap.csv', 'columns': ['tech', 'vintage', 'rb', 'year','Capacity (tonnes)']},
+            {'name': 'prod', 'file': 'prod_produce_ann.csv', 'columns': ['tech', 'rb', 'year','Production (metric tons)']},
+            {'name': 'cap', 'file': 'prod_cap.csv', 'columns': ['tech', 'vintage', 'rb', 'year','Capacity (metric tons)']},
         ],
         'preprocess': [
             {'func': pre_h2_cf, 'args': {}},
         ],
         'presets': collections.OrderedDict((
             ('CF Boxplot',{'chart_type':'Dot', 'x':'year', 'y':'CF', 'y_agg':'None', 'range':'Boxplot', 'explode':'tech', 'explode_group':'scenario', 'y_min':'0','y_max':'1', 'circle_size':r'3', 'bar_width':r'1.75', }),
-            ('CF weighted ave',{'chart_type':'Line', 'x':'year', 'y':'CF', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'Capacity (tonnes)', 'explode':'tech', 'series':'scenario', 'y_min':'0','y_max':'1',}),
+            ('CF weighted ave',{'chart_type':'Line', 'x':'year', 'y':'CF', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'Capacity (metric tons)', 'explode':'tech', 'series':'scenario', 'y_min':'0','y_max':'1',}),
         )),
         }
     ),
@@ -1862,28 +1865,28 @@ results_meta = collections.OrderedDict((
         }
     ),
 
-    ('Emissions National (tonne)',
+    ('Emissions National (metric tons)',
         {'file':'emit_nat.csv',
-        'columns': ['e', 'year', 'Emissions (tonne)'],
+        'columns': ['e', 'year', 'Emissions (metric tons)'],
         'preprocess': [
         ],
         'index': ['e', 'year'],
         'presets': collections.OrderedDict((
-            ('Scenario Lines Over Time',{'x':'year', 'y':'Emissions (tonne)', 'series':'scenario', 'explode':'e', 'chart_type':'Line', 'sync_axes':'No'}),
+            ('Scenario Lines Over Time',{'x':'year', 'y':'Emissions (metric tons)', 'series':'scenario', 'explode':'e', 'chart_type':'Line', 'sync_axes':'No'}),
         )),
         }
     ),
 
-    ('CO2 Emissions BA (tonne)',
+    ('CO2 Emissions BA (metric tons)',
         {'file':'emit_r.csv',
-        'columns': ['e', 'rb', 'year', 'Emissions (tonne)'],
+        'columns': ['e', 'rb', 'year', 'Emissions (metric tons)'],
         'preprocess': [
         ],
         'index': ['e', 'rb', 'year'],
         'presets': collections.OrderedDict((
-            ('Scenario Lines Over Time',{'x':'year', 'y':'Emissions (tonne)', 'series':'scenario', 'explode':'e', 'chart_type':'Line', 'sync_axes':'No', 'filter': {'e':['co2']}}),
-            ('Scenario Lines Over Time by State',{'x':'year', 'y':'Emissions (tonne)', 'series':'scenario', 'explode':'e', 'explode_group':'st', 'chart_type':'Line', 'sync_axes':'No', 'filter': {'e':['co2']}}),
-            ('Final BA Map',{'x':'rb', 'y':'Emissions (tonne)', 'explode':'scenario', 'chart_type':'Area Map', 'filter': {'year':'last', 'e':['co2']}}),
+            ('Scenario Lines Over Time',{'x':'year', 'y':'Emissions (metric tons)', 'series':'scenario', 'explode':'e', 'chart_type':'Line', 'sync_axes':'No', 'filter': {'e':['co2']}}),
+            ('Scenario Lines Over Time by State',{'x':'year', 'y':'Emissions (metric tons)', 'series':'scenario', 'explode':'e', 'explode_group':'st', 'chart_type':'Line', 'sync_axes':'No', 'filter': {'e':['co2']}}),
+            ('Final BA Map',{'x':'rb', 'y':'Emissions (metric tons)', 'explode':'scenario', 'chart_type':'Area Map', 'filter': {'year':'last', 'e':['co2']}}),
         )),
         }
     ),
@@ -1918,7 +1921,7 @@ results_meta = collections.OrderedDict((
 
     ('Health Damages from Emissions',
         {'file':'health_damages_caused_r.csv',
-        'columns': ['rb', 'st', 'year', 'e', 'Emissions (thousand tonnes)', 'model', 'cr', 'Marginal damage ($/tonne)', 'Health damages (billion $)', 'Health damages (lives)'],
+        'columns': ['rb', 'st', 'year', 'e', 'Emissions (thousand metric tons)', 'model', 'cr', 'Marginal damage ($/metric ton)', 'Health damages (billion $)', 'Health damages (lives)'],
         'preprocess': [
             {'func': process_health_damage, 'args':{}},
         ],
@@ -1941,7 +1944,7 @@ results_meta = collections.OrderedDict((
             {'name': 'df_capex_init', 'file': '../inputs_case/df_capex_init.csv'},
             {'name': 'sw', 'file': '../inputs_case/switches.csv', 'header':None, 'columns': ['switch', 'value']},
             {'name': 'scalars', 'file': '../inputs_case/scalars.csv', 'header':None, 'columns': ['scalar', 'value', 'comment']},
-            {'name': 'health_damages', 'file': 'health_damages_caused_r.csv', 'columns': ['rb', 'st', 'year', 'e', 'Emissions (thousand tonnes)', 'model', 'cr', 'Marginal damage ($/tonne)', 'Health damages (billion $)', 'Health damages (lives)']},
+            {'name': 'health_damages', 'file': 'health_damages_caused_r.csv', 'columns': ['rb', 'st', 'year', 'e', 'Emissions (thousand metric tons)', 'model', 'cr', 'Marginal damage ($/metric ton)', 'Health damages (billion $)', 'Health damages (lives)']},
         ],  
         'preprocess': [
             {'func': process_social_costs, 'args': {}},
@@ -2193,8 +2196,8 @@ results_meta = collections.OrderedDict((
         ],
         'presets': collections.OrderedDict((
             #To work properly, these presets require selecting the correct scenario for the Advanced Operation base.
-            ('Cumulative Undiscounted Over Time',{'x':'year','y':'cum val','series':'scenario','chart_type':'Line', 'explode':'type', 'adv_op':'Difference', 'adv_col':'scenario', 'adv_col_base':'None', 'adv_op2': 'Ratio', 'adv_col2': 'type', 'adv_col_base2': 'CO2 (Bil metric ton)', 'y_scale':'-1'}),
-            ('Cumulative Discounted Over Time',{'x':'year','y':'cum disc val','series':'scenario','chart_type':'Line', 'explode':'type', 'adv_op':'Difference', 'adv_col':'scenario', 'adv_col_base':'None', 'adv_op2': 'Ratio', 'adv_col2': 'type', 'adv_col_base2': 'CO2 (Bil metric ton)', 'y_scale':'-1'}),
+            ('Cumulative Undiscounted Over Time',{'x':'year','y':'cum val','series':'scenario','chart_type':'Line', 'explode':'type', 'adv_op':'Difference', 'adv_col':'scenario', 'adv_col_base':'None', 'adv_op2': 'Ratio', 'adv_col2': 'type', 'adv_col_base2': 'CO2 (Bil metric tons)', 'y_scale':'-1'}),
+            ('Cumulative Discounted Over Time',{'x':'year','y':'cum disc val','series':'scenario','chart_type':'Line', 'explode':'type', 'adv_op':'Difference', 'adv_col':'scenario', 'adv_col_base':'None', 'adv_op2': 'Ratio', 'adv_col2': 'type', 'adv_col_base2': 'CO2 (Bil metric tons)', 'y_scale':'-1'}),
         )),
         }
     ),
@@ -2211,7 +2214,7 @@ results_meta = collections.OrderedDict((
         ],
         'presets': collections.OrderedDict((
             #To work properly, these presets require selecting the correct scenario for the Advanced Operation base.
-            ('Abatement Cost By Year',{'x':'year','y':'val','series':'scenario','chart_type':'Line', 'explode':'type', 'adv_op':'Difference', 'adv_col':'scenario', 'adv_col_base':'None', 'adv_op2': 'Ratio', 'adv_col2': 'type', 'adv_col_base2': 'CO2 (Bil metric ton)', 'y_scale':'-1'}),
+            ('Abatement Cost By Year',{'x':'year','y':'val','series':'scenario','chart_type':'Line', 'explode':'type', 'adv_op':'Difference', 'adv_col':'scenario', 'adv_col_base':'None', 'adv_op2': 'Ratio', 'adv_col2': 'type', 'adv_col_base2': 'CO2 (Bil metric tons)', 'y_scale':'-1'}),
         )),
         }
     ),
@@ -2679,43 +2682,43 @@ results_meta = collections.OrderedDict((
         }
     ),
 
-    ('CO2 Price ($/tonne)',
+    ('CO2 Price ($/metric ton)',
         {'file':'co2_price.csv',
-        'columns': ['year', '$/tonne'],
+        'columns': ['year', '$/metric ton'],
         'preprocess': [
-            {'func': apply_inflation, 'args': {'column':'$/tonne'}},
+            {'func': apply_inflation, 'args': {'column':'$/metric ton'}},
         ],
         'index': ['year'],
         'presets': collections.OrderedDict((
-            ('CO2 price over time',{'chart_type':'Line', 'x':'year', 'y':'$/tonne', 'series':'scenario', }),
+            ('CO2 price over time',{'chart_type':'Line', 'x':'year', 'y':'$/metric ton', 'series':'scenario', }),
         )),
         }
     ),
 
-    ('CO2 Capture National (million tonnes)',
+    ('CO2 Capture National (million metric tons)',
         {'file':'CO2_CAPTURED_out_ann.csv',
-        'columns': ['rb', 'year', 'CO2 Captured (million tonnes)'],
+        'columns': ['rb', 'year', 'CO2 Captured (million metric tons)'],
         'preprocess': [
             {'func': sum_over_cols, 'args': {'drop_cols': ['rb'], 'group_cols': ['year']}},
-            {'func': scale_column, 'args': {'scale_factor': 1e-6, 'column':'CO2 Captured (million tonnes)'}},
+            {'func': scale_column, 'args': {'scale_factor': 1e-6, 'column':'CO2 Captured (million metric tons)'}},
         ],
         'index': ['year'],
         'presets': collections.OrderedDict((
-            ('Stacked Bars',{'x':'year', 'y':'CO2 Captured (million tonnes)', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars',{'x':'year', 'y':'CO2 Captured (million metric tons)', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
         )),
         }
     ),
 
-    ('CO2 Stored (million tonnes)',
+    ('CO2 Stored (million metric tons)',
         {'file':'CO2_STORED_out_ann.csv',
-        'columns': ['rb', 'reservoir_name','year', 'CO2 Stored (million tonnes)'],
+        'columns': ['rb', 'reservoir_name','year', 'CO2 Stored (million metric tons)'],
         'preprocess': [
             {'func': sum_over_cols, 'args': {'drop_cols': ['reservoir_name'], 'group_cols': ['rb','year']}},
-            {'func': scale_column, 'args': {'scale_factor': 1e-6, 'column':'CO2 Stored (million tonnes)'}},
+            {'func': scale_column, 'args': {'scale_factor': 1e-6, 'column':'CO2 Stored (million metric tons)'}},
         ],
         'index': ['rb','year'],
         'presets': collections.OrderedDict((
-            ('PCA Map Final by Tech - CCS',{'x':'rb', 'y':'CO2 Stored (million tonnes)', 'explode':'scenario', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
+            ('PCA Map Final by Tech - CCS',{'x':'rb', 'y':'CO2 Stored (million metric tons)', 'explode':'scenario', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
         }
     ),
@@ -2872,15 +2875,15 @@ results_meta = collections.OrderedDict((
         }
     ),
 
-    ('Production (Million tonnes)',
+    ('Production (Million metric tons)',
         {'file':'prod_produce_ann.csv',
-        'columns': ['tech', 'rb', 'year', 'Production (Million tonnes)'],
+        'columns': ['tech', 'rb', 'year', 'Production (Million metric tons)'],
         'preprocess': [
-            {'func': scale_column, 'args': {'scale_factor': .000001, 'column':'Production (Million tonnes)'}},
+            {'func': scale_column, 'args': {'scale_factor': .000001, 'column':'Production (Million metric tons)'}},
         ],
         'presets': collections.OrderedDict((
-			('H2 Stacked Bars', {'chart_type':'Bar', 'x':'year', 'y':'Production (Million tonnes)', 'series':'tech', 'explode':'scenario', 'bar_width':'1.75', 'filter':{'tech':h2_techs}}),
-			('DAC CO2 Capture Lines', {'chart_type':'Line', 'x':'year', 'y':'Production (Million tonnes)', 'series':'scenario', 'filter':{'tech':['dac']}}),
+			('H2 Stacked Bars', {'chart_type':'Bar', 'x':'year', 'y':'Production (Million metric tons)', 'series':'tech', 'explode':'scenario', 'bar_width':'1.75', 'filter':{'tech':h2_techs}}),
+			('DAC CO2 Capture Lines', {'chart_type':'Line', 'x':'year', 'y':'Production (Million metric tons)', 'series':'scenario', 'filter':{'tech':['dac']}}),
         )),
         }
     ),
@@ -2899,13 +2902,13 @@ results_meta = collections.OrderedDict((
     ),
 
     ('H2-CT Fuel Price ($/mmBTU)',
-        {'file':'prod_rect_cost.csv',
+        {'file':'prod_h2ct_cost.csv',
         'columns': ['product', 'year', 'Price ($/mmBTU)'],
         'preprocess': [
             {'func': apply_inflation, 'args': {'column': 'Price ($/mmBTU)'}},
         ],
         'presets': collections.OrderedDict((
-			('Lines',{'x':'year', 'y':'Price ($/mmBTU)', 'series':'scenario', 'explode':'product', 'chart_type':'Line', 'filter': {'product':['H2']}}),
+			('Lines',{'x':'year', 'y':'Price ($/mmBTU)', 'series':'scenario', 'explode':'product', 'chart_type':'Line', 'filter': {'product':['h2']}}),
         )),
         }
     ),
@@ -2935,9 +2938,9 @@ results_meta = collections.OrderedDict((
 
     ("UPV land area (sq. km.)",
         {'file':'land_use_total.csv',
-        'columns': ['year', 'built_capacity_GW', 'built_area_sq_km', 'area_sq_km'],
+        'columns': ['year', 'built_capacity_gw', 'built_area_sq_km', 'area_developable_sq_km'],
         'preprocess': [
-            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'built_capacity_GW'}},
+            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'built_capacity_gw'}},
         ],
         'presets': collections.OrderedDict((
             ('Total UPV land area',{'x':'year', 'y':'built_area_sq_km', 'series':'scenario', 'chart_type':'Line'}),

@@ -1,0 +1,30 @@
+{
+    "execution_control": {
+        "allocation": "rev",
+        "option": "kestrel",
+        "feature": "--qos=normal",
+        "memory_utilization_limit": 0.4,
+        "nodes": 100,
+        "sites_per_worker": 1000,
+        "walltime": 10
+    },
+    "log_directory": "./logs",
+    "log_level": "INFO",
+    "technology": "geothermal",
+    "output_request": [
+        "annual_energy",
+        "cf_mean",
+        "cf_profile",
+        "gen_profile",
+        "lcoe_fcr",
+        "nameplate",
+        "resource_depth",
+        "resource_temp",
+        "resource_potential"
+    ],
+    "project_points": "/kfs2/projects/rev/projects/gto/fy23/runs_with_drill_cost_curves/inputs/volumetric_inputs/points_SMU_TAD_volumetric_2.5km_3500m_valid_flash_temps.csv",
+    "sam_files": {
+        "default": "./sam_default_geothermal.json5"
+    },
+    "resource_file": "/kfs2/projects/rev/data/resource/north_america/conus/geothermal_v1/SMU_TAD_2011/SMU_TAD_volumetric_2.5km.h5"
+}

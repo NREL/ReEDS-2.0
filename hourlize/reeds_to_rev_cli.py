@@ -376,7 +376,7 @@ def from_config(json_path, out_path):
      break any ties by sorting on total_lcoe.
      - Columns do not need to be costs; any column can be used. For example, to use the
      sites with the most developable area first, one could specify ``priority`` as
-     ``{"Area_sq_km": "descending"}``.
+     ``{"area_developable_sq_km": "descending"}``.
     More information about "new_incr_mw":
     - This parameter can be used to configure incremental investments of new capacity
      in each technology. For example, settings `"wind-ons": 6,` would result in

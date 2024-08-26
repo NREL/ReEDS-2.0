@@ -2,42 +2,57 @@
     "upv_reference_ba": {
         "tech": "upv", 
         "access_case": "reference",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "upv_open_ba": {
         "tech": "upv",
         "access_case": "open",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "upv_limited_ba": {
         "tech": "upv",
         "access_case": "limited",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "wind-ons_reference_ba": {
         "tech": "wind-ons", 
+        "access_case": "reference",
+        "reg_out_col": "ba"
+    },
+    "egs_reference_ba": {
+        "tech": "egs", 
+        "access_case": "reference",
+        "reg_out_col": "reeds_ba"
+    },
+    "geohydro_reference_ba": {
+        "tech": "geohydro", 
         "access_case": "reference",
         "reg_out_col": "reeds_ba"
     },
     "wind-ons_open_ba": {
         "tech": "wind-ons",
         "access_case": "open",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "wind-ons_limited_ba": {
         "tech": "wind-ons", 
         "access_case": "limited",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "wind-ofs_open_ba": {
         "tech": "wind-ofs",
         "access_case": "open",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
+    },
+    "wind-ofs_reference_ba": {
+        "tech": "wind-ofs",
+        "access_case": "reference",
+        "reg_out_col": "ba"
     },
     "wind-ofs_limited_ba": {
         "tech" : "wind-ofs",
         "access_case": "limited",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "upv_reference_county": {
         "tech": "upv", 
@@ -77,6 +92,16 @@
     "wind-ofs_limited_county": {
         "tech" : "wind-ofs",
         "access_case": "limited",
+        "reg_out_col": "cnty_fips"
+    },
+    "egs_reference_county": {
+        "tech": "egs", 
+        "access_case": "reference",
+        "reg_out_col": "cnty_fips"
+    },
+    "geohydro_reference_county": {
+        "tech": "geohydro", 
+        "access_case": "reference",
         "reg_out_col": "cnty_fips"
     }
 }
