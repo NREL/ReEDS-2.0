@@ -36,9 +36,7 @@
 "CCGT-GAS","Jammu_Kashmir",13541.9769
 "HYDRO-PONDAGE","Jammu_Kashmir",0
 "HYDRO-ROR","Jammu_Kashmir",0
-"HYDRO-PONDAGE","Jharkhand",0
-"HYDRO-STORAGE","Jharkhand",0
-"SUBCRITICAL-COAL","Jharkhand",1455.48605454545
+"SUBCRITICAL-COAL","Jharkhand",1545.85035
 "DIESEL","Karnataka",2408.0448
 "HYDRO-PONDAGE","Karnataka",0
 "HYDRO-STORAGE","Karnataka",0
@@ -104,7 +102,7 @@
 "HYDRO-ROR","Uttar_Pradesh",0
 "HYDRO-STORAGE","Uttar_Pradesh",0
 "NUCLEAR","Uttar_Pradesh",0
-"SUBCRITICAL-COAL","Uttar_Pradesh",2082.67849565218
+"SUBCRITICAL-COAL","Uttar_Pradesh",2082.67849565217
 "SUPERCRITICAL-COAL","Uttar_Pradesh",1439.964
 "CCGT-GAS","Uttarakhand",3388.07957142857
 "HYDRO-PONDAGE","Uttarakhand",0
@@ -115,4 +113,4 @@
 "HYDRO-PUMPED","West_Bengal",0
 "HYDRO-ROR","West_Bengal",0
 "HYDRO-STORAGE","West_Bengal",0
-"SUBCRITICAL-COAL","West_Bengal",2443.415535
+"SUBCRITICAL-COAL","West_Bengal",2728.515708
