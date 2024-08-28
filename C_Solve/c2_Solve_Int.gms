@@ -41,7 +41,7 @@ tload(t)$tmodel(t) = yes ;
 *set of files for first column of merged gdx files
 * consider making tfirst and tlast globals to avoid hardcoding the years
 $ifthene.seconditer %niter%==1
-set gdxfiles /ReEDS_augur_%case%_2022*ReEDS_augur_%case%_2050/;
+set gdxfiles /ReEDS_augur_%case%_2017*ReEDS_augur_%case%_2050/;
 $endif.seconditer
 
 * create dummy parameters to read in gdx data. 
