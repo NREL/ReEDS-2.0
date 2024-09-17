@@ -45,6 +45,7 @@ Haryana,Rajasthan,AC,11334
 Haryana,Uttar_Pradesh,AC,10205
 Haryana,Uttarakhand,AC,1362
 Himachal_Pradesh,Jammu_Kashmir,AC,517
+Himachal_Pradesh,Ladakh,AC,517
 Himachal_Pradesh,Punjab,AC,8405
 Himachal_Pradesh,Uttarakhand,AC,486
 Jammu_Kashmir,Punjab,AC,15646
@@ -75,3 +76,4 @@ Rajasthan,Uttar_Pradesh,DC,2500
 Sikkim,West_Bengal,AC,1250
 Uttar_Pradesh,Uttarakhand,AC,12699
 Uttar_Pradesh,West_Bengal,DC,3000
+Uttar_Pradesh,DVC,DC,3000
