@@ -1,0 +1,25 @@
+UP_Meerut,Haryana,AC
+UP_Kanpur,Haryana,AC
+UP_Agra,Haryana,AC
+UP_Lucknow,Uttarakhand,AC
+UP_Meerut,Uttarakhand,AC
+UP_Meerut,Delhi,AC
+UP_Agra,Delhi,AC
+UP_Varanasi,Bihar,AC
+UP_Agra,Madhya Pradesh,AC
+UP_Varanasi,Madhya Pradesh,AC
+UP_Agra,Rajasthan,DC
+UP_Varanasi,Chhattisgarh,AC
+Assam,UP_Meerut,DC
+Bihar,UP_Lucknow,DC
+Delhi,UP_Meerut,AC
+Delhi,UP_Agra,AC
+Haryana,UP_Meerut,AC
+Haryana,UP_Kanpur,AC
+Haryana,UP_Agra,AC
+Madhya Pradesh,UP_Varanasi,DC
+Madhya Pradesh,UP_Varanasi,AC
+Punjab,UP_Meerut,AC
+Rajasthan,UP_Agra,AC
+Uttarakhand,UP_Meerut,AC
+West Bengal,UP_Agra,DC

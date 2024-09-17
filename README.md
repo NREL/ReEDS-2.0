@@ -4,7 +4,9 @@
 
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
-This GitHub repository contains the source code for NREL&#39;s ReEDS India model. Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS India Version 2019 source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS India model can be downloaded or cloned from [https://github.com/NREL/ReEDS\_OpenAccess](https://github.com/NREL/ReEDS_OpenAccess). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
+This GitHub repository contains the source code for NREL&#39;s ReEDS India model. This version was adapted from the ReEDS model developed for North America. [Table 2](#Tab2) summarizes differences in model design and capabilities between the two versions. 
+
+Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS India Version 2019 source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS India model can be downloaded or cloned from [https://github.com/NREL/ReEDS\_OpenAccess](https://github.com/NREL/ReEDS_OpenAccess). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
 
 ## Contents
 
@@ -155,17 +157,10 @@ Add R to the &quot;path&quot; environment variable. Follow the same instructions
 
 **IMPORTANT** : Test the R installation from the command line by typing &quot;r&quot; (no quotes) in the terminal window. The R program should initiate ([Figure 11](#Fig11)).
 
-Install R packages necessary for ReEDS from the command line. Navigate to the ReEDS directory in the terminal window. Type &quot;rscript input\_processing\R\packagesetup.R&quot; and press &quot;Enter\Return&quot;. The Rscript.exe program will install a suite of R packages ([Figure 12](#Fig12)).
-
 <a name="Fig11"></a>
 ![Image of Test R](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/r-test.png)
 
 *Figure 11. Screenshot of a test of R from the terminal window.*
-
-<a name="Fig12"></a>
-![Image of Install R Packages](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/master/images/install-r-pack.png)
- 
-*Figure 12. Screenshot of installing R packages with packagesetup.R.*
 
 <a name="RepoGuide"></a>
 # Guide to the ReEDS India Respository
@@ -215,16 +210,16 @@ The execution of the ReEDS India model can be accomplished by using a command-li
 
 A ReEDS India scenario (also referred to as a &quot;run&quot;, &quot;case&quot; or &quot;instance&quot;) is executed through a python-based case batching program called &quot;runmodel.py&quot;. The user can execute a single case or a batch of cases using this program.
 
-**Step 1** : Specify the ReEDS scenario name(s) and configuration(s) in the case configuration file.([Figure 13](#Fig13)). 
+**Step 1** : Specify the ReEDS scenario name(s) and configuration(s) in the case configuration file.([Figure 12](#Fig12)). 
 
 The scenario configuration file name is called &quot;cases.csv&quot; in the &quot;A_Inputs&quot; folder. Within &quot;cases.csv&quot;, the data in Column A are the model &quot;switches&quot; (also referred to as &quot;options&quot;). Column B provides brief descriptions of the switches. The data in Column C are the default values of the switches. Every subsequent column represents an individual model scenario, beginning with Column D. The scenario name is specified in Row 1. The value for each switch is specified beginning in Row 2. If a switch value is left blank, the default value from Column C is used. Users can tailor the default scenarios in two ways: 1.) adjust the default switch values for an existing scenario or 2.) create a new scenario by adding a new column with a scenario name in Row 1 and desired switch values beginning in Row 2.
 
 A complete list of switches is provided in the Appendix of this document.
 
-<a name="Fig13"></a>
+<a name="Fig12"></a>
 ![Image of Cases.csv](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/India_Public/images/cases.jpg) 
 
-*Figure 13. Screenshot of cases.csv.*
+*Figure 12. Screenshot of cases.csv.*
 
 **Step 2** : Compile and run the model from the command line
 
@@ -325,7 +320,7 @@ GAMS will produced files unique to each case that can help the user with error d
 
 This model is based on the ReEDS Version 2018 created for the United States. All input parameters have been updated to reflect the India context including electricity demand, technology cost and performance, data on existing and planned infrastructure, resource data, and operating and policy constraints. The ReEDS Version 2018 Documentation on which the ReEDS India model is based is available at no cost from the National Renewable Energy Laboratory: [https://www.nrel.gov/docs/fy19osti/72023.pdf](https://www.nrel.gov/docs/fy19osti/72023.pdf)
 
-[Table 2](#Tab2) summarizes difference between model design and capabilities in US ReEDS Version 2018 and ReEDS India.
+[Table 2](#Tab2) summarizes difference between model design and capabilities in US ReEDS Version 2019 and ReEDS India.
 
 <a name="Tab2"></a>
 *Table 2. Differences between US ReEDS Version 2019 and ReEDS India.*

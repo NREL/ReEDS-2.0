@@ -1,0 +1,204 @@
+---
+title: "ReEDS-India Results"
+author: "Created by: National Renewable Energy Laboratory (NREL)"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+  html_document: 
+    toc: true
+    toc_float:
+      collapsed: false
+    number_sections: true
+    fig_width: 10
+    df_print: paged
+    
+params:
+  scenario: 'Date_Scenario'
+---
+
+```{r setOptions, echo=F, warning=F, message=F, error=F, cache=F, include = F}
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+# load packages, data and plotting functions
+rpackagelib = "D:/Conda_envs/reeds3/Lib/R/library"
+library(ggplot2, lib.loc = rpackagelib)
+library(data.table, lib.loc = rpackagelib)
+library(RColorBrewer, lib.loc = rpackagelib)
+library(scales, lib.loc = rpackagelib)
+library(stringr, lib.loc = rpackagelib)
+library(rmarkdown, lib.loc = rpackagelib)
+library(zoo, lib.loc = rpackagelib)
+library(DT, lib.loc = rpackagelib)
+library(wesanderson, lib.loc = rpackagelib)
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!! PROCESSING COMMAND LINE ARGUMENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+
+curt.switch = 1
+
+final.year = params$final.year
+
+source(file.path("scripts","plot_functions_IC.R"))
+source(file.path("scripts","plot_functions_AR.R"))
+source(file.path("scripts","plot_parameters.R"))
+
+# load data for scenario
+scenario = params$scenario
+load_data = paste0('output_',scenario,'.Rdata')
+
+solutions = c(scenario = load_data)
+
+load(file.path("data",load_data))
+
+load(file.path("data","contours.Rdata"))
+
+# tech colors and order
+gen.colors = input.params[!is.na(Plot.Color),Plot.Color]
+names(gen.colors) = input.params[!is.na(Gen.Type),Gen.Type]
+gen.order = input.params[!is.na(Gen.Order), Gen.Order]
+
+# set figure width by number of scenarios
+final.year = max(cap$Year)
+n.scenario = 1
+n.year = length(unique(cap$Year))
+
+png_path = paste0(file.path("plots",scenario),.Platform$file.sep)
+
+# set up default options for chunks, turn off error or warning messages
+knitr::opts_chunk$set(echo=F, comment=NA, warning=F, message=F, include=T, 
+                      dev='png', cache = F, fig.path = png_path)
+
+```
+
+# Model
+```{r analysis-metadata, echo=FALSE}
+metadata = data.table(Scenario = scenario,
+                      `Number of years` = sum(unique(cap$Year)<=final.year),
+                      `Final analysis year` = min(final.year,max(unique(cap$Year))))
+knitr::kable(metadata)
+
+```
+
+
+# Capacity {.tabset}
+
+## Total
+```{r india-capacity, echo=FALSE,  fig.height = 5.5, rows.print = n.year, fig.width = 10}
+
+# Total capacity by year, national
+p1 = plot_cap_by_year(aggregate.by = "nation",years = 2020:2050)
+
+if(n.scenario==1 & final.year == 2050){
+  p1$plot = p1$plot + 
+  geom_vline(xintercept= 2022.5, linetype = "dashed", color = "darkgrey", size = 1.25) +
+  annotate("text", x = c(2021,2026), y=1300, label = c("Planned", "Modeled"), size = 5,
+           color = c("grey30", "firebrick"))
+}
+
+p1$plot 
+
+datatable(p1$data,  rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
+
+```
+
+## Regional
+```{r capacity-region, echo=FALSE,  fig.height = 6.5, fig.width = 8}
+
+# Total capacity by year, region
+p1 = plot_cap_by_year(aggregate.by = "region")
+
+p1$plot
+```
+
+## New capacity
+```{r new-capacity, echo=FALSE, fig.height = 5, fig.width = 8}
+
+# New capacity by year, national
+p = plot_new_capacity(aggregate.by = "nation")
+
+p$plot
+
+```
+
+## RE capacity maps
+```{r capacity-maps, echo=FALSE, fig.height = 4, fig.width = 8}
+map_rs_capacity(category = 'WIND', palette = 'Blues') + ggtitle(paste0('Wind capacity in ',final.year))
+map_rs_capacity(category = 'UPV', palette = 'Reds') + ggtitle(paste0('Utility PV capacity in ',final.year))
+
+```
+
+# Firm Capacity {.tabset}
+
+## All India
+```{r india-firm-capacity, echo=FALSE,  fig.height = 5, rows.print = n.year, fig.width = 10}
+
+p = plot_firm_capacity(aggregate.by = 'nation')
+p$plot
+datatable(p$data, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
+```
+
+## Regional
+```{r region-firm-capacity, echo=FALSE,  fig.height = 5, rows.print = n.year, fig.width = 10}
+
+p = plot_firm_capacity(aggregate.by = 'region')
+p$plot
+datatable(p$data, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
+
+```
+
+# Annual generation {.tabset}
+
+## Total generation
+```{r generation, echo=FALSE,  fig.height = 3, fig.width = 10}
+
+# Generation by year, national
+p = plot_generation(aggregate.by = "nation")
+  
+p$plot 
+
+```
+
+## Generation mix
+```{r generation-mix, echo=FALSE, rows.print = n.year, fig.height = 3.5, fig.width = 8}
+p = plot_generation(aggregate.by = "nation", plot_curt = FALSE)
+
+min_year = min(p$mix_data[,Year])
+max_year = max(p$mix_data[,Year])
+ggplot(data = p$mix_data) +
+  geom_area(aes(x=Year,y=gen.mix,fill=Type), color = 'grey20') +
+  labs(y = 'Generation mix', x = NULL) +
+  scale_x_continuous(breaks=seq(min_year-1, max_year, 4),expand = c(0,0)) +
+  scale_y_continuous(labels = scales::percent, expand = c(0,0)) +
+  scale_fill_manual("",values = gen.colors, drop = TRUE) +
+  plot_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~scenario)
+
+```
+
+## Time slice dispatch
+```{r timeslice-gen-nation, echo=FALSE, fig.height = 3.5, fig.width = 8}
+
+for(i in c(2030,2040,2050)){
+  if(i %in% tslc.gen$Year){
+  # Generation by year, national
+  p1 = plot_timeslice_generation(aggregate.by = "nation", type = 'capacity', year = i)
+  
+  print(p1$plot + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) +
+    ggtitle(paste0('Generation dispatch in ', i)))
+  }
+}
+
+```
+
+## Regional dispatch
+```{r timeslice-gen-region, echo=FALSE, fig.height = 10}
+
+# Generation by year, state
+p = plot_timeslice_generation(aggregate.by = "region", year = final.year, type = 'capacity')
+
+
+p$plot + ggtitle(paste('Generation dispatch in',final.year) ) +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+```
+

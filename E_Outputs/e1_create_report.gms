@@ -1,30 +1,21 @@
 
 *This file aggregates and formats key results for analysis
 
-parameter resgen, rescap, capinv, txinv, totflow, resflow, margcost, thermalfirmcap, rscfirmcap, 
-fuelcost, capcost, fomcost, vomcost, oprescost, firm_conv, firm_vg, firm_hydro,
-avail_refurb, inv_refurb;
+parameter gen_out, curt_out, resgen, stor_charge, rescap, capinv, txinv, totflow, resflow, margcost, 
+fuelcost, capcost, fomcost, vomcost, oprescost, firm_conv, firm_vg, firm_hydro, firm_stor,
+avail_refurb, inv_refurb, txcapcost, substcost, load_mw, load_rt;
 
-*==========================
-* --- Global sets ---
-*==========================
+gen_out(i,r,h,t) = sum(v, GEN.l(i,v,r,h,t));
 
-*Setting the default slash
-$setglobal ds \
-$setglobal copycom copy
+curt_out(i,r,h,t) = sum((v), m_cf(i,r,h) * CAP.l(i,v,r,t)$vre(i) ) - sum((v), GEN.l(i,v,r,h,t)$vre(i) );
 
-*Change the default slash if in UNIX
-$ifthen.unix %system.filesys% == UNIX
-$setglobal ds /
-$setglobal copycom cp
-$endif.unix
+resgen(i,r,t) = sum((v,h),hours(h) * GEN.l(i,v,r,h,t));
 
+stor_charge(i,r,h,t) = sum((v,src), STORAGE_IN.l(i,v,r,h,src,t));
 
-resgen(i,r,t) = sum((c,h),hours(h) * GEN.l(i,c,r,h,t));
+rescap(i,r,t) = sum(v,CAP.l(i,v,r,t));
 
-rescap(i,r,t) = sum(c,cap.l(i,c,r,t));
-
-capinv(i,r,t) = sum(c, INV.l(i,c,r,t)) + sum((c,rscbin), INV_RSC.l(i,c,r,t,rscbin));
+capinv(i,r,t) = sum(v, INV.l(i,v,r,t)) ;
 
 txinv(r,rr,t) = sum(trtype, INVTRAN.l(r,rr,t,trtype));
 
@@ -34,40 +25,64 @@ resflow(r,rr,h,t) = sum(trtype, FLOW.l(r,rr,h,t,trtype));
 
 margcost(r,h,t) = eq_supply_demand_balance.m(r,h,t);
 
-thermalfirmcap(r,t,i) =  sum(c$[valcap(i,c,r,t)$((not rsc_i(i)))], CAP.l(i,c,r,t) );
+capcost(i,r,t) = sum(v$valinv(i,v,r,t), INV.l(i,v,r,t) * cost_cap_fin_mult(i,r,t) * cost_cap(i,t))   
+                 + sum((v, rscbin)$valinv(i,v,r,t), INV_RSC.l(i,v,r,t,rscbin) * m_rsc_dat(r,i,rscbin,"cost")) 
+                 + sum(v$valinv(i,v,r,t), cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INVREFURB.l(i,v,r,t) * refurb_cost_multiplier(i));
 
-rscfirmcap(r,t,i) = sum((c,szn)$[(not hydro(i))$rsc_i(i)$valcap(i,c,r,t)], cc_avg(i,r,szn,t) * CAP.l(i,c,r,t));
+txcapcost(r,rr,t,trtype) = r_rr_transcost(r,rr) * INVTRAN.l(r,rr,t,trtype) ;
 
-fuelcost(i,r,t) = sum((h,c), hours(h) * heat_rate(i,c,r,t) * fuel_price(i,r,t) * GEN.l(i,c,r,h,t) );
+substcost(r,t) = sum{(vc), trancost(r,"cost",vc) * InvSubstation.l(r,vc,t) };
 
-capcost(i,r,t) = sum(c, INV.l(i,c,r,t)*cost_cap(i,t));
+vomcost(i,r,t) = sum((h,v), hours(h) * cost_vom(i,v,r,t)  * GEN.l(i,v,r,h,t));
 
-fomcost(i,r,t) = sum(c, CAP.l(i,c,r,t)*cost_fom(i,c,r,t));
+fomcost(i,r,t) = sum(v, cost_fom(i,v,r,t) * CAP.l(i,v,r,t));
 
-vomcost(i,r,t) = sum((h,c), cost_vom(i,c,r,t) * hours(h) * GEN.l(i,c,r,h,t));
+oprescost(i,r,t) = sum((v,h,ortype), hours(h) * cost_opres(i) * OpRes.l(ortype,i,v,r,h,t));
 
-oprescost(i,r,t) = sum((c,h,ortype), hours(h) * cost_opres(i) * OpRes.l(ortype,i,c,r,h,t));
+fuelcost(i,r,t) = sum((h,v), hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN.l(i,v,r,h,t) );
 
-firm_conv(region,szn,t,i) = sum[(c,r)$[r_region(r,region)$valcap(i,c,r,t)$(not rsc_i(i))$(not storage(i))],
-          CAP.l(i,c,r,t) ] ;
+firm_conv(region,szn,t,i) = sum[(v,r)$[r_region(r,region)$valcap(i,v,r,t)$(not rsc_i(i))$(not storage(i))],
+          CAP.l(i,v,r,t) ] ;
 
 firm_vg(region,szn,t,i) = sum[r$r_region(r,region),
-        sum((c,rr)$[cap_agg(r,rr)$(rsc_i(i) or storage(i))$(not hydro(i))$valcap(i,c,rr,t)],
-          cc_avg(i,rr,szn,t) * CAP.l(i,c,rr,t))
+        sum((v,rr)$[cap_agg(r,rr)$(rsc_i(i))$(not hydro(i))$valcap(i,v,rr,t)],
+          cc_int(i,v,rr,szn,t) * CAP.l(i,v,rr,t))
         ] ;
 
-firm_hydro(region,szn,t,i) = sum[(c,r)$[r_region(r,region)$valcap(i,c,r,t)$(hydro(i))],
-     cc_hydro(i,r,szn,t) * CAP.l(i,c,r,t) ] ;
+firm_hydro(region,szn,t,i) = sum[(v,r)$[r_region(r,region)$valcap(i,v,r,t)$hydro_pond(i)], cc_hydro(i,r,szn,t) * CAP.l(i,v,r,t) ] +
+                             sum[(v,r)$[r_region(r,region)$valcap(i,v,r,t)$hydro_stor(i)],  CAP.l(i,v,r,t) ];
+
+firm_stor(region,szn,t,i) = sum[(v,r,sdbin)$[r_region(r,region)$valcap(i,v,r,t)$storage(i)],
+				  CAP_SDBIN.l(i,v,r,szn,sdbin,t) * cc_storage(i,sdbin) ] ;
 
 avail_refurb(i,r,t) = 
 *investments that meet the refurbishment requirement (i.e. they've expired)
-    sum{(cc,rscbin,tt)$[m_refurb_cond(i,cc,r,t,tt)$tmodel(t)$rfeas(r)$refurbtech(i)],
-         INV_RSC.l(i,cc,r,tt,rscbin) }
-    + sum{(c,tt)$[yeart(tt)<=yeart(t)],
-         m_avail_retire_exog_rsc(i,c,r,tt)$[tmodel(t)$rfeas(r)$refurbtech(i)] } ;
+    sum{(vv,rscbin,tt)$[m_refurb_cond(i,vv,r,t,tt)$tmodel(t)$rfeas(r)$refurbtech(i)],
+         INV_RSC.l(i,vv,r,tt,rscbin) }
+    + sum{(v,tt)$[yeart(tt)<=yeart(t)],
+         m_avail_retire_exog_rsc(i,v,r,tt)$[tmodel(t)$rfeas(r)$refurbtech(i)] } ;
 
-inv_refurb(i,r,t) = INVREFURB.l(i,r,t);
+inv_refurb(i,r,t) = sum(v, INVREFURB.l(i,v,r,t));
 
+load_mw(r,h,t) = LOAD.l(r,h,t);
+
+load_rt(r,t) = sum(h,hours(h) * LOAD.l(r,h,t));
+
+*Load and operating reserve prices are $/MWh, and reserve margin price is $/kW-yr
+parameter
+reqt_price							"--varies-- price of requirements"
+*load_frac_prm(rb,szn,t)              "--fraction-- Fraction of peak LOAD in each BA contributing to PRM",
+*load_frac_opres(rb,h,t)			"--fraction-- Fraction of operating reserve in each BA",
+*maxload_szn_r(rb,szn,t)			"--MW-- maximum load in each season"
+;
+
+*maxload_szn_r(rb,szn,t) = smax(hh$h_szn(hh,szn), lmnt(rb,hh,t));
+*load_frac_prm(rb,szn,t) = maxload_szn_r(rb,szn,t) / sum(region$[r_region(rb,region)], peakdem_region(region,szn,t) );
+*load_frac_opres(rb,h,t) = lmnt(rb,h,t) / sum(rr, lmnt(rr,h,t));
+
+reqt_price('load','na',rb,h,t)$(rfeas(rb)$tmodel_new(t)) = (1 / cost_scale) * (1 / pvf_onm(t)) * eq_loadcon.m(rb,h,t) / hours(h) ;
+reqt_price('res_marg','na',region,szn,t)$tmodel_new(t) = (1 / cost_scale) * (1 / pvf_onm(t)) * eq_reserve_margin.m(region,szn,t)  ;
+*eqt_price('oper_res',ortype,rb,h,t)$(rfeas(rb)$tmodel_new(t)) = sum(region,(1 / cost_scale) * (1 / pvf_onm(t)) * eq_OpRes_requirement.m(ortype,region,h,t) / hours(h) * load_frac_opres(rb,h,t));
 
 $if not set fname $setglobal fname temp
-execute_unload 'E_Outputs%ds%gdxfiles%ds%output_%fname%.gdx'
+execute_unload '%casepath%%ds%outputs%ds%output_%fname%.gdx'

@@ -1,0 +1,39 @@
+reeds.category,Type,Gen.Type,Plot.Color,Gen.Order,NonFossil,Focus.Regions,reeds.states,json.states,lon,lat
+CCGT-GAS,Gas CC,Curtailment,#E1E1E1,Imports,Solar PV,Andhra_Pradesh,Andhra_Pradesh,Andhra Pradesh,83.3,17.73
+COGENERATION-BAGASSE,Cogeneration-Bagasse,Diesel,#853D65,Curtailment,Wind,Arunachal_Pradesh,Arunachal_Pradesh,Arunachal Pradesh,94.67515241,28.03873074
+CT-GAS,Gas CT,Gas CC,#52216B,H2 Solar PV and H2 Wind: Export to Grid,Other,Assam,Assam,Assam,91.75,26.19
+DIESEL,Diesel,Gas CT,#C2A1DB,BESS,Hydro,Bihar,Bihar,Bihar,85.13,25.62
+DISTPV,Solar PV,Hydro,#187F94,BESS 1hr,Nuclear,Chandigarh,Chandigarh,Chandigarh,76.78,30.75
+HYDRO-PONDAGE,Hydro,Nuclear,#820000,BESS 2hr,H2 Solar PV,Chhattisgarh,Chhattisgarh,Chhattisgarh,81.63,21.24
+HYDRO-PUMPED,Pumped hydro,Cogeneration-Bagasse,#A96235,BESS 4hr,H2 Wind,Dadra_Nagar_Haveli,Dadra_Nagar_Haveli,Dadra & Nagar Haveli,73.04129962,20.19528089
+HYDRO-ROR,Hydro,Subcritical-Oil,#734d62,BESS 6hr,,Daman_Diu,Daman_Diu,Daman & Diu,70.94869266,20.71330172
+HYDRO-STORAGE,Hydro,WHR,#cc2f2f,BESS 8hr,,Delhi,Delhi,Delhi,77.21,28.67
+NUCLEAR,Nuclear,Pumped hydro,darkblue,BESS 10hr,,Goa,Goa,Goa,73.94,15.28
+SUBCRITICAL-COAL,Sub-Coal,Solar PV,#FFC903,Pumped hydro,,Gujarat,Gujarat,Gujarat,72.58,23.03
+SUBCRITICAL-LIGNITE,Sub-Coal,Sub-Coal,#222222,H2 Solar PV,,Haryana,Haryana,Haryana,77.3,28.38
+SUBCRITICAL-OIL,Subcritical-Oil,Super-Coal,#525352,H2 Wind,,Himachal_Pradesh,Himachal_Pradesh,Himachal Pradesh,77.16,31.11
+SUPERCRITICAL-COAL,Super-Coal,Wind,#00B6EF,Solar PV,,Jammu_Kashmir,Jammu_Kashmir,Jammu & Kashmir,74.79,34.09
+UPV,Solar PV,BESS,#FF4A88,Wind,,Jharkhand,Jharkhand,Jharkhand,85.33,23.36
+WHR,WHR,BESS 1hr,#FF7FBB,Cogeneration-Bagasse,,Karnataka,Karnataka,Karnataka,77.56,12.97
+WIND,Wind,BESS 2hr,#CC0079,Subcritical-Oil,,Kerala,Kerala,Kerala,76.95,8.51
+BATTERY,BESS,BESS 4hr,#FF6882,WHR,,Madhya_Pradesh,Madhya_Pradesh,Madhya Pradesh,75.86,22.72
+BATTERY_1,BESS 1hr,BESS 6hr,#DF5282,Hydro,,Maharashtra,Maharashtra,Maharashtra,72.82,18.96
+BATTERY_2,BESS 2hr,BESS 8hr,#CC015C,Naptha,,Manipur,Manipur,Manipur,93.94,24.79
+BATTERY_4,BESS 4hr,BESS 10hr,#9B014F,Diesel,,Meghalaya,Meghalaya,Meghalaya,91.87,25.57
+BATTERY_6,BESS 6hr,H2 Solar PV,#A38102,Gas CT,,Mizoram,Mizoram,Mizoram,92.71,23.71
+BATTERY_8,BESS 8hr,H2 Wind,#037DA3,Gas CC,,Nagaland,Nagaland,Nagaland,93.73,25.92
+BATTERY_10,BESS 10hr,H2 Solar PV and H2 Wind: Export to Grid,#0B5203,Super-Coal,,Odisha,Odisha,Odisha,85.84,20.27
+NEPAL_STORAGE,Imports,,,Sub-Coal,,Puducherry,Puducherry,Puducherry,79.77,11.94
+UPV_H2,H2 Solar PV,,,Nuclear,,Punjab,Punjab,Punjab,75.84,30.91
+DISTPV_H2,H2 Solar PV,,,,,Rajasthan,Rajasthan,Rajasthan,75.8,26.92
+WIND_H2,H2 Wind,,,,,Sikkim,Sikkim,Sikkim,88.4727118,27.57167144
+Curtailment_H2,H2 Solar PV and H2 Wind: Export to Grid,,,,,Tamil_Nadu,Tamil_Nadu,Tamil Nadu,80.27,13.09
+,,,,,,Telangana,Telangana,Telangana,78.48,17.4
+,,,,,,Tripura,Tripura,Tripura,91.27,23.84
+,,,,,,UP_Agra,UP_Agra,UP_Agra,78.0044325,27.18095886
+,,,,,,UP_Kanpur,UP_Kanpur,UP_Kanpur,80.33288959,26.45270663
+,,,,,,UP_Lucknow,UP_Lucknow,UP_Lucknow,80.92431664,26.8643129
+,,,,,,UP_Meerut,UP_Meerut,UP_Meerut,77.70582675,28.98515998
+,,,,,,UP_Varanasi,UP_Varanasi,UP_Varanasi,82.97291096,25.31733232
+,,,,,,Uttarakhand,Uttarakhand,Uttarakhand,78.05,30.34
+,,,,,,West_Bengal,West_Bengal,West Bengal,88.36,22.57

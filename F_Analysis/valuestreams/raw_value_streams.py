@@ -3,8 +3,8 @@ This file can be used to combine an mps file (non-pre-solved) and associated mar
 from GAMS gdx solution file to produce value streams for the variables of the model.
 '''
 
-import pandas as pd
 import gdxpds
+import pandas as pd
 import re
 from datetime import datetime
 
@@ -54,7 +54,7 @@ def get_value_streams(solution_file, mps_file, var_list=None, con_list=None):
     df = pd.concat([df, df_var_marg], ignore_index=True)
     #Calculate value streams
     df['value_per_unit'] = df['coeff']*df['con_marginal']
-    df['value'] = df['value_per_unit']*df['var_level']
+    df['value'] = df['value_per_unit']
     return df
 
 def get_df_mps(mps_file, var_list=None, con_list=None):

@@ -1,0 +1,524 @@
+---
+title: "ReEDS-India Results"
+author: "Created by: National Renewable Energy Laboratory (NREL)"
+date: "`r format(Sys.time(), '%d %B %Y')`"
+output: 
+  html_document: 
+    toc: true
+    toc_float:
+      collapsed: false
+    number_sections: true
+    fig_width: 10
+    df_print: paged
+    
+params:
+  gdxlist: 'Base#output_Base_Base.gdx##'
+  #gdxlist: "break if not defined by CLI"
+  gamsdir: "C:/GAMS/win64/24.7"
+  final.year: 2047
+  curt.switch: 1
+---
+
+```{r setOptions, echo=F, warning=F, message=F, error=F, cache=F, include = F}
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!! USER INPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+
+# Uncommenting will overwrite any command line arguments provided by the python workflow
+
+# gdxfiles = c('Base Case' = 'output_Dec10_Base.gdx',
+#              'BESS-10' = 'output_Dec11_bat10.gdx',
+#              'BESS-20' = 'output_Dec10_bat20.gdx',
+#              'BESS-30' = 'output_Dec10_bat30.gdx',
+#              'BESS-40' = 'output_Dec10_bat40.gdx',pink
+#               'BESS-50' = 'output_Dec10_bat50.gdx',
+#              'PV-10' = 'output_Dec10_pv10.gdx',
+#              'PV-20' = 'output_Dec10_pv20.gdx',
+#              'PV-30' = 'output_Dec13_pv30.gdx',
+#              'PV-40' = 'output_Dec10_pv40.gdx',
+#               'PV-50' = 'output_Dec10_pv50.gdx',
+#              'Wind-10' = 'output_Dec10_wind10.gdx',
+#              'Wind-20' = 'output_Dec13_wind20.gdx',
+#              'Wind-30' = 'output_Dec13_wind30.gdx',
+#               'Wind-40' = 'output_Dec13_wind40.gdx')
+
+# do you want to save plots as wmf files?
+save.wmf = F
+#!!!!!!!!!!!!!!!!!!!!!!!! END USER INPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+
+# load packages, data and plotting functions
+if(!require("pacman")){
+  install.packages('devtools')
+  require(remotes)
+  install_version("pacman", version = "0.4.6", repos = "http://cran.us.r-project.org")
+}
+
+pacman::p_load(gdxrrw, ggplot2, data.table, maptools, mapproj, RColorBrewer, 
+               rgdal, rgeos, scales, stringr, rmarkdown, gdata, zoo, viridis)
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!! PROCESSING COMMAND LINE ARGUMENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+
+if(!exists("gdxfiles")){
+gdxlist = strsplit(params$gdxlist, '##', fixed = TRUE)[[1]]
+
+gdxfiles = c()
+
+  for (i in 1:length(gdxlist)){
+      svector = strsplit(gdxlist[i], split = '#', fixed = TRUE)[[1]]
+      sname = svector[1]
+      spath = svector[2]
+      f = c(spath)
+      names(f) =sname
+      gdxfiles = c(gdxfiles, f)
+  }
+}
+
+curt.switch = params$curt.switch
+
+gamsdir = params$gamsdir
+igdx(gamsdir)
+
+#hacky way to get parent directory... R is dumb
+wd <- getwd()
+setwd("..")
+parent <- getwd()
+setwd(wd) 
+gdx.dir = file.path(parent, "E_Outputs","gdxfiles")
+
+final.year = params$final.year
+
+# load analysis parameters
+input.params = fread("data/analysis_parameters.csv")
+input.params[input.params == ""] = NA
+gen.order = input.params[!is.na(Gen.Order), Gen.Order]
+gen.type.map = na.omit(input.params[,.(reeds.category, Type = factor(Type, levels = gen.order))])
+gen.colors = input.params[!is.na(Plot.Color),Plot.Color]
+names(gen.colors) = input.params[!is.na(Gen.Type),Gen.Type]
+
+focus.regions = input.params[,Focus.Regions]
+
+solutions.dir = input.params$solutions.dir[1]
+if(!(solutions.dir == gdx.dir)){
+  gdx.dir = solutions.dir
+}
+
+source("scripts/plot_functions_IC.R")
+source("scripts/plot_functions_AR.R")
+source("scripts/plot_parameters.R")
+source("scripts/gdxr_functions.R")
+source("scripts/query_gdx_files.R")
+
+# set figure width by number of scenarios
+n.scenario = length(gdxfiles)
+n.year = length(unique(cap$Year))
+
+png_path = "plots/png/png_output_"    
+
+if(save.wmf == T){
+  wmf_path = "plots/wmf/wmf_output_"  
+}
+
+# set up default options for chunks, turn off error or warning messages
+knitr::opts_chunk$set(echo=F, comment=NA, warning=F, message=F, include=T, 
+                      dev='png', cache = F, fig.path = png_path)
+
+```
+
+# Analaysis Plots and Figures
+```{r analysis-metadata, echo=FALSE}
+metadata = data.table(Scenario = names(gdxfiles),
+                      File = gdxfiles,
+                      `Number of years` = sum(unique(demand$Year)<=final.year),
+                      `Final analysis year` = final.year)
+knitr::kable(metadata)
+
+```
+
+# Capacity
+```{r total-capacity, echo=FALSE, fig.height = 3, rows.print = n.year, fig.width = 6.5}
+
+# Total capacity by year, national
+p1 = plot_cap_by_year(aggregate.by = "nation",years = 2017:2047, scenario_filter = 'Base Case')
+
+if(ncol(p1$data)==3 & final.year == 2047){
+  p1$plot = p1$plot + 
+  geom_vline(xintercept= 2022.5, linetype = "dashed", color = "darkgrey", size = 1.25) +
+  annotate("text", x = c(2019,2026), y=1300, label = c("Planned", "Modeled"), size = 5,
+           color = c("grey30", "firebrick"))
+}
+
+p1$plot + theme(strip.background = element_blank(), strip.text = element_blank())
+
+p1 = plot_cap_by_year(aggregate.by = "nation",years = 2017:2047)
+
+p1$data[, (scenario.names) := lapply(.SD, round, digits = 2), .SDcols = scenario.names]
+p1$data
+
+p2 = plot_cap_mix(aggregate.by = "nation", years = 2017:2047, scenario_filter = 'Base Case')
+
+p2$plot + theme(strip.background = element_blank(), strip.text = element_blank())
+
+p2 = plot_cap_mix(aggregate.by = "nation", years = 2017:2047)
+
+data = p2$data
+data[,(scenario.names) := lapply(.SD, function(x){scales::percent(x)}), .SDcols = scenario.names]
+
+data
+
+```
+
+## New capacity
+```{r new-capacity, echo=FALSE,  fig.height = 3.4, fig.width = 6.5}
+
+# New capacity by year, national
+p = plot_new_capacity(aggregate.by = "nation", scenario_filter = 'Base Case') 
+
+p$plot + theme(strip.background = element_blank(), strip.text = element_blank())
+
+
+```
+
+# Firm Capacity
+```{r firm-capacity, echo=FALSE,  fig.height = 3, fig.width = 6.5}
+p = plot_firm_capacity(aggregate.by = 'nation', years = c(2017,2030,2047), scenario_filter = 'Base Case')
+p$plot
+p$data
+
+```
+
+## Capacity by region
+```{r capacity-region, echo=FALSE,   fig.height = 6, fig.width = 6.5}
+
+# Total capacity by year, region
+p = plot_cap_by_year(aggregate.by = "region", scenario_filter = 'Base Case') 
+
+p$plot 
+
+```
+
+# Conventinoal capacity maps
+```{r map-conv-capacity, echo=FALSE,  fig.height = 2.5, fig.width = 6.5}
+ccgt.cap.map = map_capacity(type = "Gas CC", palette = 'Greens', years = final.year, 
+                            scenario_filter = 'Base Case') +
+  theme(strip.background = element_blank(), strip.text.x = element_blank(),
+        legend.position = c(0.85,0.2),plot.title = element_blank(),
+        legend.text = element_text(margin = margin(l = 5)),
+        legend.title = element_text(size = small.text.size),
+        legend.key.size = unit(.3,'cm'))
+
+colors = colorRampPalette(c("white", "violetred2"))
+ct.cap.map = map_capacity(type = 'Gas CT', palette = colors(6), years = final.year,
+                           scenario_filter = 'Base Case') +
+  theme(strip.background = element_blank(), strip.text.x = element_blank(),
+        legend.position = c(0.85,0.2), plot.title = element_blank(),
+        legend.text = element_text(margin = margin(l = 5)),
+        legend.title = element_text(size = small.text.size),
+        legend.key.size = unit(.3,'cm'))
+
+coal.cap.map = map_capacity(type = c('Super-Coal','Sub-Coal'), palette = 'Greys', years = final.year,
+                            scenario_filter = 'Base Case') +
+  theme(strip.background = element_blank(), strip.text.x = element_blank(),
+        legend.position = c(0.85,0.2), plot.title = element_blank(),
+        legend.text = element_text(margin = margin(l = 5)),
+        legend.title = element_text(size = small.text.size),
+        legend.key.size = unit(.3,'cm'))
+
+cowplot::plot_grid(ccgt.cap.map, ct.cap.map, coal.cap.map, nrow = 1,
+                   labels = c("a","b","c"))
+
+```
+
+# RE capacity maps
+
+```{r map-re-capacity, echo=FALSE,  fig.height = 2.5, fig.width = 6.5}
+wind.cap.map = map_rs_capacity(category = "WIND", palette = 'Blues', years = final.year, 
+                            scenario_filter = 'Base Case') +
+  theme(strip.background = element_blank(), strip.text.x = element_blank(),
+        legend.position = c(0.85,0.2),plot.title = element_blank(),
+        legend.text = element_text(margin = margin(l = 5)),
+        legend.title = element_text(size = small.text.size),
+        legend.key.size = unit(.3,'cm'))
+
+upv.cap.map = map_rs_capacity(category = 'UPV', palette = 'Oranges', years = final.year,
+                           scenario_filter = 'Base Case') +
+  theme(strip.background = element_blank(), strip.text.x = element_blank(),
+        legend.position = c(0.85,0.2), plot.title = element_blank(),
+        legend.text = element_text(margin = margin(l = 5)),
+        legend.title = element_text(size = small.text.size),
+        legend.key.size = unit(.3,'cm'))
+
+distpv.cap.map = map_rs_capacity(category = 'DISTPV', palette = 'Reds', years = final.year,
+                            scenario_filter = 'Base Case') +
+  theme(strip.background = element_blank(), strip.text.x = element_blank(),
+        legend.position = c(0.85,0.2), plot.title = element_blank(),
+        legend.text = element_text(margin = margin(l = 5)),
+        legend.title = element_text(size = small.text.size),
+        legend.key.size = unit(.3,'cm'))
+
+cowplot::plot_grid(wind.cap.map, upv.cap.map, distpv.cap.map, nrow = 1,
+                   labels = c("a","b","c"))
+
+```
+
+# Generation
+```{r generation, echo=FALSE, fig.height = 3, fig.width = 6}
+
+# Generation by year, national
+p = plot_generation(aggregate.by = "nation", scenario_filter = 'Base Case')
+  
+p$plot + theme(strip.background = element_blank(), strip.text = element_blank())
+
+```
+
+## Generation mix
+```{r generation-mix, echo=FALSE, rows.print = n.year, fig.height = 3, fig.width = 6}
+p = plot_generation(aggregate.by = "nation", scenario_filter = 'Base Case', plot_curt = FALSE)
+
+min_year = min(p$mix_data[,Year])
+max_year = max(p$mix_data[,Year])
+ggplot(data = p$mix_data) + 
+  geom_area(aes(x=Year,y=gen.mix,fill=Type), color = 'grey20') +
+  labs(y = 'Generation mix', x = NULL) +
+  scale_x_continuous(breaks=seq(min_year-1, max_year, 2),expand = c(0,0)) +
+  scale_y_continuous(labels = scales::percent, expand = c(0,0)) +
+  scale_fill_manual("",values = gen.colors, drop = TRUE) +
+  plot_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~scenario) +
+  theme(strip.background = element_blank(), strip.text = element_blank())
+
+# Generation mix by year
+p$mix
+
+```
+
+
+## Timeslice generation
+```{r timeslice-gen-nation, echo=FALSE, fig.height = 3.5, fig.width = 6.5}
+
+# Generation by year, national
+p = plot_timeslice_generation(aggregate.by = "nation", year = c(2022,2047), type = 'capacity',
+                              scenario_filter = 'Base Case')
+
+# add load as dot
+tot.load = demand[scenario == 'Base Case' & Year %in% c(2022,2047), .(Demand = sum(demand)/1000), 
+                  by = .(scenario, time_slice = time_slice, Year)]
+
+tot.load = merge(tot.load, ts.map, by = 'time_slice')
+
+net.demand = demand[scenario == 'Base Case' & Year %in% c(2022,2047),.(demand = sum(demand)), 
+                    by = .(season, time, Year)]
+
+net.demand = merge(net.demand, vre)
+net.demand[,net := (demand-gen)/1000]
+
+p = p$plot + 
+  geom_point(data = tot.load, aes(x=time, y=Demand, color="Demand"), inherit.aes = F) +
+  geom_point(data = net.demand, aes(x=time, y=net, color="Net Demand"), inherit.aes = F) +
+  scale_color_manual(values=c('Demand'='black','Net Demand'='lightpink')) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5))
+
+p + theme(legend.position = 'bottom')
+
+```
+
+# Curtailment map
+```{r map-re-curtailment, echo=FALSE,  fig.height = 2.5, fig.width = 4}
+
+curt.map = map_curtailment(year = final.year, scenario_filter = 'Base Case')
+
+curt.map 
+```
+
+## Transmission investment and flow map
+```{r map-tx-investment, echo=FALSE, fig.width = 8, fig.height = 4}
+
+map.tx.inv = map_tx_inv(scenario_filter = 'Base Case')
+map.tx.inv = map.tx.inv +
+  theme(strip.background = element_blank(), strip.text.x = element_blank(),
+        legend.position = c(0.7,0.15), plot.title = element_blank(),
+        axis.title = element_blank(), axis.text = element_blank(),
+        legend.title = element_text(size = large.text.size, hjust = 0))
+
+
+map.tx.flow = map_max_flow(year = final.year, by = 'state', scenario_filter = 'Base Case')
+map.tx.flow = map.tx.flow +
+  theme(strip.background = element_blank(), strip.text.x = element_blank(),
+        legend.position = c(0.8,0.15), plot.title = element_blank(),
+        axis.title = element_blank(), axis.text = element_blank(),
+        legend.title = element_text(size = large.text.size, hjust = 0))
+
+cowplot::plot_grid(map.tx.inv, map.tx.flow, labels = c('a','b'))
+
+```
+
+## Cost scenarios over time
+```{r cost-scenarios-time, echo=FALSE, fig.height = 5.5, fig.width = 6.5}
+if(length(scenario.names)>1){
+scenario_filter = c('Base Case','BESS-10','BESS-20','BESS-30','BESS-40','BESS-50',
+             'PV-10','PV-20','PV-30','PV-40','PV-50',
+             'Wind-10','Wind-20','Wind-30','Wind-40')
+# generation mix under different scenarios
+tot.gen = gen[,.(totgen = sum(V1)), by = .(Year, scenario)]
+vre.gen = gen[Type %in% c('Wind','Solar PV'),.(vregen = sum(V1)), by = .(Year, scenario)]
+vre.mix = merge(tot.gen,vre.gen)
+vre.mix[,Generation := vregen/totgen]
+
+# capacity mix under different scenarios
+tot.cap = cap[,.(totcap = sum(capacity)), by = .(Year, scenario)]
+vre.cap = cap[Type %in% c('Wind','Solar PV'),.(vrecap = sum(capacity)), by = .(Year, scenario)]
+vre.cap = merge(tot.cap,vre.cap)
+vre.mix = merge(vre.mix, vre.cap)
+vre.mix[,Capacity := vrecap/totcap]
+
+vre.mix[,cost_decline := as.integer(unlist(tstrsplit(scenario,"-",keep=2)))/100]
+vre.mix[,tech := tstrsplit(scenario,"-",keep=1)]
+
+base = vre.mix[scenario == 'Base Case']
+base = base[rep(1:.N,length(unique(vre.mix[scenario != 'Base Case',tech])))]
+base[,tech := unique(vre.mix[scenario != 'Base Case',tech])]
+base[, cost_decline := 0]
+vre.mix = rbind(vre.mix, base)
+vre.mix = vre.mix[tech != 'Base Case']
+
+vre.mix[, cost_decline := factor(cost_decline, labels = c('0%','10%','20%','30%','40%','50%'))]
+
+# tech scenarios
+a = ggplot(data = vre.mix[tech == 'BESS']) +
+  geom_line(aes(x=Year, y=Generation, color = cost_decline), size = 1.1) +
+  scale_y_continuous(labels = scales::percent, limits = c(0,NA)) +
+  scale_color_brewer(palette = 'Set3') +
+  labs(x=NULL,
+       y = 'VRE penetration\n in total generation',
+       color = 'BESS\n cost decline') + theme(legend.position = 'top')
+
+
+b = ggplot(data = vre.mix[tech == 'PV']) +
+  geom_line(aes(x=Year, y=Generation, color = cost_decline), size = 1.1) +
+  scale_y_continuous(labels = scales::percent, limits = c(0,NA)) +
+  scale_color_brewer(palette = 'Set3') +
+  labs(x=NULL,
+       y = 'VRE penetration\n in total generation',
+       color = 'PV\n cost decline') + theme(legend.position = 'top')
+
+c = ggplot(data = vre.mix[tech == 'Wind']) +
+  geom_line(aes(x=Year, y=Generation, color = cost_decline), size = 1.1) +
+  scale_y_continuous(labels = scales::percent, limits = c(0,NA)) +
+  scale_color_brewer(palette = 'Set3') +
+  labs(x=NULL,
+       y = 'VRE penetration\n in total generation',
+       color = 'Wind\n cost decline') + theme(legend.position = 'top') +
+  guides(color = guide_legend(nrow = 2))
+
+# 2047 box plot in the fourth quadrent
+mix47 = vre.mix[Year == 2047 & tech %in% c('BESS','PV','Wind')]
+d = ggplot(data = mix47) + 
+  geom_boxplot(aes(x = tech, y = Generation), fill = NA) +
+  geom_point(aes(x = tech, y = Generation, color = cost_decline)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_color_brewer(palette = 'Set3') +
+  labs(x=NULL,
+       y = 'VRE penetration\n in total generation by 2047',
+       color = 'Technology\ncost decline') +
+  theme(legend.position = 'top') +
+  theme(aspect.ratio = 1.2)
+
+
+cowplot::plot_grid(a, b, c, d, labels = c('a','b','c','d'), nrow = 2, vjust = 2, hjust = -2)
+}
+```
+
+## Tech Cost Scenario Capacity
+```{r scenario-capacity, echo=FALSE, fig.height = 4, fig.width = 6.5}
+# Total capacity by year, national
+p1 = plot_cap_by_year(aggregate.by = "nation",years = 2017:2047, 
+                      scenario_filter = c('Base Case','BESS-50','PV-50','Wind-40'))
+p1$plot
+```
+
+## Timeslice generation
+```{r timeslice-gen-scns, echo=FALSE, fig.height = 5, fig.width = 6.5}
+
+# Generation by year, national
+p = plot_timeslice_generation(aggregate.by = "nation", year = final.year, type = 'capacity',
+                              scenario_filter = c('Base Case','BESS-50','PV-50','Wind-40'))
+
+# add load as dot
+tot.load = demand[scenario %in% c('Base Case','BESS-50','PV-50','Wind-40') &
+                    Year == final.year, .(Demand = sum(demand)/1000), 
+                  by = .(scenario, time_slice = time_slice)]
+
+tot.load = merge(tot.load, ts.map, by = 'time_slice')
+
+p = p$plot + geom_point(data = tot.load, aes(x=time, y=Demand, shape="Demand"), inherit.aes = F)
+
+p + theme(legend.position = 'bottom') + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+## Transmission - Wind case 
+```{r map-tx-inv-wind, echo=FALSE, fig.height = 4, fig.width = 6.5}
+
+map.tx.inv = map_tx_inv(scenario_filter = c('Base Case','Wind-40')) 
+
+map.tx.inv 
+
+```
+
+## Fleet utilization factors
+```{r fleet-utilization, echo=FALSE}
+gen.ind = gen[Year == '2047' & scenario %in% c('Base Case','BESS-50','PV-50','Wind-40'), 
+              .(generation = sum(V1)), by = .(Type,scenario)]
+cap.ind = cap[Year == '2047' & scenario %in% c('Base Case','BESS-50','PV-50','Wind-40'), 
+              .(capacity = sum(capacity)), by = .(Type,scenario)]
+utz = merge(gen.ind, cap.ind)
+utz[grepl('Gas', Type), Type := 'Gas']
+utz = utz[,.(generation = sum(generation), capacity = sum(capacity)), by = .(Type, scenario)]
+
+utz[,utz := generation/(capacity*8760)]
+
+```
+
+## Fleet utilization factors
+```{r india-map, echo=FALSE, fig.height = 4, fig.width = 6.5}
+
+name.map = fread('../../Create_input_data/a_Input_data/Transmission/region_name_map.csv')
+zone.map = fread('../../Create_input_data/a_Input_data/Capacity/region_zone_map.csv')
+zone.map = unique(zone.map, by = 'State')
+name.map = merge(name.map, zone.map, by.x = 'plexos.name', by.y = 'State')
+
+contour.rs2 = merge(contour.rs,name.map, by.x = 'name', by.y = 'rev.name')
+ 
+p = ggplot() +
+    geom_polygon(data = contour.rs.nat, aes(long + 20000, lat - 20000, group = group), 
+                 color = "grey70", fill = 'grey60') +
+    geom_polygon(data = contour.rs.nat, aes(long + 20000, lat + 20000, group = group), 
+                  color = "grey70", fill = 'grey60') +
+    #geom_path(data = contour.rs.nat, aes(long, lat, group = group), color = 'grey40', size = 1.2) +
+    geom_polygon(data = contour.rs2, aes(long,lat,group = group, fill = zone)) +
+    geom_path(data = contour.rs.reg, aes(long + 15000,lat - 15000,group = group, 
+                                         color = 'Balancing area boundary'), 
+              size = 1.2, alpha = .5) +
+   geom_path(data = contour.rs.reg, aes(long - 15000,lat + 15000,group = group, 
+                                         color = 'Balancing area boundary'), 
+              size = 1.2, alpha = .5) +
+    geom_path(data = contour.rs2, aes(long, lat, group = group, color = 'Resource region boundary'),
+              size = .1) +
+    #geom_path(data = contour.region, aes(long,lat,group = group), color = 'orange') +
+    scale_color_manual(values = c('Balancing area boundary' = 'grey30', 
+                                  'Resource region boundary' = 'grey90')) +
+    scale_fill_manual(values = c('NR' = '#8CD3C5', 'WR' = '#E6867B', 'SR' = '#BFBBD7',
+                               'ER' = '#94C0E2', 'NER' = '#EFB778')) +
+    labs(color = NULL, fill = 'India regions') +
+  plot_theme +
+    coord_fixed() +
+    theme_bw() +
+    theme(axis.ticks = element_blank(), 
+          axis.title = element_blank(), 
+          axis.text =  element_blank(),
+          line = element_blank(),
+          panel.border = element_blank()) 
+
+p
+
+```

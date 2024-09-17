@@ -1,0 +1,32 @@
+key,value,dtype,description
+condor_discharge_eff,1,float,discharging efficiency used in Condor
+condor_keep_techs,"GAS,COAL",list,technologies considered in Condor
+condor_res,50,int,resolution of the dispatch algorithm in Condor - determines the number of discrete values that marginal storage's energy capacity is broken up into for the dynamic program. Higher=slower and more accurate. Don't set below 20
+condor_res_method,equal,str,"condor resolution method (equal, scaled) (default: equal) - equal: each storage tech uses condor_res (default: 50); scaled: battery_2 uses condor_res (default 15), remaining storage techs have increasing Condor resolution scaled by their duration."
+condor_stor_MW,1,float,storage power capacity used in Condor to calculate storage energy value
+condor_stor_techs,all,str,choosing techs to calculate storage value for
+curt_hydro_mingen,0.1,float,default mingen level for hydro techs for the curtailment script
+curt_max_generator_size,500,float,defualt max generator size for mingen calculations
+curt_mingen_step_size,200,int,step size for mingen adjustment to curtailment calculations
+curt_tran_step_size,1000,int,step size (in MW) of additional transmission's ability to reduce curtailment
+decimals,3,int,number of decimals to round results to for ReEDS
+log_option,4,str,log option for GAMS files
+marg_curt_cycles_per_day,1,float,default max number of cycles per day for existing storage to recover curtailment
+marg_curt_marg_stor_mw,100,int,step size used for marginal storage curtailment recovery
+min_val,0.001,float,values smaller than this are set to 0 for results that are sent back to ReEDS
+osprey_min_plant_size,5,float,generators smaller than this size (in MW) are dropped from Osprey
+osprey_min_storage_size,0.1,float,storage devices less than this size (in MW) are dropped from Osprey
+osprey_ts_length,8760,int,length of time-series used in Osprey
+reedscc_ann_hours,20,int,number of top hours considered in annual cc calculations
+reedscc_calc_annual,FALSE,boolean,when true: annual cc values are calculated
+reedscc_calc_seasonal,TRUE,boolean,when true: seasonal cc values are calculated
+reedscc_csp_cc_default,1,float,default value for CSP cc when not explicitly considering the cc of CSP
+reedscc_default_rte,0.85,float,default efficiency value to use for assessing peaking storage potential
+reedscc_marg_csp_mw,1000,int,step size used for marginal CSP cc calculations
+reedscc_marg_vre_mw,1000,int,step size used for marginal VRE calculations
+reedscc_max_stor_pen,0.9,float,max fraction of peak load considered for storage peaking capacity assessment
+reedscc_safety_bin_size,10000,int,default value (in MW) for the safety bin size in ReEDS
+reedscc_stor_buffer,60,int,additional duration (in minutes) that is required of storage to receive full capacity credit
+reedscc_stor_stepsize,100,int,step size (in MW) used when determining the peaking capacity potential of storage
+reedscc_szn_hours,10,int,number of top hours considered in seasonal cc calculations
+sleep_time,0.1,float,sleep time for skipping Augur steps - helps if watching command window when debugging

@@ -4,3 +4,15 @@ hydro_ror,HYDRO-ROR
 hydro_storage,HYDRO-STORAGE
 hydro_pumped,HYDRO-PUMPED
 hydro_pondage,HYDRO-PONDAGE
+vre,UPV
+vre,DISTPV
+vre,WIND
+nuclear,NUCLEAR
+wind,WIND
+solar,UPV
+solar,DISTPV
+battery,BATTERY_2
+battery,BATTERY_4
+battery,BATTERY_6
+battery,BATTERY_8
+battery,BATTERY_10

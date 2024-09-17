@@ -1,8 +1,10 @@
-threads = 8
+threads = 0
 lpmethod = 4
 advind 0
 *reslim 100000
 scaind 1
-aggind 5
-iis 1
-writemps TN_Oct18_Base.mps
+aggind 7
+barepcomp = 1e-10
+*datacheck = 2
+numericalemphasis = 1
+writemps test2_Reference.mps

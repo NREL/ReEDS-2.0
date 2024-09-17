@@ -1,18 +1,20 @@
 con_name,type,m_con,note
-eq_cap_mo_exist_noretire,cap_exist,,marginal value of old capacity
-eq_cap_exist_retire_ub,cap_exist,,marginal value of old capacity
-eq_cap_exist_retire_motion,cap_exist,,marginal value of old capacity
+eq_cap_init_noret,cap_exist,,marginal value of old capacity
+eq_cap_exist_retub,cap_exist,,marginal value of old capacity
+eq_cap_exist_retmo,cap_exist,,marginal value of old capacity
 eq_cap_mo_new_noretire,cap_new,,marginal value of new capacity
-eq_cap_new_retire_ub,cap_new,,marginal value of new capacity
-eq_cap_new_retire_motion,cap_new,,marginal value of new capacity
-eq_forceprescription,prescribed,,marginal value of prescribed capacity
+eq_cap_new_retub,cap_new,,marginal value of new capacity
+eq_cap_new_retmo,cap_new,,marginal value of new capacity
+eq_prescribedre_pre2024,prescribed,,marginal value of prescribed capacity
 eq_growthlimit_relative,growth,,marginal value of relative growth
 eq_growthlimit_absolute,growth,,marginal value of absolute growth
 eq_supply_demand_balance,load,1,marginal value of serving load (generation)
 eq_fuelsupply_limit,fuel,,marginal value of fuel supply
 eq_reserve_margin,res_marg,,marginal value of reserve capacity
 eq_orcap,opres,4,marginal value of operating reserve capacity
-eq_opres_requirement,opres,1,marginal value of opres requirement
+eq_opres_requirement,opres,2,marginal value of opres requirement
 eq_storage_capacity,storage,3,marginal value of stroage capacity
-eq_storage_balance,storage,3,marginal value of storage efficiency
-eq_storage_batteryduration,storage,3,marginal value of battery duration
+eq_storage_duration,storage,3,marginal value of storage duration
+eq_storage_level,storage,3,marginal value of storage level inventory balance
+eq_curtailment,curt,1,marginal value of curtailment reduction
+eq_transmission_limit,trans,2,marginal value of transmission limits

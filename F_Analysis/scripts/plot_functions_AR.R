@@ -1,3 +1,86 @@
+#--------------------------#
+# marginal cost maps ----
+#--------------------------#
+
+plot_marginal_cost_maps = function(aggregate.by = c('nation','state'), years = c()){
+  
+
+    mc.india = marg.cost.type[!Type == 'res_marg', ]
+    mc.india = merge(mc.india, hours, by.x = c('Timeslice','scenario'), by.y = c('h', 'scenario'))
+    mc.india[,wgt.value := hours*margcost/8760]
+    mc.india = mc.india[,sum(wgt.value), by = c('Type', 'State','Year','scenario')]
+
+    if(aggregate.by == 'nation'){   
+    mc.india = mc.india[,mean(V1), by = c('Type', 'Year','scenario')]
+    
+    p = ggplot(data = mc.india) +
+      geom_bar(aes(x = Year, y = V1, fill = Type), stat = 'identity') +
+      labs(y = "Average marginal cost (INR/MWh)", x = NULL) +
+      plot_theme +
+      ggtitle('Average marginal cost by cost type')
+    
+    if(length(unique(mc.india$scenario))>1){
+      p = p + facet_wrap(~scenario)
+    }
+    
+    return.list = list(plot=p, table = mc.india)
+    
+  }
+  
+  if(aggregate.by == 'State'){
+   mc.state = dcast(mc.india, State+Year+scenario~Type, value.var = "V1")
+   mc.state[,mc.total := load + oper_res]
+   mc.state = melt(mc.state, id.vars = c('State','Year','scenario'), 
+                   measure.var = c('load','oper_res','mc.total'), 
+                   value.name = 'marg.cost')
+   
+
+   mc.map = merge(contour.reg, mc.state, 
+                       by.x = "NAME_1corr", by.y = "State", all.x = T,
+                       allow.cartesian = T)
+   
+   mc.map = mc.map[variable == 'mc.total' & Year %in% years,]
+   
+   # plot the map
+   p = ggplot() +
+     geom_polygon(data = contour.nat, aes(long + 0.2, lat - 0.2, group = group), 
+                  color = "grey70", fill = 'grey60') +
+     geom_polygon(data = contour.nat, aes(long + 0.2, lat + 0.2, group = group), 
+                  color = "grey70", fill = 'grey60') +
+     geom_polygon(data = mc.map[!is.na(scenario)], aes(long, lat, group = group, fill = marg.cost), 
+                  color = "grey") +
+     geom_path(data = contour.nat, aes(long, lat, group = group), color = 'grey10', size = 0.5) +
+     scale_fill_gradient2(name = "Average marginal cost (INR/MWh)",
+                          midpoint = mean(range(mc.map$marg.cost, na.rm = T)),
+                          low = "grey95", mid = "goldenrod2",
+                          high = "firebrick",
+                          guide = guide_legend(reverse = TRUE))  + 
+     #scale_fill_manual("",values = gen.colors, drop = TRUE) +
+     #geom_point(data = nodes, aes(X, Y), size = .5, color = "red") +
+     coord_map() +
+     theme_bw() +
+     theme(axis.ticks = element_blank(), 
+           axis.title = element_blank(), 
+           axis.text = element_blank(),
+           line = element_blank(),
+           panel.border = element_blank()) 
+   
+   if(length(unique(mc.map$Year))>1){
+     p = p + facet_wrap(~Year)
+   } 
+   if(length(unique(mc.map$scenario))>1){
+     p = p + facet_wrap(~scenario)
+   }
+   
+    write.table(mc.state, 'margcost_state.csv', sep = ',',row.names = FALSE)
+    return.list = list(plot = p, table = mc.state)
+    
+  }
+  
+  return(return.list)
+}
+
+
 #----------------------------------------
 # curtailment 
 #---------------------------------------
@@ -260,7 +343,8 @@ map_curtailment = function(palette = c('Blues','BuGn','BuPu',
                                        'OrRd', 'PuBu', 'PuBuGn', 'PuRd', 'Purples',
                                        'RdPu', 'Reds', 'YlGn', 'YlGnBu ', 'YlOrBr',
                                        'YlOrRd'),
-                           year = final.year){
+                           year = final.year,
+                           scenario_filter = c()){
   
   
   # calculate curtailment
@@ -271,7 +355,7 @@ map_curtailment = function(palette = c('Blues','BuGn','BuPu',
   
   # summarize year capacity by state
   final.curt = cur.table[Year == year]
-
+  
   if(nrow(final.curt) == 0){
     return(paste0('No curtailment in ', final.year))
   }
@@ -279,11 +363,15 @@ map_curtailment = function(palette = c('Blues','BuGn','BuPu',
   final.curt = final.curt[,sum(value)/1000000, by = c('scenario','Year','Type','State')]
   
   # fill in missing scenario, year, state combinations
-  fill = CJ(scenario = scenario.names, Year = as.numeric(year), r = r.rs.map[,unique(r)])
+  fill = CJ(scenario = names(solutions), Year = as.numeric(year), r = r.rs.map[,unique(r)])
   setnames(fill, 'r','State')
   
   final.curt = merge(final.curt, fill, by = c('scenario', 'Year','State'), all = T)
   final.curt[is.na(V1), V1 := 0]
+  
+  if(length(scenario_filter)>0){
+    final.curt = final.curt[scenario %in% scenario_filter]
+  }
 
   contour.reg = merge(contour.reg, final.curt, 
                    by.x = "NAME_1corr", by.y = "State", all.x = T,
@@ -331,33 +419,39 @@ map_curtailment = function(palette = c('Blues','BuGn','BuPu',
 # total system cost - combine variable costs and sum over entire model period ----
 #--------------------------#
 
-plot_system_costs_all = function(aggregate.by = c("nation"), year = final.year){
+plot_system_costs_all = function(aggregate.by = c("nation"), year = final.year,
+                                 scenario_filter = c()){
   
 
   if(aggregate.by == 'nation'){
     fuel = fuel.cost[Year <= year,
-                     .(value = sum(fuelcost), type = "fuel"), by = .(scenario)]
+                     .(value = sum(fuelcost)/10000000, type = "Fuel"), by = .(scenario)]
     fom = fom.cost[Year <= year,
-                   .(value = sum(fomcost), type = "fom"), by = .(scenario)]
+                   .(value = sum(fomcost)/10000000, type = "Fixed O&M"), by = .(scenario)]
     vom = vom.cost[Year <= year,
-                   .(value = sum(vomcost), type = "vom"), by = .(scenario)]
+                   .(value = sum(vomcost)/10000000, type = "Variable O&M"), by = .(scenario)]
     cap = cap.cost[Year <= year,
-                   .(value = sum(capcost), type = "capacity"), by = .(scenario)]
+                   .(value = sum(capcost)/10000000, type = "Generation capacity"), by = .(scenario)]
+    tx.cap = tx.cap.cost[Year <= year,
+                   .(value = sum(V1)/10000000, type = "Transmission capacity"), by = .(scenario)]
     
     var = rbind(fom, vom)
     var <- var[,sum(value), by = .(scenario)]
     var[,type:= 'variable']
     setnames(var, 'V1','value')
     
-    costs = rbindlist(list(fom, var, cap))
+    costs = rbindlist(list(fuel, fom, vom, cap, tx.cap))
     
+    costs[,type := factor(type, levels = c("Fuel","Fixed O&M","Variable O&M","Transmission capacity","Generation capacity"))]
+    costs[,scenario := factor(scenario, levels = names(solutions))]
     
-    costs[,type := factor(type, levels = c("variable", "fom", "capacity"))]
-    
+    if(length(scenario_filter)>0){
+      costs = costs[scenario %in% scenario_filter]
+    }
     
     p = ggplot(data = costs) +
       geom_bar(aes(x = scenario, y = value, fill = type), stat = 'identity') +
-      labs(y = "Cost (INR)", x = NULL) +
+      labs(y = "Crore Rs", x = NULL) +
       plot_theme +
       ggtitle('Total system cost') +
       scale_color_viridis(discrete = TRUE, option = 'D') +
@@ -369,26 +463,28 @@ plot_system_costs_all = function(aggregate.by = c("nation"), year = final.year){
   
   if(aggregate.by == 'region'){
     fuel = fuel.cost[Year <= year,
-                     .(value = sum(fuelcost), type = "fuel"), by = .(scenario, region)]
+                     .(value = sum(fuelcost)/10000000, type = "fuel"), by = .(scenario, region)]
     fom = fom.cost[Year <= year,
-                   .(value = sum(fomcost), type = "fom"), by = .(scenario, region)]
+                   .(value = sum(fomcost)/10000000, type = "fom"), by = .(scenario, region)]
     vom = vom.cost[Year <= year,
-                   .(value = sum(vomcost), type = "vom"), by = .(scenario, region)]
+                   .(value = sum(vomcost)/10000000, type = "vom"), by = .(scenario, region)]
     cap = cap.cost[Year <= year,
-                   .(value = sum(capcost), type = "capacity"), by = .(scenario, region)]
+                   .(value = sum(capcost)/10000000, type = "capacity"), by = .(scenario, region)]
+    tx.cap = tx.cap.cost[Year <= year,
+                   .(value = sum(V1)/10000000, type = "tx.capacity"), by = .(scenario, region)]
     
     var = rbind(fom, vom)
     var <- var[,sum(value), by = .(scenario,region)]
     var[,type:= 'variable']
     setnames(var, 'V1','value')
     
-    costs = rbindlist(list(fom, var, cap))
+    costs = rbindlist(list(fom, var, cap,tx.cap))
     
-    costs[,type := factor(type, levels = c("variable","fom", "capacity"))]
+    costs[,type := factor(type, levels = c("tx.capacity","variable","fom", "capacity"))]
     
     p = ggplot(data = costs) +
       geom_bar(aes(x = region, y = value, fill = type), stat = 'identity') +
-      labs(y = "Cost (INR)", x = NULL) +
+      labs(y = "crore Rs", x = NULL) +
       plot_theme +
       ggtitle('Total system cost by region') +
       scale_color_viridis(discrete = TRUE, option = 'D') +
@@ -401,13 +497,13 @@ plot_system_costs_all = function(aggregate.by = c("nation"), year = final.year){
   
   if(aggregate.by == 'technology'){
     fuel = fuel.cost[Year <= year,
-                     .(value = sum(fuelcost), type = "fuel"), by = .(scenario, Type)]
+                     .(value = sum(fuelcost)/10000000, type = "fuel"), by = .(scenario, Type)]
     fom = fom.cost[Year <= year,
-                   .(value = sum(fomcost), type = "fom"), by = .(scenario, Type)]
+                   .(value = sum(fomcost)/10000000, type = "fom"), by = .(scenario, Type)]
     vom = vom.cost[Year <= year,
-                   .(value = sum(vomcost), type = "vom"), by = .(scenario, Type)]
+                   .(value = sum(vomcost)/10000000, type = "vom"), by = .(scenario, Type)]
     cap = cap.cost[Year <= year,
-                   .(value = sum(capcost), type = "capacity"), by = .(scenario, Type)]
+                   .(value = sum(capcost)/10000000, type = "capacity"), by = .(scenario, Type)]
     
     var = rbind(fom, vom)
     var <- var[,sum(value), by = .(scenario,Type)]
@@ -420,7 +516,7 @@ plot_system_costs_all = function(aggregate.by = c("nation"), year = final.year){
     
     p = ggplot(data = costs) +
       geom_bar(aes(x = Type, y = value, fill = type), stat = 'identity') +
-      labs(y = "Cost (INR)", x = NULL) +
+      labs(y = "Cost (crore Rs)", x = NULL) +
       plot_theme +
       ggtitle('Costs by technology') +
       scale_color_viridis(discrete = TRUE, option = 'D') +
@@ -496,7 +592,7 @@ plot_emissions = function(category = c('Emissions','Emission.Rate'), year = fina
                       by.x = 'NAME_1corr', by.y = "State", all.x = T,
                       allow.cartesian = T)
   
-  contour.reg.plot = contour.reg[year %in% final.year,]
+  contour.reg.plot = contour.reg[Year %in% final.year,]
   
   # plot the map
   p = ggplot() +
@@ -504,14 +600,17 @@ plot_emissions = function(category = c('Emissions','Emission.Rate'), year = fina
                  color = "grey70", fill = 'grey60') +
     geom_polygon(data = contour.nat, aes(long + 0.2, lat + 0.2, group = group), 
                  color = "grey70", fill = 'grey60') +
-    geom_polygon(data = contour.reg.plot[!is.na(scenario)], aes(long, lat, group = group, fill = category), 
+    geom_polygon(data = contour.reg.plot[!is.na(scenario)], aes(long, lat, group = group, fill = Emission.Rate), 
                  color = "grey") +
     geom_path(data = contour.nat, aes(long, lat, group = group), color = 'grey10', size = 0.5) +
-    scale_fill_gradient2(name = "Metric ton CO2",
-                         midpoint = mean(range(contour.reg.plot$Emissions, na.rm = T)),
+    #scale_fill_gradientn("Metric ton CO2", guide = "legend",
+    #                     colors = brewer.pal(9,palette), labels=comma) + 
+    
+    scale_fill_gradient2(name = "Metric ton CO2 per MWh",
+                         midpoint = mean(range(contour.reg.plot$Emission.Rate, na.rm = T)),
                          low = "grey95", mid = "goldenrod2",
                          high = "firebrick",
-                         guide = guide_colorbar(frame.colour = "black", ticks.colour = "black"))  + 
+                         guide = guide_legend(frame.colour = "black", ticks.colour = "black"))  + 
     #scale_fill_manual("",values = gen.colors, drop = TRUE) +
     #geom_point(data = nodes, aes(X, Y), size = .5, color = "red") +
     coord_map() +
@@ -521,7 +620,8 @@ plot_emissions = function(category = c('Emissions','Emission.Rate'), year = fina
           axis.text =  element_blank(),
           line = element_blank(),
           panel.border = element_blank()) +
-    ggtitle(paste0(category, ' in Year ', final.year))
+    ggtitle('Annual Emissions Rate')
+  
   
   if(length(unique(contour.reg.plot$Year))>1 & length(unique(contour.reg.plot$scenario)) > 1){
     p = p + facet_grid(scenario~Year)
@@ -711,3 +811,57 @@ plot_firm_cap = function(years = c()){
   
   return(return.list)
 }
+
+#----------------------------------------
+# CC as fraction of installed capacity for VRE
+#---------------------------------------
+plot_VRE_CC = function(){
+  
+  # get firm capacity and installed capacity for wind and solar
+  cc = firm_cap[Type %in% c('Wind','Solar PV'),sum(firm_capacity), by = c('Year','Type','season')]
+  cc = cc[,mean(V1), by = c('Year','Type')]
+  setnames(cc, 'V1','CC')
+  vre.cap = cap[Type %in% c('Wind','Solar PV'), sum(capacity), by = c('Year','Type')]
+  setnames(vre.cap, 'V1','cap')
+
+  # combine tables
+  cc = merge(cc, vre.cap, by = c('Year','Type'))
+  cc[,cc.frac := CC/cap]
+  
+  p = ggplot(cc, aes(x = Year, y = cc.frac, group = Type, color = Type)) + 
+    geom_line() +
+    geom_point() +
+    labs(y = 'Capacity credit (fraction of installed capacity)', x = NULL) +
+    scale_color_manual(values=c("orange", "steelblue3")) +
+    scale_x_continuous(breaks=seq(min(cc$Year), max(cc$Year), 2)) +
+    plot_theme +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+  p
+  
+  # redo plot with penetration as percentage of installed capacity on x axis
+  vre.pen = cap[,sum(capacity), by = c('Year')]
+  vre.pen[,Type:= 'Total']
+  setnames(vre.pen, 'V1','tot.cap')
+  
+  vre.pen = merge(vre.pen, vre.cap, by = 'Year')
+  vre.pen[,vre.pen:= cap/tot.cap]
+  setnames(vre.pen, 'Type.y','Type')
+  
+  vre.pen = merge(vre.pen[,.(Year, Type, vre.pen)], cc[,.(Year, Type, cc.frac)], by = c('Year','Type'))
+  
+  # put in order of penetration from low to high
+  vre.pen = vre.pen[order(vre.pen,decreasing = F)]
+  
+  p2 = ggplot(vre.pen, aes(x = vre.pen, y = cc.frac, group = Type, color = Type)) + 
+    geom_line() +
+    geom_point() +
+    labs(y = 'Capacity credit (fraction of installed capacity)', x = NULL) +
+    scale_color_manual(values=c("orange", "steelblue3")) +
+    scale_x_continuous(breaks=seq(0, max(vre.pen$vre.pen), 0.1)) +
+    plot_theme +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+  p2
+  
+  
+  
+  }

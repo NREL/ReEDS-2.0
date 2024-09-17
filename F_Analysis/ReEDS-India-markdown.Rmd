@@ -12,9 +12,9 @@ output:
     df_print: paged
     
 params:
-  gdxlist: 'Base#output_tmp_toy.gdx##'
+  gdxlist: 'Base#output_Dec10_Base.gdx##'
   gamsdir: "C:/GAMS/win64/24.7"
-  final.year: 2047
+  final.year: 2050
   curt.switch: 1
 ---
 
@@ -25,7 +25,23 @@ params:
 
 # Uncommenting will overwrite any command line arguments provided by the python workflow
 
-#gdxfiles = c("public" = "output_public_toy.gdx")
+# gdxfiles = c("HAV update" = "output_Nov3HAVup_Reference.gdx")
+#              "Regional Opres" = "output_TestRegOpres_Reference.gdx")
+
+#gdxfiles = c("Reference" = "output_Oct29_Reference.gdx")
+#               "No ES Op Reserves" = "output_Oct29_NoStorOpres.gdx",
+#               "No ES Capacity Credit" = "output_Oct29_NoStorCC.gdx",
+#              "No ES Arbitrage Value" = "output_Oct29_NoStorHAV.gdx")
+
+# gdxfiles = c("Reference" = "output_Nov9_Reference.gdx",
+#               "Low Bat Cost" = "output_Nov9_LowBatCost.gdx",
+#               "High Bat Cost" = "output_Nov9_HighBatCost.gdx",
+#              "Lower Peak" = "output_Nov9_LowerPeak.gdx",
+#              "No South Asia" = "output_Nov9_NoSouthAsia.gdx")
+
+gdxfiles = c("Reference" = "output_Nov16_Reference.gdx",
+             "No ES Arbitrage Value" = "output_Nov16_NoStorHAV.gdx",
+             "No ES Capacity Value" = "output_Nov16_NoStorCC.gdx")
 
 #!!!!!!!!!!!!!!!!!!!!!!!! END USER INPUTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
@@ -36,8 +52,8 @@ if(!require("pacman")){
   install_version("pacman", version = "0.4.6", repos = "http://cran.us.r-project.org")
 }
 
-pacman::p_load(gdxrrw, ggplot2, data.table, RColorBrewer, 
-               scales, rmarkdown, mapproj, gdata, zoo, viridis)
+pacman::p_load(gdxrrw, ggplot2, data.table, maptools, mapproj, RColorBrewer, 
+               rgdal, rgeos, scales, stringr, rmarkdown, gdata, zoo, viridis, DT, wesanderson)
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!! PROCESSING COMMAND LINE ARGUMENTS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 
@@ -66,7 +82,7 @@ wd <- getwd()
 setwd("..")
 parent <- getwd()
 setwd(wd) 
-gdx.dir = file.path(parent, "E_Outputs","gdxfiles")
+gdx.dir = '../E_Outputs/gdxfiles'
 
 final.year = params$final.year
 
@@ -98,80 +114,270 @@ knitr::opts_chunk$set(echo=F, comment=NA, warning=F, message=F, include=T,
 
 ```
 
-# Analaysis Plots and Figures
+# Models
 ```{r analysis-metadata, echo=FALSE}
 metadata = data.table(Scenario = names(gdxfiles),
                       File = gdxfiles,
                       `Number of years` = sum(unique(cap$Year)<=final.year),
-                      `Final analysis year` = final.year)
+                      `Final analysis year` = min(final.year,max(unique(cap$Year))))
 knitr::kable(metadata)
 
 ```
 
-# Firm Capacity
-```{r firm-capacity, echo=FALSE,  fig.height = 5, rows.print = n.year, fig.width = 10}
-p = plot_firm_capacity(aggregate.by = 'nation', years = final.year)
-p$plot
-p$data
+# Storage Capacity Results {.tabset}
 
-p = plot_firm_capacity(aggregate.by = 'region')
+## Total Capacity
+```{r stor-cap, echo=FALSE, fig.height=4, fig.width = 8}
+india.stor = cap[grepl('Pumped|BESS',Type) , .(tot = sum(capacity)), by = .(Year, scenario, Type)]
+
+ggplot(india.stor) +
+  geom_bar(aes(x=Year, y=tot/1000, fill = Type), color = 'black', stat='identity') +
+  scale_fill_manual("",values = gen.colors, drop = TRUE) +
+  labs(y='Installed capacity (GW)') +
+ # scale_y_continuous(labels = scales::percent) +
+  facet_wrap(~scenario, nrow = 1) + 
+  ggtitle('Energy Storage capacity to 2050')
+
+ggplot(india.stor[Year < 2031]) +
+  geom_bar(aes(x=Year, y=tot/1000, fill = Type), color = 'black', stat='identity') +
+  scale_fill_manual("",values = gen.colors, drop = TRUE) +
+  labs(y='Installed capacity (GW)',x=NULL) +
+ # scale_y_continuous(labels = scales::percent) +
+  facet_wrap(~scenario, nrow = 1) + 
+  ggtitle('Energy Storage capacity to 2030')
+  
+```
+
+## Scenarios and sensitivities
+```{r scenario-stor-cap, echo=FALSE, fig.height=4, fig.width = 8}
+india.stor = cap[grepl('BESS|Pumped',Type) , .(tot = sum(capacity)), by = .(Year, scenario)]
+
+ggplot(india.stor) +
+  geom_line(aes(x=Year, y=tot/1000, color = scenario)) +
+  scale_color_manual(values=wes_palette("Darjeeling1")) +
+  labs(y='Power capacity (GW)',x=NULL) 
+ # scale_y_continuous(labels = scales::percent)
+
+map_stor_duration = data.table(Type = c("BESS 2hr","BESS 4hr","BESS 6hr","BESS 8hr","BESS 10hr","Pumped hydro"),
+                               sdbin = c("2","4","6","8","10","12"))
+
+india.stor = cap[grepl('BESS',Type) , .(tot = sum(capacity)), by = .(Year, scenario, Type)]
+
+india.stor = merge(india.stor, map_stor_duration)
+india.stor[,energy := tot * as.numeric(sdbin)]
+india.stor.energy = india.stor[,.(energy=sum(energy)), by=.(Year,scenario)]
+
+ggplot(india.stor.energy) +
+  geom_line(aes(x=Year, y=energy/1000, color = scenario)) +
+  scale_color_manual(values=wes_palette("Darjeeling1")) +
+  labs(y='Energy capacity (GWh)',x=NULL) 
+ # scale_y_continuous(labels = scales::percent)
+
+ggplot(india.stor) +
+  geom_line(aes(x=Year, y=tot/1000, color = scenario)) +
+  scale_color_manual(values=wes_palette("Darjeeling1")) +
+  labs(y='Installed capacity (GW)',x=NULL) +
+  facet_wrap(~Type)
+ # scale_y_continuous(labels = scales::percent)
+  
+```
+
+## Capacity Credit
+```{r stor-cc-years, echo=FALSE,  fig.height = 3, rows.print = n.year, fig.width = 5}
+
+p = plot_cc_years(aggregate.by = 'nation', type.filter = c('BESS'))
 p$plot
-p$data
+```
+
+## Storage Peaking Potential
+```{r stor-peaking, echo=FALSE,  fig.height = 6, rows.print = n.year, fig.width = 8}
+
+map_stor_duration = data.table(Type = c("BESS 2hr","BESS 4hr","BESS 6hr","BESS 8hr","BESS 10hr","Pumped hydro"),
+                               sdbin = c("2","4","6","8","10","12"))
+sdbin_size = merge(sdbin_size, map_stor_duration)
+sdbin_size[,cat := 'Peaking potential']
+storage_built = cap[grepl('BESS|Pumped',Type) , 
+                    .(sdbin_size = sum(capacity),cat="Built"), by = .(Year, scenario, region, Type)]
+sdbin_dat = rbind(sdbin_size,storage_built, fill=T)
+sdbin_dat[,Type := factor(Type, levels =  c("BESS 2hr","BESS 4hr","BESS 6hr","BESS 8hr","BESS 10hr","Pumped hydro"))]
+sdbin_dat = sdbin_dat[,.(bin_size = max(sdbin_size)), by = .(region,Year,scenario,Type,cat)]
+sdbin_dat = sdbin_dat[,.(bin_size = sum(bin_size)), by = .(Year,scenario,Type,cat)]
+
+ggplot(sdbin_dat[Year %in% c(2030,2040,2050)]) +
+  geom_bar(aes(y=bin_size/1000, x=cat, fill = Type), color = 'grey20', stat = 'identity') +
+  scale_y_continuous(label=comma)+
+  scale_fill_manual("",values = gen.colors, drop = TRUE) +
+  labs(x=NULL, y='Storage Peaking Potential (GW)', fill = 'Storage\nduration (hrs)') +
+  facet_grid(scenario~Year)
 
 ```
 
-# Capacity
-```{r total-capacity, echo=FALSE,  fig.height = 4, rows.print = n.year, fig.width = 10}
+# Storage Operations{.tabset} 
+
+## Storage dispatch
+```{r timeslice-storage, echo=FALSE, fig.height = 5}
+
+# Storage by year, national
+p = plot_storage_ops(aggregate.by = "nation", year = final.year, ops = 'inout') 
+
+p$plot + ggtitle(paste('Snapshot in',final.year) )
+
+```
+
+## Annual arbitrage revenue 
+```{r arbitrage-revenue, echo=FALSE, fig.height = 3, fig.width = 10}
+
+pull_gdx_data(type = 'param', gdx.name = 'hourly_arbitrage_value_load', r.name = 'hav')
+names(hav) = c('Technology','State','Year','HAV','scenario')
+hav = merge(hav, ba.set, by = c("State","scenario"))
+
+ggplot(data=hav[as.numeric(as.character(Year)) > 2019 & as.numeric(as.character(Year)) < 2031 & Technology == 'BATTERY_4']) +
+  geom_violin(aes(x=Year, y=HAV/70),fill=NA) + 
+  geom_point(aes(x=Year,y=HAV/70, color = scenario)) +
+  labs(y='$/MW-yr') +
+  scale_y_continuous(labels=scales::comma) +
+  scale_x_discrete(breaks = seq(2020,2030,2)) +
+  scale_color_manual(values=wes_palette("Darjeeling1")) +
+  facet_wrap(~Technology,ncol=1, scales = 'free_y')
+
+```
+
+## Total arbitrage value
+```{r arbitrage-value, echo=FALSE, fig.height = 10, fig.width = 10}
+
+pull_gdx_data(type = 'param', gdx.name = 'hav_int', r.name = 'hav_val')
+if('value' %in% names(hav_val)){
+  names(hav_val) = c('Technology','State','Year','HAV_VAL','scenario','temp')
+}else{
+names(hav_val) = c('Technology','State','Year','HAV_VAL','scenario')
+}
+hav_val = merge(hav_val, ba.set, by = c("State","scenario"))
+
+# add tech investment cost for comparison
+pull_gdx_data(type = 'param', gdx.name = 'cost_cap', r.name = 'capital_cost')
+names(capital_cost) = c('Technology','Year','cost','scenario')
+bat_cost = capital_cost[grepl("BATTERY|PUMPED", Technology)]
+bat_cost = bat_cost[Technology != 'BATTERY_1']
+
+ggplot(data=hav_val) +
+  geom_violin(aes(x=Year, y=HAV_VAL/70),fill=NA) + 
+  geom_point(aes(x=Year,y=HAV_VAL/70, color = scenario)) +
+  geom_point(aes(x=Year,y=cost/70), data = bat_cost, inherit.aes = F) +
+  labs(y='$/MW') +
+  scale_y_continuous(labels=scales::comma) +
+  scale_x_discrete(breaks = seq(2020,2050,5)) +
+  scale_color_manual(values=wes_palette("Darjeeling1")) +
+  facet_wrap(~Technology,ncol=1, scales = 'free_y')
+
+```
+
+# Storage locations {.tabset}
+
+## Battery capacity
+```{r bess-capacity, echo=FALSE,  fig.height = 10, fig.width=20}
+
+# colors = colorRampPalette(c("grey80", "lightpink1"))
+# cap.map = map_capacity(category = 'BATTERY_1', palette = colors(6), years = c(2030))
+# cap.map + ggtitle(paste('BESS 1hr capacity in ',final.year) )
+
+colors = colorRampPalette(c("white", "hotpink"))
+cap.map = map_capacity(category = 'BATTERY_2', palette = colors(6), years = 2023)
+cap.map + ggtitle(paste('BESS 2hr in ',2030) )
+
+colors = colorRampPalette(c("white", "hotpink3"))
+cap.map = map_capacity(category = 'BATTERY_4', palette = colors(6), years = final.year)
+cap.map + ggtitle(paste('BESS 4hr in ',final.year) )
+
+colors = colorRampPalette(c("white", "deeppink"))
+cap.map = map_capacity(category = 'BATTERY_6', palette = colors(6), years = final.year)
+cap.map + ggtitle(paste('BESS 6hr in ',final.year) )
+if('BATTERY_8' %in% cap[,unique(Technology)]){
+colors = colorRampPalette(c("white", "deeppink2"))
+cap.map = map_capacity(category = 'BATTERY_8', palette = colors(6), years = final.year)
+cap.map + ggtitle(paste('BESS 8hr in ',final.year) )
+}
+if('BATTERY_10' %in% cap[,unique(Technology)]){
+colors = colorRampPalette(c("white", "deeppink4"))
+cap.map = map_capacity(category = 'BATTERY_10', palette = colors(6), years = final.year)
+cap.map + ggtitle(paste('BESS 10hr in ',final.year) )
+}
+```
+
+# All Capacity Results {.tabset}
+
+## Total
+```{r india-capacity, echo=FALSE,  fig.height = 5, rows.print = n.year, fig.width = 10}
 
 # Total capacity by year, national
-p1 = plot_cap_by_year(aggregate.by = "nation",years = 2017:2047)
+p1 = plot_cap_by_year(aggregate.by = "nation",years = 2020:2050)
 
-if(n.scenario==1 & final.year == 2047){
+if(n.scenario==1 & final.year == 2050){
   p1$plot = p1$plot + 
   geom_vline(xintercept= 2022.5, linetype = "dashed", color = "darkgrey", size = 1.25) +
-  annotate("text", x = c(2019,2026), y=1300, label = c("Planned", "Modeled"), size = 5,
+  annotate("text", x = c(2021,2026), y=1300, label = c("Planned", "Modeled"), size = 5,
            color = c("grey30", "firebrick"))
 }
 
-p1$plot
+p1$plot 
 
-p1$data
+datatable(p1$data,  rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
 
-p2 = plot_cap_mix(aggregate.by = "nation", years = 2017:2047)
+#p2 = plot_cap_by_year(aggregate.by = "nation",years = c(2020,2030,2040,2045,2050))
+
+#p2$plot
+```
+
+## Capacity mix
+```{r india-capacity-mix, echo=FALSE,  fig.height = 5, rows.print = n.year, fig.width = 10}
+
+p2 = plot_cap_mix(aggregate.by = "nation", years = 2017:2050)
 
 p2$plot
 
-p2$data
+datatable(p2$data,  rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
 
 ```
 
-## Capacity as frac Peak Demand
-```{r capacity-peak, echo=FALSE, rows.print = n.year}
+## Capacity as % of peak pemand
+```{r capacity-peak, echo=FALSE, rows.print = n.year, fig.width = 8, fig.height = 4}
 
 # Installed capacity as fraction of peak demand, national by year
-p =tab_cap_frac_peak()
-p$data
-
-```
-
-## Capacity by region
-```{r capacity-region, echo=FALSE,  fig.height = 8}
-
-# Total capacity by year, region
-p = plot_cap_by_year(aggregate.by = "region")
+p = tab_cap_frac_peak()
+data = p$data
+data = melt(data, id.vars = c('Year', 'Type'))
+p$plot = ggplot(data=data)+geom_area(aes(x=Year,y=value,fill=Type), color='black') +
+  scale_fill_manual(values=gen.colors)+
+  scale_y_continuous(labels = scales::percent) +
+  facet_grid(variable~.) +
+  plot_theme
 
 p$plot
 
-p = plot_cap_by_year(aggregate.by = "state", state.filter = c('Andhra_Pradesh','Tamil_Nadu',
+datatable(p$data,  rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
+
+```
+
+## Regional
+```{r capacity-region, echo=FALSE,  fig.height = 6, fig.width = 8}
+
+# Total capacity by year, region
+p1 = plot_cap_by_year(aggregate.by = "region")
+
+p1$plot
+```
+
+## Select states
+```{r capacity-state, echo=FALSE,  fig.height = 9, fig.width = 10}
+
+p2 = plot_cap_by_year(aggregate.by = "state", state.filter = c('Andhra_Pradesh','Tamil_Nadu',
                                                             'Karnataka','Telangana','Maharashtra',
                                                             'Gujarat','Madhya_Pradesh', 'Rajasthan'))
 
-p$plot
-
+p2$plot
 ```
 
 ## New capacity
-```{r new-capacity, echo=FALSE,  fig.height = 6}
+```{r new-capacity, echo=FALSE, fig.height = 4, fig.width = 8}
 
 # New capacity by year, national
 p = plot_new_capacity(aggregate.by = "nation")
@@ -181,25 +387,71 @@ p$plot
 
 ```
 
-## New capacity difference
-```{r new-capacity-diff, echo=FALSE,  fig.height = 4}
+<!-- ## New capacity difference -->
+<!-- ```{r new-capacity-diff, echo=FALSE,  fig.height = 4} -->
+
+<!-- # New capacity difference from reference scenario -->
+<!-- p = plot_new_capacity_diff(aggregate.by = "nation") -->
+
+<!-- p$plot -->
+
+<!-- ``` -->
+
+## Final capacity difference
+```{r final-cap-diff, echo=FALSE,  fig.height = 4}
 
 # New capacity difference from reference scenario
-p = plot_new_capacity_diff(aggregate.by = "nation")
+p = plot_final_cap_diff(aggregate.by = "nation", years = c(2020:2050),
+                        type.filter = c())
 
 p$plot
 
 ```
 
-# Generation
-```{r generation, echo=FALSE,  fig.height = 4}
+# Firm Capacity {.tabset}
+
+## All India
+```{r india-firm-capacity, echo=FALSE,  fig.height = 5, rows.print = n.year, fig.width = 10}
+
+p = plot_firm_capacity(aggregate.by = 'nation', years = c(2020,2030,2040,2050))
+p$plot
+datatable(p$data, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
+```
+
+## Regional
+```{r region-firm-capacity, echo=FALSE,  fig.height = 5, rows.print = n.year, fig.width = 10}
+
+p = plot_firm_capacity(aggregate.by = 'region')
+p$plot
+datatable(p$data, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
+
+```
+
+# Annual generation {.tabset}
+
+## Total generation
+```{r generation, echo=FALSE,  fig.height = 3, fig.width = 10}
 
 # Generation by year, national
 p = plot_generation(aggregate.by = "nation")
   
-p$plot
+p$plot + scale_x_continuous(breaks = c(2020,2030,2040,2050))
 
-p$mix
+```
+
+## Import/Export
+```{r import-export, echo=FALSE, fig.height = 6, fig.width = 15}
+trade.annual = trade[,.(trade = sum(trade)/1000), by = .(Country, Year,time,season)]
+
+trade.annual[,net := sum(trade), by = .(Year,time,season)]
+
+ggplot(data=trade.annual) +
+  geom_bar(aes(x=Year, y=trade, fill=Country), color = 'grey20', stat='identity') +
+  geom_point(data=trade.annual,
+             aes(x=Year, y=net), color = 'black', inherit.aes=FALSE) +
+  scale_x_continuous(breaks = unique(trade.annual$Year)[c(TRUE,FALSE,FALSE,FALSE,FALSE)]) +
+  labs(y='Imports and Exports (GW)', x=NULL, color = 'Net Import') +
+  facet_grid(time~season)
 
 ```
 
@@ -209,206 +461,248 @@ p = plot_generation(aggregate.by = "nation", plot_curt = FALSE)
 
 min_year = min(p$mix_data[,Year])
 max_year = max(p$mix_data[,Year])
-ggplot(data = p$mix_data) + 
+ggplot(data = p$mix_data) +
   geom_area(aes(x=Year,y=gen.mix,fill=Type), color = 'grey20') +
   labs(y = 'Generation mix', x = NULL) +
-  scale_x_continuous(breaks=seq(min_year-1, max_year, 2),expand = c(0,0)) +
+  scale_x_continuous(breaks=seq(min_year-1, max_year, 4),expand = c(0,0)) +
   scale_y_continuous(labels = scales::percent, expand = c(0,0)) +
   scale_fill_manual("",values = gen.colors, drop = TRUE) +
   plot_theme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   facet_wrap(~scenario)
 
-# Generation mix by year
-p$mix
+```
 
+## Generation mix data
+```{r generation-mix-data, echo=FALSE,  fig.height = 4}
+
+# Generation by year, national
+p = plot_generation(aggregate.by = "nation")
+
+datatable(p$mix, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
+
+```
+
+## VRE Penetration
+```{r vre-penetration, echo=FALSE, fig.height=4, fig.width = 6}
+india.gen = gen[, .(tot = sum(V1)), by = .(Year, scenario)]
+
+india.vre = gen[Type %in% c('Wind','Solar PV'), .(vre = sum(V1)), by = .(Year, scenario)]
+
+dat = merge(india.gen, india.vre)
+dat[, vre.share := vre/tot]
+
+ggplot(dat) +
+  geom_line(aes(x=Year, y=vre.share, color = scenario)) +
+  scale_y_continuous(labels = scales::percent)
+  
 ```
 
 ## Capacity factor
-```{r cap-factor, echo=FALSE,  fig.height = 3, fig.width = 7}
+```{r cap-factor, echo=FALSE,  fig.height = 4, fig.width = 6}
 
 # Generation by year, national
-p = plot_capacity_factor(aggregate.by = "nation", category.filter = c('Gas CC','Gas CT'))
+p = plot_capacity_factor(aggregate.by = "nation", 
+                         category.filter = c('Super-Coal','Sub-Coal','Gas CC','Gas CT','Nuclear'))
 
-p$plot
+p$plot + theme(legend.position = 'bottom') + scale_x_continuous(breaks = c(2020,2030,2040,2050)) + scale_y_continuous(labels=scales::percent)
 
 
 ```
 
-## Timeslice generation
-```{r timeslice-gen-nation, echo=FALSE, fig.height = 4, fig.width = 8}
+# Timeslice generation {.tabset}
 
+## Generation dispatch
+```{r timeslice-gen-nation, echo=FALSE, fig.height = 10, fig.width = 8}
+
+for(i in c(2030,2040,2050)){
 # Generation by year, national
-p = plot_timeslice_generation(aggregate.by = "nation", year = final.year, type = 'capacity')
+p1 = plot_timeslice_generation(aggregate.by = "nation", type = 'capacity', year = i)
 
-# add load as dot
-tot.load = demand[Year == final.year, .(Demand = sum(demand)/1000), 
-                  by = .(scenario, time_slice = time_slice)]
-
-tot.load = merge(tot.load, ts.map, by = 'time_slice')
-
-p = p$plot + ggtitle(paste('Snapshot in',final.year) ) +
-  geom_point(data = tot.load, aes(x=time, y=Demand, shape="Demand"), inherit.aes = F)
-
-p
+print(p1$plot + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) +
+  ggtitle(paste0('Generation dispatch in ', i)))
+}
 
 ```
 
-## Region timeslice generation
-```{r timeslice-gen-region, echo=FALSE, fig.height = 6}
 
-# Generation by year, national
+## Regional
+```{r timeslice-gen-region, echo=FALSE, fig.height = 10}
+
+# Generation by year, state
 p = plot_timeslice_generation(aggregate.by = "region", year = final.year, type = 'capacity')
 
-# add load as dot
 
-tot.load = demand[Year == final.year, 
-                  .(Demand = sum(demand)/1000), by = .(scenario, region, time_slice = time_slice)]
-
-p$plot + ggtitle(paste('Snapshot in',final.year) ) + 
-  geom_point(data = tot.load, aes(x=time_slice, y=Demand, shape="Demand"), inherit.aes = F) +
- theme(axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)) 
+p$plot + ggtitle(paste('Generation dispatch in',final.year) ) +
+ theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 
 ```
 
-## Curtailment iterations
+## Select states
+```{r timeslice-gen-state, echo=FALSE, fig.height = 12, fig.width = 10}
+
+select_state = c('Andhra_Pradesh','Karnataka','Maharashtra',
+                 'Gujarat', 'Rajasthan','Tamil_Nadu','Madhya_Pradesh',
+                 'Telangana')
+select_year = final.year
+# Generation by year, state
+p = plot_timeslice_generation(aggregate.by = "state", year = select_year, type = 'capacity',
+                              state_filter = select_state, scenario_filter = scenario.names[1])
+
+p$plot + ggtitle(paste('Snapshot in',final.year) )
+
+```
+
+## Other states
+```{r timeslice-other-state, echo=FALSE, fig.height = 15, fig.width = 10}
+
+other_states = cap[,unique(State)][!(cap[,unique(State)] %in% select_state)]
+select_year = final.year
+# Generation by year, state
+p = plot_timeslice_generation(aggregate.by = "state", year = select_year, type = 'capacity',
+                              state_filter = other_states, scenario_filter = scenario.names[1])
+
+
+p$plot + ggtitle(paste('Snapshot in',final.year) )
+
+```
+
+# Curtailment
 ```{r curtailment-iter, echo=FALSE, fig.height = 3, fig.width = 6}
 
-if(curt.switch == 1 ){
- if('season' %in% names(curt_iter)){
-  curt_plots = plot_curt_iter()
-  
-  curt_plots
-  }
-}
+# if(curt.switch == 1 ){
+#   curt_plots = plot_curt_iter()
+# 
+#   curt_plots[[2]]
+# }
+
+curt_temp = curt_iter[,.(curt = mean(curtailment)), by=.(Year, scenario)]
+
+ggplot(curt_temp) +
+  geom_line(aes(x=Year,y=curt,color=scenario)) +
+  scale_y_continuous(labels = scales::percent, expand = c(0,0)) +
+  labs(x=NULL,y='Average Curtailment (%)') +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) 
 
 ```
 
-## CC iterations
-```{r cc-iter, echo=FALSE, fig.height = 3, fig.width = 6}
+<!-- # VRE capacity credit -->
+<!-- ```{r cc-iter, echo=FALSE, fig.height = 3, fig.width = 6} -->
 
-if(curt.switch == 1 ){
- if('season' %in% names(cc_iter)){
-  cc_plots = plot_cc_iter()
-  
-  cc_plots[1]
-  cc_plots[2]
-  }
-}
-```
+<!-- if(curt.switch == 1 ){ -->
+<!--   cc_plots = plot_cc_iter() -->
 
-## CC by region
-```{r cc-region, echo=FALSE, fig.height = 6, fig.width = 12}
-if(curt.switch == 1 ){
- if('season' %in% names(cc_iter)){
- cc_plots[3]
- }
-}
-```
+<!--   cc_plots[1] -->
+<!--   cc_plots[2] -->
+<!-- } -->
+<!-- ``` -->
 
-## Storage operations 
-```{r timeslice-storage, echo=FALSE, fig.height = 5}
+# Operating reserves {.tabset}
 
-# Storage by year, national
-p = plot_storage_ops(aggregate.by = "nation", year = 'year.max') 
-
-p$plot + ggtitle(paste('Snapshot in',final.year) )
-
-```
-
-## Operating reserve provision
-```{r opres-tot, echo=FALSE, fig.height = 3, fig.width = 5}
+## Total provision
+```{r opres-tot, echo=FALSE, fig.height = 5, fig.width = 10}
 
 # Operating reserves by year, national
-p = plot_opres_tot(aggregate.by = "nation") 
+p = plot_opres_tot(aggregate.by = "region") 
 
-p$plot +  labs(y=NULL,x=NULL) + theme(strip.background = element_blank(), strip.text.x = element_blank()) 
+p$plot +  labs(y=NULL,x=NULL)  
 ```
 
-## Operating reserves snapshot
-```{r timeslice-opres, echo=FALSE, fig.height = 4}
+## Timeslice reserves
+```{r timeslice-opres, echo=FALSE, fig.height = 4, fig.width = 8}
 
 # Operating reserves by timeslice, national
-p = plot_opres(aggregate.by = "nation", year = 'year.max') 
+p = plot_opres(aggregate.by = "region", year = 2030) 
 
-p$plot + ggtitle(paste('Snapshot in',final.year) )
+p$plot + ggtitle(paste('Snapshot in',2030) ) + theme(axis.text.x = element_blank())
 ```
 
-# Total system cost
-```{r system-cost, echo=FALSE,  fig.height = 4}
+# Costs {.tabset}
 
-# Present value of total system costs
-p = plot_system_costs_all(aggregate.by = 'nation', year = final.year)
+<!-- ## Total cost -->
+<!-- ```{r system-cost, echo=FALSE,  fig.height = 4} -->
 
-p
+<!-- # Present value of total system costs -->
+<!-- p = plot_system_costs_all(aggregate.by = 'nation', year = final.year) -->
 
-```
+<!-- p -->
 
-## Region system cost
-```{r system-cost-region, echo=FALSE,  fig.height = 4}
+<!-- ``` -->
 
-# Present value of total system costs
-p = plot_system_costs_all(aggregate.by = 'region', year = final.year)
+<!-- ## Regional -->
+<!-- ```{r system-cost-region, echo=FALSE,  fig.height = 4} -->
 
-p
+<!-- # Present value of total system costs -->
+<!-- p = plot_system_costs_all(aggregate.by = 'region', year = final.year) -->
 
-```
+<!-- p -->
 
-## Technology cost
-```{r tech-cost, echo=FALSE,  fig.height = 6}
+<!-- ``` -->
 
-# Present value of total system costs
-p = plot_system_costs_all(aggregate.by = 'technology', year = final.year)
+<!-- ## Technology cost -->
+<!-- ```{r tech-cost, echo=FALSE,  fig.height = 6} -->
 
-p
+<!-- # Present value of total system costs -->
+<!-- p = plot_system_costs_all(aggregate.by = 'technology', year = final.year) -->
 
-```
+<!-- p -->
+
+<!-- ``` -->
 
 ## Marginal cost
-```{r marginal-cost, echo=FALSE,  fig.height = 6}
+```{r marginal-cost, echo=FALSE,  fig.height = 5, fig.width = 10}
 
 # Generation by year, national
 p = plot_marginal_cost(aggregate.by = "nation")
 
-p$plot + facet_wrap(~scenario, nrow = n.scenario)
+p$plot 
 
+
+# p2 = plot_marginal_cost_maps(aggregate.by = "State", years = c(2017, 2030, 2050))
+# p2$plot
 
 ```
 
-# RE capacity by resource region
+# Wind and Solar Maps {.tabset}
+
+## RE build out
 ```{r map-rs-cap, echo=FALSE,  fig.height = 8}
 map_rs_capacity(category = 'WIND', palette = 'Blues', years = final.year)
 
 map_rs_capacity(category = 'UPV', palette = 'Oranges', years = final.year)
 
-map_rs_capacity(category = 'DUPV', palette = 'Reds', years = final.year)
+map_rs_capacity(category = 'DISTPV', palette = 'Reds', years = final.year)
 
 ```
 
-# Capacity maps
-```{r map-re-capacity, echo=FALSE,  fig.height = 6}
+## State-wise capacity
+```{r map-state-capacity, echo=FALSE,  fig.height = 6}
 wind.cap.map = map_capacity(category = "WIND", palette = 'Blues', years = final.year)
 
-wind.cap.map + ggtitle(paste('Wind capacity in',final.year) )
+wind.cap.map
 
 upv.cap.map = map_capacity(category = 'UPV', palette = 'Oranges', years = final.year)
 
-upv.cap.map + ggtitle(paste('UPV capacity in',final.year) )
+upv.cap.map
 
-dupv.cap.map = map_capacity(category = 'DUPV', palette = 'Reds', years = final.year)
+distpv.cap.map = map_capacity(category = 'DISTPV', palette = 'Reds', years = final.year)
 
-dupv.cap.map + ggtitle(paste('DUPV capacity in',final.year) )
+distpv.cap.map
 
 if(curt.switch == 1){
-  if('Timeslice' %in% names(curt)){
   curt.map = map_curtailment(palette = 'YlOrRd', year = final.year)
-  
-    if("ggplot" %in% class(curt.map)){
-      curt.map + ggtitle(paste('Curtailment capacity in', final.year) )
-    }else{curt.map}
-  }
+
+  if("ggplot" %in% class(curt.map)){
+    curt.map + ggtitle(paste('Curtailment capacity in', final.year) )
+  }else{curt.map}
 }
 
+
+```
+
+# Conventional capacity maps
+```{r map-conv-capacity, echo=FALSE,  fig.height = 6}
 cap.map = map_capacity(category = 'SUPERCRITICAL-COAL', palette = 'Greys', years = final.year)
 cap.map + ggtitle(paste('Super-Coal capacity in ',final.year) )
 
@@ -418,23 +712,28 @@ cap.map + ggtitle(paste('CCGT capacity in ',final.year) )
 cap.map = map_capacity(category = 'CT-GAS', palette = 'Purples', years = final.year)
 cap.map + ggtitle(paste('CT capacity in ',final.year) )
 
+cap.map = map_capacity(category = 'NUCLEAR', palette = 'Reds', years = final.year)
+cap.map + ggtitle(paste('Nuclear capacity in ',final.year) )
+
 ```
 
-# Transmission investments
+# Transmission investments {.tabset}
+
+## Total invesment
 ```{r tx-investment, echo=FALSE, rows.print = 50, fig.width = 6}
 
 p = plot_tx_inv()
 
 p$plot
 
-p$data
+datatable(p$data, rownames = FALSE, filter="top", options = list(pageLength = 5, scrollX=T))
 
 
 ```
 
 
-## Transmission investment map
-```{r map-tx-investment, echo=FALSE, fig.width = 8}
+## Map
+```{r map-tx-investment, echo=FALSE, fig.width = 12}
 
 map.tx.inv <- map_tx_inv()
 
@@ -442,37 +741,49 @@ map.tx.inv
 
 ```
 
-# Power flow during highest RE time slices
-```{r map-tslc-flow, echo=FALSE, fig.width = 10}
+<!-- # Power flows {.tabset} -->
 
-map_tslc_flow(year = final.year, by = 'state', tech = 'Wind')
-map_tslc_flow(year = final.year, by = 'region', tech = 'Wind')
+<!-- ## Highest RE time slices -->
+<!-- ```{r map-tslc-flow, echo=FALSE, fig.width = 10} -->
+<!-- yr = min(tslc.flow[,max(Year), by=scenario]$V1) -->
 
-map_tslc_flow(year = final.year, by = 'state', tech = 'Solar PV')
-map_tslc_flow(year = final.year, by = 'region', tech = 'Solar PV')
+<!-- map_tslc_flow(year = 2030, by = 'state', tech = 'Wind') -->
+<!-- map_tslc_flow(year = yr, by = 'region', tech = 'Wind') -->
 
-```
+<!-- map_tslc_flow(year = yr, by = 'state', tech = 'Solar PV') -->
+<!-- map_tslc_flow(year = yr, by = 'region', tech = 'Solar PV') -->
 
-# Power flow maps
-```{r map-tx-flow, echo=FALSE, fig.width = 10}
+<!-- ``` -->
 
-map.tx.flow.state = map_tx_flow(year = final.year, by = 'state')
+<!-- ## Total power flow -->
+<!-- ```{r map-tx-flow, echo=FALSE, fig.width = 10} -->
 
-map.tx.flow.state + ggtitle(paste('Total transmission flow in',final.year) )
+<!-- map.tx.flow.state = map_tx_flow(year = yr, by = 'state') -->
 
-map_max_flow(year = final.year, by = 'state')
+<!-- map.tx.flow.state + ggtitle(paste('Total transmission flow in',yr) ) -->
 
-
-
-map.tx.flow.region = map_tx_flow(year = final.year, by = 'region')
-
-map.tx.flow.region + ggtitle(paste('Total transmission flow in',final.year) )
-
-map_max_flow(year = final.year, by = 'region')
+<!-- map_max_flow(year = final.year, by = 'state') -->
 
 
-```
+<!-- map.tx.flow.region = map_tx_flow(year = yr, by = 'region') -->
+
+<!-- map.tx.flow.region + ggtitle(paste('Total transmission flow in',yr) ) -->
+
+<!-- map_max_flow(year = yr, by = 'region') -->
 
 
+<!-- ``` -->
+
+<!-- # Iteration capacity  -->
+<!-- ```{r iter-capacity, echo=FALSE,  fig.height = 10, rows.print = n.year, fig.width = 10} -->
+
+<!-- # Total capacity by year, national -->
+<!-- d = cap_iter[,.(capacity=sum(capacity)), by = .(Year,cciter,scenario, Type) ] -->
+
+<!-- ggplot(d[cciter %in% c(0,1)]) + -->
+<!--   geom_bar(aes(x=Year,y=capacity,fill=scenario),position='dodge',stat='identity') + -->
+<!--   facet_grid(Type~cciter, scales='free_y') -->
+
+<!-- ``` -->
 
 
