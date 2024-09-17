@@ -171,7 +171,12 @@ valinv_irt(i,r,t) = sum{v, valinv(i,v,r,t) } ;
 
 * new gas investments are not allowed in Uttar Pradesh
 if(Sw_BanGasUP=1,
-valcap(i,v,r,t)$[gas(i)$newv(v)$focus_region(r)] = no
+valcap(i,v,r,t)$[gas(i)$newv(v)$focus_region(r)]=no
+);
+
+* remove colocated green H2 techs from valcap if not modeling colocation
+if(Sw_ColocatedGreenH2=0,
+valcap(i,v,r,t)$[greenhydrogentech(i)]=no
 );
 
 * -- valgen specification --

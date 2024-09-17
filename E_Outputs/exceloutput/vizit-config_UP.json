@@ -1,0 +1,622 @@
+{
+  "fileNames": [
+    "cap.csv",
+    "cap_rs.csv",
+    "cap_diff.csv",
+    "cap_new_ann.csv",
+    "costs.csv",
+    "costs_diff.csv",
+    "demand.csv",
+    "demand_timeslice.csv",
+    "firmcap.csv",
+    "gen.csv",
+    "gen_timeslice.csv",
+    "curt_timeslice.csv",
+    "curt_frac.csv",
+    "opres.csv",
+    "peakdem.csv",
+    "style.csv",
+    "transmission.csv",
+    "pnf.csv"
+  ],
+  "dashboards": [
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "cap.csv",
+              "type": "bar",
+              "agg": "sum",
+              "filter": {
+                "st": {
+                  "filter_type": "include",
+                  "filter_val": [
+                    "UP_Agra",
+                    "UP_Kanpur",
+                    "UP_Lucknow",
+                    "UP_Meerut",
+                    "UP_Varanasi"
+                  ]
+                }
+              },
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Capacity (MW)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "420",
+            "Plot Title": "UP installed capacity"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "cap_new_ann.csv",
+              "type": "bar",
+              "agg": "sum",
+              "filter": {
+                "st": {
+                  "filter_type": "include",
+                  "filter_val": [
+                    "UP_Agra",
+                    "UP_Kanpur",
+                    "UP_Lucknow",
+                    "UP_Meerut",
+                    "UP_Varanasi"
+                  ]
+                }
+              },
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Investments (MW)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "420",
+            "Plot Title": "Annual capacity additions"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "firmcap.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "row": "season",
+              "y": "Firm Capacity (MW)"
+            },
+            {
+              "dataSource": "peakdem.csv",
+              "type": "dot",
+              "agg": "sum",
+              "x": "year",
+              "row": "season",
+              "col": "scenario",
+              "name": "type",
+              "y": "PRM requirement (MW)"
+            },
+            {}
+          ],
+          "style": {
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "800",
+            "Plot Title": "Firm capacity and PRM requirement"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "cap_diff.csv",
+              "type": "bar",
+              "agg": "sum",
+              "filter": {
+                "st": {
+                  "filter_type": "include",
+                  "filter_val": [
+                    "UP_Agra",
+                    "UP_Kanpur",
+                    "UP_Lucknow",
+                    "UP_Meerut",
+                    "UP_Varanasi"
+                  ]
+                }
+              },
+              "x": "year",
+              "col": "scenario",
+              "name": "tech",
+              "y": "Difference (MW)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1000"
+          }
+        },
+        {
+          "traces": [
+            {}
+          ]
+        },
+        {
+          "traces": [
+            {}
+          ]
+        },
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ],
+      "title": "Annual capacity results",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "pnf.csv",
+              "type": "line",
+              "agg": "sum",
+              "filter": {
+                "type": {
+                  "filter_type": "select",
+                  "filter_val": "non-fossil"
+                }
+              },
+              "x": "year",
+              "name": "scenario",
+              "y": "cap_frac"
+            }
+          ],
+          "style": {
+            "Plot Title": "Capacity",
+            "Y Title": "Fraction of total capacity (%)"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "pnf.csv",
+              "type": "line",
+              "agg": "sum",
+              "filter": {
+                "type": {
+                  "filter_type": "select",
+                  "filter_val": "non-fossil"
+                }
+              },
+              "x": "year",
+              "name": "scenario",
+              "y": "gen_frac"
+            }
+          ],
+          "style": {
+            "Plot Title": "Generation",
+            "Y Title": "Fraction of total generation (%)"
+          }
+        },
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ],
+      "title": "Non-fossil fraction",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "costs.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "name": "cost_cat",
+              "col": "scenario",
+              "y": "Cost"
+            }
+          ],
+          "style": {
+            "Y Title": "Undiscounted cost (INR)",
+            "Plot Width (px)": "1000",
+            "Plot Title": "Costs by year"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "costs.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "scenario",
+              "name": "cost_cat",
+              "y": "Cost"
+            }
+          ],
+          "style": {
+            "Y Title": "Undiscounted cost (INR)",
+            "Plot Width (px)": "800",
+            "Plot Title": "Total costs"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "costs_diff.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "scenario",
+              "name": "cost_cat",
+              "y": "Cost"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "800",
+            "Plot Title": "Cost difference from reference scenario"
+          }
+        },
+        {},
+        {}
+      ],
+      "title": "Costs",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "gen.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Generation (MWh)"
+            },
+            {
+              "dataSource": "demand.csv",
+              "type": "dot",
+              "agg": "sum",
+              "filter": {
+                "st": {
+                  "filter_type": "include",
+                  "filter_val": [
+                    "UP_Agra",
+                    "UP_Kanpur",
+                    "UP_Lucknow",
+                    "UP_Meerut",
+                    "UP_Varanasi"
+                  ]
+                }
+              },
+              "x": "year",
+              "name": "type",
+              "col": "scenario",
+              "y": "Demand (MWh)"
+            },
+            {}
+          ],
+          "style": {
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "400",
+            "Plot Title": "UP generation and demand",
+            "Y Title": "Generation (MWh)"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "opres.csv",
+              "type": "bar",
+              "agg": "sum",
+              "filter": {
+                "st": {
+                  "filter_type": "include",
+                  "filter_val": [
+                    "UP_Agra",
+                    "UP_Kanpur",
+                    "UP_Lucknow",
+                    "UP_Meerut",
+                    "UP_Varanasi"
+                  ]
+                }
+              },
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "Operating Reserves (MWh)"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "400",
+            "Plot Title": "Operating reserves provision"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "curt_frac.csv",
+              "type": "line dot",
+              "agg": "sum",
+              "x": "year",
+              "name": "tech",
+              "col": "scenario",
+              "y": "curt_frac"
+            }
+          ],
+          "style": {
+            "Plot Title": "Annual curtailment",
+            "Y Title": "Fraction of available generation (%)",
+            "Plot Width (px)": "1000"
+          }
+        },
+        {},
+        {}
+      ],
+      "title": "Annual generation results",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "gen_timeslice.csv",
+              "type": "bar",
+              "agg": "sum",
+              "filter": {
+                "year": {
+                  "filter_type": "equals",
+                  "filter_val": "2030"
+                }
+              },
+              "x": "time",
+              "row": "season",
+              "col": "scenario",
+              "explode": "year",
+              "name": "tech",
+              "y": "Generation (MW)"
+            },
+            {
+              "dataSource": "curt_timeslice.csv",
+              "type": "bar",
+              "agg": "sum",
+              "filter": {
+                "year": {
+                  "filter_type": "equals",
+                  "filter_val": "2030"
+                }
+              },
+              "x": "time",
+              "name": "tech",
+              "row": "season",
+              "col": "scenario",
+              "explode": "year",
+              "y": "curtailment"
+            },
+            {
+              "dataSource": "demand_timeslice.csv",
+              "type": "dot",
+              "agg": "sum",
+              "filter": {
+                "year": {
+                  "filter_type": "equals",
+                  "filter_val": "2030"
+                }
+              },
+              "x": "time",
+              "name": "type",
+              "row": "season",
+              "col": "scenario",
+              "explode": "year",
+              "y": "Demand (MW)"
+            },
+            {},
+            {}
+          ],
+          "style": {
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "800",
+            "Plot Title": "National timeslice generation and demand",
+            "Y Title": "Dispatch (MW)"
+          }
+        }
+      ],
+      "title": "Timeslice generation",
+      "description": ""
+    },
+    {},
+    {},
+    {},
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "cap.csv",
+              "type": "custom region map (mapbox)",
+              "agg": "sum",
+              "filter": {
+                "year": {
+                  "filter_type": "slider",
+                  "filter_val": "2030"
+                },
+                "tech": {
+                  "filter_type": "select",
+                  "filter_val": "Solar PV"
+                }
+              },
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/main/UP_BAs.geojson",
+              "featureidkey": "properties.id",
+              "text": "tech",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/main/UP_BAs.geojson",
+              "locations": "st",
+              "z": "Capacity (MW)",
+              "explode": "scenario"
+            }
+          ],
+          "style": {
+            "Plot Title": "Solar Capacity",
+            "Plot Width (px)": "500",
+            "Colorscale (region)": "[[0, 'rgb(0,0,255)'], [1, 'rgb(255,0,0)']]",
+            "Colorscale Min (region)": "0",
+            "Colorscale Max (region)": "3000"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "cap.csv",
+              "type": "custom region map (mapbox)",
+              "agg": "sum",
+              "filter": {
+                "year": {
+                  "filter_type": "slider",
+                  "filter_val": "2030"
+                },
+                "tech": {
+                  "filter_type": "select",
+                  "filter_val": "Wind"
+                }
+              },
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/main/UP_BAs.geojson",
+              "featureidkey": "properties.id",
+              "text": "tech",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/main/UP_BAs.geojson",
+              "locations": "st",
+              "z": "Capacity (MW)",
+              "explode": "scenario"
+            }
+          ],
+          "style": {
+            "Plot Title": "Wind Capacity",
+            "Plot Width (px)": "500",
+            "Colorscale (region)": "Blues",
+            "Reverse Colorscale (region)": "true",
+            "Colorscale Min (region)": "0",
+            "Colorscale Max (region)": "3000"
+          }
+        },
+        {
+          "traces": [
+            {}
+          ]
+        }
+      ],
+      "title": "State Map (BAs)",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "cap_rs.csv",
+              "type": "custom region map (mapbox)",
+              "agg": "sum",
+              "filter": {
+                "year": {
+                  "filter_type": "slider",
+                  "filter_val": "2030"
+                },
+                "tech": {
+                  "filter_type": "select",
+                  "filter_val": "Solar PV"
+                }
+              },
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/main/UP_rs_altcrs.geojson",
+              "featureidkey": "properties.rs",
+              "text": "tech",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/main/UP_rs_altcrs.geojson",
+              "locations": "rs",
+              "z": "capacity_MW",
+              "explode": "scenario"
+            }
+          ],
+          "style": {
+            "Plot Title": "Solar Capacity",
+            "Plot Width (px)": "500",
+            "Colorscale (region)": "[[0, 'rgb(0,0,255)'], [1, 'rgb(255,0,0)']]",
+            "Colorscale Min (region)": "0",
+            "Colorscale Max (region)": "3000"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "cap_rs.csv",
+              "type": "custom region map (mapbox)",
+              "agg": "sum",
+              "filter": {
+                "year": {
+                  "filter_type": "slider",
+                  "filter_val": "2020"
+                },
+                "tech": {
+                  "filter_type": "select",
+                  "filter_val": "Wind"
+                }
+              },
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/main/UP_rs_altcrs.geojson",
+              "featureidkey": "properties.rs",
+              "text": "tech",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/main/UP_rs_altcrs.geojson",
+              "locations": "rs",
+              "z": "capacity_MW",
+              "explode": "scenario"
+            }
+          ],
+          "style": {
+            "Plot Title": "Wind Capacity",
+            "Plot Width (px)": "500",
+            "Colorscale (region)": "Blues",
+            "Reverse Colorscale (region)": "true",
+            "Colorscale Min (region)": "0",
+            "Colorscale Max (region)": "3000"
+          }
+        },
+        {}
+      ],
+      "title": "State Map (rs)",
+      "description": ""
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {}
+  ],
+  "globalStyleFile": "style.csv",
+  "filter": {
+    "year": {
+      "filter_type": "less-or-equal",
+      "filter_val": "2030"
+    },
+    "season": {
+      "filter_type": "include",
+      "filter_val": [
+        "Autumn",
+        "Rainy"
+      ]
+    }
+  }
+}

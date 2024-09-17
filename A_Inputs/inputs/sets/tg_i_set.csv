@@ -16,3 +16,9 @@ battery,BATTERY_4
 battery,BATTERY_6
 battery,BATTERY_8
 battery,BATTERY_10
+solar,UPV_H2
+solar,DISTPV_H2
+wind,WIND_H2
+vre,UPV_H2
+vre,DISTPV_H2
+vre,WIND_H2

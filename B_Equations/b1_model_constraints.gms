@@ -20,6 +20,7 @@ positive variables
 
 *load variable - set equal to lmnt
   LOAD(r,h,t)
+  H2_LOAD(r,h,t)
 
 * capacity and investment variables
   CAP(i,v,r,t)                   "--MW-- generation capacity"
@@ -29,20 +30,20 @@ positive variables
   INVREFURB(i,v,r,t)               "--MW-- investment in refurbishments of technologies computed on a renewable supply curve"
   GROWTH_BIN(gbin,i,state,t)        "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
 
-
 * generation and storage variables
   GEN(i,v,r,h,t)            "--MW-h-- electricity generation"
   CURT(r,h,t)               "--MW-h-- Curtailed energy"
+  H2_CURT(r,h,t)            "--MW-h-- Curtailed energy from H2 techs"
   CURT_REDUCT_TRANS(r,rr,h,t) "--MW-- curtailment reduction in r from building new transmission in rr"
   STORAGE_IN(i,v,r,h,src,t)     "--MW-h-- storage entering in hour h"
   STORAGE_LEVEL(i,v,r,h,t)    "--MW-h-- storage released in hour h"
   MINGEN(r,szn,t)           "--MW-- seasonal minimum generation level in region r"
-  SLACK_FUEL(t)                               "--GJ -- slack variable for naptha use in gas cc plants"
+  SLACK_FUEL(t)             "--GJ -- slack variable for naptha use in gas cc plants"
 
 *trade variables
   FLOW(r,rr,h,t,trtype)          "--MW-h-- electricity flow"
   OPRES_FLOW(ortype,r,rr,h,t)    "--MW-- interregional trade of operating reserves by operating reserve type"
-  CURT_FLOW(r,rr,h,t)          "--MW-- interregional trade of curtailment"
+  CURT_FLOW(r,rr,h,t)            "--MW-- interregional trade of curtailment"
   PRMTRADE(r,rr,szn,t)           "--MW-- planning reserve margin capacity traded from r to rr"
 
 *operating reserve variables
@@ -71,11 +72,12 @@ EQUATION
 
 *load constraint
  eq_loadcon(r,h,t)
+ eq_H2_loadcon(r,h,t)
 
 * main capacity constraints
- eq_cap_init_noret(i,v,r,t)                              "--MW-- Existing capacity that cannot be retired is equal to exogenously-specified amount (eq_cap_mo_exist_noretire)"
- eq_cap_init_retub(i,v,r,t)                  "--MW-- Existing capacity that can be retired is less than or equal to exogenously-specified amount (eq_cap_exist_retire_ub)"
- eq_cap_init_retmo(i,v,r,t)                              "--MW-- Once retired, existing cap stock cannot be built up again"
+ eq_cap_init_noret(i,v,r,t)        "--MW-- Existing capacity that cannot be retired is equal to exogenously-specified amount (eq_cap_mo_exist_noretire)"
+ eq_cap_init_retub(i,v,r,t)        "--MW-- Existing capacity that can be retired is less than or equal to exogenously-specified amount (eq_cap_exist_retire_ub)"
+ eq_cap_init_retmo(i,v,r,t)        "--MW-- Once retired, existing cap stock cannot be built up again"
  eq_cap_mo_new_noret(i,v,r,t)      "--MW-- New capacity equals investments + refurbishments when retirements are not possible"
  eq_cap_new_retub(i,v,r,t)         "--MW-- New capacity cannot exceed INV + refurb when retirements are possible"
  eq_cap_new_retmo(i,v,r,t)         "--MW-- Once retired, new cap of each class cannot be built up again"
@@ -96,10 +98,11 @@ EQUATION
 
 * operation and reliability
  eq_supply_demand_balance(r,h,t)         "--MWh-- supply demand balance"
+ eq_green_H2_demand_balance(r,h,t)       "--MWh-- supply H2-only captive demand balance"
  eq_dhyd_dispatch(i,v,r,szn,t)           "--MWh-- dispatchable hydro seasonal constraint"
  eq_capacity_limit(i,v,r,h,t)            "--MWh-- generation limit for new capacity"
  eq_reserve_margin(region,szn,t)         "--MW--  regional planning reserve margin requirement"
- eq_reserve_margin_state(r,szn,t)             "--MW-- state planning reserve margin requirement"
+ eq_reserve_margin_state(r,szn,t)        "--MW-- state planning reserve margin requirement"
  eq_transmission_limit(r,rr,h,t,trtype)  "--MWh-- transmission limit"
  eq_trans_reduct1(r,rr,h,t)               "--MW-- limit CURT_REDUCT_TRANS by transmission investment"
  eq_trans_reduct2(r,rr,h,t)               "--MW-- limit CURT_REDUCT_TRANS by maximum level found by Augur"
@@ -141,6 +144,7 @@ EQUATION
 * curtailment equations
  eq_curt_gen_balance(r,h,t)              "--MW-- generation plus reserves cannot exceed max possible generation minus curtailment"
  eq_curtailment(r,h,t)                   "--MW-- curtailment equals avg curt + marg curt for new investments + curt from existing VREs + changes in curt due to min gen - reductions due to storage"
+ eq_green_H2_curt(r,h,t)
  eq_mingen_lb(r,h,szn,t)                 "--MW-- min gen in each season cannot be lower than min generation level (GEN times minload) in any time slice in that season"
  eq_mingen_ub(r,h,szn,t)                 "--MW-- generation in each time slice in that season must exceed the mingen level for that season"
 
@@ -189,6 +193,10 @@ eq_curtlim(i,t)$[vre(i)$Sw_CurtLim]..
 *reserve and planning reserve margin considered
 eq_loadcon(r,h,t)$[rfeas(r)$tmodel(t)$rb(r)]..
   LOAD(r,h,t) =e= lmnt(r,h,t)
+  ;
+
+eq_H2_loadcon(r,h,t)$[rfeas_H2(r)$tmodel(t)$rb(r)$Sw_ColocatedGreenH2]..
+  H2_LOAD(r,h,t) =e= lmnt_H2_only(r,h,t)
   ;
 
 
@@ -376,7 +384,7 @@ eq_rsc_inv_account(i,v,r,t)$[tmodel(t)$valinv(i,v,r,t)$vre(i)]..
 
 
 *note that the following equation only restricts inv_rsc and not inv_refurb
-*therefore, the capacity indicated by teh supply curve may be limiting
+*therefore, the capacity indicated by the supply curve may be limiting
 *but the plant can still be refurbished
 eq_rsc_INVlim(r,i,rscbin)$[vre(i)$m_rscfeas(r,i,rscbin)]..
 
@@ -440,7 +448,6 @@ eq_growthlimit_absolute(r,tg,t)$[growth_limit_absolute(r,tg)$tmodel(t)$Sw_Growth
 
 ;
 
-
 eq_regen_mandate(t)$[tmodel(t)$Sw_REGenMandate]..
 
     sum{(ii,v,r,h)$[rfeas(r)$tmodel(t)$valgen(ii,v,r,t)$genmandate_tech_set(ii)],
@@ -451,7 +458,6 @@ eq_regen_mandate(t)$[tmodel(t)$Sw_REGenMandate]..
     sum{(ii,v,r,h)$[rfeas(r)$tmodel(t)$valgen(ii,v,r,t)],
         GEN(ii,v,r,h,t) * hours(h)}*re_mandate_gen(t)
 ;
-
 
 eq_recap_mandate(t)$[tmodel(t)$Sw_RECapMandate]..
    
@@ -577,7 +583,6 @@ eq_curtailment(r,h,t)$[tmodel(t)$rfeas(r)]..
     - sum{(trtype,rr)$routes(r,rr,trtype,t), CURT_FLOW(r,rr,h,t) }$Sw_CurtFlow
 ;
 
-
 eq_mingen_lb(r,h,szn,t)$[h_szn(h,szn)$rfeas(r)$tmodel(t)$Sw_MinGen]..
 
 *minimum generation level in a season
@@ -638,7 +643,7 @@ eq_min_cf(i,r,t)$[minCF(i)$tmodel(t)$sum{v, valgen(i,v,r,t) }$Sw_MinCF]..
 eq_supply_demand_balance(r,h,t)$[rfeas(r)$tmodel(t)$rb(r)]..
 
 * generation
-    sum{(i,v)$valgen(i,v,r,t), GEN(i,v,r,h,t) }
+    sum{(i,v)$[valgen(i,v,r,t)$(not greenhydrogentech(i))], GEN(i,v,r,h,t)}
 
 * [plus] net transmission with imports reduced by losses
     + sum{(trtype,rr)$[rfeas(rr)$routes(rr,r,trtype,t)], (1-tranloss(rr,r)) * FLOW(rr,r,h,t,trtype) }
@@ -650,10 +655,41 @@ eq_supply_demand_balance(r,h,t)$[rfeas(r)$tmodel(t)$rb(r)]..
 * [plus] imports from Bhutan
     + sum{exporter, import(exporter,r,h,t)$Sw_SAsia_Trade }
 
+* [plus] excess generation from co-located H2 techs
+    + H2_CURT(r,h,t)$[rfeas_H2(r)$tmodel(t)$Sw_ColocatedGreenH2]
+
     =e=
 
 * must exceed demand
     LOAD(r,h,t)
+
+;
+
+eq_green_H2_demand_balance(r,h,t)$[rfeas_H2(r)$tmodel(t)$rb(r)$Sw_ColocatedGreenH2]..
+
+* generation from hydrogen tech (not tied to grid)
+    sum{(i,v)$[valgen(i,v,r,t)$greenhydrogentech(i)], GEN(i,v,r,h,t)}
+
+    =g=
+
+* must be greater than H2 demand
+    H2_LOAD(r,h,t)
+
+;
+
+eq_green_H2_curt(r,h,t)$[rfeas_H2(r)$tmodel(t)$rb(r)$Sw_ColocatedGreenH2]..
+
+* total potential generation from UP green H2 techs
+    sum{(i,v,rr)$[cap_agg(r,rr)$valcap(i,v,rr,t)$rfeas_cap(rr)$greenhydrogentech(i)],
+         m_cf(i,rr,h) * CAP(i,v,rr,t)}
+
+*      - H2_LOAD(r,h,t)
+     - sum{(i,v)$[valgen(i,v,r,t)$greenhydrogentech(i)], GEN(i,v,r,h,t)}
+
+    =e=
+
+* H2 tech curtailment
+    H2_CURT(r,h,t)
 
 ;
 
