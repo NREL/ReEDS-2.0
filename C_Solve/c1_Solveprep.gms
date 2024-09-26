@@ -76,7 +76,7 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%%yearset%
 /;
 
 
-$if not set endyear $setglobal endyear 2050
+$if not set endyear $setglobal endyear 2070
 tmodel_new(t)$(yeart(t)>%endyear%)= no;
 
 *reset the first and last year indices of the model

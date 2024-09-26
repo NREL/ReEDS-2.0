@@ -240,7 +240,7 @@ $offdelim
 yeart(t) = t.val;
 year(allt) = allt.val;
 
-$if not set endyear $setglobal endyear 2050
+$if not set endyear $setglobal endyear 2070
 tmodel(t)$(yeart(t)>%endyear%)= no;
 
 *initialize boundaries on model years
