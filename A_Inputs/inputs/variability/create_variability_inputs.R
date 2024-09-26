@@ -11,7 +11,7 @@ baload = merge(baload, r.rto.map, by = 'V1')
 
 rload = baload[,.(demand = sum(V4)), by = .(Year = V3.x, rto = V2.y)]
 
-rload[,scale := demand/demand[Year == 2017], by = rto]
+rload[,scale := demand/demand[Year == 2022], by = rto]
 
 rload.scale = dcast(rload, formula = rto ~ Year, value.var = "scale", drop = T)
 
@@ -29,7 +29,7 @@ baload[,season := tstrsplit(time_slice, "_")[1]]
 
 baload[,tot.demand := sum(V4), by = .(time_slice, V3)]
 
-superpeak = baload[V3 == 2017]
+superpeak = baload[V3 == 2022]
 
 superpeak = superpeak[,.(timeslice = V2[tot.demand == max(tot.demand)]), by = season]
 
