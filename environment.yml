@@ -43,7 +43,7 @@ dependencies:
     ### vvv be excluded if you're having trouble building the environment.
     - cmocean==3.0.3 # for more plotting colors
     - folium==0.14.0 # for interactive maps
-    - geopandas==0.14.0 # for region aggregation and plotting maps
+    - geopandas==1.0.1 # for region aggregation and plotting maps
     - proj==0.2.0 # for plotting maps
     - pyproj==3.6.1 # for plotting maps
     - python-pptx==0.6.22 # for postprocessing/compare_cases.py
