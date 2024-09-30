@@ -2,7 +2,7 @@
 
 pacman::p_load(data.table)
 
-baload = fread("../demand/load.csv", header = F)
+baload = fread("../demand/load_NREL_India_Baseline.csv", header = F)
 
 # state region map
 r.rto.map = fread("../sets/hierarchy_set.csv", header = F)
