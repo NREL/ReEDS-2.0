@@ -649,7 +649,7 @@ valinv(i,v,r,t) = no ;
 valinv_irt(i,r,t) = no ;
 
 * heat rate for new capacity
-heat_rate(i,v,r,t)$[CONV(i)$rb(r)] = sum(allt$att(allt,"2017"),data_conv(allt,i,'heat_rate'));
+heat_rate(i,v,r,t)$[CONV(i)$rb(r)] = sum(allt$att(allt,"2023"),data_conv(allt,i,'heat_rate'));
 
 
 * heat rate for new investments equal to average over that investment class
