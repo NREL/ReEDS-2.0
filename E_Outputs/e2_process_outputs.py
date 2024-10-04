@@ -339,6 +339,7 @@ def ProcessGdx():
     # Transmission investments
     txinv = gdxin['txinv'].copy()
     txinv.set_axis(['State_from', 'State_to', 'Year', 'transmission_investment_MW', 'scenario'], axis = 1, inplace = True)
+    txinv['transmission_investment_MW'] = pd.to_numeric(txinv['transmission_investment_MW'], errors='coerce')
     txinv['tx_inv_cumulative'] = txinv.groupby(['State_from','State_to','scenario'])['transmission_investment_MW'].cumsum()
 
     # Costs
