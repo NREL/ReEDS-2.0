@@ -650,7 +650,7 @@ valinv(i,v,r,t) = no ;
 valinv_irt(i,r,t) = no ;
 
 * valinv_tg definition from US ReEDS (for growth penalty)
-valinv_tg(state,tg,t)$sum{(i,r)$[tg_i(tg,i)$state_r(state,r)], valinv_irt(i,r,t)} = yes
+valinv_tg(state,tg,t)$sum{(i,r)$[tg_i(tg,i)$state_r(state,r)], valinv_irt(i,r,t)} = yes;
 
 * heat rate for new capacity
 heat_rate(i,v,r,t)$[CONV(i)$rb(r)] = sum(allt$att(allt,"2023"),data_conv(allt,i,'heat_rate'));
