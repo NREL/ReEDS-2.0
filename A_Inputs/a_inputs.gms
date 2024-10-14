@@ -511,6 +511,7 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%refurbtech_set.csv
     valcap_irt(i,r,t)           "technologies that can be built in i, r, and t",
     valinv(i,v,r,t)             "i, v, r, and t combinations that are allowed for investments",
     valinv_irt(i,r,t)           "i, v, r, and t combinations that are allowed for investments",
+    valinv_tg(state,tg,t)       "valid technology groups for investments"
     prescriptivetech(i)         "prescribed technologies to be located endogenously"
           /
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%prescriptive_tech_set.csv
