@@ -26,21 +26,22 @@ positive variables
   CAP_SDBIN(i,v,r,szn,sdbin,t)   "--MW-- generation capacity by storage duration bin for relevant technologies"
   INV(i,v,r,t)                   "--MW-- generation capacity investment"
   INV_RSC(i,v,r,t,rscbin)        "--MW-- investment in technologies computed on a renewable supply curve"
-  INVREFURB(i,v,r,t)               "--MW-- investment in refurbishments of technologies computed on a renewable supply curve"
+  INVREFURB(i,v,r,t)             "--MW-- investment in refurbishments of technologies computed on a renewable supply curve"
+  GROWTH_BIN(gbin,i,state,t)     "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
 
 * generation and storage variables
-  GEN(i,v,r,h,t)            "--MW-h-- electricity generation"
-  CURT(r,h,t)               "--MW-h-- Curtailed energy"
-  CURT_REDUCT_TRANS(r,rr,h,t) "--MW-- curtailment reduction in r from building new transmission in rr"
-  STORAGE_IN(i,v,r,h,src,t)     "--MW-h-- storage entering in hour h"
-  STORAGE_LEVEL(i,v,r,h,t)    "--MW-h-- storage released in hour h"
-  MINGEN(r,szn,t)           "--MW-- seasonal minimum generation level in region r"
-  SLACK_FUEL(t)                               "--GJ -- slack variable for naptha use in gas cc plants"
+  GEN(i,v,r,h,t)               "--MW-h-- electricity generation"
+  CURT(r,h,t)                  "--MW-h-- Curtailed energy"
+  CURT_REDUCT_TRANS(r,rr,h,t)  "--MW-- curtailment reduction in r from building new transmission in rr"
+  STORAGE_IN(i,v,r,h,src,t)    "--MW-h-- storage entering in hour h"
+  STORAGE_LEVEL(i,v,r,h,t)     "--MW-h-- storage released in hour h"
+  MINGEN(r,szn,t)              "--MW-- seasonal minimum generation level in region r"
+  SLACK_FUEL(t)                "--GJ -- slack variable for naptha use in gas cc plants"
 
 *trade variables
   FLOW(r,rr,h,t,trtype)          "--MW-h-- electricity flow"
   OPRES_FLOW(ortype,r,rr,h,t)    "--MW-- interregional trade of operating reserves by operating reserve type"
-  CURT_FLOW(r,rr,h,t)          "--MW-- interregional trade of curtailment"
+  CURT_FLOW(r,rr,h,t)            "--MW-- interregional trade of curtailment"
   PRMTRADE(r,rr,szn,t)           "--MW-- planning reserve margin capacity traded from r to rr"
 
 *operating reserve variables
