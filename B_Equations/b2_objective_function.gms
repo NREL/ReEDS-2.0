@@ -30,7 +30,7 @@ eq_ObjFn_Supply.. Z =e=
 *growth penalties
               + sum{(gbin,i,state)$[sum{r$[state_r(state,r)], valinv_irt(i,r,t)}],
                     cost_growth(i,state,t) * growth_penalty(gbin) * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt)}) * GROWTH_BIN(gbin,i,state,t)
-                    }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthRel]
+                    }$[(yeart(t)>=2023)$Sw_GrowthRel]
 
 *costs of rsc investment
               + sum{(i,v,r,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$rsc_i(i)$(not hydro(i))],
