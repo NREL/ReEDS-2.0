@@ -1533,6 +1533,7 @@ parameter
           co2_mass_limit_nat(t)     "national co2 mass limit",
           CarbonTax(t)              "national carbon tax in $ / MTCO2",
           growth_bin_limit(gbin,state,tg,t) "--MW/yr-- size of each growth bin",
+          cost_growth(i,state,t)    "--$/MW-- cost basis for growth penalties",
           growth_limit_relative(tg) "--%-- growth limit for technology groups relative to existing capacity"
           /
 $ondelim
