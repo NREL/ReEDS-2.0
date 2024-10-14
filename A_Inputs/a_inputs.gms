@@ -1551,6 +1551,19 @@ $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%growth_penalty.csv
 $offdelim
           /,
+*gbin_min is based on the representative plant size for a single plant in that tech group
+          gbin_min(tg) "--MW-- minimum size of the first (zero cost) growth bin"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%gbin_min.csv
+$offdelim
+          /,
+          growth_bin_size_mult(gbin) "--unitless-- multiplier for each growth bin to be applied to the prior solve year's annual deployment"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%growth_bin_size_mult.csv
+$offdelim
+          /,
           state_rpo(t,rpo_tech,r) "--fraction-- state RPO tagets"
           /
 $ondelim
