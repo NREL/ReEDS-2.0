@@ -1533,8 +1533,6 @@ parameter
           co2_mass_limit_nat(t)     "national co2 mass limit",
           CarbonTax(t)              "national carbon tax in $ / MTCO2",
           growth_bin_limit(gbin,state,tg,t) "--MW/yr-- size of each growth bin",
-*          last_year_max_growth(state,tg,t) "--MW-- maximum growth that could have been achieved in the prior year (actual year, not solve year)"
-          cost_growth(i,state,t) "--$/MW-- cost basis for growth penalties",
           growth_limit_relative(tg) "--%-- growth limit for technology groups relative to existing capacity"
           /
 $ondelim
@@ -1565,6 +1563,11 @@ table rpotech_i(rpo_tech,i) "mapping set between RPO obligations and techs that 
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rpotech_i_map.csv
 $offdelim
+;
+
+*Initialize values for growth constraints and penalties
+growth_bin_limit(gbin,state,tg,tfirst) = gbin_min(tg)
+cost_growth(i,state,t) = 0
 ;
 
 
