@@ -83,6 +83,7 @@ EQUATION
  eq_rsc_INVlim(r,i,rscbin)         "--MW-- total investment from each rsc bin cannot exceed the available investment"
  eq_refurblim(i,r,t)               "--MW-- total refurbishments cannot exceed the refurbishments available computed as the expired investments in capital"
  eq_growthlimit_relative(tg,t)      "--MW-- relative growth limit on technologies in growlim(i)"
+ eq_growthbin_limit(gbin,state,tg,t) "--MW-- capacity limit for each growth bin"
  eq_growthlimit_absolute(r,tg,t) "--MW-- absolute growth limit on technologies in growlim(i)"
  eq_tech_phase_out(i,v,r,t)        "--MW-- mandated phase out of select technologies"
  eq_prescribedre_pre2023(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
