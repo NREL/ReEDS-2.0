@@ -29,7 +29,7 @@ eq_ObjFn_Supply.. Z =e=
 
 *growth penalties
               + sum{(gbin,i,state)$[sum{r$[state_r(state,r)], valinv_irt(i,r,t)}],
-                    cost_growth(i,state,t) * growth_penalty(gbin) * (year(t) - sum{tt$[tprev(t,tt)], yeart(tt)}) * GROWTH_BIN(gbin,i,state,t)
+                    cost_growth(i,state,t) * growth_penalty(gbin) * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt)}) * GROWTH_BIN(gbin,i,state,t)
                     }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthRel]
 
 *costs of rsc investment
