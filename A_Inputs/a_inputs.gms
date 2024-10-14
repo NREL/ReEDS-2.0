@@ -1520,7 +1520,11 @@ $offdelim
 $ondelim          
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%%REGenManTech_file%
 $offdelim
+          /,
+    gbin                            "growth bins"
           /
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%gbin_set.csv
+         /
     ;
 
 parameter
