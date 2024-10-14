@@ -385,7 +385,11 @@ eq_rsc_INVlim(r,i,rscbin)$[vre(i)$m_rscfeas(r,i,rscbin)]..
 
 
 *limit on year-on-year technology growth rate to avoid unrealistic investment growth
-eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2023)$(yeart(t)<2070)$growth_limit_relative(tg)]..
+eq_growthlimit_relative(tg,t)$[tmodel(t)
+                                $Sw_GrowthRel
+                                $(yeart(t)>2023)
+                                $(yeart(t)<2070)
+                                $growth_limit_relative(tg)]..
 
 *the relative growth rate multiplied by the existing technology group's existing capacity
     (growth_limit_relative(tg)) ** (sum{tt$[tprev(tt,t)], yeart(tt)} - yeart(t)) *
@@ -399,6 +403,19 @@ eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2023)$(yeart(t)<
         INV(i,v,r,t)}
 ;
 
+eq_growthbin_limit(gbin,state,tg,t)$[valinv_tg(state,tg,t)
+                                    $tmodel(t)
+                                    $Sw_GrowthRel
+                                    $(yeart(t)>=model_builds_start_yr)]
+
+*the growth bin limit
+    growth_bin_limit(gbin,state,tg,t)
+
+    =g=
+
+*must exceed the value in the growth bin
+    sum{i$tg_i(tg,i), GROWTH_BIN(gbin,i,state,t)}
+;
 
 *for some technologies and region, maximum amount of capacity that can be developed based on policy/environmental/resource constraints
 eq_growthlimit_absolute(r,tg,t)$[growth_limit_absolute(r,tg)$tmodel(t)$Sw_GrowthAbs]..

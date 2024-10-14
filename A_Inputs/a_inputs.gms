@@ -35,7 +35,7 @@ $setglobal input_folder '%gams.curdir%%ds%inputs'
 
 Scalar
 Sw_MinCF                      "Switch to turn minimum CF for new capacity on [1] or off [0]"          /%GSw_MinCF%/,
-Sw_GrowthRel                  "Switch for the relative growth constraint"                             /%GSw_GrowthRel%/,
+Sw_GrowthRel                  "Switch for the relative growth constraint + growth penalties"          /%GSw_GrowthRel%/,
 Sw_GrowthAbs                  "Switch for the absolute growth constraint"                             /%GSw_GrowthAbs%/,
 Sw_OpRes                      "Switch to turn on operating reserve constraint"                        /%GSw_OpRes%/,
 Sw_OpResTrade                 "Switch to allow trading operating reserves between regions"            /%GSw_OpResTrade%/,
@@ -647,6 +647,9 @@ valgen(i,v,r,t) = no;
 valcap_irt(i,r,t) = no;
 valinv(i,v,r,t) = no ;
 valinv_irt(i,r,t) = no ;
+
+* valinv_tg definition from US ReEDS (for growth penalty)
+valinv_tg(state,tg,t)$sum{(i,r)$[tg_i(tg,i)$state_r(state,r)], valinv_irt(i,r,t)} = yes
 
 * heat rate for new capacity
 heat_rate(i,v,r,t)$[CONV(i)$rb(r)] = sum(allt$att(allt,"2023"),data_conv(allt,i,'heat_rate'));
@@ -1536,7 +1539,12 @@ $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%AbsGrowLim_file%
 $offdelim
           /,
-
+          growth_penalty(gbin) "--unitless-- multiplier penalty on the capital cost for growth in each bin"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%growth_penalty.csv
+$offdelim
+          /,
           state_rpo(t,rpo_tech,r) "--fraction-- state RPO tagets"
           /
 $ondelim

@@ -27,6 +27,11 @@ eq_ObjFn_Supply.. Z =e=
                    sum{(i,v,r)$[valinv(i,v,r,t)],
                         INV(i,v,r,t) * cost_cap_fin_mult(i,r,t) * cost_cap(i,t) }
 
+*growth penalties
+              + sum{(gbin,i,state)$[sum{r$[state_r(state,r)], valinv_irt(i,r,t)}],
+                    cost_growth(i,state,t) * growth_penalty(gbin) * (year(t) - sum{tt$[tprev(t,tt)], yeart(tt)}) * GROWTH_BIN(gbin,i,state,t)
+                    }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthRel]
+
 *costs of rsc investment
               + sum{(i,v,r,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$rsc_i(i)$(not hydro(i))],
                    INV_RSC(i,v,r,t,rscbin) * m_rsc_dat(r,i,rscbin,"cost") }
