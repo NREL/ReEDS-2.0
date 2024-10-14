@@ -1580,9 +1580,9 @@ $offdelim
 ;
 
 *Initialize values for growth constraints and penalties
-growth_bin_limit(gbin,state,tg,tfirst) = gbin_min(tg)
-cost_growth(i,state,t) = 0
-;
+growth_bin_limit(gbin,state,tg,tfirst) = gbin_min(tg);
+cost_growth(i,state,t) = 0;
+
 
 
 *######################
