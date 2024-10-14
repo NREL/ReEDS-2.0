@@ -407,7 +407,7 @@ eq_growthlimit_relative(tg,t)$[tmodel(t)
 eq_growthbin_limit(gbin,state,tg,t)$[valinv_tg(state,tg,t)
                                     $tmodel(t)
                                     $Sw_GrowthRel
-                                    $(yeart(t)>=model_builds_start_yr)]
+                                    $(yeart(t)>=2023)]..
 
 *the growth bin limit
     growth_bin_limit(gbin,state,tg,t)
