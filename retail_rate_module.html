@@ -18,6 +18,8 @@
         <script src="_static/documentation_options.js?v=5929fcd5"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" /> 
@@ -46,7 +48,9 @@
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="model_information.html">Model Information</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html">Model Switches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html#troubleshooting">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
@@ -79,7 +83,7 @@
   <!--
 This is a reference to the bokeh pivot documentation that can be found in postprocessing/retail_rate_module/README.md
 -->
-<section id="retail-rate-module">
+<section class="tex2jax_ignore mathjax_ignore" id="retail-rate-module">
 <h1>Retail rate module<a class="headerlink" href="#retail-rate-module" title="Link to this heading"></a></h1>
 <p>This module can be used after finishing a ReEDS run to calculate retail electricity rates by state and year,
 where each state is served by its own investor-owned utility (IOU). The retail rate (in ¢/kWh) is given by
@@ -190,7 +194,7 @@ expense is the return to equity, which greatly simplifies our accounting.</p>
 any income tax credits claimed that year. Then we use the following equation, where <em>T</em> is the effective
 tax rate, to calculate the additional amount of revenue that would need to be collected and directed
 towards income taxes to maintain the target return to capital while also covering costs:</p>
-<p>(<code class="docutils literal notranslate"><span class="pre">return</span> <span class="pre">to</span> <span class="pre">equity</span></code> - <code class="docutils literal notranslate"><span class="pre">income</span> <span class="pre">tax</span> <span class="pre">credits</span></code>) * (${1 \over 1 - T} - 1$)</p>
+<p>(<code class="docutils literal notranslate"><span class="pre">return</span> <span class="pre">to</span> <span class="pre">equity</span></code> - <code class="docutils literal notranslate"><span class="pre">income</span> <span class="pre">tax</span> <span class="pre">credits</span></code>) * (<span class="math notranslate nohighlight">\({1 \over 1 - T} - 1\)</span>)</p>
 </section>
 </section>
 <section id="cost-components">
