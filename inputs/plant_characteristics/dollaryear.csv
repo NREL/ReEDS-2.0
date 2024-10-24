@@ -54,6 +54,9 @@ evmc_shape_Baseline,2020
 geo_ATB_2023_advanced,2020
 geo_ATB_2023_moderate,2020
 geo_ATB_2023_conservative,2020
+geo_ATB_2024_advanced,2021
+geo_ATB_2024_moderate,2021
+geo_ATB_2024_conservative,2021
 h2-ct_ATB_2023,2021
 h2-ct_ATB_2024,2022
 ofs-wind_ATB_2023_advanced,2021

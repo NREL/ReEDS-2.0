@@ -3,9 +3,6 @@ ReEDS functions and globals for bokehpivot integration
 '''
 from __future__ import division
 
-DATA_TYPE_OPTIONS = ['ReEDS 2.0']
-DEFAULT_DATA_TYPE = 'ReEDS 2.0'
-
 import os
 import copy
 import platform
@@ -20,7 +17,6 @@ import subprocess as sp
 if sys.version_info[0] == 2:
     import gdx2py
 import logging
-from pdb import set_trace as pdbst
 from defaults import (DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE, DEFAULT_END_YEAR)
 
 logger = logging.getLogger('')
@@ -74,23 +70,27 @@ def reeds_static(data_type, data_source, scenario_filter, diff, base, static_pre
                     diff_preset = copy.deepcopy(static_presets[i])
                     diff_preset['name'] = diff_preset['name'] + ' - difference from ' + base
                     diff_preset['modify'] = 'diff'
-                    if 'sheet_name' in diff_preset: diff_preset['sheet_name'] += '_diff'
+                    if 'sheet_name' in diff_preset:
+                        diff_preset['sheet_name'] += '_diff'
                     static_presets.insert(i+1,diff_preset)
                     i = i + 2
                 elif diff == 'Base + Diff':
                     diff_preset = copy.deepcopy(static_presets[i])
                     static_presets[i]['name'] = static_presets[i]['name'] + ' - base'
                     static_presets[i]['modify'] = 'base_only'
-                    if 'sheet_name' in static_presets[i]: static_presets[i]['sheet_name'] += '_base'
+                    if 'sheet_name' in static_presets[i]:
+                        static_presets[i]['sheet_name'] += '_base'
                     diff_preset['name'] = diff_preset['name'] + ' - difference from ' + base
                     diff_preset['modify'] = 'diff'
-                    if 'sheet_name' in diff_preset: diff_preset['sheet_name'] += '_diff'
+                    if 'sheet_name' in diff_preset:
+                        diff_preset['sheet_name'] += '_diff'
                     static_presets.insert(i+1,diff_preset)
                     i = i + 2
                 elif diff == 'Diff Only':
                     static_presets[i]['name'] = static_presets[i]['name'] + ' - difference from ' + base
                     static_presets[i]['modify'] = 'diff'
-                    if 'sheet_name' in static_presets[i]: static_presets[i]['sheet_name'] += '_diff'
+                    if 'sheet_name' in static_presets[i]:
+                        static_presets[i]['sheet_name'] += '_diff'
                     i = i + 1
             else:
                 i = i + 1
@@ -347,7 +347,7 @@ def get_src(scen, src):
             df_src = pd.read_csv(filepath, low_memory=False, header=None)
         else:
             df_src = pd.read_csv(filepath, low_memory=False)
-        if 'transpose' in src and src['transpose'] == True:
+        if 'transpose' in src and src['transpose'] is True:
             df_src = df_src.T
         if 'columns' in src:
             df_src.columns = src['columns']
@@ -380,7 +380,7 @@ def process_reeds_data(topwdg, custom_sorts, custom_colors, result_dfs):
     for col in df.columns.values.tolist():
         if 'meta_join_'+col in topwdg and topwdg['meta_join_'+col].value != '':
             join_file = topwdg['meta_join_'+col].value.replace('"','')
-            if col in reeds.columns_meta and 'join_in_run' in reeds.columns_meta[col] and reeds.columns_meta[col]['join_in_run'] == True:
+            if col in reeds.columns_meta and 'join_in_run' in reeds.columns_meta[col] and reeds.columns_meta[col]['join_in_run'] is True:
                 join_file = f"{GL_REEDS['scenarios'][0]['path']}/{join_file}" #Using the first run's join file
             df_join = pd.read_csv(join_file)
             #reduce columns and rename if specified in model (called "reeds" currently)
@@ -438,12 +438,12 @@ def process_reeds_data(topwdg, custom_sorts, custom_colors, result_dfs):
     #categorize columns
     cols['discrete'] = [x for x in cols['all'] if df[x].dtype == object]
     cols['continuous'] = [x for x in cols['all'] if x not in cols['discrete']]
-    cols['y-axis'] = [x for x in cols['continuous'] if not (x in reeds.columns_meta and 'y-allow' in reeds.columns_meta[x] and reeds.columns_meta[x]['y-allow']==False)]
+    cols['y-axis'] = [x for x in cols['continuous'] if not (x in reeds.columns_meta and 'y-allow' in reeds.columns_meta[x] and reeds.columns_meta[x]['y-allow'] is False)]
     cols['x-axis'] = [x for x in cols['all'] if x not in cols['y-axis']]
-    cols['filterable'] = ([x for x in cols['discrete'] if not (x in reeds.columns_meta and 'filterable' in reeds.columns_meta[x] and reeds.columns_meta[x]['filterable']==False)]+
-                         [x for x in cols['continuous'] if x in reeds.columns_meta and 'filterable' in reeds.columns_meta[x] and reeds.columns_meta[x]['filterable']==True])
-    cols['seriesable'] = ([x for x in cols['discrete'] if not (x in reeds.columns_meta and 'seriesable' in reeds.columns_meta[x] and reeds.columns_meta[x]['seriesable']==False)]+
-                         [x for x in cols['continuous'] if x in reeds.columns_meta and 'seriesable' in reeds.columns_meta[x] and reeds.columns_meta[x]['seriesable']==True])
+    cols['filterable'] = ([x for x in cols['discrete'] if not (x in reeds.columns_meta and 'filterable' in reeds.columns_meta[x] and reeds.columns_meta[x]['filterable'] is False)]+
+                         [x for x in cols['continuous'] if x in reeds.columns_meta and 'filterable' in reeds.columns_meta[x] and reeds.columns_meta[x]['filterable'] is True])
+    cols['seriesable'] = ([x for x in cols['discrete'] if not (x in reeds.columns_meta and 'seriesable' in reeds.columns_meta[x] and reeds.columns_meta[x]['seriesable'] is False)]+
+                         [x for x in cols['continuous'] if x in reeds.columns_meta and 'seriesable' in reeds.columns_meta[x] and reeds.columns_meta[x]['seriesable'] is True])
 
     #fill NA depending on column type
     df[cols['discrete']] = df[cols['discrete']].fillna('{BLANK}')

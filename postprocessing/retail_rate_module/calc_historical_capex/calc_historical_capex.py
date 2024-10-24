@@ -27,10 +27,9 @@ There are a lot of shortcuts here, such as:
 import pandas as pd
 import numpy as np
 import os
-import itertools
 import site
 site.addsitedir('..')
-import ferc_distadmin
+import ferc_distadmin  # noqa: E402
 
 #%% Arguments
 init_cap_file = os.path.join(
@@ -296,7 +295,7 @@ hydro_cap_cost_grouped = hydro_cap_cost_pivot.groupby(by=['r', 'i'], as_index=Fa
 hydro_cap_cost_grouped['cost_cap'] = (
     hydro_cap_cost_grouped['weight'] / hydro_cap_cost_grouped['cap'])
 hydro_cap_cost_grouped = hydro_cap_cost_grouped[
-    hydro_cap_cost_grouped['cost_cap'].isnull()==False]
+    hydro_cap_cost_grouped['cost_cap'].notnull()]
 hydro_cap_cost_grouped['t'] = 2010
 hydro_cap_cost_grouped = hydro_cap_cost_grouped.rename(columns={'r':'region'})
 cost_cap = pd.concat(

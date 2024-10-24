@@ -15,7 +15,6 @@ import numpy as np
 import collections
 import core
 import copy
-from pdb import set_trace as pdbst
 from itertools import product
 ## Inherit the default present value year to use in plot definitions
 from defaults import DEFAULT_PV_YEAR
@@ -34,6 +33,8 @@ prod_techs = h2_techs + ['dac']
 niche_techs =  ['hydro','csp','geothermal','beccs','lfill-gas','biopower']
 price_types = ['load','res_marg','oper_res','state_rps','nat_gen']
 ccs_techs = ['gas-cc-ccs_mod_upgrade','coal-ccs_mod_upgrade','gas-cc-ccs_max_upgrade','coal-ccs_max_upgrade','gas-cc-ccs_mod','gas-cc-ccs_max','coal-ccs_mod','coal-ccs_max','coal-ccs-nsp','coal-ccs-flex','gas-cc-ccs-flex']
+water_techs = pd.read_csv('/Users/jcarag/ReEDS/PSH_Updates/ReEDS-2.0/postprocessing/bokehpivot/in/reeds2/tech_ctt_wst.csv')['tech'].tolist()
+water_techs = [x.lower() for x in water_techs]
 
 #1. Preprocess functions for results_meta
 def scale_column(df, **kw):
@@ -106,7 +107,7 @@ def pre_systemcost(dfs, **kw):
     
     #Sometimes we want costs by BA and year, but otherwise aggregate costs nationwide by year:
     if 'maintain_ba_index' in kw and kw['maintain_ba_index'] == True:
-        id_cols = ['rb','year']
+        id_cols = ['ba','year']
     else:
         id_cols = ['year']
     
@@ -130,7 +131,7 @@ def pre_systemcost(dfs, **kw):
     nontrans_cap_type_ls = [c for c in cap_type_ls if c not in trans_cap_type_ls]
 
     #Calculate objective function system costs
-    if 'objective' in kw and kw['objective'] == True:
+    if 'objective' in kw and kw['objective'] is True:
         #Multiply all capital costs by pvf_capital and operation by pvf_onm
         df = pd.merge(left=df, right=dfs['pvf_cap'], how='left', on=['year'], sort=False)
         df = pd.merge(left=df, right=dfs['pvf_onm'], how='left', on=['year'], sort=False)
@@ -143,27 +144,27 @@ def pre_systemcost(dfs, **kw):
         return df
 
     #Annualize if specified
-    if 'annualize' in kw and kw['annualize'] == True:
+    if 'annualize' in kw and kw['annualize'] is True:
         #Turn each cost category into a column
         df = df.pivot_table(index=id_cols, columns='cost_cat', values='Cost (Bil $)').reset_index()
-        if ('remove_existing' in kw) and (kw['remove_existing'] == True):
+        if ('remove_existing' in kw) and (kw['remove_existing'] is True):
             df = df[df.year >= int(core.GL['widgets']['var_pv_year'].value)]
         #Add rows for all years (including extra years after end year for financial recovery)
         full_yrs = list(range(firstmodelyear - sys_eval_years, lastmodelyear + addyears + 1))
 
-        if 'rb' in df.columns:
-            allyrs = pd.DataFrame(list(product(full_yrs,df.rb.unique())), columns=['year','rb'])
+        if 'ba' in df.columns:
+            allyrs = pd.DataFrame(list(product(full_yrs,df.r.unique())), columns=['year','ba'])
             df = pd.merge(allyrs,df,on=id_cols,how='left').set_index('year')
         else:
             df = df.set_index('year').reindex(full_yrs)
 
         ###### Add payments for pre-2010 capacity
-        if ('remove_existing' not in kw) or (kw['remove_existing'] == False):
+        if ('remove_existing' not in kw) or (kw['remove_existing'] is False):
             ### Get modeled BAs
             val_r = dfs['val_r'][0].values
             ### Get total historical capex in modeled BAs
             df_capex_init = dfs['df_capex_init']
-            if 'maintain_ba_index' in kw and kw['maintain_ba_index'] == True:
+            if 'maintain_ba_index' in kw and kw['maintain_ba_index'] is True:
                 ### Keep data up until the year before the first modeled year
                 historical_capex = df_capex_init.rename(
                     columns={'t':'year'})
@@ -175,7 +176,7 @@ def pre_systemcost(dfs, **kw):
                 historical_capex = pd.DataFrame(historical_capex)
                 historical_capex.rename(columns={'region':'rb'}, inplace=True)
                 ### Insert into full cost table
-                df = df.set_index('rb',append=True).join(historical_capex).reset_index('rb')
+                df = df.set_index('rb',append=True).join(historical_capex).reset_index('r')
                 df.loc[:firstmodelyear-1,'inv_investment_capacity_costs'] = (
                     df.loc[:firstmodelyear-1,'capex'])
                 df = df.drop('capex',axis=1)
@@ -196,7 +197,7 @@ def pre_systemcost(dfs, **kw):
 
         #For capital costs, multiply by CRF to annualize, and sum over previous 20 years.
         #This requires 20 years before 2010 to sum properly.
-        if 'crf_from_user' in kw and kw['crf_from_user'] == True:
+        if 'crf_from_user' in kw and kw['crf_from_user'] is True:
             crf = pd.DataFrame({
                 'year': full_yrs,
                 'crf': d*(1+d)**sys_eval_years / ((1+d)**sys_eval_years - 1)
@@ -208,14 +209,14 @@ def pre_systemcost(dfs, **kw):
             crf = crf.interpolate(method='linear')
             crf['crf'] = crf['crf'].fillna(method='bfill')
 
-        if 'shift_capital' in kw and kw['shift_capital'] == True:
+        if 'shift_capital' in kw and kw['shift_capital'] is True:
             #This means we start capital payments in the year of the investment, even though loan payments
             #typically start in the following year, so that investments made in 2050 are still reflected in 2050 capital payments.
             #This requires dividing the crf by discount rate to result in the same present value calculation.
             crf = crf/(1+d)
         else:
             #This method reflects typical loan payments that start in the year after the loan.
-            if 'maintain_ba_index' in kw and kw['maintain_ba_index'] == True:
+            if 'maintain_ba_index' in kw and kw['maintain_ba_index'] is True:
                 df[cap_type_ls] = df.groupby('rb')[cap_type_ls].shift()
             else:
                 df[cap_type_ls] = df[cap_type_ls].shift()
@@ -238,7 +239,7 @@ def pre_systemcost(dfs, **kw):
         # Assuming sys_eval_years = 20, operation payments last for 20 yrs starting in the modeled
         # year, so fill 19 empty years after the modeled year.
         if 'rb' in df.columns:
-            df.loc[:,op_type_ls] = df.groupby('rb')[op_type_ls].fillna(method='ffill', limit=sys_eval_years-1)
+            df.loc[:,op_type_ls] = df.groupby('r')[op_type_ls].fillna(method='ffill', limit=sys_eval_years-1)
         else:
             df.loc[:,op_type_ls] = df[op_type_ls].fillna(method='ffill', limit=sys_eval_years-1)
         df = df.fillna(0)
@@ -411,7 +412,7 @@ def pre_avgprice(dfs, **kw):
         return df_baavgprice
 
 def pre_abatement_cost(dfs, **kw):
-    if 'objective' in kw and kw['objective'] == True:
+    if 'objective' in kw and kw['objective'] is True:
         #Preprocess costs
         df_sc = pre_systemcost(dfs, objective=True, shift_capital=kw['shift_capital'])
         df_sc['type'] = 'Cost (Bil $)'
@@ -430,7 +431,7 @@ def pre_abatement_cost(dfs, **kw):
         #Concatenate costs and emissions
         df = pd.concat([df_sc, df_co2],sort=False,ignore_index=True)
 
-    elif 'annualize' in kw and kw['annualize'] == True:
+    elif 'annualize' in kw and kw['annualize'] is True:
         #Preprocess costs
         df_sc = pre_systemcost(dfs, annualize=True, crf_from_user=True, shift_capital=kw['shift_capital'])
         df_sc = sum_over_cols(df_sc, group_cols=['year','cost_cat'], drop_cols=['Discounted Cost (Bil $)'])
@@ -525,6 +526,48 @@ def pre_gen_w_load(dfs, **kw):
     df['Gen Uncurt Frac of Load Plus All Losses'] = df['Gen Uncurt (TWh)'] / (df['load'] + df['storage'] + df['trans'] + df['curt'])
     return df
 
+def pre_valnew(df, **kw):
+    #Remove unused columns
+    df = df[~df['output'].isin(['inv_cap_ratio'])].copy()
+    #Apply inflate_series() to the 'value' column for all rows with 'output' starting with 'val_'
+    val_cond = df['output'].str.startswith('val_')
+    df.loc[val_cond, 'value'] = inflate_series(df.loc[val_cond, 'value'])
+    df_bench = df[df['tech'] == 'benchmark'].copy().drop(columns=['tech'])
+    df = df[df['tech'] != 'benchmark'].copy()
+    df_bench['output'] = df_bench['output'] + '_bench'
+    df_bench_loc = df_bench[df_bench['rb'] != 'sys'].copy()
+    df_bench_sys = df_bench[df_bench['rb'] == 'sys'].copy()
+    df_bench_sys = df_bench_sys.drop(columns=['rb'])
+    df_bench_loc['output'] = df_bench_loc['output'] + '_loc'
+    df_bench_sys['output'] = df_bench_sys['output'] + '_sys'
+    #Pivot out the 'output' column
+    df = df.pivot_table(index=['tech','rb','year'], columns='output', values='value').reset_index()
+    df_bench_loc = df_bench_loc.pivot_table(index=['rb','year'], columns='output', values='value').reset_index()
+    df_bench_sys = df_bench_sys.pivot_table(index=['year'], columns='output', values='value').reset_index()
+    #Merge the benchmark data back in
+    df = pd.merge(left=df, right=df_bench_loc, how='left', on=['rb','year'], sort=False)
+    df = pd.merge(left=df, right=df_bench_sys, how='left', on=['year'], sort=False)
+    df = df.fillna(0)
+    val_cols_base = ['val_load','val_resmarg','val_opres','val_rps']
+    val_cols = [c for c in val_cols_base if c in df]
+    val_cols_sys = [c + '_sys' for c in val_cols_base if c + '_sys' in df]
+    val_cols_bench_loc = [c + '_bench_loc' for c in val_cols_base if c + '_bench_loc' in df]
+    val_cols_bench_sys = [c + '_bench_sys' for c in val_cols_base if c + '_bench_sys' in df]
+    df['val_tot'] = df[val_cols].sum(axis=1)
+    df['val_tot_sys'] = df[val_cols_sys].sum(axis=1)
+    df['val_tot_bench_loc'] = df[val_cols_bench_loc].sum(axis=1)
+    df['val_tot_bench_sys'] = df[val_cols_bench_sys].sum(axis=1)
+    df['vf'] = (df['val_tot']/df['mwh']) / (df['val_tot_bench_sys']/df['mwh_bench_sys'])
+    df['vf_temporal'] = (df['val_tot_sys']/df['mwh']) / (df['val_tot_bench_sys']/df['mwh_bench_sys'])
+    df['vf_spatial'] = (df['val_tot_bench_loc']/df['mwh_bench_loc']) / (df['val_tot_bench_sys']/df['mwh_bench_sys'])
+    df['vf_temporal_local'] = (df['val_tot']/df['mwh']) / (df['val_tot_bench_loc']/df['mwh_bench_loc'])
+    df['vf_spatial_simult'] = (df['val_tot']/df['mwh']) / (df['val_tot_sys']/df['mwh'])
+    df['vf_interaction'] = df['vf_spatial_simult'] / df['vf_spatial']
+    df['vf_load'] = (df['val_load']/df['mwh']) / (df['val_load_bench_sys']/df['mwh_bench_sys'])
+    df['vf_no_rps'] = ((df['val_tot'] - df['val_rps'])/df['mwh']) / ((df['val_tot_bench_sys'] - df['val_rps_bench_sys'])/df['mwh_bench_sys'])
+    df['vf_resmarg_permw'] = (df['val_resmarg']/df['mw']) / (df['val_resmarg_bench_sys']/df['mw_bench_sys'])
+    return df
+
 def pre_val_streams(dfs, **kw):
     index_cols = ['tech', 'vintage', 'rb', 'year']
     inv_vars = ['inv','inv_refurb','upgrades','invtran','inv_rsc']
@@ -541,11 +584,8 @@ def pre_val_streams(dfs, **kw):
 
     if 'investment_only' in kw:
         #Analyze only investment years
-        #The first attempt of this was to use the ratio of new vs cumulative capacity in a vintage, but this has issues
-        #because of the mismatch in regionality between capacity and generation, meaning ba-level capacity ratio may not
-        #even out value streams.
         #First, use the capacity/investment linking equations with the investment and capacity variables to find the
-        #scaling factors between investment and capacity value streams
+        #scaling factors between investment and capacity value streams.
         linking_eqs = ['eq_cap_new_noret','eq_cap_new_retub','eq_cap_new_retmo','eq_cap_upgrade','eq_captran'] #eq_cap_new_retmo also includes previous year's CAP, is this bad?!
         df_vs_links = dfs['vs'][dfs['vs']['con_name'].isin(linking_eqs)].copy()
         df_vs_inv = df_vs_links[df_vs_links['var_name'].isin(inv_vars)].copy()
@@ -807,7 +847,7 @@ def pre_firm_cap(dfs, **kw):
     df = pd.merge(left=df_cap, right=dfs['firmcap'], how='left',on=['tech', 'rb', 'year','season'], sort=False)
     df = df.fillna(0)
     df[['Capacity (GW)','Firm Capacity (GW)']] = df[['Capacity (GW)','Firm Capacity (GW)']] * 1e-3
-    if 'ba' in kw and kw['ba'] == True:
+    if 'ba' in kw and kw['ba'] is True:
         df['Capacity Credit'] = df['Firm Capacity (GW)'] / df['Capacity (GW)']
     return df
 
@@ -1281,6 +1321,7 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars Cap Frac',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'tech', 'adv_col_base':'Total'}),
             ('Stacked Bars - CCS',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech':ccs_techs}}),
             ('Stacked Bars - No H2',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech':{'exclude':prod_techs}}}),
             ('Stacked Bars - Only H2',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech':prod_techs}}),
@@ -1331,6 +1372,7 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars WaterTechs',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech_raw':water_techs}}),
             ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
             ('PCA Map Final by Tech',{'x':'rb', 'y':'Capacity (GW)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Tech',{'x':'st', 'y':'Capacity (GW)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
@@ -1366,6 +1408,7 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars WaterTechs',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech_raw':water_techs}}),
             ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
         )),
         }
@@ -1400,6 +1443,7 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars WaterTechs',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech_raw':water_techs}}),
             ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
         )),
         }
@@ -1530,7 +1574,9 @@ results_meta = collections.OrderedDict((
             ('State Map Final by Tech',{'x':'st', 'y':'Water Withdrawal (Bgal)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars by Cooling Tech Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'ctt', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
+            ('Explode By State Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'wst', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'Water Withdrawal (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'Water Withdrawal (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1552,7 +1598,9 @@ results_meta = collections.OrderedDict((
             ('State Map Final by Tech',{'x':'st', 'y':'Water Consumption (Bgal)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Stacked Bars by Cooling Tech Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'ctt', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
+            ('Explode By State Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'wst', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'Water Consumption (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'Water Consumption (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1597,6 +1645,7 @@ results_meta = collections.OrderedDict((
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'Water Capacity by Region (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
+            ('Explode By State',{'x':'year', 'y':'Water Capacity by Region (Bgal)', 'series':'tech', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1641,6 +1690,7 @@ results_meta = collections.OrderedDict((
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'New Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'New Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'New Water Capacity by Region (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
+            ('Explode By State',{'x':'year', 'y':'New Water Capacity by Region (Bgal)', 'series':'tech', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'New Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'New Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1663,6 +1713,7 @@ results_meta = collections.OrderedDict((
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'New Annual Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'New Annual Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'New Annual Water Capacity by Region (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
+            ('Explode By State',{'x':'year', 'y':'New Annual Water Capacity by Region (Bgal)', 'series':'tech', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'New Annual Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'New Annual Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1670,7 +1721,7 @@ results_meta = collections.OrderedDict((
     ),
 
     ('Retired Water Capacity (Bgal)',
-        {'file':'watret_out.csv',
+        {'file':'watret_ivrt.csv',
         'columns': ['tech', 'vintage', 'rb', 'year', 'Retired Water Capacity (Bgal)'],
         'preprocess': [
             {'func': scale_column, 'args': {'scale_factor': 1e-9, 'column':'Retired Water Capacity (Bgal)'}},
@@ -2108,7 +2159,7 @@ results_meta = collections.OrderedDict((
 
      ('Sys Cost Annualized BA/State (Bil $)',
         {'sources': [
-            {'name': 'sc', 'file': 'systemcost_ba.csv', 'columns': ['cost_cat', 'rb', 'year', 'Cost (Bil $)']},
+            {'name': 'sc', 'file': 'systemcost_ba.csv', 'columns': ['cost_cat', 'r', 'year', 'Cost (Bil $)']},
             {'name': 'crf', 'file': '../inputs_case/crf.csv', 'columns': ['year', 'crf']},
             {'name': 'val_r', 'file': '../inputs_case/val_r.csv', 'header':None},
             {'name': 'df_capex_init', 'file': '../inputs_case/df_capex_init.csv'},
@@ -2215,6 +2266,26 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             #To work properly, these presets require selecting the correct scenario for the Advanced Operation base.
             ('Abatement Cost By Year',{'x':'year','y':'val','series':'scenario','chart_type':'Line', 'explode':'type', 'adv_op':'Difference', 'adv_col':'scenario', 'adv_col_base':'None', 'adv_op2': 'Ratio', 'adv_col2': 'type', 'adv_col_base2': 'CO2 (Bil metric tons)', 'y_scale':'-1'}),
+        )),
+        }
+    ),
+    ('Value New Techs',
+        {'file':'valnew.csv',
+        'columns': ['output', 'tech', 'rb', 'year', 'value'],
+        'preprocess': [
+            {'func': pre_valnew, 'args': {}},
+        ],
+        'presets': collections.OrderedDict((
+            #Total value factor by year, with separate charts for each tech and scenarios as different lines
+            ('VF by Year', {'x':'year','y':'vf','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            #Total value factor by year, with separate charts for each scenario and techs as different lines
+            ('VF by Year Explode Scenario', {'x':'year','y':'vf','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'tech','explode':'scenario','chart_type':'Dot-Line', 'sync_axes':'No', 'y_min':'0','y_max':'2'}),
+            #Value factor of energy alone, that is, energy value per MWh of a tech compared to that of the benchmark
+            ('VF Energy by Year', {'x':'year','y':'vf_load','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            #Value factor of firm capacity alone, that is, capacity value per MW of a tech compared to that of the benchmark
+            ('VF Firm Capacity by Year', {'x':'year','y':'vf_resmarg_permw','y_b':'mw','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            #Total value factor by year, excluding state RPS value in both technology and benchmark
+            ('VF No RPS by Year', {'x':'year','y':'vf_no_rps','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
         )),
         }
     ),

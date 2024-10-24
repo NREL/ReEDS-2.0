@@ -12,7 +12,8 @@ results from runs that have not completed all years.
 author: bsergi
 '''
 
-import os, subprocess
+import os
+import subprocess
 import shutil
 from glob import glob
 import argparse

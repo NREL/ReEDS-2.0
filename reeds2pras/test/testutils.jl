@@ -9,7 +9,7 @@ function capacity_checker(
 end
 
 function vg_capacity_checker(cf_info::Dict, gentype::String, region::String)
-    name = "$(gentype)_$(region)"
+    name = "$(gentype)|$(region)"
     profile_index = findfirst.(isequal.(name), (cf_info["axis0"],))[1]
 
     if isnothing(profile_index)
@@ -22,7 +22,7 @@ end
 
 function PRAS_generator_capacity_checker(pras_system, gentype::String, region::String)
     name_vec = -abs.(cmp.(gentype, pras_system.generators.categories)) .+ 1 #exact match is needed to exclude ccs
-    reg_vec = occursin.("$(region)_", pras_system.generators.names)
+    reg_vec = occursin.("$(region)|", pras_system.generators.names)
     out_vec = .*(name_vec, reg_vec)
     retained_gens = [idx for (idx, val) in enumerate(out_vec) if val == 1]
 
@@ -31,7 +31,7 @@ end
 
 function PRAS_storage_capacity_checker(pras_system, gentype::String, region::String)
     name_vec = occursin.(gentype, pras_system.storages.names)
-    reg_vec = occursin.("$(region)_", pras_system.storages.names)
+    reg_vec = occursin.("$(region)|", pras_system.storages.names)
     out_vec = .*(name_vec, reg_vec)
     retained_gens = [idx for (idx, val) in enumerate(out_vec) if val == 1]
 
@@ -51,7 +51,7 @@ function clean_gentype(input_name::String)
 end
 
 function expand_vg_types(vg_vec::Vector{<:AbstractString}, timesteps::Int64)
-    return vec(["$(a)_$(n)" for a in vg_vec, n in 1:timesteps])
+    return vec(["$(a)|$(n)" for a in vg_vec, n in 1:timesteps])
 end
 
 function run_pras_system(sys::PRAS.SystemModel, sample::Int)
@@ -108,8 +108,8 @@ function compare_line_capacities(pras_system::PRAS.SystemModel, ReEDSfilepath, y
     line_df = ReEDS2PRAS.get_line_capacity_data(ReEDS_data)
 
     for row in eachrow(line_df)
-        r1_vec = occursin.("$(row.r)_", pras_system.lines.names)
-        r2_vec = occursin.("$(row.rr)_", pras_system.lines.names)
+        r1_vec = occursin.("$(row.r)|", pras_system.lines.names)
+        r2_vec = occursin.("$(row.rr)|", pras_system.lines.names)
         type_vec = occursin.(row.trtype, pras_system.lines.names)
         out_vec = .*(r1_vec, r2_vec, type_vec)
         mw_sum = 0

@@ -229,10 +229,10 @@ def reaggregate_supply_curve_regions(df_sc_in, run_folder):
             os.path.join(run_folder, "inputs_case", "hierarchy.csv"),
             index_col="*r",
         )
-        r2aggreg = hierarchy.aggreg.copy()
-
-        ### Map original regions to new aggreg's
-        df_sc_in["region"] = df_sc_in["region"].map(r2aggreg)
+        if 'aggreg' in hierarchy.columns:
+            r2aggreg = hierarchy.aggreg.copy()
+            ### Map original regions to new aggreg's
+            df_sc_in["region"] = df_sc_in["region"].map(r2aggreg)
 
     return df_sc_in
 
@@ -288,6 +288,12 @@ def subset_supply_curve_columns(df_sc_in, tech, priority_cols):
     ]
     if tech == "dupv":
         subset_cols.insert(-2, "compare")
+    elif tech == "upv":
+        # reeds output capacity is in AC, but tech potential for UPV is in DC
+        # to avoid overbuilding sites, set buildable capacity to AC MW
+        df_sc_in["capacity"] = df_sc_in["capacity_ac_mw"]
+        # existing capacity for upv is also in dc. change to ac using derived ILR
+        df_sc_in["existing_capacity"] = df_sc_in["existing_capacity"] / df_sc_in["ilr"]
 
     df_sc_subset = df_sc_in[subset_cols].copy()
     rename = {"capacity": "cap_avail"}
@@ -1824,9 +1830,7 @@ def get_supply_curve_info(
         needed in downstream steps of ReEDS to reV.
     """
 
-    source_path = reeds_run_path.joinpath(
-        "inputs_case", "rev_paths.csv"
-    )
+    source_path = reeds_run_path.joinpath("inputs_case", "rev_paths.csv")
     sc_info_df = pd.read_csv(source_path)
 
     if bins is not None:

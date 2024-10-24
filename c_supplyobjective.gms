@@ -198,7 +198,8 @@ eq_Objfn_op(t)$tmodel(t)..
                    cost_fom(i,v,r,t) * retire_penalty(t) *
                    (CAP(i,v,r,t)
                     - INV(i,v,r,t)$valinv(i,v,r,t)
-                    - INV_REFURB(i,v,r,t)$[valinv(i,v,r,t)$refurbtech(i)$Sw_Refurb] )
+                    - INV_REFURB(i,v,r,t)$[valinv(i,v,r,t)$refurbtech(i)$Sw_Refurb] 
+                    - UPGRADES(i,v,r,t)$[upgrade(i)$Sw_Upgrades] )
                    }
 
 * ---operating reserve costs---

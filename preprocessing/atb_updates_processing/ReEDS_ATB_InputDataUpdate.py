@@ -80,7 +80,8 @@ def updates_setup():
     input_dir = 'input_files'
     
     #create output_dir folder if it doesnt exist
-    if os.path.isdir(output_dir)==False: os.mkdir(output_dir)
+    if os.path.isdir(output_dir) is False:
+        os.mkdir(output_dir)
     
     #read in ATB csv
     df_atb = pd.read_csv(os.path.join(input_dir, atb_filename))
@@ -223,7 +224,7 @@ def conventional_generation(input_dir, output_dir, df_atb, atb_year, atb_first_y
 
     #Identify the conventional technologies that are not included in the ATB, but may be required in ReEDS. This Assumes that these techs DO NOT vary by scenario"""
     non_atb_techs = hist_df_full[hist_df_full['i'].isin(['CoalOldScr', 'CoalOldUns', 'o-g-s', 'CofireOld', 'CofireNew', 'lfill-gas'])] 
-    hist_df_full = hist_df_full[hist_df_full['i'].isin(['CoalOldScr', 'CoalOldUns', 'o-g-s', 'CofireOld', 'CofireNew', 'lfill-gas'])==False] 
+    hist_df_full = hist_df_full[hist_df_full['i'].isin(['CoalOldScr', 'CoalOldUns', 'o-g-s', 'CofireOld', 'CofireNew', 'lfill-gas']) is False] 
     
     #filter for data prior to atb first year for historic data
     hist_df = hist_df_full[hist_df_full['t']<atb_first_year]

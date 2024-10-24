@@ -5,11 +5,7 @@
 
 
 import os
-from os import walk
 import csv
-import pandas as pd
-from datetime import datetime
-import re
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -83,7 +79,7 @@ main_readme_file_path = os.path.join(reeds_path, main_readme_file).replace("\\",
 
 #Open markdown file for entries
 with open(main_readme_file_path, "w") as main_file:
-    main_file.write(f"# ReEDS 2.0\n\n")
+    main_file.write("# ReEDS 2.0\n\n")
     main_file.write("## Table of Contents\n\n")
     
     #Function to generate Table of Contents using folder hierarchy
@@ -110,12 +106,12 @@ with open(main_readme_file_path, "w") as main_file:
                 write_folder_hierarchy(contents, depth + 1, f"{parent_folder}/{folder}" if parent_folder else folder)
                 
                         
-    main_file.write(f"\n")    
+    main_file.write("\n")    
     write_folder_hierarchy(folder_hierarchy)
     
-    main_file.write(f"\n\n")
-    main_file.write(f"## Input Files\n")
-    main_file.write(f"Note: If you see a '#' before a header it means there may be further subdirectories within it but the Markdown file is only capable of showing 6 levels, so the header sizes are capped to that level and they cannot be any smaller to visually reflect the further subdirectory hierarchy.\n\n")
+    main_file.write("\n\n")
+    main_file.write("## Input Files\n")
+    main_file.write("Note: If you see a '#' before a header it means there may be further subdirectories within it but the Markdown file is only capable of showing 6 levels, so the header sizes are capped to that level and they cannot be any smaller to visually reflect the further subdirectory hierarchy.\n\n")
     
     #Write file entries for each folder
     def write_file_entries(file_entries, indent):
@@ -155,7 +151,7 @@ with open(main_readme_file_path, "w") as main_file:
                     if unit:
                         main_file.write(f"{indent}  - **Units:** {unit}\n\n")
 
-            main_file.write(f"---\n\n")
+            main_file.write("---\n\n")
                             
             
     #Write files present in folders

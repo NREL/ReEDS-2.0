@@ -118,7 +118,7 @@ def logprint(filepath, message):
 if debug and (agglevel != 'ba'):
     import distutils.dir_util
     os.makedirs(inputs_case+'_original', exist_ok=True)
-    distutils.dir_util.copy_tree(inputs_case, inputs_case+'_original')
+    distutils.dir_util.copy_tree(inputs_case, inputs_case+'_original', verbose=0)
 
 # Get the various region maps created in copy_files.py
 r_county = pd.read_csv(
@@ -538,16 +538,16 @@ for filepath in inputfiles:
     elif aggfunc == 'resources':
         ### Special case: Rebuild the 'resources' column as {tech}_{region}
         df1 = (
-            df1.assign(resource=df1.i+'_'+df1.r)
+            df1.assign(resource=df1.i+'|'+df1.r)
                .drop_duplicates()
             )
         ### Special case: If calculating capacity credit by r, replace ccreg with r
         if sw['capcredit_hierarchy_level'] == 'r':
             df1 = df1.assign(ccreg=df1.r).drop_duplicates()
     elif aggfunc in ['recf','csp']:
-        ### Special case: Region is embedded in the 'resources' column as {tech}_{region}
-        col2r = dict(zip(columns, [c.split('_')[-1] for c in columns]))
-        col2i = dict(zip(columns, ['_'.join(c.split('_')[:-1]) for c in columns]))
+        ### Special case: Region is embedded in the 'resources' column as {tech}|{region}
+        col2r = dict(zip(columns, [c.split('|')[-1] for c in columns]))
+        col2i = dict(zip(columns, [c.split('|')[0] for c in columns]))
         df1 = df1.rename(columns={'value':'cf'})
         df1['r'] = df1[region_col].map(col2r)
         df1['i'] = df1[region_col].map(col2i)
@@ -567,7 +567,7 @@ for filepath in inputfiles:
         df1.cf = df1.cap_times_cf / df1.MW
         df1 = df1.rename(columns={'cf':'value'}).reset_index()
         ## Remake the resources (column names) with new regions
-        df1['wide'] = df1.i + '_' + df1.r
+        df1['wide'] = df1.i + '|' + df1.r
         df1 = df1.set_index(['index','wide'])[['value']].astype(np.float16)
     elif aggfunc in ['sum','mean','first','min']:
         df1 = df1.groupby(fix_cols+region_cols).agg(aggfunc)

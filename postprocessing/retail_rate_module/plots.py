@@ -13,10 +13,7 @@ handles, labels = ax.get_legend_handles_labels()
 leg = ax.legend(handles=handles[::-1], labels=labels[::-1])
 
 """
-import pandas as pd
 import numpy as np
-import os
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 ###################
@@ -65,10 +62,14 @@ def _despine_sub(ax,
     """
     Despine subplot
     """
-    if not top: ax.spines['top'].set_visible(False)
-    if not right: ax.spines['right'].set_visible(False)
-    if not left: ax.spines['left'].set_visible(False)
-    if not bottom: ax.spines['bottom'].set_visible(False)
+    if not top: 
+        ax.spines['top'].set_visible(False)
+    if not right:
+        ax.spines['right'].set_visible(False)
+    if not left:
+        ax.spines['left'].set_visible(False)
+    if not bottom:
+        ax.spines['bottom'].set_visible(False)
     ax.tick_params(axis='both', which='both',
                    direction=direction, 
                    top=top, right=right, 

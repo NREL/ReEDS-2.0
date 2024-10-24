@@ -305,7 +305,7 @@ def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
             lambda x: (x[0], r2aggreg[x[1]]))
         forcedoutage_hourly = forcedoutage_hourly.groupby(axis=1, level=['i','r']).mean()
     elif sw['GSw_RegionResolution'] == 'county':
-        county2zone = pd.read_csv(os.path.join(inputs_case, 'county2zone.csv'))
+        county2zone = pd.read_csv(os.path.join(inputs_case, 'county2zone.csv'), dtype={'FIPS':str})
         ba2county = pd.Series(
             index=county2zone.ba.values,
             data=('p'+county2zone.FIPS.astype(str)).values

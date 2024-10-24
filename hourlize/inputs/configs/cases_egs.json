@@ -2,7 +2,7 @@
     "egs_reference_ba": {
         "tech": "egs", 
         "access_case": "reference",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "egs_reference_county": {
         "tech": "egs", 

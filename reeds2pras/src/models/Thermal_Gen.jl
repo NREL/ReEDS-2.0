@@ -64,6 +64,6 @@ get_capacity(gen::Thermal_Gen) = fill(round(Int, gen.capacity), 1, gen.timesteps
 
 get_fuel(gen::Thermal_Gen) = gen.fuel
 
-get_category(gen::Thermal_Gen) = "$(gen.legacy)_Thermal_$(gen.fuel)"
+get_category(gen::Thermal_Gen) = "$(gen.legacy)_Thermal|$(gen.fuel)"
 
 get_type(gen::Thermal_Gen) = gen.fuel

@@ -1,6 +1,8 @@
 ###############
 #%% IMPORTS ###
-import os, time, site
+import os
+import time
+import site
 import pandas as pd
 import numpy as np
 import requests
@@ -10,7 +12,9 @@ from tqdm.notebook import tqdm
 
 reeds_path = os.path.join(os.path.sep, *(os.path.abspath(__file__).split(os.sep)[:-3]))
 site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-import plots
+# import plots after setting the module path; if it's done before, the plots module won't be found
+import plots  # noqa: E402
+
 plots.plotparams()
 
 pd.options.display.max_columns = 200

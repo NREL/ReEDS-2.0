@@ -29,9 +29,10 @@ import datetime
 import numpy as np
 import os
 import pandas as pd
+from ticker import toc, makelog
+
 pd.options.display.max_columns = 200
 # Time the operation of this script
-from ticker import toc, makelog
 
 tic = datetime.datetime.now()
 
@@ -66,6 +67,7 @@ sw = pd.read_csv(
 retscen = sw.retscen
 GSw_WaterMain = int(sw.GSw_WaterMain)
 GSw_DUPV = int(sw.GSw_DUPV)
+GSw_PVB = int(sw.GSw_PVB)
 
 scalars = pd.read_csv(
     os.path.join(inputs_case, 'scalars.csv'),
@@ -202,6 +204,16 @@ COLNAMES = {
 print('Importing generator database:')
 gdb_use = pd.read_csv(os.path.join(inputs_case,'unitdata.csv'),
                       low_memory=False)
+
+
+# If PVB is turned off, consider all PVB as UPV and battery_4 for existing and prescribed builds 
+# If PVB is turned on, consider all PVB as 'pvb'
+if GSw_PVB == 0:
+    gdb_use['tech'] = gdb_use['tech'].replace('pvb_battery','battery_4')
+    gdb_use['tech'] = gdb_use['tech'].replace('pvb_pv','upv')
+else:
+    gdb_use['tech'] = gdb_use['tech'].replace('pvb_battery','pvb')
+    gdb_use['tech'] = gdb_use['tech'].replace('pvb_pv','pvb')
 
 
 # If DUPV is turned off, consider all DUPV as UPV for existing and prescribed builds.

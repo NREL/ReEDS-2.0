@@ -3,13 +3,11 @@
 
 import pandas as pd
 import numpy as np
-import os, sys, site, math
-from glob import glob
-from tqdm import tqdm, trange
-import matplotlib as mpl
-import matplotlib.pyplot as plt
+import os
+from tqdm import tqdm
 import scipy.optimize
 from input_processing.ticker import makelog
+import argparse 
 
 ### Shared paths
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -17,7 +15,6 @@ reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 #######################
 #%% ARGUMENT INPUTS ###
 
-import argparse 
 parser = argparse.ArgumentParser(description="Minimize LCOE for hybrid wind-PV")
 parser.add_argument('case', type=str, help='completed ReEDS run to analyze')
 parser.add_argument('-y', '--year', type=int, default=2040, help='cost year')
@@ -306,7 +303,7 @@ sitemap = pd.read_csv(
     os.path.join(inp['case'],'inputs_case','spurline_sitemap.csv')
 ).rename(columns={'*i':'i'})
 ### Get profile names
-sitemap['profile'] = sitemap.i.map(lambda x: x.split('_')[1]) + '_' + sitemap.r
+sitemap['profile'] = sitemap.i.map(lambda x: x.split('_')[1]) + '|' + sitemap.r
 sitemap['tech'] = sitemap.i.map(lambda x: x.split('_')[0])
 ### Get list of valid regions and subset to those regions
 val_r = pd.read_csv(

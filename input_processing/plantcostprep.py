@@ -99,7 +99,7 @@ upv = deflate_func(upv,upvscen).set_index('t')
 # Prior to ATB 2020, PV costs are in $/kW_DC
 # Starting with ATB 2020 cost inputs, PV costs are in $/kW_AC
 # ReEDS uses DC capacity, so divide by inverter loading ratio
-if not '2019' in upvscen:
+if '2019' not in upvscen:
     upv[['capcost','fom','vom']] = upv[['capcost','fom','vom']] / scalars['ilr_utility']
 
 # Broadcast costs to all UPV resource classes

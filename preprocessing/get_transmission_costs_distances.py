@@ -6,9 +6,11 @@ One-time procedure: Import transmission line costs and distances from reV
 
 ##############
 #%%### IMPORTS
-import os, site
+import os
+import site
 import pandas as pd
 import geopandas as gpd
+
 os.environ['PROJ_NETWORK'] = 'OFF'
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -16,7 +18,8 @@ drivepath = 'Volumes' if sys.platform == 'darwin' else '/nrelnas01'
 revpath = r'/{}/Users/pbrown/reV/ReEDS_BA-BA/'.format(drivepath)
 
 site.addsitedir(os.path.join(reeds_path,'postprocessing','retail_rate_module'))
-import ferc_distadmin
+# import ferc_distadmin after setting the module path; if it's done before, it won't be found
+import ferc_distadmin  # noqa: E402
 
 ##########
 #%% INPUTS

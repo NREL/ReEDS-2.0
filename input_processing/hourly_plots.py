@@ -311,7 +311,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     dfsc['latitude'] = dfsc.sc_point_gid.map(sitemap.latitude)
     dfsc['longitude'] = dfsc.sc_point_gid.map(sitemap.longitude)
     dfsc = plots.df2gdf(dfsc)
-    dfsc['resource'] = dfsc.i + '_' + dfsc.r
+    dfsc['resource'] = dfsc.i + '|' + dfsc.r
     dfsc['cf_actual'] = dfsc.resource.map(recf)
 
     ### Get the BA map
@@ -332,7 +332,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
         cf_hourly = (
             (cf_hourly * cf_hourly.columns.map(hours)).sum(axis=1) / hours.sum()
         ).rename('cf_rep').reset_index()
-        cf_hourly['resource'] = cf_hourly.i + '_' + cf_hourly.r
+        cf_hourly['resource'] = cf_hourly.i + '|' + cf_hourly.r
 
         ### Merge with supply curve, take the difference
         cfmap = dfsc.assign(

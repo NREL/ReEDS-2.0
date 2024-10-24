@@ -376,30 +376,55 @@ if agglevel == 'county':
     revData = pd.read_csv(
                 os.path.join(inputs_case,'rev_paths.csv')
             )
+
     # There is not county-level DUPV data, so drop DUPV from consideration
     revData = revData[revData['tech'] != 'dupv']
+
+    # EGS and GeoHydro supply curves come from hourlize but don't have profiles,
+    # so drop those from consideration as well
+    revData = revData[revData['tech'] != 'egs']
+    revData = revData[revData['tech'] != 'geohydro']
     
     # Create a dataframe to hold the new file version information
-    file_version_new = pd.DataFrame(columns = ['tech','file version'])
-    file_version_new['tech'] = revData['tech']
+    rev_data_cols = ['tech','access_case']
+    file_version_new = pd.DataFrame(columns = rev_data_cols + ['file version'])
+    for rdc in rev_data_cols:
+        file_version_new[rdc] = revData[rdc]
     
     # Check to see if there is a file version file for existing county-level
     # profiles, if not, then we'll need to copy over the files. If they are
     # present, then we need to check to see if they are the right version.
-    if not os.path.isfile(os.path.join(reeds_path,'inputs','variability','multi_year','file_version.csv')):
-        existing_fv = 0
-        profile_data = revData
-        profile_data['present'] = False
-    else:
-        existing_fv = 1
+    try:
         file_version = pd.read_csv(os.path.join(reeds_path,'inputs','variability','multi_year','file_version.csv'))
-        profile_data = pd.merge(revData,file_version,on='tech')
+        missing_cols = set(['tech','access_case','file version']) - set(file_version.columns)
+        if len(missing_cols) > 0:
+            print(f"Current file_version.csv is missing {missing_cols}; will delete and re-copy county-level profiles.")
+            existing_fv = 0
+        else:
+            existing_fv = 1
+    except:
+        print(f"{os.path.join(reeds_path,'inputs','variability','multi_year','file_version.csv')} not found;"
+              " copying county-level profiles from remote" 
+              )
+        existing_fv = 0
+
+    if existing_fv:
+        profile_data = pd.merge(revData,file_version,on=['tech','access_case'], how='left')
+        # NaN means this profile is missing from the current file version
+        profile_data['file version'] = profile_data['file version'].fillna("missing")
         # Check to see if the file version in the repo is already present
         profile_data['present'] = profile_data['sc_path'].str.contains('|'.join(profile_data['file version']))
+        # check that entries in the file version have an existing file
+        profile_data['present'] = profile_data.apply(lambda row: row.present and os.path.exists(
+            os.path.join(reeds_path,'inputs','variability','multi_year',f'{row.tech}-{row.access_case}_county.h5')), axis=1)
+        
         # Populate the new file version file with the existing file version
-        # information
+        # information to start
         file_version_new = file_version
-    
+    else:
+        profile_data = revData
+        profile_data['present'] = False
+            
     # If the profile data doesn't exist for the correct version of the supply
     # curve, then copy it over and put the supply curve version in
     # file_version.csv
@@ -409,7 +434,7 @@ if agglevel == 'county':
     missing_file_versions = []
     for i,row in profile_data.iterrows():
         # If the profile is already present, do nothing
-        if row['present'] == True:
+        if row['present'] is True:
             present_in_fv += 1
             continue
         # Otherwise copy the profile over
@@ -430,7 +455,7 @@ if agglevel == 'county':
             # rev_paths.csv.
             if 'github.nrel.gov' in remote_url:
                 sc_path = row['sc_path']
-                print(f'Copying county-level hourly profiles for {row["tech"]}')
+                print(f'Copying county-level hourly profiles for {row["tech"]} {row["access_case"]}')
                 try:
                     shutil.copy(
                         os.path.join(sc_path,f'{row["tech"]}_{access_case}_county','results',f'{row["tech"]}.h5'),
@@ -442,7 +467,12 @@ if agglevel == 'county':
                         sc_path))
                     sys.exit(1)
                 # Update the file version information
-                file_version_new.loc[file_version_new['tech'] == row['tech'], 'file version'] = sc_path.split("/")[-1]
+                file_version_row = (file_version_new['tech'] == row['tech']) & (file_version_new['access_case'] == row['access_case'])
+                if sum(file_version_row) > 0:
+                    file_version_new.loc[(file_version_new['tech'] == row['tech']) & (file_version_new['access_case'] == row['access_case']), 'file version'] = sc_path.split("/")[-1]
+                else:
+                    newrow = pd.DataFrame(data={'tech': [row['tech']],'access_case': [row['access_case']], 'file version': [sc_path.split("/")[-1]]})                        
+                    file_version_new = pd.concat([file_version_new, newrow])
                 file_version_updates += 1
             # If non-NREL user, then save the name of the missing file, and write it out 
             # in the error message below
@@ -865,7 +895,7 @@ if agglevel != 'county':
 if int(sw.GSw_WaterMain):
     i = pd.concat([
         pd.read_csv(
-            os.path.join(reeds_path,'inputs','sets','i.csv'),
+            os.path.join(inputs_case,'i.csv'),
             comment='*', header=None).squeeze(1),
         pd.read_csv(
             os.path.join(inputs_case,'i_coolingtech_watersource.csv'),
@@ -873,8 +903,7 @@ if int(sw.GSw_WaterMain):
         pd.read_csv(
             os.path.join(inputs_case,'i_coolingtech_watersource_upgrades.csv'),
             comment='*', header=None).squeeze(1),
-    ])
-    i.to_csv(os.path.join(inputs_case,'sets','i.csv'), header=False, index=False)
+    ]).to_csv(os.path.join(inputs_case,'i.csv'), header=False, index=False)
 
 
 ### Legacy files - no longer used

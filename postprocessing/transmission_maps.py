@@ -1,22 +1,23 @@
 #%% IMPORTS
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.axes
-import numpy as np
 import os
 import site
 import argparse
 import traceback
 import cmocean
+import plots
+import reedsplots as rplots 
 
 os.environ['PROJ_NETWORK'] = 'OFF'
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 site.addsitedir(os.path.join(reeds_path,'postprocessing'))
 site.addsitedir(os.path.join(reeds_path,'input_processing'))
-import plots
-import reedsplots as rplots
-from ticker import makelog
+
+# import makelog after setting the module path; if it's done before, the ticker module won't be found
+from ticker import makelog  # noqa: E402
+
 plots.plotparams()
 
 ##########

@@ -19,7 +19,8 @@ import argparse
 import pandas as pd
 import numpy as np
 import gdxpds
-import os, shutil
+import os
+import shutil
 from glob import glob
 from warnings import warn
 # Time the operation of this script

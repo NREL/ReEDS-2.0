@@ -43,7 +43,8 @@ dependencies:
     ### vvv be excluded if you're having trouble building the environment.
     - cmocean==3.0.3 # for more plotting colors
     - folium==0.14.0 # for interactive maps
-    - geopandas==1.0.1 # for region aggregation and plotting maps
+    - fiona==1.9.5 
+    - geopandas==0.14.0 # for region aggregation and plotting maps
     - proj==0.2.0 # for plotting maps
     - pyproj==3.6.1 # for plotting maps
     - python-pptx==0.6.22 # for postprocessing/compare_cases.py
@@ -52,4 +53,5 @@ dependencies:
     - sphinx==7.2.6 # for building documentation
     - myst-parser==2.0.0 # for building documentation
     - sphinx_rtd_theme==2.0.0 # for documentation
+    - sphinxcontrib-bibtex==2.6.2 # for documentation
     - gamspy_base==45.7.0 # for running automated tests

@@ -28,7 +28,6 @@ import json
 import numpy as np
 import os
 import pandas as pd
-import re
 from ldc_prep import read_file
 import hourly_writetimeseries
 ##% Time the operation of this script
@@ -260,7 +259,7 @@ def identify_peak_containing_periods(df, hierarchy, level):
     else:
         rmap = hierarchy[level]
     dfmod = df.copy()
-    dfmod.columns = dfmod.columns.map(lambda x: x.split('_')[-1]).map(rmap)
+    dfmod.columns = dfmod.columns.map(lambda x: x.split('|')[-1]).map(rmap)
     dfmod = dfmod.groupby(axis=1, level=0).sum()
     ### Get the max value by (year,yperiod)
     dfmax = dfmod.groupby(['year','yperiod']).max()
@@ -281,7 +280,7 @@ def identify_min_periods(df, hierarchy, rmap1, level, prefix=''):
     else:
         rmap2 = hierarchy[level]
     dfmod = df[[c for c in df if c.startswith(prefix)]].copy()
-    dfmod.columns = dfmod.columns.map(lambda x: x.split('_')[-1]).map(rmap1).map(rmap2)
+    dfmod.columns = dfmod.columns.map(lambda x: x.split('|')[-1]).map(rmap1).map(rmap2)
     dfmod = dfmod.groupby(axis=1, level=0).sum()
     ### Get the mean value by (year,yperiod)
     dfmean = dfmod.groupby(['year','yperiod']).mean()
@@ -499,7 +498,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     ### Downselect to modeled regions
     sc = sc.loc[sc.region.isin(val_r_all)].copy()
     sc['i'] = sc.tech+'_'+sc['class'].astype(str)
-    sc['resource'] = sc.i + '_' + sc.region
+    sc['resource'] = sc.i + '|' + sc.region
     sc['aggreg'] = sc.region.map(rmap)
     ### Keep all resource classes for now
     useclass = {'upv': range(1,11), 'wind-ons': range(1,11)}

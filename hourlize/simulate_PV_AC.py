@@ -11,7 +11,7 @@ for y in {2007..2013}; do python simulate-PV-AC.py -y $y -d 1.7 -o AC; done
 #%% IMPORTS ###
 import numpy as np
 import pandas as pd
-import os, sys, math, site
+import os
 import argparse
 import h5py
 

@@ -46,6 +46,8 @@ sw = pd.read_csv(
 # Load valid regions
 val_r = pd.read_csv(
     os.path.join(inputs_case, 'val_r.csv'), header=None).squeeze(1).tolist()
+val_cendiv = pd.read_csv(
+    os.path.join(inputs_case, 'val_cendiv.csv'), header=None).squeeze(1).tolist()
 
 r_cendiv = pd.read_csv(os.path.join(inputs_case,"r_cendiv.csv"))
 
@@ -63,6 +65,7 @@ dollaryear = dollaryear.merge(deflator,on="Dollar.Year",how="left")
 ####################
 coal = pd.read_csv(os.path.join(inputs_case, 'coal_price.csv'))
 coal = coal.melt(id_vars = ['year']).rename(columns={'variable':'cendiv'})
+coal = coal.loc[coal['cendiv'].isin(val_cendiv)]
 
 # Adjust prices to 2004$
 deflate = dollaryear.loc[dollaryear['Scenario'] == sw.coalscen,'Deflator'].values[0]
@@ -108,6 +111,7 @@ h2ct = (
 
 ngprice = pd.read_csv(os.path.join(inputs_case,'natgas_price_cendiv.csv'))
 ngprice = ngprice.melt(id_vars=['year']).rename(columns={'variable':'cendiv'})
+ngprice = ngprice.loc[ngprice['cendiv'].isin(val_cendiv)]
 
 # Adjust prices to 2004$
 deflate = dollaryear.loc[dollaryear['Scenario'] == sw.ngscen,'Deflator'].values[0]
@@ -134,21 +138,20 @@ fuel = fuel.sort_values(['t','r'])
 ### Natural Gas Demand Calculations ###
 
 # Natural Gas demand
-ngdemand = pd.read_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
-ngdemand.index = ngdemand.year
-ngdemand = ngdemand.drop('year', axis=1)
+ngdemand = pd.read_csv(os.path.join(inputs_case,'ng_demand_elec.csv'), index_col='year')
+ngdemand = ngdemand[ngdemand.columns[ngdemand.columns.isin(val_cendiv)]]
 ngdemand = ngdemand.transpose()
 ngdemand = ngdemand.round(6)
 
 # Total Natural Gas demand
-ngtotdemand = pd.read_csv(os.path.join(inputs_case, 'ng_demand_tot.csv'))
-ngtotdemand.index = ngtotdemand.year
-ngtotdemand = ngtotdemand.drop('year', axis=1)
+ngtotdemand = pd.read_csv(os.path.join(inputs_case, 'ng_demand_tot.csv'), index_col='year')
+ngtotdemand = ngtotdemand[ngtotdemand.columns[ngtotdemand.columns.isin(val_cendiv)]]
 ngtotdemand = ngtotdemand.transpose()
 ngtotdemand = ngtotdemand.round(6)
 
 ### Natural Gas Alphas (already in 2004$)
-alpha = pd.read_csv(os.path.join(inputs_case, 'alpha.csv'))
+alpha = pd.read_csv(os.path.join(inputs_case, 'alpha.csv'), index_col='t')
+alpha = alpha[alpha.columns[alpha.columns.isin(val_cendiv)]]
 alpha = alpha.round(6)
 
 #%%###################
@@ -160,7 +163,7 @@ ngprice_cendiv.to_csv(os.path.join(inputs_case,'gasprice_ref.csv'))
 
 ngdemand.to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
 ngtotdemand.to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))
-alpha.to_csv(os.path.join(inputs_case,'alpha.csv'),index=False)
+alpha.to_csv(os.path.join(inputs_case,'alpha.csv'))
 
 toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
     path=os.path.join(inputs_case,'..'))

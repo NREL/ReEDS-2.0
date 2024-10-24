@@ -9,6 +9,7 @@
 import pandas as pd
 import os
 from glob import glob
+import argparse
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -105,7 +106,6 @@ def main(args):
 
 
 #%% Argument inputs
-import argparse
 parser = argparse.ArgumentParser(description='Downselect HVDC connections')
 parser.add_argument('case', type=str,
                     help='path to ReEDS run folder OR prefix of group of cases')

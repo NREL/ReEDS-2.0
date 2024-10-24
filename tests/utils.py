@@ -118,11 +118,11 @@ def get_starts_stops(path=''):
     """get all start and stop lines from gamslog.txt"""
     starts, stops = [], []
     with open(os.path.join(path,'gamslog.txt'),'r') as f:
-        for l in f:
-            if l.startswith('--- Job') and 'Start' in l:
-                starts.append(l)
-            if l.startswith('--- Job') and 'Stop' in l:
-                stops.append(l)
+        for L in f:
+            if L.startswith('--- Job') and 'Start' in L:
+                starts.append(L)
+            if L.startswith('--- Job') and 'Stop' in L:
+                stops.append(L)
     return starts, stops
 
 def time_all_gams_processes(path=''):

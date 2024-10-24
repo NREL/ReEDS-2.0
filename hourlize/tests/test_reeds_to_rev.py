@@ -11,7 +11,31 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
 
-import path_fix as _
+import path_fix as _  # noqa: F401
+
+def fix_sc_paths(run_folder, integration_data_path):
+    """
+    Edits values in inputs_case/rev_paths.csv so that the sc_file values are
+    preceded by the integration_data_path, and sc_path values are the parent directory
+    of the sc_file paths.
+
+    Parameters
+    ----------
+    run_folder : pathlib.Path
+        ReEDS run folder, containing inputs_case/rev_paths.csv
+    integration_data_path : pathlib.Path
+        Path that will be prepended to sc_file values.
+    """
+    # fix supply curve paths in the rev_paths.csv
+    rev_paths_src = run_folder.joinpath("inputs_case", "rev_paths.csv")
+    sc_info_df = pd.read_csv(rev_paths_src)
+    sc_info_df["sc_file"] = sc_info_df["sc_file"].apply(
+        lambda x: integration_data_path.joinpath(x).as_posix()
+    )
+    sc_info_df["sc_path"] = sc_info_df["sc_file"].apply(
+        lambda x: Path(x).parent.as_posix()
+    )
+    sc_info_df.to_csv(rev_paths_src, index=False, header=True)
 
 
 def remove_stream_handlers(logger_name):
@@ -51,7 +75,6 @@ def test_reeds_to_rev_integration(test_techs, integration_data_path, hourlize_pa
     upv, wind-ons, wind-ofs.
     """
 
-    sc_path = integration_data_path.joinpath("supply_curves")
     reeds_source_path = integration_data_path.joinpath("reeds")
 
     out_formats = ["reduced", "full"]
@@ -59,6 +82,8 @@ def test_reeds_to_rev_integration(test_techs, integration_data_path, hourlize_pa
     with temporary_parent_directory(reeds_source_path) as temp_reeds:
         reeds_path = Path(temp_reeds.name)
         run_folder = reeds_path.joinpath("reeds")
+
+        fix_sc_paths(run_folder, integration_data_path)
 
         for out_format in out_formats:
             for tech in test_techs:
@@ -72,8 +97,6 @@ def test_reeds_to_rev_integration(test_techs, integration_data_path, hourlize_pa
                     "cost",
                     "--tech",
                     tech,
-                    "--sc_path",
-                    sc_path.as_posix(),
                 ]
                 if out_format == "reduced":
                     sys.argv.append("--reduced_only")
@@ -113,12 +136,13 @@ def test_reeds_to_rev_6mw_wind_ons(
     wind-ons since the behavior should be the same for other technologies.
     """
 
-    sc_path = integration_data_path.joinpath("supply_curves")
     reeds_source_path = integration_data_path.joinpath("reeds")
 
     with temporary_parent_directory(reeds_source_path) as temp_reeds:
         reeds_path = Path(temp_reeds.name)
         run_folder = reeds_path.joinpath("reeds")
+
+        fix_sc_paths(run_folder, integration_data_path)
 
         remove_stream_handlers("reeds_to_rev")
         sys.argv = [
@@ -131,8 +155,6 @@ def test_reeds_to_rev_6mw_wind_ons(
             "--reduced_only",
             "--tech",
             "wind-ons",
-            "--sc_path",
-            sc_path.as_posix(),
             "--new_incr_mw",
             "6",
         ]
@@ -165,12 +187,13 @@ def test_reeds_to_rev_simul_fill_upv(integration_data_path, hourlize_path):
     UPV since the behavior should be the same for other technologies.
     """
 
-    sc_path = integration_data_path.joinpath("supply_curves")
     reeds_source_path = integration_data_path.joinpath("reeds")
 
     with temporary_parent_directory(reeds_source_path) as temp_reeds:
         reeds_path = Path(temp_reeds.name)
         run_folder = reeds_path.joinpath("reeds")
+
+        fix_sc_paths(run_folder, integration_data_path)
 
         remove_stream_handlers("reeds_to_rev")
         sys.argv = [
@@ -181,8 +204,6 @@ def test_reeds_to_rev_simul_fill_upv(integration_data_path, hourlize_path):
             "--reduced_only",
             "--tech",
             "upv",
-            "--sc_path",
-            sc_path.as_posix(),
         ]
         try:
             runpy.run_path(

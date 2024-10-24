@@ -7,7 +7,8 @@ from collections import OrderedDict
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
-import path_fix as _
+
+import path_fix as _  # noqa: F401
 
 import reeds_to_rev_cli
 from reeds_to_rev_cli import main

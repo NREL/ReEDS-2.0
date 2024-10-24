@@ -16,7 +16,6 @@
 #       -s testbatch_refseq,testbatch_carbtax,testbatch,carbcap -\
 #       -p standard,plexos
 
-import argparse
 import pandas as pd
 import numpy as np
 import os
@@ -39,8 +38,7 @@ import retail_rate_calculations
 from tableauhyperapi import HyperProcess, Telemetry, \
     Connection, CreateMode, \
     NULLABLE, SqlType, TableDefinition, \
-    Inserter, \
-    escape_name, escape_string_literal, \
+    escape_string_literal, \
     HyperException
 
 
@@ -605,7 +603,7 @@ def main(raw_args=None):
                         this_scen_df = this_scen_df.merge(this_untrunc_df,on=['r','year','cost_cat_display','cost_cat'],how='outer')
                         this_scen_df.insert(0,'scenario',this_scenario)
                         this_scen_df = this_scen_df.rename(columns={'year':'t'})
-                        this_scen_df = this_scen_df[ pivot_info['id_columns'] + [ col for col in this_scen_df.columns if not col in pivot_info['id_columns'] ]]
+                        this_scen_df = this_scen_df[ pivot_info['id_columns'] + [ col for col in this_scen_df.columns if col not in pivot_info['id_columns'] ]]
                         this_df_list.append(this_scen_df)
                     this_df = pd.concat(this_df_list)
                     this_col_list = [ x for x in this_df.columns if x not in pivot_info['id_columns'] ]
@@ -641,7 +639,7 @@ def main(raw_args=None):
                             this_scen_df.insert(0,'scenario',this_scenario)
                             this_df_list.append(this_scen_df)
                     if not this_df_list:
-                        print(f'No scenarios reported retail rate module outputs. Skipping the retail_rates pivot table.')
+                        print('No scenarios reported retail rate module outputs. Skipping the retail_rates pivot table.')
                         continue
                     this_df = pd.concat(this_df_list)
                     this_col_list = [ x for x in this_df.columns if x not in pivot_info['id_columns'] ]

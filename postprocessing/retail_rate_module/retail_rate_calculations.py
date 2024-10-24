@@ -1471,7 +1471,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     trans_cap = pd.read_csv(
         os.path.join(run_dir, 'outputs', 'tran_out.csv')
         ).rename(columns={
-            'r':'r', 'Dim2':'rr', 'trtype':'trtype', 't':'t', 'Value':'tran_cap', 
+            'Value':'tran_cap', 
             'Dim1':'r', 'Dim2':'rr', 'Dim3':'trtype', 'Dim4':'t', 'Val':'tran_cap'}
             ).set_index(['r','rr','trtype','t'])
     trans_cap['state1'] = trans_cap.index.get_level_values('r').map(reedsregion2state)
@@ -1764,7 +1764,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     ptc_values = ptc_values.merge(gen_ivrt, on=['i', 'v', 't'], how='left')
 
     # Rows with nan's meant that there was a ptc available, but no [i,v] generation was there
-    ptc_values = ptc_values[ptc_values['gen'].isnull()==False]
+    ptc_values = ptc_values[ptc_values['gen'].isnull() is False]
 
     # Calculate the value of the credits ($), and the effective after-tax value for a 
     # regulated utility
@@ -2005,7 +2005,6 @@ def retail_plots(run_dir, inputpath='inputs.csv', startyear=2010,
     import matplotlib.pyplot as plt
     import matplotlib as mpl
     ### Local imports
-    import plots
     plots.plotparams()
     ### Get module directory for relative paths
     mdir = os.path.dirname(os.path.abspath(__file__))

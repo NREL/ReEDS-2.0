@@ -381,7 +381,7 @@ def summarizeSupplyCurve(scpath, reeds_path, jsonfile, techs):
         for tech in techs:
             try:
                 processLandUseJSON(df_name, tech, json_data[df_name], scpath, reeds_path, rev_sc, area_only=True)
-            except Exception as err:
+            except Exception:
                 print(f"Error processing {df_name}")
                 #print(err)
                 print(traceback.format_exc())

@@ -19,6 +19,13 @@ $ifthen.unithintage %numhintage%=="unit"
 $eval numhintage 300
 $endif.unithintage
 
+* Under the Clean Air Act, all coal plants are regulated individually. Therefore, we need a large value of hintages to represent these plants
+$include inputs_case%ds%max_hintage_number.txt
+
+$ifthen.unithintage %GSw_Clean_Air_Act%==1
+$eval numhintage max_hintage_number
+$endif.unithintage
+
 *need to convert the 'group' numhintage to some large value
 $ifthen.unithintage %numhintage%=="group"
 $eval numhintage 300
@@ -192,6 +199,7 @@ set i_water_cooling_temp(i)
 /
 $offlisting
 $include inputs_case%ds%i_coolingtech_watersource.csv
+$include inputs_case%ds%i_coolingtech_watersource_upgrades.csv
 $onlisting
 /,
 
@@ -582,6 +590,12 @@ $offdelim
 $onlisting
 / ;
 
+unitspec_upgrades(i)$[sum{ii$ctt_i_ii(i,ii), unitspec_upgrades(ii) }$Sw_WaterMain] =
+  sum{ii$ctt_i_ii(i,ii), unitspec_upgrades(ii) } ;
+
+ban(i)$[upgrade(i)$(not Sw_Upgrades)] = yes ;
+bannew(i)$[upgrade(i)$(not Sw_Upgrades)] = yes ;
+
 * --- Read technology subset lookup table ---
 Table i_subsets(i,i_subtech) "technology subset lookup table"
 $offlisting
@@ -591,16 +605,16 @@ $offdelim
 $onlisting
 ;
 
-*assign subtechs to each upgrade tech
-*based on what they will be upgraded to
-i_subsets(i,i_subtech)$[upgrade(i)$Sw_Upgrades] =
-  sum{ii$upgrade_to(i,ii), i_subsets(ii,i_subtech) } ;
-
 *approach in cooling water formulation is populating parameters of numeraire tech (e.g. gas-CC)
 *for non-numeraire techs (e.g. gas-CC_r_fsa; r = recirculating cooling, fsa=fresh surface appropriated water source)
 *e.g. populate i_subsets for non-numeraire techs from numeraire tech using a linking set ctt_i_ii(i,ii)
 i_subsets(i,i_subtech)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), i_subsets(ii,i_subtech) } ;
+
+*assign subtechs to each upgrade tech
+*based on what they will be upgraded to
+i_subsets(i,i_subtech)$[upgrade(i)$Sw_Upgrades] =
+  sum{ii$upgrade_to(i,ii), i_subsets(ii,i_subtech) } ;
 
 ** define tech bans so that they are not defined in the technology subsets below **
 * switch based gen tech bans (see cases file for details)
@@ -971,6 +985,9 @@ vre_utility(i)$(not ban(i))         = yes$i_subsets(i,'vre_utility') ;
 vre(i)$(not ban(i))                 = yes$i_subsets(i,'vre') ;
 wind(i)$(not ban(i))                = yes$i_subsets(i,'wind') ;
 
+set coal_noccs(i) "technologies that use coal and do not have CCS, aka unabated coal" ;
+coal_noccs(i)$[coal(i)$(not ccs(i))] = yes ; 
+
 * Create mapping of technology groups to technologies
 tg_i('wind-ons',i)$onswind(i) = yes ;
 tg_i('wind-ofs',i)$ofswind(i) = yes ;
@@ -1072,6 +1089,8 @@ water_with_cons_rate(i,ctt,w,r)$geo(i) = water_with_cons_rate("geothermal",ctt,w
 * The line below just removes ctt dimension, by summing over ctt.
 water_rate(i,w,r)$i_water(i) = sum{ctt, water_with_cons_rate(i,ctt,w,r) } ;
 
+water_rate(i,w,r)$upgrade(i) = sum{ii$upgrade_to(i,ii), water_rate(ii,w,r) } ;
+
 set dispatchtech(i)                 "technologies that are dispatchable",
     noret_upgrade_tech(i)           "upgrade techs that do not retire",
     retiretech(i,v,r,t)             "combinations of i,v,r,t that can be retired",
@@ -1079,6 +1098,7 @@ set dispatchtech(i)                 "technologies that are dispatchable",
     inv_cond(i,v,r,t,tt)            "allows an investment in tech i of class v to be built in region r in year tt and usable in year t" ;
 
 noret_upgrade_tech(i)$hyd_add_pump(i) = yes ;
+noret_upgrade_tech(i)$[(coal_ccs(i) or gas_cc_ccs(i))$upgrade(i)$Sw_CCS_NoRetire] = yes ;
 dispatchtech(i)$[not(vre(i) or hydro_nd(i) or ban(i))] = yes ;
 sccapcosttech(i)$[geo(i) or hydro(i) or psh(i)] = yes ;
 
@@ -1096,6 +1116,8 @@ $onlisting
 / ;
 
 min_retire_age(i)$[i_water_cooling(i)$Sw_WaterMain] = sum{ii$ctt_i_ii(i,ii), min_retire_age(ii) } ;
+* if GSw_Clean_Air_Act is enabled, there is no minimum retire age for coal plants
+min_retire_age(i)$[coal(i)$Sw_Clean_Air_Act] = no ;
 
 parameter retire_penalty(allt) "--fraction-- penalty for retiring a power plant expressed as a fraction of FOM"
 /
@@ -1323,6 +1345,10 @@ Sw_UpgradeYear$tmodel_new("%GSw_UpgradeYear%") = %GSw_UpgradeYear% ;
 Sw_UpgradeYear$[(not Sw_UpgradeYear)] =
   smin(tt$[(tt.val>=%GSw_UpgradeYear%)$tmodel_new(tt)],tt.val) ;
 
+
+* if caa_coal_retire_year is not in the set of years being modeled, then set it to the first year that is modeled after caa_coal_retire_year
+caa_coal_retire_year$[not sum{tt$[tt.val=caa_coal_retire_year], tmodel_new(tt) }] = 
+  smin(tt$[(tt.val>=caa_coal_retire_year)$tmodel_new(tt)],tt.val) ;
 
 *======================================
 * ---------- Bintage Mapping ----------
@@ -1634,6 +1660,7 @@ set forced_retire(i,r,t) ;
 
 forced_retire(i,r,t)$[(yeart(t)>=forced_retirements(i,r))$forced_retirements(i,r)] = yes ;
 
+
 set hintage_char "characteristics available in hintage_data"
 /
 $offlisting
@@ -1682,13 +1709,6 @@ if(Sw_Upgrades = 1,
   ) ;
 ) ;
 
-parameter plant_age(i,v,r,t) "--years-- plant age of existing units" ;
-*a plants age is the difference between the current year and
-*the year at which the plant came online
-plant_age(i,v,r,t)$sum{allt$sameas(allt,t), hintage_data(i,v,r,allt,"cap") } =
-  max(0, yeart(t) - sum{allt$sameas(allt,t), hintage_data(i,v,r,allt,"wOnlineYear") }) ;
-
-
 *created by /input_processing/writecapdat.py
 parameter binned_capacity(i,v,r,allt) "existing capacity (that is not rsc, but including distpv) binned by heat rates" ;
 
@@ -1705,8 +1725,8 @@ $onlisting
 * generators not included in maxage.csv get maxage=100 years
 maxage(i)$[not maxage(i)] = maxage_default ;
 * upgrades and cooling-water techs inherit maxage from the base tech
-maxage(i)$upgrade(i) = sum{ii$upgrade_to(i,ii), maxage(ii) } ;
 maxage(i)$[i_water_cooling(i)$Sw_WaterMain] = sum{ii$ctt_i_ii(i,ii), maxage(ii) } ;
+maxage(i)$upgrade(i) = sum{ii$upgrade_to(i,ii), maxage(ii) } ;
 
 *loading in capacity mandates here to avoid conflicts in calculation of valcap
 * declared over allt to allow for external data files that extend beyond end_year
@@ -1870,6 +1890,9 @@ $include inputs_case%ds%trans_intra_cost_adder.csv
 $offdelim
 $onlisting
 / ;
+*water tech assignment necessary for when PSH and CSP is differentiated by water supply (and cooling tech)
+trans_intra_cost_adder(i)$[i_water_cooling(i)$Sw_WaterMain] =
+  sum{ii$ctt_i_ii(i,ii), trans_intra_cost_adder(ii) } ;
 
 parameter distance_spur(i,r,rscbin) "--miles-- Spur line distance"
 /
@@ -2014,7 +2037,7 @@ parameter exog_geohydro_allkm_rsc(i,r,rscbin,allt) "exogenous (pre-tfirst) geohy
 $offlisting
 $ondelim
 $ifthen.readgeohydrorevexog %geohydrosupplycurve% == 'reV'
-$include inputs_case%ds%geohydro_allkm_exog_cap.csv
+$include inputs_case%ds%exog_geohydro_allkm_rsc.csv
 $endif.readgeohydrorevexog
 $offdelim
 $onlisting
@@ -2500,7 +2523,25 @@ valcap(i,v,r,t)$[upgrade(i)$(not Sw_Upgrades)] = no ;
 valcap(i,v,r,t)$[forced_retire(i,r,t)
                 $(not sum{ii,upgrade_from(ii,i) })] = no ;
 
-m_capacity_exog(i,v,r,t)$forced_retire(i,r,t) = 0 ;
+* for any technologies that are forced to retire and cannot upgrade, remove m_capacity_exog
+m_capacity_exog(i,v,r,t)$[forced_retire(i,r,t)
+                         $(not sum{ii,upgrade_from(ii,i) })] = 0 ;
+
+* for any technologies that are forced to retire, can upgrade, and are not unabated coal, remove m_capacity_exog
+m_capacity_exog(i,v,r,t)$[forced_retire(i,r,t)$(not coal_noccs(i))
+                         $(sum{ii,upgrade_from(ii,i) })] = 0 ;
+
+* if Clean Air Act requirements are enabled, coal technologies that can be upgraded are allowed to stay in m_capacity_exog
+* if Clean Air Act requirements are not enabled, coal technologies that can be upgraded are excluded from m_capacity_exog
+m_capacity_exog(i,v,r,t)$[forced_retire(i,r,t)$(not Sw_Clean_Air_Act)$coal_noccs(i)
+                         $(sum{ii,upgrade_from(ii,i) })] = 0 ;
+
+* If, in the last year in which coal must either retire or updgrade, coal is upgraded, we can continue to 
+* use that m_capacity_exog beyond caa_coal_retire_year. But unabated coal plants must not have capacity after caa_coal_retire_year.
+* This is expanded in d_solveoneyear.gms.
+m_capacity_exog(i,v,r,t)$[forced_retire(i,r,t)$coal_noccs(i)
+                         $(t.val > caa_coal_retire_year)
+                         $(sum{ii,upgrade_from(ii,i) }) ] = 0 ;
 
 * remove upgrade technologies that are explicitly banned
 valcap(i,v,r,t)$[upgrade(i)$ban(i)] = no ;
@@ -2535,7 +2576,7 @@ valinv(i,v,r,t)$[valcap(i,v,r,t)$ivt(i,v,t)] = yes ;
 valinv(i,v,r,t)$[sum{st$r_st(r,st), tech_banned(i,st) }$(not sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,r,t) })] = no ;
 
 *remove non-prescribed numeraire technologies that remain in valcap
-valinv(i,v,r,t)$[i_numeraire(i)$Sw_WaterMain$(not sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,r,t) })] = no ;
+valinv(i,newv,r,t)$[i_numeraire(i)$Sw_WaterMain$(not sum{pcat$prescriptivelink(pcat,i), noncumulative_prescriptions(pcat,r,t) })] = no ;
 
 *upgrades are not allowed for the INV variable as they are the sum of UPGRADES
 valinv(i,v,r,t)$upgrade(i) = no ;
@@ -2620,28 +2661,39 @@ inv_cond(i,newv,r,t,tt)$[Sw_WaterMain$sum{ctt$bannew_ctt(ctt),i_ctt(i,ctt) }$tmo
 
 
 
+* cannot restrict by valcap here to maintain compatibility with water techs
+co2_captured_incentive(i,v,r,t) = co2_captured_incentive_in(i,v,t) ;
 
-co2_captured_incentive(i,v,r,t)$valcap(i,v,r,t) = co2_captured_incentive_in(i,v,t) ;
+* expand to water techs
+co2_captured_incentive(i,v,r,t)$[i_water_cooling(i)$Sw_WaterMain] = 
+   sum{ii$ctt_i_ii(i,ii), co2_captured_incentive(ii,v,r,t) } ; 
 
+* expand to upgrade techs
 co2_captured_incentive(i,v,r,t)$[upgrade(i)$valcap(i,v,r,t)] =
    sum{ii$upgrade_to(i,ii),co2_captured_incentive(ii,v,r,t) } ;
-
-co2_captured_incentive(i,v,r,t)$[i_water_cooling(i)$Sw_WaterMain] =
-   sum{ii$ctt_i_ii(i,ii), co2_captured_incentive(ii,v,r,t) } ;
-
+   
 * incentive for captured co2 for initial plants set to the amount available
 * as of upgradeyear, similar to other performance and cost characteristics
-co2_captured_incentive(i,initv,r,t)$[upgrade(i)$valcap(i,initv,r,t)$(Sw_Upgrades = 1)
+co2_captured_incentive(i,v,r,t)$[initv(v)$upgrade(i)
+                                    $valcap(i,v,r,t)$(Sw_Upgrades = 1)
                                     $(yeart(t)>=Sw_UpgradeYear)
                                     $(yeart(t) <= co2_capture_incentive_last_year_)] =
 * note we populate the incentive for all years and then trim the incentive for later years
 * when the upgrade occurs - this is after the solve statement in d_solveoneyear
 * we also cast this forward based on whether or not a plant was built in that year
 * but remove the last year for consideration of that below via co2_capture_incentive_last_year_
-  sum{(ii,v,tt)$[upgrade_to(i,ii)$newv(v)
-                $(firstyear_v(ii,v) = Sw_UpgradeYear)
+  sum{(ii,vv,tt)$[upgrade_to(i,ii)$newv(vv)
+                $(firstyear_v(ii,vv) = Sw_UpgradeYear)
                 $(yeart(tt) = Sw_UpgradeYear)],
-            co2_captured_incentive(ii,v,r,tt) } ;
+            co2_captured_incentive(ii,vv,r,tt) } ;
+
+* plants can only receive the CO2 capture incentive for the length of the incentive 'co2_capture_incentive_length', starting in the first year of that tech, vintage combination
+co2_captured_incentive(i,newv,r,t)$[(yeart(t) > firstyear_v(i,newv) + co2_capture_incentive_length)] = 0 ;
+* vintages whose first year comes after 'co2_capture_incentive_last_year_' cannot receive the CO2 capture incentive because the incentive is no longer available
+co2_captured_incentive(i,newv,r,t)$[(firstyear_v(i,newv) > co2_capture_incentive_last_year_)] = 0 ;
+
+* remove any invalid values to shrink parameter
+co2_captured_incentive(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
 
 * making h2_ptc for all regions
 h2_ptc(i,v,r,t)$valcap(i,v,r,t) = h2_ptc_in(i,v,t) ;
@@ -2698,13 +2750,7 @@ $offdelim
 $onlisting
 ;
 
-*Initialize water capacity based on water requirements of existing fleet in base year. We conservatively assume plants have
-*enough water available to operate up to a 100% capacity factor, or to operate at full capacity at any time of the year.
-wat_supply_init(wst,r) = (8760/1E6) * sum{(i,v,w,t)$[i_w(i,w)$valcap(i,v,r,t)$initv(v)$i_wst(i,wst)$tfirst(t)],
-                                                        m_capacity_exog(i,v,r,t) * water_rate(i,w,r) } ;
-
 m_watsc_dat(wst,"cost",r,t)$tmodel_new(t) = wat_supply_new(wst,"cost",r) ;
-m_watsc_dat(wst,"cap",r,t)$tmodel_new(t) = wat_supply_new(wst,"cap",r) + wat_supply_init(wst,r) ;
 
 *not allowed to invest in upgrade techs since they are a product of upgrades
 inv_cond(i,v,r,t,tt)$upgrade(i) = no ;
@@ -3668,11 +3714,9 @@ $onlisting
 fuel2tech("coal",i)$coal(i) = yes ;
 fuel2tech("naturalgas",i)$gas(i) = yes ;
 fuel2tech("uranium",i)$nuclear(i) = yes ;
-fuel2tech(f,i)$upgrade(i) = sum{ii$upgrade_to(i,ii), fuel2tech(f,ii) } ;
-
-
 fuel2tech(f,i)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), fuel2tech(f,ii) } ;
+fuel2tech(f,i)$upgrade(i) = sum{ii$upgrade_to(i,ii), fuel2tech(f,ii) } ;
 
 *===============================
 *   Generator Characteristics
@@ -4111,6 +4155,7 @@ ctt_hr_mult(i,ctt)$[(not ctt_hr_mult(i,ctt))$i_numeraire(i)] = 1 ;
 
 *applying the cooling technologies dependent multipliers to plant_char
 *note that these multipliers are only applied to new builds
+*existing parameter definitions appropriately extend these to upgrade technologies.
 if(Sw_WaterMain=1,
 
 if(Sw_CoolingTechMults = 0,
@@ -4272,7 +4317,7 @@ cost_vom_hybrid_storage(i,v,r,t)$[storage_hybrid(i)$(not csp(i))] = cost_vom("ba
 *plus the delta between upgrade_to and upgrade_from for the initial year
 cost_vom(i,initv,r,t)$[upgrade(i)$Sw_Upgrades$valcap(i,initv,r,t)] =
   sum{(v,ii,tt)$[newv(v)$ivt(ii,v,tt)$upgrade_to(i,ii)$(tt.val=Sw_UpgradeChar_Year)],
-      plant_char(ii,v,tt,"VOM") }
+      plant_char(ii,v,tt,"VOM") + vom_hyd$hydro(ii) }
 ;
 
 *if available, set cost_vom for upgrades of CCS plants to those specified in hintage_data
@@ -4384,7 +4429,7 @@ cost_fom(i,v,r,t)$[valcap(i,v,r,t)$dupv(i)] = sum{ii$dupv_upv_corr(ii,i), cost_f
 *plus the delta between upgrade_to and upgrade_from for the initial year
 cost_fom(i,initv,r,t)$[upgrade(i)$Sw_Upgrades$valcap(i,initv,r,t)] =
   sum{(v,ii,tt)$[newv(v)$ivt(ii,v,tt)$upgrade_to(i,ii)$(tt.val=Sw_UpgradeChar_Year)],
-      plant_char(ii,v,tt,"FOM") }
+      plant_char(ii,v,tt,"FOM") + hyd_fom(ii,r)$hydro(ii) }
 ;
 
 *if available, set cost_fom for upgrades of CCS plants to those specified in hintage_data
@@ -4437,10 +4482,10 @@ $offdelim
 $onlisting
 ;
 
-heat_rate_adj(i,prepost)$upgrade(i) = sum{ii$upgrade_to(i,ii), heat_rate_adj(ii,prepost) } ;
-
 heat_rate_adj(i,prepost)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), heat_rate_adj(ii,prepost) } ;
+
+heat_rate_adj(i,prepost)$upgrade(i) = sum{ii$upgrade_to(i,ii), heat_rate_adj(ii,prepost) } ;
 
 *upgrade heat rates for initial classes are the heat rates for that tech
 *plus the delta between upgrade_to and upgrade_from for the initial year
@@ -4618,10 +4663,10 @@ ramprate(i)$geo(i) = ramprate("geothermal") ;
 *if running with flexible nuclear, set ramp rate of nuclear to that of coal
 ramprate(i)$[nuclear(i)$Sw_NukeFlex] = ramprate("coal-new") ;
 
-ramprate(i)$upgrade(i) = sum{ii$upgrade_to(i,ii), ramprate(ii) } ;
-
 ramprate(i)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), ramprate(ii) } ;
+
+ramprate(i)$upgrade(i) = sum{ii$upgrade_to(i,ii), ramprate(ii) } ;
 
 * Do not allow the reserve fraction to exceed 100%, so use the minimum of 1 or the computed value.
 reserve_frac(i,ortype) = min(1,ramprate(i) * ramptime(ortype)) ;
@@ -4677,10 +4722,10 @@ heat_rate_avg(i,t)$[sum{(v,r), heat_rate(i,v,r,t) }] =
 cost_opres(i,"spin",t)$[not cost_opres(i,"spin",t)] =
   spin_hr_penalty(i) * heat_rate_avg(i,t) * fuel_price_avg(i,t) ;
 
-cost_opres(i,ortype,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_opres(ii,ortype,t) } ;
-
 cost_opres(i,ortype,t)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), cost_opres(ii,ortype,t) } ;
+
+cost_opres(i,ortype,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_opres(ii,ortype,t) } ;
 
 * again - making the assumption that the combination
 * operating reserve is the most stringent/costly
@@ -4721,6 +4766,8 @@ $include inputs_case%ds%startcost.csv
 $offdelim
 $onlisting
 / ;
+startcost(i)$[i_water_cooling(i)$Sw_WaterMain] =
+  sum{ii$ctt_i_ii(i,ii), startcost(ii) } ;
 startcost(i)$upgrade(i) = sum{ii$upgrade_to(i,ii), startcost(ii) } ;
 * Turn off startcost for some techs based on GSw_StartCost
 startcost(i)$[(Sw_StartCost=0)] = 0 ;
@@ -4888,7 +4935,8 @@ $offdelim
 $onlisting
 / ;
 
-
+eval_period_adj_mult(i,t)$[i_water_cooling(i)$Sw_WaterMain] =
+  sum{ii$ctt_i_ii(i,ii), eval_period_adj_mult(ii,t) } ;
 eval_period_adj_mult(i,t)$[upgrade(i)] =
    sum{ii$upgrade_to(i,ii),eval_period_adj_mult(ii,t) } ;
 
@@ -4963,6 +5011,9 @@ set ccs_link(i,ii)    "links CCS techs with their uncontrolled tech counterpart 
 $offlisting
 $ondelim
 $include inputs_case%ds%ccs_link.csv
+$ifthen.ctech %GSw_WaterMain% == 1
+$include inputs_case%ds%ccs_link_water.csv
+$endif.ctech
 $offdelim
 $onlisting
 / ;
@@ -4977,6 +5028,9 @@ capture_rate_input(i,"CO2")$[ccs_max(i)]=Sw_CCS_Rate_New_max;
 capture_rate_input(i,"CO2")$[upgrade(i)$(coal_ccs(i) or gas_cc_ccs(i))$ccs_mod(i)]=Sw_CCS_Rate_Upgrade_mod;
 capture_rate_input(i,"CO2")$[upgrade(i)$(coal_ccs(i) or gas_cc_ccs(i))$ccs_max(i)]=Sw_CCS_Rate_Upgrade_max;
 
+* emit_rate_fuel water expansion
+emit_rate_fuel(i,e)$[i_water_cooling(i)$Sw_WaterMain] =
+  sum{ii$ctt_i_ii(i,ii), emit_rate_fuel(ii,e) } ;
 
 * Assign the appropriate % of generation for each technology to count toward CES requirements.
 * Exclude capture rates of BECCS, which receive full credit in a CES and were already set to 1 above in the "RPS" section.
@@ -4989,12 +5043,8 @@ emit_rate_fuel(i,e)$[ccs(i)$(not beccs(i))] =
 * assign flexible ccs the same emission rate as the uncontrolled technology to allow variable CO2 removal (e.g., for gas-cc-ccs-f1, use gas-cc)
 emit_rate_fuel(i,e)$[ccsflex(i)] = sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,e) } ;
 
-* set upgrade tech emissions for non-CCS upgrades (e.g. gas-ct -> h2-ct); CCS upgrade missions are handled above
+* set upgrade tech emissions for non-CCS upgrades (e.g. gas-ct -> h2-ct); CCS upgrade emissions are handled above
 emit_rate_fuel(i,e)$[upgrade(i)$(not ccs(i))] = sum{ii$upgrade_to(i,ii), emit_rate_fuel(ii,e) } ;
-
-* this sets emissions rates for water techs
-emit_rate_fuel(i,e)$[i_water_cooling(i)$Sw_WaterMain] =
-  sum{ii$ctt_i_ii(i,ii), emit_rate_fuel(ii,e) } ;
 
 * parameters for calculating captured emissions
 parameter capture_rate_fuel(i,e) "--metric tons per MMBtu-- emissions capture rate of fuel by technology type";
@@ -5004,10 +5054,6 @@ capture_rate_fuel(i,e) = capture_rate_input(i,e) * sum{ii$ccs_link(i,ii), emit_r
 * for beccs, the captured CO2 is the entire negative emissions rate
 * since any uncontrolled emissions are assumed to be lifecycle net zero
 capture_rate_fuel(i,"CO2")$beccs(i) = - emit_rate_fuel(i,"CO2") ;
-
-* this sets capture rates for water techs
-capture_rate_fuel(i,e)$[i_water_cooling(i)$Sw_WaterMain] =
-  sum{ii$ctt_i_ii(i,ii), capture_rate_fuel(ii,e) } ;
 
 parameter capture_rate(e,i,v,r,t) "--metric tons per MWh-- emissions capture rate" ;
 
@@ -5695,8 +5741,8 @@ $offdelim
 $onlisting
 / ;
 minCF(i,t) = minCF_input(i) ;
-minCF(i,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), minCF(ii,t) } ;
 minCF(i,t)$[i_water_cooling(i)$Sw_WaterMain] = sum{ii$ctt_i_ii(i,ii), minCF(ii,t) } ;
+minCF(i,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), minCF(ii,t) } ;
 
 * adjust fleet mincf for nuclear when using flexible nuclear
 minCF(i,t)$[nuclear(i)$Sw_NukeFlex] = minCF_nuclear_flex ;
@@ -5788,7 +5834,10 @@ $offdelim
 $onlisting
 ;
 
-cost_upgrade(i,v,r,t)$[initv(v)$valcap(i,v,r,t)$sum{ii$upgrade_from(i,ii),cost_upgrade(ii,v,r,t) }$unitspec_upgrades(i)$(not Sw_UpgradeATBCosts)] =
+upgrade_mult(i,t)$[sum{ii$ctt_i_ii(i,ii), upgrade_mult(ii,t) }$Sw_WaterMain] =
+  sum{ii$ctt_i_ii(i,ii), upgrade_mult(ii,t) } ;
+
+cost_upgrade(i,v,r,t)$[initv(v)$valcap(i,v,r,t)$sum{ii$upgrade_from(i,ii),cost_upgrade(ii,v,r,t) }$unitspec_upgrades(i)$(not Sw_UpgradeATBCosts)] = 
       upgrade_mult(i,t) * sum{ii$upgrade_from(i,ii),cost_upgrade(ii,v,r,t) } ;
 
 * start with specifying upgrade_derate as zero
@@ -5967,6 +6016,16 @@ emit_modeled(e,r,t)$emit_tax(e,r,t) = yes ;
 * Remove years not modeled
 emit_modeled(e,r,t)$[not tmodel_new(t)] = no ;
 
+*================================================================================================
+*== Clean Air Act Section 111 emissions regulations ===
+*================================================================================================
+
+parameter plant_age(i,v,r,t) "--years-- plant age of existing units" ;
+*a plants age is the difference between the current year and
+*the year at which the plant came online
+plant_age(i,v,r,t)$[valcap(i,v,r,t)$initv(v)] =
+  max(0, yeart(t) - hintage_data(i,v,r,"2010","wOnlineYear") ) ;
+
 *====================================
 * --- Endogenous Retirements ---
 *====================================
@@ -6093,15 +6152,13 @@ m_rsc_dat(r,i,rscbin,"cost")$[m_rsc_dat(r,i,rscbin,"cap")$(upv(i) or pvb(i))] = 
 m_rsc_dat(r,i,rscbin,"cost_trans")$[m_rsc_dat(r,i,rscbin,"cost")$[not sccapcosttech(i)]] =
     m_rsc_dat(r,i,rscbin,"cost") - m_rsc_dat(r,i,rscbin,"cost_cap") ;
 
-*Ensure sufficient resource is available to cover existing capacity for wind and PV
+*Ensure sufficient resource is available to cover existing capacity rsc_i capacity
 m_rsc_dat(r,i,rscbin,"cap")$[rsc_i(i)
-                            $(m_rsc_dat(r,i,rscbin,"cap")
+                            $(m_rsc_dat(r,i,rscbin,"cap") * (1$[not geo_hydro(i)] + sum{t$tfirst(t), geo_discovery(i,r,t) }$geo_hydro(i))
                               < sum{(ii,v,tt)$[tfirst(tt)$rsc_agg(i,ii)$(not dr(i))$exog_rsc(i)], capacity_exog_rsc(ii,v,r,rscbin,tt) })] =
-  sum{(ii,v,tt)$[tfirst(tt)$rsc_agg(i,ii)$(not dr(i))$exog_rsc(i)], capacity_exog_rsc(ii,v,r,rscbin,tt) } ;
-
-*Now do the same for geothermal
-m_rsc_dat(r,i,"bin1","cap")$[(m_rsc_dat(r,i,"bin1","cap") < m_capacity_exog(i,"init-1",r,"2010"))
-                            $geo(i)] = m_capacity_exog(i,"init-1",r,"2010") ;
+*Use ceiling function to three decimal places so that we don't run into infeasibilities due to rounding later on
+  ceil(1000 * sum{(ii,v,tt)$[tfirst(tt)$rsc_agg(i,ii)$(not dr(i))$exog_rsc(i)], capacity_exog_rsc(ii,v,r,rscbin,tt)
+      / (1$[not geo_hydro(ii)] + geo_discovery(ii,r,tt)$geo_hydro(ii)) } ) / 1000 ;
 
 *Ensure sufficient resource is available to cover prescribed builds for techs where sameas(i,pcat). These may be costless.
 *Round values first to make sure we don't end up with small number issues (these will be rounded again later along with

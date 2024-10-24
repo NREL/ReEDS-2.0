@@ -1,6 +1,11 @@
 #This file allows reports to be run directly from this python script (without need for the bokeh server and bokehpivot UI).
 #Don't edit this file directly. Make a copy (to any location), edit the copy, and run the copy as a python script in a command prompt.
 
+import os
+import sys
+import importlib
+import reeds_bokeh as rb
+
 #EDIT THE FOLLOWING FIELDS
 data_type = 'ReEDS 2.0'
 bokehpivot_dir = r'\\nrelnas01\ReEDS\postprocessing\bokehpivot' #path to the desired bokehpivot repo.
@@ -15,11 +20,8 @@ report_format = 'html,excel' #'html', 'excel', or 'csv', or any combination sepa
 auto_open = 'Yes' #'Yes' or 'No'. Automatically open the resulting report excel and html files when they are created.
 
 #DON'T EDIT THIS SECTION
-import os, sys
-import importlib
-import datetime
+
 sys.path.insert(1, bokehpivot_dir)
-import reeds_bokeh as rb
 report_dir = os.path.dirname(report_path)
 sys.path.insert(1, report_dir)
 report_name = os.path.basename(report_path)[:-3]

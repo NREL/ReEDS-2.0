@@ -40,6 +40,7 @@ static_presets = [
     {'name': 'Final Battery Storage Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']}}},
     {'name': 'Capacity Factor - Generation', 'result': 'Capacity Factor ivrt', 'preset': 'CF weighted ave'},
     {'name': 'Retail rate (¢/kWh)', 'result': 'Retail rate (¢/kWh)', 'preset': 'Lines'},
+    {'name': 'New Tech Value Factors', 'result': 'Value New Techs', 'preset': 'VF by Year Explode Scenario'},
     {'name': 'Monetized health damages over time (billion $/year)', 'result': 'Health Damages from Emissions', 'preset': 'Monetized health damages over time'},
     {'name': 'Mortality over time (lives/year)', 'result': 'Health Damages from Emissions', 'preset': 'Mortality over time'},
     {'name': 'Total undiscounted health damages through 2050 (billion $)', 'result': 'Health Damages from Emissions', 'preset': 'Total undiscounted health damages through 2050'},

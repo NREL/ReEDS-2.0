@@ -115,7 +115,7 @@ function process_lines(
             ],
         )
 
-        name = "$(row.r)_$(row.rr)_$(row.trtype)"
+        name = "$(row.r)|$(row.rr)|$(row.trtype)"
         @debug(
             "a line $name, with $forward_cap MW forward and $backward_cap" *
             " backward in $(row.trtype)"
@@ -246,24 +246,40 @@ function process_thermals_with_disaggregation(
     all_generators = Generator[]
     # this loop gets the FOR for each build/tech
     for row in eachrow(thermal_builds)
-        i_r = "$(row.i)|$(row.r)"
-        if (i_r in DataFrames.names(forcedoutage_hourly))
-            gen_for = forcedoutage_hourly[!, i_r]
-        elseif row.i in keys(FOR_dict)
-            gen_for = fill(Float32(FOR_dict[row.i]), timesteps)
+        # Check to see if the 'i' tech is an upgrade tech. If so, use the 'upgraded-to' 
+        # tech to determine FOR
+        filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
+        upgrades = DataFrames.DataFrame(CSV.File(filepath))
+        upgrade_dict = Dict(lowercase(row["*TO"]) => lowercase(row["DELTA"]) for row in eachrow(upgrades))
+        if haskey(upgrade_dict, row.i)
+            tech = upgrade_dict[row.i]   
             @info(
-                "$(row.i) ($(row.r)) was not found in forcedoutage_hourly so using " *
-                "static value of $(FOR_dict[row.i]) from outage_forced_static.csv"
+                "$(row.i) ($(row.r)) is an upgrade tech so using $tech to determine outage rate"
             )
         else
-            gen_for = fill(Float32(0.0), timesteps)
+            tech = row.i
+        end
+
+        i_r = "$tech|$(row.r)"
+        if (i_r in DataFrames.names(forcedoutage_hourly))
+            gen_for = forcedoutage_hourly[!, i_r]
+        elseif lowercase(tech) in keys(FOR_dict)
+            gen_for = fill(Float32(FOR_dict[lowercase(tech)]), timesteps)
             @info(
-                "$(row.i) ($(row.r)) was not found in outage_forced_static.csv so using " *
+                "$tech ($(row.r)) was not found in forcedoutage_hourly so using " *
+                "static value of $(FOR_dict[tech]) from outage_forced_static.csv"
+            )
+        else
+            fill_value = 0.0
+            gen_for = fill(Float32(fill_value), timesteps)
+            @info(
+                "$(tech) ($(row.r)) was not found in outage_forced_static.csv so using " *
                 "static value of $fill_value"
             )
         end
 
         generator_array = disagg_existing_capacity(
+            ReEDS_data,
             EIA_db,
             unitsize_dict,
             floor(Int, row.MW_sum),
@@ -324,7 +340,7 @@ function process_vg(
     vg_builds = DataFrames.combine(DataFrames.groupby(vg_builds, ["i", "r"]), :MW => sum)
     for row in eachrow(vg_builds)
         category = string(row.i)
-        name = "$(category)_$(string(row.r))"
+        name = "$(category)|$(string(row.r))"
         region = string(row.r)
 
         profile_index = findfirst.(isequal.(name), (cf_info["axis0"],))[1]
@@ -438,6 +454,7 @@ function process_storages(
             )
         else
             add_new_capacity!(
+                ReEDS_data,
                 storages_array,
                 round(Int, row.MW),
                 round(Int, int_duration),
@@ -505,6 +522,7 @@ end
         disaggregated existing capacities.
 """
 function disagg_existing_capacity(
+    ReEDS_data::ReEDSdatapaths,
     eia_df::DataFrames.DataFrame,
     unitsize_dict::Dict,
     built_capacity::Int,
@@ -526,6 +544,7 @@ function disagg_existing_capacity(
     generators_array = []
     if DataFrames.nrow(tech_ba_year_existing) == 0 && gen_for != 0.0
         add_new_capacity!(
+            ReEDS_data,
             generators_array,
             built_capacity,
             0,
@@ -543,7 +562,7 @@ function disagg_existing_capacity(
         #not necessary to disagg if generator never fails
         return [
             Thermal_Gen(
-                name = "$(tech)_$(pca)_1",
+                name = "$(tech)|$(pca)|1",
                 timesteps = timesteps,
                 region_name = pca,
                 capacity = built_capacity,
@@ -572,7 +591,7 @@ function disagg_existing_capacity(
             remaining_capacity = 0
         end
         gen = Thermal_Gen(
-            name = "$(tech)_$(pca)_$(idx)",
+            name = "$(tech)|$(pca)|$(idx)",
             timesteps = timesteps,
             region_name = pca,
             capacity = gen_cap,
@@ -587,6 +606,7 @@ function disagg_existing_capacity(
     #whatever remains, we want to build as new capacity
     if remaining_capacity > 0
         add_new_capacity!(
+            ReEDS_data,
             generators_array,
             remaining_capacity,
             floor.(Int, avg_cap),
@@ -644,6 +664,7 @@ end
         updated vector or list of generators containing the new capacity
 """
 function add_new_capacity!(
+    ReEDS_data::ReEDSdatapaths,
     generators_array::Vector{<:Any},
     new_capacity::Int,
     avg_unit_cap::Int,
@@ -660,16 +681,50 @@ function add_new_capacity!(
     # use ATB
     if avg_unit_cap == 0
         try
-            #use conventional name first 
+            # use conventional name first (no water, no tech)
             avg_unit_cap = unitsize_dict[tech]
         catch
-            #if no match, split on "_" then try b/c likely upgrade
+            # if no match, then check if it's an upgraded tech without water suffixes
+            # e.g. gas-cc_gas-cc-ccs_mod or gas-cc_H2-CT
+            
+            # Import and concat upgrade_link.csv and upgradelink_water.csv from inputs_case
+            # to make the following dictionary:
+            filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
+            df1 = DataFrames.DataFrame(CSV.File(filepath))
+            filepath2 = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgradelink_water.csv")
+            df2 = DataFrames.DataFrame(CSV.File(filepath2))
+
+            DataFrames.rename!(df2, "*TO-WATER" => "*TO", "FROM-WATER" => "FROM", "DELTA-WATER" => "DELTA")
+
+            df_combined = vcat(df1,df2)
+
+            df3 = df_combined[:, ["*TO", "DELTA"]]
+            df3_dict = Dict(lowercase(row["*TO"]) => lowercase(row["DELTA"]) for row in eachrow(df3))
+            
             try
-                avg_unit_cap = unitsize_dict[split(tech, "_")[2]]
+                avg_unit_cap = unitsize_dict[df3_dict[tech]]
             catch
-                #if still no match, try dropping trailing digits
-                avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
-                #will fail if this last thing doesn't work!
+                # if still no match, it might be an upgraded tech with water suffixes
+                # e.g. gas-cc_r_fg_gas-cc-ccs_mod_r_fg 
+                try
+                    avg_unit_cap = unitsize_dict[rsplit(df3_dict[tech], "_"; limit = 3)[1]]
+                catch
+                    # if still no match, then likely a non-upgraded tech with water suffixes
+                    # e.g. gas-cc_r_fg
+                    try
+                        avg_unit_cap = unitsize_dict[rsplit(tech, "_"; limit = 3)[1]]
+                    catch   
+                        # if still no match, try dropping trailing digits
+                        # e.g. wind-ons_1
+                        try
+                            avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
+                        catch
+                            # Finally, if still no match, tech is likely "csp{CSP_Type}_{class}"
+                            avg_unit_cap = unitsize_dict[match(r"(.+)\d_\d", tech)[1]]
+                            # will fail if this last thing doesn't work!
+                        end
+                    end
+                end
             end
         end
     end
@@ -679,7 +734,7 @@ function add_new_capacity!(
         return push!(
             generators_array,
             Thermal_Gen(
-                name = "$(tech)_$(pca)_new_1",
+                name = "$(tech)|$(pca)|new|1",
                 timesteps = timesteps,
                 region_name = pca,
                 capacity = new_capacity,
@@ -695,7 +750,7 @@ function add_new_capacity!(
         push!(
             generators_array,
             Thermal_Gen(
-                name = "$(tech)_$(pca)_new_$(i)",
+                name = "$(tech)|$(pca)|new|$(i)",
                 timesteps = timesteps,
                 region_name = pca,
                 capacity = avg_unit_cap,
@@ -713,7 +768,7 @@ function add_new_capacity!(
         push!(
             generators_array,
             Thermal_Gen(
-                name = "$(tech)_$(pca)_new_$(n_gens+1)",
+                name = "$(tech)|$(pca)|new|$(n_gens+1)",
                 timesteps = timesteps,
                 region_name = pca,
                 capacity = remainder,
@@ -735,6 +790,7 @@ end
 """
 
 function add_new_capacity!(
+    ReEDS_data::ReEDSdatapaths,
     generators_array::Vector{<:Any},
     new_capacity::Int,
     new_duration::Int,
@@ -752,16 +808,50 @@ function add_new_capacity!(
     # use ATB
     if avg_unit_cap == 0
         try
-            #use conventional name first 
+            # use conventional name first (no water, no tech)
             avg_unit_cap = unitsize_dict[tech]
         catch
-            #if no match, split on "_" then try b/c likely upgrade
+            # if no match, then check if it's an upgraded tech without water suffixes
+            # e.g. gas-cc_gas-cc-ccs_mod or gas-cc_H2-CT
+            
+            # Import and concat upgrade_link.csv and upgradelink_water.csv from inputs_case
+            # to make the following dictionary:
+            filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
+            df1 = DataFrames.DataFrame(CSV.File(filepath))
+            filepath2 = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgradelink_water.csv")
+            df2 = DataFrames.DataFrame(CSV.File(filepath2))
+
+            DataFrames.rename!(df2, "*TO-WATER" => "*TO", "FROM-WATER" => "FROM", "DELTA-WATER" => "DELTA")
+
+            df_combined = vcat(df1,df2)
+
+            df3 = df_combined[:, ["*TO", "DELTA"]]
+            df3_dict = Dict(lowercase(row["*TO"]) => lowercase(row["DELTA"]) for row in eachrow(df3))
+            
             try
-                avg_unit_cap = unitsize_dict[split(tech, "_")[2]]
+                avg_unit_cap = unitsize_dict[df3_dict[tech]]
             catch
-                #if still no match, try dropping trailing digits
-                avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
-                #will fail if this last thing doesn't work!
+                # if still no match, it might be an upgraded tech with water suffixes
+                # e.g. gas-cc_r_fg_gas-cc-ccs_mod_r_fg 
+                try
+                    avg_unit_cap = unitsize_dict[rsplit(df3_dict[tech], "_"; limit = 3)[1]]
+                catch
+                    # if still no match, then likely a non-upgraded tech with water suffixes
+                    # e.g. gas-cc_r_fg
+                    try
+                        avg_unit_cap = unitsize_dict[rsplit(tech, "_"; limit = 3)[1]]
+                    catch   
+                        # if still no match, try dropping trailing digits
+                        # e.g. wind-ons_1
+                        try
+                            avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
+                        catch
+                            # Finally, if still no match, tech is likely "csp{CSP_Type}_{class}"
+                            avg_unit_cap = unitsize_dict[match(r"(.+)\d_\d", tech)[1]]
+                            # will fail if this last thing doesn't work!
+                        end
+                    end
+                end
             end
         end
     end
@@ -771,7 +861,7 @@ function add_new_capacity!(
         return push!(
             generators_array,
             Battery(
-                name = "$(tech)|$(pca)|new_1",
+                name = "$(tech)|$(pca)|new|1",
                 timesteps = timesteps,
                 region_name = pca,
                 type = tech,
@@ -792,7 +882,7 @@ function add_new_capacity!(
         push!(
             generators_array,
             Battery(
-                name = "$(tech)|$(pca)|new_$(i)",
+                name = "$(tech)|$(pca)|new|$(i)",
                 timesteps = timesteps,
                 region_name = pca,
                 type = tech,
@@ -815,7 +905,7 @@ function add_new_capacity!(
         push!(
             generators_array,
             Battery(
-                name = "$(tech)|$(pca)|new_$(n_gens+1)",
+                name = "$(tech)|$(pca)|new|$(n_gens+1)",
                 timesteps = timesteps,
                 region_name = pca,
                 type = tech,
