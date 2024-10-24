@@ -1,4 +1,9 @@
 # Model Documentation
+```{admonition} Disclaimer: Work in Progress  
+:class: warning  
+This documentation is currently a **work in progress** and may not yet provide comprehensive coverage of all features, functionalities, or recent updates to the model.  
+```
+
 ## Overview
 ReEDS is a mathematical programming model of the electric power sector. Given a set of input assumptions, ReEDS models the evolution and operation of generation, storage, transmission, and production technologies. 
 
