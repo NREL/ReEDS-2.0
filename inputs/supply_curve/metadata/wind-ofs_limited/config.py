@@ -2,7 +2,6 @@
 #If individual_sites = False, run in this order: resource.py -> hourlize_to_reeds.py
 #If individual_sites = True, run in this order: resource.py -> hourlize_to_reeds.py -> rev-site-aggregation.py -> update_indsites_rsmap.py.
 
-import datetime
 import numpy as np
 import sys
 import os

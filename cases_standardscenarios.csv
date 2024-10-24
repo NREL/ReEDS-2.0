@@ -7,7 +7,7 @@ batteryscen,Battery cost and performance characteristics,battery_ATB_2024_modera
 convscen,Conventional generators cost and performance characteristics,conv_ATB_2024,,,,,,,,,conv_ATB_2024_adv_nuclear,conv_ATB_2024_con_nuclear,conv_ATB_2024_con_ccs,conv_ATB_2024_adv_ccs,,,,,,,,,,,,,,,,,,,conv_ATB_2024_adv_nuclear,conv_ATB_2024_con_nuclear,conv_ATB_2024_con_ccs,conv_ATB_2024_adv_ccs,,,,,,,,,
 cspscen,CSP cost and performance characteristics,csp_ATB_2024_moderate,,,,,,,csp_ATB_2024_advanced,csp_ATB_2024_conservative,,,,,,,,,,,,,,,,,,,,,csp_ATB_2024_advanced,csp_ATB_2024_conservative,,,,,,,,,,,,,
 geodiscov,Annual discover rates for new geothermal sites,BAU,,,,,,,TI,,,,,,,,,,,,,,,,,,,,,,TI,,,,,,,,,,,,,,
-geoscen,Geothermal cost projections,geo_ATB_2023_moderate,,,,,,,geo_ATB_2023_advanced,geo_ATB_2023_conservative,,,,,,,,,,,,,,,,,,,,,geo_ATB_2023_advanced,geo_ATB_2023_conservative,,,,,,,,,,,,,
+geoscen,Geothermal cost projections,geo_ATB_2024_moderate,,,,,,,geo_ATB_2024_advanced,geo_ATB_2024_conservative,,,,,,,,,,,,,,,,,,,,,geo_ATB_2024_advanced,geo_ATB_2024_conservative,,,,,,,,,,,,,
 hydroscen,Hydropower cost setting,hydro_ATB_2019_mid,,,,,,,hydro_ATB_2019_low,,,,,,,,,,,,,,,,,,,,,,hydro_ATB_2019_low,,,,,,,,,,,,,,
 incentives_suffix,File suffix for incentive definition,ira,,,,,,,,,,,,,,,,ira_45q_extension,,,,,,,,,,,,,,,,,,,,,,ira_45q_extension,,,,,
 ngscen,Natural gas price scenario,AEO_2023_reference,,,,,AEO_2023_HOG,AEO_2023_LOG,,,,,,,,,,,,,,,,,,,,,AEO_2023_HOG,AEO_2023_LOG,,,,,,,,,,,,,,,

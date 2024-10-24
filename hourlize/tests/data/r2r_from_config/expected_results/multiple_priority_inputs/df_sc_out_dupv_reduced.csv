@@ -1,4 +1,4 @@
-year,sc_gid,sc_point_gid,latitude,longitude,region,class,bin,dist_km,area_developable_sq_km,trans_cap_cost,built_capacity,investment_bool
+year,sc_gid,sc_point_gid,latitude,longitude,region,class,bin,dist_spur_km,area_developable_sq_km,trans_cap_cost,built_capacity,investment_bool
 2010,10898,,35.435646,-79.26683,p98,4,,0.067051741,0.0405,14137.504,0.20246153846153891,1
 2015,10898,,35.435646,-79.26683,p98,4,,0.067051741,0.0405,14137.504,1.400986508,1
 2015,10798,,35.29622,-77.53316,p98,4,,0.192709115,0.8748,14395.191,30.26130857,1

@@ -13,4 +13,4 @@ import PRAS
 # Make sure TimeZones works
 import TimeZones
 # TimeZones.build()
-TimeZones.ZonedDateTime(2007, 01, 01, 00, TimeZones.tz"EST")
+TimeZones.ZonedDateTime(2007, 01, 01, 00, TimeZones.tz"UTC")

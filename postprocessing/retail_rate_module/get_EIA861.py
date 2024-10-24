@@ -10,12 +10,12 @@ dictionaries (the entries will hopefully be similar to the entries for 2019).
 ###############
 #%% IMPORTS ###
 
-import numpy as np
 import pandas as pd
-import sys, os, math
-import requests, zipfile, urllib.request
+import os
+import zipfile
+import urllib.request
 
-from tqdm import tqdm, trange
+from tqdm import tqdm
 
 ##############
 #%% INPUTS ###

@@ -18,13 +18,15 @@ import cmocean
 import pptx
 from pptx.util import Inches, Pt
 
+import plots
+import reedsplots
+from bokehpivot.defaults import DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE
+
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 ### Format plots and load other convenience functions
 site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-import plots
-import reedsplots
-from bokehpivot.defaults import DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE
+
 plots.plotparams()
 
 #%% Argument inputs
@@ -854,7 +856,7 @@ blank_slide_layout = prs.slide_layouts[3]
 #%%### System cost error
 dfplot = pd.concat(dictin_error, axis=1).replace(0,np.nan).dropna(how='all').fillna(0)
 
-ncols = len(dfplot)
+ncols_err = len(dfplot)
 data = {
     'z': {'title': 'System cost [fraction]', 'scale':1},
     'gen': {'title': 'Non-valgen generation [GWh]', 'scale':1e-3},
@@ -868,14 +870,14 @@ data = {k:v for k,v in data.items() if k in dfplot.index}
 
 plt.close()
 f,ax = plt.subplots(
-    1, ncols,
-    figsize=(min(ncols*3.5, 13.33), max(3.75, 0.25*len(cases))),
+    1, ncols_err,
+    figsize=(min(ncols_err*3.5, 13.33), max(3.75, 0.25*len(cases))),
 )
 for col, (datum, settings) in enumerate(data.items()):
     if datum not in dfplot.index:
         continue
     vals = dfplot.loc[datum] * settings['scale']
-    _ax = ax if ncols == 1 else ax[col]
+    _ax = ax if ncols_err == 1 else ax[col]
     _ax.bar(
         range(len(cases)),
         vals.values, color=[colors[c] for c in cases],

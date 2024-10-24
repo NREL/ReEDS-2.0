@@ -32,7 +32,7 @@ import jinja2 as ji
 import reeds_bokeh as rb
 import logging
 import requests
-from pdb import set_trace as pdbst
+from defaults import (DEFAULT_DATA_TYPE, DATA_TYPE_OPTIONS)
 
 #Setup logger
 logger = logging.getLogger('')
@@ -47,8 +47,7 @@ if not logger.hasHandlers():
 #Defaults to configure:
 DEFAULT_CUSTOM_SORTS = {} #Keys are column names and values are lists of values in the desired sort order
 DEFAULT_CUSTOM_COLORS = {} #Keys are column names and values are dicts that map column values to colors (hex strings)
-DATA_TYPE_OPTIONS = rb.DATA_TYPE_OPTIONS + ['CSV']
-DEFAULT_DATA_TYPE = rb.DEFAULT_DATA_TYPE
+DATA_TYPE_OPTIONS = DATA_TYPE_OPTIONS + ['CSV']
 WIDTH = 300
 HEIGHT = 300
 PLOT_FONT_SIZE = 10
@@ -254,10 +253,10 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
             logger.info('***Building report section: ' + name + '...')
             preset = static_preset['config']
             download_full_source = False
-            if 'download_full_source' in static_preset and static_preset['download_full_source'] == True:
+            if 'download_full_source' in static_preset and static_preset['download_full_source'] is True:
                 download_full_source = True
             preset_wdg(preset, download_full_source)
-            if 'html' in report_format and download_full_source == False:
+            if 'html' in report_format and download_full_source is False:
                 title = bmw.Div(text='<h2 id="section-' + str(sec_i) + '">' + str(sec_i) + '. ' + name + '</h2>')
                 legend = bmw.Div(text=GL['widgets']['legend'].text)
                 display_config = bmw.Div(text=GL['widgets']['display_config'].text)
@@ -296,7 +295,7 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
                     GL['df_source'].to_csv(output_dir + 'csvs/' + sheet_name + '.csv', index=False)
                 else:
                     GL['df_plots'].to_csv(output_dir + 'csvs/' + sheet_name + '.csv', index=False)
-        except Exception as e:
+        except Exception:
             logger.info('***Error in section ' + str(sec_i) + '...\n' + traceback.format_exc())
             if html_num == 'one':
                 static_plots.append(bl.row(bmw.Div(text='<h2 id="section-' + str(sec_i) + '" class="error">' + str(sec_i) + '. ' + name + '. ERROR!</h2>')))
@@ -906,10 +905,14 @@ def set_df_plots(df_source, cols, wdg, custom_sorts={}):
     #Apply Aggregation
     if wdg['y'].value in cols['continuous'] and wdg['y_agg'].value != 'None' and wdg['x'].value != 'histogram_x':
         groupby_cols = [wdg['x'].value]
-        if wdg['x_group'].value != 'None': groupby_cols = [wdg['x_group'].value] + groupby_cols
-        if wdg['series'].value != 'None': groupby_cols = [wdg['series'].value] + groupby_cols
-        if wdg['explode'].value != 'None': groupby_cols = [wdg['explode'].value] + groupby_cols
-        if wdg['explode_group'].value != 'None': groupby_cols = [wdg['explode_group'].value] + groupby_cols
+        if wdg['x_group'].value != 'None': 
+            groupby_cols = [wdg['x_group'].value] + groupby_cols
+        if wdg['series'].value != 'None': 
+            groupby_cols = [wdg['series'].value] + groupby_cols
+        if wdg['explode'].value != 'None':
+            groupby_cols = [wdg['explode'].value] + groupby_cols
+        if wdg['explode_group'].value != 'None':
+            groupby_cols = [wdg['explode_group'].value] + groupby_cols
         df_grouped = df_plots.groupby(groupby_cols, sort=False)
         df_plots = df_grouped.apply(apply_aggregation, wdg['y_agg'].value, wdg['y'].value, wdg['y_b'].value, wdg['y_c'].value, wdg['range'].value).reset_index()
         #The index of each group's dataframe is added as another column it seems. So we need to remove it:
@@ -920,9 +923,12 @@ def set_df_plots(df_source, cols, wdg, custom_sorts={}):
         weights = df_plots[wdg['y'].value] if  wdg['hist_weight'].value == 'Yes' else None
         yhist, binedges = np.histogram(df_plots[wdg['y'].value], bins=int(wdg['hist_num_bins'].value), weights=weights)
         groupby_cols = []
-        if wdg['series'].value != 'None': groupby_cols = [wdg['series'].value] + groupby_cols
-        if wdg['explode'].value != 'None': groupby_cols = [wdg['explode'].value] + groupby_cols
-        if wdg['explode_group'].value != 'None': groupby_cols = [wdg['explode_group'].value] + groupby_cols
+        if wdg['series'].value != 'None': 
+            groupby_cols = [wdg['series'].value] + groupby_cols
+        if wdg['explode'].value != 'None':
+            groupby_cols = [wdg['explode'].value] + groupby_cols
+        if wdg['explode_group'].value != 'None':
+            groupby_cols = [wdg['explode_group'].value] + groupby_cols
         if groupby_cols == []:
             bincenters = np.mean(np.vstack([binedges[0:-1],binedges[1:]]), axis=0)
             df_plots = pd.DataFrame({wdg['x'].value: bincenters, wdg['y'].value: yhist})
@@ -991,11 +997,16 @@ def set_df_plots(df_source, cols, wdg, custom_sorts={}):
     sortby_cols = []
     if wdg['sort_data'].value == 'Yes':
         sortby_cols = [wdg['x'].value]
-        if wdg['x_group'].value != 'None': sortby_cols = [wdg['x_group'].value] + sortby_cols
-        if wdg['series'].value != 'None': sortby_cols = [wdg['series'].value] + sortby_cols
-        if cum_sort_cond: sortby_cols = ['y_cumulative'] + sortby_cols
-        if wdg['explode'].value != 'None': sortby_cols = [wdg['explode'].value] + sortby_cols
-        if wdg['explode_group'].value != 'None': sortby_cols = [wdg['explode_group'].value] + sortby_cols
+        if wdg['x_group'].value != 'None':
+            sortby_cols = [wdg['x_group'].value] + sortby_cols
+        if wdg['series'].value != 'None': 
+            sortby_cols = [wdg['series'].value] + sortby_cols
+        if cum_sort_cond: 
+            sortby_cols = ['y_cumulative'] + sortby_cols
+        if wdg['explode'].value != 'None':
+            sortby_cols = [wdg['explode'].value] + sortby_cols
+        if wdg['explode_group'].value != 'None':
+            sortby_cols = [wdg['explode_group'].value] + sortby_cols
         #Add custom sort columns
         temp_sort_cols = sortby_cols[:]
         for col in custom_sorts:
@@ -1089,7 +1100,7 @@ def create_figures(df_plots, wdg, cols, custom_colors):
     if wdg['explode_grid'].value == 'Yes':
         ncols = len(df_plots_cp[wdg['explode'].value].unique())
         plot_list = [bl.gridplot(plot_list, ncols=ncols)]
-    logger.info('***Done Building Figures.')
+    logger.info('***Done Building Figures.\n')
     return plot_list
 
 def set_axis_bounds(df, plots, wdg, cols):
@@ -1350,7 +1361,8 @@ def add_glyph(glyph_type, wdg, p, xs, ys, c, y_bases=None, series=None, opacity_
         source = bms.ColumnDataSource({'x': xs, 'y': ys, 'x_legend': xs, 'y_legend': y_unstacked, 'ser_legend': ser})
         p.line('x', 'y', source=source, color=c, alpha=alpha, line_width=float(wdg['line_width'].value))
     if glyph_type == 'Bar' and y_unstacked != [0]*len(y_unstacked):
-        if y_bases is None: y_bases = [0]*len(ys)
+        if y_bases is None:
+            y_bases = [0]*len(ys)
         centers = [(ys[i] + y_bases[i])/2 for i in range(len(ys))]
         heights = [abs(ys[i] - y_bases[i]) for i in range(len(ys))]
         xs_cp = list(xs) #we don't want to modify xs that are passed into function
@@ -1386,7 +1398,8 @@ def add_glyph(glyph_type, wdg, p, xs, ys, c, y_bases=None, series=None, opacity_
         source = bms.ColumnDataSource({'x': xs_cp, 'y': centers, 'x_legend': x_legend, 'y_legend': y_unstacked, 'h': heights, 'w': widths, 'ser_legend': ser})
         p.rect('x', 'y', source=source, height='h', color=c, fill_alpha=alpha, width='w', line_color=None, line_width=0)
     if glyph_type =='Area' and y_unstacked != [0]*len(y_unstacked):
-        if y_bases is None: y_bases = [0]*len(ys)
+        if y_bases is None:
+            y_bases = [0]*len(ys)
         xs_around = xs + xs[::-1]
         ys_around = y_bases + ys[::-1]
         source = bms.ColumnDataSource({'x': [xs_around], 'y': [ys_around], 'x_legend': [wdg['x'].value], 'y_legend': [wdg['y'].value], 'ser_legend': [series]})
@@ -1475,7 +1488,7 @@ def create_maps(df, wdg, cols):
     filepath = this_dir_path + '/in/gis_' + reg_name + '.csv'
     region_boundaries = pd.read_csv(filepath, sep=',', dtype={'id': object, 'group': object})
     #Remove holes
-    region_boundaries = region_boundaries[region_boundaries['hole'] == False]
+    region_boundaries = region_boundaries[region_boundaries['hole'] is False]
     #keep only regions that are in df
     region_boundaries = region_boundaries[region_boundaries['id'].isin(full_rgs)]
     #Add x and y columns to region_boundaries and find x and y ranges
@@ -1525,7 +1538,7 @@ def create_maps(df, wdg, cols):
     #If there are only 3 columns (x_axis, y_axis, and bin_index), that means we aren't exploding:
     if len(df_maps.columns) == 3:
         maps.append(create_map(map_type, df_maps, ranges, region_boundaries, centroids, wdg, colors_full))
-        logger.info('***Done building map.')
+        logger.info('***Done building map.\n')
         return (maps, breakpoints) #single map
     #Otherwise we are exploding.
     #find all unique groups of the explode columns.
@@ -1546,7 +1559,7 @@ def create_maps(df, wdg, cols):
         #remove final comma of title
         title = title[:-2]
         maps.append(create_map(map_type, df_map, ranges, region_boundaries, centroids, wdg, colors_full, title))
-    logger.info('***Done building maps.')
+    logger.info('***Done building maps.\n')
     return (maps, breakpoints) #multiple maps
 
 def create_map(map_type, df, ranges, region_boundaries, centroids, wdg, colors_full, title=''):
@@ -1803,10 +1816,10 @@ def build_plot_legend(df_plots, wdg, custom_sorts, custom_colors):
     #resort to abide by series custom ordering. This may have been disrupted by x-axis bar height sorting or explode sorting.
     if wdg['sort_data'].value == 'Yes' and custom_sorts and series_val in custom_sorts:
         label_color = dict(zip(labels, colors))
-        labels_1 = [l for l in custom_sorts[series_val] if l in labels]
-        labels_2 = [l for l in labels if l not in labels_1]
+        labels_1 = [L for L in custom_sorts[series_val] if L in labels]
+        labels_2 = [l for L in labels if L not in labels_1]
         labels = labels_1 + labels_2
-        colors = [label_color[l] for l in labels]
+        colors = [label_color[L] for L in labels]
     #reverse order of legend
     labels.reverse()
     colors.reverse()
@@ -1854,7 +1867,7 @@ def display_config(wdg, wdg_defaults):
                     item_string += wdg[key].labels[i] + ', '
             elif isinstance(wdg[key], bmw.inputs.InputWidget) and wdg[key].value != wdg_defaults[key]:
                 item_string = wdg[key].value
-            if item_string != False:
+            if item_string is not False:
                 if item_string == '':
                     item_string = 'NONE'
                 output += '<div class="config-display-item"><span class="config-display-key">' + label + ': </span>' + item_string + '</div>'
@@ -1994,7 +2007,7 @@ def update_data_source(init_load=False, init_config={}):
         GL['widgets'].update(build_widgets(GL['df_source'], GL['columns'], init_load, init_config, wdg_defaults=GL['wdg_defaults']))
     elif data_type == 'GDX':
         GL['widgets'].update(get_wdg_gdx(path, GL['widgets']))
-    elif data_type in rb.DATA_TYPE_OPTIONS:
+    elif data_type in DATA_TYPE_OPTIONS:
         rb.update_data_source(path, init_load, init_config, data_type)
     GL['controls'].children = list(GL['widgets'].values())
     GL['plots'].children = []

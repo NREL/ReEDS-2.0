@@ -65,9 +65,8 @@ def main(t, casedir):
     resources = pd.read_csv(os.path.join(inputs_case, 'resources.csv'))
 
     recf = pd.read_hdf(os.path.join(inputs_case, 'recf.h5')).astype(np.float32)
-    recf.columns = recf.columns.map(
-        resources.set_index('resource')[['i','r']].apply(lambda row: tuple(row), axis=1)
-    ).rename(('i','r'))
+    recf.columns = pd.MultiIndex.from_tuples([tuple(x.split('|')) for x in recf.columns],
+                                             names=('i','r'))
 
     techs = gdxreeds['i_subsets'].pivot(columns='i_subtech',index='i',values='Value')
 
@@ -146,7 +145,7 @@ def main(t, casedir):
 
     ### Store generation by (i,r) for capacity_credit.py
     vre_gen_exist = gen_vre_ir.reindex(resources[['i','r']], axis=1).fillna(0).clip(lower=0)
-    vre_gen_exist.columns = resources.resource
+    vre_gen_exist.columns = ['|'.join(c) for c in vre_gen_exist.columns]
     vre_gen_exist.index = h_dt_szn.set_index(['ccseason','year','h','hour']).index
     h5out['vre_gen_exist'] = vre_gen_exist
 
@@ -179,7 +178,7 @@ def main(t, casedir):
         recf.multiply(cf_adj_i, level='i', axis=1)
         .reindex(resources[['i','r']], axis=1)
     )
-    vre_cf_marg.columns = resources.resource
+    vre_cf_marg.columns = ['|'.join(c) for c in vre_cf_marg.columns]
     vre_cf_marg.index = h_dt_szn.set_index(['ccseason','year','h','hour']).index
     h5out['vre_cf_marg'] = vre_cf_marg
 
@@ -256,6 +255,36 @@ def main(t, casedir):
     csvout['energy_cap'] = energy_cap.drop(too_small_storage, errors='ignore')
     csvout['max_cap'] = max_cap.drop(too_small_storage, errors='ignore')
 
+    #%% Strip water tech suffixes from water-dependent technologies
+    ### NOTE: This must be done to make water runs compatible with PRAS, as PRAS is not set 
+    ###       up to ingest generation techs with water tech suffixes, as well as to ensure
+    ###       PRAS is operating the same for runs with/without GSw_WaterMain on.
+
+    # For each dataframe in csvout, check if it has an 'i' index and if it does, use 
+    # i_ctt_wst_link to remove the water suffixes
+    watertech_link = pd.read_csv(
+        os.path.join(casedir,'inputs_case','i_coolingtech_watersource_link.csv'),
+             usecols=['*i','ii']
+        )
+    waterupgrades_link = pd.read_csv(
+        os.path.join(casedir,'inputs_case','i_coolingtech_watersource_upgrades_link.csv'),
+             usecols=['*i','ii']
+        )
+    watertech_link = pd.concat([watertech_link, waterupgrades_link])
+    watertech_link = watertech_link.apply(lambda x: x.str.lower()).set_index('*i').squeeze(1)
+
+    for key in csvout.keys():
+        df = csvout[key]
+        if 'i' in df.index.names:
+            # Strip water tech suffixes from tech names
+            df.rename(index=watertech_link, level='i', inplace=True)
+            # Sum over i,v,t combination duplicates now that water techs have been stripped
+            indices = list(df.index.names)
+            df = df.groupby(df.index).sum()
+            # Reset the index names
+            df.index = pd.MultiIndex.from_tuples(df.index, names=indices)
+            # Rewrite data in csvout with updated data
+            csvout[key] = df.copy()
 
     #%%### Write it
     #%% .csv files

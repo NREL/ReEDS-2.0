@@ -25,10 +25,12 @@ from glob import glob
 
 import shapely
 import geopandas as gpd
+
 reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 site.addsitedir(os.path.join(reeds_path))
-from preprocessing import geo_supply_curve_aggregation
 
+# import the geo_supply_curve_aggregation module after setting the module path 
+from preprocessing import geo_supply_curve_aggregation  # noqa: E402
 
 #%% ===========================================================================
 ### --- HELPER FUNCTIONS ---
@@ -493,7 +495,7 @@ def get_supply_curve_and_preprocess(tech, original_sc_file, reeds_path, hourlize
             df.rename(columns={reg_out_col:'region'}, inplace=True)
     
     ## process existing sites
-    if existing_sites != None:
+    if existing_sites is not None:
         print('Assigning existing sites...')
         #Read in existing sites and filter
         df_exist = pd.read_csv(existing_sites, low_memory=False)
@@ -580,7 +582,7 @@ def add_classes(df_sc, class_path, class_bin, class_bin_col, class_bin_method, c
     print('Adding classes...')
     startTime = datetime.datetime.now()
     #Create class column.
-    if class_path == None:
+    if class_path is None:
         df_sc['class'] = '1'
     else:
         df_sc['class'] = 'NA' #Initialize to NA to make sure we have full coverage of classes here.
@@ -676,8 +678,12 @@ def add_cost(df_sc, tech, reg_out_col):
     # set network reinforcement costs to zero if running county-level supply curves
     if reg_out_col == 'cnty_fips':
         print('Running county-level supply curves, so setting any network reinforcement costs to zero.')
-        df_sc['cost_total_trans_usd_per_mw'] = df_sc['cost_total_trans_usd_per_mw'] - df_sc['cost_reinforcement_usd_per_mw']
-        df_sc['cost_reinforcement_usd_per_mw'] = 0 
+        if tech == "egs" or tech == "geohydro":
+            df_sc['trans_adder_per_mw'] = df_sc['trans_cap_cost_per_mw'] - df_sc['reinforcement_cost_per_mw']
+            df_sc['reinforcement_cost_per_mw'] = 0
+        else:
+            df_sc['cost_total_trans_usd_per_mw'] = df_sc['cost_total_trans_usd_per_mw'] - df_sc['cost_reinforcement_usd_per_mw']
+            df_sc['cost_reinforcement_usd_per_mw'] = 0 
 
     # Generate the supply_curve_cost_per_mw column. Special cost_out values correspond to
     # a calculation using one or more columns, but the default is to use the cost_out
@@ -693,8 +699,11 @@ def add_cost(df_sc, tech, reg_out_col):
         
         ## transmission cost adders    
         df_sc['trans_adder_per_mw'] = df_sc['cost_total_trans_usd_per_mw']
+        
+        ## total supply curve cost adders
+        df_sc['supply_curve_cost_per_mw'] = df_sc['trans_adder_per_mw'] + df_sc['capital_adder_per_mw']
 
-    if tech == "egs" or tech == "geohydro":
+    elif tech == "egs" or tech == "geohydro":
         df_sc['capital_adder_per_mw'] = 0
         df_sc['trans_adder_per_mw'] = df_sc['trans_cap_cost_per_mw'] + df_sc['reinforcement_cost_per_mw']
 
@@ -871,7 +880,10 @@ def save_sc_outputs(
                 df_exog.reset_index(), id_vars= [profile_id_col,'class','region'],
                 value_vars=ret_year_ls, var_name='year', value_name='capacity')
             df_exog = df_exog[df_exog['capacity'].notnull()].copy()
-            df_exog['tech'] = tech + '_' + df_exog['class'].astype(str)
+            if(tech == 'egs' or tech == 'geohydro'):
+                df_exog['tech'] = tech + '_allkm_' + df_exog['class'].astype(str)
+            else:
+                df_exog['tech'] = tech + '_' + df_exog['class'].astype(str)
             df_exog = df_exog[[profile_id_col,'tech','region','year','capacity']].copy()
             df_exog = df_exog.groupby(['tech','region','year',profile_id_col], sort=False, as_index=False).sum()
             df_exog['capacity'] =  df_exog['capacity'].round(decimals)
@@ -962,16 +974,28 @@ def copy_outputs(outpath, reeds_path, sc_path, casename, reg_out_col,
             os.path.join(resultspath, f'{tech}_supply_curve.csv'),
             os.path.join(inputspath, 'supply_curve',f'{tech}_supply_curve-{case}.csv')
         )
+        #Prescribed builds and exogenous capacity (if they exist)
+        try:
+            shutil.copy2(
+                os.path.join(resultspath, f'{tech}_prescribed_builds.csv'),
+                os.path.join(inputspath,'capacity_exogenous',f'{tech}_prescribed_builds_{case}.csv')
+            )
+        except:
+            print('WARNING: No prescribed builds')
+        try:
+            df = pd.read_csv(os.path.join(resultspath,f'{tech}_exog_cap.csv'))
+            df.rename(columns={df.columns[0]: '*'+str(df.columns[0])}, inplace=True)
+            df.to_csv(
+                os.path.join(inputspath,'capacity_exogenous',f'{tech}_exog_cap_{case}.csv'),
+                index=False
+            )
+        except:
+            print('WARNING: No exogenous capacity')
         #Hourly profiles
         if reg_out_col == "cnty_fips" or "county" in casename:
             print("""County-level supply profiles are not kept in the repo due to their size 
                     and will not be copied to ReEDS""")
         else:
-            #Supply curve
-            shutil.copy2(
-                os.path.join(resultspath, f'{tech}_supply_curve.csv'),
-                os.path.join(inputspath, 'supply_curve',f'{tech}_supply_curve-{case}.csv')
-            )
             #Hourly profiles
             try:
                 shutil.copy2(
@@ -980,23 +1004,6 @@ def copy_outputs(outpath, reeds_path, sc_path, casename, reg_out_col,
                 )
             except:
                 print('WARNING: No hourly profiles')
-            #Prescribed builds and exogenous capacity (if they exist)
-            try:
-                shutil.copy2(
-                    os.path.join(resultspath, f'{tech}_prescribed_builds.csv'),
-                    os.path.join(inputspath,'capacity_exogenous',f'{tech}_prescribed_builds_{case}.csv')
-                )
-            except:
-                print('WARNING: No prescribed builds')
-            try:
-                df = pd.read_csv(os.path.join(resultspath,f'{tech}_exog_cap.csv'))
-                df.rename(columns={df.columns[0]: '*'+str(df.columns[0])}, inplace=True)
-                df.to_csv(
-                    os.path.join(inputspath,'capacity_exogenous',f'{tech}_exog_cap_{case}.csv'),
-                    index=False
-                )
-            except:
-                print('WARNING: No exogenous capacity')
 
         ## Metadata
         # rev configs
@@ -1051,7 +1058,6 @@ def map_supplycurve(
     ## Turn off loggers for imported packages
     for i in ['matplotlib','shapely','fiona','pyproj']:
         logging.getLogger(i).setLevel(logging.CRITICAL)
-    import pandas as pd
     import matplotlib.pyplot as plt
     import os
     import site
@@ -1263,7 +1269,7 @@ if __name__== '__main__':
 
     #%% setup logging
     site.addsitedir(os.path.join(cf.reeds_path, "input_processing"))
-    from ticker import toc, makelog
+    from ticker import makelog
     if not nolog:
         log = makelog(scriptname=__file__, logpath=os.path.join(cf.outpath, f'log_{cf.casename}.txt'))
 

@@ -46,6 +46,7 @@ caprsc.csv,,sum,ignore,r,i,,0,0,,1,,,,disaggfunc set to ignore because data will
 ccmult.csv,,ignore,ignore,,,,,0,,,,,,done
 ccreg.csv,,ignore,ignore,,,,,0,,,,,,done
 ccs_link.csv,inputs/emission_constraints/ccs_link.csv,ignore,ignore,,,,,0,,,,,,done
+ccs_link_water.csv,inputs/emission_constraints/ccs_link_water.csv,ignore,ignore,,,,,0,,,,,,done
 ccsflex_cat.csv,inputs/sets/ccsflex_cat.csv,ignore,ignore,,,,,,,,,ccsflex_cat,,done
 ccsflex_perf.csv,,ignore,ignore,,,,,0,,,,,,done
 cd_beta0.csv,inputs/fuelprices/cd_beta0.csv,ignore,ignore,*cendiv,,,,0,,,,,,done
@@ -188,7 +189,8 @@ geo_rsc.csv,inputs/geothermal/geo_rsc_ATB_2023.csv,sc_cat,geosize,r,*i,,0,0,valu
 geocapcostmult.csv,,ignore,ignore,,,,1,0,,,,,,done
 geoexist.csv,,sum,ignore,r,*i,,0,0,,1,,,,written to proper spatial aggregation in writecapdat.py
 geohydro_supply_curve.csv,inputs/supply_curve/geohydro_supply_curve-reference_{lvl}.csv,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
-geohydro_allkm_exog_cap.csv,,sum,ignore,r,"*i,rscbin,t",,0,0,,1,,,,Delete once aggregate_regions.py is moved up
+exog_geohydro_allkm_rsc.csv,,sum,ignore,region,"*tech,rscbin,year",,0,0,,1,,,,Delete once aggregate_regions.py is moved up
+geohydro_exog_cap.csv,inputs/capacity_exogenous/geohydro_exog_cap_{GSw_SitingGeo}_{lvl}.csv,ignore,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,Reset aggfunc to 'sum' after deleting geohydro_allkm_exog_cap.csv
 ghp_delta_commercial.csv,inputs/load/Commercial_GHP_Delta.csv,ignore,ignore,wide,hour,,1,0,,,,,,done
 ghp_delta_residential.csv,inputs/load/Residential_GHP_Delta.csv,ignore,ignore,wide,hour,,1,0,,,,,,done
 growth_bin_size_mult.csv,inputs/growth_constraints/growth_bin_size_mult.csv,ignore,ignore,,,,,0,,,,,,done
@@ -537,6 +539,7 @@ e_report_params.csv,e_report_params.csv,ignore,ignore,,,,,,,,,,,done
 gamslice.txt,gamslice.txt,ignore,ignore,,,,,,,,,,,done
 gurobi.opt,gurobi.opt,ignore,ignore,,,,,,,,,,,done
 interim_report.py,interim_report.py,ignore,ignore,,,,,,,,,,,done
+max_hintage_number.txt,,ignore,ignore,,,,,0,,,,,,done
 raw_value_streams.py,raw_value_streams.py,ignore,ignore,,,,,,,,,,,done
 runbatch.py,runbatch.py,ignore,ignore,,,,,,,,,,,done
 tc_phaseout.py,tc_phaseout.py,ignore,ignore,,,,,,,,,,,done

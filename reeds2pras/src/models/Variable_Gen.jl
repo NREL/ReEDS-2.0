@@ -108,6 +108,6 @@ end
 
 get_capacity(gen::Variable_Gen) = permutedims(round.(Int, gen.capacity))
 
-get_category(gen::Variable_Gen) = "$(gen.legacy)_$(gen.type)"
+get_category(gen::Variable_Gen) = "$(gen.legacy)|$(gen.type)"
 
 get_type(gen::Variable_Gen) = gen.type

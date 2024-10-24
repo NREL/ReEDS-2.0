@@ -323,7 +323,7 @@ def calculate_metrics():
             df[f'LVOE_{s}'] = df_profile_rep.mul(df_p_h_s[s_key]).sum(axis='rows').div(df['MWh_ann'])
         else:
             df[f'LVOE_{s}'] = df_profile.mul(df_p_h_s[s_key]).sum(axis='rows').div(df['MWh_ann'])
-        df[f'LVOE'] = df['LVOE'] + df[f'LVOE_{s}']
+        df['LVOE'] = df['LVOE'] + df[f'LVOE_{s}']
     df['LVOE_loc'] = p_ba if r['meta_path'] == 'none' else p_ba[df_meta['reeds_ba'].tolist()].to_list()
     #Output benchmark price components
     df['Pb_load_loc'] = p_ba_load if r['meta_path'] == 'none' else p_ba_load[df_meta['reeds_ba'].tolist()].to_list()

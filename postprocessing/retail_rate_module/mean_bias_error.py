@@ -8,11 +8,12 @@ The results are written in ¢/kWh in {out_dollar_year} dollars.
 
 ###############
 #%% Imports ###
-import numpy as np
 import pandas as pd
-import os, sys, math, site
+import os
+import site
 import io
 import argparse
+import retail_rate_calculations
 
 pd.options.display.max_columns = 200
 pd.options.display.max_rows = 50
@@ -38,7 +39,9 @@ out_dollar_year = args.out_dollar_year
 
 #%% Set up logger
 site.addsitedir(os.path.join(reeds_path,'input_processing'))
-from ticker import makelog
+# import makelog after setting the module path; if it's done before, the ticker module won't be found
+from ticker import makelog  # noqa: E402
+
 log = makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
 
 ##############
@@ -57,11 +60,6 @@ inf_adjust = inflation.loc[
     data_dollar_year+1:out_dollar_year,
     'inflation_rate'
 ].cumprod()[out_dollar_year]
-
-### Import the retail rate module
-site.addsitedir(retailmodulepath)
-import retail_rate_calculations
-
 
 #################
 #%% Functions ###

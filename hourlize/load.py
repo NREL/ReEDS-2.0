@@ -11,13 +11,10 @@ import argparse
 import datetime
 import h5py
 import json
-import logging
 import numpy as np
 import os
 import pandas as pd
-import shutil
 import site
-import sys
 from collections import OrderedDict
 from types import SimpleNamespace 
 
@@ -58,7 +55,7 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
         #Fill p19 with p20 and scale by guess of 1/6 (although calibration below will obviate this scaling)
         df_hr['p19'] = df_hr['p20'] / 6
 
-    if paths['calibrate_path'] != False:
+    if paths['calibrate_path'] is not False:
         #Scale the ba hourly profiles to state-level annual loads with state-to-ba participation factors
         #First, combine the calibrated state-level energy with ba participation factors to calculate the calibrated energy by BA
         df_st_energy = pd.read_csv(paths['calibrate_path'])
@@ -149,7 +146,7 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
     df_hr = pd.concat(df_hr_ls)
 
     #Splice in default data, for which the first entry is Jan 1, 1am hour ending, which is 12am-1am, which is 12am hour beginning.
-    if use_default_before_yr != False:
+    if use_default_before_yr is not False:
         print('Splicing in default load before ' + str(use_default_before_yr))
         #Read in hierarchy to map census division / state to BA
         df_hier = pd.read_csv(os.path.join(outpath, 'inputs', 'hierarchy.csv'))
@@ -279,7 +276,9 @@ if __name__== '__main__':
 
     #%% setup logging
     site.addsitedir(os.path.join(cf.reeds_path, "input_processing"))
-    from ticker import toc, makelog
+    # import makelog after setting the module path; if it's done before, the ticker module won't be found
+    from ticker import makelog
+    
     log = makelog(scriptname=__file__, logpath=os.path.join(cf.outpath, f'log_{cf.casename}.txt'))
 
     # list of paths for passing to functions
@@ -297,7 +296,7 @@ if __name__== '__main__':
         for year in list(range(2007,2014)):
             print('processing weather year ' + str(year) + '...')
             df_hr_input = get_hourly_load(os.path.join(cf.load_source,'w'+str(year)+'.csv'), cf.us_only)
-            if cf.hourly_process == False:
+            if cf.hourly_process is False:
                 df_hr = df_hr_input.copy()
             else:
                 df_hr = process_hourly(df_hr_input, cf.load_source_timezone, paths, 
@@ -326,7 +325,7 @@ if __name__== '__main__':
         f.close()
     else:
         df_hr_input = get_hourly_load(cf.load_source, cf.us_only)
-        if cf.hourly_process == False:
+        if cf.hourly_process is False:
             df_hr = df_hr_input.copy()
         else:
             df_hr = process_hourly(df_hr_input, cf.load_source_timezone, paths, 

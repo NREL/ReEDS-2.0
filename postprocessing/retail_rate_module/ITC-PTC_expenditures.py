@@ -20,9 +20,8 @@ Author: pbrown 20201230
 #%% IMPORTS ###
 import numpy as np
 import pandas as pd
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-import os, sys, math
+import os
 pd.options.display.max_columns = 20
 pd.options.display.max_rows = 10
 
@@ -333,10 +332,14 @@ def _despine_sub(ax,
     direction='out'):
     """
     """
-    if not top: ax.spines['top'].set_visible(False)
-    if not right: ax.spines['right'].set_visible(False)
-    if not left: ax.spines['left'].set_visible(False)
-    if not bottom: ax.spines['bottom'].set_visible(False)
+    if not top:
+        ax.spines['top'].set_visible(False)
+    if not right:
+        ax.spines['right'].set_visible(False)
+    if not left:
+        ax.spines['left'].set_visible(False)
+    if not bottom:
+        ax.spines['bottom'].set_visible(False)
     ax.tick_params(axis='both', which='both',
                    direction=direction, 
                    top=top, right=right, 
@@ -393,9 +396,9 @@ dfplot.plot.bar(
     color=colors, alpha=1, width=0.8
 )
 ### Legend
-h,l = ax.get_legend_handles_labels()
+h,L = ax.get_legend_handles_labels()
 ax.legend(
-    handles=h[::-1], labels=l[::-1],
+    handles=h[::-1], labels=L[::-1],
 #     loc='center left', bbox_to_anchor=(1,0.5), 
     loc='upper left', bbox_to_anchor=(-0.02,1.03), 
     ncol=1, fontsize=13,
@@ -462,9 +465,9 @@ dfplot.plot.bar(
     color=colors, alpha=1, width=0.8
 )
 ### Legend
-h,l = ax.get_legend_handles_labels()
+h,L = ax.get_legend_handles_labels()
 ax.legend(
-    handles=h[::-1], labels=l[::-1],
+    handles=h[::-1], labels=L[::-1],
 #     loc='center left', bbox_to_anchor=(1,0.5), 
     loc='upper right', #bbox_to_anchor=(-0.02,1.03), 
     ncol=1, fontsize=13,
@@ -472,7 +475,7 @@ ax.legend(
 )
 ### Formatting
 ax.set_xlabel('')
-ax.set_ylabel('Annual ITC Payments [Billion $]'.format(output_dollar_year))
+ax.set_ylabel('Annual ITC Payments [Billion $]')
 ax.set_ylim(0)
 xlabels = ax.get_xticklabels()
 for x in xlabels:

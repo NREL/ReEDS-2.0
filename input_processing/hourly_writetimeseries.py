@@ -185,6 +185,9 @@ def get_ccseason_peaks_hourly(load, sw, inputs_case, hierarchy, h2ccseason, val_
 
 
 def append_csp_profiles(cf_rep, sw):
+    ### Parse switch data (hourly_repperiods.py does this already but stress_periods.py does not)
+    if isinstance(sw['GSw_CSP_Types'],str):
+        sw['GSw_CSP_Types'] = [int(i) for i in sw['GSw_CSP_Types'].split('_')]
     ### Get the CSP profiles
     cfcsp = cf_rep[[c for c in cf_rep if c.startswith('csp')]].copy()
     ### As in cfgather.py, we duplicate the csp1 profiles for each CSP tech
@@ -524,8 +527,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         cf_rep = append_csp_profiles(cf_rep=cf_rep, sw=sw)
 
     cf_out = cf_rep.rename_axis('h').copy()
-    i = cf_rep.columns.map(resources.set_index('resource').i)
-    r = cf_rep.columns.map(resources.set_index('resource').r)
+    i = cf_rep.columns.map(lambda x: x.split('|')[0])
+    r = cf_rep.columns.map(lambda x: x.split('|')[1])
     cf_out.columns = pd.MultiIndex.from_arrays([i,r], names=['i','r'])
     cf_out = cf_out.stack(['i','r']).reorder_levels(['i','r','h']).rename('cf').reset_index()
 

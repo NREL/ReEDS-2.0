@@ -193,7 +193,9 @@ EQUATION
  eq_CSAPR_Assurance(st,t)                 "--metric tons NOx-- CSAPR state emissions cannot exceed the assurance cap"
  eq_BatteryMandate(st,t)                  "--MW-- battery storage capacity must be greater than indicated level"
  eq_cdr_cap(t)                            "--metric tons CO2-- CO2 removal (DAC and BECCS) can only offset emissions from fossil+CCS and methane leakage"
-
+ eq_caa_max_cf(i,v,r,t)                   "--MWh-- maximum capacity factors for new gas plants (CCs and CTs) under Clean Air Act Section 111 (BSER)"
+ eq_caa_rate_standard(st,t)               "--metric tons CO2-- maximum coal emissions per state under Clean Air Act Section 111 (rate-based emissions standard)"
+ 
 * RPS Policy equations
  eq_REC_Generation(RPSCat,i,st,t)         "--RECs-- Generation of RECs by state"
  eq_REC_Requirement(RPSCat,st,t)          "--RECs-- RECs generated plus trade must meet the state's requirement"
@@ -500,8 +502,11 @@ eq_cap_init_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
+
+    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
+          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 ;
 
 * ---------------------------------------------------------------------------
@@ -524,8 +529,11 @@ eq_cap_init_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
+
+    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
+          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 
 ;
 
@@ -540,6 +548,9 @@ eq_cap_init_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
          + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)],
                CAP(ii,v,r,tt) / (1 - upgrade_derate(ii,v,r,tt)) }$[Sw_Upgrades = 1]
+
+         + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
+               CAP(ii,v,r,tt) }$[Sw_Upgrades = 2]
         }
 
 * Account for capacity upsizing within init vintages
@@ -554,8 +565,11 @@ eq_cap_init_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
+
+    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
+          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 ;
 
 * ---------------------------------------------------------------------------
@@ -586,8 +600,11 @@ eq_cap_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
+
+    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
+          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 
 ;
 
@@ -613,8 +630,11 @@ eq_cap_new_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
+
+    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
+          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 ;
 
 * ---------------------------------------------------------------------------
@@ -627,6 +647,10 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
          + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)],
                CAP(ii,v,r,tt) / (1 - upgrade_derate(ii,v,r,tt)) }$[Sw_Upgrades = 1]
+
+         + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
+               CAP(ii,v,r,tt) }$[Sw_Upgrades = 2]
+
         }
 
     + INV(i,v,r,t)$valinv(i,v,r,t)
@@ -645,8 +669,11 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
+
+    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
+          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 ;
 
 * ---------------------------------------------------------------------------
@@ -679,7 +706,15 @@ eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)]..
 * without peristent upgrades, all upgrades correspond to their original bintage
     sum{(tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))$(yeart(tt)>=Sw_Upgradeyear)
              $valcap(i,v,r,tt)$sum{ii$upgrade_from(i,ii),valcap(ii,v,r,tt)}],
-        UPGRADES(i,v,r,tt) }$[Sw_Upgrades=1]
+        UPGRADES(i,v,r,tt) }$[(Sw_Upgrades = 1)$(not coal(i))]
+
+* coal cannot upgrade after the retire year - ie no mothballing
+    + sum{(tt)$[(tfix(tt) or tmodel(tt))
+               $(yeart(tt)<=yeart(t))$(yeart(tt)>=Sw_Upgradeyear)
+               $valcap(i,v,r,tt)
+               $(yeart(tt)<=caa_coal_retire_year)],
+                    UPGRADES(i,v,r,tt) 
+            }$[(Sw_Upgrades = 1)$coal(i)]
 
 * all previous years upgrades converted to new bintages of the present year
 * NOTE: the 'v' in ivt(i,v,tt) here is an important distinction -
@@ -688,9 +723,13 @@ eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)]..
     + sum{(tt,vv)$[(tfix(tt) or tmodel(tt))$(initv(vv) or sameas(v,vv))
               $(yeart(tt)<=yeart(t))$ivt(i,v,tt)
               $(yeart(tt)>=Sw_Upgradeyear)
-              $valcap(i,v,r,tt)
+              $valcap(i,v,r,tt)$(not sameas(i,'hydEND_hydED'))
               $sum(ii$upgrade_from(i,ii),valcap(ii,vv,r,tt))],
-        UPGRADES(i,vv,r,tt) }$[Sw_Upgrades=2]
+        UPGRADES(i,vv,r,tt) }$[Sw_Upgrades = 2]
+
+    + sum{(tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))$(yeart(tt)>=Sw_Upgradeyear)
+             $valcap(i,v,r,tt)$sameas(i,'hydEND_hydED')],
+        UPGRADES(i,v,r,tt) }$[Sw_Upgrades = 2]        
 
 * end product on upgrade_derate
     ) 
@@ -700,9 +739,9 @@ eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)]..
     CAP(i,v,r,t)
 
 * note this is equivalent to the previous version that had a =g=
-* sign in the corrolary equation but either assumes a retired upgrade
-* can be brought back to life again...
-    + UPGRADES_RETIRE(i,v,r,t)$[not noret_upgrade_tech(i)]
+* sign in the corrolary equation
+    + sum{tt$[(tfix(tt) or tmodel(tt))$valcap(i,v,r,tt)], 
+        UPGRADES_RETIRE(i,v,r,tt)}$[not noret_upgrade_tech(i)]
 ;
 
 * ---------------------------------------------------------------------------
@@ -817,6 +856,7 @@ eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)
 *at the "discovered" amount and hydro upgrade availability adjusted over time)
     m_rsc_dat(r,i,rscbin,"cap") * (
         1$[not geo_hydro(i)] + geo_discovery(i,r,t)$geo_hydro(i))
+* available hydro upgrade capacity
     + hyd_add_upg_cap(r,i,rscbin,t)$(Sw_HydroCapEnerUpgradeType=1)
 * available DR capacity
     + rsc_dr(i,r,"cap",rscbin,t)
@@ -2166,6 +2206,49 @@ eq_cdr_cap(t)
 ** BECCS
     - sum{(i,v,r,h)$[valgen(i,v,r,t)$beccs(i)$h_rep(h)],
         hours(h) * emit_rate("CO2",i,v,r,t) * GEN(i,v,r,h,t) }
+;
+
+* ---------------------------------------------------------------------------
+
+*Under the Clean Air Act Section 111, new gas plants (CCs or CTs) can operate above caa_gas_max_cf percent before caa_coal_retire_year 
+*During and after caa_coal_retire_year, they need to either A) operate at <= caa_gas_max_cf percent CF, B) upgrade with CCS or C) retire
+eq_caa_max_cf(i,v,r,t)$[tmodel(t)$valgen(i,v,r,t)
+                        $gas(i)$(not ccs(i))
+                        $heat_rate(i,v,r,t)
+                        $(firstyear_v(i,v)>=caa_first_year)
+                        $(yeart(t)>=caa_coal_retire_year)
+                        $Sw_Clean_Air_Act]..
+
+*fraction of annual generation capacity
+    sum{h$h_rep(h), hours(h)} * caa_gas_max_cf * CAP(i,v,r,t)
+
+
+    =g=
+
+*must exceed total annual generation
+    sum{h$h_rep(h), hours(h) * GEN(i,v,r,h,t)}
+;
+
+* ---------------------------------------------------------------------------
+
+*Under the Clean Air Act Section 111, the emissions from existing coal plants per state must be less than or equal to a rate-based emissions standard
+
+*The rate is equivalent to average coal CCS emissions assuming 90% capture rate [metric tons CO2 / MWh]
+eq_caa_rate_standard(st,t)$[tmodel(t)
+                        $(yeart(t)>=caa_coal_retire_year)
+                        $Sw_Clean_Air_Act]..
+
+*rate equivalent to average coal CCS emissions assuming 90% capture rate [metric tons CO2 / MWh]
+    caa_rate_emis_standard 
+
+*coal generation in that state [MWh]
+    * sum{(i,v,r,h)$[valgen(i,v,r,t)$coal(i)$(not cofire(i))$r_st(r,st)], 
+         GEN(i,v,r,h,t)}
+    =g= 
+
+*coal emissions in that state [metric tons CO2]
+    sum{(i,v,r,h)$[valgen(i,v,r,t)$coal(i)$(not cofire(i))$r_st(r,st)], 
+         GEN(i,v,r,h,t) * emit_rate("co2",i,v,r,t)}
 ;
 
 *==========================

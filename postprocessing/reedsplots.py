@@ -12,21 +12,25 @@ from warnings import warn
 import geopandas as gpd
 import shapely
 import cmocean
+import plots
+
 os.environ['PROJ_NETWORK'] = 'OFF'
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 remotepath = '/Volumes/ReEDS/' if sys.platform == 'darwin' else r'//nrelnas01/ReEDS/'
 
 ### Format plots and load other convenience functions
+# add necessary directories to the site path
 site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-import plots
-plots.plotparams()
 site.addsitedir(os.path.join(reeds_path,'input_processing'))
-from hourly_writetimeseries import h2timestamp, timestamp2h
-import hourly_repperiods
 site.addsitedir(os.path.join(reeds_path,'ReEDS_Augur'))
-import functions
 
+# import functions from modules after adding them to the path 
+from hourly_writetimeseries import h2timestamp, timestamp2h   # noqa: E402
+import hourly_repperiods   # noqa: E402
+import functions   # noqa: E402
+
+plots.plotparams()
 
 ###### Constants
 ### Map fiddles

@@ -57,7 +57,7 @@ def get_remote_path(local):
             "If you are on a login node the run may fail due to insufficient memory."
         )
         confirm_local = str(input('Proceed? [y]/n: ') or 'y')
-        if not confirm_local in ['[y]', 'y','Y','yes','Yes','YES']:
+        if confirm_local not in ['[y]', 'y','Y','yes','Yes','YES']:
             print("Exiting hourlize now.")
             quit()
 
@@ -97,7 +97,7 @@ def string_formatter(var, config, verbose=False):
                 if verbose:
                     print(f"Evaluating expression in {newval}.")
             except:
-                raise Exception(f"The expression could not be evaluated; check your config file.")
+                raise Exception("The expression could not be evaluated; check your config file.")
         # next check if there is a defined variable that can be used to fill in the value
         elif fvval in globals():
             newval = globals()[fvval]
@@ -190,12 +190,12 @@ def launch_batch_file(casename, configpath, outpath, args):
             writelines = []
             # comment out original time specification
             with open(os.path.join(outpath, casename+"_batch.sh"), 'r') as SPATH:
-                for l in SPATH:
-                    writelines.append(('# ' if '--time' in l else '') + l.strip())
+                for L in SPATH:
+                    writelines.append(('# ' if '--time' in L else '') + L.strip())
             # rewrite file with new time and debug partition
             with open(os.path.join(outpath, casename+"_batch.sh"), 'w') as SPATH:
-                for l in writelines:
-                    SPATH.writelines(l + '\n')
+                for L in writelines:
+                    SPATH.writelines(L + '\n')
                 SPATH.writelines("#SBATCH --time=01:00:00\n")
                 SPATH.writelines("#SBATCH --partition=debug\n")
         
@@ -349,9 +349,9 @@ def setup_resource_run(casename, case, args):
 
     # check to make sure there is a valid rev_paths option and not more than 1 rev path has been matched  
     if df_rev_case.shape[0] == 0:
-        raise Exception(f"No rev_paths found; check definitions in rev_paths file and modify cases and subsetvars.")
+        raise Exception("No rev_paths found; check definitions in rev_paths file and modify cases and subsetvars.")
     elif df_rev_case.shape[0] > 1:
-        raise Exception(f"More than 1 rev_path found; check definitions in rev_paths file and add conditions to subsetvars.")
+        raise Exception("More than 1 rev_path found; check definitions in rev_paths file and add conditions to subsetvars.")
     else:
         dct_rev = df_rev_case.squeeze().to_dict()
 
@@ -384,7 +384,8 @@ def setup_resource_run(casename, case, args):
         elif isinstance(configout[cc], OrderedDict):
             keys = configout[cc].copy()
             # don't check for capacity from filter list since we add that column in later
-            if 'capacity' in keys: del keys['capacity']
+            if 'capacity' in keys:
+                del keys['capacity']
             if len(keys) > 0:
                 config_cols.extend(keys)
         else:
@@ -413,7 +414,7 @@ def setup_resource(args):
     # load cases from json using specified suffix (default: "cases_default.json")
     if args.cases == "default":
         print("Loading cases from cases.json")
-        casepath = os.path.join(hourlize_path, "inputs", "configs", f"cases.json")
+        casepath = os.path.join(hourlize_path, "inputs", "configs", "cases.json")
     else:
         print(f"Loading cases from cases_{args.cases}.json")
         casepath = os.path.join(hourlize_path, "inputs", "configs", f"cases_{args.cases}.json")
@@ -425,7 +426,8 @@ def setup_resource(args):
         cases = json.load(f, object_pairs_hook=OrderedDict)
 
     print("\nSetting up resource.py runs for the following cases:\n")
-    for c in cases: print(c)
+    for c in cases:
+        print(c)
     print(f"\nTotal: {len(cases)} case(s)\n")
 
     ## Main loop for running cases
@@ -434,7 +436,7 @@ def setup_resource(args):
         print(casename + '\n')
         try:
             setup_resource_run(casename, cases[casename], args)
-        except Exception as err:
+        except Exception:
             print(f"Error running {casename}\n")
             traceback.print_exc() 
             print(f"\nSkipping {casename}.")

@@ -42,12 +42,12 @@ def check_cases(cases, keywords):
     cases = cases.sort_values(by=['scenario', 'keyword'], ignore_index=True)
     # summarize runs to be combined
     if len(cases) == 0:
-        error_msg = (f'No runs matched; '
+        error_msg = ('No runs matched; '
                       'check batch_name and keyword specifications')
         raise Exception(error_msg)
     if len(cases) == len(cases.scenario.unique()):
         print_cases(cases)
-        error_msg = (f'No unique scenarios identified so there are no runs to be combined; '
+        error_msg = ('No unique scenarios identified so there are no runs to be combined; '
                       'check keyword specifications')
         raise Exception(error_msg)
     return cases
@@ -213,13 +213,13 @@ def run_combine_case(scen, reeds_path, output_path):
                         "html,excel,csv", "one",
                         os.path.join(output_path, 'outputs', 'reeds-report-combined'), "No"
                         )   
-    except Exception as err:
+    except Exception:
         print("Error running bokeh.")
         print(traceback.format_exc())
 
     ## Create combined transmission maps
     site.addsitedir(os.path.join(reeds_path, "postprocessing"))
-    import plots
+    # import reedsplots after setting the module path; if it's done before, the reedsplots module won't be found
     import reedsplots
 
     # Map properties:
@@ -298,7 +298,7 @@ def run_combine_case(scen, reeds_path, output_path):
                                                          alpha=transalpha, colors=transcolor, ms=ms)
             
             ## Save map
-            end = '-translines' if show_transmission==True else ''
+            end = '-translines' if show_transmission is True else ''
             mapname = f'map_VREsites{end}-{yearend}.png'
             #maptitle = os.path.basename(os.path.normpath(output_path))+' ('+str(yearend)+ end + ')'
             #ax.set_title(maptitle)
@@ -316,10 +316,10 @@ def write_hpc_file(scen, reeds_path, output_path, hpc_settings):
         SPATH.writelines("#!/bin/bash\n")
         SPATH.writelines(f"#SBATCH --account={hpc_settings['account']}\n")
         if hpc_settings['priority']:
-            SPATH.writelines(f"#SBATCH --priority=high\n")
+            SPATH.writelines("#SBATCH --priority=high\n")
         if hpc_settings['debugnode']:
             SPATH.writelines("#SBATCH --partition=debug\n")
-            SPATH.writelines(f"#SBATCH --time=1:00:00\n")
+            SPATH.writelines("#SBATCH --time=1:00:00\n")
         else:
             SPATH.writelines(f"#SBATCH --time={hpc_settings['walltime']}\n")
         SPATH.writelines("#SBATCH --job-name=" + scen + "\n")
@@ -379,7 +379,7 @@ def main(reeds_path, batch_name, folder_name_suffix, runlist, keywords, local, d
                 "If you are on a login node the run may fail due to insufficient memory."
             )
             confirm_local = str(input('Proceed? [y]/n: ') or 'y')
-            if not confirm_local in ['[y]', 'y','Y','yes','Yes','YES']:
+            if confirm_local not in ['[y]', 'y','Y','yes','Yes','YES']:
                 print("Quitting combine_runs.py now.")
                 quit()
         ## HPC
@@ -388,7 +388,8 @@ def main(reeds_path, batch_name, folder_name_suffix, runlist, keywords, local, d
             if hpc_settings['account'] is None:
                 hpc_settings['account'] = str(
                     input('Specify hpc allocation account ("q" to quit): '))
-                if hpc_settings['account'] == 'q': sys.exit(0)
+                if hpc_settings['account'] == 'q':
+                    sys.exit(0)
             # write hpc file
             hpc_file = write_hpc_file(scen, reeds_path, output_path, hpc_settings)
             # call file

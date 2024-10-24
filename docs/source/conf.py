@@ -17,8 +17,11 @@ author = 'NREL'
 
 extensions = [
     'myst_parser',
-    'sphinx_rtd_theme',
+    'sphinxcontrib.bibtex',
 ]
+
+bibtex_bibfiles = ['references.bib'] # exported from zotero using better bibtex
+bibtex_reference_style = 'author_year'
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -27,6 +30,9 @@ suppress_warnings = [
     'myst.xref_missing',
     'myst.header'
 ]
+
+numfig = True # auto number figures when true
+
 # get GAMSLICE from environment variable
 gamslice_secret = os.getenv('GAMSLICE', '')
 
@@ -36,6 +42,7 @@ github_releases_url = base_url + '/releases'
 
 myst_enable_extensions = [
     "substitution",
+    "dollarmath",
 ]
 
 myst_substitutions = {

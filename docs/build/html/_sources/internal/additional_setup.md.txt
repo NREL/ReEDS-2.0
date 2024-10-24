@@ -13,8 +13,6 @@ First, you will need a [user account](https://www.nrel.gov/hpc/user-accounts.htm
 
 After getting an account and allocation, there are a few different options for accessing the HPCs. Most users interact with the HPCs through a combination of [WinSCP](https://winscp.net/eng/index.php) and SSH with either GitBash or VSCode.
 
-If you plan to be using Eagle instead of Kestrel, you will also need to join the appropriate GAMS group. You will need to contact HPC support by emailing [hpc-help@nrel.gov](hpc-help@nrel.gov) to request access to the "gams" group. It normally takes about a day for the HPC support team to process this request.
-
 You should now be able to [SSH into Kestrel](https://www.nrel.gov/hpc/system-connection.html) with the command: 
 ```
 $ ssh username@kestrel.hpc.nrel.gov
@@ -22,25 +20,11 @@ $ ssh username@kestrel.hpc.nrel.gov
 
 You will be prompted to enter your password, you will need to use for HPC password here.
 
-<!-- to be deleted after Eagle is retired -->
-If you're connecting to Eagle, you will use the following command: 
-```
-$ ssh username@eagle.hpc.nrel.gov
-```
-You can then type `groups` to ensure that you see your allocation and gams group. Then, to test your access to GAMS, run the following two commands: 
-* `module load gams`
-* `gams`
-
-<!-- ==================================== -->
-
 
 #### Setup
-<!-- to be deleted after Eagle is retired -->
-*Note: if you're looking to get started on Eagle, refer to the [Setup on Eagle section](#setup-on-eagle) below.
-<!-- ==================================== -->
 1. Load GAMS with the following commands: 
    * `module use /nopt/nrel/apps/software/gams/modulefiles`
-   * `module load gams/34.3.0`
+   * `module load gams/45.2.0`
 
 2. Set up your SSH key with NREL github: 
    * Copy the contents in `/home/[username]/.ssh/id_rsa.pub
@@ -126,32 +110,6 @@ You can then type `groups` to ensure that you see your allocation and gams group
 
 ReEDS should now be usable in from the command line using the python script `runbatch.py`.
 
-<!-- to be deleted after Eagle is retired -->
-#### Setup on Eagle
-1. We first need to load the appropriate modules: 
-   * `module load conda`
-   * `module load gams`
-
-2. ReEDS-2.0 requires git-lfs to clone the repository. Using conda is the easiest way to install. We create a new conda environment, activate it and add the lfs extension to git:
-   * `conda create --name git -c conda-forge git git-lfs`
-   * `conda activate git`
-   * `git lfs install`
-
-3. Next clone the ReEDS-2.0 git repository (this may take a few minutes since the repo contains a large number of files and some of them are large):
-   * `git clone git@github.nrel.gov:ReEDS/ReEDS-2.0.git`
-   * There are several options for the location of the repo. You can clone it into your home folder. It is stable and doesn't require an allocation, but it is limited to 50 GB, and, because Conda environments tend to go in there, it can fill up rather quickly. You can also clone it to your scratch folder (/scratch/username). Like home, every user has one, and it doesn't require an allocation. It has unlimited storage, but files are deleted after some period of inactivity (we're unsure how long, the HPC help page says both 28 days and 60 days). Finally, you can clone the repo into a project folder associated with an allocation.
-
-4. Now we create the ReEDS conda environment and activate it. To do this, we will use the `environment.yml` file from the repository: 
-   * `cd ReEDS-2.0`
-   * `conda env create -f environment.yml`
-   * `conda activate reeds2`
-
-  If you already have the reeds environment but want to update it to the latest specifications, you can run `conda env update --file environment.yml`
-
-**Continue with steps 5-8 above in the general [Setup section](#setup).**
-
-<!-- ==================================== -->
-
 #### Running ReEDS
 Run ReEDS using runbatch.py the same way you would on any machine. Slurm jobs will be submitted for each case in the specified cases file. To understand the differences from a normal run, read the `if hpc` code blocks in runbatch.py.
 
@@ -198,8 +156,11 @@ If you need to transfer files between the HPC and your local machine, there are 
    * Using rsync: 
       * You can also use rsync to transfer files; an example of a rsync transfer command: 
       ```
-        rsync -aOP --exclude=**/225*/ --exclude=**/cpx*/ --exclude=*.dat --exclude=*.pkl --exclude=*.g00 --include=[batch_prefix]** --exclude=* --modify-window=5 --ignore-existing [hpc_user_name]@eagle.nrel.gov:[path_to_run_folder] [destination_path]
+        rsync -aOP --exclude=**/225*/ --exclude=**/cpx*/ --exclude=*.dat --exclude=*.pkl --exclude=*.g00 --include=[batch_prefix]** --exclude=* --modify-window=5 --ignore-existing [hpc_user_name]@kestrel.nrel.gov:[path_to_run_folder] [destination_path]
       ```
+   * Using Globus: 
+      * If the above methods for file transfers don't work for you, another option is to use Globus
+      * For more information, see: [Globus File Transfer Services](https://www.nrel.gov/hpc/globus-file-transfer.html)
     
 You can also transfer individual files to your machine using VSCode by right-clicking a file and selecting "download."
 
@@ -336,18 +297,6 @@ If you'd like the model to solve in less than 2 days, you can also make the foll
   * Turn off PV-battery hybrids
 * `GSw_calc_powfrac = 0`
   * Turn off a post-processing calculation of power flows
-
-
-### ReEDS2PRAS, julia, and stress periods setup
-1. Install Julia. There are different procedures for mac/linux and windows.
-    1. [mac/linux]: Julia is included in the conda environment so you should be all set.
-    2. [windows]: Install Julia from [https://julialang.org/downloads/](https://julialang.org/downloads/).
-2. From the ReEDS-2.0 directory, run `julia --project=. instantiate.jl`
-
-Set `GSw_PRM_CapCredit=0` in your ReEDS cases file to use the coupled ReEDS/PRAS stress periods model, or just set `pras=2` to run PRAS without necessarily using stress periods.
-
-#### Troubleshooting
-1. On mac and linux we use the version of julia included in the `reeds2` conda environment, so make sure you haven't added a julia alias or modified the julia path in your ~/.bashrc or ~/.bash_profile
 
 ### Hourlize
 Hourlize processes hourly resource and load data into ReEDS inputs. For more information on getting started with Hourlize, you can find more information here: [Using Hourlize](hourlize.md)

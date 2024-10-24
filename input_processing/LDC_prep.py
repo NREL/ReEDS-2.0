@@ -169,13 +169,13 @@ def local_to_eastern(df, inputs_case, by_year=False):
     if by_year:
         dfout = pd.concat({
             year: pd.DataFrame(
-                {col: np.roll(df.loc[year][col], r2shift.loc[col.split('_')[-1]]) for col in df},
+                {col: np.roll(df.loc[year][col], r2shift.loc[col.split('|')[-1]]) for col in df},
                 index=df.loc[year].index)
             for year in df.index.get_level_values('year').unique()
         }, axis=0, names=('year',))
     else:
         dfout = pd.DataFrame(
-            {col: np.roll(df[col], r2shift.loc[col.split('_')[-1]]) for col in df},
+            {col: np.roll(df[col], r2shift.loc[col.split('|')[-1]]) for col in df},
             index=df.index)
 
     return dfout
@@ -274,7 +274,7 @@ def get_distpv_profiles(inputs_case, recf, rb2fips, agglevel):
         recf[[c for c in recf if c.startswith('upv')]].mean()
         .rename_axis('resource').rename('cf').reset_index()
         )
-    upv_cf['r'] = upv_cf.resource.map(lambda x: x.split('_')[-1])
+    upv_cf['r'] = upv_cf.resource.map(lambda x: x.split('|')[-1])
     worst_upv = (
         upv_cf.sort_values(['r','cf'])
         .drop_duplicates('r', keep='first').set_index('r').resource
@@ -288,9 +288,19 @@ def get_distpv_profiles(inputs_case, recf, rb2fips, agglevel):
         recf[worst_upv].rename(columns=dict(zip(worst_upv,worst_upv.index)))
         * distpv_upv_cf_ratio
     ).clip(upper=1)
-    distpv_profiles.columns = 'distpv_' + distpv_profiles.columns
+    distpv_profiles.columns = 'distpv|' + distpv_profiles.columns
 
     return distpv_profiles
+
+
+def fix_class_region_delimiter(df):
+    """
+    Replace {class}_{region} with {class}|{region}.
+    Eventually we'll update the names upstream in hourlize and won't require this step.
+    """
+    if not df.empty:
+        if '|' not in df.columns[0]:
+            df.columns = [c.replace('_','|',1) for c in df.columns]
 
 
 #%% ===========================================================================
@@ -302,7 +312,7 @@ def main(reeds_path, inputs_case):
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
     # inputs_case = os.path.join(
-    #     reeds_path,'runs','v20240715_aggM0_ERCOT_county','inputs_case')
+    #     reeds_path,'runs','v20240904_vcM1_Everything','inputs_case')
 
     #%% Inputs from switches
     sw = pd.read_csv(
@@ -395,7 +405,8 @@ def main(reeds_path, inputs_case):
                 temp_tech = ''
                 for n in range(0,len(temp2)-1):
                     temp_tech += temp2[n]
-                    if not n == len(temp2)-2: temp_tech += '_'
+                    if not n == len(temp2)-2:
+                        temp_tech += '_'
                 for c in range(temp_low,temp_high+1):
                     temp_save.append('{}_{}'.format(temp_tech,str(c)))
         for subset in temp_remove:
@@ -407,18 +418,21 @@ def main(reeds_path, inputs_case):
 
     ### Onshore Wind
     df_windons = read_file(os.path.join(inputs_case,'recf_wind-ons.h5'))
+    fix_class_region_delimiter(df_windons)
     df_windons.columns = ['wind-ons_' + col for col in df_windons]
     ### Don't do aggregation in this case, so make a 1:1 lookup table
     lookup = pd.DataFrame({'ragg':df_windons.columns.values})
-    lookup['r'] = lookup.ragg.map(lambda x: x.rsplit('_',1)[1])
-    lookup['i'] = lookup.ragg.map(lambda x: x.rsplit('_',1)[0])
+    lookup['r'] = lookup.ragg.map(lambda x: x.rsplit('|',1)[1])
+    lookup['i'] = lookup.ragg.map(lambda x: x.rsplit('|',1)[0])
 
     ### Offshore Wind
     df_windofs = read_file(os.path.join(inputs_case,'recf_wind-ofs.h5'))
+    fix_class_region_delimiter(df_windofs)
     df_windofs.columns = ['wind-ofs_' + col for col in df_windofs]
 
     ### UPV
     df_upv = read_file(os.path.join(inputs_case,'recf_upv.h5'))
+    fix_class_region_delimiter(df_upv)
     df_upv.columns = ['upv_' + col for col in df_upv]
 
     # If DUPV is turned off, create an empty dataframe with the same index as df_dupv to concat
@@ -426,10 +440,12 @@ def main(reeds_path, inputs_case):
         df_dupv = pd.DataFrame(index=df_upv.index)
     elif int(sw['GSw_DUPV']) == 1:
         df_dupv = read_file(os.path.join('recf_dupv.h5'))
+        fix_class_region_delimiter(df_dupv)
         df_dupv.columns = ['dupv_' + col for col in df_dupv]
 
     ### CSP
     cspcf = read_file(os.path.join(inputs_case,'recf_csp.h5'))
+    fix_class_region_delimiter(cspcf)
     # If CSP is turned off, create an empty dataframe with an appropriate index
     if int(sw['GSw_CSP']) == 0:
         cspcf = pd.DataFrame(index=cspcf.index)
@@ -450,6 +466,7 @@ def main(reeds_path, inputs_case):
         # If PVB uses same ILR as UPV then use its profile
         infile = 'recf_upv' if ilr == scalars['ilr_utility'] * 100 else f'recf_upv_{ilr}AC'
         df_pvb[pvb_type] = read_file(os.path.join(inputs_case,infile+'.h5'))
+        fix_class_region_delimiter(df_pvb[pvb_type])
         df_pvb[pvb_type].columns = [f'pvb{pvb_type}_{c}'
                                     for c in df_pvb[pvb_type].columns]
         df_pvb[pvb_type].index = df_upv.index.copy()
@@ -462,8 +479,8 @@ def main(reeds_path, inputs_case):
 
     ### Add the other recf techs to the resources lookup table
     toadd = pd.DataFrame({'ragg': [c for c in recf.columns if c not in lookup.ragg.values]})
-    toadd['r'] = [c.rsplit('_', 1)[1] for c in toadd.ragg.values]
-    toadd['i'] = [c.rsplit('_', 1)[0] for c in toadd.ragg.values]
+    toadd['r'] = [c.rsplit('|', 1)[1] for c in toadd.ragg.values]
+    toadd['i'] = [c.rsplit('|', 1)[0] for c in toadd.ragg.values]
     resources = (
         pd.concat([lookup, toadd], axis=0, ignore_index=True)
         .rename(columns={'ragg':'resource','r':'area','i':'tech'})
@@ -615,7 +632,7 @@ def main(reeds_path, inputs_case):
     distpv_profiles = get_distpv_profiles(inputs_case, recf, rb2fips, agglevel)
     ### Get distpv resources and include in list of resources
     distpv_resources = pd.DataFrame({'resource':distpv_profiles.columns, 'tech':'distpv'})
-    distpv_resources['area'] = distpv_resources.resource.map(lambda x: x.split('_')[-1])
+    distpv_resources['area'] = distpv_resources.resource.map(lambda x: x.split('|')[-1])
 
     # Resetting indices before merging to assure there are no issues in the merge
     resources = pd.concat([resources, distpv_resources], sort=False, ignore_index=True)
@@ -652,8 +669,9 @@ def main(reeds_path, inputs_case):
         tech:
         pd.DataFrame({
             'resource': cspcf.columns,
-            'r': cspcf.columns.map(lambda x: x.split('_')[1]),
-            'class': cspcf.columns.map(lambda x: x.split('_')[0])})
+            'r': cspcf.columns.map(lambda x: x.split('|')[1]),
+            'class': cspcf.columns.map(lambda x: x.split('|')[0]),
+        })
         for tech in csptechs
     }, axis=0, names=('tech',)).reset_index(level='tech')
 
@@ -674,12 +692,12 @@ def main(reeds_path, inputs_case):
     ## All CSP resource classes have the same duration for a given tech, so just take the first one
     durations = {tech: storage_duration[f'csp{tech.strip("csp")}_1'] for tech in csptechs}
     ### Run the dispatch simulation for modeled regions
-    
+
     csp_system_cf = pd.concat({
         tech: csp_dispatch(cspcf, sm=sms[tech], storage_duration=durations[tech])
         for tech in csptechs
     }, axis=1)
-    ## Collapse column labels to single strings
+    ## Collapse multiindex column labels to single strings
     csp_system_cf.columns = ['_'.join(c) for c in csp_system_cf.columns]
 
     ### Add CSP to RE output dataframes

@@ -6,10 +6,7 @@ Patrick.Brown@nrel.gov 20210520
 #%% IMPORTS ###
 import os
 import pandas as pd
-import numpy as np
-import geopandas as gpd
-import shapely
-from tqdm import tqdm, trange
+from tqdm import tqdm
 ### Set up projection environment - needed for geopandas
 os.environ['PROJ_NETWORK'] = 'OFF'
 pd.options.display.max_rows = 20

@@ -277,7 +277,7 @@ def get_ferc_costs(
     ### ratepayers, so we exclude them from the fitted admin rates and then add them
     ### back in retail_rate_calculations.py using get_excluded_costs() and
     ### special amortization assumptions.
-    if drop_pgesce_20182019 == True:
+    if drop_pgesce_20182019 is True:
         ### Loop over the exclusions and subtract them
         for (utility, year) in excludecells:
             ### Get the row number to modify and make sure it's unique

@@ -58,9 +58,6 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#version-control-and-testing">Version Control and Testing</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#reeds-2-0-releases">ReEDS-2.0 Releases</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pull-request-best-practices">Pull Request Best Practices</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#resolving-merge-conflicts">Resolving Merge Conflicts</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#reeds-versioning-releases">ReEDS Versioning &amp; Releases</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#testing-guidelines">Testing Guidelines</a></li>
 </ul>
@@ -68,6 +65,19 @@
 <li class="toctree-l2"><a class="reference internal" href="#documentation-guidelines">Documentation Guidelines</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#how-to-use-sources-documentation">How to Use Sources Documentation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#updating-the-reeds-documentation">Updating the ReEDS Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adding-citations-in-the-documentation">Adding Citations in the Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#pull-request-best-practices">Pull Request Best Practices</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#best-practices-for-creating-prs">Best Practices for Creating PRs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#resolving-merge-conflicts">Resolving Merge Conflicts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tips-and-best-practices-for-pr-reviews">Tips and Best Practices for PR Reviews</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#reeds-development-tips">ReEDS Development Tips</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#debugging-python-code">Debugging Python Code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#debugging-gams-code">Debugging GAMS Code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#additional-development-tips">Additional Development Tips</a></li>
 </ul>
 </li>
 </ul>
@@ -271,7 +281,7 @@
 <ul>
 <li><p>Do not use inline comments (comments proceeded by //). This helps to make it easier to find comments</p></li>
 <li><p>Do not use <span class="math notranslate nohighlight">\(ontext/\)</span>offtext except for headers at the beginning of files</p></li>
-<li><p>Do not include a space after the “*” to start a comment</p></li>
+<li><p>Include a space after the “*” to start a comment</p></li>
 <li><p>Do not use a comment to note an issue.  Use GitHub to put the issue instead.</p></li>
 <li><p>Example: Don’t do this:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>*!!!! this will need to be updated to the tophrs designation after the 8760 cv/curt method is implemented   
@@ -403,72 +413,16 @@ $onlisting
 </section>
 <section id="version-control-and-testing">
 <h2>Version Control and Testing<a class="headerlink" href="#version-control-and-testing" title="Link to this heading"></a></h2>
-<section id="reeds-2-0-releases">
-<h3>ReEDS-2.0 Releases<a class="headerlink" href="#reeds-2-0-releases" title="Link to this heading"></a></h3>
-</section>
-<section id="pull-request-best-practices">
-<h3>Pull Request Best Practices<a class="headerlink" href="#pull-request-best-practices" title="Link to this heading"></a></h3>
-<p>To ensure a smooth process and maintain quality of the ReEDS model, the following are best practices that should be followed when creating a pull request:</p>
-<ul class="simple">
-<li><p>Prior to creating a pull request, perform the appropriate level of testing on your branch</p>
-<ul>
-<li><p>The Full U.S. test (in cases.csv) will be used in most cases</p></li>
-<li><p>For more information on testing, see the <a class="reference internal" href="#testing-guidelines"><span class="xref myst">Testing Guidlines section</span></a></p></li>
-</ul>
-</li>
-<li><p>Ensure the title of your pull request is both descriptive and concise</p>
-<ul>
-<li><p>This is crucial, as the title of your pull request will be used in the summary of changes for each new version of ReEDS</p></li>
-</ul>
-</li>
-<li><p>Fill out the pull request template in detail</p>
-<ul>
-<li><p>The description should be clear enough for someone not directly involved in your work to grasp the changes being proposed</p></li>
-<li><p>Assign and contact reviewers</p>
-<ul>
-<li><p>Best practice is to have 2 reviewers from the ReEDS team</p></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><p>Keep your pull request in draft mode until it is ready to be merged into the main branch, indicating to reviewers that it is still a work in progresss</p></li>
-<li><p>Create smaller pull requests more frequently when possible</p>
-<ul>
-<li><p>This helps avoid merge conflicts and simplifies the review process, making it more manageable for reviewers</p></li>
-</ul>
-</li>
-<li><p>After creating the pull request, monitor the status of the automated tests</p>
-<ul>
-<li><p>This runs the R2X test automatically</p></li>
-</ul>
-</li>
-<li><p>Prior to merging your pull request, make sure to update the relevant documentation to reflect your changes. There are two places that should be updated (more information on this can be found in the <a class="reference internal" href="#documentation-guidelines"><span class="xref myst">documentation guidelines</span></a>):</p>
-<ol class="arabic simple">
-<li><p>Sources_documentation</p></li>
-<li><p>The ‘docs/’ folder within the repository</p></li>
-</ol>
-</li>
-</ul>
-</section>
-<section id="resolving-merge-conflicts">
-<h3>Resolving Merge Conflicts<a class="headerlink" href="#resolving-merge-conflicts" title="Link to this heading"></a></h3>
-<p>Sometimes you might run into merge conflicts when trying to merge your branch into another branch. Merge conflicts happen when there are competing commits that Git needs you to help decide which changes should be kept in the final merge.</p>
-<p>Merge conflicts must be resolved prior to merging a pull request and there are different ways to handle merge conflicts:</p>
-<ul class="simple">
-<li><p>Simple merge conflicts can be resolved on GitHub. To learn more about how to do this, refer to GitHub’s documentation on <a class="reference external" href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/addressing-merge-conflicts/resolving-a-merge-conflict-on-github">Resolving merge conflicts on GitHub</a></p></li>
-<li><p>Larger or more complex merge conflicts will need to be resolved using the command line and a text editor (e.g., VSCode). To learn more about how to do this, refer to GitHub’s documentation on <a class="reference external" href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/addressing-merge-conflicts/resolving-a-merge-conflict-using-the-command-line">Resolving merge conflicts using the command line</a></p></li>
-</ul>
-</section>
 <section id="reeds-versioning-releases">
 <h3>ReEDS Versioning &amp; Releases<a class="headerlink" href="#reeds-versioning-releases" title="Link to this heading"></a></h3>
 <p>This section outlines the current ReEDS approach to versioning. You can find current and past ReEDS versions here: <a class="reference external" href="https://github.nrel.gov/ReEDS/ReEDS-2.0/releases">ReEDS-2.0 Releases</a></p>
 <section id="versioning-overview">
 <h4>Versioning overview<a class="headerlink" href="#versioning-overview" title="Link to this heading"></a></h4>
 <p>GitHub Releases are used to create ReEDS versions on a monthly cadence after a suite of tests are performed. More on ReEDS testing can be found <a class="reference internal" href="#./Testing"><span class="xref myst">here</span></a>. More information on GitHub Releases can be found in the <a class="reference external" href="https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases">GitHub Doc</a>.</p>
-<p>Releases are based on Git tags, and the proposed versioning scheme is <code class="docutils literal notranslate"><span class="pre">EPOCH.MONTHLYINCREMENT.PATCH</span></code>. The components are:</p>
+<p>Releases are based on Git tags, and the proposed versioning scheme is <code class="docutils literal notranslate"><span class="pre">EPOCH.RELEASE.PATCH</span></code>. The components are:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">EPOCH</span></code>: The current year, this will be incremented in January of each year (e.g., 2023)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">MONTHLYINCREMENT</span></code>: Restarts from 0 when EPOCH is increased, then increased by 1 each month when the newest version is created</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RELEASE</span></code>: Restarts from 0 when EPOCH is increased, then increased by 1 each month when the newest version is created</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">PATCH</span></code>: Typically will just be 0, but could increment if an important update or bug fix needs to be merged in prior to the next monthly release.</p></li>
 </ul>
 </section>
@@ -488,7 +442,7 @@ $onlisting
 <li><p>Each ReEDS run produces a meta.csv file with information on the branch, commit, and version of that run which can be used to determine the vintage of any given ReEDS run.</p></li>
 </ul>
 </li>
-<li><p>If you’re using ReEDS2X for a side project and would like to tag versions for them to refer to, the suggested format is: <code class="docutils literal notranslate"><span class="pre">EPOCH.MONTHLYINCREMENT.PATCH.PROJECTNAME</span></code>, where <code class="docutils literal notranslate"><span class="pre">EPOCH.MONTHLYINCREMENT.PATCH</span></code> refers to the last version of main that has been merged into your project branch.</p>
+<li><p>If you’re using ReEDS2X for a side project and would like to tag versions for them to refer to, the suggested format is: <code class="docutils literal notranslate"><span class="pre">EPOCH.RELEASE.PATCH.PROJECTNAME</span></code>, where <code class="docutils literal notranslate"><span class="pre">EPOCH.RELEASE.PATCH</span></code> refers to the last version of main that has been merged into your project branch.</p>
 <ul>
 <li><p>The same format can be used to tag specific versions of the model that are used for published analyses that are not merged into main, e.g. 2023.4.0.hybrids.</p></li>
 <li><p>In general, please add custom components to the tail of the version number instead of the beginning to keep them easy to sort.</p></li>
@@ -546,25 +500,7 @@ $onlisting
 <section id="new-version-test">
 <h4>New Version Test<a class="headerlink" href="#new-version-test" title="Link to this heading"></a></h4>
 <p><strong>This testing is required for a new tagged and released version</strong></p>
-<ol class="arabic simple">
-<li><p>Checks to perform:</p></li>
-</ol>
-<ul class="simple">
-<li><p>Cases.csv scenario can be run on the HPC, Yampa, Mac, and Windows</p></li>
-<li><p>There are no errors in output processing scripts, including:</p>
-<ul>
-<li><p>retail_rate_calculation.py</p></li>
-<li><p>health_damage_calculations.py</p></li>
-<li><p>reeds_to_rev.py</p></li>
-<li><p>transmission_maps.py</p></li>
-<li><p>HTML reports</p></li>
-</ul>
-</li>
-<li><p>R2X pytest passes</p></li>
-</ul>
-<ol class="arabic simple" start="2">
-<li><p>The cases in cases_test.csv should all be run. All scenarios except those listed below need to complete successfully.  If any of the cases below are not successful, they should be noted in the release notes.</p></li>
-</ol>
+<p>The full set of scenarios in <code class="docutils literal notranslate"><span class="pre">cases_test.csv</span></code> is run on HPC and Yampa (tests are also run locally on Mac or Windows, with the exception of the USA_decarb scenario). All test scenarios, with the exception of the following, must succeed in order for a new version to be created:</p>
 <ul class="simple">
 <li><p>Pacific test case with water constraints</p></li>
 <li><p>Pacific test case with PVB turned on</p></li>
@@ -572,10 +508,8 @@ $onlisting
 <li><p>Pacific test case with representatives weks</p></li>
 <li><p>Pacific test case with full chronological year</p></li>
 </ul>
-<ol class="arabic simple" start="3">
-<li><p>All cases output HTMLs should be reviewed to ensure they look reasonable.</p></li>
-<li><p>Create a comparison report of the national scenario and the national 100% decarb scenario for the model version update summary (these should be attached to the Release)</p></li>
-</ol>
+<p>For any error in the output processing scripts, a new GitHub issue should be created. Additionally, the issue should be noted in the release notes for the new version.</p>
+<p>Lastly, comparison reports are created for the USA and USA_decarb scenarios to compare the current version with the previous released version. Those comparison reports should be attached to the release notes for reference.</p>
 </section>
 </section>
 </section>
@@ -632,6 +566,264 @@ $onlisting
 </li>
 <li><p>If you would like to remove the generated files, you can run the command <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">clean</span></code> from the “docs/” folder</p></li>
 </ol>
+</section>
+<section id="adding-citations-in-the-documentation">
+<h3>Adding Citations in the Documentation<a class="headerlink" href="#adding-citations-in-the-documentation" title="Link to this heading"></a></h3>
+<p>To add an in-text citation, find the citation key of the citation you would like to add in Zotero. The format to include an in-text citation in markdown is as follows:</p>
+<ul class="simple">
+<li><p>Regular citation: <code class="docutils literal notranslate"><span class="pre">{cite}`citation</span> <span class="pre">key`</span></code></p></li>
+<li><p>Citation with just the year: <code class="docutils literal notranslate"><span class="pre">{cite:year}`citation</span> <span class="pre">key`</span></code></p></li>
+<li><p>Multiple citations: <code class="docutils literal notranslate"><span class="pre">{cite:p}`citation</span> <span class="pre">key</span> <span class="pre">1,</span> <span class="pre">citation</span> <span class="pre">key</span> <span class="pre">2`</span></code></p></li>
+</ul>
+<figure class="align-default" id="id1">
+<img alt="../_images/zotero_citation_example.png" src="../_images/zotero_citation_example.png" />
+<figcaption>
+<p><span class="caption-number">Fig. 20 </span><span class="caption-text">Example of citation key in Zotero</span><a class="headerlink" href="#id1" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>Alternatively, you can use the “Zotero Citation Picker” VS Code extension for finding/adding references to the documentation. This extension requires Zotero to be installed, as well as Better BibTex for Zotero (the Better BibTex for Zotero installation guide can be found <a class="reference external" href="https://retorque.re/zotero-better-bibtex/installation/">here</a>).</p>
+</section>
+</section>
+<section id="pull-request-best-practices">
+<h2>Pull Request Best Practices<a class="headerlink" href="#pull-request-best-practices" title="Link to this heading"></a></h2>
+<section id="best-practices-for-creating-prs">
+<h3>Best Practices for Creating PRs<a class="headerlink" href="#best-practices-for-creating-prs" title="Link to this heading"></a></h3>
+<p>To ensure a smooth process and maintain quality of the ReEDS model, the following are best practices that should be followed when creating a pull request:</p>
+<ul class="simple">
+<li><p>Prior to creating a pull request, perform the appropriate level of testing on your branch</p>
+<ul>
+<li><p>The Full U.S. test (in cases.csv) will be used in most cases</p></li>
+<li><p>For more information on testing, see the <a class="reference internal" href="#testing-guidelines"><span class="xref myst">Testing Guidlines section</span></a></p></li>
+</ul>
+</li>
+<li><p>Ensure the title of your pull request is both descriptive and concise</p>
+<ul>
+<li><p>This is crucial, as the title of your pull request will be used in the summary of changes for each new version of ReEDS</p></li>
+</ul>
+</li>
+<li><p>Fill out the pull request template in detail</p>
+<ul>
+<li><p>The description should be clear enough for someone not directly involved in your work to grasp the changes being proposed</p></li>
+<li><p>Assign and contact reviewers</p>
+<ul>
+<li><p>Best practice is to have 2 reviewers from the ReEDS team</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Keep your pull request in draft mode until it is ready to be merged into the main branch, indicating to reviewers that it is still a work in progresss</p></li>
+<li><p>Provide a charge code to your reviewers for their time spent reviewing</p></li>
+<li><p>Create smaller pull requests more frequently when possible</p>
+<ul>
+<li><p>This helps avoid merge conflicts and simplifies the review process, making it more manageable for reviewers</p></li>
+</ul>
+</li>
+<li><p>After creating the pull request, monitor the status of the automated tests</p>
+<ul>
+<li><p>This runs the R2X test automatically</p></li>
+</ul>
+</li>
+<li><p>Prior to merging your pull request, make sure to update the relevant documentation to reflect your changes. There are two places that should be updated (more information on this can be found in the <a class="reference internal" href="#documentation-guidelines"><span class="xref myst">documentation guidelines</span></a>):</p>
+<ol class="arabic simple">
+<li><p>Sources_documentation</p></li>
+<li><p>The ‘docs/’ folder within the repository</p></li>
+</ol>
+</li>
+</ul>
+</section>
+<section id="resolving-merge-conflicts">
+<h3>Resolving Merge Conflicts<a class="headerlink" href="#resolving-merge-conflicts" title="Link to this heading"></a></h3>
+<p>Sometimes you might run into merge conflicts when trying to merge your branch into another branch. Merge conflicts happen when there are competing commits that Git needs you to help decide which changes should be kept in the final merge.</p>
+<p>Merge conflicts must be resolved prior to merging a pull request and there are different ways to handle merge conflicts:</p>
+<ul class="simple">
+<li><p>Simple merge conflicts can be resolved on GitHub. To learn more about how to do this, refer to GitHub’s documentation on <a class="reference external" href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/addressing-merge-conflicts/resolving-a-merge-conflict-on-github">Resolving merge conflicts on GitHub</a></p></li>
+<li><p>Larger or more complex merge conflicts will need to be resolved using the command line and a text editor (e.g., VSCode). To learn more about how to do this, refer to GitHub’s documentation on <a class="reference external" href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/addressing-merge-conflicts/resolving-a-merge-conflict-using-the-command-line">Resolving merge conflicts using the command line</a></p></li>
+</ul>
+</section>
+<section id="tips-and-best-practices-for-pr-reviews">
+<h3>Tips and Best Practices for PR Reviews<a class="headerlink" href="#tips-and-best-practices-for-pr-reviews" title="Link to this heading"></a></h3>
+<p>The following are best practices that should be considered when reviewing pull requests:</p>
+<ol class="arabic simple">
+<li><p>Understand the context of the pull request</p>
+<ul class="simple">
+<li><p>Prior to reviewing any code changes, read the PR thoroughly</p>
+<ul>
+<li><p>Is the title descriptive?</p></li>
+<li><p>Does the summary accurately state what the PR is trying to accomplish?</p></li>
+<li><p>Is there sufficient information in the pull request to accurately convey the changes being made? Because the PR is documenting the change, part of your review entails ensuring that the model changes are properly reflected in the PR text.</p></li>
+<li><p>What is the high-level impact of this PR? Can you summarize the change on the run results in 1-2 sentences?</p></li>
+</ul>
+</li>
+<li><p>Look at any linked issues or pull requests and understand what is being fixed in this pull request and which issues or incompatibilities are not being addressed.</p></li>
+</ul>
+</li>
+<li><p>Look at the compare report and any other figures included in the PR</p>
+<ul class="simple">
+<li><p>Do you understand why these code/file changes resulted in these results?</p></li>
+<li><p>What is the high-level impact of this PR? Can you summarize the change on the run results in 1-2 sentences?</p></li>
+<li><p>Are these changes explainable/justifiable to both our internal and external audiences?</p></li>
+</ul>
+</li>
+<li><p>Review the code</p>
+<ul class="simple">
+<li><p>Look at each file that has changed</p>
+<ul>
+<li><p>Do code changes or new code added make sense?</p></li>
+<li><p>Ensure newly added code is documented (even if it’s just a single-line comment)</p></li>
+<li><p>Flag any instances where you notice that the code does not follow the <a class="reference internal" href="#coding-conventions"><span class="xref myst">Coding Conventions</span></a></p></li>
+<li><p>Identify if/how these code changes could cause problems later.</p>
+<ul>
+<li><p>What other parts of the model do these changes interact with? Is that interaction broken or no longer an accurate representation with these changes?</p></li>
+<li><p>What could break if we ran different scenarios with these changes? We typically look at the impact of our changes on “main” or “Standard Scenarios Mid-Case” type runs but also consider the potential impact on decarbonization scenarios, county level runs, smaller region runs, scenarios with hydrogen enabled, etc. We want to foresee any possible impacts this might have. If you have a concern or are curious about how this change might impact a certain type of run, ask the PR author, they might have looked at similar scenarios.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Look at any input files that have changed</p>
+<ul class="simple">
+<li><p>Reviewing the commit history can sometimes be helpful in determining what has changed</p></li>
+<li><p>Do the input changes make sense? Are they consistent with the PR descriptions?</p></li>
+<li><p>There are a couple tools that help with comparing two different csv files:</p>
+<ul>
+<li><p><a class="reference external" href="https://vscode.one/diff-vscode/">VSCode diff panel</a></p></li>
+<li><p><a class="reference external" href="https://pypi.org/project/csvdiff/#:~:text=csvdiff%20allows%20you%20to%20compare,look%20at%20just%20what's%20changed.">csvdiff</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Check out the branch locally (optional)</p>
+<ul class="simple">
+<li><p>You should check the branch out locally and run the test scenario(cases_test.csv) to ensure there are no issues</p></li>
+<li><p>If there are a large amount of changes to one of the scripts or code files (ex. input_processing scripts or GAMS files), it could be helpful to run just that script and walk through it line by line with a debugging tool (ex. <a class="reference external" href="https://docs.python.org/3/library/pdb.html">pdb</a>) to more deeply understand how the revised script functions and any issues we might face with the way that script is now written.</p></li>
+</ul>
+</li>
+</ol>
+<p><strong>A few notes on reviewing pull requests:</strong></p>
+<ul class="simple">
+<li><p>When reviewing PRs, be sure to provide constructive feedback and highlight positive aspects as well. Reviewing PRs is an opportunity to learn from one another and support each other’s development as developers!</p></li>
+<li><p>Ask clarifying questions if something is unclear</p>
+<ul>
+<li><p>Reviewing PRs can be daunting if you are new to the team or to the code development process. Remember that this is an opportunity for you to learn more about the model as much as it is about getting the code changes integrated into the model. Even experienced developers make errors, hence the importance of getting a second set of eyes on the code changes. Your input and insights are valuable.</p></li>
+<li><p>If you don’t understand what is going on with a code change, chances are high that others won’t understand either, so ask for clarification, including asking for more comments or explanation in the PR text.</p></li>
+<li><p>If there is a section of the PR that you don’t feel comfortable reviewing, you should request a review from another team member</p></li>
+</ul>
+</li>
+<li><p>Request changes as necessary and explain your reasoning</p></li>
+<li><p>Remember that the PR submitter is ultimately responsible for the changes in the PR, not you, so give the PR review a good effort, but don’t agonize over every detail.</p>
+<ul>
+<li><p>If reviewing a PR becomes too large of a chore, feel free to reach out to others on the team to be able to tackle the PR review jointly</p></li>
+</ul>
+</li>
+<li><p>If necessary, make sure the <a class="reference external" href="https://pages.github.nrel.gov/ReEDS/ReEDS-2.0/index.html">ReEDS documentation</a> was updated to reflect the code changes</p>
+<ul>
+<li><p>Instructions for how to update the documentation can be found <a class="reference internal" href="#updating-the-reeds-documentation"><span class="xref myst">here</span></a></p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<section id="reeds-development-tips">
+<h2>ReEDS Development Tips<a class="headerlink" href="#reeds-development-tips" title="Link to this heading"></a></h2>
+<section id="debugging-python-code">
+<h3>Debugging Python Code<a class="headerlink" href="#debugging-python-code" title="Link to this heading"></a></h3>
+<p>When working with python code, there are a couple of useful methods for debugging. The first is using the Python Interactive Window.</p>
+<p>Cells are denoted by <code class="docutils literal notranslate"><span class="pre">#%%</span></code>, and you can run the code in a given file by cells in the interactive window. This allows you to view data and variables, as well as create graphs and visuals. This can be very helpful in stepping through a script to see what is happening in your code.</p>
+<p>For more information, see the <a class="reference external" href="https://code.visualstudio.com/docs/python/jupyter-support-py#:~:text=For%20the%20whole%20notebook%2C%20open,the%20code%20in%20that%20cell.">Python Interactive Window documentation</a>.</p>
+<p>Another way to debug is to use the Python Debugger Extension in VS Code. For more information on how to set up and use the python debugger, see <a class="reference external" href="https://code.visualstudio.com/docs/python/debugging">Python debugging in VS Code</a>.</p>
+<p>When using the python debugger, you will need to set a configuration. Here’s an example of what that might look like (<code class="docutils literal notranslate"><span class="pre">launch.json</span></code> file):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    &quot;version&quot;: &quot;0.2.0&quot;,
+    &quot;configurations&quot;: [
+        {
+            &quot;name&quot;: &quot;Python Debugger: calc_financial_inputs.py with arguments&quot;,
+            &quot;type&quot;: &quot;debugpy&quot;,
+            &quot;request&quot;: &quot;launch&quot;,
+            &quot;program&quot;: &quot;${file}&quot;,
+            &quot;console&quot;: &quot;integratedTerminal&quot;,
+            &quot;args&quot;: [
+                &quot;/Users/kminderm/ReEDS-2.0&quot;,
+                &quot;/Users/kminderm/ReEDS-2.0/runs/main_Pacific/inputs_case&quot;
+            ],
+            &quot;purpose&quot;: [&quot;debug-in-terminal&quot;]
+        },
+
+    ]
+}
+</pre></div>
+</div>
+<p>For more on debugging, you can watch the following video: <a class="reference external" href="https://nrel.sharepoint.com/:v:/s/6A90-GridPlanningandAnalysisCenterGPAC/ERsyIuWezH1Mix2ZoGiGJk4B3S8u0KNqsIDG6QVbPQK3rw?e=FhUWGx&amp;amp;nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D">GPAC’s WEI Tips and Tricks Series: Introduction to Debugging</a></p>
+</section>
+<section id="debugging-gams-code">
+<h3>Debugging GAMS Code<a class="headerlink" href="#debugging-gams-code" title="Link to this heading"></a></h3>
+<p>When making changes to the GAMS code, something that can be helpful when debugging an issue is to compare the data before and after your change. You can do that by inserting an ‘execute unload’ statement into the gams code. Example of what this looks like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">execute_unload</span> <span class="s1">&#39;before.gdx&#39;</span> <span class="p">;</span>
+</pre></div>
+</div>
+<p>If you’re interested in only a specific variable, you can specify it like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">execute_unload</span> <span class="s1">&#39;before.gdx&#39;</span> <span class="n">valcap</span> <span class="p">;</span> 
+</pre></div>
+</div>
+<p>Additionally, if you want to re-run a given scenario without having to run all of the input processing again, you can open the <code class="docutils literal notranslate"><span class="pre">call_{batch</span> <span class="pre">name}_{case}.bat/.sh</span></code> file, delete all of the lines you don’t want to run again, and then run that file from the command line. <strong>Note: be sure to edit/run the <code class="docutils literal notranslate"><span class="pre">call_{batch</span> <span class="pre">name}_{case}.bat/.sh</span></code> file from within the specific run folder</strong></p>
+</section>
+<section id="additional-development-tips">
+<h3>Additional Development Tips<a class="headerlink" href="#additional-development-tips" title="Link to this heading"></a></h3>
+<ul>
+<li><p>To avoid the prompts when kicking off a run, you can use the command line arguments:</p>
+<ul class="simple">
+<li><p>The following example runs the scenarios in cases_test.csv with the batch name ‘20240717_test’. The ‘-r -1’ means that all cases will run simultaneously.</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">runbatch</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">c</span> <span class="n">test</span> <span class="o">-</span><span class="n">b</span> <span class="mi">20240717</span><span class="n">_test</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="mi">1</span>
+</pre></div>
+</div>
+<ul>
+<li><p>All options for command line arguments that can be used:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Flag</p></th>
+<th class="head"><p></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--BatchName</span></code> / <code class="docutils literal notranslate"><span class="pre">-b</span></code></p></td>
+<td><p>Name for batch of runs</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--cases_suffix</span></code> / <code class="docutils literal notranslate"><span class="pre">-c</span></code></p></td>
+<td><p>Suffix for cases CSV file</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--single</span></code> / <code class="docutils literal notranslate"><span class="pre">-s</span></code></p></td>
+<td><p>Name of a single case to run (or comma-delimited list)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--simult_runs</span></code> / <code class="docutils literal notranslate"><span class="pre">-r</span></code></p></td>
+<td><p>Number of simultaneous runs. If negative, run all simultaneously</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--forcelocal</span></code> / <code class="docutils literal notranslate"><span class="pre">-l</span></code></p></td>
+<td><p>Force model to run locally instead of submitting a slurm job</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--restart</span></code> / <code class="docutils literal notranslate"><span class="pre">-r</span></code></p></td>
+<td><p>Switch to restart existing ReEDS runs</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--skip_checks</span></code> / <code class="docutils literal notranslate"><span class="pre">-f</span></code></p></td>
+<td><p>Force run, skipping checks on conda environment and switches</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--debug</span></code> / <code class="docutils literal notranslate"><span class="pre">-d</span></code></p></td>
+<td><p>Run in debug mode (same behavior as debug switch in cases.csv)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--debugnode</span></code> / <code class="docutils literal notranslate"><span class="pre">-n</span></code></p></td>
+<td><p>Run using debug specifications for slurm on an hpc system</p></td>
+</tr>
+</tbody>
+</table>
+</li>
+</ul>
+</li>
+<li><p>If you’re on Mac and would like to have the terminal always show what branch you’re on, you can set up Git Bash for Mac with the following: <a class="reference external" href="https://github.com/fabriziocucci/git-bash-for-mac">Git Bash for Mac</a></p></li>
+<li><p>Using the following run name format keeps your runs folder organized: ‘vYYYYMMDD’</p></li>
+</ul>
 </section>
 </section>
 </section>

@@ -77,7 +77,8 @@ if copy_to_nrelnas:
     src = os.path.join(os.path.join(os.getcwd(), "out", hourlize_run))
     dest = os.path.join(drive, hourlize_base, hourlize_run)
     # if the run already exists on nrelnas01, remove and rewrite it
-    if os.path.exists(dest): shutil.rmtree(dest)
+    if os.path.exists(dest):
+        shutil.rmtree(dest)
     shutil.copytree(src, dest)
 
 noresolutionlabel = ''

@@ -201,8 +201,8 @@ function process_vsc_lines(lines::Vector{Line}, regions::Vector{Region})
     vsc_dc_lines = filter(line -> line.VSC, lines)
 
     for vsc_line in vsc_dc_lines
-        dc_region_from = "DC_$(vsc_line.region_from)"
-        dc_region_to = "DC_$(vsc_line.region_to)"
+        dc_region_from = "DC|$(vsc_line.region_from)"
+        dc_region_to = "DC|$(vsc_line.region_to)"
 
         for reg_name in [dc_region_from, dc_region_to]
             if ~(reg_name in get_name.(regions))
@@ -213,7 +213,7 @@ function process_vsc_lines(lines::Vector{Line}, regions::Vector{Region})
         push!(
             non_vsc_dc_lines,
             Line(
-                name = "$(vsc_line.name)_DC",
+                name = "$(vsc_line.name)|DC",
                 timesteps = vsc_line.timesteps,
                 category = vsc_line.category,
                 region_from = dc_region_from,

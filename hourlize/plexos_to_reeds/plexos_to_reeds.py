@@ -1,7 +1,5 @@
 import pandas as pd
-import numpy as np
 from pdb import set_trace as pdbst
-import datetime
 
 #Enter the path to the hourly csv data by plexos region here. The first column should be 'DATETIME',
 #and the following columns should be the name of each plexos region. Then run 'python plexos_to_reeds.py'

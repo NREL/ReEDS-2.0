@@ -481,18 +481,15 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
             #%% Write the geohydro exogenous (pre-tstart) capacity
             ### Get the site-level builds
             dfgeohydroexog = pd.read_csv(
-                os.path.join(
-                    reeds_path,'inputs','capacity_exogenous',
-                    f'geohydro_exog_cap_reference_ba.csv')
-            ).rename(columns={'*tech':'*i','region':'r','year':'t','capacity':'MW'})
-            dfgeohydroexog = dfgeohydroexog.loc[dfgeohydroexog['r'].isin(val_r_all)]
+                os.path.join(inputs_case,'geohydro_exog_cap.csv')
+            ).rename(columns={'capacity':'MW'})
             ### Aggregate if necessary
             if agglevel not in ['county','ba']:
                 ### Map to the new regions (hierarchy loaded with wind above)
-                dfgeohydroexog.r = dfgeohydroexog.r.map(r2aggreg)
+                dfgeohydroexog.region = dfgeohydroexog.region.map(r2aggreg)
             ### Get the rscbin, then sum by (i,r,rscbin,t)
             dfgeohydroexog['rscbin'] = 'bin'+dfgeohydroexog.sc_point_gid.map(gid2irb_geohydro.rscbin).astype(int).astype(str)
-            dfgeohydroexog = dfgeohydroexog.groupby(['*i','r','rscbin','t']).MW.sum()
+            dfgeohydroexog = dfgeohydroexog.groupby(['*tech','region','rscbin','year']).MW.sum()
 
     #%% Get supply-curve data for postprocessing
     spurout_list = [
@@ -1077,7 +1074,7 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
         dfupvexog.round(3).to_csv(os.path.join(inputs_case,'exog_upv_rsc.csv'))
         ## Exogenous geohydro
         if use_geohydro_rev_sc:
-            dfgeohydroexog.round(3).to_csv(os.path.join(inputs_case,'geohydro_allkm_exog_cap.csv'))
+            dfgeohydroexog.round(3).to_csv(os.path.join(inputs_case,'exog_geohydro_allkm_rsc.csv'))
         ## Geothermal discovery rates
         geo_disc_rate.round(decimals).to_csv(os.path.join(inputs_case, 'geo_discovery_rate.csv'), index=False)
         geo_discovery_factor.round(decimals).to_csv(os.path.join(inputs_case, 'geo_discovery_factor.csv'), index=False)

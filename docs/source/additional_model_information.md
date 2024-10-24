@@ -1,17 +1,4 @@
-# Model Information
-## Overview 
-ReEDS is a mathematical programming model of the electric power sector. Given a set of input assumptions, ReEDS models the evolution and operation of generation, storage, transmission, and production technologies. 
-
-The model consists of two separate but interrelated modules:
-  * Supply module -  this module solves a linear program for the cost-minimizing levels of power sector investment
-  * Operation and storage (VRE) module - this module calculates key parameters for assessing the 
-  value of VRE generators and storage
-
-The full, detailed documentation of the ReEDS model can be found in the latest version of the published documentation: [Regional Energy Deployment System (ReEDS) Model Documentation: Version 2020](https://www.nrel.gov/docs/fy21osti/78195.pdf).
-
-Detailed documentation of ReEDS 2.0 input files are available [here](./sources.md)
-
-
+#Additional Model Information
 ## Model Switches
 ```{eval-rst}
 .. include:: ../../input_processing/README.md

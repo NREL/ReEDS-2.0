@@ -1,4 +1,8 @@
 bio_cofire_perc,0.15,'--fraction-- fraction of total fuel that is biomass used in cofire plants
+caa_coal_retire_year,2032,"--year-- year in which coal capacity is forced to either retire or upgrade with CCS to meet the emissions requirements under Clean Air Act, Section 111"
+caa_first_year,2024,"--year-- first year in which the emissions requirements under Clean Air Act, Section 111 are active"
+caa_rate_emis_standard,0.1039,"--metric tons CO2 per MWh-- rate equivalent to average emissions from a new coal-CCS plant, assuming 90% capture rate. Emissions rate from new coal-CCS plant is 0.051956 metric tons CO2 per MWh (see emit_rate) which assumes 95% capture. For 90% capture, the emissions rate is double that or 0.1039 metric tons CO2 per MWh."
+caa_gas_max_cf,0.40,"--fraction-- maximum cf that new gas plants (CCs or CTs) can operate at without being regulated under Clean Air Act, Section 111"
 co2_capture_incentive_length,12,'--years-- length for the co2 captured incentive to be extended in d_solveoneyear if an upgrade occurs
 co2_capture_incentive_last_year_,2038,'--year-- last year the co2 captured incentive is available
 co2_emissions_2022,1539.251,"--million metric tons CO2-- 2022 emissions (used for tax credit phaseout)"

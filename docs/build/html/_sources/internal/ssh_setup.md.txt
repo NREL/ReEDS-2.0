@@ -57,23 +57,23 @@ Now that you have created a new SSH key and added it to the ssh-agent, you need 
 
 1. Log on to github.nrel.gov and go to your account settings
 ```{figure} ../../../images/github_settings.png
-:name: figure-4
+:name: figure-github-settings
 
-Figure 4. GitHub account settings
+GitHub account settings
 ```
 
 
 2. Click on "SSH and GPG keys" on the left sidebar, then click on `New SSH key`
 ```{figure} ../../../images/github_ssh_gpg_keys.png
-:name: figure-5
+:name: figure-github-ssh-gpg-keys
 
-Figure 5. GitHub SSH and GPG keys 
+GitHub SSH and GPG keys 
 ```
 
 ```{figure} ../../../images/github_add_ssh_key.png
-:name: figure-6
+:name: figure-github-add-ssh-key
 
-Figure 6. GitHub Add New SSH Key
+GitHub Add New SSH Key
 ```
 
 3. Create a title and paste the SSH key into the "Key" field
@@ -98,23 +98,23 @@ Figure 6. GitHub Add New SSH Key
 8. Log on to github.nrel.gov and go to your account settings
    
 ```{figure} ../../../images/github_settings.png
-:name: figure-4-repeat
+:name: figure-github-settings-2
 
-Figure 4. GitHub account settings
+GitHub account settings
 ```
 
 9. Click on "SSH and GPG keys" on the left sidebar, then click on `New SSH key`
 
 ```{figure} ../../../images/github_ssh_gpg_keys.png
-:name: figure-5-repeat
+:name: figure-github-ss-gpg-keys-2
 
-Figure 5. GitHub SSH and GPG keys 
+GitHub SSH and GPG keys 
 ```
 
 ```{figure} ../../../images/github_add_ssh_key.png
-:name: figure-6-repeat
+:name: figure-github-add-ssh-key-2
 
-Figure 6. GitHub Add New SSH Key
+GitHub Add New SSH Key
 ```
 
 10. Create a title for your key (e.g. yampa) and paste the text from the clipboard into the text box below, then click "Add SSH Key" to save.

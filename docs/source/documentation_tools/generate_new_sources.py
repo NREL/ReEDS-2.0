@@ -9,7 +9,6 @@
 # and generates a new version of sources.csv containing details about each input and script files
 
 import os
-from os import walk
 import csv
 import pandas as pd
 from datetime import datetime
@@ -220,7 +219,7 @@ def rename_file(reeds_path, old_sources_csv, new_sources_csv):
     
     
 #Old sources csv is the original sources.csv file
-old_sources_csv = f"sources.csv"
+old_sources_csv = "sources.csv"
 #Adding a timestamp for log purposes and to compare with the latest sources.csv if needed
 new_sources_csv = f"sources_{timestamp}.csv"
 

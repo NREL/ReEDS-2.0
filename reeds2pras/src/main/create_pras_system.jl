@@ -45,7 +45,7 @@ function create_pras_system(
     weather_year::Int,
 )
     # switched to US/EST from UTC
-    first_ts = TimeZones.ZonedDateTime(weather_year, 01, 01, 00, TimeZones.tz"EST")
+    first_ts = TimeZones.ZonedDateTime(weather_year, 01, 01, 00, TimeZones.tz"UTC")
     last_ts = first_ts + Dates.Hour(timesteps - 1)
     my_timestamps = StepRange(first_ts, Dates.Hour(1), last_ts)
 

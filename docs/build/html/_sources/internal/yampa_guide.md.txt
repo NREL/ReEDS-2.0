@@ -14,10 +14,10 @@ orphan: true
 Access to the servers is controlled through the "reedsos" allocation. To request an HPC account, complete this [request form](https://www.nrel.gov/hpc/user-accounts.html). When asked if you intend to request a new project/allocation, select "no" and request to join "reedsos". 
 
 ```{figure} ../../../images/hpc_request_form.png
-:name: figure-1-yampa
 
-Figure 1. HPC account form, request to join "reedsos" allocation
+HPC account form, request to join "reedsos" allocation
 ```
+**Note:** the 'reedsos' allocation isn't an active allocation for HPC, which can cause some confusion with the HPC team, but it is still used to manage access to yampa.
 
 If you have access issues after requesting an account, you can contact HPC help at [HPC-Help@nrel.gov](HPC-Help@nrel.gov). 
 
@@ -31,9 +31,8 @@ Connections to the machines can be made using Microsoft Remote Desktop. To downl
 From the Remote Desktop client, you will need to click on the '+' then 'Add PC'. In the 'PC name' field, put the machine name that you would like to connect to, then click 'Add'.
 
 ```{figure} ../../../images/yampa_add_machine.png
-:name: figure-2-yampa
 
-Figure 2. Example of how to add a new machine in Microsoft Remote Desktop
+Example of how to add a new machine in Microsoft Remote Desktop
 ```
 
 **Username and Password**: Same as HPC credentials. 
@@ -71,9 +70,8 @@ Once completed, your bashrc file should look like the following screenshot. Save
 
 
 ```{figure} ../../../images/yampa_bashrc_file.png
-:name: figure-3-yampa
 
-Figure 3. Example of bashrc file with updated $PATH
+Example of bashrc file with updated $PATH
 ```
 
 ##### Set up conda folders/environments
@@ -85,6 +83,10 @@ You'll want to create a folder within your projects folder to store conda enviro
 Now, direct conda to look in these folders for packages and environments by running the following commands: 
    * `conda config --add pkgs_dirs /data/shared/projects/[username]/.conda/pkgs`
    * `conda config --add envs_dirs /data/shared/projects/[username]/.conda/envs`
+
+Next, create and activate the conda environment. From the terminal, run the following commands from within the ReEDS repo: 
+   * `conda env create -f environment.yml` - this step may take a while
+   * `conda activate reeds` - if this steps causes issues, you can try running `source activate reeds2` instead
 
 ##### Create SSH key and add it to your GitHub account
 Follow the [ssh setup guide](ssh_setup.md) to create a new SSH key and add it to your GitHub account.
@@ -98,11 +100,11 @@ We've prepopulated links for GAMS Studio, RStudio, and SmartGit kept in "/data/s
 #### GAMS Studio
 GAMS Studio is the IDE packaged with GAMS. It can be used for GAMS development and supports code markup and executing GAMS code from the developer environment. The other major application of GAMS Studio is to open .gdx files. 
 
-The GAMS studio executable is stored in the folder "/data/shared/apps/gams/gams34.3_linux_x64_64_sfx/studio/studio.AppImage".
+The GAMS studio executable is stored in the folder "/data/shared/apps/gams/gams45.2_linux_x64_64_sfx/studio/studio.AppImage".
 
 If the folder containing the executable was added to the path it can be run by using the following command from the terminal: `Studio.AppImage`
 
-Note: If if hasn't been added to your path, you can run the following command instead: `/data/shared/apps/gams/gams34.3_linux_x64_64_sfx/studio/studio.AppImage` 
+Note: If if hasn't been added to your path, you can run the following command instead: `/data/shared/apps/gams/gams45.2_linux_x64_64_sfx/studio/studio.AppImage` 
 
 Navigate to postprocessing/bokehpivot and make sure your reeds environment has been activated.  
 
@@ -132,17 +134,17 @@ Since at this time we can’t use the Linux servers to talk to Yampa we’re goi
    * To install, go to the link in the paragraph above, use the "Windows 64-bit" link to the installer. Download and run it.
    * After installation, open Remote Desktop, and click the Subscribe button. The ASCR machine should show up if you've been added to the group "Constellation Azure Servers" group. - If you're not already a member, you will need to get added, then Unsubscribe via the dropdown in the General Workspaces tab and subscribe again
 
-2. You can connect to winscp using your hpc credentials and a valid host name (eagle.hpc.nrel.gov). Once connected you can see the file system. You will want to navigate to the root and then to the following directory: `/scratch/[username]` 
+2. You can connect to winscp using your hpc credentials and a valid host name (kestrel.hpc.nrel.gov). Once connected you can see the file system. You will want to navigate to the root and then to the following directory: `/scratch/[username]` 
    * All HPC users are allocated a reasonable amount of temporary space in this folder and it’s a useful place for performing a transfer. 
 
 3. Connect to Yampa and run the following command with your required changes: 
    ```
-   rsync -avz -e ssh /data/shared/projects/[SOURCE FOLDER PATH]/ jho@eagle.nrel.gov:/scratch/[DESTINATION FOLDER PATH]/ 
+   rsync -avz -e ssh /data/shared/projects/[SOURCE FOLDER PATH]/ jho@kestrel.nrel.gov:/scratch/[DESTINATION FOLDER PATH]/ 
    ```
 
    *  Here's an example: 
    ```
-   rsync -avz -e ssh /data/shared/projects/jho/Target_Folder/ jho@eagle.nrel.gov:/scratch/jho/Destination_Folder/ 
+   rsync -avz -e ssh /data/shared/projects/jho/Target_Folder/ jho@kestrel.nrel.gov:/scratch/jho/Destination_Folder/ 
    ```
 
 4. Once executed, you'll get a login for the HPC. Once you've entered your credentials the transfer will start. 
@@ -185,9 +187,8 @@ Once created you can use the shortcut as if it were a directory.
 If you want the file viewer to adopt sorting behavior where folders are sorted alphabetically before files. You can make that change by opening the preferences menu in the folder viewer. 
 
 ```{figure} ../../../images/yampa_file_preferences.png
-:name: figure-4-yampa
 
-Figure 4. File preferences on Yampa
+File preferences on Yampa
 ```
 
 Then select the option for Sort Folders before Files. 

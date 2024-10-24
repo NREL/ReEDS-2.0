@@ -132,8 +132,8 @@ def build_dfs(years, techs, vintage_definition, year_map):
     df_it = pd.DataFrame(list(itertools.product(techs['i'], years)),
                             columns=['i', 't'])
 
-    # Since df_inv only contains generators available for build, filter itc map down
-    itv_map_inv = itv_map[itv_map['available_for_build']==True]
+    # Since df_inv only contains generators available for build, filter itc map down to only include rows where 'available_for_build' is True
+    itv_map_inv = itv_map[itv_map['available_for_build']]
 
     # Merge on itv_map_inv to expand by [v]
     # Expand for [v]
@@ -227,7 +227,7 @@ def import_data(file_root, file_suffix, indices, scen_settings, inflation_df=[],
         os.path.join(scen_settings.inputs_case, f'{file_root}.csv'))
 
     # Expand tech groups, if there is an 'i' column and the argument is True
-    if 'i' in df.columns and expand_tech_groups==True:
+    if 'i' in df.columns and expand_tech_groups is True:
         for tech_group in scen_settings.tech_groups.keys():
             if tech_group in list(df['i']):
 
@@ -248,7 +248,7 @@ def import_data(file_root, file_suffix, indices, scen_settings, inflation_df=[],
     # any columns with currency data. If currency data exists, adjust the dollar
     # year of the input data to the scen_settings's dollar year
     if (os.path.isfile(os.path.join(scen_settings.inputs_case, file_root, f'currency_{file_root}.csv'))
-        and (adjust_units==True)
+        and (adjust_units is True)
     ):
         currency_meta = pd.read_csv(
             os.path.join(scen_settings.inputs_case, f'currency_{file_root}.csv'), 
@@ -279,7 +279,7 @@ def import_data(file_root, file_suffix, indices, scen_settings, inflation_df=[],
             df[col] = df[col] * inflation_adjust
 
     # Check to see if there are any duplicate entries for the given indices
-    if check_for_dups==True:
+    if check_for_dups is True:
         df_index_check = df[indices].copy()
         if len(df_index_check) != len(df_index_check.drop_duplicates()):
             print('Error: Duplicate entries for', file_root, file_suffix, 'on indices', indices)
@@ -403,8 +403,8 @@ def import_and_mod_incentives(incentive_file_suffix, construction_times_suffix,
     # Merge with construction start years
     incentive_df = incentive_df.merge(construction_times, on=['i', 't'], how='left')
 
-    # Because of changing construction durations, some incentives don't apply to any online years. Drop those rows. 
-    incentive_df = incentive_df[incentive_df['t'].isnull()==False]
+    # Because of changing construction durations, some incentives don't apply to any online years. Keep only the rows where the 't' column is not null.  
+    incentive_df = incentive_df[incentive_df['t'].notnull()]
     
     # If the construction period exceeds the safe harbor, assume the safe harbor would be extended
     incentive_df['ptc_safe_harbor'] = incentive_df[['ptc_safe_harbor', 'construction_time']].max(axis=1)

@@ -191,7 +191,7 @@ def get_inputs(sw):
         os.path.join(sw['casedir'],'inputs_case','resources.csv')
     ).set_index('resource')
     resources['tech'] = (
-        resources.i.map(lambda x: x.split('_')[0])
+        resources.i.map(lambda x: x.split('|')[0])
         .map(lambda x: x if x.startswith('battery') else x.strip('_01234567890*')))
 
     resources['rb'] = resources.r

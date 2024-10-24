@@ -48,9 +48,6 @@
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="internal/additional_setup.html">Additional ReEDS Setup</a></li>
-<li class="toctree-l1"><a class="reference internal" href="internal/developer_best_practices.html">Developer Resources</a></li>
-<li class="toctree-l1"><a class="reference internal" href="internal/onboarding.html">Onboarding Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Model Switches</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#hourly-process-py">hourly_process.py</a><ul>
@@ -111,7 +108,7 @@
 <li><p>Switch to <code class="docutils literal notranslate"><span class="pre">GSw_HourlyType=wek</span></code>, which increases the length of the periods from 1 day to 5 days. If all the other switches are left at their defaults, switching to <code class="docutils literal notranslate"><span class="pre">wek</span></code> would increase the coverage from 42 days to 5*42=210 days.</p></li>
 <li><p>Reduce <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterRegionLevel</span></code> to something smaller than transreg (like <code class="docutils literal notranslate"><span class="pre">st</span></code>), and then increase <code class="docutils literal notranslate"><span class="pre">GSw_HourlyNumClusters</span></code></p></li>
 <li><p>Switch to <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusteAlgorithm=hierarchical</span></code> and then increase <code class="docutils literal notranslate"><span class="pre">GSw_HourlyNumClusters</span></code> (although that’s less desirable, because hierarchical clustering doesn’t do as good of a job of reproducing the actual spatial distribution of CF and load)</p></li>
-<li><p>Switch to <code class="docutils literal notranslate"><span class="pre">Gsw_HourlyType=year</span></code>. Although if you’re running for the whole US you’ll need to turn on region aggregation (<code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution=aggreg</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span></code> in [<code class="docutils literal notranslate"><span class="pre">agg1</span></code>, or <code class="docutils literal notranslate"><span class="pre">agg2</span></code>]) for it to solve.</p></li>
+<li><p>Switch to <code class="docutils literal notranslate"><span class="pre">Gsw_HourlyType=year</span></code>. Although if you’re running for the whole US you’ll need to turn on region aggregation (<code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution=aggreg</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span></code> in [<code class="docutils literal notranslate"><span class="pre">default</span></code> or <code class="docutils literal notranslate"><span class="pre">agg1</span></code>, or <code class="docutils literal notranslate"><span class="pre">agg2</span></code> or <code class="docutils literal notranslate"><span class="pre">agg3</span></code>]) for it to solve.</p></li>
 </ul>
 </li>
 </ul>

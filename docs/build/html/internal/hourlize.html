@@ -279,7 +279,8 @@ temporally and spatially.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">add_cost()</span></code></p>
 <ul class="simple">
-<li><p>A column of overall supply curve costs is added to the supply curve (<code class="docutils literal notranslate"><span class="pre">supply_curve_cost_per_mw</span></code>), as well as certain components of that cost (e.g. <code class="docutils literal notranslate"><span class="pre">trans_adder_per_mw</span></code> and <code class="docutils literal notranslate"><span class="pre">capital_adder_per_MW</span></code>). Logic for these costs depends on <code class="docutils literal notranslate"><span class="pre">tech</span></code>, and the value of <code class="docutils literal notranslate"><span class="pre">cost_out</span></code> in config (e.g. <code class="docutils literal notranslate"><span class="pre">combined_eos_trans</span></code> for onshore wind).</p></li>
+<li><p>A column of overall supply curve costs is added to the supply curve (<code class="docutils literal notranslate"><span class="pre">supply_curve_cost_per_mw</span></code>), as well as certain components of that cost (e.g. <code class="docutils literal notranslate"><span class="pre">trans_adder_per_mw</span></code> and <code class="docutils literal notranslate"><span class="pre">capital_adder_per_mw</span></code>). Logic for these costs depends on <code class="docutils literal notranslate"><span class="pre">tech</span></code>, and the value of <code class="docutils literal notranslate"><span class="pre">cost_out</span></code> in config (e.g. <code class="docutils literal notranslate"><span class="pre">combined_eos_trans</span></code> for onshore wind).</p></li>
+<li><p>A column of overall supply curve costs is added to the supply curve (<code class="docutils literal notranslate"><span class="pre">supply_curve_cost_per_mw</span></code>), as well as certain components of that cost (e.g. <code class="docutils literal notranslate"><span class="pre">trans_adder_per_mw</span></code> and <code class="docutils literal notranslate"><span class="pre">capital_adder_per_mw</span></code>). Logic for these costs depends on <code class="docutils literal notranslate"><span class="pre">tech</span></code>, and the value of <code class="docutils literal notranslate"><span class="pre">cost_out</span></code> in config (e.g. <code class="docutils literal notranslate"><span class="pre">combined_eos_trans</span></code> for onshore wind).</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">save_sc_outputs()</span></code></p>
@@ -507,11 +508,11 @@ temporally and spatially.</p>
 </tr>
 <tr class="row-odd"><td class="text-left"><p>cost_adder_components</p></td>
 <td class="text-left"><p>Supply curve cost columns to carry over to outputs</p></td>
-<td class="text-left"><p>upv, wind-ons: [‘trans_adder_per_MW’, ‘capital_adder_per_MW’]<br>wind-ofs: []</p></td>
+<td class="text-left"><p>upv, wind-ons: [‘trans_adder_per_mw’, ‘capital_adder_per_mw’]<br>wind-ofs: []</p></td>
 </tr>
 <tr class="row-even"><td class="text-left"><p>distance_cols</p></td>
-<td class="text-left"><p>dist_to_coast is currently in meters, so we convert to km in get_supply_curve_and_preprocess()</p></td>
-<td class="text-left"><p>upv, wind-ons: [‘dist_km’,’reinforcement_dist_km’]<br>wind-ofs: [‘dist_km’,’dist_to_coast’,’reinforcement_dist_km’]</p></td>
+<td class="text-left"><p>can include distances for spur lin, reinforcements, and offshore wind export cable (typically in km)</p></td>
+<td class="text-left"><p>upv, wind-ons: [‘dist_spur_km’,’dist_reinforcement_km’]<br>wind-ofs: [‘dist_spur_km’,’dist_reinforcement_km’,’dist_export_km’]</p></td>
 </tr>
 <tr class="row-odd"><td class="text-left"><p>filter_cols</p></td>
 <td class="text-left"><p>{} means use the entire dataframe; {‘offshore’:[‘=’,0]} means filter the supply curve to rows for which offshore is 0.</p></td>

@@ -26,7 +26,7 @@ get_λ(stor::STOR) where {STOR <: Storage} =
 get_μ(stor::STOR) where {STOR <: Storage} =
     fill(getfield(get_outage_rate(stor), :μ), 1, stor.timesteps)
 
-get_category(stor::STOR) where {STOR <: Storage} = "$(stor.legacy)_$(stor.type)"
+get_category(stor::STOR) where {STOR <: Storage} = "$(stor.legacy)|$(stor.type)"
 
 """
     This function searches an array stors of type Vector{<:Storage} for

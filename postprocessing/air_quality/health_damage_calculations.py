@@ -41,7 +41,8 @@ import traceback
 
 reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 site.addsitedir(os.path.join(reeds_path,'input_processing'))
-from ticker import makelog
+# import makelog after setting the module path; if it's done before, the ticker module won't be found
+from ticker import makelog  # noqa: E402
 
 ### Functions
 def get_marginal_damage_rates(casepath):

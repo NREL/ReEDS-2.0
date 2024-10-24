@@ -84,9 +84,9 @@ class grouping:
         # NOTE: The calculations here and below in group() can probably be done 
         # faster by group (without a loop).
         for ba in input_df.r.unique():
-            ba_df = input_df[input_df.r == ba]
+            ba_df = input_df[input_df.r == ba].copy()
             for tech in ba_df.TECH.unique():
-                df = ba_df[ba_df.TECH == tech]
+                df = ba_df[ba_df.TECH == tech].copy()
                 df['bin'] = df.reset_index(drop=True).index + 1
                 output_df = pd.concat([output_df, df])
 
@@ -207,7 +207,7 @@ class grouping:
                     # initialize the centroids - note that the
                     # random_state argument implies a static seed
                     # for the random processes/distribution-draws 
-                    # used in the kmeans function
+                    # used in the kmeans function           
                     centroids_obj = KMeans(
                         n_clusters=nbins, random_state=0, max_iter=1000, n_init=n_init,
                     ).fit(df[[col]].to_numpy(), sample_weight = df['Summer.capacity'].to_numpy())
@@ -305,6 +305,7 @@ def main(reeds_path, inputs_case):
     mindev = int(sw.mindev)
     GSw_WaterMain = sw.GSw_WaterMain    
     GSw_CoalRetire = int(sw.GSw_CoalRetire)
+    GSw_Clean_Air_Act = int(sw.GSw_Clean_Air_Act)
     coalretireyrs = int(sw.coalretireyrs)
 
     # ReEDS only supports a single entry for agglevel right now, so use the
@@ -408,13 +409,23 @@ def main(reeds_path, inputs_case):
     # Adjust coal retirement dates based on switch
     tech_table = pd.read_csv(
         os.path.join(inputs_case, 'tech-subset-table.csv')).set_index('Unnamed: 0')
-    coal_techs = tech_table[tech_table['COAL'] == 'YES'].index.values.tolist()
+    coal_techs = [x.lower() for x in tech_table[tech_table['COAL'] == 'YES'].index.values.tolist()]
+    gas_techs = [x.lower() for x in tech_table[tech_table['GAS'] == 'YES'].index.values.tolist()]
+
     current_yr = datetime.date.today().year
+
+    # if GSw_CoalRetire = 0, then lifetime coal retirements are not adjusted, data is just straight from EIA unit database
+
+    # if GSw_CoalRetire = 1, 
+        # For units with retire years sooner than current_yr + coalretireyrs, those units are forced to retire in this year.
+        # For units with retire years after or equal to current_yr + coalretireyrs, their lifetime is shorted by 'coalretireyrs'.
     if GSw_CoalRetire == 1:
         df.loc[(df['RetireYear'] < current_yr + coalretireyrs) & (df['RetireYear'] > current_yr)
                & (df['TECH'].isin(coal_techs)), 'RetireYear'] = current_yr
         df.loc[(df['RetireYear'] >= current_yr + coalretireyrs) & (df['TECH'].isin(coal_techs)),
                'RetireYear'] -= coalretireyrs
+
+    # if GSw_CoalRetire = 2, then increase the lifetime of all currently operating coal units by 'coalretireyrs'
     elif GSw_CoalRetire == 2:
         df.loc[(df['RetireYear'] > current_yr) & (df['TECH'].isin(coal_techs)),
                'RetireYear'] += coalretireyrs
@@ -435,13 +446,32 @@ def main(reeds_path, inputs_case):
     # Make unique ID column for generators
     id_delimiter = '<dontputthisinaname>'
     dat['id'] = dat.TECH + id_delimiter + dat.r
-
+    
     # Bin hintage data - this leverages the kmeans function in
     # the grouping class to perform the operations in the _kmeans sub-class
     # and returns the 'dat' dataframe with the additional 'bin' column
-    tdat = grouping(nBin, dat, 'HR', minSpread=mindev).df
+    # this needs to be done separately since coal techs are regulated at the unit level
+    dat_non_coal = dat[~dat.TECH.isin(coal_techs)] # all non-coal plants
+    dat_coal = dat[dat.TECH.isin(coal_techs)] # coal plants
 
-    # calculate the capacity-weighted average heat rate for each bin 
+    # treat the non-coal options regularly
+    tdat_non_coal = grouping(nBin, dat_non_coal, 'HR', minSpread=mindev).df
+
+    # coal plants are grouped at the unit level if GSw_Clean_Air_Act is enabled
+    if GSw_Clean_Air_Act == 1:
+        tdat_coal = grouping('unit', dat_coal, 'HR', minSpread=mindev).df
+    else:
+        tdat_coal = grouping(nBin, dat_coal, 'HR', minSpread=mindev).df
+
+    tdat = pd.concat([tdat_non_coal, tdat_coal], ignore_index=True, axis=0)
+    
+    # calculate the maximum hintage number, to be used in b_inputs.gms, and export it
+    max_hintage_number = tdat['bin'].max()
+    max_hintage_number_text = f'scalar max_hintage_number "--number-- the maximum number of bins used in this ReEDS run" /{max_hintage_number}/ ;'
+    with open(os.path.join(inputs_case,'max_hintage_number.txt'), 'w') as file:
+        file.write(f'{max_hintage_number_text}')
+
+   # calculate the capacity-weighted average heat rate for each bin 
     # by taking the product of the sum of the capacity and the centroid of the bin
     tdat['wHR'] = tdat.HR * tdat['Summer.capacity']
     tdat['wVOM'] = tdat.VOM * tdat['Summer.capacity']
@@ -461,7 +491,7 @@ def main(reeds_path, inputs_case):
 
     combine_cols = level_cols + ['Winter.capacity']
 
-    # Adjust the HR, VOM, FOM, solveYearOnline, and winter capacity
+# Adjust the HR, VOM, FOM, solveYearOnline, and winter capacity
     for i in list(range(2010, tdat.RetireYear.max() + 1)):
         # Subset on years earlier than i
         ydat = tdat.loc[tdat.RetireYear > i, ['id','bin','Summer.capacity'] + combine_cols]
