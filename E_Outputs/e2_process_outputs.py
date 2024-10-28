@@ -159,7 +159,7 @@ def add_scen_col(df, scenario):
 
 def read_gdxs(gdxdirs, cs):
     """reads gdx results file into memory"""
-    vars = ['CAP', 'INV', 'GEN', 'LOAD', 'OPRES', 'STORAGE_IN', 'CAPTRAN']
+    vars = ['CAP', 'INV', 'GEN', 'LOAD', 'OPRES', 'STORAGE_IN', 'CAPTRAN', 'EMIT']
     params = ['r_rs', 'hours', 'firm_conv', 'firm_hydro', 'firm_vg', 'firm_stor', 'txinv', 'import', 'peakdem_region', 'prm_region', 'm_cf']
     costs = ['capcost', 'txcapcost', 'substcost', 'vomcost', 'fomcost', 'oprescost', 'fuelcost']
     keep = vars + params + costs
@@ -273,6 +273,13 @@ def ProcessGdx():
     gen = summarize(gen_tslc, 'generation_MWh', ['Technology', 'State', 'Year', 'scenario'])
     gen = gen[['Technology', 'State', 'Year', 'generation_MWh', 'scenario']]
 
+    # Annual CO2 emissions
+    #co2_rate = gdxin['co2_rate']
+    #co2_rate = co2_rate[['Technology', 'v', 'State', 'Year', 'co2_rate_MT_per_MWh']]
+    #co2_rate_annual_gen = pd.merge(co2_rate, gen, on = ['Technology', 'State', 'Year'])
+    #co2_rate_annual_gen['Annual_CO2_Emissions_MT'] = co2_rate_annual_gen['co2_rate_MT_per_MWh'] * co2_rate_annual_gen['generation_MWh']
+    #co2_emissions = summarize(co2_rate_annual_gen, 'Annual_CO2_Emissions_MT', ['State', 'Year']
+    
     # VRE curtailment
     gen_vre = gdxin['GEN'].loc[gdxin['GEN']['i'].isin(['ONSWIND','OFSWIND','UPV','DISTPV'])].drop(columns={'Marginal','Lower','Upper','Scale'})
     gen_vre = summarize(gen_vre, 'Level', ['i','r','h','t','scenario']).rename(columns={'Level':'Gen'})
@@ -388,7 +395,8 @@ def ProcessGdx():
     costs_diff = costs_diff.set_index(['Year','cost_cat']).stack().reset_index(name='Cost')
         
     # Emissions
-  #  emit = gdxin['EMIT']
+    emit = gdxin['EMIT']
+    emit = map_rs_to_state(emit, rmap)
 
     ##### Organize sheets
     # Sheet 1: Annual results - cap, inv, gen, opres, emit
@@ -440,11 +448,11 @@ def ProcessGdx():
     curt_tslc.rename(columns={'t':'Year','Type':'Technology'}, inplace=True)
     curt_tslc = sorting(curt_tslc, True, True, False)
 
-    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, costs_diff, curt_tslc, cap_rs, cap_diff
+    return annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, costs_diff, curt_tslc, cap_rs, cap_diff, emit
 #%%
 
 def write_outputs(dir):
-    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, costs_diff, curt_tslc, cap_rs, cap_diff = ProcessGdx()
+    annual_out, firmcap, tslc_out, tx_out, dem, dem_tslc, peakdem_prm, costs, costs_diff, curt_tslc, cap_rs, cap_diff, emit = ProcessGdx()
 
     #timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     #outdir = os.path.join(dir, tag)
@@ -511,6 +519,9 @@ def write_outputs(dir):
     gen_tslc.set_axis(['scenario', 'tech', 'year', 'timeslice', 'season', 'time', 'Generation (MW)'], axis=1, inplace=True)
     gen_tslc.to_csv(os.path.join(csvsdir, 'gen_timeslice.csv'), index=False)
     
+    # emit.csv
+    emit.to_csv(os.path.join(csvsdir, 'emit.csv'), index=False)
+
     # stor_charge_BA['dispatch_MW'] = stor_charge_BA['STOR_IN_MW'] * -1
     # stor_charge_BA.drop('STOR_IN_MW', axis=1, inplace=True)
     # gen_tslc_BA = pd.concat([gen_tslc_BA, stor_charge_BA])
