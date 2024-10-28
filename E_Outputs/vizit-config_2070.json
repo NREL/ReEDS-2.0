@@ -422,8 +422,8 @@
               "featureidkey": "properties.id",
               "text": "tech",
               "explode": "scenario",
-              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india-states-w-Ladakh-and-DVC.geojson",
-              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india-states-w-Ladakh-and-DVC.geojson",
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
               "locations": "json.states",
               "z": "Capacity (MW)"
             }
@@ -460,8 +460,8 @@
               "featureidkey": "properties.id",
               "text": "tech",
               "explode": "scenario",
-              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india-states-w-Ladakh-and-DVC.geojson",
-              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india-states-w-Ladakh-and-DVC.geojson",
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
               "locations": "json.states",
               "z": "Capacity (MW)"
             }
@@ -496,8 +496,8 @@
               "featureidkey": "properties.id",
               "text": "tech",
               "explode": "scenario",
-              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india-states-w-Ladakh-and-DVC.geojson",
-              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india-states-w-Ladakh-and-DVC.geojson",
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
               "locations": "json.states",
               "z": "Capacity (MW)"
             }
@@ -532,11 +532,11 @@
                   "filter_val": "Onshore Wind"
                 }
               },
-              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india_rrs-w-Ladakh-and-DVC.geojson",
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india_rrs-w-Ladakh-and-DVC.geojson",
               "featureidkey": "properties.grid_vals",
               "text": "tech",
               "explode": "scenario",
-              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india_rrs-w-Ladakh-and-DVC.geojson",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india_rrs-w-Ladakh-and-DVC.geojson",
               "locations": "rs",
               "z": "capacity_MW"
             }
@@ -563,11 +563,11 @@
                   "filter_val": "2030"
                 }
               },
-              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india_rrs-w-Ladakh-and-DVC.geojson",
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india_rrs-w-Ladakh-and-DVC.geojson",
               "featureidkey": "properties.grid_vals",
               "text": "tech",
               "explode": "scenario",
-              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india_rrs-w-Ladakh-and-DVC.geojson",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india_rrs-w-Ladakh-and-DVC.geojson",
               "locations": "rs",
               "z": "capacity_MW"
             }
@@ -603,7 +603,7 @@
               "line_width": "tx_inv_cumulative",
               "text": "tx_inv_cumulative",
               "name": "scenario",
-              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/india-states-w-Ladakh-and-DVC.geojson",
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
               "explode": "scenario",
               "lat_start": "lat_from",
               "lon_start": "lon_from",
