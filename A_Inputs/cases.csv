@@ -3,7 +3,7 @@ timetype,Sequential or Intertemporal,int,,,,,,,,,,,,,,,
 solver,Solver for GAMS to use,CPLEX,,,,,,,,,,,,,,,
 augur_workers,Number of windows for Augur module runs,36,,,,,,,,,,,,,,,
 yearset,Set of years that are modeled,yearset_2030.csv,yearset_2070_5s.csv,yearset_2070_5s.csv,yearset_2070.csv,yearset_2050.csv,yearset_2070.csv,yearset_2050.csv,yearset_2070.csv,yearset_2050.csv,yearset_2070.csv,yearset_2050.csv,yearset_2050.csv,yearset_2050.csv,yearset_test.csv,yearset_2050.csv,yearset_2050.csv
-endyear,Last year to be modeled,2070,2070,2070,2070,2070,,,,,,,,,,,
+endyear,Last year to be modeled,2070,2070,2070,2070,2070,2070,,,,,,,,,,
 HourlyLoadFile,Load scenario name for capacity value and curtailment load duration curve data,NREL_Baseline_8760,,,,,,,,,,,,,,,
 Binnedcap_file,"file name of binned non-RE capacity by BA, year, and VO&M bin",binned_capacity.csv,,,,,,,,,,,binned_capacity_extendcoal.csv,binned_capacity_extendcoal.csv,,,binned_capacity_extendcoal.csv
 Maxage_file,file name of maximum generator age file,maxage.csv,,,,,,,,,,,maxage_extendcoal.csv,maxage_extendcoal.csv,,,maxage_extendcoal.csv
@@ -33,7 +33,7 @@ retireyear,First year when economic retirements are allowed,2024,,,,,,,,,,,,,,,
 Rediversity,Maximum fraction of new VRE investments that can go in any one resource region,0.15,,,,,,,,,,,,,,,
 CC/Curtailment Iterations,Iterations between ReEDs and CC/Curtailment modules to calculate Capacity Value and Curtailment convergence,4,,,,,,,,,,,,,,,
 GSw_MinCF,Turn minimum CF for new capacity on [1] or off [0],1,0,,,,,,,,,,,,,,
-GSw_GrowthRel,Turn relative growth constraint on [1] or off [0],0,0,,,1,,,,1,1,,1,,,,1
+GSw_GrowthRel,Turn relative growth constraint on [1] or off [0],0,0,,,1,1,,,1,1,,1,,,,1
 GSw_GrowthAbs,Turn absolute growth constraint on [1] or off [0],1,0,,,,,,,,,,,,,,
 GSw_OpRes,Turn operating reserve constraints on [1] or off [0],1,0,,,,,,,,,,,,,,
 GSw_OpResTrade,Turn operating reserve trading between regions on [1] or off [0],0,0,,,,,,,,,,,,,,
