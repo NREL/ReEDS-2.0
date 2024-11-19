@@ -33,7 +33,7 @@ prod_techs = h2_techs + ['dac']
 niche_techs =  ['hydro','csp','geothermal','beccs','lfill-gas','biopower']
 price_types = ['load','res_marg','oper_res','state_rps','nat_gen']
 ccs_techs = ['gas-cc-ccs_mod_upgrade','coal-ccs_mod_upgrade','gas-cc-ccs_max_upgrade','coal-ccs_max_upgrade','gas-cc-ccs_mod','gas-cc-ccs_max','coal-ccs_mod','coal-ccs_max','coal-ccs-nsp','coal-ccs-flex','gas-cc-ccs-flex']
-water_techs = pd.read_csv('/Users/jcarag/ReEDS/PSH_Updates/ReEDS-2.0/postprocessing/bokehpivot/in/reeds2/tech_ctt_wst.csv')['tech'].tolist()
+water_techs = pd.read_csv(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'postprocessing/bokehpivot/in/reeds2/tech_ctt_wst.csv')))['tech'].tolist()
 water_techs = [x.lower() for x in water_techs]
 
 #1. Preprocess functions for results_meta
