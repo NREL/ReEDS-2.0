@@ -988,7 +988,7 @@ eq_CAPTRANEq(r,rr,trtype,t)$[routes(r,rr,trtype,t)$tmodel(t)$rfeas(r)$rfeas(rr)]
     trancap_exog(r,rr,trtype,t)
 
 *all previous year's investment, note this can apply for both r and rr
-    + sum{(tt)$[(yeart(tt) <= yeart(t))$(tmodel(tt) or tfix(tt))$(tt.val>2022)],
+    + sum{(tt)$[(yeart(tt) <= yeart(t))$(tmodel(tt) or tfix(tt))$(tt.val>2023)],
          INVTRAN(r,rr,tt,trtype) + INVTRAN(rr,r,tt,trtype) }
 ;
 
