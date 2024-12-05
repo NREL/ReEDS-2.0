@@ -98,7 +98,7 @@ GSw_CCS_NoRetire,Switch to prevent coal and gas from turning off CCS equipment a
 GSw_ClimateDemand,Turn on/off climate impacts on demand,0; 1,0,
 climateloc,Directory for climate scenarios (change to qnap/CIRA_Inputs_R2 to use scenarios not included in inputs/climate),N/A,inputs/climate,
 climatescen,Climate scenario for climate impacts,HadGEM2-ES_rcp45_AT; HadGEM2-ES_rcp85_AT; HadGEM2-ES_RCP2p6; HadGEM2-ES_RCP4p5; HadGEM2-ES_RCP8p5; GFDL-ESM2M_RCP4p5_WM; IPSL-CM5A-LR_RCP8p5_WM,HadGEM2-ES_rcp45_AT,
-GSw_Clean_Air_Act,"Turn on/off the provisions under the Clean Air Act, Section 111, which regulate the emissions from existing coal plants and new gas plants.",0; 1,1
+GSw_Clean_Air_Act,"Turn on/off the provisions under the Clean Air Act, Section 111, which regulate the emissions from existing coal plants and new gas plants.",0; 1,1,
 GSw_ClimateHeuristics,Select scenario for a variety of climate heuristics,none; 2025_2050_linear,none,
 GSw_ClimateHydro,Turn on/off climate impacts on hydropower,0; 1,0,
 GSw_ClimateStartYear,Year in which to start applying climate impacts,N/A,2022,
@@ -264,7 +264,7 @@ GSw_RetailAdder,2004$/MWh adder to the cost of electricity consumed by hydrogen 
 GSw_Retire,Endogenous retirement: 0 = no endogenous retirement; 1 = any existing plants can retire; 2 = only existing coal/gas can retire; 3 = new/existing nuclear/coal/gas can retire after minimum age; 4 = new/existing plants of any tech can retire; 5 = same as 3 but nuclear can only retire after 2030,0; 1; 2; 3; 4; 5,5,
 GSw_RetireYear,Year to begin retirements,N/A,2025,
 GSw_RGGI,Turn on/off RGGI,0; 1,1,
-GSw_SitingGeo,"Specify the Geothermal siting scenario [reference]",reference,reference,
+GSw_SitingGeo,Specify the Geothermal siting scenario [reference],reference,reference,
 GSw_SitingUPV,"Specify the UPV siting scenario [reference, open, limited]",reference; open; limited,reference,
 GSw_SitingWindOfs,"Specify the offshore wind siting scenario  [open, reference, limited]",reference; open; limited,reference,
 GSw_SitingWindOns,Specify the onshore wind siting scenario,open; reference; limited,reference,
@@ -336,3 +336,4 @@ dump_alldata,switch to automatically dump data from final solve year into .gdx f
 delete_big_files,switch to delete big input files after completion to save storage space,0; 1,0,
 debug,Write and keep intermediate files and equation elements to help with debugging. The value of the switch is passed to `option limrow` and `option limcol` and indicates the number of equation and variable entries to print,int,0,
 plot_ba_level,0=do not plot or output BA-level year-by-month plots; 1=plot and output BA-level year-by-month plots.,0; 1,0,
+GSw_Ret_Iyanna,force retirement of certain units in the PNW,0; 1,0,
