@@ -86,6 +86,31 @@ It is highly recommended to run ReEDS using the conda environment provided in th
 conda env create -f environment.yml
 ```
 
+**IMPORTANT** : Conda does not currently support `julia` for Windows systems. Running the above command will yield the error:
+
+```bash
+Channels:
+ - defaults
+ - conda-forge
+Platform: win-64
+Collecting package metadata (repodata.json): done
+Solving environment: failed
+
+PackagesNotFoundError: The following packages are not available from current channels:
+
+  - julia=1.8*
+```
+
+This error may be resolved by opening the `environment.yml` file in a text editor such as Notepad or VSCode, and adding a pound sign as the first character in the line containing `- julia=`. 
+
+The update should look like:
+
+```bash
+# - julia=1.8 # for PRAS and stress periods
+```
+
+Save the changes and rerun the command as intended. Instructions to install Julia on Windows are below in section [ReEDS2PRAS, julia, and stress periods setup](##ReEDS2PRAS,-julia,-and-stress-periods-setup).
+
 You can verify that the environment was successfully created using the following (you should see `reeds2` in the list):
 
 ```
