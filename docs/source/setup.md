@@ -86,31 +86,6 @@ It is highly recommended to run ReEDS using the conda environment provided in th
 conda env create -f environment.yml
 ```
 
-**IMPORTANT** : Conda does not currently support `julia` for Windows systems. Running the above command will yield the error:
-
-```bash
-Channels:
- - defaults
- - conda-forge
-Platform: win-64
-Collecting package metadata (repodata.json): done
-Solving environment: failed
-
-PackagesNotFoundError: The following packages are not available from current channels:
-
-  - julia=1.8*
-```
-
-This error may be resolved by opening the `environment.yml` file in a text editor such as Notepad or VSCode, and adding a pound sign as the first character in the line containing `- julia=`. 
-
-The update should look like:
-
-```bash
-# - julia=1.8 # for PRAS and stress periods
-```
-
-Save the changes and rerun the command as intended. Instructions to install Julia on Windows are below in section [ReEDS2PRAS, julia, and stress periods setup](##ReEDS2PRAS,-julia,-and-stress-periods-setup).
-
 You can verify that the environment was successfully created using the following (you should see `reeds2` in the list):
 
 ```
@@ -232,7 +207,13 @@ git lfs install
 ## ReEDS2PRAS, julia, and stress periods setup
 Since ReEDS uses stress periods by default, julia will need to be installed and set up to run the model. To get julia and stress periods set up: 
 1. Install Julia. There are different procedures for mac/linux and windows.
-    1. [mac/linux]: Julia is included in the conda environment so you should be all set.
+    1. [mac/linux]: After installing the `reeds2` environment, execute the following commands.
+
+   ```bash
+   $ conda activate reeds2
+   (reeds2) $ conda install "julia>=1.8"
+   ```
+
     2. [windows]: Install Julia from [https://julialang.org/downloads/](https://julialang.org/downloads/).
 2. From the ReEDS-2.0 directory, run `julia --project=. instantiate.jl`
 
@@ -243,7 +224,6 @@ When setting up julia on Windows, you may run into some issues when running `jul
 1. Manually install [Random123](https://github.com/JuliaRandom/Random123.jl) 
 
 2. Re-run `julia --project=. instantiate.jl`
-
 
 
 If that doesn't resolve the issue, the following may help: 
