@@ -6,7 +6,7 @@ yearset_suffix,Set of years that are modeled,default; 1yr_2yr; 1yr_5yr; 2yr_1yr2
 endyear,Last year to be modeled,N/A,2050,
 windows_suffix,Set of windows that are modeled,default; step5; step10; 2100,default,
 solver,Solver for GAMS to use,CPLEX; gurobi,CPLEX,
-distpvscen,Setting for distpv scenario (see inputs\dGen_model_inputs),N/A,stscen2023_mid_case,
+distpvscen,Setting for distpv scenario (see inputs\dgen_model_inputs),N/A,stscen2023_mid_case,
 calc_csp_cc,Switch to turn on CSP capacity credit calculations,0; 1,0,
 batteryscen,Battery cost and performance inputs (inputs\plant_characteristics\{batteryscen}.csv). The options for batteryscen start with 'battery_' and the switch should be set to the entire file name (ex: battery_ATB_2024_advanced),battery_ATB_(2023|2024)_(conservative|moderate|advanced),battery_ATB_2024_moderate,
 beccsscen,BECCS cost and performance inputs (inputs\plant_characteristics\{beccsscen}.csv) The options for beccsscen start with 'beccs_' and the switch should be set to the entire file name (ex: beccs_reference),(beccs_BVRE_2021_(high|mid|low)|beccs_(reference|lowcost)),beccs_reference,
