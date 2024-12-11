@@ -19,11 +19,6 @@ dependencies:
   - gitpython=3.1 # for complete run metadata
   - ipykernel=6.25 # for interactive python in VS Code
   - ipywidgets=8.0 # for jupyter notebooks
-  ## vvv Keep julia here if you're installing on the HPC.
-  ## vvv If you're installing on a local machine, it's suggested to comment out
-  ## vvv julia and install directly from https://julialang.org/downloads/.
-  ## vvv If you're on Windows, you MUST comment out julia and install directly.
-  - julia=1.8 # for PRAS and stress periods
   ## ^^^
   - mapclassify=2.5 # more mapping tools
   - matplotlib=3.7 # for plots
