@@ -24,6 +24,7 @@ if __name__ == '__main__':
     parser.add_argument("filename", help="""Filename of the LDC_static_inputs file used for this ReEDS run""", type=str)
     parser.add_argument("scenario", help="""Scenario name""", type=str)
     parser.add_argument("casepath", help="""File path of augur data""")
+    #parser.add_argument("data_dir", help="""File path to augur data"""
  
     args = parser.parse_args()
 
