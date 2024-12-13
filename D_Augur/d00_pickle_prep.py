@@ -93,6 +93,9 @@ if __name__ == '__main__':
     resources = resources[resources['area'].isin(ResReg_true['area'])]
     recf = recf[resources['resource']]        
     
+    print(" ")
+    print("recf modifications successful")
+    print(" ")
 
     # ------- Dump static data into pickle files for future years -------
     		
@@ -100,4 +103,6 @@ if __name__ == '__main__':
     recf.to_pickle(os.path.join(path_pickles,'recf_{}.pkl'.format(scenario)), protocol=4)
     resources.to_pickle(os.path.join(path_pickles,'resources_{}.pkl'.format(scenario)), protocol=4)
 
-    print("successful")
+    print(" ")
+    print("load, recf, and pickle file creation successful")
+    print(" ")

@@ -89,6 +89,10 @@ def ReEDS_augur(args):
         if os.name!="posix":
             print('skipping data dump...')
             time.sleep(args['sleep_time'])
+
+    print(" ")
+    print("ReEDS data dump finished")
+    print(" ")
     
     ##############################
 #%% # d1_prep_data
@@ -104,6 +108,10 @@ def ReEDS_augur(args):
         if os.name!="posix":
             print('skipping data prep...')
             time.sleep(args['sleep_time'])
+
+    print(" ")
+    print("d1 finished")
+    print(" ")
     
     ##############################
 #%% # d2_Osprey
@@ -127,6 +135,11 @@ def ReEDS_augur(args):
         if os.name!="posix":
             print('skipping Osprey...')
             time.sleep(args['sleep_time'])
+
+    print(" ")
+    print("d2 finished")
+    print(" ")
+    
     
     ##############################
     # d3_gdx_dump
@@ -146,6 +159,12 @@ def ReEDS_augur(args):
         if os.name!="posix":
             print('skipping Osprey csv output...')
             time.sleep(args['sleep_time'])
+
+    print(" ")
+    print("d3 finished")
+    print(" ")
+
+
 #%% 
     ##############################
     # d4_process_osprey_results
@@ -161,6 +180,10 @@ def ReEDS_augur(args):
         if os.name!="posix":
             print('skipping Osprey results processing...')
             time.sleep(args['sleep_time'])
+
+    print(" ")
+    print("d4 finished")
+    print(" ")
  
     ##############################
     # d5_existing_curtailment
@@ -177,6 +200,11 @@ def ReEDS_augur(args):
             print('skipping curtailment calculations...')
             time.sleep(args['sleep_time'])
     
+    print(" ")
+    print("d5 finished")
+    print(" ")
+
+
     ##############################
     # d6_marginal_curtailment
     ##############################
@@ -191,6 +219,11 @@ def ReEDS_augur(args):
         if os.name!="posix":
             print('skipping marginal curtailment...')
             time.sleep(args['sleep_time'])
+
+    print(" ")
+    print("d6 finished")
+    print(" ")
+
 #%%    
     ##############################
     # d7_Condor
@@ -207,6 +240,11 @@ def ReEDS_augur(args):
             print('skipping storage dispatch...')
             time.sleep(args['sleep_time'])
     
+    print(" ")
+    print("d7 finished")
+    print(" ")
+
+
     ##############################
 #%% # d8_capacity_credit
     ##############################
@@ -222,6 +260,10 @@ def ReEDS_augur(args):
             print('skipping capacity credit...')
             time.sleep(args['sleep_time'])
     
+    print(" ")
+    print("d8 finished")
+    print(" ")
+
     ##############################
 #%% # Write results to gdx file
     ##############################
