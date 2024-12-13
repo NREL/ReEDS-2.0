@@ -67,6 +67,7 @@ def ReEDS_augur(args):
     ##############################
 #%% # ReEDS data dump
     ##############################
+    parser.add_argument("casepath", help="""File path of augur data""")
     path_pickles = os.path.join(args.casepath, 'augur_data')
 
     if args['data_dump'] and args['timetype'] != 'seq':
