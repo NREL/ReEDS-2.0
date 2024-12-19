@@ -338,7 +338,7 @@ def check_compatibility(sw):
 
     ### Compatible switch combinations 
     if sw['GSw_EFS1_AllYearLoad'] == 'historic' :
-        if ('demand_' + sw['demandscen'] +'.csv') in os.listdir(os.path.join(reeds_path, 'inputs','load')) :
+        if ('demand_' + sw['demandscen'] +'.csv') not in os.listdir(os.path.join(reeds_path, 'inputs','load')) :
             raise ValueError("The demand file specified by the demandscen switch is not in the inputs/load folder")
 
     if sw['GSw_PRM_scenario'] == 'none':
