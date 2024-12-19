@@ -39,6 +39,9 @@ eq_ObjFn_inv(t)$tmodel(t)..
                        cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INV(i,v,r,t)
                       }
 
+* --- penalty for exceeding interconnection queue limit  ---
+                  + sum{(tg,r), cap_penalty(tg) * CAP_ABOVE_LIM(tg,r,t) }    
+
 * --- growth penalties ---
                   + sum{(gbin,i,st)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)],
                         cost_growth(i,st,t) * growth_penalty(gbin) * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) }) * GROWTH_BIN(gbin,i,st,t)
@@ -107,7 +110,7 @@ eq_ObjFn_inv(t)$tmodel(t)..
 
 * --- storage capacity credit---
 *small cost penalty to incentivize solver to fill shorter-duration bins first
-                  + sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit],
+                  + sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
                          bin_penalty(sdbin) * CAP_SDBIN(i,v,r,ccseason,sdbin,t) }
 
 * cost of capacity upsizing
@@ -293,8 +296,8 @@ eq_Objfn_op(t)$tmodel(t)..
 * --- revenues from purchases of curtailed VRE---
               - sum{(r,h), CURT(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
 
-* --- dropped load (ONLY if before Sw_StartMarkets)
-              + sum{(r,h)$[(yeart(t)<Sw_StartMarkets)], DROPPED(r,h,t) * hours(h) * cost_dropped_load }
+* --- dropped/excess load (ONLY if before Sw_StartMarkets)
+              + sum{(r,h)$[(yeart(t)<Sw_StartMarkets)], (DROPPED(r,h,t) + EXCESS(r,h,t) ) * hours(h) * cost_dropped_load }
 
 * --- costs from producing products (for now DAC and/or H2)---
               + sum{(p,i,v,r,h)$[(h2(i) or dac(i))$valcap(i,v,r,t)$i_p(i,p)$h_rep(h)],

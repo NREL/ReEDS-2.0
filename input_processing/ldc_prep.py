@@ -251,7 +251,7 @@ def csp_dispatch(cfcsp, sm=2.4, storage_duration=10):
     return total_dispatch
 
 
-def get_distpv_profiles(inputs_case, recf, rb2fips, agglevel):
+def get_distpv_profiles(inputs_case, recf):
     """
     We only have one year's profile (2012) for distributed PV. Because we want to
     maintain weather coincidence between distpv and upv, we start with the lowest-cf
@@ -263,11 +263,6 @@ def get_distpv_profiles(inputs_case, recf, rb2fips, agglevel):
         pd.read_csv(os.path.join(inputs_case,'distpvcf_hourly.csv'), index_col=0)
           .mean(axis=1).rename_axis('ba').rename('cf')
         )
-    ### Uniformly disaggregate regions if running at county level
-    if agglevel == 'county':
-        distpv_meancf = distpv_meancf.reset_index()
-        distpv_meancf = (distpv_meancf.merge(rb2fips,how='inner')
-                                      .set_index('r'))['cf']
     ### Get the worst upv resource in each region and use its profile for distpv,
     ### scaled by the distpv/upv CF ratio
     upv_cf = (
@@ -318,6 +313,7 @@ def main(reeds_path, inputs_case):
     sw = pd.read_csv(
         os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0,
     ).squeeze(1)
+    demandscen = sw.demandscen
     GSw_EFS1_AllYearLoad = sw.GSw_EFS1_AllYearLoad
     GSw_CSP_Types = [int(i) for i in sw.GSw_CSP_Types.split('_')]
     GSw_PVB_Types = sw.GSw_PVB_Types
@@ -326,13 +322,6 @@ def main(reeds_path, inputs_case):
     GSw_LoadAdjust_Profiles=sw.GSw_LoadAdjust_Profiles
     GSw_LoadAdjust_Adoption=sw.GSw_LoadAdjust_Adoption
 
-    # ReEDS only supports a single entry for agglevel right now, so use the
-    # first value from the list (copy_files.py already ensures that only one
-    # value is present)
-    # The 'lvl' variable ensures that BA and larger spatial aggregations use BA data and methods
-    agglevel = pd.read_csv(
-        os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
-    lvl = 'ba' if agglevel in ['ba','state','aggreg'] else 'county'
 
     #%%### Load inputs
 
@@ -346,12 +335,6 @@ def main(reeds_path, inputs_case):
     ### distloss
     distloss = scalars['distloss']
 
-    ### BAs present in the current run
-    val_r_all = sorted(
-        pd.read_csv(
-             os.path.join(inputs_case, 'val_r_all.csv'), header=None,
-        ).squeeze(1).tolist()
-    )
     ### Years in the current run
     solveyears = pd.read_csv(
         os.path.join(inputs_case,'modeledyears.csv'),
@@ -376,14 +359,7 @@ def main(reeds_path, inputs_case):
         hierarchy_original['ccreg'] = hierarchy_original[sw.capcredit_hierarchy_level].copy()
     ### Map regions to new ccreg's
     rb2fips = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
-    if agglevel =='county' :
-        r2ccreg = hierarchy['ccreg']
-    else:
-        r2ccreg = hierarchy_original['ccreg']
-
-    # Map BAs to states and census divisions for use with AEO load multipliers
-    st2rb = hierarchy.reset_index(drop=False)[['r', 'st']]
-    cd2rb = hierarchy.reset_index(drop=False)[['r', 'cendiv']]
+    r2ccreg = hierarchy['ccreg']
 
     # Get technology subsets
     tech_table = pd.read_csv(
@@ -498,20 +474,15 @@ def main(reeds_path, inputs_case):
         # Read load multipliers
         load_multiplier = pd.read_csv(os.path.join(inputs_case, 'load_multiplier.csv'))
         
-        if 'cendiv' in load_multiplier.columns:
-            # AEO multipliers at the Census division level are in a wide format so
-            # need to be changed to a long format
-            load_multiplier = pd.melt(load_multiplier, id_vars=['cendiv'], 
-                                      var_name='year', value_name='multiplier')
-            load_multiplier['year'] = load_multiplier['year'].astype(int)
-            # Map census division multipliers to BAs
-            load_multiplier = load_multiplier.merge(cd2rb, on=['cendiv'], how='outer'
-                                                    ).dropna(axis=0, how='any')
+        # Multipliers from AEO 2022 and older are at Census Division level, while
+        # multipliers from AEO 2023 are at state level.
+        if all(r in hierarchy['cendiv'] for r in load_multiplier['r']):
+            r2ba = hierarchy.reset_index(drop=False)[['r', 'cendiv']]
         else:
-            # AEO multipliers at the state level are already in a long format
-            # Map state multipliers to BAs
-            load_multiplier = load_multiplier.merge(st2rb, on=['st'], how='outer'
-                                                    ).dropna(axis=0, how='any')
+            r2ba = hierarchy.reset_index(drop=False)[['r', 'st']]
+        # Map multipliers to BAs
+        load_multiplier = load_multiplier.merge(r2ba, on=['r'], how='outer'
+                                                ).dropna(axis=0, how='any')
         # Subset load multipliers for solve years only 
         load_multiplier = load_multiplier[load_multiplier['year'].isin(solveyears)
                                           ][['year', 'r', 'multiplier']]
@@ -629,7 +600,7 @@ def main(reeds_path, inputs_case):
     #################################################
     #### Distributed PV (distpv)
     ### Get distpv profiles
-    distpv_profiles = get_distpv_profiles(inputs_case, recf, rb2fips, agglevel)
+    distpv_profiles = get_distpv_profiles(inputs_case, recf)
     ### Get distpv resources and include in list of resources
     distpv_resources = pd.DataFrame({'resource':distpv_profiles.columns, 'tech':'distpv'})
     distpv_resources['area'] = distpv_resources.resource.map(lambda x: x.split('|')[-1])
@@ -681,8 +652,7 @@ def main(reeds_path, inputs_case):
         .assign(resource=csp_resources['tech'] + '_' + csp_resources['resource'])
         .assign(ccreg=csp_resources.r.map(r2ccreg))
         [['i','r','resource','ccreg']]
-    )
-
+    )    
     ###### Simulate CSP dispatch for each design
     ### Get solar multiples
     sms = {tech: scalars[f'csp_sm_{tech.strip("csp")}'] for tech in csptechs}
@@ -710,39 +680,19 @@ def main(reeds_path, inputs_case):
     load_eastern = local_to_eastern(load_profiles, inputs_case, by_year=True).astype(np.float32)
     cspcf_eastern = local_to_eastern(cspcf, inputs_case, by_year=False)
     
-    # Disaggregate load data here if running at county resolution
-    if agglevel == 'county':
-        print('Disaggregating load data')
-        #Read fractional weights for population-based disaggregation
-        fracdata = pd.read_csv(
-            os.path.join(inputs_case,'disagg_population.csv'), 
-            dtype={'fracdata':np.float32},
-            index_col='FIPS',
-        )
-        #Sort by counties to maintain sequence
-        fracdata.sort_values('FIPS', inplace=True)
-        fracdata = fracdata.loc[fracdata.PCA_REG.isin(val_r_all)].copy()
-        # Create timeseries of county load fraction * BA hourly profile
-        load_eastern = pd.concat(
-            {fips: row.fracdata * load_eastern[row.PCA_REG]
-             for fips, row in fracdata.iterrows()},
-            axis=1,
-        )
-        # Filter by regions again for cases when only a subset of a model balancing area is represented
-        load_eastern = load_eastern.loc[:,load_eastern.columns.isin(val_r_all)].copy()
 
     #%% Calculate coincident peak demand at different levels for convenience later
-    _hierarchy = hierarchy if sw['GSw_RegionResolution'] == 'county' else hierarchy_original
     _peakload = {}
-    for _level in _hierarchy.columns:
+    for _level in hierarchy.columns:
         _peakload[_level] = (
             ## Aggregate to level
-            load_eastern.rename(columns=_hierarchy[_level])
+            load_eastern.rename(columns=hierarchy[_level])
             .groupby(axis=1, level=0).sum()
             ## Calculate peak
             .groupby(axis=0, level='year').max()
             .T
         )
+
     ## Also do it at r level
     _peakload['r'] = load_eastern.groupby(axis=0, level='year').max().T
     peakload = pd.concat(_peakload, names=['level','region']).round(3)

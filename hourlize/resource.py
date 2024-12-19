@@ -156,31 +156,54 @@ def match_to_counties(sc, profile_id_col, reeds_path, outpath, tech):
     else:
         sc_sub = sc[[profile_id_col, 'state', 'latitude', 'longitude']].copy()
     sc_sub = df2gdf(sc_sub, crs=cnty_shp.crs)
-
-    # spatial join to match with counties (matches if lat/lon are within polygon)
-    sc_matched = gpd.sjoin(sc_sub, cnty_shp, how="left").drop("index_right", axis=1)
-
-    # the above match gets most sc points but some are unmatched, likey because they are on
-    # a polygon border. for those we perform a second join to the nearest area
-    # only uses this second method for unmatched points since it is signifcally slower than sjoin
-    sc_unmatched = sc_matched.loc[sc_matched.rb.isna(), sc_sub.columns]
-    # for this matching we need distances, so use the ESRI projection
-    sc_unmatched = gpd.sjoin_nearest(
-        sc_unmatched.to_crs('ESRI:102008'), cnty_shp.to_crs('ESRI:102008'), how="left"
-        ).drop("index_right", axis=1).to_crs(sc_matched.crs)
-
-    # drop any duplicated points (this can happen is a rev supply curve point is equidistant from two zones)
-    sc_unmatched = sc_unmatched.drop_duplicates(subset=profile_id_col, ignore_index=True)
     
-    # remerge into original sc 
-    sc_out = pd.concat([sc_matched[~sc_matched.rb.isna()], sc_unmatched])
-    sc_out = sc_out[[profile_id_col,'state','FIPS','NAME']].rename(columns={"FIPS":"cnty_fips", "NAME":"county"})        
-    
+    # Offshore Wind State-Specific Nearest Matching
     if tech == 'wind-ofs':
-        sc_final = sc.merge(sc_out, on=[profile_id_col], how="outer", suffixes=('_old', ''))
-    else: 
-        sc_final = sc.merge(sc_out, on=[profile_id_col, "state"], how="outer", suffixes=('_old', ''))
+        matched_data = []
+
+        for state in sc_sub['state'].unique():
+            # Filter counties and sites by state
+            state_counties = cnty_shp[cnty_shp['STATE'] == state]
+            state_sites = sc_sub[sc_sub['state'] == state]
+
+            # Perform nearest join within the state
+            state_matched = gpd.sjoin_nearest(
+                state_sites.to_crs('ESRI:102008'),
+                state_counties.to_crs('ESRI:102008'),
+                how="left"
+            ).drop("index_right", axis=1).to_crs(crs_out)
+
+            matched_data.append(state_matched)
+
+        # Concatenate state-matched data
+        sc_matched_final = pd.concat(matched_data, ignore_index=True)
+        # Prepare final output DataFrame
+        sc_out = sc_matched_final[[profile_id_col, 'state', 'FIPS', 'NAME']].rename(
+        columns={"FIPS": "cnty_fips", "NAME": "county"}
+        )  
+
+    else:
+        # Onshore Wind and UPV: Original Spatial Matching with Unmatched Handling
+        # spatial join to match with counties (matches if lat/lon are within polygon)
+        sc_matched = gpd.sjoin(sc_sub, cnty_shp, how="left").drop("index_right", axis=1)
+
+        # the above match gets most sc points but some are unmatched, likey because they are on
+        # a polygon border. for those we perform a second join to the nearest area
+        # only uses this second method for unmatched points since it is signifcally slower than sjoin
+        sc_unmatched = sc_matched.loc[sc_matched.rb.isna(), sc_sub.columns]
+        # for this matching we need distances, so use the ESRI projection
+        sc_unmatched = gpd.sjoin_nearest(
+            sc_unmatched.to_crs('ESRI:102008'), cnty_shp.to_crs('ESRI:102008'), how="left"
+            ).drop("index_right", axis=1).to_crs(sc_matched.crs)
+
+        # drop any duplicated points (this can happen is a rev supply curve point is equidistant from two zones)
+        sc_unmatched = sc_unmatched.drop_duplicates(subset=profile_id_col, ignore_index=True)
     
+        # remerge into original sc 
+        sc_out = pd.concat([sc_matched[~sc_matched.rb.isna()], sc_unmatched])
+        sc_out = sc_out[[profile_id_col,'state','FIPS','NAME']].rename(columns={"FIPS":"cnty_fips", "NAME":"county"})        
+    
+    sc_final = sc.merge(sc_out, on=[profile_id_col, "state"], how="outer", suffixes=('_old', ''))
 
     ## some checks on the results
     # drop updated columns
@@ -216,7 +239,6 @@ def match_to_counties(sc, profile_id_col, reeds_path, outpath, tech):
         raise Exception(error_msg)
     
     return sc_final 
-
 
 def add_land_fom(sc, tech, profile_id_col, hourlize_path, reeds_path, crf_year=2050):
     """adds capital cost to supply curve that serves as a proxy for land lease costs

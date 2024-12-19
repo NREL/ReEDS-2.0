@@ -17,10 +17,12 @@ positive variables
   FLEX(flex_type,r,allh,t)        "--MW-- flexible load shifted to each timeslice"
 *   PEAK_FLEX(r,ccseason,t)          "--MW-- peak busbar load adjustment based on load flexibility"
   DROPPED(r,allh,t)               "--MW-- dropped load (only allowed before Sw_StartMarkets)"
+  EXCESS(r,allh,t)                "--MW-- excess load (only allowed before Sw_StartMarkets)"
 
 * capacity and investment variables
   CAP_SDBIN(i,v,r,ccseason,sdbin,t) "--MW-- generation capacity by storage duration bin for relevant technologies"
   CAP(i,v,r,t)                     "--MW-- total generation capacity in MWac (MWdc for PV); PV capacity of hybrid PV+battery; max native, flexible EV load for EVMC"
+  CAP_ABOVE_LIM(tg,r,t)            "--MW-- amount of capacity that is deployed above the interconnection queue limits"
   CAP_RSC(i,v,r,rscbin,t)          "--MW-- total generation capacity in MWac (MWdc for PV) for wind-ons and upv"
   GROWTH_BIN(gbin,i,st,t)          "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
   INV(i,v,r,t)                     "--MW-- generation capacity add in year t"
@@ -151,6 +153,8 @@ EQUATION
  eq_growthbin_limit(gbin,st,tg,t)         "--MW-- capacity limit for each growth bin"
  eq_growthlimit_absolute(tg,t)            "--MW-- absolute growth limit on technologies"
 
+eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit based on interconnection queues"  
+
 * storage capacity credit supply curves
  eq_cap_sdbin_balance(i,v,r,ccseason,t)    "--MW-- total binned storage capacity must be equal to total storage capacity"
  eq_sdbin_limit(ccreg,ccseason,sdbin,t)    "--MW-- binned storage capacity cannot exceed storage duration bin size"
@@ -164,8 +168,6 @@ EQUATION
  eq_capacity_limit_nd(i,v,r,allh,t)            "--MW-- generation limited to available capacity for non-dispatchable resources"
  eq_curt_gen_balance(r,allh,t)                 "--MW-- net generation and curtailment must equal gross generation"
  eq_dhyd_dispatch(i,v,r,allszn,t)              "--MWh-- dispatchable hydro seasonal energy constraint (when not allowing seasonal enregy shifting)"
- eq_dhyd_dispatch_ann(i,v,r,t)                 "--MWh-- dispatchable hydro annual energy constraint (only when allowing seasonal energy shifting)"
- eq_dhyd_dispatch_szn(i,v,r,allszn,t)          "--MWh-- dispatchable hydro seasonal energy constraint"
  eq_min_cf(i,r,t)                              "--MWh-- minimum capacity factor constraint for each generator fleet, applied to (i,r)"
  eq_mingen_fixed(i,v,r,allh,t)                 "--MW-- Generation in each timeslice must be greater than mingen_fixed * capacity"
  eq_mingen_lb(r,allh,allszn,t)                 "--MW-- lower bound on minimum generation level"
@@ -271,8 +273,6 @@ EQUATION
  eq_storage_in_minloading(i,v,r,allh,allhh,t)     "--MW-- minimum level for storage_in across same-season hours"
  eq_storage_level(i,v,r,allh,t)                   "--MWh per day-- Storage level inventory balance from one time-slice to the next"
  eq_storage_opres(i,v,r,allh,t)                   "--MWh per day-- there must be sufficient energy in the storage to be able to provide operating reserves"
- eq_storage_seas_szn(i,v,r,allszn,t)              "--MWh-- GEN in a season must be greater than a certain percentage of STORAGE_IN in that season"
- eq_storage_seas(i,v,r,t)                         "--MWh-- total STORAGE_IN must balance GEN across all time-slices"
  eq_storage_thermalres(i,v,r,allh,t)              "--MW-- thermal storage contribution to operating reserves is store_in only"
 
 * demand-response specific equations
@@ -701,19 +701,22 @@ eq_cap_rsc(i,v,r,rscbin,t)
 
 eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)]..
 
-    (1 - upgrade_derate(i,v,r,t)) * (
-
 * without peristent upgrades, all upgrades correspond to their original bintage
-    sum{(tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))$(yeart(tt)>=Sw_Upgradeyear)
-             $valcap(i,v,r,tt)$sum{ii$upgrade_from(i,ii),valcap(ii,v,r,tt)}],
-        UPGRADES(i,v,r,tt) }$[(Sw_Upgrades = 1)$(not coal(i))]
+    + sum{(tt)$[(tfix(tt) or tmodel(tt))
+               $(yeart(tt)<=yeart(t))
+               $(yeart(tt)>=Sw_Upgradeyear)
+               $valcap(i,v,r,tt)
+               $sum{ii$upgrade_from(i,ii), valcap(ii,v,r,tt) }],
+                    UPGRADES(i,v,r,tt) * (1 - upgrade_derate(i,v,r,tt))
+            }$[(Sw_Upgrades = 1)$(not coal(i))]
 
 * coal cannot upgrade after the retire year - ie no mothballing
     + sum{(tt)$[(tfix(tt) or tmodel(tt))
-               $(yeart(tt)<=yeart(t))$(yeart(tt)>=Sw_Upgradeyear)
+               $(yeart(tt)<=yeart(t))
+               $(yeart(tt)>=Sw_Upgradeyear)
                $valcap(i,v,r,tt)
                $(yeart(tt)<=caa_coal_retire_year)],
-                    UPGRADES(i,v,r,tt) 
+                    UPGRADES(i,v,r,tt) * (1 - upgrade_derate(i,v,r,tt))
             }$[(Sw_Upgrades = 1)$coal(i)]
 
 * all previous years upgrades converted to new bintages of the present year
@@ -725,14 +728,13 @@ eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)]..
               $(yeart(tt)>=Sw_Upgradeyear)
               $valcap(i,v,r,tt)$(not sameas(i,'hydEND_hydED'))
               $sum(ii$upgrade_from(i,ii),valcap(ii,vv,r,tt))],
-        UPGRADES(i,vv,r,tt) }$[Sw_Upgrades = 2]
+                    UPGRADES(i,vv,r,tt) * (1 - upgrade_derate(i,vv,r,tt))
+            }$[Sw_Upgrades = 2]
 
     + sum{(tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))$(yeart(tt)>=Sw_Upgradeyear)
-             $valcap(i,v,r,tt)$sameas(i,'hydEND_hydED')],
-        UPGRADES(i,v,r,tt) }$[Sw_Upgrades = 2]        
-
-* end product on upgrade_derate
-    ) 
+              $valcap(i,v,r,tt)$sameas(i,'hydEND_hydED')],
+                    UPGRADES(i,v,r,tt) * (1 - upgrade_derate(i,v,r,tt))
+            }$[Sw_Upgrades = 2]        
 
     =e=
 
@@ -1172,10 +1174,10 @@ eq_min_cf(i,r,t)$[minCF(i,t)$tmodel(t)$valgen_irt(i,r,t)$Sw_MinCF]..
 
 * ---------------------------------------------------------------------------
 
-* Seasonal energy constraint for dispatchable hydropower when all energy must be used within season (no seasonal energy shifting)
+* Seasonal energy constraint for dispatchable hydropower
 eq_dhyd_dispatch(i,v,r,szn,t)
     $[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)
-    $(within_seas_frac(i,v,r) = 1)]..
+    ]..
 
 *seasonal hours [times] seasonal capacity factor [times] total hydro capacity [times] seasonal capacity adjustment
     sum{h$[h_szn(h,szn)], avail(i,r,h) * hours(h) }
@@ -1198,64 +1200,24 @@ eq_dhyd_dispatch(i,v,r,szn,t)
     }
 ;
 
-* ---------------------------------------------------------------------------
+* ---------------------------------------------------------------------------------------
+* Limit near-term capacity deployments by tech and region based on interconnection queues
+eq_interconnection_queues(tg,r,t)$[tmodel(t)$(yeart(t)>=model_builds_start_yr)
+                                            $(sum{(tgg,rr), cap_limit(tgg,rr,t)})
+                                            $sum{(i,newv)$tg_i(tg,i), valinv(i,newv,r,t)}]..
 
-* Annual energy constraint for dispatchable hydropower when seasonal shifting is allowed
-eq_dhyd_dispatch_ann(i,v,r,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_seas_frac(i,v,r) < 1)]..
-
-    sum{szn$szn_rep(szn),
-* seasonal hours [times] seasonal capacity factor
-        sum{h$[h_szn(h,szn)], avail(i,r,h) * hours(h) }
-* [times] total hydro capacity
-        * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],
-            INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
-            - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
-* [times] seasonal capacity adjustment
-        * m_cf_szn(i,v,r,szn,t) }
-    =g=
-
-    sum{szn$szn_rep(szn),
-*total seasonal generation plus fraction of energy for regulation
-        sum{h$[h_szn(h,szn)],
-            hours(h)
-            * (GEN(i,v,r,h,t)
-               + reg_energy_frac * (
-                   OPRES("reg",i,v,r,h,t)$[Sw_OpRes=1]
-                   + OPRES("combo",i,v,r,h,t)$[Sw_OpRes=2]
-               )$[opres_h(h)]
-            )
-        } 
-    }
-;
-
-* ---------------------------------------------------------------------------
-
-* Required fraction of energy used within a season for dispatchable hydropower when seasonal shifting is allowed
-eq_dhyd_dispatch_szn(i,v,r,szn,t)
-    $[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$szn_rep(szn)
-    $(within_seas_frac(i,v,r) < 1)]..
-
-*total seasonal generation plus fraction of energy for regulation
-    sum{h$[h_szn(h,szn)],
-        hours(h)
-        * (GEN(i,v,r,h,t)
-           + reg_energy_frac * (
-               OPRES("reg",i,v,r,h,t)$[Sw_OpRes=1]
-               + OPRES("combo",i,v,r,h,t)$[Sw_OpRes=2]
-           )$[opres_h(h)]
-        )
-    }
+* the capacity limit from the interconnection queue data
+* (with CAP_ABOVE_LIM as a slack variable to address infeasibilities)
+    cap_limit(tg,r,t) + CAP_ABOVE_LIM(tg,r,t)
 
     =g=
 
-*fractional in-season energy requirement
-    within_seas_frac(i,v,r) * (
-*seasonal hours [times] seasonal capacity factor [times] total hydro capacity [times] seasonal capacity adjustment
-        sum{h$[h_szn(h,szn)], avail(i,r,h) * hours(h) }
-        * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
-           - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
-        * (m_cf_szn(i,v,r,szn,t)$(m_cf_szn(i,v,r,szn,t) <= 1) + 1$(m_cf_szn(i,v,r,szn,t) > 1))
-    )
+* must be greater than the total capacity deployed since the
+* start of the interconnection queue data
+    sum{(i,newv,tt)$[valinv(i,newv,r,tt)$tg_i(tg,i)
+                                    $(yeart(tt)>=interconnection_start)
+                                    $(tmodel(tt) or tfix(tt))],
+        INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb] }
 ;
 
 *===============================
@@ -1301,8 +1263,9 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
     - sum{[i,v,hh]$[valgen(i,v,r,t)$dr1(i)$allowed_shifts(i,h,hh)],
                      DR_SHIFT(i,v,r,h,hh,t) / hours(h) / storage_eff(i,t) }$Sw_DR
 
-* [plus] dropped load ONLY if before Sw_StartMarkets
+* [plus] dropped/excess load ONLY if before Sw_StartMarkets
     + DROPPED(r,h,t)$(yeart(t)<Sw_StartMarkets)
+    - EXCESS(r,h,t)$(yeart(t)<Sw_StartMarkets)
 
     =e=
 
@@ -2704,8 +2667,7 @@ eq_storage_capacity(i,v,r,h,t)
 *  daily storage level in the current time-slice (h)
 *  plus daily net charging in the current time-slice (accounting for losses).
 *  CSP with storage energy accounting is also covered by this constraint.
-*  Does not apply for storage technologies that allow cross-season energy arbitrage.
-eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r) = 1)$tmodel(t)]..
+eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$tmodel(t)]..
 
 *[plus] storage level in h+1
     sum{(hh)$[nexth(h,hh)], STORAGE_LEVEL(i,v,r,hh,t) }
@@ -2752,59 +2714,6 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r)
        * (OPRES("reg",i,v,r,h,t)$[Sw_OpRes=1] + OPRES("combo",i,v,r,h,t)$[Sw_OpRes=2])
        * (1 - storage_eff(i,t)) / 2 * reg_energy_frac
     )$[opres_h(h)]
-;
-
-* ---------------------------------------------------------------------------
-
-* Annual energy balance for storage that can shift energy across seasons
-eq_storage_seas(i,v,r,t)
-    $[valgen(i,v,r,t)$storage(i)
-    $(within_seas_frac(i,v,r) < 1)$tmodel(t)]..
-
-    sum{h$h_rep(h),
-*[plus] annual storage charging
-        storage_eff(i,t) * hours(h)
-*energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
-        * STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i))
-
-*[plus] annual water inflow energy available for hydropower that adds pumping
-    + (CAP(i,v,r,t) * avail(i,r,h) * hours(h) *
-            sum{szn$h_szn(h,szn), m_cf_szn(i,v,r,szn,t) }
-            )$hyd_add_pump(i)
-    }
-
-    =e=
-*[plus] annual generation
-    sum{h$h_rep(h), hours(h) * GEN(i,v,r,h,t) }
-;
-
-* ---------------------------------------------------------------------------
-
-* Minimum amount of storage input in a season to be used for generation in that season,
-* when cross-season energy shifting is available
-eq_storage_seas_szn(i,v,r,szn,t)
-    $[valgen(i,v,r,t)$storage(i)$szn_rep(szn)
-    $(within_seas_frac(i,v,r) < 1)$tmodel(t)]..
-
-*[plus] seasonal generation
-    sum{h$h_szn(h,szn), hours(h) * GEN(i,v,r,h,t) }
-
-=g=
-
-*fractional in-season energy requirement
-    within_seas_frac(i,v,r) *
-*[plus] seasonal storage charging
-    sum{h$h_szn(h,szn),
-        storage_eff(i,t) * hours(h)
-*energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
-        * STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i))
-
-
-*[plus] seasonal water inflow energy available for hydropower that adds pumping
-    + (CAP(i,v,r,t) * avail(i,r,h) * hours(h)
-            * m_cf_szn(i,v,r,szn,t)
-        )$hyd_add_pump(i)
-    }
 ;
 
 * ---------------------------------------------------------------------------

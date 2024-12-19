@@ -85,7 +85,7 @@ if(Sw_Upgrades = 1,
 * -or- capacity of upgrades that have occurred from this i v r t combination
                     sum{(ii,tt)$[(tt.val <= t.val)$(t.val - tt.val <= Sw_UpgradeLifespan)
                                  $valcap(ii,v,r,tt)$upgrade_from(ii,i)],
-                                 UPGRADES.l(ii,v,r,tt) / (1-upgrade_derate(ii,v,r,tt)) }
+                                 UPGRADES.l(ii,v,r,tt) }
     ) ;
 
 ) ;

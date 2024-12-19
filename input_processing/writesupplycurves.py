@@ -113,12 +113,14 @@ def agg_supplycurve(scpath, inputs_case, numbins_tech,
 ### --- MAIN FUNCTION ---
 ### ============================================================================
 
-def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
+def main(reeds_path,inputs_case,AggregateRegions=1,rsc_wsc_dat=None,write=True,**kwargs):
+    print('Starting writesupplycurves.py')
+
     # #%% Settings for testing
     # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0')
-    # reeds_path = os.getcwd()
-    # inputs_case = os.path.join(reeds_path,'runs','nd1_ND','inputs_case')
+    # inputs_case = os.path.join(reeds_path,'runs','Jul2_test_Western_agg','inputs_case')
     # AggregateRegions=1
+    # rsc_wsc_dat=None
     # write=False
     
     #%% Inputs from switches
@@ -145,10 +147,9 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
     # The 'lvl' variable ensures that BA and larger spatial aggregations use BA data and methods
     agglevel = pd.read_csv(
         os.path.join(inputs_case,'agglevels.csv')).squeeze(1).tolist()[0]
-
+    
     val_r_all = pd.read_csv(
         os.path.join(inputs_case,'val_r_all.csv'), header=None).squeeze(1).tolist()
-
     # Read in tech-subset-table.csv to determine number of csp configurations
     tech_subset_table = pd.read_csv(os.path.join(inputs_case, "tech-subset-table.csv"))
     csp_configs = tech_subset_table.loc[
@@ -163,8 +164,14 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
     # Get rb2fips map
     rb2fips = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
 
-    #%% Load the existing RSC capacity (PV plants, wind, and CSP)
-    rsc_wsc = pd.read_csv(os.path.join(inputs_case,'rsc_wsc.csv'))
+    #%% Load the existing RSC capacity (PV plants, wind, and CSP) if not provided in main function call
+    if rsc_wsc_dat is None:
+        # writesupplycurves.py is being run as a main input processing script
+        rsc_wsc = pd.read_csv(os.path.join(inputs_case,'rsc_wsc.csv'))
+    else:
+        # writesupplycurves.py is being passed rsc_wsc data from an aggregate_regions.py call
+        rsc_wsc = rsc_wsc_dat.copy()
+
     for j,row in rsc_wsc.iterrows():
         # Group CSP tech
         if row['i'] in ['csp-ws']:
@@ -199,10 +206,13 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
             agglevel=agglevel, AggregateRegions=AggregateRegions, 
             numbins_tech=numbins[f'wind-{s}'], spur_cutoff=spur_cutoff
         )
-
+        # Write out the supply curve data for use in hourly_repperiods.py
+        if (write) and (AggregateRegions) and (s == 'ons'):
+            wind[s].to_csv(os.path.join(inputs_case,'wind-ons_sc.csv'), index=True, header=True)
+        
         # Convert dollar year
         cost_adder_cols = [c for c in wind[s] if c in ['trans_adder_per_mw','capital_adder_per_mw']]
-        wind[s][['supply_curve_cost_per_mw'] + cost_adder_cols] *= deflate[f'wind-{s}_supply_curve']
+        wind[s][['supply_curve_cost_per_mw'] + cost_adder_cols] *= deflate[f'wind-{s}_supply_curve']      
         # Subtract GSw_TransIntraCost (converted to $/MW) to avoid double-counting
         # but only if not running at county-level (county-level does not include
         # transmission reinforcement costs in the supply curve)
@@ -221,6 +231,7 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
                 'capital_adder_per_mw':'cost_cap'
             })
         )
+          
         cost_components_wind[s]['*i'] = f'wind-{s}_' + cost_components_wind[s]['*i'].astype(str)
         cost_components_wind[s]['rscbin'] = 'bin' + cost_components_wind[s]['rscbin'].astype(str)
         cost_components_wind[s] = pd.melt(
@@ -265,16 +276,7 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
     dfwindexog = pd.read_csv(
         os.path.join(inputs_case,'wind-ons_exog_cap.csv')
     ).rename(columns={'capacity':'MW'})
-    ### Aggregate if necessary
-    if agglevel not in ['county','ba']:
-        ### Merge the r-to-county and r-to-BA maps
-        r_county = pd.read_csv(
-            os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze()
-        r_ba = pd.read_csv(
-            os.path.join(inputs_case,'r_ba.csv'), index_col='ba').squeeze()
-        r2aggreg = pd.concat([r_county,r_ba])
-        ### Map to the new regions
-        dfwindexog.region = dfwindexog.region.map(r2aggreg)
+
     ### Get the rscbin, then sum by (i,r,rscbin,t)
     dfwindexog['rscbin'] = 'bin'+dfwindexog.sc_point_gid.map(gid2irb_wind.rscbin).astype(int).astype(str)
     dfwindexog = dfwindexog.groupby(['*tech','region','rscbin','year']).MW.sum()
@@ -289,7 +291,9 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
         agglevel=agglevel, AggregateRegions=AggregateRegions,
         numbins_tech=numbins['upv'], spur_cutoff=spur_cutoff
     )
-
+    # Write out the supply curve data for use in hourly_repperiods.py
+    if (write) and (AggregateRegions):
+        upv.to_csv(os.path.join(inputs_case,'upv_sc.csv'), index=True, header=True)
     # Convert dollar year
     cost_adder_cols = [c for c in upv if c in ['trans_adder_per_mw', 'capital_adder_per_mw']]
     upv[['supply_curve_cost_per_mw'] + cost_adder_cols] *= deflate['upv_supply_curve']
@@ -347,10 +351,7 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
     dfupvexog = pd.read_csv(
         os.path.join(inputs_case,'upv_exog_cap.csv')
     ).rename(columns={'capacity':'MW'})
-    ### Aggregate if necessary
-    if agglevel not in ['county','ba']:
-        ### Map to the new regions (hierarchy loaded with wind above)
-        dfupvexog.region = dfupvexog.region.map(r2aggreg)
+
     ### Get the rscbin, then sum by (i,r,rscbin,t)
     dfupvexog['rscbin'] = 'bin'+dfupvexog.sc_point_gid.map(gid2irb_upv.rscbin).astype(int).astype(str)
     dfupvexog = dfupvexog.groupby(['*tech','region','rscbin','year']).MW.sum()
@@ -483,10 +484,7 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
             dfgeohydroexog = pd.read_csv(
                 os.path.join(inputs_case,'geohydro_exog_cap.csv')
             ).rename(columns={'capacity':'MW'})
-            ### Aggregate if necessary
-            if agglevel not in ['county','ba']:
-                ### Map to the new regions (hierarchy loaded with wind above)
-                dfgeohydroexog.region = dfgeohydroexog.region.map(r2aggreg)
+
             ### Get the rscbin, then sum by (i,r,rscbin,t)
             dfgeohydroexog['rscbin'] = 'bin'+dfgeohydroexog.sc_point_gid.map(gid2irb_geohydro.rscbin).astype(int).astype(str)
             dfgeohydroexog = dfgeohydroexog.groupby(['*tech','region','rscbin','year']).MW.sum()
@@ -706,7 +704,7 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
                 .set_index(['tech','class','variable'])
                 .sort_index())
     hydcost = pd.melt(hydcost, id_vars=['tech','class'])
-    
+
     if agglevel == 'county':
          pass
     else:
@@ -726,25 +724,6 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
 
     hydcap['var'] = 'cap'
     hydcost['var'] = 'cost'
-
-    # If agglevel == 'county' then we want to downscale hydcap (by geoarea) and 
-    # hydcost (uniformly) to county level so that rsc_combined.csv will be output 
-    # at a uniform spatial resolution
-    if agglevel == 'county':
-        # Disaggregate hydcap by geosize
-        fracdata = (pd.read_csv(os.path.join(inputs_case,'disagg_geosize.csv'),header=0))
-        columns= list(hydcap.columns)
-        hydcap = pd.merge(fracdata, hydcap, left_on='PCA_REG', right_on='variable', how='inner')
-        hydcap['new_value'] = (hydcap['fracdata'].multiply(hydcap['value'], axis='index'))
-        hydcap.drop(columns=['variable','value'],inplace=True)
-        hydcap.rename(columns={'new_value':'value','FIPS':'variable'},inplace=True)
-        hydcap = hydcap[columns]
-
-        # Disaggregate hydcost uniformly
-        hydcost = rb2fips.merge(hydcost,left_on='ba',right_on='variable',how='inner')
-        hydcost.drop(columns=['ba','variable'],inplace=True)
-        hydcost.rename(columns={'r':'variable'},inplace=True)
-        hydcost = hydcost[columns]
 
     hyddat = pd.concat([hydcap, hydcost])
     hyddat['bin'] = hyddat['class'].map(lambda x: x.replace('hydclass','bin'))
@@ -771,23 +750,6 @@ def main(reeds_path,inputs_case,AggregateRegions=1,write=True,**kwargs):
 
     psh_cap['var'] = 'cap'
     psh_cost['var'] = 'cost'
-
-    # If agglevel == 'county' then we want to downscale psh_cap (by geoarea) and 
-    # psh_cost (uniformly) to county level so that rsc_combined.csv will be output 
-    # at a uniform spatial resolution
-    if agglevel == 'county':
-        # Disaggregate psh_cap by geosize
-        fracdata = (pd.read_csv(os.path.join(inputs_case,'disagg_geosize.csv'),header=0))
-        columns= list(psh_cap.columns)
-        psh_cap = pd.merge(fracdata, psh_cap, left_on='PCA_REG', right_on='r', how='inner')
-        psh_cap['new_value'] = (psh_cap['fracdata'].multiply(psh_cap['value'], axis='index'))
-        psh_cap.drop(columns=['r','value'],inplace=True)
-        psh_cap.rename(columns={'new_value':'value','FIPS':'r'},inplace=True)
-        psh_cap = psh_cap[columns]
-        # Disaggregate psh_cost uniformly
-        psh_cost = rb2fips.merge(psh_cost,left_on='ba',right_on='r',how='inner')
-        psh_cost.drop(columns=['ba','r_y'],inplace=True)
-        psh_cost.rename(columns={'r_x':'r'},inplace=True)
 
     psh_out = pd.concat([psh_cap, psh_cost]).fillna(0)
     psh_out['tech'] = 'pumped-hydro'

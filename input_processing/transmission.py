@@ -52,23 +52,11 @@ GSw_TransHurdleRate = sw.GSw_TransHurdleRate
 ## networksource must end in a 4-digit year indicating the year represented by the network
 trans_init_year = int(networksource[-4:])
 
-# ReEDS only supports a single entry for agglevel right now, so use the
-# first value from the list (copy_files.py already ensures that only one
-# value is present)
-# The 'lvl' variable ensures that BA and larger spatial aggregations use BA data and methods
-agglevel = pd.read_csv(
-    os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
-lvl = 'ba' if agglevel in ['ba','state','aggreg'] else 'county'
 
 valid_regions = {}
 for level in ['r','transgrp']:
-    if (level == 'r') and (lvl == 'ba'):
-        valid_regions[level] = pd.read_csv(
-            os.path.join(inputs_case, 'val_ba.csv'), header=None).squeeze(1).tolist()
-    else: 
-        valid_regions[level] = pd.read_csv(
-            os.path.join(inputs_case, f'val_{level}.csv'), header=None).squeeze(1).tolist()
-        
+    valid_regions[level] = pd.read_csv(
+        os.path.join(inputs_case, f'val_{level}.csv'), header=None).squeeze(1).tolist()    
 #%% Process some inputs
 trans_cap_future_file = os.path.join(
     inputs_case, 'transmission_capacity_future.csv')
@@ -121,7 +109,7 @@ def get_trancap_init(valid_regions, networksource='NARIS2024', level='r'):
     ### Initial trading limit, using contingency levels specified by contingency level
     ### (but assuming full capacity of DC is available for both energy and capcity)
     trancap_init = {
-        n: pd.concat([
+        n: (pd.concat([
             ## AC
             pd.concat([
                 ## Forward direction
@@ -132,9 +120,10 @@ def get_trancap_init(valid_regions, networksource='NARIS2024', level='r'):
                 .rename(columns={level:levell, levell:level, f'MW_r{n}':'MW'}))
             ], axis=0),
             ## DC
-            trancap_init_nonac[[level,levell,'trtype','MW']]
+                trancap_init_nonac[[level,levell,'trtype','MW']]
         ## Drop entries with zero capacity
         ], axis=0).replace(0.,np.nan).dropna()
+            .groupby([level,levell,'trtype']).sum().reset_index())
         for n in [0,1]
     }
 

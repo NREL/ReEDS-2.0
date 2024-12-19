@@ -21,7 +21,7 @@ set rfeas(r)                 "list of feasible r regions - for use in Augur only
     tcur(t)                  "current year"
     tnext(t)                 "next year"
     valcap_i_filt(i)         "subset of valcap"
-    valcap_ir(i,r)           "subset of valcap"
+    valcap_ir_filt(i,r)      "subset of valcap"
     valcap_iv_filt(i,v)      "subset of valcap"
     routes_filt(r,rr,trtype) "set of transmission connections"
 ;
@@ -95,7 +95,7 @@ tnext("%next_year%") = yes ;
 *populate reduced-form sets
 valcap_iv_filt(i,v) = sum{(r,t)$tcur(t), valcap(i,v,r,t)} ;
 valcap_i_filt(i) = sum{v, valcap_iv_filt(i,v)} ;
-valcap_ir(i,r) = sum{t$tcur(t), valcap_irt(i,r,t)} ;
+valcap_ir_filt(i,r) = sum{t$tcur(t), valcap_irt(i,r,t)} ;
 
 *=======================================
 * Removing banned technologies from sets
@@ -119,7 +119,7 @@ storage_standalone(i) = storage_standalone(i)$(not ban(i)) ;
 *==============================
 
 cap_exist(i,v,r)$valcap_ivr(i,v,r) = sum{t$tcur(t), CAP.l(i,v,r,t) } ;
-cap_exist_ir(i,r)$valcap_ir(i,r) = sum{v, cap_exist(i,v,r) } ;
+cap_exist_ir(i,r)$valcap_ir_filt(i,r) = sum{v, cap_exist(i,v,r) } ;
 cap_exist_iv(i,v)$valcap_iv_filt(i,v) = sum{r, cap_exist(i,v,r) } ;
 cap_exist_i(i)$valcap_i_filt(i) = sum{(r,v), cap_exist(i,v,r) } ;
 
@@ -153,7 +153,7 @@ fuel_price_filt(i,r)$cap_exist_ir(i,r) = sum{t$tcur(t), fuel_price(i,r,t) } ;
 * always be a positive value here since if an H2-CT is built it consumes hydrogen 
 * the equation from which we extract the marginal depends on whether
 * we have the national (Sw_H2 = 1) or regional (Sw_H2 = 2) constraint
-h2_usage_regional(r,h,t) =
+h2_usage_regional(r,h,t)$tcur(t) =
     hours(h) * ( 
         h2_exogenous_demand_regional(r,'h2',h,t)
         + sum{(i,v)$[valgen(i,v,r,t)$h2_ct(i)],

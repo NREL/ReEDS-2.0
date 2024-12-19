@@ -993,11 +993,15 @@ tg_i('wind-ons',i)$onswind(i) = yes ;
 tg_i('wind-ofs',i)$ofswind(i) = yes ;
 tg_i('pv',i)$[(pv(i) or pvb(i))$(not distpv(i))] = yes ;
 tg_i('csp',i)$csp(i) = yes ;
-tg_i('ccs',i)$ccs(i) = yes ;
-tg_i('gas-uncontrolled',i)$[gas(i)$(not ccs(i))] = yes ;
+tg_i('gas',i)$gas(i) = yes ;
+tg_i('coal',i)$coal(i) = yes ;
 tg_i('nuclear',i)$nuclear(i) = yes ;
-tg_i('storage',i)$storage_standalone(i) = yes ;
+tg_i('battery',i)$battery(i) = yes ;
+tg_i('hydro',i)$hydro(i) = yes ;
 tg_i('h2',i)$h2_ct(i) = yes ;
+tg_i('geothermal',i)$geo(i) = yes ;
+tg_i('biomass',i)$bio(i) = yes ;
+tg_i('pumped-hydro',i)$psh(i) = yes ;
 
 *Hybrid pv+battery (PVB) configurations are defined by:
 *  (1) inverter loading ratio (DC/AC) and
@@ -1349,6 +1353,9 @@ Sw_UpgradeYear$[(not Sw_UpgradeYear)] =
 * if caa_coal_retire_year is not in the set of years being modeled, then set it to the first year that is modeled after caa_coal_retire_year
 caa_coal_retire_year$[not sum{tt$[tt.val=caa_coal_retire_year], tmodel_new(tt) }] = 
   smin(tt$[(tt.val>=caa_coal_retire_year)$tmodel_new(tt)],tt.val) ;
+
+* if Sw_Clean_Air_Act = 0, then set caa_coal_retire_year to the last solve year
+caa_coal_retire_year$[Sw_Clean_Air_Act = 0] = smax(tmodel_new, tmodel_new.val) ;
 
 *======================================
 * ---------- Bintage Mapping ----------
@@ -2212,6 +2219,7 @@ set valcap(i,v,r,t)            "i, v, r, and t combinations that are allowed for
     valcap_irt(i,r,t)          "i, r, and t combinations that are allowed for capacity",
     valcap_i(i)                "i that are allowed for capacity",
     valcap_iv(i,v)             "i and v combinations that are allowed for capacity",
+    valcap_ir(i,r)             "i and r combinations that are allowed for capacity",
     valcap_ivr(i,v,r)          "i, v, and r combinations that are allowed for capacity",
     valcap_h2ptc(i,v,r,t)      "i, v, r and t combinations that are allowed for capacity that can receive the hydrogen PTC",
     valgen_irt(i,r,t)          "i, r, and t combinations that are allowed for generation",
@@ -2294,7 +2302,30 @@ prescription_check(i,newv,r,t)$[sum{pcat$prescriptivelink(pcat,i), noncumulative
 *Only enable for bin1 if there is no resource in any bins to keep parameter size down.
 m_rscfeas(r,i,"bin1")$[sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) }$rsc_i(i)$(not bannew(i))$(sum{rscbin, rsc_dat(i,r,"cap",rscbin) }=0)] = yes ;
 
+*==========================================================
+*--- Interconnection queues (Capacity deployment limit) ---
+*==========================================================
+alias(tg,tgg) ;
 
+$onempty
+table cap_limit(tg,r,allt) "--MW-- capacity deployment limit by region and technology based on interconnection queues"
+$offlisting
+$ondelim
+$include inputs_case%ds%cap_limit.csv
+$offdelim
+$onlisting
+;
+$offempty
+
+
+parameter cap_penalty(tg) "--per MW-- cost penalty for capacity deployment above cap limit"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%cap_penalty.csv
+$offdelim
+$onlisting
+/ ;
 
 *=============================================
 * -- Explicit spur-line capacity (if used) --
@@ -2455,18 +2486,6 @@ valcap(i,newv,r,t)$[
                    $(not ([r_offshore(r,t) and ofswind(i)] or [sum{st$r_st(r,st), batterymandate(st,t) } and battery(i)]))
                   ] = no ;
 
-*therefore remove the consideration of valcap if...
-valcap(i,newv,r,t)$[
-*if there are no required prescriptions
-                   (not sum{pcat$prescriptivelink(pcat,i),
-                      m_required_prescriptions(pcat,r,t) } )
-*if the year is before the first year the technology is allowed
-                   $(yeart(t)<firstyear(i))
-*if there is not a mandate for that technology in the region
-                   $(not ([r_offshore(r,t) and ofswind(i)] or 
-                      [sum{st$r_st(r,st), batterymandate(st,t) } and battery(i)] ) )
-                  ] = no ;
-
 *remove any non-prescriptive build capabilities if they are not prescribed
 valcap(i,newv,r,t)$[(not sameas(i,'gas-ct'))$(yeart(t)<firstyear(i))
                    $(not sum{tt$(yeart(tt)<=yeart(t)), prescription_check(i,newv,r,tt) })
@@ -2491,6 +2510,7 @@ valcap(i,v,r,t)$[i_numeraire(i)$(not psh(i))$Sw_WaterMain] = no ;
 *upgraded init capacity is available if the tech from which it is
 *upgrading is in valcap and not banned
 valcap(i,initv,r,t)$[upgrade(i)$Sw_Upgrades$(yeart(t)>=Sw_UpgradeYear)
+                    $(yeart(t)>=firstyear(i))
                     $sum{ii$upgrade_from(i,ii), valcap(ii,initv,r,t) }
                     $(not ban(i))
                     $(not sum{ii$upgrade_to(i,ii), ban(ii) })
@@ -2565,6 +2585,7 @@ valcap(i,v,r,t)$[upgrade(i)$(not sum{ii$upgrade_from(i,ii),valcap(ii,v,r,t) })] 
 * Add aggregations of valcap
 valcap_irt(i,r,t) = sum{v, valcap(i,v,r,t) } ;
 valcap_iv(i,v)$sum{(r,t)$tmodel_new(t), valcap(i,v,r,t) } = yes ;
+valcap_ir(i,r)$sum{(v,t)$tmodel_new(t), valcap(i,v,r,t) } = yes ;
 valcap_i(i)$sum{v, valcap_iv(i,v) } = yes ;
 valcap_ivr(i,v,r)$sum{t, valcap(i,v,r,t) } = yes ;
 
@@ -3779,7 +3800,7 @@ winter_cap_ratio(i,v,r)$valcap_ivr(i,v,r) = 1 ;
 winter_cap_ratio(i,initv,r)$hintage_data(i,initv,r,'2010','cap')
                             =  hintage_data(i,initv,r,'2010','wintercap') / hintage_data(i,initv,r,'2010','cap') ;
 * New capacity is given the capacity-weighted average value from existing units
-winter_cap_ratio(i,newv,r)$[sum{t, valcap(i,newv,r,t) }
+winter_cap_ratio(i,newv,r)$[valcap_ivr(i,newv,r)
                            $sum{(initv,rr), hintage_data(i,initv,rr,'2010','wintercap') }]
                            =  sum{(initv,rr), winter_cap_ratio(i,initv,rr) * hintage_data(i,initv,rr,'2010','wintercap') }
                               / sum{(initv,rr), hintage_data(i,initv,rr,'2010','wintercap') } ;
@@ -5550,7 +5571,7 @@ storage_eff(i,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), storage_eff(ii,t) } ;
 parameter minstorfrac(i,v,r) "--fraction-- minimum storage_in as a fraction of total input capacity";
 minstorfrac(i,v,r)$[valcap_ivr(i,v,r)$psh(i)] = %GSw_HydroStorInMinLoad% ;
 * Expand for water technologies
-minstorfrac(i,v,r)$[i_water_cooling(i)$sum{t, valcap(i,v,r,t) }$psh(i)$Sw_WaterMain]
+minstorfrac(i,v,r)$[i_water_cooling(i)$valcap_ivr(i,v,r)$psh(i)$Sw_WaterMain]
   = sum{ii$ctt_i_ii(i,ii), minstorfrac(ii,v,r) } ;
 
 parameter storinmaxfrac(i,v,r)  "--fraction-- max storage input capacity as a fraction of output capacity" ;
@@ -5649,7 +5670,6 @@ parameter storage_duration_m(i,v,r)   "--hours-- storage duration by tech, vinta
           cc_storage(i,sdbin)         "--fraction-- capacity credit of storage by duration"
           bin_duration(sdbin)         "--hours-- duration of each storage duration bin"
           bin_penalty(sdbin)          "--$-- penalty to incentivize solve to fill the shorter duration bins first"
-          within_seas_frac(i,v,r)     "--unitless-- fraction of energy that must be used within season. 1 means no shifting. <1 means we can shift"
 ;
 $onempty
 parameter storage_duration_pshdata(i,v,r) "--hours-- storage duration data for PSH"
@@ -5668,23 +5688,6 @@ storage_duration_m(i,v,r)$[storage_duration(i)$valcap_ivr(i,v,r)] = storage_dura
 $ifthen %GSw_HydroPSHDurData% == 1
 storage_duration_m(i,v,r)$[storage_duration_pshdata(i,v,r)$psh(i)$valcap_ivr(i,v,r)] = storage_duration_pshdata(i,v,r) ;
 $endif
-* Define fraction of energy that must be used within season. Use input parameters for dispatchable hydropower and PSH.
-within_seas_frac(i,v,r)$valcap_ivr(i,v,r) = 1 ;
-within_seas_frac(hydro_d,v,r) = %GSw_HydroWithinSeasFrac% ;
-$ifthen.usedur %GSw_HydroPumpWithinSeasFrac% == "data"
-* Use storage duration data to define.
-* This will only allow shifting for durations > 168 hours, where 168-730.5 hr is classified by the
-*   International Hydropower Association as "intra-month", and >730.5 hr is classified as Seasonal.
-within_seas_frac(psh,v,r)$[storage_duration_m(psh,v,r) > 168] = round(1 - storage_duration_m(psh,v,r)/(24*7*(52/4)), 3) ;
-within_seas_frac(psh,v,r)$[within_seas_frac(psh,v,r) < 0] = 0 ;
-$else.usedur
-* Use numerical value from case file for PSH only
-within_seas_frac(psh,v,r)$[sum{t, valcap(psh,v,r,t) }] = %GSw_HydroPumpWithinSeasFrac% ;
-$endif.usedur
-
-* Assign values for water technologies
-within_seas_frac(i,v,r)$[i_water_cooling(i)$sum{t, valcap(i,v,r,t) }$Sw_WaterMain]
-  = sum{ii$ctt_i_ii(i,ii), within_seas_frac(ii,v,r) } ;
 
 * set the duration of each storage duration bin
 bin_duration(sdbin) = sdbin.val ;
@@ -5699,7 +5702,8 @@ cc_storage(i,sdbin)$(cc_storage(i,sdbin) > 1) = 1 ;
 * beyond what is available for diurnal peaking capacity
 cc_storage(i,'8760') = 0 ;
 
-bin_penalty(sdbin) = 1e-5 * (ord(sdbin) - 1) ;
+bin_penalty(sdbin) = 0 ;
+bin_penalty(sdbin)$Sw_StorageBinPenalty = 1e-5 * (ord(sdbin) - 1) ;
 
 *upgrade plants assume the same as what they're upgraded to
 cc_storage(i,sdbin)$upgrade(i) = sum{ii$upgrade_to(i,ii), cc_storage(ii,sdbin) } ;

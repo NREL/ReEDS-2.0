@@ -120,6 +120,12 @@ $include e_report_params.gms
 h(h)$[not h_rep(h)] = no ;
 szn(szn)$[not szn_rep(szn)] = no ;
 
+*=================================================
+* -- CAPACITY ABOVE INTERCONNECTION QUEUE LIMIT --
+*=================================================
+
+cap_above_limit(tg,r,t)$tmodel_new(t) = CAP_ABOVE_LIM.l(tg,r,t) ;
+
 *=====================
 * -- CO2 Reporting --
 *=====================
@@ -531,7 +537,7 @@ repgasprice_nat(t)$[tmodel_new(t)$sum{cendiv, repgasquant(cendiv,t) }] =
 *========================================
 
 gasshare_ba(r,cendiv,t)$[r_cendiv(r,cendiv)$tmodel_new(t)$repgasquant(cendiv,t)] =
-                 sum{i$[sum{v,valgen(i,v,r,t)}$gas(i)],repgasquant_irt(i,r,t) / repgasquant(cendiv,t) } ;
+                 sum{i$[valgen_irt(i,r,t)$gas(i)],repgasquant_irt(i,r,t) / repgasquant(cendiv,t) } ;
 
 gasshare_techba(i,r,cendiv,t)$[r_cendiv(r,cendiv)$tmodel_new(t)$repgasquant(cendiv,t)$gas(i)] =
                  repgasquant_irt(i,r,t) / repgasquant(cendiv,t) ;
@@ -589,7 +595,7 @@ bioshare_techba(i,r,t)$[(cofire(i) or bio(i))$tmodel_new(t)] =
 *=========================
 
 * Calculate generation and include charging, pumping, DR shifted load, and production as negative values
-gen_h(i,r,h,t)$[tmodel_new(t)$sum{v,valgen(i,v,r,t)}] =
+gen_h(i,r,h,t)$[tmodel_new(t)$valgen_irt(i,r,t)] =
   sum{v$valgen(i,v,r,t), GEN.l(i,v,r,h,t)
 * less storage charging
   - STORAGE_IN.l(i,v,r,h,t)$[storage_standalone(i) or hyd_add_pump(i)]
@@ -611,7 +617,7 @@ gen_h("upv_6",r,h,t)$[cap_cspns(r,t)$tmodel_new(t)]
 gen_h("upv_6",r,h,t)$[cap_cspns(r,t)$tmodel_new(t)$(gen_h("upv_6",r,h,t) < 0)] = 0 ;
 
 * Do it again for stress periods
-gen_h_stress(i,r,allh,t)$[tmodel_new(t)$sum{v,valgen(i,v,r,t)}$h_stress_t(allh,t)] =
+gen_h_stress(i,r,allh,t)$[tmodel_new(t)$valgen_irt(i,r,t)$h_stress_t(allh,t)] =
   sum{v$valgen(i,v,r,t), GEN.l(i,v,r,allh,t)
 * less storage charging
       - STORAGE_IN.l(i,v,r,allh,t)$[storage_standalone(i) or hyd_add_pump(i)] }
@@ -846,12 +852,14 @@ cap_upgrade_ivrt(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades] = (1-upgrade_
 * RETIRED CAPACITY
 *=========================
 
-ret_out(i,r,t)$[(not tfirst(t))] = sum{tt$tprev(t,tt), cap_out(i,r,tt)} - cap_out(i,r,t) + cap_new_out(i,r,t) ;
+ret_ivrt(i,v,r,t)$[(not tfirst(t))] = 
+    sum{tt$tprev(t,tt), cap_ivrt(i,v,r,tt) } - cap_ivrt(i,v,r,t) + cap_new_ivrt(i,v,r,t) 
+    - sum{ii$upgrade_from(ii,i), UPGRADES.l(ii,v,r,t) } ;
+ret_ivrt(i,v,r,t)$[abs(ret_ivrt(i,v,r,t)) < 1e-6] = 0 ;
+
+ret_out(i,r,t)$[(not tfirst(t))] = sum{v, ret_ivrt(i,v,r,t) } ;
 ret_out(i,r,t)$[abs(ret_out(i,r,t)) < 1e-6] = 0 ;
 ret_ann(i,r,t)$ret_out(i,r,t) = ret_out(i,r,t) / (yeart(t) - sum{tt$tprev(t,tt), yeart(tt) }) ;
-
-ret_ivrt(i,v,r,t)$[(not tfirst(t))] = sum{tt$tprev(t,tt), cap_ivrt(i,v,r,tt)} - cap_ivrt(i,v,r,t) + cap_new_ivrt(i,v,r,t) ;
-ret_ivrt(i,v,r,t)$[abs(ret_ivrt(i,v,r,t)) < 1e-6] = 0 ;
 
 *==================================
 * BINNED STORAGE CAPACITY
@@ -1575,7 +1583,7 @@ error_check('z') = (
               * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) })
         }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthPenalties$(yeart(t)<=Sw_GrowthConLastYear)]
 * minus small penalty to move storage into shorter duration bins
-        - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$[storage(i) or hyd_add_pump(i)]],
+        - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
             bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) }
 * minus retirement penalty
         - pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
@@ -1585,8 +1593,8 @@ error_check('z') = (
         - pvf_onm(t) * sum{(r,h), CURT.l(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
 * minus hurdle costs
         - pvf_onm(t) * sum{(r,rr,trtype)$cost_hurdle(r,rr,t), tran_hurdle_cost_ann(r,rr,trtype,t) }
-* minus penalty cost for dropped load before Sw_StartMarkets
-        - pvf_onm(t) * sum{(r,h), DROPPED.l(r,h,t) * hours(h) * cost_dropped_load }
+* minus penalty cost for dropped/excess load before Sw_StartMarkets
+        - pvf_onm(t) * sum{(r,h), (DROPPED.l(r,h,t) + EXCESS.l(r,h,t)) * hours(h) * cost_dropped_load }
 * minus retail adder for electricity consuming technologies ---
         - pvf_onm(t) * sum{(p,i,v,r,h)$[valcap(i,v,r,t)$i_p(i,p)$h_rep(h)$Sw_RetailAdder$Sw_Prod],
               hours(h) * Sw_RetailAdder * PRODUCE.l(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) }
@@ -1623,6 +1631,8 @@ error_check('z') = (
                   cost_cap(i,t) * INV_REFURB.l(i,v,r,t)
                   * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
         )
+* account for penalty paid to deploy capacity beyond interconnection queue limits        
+        + sum{(tg,r), cap_penalty(tg) * CAP_ABOVE_LIM.l(tg,r,t) }  
     }
 ) / z.l ;
 
@@ -1637,9 +1647,13 @@ error_check("RPS") = sum{(RPSCat,i,st,ast,t)$[(not RecMap(i,RPSCat,st,ast,t))$[(
 error_check("OpRes") = sum{(ortype,i,v,r,h,t)$[not valgen(i,v,r,t)], OPRES.l(ortype,i,v,r,h,t) } ;
 error_check("m_rsc_dat") = sum{(r,i,rscbin)$m_rsc_dat(r,i,rscbin,"cap"), m_rsc_dat_init(r,i,rscbin) - m_rsc_dat(r,i,rscbin,"cap") } ;
 
-* Check to make sure there's no dropped load in or after Sw_StartMarkets
+* Check to make sure there's no dropped/excess load in or after Sw_StartMarkets
 error_check("dropped") = sum{(r,h,t)$[yeart(t)>=Sw_StartMarkets], DROPPED.l(r,h,t) } ;
+error_check("excess") = sum{(r,h,t)$[yeart(t)>=Sw_StartMarkets], EXCESS.l(r,h,t) } ;
 
+* Report DROPPED and EXCESS variable levels
+dropped_load(r,h,t) = DROPPED.l(r,h,t) ;
+excess_load(r,h,t) = EXCESS.l(r,h,t) ;
 
 *======================
 * Transmission

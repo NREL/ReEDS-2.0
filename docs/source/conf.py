@@ -55,6 +55,10 @@ myst_substitutions = {
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'sphinx_rtd_theme'
+html_static_path = ['_static']
+html_css_files = [
+    'customtheme.css',
+]
 
 html_theme_options = {
     'navigation_depth': 3, 
@@ -65,7 +69,9 @@ html_context = {
     'base_url': base_url,
 }
 
-html_logo = '../../images/reeds-logo.png'
+html_logo = '_static/reeds-logo.png'
+
+html_favicon = '_static/reeds-icon.png'
 
 # More info on the RTD theme configuration can be found at:
 # https://github.com/readthedocs/sphinx_rtd_theme/blob/7c9b1b5d391f6d7fae72274393eb25d1df96e546/docs/configuring.rst

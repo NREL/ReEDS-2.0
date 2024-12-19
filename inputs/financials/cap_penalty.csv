@@ -1,0 +1,14 @@
+*tg,cap_penalty
+wind-ons,10000000
+wind-ofs,10000000
+pv,10000000
+csp,10000000
+gas,10000000
+nuclear,10000000
+battery,10000000
+hydro,10000000
+h2,10000000
+coal,10000000
+geothermal,10000000
+biomass,10000000
+pumped-hydro,10000000

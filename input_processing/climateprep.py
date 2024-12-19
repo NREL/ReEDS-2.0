@@ -147,7 +147,7 @@ distloss = pd.read_csv(
 #########################################
 
 def readwrite(
-    infile, climatedir=climatedir, inputs_case=inputs_case, decimals=decimals, endyear=endyear):
+    infile, inputs_case=inputs_case, decimals=decimals, endyear=endyear):
     """
     Load modifiers, interpolate to all years, write GAMS-readable csv.
     """
@@ -160,10 +160,7 @@ def readwrite(
         'hydadjsea': ['r','szn'],
     }
     ### Load the climate scenario data
-    dfin = pd.read_csv(os.path.join(climatedir, infile+'.csv'))
-    
-    # Filter for valid regions
-    dfin = dfin.loc[dfin['r'].isin(val_r_all)]
+    dfin = pd.read_csv(os.path.join(inputs_case, infile+'.csv'))
     
     ### Put in GAMS-readable format
     dfout = pd.pivot_table(dfin, values='Value', index=index[infile], columns=['t'])
