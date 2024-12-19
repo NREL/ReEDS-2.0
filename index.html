@@ -7,8 +7,10 @@
   <title>Welcome to ReEDS’s documentation! &mdash; ReEDS  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/customtheme.css?v=299ffeb9" />
 
   
+    <link rel="shortcut icon" href="_static/reeds-icon.png"/>
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
@@ -101,7 +103,7 @@
 </section>
 <section class="tex2jax_ignore mathjax_ignore" id="required-software">
 <h1>Required Software<a class="headerlink" href="#required-software" title="Link to this heading"></a></h1>
-<p>The ReEDS model is written primarily in GAMS with auxiliary modules written in Python. R is used for the demand module, which is not active by default, and therefore need not be installed unless you plan on working with that module. At present, NREL uses the following software versions: GAMS 30.3; Python 3.6.5; R 3.4.4. Other versions of these software may be compatible with ReEDS, but NREL has not tested other versions at this time.</p>
+<p>The ReEDS model is written primarily in GAMS with auxiliary modules written in Python. At present, NREL uses the following software versions: GAMS 45.2; Python 3.11. Other versions of these software may be compatible with ReEDS, but NREL has not tested other versions at this time.</p>
 <p>GAMS is a mathematical programming software from the GAMS Development Corporation. “The use of GAMS beyond the limits of the free demo system requires the presence of a valid GAMS license file.” [<a class="reference external" href="https://www.gams.com/latest/docs/UG_License.html">1</a>] The ReEDS model requires the GAMS Base Module and a linear programming (LP) solver (e.g., CPLEX). The LP solver should be connected to GAMS with either a GAMS/Solver license or a GAMS/Solver-Link license. “A GAMS/Solver connects the GAMS Base module to a particular solver and includes a license for this solver to be used through GAMS. It is not necessary to install additional software. A GAMS/Solver-Link connects the GAMS Base Module to a particular solver, but does not include a license for the solver. It may be necessary to install additional software before the solver can be used.” [<a class="reference external" href="https://www.gams.com/products/buy-gams/">2</a>]</p>
 <p>NREL subscribes to the GAMS/CPLEX license for the LP solver, but open-source solvers and free, internet-based services are also available.</p>
 <ul class="simple">

@@ -326,6 +326,6 @@ Screenshot of initiating "runbatch.py" from the command line
 
 ### Special Case Setup Requirements
 
-For non-NREL users, some additional data is required to run the ReEDS model at the 'county' spatial resolution. This is currently considered a special case and some data was required to be kept outside the ReEDS repository because the data is simply too large. The hourly renewable capacity factor data is now available to all at : https://data.openei.org/submissions/5986.
+For non-NREL users, some additional data is required to run the ReEDS model at the 'county' spatial resolution. This is currently considered a special case and some data was required to be kept outside the ReEDS repository because the data is simply too large. The hourly renewable capacity factor data is now available to all at : [https://data.openei.org/submissions/5986](https://data.openei.org/submissions/5986).
 
 If you would like to run the model at county resolution, you are requested to download the files available from the link provided, unzip each folder, and place the files obtained into inputs/variability/multi-year in your locally cloned ReEDS repository. The input_processing scripts have also been updated to check for these files for any county-level runs. The 'cases_spatialflex.csv' file provides examples of specific switch settings to run ReEDS at county-level.
