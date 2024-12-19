@@ -287,10 +287,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
         recf.index.map(lambda x: x.year in sw.GSw_HourlyWeatherYears)
     ].mean()
 
-    agglevel = pd.read_csv(
-        os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
-    lvl = 'ba' if agglevel in ['ba','state','aggreg'] else 'county'
-    
+
     ### Get supply curves
     dfsc = {}
     for tech in techs:

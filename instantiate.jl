@@ -1,4 +1,5 @@
 ENV["JULIA_SSL_CA_ROOTS_PATH"] = ""
+ENV["JULIA_PKG_SERVER_REGISTRY_PREFERENCE"] = "eager"
 import Pkg
 Pkg.Registry.update()
 Pkg.Registry.add("General")

@@ -281,7 +281,7 @@ outwindcfmult = windcfmult.reset_index().pivot_table(index='t',columns='i', valu
 #    -- Electrolyzer Stack Replacement Cost Adjustment --    #
 ##############################################################
 
-consume_char = pd.read_csv(os.path.join(reeds_path,'inputs','consume','consume_char_'+sw.GSw_H2_Inputs+'.csv'))
+consume_char = pd.read_csv(os.path.join(inputs_case,'consume_char.csv'))
 
 # grab the electrolyzer cost 'h2_elec_stack_replace_year' years into the future
 current_year = datetime.date.today().year
@@ -422,9 +422,8 @@ outdac_elec = (
 
 ## Create Gas DAC scenario output
 # For DAC-gas we assume a solvent system: https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987
-filename = f'dac_gas_{sw.GSw_DAC_Gas_Case}'
-dac_gas = pd.read_csv(os.path.join(reeds_path,'inputs','consume',f'{filename}.csv'))
-dac_gas = deflate_func(dac_gas, filename).round(4)
+dac_gas = pd.read_csv(os.path.join(inputs_case,'dac_gas.csv'))
+dac_gas = deflate_func(dac_gas, f'dac_gas_{GSw_DAC_Gas_Case}').round(4)
 
 
 #%%###################################################

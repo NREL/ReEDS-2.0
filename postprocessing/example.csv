@@ -1,7 +1,14 @@
 casepath,casename,color
-# /Volumes/ReEDS/Users/pbrown/ReEDSruns/20240115_transop/20240307/v20240307_transopK0_Restricted,Restricted,
-# /Volumes/ReEDS/Users/pbrown/ReEDSruns/20240115_transop/20240307/v20240307_transopK0_Permit_CoordLite38,Regional coord.,
-# /Volumes/ReEDS/Users/pbrown/ReEDSruns/20240115_transop/20240307/v20240307_transopK0_Permit_CoordFull,Interregional coord.,
-# /Volumes/ReEDS/Users/pbrown/ReEDSruns/20240115_transop/20240307/v20240307_transopK0_Permit_CoordFull_ITC,Interregional coord. + ITC,
-/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240313/v20240313_stresspaperE0_CC_DemHi_90by2035__core,Capacity credit,C4
-/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240313/v20240313_stresspaperE0_SP_DemHi_90by2035__core,Stress periods,plt.cm.tab10(1)
+### Examples
+## nrelnas01 on windows
+# Z:\FY23-ReEDS_Spatial_Flex-LS\mixed_resolution\runs\v1_092424_main_ERCOT_county,main,
+# Z:\FY23-ReEDS_Spatial_Flex-LS\mixed_resolution\runs\v1_092524_dev_check_ERCOT_county,dev check,
+## nrelnas01 on mac
+# /Volumes/ReEDS/Users/pbrown/ReEDSruns/main/v20241028_mainK0_USA,Ref,C1
+# /Volumes/ReEDS/Users/pbrown/ReEDSruns/main/v20241028_mainK0_USA_decarb,Z35,plt.cm.tab20(4)
+## kestrel
+# /projects/reedsweto/pbrown/github/ReEDS-2.0/runs/v20241028_mainK0_USA,main_Ref,plt.cm.tab20(0)
+# /projects/reedsweto/pbrown/github4/ReEDS-2.0/runs/v20241028_porK0_USA,por_Ref,plt.cm.tab20(1)
+# /projects/reedsweto/pbrown/github/ReEDS-2.0/runs/v20241028_mainK0_USA_decarb,main_Z35,plt.cm.tab20(2)
+# /projects/reedsweto/pbrown/github4/ReEDS-2.0/runs/v20241028_porK0_USA_decarb,por_Z35,plt.cm.tab20(3)
+### Add your cases below (don't commit them) or create a new csv file with the same format

@@ -2,8 +2,12 @@ wind-ons
 wind-ofs
 pv
 csp
-ccs
-gas-uncontrolled
+gas
 nuclear
-storage
+battery
+hydro
 h2
+coal
+geothermal
+biomass
+pumped-hydro

@@ -1,10 +1,12 @@
 *tg,MW
-ccs,300
 csp,100
-gas-uncontrolled,300
+gas,300
 h2,100
 nuclear,600
 pv,100
-storage,100
+battery,100
+hydro,100
 wind-ofs,600
 wind-ons,100
+pumped-hydro,600
+biomass,50

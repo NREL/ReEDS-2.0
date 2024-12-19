@@ -45,7 +45,7 @@ inputs_case = args.inputs_case
 
 # #%% Settings for testing ###
 #reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-#inputs_case = os.path.join(reeds_path,'runs','test_Pacific','inputs_case','')
+#inputs_case = os.path.join(reeds_path,'runs','cap_limit_Pacific','inputs_case','')
 
 #%% Set up logger
 log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
@@ -65,6 +65,9 @@ scalars = pd.read_csv(
 casedir = os.path.dirname(inputs_case)
 NARIS = False
 decimals = 6
+
+# github runner test settings
+github_test = os.getenv("GITHUB_COUNTY_TEST", False) # tries to get environment variable from github, if it's not found it defaults to False
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
@@ -453,7 +456,7 @@ if agglevel == 'county':
             access_case = row['access_case']
             # If NREL user, then attempt to copy data from the remote location defined in 
             # rev_paths.csv.
-            if 'github.nrel.gov' in remote_url:
+            if 'github.nrel.gov' in remote_url and not github_test:
                 sc_path = row['sc_path']
                 print(f'Copying county-level hourly profiles for {row["tech"]} {row["access_case"]}')
                 try:
@@ -474,6 +477,27 @@ if agglevel == 'county':
                     newrow = pd.DataFrame(data={'tech': [row['tech']],'access_case': [row['access_case']], 'file version': [sc_path.split("/")[-1]]})                        
                     file_version_new = pd.concat([file_version_new, newrow])
                 file_version_updates += 1
+
+            elif 'github.nrel.gov' in remote_url and github_test:
+                ## this is a county-level test run, get the data from the tests/data folder
+                sc_path = row['sc_path']
+                print(f'Copying county-level hourly profiles for {row["tech"]} {row["access_case"]}')
+
+                shutil.copy(
+                    os.path.join(reeds_path,'tests','data','county',f'{row["tech"]}.h5'),
+                    os.path.join(reeds_path,'inputs','variability','multi_year',f'{row["tech"]}-{access_case}_county.h5')
+                )
+   
+                # Update the file version information
+                file_version_row = (file_version_new['tech'] == row['tech']) & (file_version_new['access_case'] == row['access_case'])
+                if sum(file_version_row) > 0:
+                    file_version_new.loc[(file_version_new['tech'] == row['tech']) & (file_version_new['access_case'] == row['access_case']), 'file version'] = sc_path.split("/")[-1]
+                else:
+                    newrow = pd.DataFrame(data={'tech': [row['tech']],'access_case': [row['access_case']], 'file version': [sc_path.split("/")[-1]]})                        
+                    file_version_new = pd.concat([file_version_new, newrow])
+                file_version_updates += 1
+
+
             # If non-NREL user, then save the name of the missing file, and write it out 
             # in the error message below
             else:
@@ -792,7 +816,7 @@ for i, row in regionFiles.iterrows():
         df = df.loc[:,df.columns.isin(fix_cols + val_st)]
 
     elif (region_col.strip('*') == 'r_cendiv'):
-        # Make sure both the r is in val_r and cendiv is in val_cendiv
+        # Make sure both the r is in val_r_all and cendiv is in val_cendiv
         df = df.loc[df['r'].isin(val_r_all)]
         df = df.loc[:,df.columns.isin(["r"] + val_cendiv)]
 
@@ -889,6 +913,20 @@ if agglevel != 'county':
 
     # Write out file
     dpv_ba.to_csv(os.path.join(inputs_case,'distpvcap.csv'), index=True)
+
+### Add capacity deployment limits based on interconnection queue data
+cap_queue = pd.read_csv(os.path.join(reeds_path,'inputs','capacity_exogenous','interconnection_queues.csv'))
+# Filter the counties that are in chosen GSw_Region
+cap_queue = cap_queue[cap_queue['r'].isin(val_county['r'])]
+
+if agglevel != 'county':
+    cap_queue = cap_queue.rename(columns={'r':'county'})
+    cap_queue = pd.merge(cap_queue, r_county, on='county', how='left').dropna()
+    cap_queue = cap_queue.drop('county', axis=1)
+
+cap_queue = cap_queue.groupby(['tg','r'],as_index=False).sum()
+
+cap_queue.to_csv(os.path.join(inputs_case,'cap_limit.csv'), index=False)
 
 #%% Special-case set modifications
 ## Expand i (technologies) set if modeling water use

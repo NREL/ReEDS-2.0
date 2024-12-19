@@ -317,13 +317,22 @@ forcedoutage_h(i,r,h)$upgrade(i) = sum{ii$upgrade_to(i,ii), forcedoutage_h(ii,r,
 * Calculate availability (includes forced and planned outage rates)
 avail(i,r,h)$valcap_i(i) = 1 ;
 
-* Assume no plant outages in the summer, adjust the planned outages to account for no planned outages in summer
-* 273 is the number of non-summer days
+* Assume no planned outages in summer/winter
+parameter planned_outage_days ;
+planned_outage_days =
+    sum{(allszn,quarter)$[(not sameas(quarter,"summ"))$(not sameas(quarter,"wint"))],
+        szn_quarter_weights(allszn,quarter) * numdays(allszn)
+    } ;
+
 avail(i,r,h)$[valcap_i(i)$(forcedoutage_h(i,r,h) or planned_outage(i))] =
     (1 - forcedoutage_h(i,r,h))
     * (1 - planned_outage(i)
-           * sum{quarter$[not sameas(quarter,"summ")], frac_h_quarter_weights(h,quarter) }
-           * 365 / 273) ;
+           * sum{quarter$[(not sameas(quarter,"summ"))$(not sameas(quarter,"wint"))],
+                 frac_h_quarter_weights(h,quarter) }
+* Scale up to keep the same annual planned outage rate (higher than annual average in spring/fall)
+           * sum{allszn, numdays(allszn)} / planned_outage_days
+    )
+;
 
 *upgrade plants assume the same availability of what they are upgraded to
 avail(i,r,h)$[upgrade(i)$valcap_i(i)] = sum{ii$upgrade_to(i,ii), avail(ii,r,h) } ;
@@ -332,7 +341,7 @@ avail(i,r,h)$[upgrade(i)$valcap_i(i)] = sum{ii$upgrade_to(i,ii), avail(ii,r,h) }
 * forced/planned outages. If GSw_PRM_StressOutages is not true,
 * set the availability of thermal generator to 1 during stress periods.
 avail(i,r,h)
-    $[h_stress(h)$valcap_i(i)$(Sw_PRM_StressOutages=0)
+    $[h_stress(h)$valcap_ir(i,r)$(Sw_PRM_StressOutages=0)
     $(not vre(i))$(not hydro(i))$(not storage(i))$(not dr(i))$(not consume(i))
     ] = 1 ;
 
@@ -346,7 +355,7 @@ derate_geo_vintage(i,initv)$[geo(i)$valcap_iv(i,initv)] =
     / (sum{(r,h), avail(i,r,h) * hours(h) }
        / sum{(r,h), hours(h) }) ;
 
-seas_cap_frac_delta(i,v,r,szn,t) =
+seas_cap_frac_delta(i,v,r,szn,t)$valcap(i,v,r,t) =
     sum{quarter, szn_quarter_weights(szn,quarter) * quarter_cap_frac_delta(i,v,r,quarter,t) } ;
 
 
@@ -357,7 +366,7 @@ seas_cap_frac_delta(i,v,r,szn,t) =
 * assign hydrogen demand by region and timeslice
 * we assumed demand is flat, i.e., timeslices w/ more hours 
 * have more demand in metric tons but the same rate in metric tons/hour
-h2_exogenous_demand_regional(r,p,h,t)$[tmodel_new(t)]
+h2_exogenous_demand_regional(r,p,h,t)$[tmodel_new(t)$h2_share(r,t)]
     = h2_share(r,t) * h2_exogenous_demand(p,t) / 8760 ;
 
 
@@ -460,13 +469,13 @@ cap_hyd_szn_adj(i,szn,r)$[upgrade(i)$hydro_d(i)$(not cap_hyd_szn_adj(i,szn,r))] 
 
 
 * do not apply "avail" for hybrid PV+battery because "avail" represents the battery availability
-m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)] =
+m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)$cf_rsc(i,v,r,h,t)$cf_adj_t(i,v,t)] =
     cf_rsc(i,v,r,h,t)
     * cf_adj_t(i,v,t)
     * (avail(i,r,h)$[not pvb(i)] + 1$pvb(i)) ;
 
 * can remove capacity factors for new vintages that have not been introduced yet
-m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ivt(i,newv,tt ) }$valcap(i,newv,r,t)] = 0 ;
+m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ivt(i,newv,tt ) }$valcap(i,newv,r,t)$m_cf(i,newv,r,h,t)] = 0 ;
 
 * distpv capacity factor is divided by (1.0 - distloss) to provide a busbar equivalent capacity factor
 m_cf(i,v,r,h,t)$[distpv(i)$valcap(i,v,r,t)] = m_cf(i,v,r,h,t) / (1.0 - distloss) ;
@@ -475,7 +484,7 @@ m_cf(i,v,r,h,t)$[distpv(i)$valcap(i,v,r,t)] = m_cf(i,v,r,h,t) / (1.0 - distloss)
 * m_cf_szn does not get populated with very small values
 m_cf(i,v,r,h,t)$[not valcap(i,v,r,t)] = 0 ;
 m_cf(i,v,r,h,t)$[(m_cf(i,v,r,h,t)<0.01)$valcap(i,v,r,t)] = 0 ;
-m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)] = round(m_cf(i,v,r,h,t),3) ;
+m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)$m_cf(i,v,r,h,t)] = round(m_cf(i,v,r,h,t),3) ;
 
 * Remove capacity when there is no corresponding capacity factor
 m_capacity_exog(i,v,r,t)$[initv(v)$cf_tech(i)$(not sum{h, m_cf(i,v,r,h,t) })] = 0 ;
