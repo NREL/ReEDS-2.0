@@ -17,8 +17,8 @@ RPSCat.csv,inputs/sets/RPSCat.csv,ignore,ignore,,,,,,,,,RPSCat,,done
 aclike.csv,inputs/sets/aclike.csv,ignore,ignore,,,,,0,,,,aclike,,done
 acp_disallowed.csv,inputs/state_policies/acp_disallowed.csv,ignore,ignore,*st,"RPSCat,val",,,0,,,,,,done
 acp_prices.csv,inputs/state_policies/acp_prices.csv,ignore,ignore,st,st,,1,0,,,,,,done
-adoption_trajectories_commercial.csv,inputs/load/Adoption_Trajectories_Commercial.csv,sum,population,wide,year,,1,0,,,,,,done
-adoption_trajectories_residential.csv,inputs/load/Adoption_Trajectories_Residential.csv,sum,population,wide,year,,1,0,,,,,,done
+adoption_trajectories_commercial.csv,inputs/load/Adoption_Trajectories_Commercial.csv,ignore,ignore,wide,year,,1,0,,,,,,done
+adoption_trajectories_residential.csv,inputs/load/Adoption_Trajectories_Residential.csv,ignore,ignore,wide,year,,1,0,,,,,,done
 agglevels.csv,,ignore,ignore,ignore,,,,0,,,,,,done
 aggreg.csv,,ignore,ignore,ignore,,,0,0,,,,,,done
 aggreg2anchorreg.csv,,ignore,ignore,ignore,,,0,0,,,,,,done
@@ -35,7 +35,8 @@ can_imports_capacity.csv,,sum,translinesize,*r,t,,0,0,,1,,,,disaggfunc set to ig
 can_imports_quarter_frac.csv,inputs/canada_imports/can_imports_quarter_frac.csv,ignore,ignore,,,,,0,,,,,,done
 can_imports_szn_frac.csv,,ignore,ignore,,,,,0,,1,,,,done
 cangrowth.csv,inputs/load/cangrowth.csv,ignore,ignore,st,,,1,0,,,,,,done
-canmexload.csv,,sum,ignore,*r,h,,0,0,,1,,,,done; 
+canmexload.csv,,sum,ignore,*r,h,,0,0,,1,,,,done; disaggfunc set to ignore because spreadsheet says to ‘leave as is’
+cap_cost_mult_noITC.csv,,mean,uniform,r,"*i,t",,0,0,,1,,,,done
 cap_cspns.csv,,sum,ignore,*r,t,,0,0,,1,,,,disaggfunc set to ignore because data is pulled from the county-indexed generator database
 cap_hyd_ccseason_adj.csv,,mean,uniform,r,"*i,ccseason",,0,0,,1,,,,done
 cap_hyd_szn_adj.csv,,mean,uniform,r,"*i,szn",,0,0,,1,,,,done
@@ -44,9 +45,9 @@ cap_penalty.csv,inputs/financials/cap_penalty.csv,ignore,ignore,,tg,,,0,,,,,,don
 capnonrsc.csv,,sum,ignore,r,i,,0,0,,1,,,,disaggfunc set to ignore because data will be written at county resolution by writecapdat.py
 cappayments_ba.csv,inputs/capacity_exogenous/cappayments_ba.csv,ignore,ignore,,*r,,0,0,,,,,,not done but not used
 caprsc.csv,,sum,ignore,r,i,,0,0,,1,,,,disaggfunc set to ignore because data will be written at county resolution by writecapdat.py
+ccmult.csv,,ignore,ignore,,,,,0,,,,,,done
 ccreg.csv,,ignore,ignore,,,,,0,,,,,,done
 ccs_link.csv,inputs/emission_constraints/ccs_link.csv,ignore,ignore,,,,,0,,,,,,done
-ccs_link_water.csv,inputs/emission_constraints/ccs_link_water.csv,ignore,ignore,,,,,0,,,,,,done
 ccsflex_cat.csv,inputs/sets/ccsflex_cat.csv,ignore,ignore,,,,,,,,,ccsflex_cat,,done
 ccsflex_perf.csv,,ignore,ignore,,,,,0,,,,,,done
 cd_beta0.csv,inputs/fuelprices/cd_beta0.csv,ignore,ignore,*cendiv,,,,0,,,,,,done
@@ -86,7 +87,7 @@ cost_opres_default.csv,inputs/plant_characteristics/cost_opres_default.csv,ignor
 cost_opres_market.csv,inputs/plant_characteristics/cost_opres_market.csv,ignore,ignore,,,,,0,,,,,,done
 cost_vom.csv,,mean,ignore,r,"i,v,t",,0,0,,1,,,,done (ReEDS-to-PLEXOS output)
 cost_vom_mult.csv,inputs/waterclimate/cost_vom_mult.csv,ignore,ignore,,,,,0,,,,,,done
-county2zone.csv,inputs/county2zone.csv,special,ignore,ba,"FIPS,county_name,state",,0,0,,,,,,done
+county2zone.csv,inputs/county2zone.csv,first,special,ba,"FIPS,county_name,state",,0,0,,,,,,done
 crf.csv,,ignore,ignore,,,,0,,,,,,,done
 crf_co2_incentive.csv,,ignore,ignore,,,,,0,,,,,,done
 crf_h2_incentive.csv,,ignore,ignore,,,,,0,,,,,,done
@@ -101,8 +102,9 @@ d_szn_1yr.csv,inputs/variability/d_szn_1yr.csv,ignore,ignore,,,,,0,,,,,,done
 d_szn_7yr.csv,inputs/variability/d_szn_7yr.csv,ignore,ignore,,,,,0,,,,,,done
 dac_assumptions.csv,,ignore,ignore,,,,,0,,,,,,done
 dac_elec.csv,inputs/consume/dac_elec_{dacscen}.csv,ignore,ignore,,,,1,0,,,,,,done
-dac_gas.csv,inputs/consume/dac_gas_{GSw_DAC_Gas_Case}.csv,ignore,ignore,,,,1,0,,1,,,,done
+dac_gas.csv,,ignore,ignore,,,,1,0,,1,,,,done
 deflator.csv,inputs/financials/deflator.csv,ignore,ignore,,,,,0,,,,,,done
+degradation_adj.csv,,ignore,ignore,,,,,0,,,,,,done
 degradation_annual.csv,inputs/degradation/degradation_annual_{degrade_suffix}.csv,ignore,ignore,,,,,0,,,,,,done
 demonstration_plants.csv,inputs/capacity_exogenous/demonstration_plants.csv,ignore,ignore,r,"t,coolingwatertech,ctt,wst,notes",i,,0,,,,,,done
 depreciation_schedules.csv,inputs/financials/depreciation_schedules_{depreciation_schedules_suffix}.csv,ignore,ignore,,,,1,0,,,,,,done
@@ -114,7 +116,7 @@ disagg_translinesize.csv,inputs/disaggregation/disagg_translinesize.csv,ignore,i
 distance_reinforcement.csv,,ignore,ignore,r,"*i,rscbin",*i,0,0,,1,,,,done
 distance_spur.csv,,ignore,ignore,r,"*i,rscbin",*i,0,0,,1,,,,done
 distpvcap.csv,inputs/dgen_model_inputs/{distpvscen}/distpvcap_{distpvscen}.csv,sum,ignore,r,wide,,1,0,,,,,,done
-distpvcf_hourly.csv,inputs/dgen_model_inputs/distpvcf_hourly.csv,mean,uniform,r,wide,,1,0,,,,,,TODO: change to capacity-weighted (using straight mean for now)
+distpvcf_hourly.csv,inputs/dgen_model_inputs/distpvcf_hourly.csv,mean,ignore,r,wide,,1,0,,,,,,TODO: change to capacity-weighted (using straight mean for now)
 dollaryear_consume.csv,inputs/consume/dollaryear.csv,ignore,ignore,,,,,0,,,,,,Do we really need 3 separate instances of dollaryear?
 dollaryear_plant.csv,inputs/plant_characteristics/dollaryear.csv,ignore,ignore,,,,,0,,,,,,Do we really need 3 separate instances of dollaryear?
 dollaryear_fuel.csv,inputs/fuelprices/dollaryear.csv,ignore,ignore,,,,,0,,,,,,done
@@ -122,7 +124,7 @@ dollaryear_sc.csv,inputs/supply_curve/dollaryear.csv,ignore,ignore,,,,,0,,,,,,do
 dr_decrease.csv,inputs/demand_response/dr_decrease_profile_{drscen}.csv,mean,population,wide,"i,hour,year",,1,0,,,,,,done
 dr_hrs.csv,,ignore,ignore,,,,,0,,,,,,done
 dr_increase.csv,inputs/demand_response/dr_increase_profile_{drscen}.csv,mean,population,wide,"i,hour,year",,1,0,,,,,,done
-dr_rsc.csv,inputs/demand_response/dr_rsc_{drscen}.csv,sc_cat,population,r,,,0,0,,,,,,Agg and disagg methods not tested. Not sure DR works anyways so ok for now
+dr_rsc.csv,inputs/demand_response/dr_rsc_{drscen}.csv,ignore,ignore,r,,,,0,,,,,,done
 dr_shed.csv,inputs/demand_response/dr_shed_{drscen}.csv,ignore,ignore,,,,,0,,,,,,done
 dr_shifts.csv,inputs/demand_response/dr_shifts_{drscen}.csv,ignore,ignore,,,,,0,,,,,,done
 dr_types.csv,inputs/demand_response/dr_types_{drscen}.csv,ignore,ignore,,,,,0,,,,,,done
@@ -134,11 +136,12 @@ eall.csv,inputs/sets/eall.csv,ignore,ignore,,,,,,,,,eall,,done
 egs_supply_curve.csv,inputs/supply_curve/egs_supply_curve-reference_{lvl}.csv,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 emit_rate.csv,,ignore,ignore,,"e,i,v,r",,0,0,,,,,,done (ReEDS-to-PLEXOS output)
 emitrate.csv,inputs/emission_constraints/emitrate.csv,ignore,ignore,,,,,0,,,,,,done
+emitrate_precombustion.csv,inputs/emission_constraints/emitrate_precombustion.csv,ignore,ignore,,,,,0,,,,,,done
 energy_communities.csv,inputs/financials/energy_communities.csv,ignore,ignore,,,,,0,,,,,,region aggregation and filtering is handled in copy_files
 eval_period_adj_mult.csv,,ignore,ignore,,,,,0,,,,,,done
 evmc_baseline_load.h5,inputs/demand_response/ev_load_{evmcscen}.h5,sum,population,*r,"h,t",,0,0,,1,,,,done
 evmc_baseline_load.csv,,sum,population,*r,"h,t",,0,0,,1,,,,done
-evmc_rsc.csv,inputs/demand_response/evmc_rsc_{evmcscen}.csv,ignore,population,r,,,0,0,,,,,,Agg and disagg methods not tested. Not sure EVMC works anyways so ok for now
+evmc_rsc.csv,inputs/demand_response/evmc_rsc_{evmcscen}.csv,ignore,ignore,r,,,,0,,,,,,done
 evmc_shape_generation.csv,,mean,population,r,"**i,h",,0,0,,1,,,,done
 evmc_shape_load.csv,,mean,population,r,"**i,h",,0,0,,1,,,,done
 evmc_shape_profile_decrease.csv,inputs/demand_response/evmc_shape_decrease_profile_{evmcscen}.h5,mean,population,wide,"i,hour,year",,1,0,,,,,,done
@@ -148,6 +151,8 @@ evmc_storage_discharge.csv,,mean,population,r,"**i,h,t",,0,0,,1,,,,done
 evmc_storage_energy.csv,inputs/demand_response/evmc_storage_energy_{evmcscen}.h5,mean,population,wide,"i,hour,year",,1,0,,,,,,done
 evmc_storage_profile_decrease.csv,inputs/demand_response/evmc_storage_decrease_profile_{evmcscen}.h5,mean,population,wide,"i,hour,year",,1,0,,,,,,done
 evmc_storage_profile_increase.csv,inputs/demand_response/evmc_storage_increase_profile_{evmcscen}.h5,mean,population,wide,"i,hour,year",,1,0,,,,,,done
+exog_upv_rsc.csv,,sum,ignore,region,"*tech,rscbin,year",,0,0,,1,,,,Delete once aggregate_regions.py is moved up
+exog_wind_ons_rsc.csv,,ignore,ignore,region,"*tech,rscbin,year",,0,0,,1,,,,Delete once aggregate_regions.py is moved up
 f.csv,inputs/sets/f.csv,ignore,ignore,,,,,,,,,f,,done
 financials_hydrogen.csv,inputs/financials/financials_hydrogen.csv,ignore,ignore,,,,,0,,,,,,done
 financials_sys.csv,inputs/financials/financials_sys_{financials_sys_suffix}.csv,ignore,ignore,,,,,0,,,,,,done
@@ -163,6 +168,7 @@ forced_retirements.csv,inputs/state_policies/forced_retirements.csv,min,uniform,
 forcedoutage_h.csv,,ignore,ignore,r,"*i,h",,0,0,,1,,,,handled in outage_rates.py
 forcedoutage_hourly.h5,,ignore,ignore,wide,index,index,1,keepindex,,1,,,,handled in outage_rates.py
 forceperiods.csv,,ignore,ignore,,,,,,,,,,,done
+fprice.csv,,ignore,ignore,r,"t,wide",,1,0,,1,,,,aggfunc/disaggfunc removed because census division level data gets mapped to the correct spatial aggregation in fuelcostprep.py
 frac_h_ccseason_weights.csv,,ignore,ignore,,,,,,,,,,,done
 frac_h_month_weights.csv,,ignore,ignore,,,,,,,,,,,done
 frac_h_quarter_weights.csv,,ignore,ignore,,,,,,,,,,,done
@@ -170,6 +176,7 @@ fuel2tech.csv,inputs/sets/fuel2tech.csv,ignore,ignore,,,,,0,,,,fuel2tech,,done
 fuel_price.csv,,ignore,ignore,,"i,r",,0,0,,,,,,done (ReEDS-to-PLEXOS output)
 fuelbin.csv,inputs/sets/fuelbin.csv,ignore,ignore,,,,,,,,,fuelbin,,done
 futurefiles.csv,inputs/userinput/futurefiles.csv,ignore,ignore,,,,,0,,,,,,done
+gasprice_ref.csv,,ignore,ignore,,,,,0,,1,,,,Delete once aggregate_regions.py is moved up
 gb.csv,inputs/sets/gb.csv,ignore,ignore,,,,,,,,,gb,,done
 gbin.csv,inputs/sets/gbin.csv,ignore,ignore,,,,,,,,,gbin,,done
 gbin_min.csv,inputs/growth_constraints/gbin_min.csv,ignore,ignore,,,,,0,,,,,,done
@@ -182,22 +189,26 @@ geo_fom_mult.csv,,ignore,ignore,,0,,0,,,,,,,done
 geo_retirements.csv,,sum,ignore,r,"i,v,wide",,1,0,,1,,,,disaggfunc set to ignore because data will be written at county resolution by writecapdat.py
 geo_rsc.csv,inputs/geothermal/geo_rsc_ATB_2023.csv,sc_cat,geosize,r,*i,,0,0,value,,,,,done
 geocapcostmult.csv,,ignore,ignore,,,,1,0,,,,,,done
-geoexist.csv,,ignore,ignore,r,*i,,0,0,,1,,,,written to proper spatial aggregation in writecapdat.py
+geoexist.csv,,sum,ignore,r,*i,,0,0,,1,,,,written to proper spatial aggregation in writecapdat.py
 geohydro_supply_curve.csv,inputs/supply_curve/geohydro_supply_curve-reference_{lvl}.csv,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
-geohydro_exog_cap.csv,inputs/capacity_exogenous/geohydro_exog_cap_{GSw_SitingGeo}_{lvl}.csv,sum,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,done
+exog_geohydro_allkm_rsc.csv,,sum,ignore,region,"*tech,rscbin,year",,0,0,,1,,,,Delete once aggregate_regions.py is moved up
+geohydro_exog_cap.csv,inputs/capacity_exogenous/geohydro_exog_cap_{GSw_SitingGeo}_{lvl}.csv,ignore,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,Reset aggfunc to 'sum' after deleting geohydro_allkm_exog_cap.csv
 ghp_delta_commercial.csv,inputs/load/Commercial_GHP_Delta.csv,ignore,ignore,wide,hour,,1,0,,,,,,done
 ghp_delta_residential.csv,inputs/load/Residential_GHP_Delta.csv,ignore,ignore,wide,hour,,1,0,,,,,,done
 growth_bin_size_mult.csv,inputs/growth_constraints/growth_bin_size_mult.csv,ignore,ignore,,,,,0,,,,,,done
 growth_limit_absolute.csv,inputs/growth_constraints/growth_limit_absolute.csv,ignore,ignore,,,,,0,,,,,,done
 growth_penalty.csv,inputs/growth_constraints/growth_penalty.csv,ignore,ignore,,,,,0,,,,,,done
 gswitches.csv,,ignore,ignore,,,,,0,,,,,,done
+gwp.csv,inputs/emission_constraints/gwp.csv,ignore,ignore,,e,,,0,,,,gwp,,done
 h2_ba_share.csv,inputs/consume/h2_ba_share.csv,sum,geosize,*r,t,,0,0,,,,,,done
+h2_compressor_cap_cost_mult.csv,,ignore,ignore,,,,,,,1,,,,done
 h2_existing_smr_cap.csv,,sum,population,*r,t,,0,0,,1,,,,done
 h2_exogenous_demand.csv,inputs/consume/h2_exogenous_demand.csv,ignore,ignore,,p,,1,0,,,,,,done
 h2_pipeline_cap_cost_mult.csv,,ignore,ignore,,,,,,,1,,,,done
 h2_ptc.csv,,ignore,ignore,,,*i,,0,,,,,,done
 h2_st.csv,inputs/sets/h2_st.csv,ignore,ignore,,,,,,,,,h2_st,,done
 h2_stor.csv,inputs/sets/h2_stor.csv,ignore,ignore,,,,,0,,,,h2_stor,,done
+h2_storage_cap_cost_mult.csv,,ignore,ignore,,,,,,,1,,,,done
 h2_storage_rb.csv,inputs/consume/h2_storage_rb.csv,first,uniform,rb,,,0,0,,,,,,done
 h2_transport_and_storage_costs.csv,inputs/consume/h2_transport_and_storage_costs.csv,ignore,ignore,,,,,,,,,,,done
 h_actualszn.csv,,ignore,ignore,,,,,0,,,,,,done
@@ -211,7 +222,7 @@ heat_rate.csv,,ignore,ignore,,"i,v,r",,0,0,,,,,,done (ReEDS-to-PLEXOS output)
 heat_rate_adj.csv,inputs/plant_characteristics/heat_rate_adj.csv,ignore,ignore,,,,,0,,,,,,done
 heat_rate_mult.csv,inputs/waterclimate/heat_rate_mult.csv,ignore,ignore,,,,,0,,,,,,done
 heat_rate_penalty_spin.csv,inputs/plant_characteristics/heat_rate_penalty_spin.csv,ignore,ignore,,,,,0,,,,,,done
-hierarchy.csv,,first,ignore,*r,"nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg",,0,0,,1,,,,post_copy column set to 1 since copy_files filters this file separately
+hierarchy.csv,,first,ignore,*r,"nercr,transreg,cendiv,st,interconnect,country,usda_region,h2ptcreg,ccreg",,0,0,,1,,,,post_copy column set to 1 since copy_files filters this file separately
 hierarchy_original.csv,,ignore,ignore,,,,,0,,1,,,,post_copy column set to 1 since copy_files copies this file separately
 hintage_char.csv,inputs/sets/hintage_char.csv,ignore,ignore,,,,,,,,,hintage_char,,done
 hintage_data.csv,,ignore,ignore,,,,,0,,,,,,done (handled separately in WriteHintage.py)
@@ -225,12 +236,10 @@ hours_hourly.csv,,ignore,ignore,,,,,,,,,,,done
 hset_hourly.csv,,ignore,ignore,,,,,,,,,,,done
 hyd_add_upg_cap.csv,inputs/supply_curve/hyd_add_upg_cap.csv,sum,hydroexist,r,"i,rscbin,wide",,1,0,,,,,,done
 hyd_fom.csv,inputs/hydro/hyd_fom.csv,mean,uniform,wide,i,,1,0,,,,,,done
-hydadjann.csv,inputs/climate/{climatescen}/hydadjann.csv,mean,uniform,r,t,,0,0,,,,,,done
-hydadjsea.csv,inputs/climate/{climatescen}/hydadjsea.csv,mean,uniform,r,"szn,t",,0,0,,,,,,done
-hydcap.csv,inputs/supply_curve/hydcap.csv,sum,geosize,wide,"tech,class",,1,0,,,,,,done
+hydcap.csv,inputs/supply_curve/hydcap.csv,ignore,ignore,wide,"tech,class",,1,0,,,,,,done
 hydcapadj.csv,inputs/hydro/SeaCapAdj_hy.csv,mean,uniform,r,"*i,month",,0,0,,,,,,done
 hydcf.csv,inputs/hydro/hydcf.h5,mean,uniform,r,"*i,month,t",,0,0,,,,,,test differentiating filetype_out (derived from filename) from filetype variables in copy_files.py
-hydcost.csv,inputs/supply_curve/hydcost.csv,mean,uniform,wide,"tech,class",,1,0,,,,,,done
+hydcost.csv,inputs/supply_curve/hydcost.csv,ignore,ignore,wide,"tech,class",,1,0,,,,,,done
 hydro_mingen.csv,inputs/hydro/hydro_mingen.csv,mean,uniform,r,"*i,quarter",,0,0,,,,,,might be better to do something capacity-weighted
 hydrocapcostmult.csv,,ignore,ignore,,,,1,0,,,,,,done
 hydrofrac_policy.csv,inputs/state_policies/hydrofrac_policy.csv,ignore,ignore,st,"RPS_All,CES",,,0,,,,,,done
@@ -255,7 +264,8 @@ ivt_step.csv,,ignore,ignore,,,,,0,,,,,,done
 lcclike.csv,inputs/sets/lcclike.csv,ignore,ignore,,,,,0,,,,lcclike,,done
 load_2010.csv,,sum,ignore,r,wide,,1,0,,1,,,,disaggfunc set to ignore because load will already be in correct spatial resolution
 load_allyear.csv,,sum,ignore,*r,"h,t",,0,0,,1,,,,disaggfunc set to ignore because load will already be in correct spatial resolution
-load_multiplier.csv,inputs/load/demand_{demandscen}.csv,ignore,ignore,,,,,0,,,,,,done
+load_hourly.csv,,sum,population,r,*h,,0,0,,1,,,,done
+load_multiplier.csv,inputs/load/demand_{demandscen}.csv,ignore,ignore,,cendiv,,1,0,,,,,,done
 load_multiplier_r.csv,,ignore,ignore,,,,1,0,,,,,,done
 maps.gpkg,,ignore,ignore,,,,,,,1,,,,done
 maxage.csv,inputs/plant_characteristics/maxage.csv,ignore,ignore,,,,,0,,,,,,done
@@ -333,14 +343,19 @@ prescriptivelink0.csv,inputs/sets/prescriptivelink0.csv,ignore,ignore,,,,,0,,,,p
 prm_annual.csv,,ignore,ignore,*nercr,,,0,0,,1,,,,done
 psh_sc_duration.csv,,ignore,ignore,,,,,0,,1,,,,Delete once aggregate_regions.py is moved up
 psh_supply_curves_duration.csv,inputs/storage/PSH_supply_curves_durations.csv,ignore,ignore,,,,,0,,1,,,,done
-psh_supply_curves_capacity.csv,inputs/supply_curve/PSH_supply_curves_capacity_{pshsupplycurve}.csv,sum,geosize,r,wide,,1,0,,,,,,done
-psh_supply_curves_cost.csv,inputs/supply_curve/PSH_supply_curves_cost_{pshsupplycurve}.csv,mean,uniform,r,wide,,1,0,,,,,,done
+psh_supply_curves_capacity.csv,inputs/supply_curve/PSH_supply_curves_capacity_{pshsupplycurve}.csv,ignore,ignore,r,,,,0,,,,,,done
+psh_supply_curves_cost.csv,inputs/supply_curve/PSH_supply_curves_cost_{pshsupplycurve}.csv,ignore,ignore,r,,,,0,,,,,,done
+ptc_value_scaled.csv,,ignore,ignore,,"*i,v,t",,0,0,,,,,,done
+ptc_values.csv,,ignore,ignore,,"i,v,t,wide",,1,0,,,,,,only for retail
 pv_cf_improve.csv,,ignore,ignore,,,,0,,,,,,,done
+pv_frac_of_depreciation.csv,,ignore,ignore,,,,,0,,,,,,done
 pvb_agg.csv,inputs/sets/pvb_agg.csv,ignore,ignore,,,,,0,,,,pvb_agg,,done
 pvb_bir.csv,,ignore,ignore,,,,,0,,,,,,done
 pvb_config.csv,inputs/sets/pvb_config.csv,ignore,ignore,,,,,,,,,pvb_config,,done
 pvb_ilr.csv,,ignore,ignore,,,,,0,,,,,,done
 pvbcapcostmult.csv,,ignore,ignore,,,,0,0,,,,,,done
+pvf_cap.csv,,ignore,ignore,,,,0,,,,,,,done
+pvf_onm_int.csv,,ignore,ignore,,,,0,,,,,,,done
 r.csv,,first,ignore,0,,,0,,,1,,,,disaggfunc set to ignore because this file is dynamic to the user-defined spatial aggregation level
 r_ba.csv,,ignore,ignore,,,,,,,,,,,done
 r_cendiv.csv,,ignore,ignore,,,,,,,,,,,done
@@ -355,7 +370,8 @@ rb_aggreg.csv,,ignore,ignore,,,,,,,,,,,done
 recstyle.csv,inputs/state_policies/recstyle.csv,ignore,ignore,*st,"RPSCat,style",,,0,,,,,,done
 rectable.csv,inputs/state_policies/rectable.csv,ignore,ignore,st_st,st,,,0,,,,,,done
 reeds_region_tz_map.csv,inputs/variability/reeds_region_tz_map.csv,trans_lookup,ignore,r,,,0,0,,,,,,disaggfunc set to ignore because input file is already at county resolution
-regional_cap_cost_mult.csv,inputs/financials/reg_cap_cost_mult_{reg_cap_cost_mult_suffix}.csv,mean,uniform,r,i,,0,0,,,,,,precursor data to reg_cap_cost_mult.csv
+reg_cap_cost_mult.csv,,mean,uniform,r,*i,,0,0,,1,,,,from regional_cap_cost_mult.csv in calc_financial_inputs.py
+regional_cap_cost_mult.csv,inputs/financials/reg_cap_cost_mult_{reg_cap_cost_mult_suffix}.csv,ignore,ignore,r,i,,0,0,,,,,,precursor data to reg_cap_cost_mult.csv
 regions.csv,,ignore,ignore,,,,,0,,,,,,not done but only for retail
 resourceclass.csv,inputs/sets/resourceclass.csv,ignore,ignore,,,,,,,,,resourceclass,,done
 resources.csv,,resources,ignore,r,"i,ccreg",i,0,0,,1,,,,disaggfunc set to ignore because this file contains all spatial resolutions valid to the model run
@@ -367,8 +383,12 @@ rggi_states.csv,inputs/emission_constraints/rggi_states.csv,ignore,ignore,*st,,,
 rggicon.csv,inputs/emission_constraints/rggicon.csv,ignore,ignore,,,,0,,,,,,,done
 rps_fraction.csv,inputs/state_policies/rps_fraction.csv,ignore,ignore,st,st,,1,0,,,,,,done
 rsc_combined.csv,,sc_cat,ignore,r,"*i,rscbin",*i,0,0,value,1,,,,done for upv/csp/wind; disaggfunc set to ignore because supply curve data is already at county level
+rsc_dat_geo.csv,,sc_cat,geosize,r,*i,,0,0,value,1,,,,Delete once aggregate_regions.py is moved up
+rsc_dr.csv,,sc_cat,population,r,"*tech,rscbin,t",,0,0,value,1,,,,Delete once aggregate_regions.py is moved up
+rsc_evmc.csv,,sc_cat,population,r,"*tech,rscbin,t",,0,0,value,1,,,,Delete once aggregate_regions.py is moved up
 rsc_wsc.csv,,ignore,ignore,,,,,0,,,,,,done
 runfiles.csv,runfiles.csv,ignore,ignore,ignore,,,0,0,,,,,,so meta
+safe_harbor_max.csv,,ignore,ignore,,,,,0,,,,,,done
 sc_cat.csv,inputs/sets/sc_cat.csv,ignore,ignore,,,,,0,,,,sc_cat,,done
 scalars.csv,inputs/scalars.csv,ignore,ignore,,,,,0,,1,,,,done
 set_actualszn.csv,,ignore,ignore,,,,,0,,,,,,done
@@ -393,6 +413,7 @@ stressperiods_seed.csv,,ignore,ignore,,,,,0,,,,,,done
 supply_chain_adjust.csv,inputs/financials/supply_chain_adjust.csv,ignore,ignore,,,,,0,,,,,,done
 sw.csv,inputs/sets/sw.csv,ignore,ignore,,,,,0,,,,sw,,done
 switches.csv,,ignore,ignore,,,,,0,,,,,,done
+tax_rate.csv,,ignore,ignore,,,,,0,,,,,,done
 tc_phaseout_schedule.csv,inputs/financials/tc_phaseout_schedule_{GSw_TCPhaseout_schedule}.csv,ignore,ignore,,,,,0,,,,,,done
 tech-subset-table.csv,inputs/tech-subset-table.csv,ignore,ignore,,,,,0,,,,,,done
 tech_resourceclass.csv,inputs/techs/tech_resourceclass.csv,ignore,ignore,,,,,0,,,,,,done
@@ -409,15 +430,17 @@ tg_rsc_upvagg.csv,inputs/sets/tg_rsc_upvagg.csv,ignore,ignore,,,,,0,,,,tg_rsc_up
 timestamps.csv,,ignore,ignore,,,,,0,,,,,,done
 trancap_fut.csv,,sum,ignore,"*r,rr","status,trtype,t",,0,0,drop_dup_r,1,,,,disaggfunc set to ignore because all transmisison data will be read into model at the correct spatial resolution
 trancap_fut_cat.csv,inputs/sets/trancap_fut_cat.csv,ignore,ignore,,,,,,,,,trancap_fut_cat,,done
-trancap_init_energy.csv,,ignore,ignore,"*r,rr",trtype,,0,0,drop_dup_r,1,,,,done
-trancap_init_prm.csv,,ignore,ignore,"*r,rr",trtype,,0,0,drop_dup_r,1,,,,done
-trancap_init_transgroup.csv,,ignore,ignore,,,,0,0,,,,,,done
+trancap_init_energy.csv,,sum,ignore,"*r,rr",trtype,,0,0,drop_dup_r,1,,,,disaggfunc set to ignore because all transmisison data will be read into model at the correct spatial resolution
+trancap_init_prm.csv,,sum,ignore,"*r,rr",trtype,,0,0,drop_dup_r,1,,,,disaggfunc set to ignore because all transmisison data will be read into model at the correct spatial resolution
+trancap_init_transgroup.csv,,ignore,ignore,,,,0,0,,,,,,Not needed because transgroup is never aggregated or disaggregated
 tranloss.csv,,trans_lookup,ignore,"*r,rr",trtype,,0,0,drop_dup_r,1,,,,disaggfunc set to ignore because all transmisison data will be read into model at the correct spatial resolution
+trans_cap_cost_mult.csv,,ignore,ignore,,,,0,0,,,,,,done
+trans_cap_cost_mult_noITC.csv,,ignore,ignore,,,,0,0,,,,,,done
 trans_intra_cost_adder.csv,inputs/supply_curve/trans_intra_cost_adder.csv,ignore,ignore,,,,,0,,,,,,done
 trans_itc_fractions.csv,,ignore,ignore,,,,,0,,,,,,done
 transmission_capacity_future.csv,inputs/transmission/transmission_capacity_future_{lvl}_{GSw_TransScen}.csv,sum,ignore,"r,rr","status,trtype,t",,0,0,drop_dup_r,,,,,'ignore’ in disaggfunc because all transmisison data will be read into model at appropriate spatial resolution
 transmission_capacity_future_baseline.csv,inputs/transmission/transmission_capacity_future_{lvl}_baseline.csv,sum,ignore,"r,rr","status,trtype,t",,0,0,drop_dup_r,,,,,'ignore’ in disaggfunc because all transmisison data will be read into model at appropriate spatial resolution
-transmission_capacity_init_AC_r.csv,inputs/transmission/transmission_capacity_init_AC_{lvl}_{GSw_TransNetworkSource}.csv,sum,ignore,"r,rr",interface,,0,0,drop_dup_r,,,,,done
+transmission_capacity_init_AC_r.csv,inputs/transmission/transmission_capacity_init_AC_{lvl}_{GSw_TransNetworkSource}.csv,sum,ignore,"r,rr",interface,,0,0,,,,,,done
 transmission_capacity_init_AC_transgrp.csv,inputs/transmission/transmission_capacity_init_AC_transgrp_{GSw_TransNetworkSource}.csv,sum,ignore,"transgrp,transgrpp",interface,,0,0,,,,,,done
 transmission_capacity_init_nonAC.csv,inputs/transmission/transmission_capacity_init_nonAC_{lvl}.csv,sum,ignore,"r,rr",trtype,,0,0,drop_dup_r,,,,,'ignore’ in disaggfunc because all transmisison data will be read into model at appropriate spatial resolution
 transmission_distance.csv,,trans_lookup,ignore,"*r,rr",trtype,,0,0,drop_dup_r,1,,,,disaggfunc set to ignore because all transmisison data will be read into model at the correct spatial resolution
@@ -427,9 +450,6 @@ transmission_line_capcost.csv,,trans_lookup,ignore,"*r,rr",trtype,,0,0,drop_dup_
 transmission_line_fom.csv,,trans_lookup,ignore,"*r,rr",trtype,,0,0,drop_dup_r,1,,,,disaggfunc set to ignore because all transmisison data will be read into model at the correct spatial resolution
 trtype.csv,inputs/sets/trtype.csv,ignore,ignore,,,,,,,,,trtype,,done
 unapp_water_sea_distr.csv,inputs/waterclimate/unapp_water_sea_distr.csv,mean,geosize,r,"wst,wide",,1,0,,,,,,done
-UnappWaterMult.csv,inputs/climate/{climatescen}/UnappWaterMult.csv,mean,uniform,r,"wst,szn,t",,0,0,,,,,,done
-UnappWaterMultAnn.csv,inputs/climate/{climatescen}/UnappWaterMultAnn.csv,mean,uniform,r,"wst,t",,0,0,,,,,,done
-UnappWaterSeaAnnDistr.csv,inputs/climate/{climatescen}/UnappWaterSeaAnnDistr.csv,mean,uniform,r,"wst,szn,t",,0,0,,,,,,done
 unbundled_limit_ces.csv,inputs/state_policies/unbundled_limit_ces.csv,ignore,ignore,st,,,,0,,,,,,done
 unbundled_limit_rps.csv,inputs/state_policies/unbundled_limit_rps.csv,ignore,ignore,st,,,,0,,,,,,done
 unitdata.csv,inputs/capacity_exogenous/ReEDS_generator_database_final_{unitdata}.csv,ignore,ignore,FIPS,,,,0,,,,,,done
@@ -444,7 +464,7 @@ upgrade_mult_conservative.csv,inputs/upgrades/upgrade_mult_atb23_ccs_con.csv,ign
 upgrade_mult_final.csv,,ignore,ignore,,,,,0,,,,,,done
 upgrade_mult_mid.csv,inputs/upgrades/upgrade_mult_atb23_ccs_mid.csv,ignore,ignore,,,,,0,,,,,,done
 upgradelink_water.csv,inputs/upgrades/upgradelink_water.csv,ignore,ignore,,,,,0,,,,,,done
-upv_exog_cap.csv,inputs/capacity_exogenous/upv_exog_cap_{GSw_SitingUPV}_{lvl}.csv,sum,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,done
+upv_exog_cap.csv,inputs/capacity_exogenous/upv_exog_cap_{GSw_SitingUPV}_{lvl}.csv,ignore,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,Reset aggfunc to 'sum' after deleting exog_upv_rsc.csv
 upv_supply_curve.csv,inputs/supply_curve/upv_supply_curve-{GSw_SitingUPV}_{lvl}.csv,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 uranium_price.csv,inputs/fuelprices/uranium_{uraniumscen}.csv,ignore,ignore,,,,0,0,,,,,,done
 va_ng_crf_penalty.csv,,ignore,ignore,,,,0,0,,,,,,done
@@ -473,7 +493,7 @@ windcfmult.csv,,ignore,ignore,,,,1,0,,,,,,done
 windcfout.csv,,ignore,ignore,,,,1,0,,,,,,done
 wind-ofs_prescribed_builds.csv,inputs/capacity_exogenous/wind-ofs_prescribed_builds_{GSw_SitingWindOfs}_{lvl}.csv,sum,ignore,region,year,,0,0,,,,,,disaggfunc set to ignore because data will be read in at the correct spatial resolution
 wind-ofs_supply_curve.csv,inputs/supply_curve/wind-ofs_supply_curve-{GSw_SitingWindOfs}_{lvl}.csv,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
-wind-ons_exog_cap.csv,inputs/capacity_exogenous/wind-ons_exog_cap_{GSw_SitingWindOns}_{lvl}.csv,sum,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,done
+wind-ons_exog_cap.csv,inputs/capacity_exogenous/wind-ons_exog_cap_{GSw_SitingWindOns}_{lvl}.csv,ignore,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,Reset aggfunc to 'sum' after deleting exog_wind_ons_rsc.csv
 wind-ons_prescribed_builds.csv,inputs/capacity_exogenous/wind-ons_prescribed_builds_{GSw_SitingWindOns}_{lvl}.csv,sum,ignore,region,year,,0,0,,,,,,disaggfunc set to ignore because data will be read in at the correct spatial resolution
 wind-ons_supply_curve.csv,inputs/supply_curve/wind-ons_supply_curve-{GSw_SitingWindOns}_{lvl}.csv,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 windows.csv,inputs/userinput/windows_{windows_suffix}.csv,ignore,ignore,,,,,0,,,,,,done
@@ -483,17 +503,19 @@ x_r.csv,,first,ignore,"*x,r",,,0,0,,1,,,,handled in writesupplycurves.py
 yearafter.csv,inputs/sets/yearafter.csv,ignore,ignore,,,,,,,,,yearafter,,done
 inputs.gdx,,ignore,ignore,,,,,0,,,,,,done
 plexos_inputs.gdx,,ignore,ignore,,,,,0,,,,,,done
-load_hourly.h5,inputs/load/{GSw_EFS1_AllYearLoad}_load_hourly.h5,sum,population,wide,"year,hour",,1,keepindex,,,,,,done
+load_hourly.h5,inputs/load/{GSw_EFS1_AllYearLoad}_load_hourly.h5,ignore,ignore,wide,,,1,0,,,,,,done
 load.h5,,sum,ignore,wide,"year,hour",,1,keepindex,,1,,,,Disaggregation handled in ldc_prep.py
 recf.h5,,recf,ignore,wide,index,index,1,keepindex,,1,,,,done
 csp.h5,,csp,ignore,wide,index,index,1,keepindex,,1,,,,done
-recf_csp.h5,inputs/variability/multi_year/csp-none_{lvl}.h5,csp,ignore,wide,index,,1,keepindex,,,,,,done
-recf_dupv.h5,inputs/variability/multi_year/dupv_ba.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_wind-ofs.h5,inputs/variability/multi_year/wind-ofs-{GSw_SitingWindOfs}_{lvl}.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_wind-ons.h5,inputs/variability/multi_year/wind-ons-{GSw_SitingWindOns}_{lvl}.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_upv.h5,inputs/variability/multi_year/upv-{GSw_SitingUPV}_{lvl}.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_upv_140AC.h5,inputs/variability/multi_year/upv_140AC-reference_ba.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_upv_220AC.h5,inputs/variability/multi_year/upv_220AC-reference_ba.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
+recf_csp.h5,inputs/variability/multi_year/csp-none_{lvl}.h5,ignore,ignore,wide,,,1,0,,,,,,done
+recf_dupv.h5,inputs/variability/multi_year/dupv_ba.h5,ignore,ignore,wide,,,1,0,,,,,,done
+recf_wind-ofs.h5,inputs/variability/multi_year/wind-ofs-{GSw_SitingWindOfs}_{lvl}.h5,ignore,ignore,wide,,,1,0,,,,,,done
+recf_wind-ons.h5,inputs/variability/multi_year/wind-ons-{GSw_SitingWindOns}_{lvl}.h5,ignore,ignore,wide,,,1,0,,,,,,done
+recf_upv.h5,inputs/variability/multi_year/upv-{GSw_SitingUPV}_{lvl}.h5,ignore,ignore,wide,,,1,0,,,,,,done
+recf_upv_140AC.h5,inputs/variability/multi_year/upv_140AC-reference_ba.h5,ignore,ignore,wide,,,1,0,,,,,,done
+recf_upv_220AC.h5,inputs/variability/multi_year/upv_220AC-reference_ba.h5,ignore,ignore,wide,,,1,0,,,,,,done
+retail_depreciation_sch.h5,,ignore,ignore,,"i,t",,0,0,,,,,,done
+retail_eval_period.h5,,ignore,ignore,,"i,t",,0,0,,,,,,done
 gswitches.txt,,ignore,ignore,,,,,0,,,,,,done
 scalars.txt,,ignore,ignore,,,,,0,,,,,,done
 Augur.py,Augur.py,ignore,ignore,,,,,,,,,,,done

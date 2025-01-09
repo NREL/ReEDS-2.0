@@ -303,7 +303,7 @@ sitemap = pd.read_csv(
     os.path.join(inp['case'],'inputs_case','spurline_sitemap.csv')
 ).rename(columns={'*i':'i'})
 ### Get profile names
-sitemap['profile'] = sitemap.i.map(lambda x: x.split('_')[1]) + '|' + sitemap.r
+sitemap['profile'] = sitemap.i.map(lambda x: x.split('_')[1]) + '_' + sitemap.r
 sitemap['tech'] = sitemap.i.map(lambda x: x.split('_')[0])
 ### Get list of valid regions and subset to those regions
 val_r = pd.read_csv(

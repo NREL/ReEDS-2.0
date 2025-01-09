@@ -257,7 +257,9 @@ cost_cap_fin_mult_no_credits(i,r,t)$pvb(i) =
 
 * --- Upgrades ---
 *Assign upgraded techs the same multipliers as the techs they are upgraded from
-*This assignment must take place after expanding for water techs, if applicable.
+cost_cap_fin_mult(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult(ii,r,t) } ;
+cost_cap_fin_mult_noITC(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult_noITC(ii,r,t) } ;
+cost_cap_fin_mult_no_credits(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult_no_credits(ii,r,t) } ;
 
 if(Sw_WaterMain=1,
 cost_cap_fin_mult(i,r,t)$i_water_cooling(i) =
@@ -269,9 +271,6 @@ cost_cap_fin_mult_noITC(i,r,t)$i_water_cooling(i) =
 cost_cap_fin_mult_no_credits(i,r,t)$i_water_cooling(i) =
     sum{(ii)$[ctt_i_ii(i,ii)], cost_cap_fin_mult_no_credits(ii,r,t) } ;
 ) ;
-
-cost_cap_fin_mult(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult(ii,r,t) } ;
-cost_cap_fin_mult_noITC(i,r,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_cap_fin_mult_noITC(ii,r,t) } ;
 
 * --- Nuclear Ban ---
 *Assign increased cost multipliers to regions with state nuclear bans

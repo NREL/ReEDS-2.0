@@ -112,7 +112,6 @@ GSw_LfillGas,1
 GSw_LoadDemand,0
 GSw_Loadpoint,0
 GSw_MaxCaptureCCSTechs,0
-GSw_MethaneGWP,34
 GSw_MethaneLeakageScen,Alvarez2018_30by2030
 GSw_MinCF,1
 GSw_MinLoadTechs,4

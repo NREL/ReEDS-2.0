@@ -1,0 +1,83 @@
+
+## Documentation Guidelines
+When making changes to ReEDS, you should generate and update the sources.csv and sources_documentation.md files before merging. 
+
+```{include} ../documentation_tools/README.md
+```
+
+### Updating the ReEDS Documentation
+The ReEDS documentation lives in the "docs/source" folder within the repo. Depending on the changes you're making to the model, please update the documentation here accordingly. See the [Getting Started with Markdown in VSCode](./markdown_cheat_sheet.md) if you're unfamiliar with markdown.
+
+To edit the ReEDS documentation: 
+1. Find the markdown file you would like to modify under the "docs/source" folder
+2. Make any necessary changes and save the file
+3. Commit and push your changes as you normally would. 
+   * **When your pull request gets merged into main, there is a github action that will automatically recompile the documentation with your changes and publish the updated site.**
+
+### Viewing the Documentation Locally
+If you would like to see what the documentation will look like when developing locally, there are two approaches:
+
+**Approach 1: Use the built-in markdown preview in VSCode**
+1. Right click on the markdown file you want to view. Select "Open Preview". 
+   * **Note:** because the documentation gets compiled using Sphinx, some things won't display properly in this view (i.e. tables, figures, and citations)
+   * To view footnotes in the preview correctly, you'll need to install the "Markdown Footnotes" VSCode extension
+
+
+**Approach 2: Build the documentation locally**
+
+1. Navigate to the "docs/" folder 
+
+2. Run the command `make html` to build the documentation locally
+   * Ensure you have the 'reeds2' environment activated
+  
+3. From Finder/File Explorer, open the folder "/ReEDS-2.0/docs/build/html" then click on "index.html"
+   * This will launch the documentation in a new internet window
+   * If you make changes and wish to see how they are reflected in the documentation, you can run the `make html` command again and refresh the window you already have open
+
+4. If you would like to remove the generated files, you can run the command `make clean` from the "docs/" folder
+
+### Adding Citations in the Documentation
+1. Download Zotero: [https://www.zotero.org/](https://www.zotero.org/)
+   a. Install the "Better BibTeX for Zotero" plugin: [https://retorque.re/zotero-better-bibtex/](https://retorque.re/zotero-better-bibtex/)
+   b. Turn on "Automatic export" under [Better BibTeX preferences]/[Automatic export] and adjust the filepath to {your filepath}
+   c. Under [Better BibTeX preferences]/[Export][BibTeX], set "Add URLs to BibTeX export" to "in the 'url' field"
+
+2. Request access to the ReEDS Zotero library from Jonathan, Brian, Patrick, Wesley, or Pieter
+
+3. If you add any new references to the ReEDS Zotero library and cite them in the ReEDS docs, you'll need to:
+   a. Replace the contents of ReEDS-2.0/docs/source/references.bib with the contents of the .bib file at {your path}
+
+
+To add an in-text citation, find the citation key of the citation you would like to add in Zotero.
+
+```{figure} ../../../images/zotero_citation_example.png
+
+Example of citation key in Zotero
+```
+
+**Citation format:** 
+```{table} Citation formats in markdown
+:name: markdown-citation-formats
+
+| **Markdown Syntax** | **Output** |
+| ------------------- | ---------- |
+| ``` {cite}`cole2020StandardScenarios2020` ``` | [Cole *et al.*, 2020] |
+| ``` {cite:t}`cole2020StandardScenarios2020` ``` | Cole *et al.*, [2020] |
+| ``` {cite:year}`cole2020StandardScenarios2020` ``` | 2020 |
+| ``` {cite:p}`cole2020StandardScenarios2020, nrelRenewableElectricityFutures2012` ``` | [Cole *et al.*, 2020, NREL, 2020] |
+| ``` {cite:p}`{see}cole2020StandardScenarios2020{pg. 2}` ``` | [see Cole *et al.*, 2020, pg. 2] |
+
+```
+
+Alternatively, you can use the "Zotero Citation Picker" VS Code extension for finding/adding references to the documentation. This extension requires Zotero to be installed, as well as Better BibTex for Zotero (the Better BibTex for Zotero installation guide can be found [here](https://retorque.re/zotero-better-bibtex/installation/)).
+
+
+**Adding new citations to Zotero**
+
+If you're looking to add a new citation to the ReEDS Zotero library, you can do so manually, or you can use the Zotero Connector. You can download it [here](https://www.zotero.org/download/connectors).
+
+After installing the extension, you'll need to enable it in your browser of choice. To create and save a new citation, open it in Firefox (or whatever browser you have the extension enabled), and click 'Zotero Connector' to run the extension and create a new Zotero citation. 
+
+```{figure} ../../../images/zotero_connector.png
+
+```

@@ -246,40 +246,25 @@ function process_thermals_with_disaggregation(
     all_generators = Generator[]
     # this loop gets the FOR for each build/tech
     for row in eachrow(thermal_builds)
-        # Check to see if the 'i' tech is an upgrade tech. If so, use the 'upgraded-to' 
-        # tech to determine FOR
-        filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
-        upgrades = DataFrames.DataFrame(CSV.File(filepath))
-        upgrade_dict = Dict(lowercase(row["*TO"]) => lowercase(row["DELTA"]) for row in eachrow(upgrades))
-        if haskey(upgrade_dict, row.i)
-            tech = upgrade_dict[row.i]   
-            @info(
-                "$(row.i) ($(row.r)) is an upgrade tech so using $tech to determine outage rate"
-            )
-        else
-            tech = row.i
-        end
-
-        i_r = "$tech|$(row.r)"
+        i_r = "$(row.i)|$(row.r)"
         if (i_r in DataFrames.names(forcedoutage_hourly))
             gen_for = forcedoutage_hourly[!, i_r]
-        elseif lowercase(tech) in keys(FOR_dict)
-            gen_for = fill(Float32(FOR_dict[lowercase(tech)]), timesteps)
+        elseif row.i in keys(FOR_dict)
+            gen_for = fill(Float32(FOR_dict[row.i]), timesteps)
             @info(
-                "$tech ($(row.r)) was not found in forcedoutage_hourly so using " *
-                "static value of $(FOR_dict[tech]) from outage_forced_static.csv"
+                "$(row.i) ($(row.r)) was not found in forcedoutage_hourly so using " *
+                "static value of $(FOR_dict[row.i]) from outage_forced_static.csv"
             )
         else
             fill_value = 0.0
             gen_for = fill(Float32(fill_value), timesteps)
             @info(
-                "$(tech) ($(row.r)) was not found in outage_forced_static.csv so using " *
+                "$(row.i) ($(row.r)) was not found in outage_forced_static.csv so using " *
                 "static value of $fill_value"
             )
         end
 
         generator_array = disagg_existing_capacity(
-            ReEDS_data,
             EIA_db,
             unitsize_dict,
             floor(Int, row.MW_sum),
@@ -454,7 +439,6 @@ function process_storages(
             )
         else
             add_new_capacity!(
-                ReEDS_data,
                 storages_array,
                 round(Int, row.MW),
                 round(Int, int_duration),
@@ -522,7 +506,6 @@ end
         disaggregated existing capacities.
 """
 function disagg_existing_capacity(
-    ReEDS_data::ReEDSdatapaths,
     eia_df::DataFrames.DataFrame,
     unitsize_dict::Dict,
     built_capacity::Int,
@@ -544,7 +527,6 @@ function disagg_existing_capacity(
     generators_array = []
     if DataFrames.nrow(tech_ba_year_existing) == 0 && gen_for != 0.0
         add_new_capacity!(
-            ReEDS_data,
             generators_array,
             built_capacity,
             0,
@@ -606,7 +588,6 @@ function disagg_existing_capacity(
     #whatever remains, we want to build as new capacity
     if remaining_capacity > 0
         add_new_capacity!(
-            ReEDS_data,
             generators_array,
             remaining_capacity,
             floor.(Int, avg_cap),
@@ -664,7 +645,6 @@ end
         updated vector or list of generators containing the new capacity
 """
 function add_new_capacity!(
-    ReEDS_data::ReEDSdatapaths,
     generators_array::Vector{<:Any},
     new_capacity::Int,
     avg_unit_cap::Int,
@@ -681,50 +661,16 @@ function add_new_capacity!(
     # use ATB
     if avg_unit_cap == 0
         try
-            # use conventional name first (no water, no tech)
+            #use conventional name first 
             avg_unit_cap = unitsize_dict[tech]
         catch
-            # if no match, then check if it's an upgraded tech without water suffixes
-            # e.g. gas-cc_gas-cc-ccs_mod or gas-cc_H2-CT
-            
-            # Import and concat upgrade_link.csv and upgradelink_water.csv from inputs_case
-            # to make the following dictionary:
-            filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
-            df1 = DataFrames.DataFrame(CSV.File(filepath))
-            filepath2 = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgradelink_water.csv")
-            df2 = DataFrames.DataFrame(CSV.File(filepath2))
-
-            DataFrames.rename!(df2, "*TO-WATER" => "*TO", "FROM-WATER" => "FROM", "DELTA-WATER" => "DELTA")
-
-            df_combined = vcat(df1,df2)
-
-            df3 = df_combined[:, ["*TO", "DELTA"]]
-            df3_dict = Dict(lowercase(row["*TO"]) => lowercase(row["DELTA"]) for row in eachrow(df3))
-            
+            #if no match, split on "_" then try b/c likely upgrade
             try
-                avg_unit_cap = unitsize_dict[df3_dict[tech]]
+                avg_unit_cap = unitsize_dict[split(tech, "_")[2]]
             catch
-                # if still no match, it might be an upgraded tech with water suffixes
-                # e.g. gas-cc_r_fg_gas-cc-ccs_mod_r_fg 
-                try
-                    avg_unit_cap = unitsize_dict[rsplit(df3_dict[tech], "_"; limit = 3)[1]]
-                catch
-                    # if still no match, then likely a non-upgraded tech with water suffixes
-                    # e.g. gas-cc_r_fg
-                    try
-                        avg_unit_cap = unitsize_dict[rsplit(tech, "_"; limit = 3)[1]]
-                    catch   
-                        # if still no match, try dropping trailing digits
-                        # e.g. wind-ons_1
-                        try
-                            avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
-                        catch
-                            # Finally, if still no match, tech is likely "csp{CSP_Type}_{class}"
-                            avg_unit_cap = unitsize_dict[match(r"(.+)\d_\d", tech)[1]]
-                            # will fail if this last thing doesn't work!
-                        end
-                    end
-                end
+                #if still no match, try dropping trailing digits
+                avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
+                #will fail if this last thing doesn't work!
             end
         end
     end
@@ -790,7 +736,6 @@ end
 """
 
 function add_new_capacity!(
-    ReEDS_data::ReEDSdatapaths,
     generators_array::Vector{<:Any},
     new_capacity::Int,
     new_duration::Int,
@@ -808,50 +753,16 @@ function add_new_capacity!(
     # use ATB
     if avg_unit_cap == 0
         try
-            # use conventional name first (no water, no tech)
+            #use conventional name first 
             avg_unit_cap = unitsize_dict[tech]
         catch
-            # if no match, then check if it's an upgraded tech without water suffixes
-            # e.g. gas-cc_gas-cc-ccs_mod or gas-cc_H2-CT
-            
-            # Import and concat upgrade_link.csv and upgradelink_water.csv from inputs_case
-            # to make the following dictionary:
-            filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
-            df1 = DataFrames.DataFrame(CSV.File(filepath))
-            filepath2 = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgradelink_water.csv")
-            df2 = DataFrames.DataFrame(CSV.File(filepath2))
-
-            DataFrames.rename!(df2, "*TO-WATER" => "*TO", "FROM-WATER" => "FROM", "DELTA-WATER" => "DELTA")
-
-            df_combined = vcat(df1,df2)
-
-            df3 = df_combined[:, ["*TO", "DELTA"]]
-            df3_dict = Dict(lowercase(row["*TO"]) => lowercase(row["DELTA"]) for row in eachrow(df3))
-            
+            #if no match, split on "_" then try b/c likely upgrade
             try
-                avg_unit_cap = unitsize_dict[df3_dict[tech]]
+                avg_unit_cap = unitsize_dict[split(tech, "_")[2]]
             catch
-                # if still no match, it might be an upgraded tech with water suffixes
-                # e.g. gas-cc_r_fg_gas-cc-ccs_mod_r_fg 
-                try
-                    avg_unit_cap = unitsize_dict[rsplit(df3_dict[tech], "_"; limit = 3)[1]]
-                catch
-                    # if still no match, then likely a non-upgraded tech with water suffixes
-                    # e.g. gas-cc_r_fg
-                    try
-                        avg_unit_cap = unitsize_dict[rsplit(tech, "_"; limit = 3)[1]]
-                    catch   
-                        # if still no match, try dropping trailing digits
-                        # e.g. wind-ons_1
-                        try
-                            avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
-                        catch
-                            # Finally, if still no match, tech is likely "csp{CSP_Type}_{class}"
-                            avg_unit_cap = unitsize_dict[match(r"(.+)\d_\d", tech)[1]]
-                            # will fail if this last thing doesn't work!
-                        end
-                    end
-                end
+                #if still no match, try dropping trailing digits
+                avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
+                #will fail if this last thing doesn't work!
             end
         end
     end

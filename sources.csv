@@ -299,7 +299,7 @@ RelativeFilePath,RelativeFolderPath,FileName_new,FileExtension,Description_new,I
 /inputs/geothermal/geo_rsc_ATB_2023.csv,/inputs/geothermal,geo_rsc_ATB_2023,.csv,,,,,,
 /inputs/growth_constraints/gbin_min.csv,/inputs/growth_constraints,gbin_min,.csv,,,,,,
 /inputs/growth_constraints/growth_bin_size_mult.csv,/inputs/growth_constraints,growth_bin_size_mult,.csv,,,,,,
-/inputs/growth_constraints/growth_limit_absolute.csv,/inputs/growth_constraints,growth_limit_absolute,.csv,,,,,,
+/inputs/growth_constraints/growth_limit_absolute.csv,/inputs/growth_constraints,growth_limit_absolute,.csv,"Maximum expected annual builds for wind, batteries, and UPV from 2024-2026 using observed record builds.",,,,,MW/year
 /inputs/growth_constraints/growth_penalty.csv,/inputs/growth_constraints,growth_penalty,.csv,,,,,,
 /inputs/hierarchy.csv,/inputs,hierarchy,.csv,,,,,,
 /inputs/hierarchy_agg2.csv,/inputs,hierarchy_agg2,.csv,,,,,,

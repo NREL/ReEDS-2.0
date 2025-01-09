@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Version Control and Testing &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/customtheme.css?v=299ffeb9" />
+
+  
+    <link rel="shortcut icon" href="../_static/reeds-icon.png"/>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="additional_setup.html">Additional ReEDS Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_best_practices.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onboarding.html">Onboarding Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_documentation.html">Model Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html">Model Switches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Version Control and Testing</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/internal/version_control_and_testing.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="version-control-and-testing">
+<h1>Version Control and Testing<a class="headerlink" href="#version-control-and-testing" title="Link to this heading"></a></h1>
+<section id="reeds-versioning-releases">
+<h2>ReEDS Versioning &amp; Releases<a class="headerlink" href="#reeds-versioning-releases" title="Link to this heading"></a></h2>
+<p>This section outlines the current ReEDS approach to versioning. You can find current and past ReEDS versions here: <a class="reference external" href="https://github.nrel.gov/ReEDS/ReEDS-2.0/releases">ReEDS-2.0 Releases</a></p>
+<section id="versioning-overview">
+<h3>Versioning overview<a class="headerlink" href="#versioning-overview" title="Link to this heading"></a></h3>
+<p>GitHub Releases are used to create ReEDS versions on a monthly cadence after a suite of tests are performed. More on ReEDS testing can be found <a class="reference internal" href="#./Testing"><span class="xref myst">here</span></a>. More information on GitHub Releases can be found in the <a class="reference external" href="https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases">GitHub Doc</a>.</p>
+<p>Releases are based on Git tags, and the proposed versioning scheme is <code class="docutils literal notranslate"><span class="pre">EPOCH.RELEASE.PATCH</span></code>. The components are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">EPOCH</span></code>: The current year, this will be incremented in January of each year (e.g., 2023)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RELEASE</span></code>: Restarts from 0 when EPOCH is increased, then increased by 1 each month when the newest version is created</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PATCH</span></code>: Typically will just be 0, but could increment if an important update or bug fix needs to be merged in prior to the next monthly release.</p></li>
+</ul>
+</section>
+<section id="tagging-versions">
+<h3>Tagging versions<a class="headerlink" href="#tagging-versions" title="Link to this heading"></a></h3>
+<p>Tagging with GitHub releases is not done manually with each pull request. After a new release has been created, a tag will be generated.</p>
+<p>How to use tags:</p>
+<ul class="simple">
+<li><p>You can check them out like any other commit: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">tags/2023.1.0</span></code></p>
+<ul>
+<li><p>You may need to fetch tags to your machine first: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">fetch</span> <span class="pre">--tags</span></code></p></li>
+<li><p>If you plan to develop from an older tag (i.e., you’re not checking out main on the most recent tag and you plan to commit new changes), you’ll also want to specify a branch or create a new one: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">-b</span> <span class="pre">&lt;new</span> <span class="pre">branch</span> <span class="pre">name&gt;</span> <span class="pre">&lt;tag</span> <span class="pre">name&gt;</span></code></p></li>
+</ul>
+</li>
+<li><p>ReEDS2X tool versions should reference the last ReEDS version they’re known to work for in their tag text or README</p>
+<ul>
+<li><p>Each ReEDS run produces a meta.csv file with information on the branch, commit, and version of that run which can be used to determine the vintage of any given ReEDS run.</p></li>
+</ul>
+</li>
+<li><p>If you’re using ReEDS2X for a side project and would like to tag versions for them to refer to, the suggested format is: <code class="docutils literal notranslate"><span class="pre">EPOCH.RELEASE.PATCH.PROJECTNAME</span></code>, where <code class="docutils literal notranslate"><span class="pre">EPOCH.RELEASE.PATCH</span></code> refers to the last version of main that has been merged into your project branch.</p>
+<ul>
+<li><p>The same format can be used to tag specific versions of the model that are used for published analyses that are not merged into main, e.g. 2023.4.0.hybrids.</p></li>
+<li><p>In general, please add custom components to the tail of the version number instead of the beginning to keep them easy to sort.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<section id="testing-guidelines">
+<h2>Testing Guidelines<a class="headerlink" href="#testing-guidelines" title="Link to this heading"></a></h2>
+<p>This section outlines the recommended testing that should be performed on ReEDS prior to creating a pull request or a new version.</p>
+<section id="post-process-test">
+<h3>Post-process Test<a class="headerlink" href="#post-process-test" title="Link to this heading"></a></h3>
+<p><strong>This testing should be performed when a change is made that does not change model code or data that might impact model outputs. Ex: changing the color styles in bokeh output plot, or adjusting a post-processing script such as runstatus.py</strong></p>
+<ol class="arabic simple">
+<li><p>Ensure the post-processing capabilities operate correctly on outputs from the most recent version of main</p>
+<ul class="simple">
+<li><p>A demonstration of this should be included in the pull request</p></li>
+</ul>
+</li>
+<li><p>Verify that R2X pytest passes</p></li>
+</ol>
+</section>
+<section id="light-test-pacific-region">
+<h3>Light Test (Pacific Region)<a class="headerlink" href="#light-test-pacific-region" title="Link to this heading"></a></h3>
+<p><strong>This testing should be performed for changes to model code that are not expected to have any meaningful impact on the model solution. Examples include:</strong></p>
+<ul class="simple">
+<li><p><strong>Rounding an input parameter</strong></p></li>
+<li><p><strong>Changing the name of a column or model parameter</strong></p></li>
+<li><p><strong>Updating code within an if statement where the if statement does not apply under default settings (e.g., “if int(sw.GSw_calc_powfrac):” where the default value of sw.GSw_calc_powfrac is 0)</strong></p></li>
+<li><p><strong>Adding a missing entry to run files.csv</strong></p></li>
+</ul>
+<ol class="arabic simple">
+<li><p>Do a comparison run of the default test case (cases_test.csv) against a test run from main and produce a comparison report.</p>
+<ul class="simple">
+<li><p>The report should be examined for any unexpected outputs and included in the pull request for review</p></li>
+</ul>
+</li>
+<li><p>Verify that R2X pytest passes</p></li>
+</ol>
+</section>
+<section id="regular-test-full-u-s">
+<h3>Regular Test (Full U.S.)<a class="headerlink" href="#regular-test-full-u-s" title="Link to this heading"></a></h3>
+<p><strong>This testing should be performed for all other cases not covered by the post-process or light test</strong></p>
+<ol class="arabic simple">
+<li><p>Do a comparison run of the default case (cases.csv) against a run from main and produce a comparison report.</p>
+<ul class="simple">
+<li><p>You should be able to reasonably explain changes in capacity, generation, transmission capacity, bulk system electricity price, system cost, and runtime</p></li>
+<li><p>The report should be included in the pull request</p></li>
+</ul>
+</li>
+<li><p>Verify that R2X pytest passes</p></li>
+</ol>
+</section>
+<section id="new-version-test">
+<h3>New Version Test<a class="headerlink" href="#new-version-test" title="Link to this heading"></a></h3>
+<p><strong>This testing is required for a new tagged and released version</strong></p>
+<p>The full set of scenarios in <code class="docutils literal notranslate"><span class="pre">cases_test.csv</span></code> is run on HPC and Yampa (tests are also run locally on Mac or Windows, with the exception of the USA_decarb scenario). All test scenarios, with the exception of the following, must succeed in order for a new version to be created:</p>
+<ul class="simple">
+<li><p>Pacific test case with water constraints</p></li>
+<li><p>Pacific test case with PVB turned on</p></li>
+<li><p>Pacific test case with detailed CO2 transport &amp; storage</p></li>
+<li><p>Pacific test case with representatives weks</p></li>
+<li><p>Pacific test case with full chronological year</p></li>
+</ul>
+<p>For any error in the output processing scripts, a new GitHub issue should be created. Additionally, the issue should be noted in the release notes for the new version.</p>
+<p>Lastly, comparison reports are created for the USA and USA_decarb scenarios to compare the current version with the previous released version. Those comparison reports should be attached to the release notes for reference.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -27,7 +27,6 @@ import shutil
 import site
 from glob import glob
 from warnings import warn
-from ldc_prep import read_h5py_file
 ## Time the operation of this script
 from ticker import toc, makelog
 import datetime
@@ -55,7 +54,7 @@ inputs_case = os.path.join(args.inputs_case)
 # #%%## Settings for testing 
 # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # inputs_case = os.path.join(
-#     reeds_path,'runs','Jul18_branchtest_ERCOT_county','inputs_case')
+#     reeds_path,'runs','v20240719_agg0M2_MA_county','inputs_case')
 
 
 #%% Settings for debugging
@@ -88,11 +87,6 @@ log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslo
 sw = pd.read_csv(
     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
 endyear = int(sw.endyear)
-GSw_CSP_Types = [int(i) for i in sw.GSw_CSP_Types.split('_')]
-
-scalars = pd.read_csv(
-        os.path.join(inputs_case, 'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0).squeeze(1)
 
 # ReEDS only supports a single entry for agglevel right now, so use the
 # first value from the list (copy_files.py already ensures that only one
@@ -122,7 +116,6 @@ def logprint(filepath, message):
 
 #%% DEBUG: Copy the original inputs_case files
 if debug and (agglevel != 'ba'):
-    print('Copying original inputs_case file...')
     import distutils.dir_util
     os.makedirs(inputs_case+'_original', exist_ok=True)
     distutils.dir_util.copy_tree(inputs_case, inputs_case+'_original', verbose=0)
@@ -155,7 +148,7 @@ else:
     ## Read in disaggregation data
     disagg_data = {
         'population'    : (pd.read_csv(os.path.join(inputs_case,'disagg_population.csv'), 
-                                       header=0, dtype={'fracdata':np.float32} )),
+                                       header=0)),
         'geosize'       : (pd.read_csv(os.path.join(inputs_case,'disagg_geosize.csv'), 
                                        header=0)),
         'translinesize' : (pd.read_csv(os.path.join(inputs_case,'disagg_translinesize.csv'), 
@@ -199,23 +192,9 @@ if agglevel in ['state','aggreg']:
     ### Get RSC VRE available capacity to use in capacity-weighted averages
     ### We need the original un-aggregated supply curves, so run writesupplycurves again
     # rscweight = pd.read_csv(os.path.join(inputs_case, 'rsc_combined.csv'))
-    
-    # Read generator database and create rsc_wsc (for use in writesupplycurves function call below)
-    gendb = pd.read_csv(os.path.join(inputs_case,'unitdata.csv'))
-    import writecapdat
-    from writecapdat import create_rsc_wsc
-    # Set the 'r' column for the generator database
-    rcol_dict = {'county':'FIPS', 'ba':'reeds_ba', 'state':'TSTATE'}
-    # Create the 'r_col' column
-    if agglevel in ['county','ba','state']:
-        gendb['r'] = gendb[rcol_dict[agglevel]].copy()
-    elif agglevel == 'aggreg':
-        gendb = gendb.assign(r=gendb.reeds_ba.map(r_ba))
-    rsc_wsc = create_rsc_wsc(gendb, TECH=writecapdat.TECH, scalars=scalars)
-    
     import writesupplycurves
     rscweight = writesupplycurves.main(
-        reeds_path, inputs_case, AggregateRegions=0, rsc_wsc_dat=rsc_wsc, write=False)
+        reeds_path, inputs_case, AggregateRegions=0, write=False)
     rscweight = (
         rscweight.loc[(rscweight.sc_cat=='cap')]
         .rename(columns={'*i':'i'})
@@ -233,7 +212,7 @@ if agglevel in ['state','aggreg']:
         else str(int(sw.GSw_HourlyClusterYear) + 1)
     ].rename_axis('r').rename('MW').copy()
     ## Add it to rscweight_nobin
-    rscweight_nobin = rscweight.groupby(['i','r'], as_index=False).sum(numeric_only=True)
+    rscweight_nobin = rscweight.groupby(['i','r'], as_index=False).MW.sum()
     rscweight_nobin = pd.concat([rscweight_nobin, distpvcap.reset_index().assign(i='distpv')], axis=0)
     ## Add PVB values in case we need them
     pvbtechs = [f'pvb{i}' for i in sw.GSw_PVB_Types.split('_')]
@@ -243,14 +222,13 @@ if agglevel in ['state','aggreg']:
         + [tocopy.assign(i=tocopy.i.str.replace('upv',pvbtech)) for pvbtech in pvbtechs]
     )
     ## Remove duplicate CSP values for different solar multiples
-    rscweight_nobin.i.replace(
+    rscweight_csp = rscweight_nobin.copy()
+    rscweight_csp.i.replace(
         {f'csp{i+1}_{c+1}': f'csp_{c+1}'
-         for i in GSw_CSP_Types
+         for i in range(int(sw.GSw_CSP))
          for c in range(int(sw.GSw_NumCSPclasses))},
-        inplace=True
-    )
-    rscweight_nobin.drop_duplicates(['i','r'], inplace=True)
-
+        inplace=True)
+    rscweight_csp.drop_duplicates(['i','r'], inplace=True)
 
 #%% Get the mapping to reduced-resolution technology classes
 original_num_classes = {**{'dupv':7}, **{f'csp{i}':12 for i in range(1,5)}}
@@ -348,7 +326,7 @@ for level in dfmap:
 
 for filepath in inputfiles:
     ### For debugging: Specify a file
-    # filepath = 'load_hourly.h5'
+    # filepath = 'can_exports.csv'
     ### Get the appropriate row from aggfiles
     row = aggfiles.loc[os.path.basename(filepath)]
 
@@ -428,18 +406,10 @@ for filepath in inputfiles:
         except pd.errors.EmptyDataError:
             continue
     elif filetype == 'h5':
-        try:
-            dfin = read_h5py_file(os.path.join(inputs_case, filepath))
-        except:
-            dfin = pd.read_hdf(os.path.join(inputs_case, filepath))
+        dfin = pd.read_hdf(os.path.join(inputs_case, filepath))
         if header == 'keepindex':
             indexnames = list(dfin.index.names)
             if (len(indexnames) == 1) and (not indexnames[0]):
-                indexnames = ['index']
-            # Special Case: change index name for recf_csp.h5 to 'index to be 
-            # consistent with the other recf_{tech}.h5 files
-            if (filepath in ['recf_csp.h5','recf_dupv.h5']) and (indexnames[0] == 'hour'):
-                dfin.index.name = 'index'
                 indexnames = ['index']
             dfin.reset_index(inplace=True)
     elif filetype == 'gdx':
@@ -462,12 +432,8 @@ for filepath in inputfiles:
 
     #%%###########################
     ### Reshape to long format ###
- 
-    if filepath == 'load_hourly.h5':
-        ### Special Case: keep file in wide format, as long-format disaggregation of 
-        ### national hourly load causes memory limit issues
-        df = dfin.set_index(indexnames)
-    elif (aggfunc == 'sc_cat') and (not wide):
+
+    if (aggfunc == 'sc_cat') and (not wide):
         ### Supply-curve format. Expect an sc_cat column with 'cap' and 'cost' values.
         ## 'cap' values are summed; 'cost' values use the 'cap'-weighted mean
         df = dfin.pivot(index=fix_cols+region_cols,columns='sc_cat',values=key).reset_index()
@@ -520,16 +486,11 @@ for filepath in inputfiles:
     df1 = df.copy()
     ### Aggregation methods -----------------------------------------------------------------------
     ### Pre-aggregation: Map old regions to new regions
-    if aggfunc in ['sum','mean','first','min','sc_cat','resources'] :
-        # Exception for load_hourly.h5 because it is not converted from wide format to long format so the columns
-        # are still the regions and need to be mapped to aggreg regions differently 
-        if filepath == 'load_hourly.h5':
-            df1.columns = df1.columns.map(r2aggreg)        
-        else:
-            for c in region_cols:
-                df1[c] = df1[c].map(lambda x: r2aggreg.get(x,x))
-            if i_col:
-                df1[i_col] = df1[i_col].map(lambda x: new_classes.get(x,x))
+    if aggfunc in ['sum','mean','first','min','sc_cat','resources']:
+        for c in region_cols:
+            df1[c] = df1[c].map(lambda x: r2aggreg.get(x,x))
+        if i_col:
+            df1[i_col] = df1[i_col].map(lambda x: new_classes.get(x,x))
 
     if aggfunc == 'sc_cat':
         ## Weight cost by cap; if there's no cap, use 1 MW as weight
@@ -585,19 +546,16 @@ for filepath in inputfiles:
             df1 = df1.assign(ccreg=df1.r).drop_duplicates()
     elif aggfunc in ['recf','csp']:
         ### Special case: Region is embedded in the 'resources' column as {tech}|{region}
-        col2r = dict(zip(columns, [c.split('_')[-1] for c in columns]))
-        col2i = dict(zip(columns, [c.split('_')[0] for c in columns]))
+        col2r = dict(zip(columns, [c.split('|')[-1] for c in columns]))
+        col2i = dict(zip(columns, [c.split('|')[0] for c in columns]))
         df1 = df1.rename(columns={'value':'cf'})
         df1['r'] = df1[region_col].map(col2r)
         df1['i'] = df1[region_col].map(col2i)
-        ## Get correct rscweight_nobin tech value
-        rsctech = os.path.splitext(filepath)[0].split('_')[1]
-        rscweight_nobin_tech = rscweight_nobin.loc[rscweight_nobin['i'].str.contains(rsctech)]
-        ## rscweight_nobin data from writesupplycurves.py has tech values of {rsctech}_{class}
-        ## so replicate this in order to merge for capacities
-        df1['i'] = f'{rsctech}_' + df1['i']
         ## Get capacities
-        df1 = df1.merge(rscweight_nobin_tech, on=['r','i'], how='left')
+        df1 = df1.merge(
+            (rscweight_csp if aggfunc == 'csp' else rscweight_nobin),
+            on=['r','i'], how='left',
+        )
         ## Similar procedure as above for aggfunc == 'sc_cat'
         df1['i'] = df1['i'].map(lambda x: new_classes.get(x,x))
         df1 = (
@@ -608,20 +566,11 @@ for filepath in inputfiles:
         )
         df1.cf = df1.cap_times_cf / df1.MW
         df1 = df1.rename(columns={'cf':'value'}).reset_index()
-        # Revert i column so rsctech is not included in the name.
-        # This ensures the resource h5 files will be in the same format when read in ldc_prep.py 
-        # regardless of the spatial resolution
-        df1['i'] = df1['i'].str.replace(f'{rsctech}_','')
-        # ## Remake the resources (column names) with new regions
-        df1['wide'] = df1.i + '_' + df1.r
+        ## Remake the resources (column names) with new regions
+        df1['wide'] = df1.i + '|' + df1.r
         df1 = df1.set_index(['index','wide'])[['value']].astype(np.float16)
     elif aggfunc in ['sum','mean','first','min']:
-        # Exception for load_hourly.h5 because it is not converted from wide format to long format so the columns
-        # are still the regions and need to be summed differently 
-        if filepath == 'load_hourly.h5':
-            df1 = df1.groupby(df1.columns, axis=1).agg(aggfunc)
-        else:
-            df1 = df1.groupby(fix_cols+region_cols).agg(aggfunc)
+        df1 = df1.groupby(fix_cols+region_cols).agg(aggfunc)
 
     ### Disaggregation methods --------------------------------------------------------------------
     elif aggfunc == 'uniform':
@@ -635,7 +584,7 @@ for filepath in inputfiles:
         if (len(fix_cols) == 1) and (fix_cols[0] == 'wide'):
             df1.set_index([region_col,'wide'],inplace=True)
         else:
-            df1.set_index(fix_cols+region_cols,inplace=True)
+            df1.set_index(region_cols,inplace=True)
 
     elif aggfunc in ['population','geosize','translinesize','hydroexist']:
         if 'sc_cat' in columns:
@@ -672,18 +621,7 @@ for filepath in inputfiles:
 
             # Combine cap and cost to get back into original format
             df1 = pd.concat([df1_cap, df1_cost])
-        ### Special Case: file kept in wide format, as long-format disaggregation of 
-        ### national hourly load causes memory limit issues
-        elif filepath == 'load_hourly.h5':
-            fracdata = disagg_data[aggfunc]
-            fracdata = fracdata.loc[fracdata['FIPS'].isin(val_r_all)]
-            fracdata.set_index('FIPS',inplace=True)
-            df1 = pd.concat(
-                {fips: row.fracdata * df1[row.PCA_REG]
-                    for fips, row in fracdata.iterrows()},
-                axis=1
-            )
-            
+
         else:
             # Disaggregate cap using the selected aggfunc
             fracdata = disagg_data[aggfunc]
@@ -721,22 +659,13 @@ for filepath in inputfiles:
                 df1.index.get_level_values(r).isin(val_r_all)
                 & df1.index.get_level_values(rr).isin(val_r_all)
             ].copy()
-
-        # Exception for load_hourly.h5 because it is not converted from wide format to long format so the columns
-        # are still the regions and need to be filtered differently 
-        elif filepath == 'load_hourly.h5':
-            df1 = df1[[col for col in df1.columns if col in val_r_all]]
         else:
             df1 = df1.loc[df1.index.get_level_values(region_col).isin(val_r_all)]
 
     #%%################################ 
     ### Put back in original format ###
 
-    # Exception for load_hourly.h5 because it is not converted from wide format to long format so 
-    # just needs the index reset before saving to inputs_case folder 
-    if filepath == 'load_hourly.h5':
-        dfout = df1.reset_index()
-    elif (aggfunc == 'sc_cat') and (not wide):
+    if (aggfunc == 'sc_cat') and (not wide):
         dfout = df1.stack().rename(key).reset_index()[columns]
     elif (aggfunc == 'sc_cat') and wide and (len(fix_cols) == 1):
         dfout = df1.stack().rename('value').unstack('wide').reset_index()[columns].fillna(0)

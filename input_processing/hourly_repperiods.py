@@ -290,7 +290,6 @@ def identify_min_periods(df, hierarchy, rmap1, level, prefix=''):
     return forceperiods
 
 
-
 ###########################
 #    -- Clustering --     #
 ###########################
@@ -302,7 +301,7 @@ def cluster_profiles(profiles_fitperiods, sw, forceperiods_yearperiod):
     Args:
         GSw_HourlyClusterRegionLevel: Level of inputs/hierarchy.csv at which to aggregate
         profiles for clustering. VRE profiles are converted to available-capacity-weighted
-        averages. That's not the best - it would be better to weight sites that are more likely
+        averages. That's not the best - it would be better to weight sites that are more likely
         to be developed more strongly - but it's better than not weighting at all.
 
     Returns:
@@ -408,6 +407,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
     modelyears = pd.read_csv(
         os.path.join(inputs_case, 'modeledyears.csv')).columns.astype(int)
+    
     # ReEDS only supports a single entry for agglevel right now, so use the
     # first value from the list (copy_files.py already ensures that only one
     # value is present)
@@ -474,8 +474,8 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         rmap = hierarchy[sw['GSw_HourlyClusterRegionLevel']]
     elif agglevel in ['ba','state','aggreg']:
         rmap = (hierarchy_orig.loc[hierarchy_orig['ba'].isin(val_r_all)]
-                [['aggreg',sw['GSw_HourlyClusterRegionLevel']]]
-                .drop_duplicates().set_index('aggreg')).squeeze()        
+                [['ba',sw['GSw_HourlyClusterRegionLevel']]]
+                .drop_duplicates().set_index('ba')).squeeze()
     ### Get r-to-county map
     r_county = pd.read_csv(
         os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze(1)
@@ -486,10 +486,10 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     #%% Load supply curves to use for available capacity weighting
     sc = {
         'wind-ons': pd.read_csv(
-            os.path.join(inputs_case,"wind-ons_sc.csv")
+            os.path.join(inputs_case,"wind-ons_supply_curve.csv")
         ).groupby(['region','class'], as_index=False).capacity.sum(),
         'upv': pd.read_csv(
-            os.path.join(inputs_case,'upv_sc.csv')
+            os.path.join(inputs_case,'upv_supply_curve.csv')
         ).groupby(['region','class'], as_index=False).capacity.sum(),
     }
     sc = (
@@ -671,7 +671,8 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     ):
         stressperiods_minre = {
             tech: identify_min_periods(
-                df=recf, hierarchy=hierarchy, rmap1 = rmap1, level=sw['GSw_PRM_StressSeedMinRElevel'], prefix=tech)
+                df=recf, hierarchy=hierarchy, rmap1=rmap1,
+                level=sw['GSw_PRM_StressSeedMinRElevel'], prefix=tech)
             for tech in ['upv','wind-ons']}
     else:
         stressperiods_minre = {'upv':set(), 'wind-ons':set()}

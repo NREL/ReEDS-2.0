@@ -19,7 +19,7 @@ ReEDS uses high spatial resolution and high-fidelity modeling. Though it covers 
 <a name="Software"></a>
 # Required Software
 
-The ReEDS model is written primarily in GAMS with auxiliary modules written in Python. At present, NREL uses the following software versions: GAMS 45.2; Python 3.11. Other versions of these software may be compatible with ReEDS, but NREL has not tested other versions at this time.
+The ReEDS model is written primarily in GAMS with auxiliary modules written in Python. R is used for the demand module, which is not active by default, and therefore need not be installed unless you plan on working with that module. At present, NREL uses the following software versions: GAMS 30.3; Python 3.6.5; R 3.4.4. Other versions of these software may be compatible with ReEDS, but NREL has not tested other versions at this time.
 
 GAMS is a mathematical programming software from the GAMS Development Corporation. &quot;The use of GAMS beyond the limits of the free demo system requires the presence of a valid GAMS license file.&quot; [[1](https://www.gams.com/latest/docs/UG_License.html)] The ReEDS model requires the GAMS Base Module and a linear programming (LP) solver (e.g., CPLEX). The LP solver should be connected to GAMS with either a GAMS/Solver license or a GAMS/Solver-Link license. &quot;A GAMS/Solver connects the GAMS Base module to a particular solver and includes a license for this solver to be used through GAMS. It is not necessary to install additional software. A GAMS/Solver-Link connects the GAMS Base Module to a particular solver, but does not include a license for the solver. It may be necessary to install additional software before the solver can be used.&quot; [[2](https://www.gams.com/products/buy-gams/)]
 

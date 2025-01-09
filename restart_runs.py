@@ -122,7 +122,7 @@ for case in runs_failed:
     shutil.copy(sbatchfile, os.path.join(case,f'ORIGINAL_{casename}.sh'))
 
     #%% Get last .lst file and restart from there
-    lstfiles = sorted(glob(os.path.join(case,'lstfiles','*.lst')))
+    lstfiles = sorted(glob(os.path.join(case,'lstfiles','*')))
     if any([os.path.basename(i).startswith('report') for i in lstfiles]):
         restart_tag = '# Output processing'
     elif len(lstfiles) == 2: 

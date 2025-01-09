@@ -212,7 +212,7 @@ watsa(wst,r,szn,t)$[tmodel_new(t)$Sw_WaterMain] =
 * update seasonal distribution factors for water sources other than fresh surface unappropriated
 * and also fsu with missing data
 watsa(wst,r,szn,t)$[(not sum{sznn, watsa(wst,r,sznn,t)})$tmodel_new(t)$Sw_WaterMain] = 
-    round(numdays(szn)/365 , 4) ;
+    round(numdays(szn)/365 , 2) ;
 
 
 $ifthen.climatewater %GSw_ClimateWater% == 1
@@ -308,31 +308,26 @@ $onlisting
 forcedoutage_h(i,r,h)$pvb(i) = forcedoutage_h("battery_%GSw_pvb_dur%",r,h) ;
 forcedoutage_h(i,r,h)$geo(i) = forcedoutage_h("geothermal",r,h) ;
 
-forcedoutage_h(i,r,h)$[i_water_cooling(i)$Sw_WaterMain] =
-    sum{ii$ctt_i_ii(i,ii), forcedoutage_h(ii,r,h) } ;
-
 * Upgrade plants assume the same forced outage rate as what they're upgraded to
 forcedoutage_h(i,r,h)$upgrade(i) = sum{ii$upgrade_to(i,ii), forcedoutage_h(ii,r,h) } ;
+
+forcedoutage_h(i,r,h)$[i_water_cooling(i)$Sw_WaterMain] =
+    sum{ii$ctt_i_ii(i,ii), forcedoutage_h(ii,r,h) } ;
 
 * Calculate availability (includes forced and planned outage rates)
 avail(i,r,h)$valcap_i(i) = 1 ;
 
-* Assume no planned outages in summer/winter
-parameter planned_outage_days ;
-planned_outage_days =
-    sum{(allszn,quarter)$[(not sameas(quarter,"summ"))$(not sameas(quarter,"wint"))],
-        szn_quarter_weights(allszn,quarter) * numdays(allszn)
-    } ;
-
-avail(i,r,h)$[valcap_i(i)$(forcedoutage_h(i,r,h) or planned_outage(i))] =
+* For rep periods, assume no planned outages in the summer, and adjust the planned outages
+* to account for no planned outages in summer
+avail(i,r,h)$[valcap_i(i)$(forcedoutage_h(i,r,h) or planned_outage(i))$h_rep(h)] =
     (1 - forcedoutage_h(i,r,h))
     * (1 - planned_outage(i)
-           * sum{quarter$[(not sameas(quarter,"summ"))$(not sameas(quarter,"wint"))],
-                 frac_h_quarter_weights(h,quarter) }
-* Scale up to keep the same annual planned outage rate (higher than annual average in spring/fall)
-           * sum{allszn, numdays(allszn)} / planned_outage_days
-    )
-;
+           * sum{quarter$[not sameas(quarter,"summ")], frac_h_quarter_weights(h,quarter) }
+           * 365 / 273) ;
+
+* For stress periods, only apply forced outages
+avail(i,r,h)$[valcap_i(i)$forcedoutage_h(i,r,h)$h_stress(h)] =
+    (1 - forcedoutage_h(i,r,h)) ;
 
 *upgrade plants assume the same availability of what they are upgraded to
 avail(i,r,h)$[upgrade(i)$valcap_i(i)] = sum{ii$upgrade_to(i,ii), avail(ii,r,h) } ;
@@ -341,7 +336,7 @@ avail(i,r,h)$[upgrade(i)$valcap_i(i)] = sum{ii$upgrade_to(i,ii), avail(ii,r,h) }
 * forced/planned outages. If GSw_PRM_StressOutages is not true,
 * set the availability of thermal generator to 1 during stress periods.
 avail(i,r,h)
-    $[h_stress(h)$valcap_ir(i,r)$(Sw_PRM_StressOutages=0)
+    $[h_stress(h)$valcap_i(i)$(Sw_PRM_StressOutages=0)
     $(not vre(i))$(not hydro(i))$(not storage(i))$(not dr(i))$(not consume(i))
     ] = 1 ;
 
@@ -355,7 +350,7 @@ derate_geo_vintage(i,initv)$[geo(i)$valcap_iv(i,initv)] =
     / (sum{(r,h), avail(i,r,h) * hours(h) }
        / sum{(r,h), hours(h) }) ;
 
-seas_cap_frac_delta(i,v,r,szn,t)$valcap(i,v,r,t) =
+seas_cap_frac_delta(i,v,r,szn,t) =
     sum{quarter, szn_quarter_weights(szn,quarter) * quarter_cap_frac_delta(i,v,r,quarter,t) } ;
 
 
@@ -366,7 +361,7 @@ seas_cap_frac_delta(i,v,r,szn,t)$valcap(i,v,r,t) =
 * assign hydrogen demand by region and timeslice
 * we assumed demand is flat, i.e., timeslices w/ more hours 
 * have more demand in metric tons but the same rate in metric tons/hour
-h2_exogenous_demand_regional(r,p,h,t)$[tmodel_new(t)$h2_share(r,t)]
+h2_exogenous_demand_regional(r,p,h,t)$[tmodel_new(t)]
     = h2_share(r,t) * h2_exogenous_demand(p,t) / 8760 ;
 
 
@@ -448,10 +443,6 @@ $onlisting
 / ;
 
 
-*Upgraded hydro parameters:
-* By default, capacity factors for upgraded hydro techs use what we upgraded from.
-cf_hyd(i,szn,r,t)$[upgrade(i)$(hydro(i) or psh(i))] =
-    sum{ii$upgrade_from(i,ii), cf_hyd(ii,szn,r,t) } ;
 
 * dispatchable hydro has a separate constraint for seasonal generation which uses m_cf_szn
 cf_rsc(i,v,r,h,t)$[hydro(i)$valcap(i,v,r,t)] = sum{szn$h_szn(h,szn), cf_hyd(i,szn,r,t) } ;
@@ -459,6 +450,10 @@ cf_rsc(i,v,r,h,t)$[hydro(i)$valcap(i,v,r,t)] = sum{szn$h_szn(h,szn), cf_hyd(i,sz
 cf_rsc(i,v,r,h,t)$[rsc_i(i)$(sum{tt, capacity_exog(i,v,r,tt) })] =
         cf_rsc(i,"init-1",r,h,t) ;
 
+*Upgraded hydro parameters:
+* By default, capacity factors for upgraded hydro techs use what we upgraded from.
+cf_hyd(i,szn,r,t)$[upgrade(i)$(hydro(i) or psh(i))] =
+    sum{ii$upgrade_from(i,ii), cf_hyd(ii,szn,r,t) } ;
 * For cap_hyd_szn_adj, which only applies to dispatchable hydro or upgraded disp hydro with added pumping, we first try using the from-tech, but if that is
 * not available we use to to-tech, and if not that either we just use 1.
 cap_hyd_szn_adj(i,szn,r)$[upgrade(i)$(hydro_d(i) or psh(i))] =
@@ -469,13 +464,13 @@ cap_hyd_szn_adj(i,szn,r)$[upgrade(i)$hydro_d(i)$(not cap_hyd_szn_adj(i,szn,r))] 
 
 
 * do not apply "avail" for hybrid PV+battery because "avail" represents the battery availability
-m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)$cf_rsc(i,v,r,h,t)$cf_adj_t(i,v,t)] =
+m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)] =
     cf_rsc(i,v,r,h,t)
     * cf_adj_t(i,v,t)
     * (avail(i,r,h)$[not pvb(i)] + 1$pvb(i)) ;
 
 * can remove capacity factors for new vintages that have not been introduced yet
-m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ivt(i,newv,tt ) }$valcap(i,newv,r,t)$m_cf(i,newv,r,h,t)] = 0 ;
+m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ivt(i,newv,tt ) }$valcap(i,newv,r,t)] = 0 ;
 
 * distpv capacity factor is divided by (1.0 - distloss) to provide a busbar equivalent capacity factor
 m_cf(i,v,r,h,t)$[distpv(i)$valcap(i,v,r,t)] = m_cf(i,v,r,h,t) / (1.0 - distloss) ;
@@ -484,7 +479,7 @@ m_cf(i,v,r,h,t)$[distpv(i)$valcap(i,v,r,t)] = m_cf(i,v,r,h,t) / (1.0 - distloss)
 * m_cf_szn does not get populated with very small values
 m_cf(i,v,r,h,t)$[not valcap(i,v,r,t)] = 0 ;
 m_cf(i,v,r,h,t)$[(m_cf(i,v,r,h,t)<0.01)$valcap(i,v,r,t)] = 0 ;
-m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)$m_cf(i,v,r,h,t)] = round(m_cf(i,v,r,h,t),3) ;
+m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)] = round(m_cf(i,v,r,h,t),3) ;
 
 * Remove capacity when there is no corresponding capacity factor
 m_capacity_exog(i,v,r,t)$[initv(v)$cf_tech(i)$(not sum{h, m_cf(i,v,r,h,t) })] = 0 ;
@@ -509,23 +504,6 @@ m_cf_szn(i,v,r,szn,t)
 
 * Calculate daytime hours (for PVB) based on hours with nonzero PV CF
 dayhours(h)$[sum{(i,v,r,t)$[pv(i)$valgen(i,v,r,t)], m_cf(i,v,r,h,t) }] = yes ;
-
-
-*=============================================
-* -- Water accounting initialization --
-*=============================================
-* Initialize water capacity based on water requirements of existing fleet in base year. 
-* We conservatively assume plants have enough water available to operate up to a 
-* 100% capacity factor, or to operate at full capacity at any time of the year.
-if(%cur_year% = sum{t$tfirst(t), yeart(t) },
-    wat_supply_init(wst,r) = sum{(i,v,h,t)$[h_rep(h)$valcap(i,v,r,t)$initv(v)$i_wst(i,wst)$tfirst(t)],
-                                hours(h)
-                                * (sum{w$i_w(i,w), m_capacity_exog(i,v,r,t) * water_rate(i,w,r)}) 
-                                * (1 + sum{szn, h_szn(h,szn) * seas_cap_frac_delta(i,v,r,szn,t)})
-                                } / 1E6 ;
-
-    m_watsc_dat(wst,"cap",r,t)$tmodel_new(t) = wat_supply_new(wst,"cap",r) + wat_supply_init(wst,r) ;
-) ;
 
 
 *=============================================
@@ -569,11 +547,11 @@ minloadfrac(r,i,h)$[coal(i)$(not minloadfrac(r,i,h))] = minloadfrac_coal ;
 *set seasonal values for minloadfrac for hydro techs
 minloadfrac(r,i,h)$[sum{szn$h_szn(h,szn), hydmin(i,r,szn ) }] =
     sum{szn$h_szn(h,szn), hydmin(i,r,szn) } ;
+*upgrade techs get their corresponding upgraded-to minloadfracs
+minloadfrac(r,i,h)$upgrade(i) = sum{ii$upgrade_to(i,ii), minloadfrac(r,ii,h) } ;
 *water tech assignment
 minloadfrac(r,i,h)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), minloadfrac(r,ii,h) } ;
-*upgrade techs get their corresponding upgraded-to minloadfracs
-minloadfrac(r,i,h)$upgrade(i) = sum{ii$upgrade_to(i,ii), minloadfrac(r,ii,h) } ;
 *remove minloadfrac for non-viable generators
 minloadfrac(r,i,h)$[not sum{(v,t), valcap(i,v,r,t) }] = 0 ;
 

@@ -33,8 +33,6 @@ prod_techs = h2_techs + ['dac']
 niche_techs =  ['hydro','csp','geothermal','beccs','lfill-gas','biopower']
 price_types = ['load','res_marg','oper_res','state_rps','nat_gen']
 ccs_techs = ['gas-cc-ccs_mod_upgrade','coal-ccs_mod_upgrade','gas-cc-ccs_max_upgrade','coal-ccs_max_upgrade','gas-cc-ccs_mod','gas-cc-ccs_max','coal-ccs_mod','coal-ccs_max','coal-ccs-nsp','coal-ccs-flex','gas-cc-ccs-flex']
-water_techs = pd.read_csv(os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, 'postprocessing/bokehpivot/in/reeds2/tech_ctt_wst.csv')))['tech'].tolist()
-water_techs = [x.lower() for x in water_techs]
 
 #1. Preprocess functions for results_meta
 def scale_column(df, **kw):
@@ -106,8 +104,8 @@ def pre_systemcost(dfs, **kw):
     addyears = max(sys_eval_years, trans_crp)
     
     #Sometimes we want costs by BA and year, but otherwise aggregate costs nationwide by year:
-    if 'maintain_ba_index' in kw and kw['maintain_ba_index'] == True:
-        id_cols = ['ba','year']
+    if 'maintain_ba_index' in kw and kw['maintain_ba_index'] is True:
+        id_cols = ['rb','year']
     else:
         id_cols = ['year']
     
@@ -152,8 +150,8 @@ def pre_systemcost(dfs, **kw):
         #Add rows for all years (including extra years after end year for financial recovery)
         full_yrs = list(range(firstmodelyear - sys_eval_years, lastmodelyear + addyears + 1))
 
-        if 'ba' in df.columns:
-            allyrs = pd.DataFrame(list(product(full_yrs,df.r.unique())), columns=['year','ba'])
+        if 'rb' in df.columns:
+            allyrs = pd.DataFrame(list(product(full_yrs,df.rb.unique())), columns=['year','rb'])
             df = pd.merge(allyrs,df,on=id_cols,how='left').set_index('year')
         else:
             df = df.set_index('year').reindex(full_yrs)
@@ -176,7 +174,7 @@ def pre_systemcost(dfs, **kw):
                 historical_capex = pd.DataFrame(historical_capex)
                 historical_capex.rename(columns={'region':'rb'}, inplace=True)
                 ### Insert into full cost table
-                df = df.set_index('rb',append=True).join(historical_capex).reset_index('r')
+                df = df.set_index('rb',append=True).join(historical_capex).reset_index('rb')
                 df.loc[:firstmodelyear-1,'inv_investment_capacity_costs'] = (
                     df.loc[:firstmodelyear-1,'capex'])
                 df = df.drop('capex',axis=1)
@@ -239,7 +237,7 @@ def pre_systemcost(dfs, **kw):
         # Assuming sys_eval_years = 20, operation payments last for 20 yrs starting in the modeled
         # year, so fill 19 empty years after the modeled year.
         if 'rb' in df.columns:
-            df.loc[:,op_type_ls] = df.groupby('r')[op_type_ls].fillna(method='ffill', limit=sys_eval_years-1)
+            df.loc[:,op_type_ls] = df.groupby('rb')[op_type_ls].fillna(method='ffill', limit=sys_eval_years-1)
         else:
             df.loc[:,op_type_ls] = df[op_type_ls].fillna(method='ffill', limit=sys_eval_years-1)
         df = df.fillna(0)
@@ -1372,7 +1370,6 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
-            ('Stacked Bars WaterTechs',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech_raw':water_techs}}),
             ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
             ('PCA Map Final by Tech',{'x':'rb', 'y':'Capacity (GW)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Tech',{'x':'st', 'y':'Capacity (GW)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
@@ -1408,7 +1405,6 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
-            ('Stacked Bars WaterTechs',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech_raw':water_techs}}),
             ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
         )),
         }
@@ -1443,7 +1439,6 @@ results_meta = collections.OrderedDict((
         'presets': collections.OrderedDict((
             ('Stacked Area',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
-            ('Stacked Bars WaterTechs',{'x':'year', 'y':'Capacity (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'filter':{'tech_raw':water_techs}}),
             ('Explode By Tech',{'x':'year', 'y':'Capacity (GW)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
         )),
         }
@@ -1574,9 +1569,7 @@ results_meta = collections.OrderedDict((
             ('State Map Final by Tech',{'x':'st', 'y':'Water Withdrawal (Bgal)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
-            ('Stacked Bars by Cooling Tech Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'ctt', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
-            ('Explode By State Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Withdrawal (Bgal)', 'series':'wst', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'Water Withdrawal (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'Water Withdrawal (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1598,9 +1591,7 @@ results_meta = collections.OrderedDict((
             ('State Map Final by Tech',{'x':'st', 'y':'Water Consumption (Bgal)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
-            ('Stacked Bars by Cooling Tech Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'ctt', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
-            ('Explode By State Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Consumption (Bgal)', 'series':'wst', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'Water Consumption (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'Water Consumption (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1645,7 +1636,6 @@ results_meta = collections.OrderedDict((
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'Water Capacity by Region (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
-            ('Explode By State',{'x':'year', 'y':'Water Capacity by Region (Bgal)', 'series':'tech', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1690,7 +1680,6 @@ results_meta = collections.OrderedDict((
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'New Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'New Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'New Water Capacity by Region (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
-            ('Explode By State',{'x':'year', 'y':'New Water Capacity by Region (Bgal)', 'series':'tech', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'New Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'New Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1713,7 +1702,6 @@ results_meta = collections.OrderedDict((
             ('Stacked Area by Water Source Type',{'x':'year', 'y':'New Annual Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Area'}),
             ('Stacked Bars by Water Source Type',{'x':'year', 'y':'New Annual Water Capacity by Region (Bgal)', 'series':'wst', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('Explode By Water Source Type',{'x':'year', 'y':'New Annual Water Capacity by Region (Bgal)', 'series':'scenario', 'explode':'wst', 'chart_type':'Line'}),
-            ('Explode By State',{'x':'year', 'y':'New Annual Water Capacity by Region (Bgal)', 'series':'tech', 'explode':'st', 'chart_type':'Bar', 'bar_width':'1.75'}),
             ('PCA Map Final by Water Source Type',{'x':'rb', 'y':'New Annual Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
             ('State Map Final by Water Source Type',{'x':'st', 'y':'New Annual Water Capacity by Region (Bgal)', 'explode':'scenario', 'explode_group':'wst', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
         )),
@@ -1721,7 +1709,7 @@ results_meta = collections.OrderedDict((
     ),
 
     ('Retired Water Capacity (Bgal)',
-        {'file':'watret_ivrt.csv',
+        {'file':'watret_out.csv',
         'columns': ['tech', 'vintage', 'rb', 'year', 'Retired Water Capacity (Bgal)'],
         'preprocess': [
             {'func': scale_column, 'args': {'scale_factor': 1e-9, 'column':'Retired Water Capacity (Bgal)'}},
@@ -2159,7 +2147,7 @@ results_meta = collections.OrderedDict((
 
      ('Sys Cost Annualized BA/State (Bil $)',
         {'sources': [
-            {'name': 'sc', 'file': 'systemcost_ba.csv', 'columns': ['cost_cat', 'r', 'year', 'Cost (Bil $)']},
+            {'name': 'sc', 'file': 'systemcost_ba.csv', 'columns': ['cost_cat', 'rb', 'year', 'Cost (Bil $)']},
             {'name': 'crf', 'file': '../inputs_case/crf.csv', 'columns': ['year', 'crf']},
             {'name': 'val_r', 'file': '../inputs_case/val_r.csv', 'header':None},
             {'name': 'df_capex_init', 'file': '../inputs_case/df_capex_init.csv'},

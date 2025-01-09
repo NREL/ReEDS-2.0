@@ -17,7 +17,6 @@ positive variables
   FLEX(flex_type,r,allh,t)        "--MW-- flexible load shifted to each timeslice"
 *   PEAK_FLEX(r,ccseason,t)          "--MW-- peak busbar load adjustment based on load flexibility"
   DROPPED(r,allh,t)               "--MW-- dropped load (only allowed before Sw_StartMarkets)"
-  EXCESS(r,allh,t)                "--MW-- excess load (only allowed before Sw_StartMarkets)"
 
 * capacity and investment variables
   CAP_SDBIN(i,v,r,ccseason,sdbin,t) "--MW-- generation capacity by storage duration bin for relevant technologies"
@@ -168,6 +167,8 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_capacity_limit_nd(i,v,r,allh,t)            "--MW-- generation limited to available capacity for non-dispatchable resources"
  eq_curt_gen_balance(r,allh,t)                 "--MW-- net generation and curtailment must equal gross generation"
  eq_dhyd_dispatch(i,v,r,allszn,t)              "--MWh-- dispatchable hydro seasonal energy constraint (when not allowing seasonal enregy shifting)"
+ eq_dhyd_dispatch_ann(i,v,r,t)                 "--MWh-- dispatchable hydro annual energy constraint (only when allowing seasonal energy shifting)"
+ eq_dhyd_dispatch_szn(i,v,r,allszn,t)          "--MWh-- dispatchable hydro seasonal energy constraint"
  eq_min_cf(i,r,t)                              "--MWh-- minimum capacity factor constraint for each generator fleet, applied to (i,r)"
  eq_mingen_fixed(i,v,r,allh,t)                 "--MW-- Generation in each timeslice must be greater than mingen_fixed * capacity"
  eq_mingen_lb(r,allh,allszn,t)                 "--MW-- lower bound on minimum generation level"
@@ -188,6 +189,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_emit_accounting(e,r,t)                "--metric tons-- accounting for total emissions in a region"
  eq_emit_rate_limit(e,r,t)                "--metric tons per MWh-- emission rate limit"
  eq_annual_cap(e,t)                       "--metric tons-- annual (year-specific) emissions cap",
+ eq_annual_CO2ecap(eall,t)                   "--metric tons-- annual (year-specific) emissions cap",
  eq_bankborrowcap(e)                      "--weighted metric tons-- flexible banking and borrowing cap (to be used w/intertemporal solve only"
  eq_RGGI_cap(t)                           "--metric tons CO2-- RGGI constraint -- Regions' emissions must be less than the RGGI cap"
  eq_state_cap(st,t)                       "--metric tons CO2-- state-level CO2 cap constraint -- used to represent California cap and trade program"
@@ -273,6 +275,8 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_storage_in_minloading(i,v,r,allh,allhh,t)     "--MW-- minimum level for storage_in across same-season hours"
  eq_storage_level(i,v,r,allh,t)                   "--MWh per day-- Storage level inventory balance from one time-slice to the next"
  eq_storage_opres(i,v,r,allh,t)                   "--MWh per day-- there must be sufficient energy in the storage to be able to provide operating reserves"
+ eq_storage_seas_szn(i,v,r,allszn,t)              "--MWh-- GEN in a season must be greater than a certain percentage of STORAGE_IN in that season"
+ eq_storage_seas(i,v,r,t)                         "--MWh-- total STORAGE_IN must balance GEN across all time-slices"
  eq_storage_thermalres(i,v,r,allh,t)              "--MW-- thermal storage contribution to operating reserves is store_in only"
 
 * demand-response specific equations
@@ -502,11 +506,8 @@ eq_cap_init_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
-
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
-          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 ;
 
 * ---------------------------------------------------------------------------
@@ -529,11 +530,8 @@ eq_cap_init_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
-
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
-          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 
 ;
 
@@ -548,9 +546,6 @@ eq_cap_init_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
          + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)],
                CAP(ii,v,r,tt) / (1 - upgrade_derate(ii,v,r,tt)) }$[Sw_Upgrades = 1]
-
-         + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
-               CAP(ii,v,r,tt) }$[Sw_Upgrades = 2]
         }
 
 * Account for capacity upsizing within init vintages
@@ -565,11 +560,8 @@ eq_cap_init_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
-
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
-          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 ;
 
 * ---------------------------------------------------------------------------
@@ -600,11 +592,8 @@ eq_cap_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
-
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
-          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 
 ;
 
@@ -630,11 +619,8 @@ eq_cap_new_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
-
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
-          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 ;
 
 * ---------------------------------------------------------------------------
@@ -647,10 +633,6 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
          + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)],
                CAP(ii,v,r,tt) / (1 - upgrade_derate(ii,v,r,tt)) }$[Sw_Upgrades = 1]
-
-         + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
-               CAP(ii,v,r,tt) }$[Sw_Upgrades = 2]
-
         }
 
     + INV(i,v,r,t)$valinv(i,v,r,t)
@@ -669,11 +651,8 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
-    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)$(not sameas(ii,'hydEND_hydED'))], 
+    + sum{(ii)$[upgrade_from(ii,i)$valcap(ii,v,r,t)],
             UPGRADES(ii,v,r,t) }$[Sw_Upgrades = 2]
-
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
-          CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
 ;
 
 * ---------------------------------------------------------------------------
@@ -712,8 +691,7 @@ eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)]..
 
 * coal cannot upgrade after the retire year - ie no mothballing
     + sum{(tt)$[(tfix(tt) or tmodel(tt))
-               $(yeart(tt)<=yeart(t))
-               $(yeart(tt)>=Sw_Upgradeyear)
+               $(yeart(tt)<=yeart(t))$(yeart(tt)>=Sw_Upgradeyear)
                $valcap(i,v,r,tt)
                $(yeart(tt)<=caa_coal_retire_year)],
                     UPGRADES(i,v,r,tt) * (1 - upgrade_derate(i,v,r,tt))
@@ -726,15 +704,10 @@ eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)]..
     + sum{(tt,vv)$[(tfix(tt) or tmodel(tt))$(initv(vv) or sameas(v,vv))
               $(yeart(tt)<=yeart(t))$ivt(i,v,tt)
               $(yeart(tt)>=Sw_Upgradeyear)
-              $valcap(i,v,r,tt)$(not sameas(i,'hydEND_hydED'))
+              $valcap(i,v,r,tt)
               $sum(ii$upgrade_from(i,ii),valcap(ii,vv,r,tt))],
                     UPGRADES(i,vv,r,tt) * (1 - upgrade_derate(i,vv,r,tt))
-            }$[Sw_Upgrades = 2]
-
-    + sum{(tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))$(yeart(tt)>=Sw_Upgradeyear)
-              $valcap(i,v,r,tt)$sameas(i,'hydEND_hydED')],
-                    UPGRADES(i,v,r,tt) * (1 - upgrade_derate(i,v,r,tt))
-            }$[Sw_Upgrades = 2]        
+            }$[Sw_Upgrades=2]
 
     =e=
 
@@ -886,7 +859,7 @@ eq_growthlimit_relative(i,st,t)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }
                                 $tmodel(t)
                                 $stfeas(st)
                                 $Sw_GrowthPenalties
-                                $(yeart(t)<=Sw_GrowthConLastYear)
+                                $(yeart(t)<=Sw_GrowthPenLastYear)
                                 $(yeart(t)>=model_builds_start_yr)]..
 
 *the annual growth limit
@@ -904,7 +877,7 @@ eq_growthbin_limit(gbin,st,tg,t)$[valinv_tg(st,tg,t)
                                  $tmodel(t)
                                  $stfeas(st)
                                  $Sw_GrowthPenalties
-                                 $(yeart(t)<=Sw_GrowthConLastYear)
+                                 $(yeart(t)<=Sw_GrowthPenLastYear)
                                  $(yeart(t)>=model_builds_start_yr)]..
 
 *the growth bin limit
@@ -928,9 +901,9 @@ eq_growthlimit_absolute(tg,t)$[growth_limit_absolute(tg)$tmodel(t)
 
      =g=
 
-* must exceed the total investment - same RHS as previous equation
-     sum{(i,v,r,rscbin)$[valinv(i,v,r,t)$m_rscfeas(r,i,rscbin)$tg_i(tg,i)$rsc_i(i)],
-          INV_RSC(i,v,r,rscbin,t) }
+* must exceed the total investment
+     sum{(i,v,r)$[valinv(i,v,r,t)$tg_i(tg,i)],
+          INV(i,v,r,t) }
 ;
 
 * ---------------------------------------------------------------------------
@@ -1174,10 +1147,10 @@ eq_min_cf(i,r,t)$[minCF(i,t)$tmodel(t)$valgen_irt(i,r,t)$Sw_MinCF]..
 
 * ---------------------------------------------------------------------------
 
-* Seasonal energy constraint for dispatchable hydropower
+* Seasonal energy constraint for dispatchable hydropower when all energy must be used within season (no seasonal energy shifting)
 eq_dhyd_dispatch(i,v,r,szn,t)
     $[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)
-    ]..
+    $(within_seas_frac(i,v,r) = 1)]..
 
 *seasonal hours [times] seasonal capacity factor [times] total hydro capacity [times] seasonal capacity adjustment
     sum{h$[h_szn(h,szn)], avail(i,r,h) * hours(h) }
@@ -1200,6 +1173,66 @@ eq_dhyd_dispatch(i,v,r,szn,t)
     }
 ;
 
+* ---------------------------------------------------------------------------
+
+* Annual energy constraint for dispatchable hydropower when seasonal shifting is allowed
+eq_dhyd_dispatch_ann(i,v,r,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_seas_frac(i,v,r) < 1)]..
+
+    sum{szn$szn_rep(szn),
+* seasonal hours [times] seasonal capacity factor
+        sum{h$[h_szn(h,szn)], avail(i,r,h) * hours(h) }
+* [times] total hydro capacity
+        * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],
+            INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
+            - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
+* [times] seasonal capacity adjustment
+        * m_cf_szn(i,v,r,szn,t) }
+    =g=
+
+    sum{szn$szn_rep(szn),
+*total seasonal generation plus fraction of energy for regulation
+        sum{h$[h_szn(h,szn)],
+            hours(h)
+            * (GEN(i,v,r,h,t)
+               + reg_energy_frac * (
+                   OPRES("reg",i,v,r,h,t)$[Sw_OpRes=1]
+                   + OPRES("combo",i,v,r,h,t)$[Sw_OpRes=2]
+               )$[opres_h(h)]
+            )
+        } 
+    }
+;
+
+* ---------------------------------------------------------------------------
+
+* Required fraction of energy used within a season for dispatchable hydropower when seasonal shifting is allowed
+eq_dhyd_dispatch_szn(i,v,r,szn,t)
+    $[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$szn_rep(szn)
+    $(within_seas_frac(i,v,r) < 1)]..
+
+*total seasonal generation plus fraction of energy for regulation
+    sum{h$[h_szn(h,szn)],
+        hours(h)
+        * (GEN(i,v,r,h,t)
+           + reg_energy_frac * (
+               OPRES("reg",i,v,r,h,t)$[Sw_OpRes=1]
+               + OPRES("combo",i,v,r,h,t)$[Sw_OpRes=2]
+           )$[opres_h(h)]
+        )
+    }
+
+    =g=
+
+*fractional in-season energy requirement
+    within_seas_frac(i,v,r) * (
+*seasonal hours [times] seasonal capacity factor [times] total hydro capacity [times] seasonal capacity adjustment
+        sum{h$[h_szn(h,szn)], avail(i,r,h) * hours(h) }
+        * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
+           - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
+        * (m_cf_szn(i,v,r,szn,t)$(m_cf_szn(i,v,r,szn,t) <= 1) + 1$(m_cf_szn(i,v,r,szn,t) > 1))
+    )
+;
+
 * ---------------------------------------------------------------------------------------
 * Limit near-term capacity deployments by tech and region based on interconnection queues
 eq_interconnection_queues(tg,r,t)$[tmodel(t)$(yeart(t)>=model_builds_start_yr)
@@ -1217,8 +1250,9 @@ eq_interconnection_queues(tg,r,t)$[tmodel(t)$(yeart(t)>=model_builds_start_yr)
     sum{(i,newv,tt)$[valinv(i,newv,r,tt)$tg_i(tg,i)
                                     $(yeart(tt)>=interconnection_start)
                                     $(tmodel(tt) or tfix(tt))],
-        INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb] }
+        INV(i,newv,r,tt) + INV_REFURB(i,newv,r,tt)$[refurbtech(i)$Sw_Refurb]}
 ;
+
 
 *===============================
 * --- SUPPLY DEMAND BALANCE ---
@@ -1263,9 +1297,8 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
     - sum{[i,v,hh]$[valgen(i,v,r,t)$dr1(i)$allowed_shifts(i,h,hh)],
                      DR_SHIFT(i,v,r,h,hh,t) / hours(h) / storage_eff(i,t) }$Sw_DR
 
-* [plus] dropped/excess load ONLY if before Sw_StartMarkets
+* [plus] dropped load ONLY if before Sw_StartMarkets
     + DROPPED(r,h,t)$(yeart(t)<Sw_StartMarkets)
-    - EXCESS(r,h,t)$(yeart(t)<Sw_StartMarkets)
 
     =e=
 
@@ -2054,7 +2087,8 @@ eq_state_cap(st,t)
           $h_rep(h)
 * If there is a national zero-carbon cap in the present year,
 * set emissions intensity of imports to zero.
-          $(not (Sw_AnnualCap and not emit_cap("CO2",t)))],
+          $(not (Sw_AnnualCap and not emit_cap("CO2",t)))
+          $(not (Sw_AnnualCapCO2e and not emit_cap("CO2e",t)))],
           hours(h) * FLOW(rr,r,h,t,trtype)
           * sum{tt$tprev(t,tt), co2_emit_rate_r(rr,tt) }
     }
@@ -2114,18 +2148,22 @@ eq_emit_rate_limit(e,r,t)$[emit_rate_con(e,r,t)$tmodel(t)]..
 
 eq_annual_cap(e,t)$[sum{tt, emit_cap(e,tt) }$tmodel(t)$sameas(e,"CO2")$Sw_AnnualCap]..
 
-*exogenous cap
+* exogenous cap
     emit_cap(e,t)
 
     =g=
 
-*must exceed annual endogenous emissions
-* Direct CO2 emissions
-    sum{r, EMIT(e,r,t) }
-* Methane emissions * global warming potential
-* [metric ton CH4] * [metric ton CO2 / metric ton CH4]
-    + sum{r$Sw_AnnualCapCO2e,
-          EMIT("CH4",r,t) * Sw_MethaneGWP }
+* must exceed annual endogenous emissions
+* Eemissions by pollutant * global warming potential
+* [metric ton of emission by pollutant] * [metric ton CO2 / metric ton of emission by pollutant]
+    sum{r,EMIT(e,r,t)}       
+;
+
+eq_annual_CO2ecap(eall,t)$[sum{tt, emit_cap(eall,tt) }$tmodel(t)$sameas(eall,"CO2e")$Sw_AnnualCapCO2e]..
+
+    emit_cap("CO2e",t)
+    =g=
+    sum{r,EMIT("CO2",r,t) * gwp("CO2") + EMIT("CH4",r,t) * gwp("CH4") + EMIT("N2O",r,t) * gwp("N2O")}       
 ;
 
 * ---------------------------------------------------------------------------
@@ -2147,18 +2185,15 @@ eq_bankborrowcap(e)$[Sw_BankBorrowCap$sum{t, emit_cap(e,t) }]..
 
 eq_cdr_cap(t)
     $[tmodel(t)
-    $Sw_AnnualCap
+    $(Sw_AnnualCap or Sw_AnnualCapCO2e)
     $Sw_NoFossilOffsetCDR]..
 
-*** CO2 emissions from fossil CCS...
-    + sum{(i,v,r,h)$[valgen(i,v,r,t)$ccs(i)$(not beccs(i))$h_rep(h)],
-        hours(h) * emit_rate("CO2",i,v,r,t) * GEN(i,v,r,h,t) }
-
-*** ...and methane leakage from fossil CCS (if included in national policy)...
-* Methane emissions * global warming potential
-* [metric ton CH4] * [metric ton CO2 / metric ton CH4]
+*** GHG emissions from fossil CCS...
+    + sum{(i,v,r,h)$[valgen(i,v,r,t)$ccs(i)$(not beccs(i))$h_rep(h)$Sw_AnnualCap],
+            hours(h) * GEN(i,v,r,h,t) * emit_rate("CO2",i,v,r,t) }
+* GHG emissions * global warming potential
     + sum{(i,v,r,h)$[valgen(i,v,r,t)$ccs(i)$(not beccs(i))$h_rep(h)$Sw_AnnualCapCO2e],
-        hours(h) * emit_rate("CH4",i,v,r,t) * GEN(i,v,r,h,t) * Sw_MethaneGWP }
+        hours(h) * GEN(i,v,r,h,t) * sum{e, emit_rate(e,i,v,r,t) * gwp(e) } } 
 
     =g=
 
@@ -2667,7 +2702,8 @@ eq_storage_capacity(i,v,r,h,t)
 *  daily storage level in the current time-slice (h)
 *  plus daily net charging in the current time-slice (accounting for losses).
 *  CSP with storage energy accounting is also covered by this constraint.
-eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$tmodel(t)]..
+*  Does not apply for storage technologies that allow cross-season energy arbitrage.
+eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r) = 1)$tmodel(t)]..
 
 *[plus] storage level in h+1
     sum{(hh)$[nexth(h,hh)], STORAGE_LEVEL(i,v,r,hh,t) }
@@ -2714,6 +2750,59 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$tmodel(t)]..
        * (OPRES("reg",i,v,r,h,t)$[Sw_OpRes=1] + OPRES("combo",i,v,r,h,t)$[Sw_OpRes=2])
        * (1 - storage_eff(i,t)) / 2 * reg_energy_frac
     )$[opres_h(h)]
+;
+
+* ---------------------------------------------------------------------------
+
+* Annual energy balance for storage that can shift energy across seasons
+eq_storage_seas(i,v,r,t)
+    $[valgen(i,v,r,t)$storage(i)
+    $(within_seas_frac(i,v,r) < 1)$tmodel(t)]..
+
+    sum{h$h_rep(h),
+*[plus] annual storage charging
+        storage_eff(i,t) * hours(h)
+*energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
+        * STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i))
+
+*[plus] annual water inflow energy available for hydropower that adds pumping
+    + (CAP(i,v,r,t) * avail(i,r,h) * hours(h) *
+            sum{szn$h_szn(h,szn), m_cf_szn(i,v,r,szn,t) }
+            )$hyd_add_pump(i)
+    }
+
+    =e=
+*[plus] annual generation
+    sum{h$h_rep(h), hours(h) * GEN(i,v,r,h,t) }
+;
+
+* ---------------------------------------------------------------------------
+
+* Minimum amount of storage input in a season to be used for generation in that season,
+* when cross-season energy shifting is available
+eq_storage_seas_szn(i,v,r,szn,t)
+    $[valgen(i,v,r,t)$storage(i)$szn_rep(szn)
+    $(within_seas_frac(i,v,r) < 1)$tmodel(t)]..
+
+*[plus] seasonal generation
+    sum{h$h_szn(h,szn), hours(h) * GEN(i,v,r,h,t) }
+
+=g=
+
+*fractional in-season energy requirement
+    within_seas_frac(i,v,r) *
+*[plus] seasonal storage charging
+    sum{h$h_szn(h,szn),
+        storage_eff(i,t) * hours(h)
+*energy into stand-alone storage (not CSP-TES) and hydropower that adds pumping
+        * STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i))
+
+
+*[plus] seasonal water inflow energy available for hydropower that adds pumping
+    + (CAP(i,v,r,t) * avail(i,r,h) * hours(h)
+            * m_cf_szn(i,v,r,szn,t)
+        )$hyd_add_pump(i)
+    }
 ;
 
 * ---------------------------------------------------------------------------

@@ -15,11 +15,11 @@ Coal-IGCC_coal-CCS_mod,coal-IGCC
 coal-new_coal-CCS_mod,coal-new
 CoalOldScr_coal-CCS_mod,CoalOldScr
 CoalOldUns_coal-CCS_mod,CoalOldUns
-CofireNew_coal-CCS_mod,CofireNew
-CofireOld_coal-CCS_mod,CofireOld
+CofireNew_coal-CCS_mod,CofireOld
+CofireOld_coal-CCS_mod,CofireNew
 Coal-IGCC_coal-CCS_max,coal-IGCC
 coal-new_coal-CCS_max,coal-new
 CoalOldScr_coal-CCS_max,CoalOldScr
 CoalOldUns_coal-CCS_max,CoalOldUns
-CofireNew_coal-CCS_max,CofireNew
-CofireOld_coal-CCS_max,CofireOld
+CofireNew_coal-CCS_max,CofireOld
+CofireOld_coal-CCS_max,CofireNew

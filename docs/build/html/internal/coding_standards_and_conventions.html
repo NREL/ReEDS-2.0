@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coding Standards and Conventions &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/customtheme.css?v=299ffeb9" />
+
+  
+    <link rel="shortcut icon" href="../_static/reeds-icon.png"/>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="additional_setup.html">Additional ReEDS Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_best_practices.html">Developer Resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onboarding.html">Onboarding Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_documentation.html">Model Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html">Model Switches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../additional_model_information.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Coding Standards and Conventions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/internal/coding_standards_and_conventions.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="coding-standards-and-conventions">
+<h1>Coding Standards and Conventions<a class="headerlink" href="#coding-standards-and-conventions" title="Link to this heading"></a></h1>
+<p>The following are naming, rounding, and coding conventions that should be followed when making changes to ReEDS. All new code contributed to the repo should follow these conventions.</p>
+<p><strong>Note:</strong> Because these conventions were not written until after the model development began, you will notice that some of these conventions are violated in the current code base. The conventions are far from comprehensive. Our hope is that this light approach can help bring consistency to the model code without being burdensome to those writing the code.</p>
+<p>In an effort to improve code quality, using the Ruff python linter is recommended. To get started with Ruff, see the guide on <a class="reference external" href="https://docs.astral.sh/ruff/installation/">Installing Ruff</a>. Once installed, you can check for errors using the following command from the base ReEDS-2.0 directory: <code class="docutils literal notranslate"><span class="pre">ruff</span> <span class="pre">check</span></code>. If you need more information on a specific error, see the <a class="reference external" href="https://docs.astral.sh/ruff/rules/">Ruff Rules</a>.</p>
+<section id="naming-rounding-and-coding-conventions">
+<h2>Naming, Rounding, and Coding Conventions<a class="headerlink" href="#naming-rounding-and-coding-conventions" title="Link to this heading"></a></h2>
+<section id="naming-conventions">
+<h3>Naming Conventions<a class="headerlink" href="#naming-conventions" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>File names (GAMS files, input files, output files)</p>
+<ul>
+<li><p>Folders are lower case</p></li>
+<li><p>Files are lower case with underscores separating words (atb_mid_wind_2018.csv)</p></li>
+<li><p>GAMS files are proceeded by a letter and underscore, with each letter representing a file category and letters in alpha-order of file execution whenever possible (a_write_data.gms). When there are multiple GAMS files in the same category, they should be numbered to show the order in which they are called (a1_write_data, a2_inputs, a3_inputs_demand)</p></li>
+<li><p>Output files start with a noun indicator for the general output category to make it easier to find (curt_marg rather than marg_curt, gen_ann rather than ann_gen)</p></li>
+</ul>
+</li>
+<li><p>Parameters</p>
+<ul>
+<li><p>Use lower case with underscores separating words</p></li>
+<li><p>Like the output files, the first word of parameters should be a noun indicator of the parameter type (curt_marg rather than marg_curt)</p></li>
+<li><p>Cost parameters should generally start with “cost” (e.g., cost_fom, cost_cap)</p></li>
+</ul>
+</li>
+<li><p>Variables</p>
+<ul>
+<li><p>Use capital letters (example: INV)</p></li>
+<li><p>Where possible, use the same naming for related variables (e.g., INV; INV_TRANS)</p></li>
+<li><p>The first indicator in a variable name should be a noun or noun abbreviation for the variable type or category</p></li>
+</ul>
+</li>
+<li><p>equations (model constraints)</p>
+<ul>
+<li><p>Begin with the prefix “eq_”</p></li>
+<li><p>Use all lower-case letters with underscores separating words (example: eq_reserve_margin)</p></li>
+</ul>
+</li>
+<li><p>switches</p>
+<ul>
+<li><p>Begin with the prefix “Sw_”</p></li>
+<li><p>Use descriptive names with upper camel case (e.g., Sw_ReserveMargin)</p></li>
+<li><p>For on/off switches, “OFF” = 0 and “ON” =1</p></li>
+</ul>
+</li>
+<li><p>indices/sets</p>
+<ul>
+<li><p>Use lower case</p></li>
+<li><p>Use short rather than descriptive (e.g., “i” instead of “tech”) – preference for one or two letter names.</p></li>
+</ul>
+</li>
+<li><p>aliases</p>
+<ul>
+<li><p>Use the same alpha character as the original set followed by a number (example: alias(r,r2))</p></li>
+</ul>
+</li>
+<li><p>subsets</p>
+<ul>
+<li><p>Use lowercase</p></li>
+<li><p>Use short but descriptive text</p></li>
+<li><p>example: conv(i) is the subset of technologies that are “conventional”</p></li>
+</ul>
+</li>
+<li><p>crosswalk sets</p>
+<ul>
+<li><p>Use the set names and separated by an underscore</p></li>
+<li><p>example: r_st(r,st) is the crosswalk between region “r” and state “st”</p></li>
+</ul>
+</li>
+<li><p>Choosing names for parameters and variables</p>
+<ul>
+<li><p>Names should be descriptive (e.g., “curt_marg” rather than “cm”)</p></li>
+<li><p>Shorter names are generally preferred (e.g., “curt_marg” rather than “curtailment_marginal”)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="rounding-conventions">
+<h3>Rounding Conventions<a class="headerlink" href="#rounding-conventions" title="Link to this heading"></a></h3>
+<p>As a general rule, costs or prices should be rounded to two decimal places. All other parameters should be rounded to no more than 3 decimal places.</p>
+<p><strong>Note:</strong> Some exceptions to this might exsist due to number scaling (e.g., emission rates)</p>
+</section>
+<section id="coding-conventions">
+<h3>Coding Conventions<a class="headerlink" href="#coding-conventions" title="Link to this heading"></a></h3>
+<ul>
+<li><p>Generally, each line in GAMS should be no longer than a standard page width (255 characters)</p></li>
+<li><p>Declarations</p>
+<ul class="simple">
+<li><p>Blocks of declarations are preferred to individual line declarations</p></li>
+<li><p>Comments are required for each declaration</p>
+<ul>
+<li><p>Units should always be defined first (even if they are unitless) enclosed in “–”</p></li>
+<li><p>Example: cap_out(i,r,t)         “–MW– capacity by region”</p></li>
+</ul>
+</li>
+<li><p>Comments need not be comprehensive</p>
+<ul>
+<li><p>CAP(i,v,r,t) “–MW– capacity by technology i of vintage v in region r in year t”</p></li>
+<li><p>CAP(i,v,r,t) “–MW– capacity by technology”</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Ordering of indices</p>
+<ul class="simple">
+<li><p>The following indices should always appear first in the following order: (1)ortype (2)i (3)v (4)r (5)h</p></li>
+<li><p>The t (year) index should always be last</p></li>
+<li><p>Other sets should generally be ordered alphabetically, respecting the two conventions above</p></li>
+</ul>
+</li>
+<li><p>Qualifiers</p>
+<ul class="simple">
+<li><p>Enclosed with brackets “[]”</p></li>
+<li><p>No space between qualifiers</p></li>
+<li><p>example: <span class="math notranslate nohighlight">\([qual1\)</span>qual2]</p></li>
+<li><p>Parenthesis should be used to make order of operations explicit</p>
+<ul>
+<li><p>Incorrect: <span class="math notranslate nohighlight">\([not qual1 \)</span>not qual2]</p></li>
+<li><p>Correct: <span class="math notranslate nohighlight">\([(not qual1)\)</span>(not qual2)]</p></li>
+</ul>
+</li>
+<li><p>Operators “and”, “not”, and “or” should be lower case</p></li>
+</ul>
+</li>
+<li><p>Equations (this applies to pre- and post-processing; model constraints)</p>
+<ul>
+<li><p>Each term should begin with a plus (+) or minus (-) sign, even the first term</p></li>
+<li><p>Summations</p>
+<ul class="simple">
+<li><p>Summation arguments should be bookended with braces “{}” sum{…}</p></li>
+<li><p>The summation will generally be separated into three parts that will appear on three different lines, with the closing } lining up with the opening {</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>[+/-] sum{ ([indices]) $ [qualifiers] ,
+                  [parameter] * [variable]
+                }
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>+ sum{(i,c,r,t)$[Qual1$Qual2 … $Qual3], 
+      cv_avg(i,r,t) * CAP(i,c,r,t)
+    }
+</pre></div>
+</div>
+</li>
+<li><p>For equations, sums should generally be split with terms on multiple lines. In some cases it will be more readable to leave the sum on one line (e.g., a short sum inside of a long sum).</p></li>
+<li><p>Each term of an equation should be separated by a new line; white space should be inserted between terms</p></li>
+<li><p>When reasonable, only one parameter should be multiplied by one variable</p>
+<ul class="simple">
+<li><p>for example, “heatrate [MBtu/MWh] * emissions rate of fuel [tons CO2/MBtu] * GENERATION [MWh]” should be “emissions rate of plant [tons CO2/MWh] * GENERATION [MWh]”</p></li>
+<li><p>this will help us limit numerical issues that result from the multiplication of two small numbers</p></li>
+</ul>
+</li>
+<li><p>When multiplying parameters and variables, parameters should appear on the left and variables on the right</p></li>
+<li><p>Keep one space on either end of a mathematical operator (<em>, /, +, -). example: “curt_marg * GEN” rather than “curt_marg</em>GEN”</p></li>
+</ul>
+</li>
+<li><p>Do not use recursive calculations; new parameters should be created</p>
+<ul class="simple">
+<li><p>Example: “load = load * 1.053” should be written as “busbarload = enduseload * 1.053”</p></li>
+<li><p>This will create consistency between the units specified in the parameter declaration and the use of the parameter</p></li>
+</ul>
+</li>
+<li><p>Comments</p>
+<ul>
+<li><p>Do not use inline comments (comments proceeded by //). This helps to make it easier to find comments</p></li>
+<li><p>Do not use <span class="math notranslate nohighlight">\(ontext/\)</span>offtext except for headers at the beginning of files</p></li>
+<li><p>Include a space after the “*” to start a comment</p></li>
+<li><p>Do not use a comment to note an issue.  Use GitHub to put the issue instead.</p></li>
+<li><p>Example: Don’t do this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>*!!!! this will need to be updated to the tophrs designation after the 8760 cv/curt method is implemented   
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+<li><p>Other</p>
+<ul>
+<li><p>GAMS functions such as sum, max, smax, etc. should use {}; Example: avg_outage(i) = sum{h,hours(h)*outage(i,h)} / 8760 ;</p></li>
+<li><p>When including the semicolon on the end of a line there should be a space between the semicolon and the last character of the line (see previous example)</p></li>
+<li><p>When using <code class="docutils literal notranslate"><span class="pre">/</span> <span class="pre">/</span></code> for a parameter declaration, place the closing semicolon on the same line as the final slash: <code class="docutils literal notranslate"><span class="pre">/</span> <span class="pre">;</span></code></p></li>
+<li><p>Sums outside of equations (e.g., in e_reports) need not be split over multiple lines if they do not exceed the line limit</p></li>
+<li><p>Do not use hard-coded numbers in equations or calculations. Values should be assigned to an appropriate parameter name that is subsequently used in the code.</p></li>
+<li><p>Large input data tables should be loaded from individual data files for each table, preferably in *.csv format. Large data tables should not be manually written into the code but can be written dynamically by scripts or inserted with a $include statement.</p></li>
+<li><p>Compile-time conditionals should always use a tag (period + tag name) to clearly define the relationships between compile-time conditional statements. Failure to do so hurts readability sometimes leads to compilation errors. Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ifthen.switch1 Sw_One==A
+  Do Something
+$elseif.switch1 Sw_One==B
+  Do Something
+$else.switch1 Sw_One==C
+  Do Something
+$endif.switch1
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<section id="input-conventions-and-data-handling">
+<h2>Input Conventions and Data Handling<a class="headerlink" href="#input-conventions-and-data-handling" title="Link to this heading"></a></h2>
+<section id="input-conventions">
+<h3>Input Conventions<a class="headerlink" href="#input-conventions" title="Link to this heading"></a></h3>
+<ul>
+<li><p>Data read into b_inputs should already be filtered.  E.g., if you are running ERCOT, only data for ERCOT should be included.</p>
+<ul class="simple">
+<li><p>We did not structure things this way when we first built ReEDS, and it might not be possible to always meet this recommendation without a large amount of work.  This recommendation represents the vision we are working toward rather than a requirement.</p></li>
+<li><p>The same applies to scenarios. If there are multiple scenario options in a single file (e.g. inputs/carbonconstraints/co2_cap.csv), only the single scenario used in a model run should be copied to inputs_case and loaded in b_inputs.gms.</p></li>
+</ul>
+</li>
+<li><p>Input csv files that are written to inputs_case should have the same name as the GAMS parameter that reads that csv file.</p>
+<ul class="simple">
+<li><p>Example: trancap_init(r,rr,trtype) reads in trancap_init.csv</p></li>
+</ul>
+</li>
+<li><p>Parameters read into b_inputs should also include a header that has the set names and then units for the values.  An asterisk is required to keep GAMS from reading the header and throwing an error.  Example:</p></li>
+<li><p>Parameters read into b_inputs should be surrounded by <span class="math notranslate nohighlight">\(offlisting and \)</span>onlisting so that they are not written to the .lst files.</p>
+<ul>
+<li><p>Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>parameter ev_static_demand(r,allh,allt) &quot;--MW-- static electricity load from EV charging by timeslice&quot;
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%ev_static_demand.csv
+$offdelim
+$onlisting
+/ ;
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+<li><p>When a file read into b_inputs was created by an upstream script within the repository, include a note indicating which script created the file.</p>
+<ul class="simple">
+<li><p>Example: “* Written by hourly_process.py”</p></li>
+</ul>
+</li>
+<li><p>In general, parameter declarations (which are in long format) are preferred to table declarations.  Table declarations are acceptable when the table format can significantly reduce the files size or when the format of the native data better matches the table format.</p></li>
+<li><p>Files used as inputs for the repository are always placed in an appropriate location within the “inputs” folder.  Input files are grouped topically.</p></li>
+<li><p>When there are multiple input options for a given input, the input file name should be “{file}_{option}”.  For example:</p>
+<ul class="simple">
+<li><p>battery_ATB_2022_moderate</p></li>
+<li><p>battery_ATB_2022_conservative</p></li>
+</ul>
+</li>
+<li><p>If preprocessing is needed to create the input file that is placed in the ReEDS repository, the preprocessing scripts or workbooks should be included in the ReEDS-2.0_Input_Processing  repository (<a class="reference external" href="https://github.nrel.gov/ReEDS/ReEDS-2.0_Input_Processing">https://github.nrel.gov/ReEDS/ReEDS-2.0_Input_Processing</a>).  Raw data files should be placed in that repository if their file size permits.  Otherwise, raw data files should be placed in \nrelnas01\ReEDS\ _ReEDS Documentation.</p></li>
+<li><p>Any scripts that preprocess data after a ReEDS run is started should be placed in the input_processing folder.</p>
+<ul class="simple">
+<li><p>Input processing scripts should start with a block of descriptive comments describing the purpose and methodology, and internal functions should use docstrings and liberal comments on functionality and assumptions.</p></li>
+</ul>
+</li>
+<li><p>Any costs read into b_inputs should already be in 2004$.  Cost adjustments in preprocessing scripts should rely on the deflator.csv file rather than have hard-coded conversions.</p></li>
+<li><p>In general, if inputs require calculations before they are ingested into b_inputs, those calculations should be done in Python rather than in GAMS. GAMS can be used for calculations where the GAMS syntax simplifies the calculation or where upstream dependencies make it challenging for the calculations to happen in Python preprocessing scripts.</p></li>
+<li><p>In Python, file paths should be added using os.path.join() rather than writing out the filepath with slashes.</p></li>
+<li><p>Data column headers should use the ReEDS set names when practical.  For example, data that include regions should use “r” for the column name rather than “ba,” “reeds_ba,” or “region.”</p></li>
+<li><p>Preprocessing scripts in input_processing should not change the working directory or use relative filepaths; absolute filepaths should be used wherever possible.</p></li>
+<li><p>When feasible, inputs used in the objective function (c_supplyobjective.gms) should be included in tests/objective_function_params.yaml. Inputs included in this .yaml file will be checked for missing values using input_processing/check_inputs.py.</p></li>
+</ul>
+</section>
+<section id="input-data">
+<h3>Input Data<a class="headerlink" href="#input-data" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>In general, all inputs less than ~10 MB should be in .csv format.</p>
+<ul>
+<li><p>If the csv file would be larger than ~10 MB, then write it as a h5 file unless accessibility is especially important (e.g., the ReEDS_generator_database file needs to be easily accessible, so is kept as a csv file).</p></li>
+<li><p>In some cases .txt files may be used as inputs if their format is especially convenient for the application.</p></li>
+</ul>
+</li>
+<li><p>Input files should be included in the repository when possible.</p>
+<ul>
+<li><p>Files too large to include in the repository or unnecessary for the repository (e.g., files used only for special circumstances, such as individual sites for wind and solar) should be included in the appropriate folder on nrelnas and can be copied to the local repository in the preprocessing steps.</p></li>
+<li><p>Files stored on nrelnas should have unique names that identify the version of the file and data.  For example, you would use “special_input_data_2022_11_28” rather than “special_input_data.”</p></li>
+</ul>
+</li>
+<li><p>Add units to raw data files</p>
+<ul>
+<li><p>When adding a new raw data file, include units in the column name to avoid confusion</p></li>
+<li><p>As an example, look at ‘/inputs/plant_characteristics/conv_ATB_2023.csv’</p>
+<ul>
+<li><p>The data in the “capcost” column are in unit of k<span class="math notranslate nohighlight">\(/MW or \)</span>/kW, although the units are not labeled</p></li>
+<li><p>As a best practice, “capcost” should be named “capcost_usd.per.kw” to make units clear</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Add comments to raw data files that represent GAMS subsets</p>
+<ul>
+<li><p>When adding a new raw data file that represents a GAMS subset, include column headers representing the GAMS set that each column’s entries belong to, with the first column header being prepended by an asterisk (this allows GAMS to parse the first row of the .csv file as a comment)</p></li>
+<li><p>For an example, see ‘/inputs/sets/fuel2tech.csv’</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

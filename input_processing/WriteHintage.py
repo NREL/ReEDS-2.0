@@ -308,6 +308,13 @@ def main(reeds_path, inputs_case):
     GSw_Clean_Air_Act = int(sw.GSw_Clean_Air_Act)
     coalretireyrs = int(sw.coalretireyrs)
 
+    # ReEDS only supports a single entry for agglevel right now, so use the
+    # first value from the list (copy_files.py already ensures that only one
+    # value is present)
+    agglevel = (
+        pd.read_csv(os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()
+    )[0]
+
     #%%
     # Inflation factor 1987$ to 2004$
     inflator = 1.69
@@ -324,10 +331,16 @@ def main(reeds_path, inputs_case):
                     'hydNPND', 'hydED', 'hydEND', 'wind-ons', 'wind-ofs', 'caes'
                     ]
     }
+    
+    # Valid regions for this run
+    val_r_all = pd.read_csv(
+            os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
 
     # Import mapping files
     r_county = pd.read_csv(
         os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze()
+    r_ba = pd.read_csv(
+        os.path.join(inputs_case,'r_ba.csv'), index_col='ba',).squeeze()
 
     # Import generator database
     indat = pd.read_csv(os.path.join(inputs_case,'unitdata.csv'),
@@ -521,6 +534,11 @@ def main(reeds_path, inputs_case):
     dpv = pd.melt(dpv.reset_index(),id_vars=['r'])
     dpv.rename(columns=dict(zip(dpv.columns,['r','year','Summer.capacity'])),
                inplace=True)
+
+    ### Aggregate if necessary
+    if agglevel  in ['state','aggreg']: # or any other spatial resolution above 'BA'
+        dpv['r'] = dpv['r'].map(r_ba)
+        dpv = dpv.groupby(['r','year'], as_index=False).sum()
 
     # Initialize columns for dpv dataframe
     dpv['tech'] = 'distpv'

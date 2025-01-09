@@ -161,11 +161,13 @@ def check_compatibility(sw):
         or int(sw['GSw_ClimateDemand'])
         or int(sw['GSw_ClimateWater'])
         or int(sw['GSw_EFS_Flex'])
+        or (float(sw['GSw_HydroWithinSeasFrac']) < 1)
+        or (float(sw['GSw_HydroPumpWithinSeasFrac']) < 1)
         or (int(sw['GSw_Canada']) == 2)
     ):
         raise NotImplementedError(
             'At least one of GSw_Canada, GSw_ClimateHydro, GSw_ClimateDemand, GSw_ClimateWater, '
-            'endyear, GSw_EFS_Flex '
+            'endyear, GSw_EFS_Flex, GSw_HydroWithinSeasFrac, GSw_HydroPumpWithinSeasFrac '
             'are using a currently-unsupported setting.')
 
     if 24 % (int(sw['GSw_HourlyWindowOverlap']) * int(sw['GSw_HourlyChunkLengthRep'])):
@@ -338,7 +340,7 @@ def check_compatibility(sw):
 
     ### Compatible switch combinations 
     if sw['GSw_EFS1_AllYearLoad'] == 'historic' :
-        if ('demand_' + sw['demandscen'] +'.csv') not in os.listdir(os.path.join(reeds_path, 'inputs','load')) :
+        if ('demand_' + sw['demandscen'] +'.csv') in os.listdir(os.path.join(reeds_path, 'inputs','load')) :
             raise ValueError("The demand file specified by the demandscen switch is not in the inputs/load folder")
 
     if sw['GSw_PRM_scenario'] == 'none':
@@ -878,9 +880,9 @@ def setupEnvironment(
     if len(existing_outpaths) and not restart:
         print(
             f'The following {len(existing_outpaths)} output directories already exist:\n'
-            + 'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n'
+            + 'vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv\n'
             + '\n'.join([os.path.basename(i) for i in existing_outpaths])
-            + '\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n'
+            + '\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n'
         )
         overwrite = str(input('Do you want to overwrite them? y/[n]: ') or 'n')
         if overwrite in ['y','Y','yes','Yes','YES']:
@@ -1282,7 +1284,6 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             big_comment('Input processing', OPATH)
             for s in [
                 'copy_files',
-                'aggregate_regions',
                 'calc_financial_inputs',
                 'fuelcostprep',
                 'writecapdat',
@@ -1296,6 +1297,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                 'transmission',
                 'outage_rates',
                 'hourly_repperiods',
+                'aggregate_regions',
             ]:
                 OPATH.writelines(f"echo {'-'*12+'-'*len(s)}\n")
                 OPATH.writelines(f"echo 'starting {s}.py'\n")

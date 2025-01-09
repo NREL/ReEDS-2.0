@@ -6,12 +6,11 @@ tfix("%cur_year%") = yes ;
     FLEX.fx(flex_type,r,h,tfix)$Sw_EFS_flex  = FLEX.l(flex_type,r,h,tfix) ;
 *     PEAK_FLEX.fx(r,ccseason,tfix)$Sw_EFS_flex = PEAK_FLEX.l(r,ccseason,tfix) ;
     DROPPED.fx(r,h,tfix)$[(yeart(tfix)<Sw_StartMarkets)] = DROPPED.l(r,h,tfix) ;
-    EXCESS.fx(r,h,tfix)$[(yeart(tfix)<Sw_StartMarkets)] = EXCESS.l(r,h,tfix) ;
 
 * capacity and investment variables
     CAP.fx(i,v,r,tfix)$[valcap(i,v,r,tfix)] = CAP.l(i,v,r,tfix) ;
     CAP_SDBIN.fx(i,v,r,ccseason,sdbin,tfix)$[valcap(i,v,r,tfix)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit] = CAP_SDBIN.l(i,v,r,ccseason,sdbin,tfix) ;
-    GROWTH_BIN.fx(gbin,i,st,tfix)$[sum{r$[r_st(r,st)], valinv_irt(i,r,tfix) }$stfeas(st)$Sw_GrowthPenalties$(yeart(tfix)<=Sw_GrowthConLastYear)] = GROWTH_BIN.l(gbin,i,st,tfix) ;
+    GROWTH_BIN.fx(gbin,i,st,tfix)$[sum{r$[r_st(r,st)], valinv_irt(i,r,tfix) }$stfeas(st)$Sw_GrowthPenalties$(yeart(tfix)<=Sw_GrowthPenLastYear)] = GROWTH_BIN.l(gbin,i,st,tfix) ;
     INV.fx(i,v,r,tfix)$[valinv(i,v,r,tfix)] = INV.l(i,v,r,tfix) ;
     INV_REFURB.fx(i,v,r,tfix)$[valinv(i,v,r,tfix)$refurbtech(i)] = INV_REFURB.l(i,v,r,tfix) ;
     INV_RSC.fx(i,v,r,rscbin,tfix)$[valinv(i,v,r,tfix)$rsc_i(i)$m_rscfeas(r,i,rscbin)] = INV_RSC.l(i,v,r,rscbin,tfix) ;

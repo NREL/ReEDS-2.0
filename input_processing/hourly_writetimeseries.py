@@ -136,12 +136,27 @@ def make_8760_map(period_szn, sw):
 
 
 def get_ccseason_peaks_hourly(load, sw, inputs_case, hierarchy, h2ccseason, val_r_all):
-
+    # ReEDS only supports a single entry for agglevel right now, so use the
+    # first value from the list (copy_files.py already ensures that only one
+    # value is present)
+    agglevel = pd.read_csv(
+            os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
     ### Aggregate demand by GSw_PRM_hierarchy_level
     if sw['GSw_PRM_hierarchy_level'] == 'r':
         rmap = pd.Series(hierarchy.index, index=hierarchy.index)
-    else:
-        rmap = hierarchy[sw['GSw_PRM_hierarchy_level']].squeeze()
+    elif agglevel == 'county':
+        rmap = hierarchy[sw['GSw_PRM_hierarchy_level']]
+    elif agglevel in ['ba','state','aggreg']:
+        hierarchy_orig = (
+            pd.read_csv(
+                os.path.join(inputs_case, 'hierarchy_original.csv'))
+            .rename(columns={'st':'state'})
+        )
+        rmap = (hierarchy_orig[hierarchy_orig['ba'].isin(val_r_all)]
+                              [['ba',sw['GSw_PRM_hierarchy_level']]]
+                              .drop_duplicates().set_index('ba')).squeeze()
+        #renaming index to 'r' for use in merge step later
+        rmap.index.names = ['r']
     load_agg = (
         load.assign(region=load.r.map(rmap))
         .groupby(['h','region']).MW.sum()
@@ -384,9 +399,6 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     #%% Parse some switches
     if not isinstance(sw['GSw_HourlyWeatherYears'], list):
         sw['GSw_HourlyWeatherYears'] = [int(y) for y in sw['GSw_HourlyWeatherYears'].split('_')]
-    # Ensure the GSw_CSP_Types is a list, as hourly_writetimeseries is called in F_stress_periods.py as well
-    if not isinstance(sw['GSw_CSP_Types'],list):
-        sw['GSw_CSP_Types'] = [int(i) for i in sw['GSw_CSP_Types'].split('_')]
     ## Designate where to write the outputs, and prefix for timestamps
     if 'rep' in periodtype.lower():
         prefix = ''
@@ -515,8 +527,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         cf_rep = append_csp_profiles(cf_rep=cf_rep, sw=sw)
 
     cf_out = cf_rep.rename_axis('h').copy()
-    i = cf_rep.columns.map(lambda x: x.split('|')[0])
-    r = cf_rep.columns.map(lambda x: x.split('|')[1])
+    i = cf_rep.columns.map(resources.set_index('resource').i)
+    r = cf_rep.columns.map(resources.set_index('resource').r)
     cf_out.columns = pd.MultiIndex.from_arrays([i,r], names=['i','r'])
     cf_out = cf_out.stack(['i','r']).reorder_levels(['i','r','h']).rename('cf').reset_index()
 

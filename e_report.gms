@@ -537,7 +537,7 @@ repgasprice_nat(t)$[tmodel_new(t)$sum{cendiv, repgasquant(cendiv,t) }] =
 *========================================
 
 gasshare_ba(r,cendiv,t)$[r_cendiv(r,cendiv)$tmodel_new(t)$repgasquant(cendiv,t)] =
-                 sum{i$[valgen_irt(i,r,t)$gas(i)],repgasquant_irt(i,r,t) / repgasquant(cendiv,t) } ;
+                 sum{i$[sum{v,valgen(i,v,r,t)}$gas(i)],repgasquant_irt(i,r,t) / repgasquant(cendiv,t) } ;
 
 gasshare_techba(i,r,cendiv,t)$[r_cendiv(r,cendiv)$tmodel_new(t)$repgasquant(cendiv,t)$gas(i)] =
                  repgasquant_irt(i,r,t) / repgasquant(cendiv,t) ;
@@ -595,7 +595,7 @@ bioshare_techba(i,r,t)$[(cofire(i) or bio(i))$tmodel_new(t)] =
 *=========================
 
 * Calculate generation and include charging, pumping, DR shifted load, and production as negative values
-gen_h(i,r,h,t)$[tmodel_new(t)$valgen_irt(i,r,t)] =
+gen_h(i,r,h,t)$[tmodel_new(t)$sum{v,valgen(i,v,r,t)}] =
   sum{v$valgen(i,v,r,t), GEN.l(i,v,r,h,t)
 * less storage charging
   - STORAGE_IN.l(i,v,r,h,t)$[storage_standalone(i) or hyd_add_pump(i)]
@@ -617,7 +617,7 @@ gen_h("upv_6",r,h,t)$[cap_cspns(r,t)$tmodel_new(t)]
 gen_h("upv_6",r,h,t)$[cap_cspns(r,t)$tmodel_new(t)$(gen_h("upv_6",r,h,t) < 0)] = 0 ;
 
 * Do it again for stress periods
-gen_h_stress(i,r,allh,t)$[tmodel_new(t)$valgen_irt(i,r,t)$h_stress_t(allh,t)] =
+gen_h_stress(i,r,allh,t)$[tmodel_new(t)$sum{v,valgen(i,v,r,t)}$h_stress_t(allh,t)] =
   sum{v$valgen(i,v,r,t), GEN.l(i,v,r,allh,t)
 * less storage charging
       - STORAGE_IN.l(i,v,r,allh,t)$[storage_standalone(i) or hyd_add_pump(i)] }
@@ -646,39 +646,17 @@ water_consumption_ivrt(i,v,r,t)$valgen(i,v,r,t) = sum{h$valgen(i,v,r,t), WAT.l(i
 
 watcap_ivrt(i,v,r,t)$valcap(i,v,r,t) = WATCAP.l(i,v,r,t) ;
 watcap_out(i,r,t)$valcap_irt(i,r,t) = sum{v$valcap(i,v,r,t), WATCAP.l(i,v,r,t) } ;
-watcap_new_out(i,r,t)$[valcap_irt(i,r,t)$i_water_cooling(i)] =
-  sum{h$h_rep(h), 
-    hours(h)
-    * sum{w$[i_w(i,w)], 
-      water_rate(i,w,r) } 
-      * ( sum{v$valinv(i,v,r,t), INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)} 
-        + sum{v$valcap(i,v,r,t), 
-          (1-upgrade_derate(i,v,r,t)) * (UPGRADES.l(i,v,r,t) - UPGRADES_RETIRE.l(i,v,r,t))}$[upgrade(i)$Sw_Upgrades] ) 
-    * (1 + sum{(v,szn), h_szn(h,szn) * seas_cap_frac_delta(i,v,r,szn,t)})
-  } / 1E6
-  + sum{v$[psh(i)$valinv(i,v,r,t)], WATCAP.l(i,v,r,t)} ;
-
-watcap_new_ivrt(i,v,r,t)$[valcap(i,v,r,t)$i_water_cooling(i)] =
-  sum{h$h_rep(h), 
-    hours(h)
-    * sum{w$[i_w(i,w)], 
-      water_rate(i,w,r) }
-      * ( [INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)]$valinv(i,v,r,t) 
-        + [(1-upgrade_derate(i,v,r,t)) * (UPGRADES.l(i,v,r,t) - UPGRADES_RETIRE.l(i,v,r,t))]$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades] )
-    * (1 + sum{szn, h_szn(h,szn) * seas_cap_frac_delta(i,v,r,szn,t)})
-  } / 1E6
-  + WATCAP.l(i,v,r,t)$psh(i) ;
-
+watcap_new_ivrt(i,v,r,t)$valcap(i,v,r,t) =
+    (8760/1E6) * sum{w$[i_w(i,w)], water_rate(i,w,r) * ( INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t) ) }
+  + WATCAP.L(i,v,r,t)$psh(i) ;
+watcap_new_out(i,r,t)$valcap_irt(i,r,t) =
+    (8760/1E6) * sum{(w,v)$[i_w(i,w)$valinv(i,v,r,t)], water_rate(i,w,r) * ( INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t) ) }
+  + sum{v$[psh(i)$valinv(i,v,r,t)], WATCAP.L(i,v,r,t)} ;
 watcap_new_ann_out(i,v,r,t)$watcap_new_ivrt(i,v,r,t) = watcap_new_ivrt(i,v,r,t) / (yeart(t) - sum(tt$tprev(t,tt), yeart(tt))) ;
 
-* --- Water Capacity Retirements ---*
-watret_out(i,r,t)$[(not tfirst(t))] = sum{tt$tprev(t,tt), watcap_out(i,r,tt)} - watcap_out(i,r,t) + watcap_new_out(i,r,t) ;
-watret_out(i,r,t)$[abs(watret_out(i,r,t)) < 1e-6] = 0 ;
-
-watret_ivrt(i,v,r,t)$[(not tfirst(t))] = sum{tt$tprev(t,tt), watcap_ivrt(i,v,r,tt)} - watcap_ivrt(i,v,r,t) + watcap_new_ivrt(i,v,r,t) ;
-watret_ivrt(i,v,r,t)$[(abs(watret_ivrt(i,v,r,t)) < 1e-6)] = 0 ;
-
-watret_ann_out(i,v,r,t)$watret_ivrt(i,v,r,t) = watret_ivrt(i,v,r,t) / (yeart(t) - sum{tt$tprev(t,tt), yeart(tt) }) ;
+watret_out(i,v,r,t)$[(not tfirst(t))$valcap_irt(i,r,t)] = sum{tt$tprev(t,tt), watcap_ivrt(i,v,r,tt)} - watcap_ivrt(i,v,r,t) + watcap_new_ivrt(i,v,r,t) ;
+watret_out(i,v,r,t)$[(abs(watret_out(i,v,r,t)) < 1e-6)] = 0 ;
+watret_ann_out(i,v,r,t)$watret_out(i,v,r,t) = watret_out(i,v,r,t) / (yeart(t) - sum{tt$tprev(t,tt), yeart(tt) }) ;
 
 *=========================
 * Operating Reserves
@@ -781,20 +759,17 @@ cap_exog(i,v,r,t)$tmodel_new(t) = m_capacity_exog(i,v,r,t) ;
 *=========================
 
 cap_new_out(i,r,t)$[(not tfirst(t))$valcap_irt(i,r,t)] = [
-  sum{v$valinv(i,v,r,t), 
-    INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t) }
-  + sum{v$valcap(i,v,r,t), 
-    (1 - upgrade_derate(i,v,r,t)) * (UPGRADES.l(i,v,r,t) - UPGRADES_RETIRE.l(i,v,r,t))}$[upgrade(i)$Sw_Upgrades]
-  ] / ilr(i) ;
+  sum{v$valinv(i,v,r,t), INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t) }
+  + sum{v$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades], 
+        (1 - upgrade_derate(i,v,r,t)) * UPGRADES.l(i,v,r,t)} ] / ilr(i) ;
 
 cap_new_out("distpv",r,t)$[valcap_irt("distpv",r,t)$(not tfirst(t))] = cap_out("distpv",r,t) - sum{tt$tprev(t,tt), cap_out("distpv",r,tt) } ;
 cap_new_ann(i,r,t)$cap_new_out(i,r,t) = cap_new_out(i,r,t) / (yeart(t) - sum{tt$tprev(t,tt), yeart(tt) }) ;
 cap_new_bin_out(i,v,r,t,rscbin)$[rsc_i(i)$valinv(i,v,r,t)] = INV_RSC.l(i,v,r,rscbin,t) / ilr(i) ;
 cap_new_bin_out(i,v,r,t,"bin1")$[(not rsc_i(i))$valinv(i,v,r,t)] = INV.l(i,v,r,t) / ilr(i) ;
-cap_new_ivrt(i,v,r,t)$[(not tfirst(t))$valcap(i,v,r,t)] = [
+cap_new_ivrt(i,v,r,t)$[(not tfirst(t))$valcap(i,v,r,t)] = {
   [INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)]$valinv(i,v,r,t)
-  + [(1-upgrade_derate(i,v,r,t)) * (UPGRADES.l(i,v,r,t) - UPGRADES_RETIRE.l(i,v,r,t))]$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades] 
- ] / ilr(i) ;
+  + (1-upgrade_derate(i,v,r,t)) * UPGRADES.l(i,v,r,t)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades] } / ilr(i) ;
 cap_new_ivrt("distpv",v,r,t)$[not tfirst(t)$valcap("distpv",v,r,t)] = cap_ivrt("distpv",v,r,t) - sum{tt$tprev(t,tt), cap_ivrt("distpv",v,r,tt) } ;
 cap_new_ivrt_refurb(i,v,r,t)$valinv(i,v,r,t) = INV_REFURB.l(i,v,r,t) / ilr(i) ;
 
@@ -852,14 +827,12 @@ cap_upgrade_ivrt(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades] = (1-upgrade_
 * RETIRED CAPACITY
 *=========================
 
-ret_ivrt(i,v,r,t)$[(not tfirst(t))] = 
-    sum{tt$tprev(t,tt), cap_ivrt(i,v,r,tt) } - cap_ivrt(i,v,r,t) + cap_new_ivrt(i,v,r,t) 
-    - sum{ii$upgrade_from(ii,i), UPGRADES.l(ii,v,r,t) } ;
-ret_ivrt(i,v,r,t)$[abs(ret_ivrt(i,v,r,t)) < 1e-6] = 0 ;
-
-ret_out(i,r,t)$[(not tfirst(t))] = sum{v, ret_ivrt(i,v,r,t) } ;
+ret_out(i,r,t)$[(not tfirst(t))] = sum{tt$tprev(t,tt), cap_out(i,r,tt)} - cap_out(i,r,t) + cap_new_out(i,r,t) ;
 ret_out(i,r,t)$[abs(ret_out(i,r,t)) < 1e-6] = 0 ;
 ret_ann(i,r,t)$ret_out(i,r,t) = ret_out(i,r,t) / (yeart(t) - sum{tt$tprev(t,tt), yeart(tt) }) ;
+
+ret_ivrt(i,v,r,t)$[(not tfirst(t))] = sum{tt$tprev(t,tt), cap_ivrt(i,v,r,tt)} - cap_ivrt(i,v,r,t) + cap_new_ivrt(i,v,r,t) ;
+ret_ivrt(i,v,r,t)$[abs(ret_ivrt(i,v,r,t)) < 1e-6] = 0 ;
 
 *==================================
 * BINNED STORAGE CAPACITY
@@ -1084,9 +1057,24 @@ emit_r(e,r,t)$tmodel_new(t) =
         ccsflex_co2eff(i,t) * hours(h) * CCSFLEX_POWREQ.l(i,v,r,h,t) })$[sameas(e,"co2")]$Sw_CCSFLEX_STO
 ;
 
+emit_precom_r(e,r,t)$tmodel_new(t) = 
+
+* Precombustion emissions from generation
+    sum{(i,v,h)$[valgen(i,v,r,t)$h_rep(h)],
+        hours(h) * emit_rate_pre(e,i,v,r,t)
+        * (GEN.l(i,v,r,h,t)
+           + CCSFLEX_POW.l(i,v,r,h,t)$[ccsflex(i)$(Sw_CCSFLEX_BYP OR Sw_CCSFLEX_STO OR Sw_CCSFLEX_DAC)])
+       }
+;  
+
 * Apply global warming potential to include methane in CO2(e)
-emit_r("CO2e",r,t)$tmodel_new(t) = emit_r("CO2",r,t) + emit_r("CH4",r,t) * Sw_MethaneGWP ;
+emit_r(e,r,t)$tmodel_new(t) = emit_r(e,r,t) * gwp(e) ;
+emit_r("CO2e",r,t)$tmodel_new(t) = sum{e, emit_r(e,r,t)} ;
+
 emit_nat(eall,t)$tmodel_new(t) = sum{r, emit_r(eall,r,t) } ;
+emit_precom_r(e,r,t)$tmodel_new(t) = emit_precom_r(e,r,t) * gwp(e) ;
+emit_precom_r("CO2e",r,t)$tmodel_new(t) = sum{e, emit_precom_r(e,r,t)} ;
+emit_precom_nat(eall,t)$tmodel_new(t) = sum{r, emit_precom_r(eall,r,t) } ;
 
 * Generation emissions by tech and region
 emit_irt(e,i,r,t)$[tmodel_new(t)$(not sameas(e,"CO2"))] = sum{(v,h)$[valgen(i,v,r,t)],
@@ -1102,8 +1090,8 @@ emit_irt("CO2",i,r,t)$tmodel_new(t) = sum{(v,h)$[valgen(i,v,r,t)],
 emit_irt("CO2",i,r,t)$[tmodel_new(t)$sum{p, i_p(i,p)}] =
          sum{(p,v,h)$i_p(i,p),
          hours(h) * prod_emit_rate("CO2",i,t) * PRODUCE.l(p,i,v,r,h,t) } ;
-* Apply global warming potential to include methane in CO2(e)
-emit_irt("CO2e",i,r,t)$tmodel_new(t) = emit_irt("CO2",i,r,t) + emit_irt("CH4",i,r,t) * Sw_MethaneGWP ;
+* Apply global warming potential to include other GHGs in CO2(e)
+emit_irt(e,i,r,t)$tmodel_new(t) = emit_irt(e,i,r,t) * gwp(e) ;
 
 emit_nat_tech(e,i,t) = sum{r, emit_irt(e,i,r,t)} ;
 
@@ -1581,9 +1569,9 @@ error_check('z') = (
         - pvf_capital(t) * sum{(gbin,i,st)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)],
               cost_growth(i,st,t) * growth_penalty(gbin) * GROWTH_BIN.l(gbin,i,st,t)
               * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) })
-        }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthPenalties$(yeart(t)<=Sw_GrowthConLastYear)]
+        }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthPenalties$(yeart(t)<=Sw_GrowthPenLastYear)]
 * minus small penalty to move storage into shorter duration bins
-        - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
+        - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$[storage(i) or hyd_add_pump(i)]],
             bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) }
 * minus retirement penalty
         - pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
@@ -1593,8 +1581,8 @@ error_check('z') = (
         - pvf_onm(t) * sum{(r,h), CURT.l(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
 * minus hurdle costs
         - pvf_onm(t) * sum{(r,rr,trtype)$cost_hurdle(r,rr,t), tran_hurdle_cost_ann(r,rr,trtype,t) }
-* minus penalty cost for dropped/excess load before Sw_StartMarkets
-        - pvf_onm(t) * sum{(r,h), (DROPPED.l(r,h,t) + EXCESS.l(r,h,t)) * hours(h) * cost_dropped_load }
+* minus penalty cost for dropped load before Sw_StartMarkets
+        - pvf_onm(t) * sum{(r,h), DROPPED.l(r,h,t) * hours(h) * cost_dropped_load }
 * minus retail adder for electricity consuming technologies ---
         - pvf_onm(t) * sum{(p,i,v,r,h)$[valcap(i,v,r,t)$i_p(i,p)$h_rep(h)$Sw_RetailAdder$Sw_Prod],
               hours(h) * Sw_RetailAdder * PRODUCE.l(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t) }
@@ -1647,13 +1635,9 @@ error_check("RPS") = sum{(RPSCat,i,st,ast,t)$[(not RecMap(i,RPSCat,st,ast,t))$[(
 error_check("OpRes") = sum{(ortype,i,v,r,h,t)$[not valgen(i,v,r,t)], OPRES.l(ortype,i,v,r,h,t) } ;
 error_check("m_rsc_dat") = sum{(r,i,rscbin)$m_rsc_dat(r,i,rscbin,"cap"), m_rsc_dat_init(r,i,rscbin) - m_rsc_dat(r,i,rscbin,"cap") } ;
 
-* Check to make sure there's no dropped/excess load in or after Sw_StartMarkets
+* Check to make sure there's no dropped load in or after Sw_StartMarkets
 error_check("dropped") = sum{(r,h,t)$[yeart(t)>=Sw_StartMarkets], DROPPED.l(r,h,t) } ;
-error_check("excess") = sum{(r,h,t)$[yeart(t)>=Sw_StartMarkets], EXCESS.l(r,h,t) } ;
 
-* Report DROPPED and EXCESS variable levels
-dropped_load(r,h,t) = DROPPED.l(r,h,t) ;
-excess_load(r,h,t) = EXCESS.l(r,h,t) ;
 
 *======================
 * Transmission

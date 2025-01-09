@@ -1100,7 +1100,7 @@ def create_figures(df_plots, wdg, cols, custom_colors):
     if wdg['explode_grid'].value == 'Yes':
         ncols = len(df_plots_cp[wdg['explode'].value].unique())
         plot_list = [bl.gridplot(plot_list, ncols=ncols)]
-    logger.info('***Done Building Figures.\n')
+    logger.info('***Done Building Figures.')
     return plot_list
 
 def set_axis_bounds(df, plots, wdg, cols):
@@ -1538,7 +1538,7 @@ def create_maps(df, wdg, cols):
     #If there are only 3 columns (x_axis, y_axis, and bin_index), that means we aren't exploding:
     if len(df_maps.columns) == 3:
         maps.append(create_map(map_type, df_maps, ranges, region_boundaries, centroids, wdg, colors_full))
-        logger.info('***Done building map.\n')
+        logger.info('***Done building map.')
         return (maps, breakpoints) #single map
     #Otherwise we are exploding.
     #find all unique groups of the explode columns.
@@ -1559,7 +1559,7 @@ def create_maps(df, wdg, cols):
         #remove final comma of title
         title = title[:-2]
         maps.append(create_map(map_type, df_map, ranges, region_boundaries, centroids, wdg, colors_full, title))
-    logger.info('***Done building maps.\n')
+    logger.info('***Done building maps.')
     return (maps, breakpoints) #multiple maps
 
 def create_map(map_type, df, ranges, region_boundaries, centroids, wdg, colors_full, title=''):
