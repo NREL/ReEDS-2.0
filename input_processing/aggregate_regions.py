@@ -25,9 +25,10 @@ import pandas as pd
 import gdxpds
 import shutil
 import site
+import sys
 from glob import glob
 from warnings import warn
-from ldc_prep import read_h5py_file
+from ldc_prep import read_file, write_h5_file
 ## Time the operation of this script
 from ticker import toc, makelog
 import datetime
@@ -135,7 +136,7 @@ r_ba = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
 # or disaggregating
 if agglevel in ['county']:
     r_ba.rename(columns={'r':'FIPS'}, inplace=True)
-elif agglevel in ['ba','state','aggreg']:
+elif agglevel in ['ba','aggreg']:
     r_ba = r_ba.set_index('ba').squeeze()
     ### Make all-regions-to-aggreg map
     r2aggreg = pd.concat([r_county, r_ba])
@@ -169,7 +170,7 @@ else:
 
 # For transmission we want to use the old endpoints to avoid requiring a new run of the
 # reV least-cost-paths procedure.
-if agglevel in ['state','aggreg']:
+if agglevel == 'aggreg':
     if anchortype in ['load','demand','MW','MWh']:
         ### Take the "anchor" zone as the zone with the largest annual demand in 2010.
         ## Get annual average load
@@ -207,7 +208,7 @@ if agglevel in ['state','aggreg']:
     # Set the 'r' column for the generator database
     rcol_dict = {'county':'FIPS', 'ba':'reeds_ba', 'state':'TSTATE'}
     # Create the 'r_col' column
-    if agglevel in ['county','ba','state']:
+    if agglevel in ['county','ba']:
         gendb['r'] = gendb[rcol_dict[agglevel]].copy()
     elif agglevel == 'aggreg':
         gendb = gendb.assign(r=gendb.reeds_ba.map(r_ba))
@@ -343,10 +344,9 @@ for level in dfmap:
 
 
 #%%############################################
-#    -- Aggregation/Disaggregation Loop --    #
+#    -- Aggregation/Disaggregation Function --    #
 ###############################################
-
-for filepath in inputfiles:
+def agg_disagg_function(filepath, class_reg_delim = '|'):
     ### For debugging: Specify a file
     # filepath = 'load_hourly.h5'
     ### Get the appropriate row from aggfiles
@@ -358,15 +358,15 @@ for filepath in inputfiles:
     if row['aggfunc']=='ignore' and row['disaggfunc']=='ignore':
         if verbose > 1:
             logprint(filepath, 'ignored')
-        continue
+        return
     ### ensure the correct aggfunc/disaggfunc is chosen for the given agglevel
     elif (
-        (agglevel in ['ba','state','aggreg'] and row['aggfunc']=='ignore')
+        (agglevel in ['ba','aggreg'] and row['aggfunc']=='ignore')
         or (agglevel in ['county'] and row['disaggfunc']=='ignore')
     ):
         if verbose > 1:
             logprint(filepath, 'ignored')
-        continue    
+        return    
     elif (row['aggfunc']!='ignore') or (row['disaggfunc']!='ignore'):
         pass    
 
@@ -375,7 +375,7 @@ for filepath in inputfiles:
     if filename not in inputfiles:
         if verbose > 1:
             logprint(filepath, 'skipped since not in inputs_case')
-        continue
+        return
 
     #%%############# 
     ### Settings ###
@@ -393,7 +393,7 @@ for filepath in inputfiles:
     region_cols = region_col.split(',')
     ### Set aggfunc to the aggregation setting if using ba, state, or aggreg,
     ### and set to the disaggregation setting if using county
-    if agglevel in ['ba','state','aggreg']:
+    if agglevel in ['ba','aggreg']:
         aggfunc = aggfuncmap.get(row['aggfunc'], row['aggfunc'])
     elif agglevel in ['county']:
         aggfunc = aggfuncmap.get(row['disaggfunc'], row['disaggfunc'])
@@ -426,22 +426,16 @@ for filepath in inputfiles:
                 dtype={'FIPS':str, 'fips':str, 'cnty_fips':str},
             )
         except pd.errors.EmptyDataError:
-            continue
+            if verbose > 1:
+                logprint(filepath, 'is empty so skipping')
+            return
     elif filetype == 'h5':
-        try:
-            dfin = read_h5py_file(os.path.join(inputs_case, filepath))
-        except:
-            dfin = pd.read_hdf(os.path.join(inputs_case, filepath))
+        dfin = read_file(os.path.join(inputs_case, filepath)) 
         if header == 'keepindex':
             indexnames = list(dfin.index.names)
             if (len(indexnames) == 1) and (not indexnames[0]):
                 indexnames = ['index']
-            # Special Case: change index name for recf_csp.h5 to 'index to be 
-            # consistent with the other recf_{tech}.h5 files
-            if (filepath in ['recf_csp.h5','recf_dupv.h5']) and (indexnames[0] == 'hour'):
-                dfin.index.name = 'index'
-                indexnames = ['index']
-            dfin.reset_index(inplace=True)
+            dfin = dfin.reset_index()
     elif filetype == 'gdx':
         ### Read in the full gdx file, but only change the 'key' parameter
         ### given in aggfiles. That's wasteful, but there are currently no
@@ -457,7 +451,7 @@ for filepath in inputfiles:
     if dfin.empty:
         if verbose > 1:
             logprint(filepath, 'empty')
-        continue
+        return
 
 
     #%%###########################
@@ -511,8 +505,7 @@ for filepath in inputfiles:
     if df.empty:
         if verbose > 1:
             logprint(filepath, 'empty')
-        continue
-
+        return
 
     #%%###################################### 
     ### Aggregate/Dissaggregate by Region ###
@@ -535,17 +528,15 @@ for filepath in inputfiles:
         ## Weight cost by cap; if there's no cap, use 1 MW as weight
         for cost_type in sc_cost_types:
             ## Geothermal doesn't have all sc_cost_types
-            if cost_type not in df1:
-                continue
-            df1[f'cap_times_{cost_type}'] = df1['cap'].fillna(1).replace(0,1) * df1[cost_type]
+            if cost_type in df1:
+                df1[f'cap_times_{cost_type}'] = df1['cap'].fillna(1).replace(0,1) * df1[cost_type]
         ## Sum everything
         df1 = df1.groupby(fix_cols+[region_col]).sum()
         ## Divide cost*cap by cap
         for cost_type in sc_cost_types:
-            if cost_type not in df1:
-                continue
-            df1[cost_type] = df1[f'cap_times_{cost_type}'] / df1['cap'].fillna(1).replace(0,1)
-            df1.drop([f'cap_times_{cost_type}'], axis=1, inplace=True)
+            if cost_type in df1:
+                df1[cost_type] = df1[f'cap_times_{cost_type}'] / df1['cap'].fillna(1).replace(0,1)
+                df1.drop([f'cap_times_{cost_type}'], axis=1, inplace=True)
     elif aggfunc == 'trans_lookup':
         ## Get data for anchor zones
         for c in region_cols:
@@ -575,9 +566,9 @@ for filepath in inputfiles:
         df1.cf = df1.cap_times_cf / df1.MW
         df1 = df1.drop(['cap_times_cf','MW'], axis=1)
     elif aggfunc == 'resources':
-        ### Special case: Rebuild the 'resources' column as {tech}_{region}
+        ### Special case: Rebuild the 'resources' column as {tech}|{region}
         df1 = (
-            df1.assign(resource=df1.i+'|'+df1.r)
+            df1.assign(resource=df1.i+class_reg_delim+df1.r)
                .drop_duplicates()
             )
         ### Special case: If calculating capacity credit by r, replace ccreg with r
@@ -585,15 +576,15 @@ for filepath in inputfiles:
             df1 = df1.assign(ccreg=df1.r).drop_duplicates()
     elif aggfunc in ['recf','csp']:
         ### Special case: Region is embedded in the 'resources' column as {tech}|{region}
-        col2r = dict(zip(columns, [c.split('_')[-1] for c in columns]))
-        col2i = dict(zip(columns, [c.split('_')[0] for c in columns]))
+        col2r = dict(zip(columns, [c.split(class_reg_delim)[-1] for c in columns]))
+        col2i = dict(zip(columns, [c.split(class_reg_delim)[0] for c in columns]))
         df1 = df1.rename(columns={'value':'cf'})
         df1['r'] = df1[region_col].map(col2r)
         df1['i'] = df1[region_col].map(col2i)
         ## Get correct rscweight_nobin tech value
         rsctech = os.path.splitext(filepath)[0].split('_')[1]
         rscweight_nobin_tech = rscweight_nobin.loc[rscweight_nobin['i'].str.contains(rsctech)]
-        ## rscweight_nobin data from writesupplycurves.py has tech values of {rsctech}_{class}
+        ## rscweight_nobin data from writesupplycurves.py has tech values of {rsctech}|{class}
         ## so replicate this in order to merge for capacities
         df1['i'] = f'{rsctech}_' + df1['i']
         ## Get capacities
@@ -604,7 +595,7 @@ for filepath in inputfiles:
             df1
             .assign(r=df1.r.map(r_ba))
             .assign(cap_times_cf=df1.cf*df1.MW)
-            .groupby(['index','i','r']).sum()
+            .groupby(indexnames + ['i','r']).sum()
         )
         df1.cf = df1.cap_times_cf / df1.MW
         df1 = df1.rename(columns={'cf':'value'}).reset_index()
@@ -613,8 +604,8 @@ for filepath in inputfiles:
         # regardless of the spatial resolution
         df1['i'] = df1['i'].str.replace(f'{rsctech}_','')
         # ## Remake the resources (column names) with new regions
-        df1['wide'] = df1.i + '_' + df1.r
-        df1 = df1.set_index(['index','wide'])[['value']].astype(np.float16)
+        df1['wide'] = df1.i + class_reg_delim + df1.r
+        df1 = df1.set_index(indexnames + ['wide'])[['value']].astype(np.float16)
     elif aggfunc in ['sum','mean','first','min']:
         # Exception for load_hourly.h5 because it is not converted from wide format to long format so the columns
         # are still the regions and need to be summed differently 
@@ -784,8 +775,7 @@ for filepath in inputfiles:
             dfwrite.columns.name = None
         else:
             dfwrite = dfout
-        dfwrite.to_hdf(
-            os.path.join(inputs_case, filepath), key='data', complevel=4, format='table')
+        write_h5_file(dfwrite, filepath, inputs_case)
     elif filetype == 'gdx':
         ### Overwrite the projected parameter
         dfall[key] = dfout.round(decimals)
@@ -798,6 +788,13 @@ for filepath in inputfiles:
             filepath,
             'aggregated ({:.1f} seconds)'.format((now-filetic).total_seconds()))
 
+# loop over inputfiles from runfiles and call aggregation/disaggregation function
+for filepath in inputfiles:
+    try:
+        agg_disagg_function(filepath)
+    except Exception as err:
+        print(f"Error processing {filepath}")
+        raise Exception(err)
 
 #%% Finish
 toc(tic=tic, year=0, process='input_processing/aggregate_regions.py', 

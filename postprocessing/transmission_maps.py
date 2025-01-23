@@ -31,42 +31,8 @@ routes = False
 ## Note that if you change the CRS you'll probably need to change
 ## the position of the annotations
 crs = 'ESRI:102008'
-### For generation capacity map
+### General purpose
 cmap = cmocean.cm.rain
-ncols = 4
-techs = [
-    'Utility PV', 'Land-based wind', 'Offshore wind', 'Electrolyzer',
-    'Battery (4h)', 'Battery (8h)', 'PSH', 'H2 turbine',
-    'Nuclear', 'Gas CCS', 'Coal CCS', 'Fossil',
-]
-techmap = {
-    **{f'upv_{i}':'Utility PV' for i in range(20)},
-    **{f'dupv_{i}':'Utility PV' for i in range(20)},
-    **{f'wind-ons_{i}':'Land-based wind' for i in range(20)},
-    **{f'wind-ofs_{i}':'Offshore wind' for i in range(20)},
-    **dict(zip(['nuclear','nuclear-smr'], ['Nuclear']*20)),
-    **dict(zip(
-        ['gas-cc_re-cc','gas-ct_re-ct','re-cc','re-ct',
-         'gas-cc_h2-ct','gas-ct_h2-ct','h2-cc','h2-ct',],
-        ['H2 turbine']*20)),
-    **{'electrolyzer':'Electrolyzer'},
-    **{'battery_4':'Battery (4h)', 'battery_8':'Battery (8h)', 'pumped-hydro':'PSH'},
-    **dict(zip(
-        ['coal-igcc', 'coaloldscr', 'coalolduns', 'gas-cc', 'gas-ct', 'coal-new', 'o-g-s',],
-        ['Fossil']*20)),
-    **dict(zip(
-        ['coal-igcc_coal-ccs_mod','coal-new_coal-ccs_mod',
-         'coaloldscr_coal-ccs_mod','coalolduns_coal-ccs_mod','cofirenew_coal-ccs_mod',
-         'cofireold_coal-ccs_mod','coal-igcc_coal-ccs_max',
-         'coal-new_coal-ccs_max','coaloldscr_coal-ccs_max','coalolduns_coal-ccs_max',
-         'cofirenew_coal-ccs_max','cofireold_coal-ccs_max',],
-        ['Coal CCS']*50)),
-    **dict(zip(
-        ['gas-cc_gas-cc-ccs_mod','gas-cc_gas-cc-ccs_max',
-         'gas-cc-ccs_mod','gas-cc-ccs_max',],
-        ['Gas CCS']*50)),
-    **dict(zip(['dac','beccs_mod','beccs_max'],['CO2 removal']*20)),
-}
 ### For VRE siting & transmission maps
 transalpha = 0.25
 transcolor = 'k'
@@ -135,6 +101,7 @@ years = pd.read_csv(
 yearstep = years[-1] - years[-2]
 val_r = pd.read_csv(
     os.path.join(case, 'inputs_case', 'val_r.csv'), header=None).squeeze(1).tolist()
+
 
 #%% Transmission line map with disaggregated transmission types
 ### Plot both total capacity (subtract_baseyear=None) and new (subtract_baseyear=2020)
@@ -282,61 +249,17 @@ except Exception:
 
 #%% Generation capacity maps
 ### Plot with tech-specific (vmax='each') and uniform (vmax='shared') color axis
+ncols = 4
+techs = [
+    'Utility PV', 'Land-based wind', 'Offshore wind', 'Electrolyzer',
+    'Battery (4h)', 'Battery (8h)', 'PSH', 'H2 turbine',
+    'Nuclear', 'Gas CCS', 'Coal CCS', 'Fossil',
+]
 for vmax in ['each', 'shared']:
     try:
-        dfmap = rplots.get_dfmap(case)
-        dfba = dfmap['r']
-        dfstates = dfmap['st']
-        ### Case data
-        dfcap = pd.read_csv(
-            os.path.join(case,'outputs','cap.csv'),
-            names=['i','r','t','MW'], header=0,
+        f,ax = rplots.map_capacity_techs(
+            case, year=year, techs=techs, ncols=ncols, vmax=vmax,
         )
-        dfcap.i = dfcap.i.str.lower().map(lambda x: techmap.get(x,x))
-        ### Get the vmax
-        if vmax == 'shared':
-            _vmax = dfcap.loc[
-                dfcap.i.isin(techs) & (dfcap.t.astype(int)==year)
-            ].groupby(['i','r']).MW.sum().max() / 1e3
-        else:
-            _vmax = None
-        ### Arrange the subplots
-        nrows = len(techs) // ncols
-        coords = dict(zip(
-            techs,
-            [(row,col) for row in range(nrows) for col in range(ncols)]
-        ))
-        ### Plot it
-        plt.close()
-        f,ax = plt.subplots(
-            nrows, ncols, figsize=(3*ncols,3*nrows),
-            gridspec_kw={'wspace':0.0,'hspace':-0.05}, dpi=150)
-        for tech in techs:
-            dfval = dfcap.loc[
-                (dfcap.i==tech)
-                & (dfcap.t.astype(int)==year)
-            ].groupby('r').MW.sum().round(3)
-            dfplot = dfba.copy()
-            dfplot['GW'] = (dfval / 1000).fillna(0)
-
-            dfba.plot(
-                ax=ax[coords[tech]],
-                facecolor='none', edgecolor='k', lw=0.1, zorder=10000)
-            dfstates.plot(
-                ax=ax[coords[tech]],
-                facecolor='none', edgecolor='k', lw=0.2, zorder=10001)
-            dfplot.plot(
-                ax=ax[coords[tech]], column='GW', cmap=cmap, legend=True,
-                vmin=0, vmax=_vmax,
-                legend_kwds={
-                    'shrink':0.75, 'pad':0, 'orientation':'horizontal',
-                    'label': '{} [GW]'.format(tech),
-                }
-            )
-            ax[coords[tech]].axis('off')
-        ax[0,0].set_title(
-            '{} ({})'.format(os.path.basename(case), year),
-            x=0.1, ha='left', va='top')
         savename = f'map_capacity-{year}-{vmax}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -345,7 +268,7 @@ for vmax in ['each', 'shared']:
         plt.close()
         print(savename)
     except Exception:
-        print('map_capacity failed:')
+        print('map_capacity_techs failed:')
         print(traceback.format_exc())
 
 #%% Site VRE capacity

@@ -20,6 +20,7 @@ RECF:
 ### ===========================================================================
 
 import argparse
+import datetime
 import h5py
 import numpy as np
 import os
@@ -69,21 +70,7 @@ def read_h5py_file(filename: Path | str) -> pd.DataFrame:
         if datakey in keys:
             # load data
             df = pd.DataFrame(f[datakey][:])
-            # check for indices
-            idx_cols = [c for c in keys if 'index' in c]
-            idx_cols.sort()
-            idx_cols_out = []
-            # loop over indices and add to data
-            if len(idx_cols) == 1 and idx_cols[0] == "index":
-                df.index = pd.Series(f["index"]).values
-            else:
-                for idx_col in idx_cols:
-                    # with multindex expecting the word 'index' plus a number indicating the order
-                    # based on format specified when writing out h5 files in copy_files
-                    idx_col_out = re.sub('index[0-9]*_', '', idx_col)
-                    idx_cols_out.append(idx_col_out)
-                    df[idx_col_out] = pd.Series(f[idx_col]).values
-                df = df.set_index(idx_cols_out)
+
         # if none of these keys work, we're dealing with EER-formatted load
         else:
             years = [column for column in keys if column.isdigit()]
@@ -91,11 +78,80 @@ def read_h5py_file(filename: Path | str) -> pd.DataFrame:
             df = pd.concat({int(y): pd.DataFrame(f[y][...]) for y in years}, axis=0)
             df.index = df.index.rename(["year", "hour"])
         
-        # add columns to data if specified
+        # add columns to data if supplied
         if 'columns' in keys:
-            df.columns = (pd.Series(f["columns"]).map(lambda x: x if isinstance(x, str) else x.decode("utf-8")).values)
+            df.columns = (pd.Series(f["columns"]).map(
+                lambda x: x if isinstance(x, str) else x.decode("utf-8")).values)
 
+        # add any index values
+        idx_cols = [c for c in keys if re.match('index_[0-9]',c)]
+        if len(idx_cols) > 0:
+            idx_cols.sort()
+            for idx_col in idx_cols:
+                df[idx_col] = pd.Series(f[idx_col]).values
+            df = df.set_index(idx_cols)
+
+        # add index names if supplied
+        if 'index_names' in keys:
+            df.index.names = (pd.Series(f["index_names"]).map(
+                lambda x: x if isinstance(x, str) else x.decode("utf-8")).values)
     return df
+
+
+def write_h5_file(df, filename, outfolder, compression_opts=4):
+    """Writes dataframe to h5py file format used by ReEDS. Used in ReEDS and hourlize
+
+    This function takes a pandas dataframe and saves to a h5py file. Data is saved to h5 file as follows:
+        - the data itself is saved to a dataset named "data"
+        - column names are saved to a dataset named "columns"
+        - the index of the data is saved to a dataset named "index"; in the case of a multindex,
+          each index is saved to a separate dataset with the format "index_{index order}"
+        - the names of the index (or multindex) are saved to a dataset named "index_names"
+
+    Parameters
+    ----------
+    df
+        pandas dataframe to save to h5
+    filename
+        Name of h5 file
+    outfolder
+        Path to folder to save the file (in ReEDS this is usually the inputs_case folder)
+
+    Returns
+    -------
+    None
+    """
+    outfile = os.path.join(outfolder, filename) 
+    with h5py.File(outfile, 'w') as f:
+        # save index or multi-index in the format 'index_{index order}')
+        for i in range(0, df.index.nlevels):
+            # get values for specified index level
+            indexvals = df.index.get_level_values(i)
+            # save index
+            if isinstance(indexvals[0], bytes):
+                # if already formatted as bytes keep that way
+                f.create_dataset(f'index_{i}', data=indexvals, dtype='S30')
+            elif indexvals.name == 'datetime':
+                # if we have a formatted datetime index that isn't bytes, save as such
+                timeindex = indexvals.to_series().apply(datetime.datetime.isoformat).reset_index(drop=True)
+                f.create_dataset(f'index_{i}', data=timeindex.str.encode('utf-8'), dtype='S30')
+            else:
+                # other indices can be saved using their data type
+                f.create_dataset(f'index_{i}', data=indexvals, dtype=indexvals.dtype)
+
+        # save index names
+        index_names = pd.Index(df.index.names)
+        f.create_dataset('index_names', data=index_names, dtype=f'S{index_names.map(len).max()}')
+
+        # save column names as string type
+        f.create_dataset('columns', data=df.columns, dtype=f'S{df.columns.map(len).max()}')
+
+        # save data
+        if len(df.dtypes.unique()) > 1:
+            raise Exception(f"Multiple data types detected in {filename}, unclear which one to use for re-saving h5.")
+        else:
+            dftype_out = df.dtypes.unique()[0]    
+        f.create_dataset('data', data=df.values, dtype=dftype_out, compression='gzip', compression_opts=compression_opts,)
 
 def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
     """Return dataframe object of input file for multiple file formats.
@@ -132,6 +188,20 @@ def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
     except ValueError:
         df = read_h5py_file(filename)
     
+    # parse timestamps if specified and if there is a datetime index
+    if (kwargs.get('parse_timestamps', False)) and ('datetime' in df.index.names):
+        if not isinstance(df.index.get_level_values('datetime')[0], bytes):
+            raise ValueError(
+                f"The indices for timestamp-indexed dataframes should be encoded as bytes. \
+                Please update {filename}."
+            )
+
+        df['datetime'] = pd.to_datetime(df.index.get_level_values('datetime').str.decode('utf-8'))
+        if isinstance(df.index, pd.MultiIndex):
+            df = df.droplevel('datetime').set_index('datetime', append=True)
+        else:
+            df = df.set_index('datetime')
+
     # All values being NaN indicates that the region filtering in copy_files.py removed all
     # data, leaving an empty dataframe.
     # Return an empty dataframe with the original file's index if all values are NaN
@@ -145,41 +215,6 @@ def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
     df = df.astype({column:np.float32 for column in numeric_cols})
     
     return df
-
-
-def local_to_eastern(df, inputs_case, by_year=False):
-    """
-    Convert a wide dataframe from local to eastern time.
-    The column names are assumed to end with _{r}.
-    
-    --- Inputs ---
-    by_year: Indicate whether to roll by year (True) or to roll the whole
-    dataset at once (False)
-    """
-    ### Get some inputs
-    r2tz = pd.read_csv(
-        os.path.join(inputs_case,'reeds_region_tz_map.csv'),
-        index_col='r')
-
-    r2tz['hourshift'] = r2tz.tz.map({'PT':+3, 'MT':+2, 'CT':+1, 'ET':0, 'AT':-1, 'NT': -2})
-    r2tz.dropna(inplace = True)
-    r2shift = r2tz.drop('tz', axis = 1)
-    r2shift['hourshift'] = r2shift['hourshift'].astype(int)
-    ### Roll the input columns according to the shift
-    if by_year:
-        dfout = pd.concat({
-            year: pd.DataFrame(
-                {col: np.roll(df.loc[year][col], r2shift.loc[col.split('|')[-1]]) for col in df},
-                index=df.loc[year].index)
-            for year in df.index.get_level_values('year').unique()
-        }, axis=0, names=('year',))
-    else:
-        dfout = pd.DataFrame(
-            {col: np.roll(df[col], r2shift.loc[col.split('|')[-1]]) for col in df},
-            index=df.index)
-
-    return dfout
-
 
 def csp_dispatch(cfcsp, sm=2.4, storage_duration=10):
     """
@@ -288,16 +323,6 @@ def get_distpv_profiles(inputs_case, recf):
     return distpv_profiles
 
 
-def fix_class_region_delimiter(df):
-    """
-    Replace {class}_{region} with {class}|{region}.
-    Eventually we'll update the names upstream in hourlize and won't require this step.
-    """
-    if not df.empty:
-        if '|' not in df.columns[0]:
-            df.columns = [c.replace('_','|',1) for c in df.columns]
-
-
 #%% ===========================================================================
 ### --- MAIN FUNCTION ---
 ### ===========================================================================
@@ -393,8 +418,7 @@ def main(reeds_path, inputs_case):
     # ------- Read in the static inputs for this run -------
 
     ### Onshore Wind
-    df_windons = read_file(os.path.join(inputs_case,'recf_wind-ons.h5'))
-    fix_class_region_delimiter(df_windons)
+    df_windons = read_file(os.path.join(inputs_case,'recf_wind-ons.h5'), parse_timestamps=True)
     df_windons.columns = ['wind-ons_' + col for col in df_windons]
     ### Don't do aggregation in this case, so make a 1:1 lookup table
     lookup = pd.DataFrame({'ragg':df_windons.columns.values})
@@ -402,26 +426,22 @@ def main(reeds_path, inputs_case):
     lookup['i'] = lookup.ragg.map(lambda x: x.rsplit('|',1)[0])
 
     ### Offshore Wind
-    df_windofs = read_file(os.path.join(inputs_case,'recf_wind-ofs.h5'))
-    fix_class_region_delimiter(df_windofs)
+    df_windofs = read_file(os.path.join(inputs_case,'recf_wind-ofs.h5'), parse_timestamps=True)
     df_windofs.columns = ['wind-ofs_' + col for col in df_windofs]
 
     ### UPV
-    df_upv = read_file(os.path.join(inputs_case,'recf_upv.h5'))
-    fix_class_region_delimiter(df_upv)
+    df_upv = read_file(os.path.join(inputs_case,'recf_upv.h5'), parse_timestamps=True)
     df_upv.columns = ['upv_' + col for col in df_upv]
 
     # If DUPV is turned off, create an empty dataframe with the same index as df_dupv to concat
     if int(sw['GSw_DUPV']) == 0: 
         df_dupv = pd.DataFrame(index=df_upv.index)
     elif int(sw['GSw_DUPV']) == 1:
-        df_dupv = read_file(os.path.join('recf_dupv.h5'))
-        fix_class_region_delimiter(df_dupv)
+        df_dupv = read_file(os.path.join('recf_dupv.h5'), parse_timestamps=True)
         df_dupv.columns = ['dupv_' + col for col in df_dupv]
 
     ### CSP
-    cspcf = read_file(os.path.join(inputs_case,'recf_csp.h5'))
-    fix_class_region_delimiter(cspcf)
+    cspcf = read_file(os.path.join(inputs_case,'recf_csp.h5'), parse_timestamps=True)
     # If CSP is turned off, create an empty dataframe with an appropriate index
     if int(sw['GSw_CSP']) == 0:
         cspcf = pd.DataFrame(index=cspcf.index)
@@ -441,8 +461,7 @@ def main(reeds_path, inputs_case):
         ilr = int(pvb_ilr['pvb{}'.format(pvb_type)] * 100)
         # If PVB uses same ILR as UPV then use its profile
         infile = 'recf_upv' if ilr == scalars['ilr_utility'] * 100 else f'recf_upv_{ilr}AC'
-        df_pvb[pvb_type] = read_file(os.path.join(inputs_case,infile+'.h5'))
-        fix_class_region_delimiter(df_pvb[pvb_type])
+        df_pvb[pvb_type] = read_file(os.path.join(inputs_case,infile+'.h5'), parse_timestamps=True)
         df_pvb[pvb_type].columns = [f'pvb{pvb_type}_{c}'
                                     for c in df_pvb[pvb_type].columns]
         df_pvb[pvb_type].index = df_upv.index.copy()
@@ -452,6 +471,12 @@ def main(reeds_path, inputs_case):
         [df_windons, df_windofs, df_upv, df_dupv]
         + [df_pvb[pvb_type] for pvb_type in df_pvb],
         sort=False, axis=1, copy=False)
+    
+    ### Downselect RECF data to resource adequacy and weather years
+    resource_adequacy_years = sw['resource_adequacy_years'].split('_')
+    hourly_weather_years = sw['GSw_HourlyWeatherYears'].split('_')
+    re_years = [int(year) for year in set(resource_adequacy_years + hourly_weather_years)]
+    recf = recf.loc[recf.index.year.isin(re_years)]
 
     ### Add the other recf techs to the resources lookup table
     toadd = pd.DataFrame({'ragg': [c for c in recf.columns if c not in lookup.ragg.values]})
@@ -469,46 +494,40 @@ def main(reeds_path, inputs_case):
 
     if GSw_EFS1_AllYearLoad == 'historic':
         load_historical = read_file(
-            os.path.join(inputs_case,'load_hourly.h5')
-        )
+            os.path.join(inputs_case,'load_hourly.h5'), parse_timestamps=True)
         # Read load multipliers
         load_multiplier = pd.read_csv(os.path.join(inputs_case, 'load_multiplier.csv'))
-        
         # Multipliers from AEO 2022 and older are at Census Division level, while
         # multipliers from AEO 2023 are at state level.
         if all(r in hierarchy['cendiv'] for r in load_multiplier['r']):
-            r2ba = hierarchy.reset_index(drop=False)[['r', 'cendiv']]
+            load_multiplier_agglevel = 'cendiv'
         else:
-            r2ba = hierarchy.reset_index(drop=False)[['r', 'st']]
+            load_multiplier_agglevel = 'st'
         # Map multipliers to BAs
-        load_multiplier = load_multiplier.merge(r2ba, on=['r'], how='outer'
-                                                ).dropna(axis=0, how='any')
+        r2ba = hierarchy.reset_index(drop=False)[['r', load_multiplier_agglevel]]
+        load_multiplier = load_multiplier.rename(columns={'r': load_multiplier_agglevel})
+        load_multiplier = (
+            load_multiplier.merge(r2ba, on=[load_multiplier_agglevel], how='outer')
+            .dropna(axis=0, how='any')
+        )
         # Subset load multipliers for solve years only 
         load_multiplier = load_multiplier[load_multiplier['year'].isin(solveyears)
                                           ][['year', 'r', 'multiplier']]
         # Reformat hourly load profiles to merge with load multipliers
-        load_historical.index = pd.MultiIndex.from_frame(hdtmap[['year','hour']])
         load_historical.reset_index(drop=False, inplace=True)
-        load_historical = pd.melt(load_historical, id_vars=['year', 'hour'], 
+        load_historical = pd.melt(load_historical, id_vars=['datetime'], 
                                   var_name='r', value_name='load')
         # Merge load multipliers into hourly load profiles 
-        load_historical = load_historical.merge(load_multiplier, on=['r'], 
-                                                how='outer', suffixes=('_w', '')
-                                                ).reset_index(drop=True)
+        load_historical = load_historical.merge(load_multiplier, on=['r'], how='outer')
         load_historical.sort_values(by=['r', 'year'], ascending=True, inplace=True)
         load_historical['load'] *= load_historical['multiplier']
-        load_historical = load_historical[['year', 'hour', 'r', 'load']]
-        # Hours should be 0-8759 (not 1-8760) for later use with hourly_repperiods.py
-        load_historical['hour'] -= 1
+        load_historical = load_historical[['year', 'datetime', 'r', 'load']]
         # Reformat hourly load profiles for GAMS
-        load_profiles = load_historical.pivot_table(index=['year', 'hour'], 
-                                                    columns='r', values='load'
-                                                    ).reset_index()
-        load_profiles = load_profiles.set_index(['year', 'hour'])
-        
+        load_profiles = load_historical.pivot_table(
+            index=['year', 'datetime'], columns='r', values='load')
     else:
         load_profiles = read_file(
-            os.path.join(inputs_case,'load_hourly.h5'),
+            os.path.join(inputs_case,'load_hourly.h5'), parse_timestamps=True
         ).loc[solveyears]
         ### If using EFS-style demand with only a single 2012 weather year, concat each profile
         ### 7 times to match the 7-year VRE profiles
@@ -520,6 +539,24 @@ def main(reeds_path, inputs_case):
                 .rename_axis('hour').stack('year')
                 .reorder_levels(['year','hour']).sort_index(axis=0, level=['year','hour'])
             )
+            fulltimeindex = pd.Series(
+                np.ravel([
+                    pd.date_range(
+                        f'{y}-01-01', f'{y+1}-01-01',
+                        freq='H', inclusive='left', tz='EST',
+                    )[:8760]
+                    for y in range(2007, 2014)
+                ])
+            )
+            load_profiles['datetime'] = (
+                load_profiles.index.get_level_values('hour').map(fulltimeindex)
+            )
+            load_profiles = load_profiles.set_index('datetime', append=True).droplevel('hour')
+
+    ### Downselect load data to resource adequacy and weather years
+    load_profiles = load_profiles.loc[(
+        load_profiles.index.get_level_values('datetime').year.isin(re_years)
+    )]
 
     # ------- Perform Load Adjustments based on GSw_LoadAdjust ------- #
     if GSw_LoadAdjust:
@@ -594,6 +631,7 @@ def main(reeds_path, inputs_case):
 
     # Adjusting load profiles by distribution loss factor
     load_profiles /= (1 - distloss)
+    load_profiles = load_profiles.astype(np.float32)
 
     #%%%#############################################
     #    -- Performing Resource Modifications --    #
@@ -607,9 +645,7 @@ def main(reeds_path, inputs_case):
 
     # Resetting indices before merging to assure there are no issues in the merge
     resources = pd.concat([resources, distpv_resources], sort=False, ignore_index=True)
-    recf = pd.merge(
-        left=recf.reset_index(drop=True), right=distpv_profiles.reset_index(drop=True),
-        left_index=True, right_index=True, copy=False)
+    recf = pd.merge(left=recf, right=distpv_profiles, left_index=True, right_index=True, copy=False)
 
     # Remove resources that are turned off
     if int(sw['GSw_distpv']) == 0:
@@ -671,22 +707,15 @@ def main(reeds_path, inputs_case):
     csp_system_cf.columns = ['_'.join(c) for c in csp_system_cf.columns]
 
     ### Add CSP to RE output dataframes
-    recf = pd.concat([recf, csp_system_cf.reset_index(drop=True)], axis=1)
+    recf = pd.concat([recf, csp_system_cf], axis=1)
     resources = pd.concat([resources, csp_resources], axis=0)
-
-
-    #%%### Convert from local time to Eastern time
-    recf_eastern = local_to_eastern(recf, inputs_case, by_year=False)
-    load_eastern = local_to_eastern(load_profiles, inputs_case, by_year=True).astype(np.float32)
-    cspcf_eastern = local_to_eastern(cspcf, inputs_case, by_year=False)
-    
 
     #%% Calculate coincident peak demand at different levels for convenience later
     _peakload = {}
     for _level in hierarchy.columns:
         _peakload[_level] = (
             ## Aggregate to level
-            load_eastern.rename(columns=hierarchy[_level])
+            load_profiles.rename(columns=hierarchy[_level])
             .groupby(axis=1, level=0).sum()
             ## Calculate peak
             .groupby(axis=0, level='year').max()
@@ -694,7 +723,7 @@ def main(reeds_path, inputs_case):
         )
 
     ## Also do it at r level
-    _peakload['r'] = load_eastern.groupby(axis=0, level='year').max().T
+    _peakload['r'] = load_profiles.groupby(axis=0, level='year').max().T
     peakload = pd.concat(_peakload, names=['level','region']).round(3)
 
 
@@ -702,9 +731,8 @@ def main(reeds_path, inputs_case):
     #    -- Data Write-Out --    #
     ##############################
 
-    load_eastern.astype(np.float32).to_hdf(
-        os.path.join(inputs_case,'load.h5'), key='data', complevel=4, index=True)
-    recf_eastern.astype(np.float16).to_hdf(
+    write_h5_file(load_profiles, 'load.h5', inputs_case)
+    recf.astype(np.float16).to_hdf(
         os.path.join(inputs_case,'recf.h5'), key='data', complevel=4, index=True)
     resources.to_csv(os.path.join(inputs_case,'resources.csv'), index=False)
     peakload.to_csv(os.path.join(inputs_case,'peakload.csv'))
@@ -712,10 +740,9 @@ def main(reeds_path, inputs_case):
     peakload.loc['nercr'].stack('year').rename_axis(['*nercr','t']).rename('MW').to_csv(
         os.path.join(inputs_case,'peakload_nercr.csv'))
     ### Write the CSP solar field CF (no SM or storage) for hourly_writetimeseries.py
-    (cspcf_eastern
-        .rename(columns=dict(zip(cspcf_eastern.columns, [f'csp_{i}' for i in cspcf_eastern.columns])))
+    (cspcf
+        .rename(columns=dict(zip(cspcf.columns, [f'csp_{i}' for i in cspcf.columns])))
         .astype(np.float32)
-        .reset_index(drop=True)
     ).to_hdf(
         os.path.join(inputs_case,'csp.h5'), key='data', complevel=4, index=False)
     ### Overwrite the original hierarchy.csv based on capcredit_hierarchy_level

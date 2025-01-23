@@ -77,13 +77,11 @@ def get_load(inputs_case, keep_modelyear=None, keep_weatheryears=[2012]):
     """
     """
     ### Subset to modeled regions
-    load = read_file(os.path.join(inputs_case,'load.h5'), index_columns=2)
+    load = read_file(
+        os.path.join(inputs_case,'load.h5'), parse_timestamps=True, index_columns=2)
     ### Subset to keep_modelyear if provided
     if keep_modelyear:
-        allyears = [keep_modelyear]
         load = load.loc[keep_modelyear].copy()
-    else:
-        allyears = load.index.get_level_values('year').unique()
     ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
     scalars = pd.read_csv(
         os.path.join(inputs_case,'scalars.csv'),
@@ -92,8 +90,7 @@ def get_load(inputs_case, keep_modelyear=None, keep_weatheryears=[2012]):
 
     ### Downselect to weather years if provided
     if isinstance(keep_weatheryears, list):
-        load['wyear'] = np.ravel([[w]*8760 for y in allyears for w in range(2007,2014)])
-        load = load.loc[load.wyear.isin(keep_weatheryears)].drop('wyear', axis=1)
+        load = load.loc[load.index.year.isin(keep_weatheryears)]
 
     return load
 
@@ -460,6 +457,14 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         'y' + timestamps.year.astype(str)
         + 'w' + timestamps.ywek.astype(str).map('{:>03}'.format)
     )
+    timestamps.index = np.ravel([
+        pd.date_range(
+            f'{y}-01-01', f'{y+1}-01-01',
+            freq='H', inclusive='left', tz='EST',
+        )[:8760]
+        for y in all_weatheryears
+    ])
+    
     timestamps_myr = timestamps.loc[timestamps.year.isin(sw['GSw_HourlyWeatherYears'])].copy()
 
     ### Get region hierarchy for use with GSw_HourlyClusterRegionLevel
@@ -472,7 +477,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         rmap = pd.Series(hierarchy.index, index=hierarchy.index)
     elif agglevel == 'county':
         rmap = hierarchy[sw['GSw_HourlyClusterRegionLevel']]
-    elif agglevel in ['ba','state','aggreg']:
+    elif agglevel in ['ba','aggreg']:
         rmap = (hierarchy_orig.loc[hierarchy_orig['ba'].isin(val_r_all)]
                 [['aggreg',sw['GSw_HourlyClusterRegionLevel']]]
                 .drop_duplicates().set_index('aggreg')).squeeze()        
@@ -515,14 +520,13 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     ### Multiply by available capacity for weighted average
     recf *= sc.set_index('resource')['capacity']
     ### Downselect to modeled years, add descriptive time index
-    recf['year'] = np.ravel([[y]*8760 for y in range(2007,2014)])
-    recf = recf.loc[recf.year.isin(sw['GSw_HourlyWeatherYears'])].drop('year', axis=1)
+    recf = recf.loc[recf.index.year.isin(sw['GSw_HourlyWeatherYears'])]
     recf.index = timestamps_myr.set_index(['year','yperiod','h_of_period']).index
 
     # rmap1 is used in conjuntion with rmap2 (created in identify_min_periods) 
     # to map regional data from BA/county (depending on desired spatial aggregation) 
     # to the spatial aggregation defined by sw['GSw_HourlyMinRElevel']
-    rmap1 = r_ba if agglevel in ['ba','state','aggreg'] else r_county
+    rmap1 = r_ba if agglevel in ['ba','aggreg'] else r_county
     ### Identify outlying periods if using capacity credit instead of stress periods
     if (int(sw.GSw_PRM_CapCredit)
         and (sw['GSw_HourlyMinRElevel'].lower() not in ['false','none'])):
@@ -682,12 +686,11 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         ## Get load for all model and weather years
         load_allyears = get_load(inputs_case, keep_weatheryears='all').loc[modelyears]
         ## Add descriptive index
-        load_allyears.index = (
-            pd.concat(
-                {y: timestamps for y in modelyears},
-                axis=0, names=['modelyear','h_of_modelyear']).reset_index()
-            .set_index(['modelyear','year','yperiod','h_of_period']).index
-        )
+        load_allyears = load_allyears.merge(
+            timestamps[['year', 'yperiod', 'h_of_period']], left_on='datetime', right_index=True)
+        load_allyears = load_allyears.droplevel('datetime')
+        load_allyears.index.names = ['modelyear']
+        load_allyears = load_allyears.set_index(['year', 'yperiod', 'h_of_period'], append=True)
         stressperiods_load = {
             y: identify_peak_containing_periods(
                 df=load_allyears.loc[y], hierarchy=hierarchy,
@@ -827,7 +830,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         )
         _missing = [t for t in modelyears if t not in stressperiods_seed.t.unique()]
         if len(_missing):
-            raise Exception(f"Missing user-defined stress periods for {','.join(_missing)}")
+            raise Exception(f"Missing user-defined stress periods for {','.join(map(str, _missing))}")
         for t in modelyears:
             ## Write the period_szn file
             szns = stressperiods_seed.loc[stressperiods_seed.t==t, 'szn'].values

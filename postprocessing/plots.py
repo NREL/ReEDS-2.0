@@ -247,7 +247,7 @@ def addcolorbarhist(
         
         cax = f.add_axes([caxleft, caxbottom, caxwidth, caxheight])
 
-        _cb1 = mpl.colorbar.ColorbarBase(
+        cbar = mpl.colorbar.ColorbarBase(
             cax, cmap=cmap, norm=norm, orientation='horizontal',
             extend=extend, extendfrac=extendfrac)
         cax.xaxis.set_ticks_position('bottom')
@@ -342,7 +342,7 @@ def addcolorbarhist(
 
         cax = f.add_axes([caxleft, caxbottom, caxwidth, caxheight])
 
-        _cb1 = mpl.colorbar.ColorbarBase(
+        cbar = mpl.colorbar.ColorbarBase(
             cax, cmap=cmap, norm=norm, orientation='vertical',
             extend=extend, extendfrac=extendfrac)
         cax.yaxis.set_ticks_position('left')
@@ -414,7 +414,7 @@ def addcolorbarhist(
             cax.set_yticklabels(yticklabels)
 
     ### Return axes
-    return cax, hax
+    return cax, hax, cbar
 
 
 def plot2dhistarray(xdata, ydata, logcolor=True, bins=None,
@@ -437,13 +437,13 @@ def plot2dhistarray(xdata, ydata, logcolor=True, bins=None,
     if isinstance(bins, int):
         bins = [np.linspace(min(xdata), max(xdata), bins), 
                 np.linspace(min(ydata), max(ydata), bins)]
-    elif type(bins) == tuple:
+    elif isinstance(bins, tuple):
         if isinstance(bins[0], int) and isinstance(bins[1], int):
             bins = [np.linspace(min(xdata), max(xdata), bins[0]), 
                     np.linspace(min(ydata), max(ydata), bins[1])]
-        elif (type(bins[0] == np.ndarray) and (type(bins[1]) == np.ndarray)):
+        elif (isinstance(bins[0], np.ndarray) and (isinstance(bins[1], np.ndarray))):
             pass
-    elif type(bins) == np.ndarray:
+    elif isinstance(bins, np.ndarray):
         bins = [bins, bins]
     elif bins is None:
         bins = [np.linspace(min(xdata), max(xdata), 101), 

@@ -28,6 +28,7 @@ import numpy as np
 import gdxpds
 ### Local imports
 import ReEDS_Augur.functions as functions
+from input_processing.ldc_prep import read_file
 
 
 #%%### Procedure
@@ -60,7 +61,13 @@ def main(t, casedir):
     hmap_7yr = pd.read_csv(os.path.join(inputs_case, 'hmap_7yr.csv'))
     hmap_7yr['szn'] = h_dt_szn['season'].copy()
 
-    load = pd.read_hdf(os.path.join(inputs_case, 'load.h5'))
+    h_dt_szn = h_dt_szn.set_index(['year', 'hour'])
+    # Add explicit timestamp index
+    h_dt_szn['timestamp'] = pd.to_datetime(
+        h_dt_szn.index.map(hmap_7yr.set_index(['year', 'hour'])['*timestamp']))
+    h_dt_szn = h_dt_szn.reset_index().set_index('timestamp')
+
+    load = read_file(os.path.join(inputs_case, 'load.h5'), parse_timestamps=True)
 
     resources = pd.read_csv(os.path.join(inputs_case, 'resources.csv'))
 
@@ -183,21 +190,24 @@ def main(t, casedir):
     h5out['vre_cf_marg'] = vre_cf_marg
 
 
+    h_dt_szn_load_years = h_dt_szn.loc[h_dt_szn.index.isin(load.index.get_level_values('datetime'))]
     #%%### H2 and DAC load
     ### First just make it all inflexible (necessary for PRAS)
     load_h2dac_all_hourly = (
         gdxreeds['prod_filt']
-        .groupby(['r','allh']).Value.sum().unstack('r')
-        ## Broadcast to hours in timeslice
-        .reindex(h_dt_szn.h).fillna(0).reset_index(drop=True)
+        .groupby(['r', 'allh']).Value.sum().reset_index()
+        .merge(h_dt_szn_load_years[['h']].reset_index(), left_on='allh', right_on='h')
+        .pivot(index='timestamp', columns='r', values='Value')
+        .fillna(0)
     )
 
 
     #%%### Total load and net load
     ### Get Candian exports and add to this solve year's load
     can_exports = (
-        gdxreeds['can_exports_h_filt'].pivot(index='allh',columns='r',values='Value')
-        .reindex(h_dt_szn.h).reset_index(drop=True)
+        gdxreeds['can_exports_h_filt']
+        .merge(h_dt_szn_load_years[['h']].reset_index(), left_on='allh', right_on='h')
+        .pivot(index='timestamp', columns='r', values='Value')
     )
     load_year = load.loc[t].add(can_exports, fill_value=0)
 
@@ -207,14 +217,23 @@ def main(t, casedir):
         pras_load = load_year.add(load_h2dac_all_hourly, fill_value=0)
     else:
         pras_load = load_year.copy()
-    pras_load.index = h_dt_szn.set_index(['season','year','h','hour']).index
+    pras_load = (
+        pras_load.merge(
+            h_dt_szn[['season', 'year', 'h', 'hour']], left_index=True, right_index=True
+        )
+        .set_index(['season', 'year', 'h', 'hour'])
+    )
     h5out['pras_load'] = pras_load
     ## Include the hourly H2/DAC load for debugging
-    h5out['pras_h2dac_load'] = load_h2dac_all_hourly
+    h5out['pras_h2dac_load'] = load_h2dac_all_hourly.reset_index(drop=True)
 
     ### Store load with the appropriate index for capacity_credit.py
-    h5out['load'] = load_year.set_index(
-        h_dt_szn.set_index(['ccseason','year','h','hour']).index)
+    h5out['load'] = (
+        load_year.merge(
+            h_dt_szn[['ccseason', 'year', 'h', 'hour']], left_index=True, right_index=True
+        )
+        .set_index(['ccseason', 'year', 'h', 'hour'])
+    )
 
 
     #%%### Collect some csv's for ReEDS2PRAS

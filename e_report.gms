@@ -740,14 +740,17 @@ losses_ann('storage',t)$tmodel_new(t) = sum{(i,v,r,h)$[valcap(i,v,r,t)$storage_s
 
 losses_ann('trans',t)$tmodel_new(t) =
   sum{(rr,r,h,trtype)$routes(rr,r,trtype,t),
-      (tranloss(rr,r,trtype) * FLOW.l(rr,r,h,t,trtype) * hours(h)) } ;
+      (tranloss(rr,r,trtype) * FLOW.l(rr,r,h,t,trtype) * hours(h)) 
+      + ((CONVERSION.l(r,h,"AC","VSC",t) + CONVERSION.l(r,h,"VSC","AC",t))* (1 - converter_efficiency_vsc) * hours(h))$[val_converter(r,t)$Sw_VSC]
+      } ;
 
 losses_ann('curt',t)$tmodel_new(t) =  sum{r, curt_ann(r,t) } ;
 
 losses_ann('load',t)$tmodel_new(t) = sum{(r,h), LOAD.l(r,h,t) * hours(h) }  ;
 
 losses_tran_h(rr,r,h,trtype,t)$[routes(r,rr,trtype,t)$tmodel_new(t)]
-    = tranloss(rr,r,trtype) * FLOW.l(rr,r,h,t,trtype) ;
+    = tranloss(rr,r,trtype) * FLOW.l(rr,r,h,t,trtype) 
+    + ((CONVERSION.l(r,h,"AC","VSC",t) + CONVERSION.l(r,h,"VSC","AC",t))* (1 - converter_efficiency_vsc))$[val_converter(r,t)$Sw_VSC] ;
 
 *=========================
 * CAPACTIY
@@ -1581,7 +1584,7 @@ error_check('z') = (
         - pvf_capital(t) * sum{(gbin,i,st)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)],
               cost_growth(i,st,t) * growth_penalty(gbin) * GROWTH_BIN.l(gbin,i,st,t)
               * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) })
-        }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthPenalties$(yeart(t)<=Sw_GrowthConLastYear)]
+        }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthPenalties$(yeart(t)<=Sw_GrowthPenLastYear)]
 * minus small penalty to move storage into shorter duration bins
         - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
             bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) }

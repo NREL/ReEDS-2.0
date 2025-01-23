@@ -22,6 +22,7 @@ extensions = [
 
 bibtex_bibfiles = ['references.bib'] # exported from zotero using better bibtex
 bibtex_reference_style = 'author_year'
+bibtex_default_style = 'plain'
 
 templates_path = ['_templates']
 exclude_patterns = []

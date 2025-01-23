@@ -21,8 +21,8 @@ p19,WECC_NW,NorthernGrid,NorthernGrid_East,Mountain,MT,western,MT,USA,mountain,M
 p20,WECC_NW,NorthernGrid,NorthernGrid_East,Mountain,MT,western,MT,USA,mountain,Mountain,Northwestern_Energy,MT
 p21,WECC_NW,NorthernGrid,NorthernGrid_East,Mountain,WY,western,WY,USA,mountain,Mountain,PacifiCorp_East,WY
 p22,WECC_NW,NorthernGrid,NorthernGrid_East,Mountain,WY,western,WY,USA,mountain,Mountain,PacifiCorp_East,WY
-p23,WECC_NW,NorthernGrid,NorthernGrid_East,Mountain,WY,western,WY,USA,mountain,Mountain,WAPA_Rocky_Mountain_Region,WY
-p24,WECC_NW,NorthernGrid,NorthernGrid_East,Mountain,WY,western,WY,USA,mountain,Mountain,WAPA_Rocky_Mountain_Region,WY
+p23,WECC_NW,NorthernGrid,NorthernGrid_East,Mountain,WY,western,WY,USA,mountain,Mountain,PacifiCorp_East,WY
+p24,WECC_NW,NorthernGrid,NorthernGrid_East,Mountain,WY,western,WY,USA,mountain,Mountain,PacifiCorp_East,WY
 p25,WECC_NW,NorthernGrid,NorthernGrid_South,Mountain,UT,western,UT,USA,mountain,Mountain,PacifiCorp_East,UT
 p26,WECC_NW,NorthernGrid,NorthernGrid_South,Mountain,UT,western,UT,USA,mountain,Mountain,PacifiCorp_East,UT
 p27,WECC_SW,WestConnect,WestConnect_South,Mountain,AZ,western,AZ,USA,mountain,Southwest,Arizona_Public_Service_Co,AZ
@@ -57,7 +57,7 @@ p55,MISO,MISO,MISO_Central,West_North_Central,MO,eastern,MO,USA,corn-belt,Midwes
 p56,MISO,MISO,MISO_South,West_South_Central,AR,eastern,AR,USA,delta-states,Delta,MISO,AR
 p57,MISO,MISO,MISO_South,West_South_Central,TX,eastern,TX,USA,southern-plains,Texas,MISO,TX_MISO
 p58,MISO,MISO,MISO_South,West_South_Central,LA,eastern,LA,USA,delta-states,Delta,MISO,LA
-p59,ERCOT,ERCOT,ERCOT,West_South_Central,TX,texas,TX,USA,southern-plains,Texas,ERCOT,TX_ERCOT_W
+p59,ERCOT,ERCOT,ERCOT,West_South_Central,TX,ercot,TX,USA,southern-plains,Texas,ERCOT,TX_ERCOT_W
 p60,ERCOT,ERCOT,ERCOT,West_South_Central,TX,ercot,TX,USA,southern-plains,Texas,ERCOT,TX_ERCOT_W
 p61,ERCOT,ERCOT,ERCOT,West_South_Central,TX,ercot,TX,USA,southern-plains,Texas,ERCOT,TX_ERCOT_W
 p62,ERCOT,ERCOT,ERCOT,West_South_Central,TX,ercot,TX,USA,southern-plains,Texas,ERCOT,TX_ERCOT_W
@@ -72,7 +72,7 @@ p70,MISO,MISO,MISO_North,West_North_Central,IA,eastern,IA,USA,corn-belt,Midwest,
 p71,MISO,MISO,MISO_Central,West_North_Central,MO,eastern,MO,USA,corn-belt,Midwest,MISO,MO
 p72,MISO,MISO,MISO_Central,West_North_Central,MO,eastern,MO,USA,corn-belt,Midwest,MISO,MO
 p73,MISO,MISO,MISO_Central,West_North_Central,MO,eastern,MO,USA,corn-belt,Midwest,MISO,MO
-p74,MISO,MISO,MISO_North,East_North_Central,MI,eastern,MI,USA,lake-states,Midwest,MISO,MI
+p74,MISO,MISO,MISO_Central,East_North_Central,MI,eastern,MI,USA,lake-states,Midwest,MISO,MI
 p75,MISO,MISO,MISO_North,East_North_Central,WI,eastern,WI,USA,lake-states,Midwest,MISO,WI
 p76,MISO,MISO,MISO_North,East_North_Central,WI,eastern,WI,USA,lake-states,Midwest,MISO,WI
 p77,MISO,MISO,MISO_North,East_North_Central,WI,eastern,WI,USA,lake-states,Midwest,MISO,WI
@@ -94,7 +94,7 @@ p92,SERC_C,SERTP,SERTP,East_South_Central,TN,eastern,TN,USA,appalachia,Southeast
 p93,PJM,PJM,PJM_East,East_South_Central,KY,eastern,KY,USA,appalachia,MidAtlantic,PJM,KY
 p94,SERC_SE,SERTP,SERTP,South_Atlantic,GA,eastern,GA,USA,southeast,Southeast,Southern_Co_Services_Inc,GA
 p95,SERC_E,SERTP,SERTP,South_Atlantic,SC,eastern,SC,USA,southeast,Southeast,Duke_Energy_Carolinas_LLC,SC
-p96,SERC_E,SERTP,SERTP,South_Atlantic,SC,eastern,SC,USA,southeast,Southeast,South_Carolina_Electric_Gas_Co,SC
+p96,SERC_E,SERTP,SERTP,South_Atlantic,SC,eastern,SC,USA,southeast,Southeast,Duke_Energy_Carolinas_LLC,SC
 p97,SERC_E,SERTP,SERTP,South_Atlantic,NC,eastern,NC,USA,appalachia,Southeast,Duke_Energy_Carolinas_LLC,NC
 p98,SERC_E,SERTP,SERTP,South_Atlantic,NC,eastern,NC,USA,appalachia,Southeast,Duke_Energy_Carolinas_LLC,NC
 p99,PJM,PJM,PJM_East,South_Atlantic,VA,eastern,VA,USA,appalachia,MidAtlantic,PJM,VA

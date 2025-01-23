@@ -703,21 +703,8 @@ def main(reeds_path,inputs_case,AggregateRegions=1,rsc_wsc_dat=None,write=True,*
     hydcap = (pd.melt(hydcap, id_vars=['tech','class'])
                 .set_index(['tech','class','variable'])
                 .sort_index())
-    hydcost = pd.melt(hydcost, id_vars=['tech','class'])
-
-    if agglevel == 'county':
-         pass
-    else:
-        # prescribed hydund in p33 does not have enough rsc_dat
-        # capacity to meet prescribed amount - check with WC
-        if 'p18' in val_r_all:
-            hydcap.loc[('hydUND','hydclass1','p18'),'value'] += 27
-            hydcap.loc[('hydNPND','hydclass1','p18'),'value'] += 3
-        if 'p110' in val_r_all:
-            hydcap.loc[('hydNPND','hydclass1','p110'),'value'] += 58
-        if 'p33' in val_r_all:
-            hydcap.loc[('hydUND','hydclass1','p33'),'value'] = 5
     hydcap = hydcap.reset_index()
+    hydcost = pd.melt(hydcost, id_vars=['tech','class'])
 
     # Convert dollar year
     hydcost[hydcost.select_dtypes(include=['number']).columns] *= deflate['hydcost']

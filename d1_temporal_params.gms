@@ -393,6 +393,7 @@ cf_in(i,r,h)$[i_water_cooling(i)$Sw_WaterMain] =
 cf_rsc(i,v,r,h,t)$[cf_in(i,r,h)$cf_tech(i)$valcap(i,v,r,t)] = cf_in(i,r,h) ;
 
 * Written by input_processing/hourly_writetimeseries.py
+$onempty
 parameter cf_hyd(i,allszn,r,allt) "--fraction-- hydro capacity factors by season and year"
 /
 $offlisting
@@ -402,6 +403,7 @@ $include inputs_case%ds%stress%stress_year%%ds%cf_hyd.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 $ifthen.climatehydro %GSw_ClimateHydro% == 1
 

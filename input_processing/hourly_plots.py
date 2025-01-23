@@ -6,6 +6,7 @@ import site
 import logging
 import pandas as pd
 import numpy as np
+import h5py
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import patheffects as pe
@@ -275,17 +276,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
 
     ### Get the CF data over all years, take the mean over weather years
     recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5'))
-    fulltimeindex = np.ravel([
-        pd.date_range(
-            f'{y}-01-01', f'{y+1}-01-01',
-            freq='H', inclusive='left', tz='EST',
-        )[:8760]
-        for y in range(2007,2014)
-    ])
-    recf.index = fulltimeindex
-    recf = recf.loc[
-        recf.index.map(lambda x: x.year in sw.GSw_HourlyWeatherYears)
-    ].mean()
+    recf = recf.loc[recf.index.year.isin(sw['GSw_HourlyWeatherYears'])].mean()
 
 
     ### Get supply curves
@@ -310,11 +301,6 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     dfsc = plots.df2gdf(dfsc)
     dfsc['resource'] = dfsc.i + '|' + dfsc.r
     dfsc['cf_actual'] = dfsc.resource.map(recf)
-
-    ### Get the BA map
-    dfba = gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','US_PCA')).set_index('rb')
-    dfba['x'] = dfba.geometry.centroid.x
-    dfba['y'] = dfba.geometry.centroid.y
 
     ### Get the hourly data
     hours = pd.read_csv(
@@ -444,21 +430,28 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
 
     ###### Do it again for load
     ### Get the full hourly data, take the mean for the cluster year and weather year(s)
-    load_raw = pd.read_hdf(os.path.join(inputs_case, 'load.h5'))
+    with h5py.File(os.path.join(inputs_case, 'load.h5'), 'r') as f:
+        index_year = pd.Series(f['index_0'])
+        index_datetime = pd.to_datetime(pd.Series(f['index_1']).str.decode('utf-8'))
+        index = pd.MultiIndex.from_arrays(
+            [index_year, index_datetime], names=['year','timeindex'])
+        load_raw = pd.DataFrame(
+            columns=pd.Series(f['columns']).str.decode('utf-8'),
+            data=f['data'], index=index,
+        )
     loadyears = load_raw.index.get_level_values('year').unique()
     keepyear = (
         int(sw['GSw_HourlyClusterYear']) if int(sw['GSw_HourlyClusterYear']) in loadyears
         else max(loadyears))
     load_raw = load_raw.loc[keepyear].copy()
-    load_raw.index = fulltimeindex
-    load_raw = load_raw.loc[
+    load_mean = load_raw.loc[
         load_raw.index.map(lambda x: x.year in sw.GSw_HourlyWeatherYears)
     ].mean() / 1000
     ## load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
     scalars = pd.read_csv(
         os.path.join(inputs_case,'scalars.csv'),
         header=None, usecols=[0,1], index_col=0).squeeze(1)
-    load_raw *= (1 - scalars['distloss'])
+    load_mean *= (1 - scalars['distloss'])
     ### Get the representative data, take the mean for the cluster year
     load_allyear = (
         pd.read_csv(os.path.join(inputs_case, 'load_allyear.csv')).rename(columns={'*r':'r'})
@@ -467,11 +460,11 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
         / hours.sum()
     ) / 1000
     ### Map it
-    dfmap = dfba.copy()
-    dfmap['GW_full'] = load_raw
-    dfmap['GW_hourly'] = load_allyear
-    dfmap['GW_diff'] = dfmap.GW_hourly - dfmap.GW_full
-    dfmap['GW_frac'] = dfmap.GW_hourly / dfmap.GW_full - 1
+    dfplot = dfmap['r'].copy()
+    dfplot['GW_full'] = load_mean
+    dfplot['GW_hourly'] = load_allyear
+    dfplot['GW_diff'] = dfplot.GW_hourly - dfplot.GW_full
+    dfplot['GW_frac'] = dfplot.GW_hourly / dfplot.GW_full - 1
 
     ### Plot the difference map
     plt.close()
@@ -479,12 +472,12 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     for col in range(3):
         dfmap['st'].plot(ax=ax[col], facecolor='none', edgecolor='k', lw=0.25, zorder=10000)
     for x,col in enumerate(['GW_full','GW_hourly','GW_frac']):
-        dfmap.plot(
+        dfplot.plot(
             ax=ax[x], column=col, cmap=cmaps[col], legend=True,
             legend_kwds={'shrink':0.75,'orientation':'horizontal',
                         'label':'load {}'.format(col), 'pad':0},
             vmin=(0 if col != 'GW_frac' else -vlimload),
-            vmax=(dfmap[['GW_full','GW_hourly']].max().max() if col != 'GW_frac' else vlimload),
+            vmax=(dfplot[['GW_full','GW_hourly']].max().max() if col != 'GW_frac' else vlimload),
         )
         ax[x].axis('off')
     ax[0].set_title(title, y=0.95, x=0.05, ha='left', fontsize=10)
@@ -502,13 +495,13 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     f,ax = plt.subplots()
     for col in ['GW_full','GW_hourly']:
         ax.plot(
-            range(1,len(dfmap)+1),
-            dfmap.sort_values('GW_full', ascending=False)[col].values,
-            label='{} ({:.1f} GW mean)'.format(col.split('_')[1], dfmap[col].sum()),
+            range(1,len(dfplot)+1),
+            dfplot.sort_values('GW_full', ascending=False)[col].values,
+            label='{} ({:.1f} GW mean)'.format(col.split('_')[1], dfplot[col].sum()),
             color=colors[col], ls=lss[col], zorder=zorders[col],
         )
     ax.set_ylim(0)
-    ax.set_xlim(0,len(dfmap)+1)
+    ax.set_xlim(0,len(dfplot)+1)
     ax.xaxis.set_minor_locator(mpl.ticker.MultipleLocator(10))
     ax.legend(fontsize='large', frameon=False)
     ax.set_ylabel('Average load [GW]')

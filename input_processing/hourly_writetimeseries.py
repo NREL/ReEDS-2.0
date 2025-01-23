@@ -56,7 +56,7 @@ def timestamp2h(ts, GSw_HourlyType='day'):
     """
     # ts = pd.Timestamp(year=2007, month=3, day=28)
     y = ts.year
-    d = int(ts.strftime('%j').strip('0'))
+    d = int(ts.strftime('%j').lstrip('0'))
     if GSw_HourlyType == 'wek':
         w = d // 5
         h = (d % 5) * 24 + ts.hour + 1
@@ -235,18 +235,17 @@ def get_yearly_demand(
     reload the raw demand and extract the demand on the modeled days for each year.
     """
     ### Get original demand data, subset to cluster year
-    load_in = read_file(os.path.join(inputs_case,'load.h5'), index_columns=2).unstack(level=0)
+    load_in = read_file(
+        os.path.join(inputs_case,'load.h5'), parse_timestamps=True, index_columns=2).unstack(level=0)
     load_in.columns = load_in.columns.rename(['r','t'])
     ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
     scalars = pd.read_csv(
         os.path.join(inputs_case,'scalars.csv'),
         header=None, usecols=[0,1], index_col=0).squeeze(1)
     load_in *= (1 - scalars['distloss'])
-    ### Keep hours being considered (only has an effect when periodtype != 'rep')
-    load_in = load_in.loc[hmap_7yr.hour0].copy()
 
     ### Add time index
-    load_in.index = hmap_7yr.actual_h.rename('h')
+    load_in.index = load_in.index.map(hmap_7yr.set_index('timestamp')['actual_h']).rename('h')
 
     load_out = load_in.copy()
     ### If using representative (i.e. medoid) periods, pull out the representative periods.
@@ -501,7 +500,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     recf = (
         recf.drop([c for c in recf if c.startswith('csp')], axis=1)
         .merge(cspcf, left_index=True, right_index=True)
-    ).loc[hmap_7yr.hour0]
+    ).loc[hmap_7yr.timestamp]
     recf.index = hmap_7yr.actual_h
 
     #%% Get data for representative periods

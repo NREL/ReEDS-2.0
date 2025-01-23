@@ -220,7 +220,7 @@ def main(reeds_path, inputs_case, **kwargs):
     agglevel = pd.read_csv(os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
     rcol_dict = {'county':'FIPS', 'ba':'reeds_ba', 'state':'TSTATE'}
     # Create the 'r_col' column
-    if agglevel in ['county','ba','state']:
+    if agglevel in ['county','ba']:
         r_col = rcol_dict[agglevel]
         gdb_use['r'] = gdb_use[r_col].copy()
     elif agglevel == 'aggreg':
