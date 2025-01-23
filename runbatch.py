@@ -162,10 +162,11 @@ def check_compatibility(sw):
         or int(sw['GSw_ClimateWater'])
         or int(sw['GSw_EFS_Flex'])
         or (int(sw['GSw_Canada']) == 2)
+        or int(sw['GSw_DUPV'])
     ):
         raise NotImplementedError(
             'At least one of GSw_Canada, GSw_ClimateHydro, GSw_ClimateDemand, GSw_ClimateWater, '
-            'endyear, GSw_EFS_Flex '
+            'endyear, GSw_EFS_Flex, or GSw_DUPV '
             'are using a currently-unsupported setting.')
 
     if 24 % (int(sw['GSw_HourlyWindowOverlap']) * int(sw['GSw_HourlyChunkLengthRep'])):
@@ -313,11 +314,11 @@ def check_compatibility(sw):
                              f'\nRemove any ILR!={scalars["ilr_utility"]} from GSw_PVB_ILR.')
             
     for year in sw['resource_adequacy_years'].split('_'):
-        if not (2007 <= int(year) <= 2013):
+        if not ((2007 <= int(year) <= 2013) or (2016 <= int(year) <= 2023)):
             raise ValueError("Fix resource_adequacy_years")
 
     for year in sw['GSw_HourlyWeatherYears'].split('_'):
-        if not (2007 <= int(year) <= 2013):
+        if not ((2007 <= int(year) <= 2013) or (2016 <= int(year) <= 2023)):
             raise ValueError("Fix GSw_HourlyWeatherYears")
 
     if '/' in sw['GSw_Region']:
@@ -334,20 +335,16 @@ def check_compatibility(sw):
         )
         if sw['GSw_Region'] not in modeled_regions:
             raise ValueError("No column in modeled_regions.csv matching GSw_Region")
-
-
+    
     ### Compatible switch combinations 
     if sw['GSw_EFS1_AllYearLoad'] == 'historic' :
         if ('demand_' + sw['demandscen'] +'.csv') not in os.listdir(os.path.join(reeds_path, 'inputs','load')) :
             raise ValueError("The demand file specified by the demandscen switch is not in the inputs/load folder")
 
     if sw['GSw_PRM_scenario'] == 'none':
-        if sw['GSw_PRM_CapCredit'] !=1 :
+        if int(sw['GSw_PRM_CapCredit']) !=1 :
             raise ValueError("To disable both the capacity credit and stress period formulations GSw_PRM_CapCredit must be set to 1") 
         
-
-
-
     ### Dependent model availability
     if (
         ((not int(sw['GSw_PRM_CapCredit'])) or (int(sw['pras']) == 2))
@@ -506,6 +503,15 @@ def setup_sequential(
                 solveyears, casedir, batch_case, toLogGamsString, OPATH, ticker,
                 restart_switches,
             )
+
+        ### Run input parameter error checks after the first solve year (since financial 
+        ### multipliers aren't created until the first solve year is run)
+        if cur_year == min(solveyears):
+            OPATH.writelines(
+                f"\npython {os.path.join(casedir, 'input_processing', 'check_inputs.py')} "
+                f"{casedir}\n"
+            )
+            OPATH.writelines(writescripterrorcheck('check_inputs.py')+'\n')
 
         ### Run Augur plots in background
         OPATH.writelines(
@@ -1370,7 +1376,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         if not LINUXORMAC:
             OPATH.writelines("endlocal\n")
         OPATH.writelines('python {t}\n'.format(t=ticker))
-        OPATH.writelines('python e_report_dump.py {}\n\n'.format(casedir))
+        OPATH.writelines(f'python e_report_dump.py {casedir} -c\n\n')
 
         ### Run the retail rate module
         if caseSwitches['GSw_Region'].lower() == 'usa':

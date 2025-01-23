@@ -16,8 +16,8 @@
       - ##### [ctus](#inputs/ctus) 
       - ##### [degradation](#inputs/degradation) 
       - ##### [demand_response](#inputs/demand_response) 
-      - ##### [dGen_model_inputs](#inputs/dGen_model_inputs) 
-      - ##### [dGen_Model_Inputs](#inputs/dGen_Model_Inputs) 
+      - ##### [dgen_model_inputs](#inputs/dgen_model_inputs) 
+      - ##### [dgen_model_inputs](#inputs/dgen_model_inputs) 
       - ##### [disaggregation](#inputs/disaggregation) 
       - ##### [emission_constraints](#inputs/emission_constraints) 
       - ##### [financials](#inputs/financials) 
@@ -1101,8 +1101,8 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [dGen_model_inputs](inputs/dGen_model_inputs) <a name='inputs/dGen_model_inputs'></a>
-  - [distPVCF_hourly.csv](/inputs/dGen_model_inputs/distpvcf_hourly.csv)
+#### [dgen_model_inputs](inputs/dgen_model_inputs) <a name='inputs/dgen_model_inputs'></a>
+  - [distPVCF_hourly.csv](/inputs/dgen_model_inputs/distpvcf_hourly.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Setting for distpv scenario hourly cf
     - **Units:** fraction
@@ -1115,64 +1115,64 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Units:** MW
 ---
 
-##### [stscen2023_highng](inputs/dGen_model_inputs/stscen2023_highng) <a name='inputs/dGen_model_inputs/stscen2023_highng'></a>
-  - [distpvcap_stscen2023_highng.csv.csv](/inputs/dGen_model_inputs/stscen2023_highng/distpvcap_stscen2023_highng.csv)
+##### [stscen2023_highng](inputs/dgen_model_inputs/stscen2023_highng) <a name='inputs/dgen_model_inputs/stscen2023_highng'></a>
+  - [distpvcap_stscen2023_highng.csv.csv](/inputs/dgen_model_inputs/stscen2023_highng/distpvcap_stscen2023_highng.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with high NG (including distpv) costs.
     - **Units:** MW
 ---
 
 
-##### [stscen2023_highre](inputs/dGen_model_inputs/stscen2023_highre) <a name='inputs/dGen_model_inputs/stscen2023_highre'></a>
-  - [distpvcap_stscen2023_highre.csv.csv](/inputs/dGen_model_inputs/stscen2023_highre/distpvcap_stscen2023_highre.csv)
+##### [stscen2023_highre](inputs/dgen_model_inputs/stscen2023_highre) <a name='inputs/dgen_model_inputs/stscen2023_highre'></a>
+  - [distpvcap_stscen2023_highre.csv.csv](/inputs/dgen_model_inputs/stscen2023_highre/distpvcap_stscen2023_highre.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with high RE (including distpv) costs.
     - **Units:** MW
 ---
 
 
-##### [stscen2023_lowng](inputs/dGen_model_inputs/stscen2023_lowng) <a name='inputs/dGen_model_inputs/stscen2023_lowng'></a>
-  - [distpvcap_stscen2023_lowng.csv.csv](/inputs/dGen_model_inputs/stscen2023_lowng/distpvcap_stscen2023_lowng.csv)
+##### [stscen2023_lowng](inputs/dgen_model_inputs/stscen2023_lowng) <a name='inputs/dgen_model_inputs/stscen2023_lowng'></a>
+  - [distpvcap_stscen2023_lowng.csv.csv](/inputs/dgen_model_inputs/stscen2023_lowng/distpvcap_stscen2023_lowng.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with low NG (including distpv) costs.
     - **Units:** MW
 ---
 
 
-##### [stscen2023_lowre](inputs/dGen_model_inputs/stscen2023_lowre) <a name='inputs/dGen_model_inputs/stscen2023_lowre'></a>
-  - [distpvcap_stscen2023_lowre.csv.csv](/inputs/dGen_model_inputs/stscen2023_lowre/distpvcap_stscen2023_lowre.csv)
+##### [stscen2023_lowre](inputs/dgen_model_inputs/stscen2023_lowre) <a name='inputs/dgen_model_inputs/stscen2023_lowre'></a>
+  - [distpvcap_stscen2023_lowre.csv.csv](/inputs/dgen_model_inputs/stscen2023_lowre/distpvcap_stscen2023_lowre.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with low RE (including distpv) costs.
     - **Units:** MW
 ---
 
 
-##### [stscen2023_mid_case](inputs/dGen_model_inputs/stscen2023_mid_case) <a name='inputs/dGen_model_inputs/stscen2023_mid_case'></a>
-  - [distpvcap_stscen2023_mid_case.csv.csv](/inputs/dGen_model_inputs/stscen2023_mid_case/distpvcap_stscen2023_mid_case.csv)
+##### [stscen2023_mid_case](inputs/dgen_model_inputs/stscen2023_mid_case) <a name='inputs/dgen_model_inputs/stscen2023_mid_case'></a>
+  - [distpvcap_stscen2023_mid_case.csv.csv](/inputs/dgen_model_inputs/stscen2023_mid_case/distpvcap_stscen2023_mid_case.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023.
     - **Units:** MW
 ---
 
 
-##### [stscen2023_mid_case_95_by_2035](inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2035) <a name='inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2035'></a>
-  - [distpvcap_stscen2023_mid_case_95_by_2035.csv.csv](/inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2035/distpvcap_stscen2023_mid_case_95_by_2035.csv)
+##### [stscen2023_mid_case_95_by_2035](inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035) <a name='inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035'></a>
+  - [distpvcap_stscen2023_mid_case_95_by_2035.csv.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035/distpvcap_stscen2023_mid_case_95_by_2035.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with a 95% carbon reduction target by 2035.
     - **Units:** MW
 ---
 
 
-##### [stscen2023_mid_case_95_by_2050](inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2050) <a name='inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2050'></a>
-  - [distpvcap_stscen2023_mid_case_95_by_2050.csv.csv](/inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2050/distpvcap_stscen2023_mid_case_95_by_2050.csv)
+##### [stscen2023_mid_case_95_by_2050](inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050) <a name='inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050'></a>
+  - [distpvcap_stscen2023_mid_case_95_by_2050.csv.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050/distpvcap_stscen2023_mid_case_95_by_2050.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with a 95% carbon reduction target by 2050.
     - **Units:** MW
 ---
 
 
-##### [stscen2023_taxcredit_extended2050](inputs/dGen_model_inputs/stscen2023_taxcredit_extended2050) <a name='inputs/dGen_model_inputs/stscen2023_taxcredit_extended2050'></a>
-  - [distpvcap_stscen2023_taxcredit_extended2050.csv.csv](/inputs/dGen_model_inputs/stscen2023_taxcredit_extended2050/distpvcap_stscen2023_taxcredit_extended2050.csv)
+##### [stscen2023_taxcredit_extended2050](inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050) <a name='inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050'></a>
+  - [distpvcap_stscen2023_taxcredit_extended2050.csv.csv](/inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050/distpvcap_stscen2023_taxcredit_extended2050.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with an extended IRA through 2050.
     - **Units:** MW

@@ -30,6 +30,7 @@ GSw_CO2_Detail,0
 GSw_CO2_Storage,15
 GSw_CSAPR,1
 GSw_CSP,1
+GSw_CSPRemoveLow,1
 GSw_CSPRelLim,25
 GSw_Canada,1
 GSw_CarbTax,0

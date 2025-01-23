@@ -20,6 +20,7 @@ from pptx.util import Inches, Pt
 
 import plots
 import reedsplots
+from reedsplots import read_output, read_report
 from bokehpivot.defaults import DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -350,6 +351,11 @@ if len(caselist) != len(casenames):
 cases = dict(zip(casenames, caselist))
 maxlength = max([len(c) for c in cases])
 
+# check to ensure there are at least two cases
+if len(cases) <= 1: 
+    err = f"There are less than two cases being compared: {', '.join(cases.values())}"
+    raise ValueError(err)
+
 ### Get the base cases
 if not len(_basecase):
     basecase = list(cases.keys())[0]
@@ -534,27 +540,15 @@ dictin_sw = {
     for case in cases
 }
 
-hierarchy = {}
-for case in cases:
-    hierarchy[case] = (
-        pd.read_csv(os.path.join(cases[case],'inputs_case','hierarchy.csv'))
-        .rename(columns={'*r':'r'}).set_index('r')
-    )
-    hierarchy[case] = hierarchy[case].loc[hierarchy[case].country.str.lower()=='usa'].copy()
+hierarchy = {case: reedsplots.get_hierarchy(cases[case]) for case in cases}
 
 dictin_error = {}
 for case in tqdm(cases, desc='system cost error'):
-    dictin_error[case] = pd.read_csv(
-        os.path.join(cases[case], 'outputs', 'error_check.csv'),
-        index_col=0,
-    ).squeeze(1)
+    dictin_error[case] = read_output(cases[case], 'error_check').set_index('*').squeeze(1)
 
 dictin_cap = {}
 for case in tqdm(cases, desc='national capacity'):
-    dictin_cap[case] = pd.read_excel(
-        os.path.join(cases[case],'outputs','reeds-report','report.xlsx'),
-        sheet_name=val2sheet['Capacity (GW)'],
-    ).drop('scenario',axis=1)
+    dictin_cap[case] = read_report(cases[case], 'Capacity (GW)', val2sheet)
     ### Simplify techs
     dictin_cap[case].tech = dictin_cap[case].tech.map(lambda x: renametechs.get(x,x))
     dictin_cap[case] = (
@@ -565,10 +559,7 @@ for case in tqdm(cases, desc='national capacity'):
 
 dictin_gen = {}
 for case in tqdm(cases, desc='national generation'):
-    dictin_gen[case] = pd.read_excel(
-        os.path.join(cases[case],'outputs','reeds-report','report.xlsx'),
-        sheet_name=val2sheet['Generation (TWh)'],
-    ).drop('scenario',axis=1)
+    dictin_gen[case] = read_report(cases[case], 'Generation (TWh)', val2sheet)
     ### Simplify techs
     dictin_gen[case].tech = dictin_gen[case].tech.map(lambda x: renametechs.get(x,x))
     dictin_gen[case] = (
@@ -593,19 +584,16 @@ costcat_rename = {
 }
 dictin_npv = {}
 for case in tqdm(cases, desc='NPV of system cost'):
-    dictin_npv[case] = pd.read_excel(
-        os.path.join(cases[case],'outputs','reeds-report','report.xlsx'),
-        sheet_name=val2sheet['Present Value of System Cost'], engine='openpyxl',
-    ).drop('scenario',axis=1).set_index('cost_cat')['Discounted Cost (Bil $)']
+    dictin_npv[case] = (
+        read_report(cases[case], 'Present Value of System Cost', val2sheet)
+        .set_index('cost_cat')['Discounted Cost (Bil $)']
+    )
     dictin_npv[case].index = pd.Series(dictin_npv[case].index).replace(costcat_rename)
     dictin_npv[case] = dictin_npv[case].groupby(level=0, sort=False).sum()
 
 dictin_scoe = {}
 for case in tqdm(cases, desc='SCOE'):
-    dictin_scoe[case] = pd.read_excel(
-        os.path.join(cases[case],'outputs','reeds-report','report.xlsx'),
-        sheet_name=val2sheet['National Average Electricity'], engine='openpyxl',
-    ).drop('scenario',axis=1)
+    dictin_scoe[case] = read_report(cases[case], 'National Average Electricity', val2sheet)
     dictin_scoe[case].cost_cat = dictin_scoe[case].cost_cat.replace(
         {**costcat_rename,**{'CO2 Incentives':'CCS Incentives'}})
     dictin_scoe[case] = (
@@ -614,10 +602,7 @@ for case in tqdm(cases, desc='SCOE'):
 
 dictin_syscost = {}
 for case in tqdm(cases, desc='annual system cost'):
-    dictin_syscost[case] = pd.read_excel(
-        os.path.join(cases[case],'outputs','reeds-report','report.xlsx'),
-        sheet_name=val2sheet['Undiscounted Annualized Syst'], engine='openpyxl',
-    ).drop('scenario',axis=1)
+    dictin_syscost[case] = read_report(cases[case], 'Undiscounted Annualized Syst', val2sheet)
     dictin_syscost[case].cost_cat = dictin_syscost[case].cost_cat.replace(
         {**costcat_rename,**{'CO2 Incentives':'CCS Incentives'}})
     dictin_syscost[case] = (
@@ -626,23 +611,18 @@ for case in tqdm(cases, desc='annual system cost'):
 
 dictin_emissions = {}
 for case in tqdm(cases, desc='national emissions'):
-    dictin_emissions[case] = pd.read_csv(
-        os.path.join(cases[case], 'outputs', 'emit_nat.csv'),
-        header=0, names=['e','t','ton'], index_col=['e','t'],
-    ).squeeze(1).unstack('e')
+    dictin_emissions[case] = (
+        read_output(cases[case], 'emit_nat', valname='ton')
+        .set_index(['e','t']).squeeze(1).unstack('e')
+    )
 
 dictin_trans = {}
 for case in tqdm(cases, desc='national transmission'):
-    dictin_trans[case] = pd.read_excel(
-        os.path.join(cases[case],'outputs','reeds-report','report.xlsx'),
-        sheet_name=val2sheet['Transmission (GW-mi)'], engine='openpyxl',
-    ).drop('scenario',axis=1)
+    dictin_trans[case] = read_report(cases[case], 'Transmission (GW-mi)')
 
 dictin_trans_r = {}
 for case in tqdm(cases, desc='regional transmission'):
-    dictin_trans_r[case] = pd.read_csv(
-        os.path.join(cases[case],'outputs','tran_out.csv')
-    ).rename(columns={'Value':'MW'})
+    dictin_trans_r[case] = read_output(cases[case], 'tran_out', valname='MW')
     for _level in ['interconnect','transreg','transgrp','st']:
         dictin_trans_r[case][f'inter_{_level}'] = (
             dictin_trans_r[case].r.map(hierarchy[case][_level])
@@ -651,10 +631,7 @@ for case in tqdm(cases, desc='regional transmission'):
 
 dictin_cap_r = {}
 for case in tqdm(cases, desc='regional capacity'):
-    dictin_cap_r[case] = pd.read_csv(
-        os.path.join(cases[case],'outputs','cap.csv'),
-        names=['i','r','t','MW'], header=0,
-    )
+    dictin_cap_r[case] = read_output(cases[case], 'cap', valname='MW')
     ### Simplify techs
     dictin_cap_r[case].i = dictin_cap_r[case].i.map(lambda x: renametechs.get(x,x))
     dictin_cap_r[case].i = dictin_cap_r[case].i.str.lower().map(lambda x: techmap.get(x,x))
@@ -662,20 +639,17 @@ for case in tqdm(cases, desc='regional capacity'):
 
 dictin_cap_firm = {}
 for case in tqdm(cases, desc='firm capacity'):
-    dictin_cap_firm[case] = pd.read_csv(
-        os.path.join(cases[case],'outputs','cap_firm.csv'),
-        names=['i','r','ccseason','t','MW'], header=0,
-    )
+    dictin_cap_firm[case] = read_output(cases[case], 'cap_firm', valname='MW')
     ### Simplify techs
     dictin_cap_firm[case].i = reedsplots.simplify_techs(dictin_cap_firm[case].i)
     dictin_cap_firm[case] = dictin_cap_firm[case].groupby(['i','r','ccseason','t'], as_index=False).MW.sum()
 
 dictin_runtime = {}
 for case in tqdm(cases, desc='runtime'):
-    dictin_runtime[case] = pd.read_excel(
-        os.path.join(cases[case],'outputs','reeds-report','report.xlsx'),
-        sheet_name=val2sheet['Runtime by year (hours)'], engine='openpyxl',
-    )[['process','year','processtime']]
+    dictin_runtime[case] = (
+        read_report(cases[case], 'Runtime by year (hours)', val2sheet)
+        .drop(columns='Net Level processtime')
+    )
 
 dictin_neue = {}
 for case in tqdm(cases, desc='NEUE'):
@@ -698,42 +672,66 @@ for case in tqdm(cases, desc='NEUE'):
     )
     dictin_neue[case] = df
 
+### Model years and discount rates
+years = {}
+yearstep = {}
+for case in cases:
+    years[case] = sorted(dictin_cap[case].year.astype(int).unique())
+    years[case] = [y for y in years[case] if y >= startyear]
+    yearstep[case] = years[case][-1] - years[case][-2]
+lastyear = max(years[case])
+## Years for which to add data notes
+startyear_sums = 2023
+allyears = range(startyear_sums,lastyear+1)
+noteyears = [2035, 2050]
+if all([lastyear < y for y in noteyears]):
+    noteyears = [lastyear]
+startyear_growth = 2035
+
+discounts = pd.Series(
+    index=range(startyear_notes,lastyear+1),
+    data=[1/(1+discountrate_social)**(y-startyear_notes)
+          for y in range(startyear_notes,lastyear+1)]
+).rename_axis('t')
+
+### Health impacts
 dictin_health = {}
 dictin_health_central = {}
 dictin_health_central_mort = {}
 for case in tqdm(cases, desc='health'):
     try:
-        dictin_health[case] = pd.read_csv(
-            os.path.join(cases[case], 'outputs', 'health_damages_caused_r.csv'),
-            header=0,
-        ).groupby(['year','pollutant','model','cr']).sum()
-    except FileNotFoundError:
-        print(case)
-
-dictin_health_central = {
-    case: (
-        dictin_health[case]
-        .xs(central_health['cr'], level='cr')
-        .xs(central_health['model'], level='model')
-        .groupby('year').sum()
-        ['damage_$']
-        ### Inflate from reeds_dollaryear (2004) to bokeh output_dollaryear (2021)
-        * inflator
-        ### Convert to $B
-        / 1e9
-    )
-    for case in dictin_health
-}
-dictin_health_central_mort = {
-    case: (
-        dictin_health[case]
-        .xs(central_health['cr'], level='cr')
-        .xs(central_health['model'], level='model')
-        .groupby('year').sum()
-        ['mortality']
-    )
-    for case in dictin_health
-}
+        dictin_health[case] = (
+            read_output(cases[case], 'health_damages_caused_r.csv')
+            .groupby(['year','pollutant','model','cr']).sum()
+        )
+        dictin_health_central[case] = (
+            dictin_health[case]
+            .xs(central_health['cr'], level='cr')
+            .xs(central_health['model'], level='model')
+            .groupby('year').sum()
+            ['damage_$']
+            ### Inflate from reeds_dollaryear (2004) to bokeh output_dollaryear (2021)
+            * inflator
+            ### Convert to $B
+            / 1e9
+        )
+        dictin_health_central_mort[case] = (
+            dictin_health[case]
+            .xs(central_health['cr'], level='cr')
+            .xs(central_health['model'], level='model')
+            .groupby('year').sum()
+            ['mortality']
+        )
+    except (FileNotFoundError, KeyError) as err:
+        print(f'Health impacts error for {case}: {err}')
+        dictin_health_central[case] = (
+            pd.Series(np.nan, index=years[case], name='damage_$')
+            .rename_axis('year')
+        )
+        dictin_health_central_mort[case] = (
+            pd.Series(np.nan, index=years[case], name='mortality')
+            .rename_axis('year')
+        )
 
 
 #%% Detailed inputs
@@ -741,9 +739,7 @@ if detailed:
     ### Timeslice generation by region
     dictin_gen_h = {}
     for case in tqdm(cases, desc='gen_h'):
-        dictin_gen_h[case] = pd.read_csv(
-            os.path.join(cases[case],'outputs','gen_h.csv'),
-        ).rename(columns={'Value':'GW','allh':'h'})
+        dictin_gen_h[case] = read_output(cases[case], 'gen_h', valname='GW')
         dictin_gen_h[case].GW /= 1e3
         dictin_gen_h[case].i = reedsplots.simplify_techs(dictin_gen_h[case].i)
         dictin_gen_h[case] = dictin_gen_h[case].groupby(['i','r','h','t'], as_index=False).GW.sum()
@@ -779,9 +775,7 @@ if detailed:
     ### Stress period dispatch
     dictin_gen_h_stress = {}
     for case in tqdm(cases, desc='gen_h_stress'):
-        dictin_gen_h_stress[case] = pd.read_csv(
-            os.path.join(cases[case],'outputs','gen_h_stress.csv'),
-        ).rename(columns={'Value':'GW', 'allh':'h'})
+        dictin_gen_h_stress[case] = read_output(cases[case], 'gen_h_stress', valname='GW')
         dictin_gen_h_stress[case].GW /= 1e3
         dictin_gen_h_stress[case].i = reedsplots.simplify_techs(dictin_gen_h_stress[case].i)
         ## Separate charge and discharge
@@ -792,17 +786,14 @@ if detailed:
     ### Stress period flows
     dictin_tran_flow_stress = {}
     for case in tqdm(cases, desc='tran_flow_stress'):
-        dictin_tran_flow_stress[case] = pd.read_csv(
-            os.path.join(cases[case],'outputs','tran_flow_stress.csv'),
-        ).rename(columns={'Value':'GW', 'allh':'h'})
+        dictin_tran_flow_stress[case] = read_output(
+            cases[case], 'tran_flow_stress', valname='GW')
         dictin_tran_flow_stress[case].GW /= 1e3
 
     ### Stress period load
     dictin_load_stress = {}
     for case in tqdm(cases, desc='load_stress'):
-        dictin_load_stress[case] = pd.read_csv(
-            os.path.join(cases[case],'outputs','load_stress.csv'),
-        ).rename(columns={'Value':'GW', 'allh':'h'})
+        dictin_load_stress[case] = read_output(cases[case], 'load_stress', valname='GW')
         dictin_load_stress[case].GW /= 1e3
 
     ### Peak load (for capacity credit)
@@ -817,34 +808,8 @@ if detailed:
     ### Capacity credit PRMTRADE
     dictin_prmtrade = {}
     for case in tqdm(cases, desc='prmtrade'):
-        dictin_prmtrade[case] = pd.read_csv(
-            os.path.join(cases[case],'outputs','captrade.csv'),
-            header=0, names=['r','rr','trtype','ccseason','t','MW']
-        ).rename(columns={'MW':'GW'})
+        dictin_prmtrade[case] = read_output(cases[case], 'captrade', valname='GW')
         dictin_prmtrade[case].GW /= 1e3
-
-
-#%% Model years and discount rates
-years = {}
-yearstep = {}
-for case in cases:
-    years[case] = sorted(dictin_cap[case].year.astype(int).unique())
-    years[case] = [y for y in years[case] if y >= startyear]
-    yearstep[case] = years[case][-1] - years[case][-2]
-lastyear = max(years[case])
-## Years for which to add data notes
-startyear_sums = 2023
-allyears = range(startyear_sums,lastyear+1)
-noteyears = [2035, 2050]
-if all([lastyear < y for y in noteyears]):
-    noteyears = [lastyear]
-startyear_growth = 2035
-
-discounts = pd.Series(
-    index=range(startyear_notes,lastyear+1),
-    data=[1/(1+discountrate_social)**(y-startyear_notes)
-          for y in range(startyear_notes,lastyear+1)]
-).rename_axis('t')
 
 
 #%%### Plots ######
@@ -988,10 +953,11 @@ for tech in aggtechsplot:
         xycoords='axes fraction', 
         fontsize='x-large', weight='bold',)
     ### Annotate the 2020 value
-    plots.annotate(
-        ax[techcoords[tech]], basecase,
-        startyear, offsetstart.get(tech,(10,10)), color='C7',
-        arrowprops={'arrowstyle':'-|>', 'color':'C7'})
+    if len(df[tech,basecase]):
+        plots.annotate(
+            ax[techcoords[tech]], basecase,
+            startyear, offsetstart.get(tech,(10,10)), color='C7',
+            arrowprops={'arrowstyle':'-|>', 'color':'C7'})
 if len(aggtechsplot) % 2:
     ax[-1,-1].axis('off')
 ## Legend
@@ -1953,7 +1919,7 @@ if len(capcreditcases):
 
 
 #%%### Transmission
-startyear_transgrowth = int(scalars.firstyear_trans_longterm)
+startyear_transgrowth = min(int(scalars.firstyear_trans_longterm), max(years[basecase]))
 for interzonal_only in [False, True]:
     if interzonal_only:
         labelline = 'Interzonal transmission [TW-mi]'
@@ -2021,7 +1987,9 @@ for interzonal_only in [False, True]:
         ## https://cigreindia.org/CIGRE%20Lib/CIGRE%20Session%202010%20paper/B4_306_2010.pdf
         1476 * 6.3 / 1e3: '1× Rio Madeira per year',
     }
-    ## DOE LBWMR
+    ## Values here from DOE 2024 Land-based Wind Market Report (page 64)
+    ## and represent U.S-wide transmission capacity editions
+    ## https://emp.lbl.gov/sites/default/files/2024-08/Land-Based%20Wind%20Market%20Report_2024%20Edition.pdf
     if interzonal_only:
         scales[0.73] = 'Mean since 2014 (345+ kV)'
         scales[1.46] = 'Max since 2014 (345+ kV)'
@@ -2031,17 +1999,19 @@ for interzonal_only in [False, True]:
         scales[1.83] = 'Max since 2014 (all kV)'
         scales[3.64] = 'Max since 2009 (all kV)'
 
-    for y, label in scales.items():
-        if y > ymax:
-            continue
-        ax[2].annotate(
-            label, xy=(len(cases), y), xytext=(len(cases)+1, y), annotation_clip=False,
-            arrowprops={'arrowstyle':'-|>', 'color':'k'},
-            ha='left', va='center', color='k', fontsize=11,
-        )
-        ax[2].axhline(
-            y, c='k', lw=0.5, ls='--',
-            path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.5)])
+    ## Only add labels if doing a national-scale run
+    if sw.GSw_Region.lower() == 'usa':
+        for y, label in scales.items():
+            if y > ymax:
+                continue
+            ax[2].annotate(
+                label, xy=(len(cases), y), xytext=(len(cases)+1, y), annotation_clip=False,
+                arrowprops={'arrowstyle':'-|>', 'color':'k'},
+                ha='left', va='center', color='k', fontsize=11,
+            )
+            ax[2].axhline(
+                y, c='k', lw=0.5, ls='--',
+                path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.5)])
 
     ### Spare
     ax[3].axis('off')

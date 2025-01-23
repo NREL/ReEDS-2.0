@@ -34,6 +34,7 @@ GSw_CO2_spurline_cost,3000
 GSw_CO2_spurline_fom,80
 GSw_CSAPR,1
 GSw_CSP,1
+GSw_CSPRemoveLow,1
 GSw_Canada,1
 GSw_CarbTax,0
 GSw_CarbTaxOption,default

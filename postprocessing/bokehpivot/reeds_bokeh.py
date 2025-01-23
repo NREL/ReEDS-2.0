@@ -19,10 +19,11 @@ if sys.version_info[0] == 2:
 import logging
 from defaults import (DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE, DEFAULT_END_YEAR)
 
-logger = logging.getLogger('')
-
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.abspath(os.path.join(this_dir_path,'..')))
+import reedsplots
 
+logger = logging.getLogger('')
 #ReEDS globals
 #scenarios: each element is a dict with name of scenario and path to scenario
 #result_dfs: keys are ReEDS result names. Values are dataframes for that result (with 'scenario' as one of the columns)
@@ -189,7 +190,7 @@ def get_wdg_reeds(path, init_load, wdg_config, wdg_defaults, custom_sorts, custo
             for i_scen, scen in df_scen.iterrows():
                 if os.path.isdir(scen['path']):
                     abs_path_scen = os.path.abspath(scen['path'])
-                    if os.path.isfile(abs_path_scen + GLRD['output_subdir'] + GLRD['test_file']):
+                    if any(os.path.isfile(abs_path_scen + GLRD['output_subdir'] + test_file) for test_file in GLRD['test_file']):
                         custom_sorts['scenario'].append(scen['name'])
                         scenarios.append({'name': scen['name'], 'path': abs_path_scen})
                         if 'color' in df_scen:
@@ -199,12 +200,13 @@ def get_wdg_reeds(path, init_load, wdg_config, wdg_defaults, custom_sorts, custo
         #run folders, so gather all of those scenarios.
         elif os.path.isdir(runs_path):
             abs_path = str(os.path.abspath(runs_path))
-            if os.path.isfile(abs_path + GLRD['output_subdir'] + GLRD['test_file']):
+            if any(os.path.isfile(abs_path + GLRD['output_subdir'] + test_file) for test_file in GLRD['test_file']):
                 scenarios.append({'name': os.path.basename(abs_path), 'path': abs_path})
             else:
                 subdirs = next(os.walk(abs_path))[1]
                 for subdir in subdirs:
-                    if os.path.isfile(abs_path+'/'+subdir + GLRD['output_subdir'] + GLRD['test_file']):
+                    if any(os.path.isfile(abs_path + '/' + subdir + GLRD['output_subdir'] + test_file)
+                            for test_file in GLRD['test_file']):
                         abs_subdir = str(os.path.abspath(abs_path+'/'+subdir))
                         scenarios.append({'name': subdir, 'path': abs_subdir})
     #If we have scenarios, build widgets for scenario filters and result.
@@ -347,10 +349,12 @@ def get_src(scen, src):
             df_src = pd.read_csv(filepath, low_memory=False, header=None)
         else:
             df_src = pd.read_csv(filepath, low_memory=False)
-        if 'transpose' in src and src['transpose'] is True:
-            df_src = df_src.T
-        if 'columns' in src:
-            df_src.columns = src['columns']
+    else:
+        df_src = reedsplots.read_output(scen['path'], filepath)
+    if 'transpose' in src and src['transpose'] is True:
+        df_src = df_src.T
+    if 'columns' in src:
+        df_src.columns = src['columns']
     df_src.replace('Eps',0, inplace=True)
     df_src.replace('Undf',0, inplace=True)
     df_src = df_src.apply(pd.to_numeric, errors='ignore')
@@ -496,12 +500,7 @@ def update_data_source(path, init_load, init_config, data_type):
 def set_globs_by_type(data_type):
     global GLDT, reeds, GLRD
     GLDT = data_type
-    if data_type == 'ReEDS 1.0':
-        reeds = rd
-    elif data_type == 'ReEDS 2.0':
-        reeds = rd2
-    elif data_type == 'RPM':
-        reeds = rpm
+    reeds = rd2
     GLRD = reeds.rb_globs
 
 def update_reeds_var(attr, old, new):

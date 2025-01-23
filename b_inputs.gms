@@ -869,6 +869,13 @@ ban(i)$[i_subsets(i,'csp')
       $sum{resourceclass$tech_resourceclass(i,resourceclass),
            resourceclassnum(resourceclass)>Sw_NumCSPclasses }] = yes ;
 ) ;
+* If Sw_CSPRemoveLow is turned on, remove the last (worst) CSP class (which will be
+* equal to Sw_NumCSPclasses)
+if(Sw_CSPRemoveLow = 1,
+ban(i)$[i_subsets(i,'csp')
+      $sum{resourceclass$tech_resourceclass(i,resourceclass),
+           resourceclassnum(resourceclass)=Sw_NumCSPclasses }] = yes ;
+) ;
 * There are 7 DUPV resource classes by default. If Sw_NumDUPVclasses < 7, we ban the
 * DUPV techs with resource class > Sw_NumDUPVclasses
 if(Sw_NumDUPVclasses < 7,
@@ -1492,9 +1499,10 @@ ptc_value_scaled(i,v,t)$[i_water_cooling(i)$Sw_WaterMain] =
    sum{ii$ctt_i_ii(i,ii), ptc_value_scaled(ii,v,t) } ;
 
 parameter firstyear_v(i,v) "flag for first year that a new new vintage can be built" ;
+parameter lastyear_v(i,v) "flag for the last year that a new new vintage can be built" ;
 
-firstyear_v(i,v) = sum{t$[yeart(t)=smin(tt$ivt(i,v,tt),yeart(tt))],yeart(t) } ;
-
+firstyear_v(i,v) = sum{t$[yeart(t)=smin(tt$ivt(i,v,tt),yeart(tt))], yeart(t) } ;
+lastyear_v(i,v) = sum{t$[yeart(t)=smax(tt$ivt(i,v,tt),yeart(tt))], yeart(t) } ;
 
 * pvf_onm_undisc is based on intertemporal pvf_onm and pvf_capital,
 * and is used for bulk system cost outputs
@@ -1666,7 +1674,9 @@ $offempty
 set forced_retire(i,r,t) ;
 
 forced_retire(i,r,t)$[(yeart(t)>=forced_retirements(i,r))$forced_retirements(i,r)] = yes ;
-
+* If the technology you would upgrade to is part of forced_retire, then include the
+* upgrade tech in forced_retire
+forced_retire(i,r,t)$[upgrade(i)$(sum{ii$upgrade_to(i,ii), forced_retire(ii,r,t) })] = yes ;
 
 set hintage_char "characteristics available in hintage_data"
 /
@@ -2415,10 +2425,10 @@ valcap(i,v,r,t)$[m_capacity_exog(i,v,r,t)$(not ban(i))$tmodel_new(t)] = yes ;
 
 * if a plant is still available by upgrade year
 * and it is able to be upgraded - keep that plant in the valcap set
-valcap(i,v,r,t)$[sum{tt$[tt.val = Sw_UpgradeYear],m_capacity_exog(i,v,r,tt) }
+valcap(i,v,r,t)$[sum{tt$[tt.val = Sw_UpgradeYear], m_capacity_exog(i,v,r,tt) }
                 $(Sw_Upgrades = 1)$(t.val >= Sw_UpgradeYear)
                 $(not ban(i))
-                $sum{ii,upgrade_from(ii,i) }$tmodel_new(t)] = yes ;
+                $sum{ii, upgrade_from(ii,i) }$tmodel_new(t)] = yes ;
 
 *enable all new classes for balancing regions
 *if available (via ivt) and if not an rsc tech
@@ -2486,6 +2496,17 @@ valcap(i,newv,r,t)$[
                    $(not ([r_offshore(r,t) and ofswind(i)] or [sum{st$r_st(r,st), batterymandate(st,t) } and battery(i)]))
                   ] = no ;
 
+*remove vintages that cannot be built because they only occur before firstyear
+valcap(i,newv,r,t)$[
+*if there are no required prescriptions
+                   (not sum{pcat$prescriptivelink(pcat,i),
+                      m_required_prescriptions(pcat,r,t) } )
+*if the vintage is not allowed before the firstyear
+                   $(lastyear_v(i,newv)<firstyear(i))
+*if there is not a mandate for that technology in the region
+                   $(not ([r_offshore(r,t) and ofswind(i)] or [sum{st$r_st(r,st), batterymandate(st,t) } and battery(i)]))
+                  ] = no ;
+
 *remove any non-prescriptive build capabilities if they are not prescribed
 valcap(i,newv,r,t)$[(not sameas(i,'gas-ct'))$(yeart(t)<firstyear(i))
                    $(not sum{tt$(yeart(tt)<=yeart(t)), prescription_check(i,newv,r,tt) })
@@ -2538,30 +2559,30 @@ valcap(i,v,r,t)$[upgrade(i)$(yeart(t)<Sw_UpgradeYear)] = no ;
 *this is more of a failsafe for potential capacity leakage
 valcap(i,v,r,t)$[upgrade(i)$(not Sw_Upgrades)] = no ;
 
-*remove capacity from valcap that is required to retire
+*remove capacity from valcap that is required to retire (and cannot be upgraded)
 * -then- remove m_capacity_exog from consideration
 valcap(i,v,r,t)$[forced_retire(i,r,t)
-                $(not sum{ii,upgrade_from(ii,i) })] = no ;
+                $(not sum{ii$(not forced_retire(ii,r,t)), upgrade_from(ii,i) })] = no ;
 
 * for any technologies that are forced to retire and cannot upgrade, remove m_capacity_exog
 m_capacity_exog(i,v,r,t)$[forced_retire(i,r,t)
-                         $(not sum{ii,upgrade_from(ii,i) })] = 0 ;
+                         $(not sum{ii$(not forced_retire(ii,r,t)), upgrade_from(ii,i) })] = 0 ;
 
 * for any technologies that are forced to retire, can upgrade, and are not unabated coal, remove m_capacity_exog
 m_capacity_exog(i,v,r,t)$[forced_retire(i,r,t)$(not coal_noccs(i))
-                         $(sum{ii,upgrade_from(ii,i) })] = 0 ;
+                         $(sum{ii$(not forced_retire(ii,r,t)), upgrade_from(ii,i) })] = 0 ;
 
 * if Clean Air Act requirements are enabled, coal technologies that can be upgraded are allowed to stay in m_capacity_exog
 * if Clean Air Act requirements are not enabled, coal technologies that can be upgraded are excluded from m_capacity_exog
 m_capacity_exog(i,v,r,t)$[forced_retire(i,r,t)$(not Sw_Clean_Air_Act)$coal_noccs(i)
-                         $(sum{ii,upgrade_from(ii,i) })] = 0 ;
+                         $(sum{ii$(not forced_retire(ii,r,t)) ,upgrade_from(ii,i) })] = 0 ;
 
 * If, in the last year in which coal must either retire or updgrade, coal is upgraded, we can continue to 
 * use that m_capacity_exog beyond caa_coal_retire_year. But unabated coal plants must not have capacity after caa_coal_retire_year.
 * This is expanded in d_solveoneyear.gms.
 m_capacity_exog(i,v,r,t)$[forced_retire(i,r,t)$coal_noccs(i)
                          $(t.val > caa_coal_retire_year)
-                         $(sum{ii,upgrade_from(ii,i) }) ] = 0 ;
+                         $(sum{ii$(not forced_retire(ii,r,t)), upgrade_from(ii,i) }) ] = 0 ;
 
 * remove upgrade technologies that are explicitly banned
 valcap(i,v,r,t)$[upgrade(i)$ban(i)] = no ;
@@ -3918,6 +3939,9 @@ $onlisting
 / ;
 
 consume_char0("dac",t,"cost_cap") = consume_char_dac("dac",t,"capcost") ;
+consume_char0("dac",t,"vom") = consume_char_dac("dac",t,"vom") ;
+consume_char0("dac",t,"fom") = consume_char_dac("dac",t,"fom") ;
+
 * conversionrate is already in tons/MWh in the BVRE input csv:
 dac_conversion_rate(i,t)$[dac(i)$(not sameas(i,"dac_gas"))] = consume_char_dac("dac",t,"conversionrate") ;
 
@@ -4053,8 +4077,8 @@ $onlisting
 
 parameter cost_h2_transport_cap(r,rr,allt)          "--$/(metric ton/hour)-- capital cost of H2 inter-BA transport pipeline per metric ton-hour"
           cost_h2_transport_fom(r,rr,allt)          "--$/[(metric ton/hour)*yr]-- fixed OM cost of H2 inter-BA transport pipeline per metric ton-hour"
-          cost_h2_storage_cap(h2_st,allt)           "--$/metric ton-- capital cost of H2 storage per metric ton"
-          cost_h2_storage_fom(h2_st,allt)           "--$/(metric ton*yr)-- fixed OM cost of H2 storage per metric ton"
+          cost_h2_storage_cap(h2_stor,allt)         "--$/metric ton-- capital cost of H2 storage per metric ton"
+          cost_h2_storage_fom(h2_stor,allt)         "--$/(metric ton*yr)-- fixed OM cost of H2 storage per metric ton"
           h2_network_load(h2_st,allt)               "--MWh/metric ton-- electricity consumption of H2 network components"
 ;
 
@@ -4113,11 +4137,11 @@ cost_h2_transport_fom(r,rr,allt)$h2_routes_inv(r,rr) =
 ;
 
 * for storage the cost is based on the storage capacity and already includes the cost of compressor
-cost_h2_storage_cap(h2_st,allt)$h2_stor(h2_st) =
-    h2_cost_inputs(h2_st,allt,"cost_cap") * h2_cap_cost_mult_storage(allt) ;
+cost_h2_storage_cap(h2_stor,allt)$h2_stor(h2_stor) =
+    h2_cost_inputs(h2_stor,allt,"cost_cap") * h2_cap_cost_mult_storage(allt) ;
 
-cost_h2_storage_fom(h2_st,allt)$h2_stor(h2_st) =
-    h2_cost_inputs(h2_st,allt,"fom") ;
+cost_h2_storage_fom(h2_stor,allt)$h2_stor(h2_stor) =
+    h2_cost_inputs(h2_stor,allt,"fom") ;
 
 * electric load from compressors in the h2 network
 h2_network_load(h2_st,allt) = h2_cost_inputs(h2_st,allt,"electric_load") ;
@@ -4374,14 +4398,6 @@ cost_fom(i,initv,r,t)$[Sw_BinOM$valcap(i,initv,r,t)] = sum{allt$att(allt,t), hin
 cost_fom(i,initv,r,t)$[Sw_BinOM$(not cost_fom(i,initv,r,t))$valcap(i,initv,r,t)] =
                             plant_char(i,initv,'2010','fom') ;
 
-table hyd_fom(i,r) "--$/MW-year -- Fixed O&M for hydro technologies"
-$offlisting
-$ondelim
-$include inputs_case%ds%hyd_fom.csv
-$offdelim
-$onlisting
-;
-
 *fom costs for a specific bintage is the average over that bintage's time frame
 cost_fom(i,newv,r,t)$[valcap(i,newv,r,t)$countnc(i,newv)] =
   sum{tt$ivt(i,newv,tt), plant_char(i,newv,tt,'fom')  } / countnc(i,newv) ;
@@ -4437,6 +4453,13 @@ cost_fom(i,initv,r,t)$[Sw_BinOM$valcap(i,initv,r,t)$nuclear(i)] =
 cost_fom(i,initv,r,t)$[Sw_BinOM$valcap(i,initv,r,t)$coal(i)] =
   cost_fom(i,initv,r,t) + sum{allt$att(allt,t),FOM_adj_coal(allt) }$Sw_NukeCoalFOM ;
 
+table hyd_fom(i,r) "--$/MW-year -- Fixed O&M for hydro technologies"
+$offlisting
+$ondelim
+$include inputs_case%ds%hyd_fom.csv
+$offdelim
+$onlisting
+;
 
 *note conditional here that will only replace fom
 *for hydro techs if it is included in hyd_fom(i,r)
@@ -5217,7 +5240,6 @@ parameter growth_bin_limit(gbin,st,tg,t) "--MW/yr-- size of each growth bin"
 * Initialize values
 growth_bin_limit(gbin,st,tg,tfirst)$stfeas(st) = gbin_min(tg) ;
 cost_growth(i,st,t) = 0 ;
-growth_limit_absolute(tg)$[growth_limit_absolute(tg) < gbin_min(tg)] = gbin_min(tg) ;
 
 *====================================
 * --- CES Gas supply curve setup ---
@@ -5282,12 +5304,14 @@ h2_stor_tran(i,t)$[Sw_H2=1] = deflator("2016") * consume_char0(i,t,"stortran_add
 * note that this overrides input values from the consume_char input file
 h2_stor_tran(i,t)$[(Sw_H2=1)$Sw_H2_TransportUniform$h2(i)$sum{(v,r), valcap(i,v,r,t) }] = Sw_H2_TransportUniform ;
 
-*multiply vom by 1000 because input costs are in $/kg
-h2_vom(i,t) = deflator("2016") * consume_char0(i,t,"vom") * 1000 ;
+* multiply vom by 1000 because input costs are in $/kg
+h2_vom(i,t)$h2(i) = deflator("2016") * consume_char0(i,t,"vom") * 1000 ;
 
 * total cost of h2 production activities ($ per metric ton)
-* note that DAC VOM costs are added above
-cost_prod(i,v,r,t)$[h2(i)$valcap(i,v,r,t)] = h2_fuel_cost(i,v,r,t) + h2_vom(i,t) + h2_stor_tran(i,t);
+cost_prod(i,v,r,t)$[h2(i)$valcap(i,v,r,t)] = h2_fuel_cost(i,v,r,t) + h2_vom(i,t) + h2_stor_tran(i,t) ;
+
+* include VOM for DAC in cost_prod
+cost_prod(i,v,r,t)$[dac(i)$valcap(i,v,r,t)] = consume_char0(i,t,"vom") ;
 
 
 table gasquant_elec(cendiv,allt) "--Quads-- Natural gas consumption in the electricity sector"
@@ -5421,12 +5445,12 @@ Scalar numfuelbins       "number of fuel bins",
 parameter cd_beta(cendiv,t)                      "--$/MMBtu per Quad-- beta value for census divisions' natural gas supply curves",
           nat_beta(t)                            "--$/MMBtu per Quad-- beta value for national natural gas supply curves",
           gasbinwidth_regional(fuelbin,cendiv,t) "--MMBtu-- census division's gas bin width",
-          Gasbinwidth_national(fuelbin,t)        "--MMBtu-- national gas bin width",
-          Gasbinp_regional(fuelbin,cendiv,t)     "--$/MMBtu-- price for each gas bin",
+          gasbinwidth_national(fuelbin,t)        "--MMBtu-- national gas bin width",
+          gasbinp_regional(fuelbin,cendiv,t)     "--$/MMBtu-- price for each gas bin",
           gasusage_national(t)                   "--MMBtu-- reference national gas usage",
-          Gasbinqq_regional(fuelbin,cendiv,t)    "--MMBtu-- regional reference level for supply curve calculation of each gas bin",
-          Gasbinqq_national(fuelbin,t)           "--MMBtu-- national reference level for supply curve calculation of each gas bin",
-          Gasbinp_national(fuelbin,t)            "--$/MMBtu--price for each national gas bin",
+          gasbinqq_regional(fuelbin,cendiv,t)    "--MMBtu-- regional reference level for supply curve calculation of each gas bin",
+          gasbinqq_national(fuelbin,t)           "--MMBtu-- national reference level for supply curve calculation of each gas bin",
+          gasbinp_national(fuelbin,t)            "--$/MMBtu--price for each national gas bin",
           gasmultterm(cendiv,t)                  "parameter to be multiplied by total gas usage to compute the reference costs of gas consumption, from which the bins deviate" ;
 
 *note these do not change over years, only exception
@@ -5498,37 +5522,37 @@ botfuelbinwidth = normfuelbinmin ;
 gasusage_national(t) = sum{cendiv, gassupply_ele(cendiv,t) } ;
 
 *gas bin width is typically the reference gas usage times the bin width
-Gasbinwidth_regional(fuelbin,cendiv,t) = gassupply_ele(cendiv,t) * normfuelbinwidth ;
+gasbinwidth_regional(fuelbin,cendiv,t) = gassupply_ele(cendiv,t) * normfuelbinwidth ;
 
 *bottom and top bins get special treatment
 *in that they are expanded by botfuelbinwidth and topfuelbinwidth
-Gasbinwidth_regional(fuelbin,cendiv,t)$[ord(fuelbin) = 1] = gassupply_ele(cendiv,t) * botfuelbinwidth ;
-Gasbinwidth_regional(fuelbin,cendiv,t)$[ord(fuelbin) = smax(afuelbin,ord(afuelbin))] =
+gasbinwidth_regional(fuelbin,cendiv,t)$[ord(fuelbin) = 1] = gassupply_ele(cendiv,t) * botfuelbinwidth ;
+gasbinwidth_regional(fuelbin,cendiv,t)$[ord(fuelbin) = smax(afuelbin,ord(afuelbin))] =
                                           gassupply_ele(cendiv,t) * topfuelbinwidth ;
 
 *don't want any super small or zero values -- this follows the same calculations in heritage ReEDS
-Gasbinwidth_regional(fuelbin,cendiv,t)$[Gasbinwidth_regional(fuelbin,cendiv,t) < 10] = 10 ;
+gasbinwidth_regional(fuelbin,cendiv,t)$[gasbinwidth_regional(fuelbin,cendiv,t) < 10] = 10 ;
 
 *gas bin widths are defined simiarly on the national level
-Gasbinwidth_national(fuelbin,t) = Gasusage_national(t) * normfuelbinwidth ;
-Gasbinwidth_national(fuelbin,t)$[ord(fuelbin) = 1]   = Gasusage_national(t) * botfuelbinwidth ;
-Gasbinwidth_national(fuelbin,t)$[ord(fuelbin)=smax(afuelbin,ord(afuelbin))]  = Gasusage_national(t) * topfuelbinwidth ;
+gasbinwidth_national(fuelbin,t) = gasusage_national(t) * normfuelbinwidth ;
+gasbinwidth_national(fuelbin,t)$[ord(fuelbin) = 1]   = gasusage_national(t) * botfuelbinwidth ;
+gasbinwidth_national(fuelbin,t)$[ord(fuelbin)=smax(afuelbin,ord(afuelbin))]  = gasusage_national(t) * topfuelbinwidth ;
 
 *comment from heritage reeds:
 *gasbinqq is the centerpoint of each of the smaller bins and is used to determine the price of each bin. The first and last bin have
 *gasbinqqs that are just one more step before and after the smaller bins.
-Gasbinqq_regional(fuelbin,cendiv,t) =
+gasbinqq_regional(fuelbin,cendiv,t) =
    gassupply_ele(cendiv,t)  * (normfuelbinmin
     + (ord(fuelbin) - 1)*normfuelbinwidth - normfuelbinwidth / 2) ;
 
-Gasbinqq_national(fuelbin,t) =  Gasusage_national(t)  * (normfuelbinmin + (ord(fuelbin) - 1)*normfuelbinwidth - normfuelbinwidth / 2) ;
+gasbinqq_national(fuelbin,t) =  gasusage_national(t)  * (normfuelbinmin + (ord(fuelbin) - 1)*normfuelbinwidth - normfuelbinwidth / 2) ;
 
 *bins' prices are those from the supply curves
 *1e9 converts from MMBtu to Quads
-Gasbinp_regional(fuelbin,cendiv,t) =
-   round((cd_beta(cendiv,t) * (Gasbinqq_regional(fuelbin,cendiv,t) -  gassupply_ele(cendiv,t))) / 1e9,5) ;
+gasbinp_regional(fuelbin,cendiv,t) =
+   round((cd_beta(cendiv,t) * (gasbinqq_regional(fuelbin,cendiv,t) -  gassupply_ele(cendiv,t))) / 1e9,5) ;
 
-Gasbinp_national(fuelbin,t)= round(nat_beta(t)*(Gasbinqq_national(fuelbin,t) - gasusage_national(t)) / 1e9,5) ;
+gasbinp_national(fuelbin,t)= round(nat_beta(t)*(gasbinqq_national(fuelbin,t) - gasusage_national(t)) / 1e9,5) ;
 
 
 *this is the reference price of gas given last year's gas usage levels
@@ -5548,7 +5572,7 @@ gasmultterm(cendiv,t) = (cd_alpha(t,cendiv)
 parameter storage_eff(i,t) "--fraction-- round-trip efficiency of storage technologies" ;
 
 storage_eff(i,t)$storage(i) = 1 ;
-storage_eff(psh,t) = storage_eff_psh ;
+storage_eff(i,t)$psh(i) = storage_eff_psh ;
 storage_eff("ICE",t) = 1 ;
 storage_eff(i,t)$[storage(i)$plant_char0(i,t,'rte')] = plant_char0(i,t,'rte') ;
 storage_eff(i,t)$[dr1(i)$plant_char0(i,t,'rte')] = plant_char0(i,t,'rte') ;
@@ -5712,8 +5736,8 @@ cc_storage(i,sdbin)$upgrade(i) = sum{ii$upgrade_to(i,ii), cc_storage(ii,sdbin) }
 
 *fom and vom costs are constant for pumped-hydro
 *values are taken from ATB
-cost_fom(psh,v,r,t)$valcap(psh,v,r,t) = cost_fom_psh ;
-cost_vom(psh,v,r,t)$valcap(psh,v,r,t) = cost_vom_psh ;
+cost_fom(i,v,r,t)$[psh(i)$valcap(i,v,r,t)] = cost_fom_psh ;
+cost_vom(i,v,r,t)$[psh(i)$valcap(i,v,r,t)] = cost_vom_psh ;
 
 * Apply a minimum VOM cost for storage (to avoid degeneracy with curtailment)
 * Only apply the value to storage that does not have a VOM value
@@ -5774,7 +5798,11 @@ cost_upgrade('Gas-CT_H2-CT',v,r,t)$[valcap('Gas-CT_H2-CT',v,r,t)] =
 
 *H2-CC upgrades includes replacing the gas turbine capacity with a new H2-CT
 *and assumes that the gas-CC is 2/3 gas-CT and 1/3 steam turbine
-cost_upgrade('Gas-CC_H2-CT',v,r,t) = cost_cap('gas-ct',t) * [(2/3 * cost_upgrade_gasct2h2ct) + 1/3] ;
+*(The set of filters on cost_upgrades yields "Gas-CC_H2-CT", but does so in a way to capture
+*water techs when the water switch is turned on)
+cost_upgrade(i,v,r,t)$[h2_ct(i)$upgrade(i)$(not ccs(i))$valcap(i,v,r,t)
+                      $sum{ii$gas_cc(ii), upgrade_from(i,ii) }] = 
+  cost_cap('gas-ct',t) * [(2/3 * cost_upgrade_gasct2h2ct) + 1/3] ;
 
 *Override any upgrade costs computed above with exogenously specified retrofit costs
 cost_upgrade(i,v,r,t)$[upgrade(i)$plant_char0(i,t,"upgradecost")$valcap(i,v,r,t)]
@@ -6206,8 +6234,11 @@ m_rscfeas(r,i,rscbin)$sum{t, rsc_evmc(i,r,"cap",rscbin,t) } = yes;
 m_rscfeas(r,i,rscbin)$[sum{ii$tg_rsc_cspagg(ii, i),m_rscfeas(r,ii,rscbin) }
                       $sum{t$tmodel_new(t), valcap_irt(i,r,t) }] = yes ;
 m_rscfeas(r,i,rscbin)$[sum{ii$rsc_agg(ii,i),m_rscfeas(r,ii,rscbin) }$sum{t$tmodel_new(t),valcap_irt(i,r,t) }$psh(i)$Sw_WaterMain] = yes ;
-m_rsc_dat(r,i,rscbin,sc_cat)$[sum{ii$rsc_agg(ii,i),m_rsc_dat(r,ii,rscbin,sc_cat) }$sum{t$tmodel_new(t),valcap_irt(i,r,t) }$psh(i)$Sw_WaterMain] =
-  sum{ii$rsc_agg(ii,i),m_rsc_dat(r,ii,rscbin,sc_cat) } ;
+m_rsc_dat(r,i,rscbin,sc_cat)$[sum{ii$rsc_agg(ii,i), m_rsc_dat(r,ii,rscbin,sc_cat) }
+                             $sum{t$tmodel_new(t), valcap_irt(i,r,t) }
+                             $(psh(i) or csp(i))
+                             $Sw_WaterMain] =
+  sum{ii$rsc_agg(ii,i), m_rsc_dat(r,ii,rscbin,sc_cat) } ;
 
 
 set force_pcat(pcat,t) "conditional to indicate whether the force prescription equation should be active for pcat" ;

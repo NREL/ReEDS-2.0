@@ -1817,7 +1817,7 @@ def build_plot_legend(df_plots, wdg, custom_sorts, custom_colors):
     if wdg['sort_data'].value == 'Yes' and custom_sorts and series_val in custom_sorts:
         label_color = dict(zip(labels, colors))
         labels_1 = [L for L in custom_sorts[series_val] if L in labels]
-        labels_2 = [l for L in labels if L not in labels_1]
+        labels_2 = [L for L in labels if L not in labels_1]
         labels = labels_1 + labels_2
         colors = [label_color[L] for L in labels]
     #reverse order of legend

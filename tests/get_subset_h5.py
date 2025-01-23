@@ -1,15 +1,24 @@
 # /// script
 # This script can be used to take a subset of the h5 files (upv, wind-ofs, wind-ons, and csp)
 # 
-# requires-python = ">=3.10"
+# requires-python = '>=3.10'
 # dependencies = [
-#     "h5py",
-#     "numpy",
+#     'h5py',
+#     'numpy',
 # ]
 # ///
 import h5py
 import numpy as np
+import os
+import pandas as pd
 import pathlib
+import site
+
+# load h5
+this_dir_path = os.path.dirname(os.path.realpath(__file__))
+reeds_path = os.path.realpath(os.path.join(this_dir_path,'..'))
+site.addsitedir(reeds_path)
+from input_processing.ldc_prep import read_file, write_h5_file
 
 # counties in p6
 counties = [
@@ -21,84 +30,29 @@ counties = [
     'p41035',
 ]
 
+# series of paths to updated county h5 files
+rev_paths_ref = pd.Series(['/scratch/bsergi/ReEDS-2.0-2/hourlize/out/upv_reference_county/results',
+                           '/scratch/bsergi/ReEDS-2.0-2/hourlize/out/wind-ons_reference_county/results',
+                           '/scratch/bsergi/ReEDS-2.0-2/hourlize/out/wind-ofs_reference_county/results',
+                           '/kfs2/shared-projects/reeds/Supply_Curve_Data/CSP/2019_Existing/csp_none_county/results'],
+                           index=['upv','wind-ons','wind-ofs','csp']
+                        )
 
-# counties in RI & p22
-# counties = [
-#     "p44001",
-#     "p44003",
-#     "p44005",
-#     "p44007",
-#     "p44009",
-#     "p56019",
-#     "p56033",
-# ]
+# iterate over tech/path
+for idx, h5path in rev_paths_ref.items():
+    fname_in = os.path.join(h5path, idx + '.h5')
+    print(f'Reading {fname_in}')
+    f = read_file(fname_in)
+    # get region from column names (assumes 'class|region' format)
+    columns = [str(x).split('|')[1].strip('"') for x in f.columns.tolist()]
 
-## to get a subset of the upv, wind-ofs, and wind-ons data
+    # subset to counties of interest
+    mask = [x in counties for x in columns]  # Create a mask that are for the 
+    subset_f = f.loc[:, mask].copy()
 
-fname = "/Volumes/reeds/Supply_Curve_Data/UPV/2024_07_09_Standard_Scenarios/upv_reference_county/results/upv.h5"
-# fname = "/Volumes/ReEDS/Supply_Curve_Data/OFFSHORE/2024_07_23_Update/wind-ofs_reference_county/results/wind-ofs.h5"
-# fname = "/Volumes/ReEDS/Supply_Curve_Data/ONSHORE/2024_06_20_Update/wind-ons_reference_county/results/wind-ons.h5"
+    # write file back out
+    dir_out = os.path.join(this_dir_path, 'data', 'county')
+    print(f'Saving subset to {os.path.join(dir_out, idx + ".h5")}')
+    write_h5_file(subset_f, idx + '.h5', dir_out)
 
-f = h5py.File(fname, "r")
-# <KeysViewHDF5 ['cf', 'columns', 'index']>
-
-cf = f["cf"]
-cols = f["columns"]
-index = f["index"]
-columns = [str(x).split("_")[1].strip("'") for x in cols[:].tolist()]
-mask = [x in counties for x in columns]  # Create a mask that are for the 
-subset_cf = cf[:, mask]
-subset_cols = cols[:][mask]
-subset_index = index[:]
-
-
-# assert subset_cf.shape[1] == len(counties), "Not all counties found."
-
-# start here for non-csp
-output_fname = "wind-ofs.h5"
-output_fpath = pathlib.Path.cwd() / output_fname
-if output_fpath.exists():
-    output_fpath.unlink()
-
-
-# Create subset h5 file
-subset = h5py.File("wind-ofs.h5", "w")
-
-cf_data = subset.create_dataset(
-    "cf", shape=(subset_cf.shape[0], subset_cf.shape[1]), dtype=np.float16
-)
-column_data = subset.create_dataset(
-    "columns",
-    shape=(subset_cf.shape[1],),
-    data=subset_cols,
-    dtype=subset_cols.dtype
-)
-index_data = subset.create_dataset(
-    "index",
-    shape=index.shape,  # Use the original shape for the index
-    data=subset_index,  # Include the full index or subset if needed
-    dtype=index.dtype
-)
-
-cf_data.write_direct(subset_cf)
-# TODO: Maybe we need to add the index as well?
-subset.close()
- 
-
-
-## to get a subset of the csp data
-from ldc_prep import read_file, read_h5py_file
-
-fname = "/Volumes/ReEDS/Supply_Curve_Data/CSP/2019_Existing/csp_none_county/results/csp.h5"
-f = read_file(fname)
-subset_df = f.loc[:, f.columns.isin([
-    "1_p44001",
-    "1_p44003",
-    "1_p44005",
-    "1_p44007",
-    "1_p44009",
-    "1_p56019",
-    "1_p56033",
-])]
-
-subset_df.to_hdf("csp.h5", key="data", data_columns=True)
+print("Finished updated county test profiles.")

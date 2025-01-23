@@ -41,8 +41,9 @@ import traceback
 
 reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 site.addsitedir(os.path.join(reeds_path,'input_processing'))
-# import makelog after setting the module path; if it's done before, the ticker module won't be found
+site.addsitedir(os.path.join(reeds_path,'postprocessing'))
 from ticker import makelog  # noqa: E402
+import reedsplots
 
 ### Functions
 def get_marginal_damage_rates(casepath):
@@ -82,6 +83,14 @@ def get_marginal_damage_rates(casepath):
         )
         .rename(columns={'FIPS':'fips'}).set_index('fips').ba
     )
+    ## Keep county resolution if using it in this ReEDS run
+    sw = pd.read_csv(
+        os.path.join(casepath, 'inputs_case', 'switches.csv'),
+        header=None, index_col=0).squeeze(1)
+    if sw.GSw_RegionResolution != 'county':
+        pass
+    else:
+        county2zone.loc[:] = 'p'+county2zone.index.astype(str).values
 
     mds_mapped = (
         mds
@@ -156,11 +165,11 @@ for casename, casepath in casepaths.items():
         mds['md'] *=  deflator.loc[2017, 'Deflator']
 
         # read emissions data by BA
-        emit = pd.read_csv(
-            os.path.join(casepath, "outputs", "emit_r.csv"), 
-            names=['pollutant','ba','year','tons'], header=0,
+        emit = (
+            reedsplots.read_output(casepath, 'emit_r', valname='tons')
+            .rename(columns={'e':'pollutant', 'r':'ba', 't':'year'})
         )
-        
+
         # inner join with marginal damages to capture only pollutants that
         # have marginal damages and only marginal damages where there are emissions
         damages = emit.merge(mds, how="inner", on=['ba', 'pollutant'])

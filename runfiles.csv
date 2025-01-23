@@ -283,6 +283,7 @@ nuclear_subsidies.csv,inputs/state_policies/nuclear_subsidies.csv,ignore,ignore,
 nuke_fom_adj.csv,,ignore,ignore,,,,0,,,,,,,done
 numhours.csv,,ignore,ignore,,,,,0,,,,,,done
 numhours_nexth.csv,,ignore,ignore,,,,,0,,1,,,,done
+objective_function_params.yaml,tests/objective_function_params.yaml,ignore,ignore,,,,,,,,,,,done
 offshore_req.csv,inputs/state_policies/offshore_req_{GSw_OfsWindForceScen}.csv,ignore,ignore,st,,,1,0,,,,,,done
 ofstype.csv,inputs/sets/ofstype.csv,ignore,ignore,,,,,,,,,ofstype,,done
 ofstype_i.csv,inputs/sets/ofstype_i.csv,ignore,ignore,,,,,0,,,,ofstype_i,,done
@@ -347,7 +348,7 @@ r_cendiv.csv,,ignore,ignore,,,,,,,,,,,done
 r_county.csv,,ignore,ignore,,,,,,,,,,,done
 r_cs.csv,inputs/ctus/r_cs.csv,first,uniform,*r,cs,,0,0,,,,,,done
 r_cs_distance_mi.csv,inputs/ctus/r_cs_distance_mi.csv,mean,uniform,*r,cs,,0,0,,,,,,may need special handling given subset on both r and cs for now should work
-r_rr_adj.csv,inputs/transmission/r_rr_adj_{lvl}.csv,first,ignore,"*r,rr",,,0,0,,,,,,disaggfunc set to ignore because the spatial aggregation level of this file is controlled by the agglevel switch
+r_rr_adj.csv,inputs/transmission/r_rr_adj_{lvl}.csv,trans_lookup,ignore,"*r,rr",,,0,0,,,,,,disaggfunc set to ignore because the spatial aggregation level of this file is controlled by the agglevel switch
 ramprate.csv,inputs/plant_characteristics/ramprate.csv,ignore,ignore,,,,,0,,,,,,done
 ramptime.csv,inputs/reserves/ramptime.csv,ignore,ignore,,,,,0,,,,,,done
 rb.csv,,first,ignore,0,,,0,,,1,,,,disaggfunc set to ignore because this file is specifically a collection of all valid BA regions
@@ -485,15 +486,14 @@ inputs.gdx,,ignore,ignore,,,,,0,,,,,,done
 plexos_inputs.gdx,,ignore,ignore,,,,,0,,,,,,done
 load_hourly.h5,inputs/load/{GSw_EFS1_AllYearLoad}_load_hourly.h5,sum,population,wide,"year,hour",,1,keepindex,,,,,,done
 load.h5,,sum,ignore,wide,"year,hour",,1,keepindex,,1,,,,Disaggregation handled in ldc_prep.py
-recf.h5,,recf,ignore,wide,index,index,1,keepindex,,1,,,,done
-csp.h5,,csp,ignore,wide,index,index,1,keepindex,,1,,,,done
-recf_csp.h5,inputs/variability/multi_year/csp-none_{lvl}.h5,csp,ignore,wide,index,,1,keepindex,,,,,,done
-recf_dupv.h5,inputs/variability/multi_year/dupv_ba.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_wind-ofs.h5,inputs/variability/multi_year/wind-ofs-{GSw_SitingWindOfs}_{lvl}.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_wind-ons.h5,inputs/variability/multi_year/wind-ons-{GSw_SitingWindOns}_{lvl}.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_upv.h5,inputs/variability/multi_year/upv-{GSw_SitingUPV}_{lvl}.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_upv_140AC.h5,inputs/variability/multi_year/upv_140AC-reference_ba.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
-recf_upv_220AC.h5,inputs/variability/multi_year/upv_220AC-reference_ba.h5,recf,ignore,wide,index,,1,keepindex,,,,,,done
+recf.h5,,recf,ignore,wide,datetime,,1,keepindex,,1,,,,done
+csp.h5,,csp,ignore,wide,datetime,,1,keepindex,,1,,,,done
+recf_csp.h5,inputs/variability/multi_year/csp-none_{lvl}.h5,csp,ignore,wide,datetime,,1,keepindex,,,,,,done
+recf_wind-ofs.h5,inputs/variability/multi_year/wind-ofs-{GSw_SitingWindOfs}_{lvl}.h5,recf,ignore,wide,datetime,,1,keepindex,,,,,,done
+recf_wind-ons.h5,inputs/variability/multi_year/wind-ons-{GSw_SitingWindOns}_{lvl}.h5,recf,ignore,wide,datetime,,1,keepindex,,,,,,done
+recf_upv.h5,inputs/variability/multi_year/upv-{GSw_SitingUPV}_{lvl}.h5,recf,ignore,wide,datetime,,1,keepindex,,,,,,done
+recf_upv_140AC.h5,inputs/variability/multi_year/upv_140AC-reference_ba.h5,recf,ignore,wide,datetime,,1,keepindex,,,,,,done
+recf_upv_220AC.h5,inputs/variability/multi_year/upv_220AC-reference_ba.h5,recf,ignore,wide,datetime,,1,keepindex,,,,,,done
 gswitches.txt,,ignore,ignore,,,,,0,,,,,,done
 scalars.txt,,ignore,ignore,,,,,0,,,,,,done
 Augur.py,Augur.py,ignore,ignore,,,,,,,,,,,done

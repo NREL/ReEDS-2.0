@@ -9,6 +9,7 @@ import os
 import site
 import traceback
 import sys
+import h5py
 
 # Third-party packages
 import numpy as np
@@ -17,13 +18,34 @@ import gdxpds
 
 
 #%% Generic functions
-def get_dtype(col):
+def get_dtype(col, df=None):
     if col.lower() == "value":
         return np.float32
     elif col in ["t", "allt"]:
         return np.uint16
     else:
-        return "category"
+        maxlength = df[col].str.len().max()
+        return f"S{maxlength}"
+
+
+def make_columns_unique(df):
+    """
+    Rename columns in place to avoid duplicates.
+    Example: [*,*,r,*,t,Value] becomes [*,*.1,r,*.2,t,Value].
+    """
+    duplicated = df.columns.duplicated()
+    if any(duplicated):
+        columns_old = df.columns
+        columns_new = []
+        times_used = {}
+        for i, column in enumerate(columns_old):
+            if not duplicated[i]:
+                columns_new.append(column)
+            else:
+                times_used[column] = times_used.get(column, 1)
+                columns_new.append(f'{column}.{times_used[column]}')
+                times_used[column] += 1
+        df.columns = columns_new
 
 
 def dfdict_to_csv(dfdict, filepath, symbol_list=None, rename=dict(), decimals=6):
@@ -65,6 +87,71 @@ def dfdict_to_csv(dfdict, filepath, symbol_list=None, rename=dict(), decimals=6)
         df_out.round(decimals).to_csv(os.path.join(filepath, f"{file_out}.csv"), index=False)
 
 
+def write_to_h5(
+    df,
+    key,
+    filepath,
+    overwrite=False,
+    drop_ctypes=False,
+    verbose=0,
+    compression='gzip',
+    compression_opts=4,
+    **kwargs,
+):
+    """
+    Write a dataframe of GAMS outputs to a .h5 file.
+    This function only works for long dataframes where the single column
+    of numeric data is named "Value".
+    A group of name {key} is created in the .h5 file at {filepath} and each column
+    in {df} is written to its own dataset.
+    String columns need to be decoded when read.
+    """
+    dfwrite = df.copy()
+    if not len(dfwrite):
+        if verbose:
+            print(f'{key} dataframe is empty, so it was not written to {filepath}')
+        return dfwrite
+    ## Sets have `c_bool(True)` as the value for every entry, so just
+    ## drop the Value column if it's a set
+    if (
+        drop_ctypes
+        and ("Value" in dfwrite)
+        and isinstance(dfwrite.Value.values[0], ctypes.c_bool)
+    ):
+        dfwrite.drop("Value", axis=1, inplace=True)
+    ## Make column names unique (necessary if '*' is overused)
+    make_columns_unique(dfwrite)
+    ## Normalize column data types
+    dfwrite = dfwrite.astype({col: get_dtype(col, dfwrite) for col in dfwrite})
+    ### Write to .h5 file
+    with h5py.File(filepath, 'a') as f:
+        if (key in list(f)):
+            if overwrite:
+                del f[key]
+            else:
+                raise ValueError(f'{key} is already used in {filepath}')
+
+        group = f.create_group(key)
+        ## Write columns to maintain order
+        group.create_dataset(
+            'columns',
+            data=dfwrite.columns,
+            dtype=f"S{dfwrite.columns.str.len().max()}",
+        )
+        ## Write data
+        for col in dfwrite:
+            group.create_dataset(
+                col,
+                data=dfwrite[col],
+                dtype=dfwrite.dtypes[col],
+                compression=compression,
+                compression_opts=compression_opts,
+                **kwargs,
+            )
+
+    return dfwrite
+
+
 def dfdict_to_h5(
     dfdict,
     filepath,
@@ -90,24 +177,14 @@ def dfdict_to_h5(
                 f"{_filepath} already exists; to overwrite set overwrite=True"
             )
     ### iterate over symbols and add to .h5 file
-
     for key in _symbol_list:
         try:
-            df = dfdict[key].copy()
-            ## Sets have `c_bool(True)` as the value for every entry, so just
-            ## drop the Value column if it's a set
-            if "Value" in df:
-                if len(df) and (type(df.Value.values[0]) == ctypes.c_bool):
-                    df = df.drop("Value", axis=1)
-            df = df.astype({col: get_dtype(col) for col in df})
-            df.to_hdf(
-                _filepath,
+            write_to_h5(
+                df=dfdict[key],
                 key=rename.get(key, key),
-                mode="a",
-                index=False,
-                format="table",
-                complevel=4,
-                **kwargs,
+                filepath=_filepath,
+                overwrite=overwrite,
+                drop_ctypes=True,
             )
         except Exception as err:
             print(key)
@@ -154,8 +231,9 @@ def dfdict_to_excel(
 
 def write_dfdict(
     dfdict,
-    filepath,
-    filetype="csv",
+    outputs_path,
+    write_csv=False,
+    write_xlsx=False,
     overwrite=True,
     symbol_list=None,
     rename=dict(),
@@ -169,37 +247,27 @@ def write_dfdict(
     * To read single dataframes from the resulting .h5 file, use:
       `pd.read_hdf('path/to/outputs.h5', 'cap')` (for example)
     """
-    ### Overwrite filetype if necessary
-    if filepath.endswith(".h5") or filepath.endswith(".xlsx"):
-        _filetype = os.path.splitext(filepath)[1].strip(".")
-    else:
-        _filetype = filetype.strip(".")
-    ### Format filepath
-    _dotfiletype = "." + _filetype
-    _filepath = filepath if filepath.endswith(_dotfiletype) else filepath + _dotfiletype
-
-    ### Run it
-    if _filetype == "csv":
+    ## Always write the h5
+    dfdict_to_h5(
+        dfdict=dfdict,
+        filepath=os.path.join(outputs_path, 'outputs.h5'),
+        overwrite=overwrite,
+        symbol_list=symbol_list,
+        rename=rename,
+        errors=errors,
+        **kwargs,
+    )
+    if write_csv:
         dfdict_to_csv(
             dfdict=dfdict,
-            filepath=filepath,
+            filepath=outputs_path,
             symbol_list=symbol_list,
             rename=rename,
         )
-    elif _filetype == "h5":
-        dfdict_to_h5(
-            dfdict=dfdict,
-            filepath=_filepath,
-            overwrite=overwrite,
-            symbol_list=symbol_list,
-            rename=rename,
-            errors=errors,
-            **kwargs,
-        )
-    elif _filetype == "xlsx":
+    if write_xlsx:
         dfdict_to_excel(
             dfdict=dfdict,
-            filepath=_filepath,
+            filepath=os.path.join(outputs_path, 'outputs.xlsx'),
             overwrite=overwrite,
             symbol_list=symbol_list,
             rename=rename,
@@ -280,25 +348,16 @@ if __name__ == '__main__':
         description="Convert ReEDS run results from gdx to specified filetype"
     )
     parser.add_argument("runname", help="ReEDS scenario name")
-    parser.add_argument(
-        "--filetype",
-        "-f",
-        type=str,
-        default="csv",
-        choices=["csv", "h5", "xlsx"],
-        help="filetype to write",
-    )
+    parser.add_argument('--csv', '-c', action='store_true', help='write csv files')
+    parser.add_argument('--xlsx', '-x', action='store_true', help='write xlsx file')
 
     args = parser.parse_args()
     runname = args.runname
-    filetype = args.filetype
+    write_csv = args.csv
+    write_xlsx = args.xlsx
 
     # #%% Inputs for debugging
-    # runname = os.path.expanduser('~/github/ReEDS-2.0/runs/v20230620_ereportM0_USA')
-    # runname = (
-    #     '/Volumes/ReEDS/FY22-NTP/Candidates/Archive/ReEDSruns/20230719/'
-    #     'v20230719_ntpH0_AC_DemMd_90by2035EP__core')
-    # filetype = 'csv'
+    # runname = os.path.expanduser('~/github2/ReEDS-2.0/runs/v20260106_h5M0_Pacific')
 
     #%% Set up logger
     reeds_path = os.path.abspath(os.path.dirname(__file__))
@@ -312,7 +371,7 @@ if __name__ == '__main__':
     print("Starting e_report_dump.py")
 
     # %%### Parse inputs and get switches
-    outpath = os.path.join(runname, "outputs")
+    outputs_path = os.path.join(runname, "outputs")
 
     ### Get switches
     sw = pd.read_csv(
@@ -334,14 +393,15 @@ if __name__ == '__main__':
     ### outputs gdx
     print("Loading outputs gdx")
     dict_out = gdxpds.to_dataframes(
-        os.path.join(outpath, f"rep_{os.path.basename(runname)}.gdx")
+        os.path.join(outputs_path, f"rep_{os.path.basename(runname)}.gdx")
     )
     print("Finished loading outputs gdx")
 
     write_dfdict(
-        dict_out,
-        filepath=(outpath if filetype == "csv" else os.path.join(outpath, "outputs")),
-        filetype=filetype,
+        dfdict=dict_out,
+        outputs_path=outputs_path,
+        write_csv=write_csv,
+        write_xlsx=write_xlsx,
         rename=rename,
     )
 
@@ -349,14 +409,13 @@ if __name__ == '__main__':
     if int(sw.GSw_calc_powfrac):
         print("Loading powerfrac gdx")
         dict_powerfrac = gdxpds.to_dataframes(
-            os.path.join(outpath, f"rep_powerfrac_{os.path.basename(runname)}.gdx")
+            os.path.join(outputs_path, f"rep_powerfrac_{os.path.basename(runname)}.gdx")
         )
         print("Finished loading powerfrac gdx")
 
         dfdict_to_csv(
             dict_powerfrac,
-            (outpath if filetype == "csv" else os.path.join(outpath, "rep_powerfrac")),
-            filetype=filetype,
+            outputs_path=outputs_path,
             rename=rename,
         )
 
@@ -366,7 +425,7 @@ if __name__ == '__main__':
         dfin_timestamp = timeslice_to_timestamp(runname, 'h2_price_h')
         dfout_month = timestamp_to_month(dfin_timestamp)
         dfout_month.rename(columns={'Value':'$2004/kg'}).to_csv(
-            os.path.join(outpath, 'h2_price_month.csv'), index=False)
+            os.path.join(outputs_path, 'h2_price_month.csv'), index=False)
     except Exception:
         if int(sw.GSw_H2):
             print(traceback.format_exc())

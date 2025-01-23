@@ -365,7 +365,14 @@ if(Sw_GrowthPenalties > 0,
     cost_growth(i,st,t)$cost_growth(i,st,t) = round(cost_growth(i,st,t),3) ;
 ) ;
 
-* --- report data immediately before the solve statement---
+* Write the inputs for debugging and error checks:
+* Always write data for the first solve year (currently always 2010).
+* Overwrites the versions written by d_solveprep.gms and d1_temporal_params.gms.
+$ifthene.write %cur_year%=2010
+execute_unload 'inputs_case%ds%inputs.gdx' ;
+$endif.write
+
+* If using debug mode, write the inputs for every solve year
 $ifthene.debug %debug%>0
 execute_unload 'alldata_%stress_year%.gdx' ;
 $endif.debug

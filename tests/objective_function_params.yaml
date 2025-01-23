@@ -1,0 +1,289 @@
+### Notes
+# This file holds parameters used in the objective function. These parameters
+# are checked using input_processing/check_inputs.py, which will identify missing
+# values in the parameters if there are any.
+
+# Instructions:
+
+# The first (non-indented value) is the parameter name used in GAMS (e.g., cost_cap)
+
+  # indexsets: list of index sets for which each parameter should have values.
+  # If multiple sets are listed, it will check the parameter against the inner-joined
+  # index sets. For example, indexsets = ['valinv', 'rsc_i'] is the same as
+  # $[valinv(i,v,r,t)$rsc_i(i)] in GAMS.
+
+  # excludesets: list of index sets for which each parameter need not have values.
+  # For example, excluding csp is equivalent to $(not csp(i)) in GAMS, and elements
+  # of the csp set will not be checked for values.
+
+  # skip: elements of a set that should be skipped. First the set is named, followed
+  # by the elements of that set that are to be skipped. For example, for the
+  # parameter cost_prod, the "electrolyzer" element of the i set is to be skipped
+  # (because it has an explicitly defined cost of $0/MWh and would appear to be
+  # empty).
+
+  # switchon: Indicates a switch setting that will turn on checking this parameter.
+  # For example, "GSw_GasCurve: 3" in this file is the equivalent of
+  # $(GSw_GasCurve = 3) in GAMS.
+  # If no switchon is provided, the parameter will always be checked.
+
+# Note that in many cases the specific configuration here does not match the GAMS
+# code. For example, the check for cost_cap excludes hydro and psh, even though
+# those are not explicitly excluded in c_supplyobjective.gms. When values are
+# known to be zero they must be excluded otherwise they will be flagged as missing
+# (GAMS does not hold zero values, so values explicitly set to zero will appear
+# the same as missing values).
+
+# The ordering of parameters here should follow the ordering in c_supplyobjective.gms.
+# Most general-purpose parameters used in the objective function should be added to
+# this file. Parameters that are primarily user-defined or that define their own scope
+# without the use of separate index sets are not tested here. Examples of such skipped
+# parameters are:
+  # cost_growth(i,st,t)
+  # growth_penalty(gbin)
+  # cost_opres(i,ortype,t)
+  # dac_gas_cons_rate("dac_gas",v,t)
+  # cost_hurdle(r,rr,t)
+  # co2_captured_incentive(i,v,r,t)
+  # ptc_value_scaled(i,v,t)
+  # h2_ptc("electrolyzer",v,r,t)
+
+### Investment component
+cost_cap:
+  indexsets:
+  - valinv
+  excludesets:
+  - hydro
+  - psh
+cost_cap_fin_mult:
+  indexsets:
+  - valinv
+cap_penalty:
+  indexsets:
+  - cap_limit
+cost_upgrade:
+  indexsets:
+  - valcap
+  - upgrade
+m_rsc_dat("cost"):
+  indexsets:
+  - valinv
+  - m_rscfeas
+  - rsc_i
+  excludesets:
+  - spur_techs
+  skip:
+    sc_cat:
+    - cap
+    - cost_cap
+    - cost_trans
+rsc_fin_mult:
+  indexsets:
+  - valinv
+  - rsc_i
+rsc_dr:
+  indexsets:
+  - valinv
+  - m_rscfeas
+  - dr
+  skip:
+    sc_cat:
+    - cap
+rsc_evmc:
+  indexsets:
+  - valinv
+  - m_rscfeas
+  - evmc
+  skip:
+    sc_cat:
+    - cap
+spurline_cost:
+  indexsets:
+  - xfeas
+  switchon:
+    Sw_SpurScen: 1
+transmission_line_capcost:
+  indexsets:
+  - routes
+trans_cost_cap_fin_mult:
+  indexsets:
+  - t
+m_watsc_dat:
+  indexsets:
+  - i_wst
+  - valinv
+  switchon:
+    Sw_WaterMain: 1
+cost_cap_up:
+  indexsets:
+  - allow_cap_up
+cost_ener_up:
+  indexsets:
+  - allow_ener_up
+cost_h2_transport_cap:
+  indexsets:
+  - h2_routes_inv
+cost_h2_storage_cap:
+  indexsets:
+  - h2_stor_r
+cost_co2_pipeline_cap:
+  indexsets:
+  - co2_routes
+cost_co2_spurline_cap:
+  indexsets:
+  - r_cs
+  - csfeas
+
+### Operational component
+cost_vom:
+  indexsets:
+  - valgen
+  excludesets:
+  - geo
+  - vre
+  - canada
+cost_vom_pvb_p:
+  indexsets:
+  - valgen
+  - storage_hybrid
+  excludesets:
+  - csp
+cost_vom_pvb_b:
+  indexsets:
+  - valgen
+  - storage_hybrid
+  excludesets:
+  - csp
+cost_fom:
+  indexsets:
+  - valcap
+  excludesets:
+  - canada
+  - distpv
+transmission_line_fom:
+  indexsets:
+  - routes
+m_rsc_dat("cost_trans"):
+  indexsets:
+  - valcap
+  - m_rscfeas
+  - rsc_i
+  excludesets:
+  - spur_techs
+  - sccapcosttech
+  skip:
+    sc_cat:
+    - cap
+    - cost
+    - cost_cap
+fuel_price:
+  indexsets:
+  - valgen
+  - heat_rate
+  excludesets:
+  - gas
+  - bio
+  - cofire
+  - lfill
+heat_rate:
+  indexsets:
+  - valgen
+  excludesets:
+  - rsc_i
+  - storage
+  - canada
+gasprice:
+  indexsets:
+  - r_cendiv
+  switchon:
+    GSw_GasCurve: 0
+gasadder_cd:
+  indexsets:
+  - r_cendiv
+  switchon:
+    GSw_GasCurve: 3
+gasprice_nat_bin:
+  indexsets:
+  - t
+  switchon:
+    GSw_GasCurve: 3
+gasmultterm:
+  indexsets:
+  - r_cendiv
+  switchon:
+    GSw_GasCurve: 1
+szn_adj_gas:
+  indexsets:
+  - h
+  switchon:
+    GSw_GasCurve: 1
+cendiv_weights:
+  indexsets:
+  - r_cendiv
+  switchon:
+    GSw_GasCurve: 1
+gasbinp_regional:
+  indexsets:
+  - t
+  switchon:
+    GSw_GasCurve: 1
+  skip:
+    t:
+    - '2010'
+gasbinp_national:
+  indexsets:
+  - t
+  switchon:
+    GSw_GasCurve: 1
+  skip:
+    t:
+    - '2010'
+# NOTE: The following only checks if there's an entry for each usda_region. It doesn't
+# check if every bioclass in each usda_region with nonzero cap also has nonzero price.
+biosupply:
+  indexsets:
+  - r_usda
+capture_rate("CO2"):
+  indexsets:
+  - valgen
+  - ccs
+  switchon:
+    Sw_CCS: 1
+cost_prod:
+  indexsets:
+  - valcap
+  - consume
+  skip:
+    i:
+    - electrolyzer
+cost_h2_transport_fom:
+  indexsets:
+  - h2_routes_inv
+cost_h2_storage_fom:
+  indexsets:
+  - h2_stor_r
+prod_conversion_rate:
+  indexsets:
+  - valcap
+  - i_p
+cost_co2_pipeline_fom:
+  indexsets:
+  - co2_routes
+cost_co2_spurline_fom:
+  indexsets:
+  - r_cs
+  - csfeas
+cost_co2_stor_bec:
+  indexsets:
+  - r_cs
+storage_eff_pvb_g:
+  indexsets:
+  - pvb
+  - valgen
+  switchon:
+    Sw_PVB: 1
+acp_price:
+  indexsets:
+  - RecPerc
+  excludesets:
+  - acp_disallowed

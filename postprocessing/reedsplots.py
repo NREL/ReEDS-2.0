@@ -13,6 +13,7 @@ import geopandas as gpd
 import shapely
 import cmocean
 import plots
+import h5py
 
 os.environ['PROJ_NETWORK'] = 'OFF'
 
@@ -42,10 +43,113 @@ zone_label_offset = {
 
 
 ### Functions
-def get_hierarchy(case=None, country='USA'):
+def read_output(case, filename, valname=None):
+    """
+    Read a ReEDS output csv file or a key from outputs.h5.
+    If outputs.h5 doesn't exist, falls back to outputs/{filename}.csv file.
+
+    Args:
+        case: Path to a single ReEDS run folder
+        filename: Name of a ReEDS output (e.g. 'cap', 'tran_out').
+            If filename ends with '.csv', always read the .csv version.
+            Otherwise, read the {filename} key from {case}/outputs/outputs.h5.
+        valname (optional): If provided, rename 'Value' column to {valname}
+    
+    Returns:
+        pd.DataFrame
+    """
+    h5path = os.path.join(case, 'outputs', 'outputs.h5')
+    if os.path.exists(h5path) and not filename.endswith('.csv'):
+        key = os.path.basename(filename)
+        try:
+            with h5py.File(h5path, 'r') as f:
+                columns = [i.decode() for i in list(f[key]['columns'])]
+                df = pd.DataFrame({col: f[key][col] for col in columns})
+            for col in df:
+                if df[col].dtype == 'O':
+                    df[col] = df[col].str.decode('utf-8')
+        except KeyError:
+            ## Empty dataframes aren't written to h5 file, so make one ourselves
+            e_report_params = pd.read_csv(
+                os.path.join(case, 'e_report_params.csv'), comment='#',
+            )
+            _index = e_report_params.loc[
+                e_report_params.param.map(lambda x: x.split('(')[0]) == key,
+                'param'
+            ].squeeze()
+            if not len(_index):
+                raise KeyError(f"{filename} is not in {h5path}")
+            index = _index.split('(')[-1].strip(')').split(',')
+            df = pd.DataFrame(columns=index+['Value'])
+    else:
+        _filename = filename if filename.endswith('.csv') else filename + '.csv'
+        df = pd.read_csv(os.path.join(case, 'outputs', _filename))
+
+    if valname is not None:
+        df = df.rename(columns={'Value':valname})
+    df = df.rename(columns={'allh':'h', 'eall':'e'})
+    to_retype = df.dtypes.loc[df.dtypes == 'category'].index
+    for col in to_retype:
+        if col in df:
+            df = df.astype({col:str})
+
+    return df
+
+
+def get_report_sheetmap(case):
+    """
+    Create a dictionary of report.xlsx fields to excel sheet names
+    """
+    import openpyxl
+    excel = openpyxl.load_workbook(
+        os.path.join(case,'outputs','reeds-report','report.xlsx'),
+        read_only=True, keep_links=False)
+    sheets = excel.sheetnames
+    val2sheet = dict(zip([sheet.split('_', maxsplit=1)[-1] for sheet in sheets], sheets))
+    return val2sheet
+
+
+def read_report(case, sheet=None, val2sheet=None, reportname='reeds-report'):
+    """
+    Read a ReEDS bokeh report.xlsx.
+
+    Args:
+        case: Path to a single ReEDS run folder
+        sheet: Name of a sheet from report.xlsx (written by bokeh).
+            If sheet is a sheet name (with or without leading number), return that sheet.
+            If sheet is None, return a dictionary of all sheets.
+        val2sheet: Dictionary produced by get_report_sheetmap(). Keys are sheet names
+            without leading numbers; values are full sheet names.
+        reportname: directory of bokeh outputs (e.g. 'reeds-report', 'reeds-report-reduced')
+    
+    Returns:
+        pd.DataFrame (if sheet is not None) else dict of dataframes
+    """
+    if val2sheet is None:
+        val2sheet = get_report_sheetmap(case)
+    if sheet is None:
+        dfout = {}
+        for val, sheet in val2sheet.items():
+            dfout[val] = pd.read_excel(
+                os.path.join(case,'outputs',reportname,'report.xlsx'),
+                sheet_name=sheet, engine='openpyxl',
+            ).drop('scenario', axis=1, errors='ignore')
+    else:
+        _sheet = val2sheet.get(sheet,sheet)
+        dfout = pd.read_excel(
+            os.path.join(case,'outputs',reportname,'report.xlsx'),
+            sheet_name=_sheet, engine='openpyxl',
+        ).drop('scenario', axis=1, errors='ignore')
+    return dfout
+
+
+def get_hierarchy(case=None, original=False, country='USA'):
     """Get hierarchy for ReEDs case if provided, or for country if case not provided"""
     if case:
-        filepath = os.path.join(case,'inputs_case','hierarchy_original.csv')
+        if original:
+            filepath = os.path.join(case,'inputs_case','hierarchy_original.csv')
+        else:
+            filepath = os.path.join(case,'inputs_case','hierarchy.csv')
     else:
         filepath = os.path.join(reeds_path, 'inputs', 'hierarchy.csv')
     hierarchy = (
@@ -54,8 +158,7 @@ def get_hierarchy(case=None, country='USA'):
         .set_index('r')
         .drop(columns=['st_interconnect'], errors='ignore')
     )
-    if not case:
-        hierarchy = hierarchy.loc[hierarchy.country.str.lower() == country.lower()].copy()
+    hierarchy = hierarchy.loc[hierarchy.country.str.lower() == country.lower()].copy()
     return hierarchy
 
 
@@ -76,7 +179,7 @@ def get_zonemap(case=None):
         sw['GSw_RegionResolution'] = 'ba'
 
     if sw.GSw_RegionResolution != 'county':
-        hierarchy = get_hierarchy(case)
+        hierarchy = get_hierarchy(case, original=True)
         ### Model zones
         dfba = (
             gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','US_PCA'))
@@ -96,9 +199,7 @@ def get_zonemap(case=None):
         dfba['centroid_y'] = dfba.geometry.centroid.y
 
     else:
-        hierarchy = pd.read_csv(
-            os.path.join(case,'inputs_case','hierarchy.csv')
-        ).rename(columns={'*r':'r','ba':'r'}).set_index('r')
+        hierarchy = get_hierarchy(case, original=False)
         ### Get the county map
         crs = 'ESRI:102008'
         dfba = gpd.read_file(
@@ -115,7 +216,7 @@ def get_zonemap(case=None):
             dtype={"STATEFP":"string"}, header=0)
         state_fips = state_fips.loc[state_fips['CONUS'], :]
         dfba = dfba.merge(state_fips, on="STATEFP")
-        dfba = dfba[['rb', 'NAMELSAD', 'STATE_x', 'geometry']].set_index('rb')
+        dfba = dfba[['rb', 'NAMELSAD', 'STATE_x', 'geometry']].set_index('rb').loc[hierarchy.index]
 
         ## Use the centroid for both the transmission endpoint and centroid
         for prefix in ['','centroid_']:
@@ -133,7 +234,7 @@ def get_zonemap(case=None):
 
 def get_dfmap(case=None):
     """Get dictionary of maps at different hierarchy levels"""
-    hierarchy = get_hierarchy(case).drop(columns=['aggreg'], errors='ignore')
+    hierarchy = get_hierarchy(case, original=True).drop(columns=['aggreg'], errors='ignore')
 
     mapsfile = os.path.join(str(case), 'inputs_case', 'maps.gpkg')
     if os.path.exists(mapsfile):
@@ -201,22 +302,8 @@ def simplify_techs(techs, condense_upgrades=True):
     return techs_renamed
 
 
-def get_report_sheetmap(case):
-    """
-    Create a dictionary of report.xlsx fields to excel sheet names
-    """
-    import openpyxl
-    excel = openpyxl.load_workbook(
-        os.path.join(case,'outputs','reeds-report/report.xlsx'),
-        read_only=True, keep_links=False)
-    sheets = excel.sheetnames
-    val2sheet = dict(zip([sheet.split('_', maxsplit=1)[-1] for sheet in sheets], sheets))
-    return val2sheet
-
-
 def read_pras_results(filepath):
     """Read a run_pras.jl output file"""
-    import h5py
     with h5py.File(filepath, 'r') as f:
         keys = list(f)
         df = pd.concat({c: pd.Series(f[c][...]) for c in keys}, axis=1)
@@ -430,10 +517,7 @@ def plotdiff(
     sheet = val2sheet[val]
 
     ### Load the data
-    dfbase = pd.read_excel(
-        os.path.join(casebase,'outputs','reeds-report/report.xlsx'),
-        sheet_name=sheet, engine='openpyxl',
-    ).rename(columns={'trtype':'type'})
+    dfbase = read_report(casebase, sheet, val2sheet).rename(columns={'trtype':'type'})
 
     if colorcol[val] == 'dummy':
         dfbase['dummy'] = 'dummy'
@@ -444,10 +528,7 @@ def plotdiff(
             fixval = fixcol[val][col]
         dfbase = dfbase.loc[dfbase[col] == fixval].copy()
 
-    dfcomp = pd.read_excel(
-        os.path.join(casecomp,'outputs','reeds-report/report.xlsx'),
-        sheet_name=sheet, engine='openpyxl',
-    ).rename(columns={'trtype':'type'})
+    dfcomp = read_report(casecomp, sheet, val2sheet).rename(columns={'trtype':'type'})
     
     if colorcol[val] == 'dummy':
         dfcomp['dummy'] = 'dummy'
@@ -471,8 +552,9 @@ def plotdiff(
     dfcomp = dfcomp.loc[dfcomp[xcol[val]].isin(shared_x)].copy()
 
     ### Take the diff
-    dfdiff = dfbase.drop(['scenario'],axis=1).merge(
-        dfcomp.drop(['scenario'],axis=1), on=[colorcol[val],xcol[val]], how='outer',
+    dfdiff = dfbase.drop(['scenario'], axis=1, errors='ignore').merge(
+        dfcomp.drop(['scenario'], axis=1, errors='ignore'),
+        on=[colorcol[val],xcol[val]], how='outer',
         suffixes=('_base','_comp')).fillna(0)
     dfdiff['{}_diff'.format(ycol[val])] = (
         dfdiff['{}_comp'.format(ycol[val])] - dfdiff['{}_base'.format(ycol[val])])
@@ -693,9 +775,7 @@ def plot_trans_diff(
     dfmap = get_dfmap(casebase)
     dfba = dfmap['r']
     dfstates = dfmap['st']
-    hierarchy = pd.read_csv(
-        os.path.join(casebase,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(casebase)
     for col in hierarchy:
         dfba[col] = dfba.index.map(hierarchy[col])
     hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
@@ -717,12 +797,7 @@ def plot_trans_diff(
     cases = {'base': casebase, 'comp': casecomp}
     tran_out = {}
     for case in cases:
-        tran_out[case] = (
-            pd.read_csv(os.path.join(cases[case],'outputs','tran_out.csv'))
-            .rename(columns={
-                'Dim1':'r','Dim2':'rr','Dim3':'trtype','Dim4':'t','Val':'MW','Value':'MW',
-            })
-        )
+        tran_out[case] = read_output(cases[case], 'tran_out', valname='MW')
         if simpletypes is None:
             dicttran = {
                 i: tran_out[case].loc[tran_out[case].trtype==i].set_index(['r','rr','t']).MW
@@ -916,9 +991,7 @@ def plot_trans_onecase(
     dfmap = get_dfmap(case)
     dfba = dfmap['r']
     dfstates = dfmap['st']
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
     ## Aggregate zones if necessary
     dfzones = dfba.copy()
     if level not in ['r','rb']:
@@ -947,10 +1020,7 @@ def plot_trans_onecase(
 
     ### Load run-specific output data
     if dfin is None:
-        tran_out = pd.read_csv(
-            os.path.join(case,'outputs','tran_out.csv'),
-            header=0, names=['r','rr','trtype','t','MW'],
-        )
+        tran_out = read_output(case, 'tran_out', valname='MW')
         ## If necessary, subset to interregional lines
         if crossing_level != 'r':
             tran_out = tran_out.loc[
@@ -1011,10 +1081,7 @@ def plot_trans_onecase(
 
     ## Load VSC converter capacity if necessary
     if show_converters and ('VSC' in dfplot.trtype.unique()):
-        dfin = pd.read_csv(
-            os.path.join(case,'outputs','cap_converter_out.csv'),
-            header=0,  names=['r','t','MW'], dtype={'r':str, 't':int, 'MW':float},
-        )
+        dfin = read_output(case, 'cap_converter_out', valname='MW')
         dfconverter = dfba.merge(
             dfin.loc[dfin.t==year], left_index=True, right_on='r'
         )
@@ -1210,14 +1277,8 @@ def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path,
     dfstates = dfmap['st']
 
     ### Load the data, sum over hours
-    dfbase = pd.read_csv(
-        os.path.join(casebase,'outputs',val+'.csv'),
-        names=ycols[val], header=0,
-    )
-    dfcomp = pd.read_csv(
-        os.path.join(casecomp,'outputs',val+'.csv'),
-        names=ycols[val], header=0,
-    )
+    dfbase = read_output(casebase, val, valname=valcol)
+    dfcomp = read_output(casecomp, val, valname=valcol)
 
     ### Drop the tails
     dfbase.i = dfbase.i.str.strip('_0123456789').str.lower()
@@ -1343,20 +1404,14 @@ def plot_trans_vsc(
     dfstates = dfmap['st']
 
     ### Load converter capacity
-    dfin = pd.read_csv(
-        os.path.join(case,'outputs','cap_converter_out.csv'),
-        header=0,  names=['r','t','MW'], dtype={'r':str, 't':int, 'MW':float},
-    )
+    dfin = read_output(case, 'cap_converter_out', valname='MW')
     dfconverter = dfba.merge(
         dfin.loc[dfin.t==year], left_index=True, right_on='r'
     ).rename(columns={'MW':'GW'})
     dfconverter.GW /= 1000
 
     ### Load transmission capacity
-    tran_out = pd.read_csv(
-        os.path.join(case,'outputs','tran_out.csv'),
-        header=0, names=['r','rr','trtype','t','MW'],
-    )
+    tran_out = read_output(case, 'tran_out', valname='MW')
 
     dfplot = tran_out.copy()
     dfplot = dfplot.loc[
@@ -1445,25 +1500,25 @@ def plot_transmission_utilization(
     hcol = 'h'
     if any([k in network.lower() for k in ['h2','hydrogen']]):
         dftrans = {
-            'trans_cap': pd.read_csv(os.path.join(case,'outputs','h2_trans_cap.csv')),
-            'trans_flow_power': pd.read_csv(os.path.join(case,'outputs','h2_trans_flow.csv')),
+            'trans_cap': read_output(case, 'h2_trans_cap'),
+            'trans_flow_power': read_output(case, 'h2_trans_flow'),
         }
         title = f'{plottype.title()} utilization [fraction]'
         add_other_direction = True
     elif any([k in network.lower() for k in ['stress','prm','peak','resource adequacy']]):
         dftrans = {
-            'trans_cap': pd.read_csv(os.path.join(case,'outputs','tran_cap_prm.csv')),
+            'trans_cap': read_output(case, 'tran_cap_prm'),
         }
         if int(sw.GSw_PRM_CapCredit):
-            dftrans['trans_flow_power'] = pd.read_csv(os.path.join(case,'outputs','captrade.csv'))
+            dftrans['trans_flow_power'] = read_output(case, 'captrade')
             hcol = 'ccseason'
         else:
-            dftrans['trans_flow_power'] = pd.read_csv(os.path.join(case,'outputs','tran_flow_stress.csv'))
+            dftrans['trans_flow_power'] = read_output(case, 'tran_flow_stress')
         title = f'{plottype.title()} utilization\nfor RA [fraction]'
     else:
         dftrans = {
-            'trans_cap': pd.read_csv(os.path.join(case,'outputs','tran_cap_energy.csv')),
-            'trans_flow_power': pd.read_csv(os.path.join(case,'outputs','tran_flow_rep.csv')),
+            'trans_cap': read_output(case, 'tran_cap_energy'),
+            'trans_flow_power': read_output(case, 'tran_flow_rep'),
         }
         title = f'{plottype.title()} utilization [fraction]'
     if add_other_direction:
@@ -1490,7 +1545,7 @@ def plot_transmission_utilization(
             .groupby([c for c in dftrans[data] if c not in ['Value']], as_index=False)
             .sum()
             .drop('t', axis=1)
-        ).rename(columns={'allh':'h', 'Value':'Val', 'MW':'Val', hcol:'h'})
+        ).rename(columns={'Value':'Val', 'MW':'Val', hcol:'h'})
     ### Get utilization by timeslice
     utilization = dftrans['trans_flow_power'].merge(
         dftrans['trans_cap'], on=['r','rr','trtype'], suffixes=('_flow','_cap'),
@@ -1576,15 +1631,11 @@ def map_net_imports(
     """
     """
     ### Get outputs
-    net_import_ann_rep = pd.read_csv(
-        os.path.join(case, 'outputs', 'net_import_ann_rep.csv')
-    )
+    net_import_ann_rep = read_output(case, 'net_import_ann_rep')
     ## Convert to TWh
     net_import_ann_rep.Value /= 1e6
     years = [y for y in sorted(net_import_ann_rep.t.unique()) if y >= yearmin]
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
 
     ### Aggregate if necessary
     if level not in ['r','rb','ba']:
@@ -1674,9 +1725,7 @@ def plot_max_imports(
 
     ### Get inputs
     dfmap = get_dfmap(cases[0])
-    hierarchy = pd.read_csv(
-        os.path.join(cases[0],'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(cases[0])
 
     ## Sort regions west to east
     regions = dfmap[level].loc[hierarchy[level].unique()].bounds.minx.sort_values().index
@@ -1691,9 +1740,7 @@ def plot_max_imports(
     ### Get results
     dictplot = {}
     for c in cases:
-        flow = pd.read_csv(
-            os.path.join(c,'outputs','tran_flow_all_stress.csv'),
-        ).rename(columns={'allh':'h', 'Value':'MW'})
+        flow = read_output(c, 'tran_flow_all_stress', valname='MW')
         flow[level] = flow.r.map(r2agg)
         flow[levell] = flow.rr.map(r2agg)
 
@@ -1856,9 +1903,10 @@ def plot_vresites_transmission(
     cap = {}
     for tech in techs:
         try:
-            cap[tech] = pd.read_csv(
-                os.path.join(case,'outputs','df_sc_out_{}_reduced.csv'.format(tech))
-            ).rename(columns={'built_capacity':'capacity_MW'})
+            cap[tech] = (
+                pd.read_csv(os.path.join(case, 'outputs', f'df_sc_out_{tech}_reduced.csv'))
+                .rename(columns={'built_capacity':'capacity_MW'})
+            )
             cap[tech]['geometry'] = cap[tech].apply(
                 lambda row: shapely.geometry.Point(row.longitude, row.latitude),
                 axis=1)
@@ -1957,17 +2005,11 @@ def plot_prmtrade(
 
     ### Load results, aggregate over transmission types
     if int(sw.get('GSw_PRM_CapCredit', 1)):
-        dfplot = pd.read_csv(
-            os.path.join(case,'outputs','captrade.csv'),
-            header=0, names=['r','rr','trtype','ccseason','t','MW']
-        )
+        dfplot = read_output(case, 'captrade', valname='MW')
         dfplot = dfplot.loc[dfplot.t==year].groupby(['ccseason','r','rr'], as_index=False).MW.sum()
     else:
         ### For stress periods take the average flow over each period
-        dfplot = pd.read_csv(
-            os.path.join(case,'outputs','tran_flow_stress.csv'),
-            header=0, names=['r','rr','h','trtype','t','MW'],
-        )
+        dfplot = read_output(case, 'tran_flow_stress', valname='MW')
         dfplot['ccseason'] = (
             dfplot.h.str.split('h', expand=True)[0]
             ## Convert to timestamp
@@ -2102,10 +2144,7 @@ def plot_average_flow(
         dfba['y'] = dfba.index.map(endpoints.y)
 
     if thickborders not in [None,'','none','None',False]:
-        hierarchy = pd.read_csv(
-            os.path.join(case,'inputs_case','hierarchy.csv')
-        ).rename(columns={'*r':'r'}).set_index('r')
-        hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
+        hierarchy = get_hierarchy(case)
         if thickborders in hierarchy:
             dfthick = dfba.copy()
             dfthick[thickborders] = hierarchy[thickborders]
@@ -2119,13 +2158,11 @@ def plot_average_flow(
     ).squeeze(1)
     if both_directions:
         if ('h2' in network.lower()) or ('hydrogen' in network.lower()):
-            flow = pd.read_csv(
-                os.path.join(case,'outputs','h2_trans_flow.csv')
-            ).assign(trtype='H2').rename(columns={'allh':'h','Value':'Val'})
+            flow = (
+                read_output(case, 'h2_trans_flow', valname='Val')
+            ).assign(trtype='H2')
         else:
-            flow = pd.read_csv(
-                os.path.join(case,'outputs','tran_flow_rep.csv'),
-                header=0, names=['r','rr','h','trtype','t','Val'])
+            flow = read_output(case, 'tran_flow_rep', valname='Val')
         ## Convert to plot units, then sum over hours
         flow.Val *= labelscale
         flow['hours'] = flow.h.map(hours)
@@ -2147,10 +2184,7 @@ def plot_average_flow(
         groupcols = ['direction','r','rr']
 
     else:
-        dfplot = pd.read_csv(
-            os.path.join(case,'outputs','tran_flow_rep_ann.csv'),
-            header=0, names=['r','rr','trtype','t','Val']
-        )
+        dfplot = read_output(case, 'tran_flow_rep_ann', valname='Val')
         dfplot.Val /= hours.sum()
         groupcols = ['r','rr']
 
@@ -2261,19 +2295,14 @@ def get_transfer_peak_fraction(case, level='transreg', tstart=2020, everything=F
     levell = level + level[-1]
 
     ### Shared inputs
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-
+    hierarchy = get_hierarchy(case)
     dfmap = get_dfmap(case)
 
     ## Plot regions from west to east
     regions = dfmap[level].bounds.minx.sort_values().index
 
     ### Run results
-    dfin_trans_r = pd.read_csv(
-        os.path.join(case,'outputs','tran_out.csv')
-    ).rename(columns={'Value':'MW'})
+    dfin_trans_r = read_output(case, 'tran_out', valname='MW')
     dfin_trans_r[f'inter_{level}'] = (
         dfin_trans_r.r.map(hierarchy[level])
         != dfin_trans_r.rr.map(hierarchy[level])
@@ -2296,17 +2325,10 @@ def get_transfer_peak_fraction(case, level='transreg', tstart=2020, everything=F
     transfercap = pd.concat(transfercap, axis=1)
 
     ### Get peak load from hourly demand
-    try:
-        dfpeak = pd.read_csv(
-            os.path.join(case,'inputs_case','peakload.csv'), index_col=['level','region']
-        ).loc[level].T
-        dfpeak.index = dfpeak.index.astype(int)
-    except FileNotFoundError:
-        dfdemand = pd.read_hdf(os.path.join(case, 'inputs_case','load.h5'))
-        ## Aggregate to level
-        dfdemand = dfdemand.rename(columns=hierarchy[level]).groupby(axis=1, level=0).sum()
-        ## Calculate peak
-        dfpeak = dfdemand.groupby(axis=0, level='year').max()
+    dfpeak = pd.read_csv(
+        os.path.join(case,'inputs_case','peakload.csv'),
+        index_col=['level','region'],
+    ).rename(columns=int).loc[level].T
     ### Get the fraction
     dfout = (transfercap / dfpeak.loc[tstart:])[regions]
 
@@ -2499,10 +2521,7 @@ def animate_dispatch(
     rs = dfba.index.values
 
     ##### Generation
-    gen = pd.read_csv(
-        os.path.join(case,'outputs','gen_h.csv'),
-        header=0, names=['i','r','h','t','GW']
-    )
+    gen = read_output(case, 'gen_h', valname='GW')
     gen = gen.loc[gen.t==year].copy()
     gen.GW /= 1000
     gen.i = gen.i.map(lambda x: aggtechs.get(x,x))
@@ -2515,19 +2534,13 @@ def animate_dispatch(
     )[str(year)] / 1000
 
     ##### Transmission capacity
-    transcap = pd.read_csv(
-        os.path.join(case,'outputs','tran_out.csv'),
-        header=0, names=['r','rr','trtype','t','GW']
-    )
+    transcap = read_output(case, 'tran_out', valname='GW')
     transcap = transcap.loc[transcap.t==year].copy()
     transcap.GW /= 1000
     transcap = transcap.groupby(['r','rr']).GW.sum()
 
     ##### Transmission flow
-    flow = pd.read_csv(
-        os.path.join(case,'outputs','tran_flow_rep.csv'),
-        header=0, names=['r','rr','h','trtype','t','GW']
-    )
+    flow = read_output(case, 'tran_flow_rep', valname='GW')
     flow = flow.loc[flow.t==year].copy()
     flow.GW /= 1000
     flow = flow.groupby(['h','r','rr']).GW.sum()
@@ -2669,15 +2682,9 @@ def map_trans_agg(
     width_intra = width_inter * width_intra_frac
 
     ###### Get case inputs and outputs
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-    hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
+    hierarchy = get_hierarchy(case)
 
-    tran_out = pd.read_csv(
-        os.path.join(case,'outputs','tran_out.csv'),
-        header=0, names=['r','rr','trtype','t','GW']
-    )
+    tran_out = read_output(case, 'tran_out', valname='GW')
     tran_out.GW /= 1000
 
     ### Map transmission capacity to agglevel
@@ -2868,10 +2875,7 @@ def map_agg(
       postprocessing/plots/transmission-interface-coords.csv
     """
     ### Get inputs
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-    hierarchy = hierarchy.loc[hierarchy.country=='USA'].copy()
+    hierarchy = get_hierarchy(case)
 
     ### Get colors and simpler tech names
     capcolors = pd.read_csv(
@@ -2885,20 +2889,14 @@ def map_agg(
 
     ### Get outputs
     if data in ['cap','Cap','capacity',None,'GW','']:
-        val = pd.read_csv(
-            os.path.join(case,'outputs','cap.csv'),
-            header=0, names=['i','r','t','Value']
-        )
+        val = read_output(case, 'cap', valname='Value')
         ### Convert capacity to GW
         val.Value /= 1000
         val.i = val.i.str.lower()
         val = val.loc[val.t >= startyear].copy()
         units = 'GW'
     elif data in ['gen','Gen','generation','TWh']:
-        val = pd.read_csv(
-            os.path.join(case,'outputs','gen_ann.csv'),
-            header=0, names=['i','r','t','Value']
-        )
+        val = read_output(case, 'gen_ann', valname='Value')
         ### Convert generation to TWh
         val.Value /= 1e6
         val.i = val.i.str.lower()
@@ -3045,6 +3043,103 @@ def map_agg(
     return f, ax
 
 
+def map_capacity_techs(
+        case, year=2050,
+        techs=[
+            'Utility PV', 'Land-based wind', 'Offshore wind', 'Electrolyzer',
+            'Battery (4h)', 'Battery (8h)', 'PSH', 'H2 turbine',
+            'Nuclear', 'Gas CCS', 'Coal CCS', 'Fossil',
+        ],
+        ncols=4,
+        vmax='shared',
+        cmap=cmocean.cm.rain,
+    ):
+    """
+    """
+    ### Tech simplifications
+    techmap = {
+        **{f'upv_{i}':'Utility PV' for i in range(20)},
+        **{f'dupv_{i}':'Utility PV' for i in range(20)},
+        **{f'wind-ons_{i}':'Land-based wind' for i in range(20)},
+        **{f'wind-ofs_{i}':'Offshore wind' for i in range(20)},
+        **dict(zip(['nuclear','nuclear-smr'], ['Nuclear']*20)),
+        **dict(zip(
+            ['gas-cc_re-cc','gas-ct_re-ct','re-cc','re-ct',
+             'gas-cc_h2-ct','gas-ct_h2-ct','h2-cc','h2-ct'],
+            ['H2 turbine']*20)),
+        **{'electrolyzer':'Electrolyzer'},
+        **{'battery_4':'Battery (4h)', 'battery_8':'Battery (8h)', 'pumped-hydro':'PSH'},
+        **dict(zip(
+            ['coal-igcc', 'coaloldscr', 'coalolduns', 'gas-cc', 'gas-ct', 'coal-new',
+             'o-g-s'],
+            ['Fossil']*20)),
+        **dict(zip(
+            ['coal-igcc_coal-ccs_mod','coal-new_coal-ccs_mod',
+             'coaloldscr_coal-ccs_mod','coalolduns_coal-ccs_mod','cofirenew_coal-ccs_mod',
+             'cofireold_coal-ccs_mod','coal-igcc_coal-ccs_max',
+             'coal-new_coal-ccs_max','coaloldscr_coal-ccs_max','coalolduns_coal-ccs_max',
+             'cofirenew_coal-ccs_max','cofireold_coal-ccs_max'],
+            ['Coal CCS']*50)),
+        **dict(zip(
+            ['gas-cc_gas-cc-ccs_mod','gas-cc_gas-cc-ccs_max',
+             'gas-cc-ccs_mod','gas-cc-ccs_max'],
+            ['Gas CCS']*50)),
+        **dict(zip(['dac','beccs_mod','beccs_max'], ['CO2 removal']*20)),
+    }
+    ### Get maps
+    dfmap = get_dfmap(case)
+    dfba = dfmap['r']
+    dfstates = dfmap['st']
+    ### Case data
+    dfcap = read_output(case, 'cap', valname='MW')
+    dfcap.i = dfcap.i.str.lower().map(lambda x: techmap.get(x,x))
+    ### Get the vmax
+    if vmax == 'shared':
+        _vmax = dfcap.loc[
+            dfcap.i.isin(techs) & (dfcap.t.astype(int)==year)
+        ].groupby(['i','r']).MW.sum().max() / 1e3
+    else:
+        _vmax = None
+    ### Arrange the subplots
+    nrows = len(techs) // ncols
+    coords = dict(zip(
+        techs,
+        [(row,col) for row in range(nrows) for col in range(ncols)]
+    ))
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(3*ncols, 3*nrows),
+        gridspec_kw={'wspace':0.0,'hspace':-0.05}, dpi=150)
+    for tech in techs:
+        dfval = dfcap.loc[
+            (dfcap.i==tech)
+            & (dfcap.t.astype(int)==year)
+        ].groupby('r').MW.sum().round(3)
+        dfplot = dfba.copy()
+        dfplot['GW'] = (dfval / 1000).fillna(0)
+
+        dfba.plot(
+            ax=ax[coords[tech]],
+            facecolor='none', edgecolor='k', lw=0.1, zorder=10000)
+        dfstates.plot(
+            ax=ax[coords[tech]],
+            facecolor='none', edgecolor='k', lw=0.2, zorder=10001)
+        dfplot.plot(
+            ax=ax[coords[tech]], column='GW', cmap=cmap, legend=True,
+            vmin=0, vmax=_vmax,
+            legend_kwds={
+                'shrink':0.75, 'pad':0, 'orientation':'horizontal',
+                'label': '{} [GW]'.format(tech),
+            }
+        )
+        ax[coords[tech]].axis('off')
+    ax[0,0].set_title(
+        '{} ({})'.format(os.path.basename(case), year),
+        x=0.1, ha='left', va='top')
+    return f, ax
+
+
 def map_capacity_markers(
         case, level='r', year=2050, ms=5,
         unitsize=1,
@@ -3112,14 +3207,9 @@ def map_capacity_markers(
     dfmap = get_dfmap(case)
     dfba = dfmap['r']
     dfstates = dfmap['st']
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-    hierarchy = hierarchy.loc[hierarchy.country.str.lower()=='usa'].copy()
+    hierarchy = get_hierarchy(case)
 
-    cap = pd.read_csv(
-        os.path.join(case,'outputs','cap.csv')
-    )
+    cap = read_output(case, 'cap')
     cap = cap.loc[cap.t==year].copy()
     cap['GW'] = cap.Value / 1e3
     ### Aggregate and simplify tech classes and types
@@ -3245,10 +3335,7 @@ def map_transmission_lines(
     dfmap = get_dfmap(case)
     dfba = dfmap['r']
     dfstates = dfmap['st']
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-    hierarchy = hierarchy.loc[hierarchy.country.str.lower()=='usa'].copy()
+    hierarchy = get_hierarchy(case)
 
     if level in ['r','rb']:
         dfzones = dfba.copy()
@@ -3257,9 +3344,7 @@ def map_transmission_lines(
         dfzones['zone'] = dfba.index.map(hierarchy[level])
         dfzones = dfzones.dissolve('zone')
 
-    tran_out = pd.read_csv(
-        os.path.join(case,'outputs','tran_out.csv')
-    )
+    tran_out = read_output(case, 'tran_out')
     if subtract_baseyear:
         tran_out = (
             tran_out.loc[tran_out.t==year].set_index(['r','rr','trtype']).Value
@@ -3388,24 +3473,11 @@ def get_gen_capacity(case, year=2050, level='r', units='GW'):
     assert units in ['MW','GW','TW']
 
     ### Get data
-    try:
-        hierarchy = pd.read_csv(
-            os.path.join(case,'inputs_case','hierarchy.csv')
-        ).rename(columns={'*r':'r'}).set_index('r')
-    except (NotADirectoryError, FileNotFoundError):
-        hierarchy = pd.read_csv(
-            os.path.join(case.split(os.sep+'outputs')[0],'inputs_case','hierarchy.csv')
-        ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
 
     bokehcolors, transcolors = get_colors(reeds_path)
 
-    try:
-        dfcap_in = pd.read_csv(
-            os.path.join(case,'outputs','cap.csv'),
-            names=['i','r','t','MW'], header=0,
-        )
-    except (NotADirectoryError, FileNotFoundError):
-        dfcap_in = pd.read_csv(case, names=['i','r','t','MW'], header=0)
+    dfcap_in = read_output(case, 'cap', valname='MW')
     dfcap_in.i = simplify_techs(dfcap_in.i)
     dfcap = dfcap_in.loc[
         (dfcap_in.t==year)
@@ -3433,32 +3505,15 @@ def get_trans_capacity(case, year=2050, level='r', units='GW'):
     assert units in ['MW','GW','TW']
 
     ### Get data
-    try:
-        hierarchy = pd.read_csv(
-            os.path.join(case,'inputs_case','hierarchy.csv')
-        ).rename(columns={'*r':'r'}).set_index('r')
-    except (NotADirectoryError, FileNotFoundError):
-        hierarchy = pd.read_csv(
-            os.path.join(case.split(os.sep+'outputs')[0],'inputs_case','hierarchy.csv')
-        ).rename(columns={'*r':'r'}).set_index('r')
-
-    try:
-        dfmap = get_dfmap(case)
-    except (NotADirectoryError, FileNotFoundError):
-        dfmap = get_dfmap(case.split(os.sep+'outputs')[0])
+    hierarchy = get_hierarchy(case)
+    dfmap = get_dfmap(case)
 
     for r in zone_label_offset:
         if r in dfmap[level].index:
             dfmap[level].loc[r, 'centroid_x'] += zone_label_offset[r][0]
             dfmap[level].loc[r, 'centroid_y'] += zone_label_offset[r][1]
 
-    try:
-        tran_out = pd.read_csv(
-            os.path.join(case,'outputs','tran_out.csv')
-        ).rename(columns={'Value':'MW'})
-    except (NotADirectoryError, FileNotFoundError):
-        tran_out = pd.read_csv(case).rename(columns={'Value':'MW'})
-
+    tran_out = read_output(case, 'tran_out', valname='MW')
     transmap = tran_out.loc[
         (tran_out.t==year)
     ][['r','rr','trtype','MW']].copy()
@@ -3580,31 +3635,22 @@ def map_zone_capacity(
             'gas-cc-ccs_mod_upgrade':'gas-cc-ccs_mod',
             'coal-ccs_mod_upgrade':'coal-ccs_mod',
         }
-        dfgen_in = pd.read_excel(
-            os.path.join(case,'outputs','reeds-report','report.xlsx'),
-            sheet_name='3_Generation (TWh)', engine='openpyxl',
-        ).drop('scenario',axis=1)
+        dfgen_in = read_report(case, 'Generation (TWh)')
         dfgen_in.tech = dfgen_in.tech.map(lambda x: renametechs.get(x,x))
         dfgen_in = (
             dfgen_in.groupby(['tech','year'], as_index=False)['Generation (TWh)'].sum())
 
-        dfcap_nat = pd.read_excel(
-            os.path.join(case,'outputs','reeds-report','report.xlsx'),
-            sheet_name='4_Capacity (GW)',
-        ).drop('scenario',axis=1)
+        dfcap_nat = read_report(case, 'Capacity (GW)')
         dfcap_nat.tech = dfcap_nat.tech.map(lambda x: renametechs.get(x,x))
         dfcap_nat = (
             dfcap_nat.groupby(['tech','year'], as_index=False)['Capacity (GW)'].sum())
 
-        emit_nat_tech = pd.read_csv(
-            os.path.join(case, 'outputs', 'emit_nat_tech.csv'),
-        header=0, names=['e','i','t','ton'], index_col=['e','i','t'],
-        ).squeeze(1)
+        emit_nat_tech = (
+            read_output(case, 'emit_nat_tech', valname='ton')
+            .set_index(['e','i','t']).squeeze(1)
+        )
 
-        dfin_trans = pd.read_excel(
-            os.path.join(case,'outputs','reeds-report','report.xlsx'),
-            sheet_name='14_Transmission (GW-mi)', engine='openpyxl',
-        ).drop('scenario',axis=1)
+        dfin_trans = read_report(case, 'Transmission (GW-mi)')
 
         ###### Make the side plots
         alltechs = set()
@@ -3761,10 +3807,7 @@ def plot_retire_add(
         _figsize = figsize
 
     ## Nationwide capacity
-    dfcap_in = pd.read_excel(
-        os.path.join(case,'outputs','reeds-report','report.xlsx'),
-        sheet_name='4_Capacity (GW)',
-    ).drop('scenario', axis=1)
+    dfcap_in = read_report(case, 'Capacity (GW)')
     ## Simplify techs
     renametechs = {
         'h2-cc_upgrade':'h2-cc',
@@ -3775,23 +3818,12 @@ def plot_retire_add(
     dfcap_in.tech = dfcap_in.tech.map(lambda x: renametechs.get(x,x))
     dfcap_in = dfcap_in.groupby(['tech','year'], as_index=False)['Capacity (GW)'].sum()
 
-    ## Time index
-    fulltimeindex = np.ravel([
-        pd.date_range(
-            f'{y}-01-01', f'{y+1}-01-01',
-            freq='H', inclusive='left', tz='EST',
-        )[:8760]
-        for y in range(2007,2014)
-    ])
-
     ## Peak coincident demand
     if peak:
-        dfdemand = (
-            pd.read_hdf(os.path.join(case,'inputs_case','load.h5'))
-            .sum(axis=1).unstack('year').set_index(fulltimeindex)
-            / 1e3
-        )
-        dfpeak = dfdemand.max().loc[_years]
+        dfpeak = pd.read_csv(
+            os.path.join(case,'inputs_case','peakload.csv'),
+            index_col=['level','region'],
+        ).rename(columns=int).loc['country', _years].squeeze(0) / 1e3
 
     ### Calculate the retirements and additions
     dfcap = (
@@ -3917,21 +3949,11 @@ def map_hybrid_pv_wind(
     ###### Load the data
     ### Model results
     dictin_hybrid = dict(
-        site_cap=pd.read_csv(
-            os.path.join(case,'outputs','site_cap.csv'),
-            header=0, names=['i','x','t','MW']),
-        site_pv_fraction=pd.read_csv(
-            os.path.join(case,'outputs','site_pv_fraction.csv'),
-            header=0, names=['x','t','pv_fraction']),
-        site_hybridization=pd.read_csv(
-            os.path.join(case,'outputs','site_hybridization.csv'),
-            header=0, names=['x','t','hybridization']),
-        site_spurcap=pd.read_csv(
-            os.path.join(case,'outputs','site_spurcap.csv'),
-            header=0, names=['x','t','MW']),
-        site_gir=pd.read_csv(
-            os.path.join(case,'outputs','site_gir.csv'),
-            header=0, names=['i','x','t','GIR']),
+        site_cap=read_output(case, 'site_cap', valname='MW'),
+        site_pv_fraction=read_output(case, 'site_pv_fraction', valname='pv_fraction'),
+        site_hybridization=read_output(case, 'site_hybridization', valname='hybridization'),
+        site_spurcap=read_output(case, 'site_spurcap', valname='MW'),
+        site_gir=read_output(case, 'site_gir', valname='GIR'),
     )
 
     ### Other shared inputs
@@ -4027,10 +4049,10 @@ def plot_dispatch_yearbymonth(
     hmap_myr = pd.read_csv(os.path.join(case, 'inputs_case', 'hmap_myr.csv'))
 
     if plottype.lower() in ['soc', 'stateofcharge', 'energy_level', 'stor_level']:
-        dfin = pd.read_csv(os.path.join(case, 'outputs', 'stor_level.csv'))
+        dfin = read_output(case, 'stor_level')
         dfin.i = dfin.i.str.lower().map(lambda x: tech_map.get(x,x))
     else:
-        dfin = pd.read_csv(os.path.join(case, 'outputs', 'gen_h.csv'))
+        dfin = read_output(case, 'gen_h')
         dfin.i = dfin.i.map(
             lambda x: x if x.startswith('battery') else x.strip('_01234567890*')
         ).str.lower().map(lambda x: tech_map.get(x,x))
@@ -4040,7 +4062,7 @@ def plot_dispatch_yearbymonth(
 
     dfyear = (
         dfin.loc[dfin.t==t]
-        .groupby(['i','allh']).Value.sum()
+        .groupby(['i','h']).Value.sum()
         .unstack('i').fillna(0)
         / 1e3
     )
@@ -4139,16 +4161,14 @@ def plot_dispatch_yearbymonth(
 
 
 def plot_dispatch_weightwidth(
-        case, val='7_Final Gen by timeslice (GW)', figsize=(13,4)):
+        case, val='Final Gen by timeslice (GW)', figsize=(13,4)):
     """
     Rep period dispatch for final year with period width given by period weight
     """
     ### Load run files
     hmap_myr = pd.read_csv(os.path.join(case, 'inputs_case', 'hmap_myr.csv'))
     dispatch = (
-        pd.read_excel(
-            os.path.join(case, 'outputs', 'reeds-report', 'report.xlsx'),
-            sheet_name=val, engine='openpyxl')
+        read_report(case, val)
         .drop(['scenario','Net Level Generation (GW)'], axis=1, errors='ignore')
         .pivot(index='timeslice',columns='tech',values='Generation (GW)'))
     bokehcolors = pd.read_csv(
@@ -4235,19 +4255,14 @@ def plot_stressperiod_dispatch(case, tmin=2023, level='country', regions='USA'):
         index_col='order',
     ).squeeze(1)
 
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
     keepr = hierarchy.loc[hierarchy[level].str.lower().isin(_regions)].index
 
     years = pd.read_csv(
         os.path.join(case,'inputs_case','modeledyears.csv')).columns.astype(int).values
 
     ### Get model outputs
-    gen_h_stress = pd.read_csv(
-        os.path.join(case,'outputs','gen_h_stress.csv'),
-        header=0, names=['i','r','h','t','GW'],
-    )
+    gen_h_stress = read_output(case, 'gen_h_stress', valname='GW')
     gen_h_stress.GW /= 1000
     gen_h_stress.i = gen_h_stress.i.str.lower()
 
@@ -4351,10 +4366,7 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
     ### and keys for solve years
     dfplot = {}
     ### Get stress period IDs from output generation
-    gen_h_stress = pd.read_csv(
-        os.path.join(case,'outputs','gen_h_stress.csv'),
-        header=0, names=['i','r','h','t','MW'],
-    )
+    gen_h_stress = read_output(case, 'gen_h_stress', valname='MW')
     gen_h_stress['szn'] = gen_h_stress['h'].map(lambda x: x.split('h')[0])
 
     years = [
@@ -4369,7 +4381,6 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
     t2starts = t2periods.map(
         lambda row: [h2timestamp(d+'h01') for d in row]
     )
-    # load = pd.read_hdf(os.path.join(case,'inputs_case','load.h5')).sum(axis=1)
     ## Use same procedure as dfpeak and diagnostic_plots.plot_netloadhours_timeseries()
     for t in years:
         if repcolor in ['none', None, False]:
@@ -4533,15 +4544,15 @@ def plot_neue_bylevel(
     dictin_neue = {}
     for t, iteration in year2iteration.items():
         try:
-            dictin_neue[t] = pd.read_csv(
-                os.path.join(case,'outputs',f'neue_{t}i{iteration}.csv'),
-                index_col=['level','metric','region']
-            ).squeeze(1)
+            dictin_neue[t] = (
+                read_output(case, f'neue_{t}i{iteration}.csv')
+                .set_index(['level','metric','region']).squeeze(1)
+            )
         except FileNotFoundError:
-            dictin_neue[t] = pd.read_csv(
-                os.path.join(case,'outputs',f'neue_{t}i{iteration-1}.csv'),
-                index_col=['level','metric','region']
-            ).squeeze(1)
+            dictin_neue[t] = (
+                read_output(case, f'neue_{t}i{iteration-1}.csv')
+                .set_index(['level','metric','region']).squeeze(1)
+            )
     dfin_neue = pd.concat(dictin_neue, axis=0, names=['year']).unstack('year')
     dfin_neue = dfin_neue[[c for c in dfin_neue if int(c) >= 2025]].copy()
     if onlydata:
@@ -4616,8 +4627,7 @@ def map_neue(
             case=case, year=year, samples=samples)
     else:
         _iteration = iteration
-    infile = os.path.join(case, 'outputs', f'neue_{year}i{_iteration}.csv')
-    neue = pd.read_csv(infile)
+    neue = read_output(case, f'neue_{year}i{_iteration}.csv')
     neue = neue.loc[neue.metric==metric].set_index(['level','region']).NEUE_ppm
 
     ### Set up plot
@@ -4697,7 +4707,7 @@ def map_h2_capacity(
     h2_ct_intensity = 1e6 / scalars['h2_energy_intensity'] / scalars['lb_per_tonne']
 
     ### Load storage capacity
-    h2_storage_cap_in = pd.read_csv(os.path.join(case,'outputs','h2_storage_cap.csv'))
+    h2_storage_cap_in = read_output(case, 'h2_storage_cap')
     h2_storage_cap = (
         h2_storage_cap_in.loc[h2_storage_cap_in.t==year]
         .pivot(index='r', columns='h2_stor', values='Value').fillna(0)
@@ -4708,13 +4718,12 @@ def map_h2_capacity(
     cap_storage = dfba.merge(h2_storage_cap, left_index=True, right_index=True)
 
     ### Load H2 turbine capacity, convert to kT/day
-    cap_ivrt_in = pd.read_csv(os.path.join(case,'outputs','cap_ivrt.csv'))
+    cap_ivrt_in = read_output(case, 'cap_ivrt')
     cap_ivrt = cap_ivrt_in.loc[
         cap_ivrt_in.i.map(lambda x: 'h2' in x.lower())
         & (cap_ivrt_in.t==year)
     ].set_index(['i','v','r']).Value
-    heat_rate_in = pd.read_csv(
-        os.path.join(case,'outputs','heat_rate.csv'))
+    heat_rate_in = read_output(case, 'heat_rate')
     heat_rate = heat_rate_in.loc[heat_rate_in.t==year].set_index(['i','v','r']).Value
     ## capacity [MW] * heat rate [MMBtu/MWh] * [metric ton/MMBtu] / 1000 * [24h/d] = [kT per day]
     cap_h2turbine = (
@@ -4724,7 +4733,7 @@ def map_h2_capacity(
     cap_h2turbine = dfba.merge(cap_h2turbine, left_index=True, right_index=True)
 
     ### Get H2 production capacity
-    prod_cap_in = pd.read_csv(os.path.join(case,'outputs','prod_cap.csv'))
+    prod_cap_in = read_output(case, 'prod_cap')
     h2_prod_cap = prod_cap_in.loc[
         ~prod_cap_in.i.str.lower().isin(['dac'])
         & (prod_cap_in.t==year)
@@ -4733,7 +4742,7 @@ def map_h2_capacity(
     cap_h2prod = dfba.merge(h2_prod_cap, left_index=True, right_index=True)
 
     ### Load pipeline capacity
-    h2_trans_cap_in = pd.read_csv(os.path.join(case,'outputs','h2_trans_cap.csv'))
+    h2_trans_cap_in = read_output(case, 'h2_trans_cap')
     h2_trans_cap = h2_trans_cap_in.loc[h2_trans_cap_in.t==year].rename(columns={'Value':'kTperday'})
     h2_trans_cap.kTperday *= 24 / 1000
 
@@ -4797,18 +4806,16 @@ def plot_h2_timeseries(
     """
     ### Load results in metric ton and metric ton/hour
     h2techs = ['electrolyzer','smr','smr_ccs']
-    h2_storage_level = pd.read_csv(os.path.join(case,'outputs','h2_storage_level.csv'))
-    h2_storage_level_szn = pd.read_csv(os.path.join(case,'outputs','h2_storage_level_szn.csv'))
-    h2_inout = pd.read_csv(os.path.join(case,'outputs','h2_inout.csv'))
-    prod_produce = pd.read_csv(os.path.join(case,'outputs','prod_produce.csv'))
-    h2_usage = pd.read_csv(os.path.join(case,'outputs','h2_usage.csv'))
+    h2_storage_level = read_output(case, 'h2_storage_level')
+    h2_storage_level_szn = read_output(case, 'h2_storage_level_szn')
+    h2_inout = read_output(case, 'h2_inout')
+    prod_produce = read_output(case, 'prod_produce')
+    h2_usage = read_output(case, 'h2_usage')
     ### Timeseries data
     hmap_myr = pd.read_csv(os.path.join(case,'inputs_case','hmap_myr.csv'))
 
     ###### Total across modeled area
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
     if agglevel == 'r':
         rmap = pd.Series(hierarchy.index.values, index=hierarchy.index.values)
     else:
@@ -4818,17 +4825,17 @@ def plot_h2_timeseries(
     dfall = {
         'production': prod_produce.assign(r=prod_produce.r.map(rmap)).loc[
             prod_produce.i.isin(h2techs) & (prod_produce.t==year)
-        ].rename(columns={'allh':'h'}).groupby(['r','h']).Value.sum(),
+        ].groupby(['r','h']).Value.sum(),
         'usage': -h2_usage.assign(r=h2_usage.r.map(rmap)).loc[
             (h2_usage.t==year)
-        ].rename(columns={'allh':'h'}).groupby(['r','h']).Value.sum(),
+        ].groupby(['r','h']).Value.sum(),
         ## Group over H2 storage techs
         'stor_charge': h2_inout.assign(r=h2_inout.r.map(rmap)).loc[
             (h2_inout['*'].str.lower() == 'in') & (h2_inout.t==year)
-        ].rename(columns={'allh':'h'}).groupby(['r','h']).Value.sum(),
+        ].groupby(['r','h']).Value.sum(),
         'stor_discharge': -h2_inout.assign(r=h2_inout.r.map(rmap)).loc[
             (h2_inout['*'].str.lower() == 'out') & (h2_inout.t==year)
-        ].rename(columns={'allh':'h'}).groupby(['r','h']).Value.sum(),
+        ].groupby(['r','h']).Value.sum(),
     }
     dfall = pd.concat(dfall, axis=1).fillna(0)
     dfall['stor_dispatch'] = dfall['stor_discharge'] + dfall['stor_charge']
@@ -4843,7 +4850,6 @@ def plot_h2_timeseries(
         storstack = (
             h2_storage_level.assign(r=h2_storage_level.r.map(rmap))
             .loc[(h2_storage_level.t==year)]
-            .rename(columns={'allh':'h'})
             .groupby(['r','actualszn','h']).Value.sum()
             .rename('stor_level').to_frame().unstack('r')
             .reorder_levels(['r',None], axis=1)
@@ -4959,9 +4965,7 @@ def plot_interface_flows(
     """
     """
     fulltimeindex = functions.make_fulltimeindex()
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
 
     if source.lower() == 'pras':
         infile, _iteration = get_last_iteration(
@@ -5088,9 +5092,7 @@ def plot_storage_soc(
     ):
     """Plot storage state of charge from PRAS"""
     fulltimeindex = functions.make_fulltimeindex()
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
 
     ### Get storage state of charge
     if source.lower() == 'pras':
@@ -5206,10 +5208,7 @@ def map_period_dispatch(
     # onlydata = False
 
     ### Shared inputs
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
-
+    hierarchy = get_hierarchy(case)
     dfmap = get_dfmap(case)
     dfba = dfmap['r']
 
@@ -5280,17 +5279,12 @@ def map_period_dispatch(
         raise ValueError('Use unique x values in transmissioninterface-coords.csv')
 
     ### Get outputs
-    gen_h_stress = pd.read_csv(
-        os.path.join(case,'outputs','gen_h_stress.csv'),
-        header=0, names=['i','r','h','t','GW'],
-    )
+    gen_h_stress = read_output(case, 'gen_h_stress', valname='GW')
     gen_h_stress.GW /= 1000
     gen_h_stress.i = simplify_techs(gen_h_stress.i)
 
     ## Aggregate transmission flows
-    tran_flow_stress = pd.read_csv(
-        os.path.join(case,'outputs','tran_flow_stress.csv'),
-    ).rename(columns={'Value':'GW', 'allh':'h'})
+    tran_flow_stress = read_output(case, 'tran_flow_stress', valname='GW')
     tran_flow_stress.GW /= 1e3
 
     tran_flow_stress['aggreg'] = tran_flow_stress.r.map(r2aggreg)
@@ -5304,9 +5298,7 @@ def map_period_dispatch(
     )
 
     ## Load
-    load_stress = pd.read_csv(
-        os.path.join(case,'outputs','load_stress.csv'),
-    ).rename(columns={'Value':'GW', 'allh':'h'})
+    load_stress = read_output(case, 'load_stress', valname='GW')
     load_stress.GW /= 1e3
     dfload_allperiods = (
         load_stress.assign(region=load_stress.r.map(r2aggreg))
@@ -5545,9 +5537,7 @@ def plot_pras_eue_timeseries_full(
     ]].copy()
 
     ### Sum by hierarchy level
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
     dfpras_agg = (
         dfpras
         .rename(columns={c: c[:-len('_EUE')] for c in dfpras})
@@ -5604,9 +5594,7 @@ def plot_seed_stressperiods(
         header=None, index_col=0,
     ).squeeze(1)
 
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
     dfmap = get_dfmap(case)
 
     years = pd.read_csv(
@@ -5797,9 +5785,7 @@ def plot_cap_rep_stress_mix(
     ).rename(columns={'*h':'h'}).set_index('h').squeeze(1)
 
     dfmap = get_dfmap(case)
-    hierarchy = pd.read_csv(
-        os.path.join(case,'inputs_case','hierarchy.csv')
-    ).rename(columns={'*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
 
     ## Sort regions west to east
     regions = dfmap[level].loc[hierarchy[level].unique()].bounds.minx.sort_values().index
@@ -5817,7 +5803,7 @@ def plot_cap_rep_stress_mix(
     ).loc[level][str(year)]
 
     ### Capacity by region
-    cap = pd.read_csv(os.path.join(case,'outputs','cap.csv'))
+    cap = read_output(case, 'cap')
     cap = cap.loc[cap.t==year].copy()
     cap.i = simplify_techs(cap.i)
     cap.r = cap.r.map(r2agg)
@@ -5825,9 +5811,7 @@ def plot_cap_rep_stress_mix(
     cap = cap.loc[~cap.index.isin(['electrolyzer','smr','smr-ccs','canada'])].copy()
 
     ### Timeslice generation by region
-    gen_h = pd.read_csv(
-        os.path.join(case,'outputs','gen_h.csv'),
-    ).rename(columns={'Value':'MW', 'allh':'h'})
+    gen_h = read_output(case, 'gen_h', valname='MW')
     gen_h = gen_h.loc[gen_h.t==year].copy()
     gen_h.i = simplify_techs(gen_h.i)
     gen_h.r = gen_h.r.map(r2agg)
@@ -5865,9 +5849,7 @@ def plot_cap_rep_stress_mix(
     ).fillna(0)
 
     ### Stress period dispatch
-    gen_h_stress = pd.read_csv(
-        os.path.join(case,'outputs','gen_h_stress.csv'),
-    ).rename(columns={'Value':'MW', 'allh':'h'})
+    gen_h_stress = read_output(case, 'gen_h_stress', valname='MW')
     gen_h_stress = gen_h_stress.loc[gen_h_stress.t==year].copy()
     gen_h_stress.i = simplify_techs(gen_h_stress.i)
     gen_h_stress.r = gen_h_stress.r.map(r2agg)
@@ -6058,9 +6040,7 @@ def plot_capacity_offline(
         ).rename(columns={'ba':'r'}).set_index('r').aggreg
         temperatures = temperatures.rename(columns=r2aggreg)
 
-    hierarchy = pd.read_csv(
-        os.path.join(case, 'inputs_case', 'hierarchy.csv')
-    ).rename(columns={'ba':'r', '*r':'r'}).set_index('r')
+    hierarchy = get_hierarchy(case)
     r2level = hierarchy[level]
 
     bokehcolors = pd.read_csv(
@@ -6083,13 +6063,11 @@ def plot_capacity_offline(
         temperatures.index.strftime('%Y-%m-%d').drop_duplicates())
 
     ### Get GW capacity offline, with same index as temperatures
-    capacity_offline = pd.read_csv(
-        os.path.join(case, 'outputs', 'capacity_offline.csv')
-    )
+    capacity_offline = read_output(case, 'capacity_offline')
     capacity_offline = (
         capacity_offline.assign(i=simplify_techs(capacity_offline.i))
         .loc[capacity_offline.t==year]
-        .groupby(['i','r','allh']).Value.sum().unstack(['r','i'])
+        .groupby(['i','r','h']).Value.sum().unstack(['r','i'])
         / 1e3
     )
     ## Aggregate

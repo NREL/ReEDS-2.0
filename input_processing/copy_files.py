@@ -18,7 +18,7 @@ import subprocess
 import sys
 import site
 # Local Imports
-from ldc_prep import read_file
+from ldc_prep import read_file, write_h5_file
 # Time the operation of this script
 from ticker import toc, makelog
 import datetime
@@ -165,7 +165,7 @@ regionFiles = (
 #############################################
 print('Copying non-region-indexed files')
 for i,row in nonregionFiles.iterrows():
-    if row['filepath'].split('/')[0] in ['inputs','postprocessing']:
+    if row['filepath'].split('/')[0] in ['inputs','postprocessing','tests']:
         dir_dst = inputs_case
     else:
         dir_dst = casedir    
@@ -270,7 +270,7 @@ if (len(agglevels) > 1):
     raise Exception("ReEDS only allows a single agglevels value, but multiple agglevels values are present")
 else:
     agglevel = agglevels[0]
-    lvl = 'ba' if agglevel in ['ba','state','aggreg'] else 'county'
+    lvl = 'ba' if agglevel in ['ba','aggreg'] else 'county'
 
 
 #%%
@@ -775,12 +775,12 @@ for i, row in regionFiles.iterrows():
             df = df.loc[:,df.columns.isin(fix_cols + val_r_all)]
         else:
             # Checks if regions are in columns as '[class]_[region]' (e.g. in 8760 RECF data).
-            # This 'try' attempts to split each column name at the '_' and checks the second 
+            # This 'try' attempts to split each column name using '|' as a delimiter and checks the second 
             # value for any regions.
             # If it can't do so, it will instead use a blank dataframe.
             try:
-                df.columns.str.split('_',expand=True).get_level_values(1).isin(val_r_all).any()
-                column_mask = (df.columns.str.split('_',expand=True)
+                df.columns.str.split('|',expand=True).get_level_values(1).isin(val_r_all).any()
+                column_mask = (df.columns.str.split('|',expand=True)
                                 .get_level_values(1)
                                 .isin(val_r_all)
                                 .tolist()
@@ -837,30 +837,7 @@ for i, row in regionFiles.iterrows():
     
     #------- Write data to inputs_case folder -------#
     if filetype_out == 'h5':
-        outfile = os.path.join(inputs_case,filename) 
-                
-        with h5py.File(outfile, 'w') as f:
-            # save index, either as a standalone or with a group for each level
-            # in a multi-index (with the format 'index{index order}_{index name}')
-            idx_val = 0
-            for idx_name in df.index.names:
-                if (idx_name is None) and (len(df.index.names) == 1):
-                    f.create_dataset('index', data=df.index, dtype=df.index.dtype)
-                else:
-                    if idx_name is None:
-                        idx_name = idx_val
-                    idx_values = df.index.get_level_values(idx_name)
-                    f.create_dataset(f'index{idx_val+1}_{idx_name}', data=idx_values, dtype=idx_values.dtype)
-                idx_val += 1
-            # save column names as string type
-            f.create_dataset('columns', data=df.columns, dtype=f'S{df.columns.map(len).max()}')
-
-            # save data
-            if len(df.dtypes.unique()) > 1:
-                raise Exception(f"Multiple data types detected in {filename}, unclear which one to use for re-saving h5.")
-            else:
-                dftype_out = df.dtypes.unique()[0]    
-            f.create_dataset('data', data=df.values, dtype=dftype_out, compression='gzip', compression_opts=4,)
+        write_h5_file(df, filename, inputs_case)
     else:
         # Special cases: These files' values need to be adjusted for inflation prior to copy
         if filename in ['bio_supplycurve.csv', 'co2_site_char.csv']:

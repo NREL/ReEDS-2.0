@@ -794,7 +794,9 @@ eq_forceprescription(pcat,r,t)$[tmodel(t)$force_pcat(pcat,t)$Sw_ForcePrescriptio
     + EXTRA_PRESCRIP(pcat,r,t)$[yeart(t)>=firstyear_pcat(pcat)]
 
 * or in regions where there is a offshore wind requirement
-    + EXTRA_PRESCRIP(pcat,r,t)$[r_offshore(r,t)$sameas(pcat,'wind-ofs')]
+    + EXTRA_PRESCRIP(pcat,r,t)$[r_offshore(r,t)$sameas(pcat,'wind-ofs')
+                               $(yeart(t)>=firstyear_RPS)
+                               $sum{st$r_st(r,st), offshore_cap_req(st,t) }]
 ;
 
 
@@ -886,7 +888,7 @@ eq_growthlimit_relative(i,st,t)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }
                                 $tmodel(t)
                                 $stfeas(st)
                                 $Sw_GrowthPenalties
-                                $(yeart(t)<=Sw_GrowthConLastYear)
+                                $(yeart(t)<=Sw_GrowthPenLastYear)
                                 $(yeart(t)>=model_builds_start_yr)]..
 
 *the annual growth limit
@@ -904,7 +906,7 @@ eq_growthbin_limit(gbin,st,tg,t)$[valinv_tg(st,tg,t)
                                  $tmodel(t)
                                  $stfeas(st)
                                  $Sw_GrowthPenalties
-                                 $(yeart(t)<=Sw_GrowthConLastYear)
+                                 $(yeart(t)<=Sw_GrowthPenLastYear)
                                  $(yeart(t)>=model_builds_start_yr)]..
 
 *the growth bin limit
@@ -928,9 +930,9 @@ eq_growthlimit_absolute(tg,t)$[growth_limit_absolute(tg)$tmodel(t)
 
      =g=
 
-* must exceed the total investment - same RHS as previous equation
-     sum{(i,v,r,rscbin)$[valinv(i,v,r,t)$m_rscfeas(r,i,rscbin)$tg_i(tg,i)$rsc_i(i)],
-          INV_RSC(i,v,r,rscbin,t) }
+* must exceed the total investment
+     sum{(i,v,r)$[valinv(i,v,r,t)$tg_i(tg,i)],
+          INV(i,v,r,t) }
 ;
 
 * ---------------------------------------------------------------------------
@@ -2424,7 +2426,8 @@ eq_REC_launder(RPSCat,st,t)$[RecStates(RPSCat,st,t)$(not tfirst(t))$(yeart(t)>=f
 * ---------------------------------------------------------------------------
 
 eq_RPS_OFSWind(st,t)$[tmodel(t)$stfeas(st)$offshore_cap_req(st,t)$Sw_StateRPS
-                      $sum{(i,v,r)$[r_st(r,st)$ofswind(i)], valcap(i,v,r,t) }]..
+                      $sum{(i,v,r)$[r_st(r,st)$ofswind(i)], valcap(i,v,r,t) }
+                      $(yeart(t)>=firstyear_RPS)]..
 
 * existing capacity of wind
     sum{(i,v,r)$[r_st(r,st)$ofswind(i)], m_capacity_exog(i,v,r,t) }
