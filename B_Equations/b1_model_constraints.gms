@@ -86,6 +86,7 @@ EQUATION
  eq_growthlimit_relative(tg,t)      "--MW-- relative growth limit on technologies in growlim(i)"
  eq_growthbin_limit(gbin,state,tg,t) "--MW-- capacity limit for each growth bin"
  eq_growthlimit_absolute(r,tg,t) "--MW-- absolute growth limit on technologies in growlim(i)"
+ eq_growthlimit_initial(r,tg,t)
  eq_tech_phase_out(i,v,r,t)        "--MW-- mandated phase out of select technologies"
  eq_prescribedre_pre2023(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
 *eq_prescribedre_pre2024(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
@@ -403,6 +404,24 @@ eq_growthlimit_relative(tg,t)$[tmodel(t)
 *must exceed the current periods investment
     sum{(i,v,r)$[valinv(i,v,r,t)$tg_i(tg,i)],
         INV(i,v,r,t)}
+;
+
+*limit on year-on-year technology growth rate to avoid unrealistic investment growth
+eq_growthlimit_initial(r,tg,t)$[tmodel(t)
+                                $Sw_GrowthInit
+                                $(yeart(t)<2025)
+                                $growth_limit_initial(r,tg)]..
+
+*the relative growth rate multiplied by the existing technology group's existing capacity
+    growth_limit_initial(r,tg)
+
+    =g=
+
+*must exceed the current periods investment
+     sum{(i,v,rr)$[tg_i(tg,i)$cap_agg(r,rr)$vre(i)],
+         CAP(i,v,rr,t)} +
+     sum{(i,v)$[tg_i(tg,i)$(not vre(i))],
+         CAP(i,v,r,t)}
 ;
 
 eq_growthbin_limit(gbin,state,tg,t)$[valinv_tg(state,tg,t)

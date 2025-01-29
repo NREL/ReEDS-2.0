@@ -37,6 +37,7 @@ Scalar
 Sw_MinCF                      "Switch to turn minimum CF for new capacity on [1] or off [0]"          /%GSw_MinCF%/,
 Sw_GrowthRel                  "Switch for the relative growth constraint + growth penalties"          /%GSw_GrowthRel%/,
 Sw_GrowthAbs                  "Switch for the absolute growth constraint"                             /%GSw_GrowthAbs%/,
+Sw_GrowthInit                 "Switch for setting initial year growth limit"                          /%GSw_GrowthInit%/,
 Sw_OpRes                      "Switch to turn on operating reserve constraint"                        /%GSw_OpRes%/,
 Sw_OpResTrade                 "Switch to allow trading operating reserves between regions"            /%GSw_OpResTrade%/,
 Sw_Refurb                     "Switch to allow refurbishments"                                        /%GSw_Refurb%/,
@@ -1544,6 +1545,12 @@ $offdelim
           /
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%AbsGrowLim_file%
+$offdelim
+          /,
+          growth_limit_initial(r,tg) "--MW-- growth limit for technology groups in initial model year"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%InitGrowLim_file%
 $offdelim
           /,
           growth_penalty(gbin) "--unitless-- multiplier penalty on the capital cost for growth in each bin"

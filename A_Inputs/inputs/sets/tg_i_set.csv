@@ -9,8 +9,8 @@ vre,DISTPV
 vre,ONSWIND
 vre,OFSWIND
 nuclear,NUCLEAR
-wind,ONSWIND
-wind,OFSWIND
+onswind,ONSWIND
+ofswind,OFSWIND
 solar,UPV
 solar,DISTPV
 battery,BATTERY_2

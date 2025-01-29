@@ -24,6 +24,7 @@ RECapManTech_file,file name of set of technologies that qualify for RE capacity 
 REGenMandate_file,file name of the RE generation mandate to be used in the scenario run,regen_mandate_2030.csv,,,,,,,,,,,,,,,,
 REGenManTech_file,file name of set of technologies that qualify for RE generation mandate,genmandate_tech_set.csv,,,,,,,,,,,,,,,,
 AbsGrowLim_file,file name of absolute growth limit,growth_limit_absolute.csv,,,,,,,,,,,,,,,,
+InitGrowLim_file,file name of initial growth limit,growth_limit_init.csv,,,,,,,,,,,,,,,,
 Trancap_file,file name of the exogenous transmission capacity,trancap.csv,,,,,,,,,,,,,,,,
 InterTrancost_file,file name of the transmission cost between states,inter_transcost.csv,,,,,,,,,,,,,,,,
 numclass,maximum number of technology classes,4,,,,,,,,,,,,,,,,
@@ -35,6 +36,7 @@ CC/Curtailment Iterations,Iterations between ReEDs and CC/Curtailment modules to
 GSw_MinCF,Turn minimum CF for new capacity on [1] or off [0],1,0,,,,,,,,,,,,,,,
 GSw_GrowthRel,Turn relative growth constraint on [1] or off [0],0,0,,,1,0,1,,,1,1,,1,,,,1
 GSw_GrowthAbs,Turn absolute growth constraint on [1] or off [0],1,0,,,,,,,,,,,,,,,
+Gsw_GrowthInit,Turn initial growth constraint on [1] or off [0],0,,,1,,,,,,,,,,,,,
 GSw_OpRes,Turn operating reserve constraints on [1] or off [0],1,0,,,,,,,,,,,,,,,
 GSw_OpResTrade,Turn operating reserve trading between regions on [1] or off [0],0,0,,,,,,,,,,,,,,,
 GSw_Refurb,Turn refurbishments on [1] or off [0],1,,,,,,,,,,,,,,,,
