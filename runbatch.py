@@ -107,8 +107,8 @@ def get_rev_paths(revswitches, caseSwitches):
     if os.environ.get('NREL_CLUSTER') == 'kestrel':
         hpc_path = '/kfs2/shared-projects/reeds/Supply_Curve_Data'
     else:
-        hpc_path = '/shared-projects/reeds/Supply_Curve_Data' 
-        
+        hpc_path = '/shared-projects/reeds/Supply_Curve_Data'
+
     if hpc:
         rev_prefix = hpc_path
     else:
@@ -124,7 +124,7 @@ def get_rev_paths(revswitches, caseSwitches):
     revswitches['sc_path'] = revswitches['sc_path'].apply(lambda row: os.path.join(rev_prefix,row))
     revswitches['rev_path'] = revswitches.apply(lambda row: os.path.join(row.sc_path, "reV", row.rev_case), axis=1)
 
-    # link to the pre-processed reV supply curves from hourlize 
+    # link to the pre-processed reV supply curves from hourlize
     def get_rev_sc_file_name(caseSwitches, rev_row, use_hpc=False):
         if pd.isnull(rev_row.original_sc_file):
             return ""
@@ -139,15 +139,15 @@ def get_rev_paths(revswitches, caseSwitches):
                 sc_path = rev_row.hpc_sc_path
             else:
                 sc_path = rev_row.sc_path
-            
-            # supply curve name should be in format of {tech}_rev_supply_curves_raw.csv 
+
+            # supply curve name should be in format of {tech}_rev_supply_curves_raw.csv
             # in the hourlize results folder (must match format in 'save_sc_outputs' function of hourlize/resource.py)
-            sc_file = os.path.join(sc_path, 
+            sc_file = os.path.join(sc_path,
                             rev_row.tech + "_" + rev_row.access_case + sc_folder_suffix,
-                            "results", 
+                            "results",
                             rev_row.tech + "_supply_curve_raw.csv"
                             )
-            return sc_file 
+            return sc_file
     revswitches['sc_file'] = revswitches.apply(lambda row: get_rev_sc_file_name(caseSwitches, row), axis=1)
     revswitches['hpc_sc_file'] = revswitches.apply(lambda row: get_rev_sc_file_name(caseSwitches, row, use_hpc=True), axis=1)
 
@@ -302,7 +302,7 @@ def check_compatibility(sw):
         os.path.join(reeds_path,'inputs','scalars.csv'),
         header=None, usecols=[0,1], index_col=0).squeeze(1)
     ilr_upv = scalars['ilr_utility'] * 100
-    
+
     if (int(sw['GSw_PVB'])) and (sw['GSw_SitingUPV'] != 'reference'):
         if (all(ilr != ilr_upv for ilr in sw['GSw_PVB_ILR'].split('_'))):
             raise ValueError(f'PVB with ILR!={scalars["ilr_utility"]} only works with GSw_SitingUPV == "reference".'
@@ -312,7 +312,7 @@ def check_compatibility(sw):
         if (all(ilr != ilr_upv for ilr in sw['GSw_PVB_ILR'].split('_'))):
             raise ValueError(f'PVB with ILR!={scalars["ilr_utility"]} does not work at county resolution.'
                              f'\nRemove any ILR!={scalars["ilr_utility"]} from GSw_PVB_ILR.')
-            
+
     for year in sw['resource_adequacy_years'].split('_'):
         if not ((2007 <= int(year) <= 2013) or (2016 <= int(year) <= 2023)):
             raise ValueError("Fix resource_adequacy_years")
@@ -335,16 +335,16 @@ def check_compatibility(sw):
         )
         if sw['GSw_Region'] not in modeled_regions:
             raise ValueError("No column in modeled_regions.csv matching GSw_Region")
-    
-    ### Compatible switch combinations 
+
+    ### Compatible switch combinations
     if sw['GSw_EFS1_AllYearLoad'] == 'historic' :
         if ('demand_' + sw['demandscen'] +'.csv') not in os.listdir(os.path.join(reeds_path, 'inputs','load')) :
             raise ValueError("The demand file specified by the demandscen switch is not in the inputs/load folder")
 
     if sw['GSw_PRM_scenario'] == 'none':
         if int(sw['GSw_PRM_CapCredit']) !=1 :
-            raise ValueError("To disable both the capacity credit and stress period formulations GSw_PRM_CapCredit must be set to 1") 
-        
+            raise ValueError("To disable both the capacity credit and stress period formulations GSw_PRM_CapCredit must be set to 1")
+
     ### Dependent model availability
     if (
         ((not int(sw['GSw_PRM_CapCredit'])) or (int(sw['pras']) == 2))
@@ -361,8 +361,8 @@ def check_compatibility(sw):
     if (int(sw['land_use_analysis'])) and (not int(sw['reeds_to_rev'])):
         raise ValueError(
             "'reeds_to_rev' must be enable for land_use analysis to run."
-        )    
-    
+        )
+
 
 def solvestring_sequential(
         batch_case, caseSwitches,
@@ -504,7 +504,7 @@ def setup_sequential(
                 restart_switches,
             )
 
-        ### Run input parameter error checks after the first solve year (since financial 
+        ### Run input parameter error checks after the first solve year (since financial
         ### multipliers aren't created until the first solve year is run)
         if cur_year == min(solveyears):
             OPATH.writelines(
@@ -840,7 +840,7 @@ def setupEnvironment(
                         + '\n'
                     )
                     raise ValueError(error)
-                
+
         #Check GSw_Region switch and ask user to correct if commas are used instead of periods to list multiple regions
         if ',' in (df_cases[case].loc['GSw_Region']) :
             print("Please change the delimeter in the GSw_Region switch from ',' to '.'")
@@ -1101,15 +1101,15 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                                 orient='index').reset_index().rename(columns={'index':'tech', 0:'bins'})
 
     revswitches = revswitches.merge(binSwitches, on=['tech'], how='left')
-                                                 
+
     # format rev paths
     revswitches = get_rev_paths(revswitches, caseSwitches)
 
     # save rev paths file for run
-    revswitches[['tech','access_switch','access_case','rev_case','bins','sc_path', 
+    revswitches[['tech','access_switch','access_case','rev_case','bins','sc_path',
                  'sc_file','hpc_sc_file','cf_path','original_rev_folder']
                 ].to_csv(os.path.join(inputs_case,'rev_paths.csv'), index=False)
-    
+
     #%% Set up the meta.csv file to track repo information and runtime
     ticker = os.path.join(reeds_path,'input_processing','ticker.py')
     loglines = ['computer,repo,branch,commit,description\n']
@@ -1267,7 +1267,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             comment('Set up nodal environment for run', OPATH)
             OPATH.writelines(". $HOME/.bashrc \n")
             OPATH.writelines("module purge \n")
-            
+
             if os.environ.get('NREL_CLUSTER') == 'kestrel':
                 OPATH.writelines("source /nopt/nrel/apps/env.sh \n")
                 OPATH.writelines("module load anaconda3 \n")
@@ -1277,7 +1277,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                 OPATH.writelines("module load conda \n")
                 OPATH.writelines("module load gams \n")
 
-            OPATH.writelines("conda activate reeds2 \n")            
+            OPATH.writelines("conda activate reeds2 \n")
             OPATH.writelines('export R_LIBS_USER="$HOME/rlib" \n\n\n')
 
         if restart:
@@ -1310,8 +1310,11 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                     f"python {os.path.join(casedir,'input_processing',s)}.py {reeds_path} {inputs_case}\n")
                 OPATH.writelines(writescripterrorcheck(s)+'\n')
 
+            if int(caseSwitches['input_processing_only']):
+                OPATH.writelines('\n' + ('exit' if LINUXORMAC else 'goto:eof') + '\n\n')
+
             big_comment('Compile model', OPATH)
-            
+
             OPATH.writelines(
                 "\ngams createmodel.gms gdxcompress=1 xs="+os.path.join("g00files",batch_case)
                 + (' license=gamslice.txt' if hpc else '')
@@ -1416,13 +1419,13 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         ## ReEDS_to_rev processing
         if caseSwitches['reeds_to_rev'] == '1':
             OPATH.writelines('cd {} \n\n'.format(reeds_path))
-            OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "priority" ' 
-                             '-t "wind-ons" --new_incr_mw 6 -l "gamslog.txt" -r\n')
-            OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "priority" ' 
+            OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "priority" '
+                             '-t "wind-ons" -l "gamslog.txt" -r\n')
+            OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "priority" '
                              '-t "wind-ofs" -l "gamslog.txt" -r\n')
             OPATH.writelines(f'python hourlize/reeds_to_rev.py {reeds_path} {casedir} "simultaneous" '
                              '-t "upv" -l "gamslog.txt" -r\n\n')
-            
+
         if caseSwitches['land_use_analysis'] == '1':
             # Run the land-used characterization module
             OPATH.writelines(
@@ -1506,7 +1509,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
     elif hpc:
         # Create a copy of srun_template in casedir as {batch_case}.sh
         shutil.copy("srun_template.sh", os.path.join(casedir, batch_case+".sh"))
-        
+
         # option to run on a debug node on an hpc system
         if debugnode:
             writelines = []

@@ -130,14 +130,14 @@ if debug and (agglevel != 'ba'):
 
 # Get the various region maps created in copy_files.py
 r_county = pd.read_csv(
-    os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze()
+    os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze(1)
 r_ba = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
 # r_ba needs to be in different formats depending on whether you are aggregating 
 # or disaggregating
 if agglevel in ['county']:
     r_ba.rename(columns={'r':'FIPS'}, inplace=True)
 elif agglevel in ['ba','aggreg']:
-    r_ba = r_ba.set_index('ba').squeeze()
+    r_ba = r_ba.set_index('ba').squeeze(1)
     ### Make all-regions-to-aggreg map
     r2aggreg = pd.concat([r_county, r_ba])
 

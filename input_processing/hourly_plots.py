@@ -14,6 +14,7 @@ import geopandas as gpd
 import cmocean
 
 import hourly_repperiods
+from ldc_prep import read_file
 
 ## Turn off logging for imported packages
 for i in ['matplotlib']:
@@ -275,7 +276,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     dfmap = reedsplots.get_dfmap(os.path.abspath(os.path.join(inputs_case,'..')))
 
     ### Get the CF data over all years, take the mean over weather years
-    recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5'))
+    recf = read_file(os.path.join(inputs_case, 'recf.h5'), parse_timestamps=True)
     recf = recf.loc[recf.index.year.isin(sw['GSw_HourlyWeatherYears'])].mean()
 
 

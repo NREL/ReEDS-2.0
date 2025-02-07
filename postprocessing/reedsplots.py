@@ -1005,15 +1005,9 @@ def plot_trans_onecase(
             dfthick = dfmap[thickborders].copy()
     ## Get route linestrings if necessary
     if routes:
-        try:
-            transmission_routes = gpd.read_file(
-                os.path.join(reeds_path,'inputs','shapefiles','transmission_routes-500kVac.gpkg')
-            ).set_index(['r','rr']).to_crs(crs)
-        except FileNotFoundError:
-            print('New routes not found so reverting to old routes')
-            transmission_routes = gpd.read_file(
-                os.path.join(reeds_path,'inputs','shapefiles','transmission_routes')
-            ).set_index(['from_ba','to_ba']).to_crs(crs)
+        transmission_routes = gpd.read_file(
+            os.path.join(reeds_path,'inputs','shapefiles','transmission_routes-500kVac.gpkg')
+        ).set_index(['r','rr']).to_crs(crs)
 
         if tolerance:
             transmission_routes['geometry'] = transmission_routes.simplify(tolerance)
@@ -2503,7 +2497,7 @@ def animate_dispatch(
     ###### Create the index
     fulltimeindex = pd.date_range(
         '2012-01-01', '2013-01-01',
-        inclusive='left', freq='h', tz='Etc/GMT+5',
+        inclusive='left', freq='h', tz='Etc/GMT+6',
     )[:8760]
     if chunklength == 4:
         timeindex = fulltimeindex[2::chunklength]
@@ -2631,7 +2625,7 @@ def animate_dispatch(
 
         ###### Label
         ax.annotate(
-            timeindex[int(h.strip('h'))-1].strftime('%Y-%m-%d\n%H:%M:00 EST'),
+            timeindex[int(h.strip('h'))-1].strftime('%Y-%m-%d\n%H:%M:00 CST'),
             (-2e6, -1.2e6), ha='left', va='bottom', fontsize=12,
         )
         ax.set_xlim(xmin,xmax)
@@ -4348,7 +4342,7 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
     period_days = 1 if sw['GSw_HourlyType'] == 'day' else 5
     yplot = 2012
     timeindex = pd.date_range(
-        f'{yplot}-01-01', f'{yplot+1}-01-01', freq='H', tz='EST')[:8760]
+        f'{yplot}-01-01', f'{yplot+1}-01-01', freq='H', tz='Etc/GMT+6')[:8760]
     ### Get rep periods
     szn_rep = pd.read_csv(
         os.path.join(case,'inputs_case','set_szn.csv')
@@ -4390,7 +4384,7 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
         for y in range(2007,2014):
             yearstarts = [i for i in t2starts[t] if i.year == y]
             yearstarts_aligned = [
-                pd.Timestamp(f'{yplot}-{i.month}-{i.day} 00:00', tz='EST')
+                pd.Timestamp(f'{yplot}-{i.month}-{i.day} 00:00', tz='Etc/GMT+6')
                 for i in yearstarts
             ]
             yearhours = np.ravel([
@@ -5555,7 +5549,7 @@ def plot_pras_eue_timeseries_full(
     for row, y in enumerate(wys):
         timeindex_y = pd.date_range(
             f"{y}-01-01", f"{y+1}-01-01", inclusive='left', freq='H',
-            tz='EST')[:8760]
+            tz='Etc/GMT+6')[:8760]
         for region, color in colors.items():
             ax[row].fill_between(
                 timeindex_y, dfpras_agg.loc[str(y),region:].sum(axis=1).values,
@@ -5567,7 +5561,7 @@ def plot_pras_eue_timeseries_full(
         ax[row].set_xlim(
             pd.Timestamp(f"{y}-01-01 00:00-05:00"),
             pd.Timestamp(f"{y}-12-31 23:59-05:00"))
-        ax[row].xaxis.set_major_locator(mpl.dates.MonthLocator(tz='EST'))
+        ax[row].xaxis.set_major_locator(mpl.dates.MonthLocator(tz='Etc/GMT+6'))
         ax[row].xaxis.set_minor_locator(mpl.dates.WeekdayLocator(byweekday=mpl.dates.SU))
         if row == len(wys) - 1:
             ax[row].xaxis.set_major_formatter(mpl.dates.DateFormatter('%b'))

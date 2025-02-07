@@ -69,7 +69,7 @@ def agg_supplycurve(scpath, inputs_case, numbins_tech,
     if agglevel not in ['county','ba']:
         if int(AggregateRegions):
             ### Get the ba-to-agglevel map
-            rb2agglevel = pd.read_csv(os.path.join(inputs_case,'r_ba.csv')).set_index('ba').squeeze()
+            rb2agglevel = pd.read_csv(os.path.join(inputs_case,'r_ba.csv')).set_index('ba').squeeze(1)
             ### Map old regions to new aggregated regions
             dfin.region = dfin.region.map(rb2agglevel)
     ### Assign bins
@@ -276,7 +276,6 @@ def main(reeds_path,inputs_case,AggregateRegions=1,rsc_wsc_dat=None,write=True,*
     dfwindexog = pd.read_csv(
         os.path.join(inputs_case,'wind-ons_exog_cap.csv')
     ).rename(columns={'capacity':'MW'})
-
     ### Get the rscbin, then sum by (i,r,rscbin,t)
     dfwindexog['rscbin'] = 'bin'+dfwindexog.sc_point_gid.map(gid2irb_wind.rscbin).astype(int).astype(str)
     dfwindexog = dfwindexog.groupby(['*tech','region','rscbin','year']).MW.sum()

@@ -29,7 +29,7 @@ rev_year = 2012
 
 def get_prices():
     print('Reading ReEDS prices and quantities')
-    #ReEDS hours start at 12am EST (UTC-5)
+    #ReEDS hours start at 12am CST (UTC-6)
     df_p = pd.read_csv(f'{reeds_run_path}/outputs/reqt_price.csv')
     df_q = pd.read_csv(f'{reeds_run_path}/outputs/reqt_quant.csv')
     pq_cols = ['reqt','reqt_cat','reeds_ba','h','year']
@@ -188,9 +188,9 @@ def get_prices():
         df_p_h_serv = {'tot':df_p_h_ba, 'load': df_p_load_h, 'rm': df_p_rm_h, 'or': df_p_or_h_mult, 'rps':df_p_rps_h}
 
     for s in list(df_p_h_serv.keys()):
-        #Roll prices from EST to UTC (this will bring prices from end of year to beginning of year)
+        #Roll prices from CST to UTC (this will bring prices from end of year to beginning of year)
         for col in df_p_h_serv[s]:
-            df_p_h_serv[s][col] = np.roll(df_p_h_serv[s][col], 5)
+            df_p_h_serv[s][col] = np.roll(df_p_h_serv[s][col], 6)
         if sw_reg != 'ba':
             #In this case, we need to map prices to bas
             df_hier_red = df_hier[df_hier[sw_reg].isin(df_p_h_serv[s].columns)]
@@ -301,8 +301,8 @@ def calculate_metrics():
         df_hmap_rep = df_hmap[['periodhour','actual_period','season']].copy()
         df_hmap_rep['actual_period_hour'] = df_hmap_rep['actual_period']+ '_' + df_hmap_rep['periodhour'].astype(str)
         df_hmap_rep['season_hour'] = df_hmap_rep['season']+ '_' + df_hmap_rep['periodhour'].astype(str)
-        #Make the index of df_hmap_rep the UTC hour (like df_profile), assuming df_hmap starts at 12am EST (5am UTC)
-        df_hmap_rep.index = np.roll(df_hmap_rep.index, -5)
+        #Make the index of df_hmap_rep the UTC hour (like df_profile), assuming df_hmap starts at 12am CST (6am UTC)
+        df_hmap_rep.index = np.roll(df_hmap_rep.index, -6)
         df_hmap_rep = df_hmap_rep.sort_index()
         df_hmap_rep_only = df_hmap_rep[df_hmap_rep['actual_period_hour'] == df_hmap_rep['season_hour']][['season_hour']].copy()
         df_profile_rep = df_profile.copy()

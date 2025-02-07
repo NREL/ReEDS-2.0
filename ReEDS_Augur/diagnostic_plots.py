@@ -127,14 +127,14 @@ def get_inputs(sw):
         timeindex = pd.date_range(
             f"{sw['resource_adequacy_years'][0]}-01-01",
             f"{sw['resource_adequacy_years'][0]+1}-01-01",
-            freq='H', inclusive='left', tz='EST',
+            freq='H', inclusive='left', tz='Etc/GMT+6',
         )[:8760]
     else:
         timeindex = np.ravel([
             pd.date_range(
                 '{}-01-01'.format(y),
                 '{}-01-01'.format(y+1),
-                freq='H', inclusive='left', tz='EST',
+                freq='H', inclusive='left', tz='Etc/GMT+6',
             )[:8760]
             for y in sw['resource_adequacy_years']
         ])
@@ -374,7 +374,7 @@ def plot_dropped_load_timeseries_full(sw, dfs):
     dropped = dfs['pras']['USA_EUE'].copy()
     timeindex_y = pd.date_range(
         f"{sw['t']}-01-01", f"{sw['t']+1}-01-01", inclusive='left', freq='H',
-        tz='EST')[:8760]
+        tz='Etc/GMT+6')[:8760]
     savename = f"dropped_load-timeseries-wfull-{sw['t']}.png"
     weatheryears = sw['resource_adequacy_years']
     plt.close()
@@ -1120,7 +1120,7 @@ def plot_netloadhours_histogram(sw, dfs):
         ax=ax[0], color=dfs['peakcolors'], stacked=True, alpha=1,
         width=0.95, legend=False,
     )
-    ax[0].set_xlabel('Hour [EST]')
+    ax[0].set_xlabel('Hour [CST]')
     ax[0].xaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
     ax[0].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(1))
     ax[0].tick_params(labelrotation=0)

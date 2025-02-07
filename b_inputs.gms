@@ -2346,6 +2346,7 @@ set spur_techs(i) "Generators with endogenous spur lines" ;
 spur_techs(i) = no ;
 
 * Written by writesupplycurves.py
+$onempty
 set x "reV resource sites"
 /
 $offlisting
@@ -2382,6 +2383,7 @@ $include inputs_case%ds%x_r.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 * Include techs in spurline_sitemap in spur_techs (currently only wind-ons and upv)
 $ifthene.spursites %GSw_SpurScen% == 1
@@ -3003,6 +3005,7 @@ $onlisting
 $offempty
 
 RecPerc(RPSCat,st,t) = sum{allt$att(allt,t), rps_fraction(allt,st,RPSCat) } ;
+RecPerc(RPSCat,st,t)$[(Sw_StateRPS_Carveouts = 0)$(sameas(RPSCat, "RPS_solar") or sameas(RPSCat, "RPS_Wind"))] = 0;
 RecPerc("CES",st,t) = ces_fraction(t,st) ;
 
 * RE generation creates both CES and RPS credits, which can cause double-counting
@@ -3382,6 +3385,7 @@ trtypemax(trtype)$[(Sw_TransCapMaxTypes=3)$(not sameas(trtype,'AC'))] = yes ;
 * --- initial transmission capacity ---
 * transmission capacity input data are defined in both directions for each region-to-region pair
 * Written by transmission.py
+$onempty
 parameter trancap_init_energy(r,rr,trtype) "--MW-- initial transmission capacity for energy trading"
 /
 $offlisting
@@ -3399,6 +3403,7 @@ $include inputs_case%ds%trancap_init_prm.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 * --- future transmission capacity ---
 * Transmission additions are defined in one direction for each region-to-region pair with the lowest region number listed first
@@ -3553,6 +3558,7 @@ routes_nercr(nercr,nercrr,r,rr)$[
 
 * Transmission line capex cost (generated from reV tables)
 * Written by transmission.py
+$onempty
 parameter transmission_line_capcost(r,rr,trtype) "--$/MW-- cost of transmission line capacity"
 /
 $offlisting
@@ -3575,6 +3581,7 @@ $include inputs_case%ds%transmission_line_fom.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 parameter cost_hurdle(r,rr,allt) "--$ per MWh-- cost for transmission hurdle rate" ;
 parameter cost_hurdle_regiongrp1(r,rr,allt) "--$ per MWh-- cost for transmission hurdle rate between regiongrp1" ;
@@ -3670,6 +3677,7 @@ cost_hurdle(r,rr,t)$[sum{trtype, routes(r,rr,trtype,t) }] = max{cost_hurdle_regi
 * algorithm and cost tables as for wind and solar spur lines.
 * Distances are more representative of new greenfield lines than existing lines.
 * Written by transmission.py
+$onempty
 parameter distance(r,rr,trtype) "--miles-- distance between BAs by line type"
 /
 $offlisting
@@ -3690,6 +3698,7 @@ $include inputs_case%ds%tranloss.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 
 * --- VSC HVDC macrogrid ---
@@ -3859,6 +3868,7 @@ ccseason_cap_frac_delta(i,v,r,ccseason,t)$[conv(i)$sameas(ccseason,'hot')] =
 * -- Consume technologies specification --
 *============================================
 
+$onempty
 set r_rr_adj(r,rr) "all pairs of adjacent BAs"
 /
 $offlisting
@@ -3867,6 +3877,7 @@ $include inputs_case%ds%r_rr_adj.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 set h2_routes(r,rr)       "set of feasible pipeline corridors for hydrogen"
     h2_routes_inv(r,rr)   "set of feasible investment pipeline corridors for hydrogen"
@@ -6141,6 +6152,11 @@ m_rsc_dat(r,i,rscbin,sc_cat)
     $[sum{(ii,t)$[rsc_agg(i,ii)$tmodel_new(t)], valcap_irt(ii,r,t) }]
     = rsc_dat(i,r,sc_cat,rscbin) ;
 
+parameter m_rsc_dat_original(r,i,rscbin,sc_cat) "--MW or $/MW-- resource supply curve attributes before any adjustments" ;
+*m_rsc_dat_original is used to compare the magnitude of possible adjustments in supply curves. 
+*It is only used for model validation and debugging purposes. 
+m_rsc_dat_original(r,i,rscbin,sc_cat) = m_rsc_dat(r,i,rscbin,sc_cat) ;
+
 *=========================================
 * Reduced Resource Switch
 *=========================================
@@ -6192,13 +6208,64 @@ m_rsc_dat(r,i,rscbin,"cap")$[rsc_i(i)
   ceil(1000 * sum{(ii,v,tt)$[tfirst(tt)$rsc_agg(i,ii)$(not dr(i))$exog_rsc(i)], capacity_exog_rsc(ii,v,r,rscbin,tt)
       / (1$[not geo_hydro(ii)] + geo_discovery(ii,r,tt)$geo_hydro(ii)) } ) / 1000 ;
 
-*Ensure sufficient resource is available to cover prescribed builds for techs where sameas(i,pcat). These may be costless.
-*Round values first to make sure we don't end up with small number issues (these will be rounded again later along with
-*other parameters)
-m_rsc_dat(r,i,rscbin,"cap")$m_rsc_dat(r,i,rscbin,"cap") = round(m_rsc_dat(r,i,rscbin,"cap"),3) ;
-m_rsc_dat(r,i,"bin1","cap")$[rsc_i(i)$sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) }
-      $(sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } < sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) })] =
-  sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) } - sum{rscbin, m_rsc_dat(r,i,rscbin,"cap") } + m_rsc_dat(r,i,"bin1","cap") ;
+*Ensure sufficient resource availability to cover prescribed builds
+*while considering existing capacity (capacity_exog_rsc) 
+*and prescribed capacity (noncumulative_prescriptions).
+
+*Two types of adjustments:
+*1- If at least one element of m_rsc_dat(r,i,rscbin,"cap") is nonzero within a technology group (pcat), 
+*   apply a multiplier to all associated i-classes so that the total available capacity 
+*   meets or exceeds prescribed capacity.
+*2- If m_rsc_dat(r,i,rscbin,"cap") is zero for all i-classes within the technology group, 
+*   but prescribed capacity exists, assign prescribed capacity to the first bin at zero cost.
+
+*Define auxiliary parameters to organize the computation
+parameter cap_existing(i,r)     "--MW-- amount of existing resource supply curve (rsc) capacity in each region"
+          cap_prescribed(i,r)   "--MW-- amount of prescribed (required builds) rsc capacity in each region"
+          available_supply(i,r) "--MW-- amount of available rsc supply in each region"
+;
+
+*Initialize the available supply to zero
+available_supply(i,r) = 0 ;
+
+*Get existing capacity
+cap_existing(i,r)$exog_rsc(i) = sum{(v,t,rscbin)$[tfirst(t)], capacity_exog_rsc(i,v,r,rscbin,t) } ;
+
+*Get prescribed capacity
+cap_prescribed(i,r)$rsc_i(i) = sum{(pcat,t)$[(sameas(pcat,i) or prescriptivelink(pcat,i))
+                                            $tmodel_new(t)], 
+                                noncumulative_prescriptions(pcat,r,t) } ;
+
+*Loop over all regions
+loop(r,
+*Loop over non-geothermal rsc technologies
+  loop(i$[rsc_i(i)$sum{(v,t)$newv(v), valcap(i,v,r,t) }$(not prescriptivelink("geothermal",i))],
+
+*Get total available supply for all ii associated with pcat of i.
+*For example, if i = {upv_2}, then ii = {upv_2, upv_3, ...} and pcat = {UPV}.
+    available_supply(i,r) = sum{(pcat,ii,rscbin)$[prescriptivelink(pcat,i)
+                                                  $prescriptivelink(pcat,ii)], 
+                              m_rsc_dat(r,ii,rscbin,"cap") } ;
+
+*Apply multiplier if prescribed capacity exceeds available supply
+    if ([((cap_existing(i,r) + cap_prescribed(i,r)) > available_supply(i,r))$(available_supply(i,r))],
+        m_rsc_dat(r,ii,rscbin,"cap")$[sum{pcat$(prescriptivelink(pcat,i)$prescriptivelink(pcat,ii)), 1 }]
+            = m_rsc_dat(r,ii,rscbin,"cap") * ((cap_existing(i,r) + cap_prescribed(i,r)) / available_supply(i,r)) ;
+    ) ;
+
+*Assign prescribed capacity to first bin at no cost if no supply is available
+    if ([(cap_prescribed(i,r) > 0)$(not available_supply(i,r))] ,
+      m_rsc_dat(r,i,"bin1","cap") = cap_prescribed(i,r) ;
+    ) ;
+  ) ; 
+) ;
+
+*Compute the difference between m_rsc_dat_original and m_rsc_dat
+parameter rsc_cap_diff(r,i,rscbin) "--MW or $/MW-- total supply added to m_rsc_dat to adjust for prescriptions" ;
+rsc_cap_diff(r,i,rscbin) = m_rsc_dat(r,i,rscbin,"cap") - m_rsc_dat_original(r,i,rscbin,"cap") ;
+
+*Round up to the nearest 3rd decimal place
+m_rsc_dat(r,i,rscbin,"cap")$m_rsc_dat(r,i,rscbin,"cap") = ceil(m_rsc_dat(r,i,rscbin,"cap") * 1000) / 1000 ;
 
 *Geothermal is not a tech with sameas(i,pcat), so handle it separately here
 *Loop over regions that have geothermal prescribed builds

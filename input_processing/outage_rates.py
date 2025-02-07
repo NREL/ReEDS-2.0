@@ -13,7 +13,7 @@ reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 
 #%%### Fixed inputs
 tz_in = 'UTC'
-tz_out = 'Etc/GMT+5'
+tz_out = 'Etc/GMT+6'
 temp_min = -50
 temp_max = 60
 ignore_techs = ['ocean', 'caes', 'ice']
@@ -88,7 +88,7 @@ def get_sw(case):
     return sw
 
 
-def get_temperatures(case, tz_in='UTC', tz_out='Etc/GMT+5', subset_years=True):
+def get_temperatures(case, tz_in='UTC', tz_out='Etc/GMT+6', subset_years=True):
     ### Derived inputs
     inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
     h5path = os.path.join(inputs_case, 'temperature_celsius-ba.h5')
@@ -182,7 +182,7 @@ def get_techlist_after_bans(case):
     return techlist
 
 
-def get_forcedoutage_hourly(case, tz='Etc/GMT+5', multilevel=True):
+def get_forcedoutage_hourly(case, tz='Etc/GMT+6', multilevel=True):
     inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
     with h5py.File(os.path.join(inputs_case, 'forcedoutage_hourly.h5'), 'r') as f:
         if multilevel:

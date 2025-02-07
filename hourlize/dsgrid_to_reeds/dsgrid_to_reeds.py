@@ -38,9 +38,9 @@ print('Done with pivot: '+ str(datetime.now() - startTime))
 df = df.reset_index()
 print('Done with reset index: '+ str(datetime.now() - startTime))
 
-# Convert 'timestamp' column from UTC to EST & then strip timezone off
+# Convert 'timestamp' column from UTC to CST & then strip timezone off
 df['timestamp'] = (df['timestamp'].dt.tz_localize("UTC")
-                                  .dt.tz_convert("EST")
+                                  .dt.tz_convert("CST")
                                   .dt.tz_localize(None))
 print('Done changing timestamp: '+ str(datetime.now() - startTime))
 

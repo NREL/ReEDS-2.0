@@ -30,6 +30,9 @@ All outputs are written to the `outputs/retail/` folder within the provided run 
 
 ## Caveats
 * The plotting portion of the script will currently fail if technologies are built that are not in the `map_i_to_tech.csv` file. The main `retail_rate_components.csv` file will still be produced as usual; this error only affects the production of the `costs_over_time.html` summary plots.
+* The plots created by the retail rate module will often show certain components of the retail rate dip below the "zero" line. This is due to the order that the module plots each retail rate component when creating stacked bars of the plot: negative-value components are plotted first, then positive-values components are plotted over the negative values, starting at the final value 
+of the negative-value components.
+For example, if the sum of negative-value components is -$3 and the first positive-value component is $0.25, then the positive-value component will be plotted as a bar from -$3 to -$2.75. The second positive-value component will then be plotted starting at -$2.75. These component plots, then, are primarily used to understand the fractional contribution of each positive-value component of the retail rate module to the overall retail rate over time (the overall retail rate can be found by reading the top of each stacked bar).
 
 ## Accounting approach
 Here we describe the accounting methods that we employ to translate yearly costs into estimates of the 

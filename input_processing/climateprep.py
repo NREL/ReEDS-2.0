@@ -356,7 +356,7 @@ def write_load_files(
     else:
         load_hourly_base = read_file(
             os.path.join(reeds_path,'inputs','load', f'{GSw_EFS1_AllYearLoad}_load_hourly.h5'),
-            index_columns=2)[val_r_all]
+        )[val_r_all]
     load_hourly_base.columns.name = 'r'
 
     #%% Get the climate-induced load delta

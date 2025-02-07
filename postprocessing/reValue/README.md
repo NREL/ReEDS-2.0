@@ -14,7 +14,7 @@ reValue has two main purposes:
     - **reeds_run_path**: The path to the ReEDS run
     - **rev_sc_path**: The path to a reV supply curve. Use *none* if not using reV site-level profiles, e.g. if using *load*.
     - **profile_path**: The path to a file containing generation profiles, or *none* if gathering only prices . For onshore wind reV data, this will be the path to an h5 file, and for BA-level load data, this will be a path to a csv file.
-    - **profile_timezone**: The timezone of the profile relative to UTC (e.g. *-5* for EST), or *local* to indicate that the profiles are in local time of the associated balancing areas.
+    - **profile_timezone**: The timezone of the profile relative to UTC (e.g. *-6* for CST), or *local* to indicate that the profiles are in local time of the associated balancing areas.
     - **buildings_file**: A file containing number of buildings and sqft by BA, used for calculating additional metrics of GHP-based load adjustments. Otherwise use *none*
  1. (Optional) Configure switches at the top of reValue.py:
      - **output_prices**: Set to *False* if you don't care about the price outputs, otherwise *True*.

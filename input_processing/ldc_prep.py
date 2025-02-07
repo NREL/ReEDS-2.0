@@ -27,6 +27,7 @@ import os
 import pandas as pd
 import re
 import sys
+from typing import Union
 
 import logging
 from pathlib import Path
@@ -38,7 +39,7 @@ logger = logging.getLogger(__file__)
 ### --- FUNCTIONS ---
 ### ===========================================================================
 
-def read_h5py_file(filename: Path | str) -> pd.DataFrame:
+def read_h5py_file(filename: Union[Path, str]) -> pd.DataFrame:
     """Return dataframe object for a h5py file.
 
     This function returns a pandas dataframe of a h5py file. If the file has multiple dataset on it
@@ -54,7 +55,7 @@ def read_h5py_file(filename: Path | str) -> pd.DataFrame:
     pd.DataFrame
         Pandas dataframe of the file
     """
-    
+
     valid_data_keys = ["data", "cf", "load", "evload"]
 
     with h5py.File(filename, "r") as f:
@@ -66,18 +67,12 @@ def read_h5py_file(filename: Path | str) -> pd.DataFrame:
         assert len(datakey) <= 1, f"Multiple keys={datakey} found for {filename}"
         datakey = datakey[0] if datakey else None
 
-        # standard approach for data with one of the matching keys
         if datakey in keys:
             # load data
             df = pd.DataFrame(f[datakey][:])
-
-        # if none of these keys work, we're dealing with EER-formatted load
         else:
-            years = [column for column in keys if column.isdigit()]
-            # Extract all the years and concat them in a single dataframe.
-            df = pd.concat({int(y): pd.DataFrame(f[y][...]) for y in years}, axis=0)
-            df.index = df.index.rename(["year", "hour"])
-        
+            df = pd.DataFrame()
+
         # add columns to data if supplied
         if 'columns' in keys:
             df.columns = (pd.Series(f["columns"]).map(
@@ -95,6 +90,7 @@ def read_h5py_file(filename: Path | str) -> pd.DataFrame:
         if 'index_names' in keys:
             df.index.names = (pd.Series(f["index_names"]).map(
                 lambda x: x if isinstance(x, str) else x.decode("utf-8")).values)
+
     return df
 
 
@@ -124,7 +120,7 @@ def write_h5_file(df, filename, outfolder, compression_opts=4):
     outfile = os.path.join(outfolder, filename) 
     with h5py.File(outfile, 'w') as f:
         # save index or multi-index in the format 'index_{index order}')
-        for i in range(0, df.index.nlevels):
+        for i in range(df.index.nlevels):
             # get values for specified index level
             indexvals = df.index.get_level_values(i)
             # save index
@@ -133,27 +129,50 @@ def write_h5_file(df, filename, outfolder, compression_opts=4):
                 f.create_dataset(f'index_{i}', data=indexvals, dtype='S30')
             elif indexvals.name == 'datetime':
                 # if we have a formatted datetime index that isn't bytes, save as such
-                timeindex = indexvals.to_series().apply(datetime.datetime.isoformat).reset_index(drop=True)
+                timeindex = (
+                    indexvals.to_series()
+                    .apply(datetime.datetime.isoformat)
+                    .reset_index(drop=True)
+                )
                 f.create_dataset(f'index_{i}', data=timeindex.str.encode('utf-8'), dtype='S30')
             else:
-                # other indices can be saved using their data type
+                # Other indices can be saved using their data type
                 f.create_dataset(f'index_{i}', data=indexvals, dtype=indexvals.dtype)
 
         # save index names
         index_names = pd.Index(df.index.names)
-        f.create_dataset('index_names', data=index_names, dtype=f'S{index_names.map(len).max()}')
+        if len(index_names):
+            f.create_dataset(
+                'index_names', data=index_names, dtype=f'S{index_names.map(len).max()}')
 
         # save column names as string type
-        f.create_dataset('columns', data=df.columns, dtype=f'S{df.columns.map(len).max()}')
+        if len(df.columns):
+            f.create_dataset(
+                'columns', data=df.columns, dtype=f'S{df.columns.map(len).max()}')
 
-        # save data
-        if len(df.dtypes.unique()) > 1:
-            raise Exception(f"Multiple data types detected in {filename}, unclear which one to use for re-saving h5.")
+        # save data if it exists
+        if df.empty:
+            pass
+        elif len(df.dtypes.unique()) == 1:
+            dtype = df.dtypes.unique()[0]
+            f.create_dataset(
+                'data',
+                data=df.values,
+                dtype=dtype,
+                compression='gzip',
+                compression_opts=compression_opts,
+            )
         else:
-            dftype_out = df.dtypes.unique()[0]    
-        f.create_dataset('data', data=df.values, dtype=dftype_out, compression='gzip', compression_opts=compression_opts,)
+            types = df.dtypes.unique()
+            print(df)
+            raise ValueError(
+                f"{outfile} can only contain one datatype but it contains {types}"
+            )
 
-def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
+        return df
+
+
+def read_file(filename: Union[Path, str], parse_timestamps: bool = False) -> pd.DataFrame:
     """Return dataframe object of input file for multiple file formats.
 
     This function read multiple file formats for h5 file sand returns a dataframe from the file. 
@@ -183,13 +202,12 @@ def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
     # datasets that composes the h5 file. For a single dataset we use pandas (since it is the most
     # convenient) and h5py for the custom h5 file.
     try:
+        df = read_h5py_file(filename)
+    except TypeError:
         df = pd.read_hdf(filename)
 
-    except ValueError:
-        df = read_h5py_file(filename)
-    
     # parse timestamps if specified and if there is a datetime index
-    if (kwargs.get('parse_timestamps', False)) and ('datetime' in df.index.names):
+    if parse_timestamps and ('datetime' in df.index.names):
         if not isinstance(df.index.get_level_values('datetime')[0], bytes):
             raise ValueError(
                 f"The indices for timestamp-indexed dataframes should be encoded as bytes. \
@@ -215,6 +233,7 @@ def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
     df = df.astype({column:np.float32 for column in numeric_cols})
     
     return df
+
 
 def csp_dispatch(cfcsp, sm=2.4, storage_duration=10):
     """
@@ -332,13 +351,12 @@ def main(reeds_path, inputs_case):
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
     # inputs_case = os.path.join(
-    #     reeds_path,'runs','v20240904_vcM1_Everything','inputs_case')
+    #     reeds_path,'runs','v20250129_cspfixM0_ISONE','inputs_case')
 
     #%% Inputs from switches
     sw = pd.read_csv(
         os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0,
     ).squeeze(1)
-    demandscen = sw.demandscen
     GSw_EFS1_AllYearLoad = sw.GSw_EFS1_AllYearLoad
     GSw_CSP_Types = [int(i) for i in sw.GSw_CSP_Types.split('_')]
     GSw_PVB_Types = sw.GSw_PVB_Types
@@ -349,11 +367,7 @@ def main(reeds_path, inputs_case):
 
 
     #%%### Load inputs
-
-    # -------- Datetime mapper --------
-    hdtmap = pd.read_csv(os.path.join(inputs_case, 'h_dt_szn.csv'))
-
-    ###### Load the input parameters
+    ### Load the input parameters
     scalars = pd.read_csv(
         os.path.join(inputs_case,'scalars.csv'),
         header=None, usecols=[0,1], index_col=0).squeeze(1)
@@ -383,7 +397,6 @@ def main(reeds_path, inputs_case):
         hierarchy['ccreg'] = hierarchy[sw.capcredit_hierarchy_level].copy()
         hierarchy_original['ccreg'] = hierarchy_original[sw.capcredit_hierarchy_level].copy()
     ### Map regions to new ccreg's
-    rb2fips = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
     r2ccreg = hierarchy['ccreg']
 
     # Get technology subsets
@@ -543,7 +556,7 @@ def main(reeds_path, inputs_case):
                 np.ravel([
                     pd.date_range(
                         f'{y}-01-01', f'{y+1}-01-01',
-                        freq='H', inclusive='left', tz='EST',
+                        freq='H', inclusive='left', tz='Etc/GMT+6',
                     )[:8760]
                     for y in range(2007, 2014)
                 ])
@@ -732,19 +745,15 @@ def main(reeds_path, inputs_case):
     ##############################
 
     write_h5_file(load_profiles, 'load.h5', inputs_case)
-    recf.astype(np.float16).to_hdf(
-        os.path.join(inputs_case,'recf.h5'), key='data', complevel=4, index=True)
+    write_h5_file(recf.astype(np.float16), 'recf.h5', inputs_case)
     resources.to_csv(os.path.join(inputs_case,'resources.csv'), index=False)
     peakload.to_csv(os.path.join(inputs_case,'peakload.csv'))
     ### Write peak demand by NERC region to use in firm net import constraint
     peakload.loc['nercr'].stack('year').rename_axis(['*nercr','t']).rename('MW').to_csv(
         os.path.join(inputs_case,'peakload_nercr.csv'))
     ### Write the CSP solar field CF (no SM or storage) for hourly_writetimeseries.py
-    (cspcf
-        .rename(columns=dict(zip(cspcf.columns, [f'csp_{i}' for i in cspcf.columns])))
-        .astype(np.float32)
-    ).to_hdf(
-        os.path.join(inputs_case,'csp.h5'), key='data', complevel=4, index=False)
+    cspcf = cspcf.rename(columns=dict(zip(cspcf.columns, [f'csp_{i}' for i in cspcf.columns])))
+    write_h5_file(cspcf.astype(np.float32), 'csp.h5', inputs_case)
     ### Overwrite the original hierarchy.csv based on capcredit_hierarchy_level
     hierarchy.rename_axis('*r').to_csv(
         os.path.join(inputs_case, 'hierarchy.csv'), index=True, header=True)
@@ -763,9 +772,12 @@ if __name__ == '__main__':
     tic = datetime.datetime.now()
 
     ### Parse arguments
-    parser = argparse.ArgumentParser(description='Create run-specific pickle files for capacity value')
-    parser.add_argument('reeds_path', type=str, help='Base directory for all batch runs')
-    parser.add_argument('inputs_case', help='path to inputs_case directory')
+    parser = argparse.ArgumentParser(
+        description='Create run-specific hourly profiles',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument('reeds_path', help='ReEDS-2.0 directory')
+    parser.add_argument('inputs_case', help='ReEDS-2.0/runs/{case}/inputs_case directory')
 
     args = parser.parse_args()
     reeds_path = args.reeds_path

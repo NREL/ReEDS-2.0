@@ -77,8 +77,7 @@ def get_load(inputs_case, keep_modelyear=None, keep_weatheryears=[2012]):
     """
     """
     ### Subset to modeled regions
-    load = read_file(
-        os.path.join(inputs_case,'load.h5'), parse_timestamps=True, index_columns=2)
+    load = read_file(os.path.join(inputs_case,'load.h5'), parse_timestamps=True)
     ### Subset to keep_modelyear if provided
     if keep_modelyear:
         load = load.loc[keep_modelyear].copy()
@@ -460,7 +459,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     timestamps.index = np.ravel([
         pd.date_range(
             f'{y}-01-01', f'{y+1}-01-01',
-            freq='H', inclusive='left', tz='EST',
+            freq='H', inclusive='left', tz='Etc/GMT+6',
         )[:8760]
         for y in all_weatheryears
     ])
@@ -480,7 +479,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     elif agglevel in ['ba','aggreg']:
         rmap = (hierarchy_orig.loc[hierarchy_orig['ba'].isin(val_r_all)]
                 [['aggreg',sw['GSw_HourlyClusterRegionLevel']]]
-                .drop_duplicates().set_index('aggreg')).squeeze()        
+                .drop_duplicates().set_index('aggreg')).squeeze(1)
     ### Get r-to-county map
     r_county = pd.read_csv(
         os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze(1)
@@ -513,7 +512,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     #%%### Load RE CF data, then take available-capacity-weighted average by (tech,region)
     print("Collecting 8760 capacity factor data")
-    recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5'))
+    recf = read_file(os.path.join(inputs_case, 'recf.h5'), parse_timestamps=True)
     ### Downselect to techs used for rep-period selection
     keep = sw['GSw_HourlyClusterWeights'].index.tolist()
     recf = recf[[c for c in recf if any([c.startswith(p) for p in keep])]].copy()
@@ -880,7 +879,7 @@ if __name__ == '__main__':
     # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # inputs_case = os.path.join(
     #     reeds_path,'runs',
-    #     'v20240111_mainM1_Pacific_stress','inputs_case','')
+    #     'v20250129_cspfixM0_ISONE','inputs_case','')
     # make_plots = 0
     # interactive = True
 

@@ -294,11 +294,11 @@ def timeslice_to_timestamp(case, param):
     hs['timestamp'] = pd.concat([
         pd.Series(
             pd.date_range(
-                f'{y}-01-01', f'{y+1}-01-01', inclusive='left', freq='H', tz='EST',
+                f'{y}-01-01', f'{y+1}-01-01', inclusive='left', freq='H', tz='Etc/GMT+6',
             )[:8760])
         for y in sw['GSw_HourlyWeatherYears']
     ]).values
-    hs = hs.set_index('timestamp').h.tz_localize('UTC').tz_convert('EST')
+    hs = hs.set_index('timestamp').h.tz_localize('UTC').tz_convert('Etc/GMT+6')
     ### Load the ReEDS output file
     rename = {'allh':'h', 'allt':'t'}
     dfin_timeslice = pd.read_csv(

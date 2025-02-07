@@ -17,7 +17,6 @@
       - ##### [degradation](#inputs/degradation) 
       - ##### [demand_response](#inputs/demand_response) 
       - ##### [dgen_model_inputs](#inputs/dgen_model_inputs) 
-      - ##### [dgen_model_inputs](#inputs/dgen_model_inputs) 
       - ##### [disaggregation](#inputs/disaggregation) 
       - ##### [emission_constraints](#inputs/emission_constraints) 
       - ##### [financials](#inputs/financials) 
@@ -860,56 +859,56 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [dac_elec_BVRE_2021_high.csv](/inputs/consume/dac_elec_BVRE_2021_high.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using High assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using High assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)]
 ---
 
   - [dac_elec_BVRE_2021_low.csv](/inputs/consume/dac_elec_BVRE_2021_low.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using Low assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Low assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)]
 ---
 
   - [dac_elec_BVRE_2021_mid.csv](/inputs/consume/dac_elec_BVRE_2021_mid.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using Mid assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Mid assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)]
 ---
 
   - [dac_gas_BVRE_2021_high.csv](/inputs/consume/dac_gas_BVRE_2021_high.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using High assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using High assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)]
 ---
 
   - [dac_gas_BVRE_2021_low.csv](/inputs/consume/dac_gas_BVRE_2021_low.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using Low assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Low assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)]
 ---
 
   - [dac_gas_BVRE_2021_mid.csv](/inputs/consume/dac_gas_BVRE_2021_mid.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using Mid assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Mid assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)]
 ---
 
   - [dollaryear.csv](/inputs/consume/dollaryear.csv)
@@ -1108,75 +1107,65 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Units:** fraction
 
 ---
-##### [stscen2023_electrification](inputs/dGen_model_inputs/stscen2023_electrification) <a name='inputs/dGen_model_inputs/stscen2023_electrification'></a>
-  - [distpv_stscen2023_electrification.csv.csv](/inputs/dGen_Model_Inputs/stscen2023_electrification/distpv_stscen2023_electrification.csv)
+
+
+##### [stscen2023_electrification](inputs/dgen_model_inputs/stscen2023_electrification) <a name='inputs/dgen_model_inputs/stscen2023_electrification'></a>
+  - [distpv_stscen2023_electrification.csv.csv](/inputs/dgen_model_inputs/stscen2023_electrification/distpv_stscen2023_electrification.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with electrification.
-    - **Units:** MW
 ---
+
 
 ##### [stscen2023_highng](inputs/dgen_model_inputs/stscen2023_highng) <a name='inputs/dgen_model_inputs/stscen2023_highng'></a>
   - [distpvcap_stscen2023_highng.csv.csv](/inputs/dgen_model_inputs/stscen2023_highng/distpvcap_stscen2023_highng.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with high NG (including distpv) costs.
-    - **Units:** MW
+    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with high NG (including distpv) costs
 ---
 
 
 ##### [stscen2023_highre](inputs/dgen_model_inputs/stscen2023_highre) <a name='inputs/dgen_model_inputs/stscen2023_highre'></a>
   - [distpvcap_stscen2023_highre.csv.csv](/inputs/dgen_model_inputs/stscen2023_highre/distpvcap_stscen2023_highre.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with high RE (including distpv) costs.
-    - **Units:** MW
+    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with high RE (including distpv) costs
 ---
 
 
 ##### [stscen2023_lowng](inputs/dgen_model_inputs/stscen2023_lowng) <a name='inputs/dgen_model_inputs/stscen2023_lowng'></a>
   - [distpvcap_stscen2023_lowng.csv.csv](/inputs/dgen_model_inputs/stscen2023_lowng/distpvcap_stscen2023_lowng.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with low NG (including distpv) costs.
-    - **Units:** MW
+    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with low NG (including distpv) costs
 ---
 
 
 ##### [stscen2023_lowre](inputs/dgen_model_inputs/stscen2023_lowre) <a name='inputs/dgen_model_inputs/stscen2023_lowre'></a>
   - [distpvcap_stscen2023_lowre.csv.csv](/inputs/dgen_model_inputs/stscen2023_lowre/distpvcap_stscen2023_lowre.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with low RE (including distpv) costs.
-    - **Units:** MW
+    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with low RE (including distpv) costs
 ---
 
 
 ##### [stscen2023_mid_case](inputs/dgen_model_inputs/stscen2023_mid_case) <a name='inputs/dgen_model_inputs/stscen2023_mid_case'></a>
   - [distpvcap_stscen2023_mid_case.csv.csv](/inputs/dgen_model_inputs/stscen2023_mid_case/distpvcap_stscen2023_mid_case.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023.
-    - **Units:** MW
 ---
 
 
 ##### [stscen2023_mid_case_95_by_2035](inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035) <a name='inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035'></a>
   - [distpvcap_stscen2023_mid_case_95_by_2035.csv.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035/distpvcap_stscen2023_mid_case_95_by_2035.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with a 95% carbon reduction target by 2035.
-    - **Units:** MW
 ---
 
 
 ##### [stscen2023_mid_case_95_by_2050](inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050) <a name='inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050'></a>
   - [distpvcap_stscen2023_mid_case_95_by_2050.csv.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050/distpvcap_stscen2023_mid_case_95_by_2050.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with a 95% carbon reduction target by 2050.
-    - **Units:** MW
 ---
 
 
 ##### [stscen2023_taxcredit_extended2050](inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050) <a name='inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050'></a>
   - [distpvcap_stscen2023_taxcredit_extended2050.csv.csv](/inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050/distpvcap_stscen2023_taxcredit_extended2050.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with an extended IRA through 2050.
-    - **Units:** MW
 ---
+
 
 #### [disaggregation](inputs/disaggregation) <a name='inputs/disaggregation'></a>
   - [disagg_geosize.csv](/inputs/disaggregation/disagg_geosize.csv)
@@ -1323,6 +1312,8 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [inflation_default.csv](/inputs/financials/inflation_default.csv)
+    - **Description:** Annual inflation factors from 1914 through 2200; historical values use the avg-avg values from https://www.usinflationcalculator.com/inflation/consumer-price-index-and-annual-percent-changes-from-1913-to-2008/
+    - **Indices:** t
 ---
 
   - [reg_cap_cost_mult_default.csv](/inputs/financials/reg_cap_cost_mult_default.csv)
@@ -1963,26 +1954,23 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [ofs-wind_ATB_2023_advanced.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_advanced.csv)
     - **File Type:** Inputs file
-    - **Description:** 2023 advanced ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year. Note: rsc_mult is outdated and not in use from 2024 anymore
+    - **Description:** 2023 advanced ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
     - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2023_conservative.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_conservative.csv)
     - **File Type:** Inputs file
-    - **Description:** 2023 conservative ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year. Note: rsc_mult is outdated and not in use from 2024 anymore
+    - **Description:** 2023 conservative ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
     - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2023_moderate.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_moderate.csv)
     - **File Type:** Inputs file
-    - **Description:** 2023 moderate ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year. Note: rsc_mult is outdated and not in use from 2024 anymore
+    - **Description:** 2023 moderate ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
     - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2023_moderate_noFloating.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_moderate_noFloating.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 moderate capital, fixed O&M and var O&M costs of non-floating type ofs-wind by class and year
-    - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2024_advanced.csv](/inputs/plant_characteristics/ofs-wind_ATB_2024_advanced.csv)
@@ -2005,25 +1993,17 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [ofs-wind_ATB_2024_moderate_noFloating.csv](/inputs/plant_characteristics/ofs-wind_ATB_2024_moderate_noFloating.csv)
     - **File Type:** Inputs file
-    - **Description:** 2024 moderate_noFloating ofs-wind capital (5x floating capital cost), fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
+    - **Description:** 2024 moderate_noFloating ofs-wind capital (5x floating capital cost), fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year
     - **Dollar year:** 2022
 ---
 
   - [ons-wind_ATB_2023_advanced.csv](/inputs/plant_characteristics/ons-wind_ATB_2023_advanced.csv)
-    - **Description:** 2023 advanced ons-wind capacity factor multiplier, capital, fixed O&M and var O&M costs by class and year, with a reference 115 hh, 175 rd turbine type
-    - **Dollar year:** 2004
 ---
 
   - [ons-wind_ATB_2023_conservative.csv](/inputs/plant_characteristics/ons-wind_ATB_2023_conservative.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 conservative ons-wind capacity factor multiplier, capital, fixed O&M and var O&M costs by class and year, with a reference 115 hh, 175 rd turbine type
-    - **Dollar year:** 2004
 ---
 
   - [ons-wind_ATB_2023_moderate.csv](/inputs/plant_characteristics/ons-wind_ATB_2023_moderate.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 moderate ons-wind capacity factor multiplier, capital, fixed O&M and var O&M costs by class and year, with a reference 115 hh, 175 rd turbine type
-    - **Dollar year:** 2004
 ---
 
   - [ons-wind_ATB_2024_advanced.csv](/inputs/plant_characteristics/ons-wind_ATB_2024_advanced.csv)
@@ -3412,7 +3392,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Example data for US electric power generation
 ---
 
-  - [example_reeds_scenarios.csv](/postprocessing/bokehpivot/in/example_reeds_scenarios.csv)
+  - [reeds_scenarios.csv](/postprocessing/bokehpivot/reeds_scenarios.csv)
     - **Description:** Example data for ReEDS scenarios, each scenario with a custom style 
 ---
 

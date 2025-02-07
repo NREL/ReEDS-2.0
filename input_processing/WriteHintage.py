@@ -327,7 +327,7 @@ def main(reeds_path, inputs_case):
 
     # Import mapping files
     r_county = pd.read_csv(
-        os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze()
+        os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze(1)
 
     # Import generator database
     indat = pd.read_csv(os.path.join(inputs_case,'unitdata.csv'),

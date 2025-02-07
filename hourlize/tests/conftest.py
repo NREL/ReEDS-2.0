@@ -13,14 +13,15 @@ TEST_DATA_PATH = TEST_PATH.joinpath("data")
 INTEGRATION_DATA_PATH = TEST_DATA_PATH.joinpath("r2r_integration")
 FROM_CONFIG_DATA_PATH = TEST_DATA_PATH.joinpath("r2r_from_config")
 EXPANDED_DATA_PATH = TEST_DATA_PATH.joinpath("r2r_expanded")
-STANDARD_CONFIG_JSON_PATH = FROM_CONFIG_DATA_PATH.joinpath("standard_inputs.json")
+STANDARD_CONFIG_JSON_PATH = FROM_CONFIG_DATA_PATH.joinpath(
+    "standard_inputs_wind_and_pv.json"
+)
 NO_BINS_CONFIG_JSON_PATH = FROM_CONFIG_DATA_PATH.joinpath(
     "no_bin_constraint_inputs.json"
 )
 PRIORITY_INPUTS = FROM_CONFIG_DATA_PATH.joinpath("priority_inputs.json")
 MULTI_PRIORITY_INPUTS = FROM_CONFIG_DATA_PATH.joinpath("multiple_priority_inputs.json")
 WIND_ONS_6_MW_INPUTS = FROM_CONFIG_DATA_PATH.joinpath("wind-ons_6mw_inputs.json")
-EXPANDED_INPUTS = EXPANDED_DATA_PATH.joinpath("config.json")
 
 
 @pytest.fixture
@@ -120,30 +121,6 @@ def multiple_priority_inputs_config_json_data():
     reeds_to_rev_cli.py from-config command.
     """
     with open(MULTI_PRIORITY_INPUTS, "r") as f:
-        data = json.load(f)
-
-    return data
-
-
-@pytest.fixture
-def expanded_inputs_config_json_data():
-    """
-    Return data from configuration json that results in expanded capacity for the
-    reeds_to_rev_cli.py from-config command.
-    """
-    with open(EXPANDED_INPUTS, "r") as f:
-        data = json.load(f)
-
-    return data
-
-
-@pytest.fixture
-def wind_ons_6mw_inputs_config_json_data():
-    """
-    Return data from wind-ons 6 mw inputs configuration json for the
-    reeds_to_rev_cli.py from-config command.
-    """
-    with open(WIND_ONS_6_MW_INPUTS, "r") as f:
         data = json.load(f)
 
     return data

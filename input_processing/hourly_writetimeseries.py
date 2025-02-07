@@ -34,7 +34,7 @@ all_weatheryears = list(range(2007,2014))
 ### --- FUNCTIONS ---
 ### ===========================================================================
 
-def h2timestamp(h, tz='EST'):
+def h2timestamp(h, tz='Etc/GMT+6'):
     """
     Map ReEDS timeslice to actual timestamp
     """
@@ -66,9 +66,9 @@ def timestamp2h(ts, GSw_HourlyType='day'):
         out = f'y{y}d{d:>03}h{h:>03}'
     return out
 
-def get_timeindex(firstyear=2007, lastyear=2013, tz='EST'):
+def get_timeindex(firstyear=2007, lastyear=2013, tz='Etc/GMT+6'):
     """
-    ReEDS time indices are in EST, and leap years drop Dec 31 instead of Feb 29
+    ReEDS time indices are in Central Standard Time, and leap years drop Dec 31 instead of Feb 29
     """
     timeindex = np.ravel([
         pd.date_range(
@@ -141,7 +141,7 @@ def get_ccseason_peaks_hourly(load, sw, inputs_case, hierarchy, h2ccseason, val_
     if sw['GSw_PRM_hierarchy_level'] == 'r':
         rmap = pd.Series(hierarchy.index, index=hierarchy.index)
     else:
-        rmap = hierarchy[sw['GSw_PRM_hierarchy_level']].squeeze()
+        rmap = hierarchy[sw['GSw_PRM_hierarchy_level']]
     load_agg = (
         load.assign(region=load.r.map(rmap))
         .groupby(['h','region']).MW.sum()
@@ -236,7 +236,7 @@ def get_yearly_demand(
     """
     ### Get original demand data, subset to cluster year
     load_in = read_file(
-        os.path.join(inputs_case,'load.h5'), parse_timestamps=True, index_columns=2).unstack(level=0)
+        os.path.join(inputs_case,'load.h5'), parse_timestamps=True).unstack(level=0)
     load_in.columns = load_in.columns.rename(['r','t'])
     ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
     scalars = pd.read_csv(
@@ -493,10 +493,9 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     #%%### Load full hourly RE CF, for downselection below
     #%% VRE
-    recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5'))
-    resources = pd.read_csv(os.path.join(inputs_case,'resources.csv'))
+    recf = read_file(os.path.join(inputs_case, 'recf.h5'), parse_timestamps=True)
     ### Overwrite CSP CF (which in recf.h5 is post-storage) with solar field CF
-    cspcf = pd.read_hdf(os.path.join(inputs_case,'csp.h5'))
+    cspcf = read_file(os.path.join(inputs_case, 'csp.h5'), parse_timestamps=True)
     recf = (
         recf.drop([c for c in recf if c.startswith('csp')], axis=1)
         .merge(cspcf, left_index=True, right_index=True)
@@ -935,7 +934,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     #%%### Outage rates ######
     infile = os.path.join(inputs_case, 'forcedoutage_hourly.h5')
-    tz = 'Etc/GMT+5'
+    tz = 'Etc/GMT+6'
     with h5py.File(infile, 'r') as f:
         forcedoutage_hourly = pd.DataFrame(
             index=pd.to_datetime(pd.Series(f['index']).map(lambda x: x.decode())),
@@ -950,6 +949,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     ### Aggregate to model resolution
     aggmethod = 'mean' if periodtype == 'rep' else 'max'
+
     forcedoutage_h = forcedoutage_hourly.loc[hmap_myr.timestamp].copy()
     forcedoutage_h.index = hmap_myr.h.map(chunkmap)
     forcedoutage_h = (

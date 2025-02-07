@@ -73,7 +73,7 @@ loop(i$rsc_i(i),
 ) ;
 
 * set m_capacity_exog to the maximum of either its original amount
-* or the amount of upgraded capacity that has occurred in the past 20 years
+* or the amount of upgraded capacity that has occurred in the past "Sw_UpgradeLifespan" years
 * to avoid forcing recently upgraded capacity into retirement
 if(Sw_Upgrades = 1,
 

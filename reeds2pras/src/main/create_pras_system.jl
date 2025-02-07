@@ -4,8 +4,8 @@
     It takes in a vector of Region objects, a vector of Line objects, a vector
     of Generator objects, a vector of Storage objects, a vector of Gen_Storage
     objects, an integer timesteps representing the number of timesteps, and an
-    integer weather_year representing the year of the simulation. It then switches to
-    US/EST from UTC, creates a StepRange object for the timestamps, creates
+    integer weather_year representing the year of the simulation. It then
+    creates a StepRange object for the timestamps, creates
     PRAS lines and interfaces from the sorted lines and interface indices,
     creates PRAS regions from the regions, creates PRAS generators from the
     sorted generators and generator indices, creates PRAS storages from the
@@ -44,7 +44,6 @@ function create_pras_system(
     timesteps::Int,
     weather_year::Int,
 )
-    # switched to US/EST from UTC
     first_ts = TimeZones.ZonedDateTime(weather_year, 01, 01, 00, TimeZones.tz"UTC")
     last_ts = first_ts + Dates.Hour(timesteps - 1)
     my_timestamps = StepRange(first_ts, Dates.Hour(1), last_ts)

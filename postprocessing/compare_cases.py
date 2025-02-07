@@ -429,7 +429,7 @@ if not skipbp:
     bp_outpath = f'{outpath}/{bpreport}-diff-multicase'
     add_diff = 'Yes'
     auto_open = 'Yes'
-    bp_colors = pd.read_csv(f'{bp_path}/in/example_reeds_scenarios.csv')['color'].tolist()
+    bp_colors = pd.read_csv(f'{bp_path}/reeds_scenarios.csv')['color'].tolist()
     bp_colors = bp_colors*10 #Up to 200 scenarios
     bp_colors = bp_colors[:len(casenames)]
     df_scenarios = pd.DataFrame({'name':casenames, 'color':bp_colors, 'path':caselist})
@@ -1948,7 +1948,7 @@ for interzonal_only in [False, True]:
         val = np.around(df.loc[max(years[case])], 0) + 0
         ax[0].annotate(
             f' {val:.0f}',
-            (max(years[case]), val), ha='left', va='center',
+            (max(years[case]), df.loc[max(years[case])]), ha='left', va='center',
             color=colors[case], fontsize='medium',
         )
     ax[0].set_ylim(0)

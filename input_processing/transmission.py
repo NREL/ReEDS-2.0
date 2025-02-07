@@ -20,8 +20,8 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing ###
-#reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-#inputs_case = os.path.join(reeds_path,'runs','hr_test_none_Pacific','inputs_case','')
+# reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+# inputs_case = os.path.join(reeds_path,'runs','v20240916_unitsM0_TN','inputs_case','')
 
 #%%#################
 ### FIXED INPUTS ###
@@ -249,7 +249,10 @@ def getloss(row):
     """
     return row.miles * tranloss_permile[row.trtype] + tranloss_fixed[row.trtype] * 2
 
-tline_data['loss'] = tline_data.apply(getloss, axis=1)
+if tline_data.empty:
+    tline_data['loss'] = None
+else:
+    tline_data['loss'] = tline_data.apply(getloss, axis=1)
 
 ### Set the identifier index for easier indexing later
 tline_data.set_index(['r','rr','trtype'], inplace=True)
@@ -301,7 +304,10 @@ transmission_distance.round(3).reset_index().rename(columns={'r':'*r'}).to_csv(
 
 ### tranloss
 tranloss = transmission_distance.reset_index()
-tranloss['loss'] = tranloss.apply(getloss, axis=1)
+if tranloss.empty:
+    tranloss['loss'] = None
+else:
+    tranloss['loss'] = tranloss.apply(getloss, axis=1)
 tranloss[['r','rr','trtype','loss']].round(decimals).rename(columns={'r':'*r'}).to_csv(
     os.path.join(inputs_case,'tranloss.csv'), index=False, header=True)
 

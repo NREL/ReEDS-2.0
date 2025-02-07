@@ -224,7 +224,7 @@ def main(reeds_path, inputs_case, **kwargs):
         r_col = rcol_dict[agglevel]
         gdb_use['r'] = gdb_use[r_col].copy()
     elif agglevel == 'aggreg':
-        r_ba = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'), index_col='ba').squeeze()
+        r_ba = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'), index_col='ba').squeeze(1)
         gdb_use = gdb_use.assign(r=gdb_use.reeds_ba.map(r_ba))
 
     # If PVB is turned off, consider all PVB as UPV and battery_4 for existing and prescribed builds 
@@ -468,7 +468,7 @@ def main(reeds_path, inputs_case, **kwargs):
     h2_exogenous_demand = (
         pd.read_csv(os.path.join(inputs_case,'h2_exogenous_demand.csv'))
         .rename(columns={f'{sw.GSw_H2_Demand_Case}':'million_tons'},)
-        .drop(['*p'], axis=1).set_index('t').squeeze()
+        .drop(['*p'], axis=1).set_index('t').squeeze(1)
     )
     ### Get BA share of national H2 demand
     h2_ba_share = pd.read_csv(

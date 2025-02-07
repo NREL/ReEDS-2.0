@@ -27,12 +27,12 @@ def get_hierarchy(casepath):
 
 def make_fulltimeindex():
     """
-    Generate pandas index of 7x8760 timestamps in EST for 2007-2013,
+    Generate pandas index of 7x8760 timestamps for 2007-2013,
     dropping December 31 on leap years.
     """
     fulltimeindex = np.ravel([
         pd.date_range(
-            f'{y}-01-01', f'{y+1}-01-01', freq='H', inclusive='left', tz='EST',
+            f'{y}-01-01', f'{y+1}-01-01', freq='H', inclusive='left', tz='Etc/GMT+6',
         )[:8760]
         for y in range(2007,2014)
     ])

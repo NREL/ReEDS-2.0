@@ -70,8 +70,7 @@ def main(t, casedir):
     load = read_file(os.path.join(inputs_case, 'load.h5'), parse_timestamps=True)
 
     resources = pd.read_csv(os.path.join(inputs_case, 'resources.csv'))
-
-    recf = pd.read_hdf(os.path.join(inputs_case, 'recf.h5')).astype(np.float32)
+    recf = read_file(os.path.join(inputs_case, 'recf.h5'), parse_timestamps=True)
     recf.columns = pd.MultiIndex.from_tuples([tuple(x.split('|')) for x in recf.columns],
                                              names=('i','r'))
 
