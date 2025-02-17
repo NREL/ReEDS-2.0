@@ -43,10 +43,7 @@ def read_pras_results(filepath):
     """Read a run_pras.jl output file"""
     with h5py.File(filepath, 'r') as f:
         keys = list(f)
-        if len(keys):
-            df = pd.concat({c: pd.Series(f[c][...]) for c in keys}, axis=1)
-        else:
-            df = pd.DataFrame()
+        df = pd.concat({c: pd.Series(f[c][...]) for c in keys}, axis=1)
         return df
 
 
@@ -128,9 +125,9 @@ def get_switches(casedir):
     ### Combine
     sw = pd.concat([rsw, asw.value])
     ### Format a few datatypes
-    for key in ['resource_adequacy_years']:
+    for key in ['osprey_years']:
         sw[key] = [int(y) for y in sw[key].split('_')]
-    ### Get number of threads to use in PRAS
+    ### Get number of threads to use in Osprey/PRAS
     threads = get_param_value(os.path.join(casedir, 'cplex.opt'), "threads", dtype=int)
     sw['threads'] = threads
     ### Determine whether run is on HPC
@@ -138,7 +135,7 @@ def get_switches(casedir):
     ### Add the run location
     sw['casedir'] = casedir
     sw['reeds_path'] = os.path.dirname(os.path.dirname(casedir))
-    ### Get the number of hours per period to use in plots
+    ### Get the number of hours per period to use in Osprey
     sw['hoursperperiod'] = {'day':24, 'wek':120, 'year':24}[sw['GSw_HourlyType']]
     sw['periodsperyear'] = {'day':365, 'wek':73, 'year':365}[sw['GSw_HourlyType']]
 
@@ -153,6 +150,7 @@ def delete_csvs(sw):
         glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"*_{sw['t']}.pkl"))
         + glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"*_{sw['t']}.h5"))
         + glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"*_{sw['t']}.csv"))
+        + glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"osprey_outputs_{sw['t']}.gdx"))
         + glob(os.path.join(sw['casedir'],'ReEDS_Augur','PRAS',f"PRAS_{sw['t']}*.pras"))
     )
 

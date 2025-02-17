@@ -3,7 +3,7 @@
 param,units,comment,reeds2x,output_rename,input
 "acp_purchases_out(rpscat,st,t)",MWh,Annual alternative compliance credits from the variable ACP_PURCHASES,,,
 "avg_cf(i,v,r,t)",frac,Annual average capacity factor for rsc technologies,,,
-"avg_avail(i,v,r)",frac,Annual average avail factor,,,
+"avg_avail(i,v)",frac,Annual average avail factor,,,
 "bioused_out(bioclass,r,t)",dry tons (imperial),biomass used by class in each model region (-> bioused.csv),,,
 "bioused_usda(bioclass,usda_region,t)",dry tons (imperial),biomass used by class in each USDA region,,,
 "state_cap_and_trade_price(st,t)",$/metric ton,marginal from state annual CO2 cap constraints,,,
@@ -24,7 +24,6 @@ param,units,comment,reeds2x,output_rename,input
 "cap_new_out(i,r,t)",MW,"new capacity by region, which are investments and upgrades from one solve year to the next",,,
 "cap_out(i,r,t)",MW,capacity by region,1,cap,
 "cap_out_ivrt(i,v,r,t)",MW,capacity by region and vintage,,,
-"capacity_offline(i,r,allh,t)",MW,capacity offline due to forced or planned outages,,,
 "capex_ivrt(i,v,r,t)",$,"capital expenditure for new capacity, no ITC/depreciation/PTC reductions",,,
 "cap_upgrade(i,r,t)",MW,upgraded capacity by region,,,
 "cap_upgrade_ivrt(i,v,r,t)",MW,upgraded capacity by region and vintage,,,
@@ -65,12 +64,10 @@ curt_rate(t),frac,fraction of VRE generation that is curtailed,,,
 "emit_rate_regional(r,t)",metric tons,"regional average CO2 emissions rate, used in state CO2 caps",,,
 emit_weighted(eall),metric tons * pvf,national emissions * pvf_onm,,,
 error_check(*),unitless,set of checks to determine if there is an error - values should be zero if there is no error,,,
-"error_gen(i,v,r,allh,t)",MWh,"erroneous generation that disobeys valgen(i,v,r,t)",,,
 "expenditure_flow(*,r,rr,t)",2004$,expenditures from flows of * moving from r to rr,,,
 "expenditure_flow_rps(st,ast,t)",2004$,expenditures from trades of RECS from st to ast,,,
 "expenditure_flow_int(r,t)",2004$,expenditures from exogenous international imports/exports,,,
 "flex_load_out(flex_type,r,allh,t)",MWh,flexible load consumed in each timeslice,,,
-forced_outage(i),fraction,average forced outage rate (h-weighted; r-unweighted) by technology during representative periods,,,
 "gen_ivrt_uncurt(i,v,r,t)",MWh,annual uncurtailed generation from VREs,,,
 "gen_ivrt(i,v,r,t)",MWh,annual generation,,,
 "gen_h(i,r,allh,t)",MW,generation by timeslice with charge and production load as negative generation,1,,
@@ -82,9 +79,6 @@ forced_outage(i),fraction,average forced outage rate (h-weighted; r-unweighted) 
 "h2_inout(h2_stor,r,allh,t,*)",metric tons/hour,H2 moving in/out of storage,,,
 "h2_price_h(r,allh,t)",$2004/kg,Marginal cost of H2 by region and timeslice,,,
 "h2_price_szn(r,allszn,t)",$2004/kg,Marginal cost of H2 by region and season,,,
-"h2_ptc_generation(i,v,r,allh,t)",MWh,generation of clean electricity for electrolyzers receiving the hydrogen production tax credit (derived from CREDIT_H2PTC variable),,,
-"h2_ptc_marginal_region(h2ptcreg,t)",$2004/MWh,marginal cost of producing an Energy Attribute Credit with regional and annual matching,,,
-"h2_ptc_marginal_region_hour(h2ptcreg,allh,t)",$2004/MWh,"marginal cost of producing an Energy Attribute Credit with regional, hourly and annual matching",,,
 "h2_storage_level(h2_stor,r,actualszn,allh,t)",metric tons,H2 storage level by timeslice,,,
 "h2_storage_level_szn(h2_stor,r,actualszn,t)",metric tons,H2 storage level by season,,,
 "h2_storage_cap(h2_stor,r,t)",metric tons,total H2 storage capacity by BA and type,,,
@@ -172,8 +166,7 @@ rggi_quant(t),metric tons,annual CO2 cap for the regional greenhouse gas initiat
 # end system cost parameters,,,,,
 tax_expenditure_itc(t),2004$,ITC tax expenditure,,,
 tax_expenditure_ptc(t),2004$,PTC tax expenditure,,,
-"tran_flow_all_rep(r,rr,allh,trtype,t)",MW,transmission flows between regions by representative time slice,,,
-"tran_flow_all_stress(r,rr,allh,trtype,t)",MW,transmission flows between regions by stress time slice,,,
+"tran_flow_all(r,rr,allh,trtype,t)",MW,transmission flows between regions by time slice,,,
 "tran_flow_rep(r,rr,allh,trtype,t)",MW,"power flow along each transmission line, losses NOT included",,,
 "tran_flow_rep_ann(r,rr,trtype,t)",MWh,"annual net energy flow across each transmission interface, losses NOT included",,,
 "tran_flow_stress(r,rr,allh,trtype,t)",MW,transmission flows between regions during stress periods,,,
@@ -222,8 +215,6 @@ capture_rate,,,,,1
 cf_adj_t,,,,,1
 cf_hyd,,,,,1
 cost_cap,,,,,1
-cost_cap_fin_mult,,,,,1
-cost_cap_fin_mult_noITC,,,,,1
 cost_hurdle,,,,,1
 cost_scale,,,,,1
 cost_vom,,,,,1
@@ -231,6 +222,7 @@ cendiv,,,,,1
 degrade_annual,,,,,1
 e,,,,,1
 emit_rate,,,,,1
+forced_outage,,,,,1
 fuel_price,,,,,1
 fuel2tech,,,,,1
 h_szn,,,,,1

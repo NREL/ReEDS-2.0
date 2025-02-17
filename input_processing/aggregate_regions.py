@@ -54,7 +54,7 @@ inputs_case = os.path.join(args.inputs_case)
 # #%%## Settings for testing 
 # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # inputs_case = os.path.join(
-#     reeds_path,'runs','v20240719_agg0M2_MA_county','inputs_case')
+#     reeds_path,'runs','v20240606_aggmapsM3_ERCOT_county','inputs_case')
 
 
 #%% Settings for debugging
@@ -72,8 +72,6 @@ decimals = 6
 ### anchortype: 'load' sets rb with largest 2010 load as anchor reg;
 ### 'size' sets largest rb as anchor reg
 anchortype = 'size'
-### Types of cost data in files that use sc_cat
-sc_cost_types = ['cost', 'cost_cap', 'cost_trans']
 
 ######################
 ### DERIVED INPUTS ###
@@ -204,7 +202,7 @@ if agglevel in ['state','aggreg']:
     
     ### Get distpv capacity to use in capacity-weighted averages
     distpvcap = pd.read_csv(
-        os.path.join(inputs_case, 'distpvcap.csv'), index_col=0
+        os.path.join(inputs_case, 'distPVcap.csv'), index_col=0
     )
     ## Keep a single year
     distpvcap = distpvcap[
@@ -212,15 +210,8 @@ if agglevel in ['state','aggreg']:
         else str(int(sw.GSw_HourlyClusterYear) + 1)
     ].rename_axis('r').rename('MW').copy()
     ## Add it to rscweight_nobin
-    rscweight_nobin = rscweight.groupby(['i','r'], as_index=False).MW.sum()
+    rscweight_nobin = rscweight.groupby(['i','r'], as_index=False).sum()
     rscweight_nobin = pd.concat([rscweight_nobin, distpvcap.reset_index().assign(i='distpv')], axis=0)
-    ## Add PVB values in case we need them
-    pvbtechs = [f'pvb{i}' for i in sw.GSw_PVB_Types.split('_')]
-    tocopy = rscweight_nobin.loc[rscweight_nobin.i.str.startswith('upv')].copy()
-    rscweight_nobin = pd.concat(
-        [rscweight_nobin]
-        + [tocopy.assign(i=tocopy.i.str.replace('upv',pvbtech)) for pvbtech in pvbtechs]
-    )
     ## Remove duplicate CSP values for different solar multiples
     rscweight_csp = rscweight_nobin.copy()
     rscweight_csp.i.replace(
@@ -228,7 +219,7 @@ if agglevel in ['state','aggreg']:
          for i in range(int(sw.GSw_CSP))
          for c in range(int(sw.GSw_NumCSPclasses))},
         inplace=True)
-    rscweight_csp.drop_duplicates(['i','r'], inplace=True)
+    rscweight_csp.drop_duplicates(['i','r','rscbin'], inplace=True)
 
 #%% Get the mapping to reduced-resolution technology classes
 original_num_classes = {**{'dupv':7}, **{f'csp{i}':12 for i in range(1,5)}}
@@ -254,7 +245,6 @@ aggfiles = (
     pd.read_csv(
         os.path.join(reeds_path, 'runfiles.csv'),
         dtype={'fix_cols':str}, index_col='filename',
-        comment='#',
     ).fillna({'fix_cols':''})
     .rename(columns={'wide (1 if any parameters are in wide format)':'wide',
                      'header (0 if file has column labels)':'header'})
@@ -399,11 +389,8 @@ for filepath in inputfiles:
         # Some csv files are empty and therefore cannot be opened.  If that is
         # the case, then skip them.
         try:
-            dfin = pd.read_csv(
-                os.path.join(inputs_case, filepath), header=header,
-                dtype={'FIPS':str, 'fips':str, 'cnty_fips':str},
-            )
-        except pd.errors.EmptyDataError:
+            dfin = pd.read_csv(os.path.join(inputs_case, filepath), header=header)
+        except Exception:
             continue
     elif filetype == 'h5':
         dfin = pd.read_hdf(os.path.join(inputs_case, filepath))
@@ -493,20 +480,13 @@ for filepath in inputfiles:
             df1[i_col] = df1[i_col].map(lambda x: new_classes.get(x,x))
 
     if aggfunc == 'sc_cat':
-        ## Weight cost by cap; if there's no cap, use 1 MW as weight
-        for cost_type in sc_cost_types:
-            ## Geothermal doesn't have all sc_cost_types
-            if cost_type not in df1:
-                continue
-            df1[f'cap_times_{cost_type}'] = df1['cap'].fillna(1).replace(0,1) * df1[cost_type]
+        ## Weight cost by cap
+        df1['cap_times_cost'] = df1['cap'] * df1['cost']
         ## Sum everything
         df1 = df1.groupby(fix_cols+[region_col]).sum()
         ## Divide cost*cap by cap
-        for cost_type in sc_cost_types:
-            if cost_type not in df1:
-                continue
-            df1[cost_type] = df1[f'cap_times_{cost_type}'] / df1['cap'].fillna(1).replace(0,1)
-            df1.drop([f'cap_times_{cost_type}'], axis=1, inplace=True)
+        df1['cost'] = df1['cap_times_cost'] / df1['cap']
+        df1.drop(['cap_times_cost'], axis=1, inplace=True)
     elif aggfunc == 'trans_lookup':
         ## Get data for anchor zones
         for c in region_cols:
@@ -641,13 +621,7 @@ for filepath in inputfiles:
                       .set_index(df1cols[:-1])
                   )
             df1 = df1[[valcol]]
-
-    elif aggfunc == 'special':
-        if (filename == 'county2zone.csv') and (agglevel == 'county'):
-            for r in region_cols:
-                df1[r] = 'p' + df1['FIPS'].map(lambda x: f"{x:0>5}")
-            df1 = df1.set_index(region_cols)
-
+            
     else:
         raise ValueError(f'Invalid choice of aggfunc: {aggfunc} for {filename}')
 

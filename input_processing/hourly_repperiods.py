@@ -249,6 +249,32 @@ def assign_representative_days(profiles_day, rweights):
     return a2r
 
 
+def get_threaddays(threads=4, numdays=7*365):
+    """
+    Evenly apportion days to threads for efficient parallelization
+    """
+    base = numdays // threads
+    remainder = numdays % threads
+    threadnumdays = [base+1]*remainder + [base]*(threads-remainder)
+    threadnumdays = dict(zip(range(1,threads+1), threadnumdays))
+
+    ends, days = {}, {}
+    for thread in range(1,threads+1):
+        if thread == 1:
+            start = 1
+        else:
+            start = ends[thread-1]+1
+
+        ends[thread] = start + threadnumdays[thread] - 1
+        days[thread] = pd.Series(range(start, start+threadnumdays[thread]))
+
+    threadout = (
+        pd.concat(days).reset_index(level=1, drop=True)
+        .reset_index().rename(columns={'index':'*thread',0:'day'}))
+
+    return threadout
+
+
 def identify_peak_containing_periods(df, hierarchy, level):
     """
     Identify the period containing the peak value.
@@ -762,6 +788,22 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     )
 
 
+    #%%### Get number of threads to use in Augur/Osprey
+    d_osprey = 's'+timestamps['period'].drop_duplicates()
+
+    threads_pattern = re.compile(r'threads\s*=?\s*(-?\d+)')
+    with open(os.path.join(inputs_case,'..','cplex.opt')) as f:
+        text = f.read()
+    threads = int(threads_pattern.findall(text)[0])
+    if threads <= 0:
+        threads = 16
+    ### Get number of periods used in Augur/Osprey
+    numdays = periodsperyear[sw['GSw_HourlyType']] * len(sw.osprey_years.split('_'))
+    ### Make the threads-to-days table
+    threadout = get_threaddays(threads=threads, numdays=numdays)
+    threadout['day'] = d_osprey.values
+
+
     #%%### Plot some stuff
     if make_plots >= 3:
         try:
@@ -857,6 +899,13 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
             else:
                 stress_period_szn.loc[[t]].to_csv(
                     os.path.join(inputs_case, f'stress{t}i0', 'period_szn.csv'), index=False)
+
+    #%% Write the set of days to model in Osprey (all possible stress periods)
+    d_osprey.to_csv(
+        os.path.join(inputs_case, 'd_osprey.csv'), header=False, index=False)
+
+    threadout.to_csv(os.path.join(inputs_case, 'threads.csv'), index=False)
+
 
 
 #%% ===========================================================================

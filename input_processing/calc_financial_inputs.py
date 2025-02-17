@@ -18,18 +18,14 @@ import datetime
 def calc_financial_inputs(inputs_case):
     """
     Write the following files to runs/{batch_case}/inputs_case/:
-    - cap_cost_mult_noITC.csv
-    - co2_capture_incentive.csv
-    - crf.csv
-    - crf_co2_incentive.csv
-    - crf_h2_incentive.csv
-    - depreciation_schedules.csv
-    - h2_ptc.csv
-    - inflation.csv
-    - itc_fractions.csv
     - ivt.csv
     - ptc_values.csv
     - ptc_value_scaled.csv
+    - itc_fractions.csv
+    - depreciation_schedules.csv
+    - inflation.csv
+    - cap_cost_mult_noITC.csv
+    - crf.csv
     - pvf_onm_int.csv
     - pvf_cap.csv
     - reg_cap_cost_mult.csv
@@ -90,15 +86,16 @@ def calc_financial_inputs(inputs_case):
     df_ivt = sFuncs.build_dfs(years, techs, vintage_definition, year_map)
     print('df_ivt created for', inputs_case)
 
+
     #%% Import and merge data onto df_ivt
 
     # Import system-wide real discount rates, calculate present-value-factors, merge onto df's
     financials_sys = sFuncs.import_sys_financials(
         sw['financials_sys_suffix'], inflation_df, modeled_years, 
-        years, year_map, sw['sys_eval_years'], scen_settings, scalars['co2_capture_incentive_length'],scalars['h2_ptc_length'])
+        years, year_map, sw['sys_eval_years'], scen_settings, scalars['co2_capture_incentive_length'])
     financials_sys.to_csv(os.path.join(inputs_case,'financials_sys.csv'),index=False)
     df_ivt = df_ivt.merge(
-        financials_sys[['t', 'pvf_capital', 'crf', 'crf_co2_incentive','crf_h2_incentive','d_real', 'd_nom', 'interest_rate_nom', 
+        financials_sys[['t', 'pvf_capital', 'crf', 'crf_co2_incentive', 'd_real', 'd_nom', 'interest_rate_nom', 
                         'tax_rate', 'debt_fraction', 'rroe_nom']], 
         on=['t'], how='left')
 
@@ -158,7 +155,6 @@ def calc_financial_inputs(inputs_case):
     df_ivt = df_ivt.merge(incentive_df, on=['i', 't', 'country'], how='left')
     df_ivt['safe_harbor_max'] = df_ivt['safe_harbor_max'].fillna(0.0)
     df_ivt['co2_capture_value_monetized'] = df_ivt['co2_capture_value_monetized'].fillna(0.0) * (1 / (1 - df_ivt['tax_rate']))
-    df_ivt['h2_ptc_value_monetized'] = df_ivt['h2_ptc_value_monetized'].fillna(0.0) * (1 / (1 - df_ivt['tax_rate']))
     
     ### Calculate the tax impacts of the PTC, and calculate the adjustment to reflect the 
     # difference between the PTC duration and ReEDS evaluation period
@@ -182,25 +178,6 @@ def calc_financial_inputs(inputs_case):
     co2_capture_value = co2_capture_value.drop_duplicates(['i', 'v', 't'])
     co2_capture_value['v'] = ['new%s' % v for v in co2_capture_value['v']]
     co2_capture_value['t'] = co2_capture_value['t'].astype(int)
-
-    # Expand h2_ptc_value by the duration of the incentive. 
-    h2_ptc_value = df_ivt[['i', 'v', 't', 'h2_ptc_value_monetized', 'h2_ptc_dur']].copy()
-    h2_ptc_value = h2_ptc_value[h2_ptc_value['h2_ptc_value_monetized']>0]
-    if len(h2_ptc_value) > 0:
-        dur_list = [] # create year expander
-        for n in list(h2_ptc_value['h2_ptc_dur'].drop_duplicates()):
-            dur_df = pd.DataFrame()
-            dur_df['year_adder'] = np.arange(0,n)
-            dur_df['h2_ptc_dur'] = n
-            dur_list += [dur_df.copy()]
-        expander = pd.concat(dur_list, ignore_index=True, sort=False)
-        h2_ptc_value = h2_ptc_value.merge(expander, on='h2_ptc_dur', how='left')
-        h2_ptc_value['t'] = h2_ptc_value['t'] + h2_ptc_value['year_adder']
-    else:
-        h2_ptc_value = df_ivt[['i', 'v', 't', 'h2_ptc_value_monetized', 'h2_ptc_dur']].iloc[0:5,:]
-    h2_ptc_value = h2_ptc_value.drop_duplicates(['i', 'v', 't'])
-    h2_ptc_value['v'] = ['new%s' % v for v in h2_ptc_value['v']]
-    h2_ptc_value['t'] = h2_ptc_value['t'].astype(int)
     
     # Expand the various ptc values by the duration of the incentive. 
     # We are tracking various ptc_values (e.g. with and without tax grossups)
@@ -365,23 +342,6 @@ def calc_financial_inputs(inputs_case):
     #%% Before writing outputs, change "x" to "newx" in [v]
     df_ivt['v'] = ['new%s' % v for v in df_ivt['v']]
 
-    ## get energy communities and itc bonus 
-    energy_communities = pd.read_csv(os.path.join(inputs_case, 'energy_communities.csv'))
-    temp_incentives = incentive_df[
-       incentive_df['itc_energy_comm_bonus'] != 0
-    ][['i','itc_energy_comm_bonus']].drop_duplicates()
-
-    energy_communities['key'] = 1
-    temp_incentives['key'] = 1
-    e_df = pd.merge(energy_communities, temp_incentives, on='key').drop('key', axis=1)
-
-    # Calculate the weighted energy community bonus: the 'itc_energy_comm_bonus' is initially set to 1 - the value from the incentives file.
-    # To apply the bonus correctly, we reverse the adjustment, multiply it by the 'percentage_energy_communities',
-    # and then adjust it back to the 1 - 'itc_energy_comm_bonus' format.
-    e_df['itc_energy_comm_bonus'] = (
-        1 - ((1 - e_df['itc_energy_comm_bonus']) * e_df['percentage_energy_communities'])
-    ).round(4).drop(columns='percentage_energy_communities')
-
     #%% Write the scenario-specific output files
     
     # Write out the components of the financial multiplier
@@ -407,12 +367,6 @@ def calc_financial_inputs(inputs_case):
         reg_cap_cost_mult, None, 'reg_cap_cost_mult', ['i', 'r'], 
         'reg_cap_cost_mult', inputs_case)
     
-    # Write out the energy community itc bonus
-    sFuncs.param_exporter(
-        e_df[['i','r','itc_energy_comm_bonus']],
-        'itc_energy_comm_bonus', 'itc_energy_comm_bonus', inputs_case
-    )
-
     # Write out the adjustment multiplier for non-standard evaluation periods
     sFuncs.param_exporter(
         df_ivt[['i', 't', 'eval_period_adj_mult']], 
@@ -428,11 +382,7 @@ def calc_financial_inputs(inputs_case):
     sFuncs.param_exporter(
         co2_capture_value[['i', 'v', 't', 'co2_capture_value_monetized']], 
         'co2_capture_value_monetized', 'co2_capture_incentive', inputs_case)
-
-    # Write out the H2 production incentive values
-    sFuncs.param_exporter(
-        h2_ptc_value[['i', 'v', 't', 'h2_ptc_value_monetized']], 
-        'h2_ptc_value_monetized', 'h2_ptc', inputs_case)   
+    
     
     # Write out the ptc_value_scaled (which incorporates all the adjustments reeds expects)
     sFuncs.param_exporter(
@@ -457,9 +407,6 @@ def calc_financial_inputs(inputs_case):
 
     # 12-year crf used in sequential case for calculating 12-year payback time of co2_captured_incentive
     sFuncs.param_exporter(crf_df[['t', 'crf_co2_incentive']], 'crf_co2_incentive', 'crf_co2_incentive', inputs_case)
-
-    # 10-year crf used in sequential case for calculating 10-year payback time of h2_ptc
-    sFuncs.param_exporter(crf_df[['t', 'crf_h2_incentive']], 'crf_h2_incentive', 'crf_h2_incentive', inputs_case)
 
     # pvf_onm used in intertemporal
     pvf_onm_int = financials_sys[['modeled_year', 'pvf_onm']].groupby(by=['modeled_year']).sum()

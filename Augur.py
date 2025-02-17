@@ -14,13 +14,46 @@ import datetime
 import pandas as pd
 import gdxpds
 
-import ReEDS_Augur.prep_data as prep_data
-import ReEDS_Augur.capacity_credit as capacity_credit
-import ReEDS_Augur.stress_periods as stress_periods
+import ReEDS_Augur.A_prep_data as A_prep_data
+import ReEDS_Augur.E_capacity_credit as E_capacity_credit
+import ReEDS_Augur.F_stress_periods as F_stress_periods
 import ReEDS_Augur.functions as functions
 
 
 #%% Functions
+def run_osprey(casedir, t, sw):
+    """
+    """
+    print('Running Osprey')
+    tic = datetime.datetime.now()
+    subprocess.call(
+        [
+            'gams', os.path.join(casedir, 'ReEDS_Augur', 'B1_osprey'),
+            'o='+os.path.join(casedir, 'lstfiles', f'osprey_{t}.lst'),
+            'logOption=0',
+            'logfile='+os.path.join(casedir, 'gamslog.txt'),
+            'appendLog=1',
+            '--solver=cplex',
+            f'--prev_year={t}',
+            f"--hoursperperiod={sw['hoursperperiod']:>03}",
+            f"--threads={sw['threads'] if sw['threads'] > 0 else 16}",
+        ] + (['license=gamslice.txt'] if int(sw['hpc']) else []),
+        cwd=os.getcwd()
+    )
+    functions.toc(tic=tic, year=t, process='ReEDS_Augur/B1_osprey.gms')
+
+    ### Write Osprey results to csv files
+    tic = datetime.datetime.now()
+    subprocess.call(
+        [
+            'gams', os.path.join(casedir, 'ReEDS_Augur', 'B2_gdx_dump'),
+            f"--prev_year={t}"
+        ] + (['license=gamslice.txt'] if int(sw['hpc']) else []),
+        cwd=os.getcwd()
+    )
+    functions.toc(tic=tic, year=t, process='ReEDS_Augur/B2_gdx_dump.gms')
+
+
 def run_pras(
         casedir, t, sw, iteration=0, recordtime=True,
         repo=False, overwrite=True, include_samples=False,
@@ -74,39 +107,40 @@ def run_pras(
 def main(t, tnext, casedir, iteration=0):
 
     # #%% To debug, uncomment these lines and update the run path
-    # t = 2020
-    # tnext = 2023
-    # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0')
-    # casedir = os.path.join(
-    #     reeds_path,'runs','v20240708_tforM1_Pacific')
+    # t = 2035
+    # tnext = 2040
+    # casedir = os.path.expanduser(
+    #     '~/github/ReEDS-2.0/runs/v20240118_stressM0_Z45_SP_5yr_H2_EI')
     # iteration = 0
     # assert tnext >= t
     # os.chdir(casedir)
-    # # ## Copy reeds2pras from repo to run folder
-    # # import shutil
-    # # shutil.rmtree(os.path.join(casedir, 'reeds2pras'))
-    # # shutil.copytree(
-    # #     os.path.join(reeds_path, 'reeds2pras'),
-    # #     os.path.join(casedir, 'reeds2pras'),
-    # #     ignore=shutil.ignore_patterns('test'),
-    # # )
 
     #%% Get switches from inputs_case/switches.csv and ReEDS_Augur/augur_switches.csv
     sw = functions.get_switches(casedir)
     sw['t'] = t
 
-    #%% Prep data for resource adequacy
-    print('Preparing data for resource adequacy calculations')
+    #%% Prep data for Osprey and capacity credit
+    print('Preparing data for Osprey, PRAS, and capacity credit calculation')
     tic = datetime.datetime.now()
-    augur_csv, augur_h5 = prep_data.main(t, casedir)
-    functions.toc(tic=tic, year=t, process='ReEDS_Augur/prep_data.py')
+    augur_gdx, augur_csv, augur_h5 = A_prep_data.main(t, casedir)
+    functions.toc(tic=tic, year=t, process='ReEDS_Augur/A_prep_data.py')
+
+    #%% Run Osprey if...
+    ## the user specifies to run Osprey or...
+    if int(sw['osprey']) or (
+        ## if we're using stress periods (not capacity credit) and using Osprey to
+        ## identify dropped-PRM periods (instead of PRAS to identify high-risk periods).
+        (not int(sw.GSw_PRM_CapCredit))
+        and (sw['GSw_PRM_StressModel'].lower() == 'osprey')
+    ):
+        run_osprey(casedir, t, sw)
 
     #%% Calculate capacity credit if necessary; otherwise bypass
     print('calculating capacity credit...')
     tic = datetime.datetime.now()
 
     if int(sw['GSw_PRM_CapCredit']):
-        cc_results = capacity_credit.reeds_cc(t, tnext, casedir)
+        cc_results = E_capacity_credit.reeds_cc(t, tnext, casedir)
     else:
         cc_results = {
             'cc_mar': pd.DataFrame(columns=['i','r','ccreg','szn','t','Value']),
@@ -115,7 +149,7 @@ def main(t, tnext, casedir, iteration=0):
             'sdbin_size': pd.DataFrame(columns=['ccreg','szn','bin','t','Value']),
         }
 
-    functions.toc(tic=tic, year=t, process='ReEDS_Augur/capacity_credit.py')
+    functions.toc(tic=tic, year=t, process='ReEDS_Augur/E_capacity_credit.py')
 
     #%% Run PRAS if necessary
     solveyears = pd.read_csv(
@@ -126,7 +160,10 @@ def main(t, tnext, casedir, iteration=0):
         1: True if t == max(solveyears) else False,
         2: True,
     }[int(sw['pras'])]
-    if pras_this_solve_year or (not int(sw.GSw_PRM_CapCredit)):
+    if pras_this_solve_year or (
+        (not int(sw.GSw_PRM_CapCredit))
+        and (sw['GSw_PRM_StressModel'].lower() == 'pras')
+    ):
         result = run_pras(
             casedir, t, sw, iteration=iteration,
             write_flow=(True if t == max(solveyears) else False),
@@ -141,8 +178,8 @@ def main(t, tnext, casedir, iteration=0):
     print('identifying new stress periods...')
     tic = datetime.datetime.now()
     if 'user' not in sw['GSw_PRM_StressModel'].lower():
-        _eue_sorted_periods = stress_periods.main(sw=sw, t=t, iteration=iteration)
-    functions.toc(tic=tic, year=t, process='ReEDS_Augur/stress_periods.py')
+        _eue_sorted_periods = F_stress_periods.main(sw=sw, t=t, iteration=iteration)
+    functions.toc(tic=tic, year=t, process='ReEDS_Augur/F_stress_periods.py')
 
     #%% Write gdx file explicitly to ensure that all entries
     ### (even empty dataframes) are written as parameters, not sets
@@ -159,13 +196,12 @@ def main(t, tnext, casedir, iteration=0):
             os.path.join('ReEDS_Augur', 'augur_data', f'ReEDS_Augur_{t}.gdx')
         )
 
-    # #%% Uncomment to run diagnostic_plots
-    # ### (typically run from call_{}.sh script for parallelization)
+    # #%% Uncomment to run G_plots (typically run from call_{}.sh script for parallelization)
     # try:
-    #     import ReEDS_Augur.diagnostic_plots as diagnostic_plots
-    #     diagnostic_plots.main(sw)
+    #     import ReEDS_Augur.G_plots as G_plots
+    #     G_plots.main(sw)
     # except Exception as err:
-    #     print('diagnostic_plots.py failed with the following exception:')
+    #     print('G_plots.py failed with the following exception:')
     #     print(err)
 
 

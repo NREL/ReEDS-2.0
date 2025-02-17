@@ -36,6 +36,11 @@ wind-ofs_7,wind-ofs,#106BA7
 wind-ofs_8,wind-ofs,#106BA7
 wind-ofs_9,wind-ofs,#106BA7
 wind-ofs_10,wind-ofs,#106BA7
+wind-ofs_11,wind-ofs,#106BA7
+wind-ofs_12,wind-ofs,#106BA7
+wind-ofs_13,wind-ofs,#106BA7
+wind-ofs_14,wind-ofs,#106BA7
+wind-ofs_15,wind-ofs,#106BA7
 wind-ons_1,wind-ons,#00B6EF
 wind-ons_2,wind-ons,#00B6EF
 wind-ons_3,wind-ons,#00B6EF
@@ -162,11 +167,6 @@ battery_4,battery,#FF4A88
 battery_6,battery,#FF4A88
 battery_8,battery,#FF4A88
 battery_10,battery,#FF4A88
-battery_12,battery,#FF4A88
-battery_24,battery,#FF4A88
-battery_48,battery,#FF4A88
-battery_72,battery,#FF4A88
-battery_100,battery,#FF4A88
 gas-CT,gas-ct,#C2A1DB
 gas-CC,gas-cc,#52216B
 pumped-hydro,phs,#FF4A88

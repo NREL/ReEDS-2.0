@@ -44,17 +44,11 @@ import math
 import numpy as np
 import os
 import pandas as pd
-import warnings
 from sklearn.cluster import KMeans
-from sklearn.exceptions import ConvergenceWarning
 # Time the operation of this script
 from ticker import toc, makelog
 import datetime
 tic = datetime.datetime.now()
-
-# ignore ConvergenceWarnings that occur in this file from the kmeans function 
-warnings.filterwarnings("ignore", category=ConvergenceWarning)
-
 
 #%% ===========================================================================
 ### --- FUNCTIONS AND CLASSES ---
@@ -207,7 +201,7 @@ class grouping:
                     # initialize the centroids - note that the
                     # random_state argument implies a static seed
                     # for the random processes/distribution-draws 
-                    # used in the kmeans function
+                    # used in the kmeans function           
                     centroids_obj = KMeans(
                         n_clusters=nbins, random_state=0, max_iter=1000, n_init=n_init,
                     ).fit(df[[col]].to_numpy(), sample_weight = df['Summer.capacity'].to_numpy())
@@ -322,10 +316,9 @@ def main(reeds_path, inputs_case):
     TECH = {
     # This is not all technologies that do not having cooling, but technologies
     # that are (or could be) in the plant database.
-    'no_cooling':['dupv', 'upv', 'pvb', 'gas-ct', 'geohydro_allkm',
+    'no_cooling' : ['dupv', 'upv', 'pvb', 'gas-ct', 'geothermal',
                     'battery_2', 'battery_4', 'battery_6', 'battery_8', 
-                    'battery_10','battery_12','battery_24','battery_48',
-                    'battery_72','battery_100', 'pumped-hydro', 'pumped-hydro-flex', 'hydUD', 
+                    'battery_10', 'pumped-hydro', 'pumped-hydro-flex', 'hydUD', 
                     'hydUND', 'hydD', 'hydND', 'hydSD', 'hydSND', 'hydNPD',
                     'hydNPND', 'hydED', 'hydEND', 'wind-ons', 'wind-ofs', 'caes'
                     ]
@@ -403,7 +396,7 @@ def main(reeds_path, inputs_case):
     # Only want those with a heat rate - all other binning is arbitrary
     # because the only data we get from generator database is the capacity and heat
     # rate but O&M costs are assumed
-    df = ad[(~ad.HR.isna()) & (~ad.TECH.isin(['geohydro_allkm', 'CofireNew']))]
+    df = ad[(~ad.HR.isna()) & (~ad.TECH.isin(['geothermal', 'CofireNew']))]
 
     # Adjust coal retirement dates based on switch
     tech_table = pd.read_csv(
@@ -491,7 +484,7 @@ def main(reeds_path, inputs_case):
     #    -- Get DPV Generators --    #
     ##################################
 
-    dpv = pd.read_csv(os.path.join(inputs_case,'distpvcap.csv')).set_index('r')
+    dpv = pd.read_csv(os.path.join(inputs_case,'distPVcap.csv')).set_index('Unnamed: 0')
            
     # Fill in odd years' values for dpv (only add odd year data if that
     # data does not already exist)
@@ -501,14 +494,33 @@ def main(reeds_path, inputs_case):
     for yr in oddyrs:
         if yr not in dpv.columns:
             dpv[yr] = (dpv[str(int(yr)-1)] + dpv[str(int(yr)+1)]) / 2
-    dpv = pd.melt(dpv.reset_index(),id_vars=['r'])
+    dpv = pd.melt(dpv.reset_index(),id_vars=['Unnamed: 0'])
     dpv.rename(columns=dict(zip(dpv.columns,['r','year','Summer.capacity'])),
                inplace=True)
 
-    ### Aggregate if necessary
-    if agglevel  in ['state','aggreg']: # or any other spatial resolution above 'BA'
+    ### Aggregate/Disaggregate if necessary
+    if agglevel == 'county':
+        # Disaggregate by population
+        fracdata = pd.read_csv(os.path.join(inputs_case,'disagg_population.csv'), 
+                   header=0)
+        dpv_cols_long= list(dpv.columns)
+        dpv = pd.merge(fracdata, dpv, left_on='PCA_REG', right_on='r', how='inner')
+        dpv['new_value'] = (dpv['fracdata'].multiply(dpv['Summer.capacity'], axis='index'))
+        dpv = (dpv.drop(columns=['Summer.capacity']+['r'])
+                  .rename(columns={'new_value':'Summer.capacity','FIPS':'r'})
+        )
+        dpv.set_index(dpv_cols_long[:-1], inplace=True)
+        dpv = dpv[['Summer.capacity']]
+        # Put back in original format
+        dpv = dpv.reset_index().sort_values(['r','year'])
+
+        # Filter by regions again for cases when only a subset of a model balancing area is represented
+        dpv = dpv.loc[dpv['r'].isin(val_r_all)]
+    elif agglevel in ['state','aggreg']: # or any other spatial resolution above 'BA'
         dpv['r'] = dpv['r'].map(r_ba)
         dpv = dpv.groupby(['r','year'], as_index=False).sum()
+    elif agglevel == 'ba':
+        pass
 
     # Initialize columns for dpv dataframe
     dpv['tech'] = 'distpv'

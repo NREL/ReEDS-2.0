@@ -6,7 +6,6 @@ import logging
 import shutil
 import pandas as pd
 import numpy as np
-import h5py
 ### Local imports
 from ldc_prep import read_file
 from writedrshift import get_dr_shifts
@@ -135,7 +134,7 @@ def make_8760_map(period_szn, sw):
     return hmap_7yr, hmap_myr
 
 
-def get_ccseason_peaks_hourly(load, sw, inputs_case, hierarchy, h2ccseason, val_r_all):
+def get_ccseason_peaks_hourly(load, sw, reeds_path, inputs_case, hierarchy, h2ccseason, val_r_all):
     # ReEDS only supports a single entry for agglevel right now, so use the
     # first value from the list (copy_files.py already ensures that only one
     # value is present)
@@ -381,7 +380,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     """
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-    # inputs_case = os.path.join(reeds_path, 'runs', 'v20240708_tforM3_Pacific', 'inputs_case')
+    # inputs_case = os.path.join(reeds_path, 'runs', 'v20240612_aggmapsM2_Pacific_hourly', 'inputs_case')
     # sw = pd.read_csv(
     #     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
     # periodtype = 'rep'
@@ -443,6 +442,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             'nexth': ['*h','h'],
             'frac_h_ccseason_weights': ['*h','ccseason','weight'],
             'frac_h_quarter_weights': ['*h','quarter','weight'],
+            'd_szn': ['*period','szn'],
             'h_szn_start': ['*season','h'],
             'h_szn_end': ['*season','h'],
             'hour_szn_group': ['*h','hh'],
@@ -460,7 +460,6 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
                          'periodhour','actual_period','actual_h','season','h'],
             'periodmap_1yr': ['*actual_period','season'],
             'canmexload': ['*r','h'],
-            'forcedoutage_h': ['*i','r','h'],
             'dr_increase': ['*i','r','h'],
             'dr_decrease': ['*i','r','h'],
             'dr_shifts': ['*i','h','hh'],
@@ -669,7 +668,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     #%% Imports: Spread over seasons by quarter.
     can_imports_quarter_frac = pd.read_csv(
-        os.path.join(inputs_case, 'can_imports_quarter_frac.csv'),
+        os.path.join(inputs_case, 'can_imports_szn_frac.csv'),
         header=0, names=['season','frac'], index_col='season',
     ).squeeze(1)
     df = hmap_myr.assign(quarter=hmap_myr.yearhour.map(quarters))
@@ -871,7 +870,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     for year in years:
         peak_all[year] = get_ccseason_peaks_hourly(
             load=load_full_yearly[['r','h',year]].rename(columns={year:'MW'}),
-            sw=sw, inputs_case=inputs_case, hierarchy=hierarchy, 
+            sw=sw, reeds_path=reeds_path, inputs_case=inputs_case, hierarchy=hierarchy, 
             h2ccseason=h2ccseason, val_r_all=val_r_all)
     peak_all = (
         pd.concat(peak_all, names=['t','drop']).reset_index().drop('drop', axis=1)
@@ -879,7 +878,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ).copy()
 
     ##############################################
-    #%%  -- Hydro Month-to-Szn Adjustments --    #
+    #    -- Hydro Month-to-Szn Adjustments --    #
     ##############################################
     
     ### Import and format hydro capacity factors
@@ -934,44 +933,16 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         / szn_month_weights.groupby('season').weight.sum()        
     ).rename('value').reset_index().rename(columns={'season':'szn'})
 
-    ### Calculate the peak demand timeslice of each ccseason.
-    ## Used for hydro_nd PRM constraint.
+    #%% Calculate the peak demand timeslice of each ccseason.
+    ### Used for hydro_nd PRM constraint.
     h_ccseason_prm = (
         pd.merge(load_h[max(years)].groupby('h').sum().rename('MW'), h_ccseason, on='h')
         .sort_values('MW').drop_duplicates('ccseason', keep='last')
         .drop('MW', axis=1).sort_values('ccseason')
     )
 
-
-    #%%### Outage rates ######
-    infile = os.path.join(inputs_case, 'forcedoutage_hourly.h5')
-    tz = 'Etc/GMT+5'
-    with h5py.File(infile, 'r') as f:
-        forcedoutage_hourly = pd.DataFrame(
-            index=pd.to_datetime(pd.Series(f['index']).map(lambda x: x.decode())),
-            columns=pd.Series(f['columns']).map(lambda x: x.decode()),
-            data=f['data'],
-        ).tz_localize('UTC').tz_convert(tz)
-
-    forcedoutage_hourly.columns = pd.MultiIndex.from_tuples(
-        forcedoutage_hourly.columns.map(lambda x: tuple(x.split('|'))),
-        names=['i','r'],
-    )
-
-    ### Aggregate to model resolution
-    aggmethod = 'mean' if periodtype == 'rep' else 'max'
-    forcedoutage_h = forcedoutage_hourly.loc[hmap_myr.timestamp].copy()
-    forcedoutage_h.index = hmap_myr.h.map(chunkmap)
-    forcedoutage_h = (
-        forcedoutage_h
-        .groupby(forcedoutage_h.index).agg(aggmethod)
-        .stack(['i','r']).reorder_levels(['i','r','h'])
-        .rename('forced_outage_rate')
-    ).reset_index()
-
-
     ###############################
-    #%%  -- Demand Response --    #
+    #    -- Demand Response --    #
     ###############################
 
     if int(sw.GSw_DR):
@@ -1077,6 +1048,11 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         'h_actualszn': [h_actualszn, False, False],
         ## mapping from one timeslice to the next for actual periods
         'nexth_actualszn': [nexth_actualszn, False, False],
+        ## Day to season mapping for Osprey (day,szn)
+        'd_szn': [
+            (h_dt_szn.assign(d='s'+h_dt_szn.actual_period.str.strip('s'))
+             [['d','season']].drop_duplicates()),
+            False, False],
         ## first timeslice in season (szn,h)
         'h_szn_start': [szn2starth.map(chunkmap).reset_index(), False, False],
         ## last timeslice in season (szn,h)
@@ -1111,8 +1087,6 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             False, False],
         ## Imports from Canada [fraction] (szn)
         'can_imports_szn_frac': [can_imports_szn_frac.round(6), False, False],
-        ## Forced outage rates
-        'forcedoutage_h': [forcedoutage_h.round(3), False, False],
         ## Demand response
         'dr_increase': [
             (dr_inc.assign(h=dr_inc.h.map(chunkmap))

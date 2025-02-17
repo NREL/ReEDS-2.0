@@ -1852,7 +1852,7 @@ def stackbar(df, ax, colors, width=1, net=True, align='center', bottom=0, x0=0, 
         poscols = [c for c in row.index if c not in negcols]
         dfneg = row[negcols]
         dfpos = row[poscols]
-        x = index if isinstance(index, (int,float,pd.Timestamp)) else i
+        x = index if isinstance(index, (int,float)) else i
         ### Positive
         if len(dfpos):
             ax.bar(
@@ -2100,77 +2100,6 @@ def plot_region_bars(
                 [x0-width/2, x0+width/2], [bottom]*2,
                 **zeroline,
             )
-
-
-def map_years_months(
-        dfzones, dfdata, cmap=cmocean.cm.rain, aggfunc='mean',
-        colwidth=1.2, rowheight=1.0, simplify=10000, mapbuffer=1.08,
-        vmin=0., vmax=None, outline=0.25,
-        **colorbarkwargs,
-    ):
-    """Array of small maps with years as rows and months as columns.
-    Index of dfzones must match columns of dfdata.
-    """
-    import geopandas as gpd
-    import shapely
-    ### Process input data
-    dfyearmonth = dfdata.groupby(
-        [dfdata.index.year, dfdata.index.month]
-    ).agg(aggfunc).rename_axis(['year','month'])
-    years = dfyearmonth.index.get_level_values('year').unique()
-    months = dfyearmonth.index.get_level_values('month').unique()
-    nrows = len(years)
-    ncols = len(months)
-    _vmin = dfyearmonth.min().min() if vmin is None else vmin
-    _vmax = dfyearmonth.max().max() if vmax is None else vmax
-    ### Process spatial data
-    r_base = dfzones.copy()
-    r_base['geometry'] = r_base['geometry'].simplify(simplify)
-
-    outline_base = dfzones.dissolve().copy()
-    outline_base['geometry'] = outline_base['geometry'].buffer(0.).simplify(simplify)
-
-    xstep = r_base.dissolve().bounds.loc[0,['minx','maxx']].diff().dropna().squeeze() * mapbuffer
-    ystep = -r_base.dissolve().bounds.loc[0,['miny','maxy']].diff().dropna().squeeze() * mapbuffer
-
-    ### Plot it
-    plt.close()
-    f,ax = plt.subplots(figsize=(colwidth*ncols, rowheight*nrows))
-    for row, year in enumerate(years):
-        for col, month in enumerate(months):
-            if outline:
-                _outline = outline_base.copy()
-                _outline.geometry = gpd.GeoSeries([
-                    shapely.affinity.translate(outline_base.loc[r,'geometry'], col*xstep, row*ystep)
-                    for r in _outline.index
-                ]).values
-                _outline.plot(ax=ax, facecolor='none', edgecolor='k', lw=0.25, zorder=1e6)
-            ## Outage rate by region
-            dfplot = r_base.copy()
-            dfplot['data'] = dfyearmonth.loc[(year,month)]
-            dfplot.geometry = gpd.GeoSeries([
-                shapely.affinity.translate(r_base.loc[r,'geometry'], col*xstep, row*ystep)
-                for r in dfplot.index
-            ]).values
-            dfplot.plot(ax=ax, column='data', lw=0, cmap=cmap, vmin=_vmin, vmax=_vmax)
-    ## Colorbar
-    colorbarkwargs = {
-        **{
-            'nbins': 101,
-            'cbarleft': 1.025,
-            'cbarheight': 0.7,
-            'cbarbottom': 0.08,
-            'cbarwidth': 0.02,
-            'histratio': 2,
-        },
-        **colorbarkwargs,
-    }
-    addcolorbarhist(
-        f=f, ax0=ax, data=dfyearmonth.stack(), cmap=cmap, vmin=_vmin, vmax=_vmax,
-        **colorbarkwargs,
-    )
-    ax.axis('off')
-    return f, ax
 
 
 def plot_segmented_arrow(

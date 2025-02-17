@@ -1,6 +1,5 @@
 {
     "fed_land": {"colname": "fed_land_owner", "newcolname": "fed_land_owner", "mapping": "federal_land_categories"},
-    "fed_land_new": {"colname": "target_federal_lands-2024-04", "newcolname": "fed_land_owner", "mapping": "federal_land_categories_updated"},
     "nlcd": {"colname": "nlcd_2019_90x90", "newcolname":"nlcd_value", "mapping": "nlcd_combined_categories"},
     "species": {"colname": ["habitat", "range", "ungulate_use_areas"]}
 }

@@ -131,8 +131,13 @@ function run_checks(data::ReEDSdatapaths)
         )
     end
 
-    # Forced Outage Rate
-    filepath = joinpath(data.ReEDSfilepath, "inputs_case", "outage_forced_static.csv")
+    # Foreced Outage Rate
+    filepath = joinpath(
+        data.ReEDSfilepath,
+        "ReEDS_Augur",
+        "augur_data",
+        "forced_outage_$(string(data.year)).csv",
+    )
 
     io, bool = check_file(filepath)
 
@@ -141,19 +146,6 @@ function run_checks(data::ReEDSdatapaths)
     else
         error(
             "Forced Outage Rate data is not available in ReEDS results. You are either using a ReEDS version not compatible with ReEDS2PRAS (or) the ReEDS case results location passed is erroneous (or) you don't have access to the forced_outage_$(string(data.year)) .csv file/ deleted it.",
-        )
-    end
-
-    # Hourly Forced Outage Rate
-    filepath = joinpath(data.ReEDSfilepath, "inputs_case", "forcedoutage_hourly.h5")
-
-    io, bool = check_file(filepath)
-
-    if (bool)
-        close(io)
-    else
-        error(
-            "Hourly Forced Outage Rate data is not available in ReEDS results. You are either using a ReEDS version not compatible with ReEDS2PRAS (or) the ReEDS case results location passed is erroneous (or) you don't have access to the forcedoutage_hourly.h5 file/ deleted it.",
         )
     end
 

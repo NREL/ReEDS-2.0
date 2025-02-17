@@ -40,11 +40,6 @@ battery_4,#FF6882
 battery_6,#DF5282
 battery_8,#CC015C
 battery_10,#9B014F
-battery_12,#9B034F
-battery_24,#9B054F
-battery_48,#9B214F
-battery_72,#9B334F
-battery_100,#9B454F
 dr,#B9CBF5
 evmc_storage,#a55194
 evmc_shape,#ce6dbd

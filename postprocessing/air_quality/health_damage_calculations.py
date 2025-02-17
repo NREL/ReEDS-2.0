@@ -13,6 +13,7 @@ Passed arguments:
     - scenario to run (either path to a run folder or a csv of scenarios with paths)
 
 Other input data:
+    - 'marginal_damages_by_ReEDS_BA.csv': data on marginal damages. built by 'format_marginal_damages.py'
     - ReEDS deflator values
 
 Output: 'health_damages_caused_by_r.csv'
@@ -32,133 +33,92 @@ For more information on the marginal damages, see https://www.caces.us/data.
 Author: Brian Sergi 
 Date Created: 2/22/2022
 '''
-#%% Imports
+
 import argparse
 import os
 import pandas as pd
+import sys
 import site
-import traceback
 
-reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+# Automatic inputs
+reeds_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 site.addsitedir(os.path.join(reeds_path,'input_processing'))
 from ticker import makelog
 
-### Functions
-def get_marginal_damage_rates(casepath):
-    '''
-    This function loads raw marginal damage estimates from the reduced complexity models
-    and processes them for use in ReEDS in calculating health damages, converting
-    from county to ReEDS BA. 
-
-    Marginal damage data and documentation are available from https://www.caces.us/data
-    (last downloaded January 27, 2022).
-    Note that the VSL assumption of current data is 2017$.
-    '''
-    # load marginal damage information from RCMs
-    mds_acs = pd.read_csv(
-        os.path.join(
-            reeds_path, 'postprocessing', 'air_quality', 'rcm_data',
-            'counties_ACS_high_stack_2017.csv'))
-    mds_h6c = pd.read_csv(
-        os.path.join(
-            reeds_path, 'postprocessing', 'air_quality', 'rcm_data',
-            'counties_H6C_high_stack_2017.csv'))
-
-    # assign concentration-response function information and combine
-    mds_acs['cr'] = "ACS"
-    mds_h6c['cr'] = "H6C"
-    mds = pd.concat([mds_acs, mds_h6c], axis=0)
-    mds.fips = mds.fips.map(lambda x: f"{x:0>5}")
-
-    # only EASIUR has estimates that vary by season, so take annual values for now
-    mds = mds.loc[mds['season'] == "annual"].copy()
-
-    ### Map from counties to ReEDS BAs
-    county2zone = (
-        pd.read_csv(
-            os.path.join(casepath, 'inputs_case', 'county2zone.csv'),
-            dtype={'FIPS':str},
-        )
-        .rename(columns={'FIPS':'fips'}).set_index('fips').ba
-    )
-
-    mds_mapped = (
-        mds
-        .assign(ba=mds.fips.map(county2zone))
-        .dropna(subset=['ba'])
-    )
-
-    ### Take average marginal damange by ReEDS BA
-    # this probably underestimates damages since there more counties with low populations
-    # alternative approaches might be to take the weighted-average based on load by county or by historical emissions 
-    mds_avg = mds_mapped.groupby(['ba', 'state_abbr', 'model', 'cr', 'pollutant'])['damage'].mean()
-    mds_avg = mds_avg.reset_index()
-
-    # match formatting for pollutants in ReEDS
-    mds_avg['pollutant'] = mds_avg['pollutant'].str.upper()
-
-    return mds_avg
-
-#%% Argument inputs
+# Argument inputs
 parser = argparse.ArgumentParser(
-    description='Calculate health damages from the emissions outputs of one or more ReEDS runs',
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-)
+    description='Calculate health damages from the emissions outputs of one or more ReEDS runs')
 parser.add_argument(
-    'scenario', type=str,
+    'scenario',
     help='Either the folder for ReEDS run or a csv with a list of cases to post-process')
 args = parser.parse_args()
-scenario = args.scenario
 
-# #%% Inputs for debugging
-# scenario = os.path.join(reeds_path, 'runs', 'v20240719_agg0M1_PJM')
-# casepath = scenario
-# casename = os.path.basename(scenario)
-
-#%% Procedure
 print("Running 'health_damage_calculations.py' script.")
 
 # check if scenario is a single run folder or a list of runs
-casepaths = {}
-# if passed .csv file of casepaths
-if scenario.endswith('.csv'):
-    # read in casepaths to run
-    scen_file = pd.read_csv(scenario)
-    for i, row in scen_file.iterrows(): 
-        casepaths[row["run"]] = row["path"]
+scenarios = {}
+try:
+    # if passed .csv file of scenarios
+    if args.scenario.endswith('.csv'):
 
-# if post-processing during a ReEDS run
-elif os.path.isdir(scenario):
-    scenName = os.path.basename(scenario)
-    casepaths[scenName] = scenario
+        # read in scenarios to run
+        scen_file = pd.read_csv(args.scenario)
+        for i, row in scen_file.iterrows(): 
+            scenarios[row["run"]] = row["path"]
 
-#%% Iterate over casepaths
-for casename, casepath in casepaths.items():
-    print("Processing health damages for " + casename)
-    try:
-        # Set up logger
-        log = makelog(scriptname=__file__, logpath=os.path.join(casepath,'gamslog.txt'))
+        # load deflator and marginal damages
+        deflator = pd.read_csv(os.path.join(reeds_path, 'inputs', 'financials', 'deflator.csv'), index_col=0)
+        mds = pd.read_csv(
+            os.path.join(
+                reeds_path, 'postprocessing', 'air_quality',
+                'rcm_data', 'marginal_damages_by_ReEDS_BA.csv'))
 
-        # get deflator
+    # if post-processing during a ReEDS run
+    elif os.path.isdir(args.scenario):
+        scenName = os.path.basename(args.scenario)
+        scenarios[scenName] = args.scenario
+
+        #%% Set up logger
+        log = makelog(scriptname=__file__, logpath=os.path.join(args.scenario,'gamslog.txt'))
+
+        # load deflator and marginal damages
         deflator = pd.read_csv(
-            os.path.join(casepath, 'inputs_case', 'deflator.csv'),
+            os.path.join(args.scenario, 'inputs_case', 'deflator.csv'),
             index_col=0)
-        # using EPA VSL of $7.4 million in 2006$
-        # (source: https://www.epa.gov/environmental-economics/mortality-risk-valuation#whatvalue)
-        # deflated to 2004$ to match ReEDS / marginal damage $ value
-        VSL = 7.4E6 * deflator.loc[2006, 'Deflator'] 
+        mds = pd.read_csv(
+            os.path.join(
+                reeds_path, 'postprocessing', 'air_quality', 'rcm_data',
+                'marginal_damages_by_ReEDS_BA.csv'))
 
-        # get marginal damage rates
-        mds = get_marginal_damage_rates(casepath).rename(columns={"damage":"md"})
+except Exception as err:
+    print("Invalid run path or file name for calculating health damages.")
+    print(err)
 
-        # marginal damage start with VSL adjusted to 2017$, so deflate to 2004$ here to match ReEDS
-        mds['md'] *=  deflator.loc[2017, 'Deflator']
+# load marginal damages 
+try:
+    mds.rename(columns={"damage":"md"}, inplace=True)
 
+    # marginal damage start with VSL adjusted to 2017$, so deflate to 2004$ here to match ReEDS
+    mds['md'] *=  deflator.loc[2017, 'Deflator']
+
+    # using EPA VSL of $7.4 million in 2006$
+    # (source: https://www.epa.gov/environmental-economics/mortality-risk-valuation#whatvalue)
+    # deflated to 2004$ to match ReEDS / marginal damage $ value
+    VSL = 7.4E6 * deflator.loc[2006, 'Deflator'] 
+
+except Exception as err:
+    print("Error loading marginal damage data.")
+    print(err)
+
+
+# iterate over scenarios
+for scen in scenarios:
+    print("Processing health damages for " + scen)
+
+    try:
         # read emissions data by BA
-        emit = pd.read_csv(
-            os.path.join(casepath, "outputs", "emit_r.csv"), 
-            names=['pollutant','ba','year','tons'], header=0,
-        )
+        emit = pd.read_csv(os.path.join(scenarios[scen], "outputs", "emit_r.csv"), 
+                            names=['pollutant','ba','year','tons'], header=0)
         
         # inner join with marginal damages to capture only pollutants that
         # have marginal damages and only marginal damages where there are emissions
@@ -173,15 +133,15 @@ for casename, casepath in casepaths.items():
         # organize and save
         damages = damages[[
             'ba', 'state_abbr', 'year', 'pollutant', 'tons',
-            'model', 'cr', 'md', 'damage_$', 'mortality'
-        ]].round({'tons':2,'md':2,'damage_$':2,'mortality':4})
-
+            'model', 'cr', 'md', 'damage_$', 'mortality']].round(
+                {'tons':2,'md':2,'damage_$':2,'mortality':4}
+            )
         damages.to_csv(
-            os.path.join(casepath, 'outputs', 'health_damages_caused_r.csv'),
+            os.path.join(scenarios[scen], 'outputs', 'health_damages_caused_r.csv'),
             index=False)
+    except Exception as err:
+        print("Error when processing health damages for " + scen)
+        print(err)
 
-    except Exception:
-        print("Error when processing health damages for " + casename)
-        print(traceback.format_exc())
 
-print("Completed health_damage_calculations.py")
+print("Completed 'health_damage_calculations.py' script.")

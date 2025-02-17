@@ -27,7 +27,7 @@ set rfeas(r)                 "list of feasible r regions - for use in Augur only
 ;
 
 parameter
-avail_filt(i,v,r,allszn)           "--fraction-- fraction of capacity available for generation by season"
+avail_filt(i,v,allszn)             "--fraction-- fraction of capacity available for generation by season"
 can_exports_h_filt(r,allh)         "--MW-- Canada exports by region and timeslice filtered for the previous solve year"
 can_imports_cap(i,v,r)             "--MW-- Canadian import max capacity"
 can_imports_szn_filt(r,allszn)     "--MWh-- Canada imports by region and season filtered for the previous solve year"
@@ -220,8 +220,7 @@ repgasprice_filt(r) = sum{t$tcur(t), repgasprice_r(r,t) } ;
 * Filter necessary input data
 *============================
 
-avail_filt(i,v,r,szn)$[cap_exist_iv(i,v)$(not vre(i))] =
-    smax{h$h_szn(h,szn), avail(i,r,h) * derate_geo_vintage(i,v) } ;
+avail_filt(i,v,szn)$[cap_exist_iv(i,v)$(not vre(i))] = smax{h$h_szn(h,szn), avail(i,h) * derate_geo_vintage(i,v) } ;
 
 can_exports_h_filt(r,h) = sum{t$tcur(t), can_exports_h(r,h,t)} ;
 
@@ -370,6 +369,7 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     energy_price
     flex_load
     flex_load_opt
+    forced_outage
     fuel_price_filt
     fuel2tech
     geo

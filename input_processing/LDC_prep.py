@@ -24,7 +24,6 @@ import h5py
 import numpy as np
 import os
 import pandas as pd
-import re
 import sys
 
 import logging
@@ -53,11 +52,9 @@ def read_h5py_file(filename: Path | str) -> pd.DataFrame:
     pd.DataFrame
         Pandas dataframe of the file
     """
-    
-    valid_data_keys = ["data", "cf", "load", "evload"]
+    valid_data_keys = ["data", "cf", "load","evload"]
 
     with h5py.File(filename, "r") as f:
-        # Identify keys in h5 file and check for overlap with valid key set
         keys = list(f.keys())
         datakey = list(set(keys).intersection(valid_data_keys))
 
@@ -65,36 +62,22 @@ def read_h5py_file(filename: Path | str) -> pd.DataFrame:
         assert len(datakey) <= 1, f"Multiple keys={datakey} found for {filename}"
         datakey = datakey[0] if datakey else None
 
-        # standard approach for data with one of the matching keys
-        if datakey in keys:
-            # load data
-            df = pd.DataFrame(f[datakey][:])
-            # check for indices
-            idx_cols = [c for c in keys if 'index' in c]
-            idx_cols.sort()
-            idx_cols_out = []
-            # loop over indices and add to data
-            if len(idx_cols) == 1 and idx_cols[0] == "index":
-                df.index = pd.Series(f["index"]).values
-            else:
-                for idx_col in idx_cols:
-                    # with multindex expecting the word 'index' plus a number indicating the order
-                    # based on format specified when writing out h5 files in copy_files
-                    idx_col_out = re.sub('index[0-9]*_', '', idx_col)
-                    idx_cols_out.append(idx_col_out)
-                    df[idx_col_out] = pd.Series(f[idx_col]).values
-                df = df.set_index(idx_cols_out)
-        # if none of these keys work, we're dealing with EER-formatted load
-        else:
+        # If none of these keys work, we're dealing with EER-formatted load
+        if datakey not in keys:
             years = [column for column in keys if column.isdigit()]
+
             # Extract all the years and concat them in a single dataframe.
             df = pd.concat({int(y): pd.DataFrame(f[y][...]) for y in years}, axis=0)
             df.index = df.index.rename(["year", "hour"])
-        
-        # add columns to data if specified
-        if 'columns' in keys:
-            df.columns = (pd.Series(f["columns"]).map(lambda x: x if isinstance(x, str) else x.decode("utf-8")).values)
 
+        else:
+            df = pd.DataFrame(f[datakey][:])
+            df.index = pd.Series(f["index"]).values
+        df.columns = (
+            pd.Series(f["columns"])
+            .map(lambda x: x if isinstance(x, str) else x.decode("utf-8"))
+            .values
+        )
     return df
 
 def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
@@ -136,7 +119,7 @@ def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
     # data, leaving an empty dataframe.
     # Return an empty dataframe with the original file's index if all values are NaN
     if all(df.isnull().all()):
-        df = df.drop(columns=df.columns)
+        df = df.drop(columns=0)
         return df
 
     # NOTE: Some files are saved as float16, so we cast to float32 to prevent issues with
@@ -260,7 +243,7 @@ def get_distpv_profiles(inputs_case, recf, rb2fips, agglevel):
     """
     ### Get average CF (used to scale down UPV profiles to generate distpv profiles)
     distpv_meancf = (
-        pd.read_csv(os.path.join(inputs_case,'distpvcf_hourly.csv'), index_col=0)
+        pd.read_csv(os.path.join(inputs_case,'distPVCF_hourly.csv'), index_col=0)
           .mean(axis=1).rename_axis('ba').rename('cf')
         )
     ### Uniformly disaggregate regions if running at county level
@@ -302,7 +285,7 @@ def main(reeds_path, inputs_case):
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
     # inputs_case = os.path.join(
-    #     reeds_path,'runs','v20240715_aggM0_ERCOT_county','inputs_case')
+    #     reeds_path,'runs','v20240109_aggfixM1_Western_agg','inputs_case')
 
     #%% Inputs from switches
     sw = pd.read_csv(
@@ -447,8 +430,8 @@ def main(reeds_path, inputs_case):
     )
     for pvb_type in GSw_PVB_Types:
         ilr = int(pvb_ilr['pvb{}'.format(pvb_type)] * 100)
-        # If PVB uses same ILR as UPV then use its profile
-        infile = 'recf_upv' if ilr == scalars['ilr_utility'] * 100 else f'recf_upv_{ilr}AC'
+        # UPV uses ILR = 1.3, so use its profile if ILR = 1.3
+        infile = 'recf_upv' if ilr == 130 else f'recf_upv_{ilr}AC'
         df_pvb[pvb_type] = read_file(os.path.join(inputs_case,infile+'.h5'))
         df_pvb[pvb_type].columns = [f'pvb{pvb_type}_{c}'
                                     for c in df_pvb[pvb_type].columns]
@@ -714,12 +697,11 @@ def main(reeds_path, inputs_case):
         load_eastern = load_eastern.loc[:,load_eastern.columns.isin(val_r_all)].copy()
 
     #%% Calculate coincident peak demand at different levels for convenience later
-    _hierarchy = hierarchy if sw['GSw_RegionResolution'] == 'county' else hierarchy_original
     _peakload = {}
-    for _level in _hierarchy.columns:
+    for _level in hierarchy.columns:
         _peakload[_level] = (
             ## Aggregate to level
-            load_eastern.rename(columns=_hierarchy[_level])
+            load_eastern.rename(columns=hierarchy[_level])
             .groupby(axis=1, level=0).sum()
             ## Calculate peak
             .groupby(axis=0, level='year').max()
@@ -740,9 +722,6 @@ def main(reeds_path, inputs_case):
         os.path.join(inputs_case,'recf.h5'), key='data', complevel=4, index=True)
     resources.to_csv(os.path.join(inputs_case,'resources.csv'), index=False)
     peakload.to_csv(os.path.join(inputs_case,'peakload.csv'))
-    ### Write peak demand by NERC region to use in firm net import constraint
-    peakload.loc['nercr'].stack('year').rename_axis(['*nercr','t']).rename('MW').to_csv(
-        os.path.join(inputs_case,'peakload_nercr.csv'))
     ### Write the CSP solar field CF (no SM or storage) for hourly_writetimeseries.py
     (cspcf_eastern
         .rename(columns=dict(zip(cspcf_eastern.columns, [f'csp_{i}' for i in cspcf_eastern.columns])))

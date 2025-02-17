@@ -20,8 +20,8 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing ###
-#reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-#inputs_case = os.path.join(reeds_path,'runs','hr_test_none_Pacific','inputs_case','')
+# reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+# inputs_case = os.path.join(reeds_path,'runs','v20240621_aggmapsM0_ERCOTSPP','inputs_case','')
 
 #%%#################
 ### FIXED INPUTS ###
@@ -45,10 +45,6 @@ GSw_TransRestrict = sw.GSw_TransRestrict
 GSw_VSC = int(sw.GSw_VSC)
 GSw_TransSquiggliness = float(sw.GSw_TransSquiggliness)
 networksource = sw.GSw_TransNetworkSource
-GSw_TransHurdleLevel1 = sw.GSw_TransHurdleLevel1
-GSw_TransHurdleLevel2 = sw.GSw_TransHurdleLevel2
-GSw_TransHurdleRate = sw.GSw_TransHurdleRate
-
 ## networksource must end in a 4-digit year indicating the year represented by the network
 trans_init_year = int(networksource[-4:])
 
@@ -146,54 +142,27 @@ def get_trancap_init(valid_regions, networksource='NARIS2024', level='r'):
 ### ===========================================================================
 
 #%% Limits on PRMTRADE across nercr boundaries
-if not int(sw.GSw_PRM_NetImportLimit):
-    ## No limit
-    firm_import_limit = pd.DataFrame(columns=['*nercr','t','fraction']).set_index(['*nercr','t'])
-else:
-    limits = pd.Series(
-        {int(i.split('_')[0]): i.split('_')[1] for i in sw.GSw_PRM_NetImportLimitScen.split('/')}
-    )
-
-    solveyears = pd.read_csv(
+solveyears = pd.read_csv(
         os.path.join(inputs_case,'modeledyears.csv')
-    ).columns.astype(int).tolist()
-    startyear = min(solveyears)
-    endyear = max(solveyears)
-    allyears = range(startyear, max(endyear, limits.index.max())+1)
+    ).columns.astype(int)
 
-    ## Take the max over all years for each region and drop negative values
-    net_firm_transfers_nerc = pd.read_csv(
-        os.path.join(inputs_case,'net_firm_transfers_nerc.csv'),
-        index_col=['nercr','t']
-    )
-    net_firm_import_frac = (
-        net_firm_transfers_nerc.MW / net_firm_transfers_nerc.MW_TotalDemand
-    ).unstack('nercr').max().clip(lower=0)
-    nercrs = net_firm_import_frac.index
-
-    _dfout = {}
-    for key, val in limits.items():
-        ## If 'hist' is in GSw_PRM_NetImportLimitScen,
-        ## all years up until that year use the historical regional max
-        if val == 'hist':
-            for y in range(startyear, key+1):
-                _dfout[y] = net_firm_import_frac
-        ## If 'histmax', all prior years use the historical max across all regions
-        elif val == 'histmax':
-            for y in range(startyear, key+1):
-                _dfout[y] = net_firm_import_frac.clip(lower=net_firm_import_frac.max())
-        else:
-            ## Input values are percentages so convert to fractions
-            _dfout[key] = pd.Series(index=nercrs, data=float(val) / 100)
-    firm_import_limit = (
-        pd.concat(_dfout, names=('t',)).unstack('nercr')
-        ## Linear interpolation between values; flat projections before and after
-        .reindex(allyears).interpolate('linear').bfill().ffill()
-        .loc[solveyears]
-        .unstack('t').rename('fraction').rename_axis(['*nercr','t'])
-    )
-
-firm_import_limit.to_csv(os.path.join(inputs_case, 'firm_import_limit.csv'))
+## Take the max over all years for each region and drop negative values
+planned_firm_transfers = pd.read_csv(
+    os.path.join(inputs_case,'net_firm_transfers_nerc.csv'),
+).pivot(index='t',columns='nercr',values='MW').max().clip(lower=0).rename('MW')
+## Keep planned firm transfers for years before GSw_PRMTRADE_limit to use in the
+## eq_firm_transfer_limit / eq_firm_transfer_limit_cc constraints
+if any([y < int(sw.GSw_PRMTRADE_limit) for y in solveyears]):
+    firm_transfer_limit = pd.concat({
+        y: planned_firm_transfers
+        for y in solveyears
+        if y <= int(sw.GSw_PRMTRADE_limit)
+    }, names=['t']).reorder_levels(['nercr','t']).rename_axis(['*nercr','t'])
+## Otherwise, if GSw_PRMTRADE_limit is set to a value before all solve years (such as 0),
+## write an empty dataframe
+else:
+    firm_transfer_limit = pd.DataFrame(columns=['*nercr','t','MW']).set_index(['*nercr','t'])
+firm_transfer_limit.to_csv(os.path.join(inputs_case, 'firm_transfer_limit.csv'))
 
 
 #%% Get single-link distances and losses
@@ -367,23 +336,6 @@ trancap_fut.rename(columns={'r':'*r'}).astype({'t':int}).round(3).to_csv(
 tline_data[costcol].round(2).reset_index().rename(columns={'r':'*r'}).to_csv(
     os.path.join(inputs_case,'transmission_line_capcost.csv'), index=False)
 
-#%%#########################
-# -- cost_hurdle_rates --  #
-############################
-hurdle_levels = [1, 2]
-cost_hurdle_intra = (
-    pd.read_csv(os.path.join(inputs_case, 'cost_hurdle_intra.csv'))
-    .rename(columns={'t':'*t'}).set_index('*t').round(3)
-)
-cost_hurdle_rate = {
-    i: (
-        cost_hurdle_intra[sw[f'GSw_TransHurdleLevel{i}']] if int(sw.GSw_TransHurdleRate)
-        else pd.Series(name='region').rename_axis('*t')
-    )
-    for i in hurdle_levels
-}
-for i in hurdle_levels:
-    cost_hurdle_rate[i].to_csv(os.path.join(inputs_case, f'cost_hurdle_rate{i}.csv'))
 
 #%%#####################################################################
 #    -- Create the inputs for the VSC DC macrogrid, if necessary --    #
@@ -438,7 +390,6 @@ pd.concat([
 ).to_csv(
     os.path.join(inputs_case,'transmission_distance.csv'), index=False, header=True
 )
-
 
 #%% Finish the timer
 finish()

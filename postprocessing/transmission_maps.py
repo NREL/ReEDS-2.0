@@ -1,8 +1,6 @@
 #%% IMPORTS
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.axes
-import numpy as np
 import os
 import site
 import argparse
@@ -98,7 +96,7 @@ routes = args.routes
 # case = (
 #     '/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240313/'
 #     'v20240313_stresspaperE0_SP_DemHi_90by2035__core')
-# case = os.path.join(reeds_path,'runs','v20240806_tforK0_Ref_TFOR')
+# case = os.path.join(reeds_path,'runs','v20240611_aggmapsM0_WECC')
 # year = 2050
 # routes = False
 # interactive = True
@@ -241,21 +239,6 @@ try:
         print(savename)
 except Exception:
     print('map_net_imports failed:')
-    print(traceback.format_exc())
-
-try:
-    level = 'nercr'
-    plt.close()
-    f, ax, df = rplots.plot_max_imports(case=case, level=level)
-    savename = f"plot_max_imports-{level}"
-    if write:
-        plt.savefig(os.path.join(savepath, savename))
-    if interactive:
-        plt.show()
-    plt.close()
-    print(savename)
-except Exception:
-    print('plot_max_imports failed:')
     print(traceback.format_exc())
 
 
@@ -427,48 +410,28 @@ except Exception:
 
 #%% Dispatch plots
 ### Specify techs to include (None = all techs)
-tech_subset_table = pd.read_csv(
-    os.path.join(reeds_path,'inputs', 'tech-subset-table.csv'), index_col=0)
-subtechs = {
-    '': None,
-    'storage': tech_subset_table.loc[tech_subset_table['STORAGE_STANDALONE']=='YES'].index.tolist()
-}
-### Specify BAs to plot (None = aggregate all together)
-bas = [None]
-if int(sw['plot_ba_level']):
-    bas += pd.read_csv(
-        os.path.join(case, 'inputs_case', 'val_r.csv'), header=None,
-    ).squeeze(1).tolist()
-    savepath_ba = os.path.join(savepath, 'ba')
-    os.makedirs(savepath_ba, exist_ok=True)
-else:
-    figpath = savepath
-
-### Plot dispatch and state of charge
-for label, plottechs in subtechs.items():
-    plottypes = ['dispatch', 'soc'] if label == 'storage' else ['dispatch']
-    try:
-        for ba in bas:
-            figpath = savepath_ba if ba else savepath
-            for plottype in plottypes:
-                for v in ([1] if ba else [0, 1]):
-                    plt.close()
-                    f, ax, df = rplots.plot_dispatch_yearbymonth(
-                        case=case, t=year, plottype=plottype, ba=ba,
-                        techs=plottechs, highlight_rep_periods=v,
-                    )
-                    savename = (
-                        f"plot_{plottype}{'_'+label if len(label) else ''}-yearbymonth"
-                        + f"{'-'+ba if ba else ''}-{v}-{year}.png")
-                    if write and (df is not None):
-                        plt.savefig(os.path.join(figpath, savename))
-                        print(savename)
-                    if interactive and (df is not None):
-                        plt.show()
-                    plt.close()
-    except Exception:
-        print('plot_dispatch-yearbymonth failed:')
-        print(traceback.format_exc())
+# techs = [
+#     'nuclear','nuclear-smr',
+#     'coal','coal-ccs_mod','coal-ccs_mod_upgrade',
+#     'gas-cc-ccs_mod','gas-cc-ccs_mod_upgrade',
+# ]
+techs = None
+try:
+    for v in [0,1]:
+        plt.close()
+        f,ax = rplots.plot_dispatch_yearbymonth(
+            case=case, t=year, highlight_rep_periods=v, techs=techs)
+        endname = '' if not techs else f"-{','.join(techs)}"
+        savename = f'plot_dispatch-yearbymonth-{v}-{year}{endname}.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+except Exception:
+    print('plot_dispatch-yearbymonth failed:')
+    print(traceback.format_exc())
 
 try:
     plt.close()
@@ -597,10 +560,10 @@ try:
     if int(sw['GSw_H2']):
         agglevel = ('r' if len(val_r) <= 20 else ('st' if len(val_r) <= 30 else 'transreg'))
         plt.close()
-        f, ax, df = rplots.plot_h2_timeseries(
+        f, ax = rplots.plot_h2_timeseries(
             case=case, year=year, agglevel=agglevel, grid=0)
         savename = f'plot_h2_timeseries-{year}.png'
-        if write and not df.empty:
+        if write:
             plt.savefig(os.path.join(savepath, savename))
         if interactive:
             plt.show()
@@ -765,41 +728,6 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
             print(savename)
     except Exception:
         print('map_neue failed:')
-        print(traceback.format_exc())
-
-    try:
-        level = 'transreg'
-        for units in ['percent', 'GW']:
-            plt.close()
-            f, ax, df = rplots.plot_cap_rep_stress_mix(
-                case=case, year=year, level=level, units=units)
-            savename = f'plot_cap_rep_stress_mix-{units}-{level}-{year}.png'
-            if write:
-                plt.savefig(os.path.join(savepath, savename))
-            if interactive:
-                plt.show()
-            plt.close()
-            print(savename)
-    except Exception:
-        print('plot_cap_rep_stress_mix failed:')
-        print(traceback.format_exc())
-
-    try:
-        level = 'transgrp'
-        plot_for = False
-        plottype = ('forced_outage_rate' if plot_for else 'capacity_offline')
-        plt.close()
-        f, ax, df = rplots.plot_capacity_offline(
-            case=case, year=year, level=level, plot_for=plot_for)
-        savename = f'plot_{plottype}-{level}-{year}.png'
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        plt.close()
-        print(savename)
-    except Exception:
-        print('plot_capacity_offline failed:')
         print(traceback.format_exc())
 
 

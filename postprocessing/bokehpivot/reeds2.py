@@ -27,8 +27,7 @@ coststreams = ['eq_gasaccounting_regional','eq_gasaccounting_national','eq_bious
 vf_valstreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
 # valuestreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_national_gen','eq_annual_cap','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min','eq_emit_accounting','eq_mingen_lb','eq_mingen_ub','eq_rps_ofswind']
 energy_valstreams = ['eq_supply_demand_balance','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
-cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','dupv','pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']
-battery_techs=['battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']
+cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','dupv','pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10']
 h2_techs = ['smr', 'smr-ccs', 'electrolyzer']
 prod_techs = h2_techs + ['dac']
 niche_techs =  ['hydro','csp','geothermal','beccs','lfill-gas','biopower']
@@ -990,7 +989,7 @@ def rgba2hex(rgba):
 def pre_runtime(dictin, **kw):
     """
     ### Use the code below to redefine the colormap when new scripts are added
-    augur_start = df.index.tolist().index('ReEDS_Augur/prep_data.py')
+    augur_start = df.index.tolist().index('ReEDS_Augur/A_prep_data.py')
     for i, row in enumerate(df.index):
         if i < augur_start:
             colors[row.lower()] = rgba2hex(plt.cm.tab20b(i))
@@ -1148,11 +1147,11 @@ def pre_spur(dfs, **kw):
         ]
         .merge(spur_parameters, on=['i','r','rscbin'], how='left')
     )
-    spur = (cap_new_bin_out[['year','MW','dist_spur_km']]
-        .rename(columns={'dist_spur_km':'dist'})
+    spur = (cap_new_bin_out[['year','MW','dist_km']]
+        .rename(columns={'dist_km':'dist'})
         .assign(trtype='spur'))
-    reinforcement = (cap_new_bin_out[['year','MW','dist_reinforcement_km']]
-        .rename(columns={'dist_reinforcement_km':'dist'})
+    reinforcement = (cap_new_bin_out[['year','MW','reinforcement_dist_km']]
+        .rename(columns={'reinforcement_dist_km':'dist'})
         .assign(trtype='reinforcement'))
     tech_trans = pd.concat([spur, reinforcement], ignore_index=True)
     ### Sum total spur-line GW-mi by year
@@ -2908,7 +2907,7 @@ results_meta = collections.OrderedDict((
             {'func': apply_inflation, 'args': {'column': 'Price ($/mmBTU)'}},
         ],
         'presets': collections.OrderedDict((
-			('Lines',{'x':'year', 'y':'Price ($/mmBTU)', 'series':'scenario', 'explode':'product', 'chart_type':'Line', 'filter': {'product':['h2']}}),
+			('Lines',{'x':'year', 'y':'Price ($/mmBTU)', 'series':'scenario', 'explode':'product', 'chart_type':'Line', 'filter':{'product':['h2']}}),
         )),
         }
     ),
@@ -2938,9 +2937,9 @@ results_meta = collections.OrderedDict((
 
     ("UPV land area (sq. km.)",
         {'file':'land_use_total.csv',
-        'columns': ['year', 'built_capacity_gw', 'built_area_sq_km', 'area_developable_sq_km'],
+        'columns': ['year', 'built_capacity_GW', 'built_area_sq_km', 'area_sq_km'],
         'preprocess': [
-            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'built_capacity_gw'}},
+            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'built_capacity_GW'}},
         ],
         'presets': collections.OrderedDict((
             ('Total UPV land area',{'x':'year', 'y':'built_area_sq_km', 'series':'scenario', 'chart_type':'Line'}),

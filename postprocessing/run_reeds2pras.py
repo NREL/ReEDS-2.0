@@ -69,7 +69,7 @@ def main(
         write_flow=False, write_surplus=False, write_energy=False,
     ):
     """
-    Run prep_data, ReEDS2PRAS, and PRAS as necessary.
+    Run A_prep_data, ReEDS2PRAS, and PRAS as necessary.
     If running PRAS, append the number of samples to the filename.
     """
     ### Import Augur scripts
@@ -78,7 +78,7 @@ def main(
     else:
         site.addsitedir(case)
     import Augur
-    import ReEDS_Augur.prep_data as prep_data
+    import ReEDS_Augur.A_prep_data as A_prep_data
     import ReEDS_Augur.functions as functions
 
     ### Get the switches, overwriting values as necessary
@@ -103,11 +103,12 @@ def main(
         .split(f'{t}i')[-1]
     )
 
-    ### Check if prep_data.py outputs exist; if not, run it
+    ### Check if A_prep_data.py outputs exist; if not, run it
     augur_data = os.path.join(case,'ReEDS_Augur','augur_data')
     files_expected = [
         f'cap_converter_{t}.csv',
         f'energy_cap_{t}.csv',
+        f'forced_outage_{t}.csv',
         f'max_cap_{t}.csv',
         f'tran_cap_{t}.csv',
         f'pras_load_{t}.h5',
@@ -117,7 +118,7 @@ def main(
         any([not os.path.isfile(os.path.join(augur_data,f)) for f in files_expected])
         or overwrite
     ):
-        augur_csv, augur_h5 = prep_data.main(t, case)
+        augur_gdx, augur_csv, augur_h5 = A_prep_data.main(t, case)
 
     ### Run ReEDS2PRAS
     Augur.run_pras(
@@ -131,7 +132,7 @@ def main(
 if __name__ == '__main__':
     #%% Argument inputs
     import argparse
-    description = """Run prep_data, ReEDS2PRAS, and PRAS as necessary.
+    description = """Run A_prep_data, ReEDS2PRAS, and PRAS as necessary.
     Example usage on the HPC:
     `case=/projects/reedsweto/github/ReEDS-2.0/runs/v20230524_ntpH0_Pacific`
     `for s in 100 1000; do python postprocessing/run_reeds2pras.py $case -s $s -r; done`

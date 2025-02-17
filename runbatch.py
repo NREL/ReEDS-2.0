@@ -100,59 +100,6 @@ def get_ivt_numclass(reeds_path, casedir, caseSwitches):
     return numclass
 
 
-def get_rev_paths(revswitches, caseSwitches):
-    # Expand on reV path based on where this run is happening
-    # when running on the HPC this links to the shared-projects folder
-    hpc = True if (int(os.environ.get('REEDS_USE_SLURM',0))) else False
-    if os.environ.get('NREL_CLUSTER') == 'kestrel':
-        hpc_path = '/kfs2/shared-projects/reeds/Supply_Curve_Data'
-    else:
-        hpc_path = '/shared-projects/reeds/Supply_Curve_Data' 
-        
-    if hpc:
-        rev_prefix = hpc_path
-    else:
-        hostname = os.environ.get('HOSTNAME')
-        if (hostname) and (hostname.split('.')[0] in YAMPASERVERS):
-            drive = '/data/shared/shared_data'
-        elif LINUXORMAC:
-            drive = '/Volumes'
-        else:
-            drive = '//nrelnas01'
-        rev_prefix = os.path.join(drive,'ReEDS','Supply_Curve_Data')
-    revswitches['hpc_sc_path'] = revswitches['sc_path'].apply(lambda row: os.path.join(hpc_path,row))
-    revswitches['sc_path'] = revswitches['sc_path'].apply(lambda row: os.path.join(rev_prefix,row))
-    revswitches['rev_path'] = revswitches.apply(lambda row: os.path.join(row.sc_path, "reV", row.rev_case), axis=1)
-
-    # link to the pre-processed reV supply curves from hourlize 
-    def get_rev_sc_file_name(caseSwitches, rev_row, use_hpc=False):
-        if pd.isnull(rev_row.original_sc_file):
-            return ""
-        else:
-            if caseSwitches['GSw_RegionResolution'] == "county":
-                sc_folder_suffix = "_county"
-            else:
-                sc_folder_suffix = "_ba"
-
-            # link to HPC or other sc_path
-            if use_hpc:
-                sc_path = rev_row.hpc_sc_path
-            else:
-                sc_path = rev_row.sc_path
-            
-            # supply curve name should be in format of {tech}_rev_supply_curves_raw.csv 
-            # in the hourlize results folder (must match format in 'save_sc_outputs' function of hourlize/resource.py)
-            sc_file = os.path.join(sc_path, 
-                            rev_row.tech + "_" + rev_row.access_case + sc_folder_suffix,
-                            "results", 
-                            rev_row.tech + "_supply_curve_raw.csv"
-                            )
-            return sc_file 
-    revswitches['sc_file'] = revswitches.apply(lambda row: get_rev_sc_file_name(caseSwitches, row), axis=1)
-    revswitches['hpc_sc_file'] = revswitches.apply(lambda row: get_rev_sc_file_name(caseSwitches, row, use_hpc=True), axis=1)
-
-    return revswitches
-
 def check_compatibility(sw):
     ### Hourly resolution
     if (
@@ -191,18 +138,12 @@ def check_compatibility(sw):
             "inputs/variability/period_szn_user.csv"
         )
 
-    if ((sw['GSw_PRM_StressModel'].lower() not in ['pras'])
+    if ((sw['GSw_PRM_StressModel'].lower() not in ['pras','osprey'])
         and ('user' not in sw['GSw_PRM_StressModel'])):
         raise ValueError(
-            "GSw_PRM_StressModel must be set to 'pras' or must "
+            "GSw_PRM_StressModel must be set to 'pras' or 'osprey', or must "
             "contain the substring 'user' and match a scenario at "
             "inputs/variability/stressperiods_{GSw_PRM_StressModel}.csv"
-        )
-
-    if (int(sw['GSw_H2_PTC']) == 1) and (int(sw['GSw_H2']) != 2):
-        raise ValueError(
-            'When running with the H2 PTC enabled, GSw_H2 should be set to 2.\n'
-            f"GSw_H2_PTC={sw['GSw_H2_PTC']}, GSw_H2={sw['GSw_H2']}"
         )
 
     if ('usa' not in sw['GSw_Region'].lower()) and (int(sw['GSw_GasCurve']) != 2):
@@ -247,6 +188,12 @@ def check_compatibility(sw):
                 "stress metric in GSw_PRM_StressThreshold must be 'EUE' or 'NEUE' "
                 f"but '{stress_metric}' was provided"
             )
+        if (sw['GSw_PRM_StressModel'].lower() != 'pras') and (stress_metric.upper() != 'EUE'):
+            err = (
+                f"The combination of GSw_PRM_StressModel={sw['GSw_PRM_StressModel']} and "
+                f"stress_metric={stress_metric} is not supported."
+            )
+            raise NotImplementedError(err)
 
     if sw['GSw_PRM_StressStorageCutoff'].lower() not in ['off','0','false']:
         metric, value = sw['GSw_PRM_StressStorageCutoff'].split('_')
@@ -268,25 +215,6 @@ def check_compatibility(sw):
                 f"{metric}_{value} was provided"
             )
 
-    for keyval in sw['GSw_PRM_NetImportLimitScen'].split('/'):
-        err = (
-            "GSw_PRM_NetImportLimitScen accepts inputs in the format "
-            "{year1}_{'hist' or float}/{year2}_{float}/{year3}_{float} "
-            "or a single value given as {year1}_{'hist' or float}. Examples are "
-            "2024_hist/2035_40, 2025_20/2032_40, 2024_hist, 2025_20/2032_40/2050_60. "
-            f"You entered {sw['GSw_PRM_NetImportLimitScen']}."
-        )
-        year, limit = keyval.split('_')
-        try:
-            int(year)
-        except ValueError:
-            raise ValueError(err)
-        if limit not in ['hist', 'histmax']:
-            try:
-                float(limit)
-            except ValueError:
-                raise ValueError(err)
-
     for bir in sw['GSw_PVB_BIR'].split('_'):
         if not (float(bir) >= 0):
             raise ValueError("Fix GSw_PVB_BIR")
@@ -299,24 +227,19 @@ def check_compatibility(sw):
         if not (1 <= int(pvbtype) <= 3):
             raise ValueError("Fix GSw_PVB_Types")
 
-    scalars = pd.read_csv(
-        os.path.join(reeds_path,'inputs','scalars.csv'),
-        header=None, usecols=[0,1], index_col=0).squeeze(1)
-    ilr_upv = scalars['ilr_utility'] * 100
-    
     if (int(sw['GSw_PVB'])) and (sw['GSw_SitingUPV'] != 'reference'):
-        if (all(ilr != ilr_upv for ilr in sw['GSw_PVB_ILR'].split('_'))):
-            raise ValueError(f'PVB with ILR!={scalars["ilr_utility"]} only works with GSw_SitingUPV == "reference".'
+        if (all(ilr != 130 for ilr in sw['GSw_PVB_ILR'].split('_'))):
+            raise ValueError('PVB with ILR!=1.3 only works with GSw_SitingUPV == "reference".'
                              '\nSet GSw_SitingUPV to "reference".')
 
     if (int(sw['GSw_PVB'])) and (sw['GSw_RegionResolution'] == 'county'):
-        if (all(ilr != ilr_upv for ilr in sw['GSw_PVB_ILR'].split('_'))):
-            raise ValueError(f'PVB with ILR!={scalars["ilr_utility"]} does not work at county resolution.'
-                             f'\nRemove any ILR!={scalars["ilr_utility"]} from GSw_PVB_ILR.')
+        if (all(ilr != 130 for ilr in sw['GSw_PVB_ILR'].split('_'))):
+            raise ValueError('PVB with ILR!=1.3 does not work at county resolution.'
+                             '\nRemove any ILR!=1.3 from GSw_PVB_ILR.')
             
-    for year in sw['resource_adequacy_years'].split('_'):
+    for year in sw['osprey_years'].split('_'):
         if not (2007 <= int(year) <= 2013):
-            raise ValueError("Fix resource_adequacy_years")
+            raise ValueError("Fix osprey_years")
 
     for year in sw['GSw_HourlyWeatherYears'].split('_'):
         if not (2007 <= int(year) <= 2013):
@@ -401,7 +324,6 @@ def solvestring_sequential(
             'GSw_Canada', 'GSw_ClimateHydro',
             'GSw_HourlyChunkLengthRep', 'GSw_HourlyChunkLengthStress',
             'GSw_StateCO2ImportLevel',
-            'GSw_PVB_Dur',
             'GSw_ValStr', 'GSw_gopt', 'solver',
             'debug',
         ]])
@@ -447,7 +369,9 @@ def setup_sequential_year(
     if ((
         (cur_year < max(solveyears))
         and (next_year > int(caseSwitches['GSw_SkipAugurYear']))
-    ) or (cur_year == max(solveyears))):
+    ) or (
+        (cur_year == max(solveyears)) and int(caseSwitches['osprey_finalyear'])
+    )):
         OPATH.writelines(
             f"\npython Augur.py {next_year} {cur_year} {casedir}\n")
         ## Check to make sure Augur ran successfully; quit otherwise
@@ -511,7 +435,7 @@ def setup_sequential(
 
         ### Run Augur plots in background
         OPATH.writelines(
-            f"python {os.path.join('ReEDS_Augur','diagnostic_plots.py')} "
+            f"python {os.path.join('ReEDS_Augur','G_plots.py')} "
             f"--reeds_path={reeds_path} --casedir={casedir} --t={cur_year} &\n")
 
 
@@ -662,7 +586,7 @@ def setup_window(
 ### ===========================================================================
 
 def setupEnvironment(
-        BatchName=False, cases_suffix=False, single='', simult_runs=0,
+        BatchName=False, cases_suffix=False, simult_runs=0,
         forcelocal=0, restart=False, skip_checks=False,
         debug=False, debugnode=False):
     # #%% Settings for testing
@@ -794,9 +718,6 @@ def setupEnvironment(
         # Ignore cases with ignore flag
         if int(df_cases.loc['ignore',case]) == 1:
             continue
-        # Ignore cases that don't match the "single" case
-        if len(single) and (case not in single.split(',')):
-            continue
         # Check to make sure the switch setting is valid
         for i, val in df_cases[case].items():
             if skip_checks:
@@ -859,20 +780,6 @@ def setupEnvironment(
     casenames = [case for case in casenames if int(df_cases.loc['ignore',case]) != 1]
     df_cases.drop(
         df_cases.loc['ignore'].loc[df_cases.loc['ignore']=='1'].index, axis=1, inplace=True)
-    # If the "single" argument is provided, only run that case
-    if single:
-        for s in single.split(','):
-            if s not in df_cases:
-                err = (
-                    f'Specified single={single} but available cases are:\n'
-                    + '\n> '.join([
-                        c for c in df_cases.columns
-                        if c not in ['Choices','Description','Default Value']
-                    ])
-                )
-                raise KeyError(err)
-        df_cases = df_cases[single.split(',')].copy()
-        casenames = single.split(',')
 
     # Make sure the run folders don't already exist
     outpaths = [os.path.join(reeds_path,'runs',f'{BatchName}_{case}') for case in casenames]
@@ -920,7 +827,7 @@ def setupEnvironment(
     if len(caseList)==1:
         print("Only one case is to be run, therefore only one thread is needed")
         WORKERS = 1
-    elif simult_runs < 0 or hpc:
+    elif simult_runs < 0:
         WORKERS = len(caseList)
     elif simult_runs > 0:
         WORKERS = simult_runs
@@ -1097,10 +1004,55 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                                 orient='index').reset_index().rename(columns={'index':'tech', 0:'bins'})
 
     revswitches = revswitches.merge(binSwitches, on=['tech'], how='left')
-                                                 
-    # format rev paths
-    revswitches = get_rev_paths(revswitches, caseSwitches)
 
+    # Expand on reV path based on where this run is happening
+    # when running on the HPC this links to the shared-projects folder
+    if os.environ.get('NREL_CLUSTER') == 'kestrel':
+        hpc_path = '/kfs2/shared-projects/reeds/Supply_Curve_Data'
+    else:
+        hpc_path = '/shared-projects/reeds/Supply_Curve_Data' 
+    if hpc:
+        rev_prefix = hpc_path
+    else:
+        hostname = os.environ.get('HOSTNAME')
+        if (hostname) and (hostname.split('.')[0] in YAMPASERVERS):
+            drive = '/data/shared/shared_data'
+        elif LINUXORMAC:
+            drive = '/Volumes'
+        else:
+            drive = '//nrelnas01'
+        rev_prefix = os.path.join(drive,'ReEDS','Supply_Curve_Data')
+    revswitches['hpc_sc_path'] = revswitches['sc_path'].apply(lambda row: os.path.join(hpc_path,row))
+    revswitches['sc_path'] = revswitches['sc_path'].apply(lambda row: os.path.join(rev_prefix,row))
+    revswitches['rev_path'] = revswitches.apply(lambda row: os.path.join(row.sc_path, "reV", row.rev_case), axis=1)
+
+    # link to the pre-processed reV supply curves from hourlize 
+    def get_rev_sc_file_name(caseSwitches, rev_row, use_hpc=False):
+        if pd.isnull(rev_row.original_sc_file):
+            return ""
+        else:
+            if caseSwitches['GSw_RegionResolution'] == "county":
+                sc_folder_suffix = "_county"
+            else:
+                sc_folder_suffix = "_ba"
+
+            # link to HPC or other sc_path
+            if use_hpc:
+                sc_path = rev_row.hpc_sc_path
+            else:
+                sc_path = rev_row.sc_path
+            
+            # supply curve name should be in format of {tech}_rev_supply_curves_raw.csv 
+            # in the hourlize results folder (must match format in 'save_sc_outputs' function of hourlize/resource.py)
+            sc_file = os.path.join(sc_path, 
+                            rev_row.tech + "_" + rev_row.access_case + sc_folder_suffix,
+                            "results", 
+                            rev_row.tech + "_supply_curve_raw.csv"
+                            )
+            return sc_file 
+    revswitches['sc_file'] = revswitches.apply(lambda row: get_rev_sc_file_name(caseSwitches, row), axis=1)
+    revswitches['hpc_sc_file'] = revswitches.apply(lambda row: get_rev_sc_file_name(caseSwitches, row, use_hpc=True), axis=1)
+                                                     
     # save rev paths file for run
     revswitches[['tech','access_switch','access_case','rev_case','bins','sc_path', 
                  'sc_file','hpc_sc_file','cf_path','original_rev_folder']
@@ -1282,6 +1234,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         else:
             #%% Write the input_processing script calls
             big_comment('Input processing', OPATH)
+            tolog = ''
             for s in [
                 'copy_files',
                 'calc_financial_inputs',
@@ -1295,7 +1248,6 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                 'forecast',
                 'WriteHintage',
                 'transmission',
-                'outage_rates',
                 'hourly_repperiods',
                 'aggregate_regions',
             ]:
@@ -1303,7 +1255,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                 OPATH.writelines(f"echo 'starting {s}.py'\n")
                 OPATH.writelines(f"echo {'-'*12+'-'*len(s)}\n")
                 OPATH.writelines(
-                    f"python {os.path.join(casedir,'input_processing',s)}.py {reeds_path} {inputs_case}\n")
+                    f"python {os.path.join(casedir,'input_processing',s)}.py {reeds_path} {inputs_case} {tolog}\n")
                 OPATH.writelines(writescripterrorcheck(s)+'\n')
 
             big_comment('Compile model', OPATH)
@@ -1467,13 +1419,10 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
 
         ### Write the call to the R2X tests
         pipe = '2>&1 | tee -a' if LINUXORMAC else '>>'
-        tolog = f"{pipe} {os.path.join(casedir,'gamslog.txt')}"
         OPATH.writelines(
-            f"\npython -m pytest -v -l tests/test_r2x_integration.py --casepath {casedir} {tolog}\n"
+            f"\npython -m pytest -v -l tests/test_r2x_integration.py --casepath {casedir} "
+            f"{pipe} {os.path.join(casedir,'gamslog.txt')}\n"
         )
-
-        ### Check the error level
-        OPATH.writelines(f"\npython postprocessing/check_error.py {casedir} {tolog}\n")
 
     ### =====================================================================================
     ### --- CALL THE CREATED BATCH FILE ---
@@ -1557,7 +1506,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
 
 
 def main(
-        BatchName='', cases_suffix='', single='', simult_runs=0,
+        BatchName='', cases_suffix='', simult_runs=0,
         forcelocal=False, restart=False, skip_checks=False,
         debug=False, debugnode=False,
     ):
@@ -1585,8 +1534,7 @@ def main(
 
     # Gather user inputs before calling GAMS programs
     envVar = setupEnvironment(
-        BatchName=BatchName, cases_suffix=cases_suffix,
-        single=single, simult_runs=simult_runs,
+        BatchName=BatchName, cases_suffix=cases_suffix, simult_runs=simult_runs,
         forcelocal=forcelocal, restart=restart, skip_checks=skip_checks,
         debug=debug, debugnode=debugnode,
     )
@@ -1599,8 +1547,6 @@ if __name__ == '__main__':
                         help='Name for batch of runs')
     parser.add_argument('--cases_suffix', '-c', type=str, default='',
                         help='Suffix for cases CSV file')
-    parser.add_argument('--single', '-s', type=str, default='',
-                        help='Name of a single case to run (or comma-delimited list)')
     parser.add_argument('--simult_runs', '-r', type=int, default=0,
                         help='Number of simultaneous runs. If negative, run all simultaneously.')
     parser.add_argument('--forcelocal', '-l', action='store_true',
@@ -1617,7 +1563,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main(
-        BatchName=args.BatchName, cases_suffix=args.cases_suffix, single=args.single,
+        BatchName=args.BatchName, cases_suffix=args.cases_suffix,
         simult_runs=args.simult_runs, forcelocal=args.forcelocal,
         restart=args.restart, skip_checks=args.skip_checks,
         debug=args.debug, debugnode=args.debugnode,

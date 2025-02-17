@@ -21,7 +21,8 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
     # os.chdir(casepath)
 
     #%% Inferred inputs
-    site.addsitedir(casepath)
+    reeds_path = os.path.dirname(os.path.dirname(casepath))
+    site.addsitedir(reeds_path)
     import runbatch
 
     #%% Get the run settings
@@ -59,9 +60,7 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
         print(cmd_gams)
 
         ### Run GAMS LP
-        result = subprocess.run(cmd_gams, shell=True)
-        if result.returncode:
-            raise Exception(f'd_solveoneyear.gms failed with return code {result.returncode}')
+        subprocess.run(cmd_gams, shell=True)
 
         #%% Run ticker
         try:

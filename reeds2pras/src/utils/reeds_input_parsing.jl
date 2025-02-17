@@ -144,7 +144,12 @@ end
         Dataframe containing the forced outage data.
 """
 function get_forced_outage_data(data::ReEDSdatapaths)
-    filepath = joinpath(data.ReEDSfilepath, "inputs_case", "outage_forced_static.csv")
+    filepath = joinpath(
+        data.ReEDSfilepath,
+        "ReEDS_Augur",
+        "augur_data",
+        "forced_outage_$(string(data.year)).csv",
+    )
     df = DataFrames.DataFrame(CSV.File(filepath, header = true))
     return DataFrames.rename!(df, ["ResourceType", "FOR"])
 end

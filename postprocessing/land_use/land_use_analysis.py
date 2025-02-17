@@ -42,11 +42,11 @@ def totalLand(scen_path, tech_land_use, total_area, tech, capacity_col):
     # check whether each supply curve point is full (within tolerance of 0.1 MW)
     tech_land_use['sc_full_bool'] = (abs(tech_land_use[capacity_col] - tech_land_use['built_capacity']) < 0.1)
     tech_land_use['fraction_built'] =  tech_land_use['built_capacity'] / tech_land_use[capacity_col]
-    tech_land_use['built_area_sq_km'] = tech_land_use['area_developable_sq_km'] * tech_land_use['fraction_built']
+    tech_land_use['built_area_sq_km'] = tech_land_use['area_sq_km'] * tech_land_use['fraction_built']
 
     # calculate total area
-    tech_land_use['built_capacity_mw'] = tech_land_use['built_capacity']
-    tech_area = tech_land_use.groupby(['year'])[["built_capacity_mw", "built_area_sq_km"]].sum()
+    tech_land_use['built_capacity_MW'] = tech_land_use['built_capacity']
+    tech_area = tech_land_use.groupby(['year'])[["built_capacity_MW", "built_area_sq_km"]].sum()
 
     # current total is area available for development, not total non-excluded area
     # does not currently use multiple years of land-use data
@@ -62,18 +62,18 @@ def calculateCapacityByUse(df, tag):
 
     # NAs indicate no cells or builds in that supply curve point
     # df = df.fillna(0)
-    df['built_capacity_mw'] = df['built_capacity_mw'].fillna(0)
+    df['built_capacity_MW'] = df['built_capacity_MW'].fillna(0)
     df['fraction_built'] = df['fraction_built'].fillna(0)
 
     frac_column = "fraction_sc_area"
     # this is the fraction of the land use category to the total supply curve
-    df[frac_column] =  df['area_sq_km_land_use'] / df['area_developable_sq_km'] 
+    df[frac_column] =  df['area_sq_km_land_use'] / df['area_sq_km'] 
     
     # amount of capacity built in each land class is (total capacity built in sc_point) x (share of land use / total sc point)
-    df[tag + '_built_capacity_mw'] = df[frac_column] *  df['built_capacity_mw']
+    df[tag + '_built_capacity_MW'] = df[frac_column] *  df['built_capacity_MW']
 
     # area used is a function of the fraction of total sc curve area used
-    df[tag + '_area_built_sq_km'] = df[frac_column] *  df['area_developable_sq_km'] * df['fraction_built']
+    df[tag + '_area_built_sq_km'] = df[frac_column] *  df['area_sq_km'] * df['fraction_built']
 
     # drop fraction column
     df.drop(frac_column, axis=1, inplace=True)
@@ -82,7 +82,7 @@ def calculateCapacityByUse(df, tag):
 
 # helper function to parse any columns with JSON data
 def parseJSON(df, col, var, reeds_path, mapping=None, 
-              keepcols=["sc_point_gid", "latitude", "longitude", "cnty_fips", "area_developable_sq_km"]):
+              keepcols=["sc_point_gid", "latitude", "longitude", "cnty_fips", "area_sq_km"]):
 
     # select data based on column (can be a regular expression for multiple columns)
     jsondata = df.filter(regex=(col))
@@ -199,15 +199,15 @@ def processLandUseJSON(df_name, tech, df_vals, scen_path, reeds_path, rev_sc, te
 
         # merge buildout with land use categories
         # use outer join to include available land from areas with no capacity
-        land_use = land_class_merge.merge(tech_land_use_merge[['year', 'sc_point_gid', 'built_capacity_mw', 'fraction_built']], on=["sc_point_gid", "year"], how="outer")    
+        land_use = land_class_merge.merge(tech_land_use_merge[['year', 'sc_point_gid', 'built_capacity_MW', 'fraction_built']], on=["sc_point_gid", "year"], how="outer")    
 
         # allocate capacity to each land use category    
         land_use = calculateCapacityByUse(land_use, df_name)
 
         # rename some columns
         land_use.rename(columns={'area_sq_km_land_use': f'{df_name}_area_avail_sq_km',
-                                 'area_developable_sq_km': 'sc_area_avail_sq_km',
-                                 'built_capacity_mw': 'sc_built_capacity_mw',
+                                 'area_sq_km': 'sc_area_avail_sq_km',
+                                 'built_capacity_MW': 'sc_built_capacity_MW',
                                  'fraction_built': 'sc_fraction_built'}, inplace=True)
         
         # preserve leading zero in fips code
@@ -262,7 +262,7 @@ def getSpeciesImpact(tech, scen_path, rev_sc, tech_land_use, species_col_list):
     else:
         print(f"Found the following species colums: {species_cols}")
     
-    id_cols = ['year','region','sc_point_gid','sc_full_bool','fraction_built','area_developable_sq_km','built_area_sq_km','built_capacity_mw']
+    id_cols = ['year','region','sc_point_gid','sc_full_bool','fraction_built','area_sq_km','built_area_sq_km','built_capacity_MW']
     species_land_use = tech_land_use[id_cols]
 
     # using left join here for now but may want to revise to capture species habitat/range outside of built areas
@@ -283,12 +283,12 @@ def getSpeciesImpact(tech, scen_path, rev_sc, tech_land_use, species_col_list):
     species_land_use['species_area_sq_km'] = species_land_use['species_var_cells'] * cell_area
 
     # calculate density as a fraction of developable area (consider converting calculation to total area in sc point)
-    #species_land_use['species_density'] = species_land_use['species_area'] / species_land_use['area_developable_sq_km']
+    #species_land_use['species_density'] = species_land_use['species_area'] / species_land_use['area_sq_km']
 
     species_land_use.rename(columns={
-                                 'area_developable_sq_km': 'sc_area_avail_sq_km',
+                                 'area_sq_km': 'sc_area_avail_sq_km',
                                  'built_area_sq_km': 'sc_built_area_sq_km',
-                                 'built_capacity_mw': 'sc_built_capacity_mw'
+                                 'built_capacity_MW': 'sc_built_capacity_MW'
                                 }, inplace=True)
     
     species_land_use.drop("species_var_cells", axis=1, inplace=True)
@@ -334,11 +334,11 @@ def getLandUse(scen_path, jsonfile, rev_paths, reeds_path, tech, capacity_col="c
 
     # if using land-use features that change over time then merge on year, otherwise ignore year
     tech_land_use = builds_tech[['year','region','sc_point_gid','built_capacity']].merge(
-        rev_sc[['sc_point_gid', 'area_developable_sq_km', capacity_col]], on=['sc_point_gid']
+        rev_sc[['sc_point_gid', 'area_sq_km', capacity_col]], on=['sc_point_gid']
         )
     
     # estimate of total developable area from reV
-    total_area = rev_sc['area_developable_sq_km'].sum()
+    total_area = rev_sc['area_sq_km'].sum()
     # calculate total built area
     totalLand(scen_path, tech_land_use, total_area, tech, capacity_col)
     

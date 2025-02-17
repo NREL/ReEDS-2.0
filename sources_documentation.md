@@ -17,7 +17,6 @@
       - ##### [degradation](#inputs/degradation) 
       - ##### [demand_response](#inputs/demand_response) 
       - ##### [dGen_model_inputs](#inputs/dGen_model_inputs) 
-      - ##### [dGen_Model_Inputs](#inputs/dGen_Model_Inputs) 
       - ##### [disaggregation](#inputs/disaggregation) 
       - ##### [emission_constraints](#inputs/emission_constraints) 
       - ##### [financials](#inputs/financials) 
@@ -140,7 +139,8 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [fair_market_value.csv](/hourlize/inputs/resource/fair_market_value.csv)
     - **Description:** Contains estimates of fair market land value in $ per hectare for each reV supply curve site
 
-    - **Citation:** [(Provided by Anthony Lopez in June 2023)]
+    - **Citation:** [(Supplied by Anthony Lopez from the reV team)]
+
 ---
 
   - [rev_sc_columns_for_hourlize.csv](/hourlize/inputs/resource/rev_sc_columns_for_hourlize.csv)
@@ -156,9 +156,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [wind-ofs_resource_classes.csv](/hourlize/inputs/resource/wind-ofs_resource_classes.csv)
-    - **File Type:** supply curve input
-    - **Description:** Contains information related to Offshore wind class segregation and turbine type (fixed vs floating) based on water depth and site lcoe
-    - **Indices:** n/a
+    - **Description:** Contains information related to Offshore wind class segregation based on mean wind speeds.
 ---
 
   - [wind-ons_resource_classes.csv](/hourlize/inputs/resource/wind-ons_resource_classes.csv)
@@ -396,10 +394,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [county2zone.csv](/inputs/county2zone.csv)
 ---
 
-  - [energy_communities.csv](/inputs/energy_communities.csv)
-    - **Description:** Contains a list of all county-regions designated as an energy community. The list is created from the NETL Energy Comunity Tax Bonus Website (https://arcgis.netl.doe.gov/portal/apps/experiencebuilder/experience/?id=a2ce47d4721a477a8701bd0e08495e1d) for 2023, and is appended with the list of new counties designated as energy communities published by the IRS in March 2024 (https://www.irs.gov/pub/irs-drop/n-24-30-appendix-2.pdf).
----
-
   - [hierarchy.csv](/inputs/hierarchy.csv)
 ---
 
@@ -419,35 +413,17 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 #### [canada_imports](inputs/canada_imports) <a name='inputs/canada_imports'></a>
   - [can_exports.csv](/inputs/canada_imports/can_exports.csv)
-    - **File Type:** Input
     - **Description:** Annual exports to Canada by BA
-    - **Indices:** r,t
-    - **Units:** MWh
-
 ---
 
   - [can_exports_szn_frac.csv](/inputs/canada_imports/can_exports_szn_frac.csv)
-    - **File Type:** Input
-    - **Description:** Fraction of annual exports to Canada by season
-    - **Indices:** N/A
-    - **Units:** rate (unitless)
-
 ---
 
   - [can_imports.csv](/inputs/canada_imports/can_imports.csv)
-    - **File Type:** Input
     - **Description:** Annual imports from Canada by BA
-    - **Indices:** r,t
-    - **Units:** MWh
-
 ---
 
-  - [can_imports_quarter_frac.csv](/inputs/canada_imports/can_imports_quarter_frac.csv)
-    - **File Type:** Input
-    - **Description:** Fraction of annual imports from Canada by season
-    - **Indices:** N/A
-    - **Units:** rate (unitless)
-
+  - [can_imports_szn_frac.csv](/inputs/canada_imports/can_imports_szn_frac.csv)
 ---
 
 
@@ -464,12 +440,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Indices:** t,r,i,coolingwatertech,ctt,wst,value
 
     - **Citation:** [(See 'notes' column in the file)]
-    - **Units:** MW
-
 ---
 
   - [ReEDS_generator_database_final_EIA-NEMS.csv](/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv)
-    - **File Type:** Input
     - **Description:** EIA-NEMS database of existing generators
 ---
 
@@ -479,227 +452,115 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [upv_exog_cap_limited_ba.csv](/inputs/capacity_exogenous/upv_exog_cap_limited_ba.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) UPV capacity with limited siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [upv_exog_cap_limited_county.csv](/inputs/capacity_exogenous/upv_exog_cap_limited_county.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) UPV capacity with limited siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [upv_exog_cap_open_ba.csv](/inputs/capacity_exogenous/upv_exog_cap_open_ba.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) UPV capacity with open siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [upv_exog_cap_open_county.csv](/inputs/capacity_exogenous/upv_exog_cap_open_county.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) UPV capacity with open siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [upv_exog_cap_reference_ba.csv](/inputs/capacity_exogenous/upv_exog_cap_reference_ba.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) UPV capacity with reference siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [upv_exog_cap_reference_county.csv](/inputs/capacity_exogenous/upv_exog_cap_reference_county.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) UPV capacity with reference siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [upv_prescribed_builds_limited_ba.csv](/inputs/capacity_exogenous/upv_prescribed_builds_limited_ba.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with limited siting assumptions at BA resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [upv_prescribed_builds_limited_county.csv](/inputs/capacity_exogenous/upv_prescribed_builds_limited_county.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with limited siting assumptions at county resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [upv_prescribed_builds_open_ba.csv](/inputs/capacity_exogenous/upv_prescribed_builds_open_ba.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with open siting assumptions at BA resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [upv_prescribed_builds_open_county.csv](/inputs/capacity_exogenous/upv_prescribed_builds_open_county.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with open siting assumptions at county resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [upv_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/upv_prescribed_builds_reference_ba.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with reference siting assumptions at BA resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [upv_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/upv_prescribed_builds_reference_county.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with reference siting assumptions at county resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ofs_prescribed_builds_limited_ba.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_limited_ba.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with limited siting assumptions at BA resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ofs_prescribed_builds_limited_county.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_limited_county.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with limited siting assumptions at county resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ofs_prescribed_builds_open_ba.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_open_ba.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with open siting assumptions at BA resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ofs_prescribed_builds_open_county.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_open_county.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with open siting assumptions at county resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_exog_cap_limited_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_limited_ba.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_exog_cap_limited_county.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_limited_county.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_exog_cap_open_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_open_ba.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) wind-ons capacity with open siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_exog_cap_open_county.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_open_county.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) wind-ons capacity with open siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_exog_cap_reference_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_reference_ba.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_exog_cap_reference_county.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_reference_county.csv)
-    - **File Type:** Exogenous capacity
     - **Description:** Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_prescribed_builds_limited_ba.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_limited_ba.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with limited siting assumptions at BA resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_prescribed_builds_limited_county.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_limited_county.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with limited siting assumptions at county resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_prescribed_builds_open_ba.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_open_ba.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with open siting assumptions at BA resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_prescribed_builds_open_county.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_open_county.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with open siting assumptions at county resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_ba.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with reference siting assumptions at BA resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
   - [wind-ons_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_county.csv)
-    - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with reference siting assumptions at county resolution
-    - **Indices:** r,t
-    - **Units:** MW
-
 ---
 
 
@@ -992,10 +853,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [dr_decrease_profile_Baseline.csv](/inputs/demand_response/dr_decrease_profile_Baseline.csv)
-    - **File Type:** inputs
-    - **Description:** Average capacity factor for dr profile which leads to an increase in load in timeslice h for Baseline demand response profile. The demand response profiles are not being actively developed and may be outdated. 
-    - **Units:** fraction
-
 ---
 
   - [dr_decrease_profile_Baseline_shed.csv](/inputs/demand_response/dr_decrease_profile_Baseline_shed.csv)
@@ -1011,10 +868,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [dr_increase_profile_Baseline.csv](/inputs/demand_response/dr_increase_profile_Baseline.csv)
-    - **File Type:** inputs
-    - **Description:** Average capacity factor for dr profile which leads to a reduction in load in timeslice h for Baseline demand response profile. The demand response profiles are not being actively developed and may be outdated.
-    - **Units:** fraction
-
 ---
 
   - [dr_increase_profile_Baseline_shed.csv](/inputs/demand_response/dr_increase_profile_Baseline_shed.csv)
@@ -1051,7 +904,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [dr_shifts_Baseline.csv](/inputs/demand_response/dr_shifts_Baseline.csv)
-    - **Description:** How much load each dr type is allowed to shift into h from hh
 ---
 
   - [dr_shifts_Baseline_shed.csv](/inputs/demand_response/dr_shifts_Baseline_shed.csv)
@@ -1076,10 +928,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [ev_load_Baseline.h5](/inputs/demand_response/ev_load_Baseline.h5)
-    - **File Type:** inputs
-    - **Description:** Baseline electricity load from EV charging by timeslice h and year t
-    - **Units:** MW
-
 ---
 
   - [evmc_rsc_Baseline.csv](/inputs/demand_response/evmc_rsc_Baseline.csv)
@@ -1102,71 +950,76 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [dGen_model_inputs](inputs/dGen_model_inputs) <a name='inputs/dGen_model_inputs'></a>
-  - [distPVCF_hourly.csv](/inputs/dGen_model_inputs/distpvcf_hourly.csv)
-    - **File Type:** distribution PV inputs 
-    - **Description:** Setting for distpv scenario hourly cf
-    - **Units:** fraction
 
+##### [StScen2022_High_RE_Cost](inputs/dGen_model_inputs/StScen2022_High_RE_Cost) <a name='inputs/dGen_model_inputs/StScen2022_High_RE_Cost'></a>
+  - [distPVcap_StScen2022_High_RE_Cost.csv](/inputs/dGen_model_inputs/StScen2022_High_RE_Cost/distPVcap_StScen2022_High_RE_Cost.csv)
+---
+
+  - [distPVCF_hourly_StScen2022_High_RE_Cost.csv](/inputs/dGen_model_inputs/StScen2022_High_RE_Cost/distPVCF_hourly_StScen2022_High_RE_Cost.csv)
 ---
 
 
-##### [stscen2023_highng](inputs/dGen_model_inputs/stscen2023_highng) <a name='inputs/dGen_model_inputs/stscen2023_highng'></a>
-  - [distpvcap_stscen2023_highng.csv.csv](/inputs/dGen_model_inputs/stscen2023_highng/distpvcap_stscen2023_highng.csv)
-    - **File Type:** distribution PV inputs 
-    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with high NG (including distpv) costs
+##### [StScen2022_High_RE_Cost_LMI](inputs/dGen_model_inputs/StScen2022_High_RE_Cost_LMI) <a name='inputs/dGen_model_inputs/StScen2022_High_RE_Cost_LMI'></a>
+  - [distPVcap_StScen2022_High_RE_Cost_LMI.csv](/inputs/dGen_model_inputs/StScen2022_High_RE_Cost_LMI/distPVcap_StScen2022_High_RE_Cost_LMI.csv)
+---
+
+  - [distPVCF_hourly_StScen2022_High_RE_Cost_LMI.csv](/inputs/dGen_model_inputs/StScen2022_High_RE_Cost_LMI/distPVCF_hourly_StScen2022_High_RE_Cost_LMI.csv)
 ---
 
 
-##### [stscen2023_highre](inputs/dGen_model_inputs/stscen2023_highre) <a name='inputs/dGen_model_inputs/stscen2023_highre'></a>
-  - [distpvcap_stscen2023_highre.csv.csv](/inputs/dGen_model_inputs/stscen2023_highre/distpvcap_stscen2023_highre.csv)
-    - **File Type:** distribution PV inputs 
-    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with high RE (including distpv) costs
+##### [StScen2022_High_RE_Cost_noIRA](inputs/dGen_model_inputs/StScen2022_High_RE_Cost_noIRA) <a name='inputs/dGen_model_inputs/StScen2022_High_RE_Cost_noIRA'></a>
+  - [distPVcap_StScen2022_High_RE_Cost_noIRA.csv](/inputs/dGen_model_inputs/StScen2022_High_RE_Cost_noIRA/distPVcap_StScen2022_High_RE_Cost_noIRA.csv)
+---
+
+  - [distPVCF_hourly_StScen2022_High_RE_Cost_noIRA.csv](/inputs/dGen_model_inputs/StScen2022_High_RE_Cost_noIRA/distPVCF_hourly_StScen2022_High_RE_Cost_noIRA.csv)
 ---
 
 
-##### [stscen2023_lowng](inputs/dGen_model_inputs/stscen2023_lowng) <a name='inputs/dGen_model_inputs/stscen2023_lowng'></a>
-  - [distpvcap_stscen2023_lowng.csv.csv](/inputs/dGen_model_inputs/stscen2023_lowng/distpvcap_stscen2023_lowng.csv)
-    - **File Type:** distribution PV inputs 
-    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with low NG (including distpv) costs
+##### [StScen2022_Low_RE_Cost](inputs/dGen_model_inputs/StScen2022_Low_RE_Cost) <a name='inputs/dGen_model_inputs/StScen2022_Low_RE_Cost'></a>
+  - [distPVcap_StScen2022_Low_RE_Cost.csv](/inputs/dGen_model_inputs/StScen2022_Low_RE_Cost/distPVcap_StScen2022_Low_RE_Cost.csv)
+---
+
+  - [distPVCF_hourly_StScen2022_Low_RE_Cost.csv](/inputs/dGen_model_inputs/StScen2022_Low_RE_Cost/distPVCF_hourly_StScen2022_Low_RE_Cost.csv)
 ---
 
 
-##### [stscen2023_lowre](inputs/dGen_model_inputs/stscen2023_lowre) <a name='inputs/dGen_model_inputs/stscen2023_lowre'></a>
-  - [distpvcap_stscen2023_lowre.csv.csv](/inputs/dGen_model_inputs/stscen2023_lowre/distpvcap_stscen2023_lowre.csv)
-    - **File Type:** distribution PV inputs 
-    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with low RE (including distpv) costs
+##### [StScen2022_Low_RE_Cost_LMI](inputs/dGen_model_inputs/StScen2022_Low_RE_Cost_LMI) <a name='inputs/dGen_model_inputs/StScen2022_Low_RE_Cost_LMI'></a>
+  - [distPVcap_StScen2022_Low_RE_Cost_LMI.csv](/inputs/dGen_model_inputs/StScen2022_Low_RE_Cost_LMI/distPVcap_StScen2022_Low_RE_Cost_LMI.csv)
+---
+
+  - [distPVCF_hourly_StScen2022_Low_RE_Cost_LMI.csv](/inputs/dGen_model_inputs/StScen2022_Low_RE_Cost_LMI/distPVCF_hourly_StScen2022_Low_RE_Cost_LMI.csv)
 ---
 
 
-##### [stscen2023_mid_case](inputs/dGen_model_inputs/stscen2023_mid_case) <a name='inputs/dGen_model_inputs/stscen2023_mid_case'></a>
-  - [distpvcap_stscen2023_mid_case.csv.csv](/inputs/dGen_model_inputs/stscen2023_mid_case/distpvcap_stscen2023_mid_case.csv)
-    - **File Type:** distribution PV inputs 
+##### [StScen2022_Low_RE_Cost_noIRA](inputs/dGen_model_inputs/StScen2022_Low_RE_Cost_noIRA) <a name='inputs/dGen_model_inputs/StScen2022_Low_RE_Cost_noIRA'></a>
+  - [distPVcap_StScen2022_Low_RE_Cost_noIRA.csv](/inputs/dGen_model_inputs/StScen2022_Low_RE_Cost_noIRA/distPVcap_StScen2022_Low_RE_Cost_noIRA.csv)
+---
+
+  - [distPVCF_hourly_StScen2022_Low_RE_Cost_noIRA.csv](/inputs/dGen_model_inputs/StScen2022_Low_RE_Cost_noIRA/distPVCF_hourly_StScen2022_Low_RE_Cost_noIRA.csv)
 ---
 
 
-##### [stscen2023_mid_case_95_by_2035](inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2035) <a name='inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2035'></a>
-  - [distpvcap_stscen2023_mid_case_95_by_2035.csv.csv](/inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2035/distpvcap_stscen2023_mid_case_95_by_2035.csv)
-    - **File Type:** distribution PV inputs 
+##### [StScen2022_Mid_Case](inputs/dGen_model_inputs/StScen2022_Mid_Case) <a name='inputs/dGen_model_inputs/StScen2022_Mid_Case'></a>
+  - [distPVcap_StScen2022_Mid_Case.csv](/inputs/dGen_model_inputs/StScen2022_Mid_Case/distPVcap_StScen2022_Mid_Case.csv)
+---
+
+  - [distPVCF_hourly_StScen2022_Mid_Case.csv](/inputs/dGen_model_inputs/StScen2022_Mid_Case/distPVCF_hourly_StScen2022_Mid_Case.csv)
 ---
 
 
-##### [stscen2023_mid_case_95_by_2050](inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2050) <a name='inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2050'></a>
-  - [distpvcap_stscen2023_mid_case_95_by_2050.csv.csv](/inputs/dGen_model_inputs/stscen2023_mid_case_95_by_2050/distpvcap_stscen2023_mid_case_95_by_2050.csv)
-    - **File Type:** distribution PV inputs 
+##### [StScen2022_Mid_Case_LMI](inputs/dGen_model_inputs/StScen2022_Mid_Case_LMI) <a name='inputs/dGen_model_inputs/StScen2022_Mid_Case_LMI'></a>
+  - [distPVcap_StScen2022_Mid_Case_LMI.csv](/inputs/dGen_model_inputs/StScen2022_Mid_Case_LMI/distPVcap_StScen2022_Mid_Case_LMI.csv)
+---
+
+  - [distPVCF_hourly_StScen2022_Mid_Case_LMI.csv](/inputs/dGen_model_inputs/StScen2022_Mid_Case_LMI/distPVCF_hourly_StScen2022_Mid_Case_LMI.csv)
 ---
 
 
-##### [stscen2023_taxcredit_extended2050](inputs/dGen_model_inputs/stscen2023_taxcredit_extended2050) <a name='inputs/dGen_model_inputs/stscen2023_taxcredit_extended2050'></a>
-  - [distpvcap_stscen2023_taxcredit_extended2050.csv.csv](/inputs/dGen_model_inputs/stscen2023_taxcredit_extended2050/distpvcap_stscen2023_taxcredit_extended2050.csv)
-    - **File Type:** distribution PV inputs 
+##### [StScen2022_Mid_Case_noIRA](inputs/dGen_model_inputs/StScen2022_Mid_Case_noIRA) <a name='inputs/dGen_model_inputs/StScen2022_Mid_Case_noIRA'></a>
+  - [distPVcap_StScen2022_Mid_Case_noIRA.csv](/inputs/dGen_model_inputs/StScen2022_Mid_Case_noIRA/distPVcap_StScen2022_Mid_Case_noIRA.csv)
 ---
 
-
-#### [dGen_Model_Inputs](inputs/dGen_Model_Inputs) <a name='inputs/dGen_Model_Inputs'></a>
-
-##### [stscen2023_electrification](inputs/dGen_Model_Inputs/stscen2023_electrification) <a name='inputs/dGen_Model_Inputs/stscen2023_electrification'></a>
-  - [distpv_stscen2023_electrification.csv.csv](/inputs/dGen_Model_Inputs/stscen2023_electrification/distpv_stscen2023_electrification.csv)
-    - **File Type:** distribution PV inputs 
+  - [distPVCF_hourly_StScen2022_Mid_Case_noIRA.csv](/inputs/dGen_model_inputs/StScen2022_Mid_Case_noIRA/distPVCF_hourly_StScen2022_Mid_Case_noIRA.csv)
 ---
 
 
@@ -1240,8 +1093,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Dollar year:** N/A
 
     - **Citation:** [(https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220)]
-    - **Units:** rate (unitless)
-
 ---
 
   - [rggi_states.csv](/inputs/emission_constraints/rggi_states.csv)
@@ -1318,9 +1169,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [reg_cap_cost_mult_default.csv](/inputs/financials/reg_cap_cost_mult_default.csv)
-    - **File Type:** parameter
-    - **Description:** region-specific multipliers for capital cost of all resources. Note: RE resources have values of 1 since their multipliers are incorporated in hourlize
-    - **Indices:** i,r
 ---
 
   - [retire_penalty.csv](/inputs/financials/retire_penalty.csv)
@@ -1334,7 +1182,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [fuelprices](inputs/fuelprices) <a name='inputs/fuelprices'></a>
-  - [alpha_AEO_2022_HOG .csv](/inputs/fuelprices/alpha_AEO_2022_HOG.csv)
+  - [alpha_AEO_2022_HOG.csv](/inputs/fuelprices/alpha_AEO_2022_HOG.csv)
     - **File Type:** Input
     - **Description:** High Oil and Gas scenario census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
@@ -1433,189 +1281,75 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [ng_AEO_2022_HOG.csv](/inputs/fuelprices/ng_AEO_2022_HOG.csv)
-    - **File Type:** Input
     - **Description:** High Oil and Gas scenario census division fuel price of natural gas
-    - **Indices:** cendiv,t
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** 2004$/MMBtu
-
 ---
 
   - [ng_AEO_2022_LOG.csv](/inputs/fuelprices/ng_AEO_2022_LOG.csv)
-    - **File Type:** Input
     - **Description:** Low Oil and Gas scenario census division fuel price of natural gas
-    - **Indices:** cendiv,t
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** 2004$/MMBtu
-
 ---
 
   - [ng_AEO_2022_reference.csv](/inputs/fuelprices/ng_AEO_2022_reference.csv)
-    - **File Type:** Input
     - **Description:** Reference scenario census division fuel price of natural gas
-    - **Indices:** cendiv,t
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** 2004$/MMBtu
-
 ---
 
   - [ng_AEO_2023_HOG.csv](/inputs/fuelprices/ng_AEO_2023_HOG.csv)
-    - **File Type:** Input
     - **Description:** High Oil and Gas scenario census division fuel price of natural gas
-    - **Indices:** cendiv,t
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** 2004$/MMBtu
-
 ---
 
   - [ng_AEO_2023_LOG.csv](/inputs/fuelprices/ng_AEO_2023_LOG.csv)
-    - **File Type:** Input
     - **Description:** Low Oil and Gas scenario census division fuel price of natural gas
-    - **Indices:** cendiv,t
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** 2004$/MMBtu
-
 ---
 
   - [ng_AEO_2023_reference.csv](/inputs/fuelprices/ng_AEO_2023_reference.csv)
-    - **File Type:** Input
     - **Description:** Reference scenario census division fuel price of natural gas
-    - **Indices:** cendiv,t
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** 2004$/MMBtu
-
 ---
 
   - [ng_demand_AEO_2022_HOG.csv](/inputs/fuelprices/ng_demand_AEO_2022_HOG.csv)
-    - **File Type:** Input
     - **Description:** High Oil and Gas census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_demand_AEO_2022_LOG.csv](/inputs/fuelprices/ng_demand_AEO_2022_LOG.csv)
-    - **File Type:** Input
     - **Description:** Low Oil and Gas census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_demand_AEO_2022_reference.csv](/inputs/fuelprices/ng_demand_AEO_2022_reference.csv)
-    - **File Type:** Input
     - **Description:** Reference census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_demand_AEO_2023_HOG.csv](/inputs/fuelprices/ng_demand_AEO_2023_HOG.csv)
-    - **File Type:** Input
     - **Description:** High Oil and Gas census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_demand_AEO_2023_LOG.csv](/inputs/fuelprices/ng_demand_AEO_2023_LOG.csv)
-    - **File Type:** Input
     - **Description:** Low Oil and Gas census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_demand_AEO_2023_reference.csv](/inputs/fuelprices/ng_demand_AEO_2023_reference.csv)
-    - **File Type:** Input
     - **Description:** Reference census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_tot_demand_AEO_2022_HOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2022_HOG.csv)
-    - **File Type:** Input
     - **Description:** High Oil and Gas census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_tot_demand_AEO_2022_LOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2022_LOG.csv)
-    - **File Type:** Input
     - **Description:** Low Oil and Gas census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_tot_demand_AEO_2022_reference.csv](/inputs/fuelprices/ng_tot_demand_AEO_2022_reference.csv)
-    - **File Type:** Input
     - **Description:** Reference census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_tot_demand_AEO_2023_HOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2023_HOG.csv)
-    - **File Type:** Input
     - **Description:** High Oil and Gas census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_tot_demand_AEO_2023_LOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2023_LOG.csv)
-    - **File Type:** Input
     - **Description:** Low Oil and Gas census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [ng_tot_demand_AEO_2023_reference.csv](/inputs/fuelprices/ng_tot_demand_AEO_2023_reference.csv)
-    - **File Type:** Input
     - **Description:** Reference census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
-    - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
-
 ---
 
   - [uranium_AEO_2022_reference.csv](/inputs/fuelprices/uranium_AEO_2022_reference.csv)
@@ -1774,28 +1508,22 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [plant_characteristics](inputs/plant_characteristics) <a name='inputs/plant_characteristics'></a>
+  - [battery_ATB_2022_advanced.csv](/inputs/plant_characteristics/battery_ATB_2022_advanced.csv)
+---
+
+  - [battery_ATB_2022_conservative.csv](/inputs/plant_characteristics/battery_ATB_2022_conservative.csv)
+---
+
+  - [battery_ATB_2022_moderate.csv](/inputs/plant_characteristics/battery_ATB_2022_moderate.csv)
+---
+
   - [battery_ATB_2023_advanced.csv](/inputs/plant_characteristics/battery_ATB_2023_advanced.csv)
-    - **Dollar year:** 2020
 ---
 
   - [battery_ATB_2023_conservative.csv](/inputs/plant_characteristics/battery_ATB_2023_conservative.csv)
-    - **Dollar year:** 2020
 ---
 
   - [battery_ATB_2023_moderate.csv](/inputs/plant_characteristics/battery_ATB_2023_moderate.csv)
-    - **Dollar year:** 2020
----
-
-  - [battery_ATB_2024_advanced.csv](/inputs/plant_characteristics/battery_ATB_2024_advanced.csv)
-    - **Dollar year:** 2021
----
-
-  - [battery_ATB_2024_conservative.csv](/inputs/plant_characteristics/battery_ATB_2024_conservative.csv)
-    - **Dollar year:** 2021
----
-
-  - [battery_ATB_2024_moderate.csv](/inputs/plant_characteristics/battery_ATB_2024_moderate.csv)
-    - **Dollar year:** 2021
 ---
 
   - [beccs_BVRE_2021_high.csv](/inputs/plant_characteristics/beccs_BVRE_2021_high.csv)
@@ -1827,6 +1555,12 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Dollar year:** 2017
 ---
 
+  - [conv_ATB_2022.csv](/inputs/plant_characteristics/conv_ATB_2022.csv)
+---
+
+  - [conv_ATB_2022_low_nuclear_and_ccs_cost.csv](/inputs/plant_characteristics/conv_ATB_2022_low_nuclear_and_ccs_cost.csv)
+---
+
   - [conv_ATB_2023.csv](/inputs/plant_characteristics/conv_ATB_2023.csv)
 ---
 
@@ -1848,6 +1582,15 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [cost_opres_market.csv](/inputs/plant_characteristics/cost_opres_market.csv)
 ---
 
+  - [csp_ATB_2022_advanced.csv](/inputs/plant_characteristics/csp_ATB_2022_advanced.csv)
+---
+
+  - [csp_ATB_2022_conservative.csv](/inputs/plant_characteristics/csp_ATB_2022_conservative.csv)
+---
+
+  - [csp_ATB_2022_moderate.csv](/inputs/plant_characteristics/csp_ATB_2022_moderate.csv)
+---
+
   - [csp_ATB_2023_advanced.csv](/inputs/plant_characteristics/csp_ATB_2023_advanced.csv)
 ---
 
@@ -1855,15 +1598,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [csp_ATB_2023_moderate.csv](/inputs/plant_characteristics/csp_ATB_2023_moderate.csv)
----
-
-  - [csp_ATB_2024_advanced.csv](/inputs/plant_characteristics/csp_ATB_2024_advanced.csv)
----
-
-  - [csp_ATB_2024_conservative.csv](/inputs/plant_characteristics/csp_ATB_2024_conservative.csv)
----
-
-  - [csp_ATB_2024_moderate.csv](/inputs/plant_characteristics/csp_ATB_2024_moderate.csv)
 ---
 
   - [csp_SunShot2030.csv](/inputs/plant_characteristics/csp_SunShot2030.csv)
@@ -1904,6 +1638,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [geo_ATB_2023_moderate.csv](/inputs/plant_characteristics/geo_ATB_2023_moderate.csv)
 ---
 
+  - [h2-ct_ATB_2022.csv](/inputs/plant_characteristics/h2-ct_ATB_2022.csv)
+---
+
   - [h2-ct_ATB_2023.csv](/inputs/plant_characteristics/h2-ct_ATB_2023.csv)
 ---
 
@@ -1935,7 +1672,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [min_retire_age.csv](/inputs/plant_characteristics/min_retire_age.csv)
-    - **Description:** Minimum retirement age for given technology
 ---
 
   - [minCF.csv](/inputs/plant_characteristics/minCF.csv)
@@ -1953,95 +1689,122 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Dollar year:** 2017
 ---
 
+  - [ofs-wind_ATB_2022_advanced.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_advanced.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 advanced capital, fixed O&M and var O&M costs of ofs-wind by class and year
+    - **Dollar year:** 2004
+---
+
+  - [ofs-wind_ATB_2022_advanced_noFloating.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_advanced_noFloating.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 advanced capital, fixed O&M and var O&M costs of non-floating type ofs-wind by class and year
+    - **Dollar year:** 2004
+---
+
+  - [ofs-wind_ATB_2022_advanced_noFloating_rsc_mult.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_advanced_noFloating_rsc_mult.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 advanced non-floating type ofs-wind rsc mult (SC cost reduction mult) by class and year
+    - **Dollar year:** N/A
+---
+
+  - [ofs-wind_ATB_2022_advanced_rsc_mult.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_advanced_rsc_mult.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 advanced ofs-wind rsc mult (SC cost reduction mult) by class and year
+    - **Dollar year:** N/A
+---
+
+  - [ofs-wind_ATB_2022_conservative.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_conservative.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 conservative capital, fixed O&M and var O&M costs of ofs-wind by class and year
+    - **Dollar year:** 2004
+---
+
+  - [ofs-wind_ATB_2022_conservative_noFloating.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_conservative_noFloating.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 conservative capital, fixed O&M and var O&M costs of non-floating type ofs-wind by class and year
+    - **Dollar year:** 2004
+---
+
+  - [ofs-wind_ATB_2022_conservative_noFloating_rsc_mult.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_conservative_noFloating_rsc_mult.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 conservative non-floating type ofs-wind rsc mult (SC cost reduction mult) by class and year
+    - **Dollar year:** N/A
+---
+
+  - [ofs-wind_ATB_2022_conservative_rsc_mult.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_conservative_rsc_mult.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 conservative ofs-wind rsc mult (SC cost reduction mult) by class and year
+    - **Dollar year:** N/A
+---
+
+  - [ofs-wind_ATB_2022_moderate.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_moderate.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 moderate capital, fixed O&M and var O&M costs of ofs-wind by class and year
+    - **Dollar year:** 2004
+---
+
+  - [ofs-wind_ATB_2022_moderate_noFloating.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_moderate_noFloating.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 moderate capital, fixed O&M and var O&M costs of non-floating type ofs-wind by class and year
+    - **Dollar year:** 2004
+---
+
+  - [ofs-wind_ATB_2022_moderate_noFloating_rsc_mult.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_moderate_noFloating_rsc_mult.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 moderate non-floating type ofs-wind rsc mult (SC cost reduction mult) by class and year
+    - **Dollar year:** N/A
+---
+
+  - [ofs-wind_ATB_2022_moderate_rsc_mult.csv](/inputs/plant_characteristics/ofs-wind_ATB_2022_moderate_rsc_mult.csv)
+    - **File Type:** Inputs file
+    - **Description:** 2022 moderate ofs-wind rsc mult (SC cost reduction mult) by class and year
+    - **Dollar year:** N/A
+---
+
   - [ofs-wind_ATB_2023_advanced.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_advanced.csv)
     - **File Type:** Inputs file
-    - **Description:** 2023 advanced ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year. Note: rsc_mult is outdated and not in use from 2024 anymore
+    - **Description:** 2023 advanced ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
     - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2023_conservative.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_conservative.csv)
     - **File Type:** Inputs file
-    - **Description:** 2023 conservative ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year. Note: rsc_mult is outdated and not in use from 2024 anymore
+    - **Description:** 2023 conservative ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
     - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2023_moderate.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_moderate.csv)
     - **File Type:** Inputs file
-    - **Description:** 2023 moderate ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year. Note: rsc_mult is outdated and not in use from 2024 anymore
+    - **Description:** 2023 moderate ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
     - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2023_moderate_noFloating.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_moderate_noFloating.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 moderate capital, fixed O&M and var O&M costs of non-floating type ofs-wind by class and year
-    - **Dollar year:** 2004
 ---
 
-  - [ofs-wind_ATB_2024_advanced.csv](/inputs/plant_characteristics/ofs-wind_ATB_2024_advanced.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2024 advanced ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
-    - **Dollar year:** 2022
+  - [ons-wind_ATB_2022_advanced.csv](/inputs/plant_characteristics/ons-wind_ATB_2022_advanced.csv)
 ---
 
-  - [ofs-wind_ATB_2024_conservative.csv](/inputs/plant_characteristics/ofs-wind_ATB_2024_conservative.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2024 conservative ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
-    - **Dollar year:** 2022
+  - [ons-wind_ATB_2022_conservative.csv](/inputs/plant_characteristics/ons-wind_ATB_2022_conservative.csv)
 ---
 
-  - [ofs-wind_ATB_2024_moderate.csv](/inputs/plant_characteristics/ofs-wind_ATB_2024_moderate.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2024 moderate ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
-    - **Dollar year:** 2022
----
-
-  - [ofs-wind_ATB_2024_moderate_noFloating.csv](/inputs/plant_characteristics/ofs-wind_ATB_2024_moderate_noFloating.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2024 moderate_noFloating ofs-wind capital (5x floating capital cost), fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
-    - **Dollar year:** 2022
+  - [ons-wind_ATB_2022_moderate.csv](/inputs/plant_characteristics/ons-wind_ATB_2022_moderate.csv)
 ---
 
   - [ons-wind_ATB_2023_advanced.csv](/inputs/plant_characteristics/ons-wind_ATB_2023_advanced.csv)
-    - **Description:** 2023 advanced ons-wind capacity factor multiplier, capital, fixed O&M and var O&M costs by class and year, with a reference 115 hh, 175 rd turbine type
-    - **Dollar year:** 2004
 ---
 
   - [ons-wind_ATB_2023_conservative.csv](/inputs/plant_characteristics/ons-wind_ATB_2023_conservative.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 conservative ons-wind capacity factor multiplier, capital, fixed O&M and var O&M costs by class and year, with a reference 115 hh, 175 rd turbine type
-    - **Dollar year:** 2004
 ---
 
   - [ons-wind_ATB_2023_moderate.csv](/inputs/plant_characteristics/ons-wind_ATB_2023_moderate.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 moderate ons-wind capacity factor multiplier, capital, fixed O&M and var O&M costs by class and year, with a reference 115 hh, 175 rd turbine type
-    - **Dollar year:** 2004
 ---
 
-  - [ons-wind_ATB_2024_advanced.csv](/inputs/plant_characteristics/ons-wind_ATB_2024_advanced.csv)
-    - **File Type:** Inputs file
-    - **Description:** Advanced cost and performance inputs from the 2024 Annual Technology Baseline for land-based wind
-    - **Dollar year:** 2022
----
-
-  - [ons-wind_ATB_2024_conservative.csv](/inputs/plant_characteristics/ons-wind_ATB_2024_conservative.csv)
-    - **File Type:** Inputs file
-    - **Description:** Conservative cost and performance inputs from the 2024 Annual Technology Baseline for land-based wind
-    - **Dollar year:** 2022
----
-
-  - [ons-wind_ATB_2024_moderate.csv](/inputs/plant_characteristics/ons-wind_ATB_2024_moderate.csv)
-    - **File Type:** Inputs file
-    - **Description:** Moderate cost and performance inputs from the 2024 Annual Technology Baseline for land-based wind
-    - **Dollar year:** 2022
----
-
-  - [outage_forced_static.csv](/inputs/plant_characteristics/outage_forced_static.csv)
-    - **File Type:** Inputs file
+  - [outage_forced.csv](/inputs/plant_characteristics/outage_forced.csv)
     - **Description:** Forced outage rates by technology
 ---
 
-  - [outage_planned_static.csv](/inputs/plant_characteristics/outage_planned_static.csv)
+  - [outage_planned.csv](/inputs/plant_characteristics/outage_planned.csv)
     - **Description:** Planned outage rate by technology
 ---
 
@@ -2055,47 +1818,25 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [startcost.csv](/inputs/plant_characteristics/startcost.csv)
 ---
 
-  - [temperature_celsius-ba.h5](/inputs/plant_characteristics/temperature_celsius-ba.h5)
-    - **Description:** Unweighted average hourly temperature (2007-2013) from NSRDB by ReEDS BA
----
-
   - [unitsize.csv](/inputs/plant_characteristics/unitsize.csv)
 ---
 
+  - [upv_ATB_2022_advanced.csv](/inputs/plant_characteristics/upv_ATB_2022_advanced.csv)
+---
+
+  - [upv_ATB_2022_conservative.csv](/inputs/plant_characteristics/upv_ATB_2022_conservative.csv)
+---
+
+  - [upv_ATB_2022_moderate.csv](/inputs/plant_characteristics/upv_ATB_2022_moderate.csv)
+---
+
   - [upv_ATB_2023_advanced.csv](/inputs/plant_characteristics/upv_ATB_2023_advanced.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 advanced UPV capital, FOM and VOM costs, and capacity factor improvement multipliers by year
-    - **Dollar year:** 2004
 ---
 
   - [upv_ATB_2023_conservative.csv](/inputs/plant_characteristics/upv_ATB_2023_conservative.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 conservative UPV capital, FOM and VOM costs, and capacity factor improvement multipliers by year
-    - **Dollar year:** 2004
 ---
 
   - [upv_ATB_2023_moderate.csv](/inputs/plant_characteristics/upv_ATB_2023_moderate.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 moderate UPV capital, FOM and VOM costs, and capacity factor improvement multipliers by year
-    - **Dollar year:** 2004
----
-
-  - [upv_ATB_2024_advanced.csv](/inputs/plant_characteristics/upv_ATB_2024_advanced.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2024 advanced UPV capital, FOM and VOM costs, and capacity factor improvement multipliers by year
-    - **Dollar year:** 2004
----
-
-  - [upv_ATB_2024_conservative.csv](/inputs/plant_characteristics/upv_ATB_2024_conservative.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2024 conservative UPV capital, FOM and VOM costs, and capacity factor improvement multipliers by year
-    - **Dollar year:** 2004
----
-
-  - [upv_ATB_2024_moderate.csv](/inputs/plant_characteristics/upv_ATB_2024_moderate.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2024 moderate UPV capital, FOM and VOM costs, and capacity factor improvement multipliers by year
-    - **Dollar year:** 2004
 ---
 
   - [years_until_endogenous.csv](/inputs/plant_characteristics/years_until_endogenous.csv)
@@ -2243,11 +1984,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [i_geotech.csv](/inputs/sets/i_geotech.csv)
     - **File Type:** GAMS set
     - **Description:** crosswalk between an individual geothermal technology and its category
----
-
-  - [i_h2_ptc_gen.csv](/inputs/sets/i_h2_ptc_gen.csv)
-    - **File Type:** GAMS set
-    - **Description:** set of technologies which can produce energy for electrolyzers claiming the hydrogen production tax credit due to their low lifecycle carbon emissions
 ---
 
   - [i_p.csv](/inputs/sets/i_p.csv)
@@ -2502,8 +2238,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Dollar year:** N/A
 
     - **Citation:** [(https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220)]
-    - **Units:** rate (unitless)
-
 ---
 
   - [nuclear_ba_ban_list.csv](/inputs/state_policies/nuclear_ba_ban_list.csv)
@@ -2514,15 +2248,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [offshore_req_30by30.csv](/inputs/state_policies/offshore_req_30by30.csv)
-    - **File Type:** Inputs
-    - **Description:** state mandates of offshore wind capacity, 30 GW total by 2030
-    - **Indices:** st,allt
 ---
 
   - [offshore_req_default.csv](/inputs/state_policies/offshore_req_default.csv)
-    - **File Type:** Inputs
-    - **Description:** default state mandates of offshore wind capacity
-    - **Indices:** st,allt
 ---
 
   - [oosfrac.csv](/inputs/state_policies/oosfrac.csv)
@@ -3206,11 +2934,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [index_hr_map_1.csv](/inputs/variability/index_hr_map_1.csv)
-    - **Description:** Mapping for day set to season for a single year (365 days)
 ---
 
   - [index_hr_map_7.csv](/inputs/variability/index_hr_map_7.csv)
-    - **Description:** Mapping for day set to season for a 7 years (2555 days)
 ---
 
   - [period_szn_user.csv](/inputs/variability/period_szn_user.csv)
@@ -3231,7 +2957,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ##### [multi_year](inputs/variability/multi_year) <a name='inputs/variability/multi_year'></a>
   - [csp-none_ba.h5](/inputs/variability/multi_year/csp-none_ba.h5)
-    - **Description:** Concentrated Solar Power resource supply curve. Data is a capacity factor i.e. a fraction.
 ---
 
   - [dupv_ba.h5](/inputs/variability/multi_year/dupv_ba.h5)
@@ -3397,15 +3122,12 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ##### [in](postprocessing/bokehpivot/in) <a name='postprocessing/bokehpivot/in'></a>
   - [example_custom_styles.csv](/postprocessing/bokehpivot/in/example_custom_styles.csv)
-    - **Description:** Examples of custom styles used for bokehpivot
 ---
 
   - [example_data_US_electric_power_generation.csv](/postprocessing/bokehpivot/in/example_data_US_electric_power_generation.csv)
-    - **Description:** Example data for US electric power generation
 ---
 
   - [example_reeds_scenarios.csv](/postprocessing/bokehpivot/in/example_reeds_scenarios.csv)
-    - **Description:** Example data for ReEDS scenarios, each scenario with a custom style 
 ---
 
   - [gis_centroid_rb.csv](/postprocessing/bokehpivot/in/gis_centroid_rb.csv)
@@ -3430,17 +3152,14 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [state_code.csv](/postprocessing/bokehpivot/in/state_code.csv)
-    - **Description:** Abbreviation and code for each state
 ---
 
 
 ###### [reeds2](postprocessing/bokehpivot/in/reeds2) <a name='postprocessing/bokehpivot/in/reeds2'></a>
   - [class_map.csv](/postprocessing/bokehpivot/in/reeds2/class_map.csv)
-    - **Description:** Class mapping for bokehpivot postprocessing
 ---
 
   - [class_style.csv](/postprocessing/bokehpivot/in/reeds2/class_style.csv)
-    - **Description:** Custom styles for classes in bokehpivot 
 ---
 
   - [con_adj_map.csv](/postprocessing/bokehpivot/in/reeds2/con_adj_map.csv)
@@ -3462,7 +3181,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [hours.csv](/postprocessing/bokehpivot/in/reeds2/hours.csv)
-    - **Description:** Hours for each of the 17 timeslices
 ---
 
   - [m_bar_width.csv](/postprocessing/bokehpivot/in/reeds2/m_bar_width.csv)
@@ -3484,7 +3202,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [tech_style.csv](/postprocessing/bokehpivot/in/reeds2/tech_style.csv)
-    - **Description:** Custom colors for each technology used by bokehpivot
 ---
 
   - [trtype_map.csv](/postprocessing/bokehpivot/in/reeds2/trtype_map.csv)
@@ -3503,7 +3220,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 #### [land_use](postprocessing/land_use) <a name='postprocessing/land_use'></a>
 
 ##### [inputs](postprocessing/land_use/inputs) <a name='postprocessing/land_use/inputs'></a>
-  - [.csv](/postprocessing/land_use/inputs/federal_land_categories.csv)
+  - [federal_land_categories.csv](/postprocessing/land_use/inputs/federal_land_categories.csv)
 ---
 
   - [field_definitions.csv](/postprocessing/land_use/inputs/field_definitions.csv)
@@ -3547,11 +3264,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [load_by_state_eia.csv](/postprocessing/retail_rate_module/load_by_state_eia.csv)
-    - **Description:** End use load by state since 1960
 ---
 
   - [map_i_to_tech.csv](/postprocessing/retail_rate_module/map_i_to_tech.csv)
-    - **Description:** Maps i to tech with custom coloring for each
 ---
 
 
@@ -3600,7 +3315,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [Table_9.8_Average_Retail_Prices_of_Electricity.xlsx](/postprocessing/retail_rate_module/inputs/Table_9.8_Average_Retail_Prices_of_Electricity.xlsx)
-    - **Description:** Historical EIA861 rates (annual and monthly)
 ---
 
 

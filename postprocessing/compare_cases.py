@@ -435,6 +435,23 @@ if not skipbp:
 
 #%%### Load data
 #%% Shared
+## Determine if we're on a branch before or after county-level capability was merged
+countyreeds = (
+    True if os.path.isfile(os.path.join(reeds_path,'inputs','transmission','r_rr_adj_county.csv'))
+    else False
+)
+if countyreeds:
+    hierarchy = (
+        pd.read_csv(os.path.join(reeds_path,'inputs','hierarchy.csv'))
+        .drop(['county','county_name'], axis=1, errors='ignore')
+        .drop_duplicates().rename(columns={'ba':'r'}).set_index('r')
+    )
+else:
+    hierarchy = pd.read_csv(
+        os.path.join(reeds_path,'inputs','hierarchy.csv')
+    ).rename(columns={'*r':'r'}).set_index('r')    
+hierarchy = hierarchy.loc[hierarchy.country.str.lower()=='usa'].copy()
+
 sw = pd.read_csv(
     os.path.join(cases[case],'inputs_case','switches.csv'),
     header=None, index_col=0).squeeze(1)
@@ -532,21 +549,6 @@ dictin_sw = {
     for case in cases
 }
 
-hierarchy = {}
-for case in cases:
-    hierarchy[case] = (
-        pd.read_csv(os.path.join(cases[case],'inputs_case','hierarchy.csv'))
-        .rename(columns={'*r':'r'}).set_index('r')
-    )
-    hierarchy[case] = hierarchy[case].loc[hierarchy[case].country.str.lower()=='usa'].copy()
-
-dictin_error = {}
-for case in tqdm(cases, desc='system cost error'):
-    dictin_error[case] = pd.read_csv(
-        os.path.join(cases[case], 'outputs', 'error_check.csv'),
-        index_col=0,
-    ).squeeze(1)
-
 dictin_cap = {}
 for case in tqdm(cases, desc='national capacity'):
     dictin_cap[case] = pd.read_excel(
@@ -559,7 +561,7 @@ for case in tqdm(cases, desc='national capacity'):
         dictin_cap[case].groupby(['tech','year'], as_index=False)
         ['Capacity (GW)'].sum())
     dictin_cap[case] = dictin_cap[case].loc[
-        ~dictin_cap[case].tech.isin(['electrolyzer','smr','smr-ccs','dac'])].copy()
+        ~dictin_cap[case].tech.isin(['electrolyzer','smr','smr-ccs'])].copy()
 
 dictin_gen = {}
 for case in tqdm(cases, desc='national generation'):
@@ -643,8 +645,8 @@ for case in tqdm(cases, desc='regional transmission'):
     ).rename(columns={'Value':'MW'})
     for _level in ['interconnect','transreg','transgrp','st']:
         dictin_trans_r[case][f'inter_{_level}'] = (
-            dictin_trans_r[case].r.map(hierarchy[case][_level])
-            != dictin_trans_r[case].rr.map(hierarchy[case][_level])
+            dictin_trans_r[case].r.map(hierarchy[_level])
+            != dictin_trans_r[case].rr.map(hierarchy[_level])
         ).astype(int)
 
 dictin_cap_r = {}
@@ -849,56 +851,6 @@ discounts = pd.Series(
 ### Set up powerpoint file
 prs = pptx.Presentation(os.path.join(reeds_path,'postprocessing','template.pptx'))
 blank_slide_layout = prs.slide_layouts[3]
-
-
-#%%### System cost error
-dfplot = pd.concat(dictin_error, axis=1).replace(0,np.nan).dropna(how='all').fillna(0)
-
-ncols = len(dfplot)
-data = {
-    'z': {'title': 'System cost [fraction]', 'scale':1},
-    'gen': {'title': 'Non-valgen generation [GWh]', 'scale':1e-3},
-    'cap': {'title': 'Non-valcap capacity [GW]', 'scale':1e-3},
-    'RPS': {'title': 'Non-RecMap RECS [GWh]', 'scale':1e-3},
-    'OpRes': {'title': 'Non-valgen opres [MWh]', 'scale':1},
-    'm_rsc_dat': {'title': 'Supply curve tweaks [GW]', 'scale':1e-3},
-    'dropped': {'title': 'Dropped load [GWh]', 'scale':1e-3},
-}
-data = {k:v for k,v in data.items() if k in dfplot.index}
-
-plt.close()
-f,ax = plt.subplots(
-    1, ncols,
-    figsize=(min(ncols*3.5, 13.33), max(3.75, 0.25*len(cases))),
-)
-for col, (datum, settings) in enumerate(data.items()):
-    if datum not in dfplot.index:
-        continue
-    vals = dfplot.loc[datum] * settings['scale']
-    _ax = ax if ncols == 1 else ax[col]
-    _ax.bar(
-        range(len(cases)),
-        vals.values, color=[colors[c] for c in cases],
-    )
-    ## Formatting
-    _ax.set_title(settings['title'], weight='bold', fontsize=14)
-    _ax.set_xticks(range(len(cases)))
-    _ax.set_xticklabels(cases.keys(), rotation=45, rotation_mode='anchor', ha='right')
-    if _ax.get_ylim()[0] < 0:
-        _ax.axhline(0, c='k', ls='--', lw=0.75)
-    ## Notes
-    for x, val in enumerate(vals):
-        text = f"{val:.1e}" if datum == 'z' else f"{val:.0f}"
-        _ax.annotate(text, (x, val), ha='center',
-        xytext=(0, 2), textcoords='offset points',
-    )
-plots.despine(ax)
-
-### Save it
-title = 'Error check'
-slide = add_to_pptx(title, width=None, height=6.88)
-if interactive:
-    plt.show()
 
 
 #%%### Generation capacity lines
@@ -2198,27 +2150,6 @@ except Exception:
     print(traceback.format_exc())
 
 
-#%%### Max firm imports
-try:
-    f, ax, dfplot = reedsplots.plot_max_imports(
-        case=list(cases.values()),
-        colors={v: colors[k] for k,v in cases.items()},
-        casenames={v:k for k,v in cases.items()},
-        level='nercr', tstart=startyear,
-    )
-    ### Save it
-    slide = add_to_pptx(
-        'Max net stress imports / peak demand',
-        height=(6.88 if ax.shape[1] <= 8 else None),
-        width=(13.33 if ax.shape[1] > 8 else None),
-    )
-    if interactive:
-        plt.show()
-
-except Exception:
-    print(traceback.format_exc())
-
-
 #%%### Transmission maps
 if (len(cases) == 2) and (not forcemulti):
     plt.close()
@@ -2344,7 +2275,7 @@ if detailed:
             hcol = 'h'
             df = dictin_load_stress[case].copy()
         df = (
-            df.assign(region=df.r.map(hierarchy[case][ralevel]))
+            df.assign(region=df.r.map(hierarchy[ralevel]))
             .groupby(['t','region',hcol]).GW.sum()
             .loc[lastyear].unstack('region')
         )
@@ -2362,8 +2293,8 @@ if detailed:
         else:
             df = dictin_tran_flow_stress[case].copy()
             hcol = 'h'
-        df['aggreg'] = df.r.map(hierarchy[case][ralevel])
-        df['aggregg'] = df.rr.map(hierarchy[case][ralevel])
+        df['aggreg'] = df.r.map(hierarchy[ralevel])
+        df['aggregg'] = df.rr.map(hierarchy[ralevel])
         df['interface'] = df.aggreg + '|' + df.aggregg
 
         df = (
@@ -2450,11 +2381,7 @@ if detailed:
                 )
 
             interfaces = tran_flow_stress_agg[case].columns
-            numdays = (
-                len(tran_flow_stress_agg[case])
-                * int(dictin_sw[case].GSw_HourlyChunkLengthStress)
-                // 24
-            )
+            numdays = len(tran_flow_stress_agg[case]) * int(sw.GSw_HourlyChunkLengthStress) // 24
 
             ### Head/tail length:
             gwh_forward = tran_flow_stress_agg[case].clip(lower=0).sum()

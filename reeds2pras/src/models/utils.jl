@@ -5,21 +5,34 @@
 
     Parameters
     ----------
-    for_gen:
+    for_gen: Float64
         forced outage rate (amount of time unit is out-of-service)
-    mttr:
+    mttr: Int64
         Mean time to repair (in hours)
 
     Returns
     -------
-    (λ, μ): Tuple
+    (λ, μ): Tuple[Float64, Float64]
         λ is the probability of a unit being down, μ is probability 
         of recovery
 """
-function outage_to_rate(for_gen, mttr)
-    μ = 1 / mttr
-    λ = (μ .* for_gen) ./ (1 .- for_gen)
-    return (λ = λ, μ = μ)
+function outage_to_rate(for_gen::Float64, mttr::Int64)
+    if (for_gen == 0.0)
+        return (λ = 0.0, μ = 1.0)
+    else
+        if (for_gen > 1.0)
+            for_gen = for_gen / 100
+        end
+
+        if (mttr != 0)
+            μ = 1 / mttr
+        else
+            μ = 0.0
+        end
+        λ = (μ * for_gen) / (1 - for_gen)
+
+        return (λ = λ, μ = μ)
+    end
 end
 
 emptyvec(::Vector{<:Storage}) = Storage[]

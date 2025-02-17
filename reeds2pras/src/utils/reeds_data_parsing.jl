@@ -24,12 +24,20 @@ function process_regions_and_load(ReEDS_data, weather_year::Int, timesteps::Int)
     # **TODO: can get a bug/error here if ReEDS case lacks multiple load years
     # slices based on input weather year
     slicer = findfirst(isequal(weather_year), load_info["axis1_level1"])
-
-    # Julia indexes from 1 we need -1 here
+    # I think b/c julia indexes from 1 we need -1 here
     indices = findall(i -> (i == (slicer - 1)), load_info["axis1_label1"])
-    slice_reqd = first(indices):(first(indices) + timesteps - 1)
 
-    load_timesteps = load_data[:, slice_reqd]
+    # should be regionsX8760, which is now just enforced
+    if timesteps > 8760
+        load_year = load_data[:, indices[1:8760]]
+        load_timesteps = repeat(load_year, 1, floor(Int, timesteps / 8760))
+        if timesteps % 8760 > 0
+            load_timesteps =
+                hcat(load_timesteps, load_data[:, indices[1:(timesteps % 8760)]])
+        end
+    else
+        load_timesteps = load_data[:, indices[1:timesteps]]
+    end
 
     return [
         Region(r, timesteps, floor.(Int, load_timesteps[idx, :])) for
@@ -54,6 +62,8 @@ end
         DataFrame containing ReEDS line capacity data.
     regions : Vector{<:AbstractString}
         Vector of region names.
+    year : Int
+        ReEDS solve year of the data.
     timesteps : Int
         Number of timesteps.
 
@@ -65,6 +75,7 @@ end
 function process_lines(
     ReEDS_data,
     regions::Vector{<:AbstractString},
+    year::Int,
     timesteps::Int,
     user_inputs::Dict{Any, Any},
 )
@@ -230,12 +241,11 @@ function process_thermals_with_disaggregation(
     ReEDS_data,
     thermal_builds::DataFrames.DataFrame,
     FOR_dict::Dict,
-    forcedoutage_hourly::DataFrames.DataFrame,
     unitsize_dict::Dict,
     timesteps::Int,
     year::Int,
     user_inputs::Dict{Any, Any},
-)
+) # FOR_data::DataFrames.DataFrame,
     # csp-ns is not a thermal; just drop in for now
     thermal_builds = thermal_builds[(thermal_builds.i .!= "csp-ns"), :]
     # split-apply-combine to handle differently vintaged entries
@@ -246,20 +256,14 @@ function process_thermals_with_disaggregation(
     all_generators = Generator[]
     # this loop gets the FOR for each build/tech
     for row in eachrow(thermal_builds)
-        i_r = "$(row.i)|$(row.r)"
-        if (i_r in DataFrames.names(forcedoutage_hourly))
-            gen_for = forcedoutage_hourly[!, i_r]
-        elseif row.i in keys(FOR_dict)
-            gen_for = fill(Float32(FOR_dict[row.i]), timesteps)
-            @info(
-                "$(row.i) ($(row.r)) was not found in forcedoutage_hourly so using " *
-                "static value of $(FOR_dict[row.i]) from outage_forced_static.csv"
-            )
+        if row.i in keys(FOR_dict)
+            gen_for = FOR_dict[row.i]
         else
-            gen_for = fill(Float32(0.0), timesteps)
-            @info(
-                "$(row.i) ($(row.r)) was not found in outage_forced_static.csv so using " *
-                "static value of $fill_value"
+            gen_for = 0.00 #assume as 0 for gens dropped from ReEDS table
+            @debug(
+                "CONVENTIONAL GENERATION: for $(row.i), and region " *
+                "$(row.r), no gen_for is found in ReEDS forced outage " *
+                "data, so $gen_for is used"
             )
         end
 
@@ -293,6 +297,8 @@ end
         A dictionary of Forced Outage Rate (FOR) for each technology type
     ReEDS_data : DataFrames.DataFrame
         A dataset from the ReEDS Program
+    year : Int
+        The current year
     weather_year : Int
         The weather year (when the heat rate variation data was collected)
     timesteps : Int
@@ -306,10 +312,11 @@ end
         An array of the VG generators
 """
 function process_vg(
-    generators_array::Vector,
+    generators_array::Vector{<:ReEDS2PRAS.Generator},
     vg_builds::DataFrames.DataFrame,
     FOR_dict::Dict,
     ReEDS_data,
+    year::Int,
     weather_year::Int,
     timesteps::Int,
     min_year::Int,
@@ -370,6 +377,8 @@ end
         input data from ReEDS
     timesteps : Int
         Number of timesteps
+    regions : Vector[<:AbstractString]
+        vector of region names
     year : Int64
         simulated time period
 
@@ -384,6 +393,7 @@ function process_storages(
     unitsize_dict::Dict,
     ReEDS_data,
     timesteps::Int,
+    regions::Vector{<:AbstractString},
     year::Int64,
     user_inputs::Dict{Any, Any},
 )
@@ -510,7 +520,7 @@ function disagg_existing_capacity(
     built_capacity::Int,
     tech::String,
     pca::String,
-    gen_for::Vector{Float32},
+    gen_for::Float64,
     timesteps::Int,
     year::Int,
     user_inputs::Dict{Any, Any},
@@ -651,7 +661,7 @@ function add_new_capacity!(
     unitsize_dict::Dict,
     tech::AbstractString,
     pca::AbstractString,
-    gen_for::Vector{Float32},
+    gen_for::Float64,
     timesteps::Int,
     year::Int,
     MTTR::Int,

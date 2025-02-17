@@ -1,0 +1,17 @@
+name,color,path
+Reference (WECC),#1f77b4,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_base_int
+IRP Load (WECC),#ff7f0e,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_base_int_id_irp_load
+No BHGW (WECC),#2ca02c,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_base_int_no_BHGW_tx
+SWIPP (WECC),#d62728,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_base_int_swip_tx
+High NG Price (WECC),#9467bd,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_highGas_int
+High NG Price Low Nuclear Cost (WECC),#8c564b,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_highGas_lowNuc_int
+Hurdle Rates (WECC),#e377c2,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_hurdleRates_int
+Low Nuclear Cost (WECC),#7f7f7f,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_lowNuc_int
+No IRA (WECC),#bcbd22,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_noIRA_int
+Reference (ID Only),#17becf,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\V1_120924_base_ID
+IRP Load (ID Only),#aec7e8,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\V1_120924_base_ID_id_irp_load
+High NG Price (ID Only),#ffbb78,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\V1_120924_highGas_ID
+High NG Price Low Nuclear Cost (ID Only),#98df8a,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\V1_120924_highGas_lowNuc_ID
+Hurdle Rates (ID Only),#ff9896,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\V1_120924_hurdleRates_ID
+Low Nuclear Cost (ID Only),#c5b0d5,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\V1_120924_lowNuc_ID
+No IRA (ID Only),#c49c94,\\nrelnas01\ReEDS\FY25-ID_PUC\runs\v1_121024_noIRA_ID

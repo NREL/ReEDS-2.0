@@ -1,4 +1,4 @@
-sc_point_gid,area_developable_sq_km,latitude,longitude,timezone,r,trans_gid,dist_km,trans_cap_cost_per_mw
+sc_point_gid,area_sq_km,latitude,longitude,timezone,r,trans_gid,dist_km,trans_cap_cost_per_mw
 34,13.3407,49.034,-123.101,-8,p53073,52083,31.98,535006.97
 414,3.2805,48.94,-123.054,-8,p53073,52083,32.98,4634827.82
 415,3.5397,48.967,-122.894,-8,p53073,52083,18.75,3472116.98

@@ -1,2 +1,0 @@
-full_name,scenario,keyword,path
-full name of run folder,substring in full name that identifies a group of cases to combine; used for output folder name with folder_name_suffix argument,keyword in full name that indicates distinct runs to be combined (usually the subregion),full path to the relevant run folder

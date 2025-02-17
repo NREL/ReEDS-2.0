@@ -37,7 +37,7 @@ static_presets = [
     {'name': 'Final Geothermal Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['geothermal']}}},
     {'name': 'Final Hydro and Canadian Import Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['hydro','Canada']}}},
     {'name': 'Final Pumped-hydro Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['pumped-hydro','pumped-hydro-flex']}}},
-    {'name': 'Final Battery Storage Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']}}},
+    {'name': 'Final Battery Storage Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10']}}},
     {'name': 'Capacity Factor - Generation', 'result': 'Capacity Factor ivrt', 'preset': 'CF weighted ave'},
     {'name': 'Retail rate (¢/kWh)', 'result': 'Retail rate (¢/kWh)', 'preset': 'Lines'},
     {'name': 'Monetized health damages over time (billion $/year)', 'result': 'Health Damages from Emissions', 'preset': 'Monetized health damages over time'},

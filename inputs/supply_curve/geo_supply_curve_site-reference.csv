@@ -1,4 +1,4 @@
-﻿region,class,sc_point_gid,capacity,supply_curve_cost_per_MW,dist_km,trans_adder_per_mw,capital_adder_per_mw
+﻿region,class,sc_point_gid,capacity,supply_curve_cost_per_MW,dist_km,trans_adder_per_MW,capital_adder_per_MW
 p1,,9638,31.10660868,0,34.33761036,0,0
 p2,,9639,72.69617122,0,45.85761036,0,0
 p3,,10018,178.6766891,0,45.29512986,0,0

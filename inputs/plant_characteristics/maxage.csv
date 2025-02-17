@@ -18,7 +18,7 @@ CoalOldScr,70
 CoalOldUns,70
 CofireNew,70
 CofireOld,70
-wind-ofs_1*wind-ofs_10,30
+wind-ofs_1*wind-ofs_15,30
 wind-ons_1*wind-ons_10,30
 upv_1*upv_10,30
 dupv_1*dupv_10,30
@@ -55,11 +55,6 @@ battery_4,15
 battery_6,15
 battery_8,15
 battery_10,15
-battery_12,15
-battery_24,15
-battery_48,15
-battery_72,15
-battery_100,15
 dr1_1*dr1_20,1
 dr2_1*dr2_20,1
 evmc_storage_1*evmc_storage_10,1

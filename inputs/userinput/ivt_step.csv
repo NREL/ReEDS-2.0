@@ -5,11 +5,6 @@ battery_4,0
 battery_6,0
 battery_8,0
 battery_10,0
-battery_12,0
-battery_24,0
-battery_48,0
-battery_72,0
-battery_100,0
 biopower,5
 beccs_mod,5
 beccs_max,5
@@ -51,7 +46,7 @@ dupv_1*dupv_10,1
 pvb1_1 * pvb1_10,1
 pvb2_1 * pvb2_10,1
 pvb3_1 * pvb3_10,1
-wind-ofs_1*wind-ofs_10,1
+wind-ofs_1*wind-ofs_15,1
 wind-ons_1*wind-ons_10,1
 csp1_1*csp1_12,5
 csp2_1*csp2_12,5

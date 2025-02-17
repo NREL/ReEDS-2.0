@@ -100,7 +100,6 @@ positive variables
   H2_STOR_OUT(h2_stor,r,allh,t)         "--metric tons per hour-- widthdrawal of H2 from storage in a given timeslice"
   H2_STOR_LEVEL(h2_stor,r,actualszn,allh,t) "--metric tons-- total storage level of H2 in a timeslice by storage type"
   H2_STOR_LEVEL_SZN(h2_stor,r,actualszn,t)  "--metric tons-- total storage level of H2 in a period by storage type"
-  CREDIT_H2PTC(i,v,r,allh,t)              "--MW-- generation by resources which qualify for the hydrogen production tax credit, in hour h"
 
 * water climate variables
   WATCAP(i,v,r,t)                        "--million gallons/year; Mgal/yr-- total water access capacity available in terms of withdraw/consumption per year"
@@ -225,14 +224,11 @@ EQUATION
  eq_h2_storage_flowlimit(h2_stor,r,allh,t)            "--metric tons per hour-- H2 storage injection or withdrawal cannot exceed cumulative storage investment"
  eq_h2_storage_capacity(h2_stor,r,t)                  "--metric tons-- H2 storage capacity is sum of H2 storage investments"
  eq_h2_min_storage_cap(r,t)                           "--metric tons-- H2 storage capacity must be ≥ Sw_H2_MinStorHours * H2 usage capacity"
- eq_h2_ptc_region_balance(h2ptcreg,t)                 "--MWh-- clean generation for hydrogen production must be more than electricity required for electrolytic H2 production in that region and year"
- eq_h2_ptc_region_hour_balance(h2ptcreg,allh,t)       "--MWh-- clean generation for hydrogen production must be more than electricity required for electrolytic H2 production in that region, hour and year"
- eq_h2_ptc_creditgen(i,v,r,allh,t)                    "--MWh-- total generation must be greater than clean generation for hydrogen production"
  eq_h2_storage_caplimit(h2_stor,r,actualszn,allh,t)   "--metric tons-- total H2 storage in a storage facility cannot exceed investment capacity"
  eq_h2_storage_level(h2_stor,r,actualszn,allh,t)      "--metric tons-- tracks H2 storage level by storage type and BA within and across periods"
  eq_h2_storage_caplimit_szn(h2_stor,r,actualszn,t)    "--metric tons-- total H2 storage in a storage facility cannot exceed investment capacity"
  eq_h2_storage_level_szn(h2_stor,r,actualszn,t)       "--metric tons-- tracks H2 storage level by storage type and BA within and across periods"
- 
+
 * CO2 capture and storage
  eq_co2_capture(r,allh,t)                    "--metric tons-- accounting of CO2 captured from DAC and CCS technologies"
  eq_co2_injection_limit(cs,allh,t)           "--metric tons per hour-- limit on CO2 injection for each carbon site as a rate"
@@ -802,13 +798,7 @@ eq_rsc_inv_account(i,v,r,t)$[tmodel(t)$valinv(i,v,r,t)$rsc_i(i)]..
 *note that the following equation only restricts inv_rsc and not inv_refurb
 *therefore, the capacity indicated by the supply curve may be limiting
 *but the plant can still be refurbished
-*Also note the flag_eq_rsc_INVlim--its calculation needs to be updated if this equation
-*is changed
-eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)
-                            $rsc_i(i)
-                            $m_rscfeas(r,i,rscbin)
-                            $m_rsc_con(r,i)
-                            $(not flag_eq_rsc_INVlim(r,i,rscbin,t))]..
+eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)$rsc_i(i)$m_rscfeas(r,i,rscbin)$m_rsc_con(r,i)]..
 *With water constraints, some RSC techs are expanded to include cooling technologies
 *but the combination of m_rsc_con and rsc_agg allows for those investments
 *to be limited by the numeraire techs' m_rsc_dat
@@ -974,13 +964,13 @@ eq_capacity_limit(i,v,r,h,t)
     $(not storage_standalone(i))$(not storage_hybrid(i)$(not csp(i)))$(not nondispatch(i))]..
     
 *total amount of dispatchable, non-hydro capacity
-    avail(i,r,h)$[dispatchtech(i)$(not hydro_d(i))]
+    avail(i,h)$[dispatchtech(i)$(not hydro_d(i))]
     * derate_geo_vintage(i,v)
     * (1 + sum{szn, h_szn(h,szn) * seas_cap_frac_delta(i,v,r,szn,t)})
     * CAP(i,v,r,t)
 
 *total amount of dispatchable hydro capacity
-    + avail(i,r,h)$hydro_d(i)
+    + avail(i,h)$hydro_d(i)
       * CAP(i,v,r,t) 
       * sum{szn$h_szn(h,szn), cap_hyd_szn_adj(i,szn,r) }
       * (1 + hydro_capcredit_delta(i,t)$[h_stress(h)])
@@ -1138,7 +1128,7 @@ eq_dhyd_dispatch(i,v,r,szn,t)
     $(within_seas_frac(i,v,r) = 1)]..
 
 *seasonal hours [times] seasonal capacity factor [times] total hydro capacity [times] seasonal capacity adjustment
-    sum{h$[h_szn(h,szn)], avail(i,r,h) * hours(h) }
+    sum{h$[h_szn(h,szn)], avail(i,h) * hours(h) }
     * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],
                INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
              - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
@@ -1165,7 +1155,7 @@ eq_dhyd_dispatch_ann(i,v,r,t)$[tmodel(t)$hydro_d(i)$valgen(i,v,r,t)$(within_seas
 
     sum{szn$szn_rep(szn),
 * seasonal hours [times] seasonal capacity factor
-        sum{h$[h_szn(h,szn)], avail(i,r,h) * hours(h) }
+        sum{h$[h_szn(h,szn)], avail(i,h) * hours(h) }
 * [times] total hydro capacity
         * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],
             INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
@@ -1211,7 +1201,7 @@ eq_dhyd_dispatch_szn(i,v,r,szn,t)
 *fractional in-season energy requirement
     within_seas_frac(i,v,r) * (
 *seasonal hours [times] seasonal capacity factor [times] total hydro capacity [times] seasonal capacity adjustment
-        sum{h$[h_szn(h,szn)], avail(i,r,h) * hours(h) }
+        sum{h$[h_szn(h,szn)], avail(i,h) * hours(h) }
         * (CAP(i,v,r,t) + sum{(tt,rscbin)$[(tmodel(tt) or tfix(tt))],INV_ENER_UP(i,v,r,rscbin,tt)$allow_ener_up(i,v,r,rscbin,tt)
            - degrade(i,tt,t) * INV_CAP_UP(i,v,r,rscbin,tt)$allow_cap_up(i,v,r,rscbin,tt) })
         * (m_cf_szn(i,v,r,szn,t)$(m_cf_szn(i,v,r,szn,t) <= 1) + 1$(m_cf_szn(i,v,r,szn,t) > 1))
@@ -1783,7 +1773,6 @@ eq_transgrp_limit_energy(transgrp,transgrpp,h,t)
 
 eq_transgrp_limit_prm(transgrp,transgrpp,ccseason,t)
     $[tmodel(t)
-    $Sw_PRM_CapCredit
     $Sw_TransGroupContraint
     $sum{(r,rr), routes_transgroup(transgrp,transgrpp,r,rr) }]..
 
@@ -1801,11 +1790,11 @@ eq_transgrp_limit_prm(transgrp,transgrpp,ccseason,t)
 * NERC regions are only allowed to import firm capacity up to their limit
 eq_firm_transfer_limit(nercr,h,t)
     $[tmodel(t)
-    $Sw_PRM_NetImportLimit
+    $Sw_PRMTRADE_limit
+    $(yeart(t)<=Sw_PRMTRADE_limit)
     $h_stress(h)]..
 
-* max net import fraction [.] * peak demand by NERC region [MW]
-    firm_import_limit(nercr,t) * peakload_nercr(nercr,t)
+    firm_transfer_limit(nercr,t)
 
     =g=
 
@@ -1825,12 +1814,11 @@ eq_firm_transfer_limit(nercr,h,t)
 * NERC regions are only allowed to import firm capacity up to their limit
 eq_firm_transfer_limit_cc(nercr,ccseason,t)
     $[tmodel(t)
-    $Sw_PRM_NetImportLimit
+    $Sw_PRMTRADE_limit
+    $(yeart(t)<=Sw_PRMTRADE_limit)
     $Sw_PRM_CapCredit]..
 
-* max net import fraction [.] * peak demand by ccseason [MW]
-    firm_import_limit(nercr,t)
-    * sum{r$r_nercr(r,nercr), peakdem_static_ccseason(r,ccseason,t) }
+    firm_transfer_limit(nercr,t)
 
     =g=
 
@@ -2178,18 +2166,14 @@ eq_REC_Generation(RPSCat,i,st,t)$[stfeas(st)$(not tfirst(t))$tmodel(t)
                                  $Sw_StateRPS$(yeart(t)>=firstyear_RPS)
                                  $(not sameas(RPSCat,"RPS_Bundled"))
                                  $(not sameas(RPSCat,"CES_Bundled"))
-                                 $RecTech(RPSCat,i,st,t)
-                                 ]..
+                                 $RecTech(RPSCat,i,st,t)]..
 
 *RECS are computed as the total annual generation from a technology
 *hydro is the only technology adjusted by RPSTechMult
-*because GEN can only generate a H2 PTC credit or a REC, not both, subtract out the generation which produces a hydrogen PTC credit
 *because GEN from pvb(i) includes grid charging, subtract out its grid charging
     + sum{(v,r,h)$[valgen(i,v,r,t)$r_st(r,st)$h_rep(h)],
           RPSTechMult(RPSCat,i,st) * hours(h)
-          * (GEN(i,v,r,h,t) 
-          - CREDIT_H2PTC(i,v,r,h,t)$[valgen_h2ptc(i,v,r,t)$Sw_H2_PTC] 
-          - (STORAGE_IN_GRID(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant] )
+          * (GEN(i,v,r,h,t) - (STORAGE_IN_GRID(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant] )
          }
 
      =g=
@@ -2352,8 +2336,7 @@ eq_REC_launder(RPSCat,st,t)$[RecStates(RPSCat,st,t)$(not tfirst(t))$(yeart(t)>=f
 
 *in-state REC generation
     + sum{(i,v,r,h)$[valgen(i,v,r,t)$RecTech(RPSCat,i,st,t)$r_st(r,st)$h_rep(h)],
-          hours(h) * (GEN(i,v,r,h,t) - CREDIT_H2PTC(i,v,r,h,t)$[valgen_h2ptc(i,v,r,t)$Sw_H2_PTC])
-         }
+          hours(h) * GEN(i,v,r,h,t) }
 
 *minus ACP_PURCHASES with a 10x multiplier (the multiplier discourages the model from
 *exporting RECs when it is buying ACP credits)
@@ -2580,22 +2563,16 @@ eq_biousedlimit(bioclass,usda_region,t)$tmodel(t)..
 
 *storage use cannot exceed capacity
 *this constraint does not apply to CSP+TES or hydro pump upgrades
-eq_storage_capacity(i,v,r,h,t)
-    $[valgen(i,v,r,t)
-    $(storage_standalone(i)$(not evmc_storage(i))
-        or evmc_storage(i)
-            $[evmc_storage_charge_frac(i,r,h,t)$evmc_storage_discharge_frac(i,r,h,t)]
-        or storage_hybrid(i)$(not csp(i)))
-    $tmodel(t)]..
+eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)$(storage_standalone(i) or storage_hybrid(i)$(not csp(i)))$tmodel(t)]..
 
 * [plus] Capacity of all storage technologies
-    (CAP(i,v,r,t) * bcr(i) * avail(i,r,h)
+    (CAP(i,v,r,t) * bcr(i) * avail(i,h)
        * (1 + sum{szn, h_szn(h,szn) * seas_cap_frac_delta(i,v,r,szn,t)})
     )$valcap(i,v,r,t)
 
     =g=
 
-* [plus] Generation from storage, excluding hybrid+storage and adjusting evmc_storage for time-varying discharge (deferral) availability
+* [plus] Generation from storage, excluding hybrid+storage and adjusting evmc_storage for time-varying discharge (deferral) availability* [plus] Generation from storage, and adjusting evmc_storage for time-varying discharge (deferral) availability
     GEN(i,v,r,h,t)$(not storage_hybrid(i)$(not csp(i))) / (1$(not evmc_storage(i)) + evmc_storage_discharge_frac(i,r,h,t)$evmc_storage(i))
 
 * [plus] Generation from battery of hybrid+storage
@@ -2604,7 +2581,6 @@ eq_storage_capacity(i,v,r,h,t)
 * [plus] Storage charging
 * excludes hybrid plant+storage and adjusting evmc_storage for time-varying charge (add back deferred EV load) availability
     + STORAGE_IN(i,v,r,h,t)$[not storage_hybrid(i)$(not csp(i))] / (1$(not evmc_storage(i)) + evmc_storage_charge_frac(i,r,h,t)$evmc_storage(i))
-   
 * hybrid+storage plant: plant generation
     + STORAGE_IN_PLANT(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$dayhours(h)$Sw_HybridPlant]
 * hybrid+storage plant: Grid generation
@@ -2643,7 +2619,7 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$(within_seas_frac(i,v,r)
           )$[CSP_Storage(i)$valcap(i,v,r,t)]
       )
 *[plus] water inflow energy available for hydropower that adds pumping
-    + (CAP(i,v,r,t) * avail(i,r,h) * hours_daily(h) *
+    + (CAP(i,v,r,t) * avail(i,h) * hours_daily(h) *
         sum{szn$h_szn(h,szn), m_cf_szn(i,v,r,szn,t) }
         )$hyd_add_pump(i)
 
@@ -2685,7 +2661,7 @@ eq_storage_seas(i,v,r,t)
         * STORAGE_IN(i,v,r,h,t)$(storage_standalone(i) or hyd_add_pump(i))
 
 *[plus] annual water inflow energy available for hydropower that adds pumping
-    + (CAP(i,v,r,t) * avail(i,r,h) * hours(h) *
+    + (CAP(i,v,r,t) * avail(i,h) * hours(h) *
             sum{szn$h_szn(h,szn), m_cf_szn(i,v,r,szn,t) }
             )$hyd_add_pump(i)
     }
@@ -2718,7 +2694,7 @@ eq_storage_seas_szn(i,v,r,szn,t)
 
 
 *[plus] seasonal water inflow energy available for hydropower that adds pumping
-    + (CAP(i,v,r,t) * avail(i,r,h) * hours(h)
+    + (CAP(i,v,r,t) * avail(i,h) * hours(h)
             * m_cf_szn(i,v,r,szn,t)
         )$hyd_add_pump(i)
     }
@@ -2796,7 +2772,7 @@ eq_storage_in_cap(i,v,r,h,t)$[(storage_standalone(i) or hyd_add_pump(i))$valgen(
 
 *[plus] maximum storage input capacity as a fraction of output capacity and accounting for availability
 * for evmc_storage this adjust for time-varying availability of charging (add back deferred EV load)
-    avail(i,r,h) * storinmaxfrac(i,v,r)
+    avail(i,h) * storinmaxfrac(i,v,r)
     * CAP(i,v,r,t)
     * (1 + sum{szn, h_szn(h,szn) * seas_cap_frac_delta(i,v,r,szn,t)})
     * (1$(not evmc_storage(i)) + evmc_storage_charge_frac(i,r,h,t)$evmc_storage(i))
@@ -3082,7 +3058,7 @@ eq_prod_capacity_limit(i,v,r,h,t)
     $h_rep(h)]..
 
 * available capacity [times] the conversion rate of metric ton / MW
-    CAP(i,v,r,t) * avail(i,r,h)
+    CAP(i,v,r,t) * avail(i,h)
             * (prod_conversion_rate(i,v,r,t)$[not sameas(i,"dac_gas")]
                 + 1$sameas(i,"dac_gas"))
             * (1 + sum{szn, h_szn(h,szn) * seas_cap_frac_delta(i,v,r,szn,t)})
@@ -3100,7 +3076,7 @@ eq_h2_demand(p,t)$[(sameas(p,"H2"))$tmodel(t)$(yeart(t)>=h2_demand_start)$(Sw_H2
     sum{(i,v,r,h)$[h2(i)$valcap(i,v,r,t)$i_p(i,p)$h_rep(h)],
         PRODUCE(p,i,v,r,h,t) * hours(h) }
 
-    =e=
+    =g=
 
 * annual demand
     h2_exogenous_demand(p,t)
@@ -3128,10 +3104,10 @@ eq_h2_demand_regional(r,h,t)
     - sum{rr$h2_routes(r,rr), H2_FLOW(r,rr,h,t) }
         
 * net storage injections / withdrawls in a BA
-    + sum{h2_stor$[h2_stor_r(h2_stor,r)], H2_STOR_OUT(h2_stor,r,h,t)}
-    - sum{h2_stor$[h2_stor_r(h2_stor,r)], H2_STOR_IN(h2_stor,r,h,t)}
+    + sum{h2_stor$h2_stor_r(h2_stor,r), H2_STOR_OUT(h2_stor,r,h,t) }
+    - sum{h2_stor$h2_stor_r(h2_stor,r), H2_STOR_IN(h2_stor,r,h,t) }
 
-    =e=
+    =g=
 
 * annual demand in [metric tons/hour]
     sum{p, h2_exogenous_demand_regional(r,p,h,t) }
@@ -3293,69 +3269,6 @@ eq_h2_storage_caplimit_szn(h2_stor,r,actualszn,t)
 ;
 
 * ---------------------------------------------------------------------------
-
-* Hydrogen production tax credit - before and in h2_ptc_temporal_match_year, electric generation must occur in the same 
-* region ('h2ptcreg' level) and year that the electrolyzer produces the hydrogen, to qualify for the credit
-eq_h2_ptc_region_balance(h2ptcreg,t)$[tmodel(t)
-                            $h2_ptc_years(t)
-                            $(yeart(t)>=h2_demand_start)
-                            $(Sw_H2_PTC)
-                            $(yeart(t)<=h2_ptc_temporal_match_year)
-                            ]..
-
-* generation from clean technologies which qualify to receive hydrogen production tax credits [MW]
-    sum{(i,v,r,h)$[r_h2ptcreg(r,h2ptcreg)$hours(h)$h_rep(h)$valgen_h2ptc(i,v,r,t)], CREDIT_H2PTC(i,v,r,h,t)}
-
-    =e=
-
-* amount of generation needed to produce hydrogen via electrolysis in that year [MW]
-    sum{(v,r,h)$[r_h2ptcreg(r,h2ptcreg)$valcap("electrolyzer",v,r,t)$hours(h)$prod_conversion_rate("electrolyzer",v,r,t)],
-        PRODUCE("h2","electrolyzer",v,r,h,t) / prod_conversion_rate("electrolyzer",v,r,t) }
-;
-
-* ---------------------------------------------------------------------------
-
-* Hydrogen production tax credit - after h2_ptc_temporal_match_year, electric generation must occur in the same 
-* region ('h2ptcreg' level), hour and year that the electrolyzer produces the hydrogen, to qualify for the credit
-eq_h2_ptc_region_hour_balance(h2ptcreg,h,t)$[hours(h)$tmodel(t)
-                                $h_rep(h)
-                                $h2_ptc_years(t)
-                                $(yeart(t)>=h2_demand_start)
-                                $(Sw_H2_PTC)
-                                $(yeart(t)>h2_ptc_temporal_match_year)
-                                ]..
-
-* generation from clean technologies which qualify to receive hydrogen production tax credits [MW]
-    sum{(i,v,r)$[r_h2ptcreg(r,h2ptcreg)$valgen_h2ptc(i,v,r,t)], CREDIT_H2PTC(i,v,r,h,t)}
-
-    =e=
-
-* amount of generation needed to produce hydrogen via electrolysis [MW]
-    sum{(v,r)$[r_h2ptcreg(r,h2ptcreg)$valcap("electrolyzer",v,r,t)$prod_conversion_rate("electrolyzer",v,r,t)],
-       PRODUCE("h2","electrolyzer",v,r,h,t) / prod_conversion_rate("electrolyzer",v,r,t) }
-;
-
-* ---------------------------------------------------------------------------
-
-* Hydrogen production tax credit - total generation must be greater than generation going towards electrolyzers to receive the tax credit
-eq_h2_ptc_creditgen(i,v,r,h,t)$[valgen_h2ptc(i,v,r,t)
-                            $h_rep(h)
-                            $tmodel(t)
-                            $Sw_H2_PTC
-                            $h2_ptc_years(t)
-                            $(yeart(t)>=h2_demand_start)]..
-
-* total generation [MW]
-    GEN(i,v,r,h,t)
-
-    =g=
-
-* generation going towards electrolyzers to receive the tax credit [MW]
-    CREDIT_H2PTC(i,v,r,h,t)     
-;
-
-* ---------------------------------------------------------------------------
-
 
 *=================================
 * -- CO2 transport and storage --

@@ -8,7 +8,7 @@
         * Switch to `GSw_HourlyType=wek`, which increases the length of the periods from 1 day to 5 days. If all the other switches are left at their defaults, switching to `wek` would increase the coverage from 42 days to 5*42=210 days.
         * Reduce `GSw_HourlyClusterRegionLevel` to something smaller than transreg (like `st`), and then increase `GSw_HourlyNumClusters`
         * Switch to `GSw_HourlyClusteAlgorithm=hierarchical` and then increase `GSw_HourlyNumClusters` (although that's less desirable, because hierarchical clustering doesn't do as good of a job of reproducing the actual spatial distribution of CF and load)
-        * Switch to `Gsw_HourlyType=year`. Although if you're running for the whole US you'll need to turn on region aggregation (`GSw_RegionResolution=aggreg` and `GSw_HierarchyFile` in [`default` or `agg1`, or `agg2` or `agg3`]) for it to solve.
+        * Switch to `Gsw_HourlyType=year`. Although if you're running for the whole US you'll need to turn on region aggregation (`GSw_RegionResolution=aggreg` and `GSw_HierarchyFile` in [`agg1`, or `agg2`]) for it to solve.
 * `GSw_HourlyClusterAlgorithm`
     * If set to 'hierarchical', then hierarchical clustering is used via
         ```python

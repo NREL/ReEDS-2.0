@@ -44,8 +44,8 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing ###
-#reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-#inputs_case = os.path.join(reeds_path,'runs','test_Pacific','inputs_case','')
+# reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+# inputs_case = os.path.join(reeds_path,'runs','v20240606_aggmapsM2_ERCOT_county','inputs_case','')
 
 #%% Set up logger
 log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
@@ -55,7 +55,7 @@ print('Starting copy_files.py')
 sw = pd.read_csv(
     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
 # Create switch dictionary that has certain switches evaluated for the values ReEDS actually uses
-sw_expanded = {**sw, **{'num_resource_adequacy_years':str(len(sw['resource_adequacy_years'].split('_')))}}
+sw_expanded = {**sw, **{'osprey_num_years':str(len(sw['osprey_years'].split('_')))}}
 
 scalars = pd.read_csv(
     os.path.join(reeds_path, 'inputs', 'scalars.csv'),
@@ -281,7 +281,6 @@ hier_sub['r'][hier_sub['resolution']=='state'] = hier_sub['st'][hier_sub['resolu
 hier_sub['r'][hier_sub['resolution']=='aggreg'] = hier_sub['aggreg'][hier_sub['resolution']=='aggreg']
 
 # Write out a mapping of r to all counties
-r_county = hier_sub[['r','county']]
 hier_sub[['r','county']].to_csv(
     os.path.join(inputs_case, 'r_county.csv'), index=False)
 
@@ -343,7 +342,7 @@ pd.Series(val_st).to_csv(
     os.path.join(inputs_case, 'val_st.csv'), header=False, index=False)
 
 # Rename columns and save as hierarchy.csv
-hier_sub.rename(columns={'r':'*r'}).drop(columns='aggreg').to_csv(
+hier_sub.rename(columns={'r':'*r'}).to_csv(
     os.path.join(inputs_case, 'hierarchy.csv'), index=False)
 
 levels = list(hier_sub.columns)
@@ -517,28 +516,12 @@ pd.read_csv(
     os.path.join(inputs_case,'ng_crf_penalty.csv')
 )
 
-## Calculate CO2 cap based on GSw_Region chosen (national or sub-national regions)
-# Read in national co2 cap
-em_nat = pd.read_csv(os.path.join(reeds_path,'inputs','emission_constraints','co2_cap.csv'), 
-                     index_col='t',).loc[sw['GSw_AnnualCapScen']].rename_axis('*t')
-em_nat.to_csv(os.path.join(inputs_case,'co2_cap.csv'))
+pd.read_csv(
+    os.path.join(reeds_path,'inputs','emission_constraints','co2_cap.csv'), index_col='t',
+).loc[sw['GSw_AnnualCapScen']].rename_axis('*t').to_csv(
+    os.path.join(inputs_case,'co2_cap.csv')
+)
 
-# Read in 2022 CO2 emission share by county calculated from 2022 eGrid emission data:
-em_share = pd.read_csv(os.path.join(reeds_path,'inputs','emission_constraints','county_co2_share_egrid_2022.csv'),
-                       index_col=0,)
-
-# Filter the counties that are in chosen GSw_Region
-val_county = pd.read_csv(os.path.join(inputs_case,'val_county.csv'),names=['r'])
-
-# Merge emission share by county with the counties in GSw_Region and calculate emission share of GSw_Region
-region_em_share = val_county.merge(em_share, on='r', how='left').fillna(0)
-region_em_share = region_em_share['share'].sum()
-
-# Apply the emission share to national cap to get the emission cap trajectory of GSw_Region
-em_reg = em_nat*region_em_share
-em_reg.to_csv(os.path.join(inputs_case,'co2_cap_reg.csv'))
-
-## CO2 tax
 pd.read_csv(
     os.path.join(reeds_path,'inputs','emission_constraints','co2_tax.csv'), index_col='t',
 )[sw['GSw_CarbTaxOption']].rename_axis('*t').round(2).to_csv(
@@ -708,7 +691,7 @@ for i, row in regionFiles.iterrows():
         df = read_file(full_path)
         
     elif filetype_in == 'csv':
-        df = pd.read_csv(full_path, dtype={'FIPS':str, 'fips':str, 'cnty_fips':str})
+        df = pd.read_csv(full_path)
         
     else:
         raise TypeError(f'filetype for {full_path} is not .csv or .h5')
@@ -736,7 +719,7 @@ for i, row in regionFiles.iterrows():
                 # In the case that val_r_all filters out all columns, leaving an empty dataframe,
                 # fill a single column with NaN to preserve the file index for use in ldc_prep
                 if len(df.columns) == 0:
-                    df = pd.DataFrame(np.nan, index = df.index,columns = val_r_all)
+                    df[0] = np.nan
             except:
                 df = pd.DataFrame()
 
@@ -766,14 +749,13 @@ for i, row in regionFiles.iterrows():
         df = df.loc[df['r'].isin(val_r_all)]
         df = df.loc[:,df.columns.isin(["r"] + val_cendiv)]
 
-    # Subset on val_{level} if region_col == 'wide_{level}'
-    elif (region_col.split('_')[0] == 'wide') and (region_col.split('_')[1] in valid_regions.keys()):
-        # Check to see if the region values are listed in the columns. If they are,
+    # Subset on val_st if region_col == st
+    elif region_col == 'wide_st':
+        # Check to see if the states are listed in the columns. If they are,
         # then use those columns
-        val_reg = valid_regions[region_col.split('_')[1]]
-        if df.columns.isin(val_reg).any():
-            df = df.loc[:,df.columns.isin(fix_cols + val_reg)]
-        # Otherwise just use an empty dataframe
+        if df.columns.isin(val_st).any():
+            df = df.loc[:,df.columns.isin(fix_cols + val_st)]
+        # Otherwise just use a empty dataframe
         else:
             df = pd.DataFrame()
     
@@ -783,30 +765,8 @@ for i, row in regionFiles.iterrows():
     
     #------- Write data to inputs_case folder -------#
     if filetype_out == 'h5':
-        outfile = os.path.join(inputs_case,filename) 
-                
-        with h5py.File(outfile, 'w') as f:
-            # save index, either as a standalone or with a group for each level
-            # in a multi-index (with the format 'index{index order}_{index name}')
-            idx_val = 0
-            for idx_name in df.index.names:
-                if (idx_name is None) and (len(df.index.names) == 1):
-                    f.create_dataset('index', data=df.index, dtype=df.index.dtype)
-                else:
-                    if idx_name is None:
-                        idx_name = idx_val
-                    idx_values = df.index.get_level_values(idx_name)
-                    f.create_dataset(f'index{idx_val+1}_{idx_name}', data=idx_values, dtype=idx_values.dtype)
-                idx_val += 1
-            # save column names as string type
-            f.create_dataset('columns', data=df.columns, dtype=f'S{df.columns.map(len).max()}')
-
-            # save data
-            if len(df.dtypes.unique()) > 1:
-                raise Exception(f"Multiple data types detected in {filename}, unclear which one to use for re-saving h5.")
-            else:
-                dftype_out = df.dtypes.unique()[0]    
-            f.create_dataset('data', data=df.values, dtype=dftype_out, compression='gzip', compression_opts=4,)
+        df.to_hdf(
+            os.path.join(inputs_case,filename), key='data', complevel=4, format='table')
     else:
         # Special cases: These files' values need to be adjusted for inflation prior to copy
         if filename in ['bio_supplycurve.csv', 'co2_site_char.csv']:
@@ -821,44 +781,6 @@ for i, row in regionFiles.iterrows():
         df.to_csv(
             os.path.join(inputs_case,filename), index=False)
 
-#%% Handle special case inputs that are always at county-resolution
-
-### Map energy communities to regions and calculate the percentage of energy communities in a region to give a weighted bonus
-# Rename column in energy_communities.csv and map county to r, save as energy_communities.csv
-energy_communities = pd.read_csv(os.path.join(inputs_case, 'energy_communities.csv'))
-energy_communities.rename(columns={'County Region': 'county'}, inplace=True)
-
-# map energy communities to regions
-e_df = pd.merge(energy_communities, r_county, on='county', how='left').dropna()
-
-# group energy community regions and count the number of counties in each
-energy_county_counts = e_df.groupby('r')['county'].nunique()
-
-# group all regions and count the number of counties in each 
-total_county_counts = r_county.groupby('r')['county'].nunique()
-
-# calculate the percentage of counties that are energy communities in each region
-e_df = (energy_county_counts / total_county_counts).round(3).reset_index().dropna()
-
-# rename columns to from ['r','county'] to ['r','percentage_energy_communities']
-e_df.columns = ['r', 'percentage_energy_communities']
-
-e_df.to_csv(
-    os.path.join(inputs_case, 'energy_communities.csv'),
-    index=False
-)
-
-### Aggregate distpv capacity to ba resolution if not running county-level resolution
-if agglevel != 'county':
-    dpv = (pd.read_csv(os.path.join(inputs_case,'distpvcap.csv'))
-                .set_index('r')
-            )
-    # Merge county mapping to distpv capacity data and aggregate
-    dpv_ba = dpv.merge(r_county, left_index=True, right_on='county').drop('county', axis=1)
-    dpv_ba = dpv_ba.groupby('r').sum()
-
-    # Write out file
-    dpv_ba.to_csv(os.path.join(inputs_case,'distpvcap.csv'), index=True)
 
 #%% Special-case set modifications
 ## Expand i (technologies) set if modeling water use

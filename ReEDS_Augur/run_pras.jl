@@ -1,13 +1,16 @@
 #%% Imports
 import ArgParse
-import DataFrames
+import DataFrames as DF
 import Logging
 import LoggingExtras
 import Dates
 import PRAS
 import HDF5
-
-const DF = DataFrames
+try
+    using Revise
+catch e
+    @warn "Error initializing Revise" exception=(e, catch_backtrace())
+end
 
 #%% Functions
 """
@@ -128,14 +131,8 @@ end
 """
 function run_pras(pras_system_path::String, args::Dict)
     #%% Load the system model
-    sys = 
-    try
-        @info "Parsing PRAS System ..."
-        PRAS.SystemModel(pras_system_path);
-    catch
-        error("Cannot parse the PRAS System ...")
-    end
-   
+    sys = PRAS.SystemModel(pras_system_path)
+
     #%% Run PRAS
     short, flow, surplus, energy = PRAS.assess(
         sys,
@@ -185,8 +182,8 @@ function run_pras(pras_system_path::String, args::Dict)
         outfile = replace(pras_system_path, ".pras"=>".h5")
     end
     HDF5.h5open(outfile, "w") do f
-        for column in DF.names(dfout)
-            f[column, compress=4] = convert(Array, dfout[!, column])
+        for column in DF._names(dfout)
+            f["$column", compress=4] = convert(Array, dfout[!, column])
         end
     end
     @info("Wrote PRAS EUE and LOLE to $(outfile)")
@@ -272,18 +269,16 @@ function main(args::Dict)
 
     #%% Run ReEDS2PRAS
     if (args["overwrite"] == 1) | ~isfile(pras_system_path)
-        ### Create and save the PRAS system
-        ## Could use compression_level={integer} here but it doesn't really help
-        PRAS.savemodel(
-            ReEDS2PRAS.reeds_to_pras(
-                args["reedscase"],
-                args["solve_year"],
-                args["timesteps"],
-                args["weather_year"],
-            ),
-            pras_system_path,
-            verbose=true,
+        pras_system = ReEDS2PRAS.reeds_to_pras(
+            args["reedscase"],
+            args["solve_year"],
+            args["timesteps"],
+            args["weather_year"],
         )
+        ### Save the PRAS system
+        ## Could use compression_level={integer} here but it doesn't really help
+        @info "Saving PRAS model to to $(pras_system_path)"
+        PRAS.savemodel(pras_system, pras_system_path, verbose=true)
         @info "Finished ReEDS2PRAS"
     end
 
@@ -302,11 +297,11 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__
     # #%% Inputs for debugging
     # args = Dict(
-    #     "reeds_path" => "/Users/pbrown/github2/ReEDS-2.0",
+    #     "reeds_path" => "/Users/pbrown/github/ReEDS-2.0",
     #     "reedscase" => (
-    #         "/Users/pbrown/github2/ReEDS-2.0/runs/"
-    #         *"v20240705_tforM2_Pacific"),
-    #     "solve_year" => 2020,
+    #         "/Users/pbrown/github/ReEDS-2.0/runs/"
+    #         *"v20240118_stressM0_Z45_SP_5yr_H2_WECC"),
+    #     "solve_year" => 2050,
     #     "weather_year" => 2007,
     #     "samples" => 10,
     #     "iteration" => 0,
@@ -319,11 +314,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
     #     "debug" => 0,
     #     "include_samples" => 0,
     # )
-    # reedscase = args["reedscase"]
-    # solve_year = args["solve_year"]
-    # timesteps = args["timesteps"]
-    # weather_year = args["weather_year"]
-    # include(joinpath(args["reeds_path"], "reeds2pras", "src", "ReEDS2PRAS.jl"))
 
     #%% Parse the command line arguments
     args = parse_commandline()
