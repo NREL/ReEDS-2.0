@@ -3,7 +3,9 @@
 
 This GitHub repository contains the source code for NREL&#39;s ReEDS model. The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS model can be downloaded or cloned from [https://github.com/NREL/ReEDS-2.0](https://github.com/NREL/ReEDS-2.0). 
 
-**For more information about the model, see the [open source ReEDS-2.0 Documentation](https://nrel.github.io/ReEDS-2.0)**
+**For more information about the model, see the [ReEDS-2.0 Documentation](https://pages.github.nrel.gov/ReEDS/ReEDS-2.0)**
+
+<!-- **For more information about the model, see the [open source ReEDS-2.0 Documentation](https://nrel.github.io/ReEDS-2.0)** -->
 
 A ReEDS training video (based on the 2020 version of ReEDS) is available on the NREL YouTube channel at [https://youtu.be/aGj3Jnspk9M?si=iqCRNn5MbGZc8ZIO](https://youtu.be/aGj3Jnspk9M?si=iqCRNn5MbGZc8ZIO).
 

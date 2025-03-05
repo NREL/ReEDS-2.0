@@ -1,26 +1,12 @@
 # Exploding Pivot Charts
 
 ## Intro
-This python bokeh app creates multiple pivot charts from data. A helpful tutorial is here: https://youtu.be/8Xi59M4bB6I. Note that some of this documentation might be outdated.
+This python bokeh app creates multiple pivot charts from data. A helpful tutorial is here: https://youtu.be/8Xi59M4bB6I. Note that some of this documentation might be outdated. Also note that the bokehpivot interface is currently broken on the reeds2 conda environment. Description of the issue and instructions for a workaround are here: https://github.nrel.gov/ReEDS/ReEDS-2.0/issues/1146
 
-## Installing Bokeh
-1. You can check if you already have bokeh by going to
-    command line and simply entering:
-    ```
-    bokeh
-    ```
-    If you get a message that says
-    ```
-    ERROR: Must specify subcommand...
-    ```
-    you already have Bokeh. If not, here are the Bokeh installation instructions:
-    http://bokeh.pydata.org/en/latest/docs/installation.html. The easiest way is to use conda,
-    e.g. from the command line:
-    ```
-    conda install bokeh
-    ```
+## Quickstart for using bokehpivot via command line to build comparison reports
+1. See instructions at top of bokehpivot/run_report.py
 
-## Running Bokehpivot (Windows)
+## Running Bokehpivot Interface (Windows)
 1. In the ReEDS repo, simply double click on bokehpivot/launch.bat to launch the tool. This will start a bokeh server in a terminal window and a browser window with an interactive interface.
 1. After the tool is launched, go to the *Loading Model data* section below.
 1. When done, simply close the terminal window that is running the server.
@@ -32,7 +18,7 @@ This python bokeh app creates multiple pivot charts from data. A helpful tutoria
     * `bokeh serve . --sh`: Launch bokeh server and open browser window with the app. See https://docs.bokeh.org/en/latest/docs/user_guide/server.html for more info.
     * `--port 0`: This will allow bokehpivot to use an available port, and allows multiple simultaneous bokehpivot sessions (by launching multiple times).
     
-## Running Bokehpivot (MacOS)
+## Running Bokehpivot Interface (MacOS)
 In the bokehpivot directory in VSCode or terminal, launch bokehpivot by:
 ```
 /.launch.sh
@@ -50,7 +36,7 @@ After starting up the app in a browser window, you must enter a path in the *Dat
     * Enter a path to a Model run folder. This works using shared drives too. For example,  *\\\\nrelqnap01d\\ReEDS\\someProject\\runs\\someRun*.
     * Enter a path to a folder containing run folders. For example,  *\\\\nrelqnap01d\\ReEDS\\someProject\\runs*.
     * Enter any number of the path types above, each separated by a | (pipe) symbol
-    * Enter a path to a csv file that contains a list of runs. Using this method allows scenarios to be ordered as desired and colors to be specified as well. See *in/reeds_scenarios.csv* for an example. It's easiest to just copy *reeds_scenarios.csv* to some other location and edit/use the copy. Note that the file name must end with *reeds_scenarios.csv*.
+    * Enter a path to a csv file that contains a list of runs. Using this method allows scenarios to be ordered as desired and colors to be specified as well. See *bokehpivot/reeds_scenarios.csv* for an example. It's easiest to just copy *reeds_scenarios.csv* to some other location and edit/use the copy. Note that the file name must end with *reeds_scenarios.csv*.
     * After entering one of the above, see the *ReEDS Widgets* and *Core Pivot Functionality* sections below.
 
 ## Model Widgets

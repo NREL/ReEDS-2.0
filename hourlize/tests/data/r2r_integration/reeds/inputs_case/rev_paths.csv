@@ -2,4 +2,3 @@ tech,access_switch,access_case,rev_case,bins,sc_path,sc_file,hpc_sc_file,cf_path
 upv,GSw_SitingUPV,reference,pv_reference,10,supply_curves/upv_reference/results/,supply_curves/upv_reference/results/upv_supply_curve_raw.csv,,,
 wind-ons,GSw_SitingWindOns,reference,wind_reference,10,supply_curves/wind-ons_reference/results/,supply_curves/wind-ons_reference/results/wind-ons_supply_curve_raw.csv,,,
 wind-ofs,GSw_SitingWindOfs,open,0_open_moderate,5,supply_curves/wind-ofs_0_open_moderate/results/,supply_curves/wind-ofs_0_open_moderate/results/wind-ofs_supply_curve_raw.csv,,,
-dupv,none,none,DUPV/2018_Update,,supply_curves/,supply_curves/dupv_sc_naris_scaled.csv,,,

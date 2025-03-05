@@ -160,6 +160,8 @@ rggi_quant(t),metric tons,annual CO2 cap for the regional greenhouse gas initiat
 "stor_energy_cap(i,v,r,t)",MWh,"energy capacity of storage devices by tech, BA, vintage, and year",,,
 "stor_inout(i,v,r,t,*)",MWh,Annual energy going into and out of storage,,,
 "stor_in(i,v,r,allh,t)",MW,energy going into storage by timeslice,,,
+"stor_interday_level(i,v,r,allszn,t)",MWh,storage level for inter-day technogies,,,
+"stor_interday_dispatch(i,v,r,allh,t)",MW,storage net dispatch for inter-day technogies,,,
 "stor_level(i,v,r,allh,t)",MWh,storage level,,,
 "stor_out(i,v,r,allh,t)",MW,energy leaving storage,,,
 # Begin system cost parameters,,,,,

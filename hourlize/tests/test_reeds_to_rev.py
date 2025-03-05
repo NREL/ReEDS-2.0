@@ -13,6 +13,7 @@ import pytest
 
 import path_fix as _  # noqa: F401
 
+
 def fix_sc_paths(run_folder, integration_data_path):
     """
     Edits values in inputs_case/rev_paths.csv so that the sc_file values are
@@ -68,73 +69,28 @@ def test_reeds_to_rev_usage(hourlize_path):
         assert e.code == 0, "reeds_to_rev.py encountered an error."
 
 
-def test_reeds_to_rev_integration(test_techs, integration_data_path, hourlize_path):
+@pytest.mark.parametrize(
+    "tech",
+    [
+        "egs_allkm",
+        "geohydro_allkm",
+        "wind-ons",
+        "wind-ofs",
+        "upv",
+    ],
+)
+@pytest.mark.parametrize("out_format", ["reduced", "full"])
+def test_reeds_to_rev_integration(tech, out_format, test_data_path, hourlize_path):
     """
     Integration test of reeds_to_rev.py to ensure it returns the
     expected outputs. This test covers the following techs:
     upv, wind-ons, wind-ofs.
     """
 
-    reeds_source_path = integration_data_path.joinpath("reeds")
-
-    out_formats = ["reduced", "full"]
-
-    with temporary_parent_directory(reeds_source_path) as temp_reeds:
-        reeds_path = Path(temp_reeds.name)
-        run_folder = reeds_path.joinpath("reeds")
-
-        fix_sc_paths(run_folder, integration_data_path)
-
-        for out_format in out_formats:
-            for tech in test_techs:
-                remove_stream_handlers("reeds_to_rev")
-                sys.argv = [
-                    None,
-                    reeds_path.as_posix(),
-                    run_folder.as_posix(),
-                    "priority",
-                    "--priority",
-                    "cost",
-                    "--tech",
-                    tech,
-                ]
-                if out_format == "reduced":
-                    sys.argv.append("--reduced_only")
-
-                try:
-                    runpy.run_path(
-                        hourlize_path.joinpath("reeds_to_rev.py"), run_name="__main__"
-                    )
-                except SystemExit as e:
-                    assert e.code == 0, "reeds_to_rev.py encountered an error."
-
-                if out_format == "reduced":
-                    out_csv_name = f"df_sc_out_{tech}_reduced.csv"
-                else:
-                    out_csv_name = f"df_sc_out_{tech}.csv"
-
-                result_csv_path = run_folder.joinpath("outputs", out_csv_name)
-                assert result_csv_path.exists()
-
-                expected_csv_path = integration_data_path.joinpath(
-                    "expected_results", out_csv_name
-                )
-                assert expected_csv_path.exists()
-
-                result_df = pd.read_csv(result_csv_path)
-                expected_df = pd.read_csv(expected_csv_path)
-
-                assert_frame_equal(result_df, expected_df)
-
-
-def test_reeds_to_rev_6mw_wind_ons(
-    integration_data_path, hourlize_path, from_config_data_path
-):
-    """
-    Integration test of reeds_to_rev.py to ensure it returns the
-    expected outputs when new_incr_mw is changed from default. This test only covers
-    wind-ons since the behavior should be the same for other technologies.
-    """
+    if tech in ["egs_allkm", "geohydro_allkm"]:
+        integration_data_path = test_data_path.joinpath("r2r_integration_geothermal")
+    else:
+        integration_data_path = test_data_path.joinpath("r2r_integration")
 
     reeds_source_path = integration_data_path.joinpath("reeds")
 
@@ -152,32 +108,31 @@ def test_reeds_to_rev_6mw_wind_ons(
             "priority",
             "--priority",
             "cost",
-            "--reduced_only",
             "--tech",
-            "wind-ons",
-            "--new_incr_mw",
-            "6",
+            tech,
         ]
-        try:
-            runpy.run_path(
-                hourlize_path.joinpath("reeds_to_rev.py"), run_name="__main__"
-            )
-        except SystemExit as e:
-            assert e.code == 0, "reeds_to_rev.py encountered an error."
+        if out_format == "reduced":
+            sys.argv.append("--reduced_only")
 
-        out_csv_name = "df_sc_out_wind-ons_reduced.csv"
+        runpy.run_path(hourlize_path.joinpath("reeds_to_rev.py"), run_name="__main__")
+
+        if out_format == "reduced":
+            out_csv_name = f"df_sc_out_{tech}_reduced.csv"
+        else:
+            out_csv_name = f"df_sc_out_{tech}.csv"
+
         result_csv_path = run_folder.joinpath("outputs", out_csv_name)
         assert result_csv_path.exists()
 
-        expected_csv_path = from_config_data_path.joinpath(
-            "expected_results", "wind-ons_6mw_inputs", out_csv_name
+        expected_csv_path = integration_data_path.joinpath(
+            "expected_results", out_csv_name
         )
         assert expected_csv_path.exists()
 
         result_df = pd.read_csv(result_csv_path)
         expected_df = pd.read_csv(expected_csv_path)
 
-        assert_frame_equal(result_df, expected_df)
+        assert_frame_equal(result_df, expected_df, check_like=True, check_dtype=False)
 
 
 def test_reeds_to_rev_simul_fill_upv(integration_data_path, hourlize_path):

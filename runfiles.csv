@@ -17,6 +17,7 @@ RPSCat.csv,inputs/sets/RPSCat.csv,ignore,ignore,,,,,,,,,RPSCat,,done
 aclike.csv,inputs/sets/aclike.csv,ignore,ignore,,,,,0,,,,aclike,,done
 acp_disallowed.csv,inputs/state_policies/acp_disallowed.csv,ignore,ignore,*st,"RPSCat,val",,,0,,,,,,done
 acp_prices.csv,inputs/state_policies/acp_prices.csv,ignore,ignore,st,st,,1,0,,,,,,done
+numpartitions.csv,,ignore,ignore,,,,,0,,,,,,done
 adoption_trajectories_commercial.csv,inputs/load/Adoption_Trajectories_Commercial.csv,sum,population,wide,year,,1,0,,,,,,done
 adoption_trajectories_residential.csv,inputs/load/Adoption_Trajectories_Residential.csv,sum,population,wide,year,,1,0,,,,,,done
 agglevels.csv,,ignore,ignore,ignore,,,,0,,,,,,done
@@ -104,9 +105,10 @@ dac_elec.csv,inputs/consume/dac_elec_{dacscen}.csv,ignore,ignore,,,,1,0,,,,,,don
 dac_gas.csv,inputs/consume/dac_gas_{GSw_DAC_Gas_Case}.csv,ignore,ignore,,,,1,0,,1,,,,done
 deflator.csv,inputs/financials/deflator.csv,ignore,ignore,,,,,0,,,,,,done
 degradation_annual.csv,inputs/degradation/degradation_annual_{degrade_suffix}.csv,ignore,ignore,,,,,0,,,,,,done
-demonstration_plants.csv,inputs/capacity_exogenous/demonstration_plants.csv,ignore,ignore,r,"t,coolingwatertech,ctt,wst,notes",i,,0,,,,,,done
+demonstration_plants.csv,inputs/capacity_exogenous/demonstration_plants.csv,ignore,ignore,r,"t,i,coolingwatertech,ctt,wst,notes",i,0,0,,,,,,done
 depreciation_schedules.csv,inputs/financials/depreciation_schedules_{depreciation_schedules_suffix}.csv,ignore,ignore,,,,1,0,,,,,,done
 df_capex_init.csv,postprocessing/retail_rate_module/calc_historical_capex/df_capex_init.csv,sum,geosize,region,"i,t",,0,0,,,,,,done
+diagnose.gms,postprocessing/diagnose/diagnose.gms,ignore,ignore,,,,,,,,,,,done 
 disagg_geosize.csv,inputs/disaggregation/disagg_geosize.csv,ignore,ignore,,,,,0,,,,,,done
 disagg_hydroexist.csv,inputs/disaggregation/disagg_hydroexist.csv,ignore,ignore,,,,,0,,,,,,done
 disagg_population.csv,inputs/disaggregation/disagg_population.csv,ignore,ignore,,,,,0,,,,,,done
@@ -114,7 +116,6 @@ disagg_translinesize.csv,inputs/disaggregation/disagg_translinesize.csv,ignore,i
 distance_reinforcement.csv,,ignore,ignore,r,"*i,rscbin",*i,0,0,,1,,,,done
 distance_spur.csv,,ignore,ignore,r,"*i,rscbin",*i,0,0,,1,,,,done
 distpvcap.csv,inputs/dgen_model_inputs/{distpvscen}/distpvcap_{distpvscen}.csv,sum,ignore,r,wide,,1,0,,,,,,done
-distpvcf_hourly.csv,inputs/dgen_model_inputs/distpvcf_hourly.csv,mean,uniform,r,wide,,1,0,,,,,,TODO: change to capacity-weighted (using straight mean for now)
 dollaryear_consume.csv,inputs/consume/dollaryear.csv,ignore,ignore,,,,,0,,,,,,Do we really need 3 separate instances of dollaryear?
 dollaryear_plant.csv,inputs/plant_characteristics/dollaryear.csv,ignore,ignore,,,,,0,,,,,,Do we really need 3 separate instances of dollaryear?
 dollaryear_fuel.csv,inputs/fuelprices/dollaryear.csv,ignore,ignore,,,,,0,,,,,,done
@@ -193,6 +194,7 @@ growth_penalty.csv,inputs/growth_constraints/growth_penalty.csv,ignore,ignore,,,
 gswitches.csv,,ignore,ignore,,,,,0,,,,,,done
 h2_ba_share.csv,inputs/consume/h2_ba_share.csv,sum,geosize,*r,t,,0,0,,,,,,done
 h2_existing_smr_cap.csv,,sum,population,*r,t,,0,0,,1,,,,done
+h_preh.csv,,ignore,ignore,,,,,0,,,,,,done
 h2_exogenous_demand.csv,inputs/consume/h2_exogenous_demand.csv,ignore,ignore,,p,,1,0,,,,,,done
 h2_pipeline_cap_cost_mult.csv,,ignore,ignore,,,,,,,1,,,,done
 h2_ptc.csv,,ignore,ignore,,,*i,,0,,,,,,done
@@ -202,8 +204,8 @@ h2_storage_rb.csv,inputs/consume/h2_storage_rb.csv,first,uniform,rb,,,0,0,,,,,,d
 h2_transport_and_storage_costs.csv,inputs/consume/h2_transport_and_storage_costs.csv,ignore,ignore,,,,,,,,,,,done
 h_actualszn.csv,,ignore,ignore,,,,,0,,,,,,done
 h_ccseason_prm.csv,,ignore,ignore,,,,,0,,,,,,done
-h_dt_szn_h17.csv,inputs/variability/h_dt_szn.csv,ignore,ignore,,,,,0,,,,,,done
-h_dt_szn.csv,inputs/variability/h_dt_szn.csv,ignore,ignore,,,,,0,,,,,,done
+h_dt_szn_h17.csv,inputs/variability/h_dt_szn.csv,ignore,ignore,,,,,0,,1,,,,done
+h_dt_szn.csv,,ignore,ignore,,,,,0,,1,,,,done
 h_szn.csv,,ignore,ignore,,,,0,0,,,,,,done
 h_szn_end.csv,,ignore,ignore,,,,,0,,,,,,done
 h_szn_start.csv,,ignore,ignore,,,,,0,,,,,,done
@@ -213,9 +215,10 @@ heat_rate_mult.csv,inputs/waterclimate/heat_rate_mult.csv,ignore,ignore,,,,,0,,,
 heat_rate_penalty_spin.csv,inputs/plant_characteristics/heat_rate_penalty_spin.csv,ignore,ignore,,,,,0,,,,,,done
 hierarchy.csv,,first,ignore,*r,"nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg",,0,0,,1,,,,post_copy column set to 1 since copy_files filters this file separately
 hierarchy_original.csv,,ignore,ignore,,,,,0,,1,,,,post_copy column set to 1 since copy_files copies this file separately
+hierarchy_with_res.csv,,ignore,ignore,,,,,0,,1,,,,post_copy column set to 1 since copy_files copies this file separately
 hintage_char.csv,inputs/sets/hintage_char.csv,ignore,ignore,,,,,,,,,hintage_char,,done
 hintage_data.csv,,ignore,ignore,,,,,0,,,,,,done (handled separately in WriteHintage.py)
-hmap_7yr.csv,,ignore,ignore,,,,,0,,,,,,done
+hmap_allyrs.csv,,ignore,ignore,,,,,0,,,,,,done
 hmap_myr.csv,,ignore,ignore,,,,,0,,,,,,done
 hour_szn_group.csv,,ignore,ignore,,,,,,,,,,,done
 hourly_operational_characteristics.csv,inputs/variability/hourly_operational_characteristics.csv,ignore,ignore,,,,,0,,,,,,done
@@ -272,6 +275,7 @@ national_rps_frac_allScen.csv,inputs/national_generation/national_rps_frac_allSc
 net_firm_transfers_nerc.csv,inputs/reserves/net_firm_transfers_nerc.csv,ignore,ignore,nercr,t,,0,0,,,,,,done
 nexth.csv,,ignore,ignore,,,,,0,,,,,,done
 nexth_actualszn.csv,,ignore,ignore,,,,,0,,,,,,done
+nextpartition.csv,,ignore,ignore,,,,,0,,,,,,done
 ng_crf_penalty.csv,,ignore,ignore,,,,0,0,,,,,,done
 ng_crf_penalty_st.csv,inputs/state_policies/ng_crf_penalty_st.csv,ignore,ignore,st,*t,,0,0,,,,,,done
 ng_demand_elec.csv,inputs/fuelprices/ng_demand_{ngscen}.csv,ignore,ignore,wide_cendiv,year,,1,0,,,,,,done
@@ -394,6 +398,7 @@ stressperiods_seed.csv,,ignore,ignore,,,,,0,,,,,,done
 supply_chain_adjust.csv,inputs/financials/supply_chain_adjust.csv,ignore,ignore,,,,,0,,,,,,done
 sw.csv,inputs/sets/sw.csv,ignore,ignore,,,,,0,,,,sw,,done
 switches.csv,,ignore,ignore,,,,,0,,,,,,done
+szn_actualszn.csv,,ignore,ignore,,,,,0,,,,,,done
 tc_phaseout_schedule.csv,inputs/financials/tc_phaseout_schedule_{GSw_TCPhaseout_schedule}.csv,ignore,ignore,,,,,0,,,,,,done
 tech-subset-table.csv,inputs/tech-subset-table.csv,ignore,ignore,,,,,0,,,,,,done
 tech_resourceclass.csv,inputs/techs/tech_resourceclass.csv,ignore,ignore,,,,,0,,,,,,done
@@ -484,7 +489,7 @@ x_r.csv,,first,ignore,"*x,r",,,0,0,,1,,,,handled in writesupplycurves.py
 yearafter.csv,inputs/sets/yearafter.csv,ignore,ignore,,,,,,,,,yearafter,,done
 inputs.gdx,,ignore,ignore,,,,,0,,,,,,done
 plexos_inputs.gdx,,ignore,ignore,,,,,0,,,,,,done
-load_hourly.h5,inputs/load/{GSw_EFS1_AllYearLoad}_load_hourly.h5,sum,population,wide,"year,hour",,1,keepindex,,,,,,done
+load_hourly.h5,inputs/load/{GSw_EFS1_AllYearLoad}_load_hourly.h5,sum,population,wide,"year,datetime",,1,keepindex,,,,,,done
 load.h5,,sum,ignore,wide,"year,hour",,1,keepindex,,1,,,,Disaggregation handled in ldc_prep.py
 recf.h5,,recf,ignore,wide,datetime,,1,keepindex,,1,,,,done
 csp.h5,,csp,ignore,wide,datetime,,1,keepindex,,1,,,,done
@@ -494,6 +499,7 @@ recf_wind-ons.h5,inputs/variability/multi_year/wind-ons-{GSw_SitingWindOns}_{lvl
 recf_upv.h5,inputs/variability/multi_year/upv-{GSw_SitingUPV}_{lvl}.h5,recf,ignore,wide,datetime,,1,keepindex,,,,,,done
 recf_upv_140AC.h5,inputs/variability/multi_year/upv_140AC-reference_ba.h5,recf,ignore,wide,datetime,,1,keepindex,,,,,,done
 recf_upv_220AC.h5,inputs/variability/multi_year/upv_220AC-reference_ba.h5,recf,ignore,wide,datetime,,1,keepindex,,,,,,done
+recf_distpv.h5,inputs/variability/multi_year/distpv-reference_{lvl}.h5,distpv,ignore,wide,datetime,,1,keepindex,,,,,,done
 gswitches.txt,,ignore,ignore,,,,,0,,,,,,done
 scalars.txt,,ignore,ignore,,,,,0,,,,,,done
 Augur.py,Augur.py,ignore,ignore,,,,,,,,,,,done
@@ -526,3 +532,4 @@ raw_value_streams.py,raw_value_streams.py,ignore,ignore,,,,,,,,,,,done
 runbatch.py,runbatch.py,ignore,ignore,,,,,,,,,,,done
 tc_phaseout.py,tc_phaseout.py,ignore,ignore,,,,,,,,,,,done
 valuestreams.py,valuestreams.py,ignore,ignore,,,,,,,,,,,done
+

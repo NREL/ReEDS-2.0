@@ -289,6 +289,52 @@ function get_ICAP_data(data::ReEDSdatapaths)
 end
 
 """
+    Returns DataFrames containing hydroelectric plants capacity factors
+
+    Parameters
+    ----------
+    data : ReEDSdatapaths
+        A ReEDSdatapaths object containing the year and filepath.
+
+    Returns
+    -------
+    hydcf: DataFrame
+        A DataFrame containing the seasonal capacity factors for both 
+        dispatchable and non-dispatchable hydroelectric plants, subsetted
+        to the required output year. 
+    
+    hydcapadj: DataFrame
+        A DataFrame containing seasonal capacity adjustment factors for
+        dispatchable hydroelectric plants which limits the maximum hourly 
+        dispatch (MW) in each season.
+
+    Raises
+    ------
+    Error
+        If the filepath for the for the two files do not exist.
+"""
+function get_hydro_data(data::ReEDSdatapaths)
+    filepath_cf = joinpath(data.ReEDSfilepath, "inputs_case", "hydcf.csv")
+    hydcf = DataFrames.DataFrame(CSV.File(filepath_cf))
+
+    # Rename plant types as techtypes and capacity are lowercase
+    DataFrames.rename!(hydcf, [:"*i"] .=> [:i])
+    hydcf.i = lowercase.(hydcf.i)
+    # Subset to ReEDS model year
+    hydcf = filter(x -> x.t == data.year, hydcf)
+
+    filepath_capadj = joinpath(data.ReEDSfilepath, "inputs_case", "hydcapadj.csv")
+
+    hydcapadj = DataFrames.DataFrame(CSV.File(filepath_capadj))
+
+    # Rename plant types as techtypes and capacity are lowercase
+    DataFrames.rename!(hydcapadj, [:"*i"] .=> [:i])
+    hydcapadj.i = lowercase.(hydcapadj.i)
+
+    return hydcf, hydcapadj
+end
+
+"""
     Returns a DataFrame containing the installed storage energy capacity data
     for the year specified in the ReEDSdatapaths object.
 
@@ -315,4 +361,60 @@ function get_storage_energy_capacity_data(data::ReEDSdatapaths)
         "energy_cap_$(string(data.year)).csv",
     )
     return DataFrames.DataFrame(CSV.File(filepath))
+end
+
+# Structs and functions to handle hydro limits data available
+
+# Struct to define monthhour values
+mutable struct monthhour
+    month::String
+    numhrs::Int64
+    cumsum::Int64
+    slice::UnitRange{Int64}
+
+    # Inner Constructors & Checks
+    function monthhour(
+        month = "month",
+        numhrs = 10,
+        cumsum = 0,
+        slice = range(1, length = 10),
+    )
+        return new(month, numhrs, cumsum, slice)
+    end
+end
+
+# Functions to augment collection of monthour
+function cumsum!(collection::Vector{monthhour})
+    sum = 0
+    for element in collection
+        sum = sum + element.numhrs
+        element.cumsum = sum
+    end
+end
+
+function addslices!(collection::Vector{monthhour})
+    for element in collection
+        element.slice = (element.cumsum - element.numhrs + 1):(element.cumsum)
+    end
+end
+
+# Generating necessary data 
+function monhours()
+    monthours = monthhour[]
+    start_date = Dates.Date("2021-01", "yyyy-mm")
+    for i in range(0, length = 12)
+        new_date = start_date + Dates.Month(i)
+        push!(
+            monthours,
+            monthhour(
+                uppercase(Dates.monthabbr(i + 1)),
+                Dates.daysinmonth(new_date) * 24,
+            ),
+        )
+    end
+
+    cumsum!(monthours)
+    addslices!(monthours)
+
+    return monthours
 end

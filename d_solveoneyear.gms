@@ -28,7 +28,7 @@ $offMulti
 
 * need to have values initialized before making adjustments
 * thus cannot perform these adjustments until 2010 has solved
-$ifthene.post2010 %cur_year%>2010
+$ifthene.post_startyear %cur_year%>%startyear%
 * Here we calculate the RHS value of eq_rsc_INVlim because floating point
 * differences can cause small number issues that either make the model
 * infeasible or result in very tiny number (order 1e-16) in the matrix
@@ -73,7 +73,7 @@ loop(i$rsc_i(i),
 ) ;
 
 * set m_capacity_exog to the maximum of either its original amount
-* or the amount of upgraded capacity that has occurred in the past 20 years
+* or the amount of upgraded capacity that has occurred in the past "Sw_UpgradeLifespan" years
 * to avoid forcing recently upgraded capacity into retirement
 if(Sw_Upgrades = 1,
 
@@ -132,7 +132,7 @@ if(Sw_GrowthPenalties > 0,
 
 ) ;
 
-$endif.post2010
+$endif.post_startyear
 
 *load in results from the cc/curtailment scripts
 $ifthene.tcheck %cur_year%>%GSw_SkipAugurYear%
@@ -344,9 +344,9 @@ cost_cap_fin_mult(i,r,t)$[gas(i)$(not ccs(i))] =
 
 * --- Estimate curtailment from "old" hybrid PV+battery ---
 
-$ifthene %cur_year%==2010
+$ifthene %cur_year%==%startyear%
 *initialize CAP.l for 2010 because it has not been defined yet
-CAP.l(i,v,r,"2010")$[m_capacity_exog(i,v,r,"2010")] = m_capacity_exog(i,v,r,"2010") ;
+CAP.l(i,v,r,"%startyear%")$[m_capacity_exog(i,v,r,"%startyear%")] = m_capacity_exog(i,v,r,"%startyear%") ;
 $endif
 
 * Now that cost_cap_fin_mult is done, calculate cost_growth, which is
@@ -368,7 +368,7 @@ if(Sw_GrowthPenalties > 0,
 * Write the inputs for debugging and error checks:
 * Always write data for the first solve year (currently always 2010).
 * Overwrites the versions written by d_solveprep.gms and d1_temporal_params.gms.
-$ifthene.write %cur_year%=2010
+$ifthene.write %cur_year%=%startyear%
 execute_unload 'inputs_case%ds%inputs.gdx' ;
 $endif.write
 
@@ -376,6 +376,14 @@ $endif.write
 $ifthene.debug %debug%>0
 execute_unload 'alldata_%stress_year%.gdx' ;
 $endif.debug
+
+
+* --- diagnoses gdx dump settings ---
+$ifthene.diagnose %diagnose%=1
+$ifthene.diagnose_2 %diagnose_year%<=%cur_year%
+$include inputs_case%ds%diagnose.gms
+$endif.diagnose_2
+$endif.diagnose
 
 * ------------------------------
 * Solve the Model

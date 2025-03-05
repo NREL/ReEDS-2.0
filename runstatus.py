@@ -85,9 +85,12 @@ for key, runs in dictruns.items():
                 last_lst = 'e_report.gms'
                 penultimatefile = None
             else:
+                if len(lstfiles) > 1:
+                    # Drop environment file
+                    lstfiles = [l for l in lstfiles if "environment.csv" not in l]
                 lastfile = lstfiles[-1]
                 try:
-                    ### Get time since previous lst file was modified
+                    # Get time since previous lst file was modified
                     penultimatefile = lstfiles[-2]
                     penultimateyear = os.path.splitext(penultimatefile)[0].split('_')[-1]
                     lasttime = os.path.getmtime(penultimatefile)

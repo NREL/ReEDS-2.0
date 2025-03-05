@@ -5,8 +5,7 @@ import argparse
 import pandas as pd
 import subprocess
 from glob import glob
-from input_processing.ticker import makelog
-from ReEDS_Augur.functions import get_switches
+import reeds
 
 
 #%% Main function
@@ -25,7 +24,7 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
     import runbatch
 
     #%% Get the run settings
-    sw = get_switches(casepath)
+    sw = reeds.io.get_switches(casepath)
     years = pd.read_csv(
         os.path.join(casepath,'inputs_case','modeledyears.csv')
     ).columns.astype(int).values
@@ -63,13 +62,13 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
         if result.returncode:
             raise Exception(f'd_solveoneyear.gms failed with return code {result.returncode}')
 
-        #%% Run ticker
+        #%% Add solve time to run metadata
         try:
-            cmd_ticker = (
-                f"python {os.path.join(casepath,'input_processing','ticker.py')}"
+            cmd_log = (
+                f"python {os.path.join(casepath, 'reeds', 'log.py')}"
                 f" --year={t}\n"
             )
-            subprocess.run(cmd_ticker, shell=True)
+            subprocess.run(cmd_log, shell=True)
         except Exception as err:
             print(err)
 
@@ -97,7 +96,7 @@ def main(casepath, t, overwrite=False):
     """
     """
     ### Get the run settings
-    sw = get_switches(casepath)
+    sw = reeds.io.get_switches(casepath)
     for iteration in range(int(sw.GSw_PRM_StressIterateMax)):
         #%% If not overwriting, skip iterations that have already finished
         if (
@@ -180,7 +179,10 @@ if __name__ == '__main__':
     os.chdir(casepath)
 
     #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(casepath,'gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(casepath,'gamslog.txt'),
+    )
 
     #%% Run it
     main(casepath=casepath, t=t, overwrite=overwrite)

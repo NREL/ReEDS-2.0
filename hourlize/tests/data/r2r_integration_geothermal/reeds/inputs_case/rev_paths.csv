@@ -1,0 +1,3 @@
+tech,access_switch,access_case,rev_case,bins,sc_path,sc_file,hpc_sc_file,cf_path,original_rev_folder
+egs,GSw_SitingGeo,reference,00_reference,,supply_curves/,supply_curves/egs_supply_curve_raw.csv,,,
+geohydro,GSw_SitingGeo,reference,00_reference,,supply_curves/,supply_curves/geohydro_supply_curve_raw.csv,,,

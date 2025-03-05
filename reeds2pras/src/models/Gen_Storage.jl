@@ -56,12 +56,12 @@ struct Gen_Storage <: Storage
     timesteps::Int64
     region_name::String
     type::String
-    charge_cap::Float64
-    discharge_cap::Float64
-    energy_cap::Float64
-    inflow::Float64
-    grid_withdrawl_cap::Float64
-    grid_inj_cap::Float64
+    charge_cap::Vector{Float64}
+    discharge_cap::Vector{Float64}
+    energy_cap::Vector{Float64}
+    inflow::Vector{Float64}
+    grid_withdrawl_cap::Vector{Float64}
+    grid_inj_cap::Vector{Float64}
     legacy::String
     charge_eff::Float64
     discharge_eff::Float64
@@ -75,12 +75,12 @@ struct Gen_Storage <: Storage
         timesteps = 8760,
         region_name = "init_name",
         type = "init_type",
-        charge_cap = 0.0,
-        discharge_cap = 0.0,
-        energy_cap = 0.0,
-        inflow = 0.0,
-        grid_withdrawl_cap = 0.0,
-        grid_inj_cap = 0.0,
+        charge_cap = zeros(Float64, timesteps),
+        discharge_cap = zeros(Float64, timesteps),
+        energy_cap = zeros(Float64, timesteps),
+        inflow = zeros(Float64, timesteps),
+        grid_withdrawl_cap = zeros(Float64, timesteps),
+        grid_inj_cap = zeros(Float64, timesteps),
         legacy = "New",
         charge_eff = 1.0,
         discharge_eff = 1.0,
@@ -88,27 +88,27 @@ struct Gen_Storage <: Storage
         FOR = 0.0,
         MTTR = 24,
     )
-        charge_cap >= 0.0 || error(
+        all(charge_cap .>= 0.0) || error(
             "Charge capacity passed is not allowed (should be >= 0.0) : $(name) - $(charge_cap) MW",
         )
 
-        discharge_cap >= 0.0 || error(
+        all(discharge_cap .>= 0.0) || error(
             "Discharge capacity passed is not allowed (should be >= 0.0) : $(name) - $(discharge_cap) MW",
         )
 
-        energy_cap >= 0.0 || error(
+        all(energy_cap .>= 0.0) || error(
             "Energy capacity passed is not allowed (should be >= 0.0) : $(name) - $(energy_cap) MWh",
         )
 
-        inflow >= 0.0 || error(
+        all(inflow .>= 0.0) || error(
             "Inflow passed is not allowed (should be >= 0.0) : $(name) - $(inflow) MW",
         )
 
-        grid_withdrawl_cap >= 0.0 || error(
+        all(grid_withdrawl_cap .>= 0.0) || error(
             "Grid withdrawl capacity passed is not allowed (should be >= 0.0) : $(name) - $(grid_withdrawl_cap) MW",
         )
 
-        grid_inj_cap >= 0.0 || error(
+        all(grid_inj_cap .>= 0.0) || error(
             "Grid injection capacity passed is not allowed (should be >= 0.0) : $(name) - $(grid_inj_cap) MW",
         )
 
@@ -145,19 +145,15 @@ end
 
 # Getter Functions
 
-get_charge_capacity(stor::Gen_Storage) =
-    fill(round(Int, stor.charge_cap), 1, stor.timesteps)
+get_charge_capacity(stor::Gen_Storage) = permutedims(round.(Int, stor.charge_cap))
 
-get_discharge_capacity(stor::Gen_Storage) =
-    fill(round(Int, stor.discharge_cap), 1, stor.timesteps)
+get_discharge_capacity(stor::Gen_Storage) = permutedims(round.(Int, stor.discharge_cap))
 
-get_energy_capacity(stor::Gen_Storage) =
-    fill(round(Int, stor.energy_cap), 1, stor.timesteps)
+get_energy_capacity(stor::Gen_Storage) = permutedims(round.(Int, stor.energy_cap))
 
-get_inflow(stor::Gen_Storage) = fill(round(Int, stor.inflow), 1, stor.timesteps)
+get_inflow(stor::Gen_Storage) = permutedims(round.(Int, stor.inflow))
 
 get_grid_withdrawl_capacity(stor::Gen_Storage) =
-    fill(round(Int, stor.grid_withdrawl_cap), 1, stor.timesteps)
+    permutedims(round.(Int, stor.grid_withdrawl_cap))
 
-get_grid_injection_capacity(stor::Gen_Storage) =
-    fill(round(Int, stor.grid_inj_cap), 1, stor.timesteps)
+get_grid_injection_capacity(stor::Gen_Storage) = permutedims(round.(Int, stor.grid_inj_cap))

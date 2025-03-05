@@ -65,11 +65,13 @@ NREL/TP-6A20-64297. https://www.nrel.gov/docs/fy15osti/64297.pdf
 
 import pandas as pd
 import os
+import sys
 import argparse
-from forecast import forecast
-# Time the operation of this script
-from ticker import toc, makelog
 import datetime
+from forecast import forecast
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+# Time the operation of this script
 tic = datetime.datetime.now()
 
 #%% Parse arguments
@@ -96,18 +98,21 @@ decimals = 5
 slicetree = {'h17': 'h3'}
 
 #%% Set up logger
-log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+log = reeds.log.makelog(
+    scriptname=__file__,
+    logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+)
 print('Starting climateprep.py')
 
 #%% Inputs from switches
-sw = pd.read_csv(
-    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+sw = reeds.io.get_switches(inputs_case)
 climatescen = sw.climatescen
 climateloc = sw.climateloc
 GSw_ClimateWater = int(sw.GSw_ClimateWater)
 GSw_ClimateHydro = int(sw.GSw_ClimateHydro)
 GSw_ClimateDemand = int(sw.GSw_ClimateDemand)
 GSw_EFS1_AllYearLoad = sw.GSw_EFS1_AllYearLoad
+startyear = int(sw.startyear)
 endyear = int(sw.endyear)
 GSw_ClimateStartYear = int(sw.GSw_ClimateStartYear)
 
@@ -125,7 +130,7 @@ climatedir = os.path.join(climateloc, climatescen)
 
 ### Get modeled years
 modelyears = pd.read_csv(os.path.join(inputs_case,'modeledyears.csv')).columns.astype(int).tolist()
-allyears = list(range(2010, endyear+1))
+allyears = list(range(startyear, endyear+1))
 ### Get reeds_data_year
 reeds_data_year = 2012
 
@@ -134,9 +139,8 @@ val_r_all = pd.read_csv(
     os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
 
 ### Get some other fixed inputs
-distloss = pd.read_csv(
-    os.path.join(inputs_case,'scalars.csv'),
-    header=None, usecols=[0,1], index_col=0).squeeze(1)['distloss']
+scalars = reeds.io.get_scalars(inputs_case)
+distloss = scalars.distloss
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
@@ -346,7 +350,6 @@ def write_load_files(
             clip_min=clip_min, clip_max=clip_max)
 
     #%% Get the hourly demand
-    from ldc_prep import read_file
     # Historic
     if GSw_EFS1_AllYearLoad == 'historic':
         load_hourly_base = pd.read_hdf(
@@ -354,9 +357,9 @@ def write_load_files(
         )[val_r_all]
     # EFS - only available for a single year, so concatenate it
     else:
-        load_hourly_base = read_file(
+        load_hourly_base = reeds.io.read_file(
             os.path.join(reeds_path,'inputs','load', f'{GSw_EFS1_AllYearLoad}_load_hourly.h5'),
-            index_columns=2)[val_r_all]
+        )[val_r_all]
     load_hourly_base.columns.name = 'r'
 
     #%% Get the climate-induced load delta
@@ -589,7 +592,7 @@ if GSw_ClimateDemand:
 if not any([GSw_ClimateWater,GSw_ClimateHydro,GSw_ClimateDemand]):
     print("All climate switches are off. We stopped climate change!")
 
-toc(tic=tic, year=0, process='input_processing/climateprep.py',
+reeds.log.toc(tic=tic, year=0, process='input_processing/climateprep.py',
     path=os.path.join(inputs_case,'..'))
 
 print('Finished climateprep.py')

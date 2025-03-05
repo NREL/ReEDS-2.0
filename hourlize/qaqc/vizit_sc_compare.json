@@ -1,0 +1,335 @@
+{
+  "fileNames": [
+    "supply_curve_comparison.csv"
+  ],
+  "dashboards": [
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "bar",
+              "agg": "sum",
+              "x": "name",
+              "name": "name",
+              "y": "capacity_ac_mw"
+            }
+          ],
+          "style": {
+            "Plot Title": "Capacity (MW)"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "grouped bar",
+              "agg": "sum",
+              "x": "state",
+              "name": "name",
+              "y": "capacity_ac_mw"
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "1200",
+            "Plot Title": "Capacity (MW) by state",
+            "X Tick Font Size (pt)": "10"
+          }
+        }
+      ],
+      "title": "Capacity (MW)",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "line",
+              "agg": "none",
+              "x": "cumulative_cap_mw",
+              "name": "name",
+              "y": "lcoe_all_in_usd_per_mwh"
+            }
+          ],
+          "style": {
+            "Y Min": "0",
+            "Y Max": "100"
+          }
+        }
+      ],
+      "title": "LCOE ($/MWh) vs. cumulative capacity (MW)",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "lat/lon/size dot map (continuous color) (mapbox)",
+              "agg": "none",
+              "explode": "name",
+              "marker_color": "capacity_ac_mw_diff",
+              "text": "capacity_ac_mw_diff",
+              "lat": "latitude",
+              "lon": "longitude",
+              "filter": {
+                "name": {
+                  "filter_type": "exclude",
+                  "filter_val": [
+                    "base"
+                  ]
+                }
+              }
+            }
+          ],
+          "style": {
+            "Plot Title": "Capacity diff (MW)",
+            "Marker Size (px)": "3",
+            "Colorscale Min (marker)": "-300",
+            "Colorscale Max (marker)": "300",
+            "Colorscale (marker)": "RdBu",
+            "Reverse Colorscale (marker)": "true"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "histogram",
+              "agg": "none",
+              "explode": "name",
+              "x": "capacity_ac_mw_diff",
+              "filter": {
+                "name": {
+                  "filter_type": "exclude",
+                  "filter_val": [
+                    "base"
+                  ]
+                }
+              }
+            }
+          ],
+          "style": {
+            "Plot Title": "Capacity diff (MW)",
+            "Histogram size of each bin": "5",
+            "X Min": "-300",
+            "X Max": "300"
+          }
+        }
+      ],
+      "title": "Capacity diff (MW) by site",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "lat/lon/size dot map (continuous color) (mapbox)",
+              "agg": "none",
+              "explode": "name",
+              "marker_color": "capacity_factor_ac_diff",
+              "lat": "latitude",
+              "lon": "longitude",
+              "text": "capacity_factor_ac_diff",
+              "filter": {
+                "name": {
+                  "filter_type": "exclude",
+                  "filter_val": [
+                    "base"
+                  ]
+                },
+                "both_exist": {
+                  "filter_type": "equals",
+                  "filter_val": "1"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Plot Title": "Capacity factor diff",
+            "Marker Size (px)": "3",
+            "Colorscale Min (marker)": "-0.2",
+            "Colorscale Max (marker)": "0.2",
+            "Colorscale (marker)": "RdBu",
+            "Reverse Colorscale (marker)": "true"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "histogram",
+              "agg": "none",
+              "explode": "name",
+              "x": "capacity_factor_ac_diff",
+              "filter": {
+                "name": {
+                  "filter_type": "exclude",
+                  "filter_val": [
+                    "base"
+                  ]
+                },
+                "both_exist": {
+                  "filter_type": "equals",
+                  "filter_val": "1"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Plot Title": "Capacity factor diff",
+            "Histogram size of each bin": ".02",
+            "X Min": "-0.2",
+            "X Max": "0.2"
+          }
+        }
+      ],
+      "title": "Capacity factor diff by site",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "lat/lon/size dot map (continuous color) (mapbox)",
+              "explode": "name",
+              "agg": "none",
+              "marker_color": "lcoe_all_in_usd_per_mwh_diff",
+              "text": "lcoe_all_in_usd_per_mwh_diff",
+              "lat": "latitude",
+              "lon": "longitude",
+              "filter": {
+                "name": {
+                  "filter_type": "exclude",
+                  "filter_val": [
+                    "base"
+                  ]
+                },
+                "both_exist": {
+                  "filter_type": "equals",
+                  "filter_val": "1"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Colorscale Min (marker)": "-20",
+            "Colorscale Max (marker)": "20",
+            "Colorscale (marker)": "RdBu",
+            "Reverse Colorscale (marker)": "true",
+            "Marker Size (px)": "3",
+            "Plot Title": "Total LCOE diff ($/MWh)"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "histogram",
+              "agg": "none",
+              "x": "lcoe_all_in_usd_per_mwh_diff",
+              "explode": "name",
+              "filter": {
+                "name": {
+                  "filter_type": "exclude",
+                  "filter_val": [
+                    "base"
+                  ]
+                },
+                "both_exist": {
+                  "filter_type": "equals",
+                  "filter_val": "1"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Plot Title": "Total LCOE diff ($/MWh)",
+            "Histogram size of each bin": "1",
+            "X Min": "-20",
+            "X Max": "20"
+          }
+        }
+      ],
+      "title": "Total LCOE diff ($/MWh) by site",
+      "description": ""
+    },
+    {
+      "charts": [
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "lat/lon/size dot map (continuous color) (mapbox)",
+              "explode": "name",
+              "agg": "none",
+              "marker_color": "supply_curve_cost_per_mw_diff",
+              "text": "supply_curve_cost_per_mw_diff",
+              "lat": "latitude",
+              "lon": "longitude",
+              "filter": {
+                "name": {
+                  "filter_type": "exclude",
+                  "filter_val": [
+                    "base"
+                  ]
+                },
+                "both_exist": {
+                  "filter_type": "equals",
+                  "filter_val": "1"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Colorscale Min (marker)": "-200000",
+            "Colorscale Max (marker)": "200000",
+            "Colorscale (marker)": "RdBu",
+            "Reverse Colorscale (marker)": "true",
+            "Marker Size (px)": "3",
+            "Plot Title": "Total supply curve cost diff ($/MW)"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "supply_curve_comparison.csv",
+              "type": "histogram",
+              "agg": "none",
+              "x": "supply_curve_cost_per_mw_diff",
+              "explode": "name",
+              "filter": {
+                "name": {
+                  "filter_type": "exclude",
+                  "filter_val": [
+                    "base"
+                  ]
+                },
+                "both_exist": {
+                  "filter_type": "equals",
+                  "filter_val": "1"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Plot Title": "Total supply curve cost diff ($/MW)",
+            "Histogram size of each bin": "10000",
+            "X Min": "-200000",
+            "X Max": "200000"
+          }
+        }
+      ],
+      "title": "Total supply curve cost diff ($/MW) by site",
+      "description": ""
+    }
+  ]
+}

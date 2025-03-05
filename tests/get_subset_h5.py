@@ -7,18 +7,19 @@
 #     'numpy',
 # ]
 # ///
-import h5py
-import numpy as np
 import os
+import sys
 import pandas as pd
-import pathlib
 import site
+
+#Switches
+techs_to_update = ['upv','wind-ons','wind-ofs','csp'] #downselect if updating only certain techs
 
 # load h5
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
 reeds_path = os.path.realpath(os.path.join(this_dir_path,'..'))
 site.addsitedir(reeds_path)
-from input_processing.ldc_prep import read_file, write_h5_file
+import reeds
 
 # counties in p6
 counties = [
@@ -31,18 +32,22 @@ counties = [
 ]
 
 # series of paths to updated county h5 files
-rev_paths_ref = pd.Series(['/scratch/bsergi/ReEDS-2.0-2/hourlize/out/upv_reference_county/results',
-                           '/scratch/bsergi/ReEDS-2.0-2/hourlize/out/wind-ons_reference_county/results',
-                           '/scratch/bsergi/ReEDS-2.0-2/hourlize/out/wind-ofs_reference_county/results',
-                           '/kfs2/shared-projects/reeds/Supply_Curve_Data/CSP/2019_Existing/csp_none_county/results'],
-                           index=['upv','wind-ons','wind-ofs','csp']
-                        )
+hpc = True if ('NREL_CLUSTER' in os.environ) else False
+if hpc:
+    remotepath = '/kfs2/shared-projects/reeds' #kestrel
+else:
+    remotepath = f"{('/Volumes' if sys.platform == 'darwin' else '//nrelnas01')}/ReEDS"
+df_rev_paths = pd.read_csv(f'{reeds_path}/inputs/supply_curve/rev_paths.csv', usecols=['tech','access_case','sc_path'])
+df_rev_paths = df_rev_paths[df_rev_paths['tech'].isin(techs_to_update)]
+df_rev_paths = df_rev_paths[df_rev_paths['access_case'].isin(['reference','none'])]
+df_rev_paths['county_h5_path'] =  remotepath + '/Supply_Curve_Data/' + df_rev_paths['sc_path'] + '/' + df_rev_paths['tech'] + '_' + df_rev_paths['access_case'] + '_county/results'
+rev_paths_ref = df_rev_paths.set_index('tech')['county_h5_path']
 
 # iterate over tech/path
 for idx, h5path in rev_paths_ref.items():
     fname_in = os.path.join(h5path, idx + '.h5')
     print(f'Reading {fname_in}')
-    f = read_file(fname_in)
+    f = reeds.io.read_file(fname_in)
     # get region from column names (assumes 'class|region' format)
     columns = [str(x).split('|')[1].strip('"') for x in f.columns.tolist()]
 
@@ -53,6 +58,6 @@ for idx, h5path in rev_paths_ref.items():
     # write file back out
     dir_out = os.path.join(this_dir_path, 'data', 'county')
     print(f'Saving subset to {os.path.join(dir_out, idx + ".h5")}')
-    write_h5_file(subset_f, idx + '.h5', dir_out)
+    reeds.io.write_profile_to_h5(subset_f, idx + '.h5', dir_out)
 
 print("Finished updated county test profiles.")

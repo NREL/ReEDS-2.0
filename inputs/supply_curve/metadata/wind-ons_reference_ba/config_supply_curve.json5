@@ -3,7 +3,6 @@
         "allocation": "wetosa",
         "feature": "-p debug",
         "option": "kestrel",
-        "nodes": 1,
         "walltime": 1
     },
     "log_directory": "./logs",
@@ -15,5 +14,5 @@
     "sc_capacity_col": "capacity_ac_mw",
     "simple": true,
     "sort_on": "lcoe_all_in_usd_per_mwh",
-    "fixed_charge_rate": 0.07073
+    "fixed_charge_rate": 0.07140832
 }

@@ -22,6 +22,9 @@ inout/gdxfiles/*.gdx
 # jupyter notebook checkpoints
 *.ipynb_checkpoints*/
 
+# files in bokehpivot output folder
+bokehpivot/out/*
+
 # lst and g00 files
 *.lst
 *.g00
@@ -44,6 +47,10 @@ Manifest.toml
 retail_rate_module/inputs/EIA861/*
 postprocessing/retail_rate_module/inputs/EIA861/*
 
+# County-level hourly RE profiles (due to very large file size)
+inputs/variability/multi_year/*county*.h5
+inputs/variability/multi_year/file_version.csv
+
 # IDE stuff
 *.vscode
 
@@ -55,3 +62,6 @@ postprocessing/retail_rate_module/inputs/EIA861/*
 
 # NREL HPC files
 slurm*.out
+
+# documentation files 
+docs/build/*

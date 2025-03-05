@@ -20,8 +20,8 @@ import logging
 from defaults import (DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE, DEFAULT_END_YEAR)
 
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.abspath(os.path.join(this_dir_path,'..')))
-import reedsplots
+sys.path.append(os.path.abspath(os.path.join(this_dir_path,'..','..')))
+from reeds.io import read_output
 
 logger = logging.getLogger('')
 #ReEDS globals
@@ -350,7 +350,7 @@ def get_src(scen, src):
         else:
             df_src = pd.read_csv(filepath, low_memory=False)
     else:
-        df_src = reedsplots.read_output(scen['path'], filepath)
+        df_src = read_output(scen['path'], filepath)
     if 'transpose' in src and src['transpose'] is True:
         df_src = df_src.T
     if 'columns' in src:

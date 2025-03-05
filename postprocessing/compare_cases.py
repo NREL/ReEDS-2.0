@@ -17,10 +17,10 @@ import traceback
 import cmocean
 import pptx
 from pptx.util import Inches, Pt
-
-import plots
-import reedsplots
-from reedsplots import read_output, read_report
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+from reeds import plots
+from reeds import reedsplots
 from bokehpivot.defaults import DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -121,6 +121,8 @@ central_health = {'cr':'ACS', 'model':'EASIUR'}
 reeds_dollaryear = 2004
 output_dollaryear = DEFAULT_DOLLAR_YEAR
 startyear_notes = DEFAULT_PV_YEAR
+SLIDE_HEIGHT = 6.88
+SLIDE_WIDTH = 13.33
 
 colors_social = {
     'CO2': plt.cm.tab20b(4),
@@ -188,7 +190,7 @@ mapdiff = 'cap'
 
 #%%### Functions
 def add_to_pptx(
-        title=None, file=None, left=0, top=0.62, width=13.33, height=None,
+        title=None, file=None, left=0, top=0.62, width=SLIDE_WIDTH, height=None,
         verbose=1, slide=None,
     ):
     """Add current matplotlib figure (or file if specified) to new powerpoint slide"""
@@ -217,7 +219,7 @@ def add_to_pptx(
 
 def add_textbox(
         text, slide,
-        left=0, top=7.2, width=13.33, height=0.3,
+        left=0, top=7.2, width=SLIDE_WIDTH, height=0.3,
         fontsize=14,
     ):
     """Add a textbox to the specified slide"""
@@ -429,7 +431,7 @@ if not skipbp:
     bp_outpath = f'{outpath}/{bpreport}-diff-multicase'
     add_diff = 'Yes'
     auto_open = 'Yes'
-    bp_colors = pd.read_csv(f'{bp_path}/in/example_reeds_scenarios.csv')['color'].tolist()
+    bp_colors = pd.read_csv(f'{bp_path}/reeds_scenarios.csv')['color'].tolist()
     bp_colors = bp_colors*10 #Up to 200 scenarios
     bp_colors = bp_colors[:len(casenames)]
     df_scenarios = pd.DataFrame({'name':casenames, 'color':bp_colors, 'path':caselist})
@@ -443,16 +445,11 @@ if not skipbp:
 
 #%%### Load data
 #%% Shared
-sw = pd.read_csv(
-    os.path.join(cases[case],'inputs_case','switches.csv'),
-    header=None, index_col=0).squeeze(1)
-
-scalars = pd.read_csv(
-    os.path.join(cases[case], 'inputs_case', 'scalars.csv'),
-    header=None, usecols=[0,1], index_col=0).squeeze(1)
+sw = reeds.io.get_switches(cases[case])
+scalars = reeds.io.get_scalars(cases[case])
 phaseout_trigger = float(scalars.co2_emissions_2022) * float(sw.GSw_TCPhaseout_trigger_f)
 
-inflatable = reedsplots.get_inflatable(os.path.join(
+inflatable = reeds.io.get_inflatable(os.path.join(
     reeds_path,'inputs','financials','inflation_default.csv'))
 inflator = inflatable[reeds_dollaryear, output_dollaryear]
 
@@ -524,7 +521,7 @@ colors_trans = pd.read_csv(
     index_col='order')['color']
 
 #%% Parse excel report sheet names
-val2sheet = reedsplots.get_report_sheetmap(cases[basecase])
+val2sheet = reeds.io.get_report_sheetmap(cases[basecase])
 
 #%% Read input files
 renametechs = {
@@ -533,22 +530,17 @@ renametechs = {
     'gas-cc-ccs_mod_upgrade':'gas-cc-ccs_mod',
     'coal-ccs_mod_upgrade':'coal-ccs_mod',
 }
-dictin_sw = {
-    case: pd.read_csv(
-        os.path.join(cases[case],'inputs_case','switches.csv'),
-        header=None, index_col=0).squeeze(1)
-    for case in cases
-}
+dictin_sw = {case: reeds.io.get_switches(cases[case]) for case in cases}
 
-hierarchy = {case: reedsplots.get_hierarchy(cases[case]) for case in cases}
+hierarchy = {case: reeds.io.get_hierarchy(cases[case]) for case in cases}
 
 dictin_error = {}
 for case in tqdm(cases, desc='system cost error'):
-    dictin_error[case] = read_output(cases[case], 'error_check').set_index('*').squeeze(1)
+    dictin_error[case] = reeds.io.read_output(cases[case], 'error_check').set_index('*').squeeze(1)
 
 dictin_cap = {}
 for case in tqdm(cases, desc='national capacity'):
-    dictin_cap[case] = read_report(cases[case], 'Capacity (GW)', val2sheet)
+    dictin_cap[case] = reeds.io.read_report(cases[case], 'Capacity (GW)', val2sheet)
     ### Simplify techs
     dictin_cap[case].tech = dictin_cap[case].tech.map(lambda x: renametechs.get(x,x))
     dictin_cap[case] = (
@@ -559,7 +551,7 @@ for case in tqdm(cases, desc='national capacity'):
 
 dictin_gen = {}
 for case in tqdm(cases, desc='national generation'):
-    dictin_gen[case] = read_report(cases[case], 'Generation (TWh)', val2sheet)
+    dictin_gen[case] = reeds.io.read_report(cases[case], 'Generation (TWh)', val2sheet)
     ### Simplify techs
     dictin_gen[case].tech = dictin_gen[case].tech.map(lambda x: renametechs.get(x,x))
     dictin_gen[case] = (
@@ -585,7 +577,7 @@ costcat_rename = {
 dictin_npv = {}
 for case in tqdm(cases, desc='NPV of system cost'):
     dictin_npv[case] = (
-        read_report(cases[case], 'Present Value of System Cost', val2sheet)
+        reeds.io.read_report(cases[case], 'Present Value of System Cost', val2sheet)
         .set_index('cost_cat')['Discounted Cost (Bil $)']
     )
     dictin_npv[case].index = pd.Series(dictin_npv[case].index).replace(costcat_rename)
@@ -593,7 +585,7 @@ for case in tqdm(cases, desc='NPV of system cost'):
 
 dictin_scoe = {}
 for case in tqdm(cases, desc='SCOE'):
-    dictin_scoe[case] = read_report(cases[case], 'National Average Electricity', val2sheet)
+    dictin_scoe[case] = reeds.io.read_report(cases[case], 'National Average Electricity', val2sheet)
     dictin_scoe[case].cost_cat = dictin_scoe[case].cost_cat.replace(
         {**costcat_rename,**{'CO2 Incentives':'CCS Incentives'}})
     dictin_scoe[case] = (
@@ -602,7 +594,7 @@ for case in tqdm(cases, desc='SCOE'):
 
 dictin_syscost = {}
 for case in tqdm(cases, desc='annual system cost'):
-    dictin_syscost[case] = read_report(cases[case], 'Undiscounted Annualized Syst', val2sheet)
+    dictin_syscost[case] = reeds.io.read_report(cases[case], 'Undiscounted Annualized Syst', val2sheet)
     dictin_syscost[case].cost_cat = dictin_syscost[case].cost_cat.replace(
         {**costcat_rename,**{'CO2 Incentives':'CCS Incentives'}})
     dictin_syscost[case] = (
@@ -612,17 +604,17 @@ for case in tqdm(cases, desc='annual system cost'):
 dictin_emissions = {}
 for case in tqdm(cases, desc='national emissions'):
     dictin_emissions[case] = (
-        read_output(cases[case], 'emit_nat', valname='ton')
+        reeds.io.read_output(cases[case], 'emit_nat', valname='ton')
         .set_index(['e','t']).squeeze(1).unstack('e')
     )
 
 dictin_trans = {}
 for case in tqdm(cases, desc='national transmission'):
-    dictin_trans[case] = read_report(cases[case], 'Transmission (GW-mi)')
+    dictin_trans[case] = reeds.io.read_report(cases[case], 'Transmission (GW-mi)')
 
 dictin_trans_r = {}
 for case in tqdm(cases, desc='regional transmission'):
-    dictin_trans_r[case] = read_output(cases[case], 'tran_out', valname='MW')
+    dictin_trans_r[case] = reeds.io.read_output(cases[case], 'tran_out', valname='MW')
     for _level in ['interconnect','transreg','transgrp','st']:
         dictin_trans_r[case][f'inter_{_level}'] = (
             dictin_trans_r[case].r.map(hierarchy[case][_level])
@@ -631,7 +623,7 @@ for case in tqdm(cases, desc='regional transmission'):
 
 dictin_cap_r = {}
 for case in tqdm(cases, desc='regional capacity'):
-    dictin_cap_r[case] = read_output(cases[case], 'cap', valname='MW')
+    dictin_cap_r[case] = reeds.io.read_output(cases[case], 'cap', valname='MW')
     ### Simplify techs
     dictin_cap_r[case].i = dictin_cap_r[case].i.map(lambda x: renametechs.get(x,x))
     dictin_cap_r[case].i = dictin_cap_r[case].i.str.lower().map(lambda x: techmap.get(x,x))
@@ -639,7 +631,7 @@ for case in tqdm(cases, desc='regional capacity'):
 
 dictin_cap_firm = {}
 for case in tqdm(cases, desc='firm capacity'):
-    dictin_cap_firm[case] = read_output(cases[case], 'cap_firm', valname='MW')
+    dictin_cap_firm[case] = reeds.io.read_output(cases[case], 'cap_firm', valname='MW')
     ### Simplify techs
     dictin_cap_firm[case].i = reedsplots.simplify_techs(dictin_cap_firm[case].i)
     dictin_cap_firm[case] = dictin_cap_firm[case].groupby(['i','r','ccseason','t'], as_index=False).MW.sum()
@@ -647,7 +639,7 @@ for case in tqdm(cases, desc='firm capacity'):
 dictin_runtime = {}
 for case in tqdm(cases, desc='runtime'):
     dictin_runtime[case] = (
-        read_report(cases[case], 'Runtime by year (hours)', val2sheet)
+        reeds.io.read_report(cases[case], 'Runtime by year (hours)', val2sheet)
         .drop(columns='Net Level processtime')
     )
 
@@ -701,7 +693,7 @@ dictin_health_central_mort = {}
 for case in tqdm(cases, desc='health'):
     try:
         dictin_health[case] = (
-            read_output(cases[case], 'health_damages_caused_r.csv')
+            reeds.io.read_output(cases[case], 'health_damages_caused_r.csv')
             .groupby(['year','pollutant','model','cr']).sum()
         )
         dictin_health_central[case] = (
@@ -739,7 +731,7 @@ if detailed:
     ### Timeslice generation by region
     dictin_gen_h = {}
     for case in tqdm(cases, desc='gen_h'):
-        dictin_gen_h[case] = read_output(cases[case], 'gen_h', valname='GW')
+        dictin_gen_h[case] = reeds.io.read_output(cases[case], 'gen_h', valname='GW')
         dictin_gen_h[case].GW /= 1e3
         dictin_gen_h[case].i = reedsplots.simplify_techs(dictin_gen_h[case].i)
         dictin_gen_h[case] = dictin_gen_h[case].groupby(['i','r','h','t'], as_index=False).GW.sum()
@@ -775,7 +767,7 @@ if detailed:
     ### Stress period dispatch
     dictin_gen_h_stress = {}
     for case in tqdm(cases, desc='gen_h_stress'):
-        dictin_gen_h_stress[case] = read_output(cases[case], 'gen_h_stress', valname='GW')
+        dictin_gen_h_stress[case] = reeds.io.read_output(cases[case], 'gen_h_stress', valname='GW')
         dictin_gen_h_stress[case].GW /= 1e3
         dictin_gen_h_stress[case].i = reedsplots.simplify_techs(dictin_gen_h_stress[case].i)
         ## Separate charge and discharge
@@ -786,14 +778,14 @@ if detailed:
     ### Stress period flows
     dictin_tran_flow_stress = {}
     for case in tqdm(cases, desc='tran_flow_stress'):
-        dictin_tran_flow_stress[case] = read_output(
+        dictin_tran_flow_stress[case] = reeds.io.read_output(
             cases[case], 'tran_flow_stress', valname='GW')
         dictin_tran_flow_stress[case].GW /= 1e3
 
     ### Stress period load
     dictin_load_stress = {}
     for case in tqdm(cases, desc='load_stress'):
-        dictin_load_stress[case] = read_output(cases[case], 'load_stress', valname='GW')
+        dictin_load_stress[case] = reeds.io.read_output(cases[case], 'load_stress', valname='GW')
         dictin_load_stress[case].GW /= 1e3
 
     ### Peak load (for capacity credit)
@@ -808,7 +800,7 @@ if detailed:
     ### Capacity credit PRMTRADE
     dictin_prmtrade = {}
     for case in tqdm(cases, desc='prmtrade'):
-        dictin_prmtrade[case] = read_output(cases[case], 'captrade', valname='GW')
+        dictin_prmtrade[case] = reeds.io.read_output(cases[case], 'captrade', valname='GW')
         dictin_prmtrade[case].GW /= 1e3
 
 
@@ -836,7 +828,7 @@ data = {k:v for k,v in data.items() if k in dfplot.index}
 plt.close()
 f,ax = plt.subplots(
     1, ncols_err,
-    figsize=(min(ncols_err*3.5, 13.33), max(3.75, 0.25*len(cases))),
+    figsize=(min(ncols_err*3.5, SLIDE_WIDTH), max(3.75, 0.25*len(cases))),
 )
 for col, (datum, settings) in enumerate(data.items()):
     if datum not in dfplot.index:
@@ -863,7 +855,7 @@ plots.despine(ax)
 
 ### Save it
 title = 'Error check'
-slide = add_to_pptx(title, width=None, height=6.88)
+slide = add_to_pptx(title, width=None, height=SLIDE_HEIGHT)
 if interactive:
     plt.show()
 
@@ -916,7 +908,7 @@ offset = dict()
 plt.close()
 f,ax = plt.subplots(
     techrows, techcols, sharex=True, sharey=True,
-    figsize=(13.33, 6.88),
+    figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
     gridspec_kw={'wspace':0.3, 'hspace':0.15},
 )
 df = {}
@@ -1015,7 +1007,7 @@ if (len(cases) == 2) and (not forcemulti):
             slide = add_to_pptx(val, verbose=0)
             textbox = slide.shapes.add_textbox(
                 left=Inches(0), top=Inches(7),
-                width=Inches(13.33), height=Inches(0.5))
+                width=Inches(SLIDE_WIDTH), height=Inches(0.5))
             textbox.text_frame.text = printstring
             if interactive:
                 plt.show()
@@ -1023,9 +1015,27 @@ if (len(cases) == 2) and (not forcemulti):
             print(err)
 else:
     toplot = {
-        'Capacity': {'data': dictin_cap, 'colors':techcolors, 'columns':'tech', 'values':'Capacity (GW)', 'label':'Capacity [GW]'},
-        'Generation': {'data': dictin_gen, 'colors':techcolors, 'columns':'tech', 'values':'Generation (TWh)', 'label':'Generation [TWh]'},
-        'Runtime': {'data': dictin_runtime, 'colors':colors_time.to_dict(), 'columns':'process', 'values':'processtime', 'label':'Runtime [hours]'},
+        'Capacity': {
+            'data': dictin_cap,
+            'colors':techcolors,
+            'columns':'tech',
+            'values':'Capacity (GW)',
+            'label':'Capacity [GW]'
+        },
+        'Generation': {
+            'data': dictin_gen,
+            'colors':techcolors,
+            'columns':'tech',
+            'values':'Generation (TWh)',
+            'label':'Generation [TWh]'
+        },
+        'Runtime': {
+            'data': dictin_runtime,
+            'colors':colors_time.to_dict(),
+            'columns':'process',
+            'values':'processtime',
+            'label':'Runtime [hours]'
+        },
     }
     plotwidth = 2.0
     figwidth = plotwidth * len(cases)
@@ -1100,7 +1110,7 @@ else:
         plt.draw()
         plots.shorten_years(ax[1,0])
         ### Save it
-        slide = add_to_pptx(slidetitle+' stack', width=min(figwidth, 13.33))
+        slide = add_to_pptx(slidetitle+' stack', width=min(figwidth, SLIDE_WIDTH))
         if interactive:
             plt.show()
 
@@ -1267,7 +1277,7 @@ if len(cases) <= 4:
 width = max(11, len(cases)*1.3)
 plt.close()
 f,ax = plt.subplots(
-    2, 4, figsize=(width, 6.88), sharex=True,
+    2, 4, figsize=(width, SLIDE_HEIGHT), sharex=True,
     sharey=('col' if (sharey is True) else False),
 )
 handles = {}
@@ -1540,7 +1550,7 @@ plt.tight_layout()
 plots.despine(ax)
 
 ### Save it
-slide = add_to_pptx('NPV of system, climate, health costs', width=min(width, 13.33))
+slide = add_to_pptx('NPV of system, climate, health costs', width=min(width, SLIDE_WIDTH))
 if interactive:
     plt.show()
 
@@ -1788,7 +1798,7 @@ dfplot = {
 
 ### Plot them
 plt.close()
-f,ax = plt.subplots(1, 5, figsize=(13.33, 4.5), gridspec_kw={'wspace':0.7})
+f,ax = plt.subplots(1, 5, figsize=(SLIDE_WIDTH, 4.5), gridspec_kw={'wspace':0.7})
 for col, (ylabel, df) in enumerate(dfplot.items()):
     ax[col].set_ylabel(ylabel, labelpad=-4)
     ax[col].set_ylim(0,100)
@@ -1830,7 +1840,7 @@ if len(capcreditcases):
 
     plt.close()
     f,ax = plt.subplots(
-        2, cccols, figsize=(11, 6.88), sharex='col',
+        2, cccols, figsize=(11, SLIDE_HEIGHT), sharex='col',
         sharey=('col' if (sharey is True) else False),
     )
     ### Firm capacity stack
@@ -1948,7 +1958,7 @@ for interzonal_only in [False, True]:
         val = np.around(df.loc[max(years[case])], 0) + 0
         ax[0].annotate(
             f' {val:.0f}',
-            (max(years[case]), val), ha='left', va='center',
+            (max(years[case]), df.loc[max(years[case])]), ha='left', va='center',
             color=colors[case], fontsize='medium',
         )
     ax[0].set_ylim(0)
@@ -2160,8 +2170,8 @@ try:
     ### Save it
     slide = add_to_pptx(
         'Interregional transmission / peak demand',
-        height=(6.88 if ax.shape[1] <= 8 else None),
-        width=(13.33 if ax.shape[1] > 8 else None),
+        height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
+        width=(SLIDE_WIDTH if ax.shape[1] > 8 else None),
     )
     if interactive:
         plt.show()
@@ -2181,8 +2191,8 @@ try:
     ### Save it
     slide = add_to_pptx(
         'Max net stress imports / peak demand',
-        height=(6.88 if ax.shape[1] <= 8 else None),
-        width=(13.33 if ax.shape[1] > 8 else None),
+        height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
+        width=(SLIDE_WIDTH if ax.shape[1] > 8 else None),
     )
     if interactive:
         plt.show()
@@ -2215,7 +2225,7 @@ else:
     for subtract_baseyear in [None, 2020]:
         plt.close()
         f,ax = plt.subplots(
-            nrows, ncols, figsize=(13.33, 6.88),
+            nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
             gridspec_kw={'wspace':0.0,'hspace':-0.1},
         )
         for case in cases:
@@ -2252,7 +2262,7 @@ else:
     ### Difference
     plt.close()
     f,ax = plt.subplots(
-        nrows, ncols, figsize=(13.33, 6.88),
+        nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
         gridspec_kw={'wspace':0.0,'hspace':-0.1},
     )
     for case in cases:
@@ -2303,7 +2313,7 @@ if detailed:
     ralevel = 'transreg'
     scale = 10
     wscale = 7e3
-    dfmap = reedsplots.get_dfmap(cases[basecase])
+    dfmap = reeds.io.get_dfmap(cases[basecase])
     regions = dfmap[ralevel].bounds.minx.sort_values().index
 
     ### Calculate aggregated load
@@ -2386,7 +2396,7 @@ if detailed:
     for label in ['max','average']:
         plt.close()
         f,ax = plt.subplots(
-            nrows, ncols, figsize=(13.33, 6.88),
+            nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
             gridspec_kw={'wspace':0.0,'hspace':-0.1},
         )
 
@@ -2476,25 +2486,40 @@ if detailed:
             plt.show()
 
 
-#%%### All-in-one maps
-for case in cases:
-    try:
-        slide = add_to_pptx(
-            case,
-            file=os.path.join(
-                cases[case],'outputs','maps',
-                f'map_gencap_transcap-{lastyear}.png'),
-            width=None, height=6.88,
-        )
-    except FileNotFoundError:
-        print(f'No all-in-one map for {os.path.basename(cases[case])}')
+#%%### Copy some premade single-case plots
+level = dictin_sw[basecase]['GSw_PRM_StressThreshold'].split('_')[0]
+wide = 1 if len(hierarchy[basecase]['transreg'].unique()) > 6 else 0
+for figname, width, height in [
+    (f'map_gencap_transcap-{lastyear}', None, SLIDE_HEIGHT),
+    (f'plot_stressperiod_evolution-sum-{level}', SLIDE_WIDTH, None),
+    (f'plot_dispatch-yearbymonth-1-{lastyear}', SLIDE_WIDTH, None),
+    (
+        f'plot_cap_rep_stress_mix-GW-transreg-{lastyear}',
+        (SLIDE_WIDTH if wide else None),
+        (None if wide else SLIDE_HEIGHT)
+    ),
+    (
+        f'plot_cap_rep_stress_mix-percent-transreg-{lastyear}',
+        (SLIDE_WIDTH if wide else None),
+        (None if wide else SLIDE_HEIGHT)
+    ),
+]:
+    for case in cases:
+        try:
+            slide = add_to_pptx(
+                case,
+                file=os.path.join(cases[case], 'outputs', 'maps', f'{figname}.png'),
+                width=width, height=height,
+            )
+        except FileNotFoundError:
+            print(f'No outputs/maps/{figname}.png for {os.path.basename(cases[case])}')
 
 
 #%%### Generation capacity maps
 ### Shared data
 base = cases[list(cases.keys())[0]]
 val_r = dictin_cap_r[basecase].r.unique()
-dfmap = reedsplots.get_dfmap(base)
+dfmap = reeds.io.get_dfmap(base)
 dfba = dfmap['r']
 dfstates = dfmap['st']
 if (len(cases) == 2) and (not forcemulti):
@@ -2540,7 +2565,7 @@ if (len(cases) == 2) and (not forcemulti):
         if interactive:
             plt.show()
 else:
-    figwidth = 13.33
+    figwidth = SLIDE_WIDTH
     #### Absolute maps
     if (nrows == 1) or (ncols == 1):
         legendcoords = max(nrows, ncols) - 1
@@ -2568,7 +2593,7 @@ else:
         ### Set up plot
         plt.close()
         f,ax = plt.subplots(
-            nrows, ncols, figsize=(figwidth, 6.88),
+            nrows, ncols, figsize=(figwidth, SLIDE_HEIGHT),
             gridspec_kw={'wspace':0.0,'hspace':-0.1},
         )
         ### Plot it
@@ -2640,7 +2665,7 @@ else:
         ### Set up plot
         plt.close()
         f,ax = plt.subplots(
-            nrows, ncols, figsize=(figwidth, 6.88),
+            nrows, ncols, figsize=(figwidth, SLIDE_HEIGHT),
             gridspec_kw={'wspace':0.0,'hspace':-0.1},
         )
         ### Plot it

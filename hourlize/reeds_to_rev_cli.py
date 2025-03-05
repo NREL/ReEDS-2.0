@@ -20,7 +20,6 @@ REQUIRED_CONFIG_KEYS = {
     "tech_supply_curves": dict,
     "constrain_to_bins": bool,
     "priority": dict,
-    "new_incr_mw": dict,
 }
 
 
@@ -76,43 +75,6 @@ class ConfigError(Exception):
     Custom Exception. Intended to be used for summarizing errors encountered during
     validation of an input Configuration file.
     """
-
-
-def validate_new_incr_mw(new_incr_mw):
-    """
-    Validate an input "new_incr_mw" dictionary (e.g., from a configuration JSON).
-    Check that for each input key/value pair, the key (which will be interpreted as
-    a technology) is in the allowable set of valid technologies and that the value,
-    which (which will be interpreted as the increment size for new investments in that
-    tech) can be cast to a float.
-
-    Parameters
-    ----------
-    new_incr_mw : dict
-        Input new_incr_mw parameter.
-
-    Returns
-    -------
-    list
-        List of errors identified during validation. An empty list indicates no errors.
-    """
-
-    errs = []
-    if len(new_incr_mw) == 0:
-        errs.append("new_incr_mw is empty.")
-    for tech in new_incr_mw:
-        if tech not in reeds_to_rev.VALID_TECHS:
-            errs.append(
-                "Invalid tech specified in new_incr_mw. "
-                f"Keys must be one of {reeds_to_rev.VALID_TECHS}"
-            )
-        else:
-            try:
-                float(new_incr_mw[tech])
-            except ValueError:
-                errs.append("Invalid value for {tech}. Could not be cast to float")
-
-    return errs
 
 
 def validate_tech_supply_curves(tech_supply_curves):
@@ -229,7 +191,6 @@ def validate_config(config_data):
 
     errs += validate_tech_supply_curves(config_data["tech_supply_curves"])
     errs += validate_priority(config_data["priority"])
-    errs += validate_new_incr_mw(config_data["new_incr_mw"])
 
     if len(errs) > 0:
         err_message = "\n".join(errs)
@@ -358,12 +319,6 @@ def from_config(json_path, out_path):
             # used to prioritize supply curve project sites during disaggregation.
             "*cost_col*": "ascending"
             "total_lcoe": "ascending"
-        },
-        "new_incr_mw": {
-            "upv": 1e10,
-            "wind-ofs": 1e10,
-            "wind-ons": 1e10,
-            "dupv": 1e10
         }
     }``
     More information about "priority":
@@ -377,15 +332,6 @@ def from_config(json_path, out_path):
      - Columns do not need to be costs; any column can be used. For example, to use the
      sites with the most developable area first, one could specify ``priority`` as
      ``{"area_developable_sq_km": "descending"}``.
-    More information about "new_incr_mw":
-    - This parameter can be used to configure incremental investments of new capacity
-     in each technology. For example, settings `"wind-ons": 6,` would result in
-     new investments being made 6 MW at a time for each project site, following the
-     "priority" site order, until all new investments have been made. All else equal,
-     this has the  effect of spreading out new investments across a larger number of
-     sites within a given region, resource class, and (if enabled) cost bin.
-     - Setting this number to an arbitrarily high number (e.g., 1e10) effectively
-     disables incremental investments and reproduces legacy behavior of ReEDS to reV.
     """
 
     logger.info(f"Loading input configuration file {json_path}")
@@ -412,6 +358,13 @@ def from_config(json_path, out_path):
         shutil.copy(source_code_path, out_path)
 
     for tech, sc_file in config["tech_supply_curves"].items():
+        if not reeds_to_rev.check_tech(config["run_folder"], tech):
+            logger.warning(
+                f"Warning: Technology {tech} is not present in ReEDS outputs. "
+                "Skipping disaggregation."
+            )
+            continue
+
         logger.info(
             f"Preparing required data to disaggregate built capacity for {tech}."
         )
@@ -438,7 +391,7 @@ def from_config(json_path, out_path):
         disagg_df = reeds_to_rev.disaggregate_reeds_to_rev(
             priority=priority,
             constrain_to_bins=config["constrain_to_bins"],
-            new_incr_mw=config["new_incr_mw"][tech],
+            tech=tech,
             **reeds_to_rev_data,
         )
 

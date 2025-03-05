@@ -1,5 +1,6 @@
 #%%### Imports
 import os
+import sys
 import site
 import pandas as pd
 import numpy as np
@@ -13,11 +14,11 @@ import cmocean
 pd.options.display.max_rows = 20
 pd.options.display.max_columns = 200
 ### Local imports
-try:
-    import ReEDS_Augur.functions as functions
-except ModuleNotFoundError:
-    import functions
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+from reeds import plots
 
+plots.plotparams()
 
 
 #%%### Fixed inputs
@@ -27,6 +28,24 @@ savefig = True
 
 
 #%%### Functions
+def delete_temporary_files(sw):
+    """
+    Delete temporary csv, pkl, and h5 files
+    """
+    dropfiles = (
+        glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"*_{sw['t']}.pkl"))
+        + glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"*_{sw['t']}.h5"))
+        + glob(os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f"*_{sw['t']}.csv"))
+        + glob(os.path.join(sw['casedir'],'ReEDS_Augur','PRAS',f"PRAS_{sw['t']}*.pras"))
+    )
+
+    for keyword in sw['keepfiles']:
+        dropfiles = [f for f in dropfiles if not os.path.basename(f).startswith(keyword)]
+
+    for f in dropfiles:
+        os.remove(f)
+
+
 def group_techs(dfin, dfs, technamecol='i'):
     """
     Aggregate techs using bokehpivot tables
@@ -116,33 +135,16 @@ def get_pras_system(sw, verbose=0):
 #%% Input-loading function
 def get_inputs(sw):
     ### Make savepath
-    import plots
     sw['savepath'] = os.path.join(sw['casedir'], 'outputs', 'Augur_plots')
     os.makedirs(sw['savepath'], exist_ok=True)
 
     ##### Load shared parameters
-    fulltimeindex = functions.make_fulltimeindex()
-
-    if len(sw['resource_adequacy_years']) == 1:
-        timeindex = pd.date_range(
-            f"{sw['resource_adequacy_years'][0]}-01-01",
-            f"{sw['resource_adequacy_years'][0]+1}-01-01",
-            freq='H', inclusive='left', tz='EST',
-        )[:8760]
-    else:
-        timeindex = np.ravel([
-            pd.date_range(
-                '{}-01-01'.format(y),
-                '{}-01-01'.format(y+1),
-                freq='H', inclusive='left', tz='EST',
-            )[:8760]
-            for y in sw['resource_adequacy_years']
-        ])
+    fulltimeindex = reeds.timeseries.get_timeindex(sw.resource_adequacy_years)
 
     h_dt_szn = (
         pd.read_csv(os.path.join(sw['casedir'],'inputs_case','h_dt_szn.csv'))
         .assign(hr=(['hr{:>03}'.format(i+1) for i in range(sw['hoursperperiod'])]
-                    * sw['periodsperyear'] * 7))
+                    * sw['periodsperyear'] * len(sw.resource_adequacy_years_list)))
         .assign(datetime=fulltimeindex)
     )
     h_dt_szn['d'] = h_dt_szn.datetime.dt.strftime('sy%Yd%j')
@@ -185,7 +187,7 @@ def get_inputs(sw):
     # for i in [1,2,3]:
     #     tech_style[f'pvb{i}'] = tech_style['pvb']
 
-    hierarchy = functions.get_hierarchy(sw.casedir)
+    hierarchy = reeds.io.get_hierarchy(sw.casedir)
 
     resources = pd.read_csv(
         os.path.join(sw['casedir'],'inputs_case','resources.csv')
@@ -212,8 +214,8 @@ def get_inputs(sw):
         .groupby(axis=1, level=0).sum()
         .set_index(fulltimeindex)
     )
-    if len(sw['resource_adequacy_years']) == 1:
-        vre_gen_usa = vre_gen_usa.xs(int(sw['resource_adequacy_years'][0]), level='year', axis=0)
+    if len(sw['resource_adequacy_years_list']) == 1:
+        vre_gen_usa = vre_gen_usa.xs(int(sw['resource_adequacy_years_list'][0]), level='year', axis=0)
 
     ### Get vre_gen summed over tech by BA (full 7 years)
     vre_gen_r = (
@@ -259,7 +261,7 @@ def get_inputs(sw):
 
     ### Load LOLE/EUE/NEUE from PRAS
     try:
-        pras = functions.read_pras_results(
+        pras = reeds.io.read_pras_results(
             os.path.join(sw['casedir'], 'ReEDS_Augur', 'PRAS',
                          f"PRAS_{sw.t}i{sw.iteration}.h5")
         )
@@ -333,7 +335,6 @@ def get_inputs(sw):
     dfs['resources'] = resources
     dfs['tech_map'] = tech_map
     dfs['tech_style'] = tech_style
-    dfs['timeindex'] = timeindex
     dfs['vre_gen_usa'] = vre_gen_usa
     dfs['vre_gen'] = vre_gen
 
@@ -345,8 +346,7 @@ def plot_netload_profile(sw, dfs):
     """
     Net load profile
     """
-    import plots
-    for y in sw['resource_adequacy_years']:
+    for y in sw['resource_adequacy_years_list']:
         savename = f"A-netload-profile-w{y}-{sw['t']}.png"
 
         dfpos = dfs['net_load_usa'].loc[str(y)].clip(lower=0)
@@ -370,13 +370,12 @@ def plot_dropped_load_timeseries_full(sw, dfs):
     """
     Dropped load timeseries
     """
-    import plots
     dropped = dfs['pras']['USA_EUE'].copy()
     timeindex_y = pd.date_range(
         f"{sw['t']}-01-01", f"{sw['t']+1}-01-01", inclusive='left', freq='H',
-        tz='EST')[:8760]
+        tz='Etc/GMT+6')[:8760]
     savename = f"dropped_load-timeseries-wfull-{sw['t']}.png"
-    weatheryears = sw['resource_adequacy_years']
+    weatheryears = sw.resource_adequacy_years_list
     plt.close()
     f,ax = plt.subplots(len(weatheryears), 1, sharex=True, sharey=True, figsize=(13.33,5))
     for row, y in enumerate(weatheryears):
@@ -405,13 +404,12 @@ def plot_h2dac_load_timeseries(sw, dfs):
     """
     H2 and DAC load timeseries
     """
-    import plots
 
     dfplot = dfs['pras_h2dac_load'].sum(axis=1)
     if not dfplot.sum():
         return
 
-    for y in sw['resource_adequacy_years']:
+    for y in sw['resource_adequacy_years_list']:
         savename = f"h2dac_load-timeseries-w{y}-{sw['t']}.png"
 
         plt.close()
@@ -431,7 +429,6 @@ def plot_dropped_load_duration(sw, dfs):
     """
     Dropped load duration
     """
-    import plots
     dropped = dfs['pras']['USA_EUE'].copy()
 
     savename = f"dropped_load-duration-{sw['t']}.png"
@@ -453,8 +450,8 @@ def plot_dropped_load_duration(sw, dfs):
     ## Formatting
     ax.set_ylabel('Demand [GW]')
     ax.set_xlabel(
-        f"Hours of dispatch period ({min(sw['resource_adequacy_years'])}–"
-        f"{max(sw['resource_adequacy_years'])}) [h]")
+        f"Hours of dispatch period ({min(sw['resource_adequacy_years_list'])}–"
+        f"{max(sw['resource_adequacy_years_list'])}) [h]")
     ax.set_xlim(0, max((dropped>0).sum(), 1))
     ax.set_ylim(0)
     ax.legend(
@@ -474,10 +471,8 @@ def map_dropped_load(sw, dfs, level='r'):
     """
     Annual EUE and NEUE by ReEDS zone
     """
-    import reedsplots
-
     ### Get the inputs
-    dfmap = reedsplots.get_dfmap(sw['casedir'])
+    dfmap = reeds.io.get_dfmap(sw['casedir'])
     dfba = dfmap['r']
     dropped = dfs['pras'][
         [c for c in dfs['pras'] if c.endswith('_EUE') and (not c.startswith('USA'))]
@@ -587,8 +582,7 @@ def plot_pras_ICAP(sw, dfs):
     load = dfs['pras_system']['load'].sum(axis=1)
 
     ### Plot it
-    years = list(range(2007,2014))
-    for y in years:
+    for y in sw.resource_adequacy_years_list:
         savename = f"PRAS-ICAP-w{y}-{sw['t']}.png"
         plt.close()
         f,ax = plots.plotyearbymonth(
@@ -720,7 +714,6 @@ def plot_pras_ICAP_regional(sw, dfs, numdays=5):
         print('PRAS system was not loaded')
         return
     ### Get the peak dropped-load periods
-    import plots
     dropped = dfs['pras']['USA_EUE'].copy()
     dropped = dropped.groupby(
         [dropped.index.year, dropped.index.month, dropped.index.day]
@@ -805,8 +798,6 @@ def plot_pras_unitsize_distribution(sw, dfs):
         print('PRAS system was not loaded')
         return
     savename = f"PRAS-unitcap-{sw['t']}.png"
-    import plots
-    # import reedsplots
     gencap = dfs['pras_system']['gencap']
     storcap = dfs['pras_system']['storcap']
     # genstorcap = dfs['pras_system']['genstorcap']
@@ -888,7 +879,6 @@ def plot_pras_unitsize_distribution(sw, dfs):
 
 def plot_pras_augur_load(sw, dfs):
     """PRAS load against Augur load"""
-    import plots
     dfpras = dfs['pras_system']['load'].sum(axis=1).rename('PRAS')
     dfaugur = dfs['load_r'].set_axis(dfpras.index).sum(axis=1).rename('Augur')
     years = dfpras.index.year.unique()
@@ -921,7 +911,6 @@ def plot_pras_augur_load(sw, dfs):
 
 def plot_pras_load(sw, dfs):
     """PRAS load over all weather years"""
-    import plots
     dfpras = dfs['pras_system']['load'].sum(axis=1).rename('PRAS')
     years = dfpras.index.year.unique()
     linecolors = plots.rainbowmapper(years)
@@ -952,9 +941,7 @@ def plot_pras_load(sw, dfs):
 
 def map_pras_failure_rate(sw, dfs, aggfunc='mean', repair=False):
     """Failure rates from PRAS"""
-    import plots
-    import reedsplots
-    dfmap = reedsplots.get_dfmap(sw['casedir'])
+    dfmap = reeds.io.get_dfmap(sw['casedir'])
     dfzones = dfmap['r']
 
     failrate = (
@@ -1008,7 +995,6 @@ def plot_cc_mar(sw, dfs):
     """
     Marginal capacity credit
     """
-    import plots
     param = 'cc_mar'
     savename = f"{param}-{sw['t']}.png"
 
@@ -1067,11 +1053,10 @@ def plot_netloadhours_timeseries(sw, dfs):
     """
     Peak net load hours by ccreg
     """
-    import plots
     savename = f"netloadhours-timeseries-{sw['t']}.png"
 
     ### Plot it
-    years = range(2007,2014)
+    years = sw.resource_adequacy_years_list
     ccregs = sorted(dfs['dfpeak'].columns)
     plt.close()
     f,ax = plt.subplots(len(years),1,sharex=False,sharey=True,figsize=(12,6))
@@ -1107,11 +1092,10 @@ def plot_netloadhours_histogram(sw, dfs):
     """
     histograms of peak net load occurrence
     """
-    import plots
     savename = f"netloadhours-histogram-{sw['t']}.png"
 
     ### Plot it
-    years = range(2007,2014)
+    years = sw.resource_adequacy_years_list
     ccregs = sorted(dfs['dfpeak'].columns)
     plt.close()
     f,ax = plt.subplots(1,3,figsize=(12,3.75))
@@ -1120,7 +1104,7 @@ def plot_netloadhours_histogram(sw, dfs):
         ax=ax[0], color=dfs['peakcolors'], stacked=True, alpha=1,
         width=0.95, legend=False,
     )
-    ax[0].set_xlabel('Hour [EST]')
+    ax[0].set_xlabel('Hour [CST]')
     ax[0].xaxis.set_major_locator(mpl.ticker.MultipleLocator(4))
     ax[0].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(1))
     ax[0].tick_params(labelrotation=0)
@@ -1166,7 +1150,6 @@ def main(sw, augur_plots=1):
     """
     ### Local imports
     site.addsitedir(os.path.join(sw['reeds_path'],'postprocessing'))
-    import plots
     plots.plotparams()
 
     #%% Get the inputs
@@ -1203,11 +1186,6 @@ def main(sw, augur_plots=1):
             plot_pras_load(sw, dfs)
         except Exception:
             print('plot_pras_load() failed:', traceback.format_exc())
-
-        try:
-            map_pras_failure_rate(sw, dfs)
-        except Exception:
-            print('map_pras_failure_rate() failed:', traceback.format_exc())
 
     try:
         plot_dropped_load_timeseries_full(sw, dfs)
@@ -1253,6 +1231,11 @@ def main(sw, augur_plots=1):
         except Exception:
             print('plot_netload_profile() failed:', traceback.format_exc())
 
+        try:
+            map_pras_failure_rate(sw, dfs)
+        except Exception:
+            print('map_pras_failure_rate() failed:', traceback.format_exc())
+
 
 #%%### PROCEDURE
 if __name__ == '__main__':
@@ -1285,7 +1268,7 @@ if __name__ == '__main__':
 
     #%%### INPUTS
     ### Switches
-    sw = functions.get_switches(casedir)
+    sw = reeds.io.get_switches(casedir)
     sw['t'] = t
     ## Debugging
     # sw['reeds_path'] = reeds_path
@@ -1305,18 +1288,12 @@ if __name__ == '__main__':
     ### Make the plots if it's a plot year
     if t in sw['plot_years']:
         print('plotting intermediate Augur results...')
-        ## Local imports
-        site.addsitedir(os.path.join(sw['reeds_path'],'postprocessing'))
-        import plots
-        plots.plotparams()
-        # tic = datetime.datetime.now()
         try:
             main(sw)
         except Exception as _err:
             print('diagnostic_plots.py failed with the following exception:')
             print(traceback.format_exc())
-        # functions.toc(tic=tic, year=t, process='ReEDS_Augur/diagnostic_plots.py')
 
     ### Remove intermediate csv files to save drive space
     if (not int(sw['keep_augur_files'])) and (not int(sw['debug'])):
-        functions.delete_csvs(sw)
+        delete_temporary_files(sw)

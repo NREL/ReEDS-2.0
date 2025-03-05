@@ -6,6 +6,8 @@ import os
 import sys
 import datetime
 import shutil
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import reeds
 
 #User inputs
 output_prices = True
@@ -29,7 +31,7 @@ rev_year = 2012
 
 def get_prices():
     print('Reading ReEDS prices and quantities')
-    #ReEDS hours start at 12am EST (UTC-5)
+    #ReEDS hours start at 12am CST (UTC-6)
     df_p = pd.read_csv(f'{reeds_run_path}/outputs/reqt_price.csv')
     df_q = pd.read_csv(f'{reeds_run_path}/outputs/reqt_quant.csv')
     pq_cols = ['reqt','reqt_cat','reeds_ba','h','year']
@@ -188,9 +190,9 @@ def get_prices():
         df_p_h_serv = {'tot':df_p_h_ba, 'load': df_p_load_h, 'rm': df_p_rm_h, 'or': df_p_or_h_mult, 'rps':df_p_rps_h}
 
     for s in list(df_p_h_serv.keys()):
-        #Roll prices from EST to UTC (this will bring prices from end of year to beginning of year)
+        #Roll prices from CST to UTC (this will bring prices from end of year to beginning of year)
         for col in df_p_h_serv[s]:
-            df_p_h_serv[s][col] = np.roll(df_p_h_serv[s][col], 5)
+            df_p_h_serv[s][col] = np.roll(df_p_h_serv[s][col], 6)
         if sw_reg != 'ba':
             #In this case, we need to map prices to bas
             df_hier_red = df_hier[df_hier[sw_reg].isin(df_p_h_serv[s].columns)]
@@ -301,8 +303,8 @@ def calculate_metrics():
         df_hmap_rep = df_hmap[['periodhour','actual_period','season']].copy()
         df_hmap_rep['actual_period_hour'] = df_hmap_rep['actual_period']+ '_' + df_hmap_rep['periodhour'].astype(str)
         df_hmap_rep['season_hour'] = df_hmap_rep['season']+ '_' + df_hmap_rep['periodhour'].astype(str)
-        #Make the index of df_hmap_rep the UTC hour (like df_profile), assuming df_hmap starts at 12am EST (5am UTC)
-        df_hmap_rep.index = np.roll(df_hmap_rep.index, -5)
+        #Make the index of df_hmap_rep the UTC hour (like df_profile), assuming df_hmap starts at 12am CST (6am UTC)
+        df_hmap_rep.index = np.roll(df_hmap_rep.index, -6)
         df_hmap_rep = df_hmap_rep.sort_index()
         df_hmap_rep_only = df_hmap_rep[df_hmap_rep['actual_period_hour'] == df_hmap_rep['season_hour']][['season_hour']].copy()
         df_profile_rep = df_profile.copy()
@@ -364,8 +366,7 @@ for i,r in df_scens.iterrows():
     profile_path = r['profile_path'].replace('"', '')
     reeds_run_path = r['reeds_run_path'].replace('"', '')
     year = r['year']
-    df_switches = pd.read_csv(f'{reeds_run_path}/inputs_case/switches.csv', header=None)
-    switches = dict(zip(df_switches[0], df_switches[1]))
+    switches = reeds.io.get_switches(reeds_run_path)
     sw_reg = switches['GSw_RegionResolution']
     sw_hier = switches['GSw_HierarchyFile']
     hier_suffix = '' if sw_hier == 'default' else '_' + sw_hier
@@ -375,7 +376,7 @@ for i,r in df_scens.iterrows():
     df_county_map = pd.read_csv(hier_file, usecols=['county','ba'])
     df_county_map.columns = ['reeds_county', 'reeds_ba']
     df_hmap = pd.read_csv(f'{reeds_run_path}/inputs_case/hmap_myr.csv')
-    # df_hmap_7yr = pd.read_csv(f'{reeds_run_path}/inputs_case/hmap_7yr.csv')
+    # df_hmap_allyrs = pd.read_csv(f'{reeds_run_path}/inputs_case/hmap_allyrs.csv')
     #Only fetch prices if we haven't already for this reeds run and year
     #TODO: Include tech here in the dct_prices tuple key? For now I disallow multiple techs
     if (reeds_run_path, year) not in dct_prices:

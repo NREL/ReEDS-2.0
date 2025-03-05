@@ -28,20 +28,15 @@ import argparse
 import datetime
 import numpy as np
 import os
+import sys
 import pandas as pd
-from ticker import toc, makelog
-
-pd.options.display.max_columns = 200
-# Time the operation of this script
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 
 
 #%%#################
 ### FIXED INPUTS ###
 
-# Start year for ReEDS prescriptive builds (default: 2010):
-Sw_startyear = 2010
-# end year for ReEDS prescriptive builds (default: 2023):
-Sw_endyear = 2023
 # Generator database column seletions:
 Sw_onlineyearcol = 'StartYear'
 
@@ -49,11 +44,11 @@ Sw_onlineyearcol = 'StartYear'
 #%% ===========================================================================
 ### --- FUNCTIONS ---
 ### ===========================================================================
-def create_rsc_wsc(gendb,TECH,scalars):
+def create_rsc_wsc(gendb,TECH,scalars,startyear):
 
     rsc_wsc = gendb.loc[(gendb['tech'].isin(TECH['rsc_wsc'])) &
-                        (gendb[Sw_onlineyearcol] < Sw_startyear) &
-                        (gendb['RetireYear']     > Sw_startyear)
+                        (gendb[Sw_onlineyearcol] < startyear) &
+                        (gendb['RetireYear']     > startyear)
                         ]
     
     rsc_wsc = rsc_wsc[['r','tech','cap']].rename(columns={'tech':'i','cap':'value'})
@@ -129,7 +124,7 @@ TECH = {
 ### --- MAIN FUNCTION ---
 ### ===========================================================================
 
-def main(reeds_path, inputs_case, **kwargs):
+def main(reeds_path, inputs_case, agglevel, regions):
     
     # #%% Settings for testing
     # reeds_path = os.path.expanduser('~/github/ReEDS-2.0')
@@ -146,16 +141,14 @@ def main(reeds_path, inputs_case, **kwargs):
                     }
     
     #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+    sw = reeds.io.get_switches(inputs_case)
     retscen = sw.retscen
     GSw_WaterMain = int(sw.GSw_WaterMain)
     GSw_DUPV = int(sw.GSw_DUPV)
     GSw_PVB = int(sw.GSw_PVB)
+    startyear = int(sw.startyear)
 
-    scalars = pd.read_csv(
-        os.path.join(inputs_case, 'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0).squeeze(1)
+    scalars = reeds.io.get_scalars(inputs_case)
 
     years = pd.read_csv(
         os.path.join(inputs_case,'modeledyears.csv')
@@ -217,15 +210,19 @@ def main(reeds_path, inputs_case, **kwargs):
     gdb_use = pd.read_csv(os.path.join(inputs_case,'unitdata.csv'),
                         low_memory=False)
 
-    agglevel = pd.read_csv(os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
-    rcol_dict = {'county':'FIPS', 'ba':'reeds_ba', 'state':'TSTATE'}
+    
+    rcol_dict = {'county':'FIPS', 'ba':'reeds_ba'}
     # Create the 'r_col' column
     if agglevel in ['county','ba']:
-        r_col = rcol_dict[agglevel]
+        r_col = rcol_dict[agglevel]        
         gdb_use['r'] = gdb_use[r_col].copy()
+        # Filter generator database to regions that match the spatial resolution of the run
+        gdb_use = gdb_use[gdb_use['r'].isin(regions)]
     elif agglevel == 'aggreg':
-        r_ba = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'), index_col='ba').squeeze()
-        gdb_use = gdb_use.assign(r=gdb_use.reeds_ba.map(r_ba))
+        rb_aggreg = pd.read_csv(os.path.join(inputs_case,'rb_aggreg.csv'), index_col='ba').squeeze(1)
+        gdb_use = gdb_use.assign(r=gdb_use.reeds_ba.map(rb_aggreg))
+        # Filter generator database to regions that match the spatial resolution of the run
+        gdb_use = gdb_use[gdb_use['r'].isin(regions)]
 
     # If PVB is turned off, consider all PVB as UPV and battery_4 for existing and prescribed builds 
     # If PVB is turned on, consider all PVB as 'pvb'
@@ -243,20 +240,20 @@ def main(reeds_path, inputs_case, **kwargs):
 
     # Change tech category of hydro that will be prescribed to use upgrade tech
     # This is a coarse assumption that all recent new hydro is upgrades
-    # Existing hydro techs (hydED/hydEND) specifically refer to hydro that exists in 2010
+    # Existing hydro techs (hydED/hydEND) specifically refer to hydro that exists in startyear
     # Future work could incorporate this change into unit database creation and possibly
     #    use data from ORNL HydroSource to assign a more accurate hydro category.
     gdb_use.loc[
-        (gdb_use['tech']=='hydEND') & (gdb_use[Sw_onlineyearcol] >= Sw_startyear), 'tech'
+        (gdb_use['tech']=='hydEND') & (gdb_use[Sw_onlineyearcol] >= startyear), 'tech'
     ] = 'hydUND'
     gdb_use.loc[
-        (gdb_use['tech']=='hydED') & (gdb_use[Sw_onlineyearcol] >= Sw_startyear), 'tech'
+        (gdb_use['tech']=='hydED') & (gdb_use[Sw_onlineyearcol] >= startyear), 'tech'
     ] = 'hydUD'
 
     # We model csp-ns (CSP No Storage) as upv throughout ReEDS, but switch it back for reporting.
     # So save the csp-ns capacity separately, then rename it.
     csp_units = (
-        gdb_use.loc[(gdb_use['tech']=='csp-ns') & (gdb_use['RetireYear'] > Sw_startyear)]
+        gdb_use.loc[(gdb_use['tech']=='csp-ns') & (gdb_use['RetireYear'] > startyear)]
         .groupby(['r','StartYear','RetireYear']).cap.sum()
         .reset_index()
     )
@@ -274,7 +271,7 @@ def main(reeds_path, inputs_case, **kwargs):
             .rename_axis(['t','*r']).reorder_levels(['*r','t']).rename('MWac')
         )
         cap_cspns = (
-            cap_cspns.loc[cap_cspns.index.get_level_values('t') >= Sw_startyear].copy())
+            cap_cspns.loc[cap_cspns.index.get_level_values('t') >= startyear].copy())
     else:
         cap_cspns = pd.DataFrame(columns=['*r','t','MWac']).set_index(['*r','t'])
     # csp-ns capacity is MWac measured at the power block, while PV capacity is MWdc,
@@ -299,8 +296,8 @@ def main(reeds_path, inputs_case, **kwargs):
     #####################################
 
     ### Used as the starting point for intra-zone network reinforcement costs
-    poi_cap_init = gdb_use.loc[(gdb_use[Sw_onlineyearcol] < Sw_startyear) &
-                            (gdb_use['RetireYear'] > Sw_startyear) 
+    poi_cap_init = gdb_use.loc[(gdb_use[Sw_onlineyearcol] < startyear) &
+                            (gdb_use['RetireYear'] > startyear) 
     ].groupby('r').cap.sum().rename('MW').round(3)
     poi_cap_init.index = poi_cap_init.index.rename('*r')
 
@@ -310,8 +307,8 @@ def main(reeds_path, inputs_case, **kwargs):
 
     print('Gathering non-RSC Existing Capacity...')
     capnonrsc = gdb_use.loc[(gdb_use['tech'].isin(TECH['capnonrsc'])) &
-                            (gdb_use[Sw_onlineyearcol] < Sw_startyear) &
-                            (gdb_use['RetireYear']     > Sw_startyear)
+                            (gdb_use[Sw_onlineyearcol] < startyear) &
+                            (gdb_use['RetireYear']     > startyear)
                             ]
     capnonrsc = capnonrsc[COLNAMES['capnonrsc'][0]]
     capnonrsc.columns = COLNAMES['capnonrsc'][1]
@@ -324,7 +321,7 @@ def main(reeds_path, inputs_case, **kwargs):
 
     print('Gathering non-RSC Prescribed Capacity...')
     prescribed_nonRSC = gdb_use.loc[(gdb_use['tech'].isin(TECH['prescribed_nonRSC'])) &
-                                    (gdb_use[Sw_onlineyearcol] >= Sw_startyear)
+                                    (gdb_use[Sw_onlineyearcol] >= startyear)
                                     ]
     prescribed_nonRSC = prescribed_nonRSC[COLNAMES['prescribed_nonRSC'][0]]
     prescribed_nonRSC.columns = COLNAMES['prescribed_nonRSC'][1]
@@ -352,8 +349,8 @@ def main(reeds_path, inputs_case, **kwargs):
     print('Gathering RSC Existing Capacity...')
     # DUPV and UPV values are collected at the same time here:
     caprsc = gdb_use.loc[(gdb_use['tech'].isin(TECH['rsc_all'][:2])) &
-                        (gdb_use[Sw_onlineyearcol] < Sw_startyear)  &
-                        (gdb_use['RetireYear']     > Sw_startyear)
+                        (gdb_use[Sw_onlineyearcol] < startyear)  &
+                        (gdb_use['RetireYear']     > startyear)
                         ]
     caprsc = caprsc[COLNAMES['rsc'][0]]
     caprsc.columns = COLNAMES['rsc'][1]
@@ -365,8 +362,8 @@ def main(reeds_path, inputs_case, **kwargs):
     #   Note: Since CSP data is affected by GSw_WaterMain, it must be dealt with
     #       separate from the other RSC tech (UPV, DUPV, wind, etc)
     csp = gdb_use.loc[(gdb_use['tech'].isin(TECH['rsc_csp']))    &
-                    (gdb_use[Sw_onlineyearcol] < Sw_startyear) &
-                    (gdb_use['RetireYear']     > Sw_startyear)
+                    (gdb_use[Sw_onlineyearcol] < startyear) &
+                    (gdb_use['RetireYear']     > startyear)
                     ]
     csp = csp[COLNAMES['rsc'][0]]
     csp.columns = COLNAMES['rsc'][1]
@@ -389,12 +386,12 @@ def main(reeds_path, inputs_case, **kwargs):
     caprsc = pd.concat([caprsc, csp, hyd])
 
     # Export Existing RSC data specifically used in writesupplycurves.py
-    rsc_wsc = create_rsc_wsc(gdb_use, TECH=TECH, scalars=scalars)
+    rsc_wsc = create_rsc_wsc(gdb_use, TECH=TECH, scalars=scalars,startyear=startyear)
 
     # Create geoexist.csv and copy to inputs_case
     geoexist = gdb_use.loc[(gdb_use['tech'].isin(['geohydro_allkm','egs_allkm'])) &
-                       (gdb_use[Sw_onlineyearcol] < Sw_startyear) &
-                       (gdb_use['RetireYear']     > Sw_startyear)
+                       (gdb_use[Sw_onlineyearcol] < startyear) &
+                       (gdb_use['RetireYear']     > startyear)
                        ]
     geoexist = (geoexist[['tech','r','cap']]
                 .rename(columns={'tech':'*i','cap':'MW'})
@@ -402,7 +399,7 @@ def main(reeds_path, inputs_case, **kwargs):
     geoexist = geoexist.groupby(['*i','r']).sum().reset_index()
     # Rename generic geothermal tech category to geohydro_allkm_1
     geoexist['*i'] = 'geohydro_allkm_1'
-    geoexist.to_csv(os.path.join(inputs_case,'geoexist.csv'),index=False)
+
 
     #%%####################################
     #    -- RSC Prescribed Capacity --    #
@@ -411,7 +408,7 @@ def main(reeds_path, inputs_case, **kwargs):
     print('Gathering RSC Prescribed Capacity...')
     # DUPV and UPV values are collected at the same time here:
     pupv = gdb_use.loc[(gdb_use['tech'].isin(TECH['prsc_upv'])) &
-                    (gdb_use[Sw_onlineyearcol] >= Sw_startyear)
+                    (gdb_use[Sw_onlineyearcol] >= startyear)
                     ]
     pupv = pupv[COLNAMES['prsc_upv'][0]]
     pupv.columns = COLNAMES['prsc_upv'][1]
@@ -421,7 +418,7 @@ def main(reeds_path, inputs_case, **kwargs):
 
     # Load in wind builds:
     pwind = gdb_use.loc[(gdb_use['tech'].isin(TECH['prsc_w'])) &
-                        (gdb_use[Sw_onlineyearcol] >= Sw_startyear)
+                        (gdb_use[Sw_onlineyearcol] >= startyear)
                         ]
     pwind = pwind[COLNAMES['prsc_w'][0]]
     pwind.columns = COLNAMES['prsc_w'][1]
@@ -433,7 +430,7 @@ def main(reeds_path, inputs_case, **kwargs):
     #   Note: Since csp is affected by GSw_WaterMain, it must be dealt with separate
     #         from the other RSC tech (dupv, upv, wind, etc)
     pcsp = gdb_use.loc[(gdb_use['tech'].isin(TECH['prsc_csp'])) &
-                    (gdb_use[Sw_onlineyearcol] >= Sw_startyear)
+                    (gdb_use[Sw_onlineyearcol] >= startyear)
                     ]
     pcsp = pcsp[COLNAMES['prsc_csp'][0]]
     pcsp.columns = COLNAMES['prsc_csp'][1]
@@ -442,7 +439,7 @@ def main(reeds_path, inputs_case, **kwargs):
 
     # Load in geo builds:
     pgeo = gdb_use.loc[(gdb_use['tech'].isin(TECH['prsc_geo'])) &
-                        (gdb_use[Sw_onlineyearcol] >= Sw_startyear)
+                        (gdb_use[Sw_onlineyearcol] >= startyear)
                         ]
     pgeo = pgeo[COLNAMES['prsc_geo'][0]]
     pgeo.columns = COLNAMES['prsc_geo'][1]
@@ -468,14 +465,16 @@ def main(reeds_path, inputs_case, **kwargs):
     h2_exogenous_demand = (
         pd.read_csv(os.path.join(inputs_case,'h2_exogenous_demand.csv'))
         .rename(columns={f'{sw.GSw_H2_Demand_Case}':'million_tons'},)
-        .drop(['*p'], axis=1).set_index('t').squeeze()
+        .drop(['*p'], axis=1).set_index('t').squeeze(1)
     )
     ### Get BA share of national H2 demand
     h2_ba_share = pd.read_csv(
-        os.path.join(inputs_case,'h2_ba_share.csv')
-    ).rename(columns={'*r':'r'}).pivot(index='t', columns='r', values='fraction')
+        os.path.join(inputs_case,'h2_ba_share.csv'))
+    # Filter to regions in function call
+    h2_ba_share = h2_ba_share[h2_ba_share['*r'].isin(regions)]
+    h2_ba_share = h2_ba_share.rename(columns={'*r':'r'}).pivot(index='t', columns='r', values='fraction')
     ## h2_ba_share is only populated for 2021 and 2050, so need to fill the empty data
-    h2_ba_share = h2_ba_share.reindex(sorted(list(set(years+[2021,2050]))))
+    h2_ba_share = h2_ba_share.reindex(sorted(set(years+[2021,2050])))
     ## If a region has no data for 2021, it's zero (GAMS convention)
     h2_ba_share.loc[2021] = h2_ba_share.loc[2021].fillna(0)
     ## Backfill before 2021
@@ -495,7 +494,7 @@ def main(reeds_path, inputs_case, **kwargs):
                                 header=None, index_col=0,
     ).squeeze(1)
 
-    smr_2010_ele_efficiency = consume_char0['smr',2010,'ele_efficiency']
+    smr_init_ele_efficiency = consume_char0['smr',startyear,'ele_efficiency']
     smr_outage_forced = outage_forced_static['smr']
     h2_demand_initial = h2_exogenous_demand[h2_prod_first_year]
 
@@ -510,7 +509,7 @@ def main(reeds_path, inputs_case, **kwargs):
     # Only for it to meet 2023 demand
     h2_existing_smr_cap['million_tons'] = h2_existing_smr_cap['fraction'] * h2_demand_initial
     h2_existing_smr_cap['value'] =  (
-        h2_existing_smr_cap['million_tons'] * 1e9 * smr_2010_ele_efficiency
+        h2_existing_smr_cap['million_tons'] * 1e9 * smr_init_ele_efficiency
         / 8760 / 1000 / (1 - smr_outage_forced) * 1.0001)
     # Make any value after h2_prod_first_year to be the same MW value as h2_prod_first_year
     # (aka we will not force model to build more SMR capacity in 2030 once it has already
@@ -548,7 +547,7 @@ def main(reeds_path, inputs_case, **kwargs):
     ################################
     print('Gathering Retirement Data...')
     rets = gdb_use.loc[(gdb_use['tech'].isin(TECH['retirements'])) &
-                    (gdb_use[retscen]>Sw_startyear)
+                    (gdb_use[retscen]>startyear)
                     ]
     rets = rets[COLNAMES['retirements'][0]]
     rets.columns = COLNAMES['retirements'][1]
@@ -560,9 +559,9 @@ def main(reeds_path, inputs_case, **kwargs):
     ################################
     print('Gathering Wind Retirement Data...')
     wind_rets = gdb_use.loc[(gdb_use['tech'].isin(TECH['windret'])) &
-                            (gdb_use[Sw_onlineyearcol] <= Sw_startyear) &
-                            (gdb_use['RetireYear']     >  Sw_startyear) &
-                            (gdb_use['RetireYear']     <  Sw_startyear + 30)
+                            (gdb_use[Sw_onlineyearcol] <= startyear) &
+                            (gdb_use['RetireYear']     >  startyear) &
+                            (gdb_use['RetireYear']     <  startyear + 30)
                             ]
     wind_rets = wind_rets[COLNAMES['windret'][0]]
     wind_rets.columns = COLNAMES['windret'][1]
@@ -578,9 +577,9 @@ def main(reeds_path, inputs_case, **kwargs):
     #================================
     print('Gathering Geothermal Retirement Data...')
     geo_retirements = gdb_use.loc[(gdb_use['tech'].isin(TECH['georet'])) &
-                    (gdb_use[Sw_onlineyearcol] <= Sw_startyear) &
-                    (gdb_use['RetireYear']     >  Sw_startyear) &
-                    (gdb_use['RetireYear']     <  Sw_startyear + 30)
+                    (gdb_use[Sw_onlineyearcol] <= startyear) &
+                    (gdb_use['RetireYear']     >  startyear) &
+                    (gdb_use['RetireYear']     <  startyear + 30)
                     ]
     geo_retirements = geo_retirements[COLNAMES['georet'][0]]
     geo_retirements.columns = COLNAMES['georet'][1]
@@ -601,6 +600,8 @@ def main(reeds_path, inputs_case, **kwargs):
 
     # Initialize with monthly hydropower capacity adjustment factor values
     hydcapadj_ccszn = pd.read_csv(os.path.join(inputs_case,'hydcapadj.csv'))
+    #Filter to regions in function call
+    hydcapadj_ccszn = hydcapadj_ccszn[hydcapadj_ccszn['r'].isin(regions)]
     # Map hot/cold values to ccseason months and filter for ccseason data
     hydcapadj_ccszn['ccseason'] = hydcapadj_ccszn['month'].map(hotcold_months)
     hydcapadj_ccszn = (hydcapadj_ccszn[hydcapadj_ccszn['ccseason'].isin(['cold','hot'])]
@@ -667,10 +668,12 @@ def main(reeds_path, inputs_case, **kwargs):
 
     can_imports_year_mwh = pd.read_csv(os.path.join(inputs_case,'can_imports.csv'),
                                     index_col='r').dropna()
+    # Filter to regions in function call
+    can_imports_year_mwh = can_imports_year_mwh[can_imports_year_mwh.index.isin(regions)]
     can_imports_year_mwh.columns = can_imports_year_mwh.columns.astype(int)
     can_imports_year_mwh = can_imports_year_mwh.reindex(years, axis=1).dropna(axis=1)
 
-    h_dt_szn = pd.read_csv(os.path.join(inputs_case,'h_dt_szn.csv'))
+    h_dt_szn = pd.read_csv(os.path.join(inputs_case,'h_dt_szn_h17.csv'))
     quarterhours = h_dt_szn.loc[h_dt_szn.year==2012].groupby('quarter').year.count()
     quarterhours.index = quarterhours.index.map(lambda x: quartershorten.get(x,x)).rename('szn')
 
@@ -703,31 +706,25 @@ def main(reeds_path, inputs_case, **kwargs):
         if 't' in df.columns:
             df['t'] = df.t.astype(float).round().astype(int)
 
-    #%% Write it
-    print('Writing out capacity data')
-    capnonrsc[['i','r','value']].to_csv(
-        os.path.join(inputs_case,'capnonrsc.csv'),index=False)
-    rets[['t','r','i','value']].to_csv(
-        os.path.join(inputs_case,'retirements.csv'),index=False)
-    prescribed_nonRSC[['t','i','r','value']].to_csv(
-        os.path.join(inputs_case,'prescribed_nonRSC.csv'),index=False)
-    caprsc[['i','r','value']].to_csv(
-        os.path.join(inputs_case,'caprsc.csv'),index=False)
-    prescribed_rsc[['t','i','r','value']].to_csv(
-        os.path.join(inputs_case,'prescribed_rsc.csv'),index=False)
-    wind_rets.to_csv(
-        os.path.join(inputs_case,'wind_retirements.csv'),index=False)
-    h2_existing_smr_cap[['*r','t','value']].to_csv(
-        os.path.join(inputs_case,'h2_existing_smr_cap.csv'),index=False)
-    geo_retirements.to_csv(
-        os.path.join(inputs_case,'geo_retirements.csv'),index=False)
-    poi_cap_init.to_csv(os.path.join(inputs_case,'poi_cap_init.csv'))
-    cap_cspns.to_csv(os.path.join(inputs_case,'cap_cspns.csv'))
-    rsc_wsc.to_csv(os.path.join(inputs_case,'rsc_wsc.csv'),index=False)
-    ### Add '*' to first column name so GAMS reads it as a comment
-    hydcapadj_ccszn[['*i','ccseason','r','value']] \
-        .to_csv(os.path.join(inputs_case,'cap_hyd_ccseason_adj.csv'), index=False)
-    can_imports_capacity.to_csv(os.path.join(inputs_case,'can_imports_capacity.csv'))
+    #%% 
+    # Return 
+    files_out = {'capnonrsc' :  capnonrsc[['i','r','value']],
+                'rets' :  rets[['t','r','i','value']],
+                'prescribed_nonRSC' : prescribed_nonRSC[['t','i','r','value']],
+                'caprsc' :caprsc[['i','r','value']],
+                'prescribed_rsc' : prescribed_rsc[['t','i','r','value']],
+                'wind_rets' : wind_rets,
+                'h2_existing_smr_cap' : h2_existing_smr_cap[['*r','t','value']],
+                'geo_retirements' : geo_retirements,
+                'poi_cap_init' : poi_cap_init, 
+                'cap_cspns': cap_cspns,
+                'rsc_wsc':rsc_wsc,
+                'hydcapadj_ccszn' : hydcapadj_ccszn[['*i','ccseason','r','value']],
+                'can_imports_capacity' : can_imports_capacity,
+                'geoexist' : geoexist
+                }
+
+    return files_out 
 
 #%% ===========================================================================
 ### --- PROCEDURE ---
@@ -735,8 +732,6 @@ def main(reeds_path, inputs_case, **kwargs):
 
 if __name__ == '__main__':
     ### Time the operation of this script
-    from ticker import toc, makelog
-    import datetime
     tic = datetime.datetime.now()
     
     ### Parse arguments
@@ -749,14 +744,78 @@ if __name__ == '__main__':
     inputs_case = args.inputs_case
 
     #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+    )
     print('Starting writecapdat.py')
 
-    #%% Run it
-    main(reeds_path=reeds_path, inputs_case=inputs_case)
 
-    toc(tic=tic, year=0, process='input_processing/writecapdat.py',
+    # Use agglevel_variables function to obtain spatial resolution variables 
+    agglevel_variables  = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)
+
+    # For mixed resolution runs the main function of writecapdat needs to be executed separately for each desired resolution 
+    # Then the data from each resolution are combined and written to the inputs_case folder 
+    if agglevel_variables['lvl'] == 'mult':
+        for resolution in agglevel_variables['agglevel']:
+            if resolution == 'aggreg':
+                aggreg_data  = main(reeds_path, inputs_case, agglevel=resolution, 
+                                     regions=agglevel_variables['ba_regions'] )
+            if resolution == 'ba':
+                ba_data = main(reeds_path, inputs_case, agglevel=resolution, 
+                                regions=agglevel_variables['ba_regions'])
+            if resolution == 'county':
+                county_data = main(reeds_path, inputs_case, agglevel=resolution,
+                                     regions=agglevel_variables['county_regions'],)
+        
+        # Combine and write mixed resolution data
+        # ReEDS only supports county-BA, county-aggreg combinations 
+        combined_data = {}
+        if 'ba' in agglevel_variables['agglevel']:
+            for key in ba_data.keys() :
+                if county_data[key].empty:
+                    combined_data[key] = ba_data[key]
+                elif ba_data[key].empty:
+                    combined_data[key] = county_data[key]
+                else:
+                    combined_data[key] = pd.concat([ba_data[key], county_data[key]])
+
+        if 'aggreg' in agglevel_variables['agglevel']:
+            for key in aggreg_data.keys() :
+                if county_data[key].empty:
+                    combined_data[key] = aggreg_data[key]
+                elif aggreg_data[key].empty:
+                    combined_data[key] = county_data[key]
+                else:
+                    combined_data[key] = pd.concat([aggreg_data[key], county_data[key]])
+        
+        data = combined_data
+
+    # Single Resolution Procedure
+    else: 
+        agglevel = agglevel_variables['agglevel']
+        regions = pd.read_csv(os.path.join(inputs_case,f'val_{agglevel}.csv'),header=None).squeeze(1).values
+        data = main(reeds_path, inputs_case,agglevel, regions)
+
+    # Write it
+    print('Writing out capacity data')
+    outname = {
+        'rets': 'retirements',
+        'wind_rets': 'wind_retirements',
+        'hydcapadj_ccszn': 'cap_hyd_ccseason_adj',
+    }
+    keep_index = {
+        'poi_cap_init': True,
+        'cap_cspns': True,
+        'can_imports_capacity': True,
+    }
+    for key, df in data.items():
+        df.to_csv(
+            os.path.join(inputs_case, f'{outname.get(key, key)}.csv'),
+            index=keep_index.get(key, False),
+        )
+
+    reeds.log.toc(tic=tic, year=0, process='input_processing/writecapdat.py',
         path=os.path.join(inputs_case,'..'))
 
     print('Finished writecapdat.py')
-

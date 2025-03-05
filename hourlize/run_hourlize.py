@@ -68,11 +68,11 @@ def make_output_dir(casename):
     ## setup output directory
     outpath = os.path.join(hourlize_path, 'out', casename) 
     if os.path.exists(outpath):
-        if args.overwrite:
-            shutil.rmtree(outpath)
-        else:
+        if args.archive:
             time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             os.rename(outpath, outpath + '-archive-' + time)
+        else:
+            shutil.rmtree(outpath)
     os.makedirs(outpath, exist_ok=True)
     os.makedirs(os.path.join(outpath, 'inputs'), exist_ok=True)
     os.makedirs(os.path.join(outpath, 'results'), exist_ok=True)
@@ -161,7 +161,10 @@ def launch_batch_file(casename, configpath, outpath, args):
             OPATH.writelines("conda activate reeds2 \n\n") 
         # run hourlize
         OPATH.writelines(f"cd {hourlize_path}\n")
-        OPATH.writelines(f"python {args.mode}.py --config {configpath}\n")
+        if args.nolog:
+            OPATH.writelines(f"python {args.mode}.py --config {configpath} --nolog\n")
+        else:
+            OPATH.writelines(f"python {args.mode}.py --config {configpath}\n")
 
     # launch run locally or submit to hpc
     if args.local:
@@ -265,7 +268,7 @@ def check_config_value(configs, entry, format=False, format_config={}):
         return output
     
 # check rev supply curve for columns needed by hourlize
-def check_cols(sc_file, req_cols=[], opt_cols=[]):
+def check_cols(sc_file, hourlize_path, req_cols=[], opt_cols=[]):
     
     # get supply curve columns 
     if isinstance(sc_file, pd.DataFrame):
@@ -275,7 +278,7 @@ def check_cols(sc_file, req_cols=[], opt_cols=[]):
         sc_cols = pd.read_csv(sc_file, nrows=0).columns.tolist()
     
     # for geothermal, create a mapping to change old column headers to new 
-    rev_sc_colnames = pd.read_csv(os.path.join("inputs", "resource", "rev_sc_columns.csv"))
+    rev_sc_colnames = pd.read_csv(os.path.join(hourlize_path, "inputs", "resource", "rev_sc_columns.csv"))
     rev_cols_mapping = dict(zip(rev_sc_colnames['legacy_colname'], rev_sc_colnames['new_colname']))
 
     # update old column headers in sc_cols
@@ -392,13 +395,13 @@ def setup_resource_run(casename, case, args):
             config_cols.append(configout[cc])
     
     # next check for the coloumns that are always supposed to be present
-    rev_cols = pd.read_csv(os.path.join("inputs", "resource", "rev_sc_columns.csv"))
+    rev_cols = pd.read_csv(os.path.join(hourlize_path, "inputs", "resource", "rev_sc_columns.csv"))
     # subset to just the ones needed by hourlize or ReEDS
     req_cols_all = rev_cols.loc[rev_cols.used_by_hourlize == "X", "new_colname"].to_list()
 
     # now check for missing columns
     if(not (case['tech']=='egs' or case['tech']=='geohydro')):
-        check_cols(case['original_sc_file'], config_cols + req_cols_all)
+        check_cols(case['original_sc_file'], hourlize_path, config_cols + req_cols_all)
     else:
         print("Skipping column check for geothermal technologies as supply curve is aggregated from multiple files in resource.py")
     
@@ -481,10 +484,11 @@ if __name__== '__main__':
                     help='Run all cases locally (if on HPC will run on current node)')
     parser.add_argument('--nosubmit', '-n', default=False, action='store_true',
                     help='Only create config and output folders without submitting to the HPC or running')
-    parser.add_argument('--overwrite', '-o', action="store_true", help='''Overwrite existing hourlize output folder 
-                                                                          if it exists instead of archiving''')
+    parser.add_argument('--archive', '-a', action="store_true", help='''Archive existing hourlize output folder 
+                                                                          if it exists instead of overwriting''')
     parser.add_argument('--verbose', '-v', default=False, action='store_true',
                     help='Prints more output to the console for setting up run (useful for debugging in run_hourlize.py)')
+    parser.add_argument('--nolog', '-g', default=False, action='store_true', help='turn off logging for debugging')
         
     args = parser.parse_args()
 

@@ -14,10 +14,12 @@ well as NG demand for electricity generation) and natural gas alphas
 
 import pandas as pd
 import os
+import sys
 import argparse
-# Time the operation of this script
-from ticker import toc, makelog
 import datetime
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+# Time the operation of this script
 tic = datetime.datetime.now()
 
 #%% Parse arguments
@@ -36,12 +38,14 @@ inputs_case = args.inputs_case
 # inputs_case = os.path.join('runs','nd5_ND','inputs_case')
 
 #%% Set up logger
-log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+log = reeds.log.makelog(
+    scriptname=__file__,
+    logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+)
 print("Starting fuelcostprep.py")
 
 #%% Inputs from switches
-sw = pd.read_csv(
-    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+sw = reeds.io.get_switches(inputs_case)
 
 # Load valid regions
 val_r = pd.read_csv(
@@ -165,7 +169,7 @@ ngdemand.to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
 ngtotdemand.to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))
 alpha.to_csv(os.path.join(inputs_case,'alpha.csv'))
 
-toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
+reeds.log.toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
     path=os.path.join(inputs_case,'..'))
 
 print('Finished fuelcostprep.py')

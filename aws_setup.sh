@@ -77,7 +77,7 @@ export PATH=/home/ec2-user/anaconda3/bin/:$PATH:/opt/gams/gams35.1_linux_x64_64_
 
 #make sure you have the appropriate packages installed
 conda install pandas numpy scipy scikit-learn matplotlib networkx numba 
-pip install gdxpds ticker
+pip install gdxpds
 
 #------------------------
 # -- git instructions -- 

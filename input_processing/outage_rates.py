@@ -2,18 +2,20 @@
 import pandas as pd
 import numpy as np
 import os
+import sys
+import datetime
 import argparse
 import h5py
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 ## Time the operation of this script
-from ticker import toc, makelog
-import datetime
 tic = datetime.datetime.now()
 
 reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
 
 #%%### Fixed inputs
 tz_in = 'UTC'
-tz_out = 'Etc/GMT+5'
+tz_out = 'Etc/GMT+6'
 temp_min = -50
 temp_max = 60
 ignore_techs = ['ocean', 'caes', 'ice']
@@ -81,20 +83,13 @@ def extrapolate_forward_backward(
     return dfout
 
 
-def get_sw(case):
-    inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
-    filename = os.path.join(inputs_case, 'switches.csv')
-    sw = pd.read_csv(filename, header=None, index_col=0).squeeze(1)
-    return sw
-
-
-def get_temperatures(case, tz_in='UTC', tz_out='Etc/GMT+5', subset_years=True):
+def get_temperatures(case, tz_in='UTC', tz_out='Etc/GMT+6', subset_years=True):
     ### Derived inputs
     inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
     h5path = os.path.join(inputs_case, 'temperature_celsius-ba.h5')
-    sw = get_sw(inputs_case)
+    sw = reeds.io.get_switches(inputs_case)
     ## Add one more year on either end of weather years to allow for timezone conversion
-    weather_years = [int(i) for i in sw.resource_adequacy_years.split('_')]
+    weather_years = sw.resource_adequacy_years_list
     read_years = [min(weather_years) - 1] + weather_years + [max(weather_years) + 1]
     val_ba = (
         pd.read_csv(os.path.join(inputs_case, 'val_ba.csv'), header=None)
@@ -105,8 +100,9 @@ def get_temperatures(case, tz_in='UTC', tz_out='Etc/GMT+5', subset_years=True):
     with h5py.File(h5path, 'r') as f:
         years = read_years if subset_years else [int(i) for i in list(f) if i.isdigit()]
         for year in years:
-            timeindex = pd.date_range(
-                f'{year}-01-01', f'{year+1}-01-01', inclusive='left', tz=tz_in, freq='H',
+            timeindex = pd.to_datetime(
+                pd.Series(f[f"index_{year}"][:])
+                .str.decode('utf-8')
             )
             _temperatures[year] = pd.DataFrame(
                 index=timeindex,
@@ -118,8 +114,8 @@ def get_temperatures(case, tz_in='UTC', tz_out='Etc/GMT+5', subset_years=True):
         pd.concat(_temperatures, names=('year','timestamp')).rename_axis(columns='r')
         ## Round to integers for lookup
         .round(0).astype(int)
-        ## Convert to Eastern time
         .reset_index('year', drop=True)
+        .tz_localize(tz_in)
         .tz_convert(tz_out)
         ## Subset to weather years used in ReEDS
         .loc[str(min(weather_years)):str(max(weather_years))]
@@ -151,7 +147,7 @@ def get_tech_subset_table(case):
 
 
 def get_techlist_after_bans(case):
-    sw = get_sw(case)
+    sw = reeds.io.get_switches(case)
     tech_subset_table = get_tech_subset_table(case)
     techlist = sorted(tech_subset_table.unique())
     if not int(sw.GSw_BECCS):
@@ -182,7 +178,7 @@ def get_techlist_after_bans(case):
     return techlist
 
 
-def get_forcedoutage_hourly(case, tz='Etc/GMT+5', multilevel=True):
+def get_forcedoutage_hourly(case, tz='Etc/GMT+6', multilevel=True):
     inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
     with h5py.File(os.path.join(inputs_case, 'forcedoutage_hourly.h5'), 'r') as f:
         if multilevel:
@@ -214,7 +210,7 @@ def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
     # interactive = True
 
     #%% Derived inputs
-    sw = get_sw(inputs_case)
+    sw = reeds.io.get_switches(inputs_case)
     val_ba = (
         pd.read_csv(os.path.join(inputs_case, 'val_ba.csv'), header=None)
         .squeeze(1).values
@@ -229,21 +225,20 @@ def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
 
     tech_subset_table = get_tech_subset_table(inputs_case)
 
-    #%% Load temperatures
-    print('Load temperatures')
-    temperatures = get_temperatures(inputs_case)
-
     #%% Input data
     if sw.GSw_OutageScen.lower() == 'static':
         ### Fill static data for all techs and modeled regions
+        fulltimeindex = reeds.timeseries.get_timeindex(sw.resource_adequacy_years_list)
         forcedoutage_prefill = pd.concat(
             {
-                (i,r): pd.Series(index=temperatures.index, data=outage_forced_static[i])
+                (i,r): pd.Series(index=fulltimeindex, data=outage_forced_static[i])
                 for i in outage_forced_static.index for r in val_ba
             }, axis=1, names=('i','r'),
         )
-
     else:
+        ### Load temperatures
+        print('Load temperatures')
+        temperatures = get_temperatures(inputs_case)
         fits_forcedoutage_in = pd.read_csv(
             os.path.join(inputs_case, 'temperature_outage_forced.csv'),
             comment='#',
@@ -284,7 +279,7 @@ def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
     print(f"missing ({len(missing_techs)}): {' '.join(missing_techs)}")
 
     #%% Fill data for missing techs
-    if len(missing_techs):
+    if len(missing_techs):       
         forcedoutage_filled = pd.concat(
             {
                 (i,r): pd.Series(index=forcedoutage_prefill.index, data=outage_forced_static[i])
@@ -296,23 +291,35 @@ def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
     else:
         forcedoutage_hourly = forcedoutage_prefill
 
-    ### This file has a unique format so aggregate it now if necessary
-    if sw['GSw_RegionResolution'] == 'aggreg':
-        r2aggreg = pd.read_csv(
-            os.path.join(inputs_case, 'hierarchy_original.csv')
-        ).rename(columns={'ba':'r'}).set_index('r').aggreg
+   
+    #%% forcedoutage_hourly.h5 has a unique format so aggregate it now if necessary
+    val_r = pd.read_csv(os.path.join(inputs_case, 'val_r.csv'), header=None).squeeze(1)
+    r2aggreg = pd.read_csv(
+        os.path.join(inputs_case, 'hierarchy_original.csv')
+    ).rename(columns={'ba':'r'}).set_index('r').aggreg
+    agglevel_variables = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)
+
+    county2zone = pd.read_csv(os.path.join(inputs_case, 'county2zone.csv'), dtype={'FIPS':str})
+    county2zone.FIPS = 'p' + county2zone.FIPS
+    county2zone = county2zone.set_index('FIPS').ba.loc[agglevel_variables['county_regions']]
+
+    if 'aggreg' in agglevel_variables['agglevel']:
+        county2zone = county2zone.map(r2aggreg)
         forcedoutage_hourly.columns = forcedoutage_hourly.columns.map(
             lambda x: (x[0], r2aggreg[x[1]]))
         forcedoutage_hourly = forcedoutage_hourly.groupby(axis=1, level=['i','r']).mean()
-    elif sw['GSw_RegionResolution'] == 'county':
-        county2zone = pd.read_csv(os.path.join(inputs_case, 'county2zone.csv'), dtype={'FIPS':str})
-        ba2county = pd.Series(
-            index=county2zone.ba.values,
-            data=('p'+county2zone.FIPS.astype(str)).values
-        ).loc[val_ba]
+
+    if 'county' in agglevel_variables['agglevel']:
         forcedoutage_hourly = pd.concat(
             {
-                i: forcedoutage_hourly[i][ba2county.index].set_axis(ba2county.values, axis=1)
+                i: (
+                    forcedoutage_hourly[i]
+                    ## Get the zone for each county, or if it's already a zone, keep the zone.
+                    ## Every county in a zone thus gets the same profile.
+                    [val_r.map(lambda x: county2zone.get(x,x))]
+                    ## Set the actual regions (could be mix of zones and counties) as index
+                    .set_axis(val_r.values, axis=1)
+                )
                 for i in forcedoutage_hourly.columns.get_level_values('i').unique()
             },
             axis=1, names=('i','r'),
@@ -351,10 +358,7 @@ def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
     if debug:
         #%% Prep plots
         import matplotlib.pyplot as plt
-        import site
-        site.addsitedir(os.path.join(reeds_path, 'postprocessing'))
-        import plots
-        import reedsplots
+        from reeds import plots
         plots.plotparams()
         case = os.path.dirname(inputs_case.rstrip(os.sep))
         figpath = os.path.join(case,'outputs','hourly')
@@ -382,7 +386,7 @@ def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
             pd.read_hdf(outfile)
 
         #%% Plot forced outage rates
-        dfmap = reedsplots.get_dfmap(case)
+        dfmap = reeds.io.get_dfmap(case)
         dfzones = dfmap['r'].loc[val_ba]
         aggfunc = 'mean'
 
@@ -416,11 +420,16 @@ if __name__ == '__main__':
     inputs_case = args.inputs_case
 
     #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+    )
 
     #%% Run it
     main(reeds_path=reeds_path, inputs_case=inputs_case)
 
     #%% All done
-    toc(tic=tic, year=0, process='input_processing/outage_rates.py', 
-        path=os.path.join(inputs_case,'..'))
+    reeds.log.toc(
+        tic=tic, year=0, process='input_processing/outage_rates.py', 
+        path=os.path.join(inputs_case,'..'),
+    )

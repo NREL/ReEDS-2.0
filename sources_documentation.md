@@ -17,7 +17,6 @@
       - ##### [degradation](#inputs/degradation) 
       - ##### [demand_response](#inputs/demand_response) 
       - ##### [dgen_model_inputs](#inputs/dgen_model_inputs) 
-      - ##### [dgen_model_inputs](#inputs/dgen_model_inputs) 
       - ##### [disaggregation](#inputs/disaggregation) 
       - ##### [emission_constraints](#inputs/emission_constraints) 
       - ##### [financials](#inputs/financials) 
@@ -44,6 +43,7 @@
     - #### [postprocessing](#postprocessing) 
       - ##### [air_quality](#postprocessing/air_quality) 
       - ##### [bokehpivot](#postprocessing/bokehpivot) 
+      - ##### [combine_runs](#postprocessing/combine_runs) 
       - ##### [land_use](#postprocessing/land_use) 
       - ##### [plots](#postprocessing/plots) 
       - ##### [retail_rate_module](#postprocessing/retail_rate_module) 
@@ -54,6 +54,8 @@
     - #### [reeds2pras](#reeds2pras) 
       - ##### [test](#reeds2pras/test) 
     - #### [ReEDS_Augur](#ReEDS_Augur) 
+    - #### [tests](#tests) 
+      - ##### [data](#tests/data) 
 
 
 ## Input Files
@@ -137,14 +139,19 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 ##### [resource](hourlize/inputs/resource) <a name='hourlize/inputs/resource'></a>
+  - [egs_resource_classes.csv](/hourlize/inputs/resource/egs_resource_classes.csv)
+---
+
   - [fair_market_value.csv](/hourlize/inputs/resource/fair_market_value.csv)
     - **Description:** Contains estimates of fair market land value in $ per hectare for each reV supply curve site
 
     - **Citation:** [(Provided by Anthony Lopez in June 2023)]
 ---
 
-  - [rev_sc_columns_for_hourlize.csv](/hourlize/inputs/resource/rev_sc_columns_for_hourlize.csv)
-    - **Description:** List of reV supply curve columns needed to run hourlize for each tech
+  - [geohydro_resource_classes.csv](/hourlize/inputs/resource/geohydro_resource_classes.csv)
+---
+
+  - [rev_sc_columns.csv](/hourlize/inputs/resource/rev_sc_columns.csv)
 ---
 
   - [state_abbrev.csv](/hourlize/inputs/resource/state_abbrev.csv)
@@ -192,54 +199,200 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ###### [r2r_expanded](hourlize/tests/data/r2r_expanded) <a name='hourlize/tests/data/r2r_expanded'></a>
 
-####### [expected_results](hourlize/tests/data/r2r_expanded/expected_results) <a name='hourlize/tests/data/r2r_expanded/expected_results'></a>
-  - [df_sc_out_wind-ons_reduced.csv](/hourlize/tests/data/r2r_expanded/expected_results/df_sc_out_wind-ons_reduced.csv)
+####### [upv_case_1](hourlize/tests/data/r2r_expanded/upv_case_1) <a name='hourlize/tests/data/r2r_expanded/upv_case_1'></a>
+
+####### [expected_results](hourlize/tests/data/r2r_expanded/upv_case_1/expected_results) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/expected_results'></a>
+  - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/expected_results/df_sc_out_upv_reduced.csv)
 ---
 
 
-####### [reeds](hourlize/tests/data/r2r_expanded/reeds) <a name='hourlize/tests/data/r2r_expanded/reeds'></a>
+####### [reeds](hourlize/tests/data/r2r_expanded/upv_case_1/reeds) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/reeds'></a>
 
-####### [inputs_case](hourlize/tests/data/r2r_expanded/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/reeds/inputs_case'></a>
-  - [hierarchy.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/hierarchy.csv)
+####### [inputs_case](hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case'></a>
+  - [hierarchy_original.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case/hierarchy_original.csv)
 ---
 
-  - [maxage.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/maxage.csv)
+  - [maxage.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case/maxage.csv)
 ---
 
-  - [site_bin_map.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/site_bin_map.csv)
+  - [rev_paths.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case/rev_paths.csv)
 ---
 
-  - [switches.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/switches.csv)
+  - [site_bin_map.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case/site_bin_map.csv)
 ---
 
-
-####### [supplycurve_metadata](hourlize/tests/data/r2r_expanded/reeds/inputs_case/supplycurve_metadata) <a name='hourlize/tests/data/r2r_expanded/reeds/inputs_case/supplycurve_metadata'></a>
-  - [rev_paths.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/supplycurve_metadata/rev_paths.csv)
----
-
-  - [rev_supply_curves.csv](/hourlize/tests/data/r2r_expanded/reeds/inputs_case/supplycurve_metadata/rev_supply_curves.csv)
+  - [switches.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case/switches.csv)
 ---
 
 
-####### [outputs](hourlize/tests/data/r2r_expanded/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/reeds/outputs'></a>
-  - [cap.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/cap.csv)
+####### [outputs](hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs'></a>
+  - [cap.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs/cap.csv)
 ---
 
-  - [cap_exog.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/cap_exog.csv)
+  - [cap_exog.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs/cap_exog.csv)
 ---
 
-  - [cap_new_bin_out.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/cap_new_bin_out.csv)
+  - [cap_new_bin_out.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs/cap_new_bin_out.csv)
 ---
 
-  - [cap_new_ivrt_refurb.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/cap_new_ivrt_refurb.csv)
+  - [cap_new_ivrt_refurb.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs/cap_new_ivrt_refurb.csv)
 ---
 
-  - [systemcost.csv](/hourlize/tests/data/r2r_expanded/reeds/outputs/systemcost.csv)
+  - [systemcost.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs/systemcost.csv)
 ---
 
 
-####### [supply_curves](hourlize/tests/data/r2r_expanded/supply_curves) <a name='hourlize/tests/data/r2r_expanded/supply_curves'></a>
-  - [wind-ons_supply_curve_raw.csv](/hourlize/tests/data/r2r_expanded/supply_curves/wind-ons_supply_curve_raw.csv)
+####### [supply_curves](hourlize/tests/data/r2r_expanded/upv_case_1/supply_curves) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/supply_curves'></a>
+  - [upv_supply_curve_raw_unpacked.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/supply_curves/upv_supply_curve_raw_unpacked.csv)
+---
+
+
+####### [upv_case_2](hourlize/tests/data/r2r_expanded/upv_case_2) <a name='hourlize/tests/data/r2r_expanded/upv_case_2'></a>
+
+####### [expected_results](hourlize/tests/data/r2r_expanded/upv_case_2/expected_results) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/expected_results'></a>
+  - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/expected_results/df_sc_out_upv_reduced.csv)
+---
+
+
+####### [reeds](hourlize/tests/data/r2r_expanded/upv_case_2/reeds) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/reeds'></a>
+
+####### [inputs_case](hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case'></a>
+  - [hierarchy_original.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case/hierarchy_original.csv)
+---
+
+  - [maxage.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case/maxage.csv)
+---
+
+  - [rev_paths.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case/rev_paths.csv)
+---
+
+  - [site_bin_map.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case/site_bin_map.csv)
+---
+
+  - [switches.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case/switches.csv)
+---
+
+
+####### [outputs](hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs'></a>
+  - [cap.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs/cap.csv)
+---
+
+  - [cap_exog.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs/cap_exog.csv)
+---
+
+  - [cap_new_bin_out.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs/cap_new_bin_out.csv)
+---
+
+  - [cap_new_ivrt_refurb.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs/cap_new_ivrt_refurb.csv)
+---
+
+  - [systemcost.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs/systemcost.csv)
+---
+
+
+####### [supply_curves](hourlize/tests/data/r2r_expanded/upv_case_2/supply_curves) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/supply_curves'></a>
+  - [upv_supply_curve_raw_unpacked.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/supply_curves/upv_supply_curve_raw_unpacked.csv)
+---
+
+
+####### [upv_case_3](hourlize/tests/data/r2r_expanded/upv_case_3) <a name='hourlize/tests/data/r2r_expanded/upv_case_3'></a>
+
+####### [expected_results](hourlize/tests/data/r2r_expanded/upv_case_3/expected_results) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/expected_results'></a>
+  - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/expected_results/df_sc_out_upv_reduced.csv)
+---
+
+
+####### [reeds](hourlize/tests/data/r2r_expanded/upv_case_3/reeds) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/reeds'></a>
+
+####### [inputs_case](hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case'></a>
+  - [hierarchy_original.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case/hierarchy_original.csv)
+---
+
+  - [maxage.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case/maxage.csv)
+---
+
+  - [rev_paths.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case/rev_paths.csv)
+---
+
+  - [site_bin_map.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case/site_bin_map.csv)
+---
+
+  - [switches.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case/switches.csv)
+---
+
+
+####### [outputs](hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs'></a>
+  - [cap.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs/cap.csv)
+---
+
+  - [cap_exog.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs/cap_exog.csv)
+---
+
+  - [cap_new_bin_out.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs/cap_new_bin_out.csv)
+---
+
+  - [cap_new_ivrt_refurb.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs/cap_new_ivrt_refurb.csv)
+---
+
+  - [systemcost.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs/systemcost.csv)
+---
+
+
+####### [supply_curves](hourlize/tests/data/r2r_expanded/upv_case_3/supply_curves) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/supply_curves'></a>
+  - [upv_supply_curve_raw_unpacked.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/supply_curves/upv_supply_curve_raw_unpacked.csv)
+---
+
+
+####### [wind-ons_case_1](hourlize/tests/data/r2r_expanded/wind-ons_case_1) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1'></a>
+
+####### [expected_results](hourlize/tests/data/r2r_expanded/wind-ons_case_1/expected_results) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/expected_results'></a>
+  - [df_sc_out_wind-ons_reduced.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/expected_results/df_sc_out_wind-ons_reduced.csv)
+---
+
+
+####### [reeds](hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds'></a>
+
+####### [inputs_case](hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case'></a>
+  - [hierarchy_original.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/hierarchy_original.csv)
+---
+
+  - [maxage.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/maxage.csv)
+---
+
+  - [rev_paths.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/rev_paths.csv)
+---
+
+  - [site_bin_map.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/site_bin_map.csv)
+---
+
+  - [switches.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/switches.csv)
+---
+
+
+####### [supplycurve_metadata](hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/supplycurve_metadata) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/supplycurve_metadata'></a>
+  - [rev_supply_curves.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/supplycurve_metadata/rev_supply_curves.csv)
+---
+
+
+####### [outputs](hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs'></a>
+  - [cap.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs/cap.csv)
+---
+
+  - [cap_exog.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs/cap_exog.csv)
+---
+
+  - [cap_new_bin_out.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs/cap_new_bin_out.csv)
+---
+
+  - [cap_new_ivrt_refurb.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs/cap_new_ivrt_refurb.csv)
+---
+
+  - [systemcost.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs/systemcost.csv)
+---
+
+
+####### [supply_curves](hourlize/tests/data/r2r_expanded/wind-ons_case_1/supply_curves) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/supply_curves'></a>
+  - [wind-ons_supply_curve_raw.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/supply_curves/wind-ons_supply_curve_raw.csv)
 ---
 
 
@@ -248,9 +401,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ####### [expected_results](hourlize/tests/data/r2r_from_config/expected_results) <a name='hourlize/tests/data/r2r_from_config/expected_results'></a>
 
 ####### [multiple_priority_inputs](hourlize/tests/data/r2r_from_config/expected_results/multiple_priority_inputs) <a name='hourlize/tests/data/r2r_from_config/expected_results/multiple_priority_inputs'></a>
-  - [df_sc_out_dupv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/multiple_priority_inputs/df_sc_out_dupv_reduced.csv)
----
-
   - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/multiple_priority_inputs/df_sc_out_upv_reduced.csv)
 ---
 
@@ -262,9 +412,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 ####### [no_bin_constraint](hourlize/tests/data/r2r_from_config/expected_results/no_bin_constraint) <a name='hourlize/tests/data/r2r_from_config/expected_results/no_bin_constraint'></a>
-  - [df_sc_out_dupv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/no_bin_constraint/df_sc_out_dupv_reduced.csv)
----
-
   - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/no_bin_constraint/df_sc_out_upv_reduced.csv)
 ---
 
@@ -276,9 +423,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 ####### [priority_inputs](hourlize/tests/data/r2r_from_config/expected_results/priority_inputs) <a name='hourlize/tests/data/r2r_from_config/expected_results/priority_inputs'></a>
-  - [df_sc_out_dupv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/priority_inputs/df_sc_out_dupv_reduced.csv)
----
-
   - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/priority_inputs/df_sc_out_upv_reduced.csv)
 ---
 
@@ -289,23 +433,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [wind-ons_6mw_inputs](hourlize/tests/data/r2r_from_config/expected_results/wind-ons_6mw_inputs) <a name='hourlize/tests/data/r2r_from_config/expected_results/wind-ons_6mw_inputs'></a>
-  - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/wind-ons_6mw_inputs/df_sc_out_upv_reduced.csv)
----
-
-  - [df_sc_out_wind-ons_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/wind-ons_6mw_inputs/df_sc_out_wind-ons_reduced.csv)
----
-
-
 ###### [r2r_integration](hourlize/tests/data/r2r_integration) <a name='hourlize/tests/data/r2r_integration'></a>
 
 ####### [expected_results](hourlize/tests/data/r2r_integration/expected_results) <a name='hourlize/tests/data/r2r_integration/expected_results'></a>
-  - [df_sc_out_dupv.csv](/hourlize/tests/data/r2r_integration/expected_results/df_sc_out_dupv.csv)
----
-
-  - [df_sc_out_dupv_reduced.csv](/hourlize/tests/data/r2r_integration/expected_results/df_sc_out_dupv_reduced.csv)
----
-
   - [df_sc_out_upv.csv](/hourlize/tests/data/r2r_integration/expected_results/df_sc_out_upv.csv)
 ---
 
@@ -331,21 +461,19 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ####### [reeds](hourlize/tests/data/r2r_integration/reeds) <a name='hourlize/tests/data/r2r_integration/reeds'></a>
 
 ####### [inputs_case](hourlize/tests/data/r2r_integration/reeds/inputs_case) <a name='hourlize/tests/data/r2r_integration/reeds/inputs_case'></a>
-  - [hierarchy.csv](/hourlize/tests/data/r2r_integration/reeds/inputs_case/hierarchy.csv)
+  - [hierarchy_original.csv](/hourlize/tests/data/r2r_integration/reeds/inputs_case/hierarchy_original.csv)
 ---
 
   - [maxage.csv](/hourlize/tests/data/r2r_integration/reeds/inputs_case/maxage.csv)
+---
+
+  - [rev_paths.csv](/hourlize/tests/data/r2r_integration/reeds/inputs_case/rev_paths.csv)
 ---
 
   - [site_bin_map.csv](/hourlize/tests/data/r2r_integration/reeds/inputs_case/site_bin_map.csv)
 ---
 
   - [switches.csv](/hourlize/tests/data/r2r_integration/reeds/inputs_case/switches.csv)
----
-
-
-####### [supplycurve_metadata](hourlize/tests/data/r2r_integration/reeds/inputs_case/supplycurve_metadata) <a name='hourlize/tests/data/r2r_integration/reeds/inputs_case/supplycurve_metadata'></a>
-  - [rev_supply_curves.csv](/hourlize/tests/data/r2r_integration/reeds/inputs_case/supplycurve_metadata/rev_supply_curves.csv)
 ---
 
 
@@ -367,9 +495,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 ####### [supply_curves](hourlize/tests/data/r2r_integration/supply_curves) <a name='hourlize/tests/data/r2r_integration/supply_curves'></a>
-  - [dupv_sc_naris_scaled.csv](/hourlize/tests/data/r2r_integration/supply_curves/dupv_sc_naris_scaled.csv)
----
-
 
 ####### [upv_reference](hourlize/tests/data/r2r_integration/supply_curves/upv_reference) <a name='hourlize/tests/data/r2r_integration/supply_curves/upv_reference'></a>
 
@@ -392,18 +517,80 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-### [inputs](inputs) <a name='inputs'></a>
-  - [county2zone.csv](/inputs/county2zone.csv)
+###### [r2r_integration_geothermal](hourlize/tests/data/r2r_integration_geothermal) <a name='hourlize/tests/data/r2r_integration_geothermal'></a>
+
+####### [expected_results](hourlize/tests/data/r2r_integration_geothermal/expected_results) <a name='hourlize/tests/data/r2r_integration_geothermal/expected_results'></a>
+  - [df_sc_out_egs_allkm.csv](/hourlize/tests/data/r2r_integration_geothermal/expected_results/df_sc_out_egs_allkm.csv)
 ---
 
-  - [energy_communities.csv](/inputs/energy_communities.csv)
-    - **Description:** Contains a list of all county-regions designated as an energy community. The list is created from the NETL Energy Comunity Tax Bonus Website (https://arcgis.netl.doe.gov/portal/apps/experiencebuilder/experience/?id=a2ce47d4721a477a8701bd0e08495e1d) for 2023, and is appended with the list of new counties designated as energy communities published by the IRS in March 2024 (https://www.irs.gov/pub/irs-drop/n-24-30-appendix-2.pdf).
+  - [df_sc_out_egs_allkm_reduced.csv](/hourlize/tests/data/r2r_integration_geothermal/expected_results/df_sc_out_egs_allkm_reduced.csv)
+---
+
+  - [df_sc_out_geohydro_allkm.csv](/hourlize/tests/data/r2r_integration_geothermal/expected_results/df_sc_out_geohydro_allkm.csv)
+---
+
+  - [df_sc_out_geohydro_allkm_reduced.csv](/hourlize/tests/data/r2r_integration_geothermal/expected_results/df_sc_out_geohydro_allkm_reduced.csv)
+---
+
+
+####### [reeds](hourlize/tests/data/r2r_integration_geothermal/reeds) <a name='hourlize/tests/data/r2r_integration_geothermal/reeds'></a>
+
+####### [inputs_case](hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case) <a name='hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case'></a>
+  - [hierarchy_original.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case/hierarchy_original.csv)
+---
+
+  - [maxage.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case/maxage.csv)
+---
+
+  - [rev_paths.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case/rev_paths.csv)
+---
+
+  - [site_bin_map.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case/site_bin_map.csv)
+---
+
+  - [switches.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case/switches.csv)
+---
+
+
+####### [outputs](hourlize/tests/data/r2r_integration_geothermal/reeds/outputs) <a name='hourlize/tests/data/r2r_integration_geothermal/reeds/outputs'></a>
+  - [cap.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/outputs/cap.csv)
+---
+
+  - [cap_exog.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/outputs/cap_exog.csv)
+---
+
+  - [cap_new_bin_out.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/outputs/cap_new_bin_out.csv)
+---
+
+  - [cap_new_ivrt_refurb.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/outputs/cap_new_ivrt_refurb.csv)
+---
+
+  - [systemcost.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/outputs/systemcost.csv)
+---
+
+
+####### [supply_curves](hourlize/tests/data/r2r_integration_geothermal/supply_curves) <a name='hourlize/tests/data/r2r_integration_geothermal/supply_curves'></a>
+  - [egs_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration_geothermal/supply_curves/egs_supply_curve_raw.csv)
+---
+
+  - [geohydro_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration_geothermal/supply_curves/geohydro_supply_curve_raw.csv)
+---
+
+
+### [inputs](inputs) <a name='inputs'></a>
+  - [county2zone.csv](/inputs/county2zone.csv)
 ---
 
   - [hierarchy.csv](/inputs/hierarchy.csv)
 ---
 
+  - [hierarchy_agg1.csv](/inputs/hierarchy_agg1.csv)
+---
+
   - [hierarchy_agg2.csv](/inputs/hierarchy_agg2.csv)
+---
+
+  - [hierarchy_agg3.csv](/inputs/hierarchy_agg3.csv)
 ---
 
   - [modeledyears.csv](/inputs/modeledyears.csv)
@@ -466,6 +653,27 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Citation:** [(See 'notes' column in the file)]
     - **Units:** MW
 
+---
+
+  - [geohydro_allkm_exog_cap_reference.csv](/inputs/capacity_exogenous/geohydro_allkm_exog_cap_reference.csv)
+---
+
+  - [geohydro_allkm_prescribed_builds_reference.csv](/inputs/capacity_exogenous/geohydro_allkm_prescribed_builds_reference.csv)
+---
+
+  - [geohydro_exog_cap_reference_ba.csv](/inputs/capacity_exogenous/geohydro_exog_cap_reference_ba.csv)
+---
+
+  - [geohydro_exog_cap_reference_county.csv](/inputs/capacity_exogenous/geohydro_exog_cap_reference_county.csv)
+---
+
+  - [geohydro_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/geohydro_prescribed_builds_reference_ba.csv)
+---
+
+  - [geohydro_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/geohydro_prescribed_builds_reference_county.csv)
+---
+
+  - [interconnection_queues.csv](/inputs/capacity_exogenous/interconnection_queues.csv)
 ---
 
   - [ReEDS_generator_database_final_EIA-NEMS.csv](/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv)
@@ -604,6 +812,12 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Indices:** r,t
     - **Units:** MW
 
+---
+
+  - [wind-ofs_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_reference_ba.csv)
+---
+
+  - [wind-ofs_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_reference_county.csv)
 ---
 
   - [wind-ons_exog_cap_limited_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_limited_ba.csv)
@@ -860,56 +1074,56 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [dac_elec_BVRE_2021_high.csv](/inputs/consume/dac_elec_BVRE_2021_high.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using High assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using High assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)]
 ---
 
   - [dac_elec_BVRE_2021_low.csv](/inputs/consume/dac_elec_BVRE_2021_low.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using Low assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Low assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)]
 ---
 
   - [dac_elec_BVRE_2021_mid.csv](/inputs/consume/dac_elec_BVRE_2021_mid.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using Mid assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Mid assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)]
 ---
 
   - [dac_gas_BVRE_2021_high.csv](/inputs/consume/dac_gas_BVRE_2021_high.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using High assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using High assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)]
 ---
 
   - [dac_gas_BVRE_2021_low.csv](/inputs/consume/dac_gas_BVRE_2021_low.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using Low assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Low assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)]
 ---
 
   - [dac_gas_BVRE_2021_mid.csv](/inputs/consume/dac_gas_BVRE_2021_mid.csv)
     - **File Type:** Inputs
-    - **Description:** DAC costs (capex, FOM, VOM) and conversion rate, over time, using Mid assumptions.
+    - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Mid assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
 
-    - **Citation:** [(Beyond VRE project with Exxon Mobile and NETL.)]
+    - **Citation:** [(https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)]
 ---
 
   - [dollaryear.csv](/inputs/consume/dollaryear.csv)
@@ -1102,81 +1316,63 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [dgen_model_inputs](inputs/dgen_model_inputs) <a name='inputs/dgen_model_inputs'></a>
-  - [distPVCF_hourly.csv](/inputs/dgen_model_inputs/distpvcf_hourly.csv)
-    - **File Type:** distribution PV inputs 
-    - **Description:** Setting for distpv scenario hourly cf
-    - **Units:** fraction
 
+##### [stscen2023_electrification](inputs/dgen_model_inputs/stscen2023_electrification) <a name='inputs/dgen_model_inputs/stscen2023_electrification'></a>
+  - [distpvcap_stscen2023_electrification.csv](/inputs/dgen_model_inputs/stscen2023_electrification/distpvcap_stscen2023_electrification.csv)
 ---
-##### [stscen2023_electrification](inputs/dGen_model_inputs/stscen2023_electrification) <a name='inputs/dGen_model_inputs/stscen2023_electrification'></a>
-  - [distpv_stscen2023_electrification.csv.csv](/inputs/dGen_Model_Inputs/stscen2023_electrification/distpv_stscen2023_electrification.csv)
-    - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with electrification.
-    - **Units:** MW
----
+
 
 ##### [stscen2023_highng](inputs/dgen_model_inputs/stscen2023_highng) <a name='inputs/dgen_model_inputs/stscen2023_highng'></a>
-  - [distpvcap_stscen2023_highng.csv.csv](/inputs/dgen_model_inputs/stscen2023_highng/distpvcap_stscen2023_highng.csv)
+  - [distpvcap_stscen2023_highng.csv](/inputs/dgen_model_inputs/stscen2023_highng/distpvcap_stscen2023_highng.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with high NG (including distpv) costs.
-    - **Units:** MW
+    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with high NG (including distpv) costs
 ---
 
 
 ##### [stscen2023_highre](inputs/dgen_model_inputs/stscen2023_highre) <a name='inputs/dgen_model_inputs/stscen2023_highre'></a>
-  - [distpvcap_stscen2023_highre.csv.csv](/inputs/dgen_model_inputs/stscen2023_highre/distpvcap_stscen2023_highre.csv)
+  - [distpvcap_stscen2023_highre.csv](/inputs/dgen_model_inputs/stscen2023_highre/distpvcap_stscen2023_highre.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with high RE (including distpv) costs.
-    - **Units:** MW
+    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with high RE (including distpv) costs
 ---
 
 
 ##### [stscen2023_lowng](inputs/dgen_model_inputs/stscen2023_lowng) <a name='inputs/dgen_model_inputs/stscen2023_lowng'></a>
-  - [distpvcap_stscen2023_lowng.csv.csv](/inputs/dgen_model_inputs/stscen2023_lowng/distpvcap_stscen2023_lowng.csv)
+  - [distpvcap_stscen2023_lowng.csv](/inputs/dgen_model_inputs/stscen2023_lowng/distpvcap_stscen2023_lowng.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with low NG (including distpv) costs.
-    - **Units:** MW
+    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with low NG (including distpv) costs
 ---
 
 
 ##### [stscen2023_lowre](inputs/dgen_model_inputs/stscen2023_lowre) <a name='inputs/dgen_model_inputs/stscen2023_lowre'></a>
-  - [distpvcap_stscen2023_lowre.csv.csv](/inputs/dgen_model_inputs/stscen2023_lowre/distpvcap_stscen2023_lowre.csv)
+  - [distpvcap_stscen2023_lowre.csv](/inputs/dgen_model_inputs/stscen2023_lowre/distpvcap_stscen2023_lowre.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with low RE (including distpv) costs.
-    - **Units:** MW
+    - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with low RE (including distpv) costs
 ---
 
 
 ##### [stscen2023_mid_case](inputs/dgen_model_inputs/stscen2023_mid_case) <a name='inputs/dgen_model_inputs/stscen2023_mid_case'></a>
-  - [distpvcap_stscen2023_mid_case.csv.csv](/inputs/dgen_model_inputs/stscen2023_mid_case/distpvcap_stscen2023_mid_case.csv)
+  - [distpvcap_stscen2023_mid_case.csv](/inputs/dgen_model_inputs/stscen2023_mid_case/distpvcap_stscen2023_mid_case.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023.
-    - **Units:** MW
 ---
 
 
 ##### [stscen2023_mid_case_95_by_2035](inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035) <a name='inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035'></a>
-  - [distpvcap_stscen2023_mid_case_95_by_2035.csv.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035/distpvcap_stscen2023_mid_case_95_by_2035.csv)
+  - [distpvcap_stscen2023_mid_case_95_by_2035.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035/distpvcap_stscen2023_mid_case_95_by_2035.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with a 95% carbon reduction target by 2035.
-    - **Units:** MW
 ---
 
 
 ##### [stscen2023_mid_case_95_by_2050](inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050) <a name='inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050'></a>
-  - [distpvcap_stscen2023_mid_case_95_by_2050.csv.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050/distpvcap_stscen2023_mid_case_95_by_2050.csv)
+  - [distpvcap_stscen2023_mid_case_95_by_2050.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050/distpvcap_stscen2023_mid_case_95_by_2050.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with a 95% carbon reduction target by 2050.
-    - **Units:** MW
 ---
 
 
 ##### [stscen2023_taxcredit_extended2050](inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050) <a name='inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050'></a>
-  - [distpvcap_stscen2023_taxcredit_extended2050.csv.csv](/inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050/distpvcap_stscen2023_taxcredit_extended2050.csv)
+  - [distpvcap_stscen2023_taxcredit_extended2050.csv](/inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050/distpvcap_stscen2023_taxcredit_extended2050.csv)
     - **File Type:** distribution PV inputs 
-    - **Description:** Existing rooftop PV capacities are derived from EIA-826 data spanning 2010 to 2022. For future deployment, the settings align with the Standard Scenarios 2023 with an extended IRA through 2050.
-    - **Units:** MW
 ---
+
 
 #### [disaggregation](inputs/disaggregation) <a name='inputs/disaggregation'></a>
   - [disagg_geosize.csv](/inputs/disaggregation/disagg_geosize.csv)
@@ -1201,19 +1397,10 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [emission_constraints](inputs/emission_constraints) <a name='inputs/emission_constraints'></a>
-  - [capture_rates_CCS_80.csv](/inputs/emission_constraints/capture_rates_CCS_80.csv)
----
-
-  - [capture_rates_CCS_95.csv](/inputs/emission_constraints/capture_rates_CCS_95.csv)
----
-
-  - [capture_rates_CCS_99.csv](/inputs/emission_constraints/capture_rates_CCS_99.csv)
----
-
-  - [capture_rates_default.csv](/inputs/emission_constraints/capture_rates_default.csv)
----
-
   - [ccs_link.csv](/inputs/emission_constraints/ccs_link.csv)
+---
+
+  - [ccs_link_water.csv](/inputs/emission_constraints/ccs_link_water.csv)
 ---
 
   - [co2_cap.csv](/inputs/emission_constraints/co2_cap.csv)
@@ -1222,6 +1409,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [co2_tax.csv](/inputs/emission_constraints/co2_tax.csv)
     - **Description:** Annual co2 tax
+---
+
+  - [county_co2_share_egrid_2022.csv](/inputs/emission_constraints/county_co2_share_egrid_2022.csv)
 ---
 
   - [csapr_group1_ex.csv](/inputs/emission_constraints/csapr_group1_ex.csv)
@@ -1264,6 +1454,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [financials](inputs/financials) <a name='inputs/financials'></a>
+  - [cap_penalty.csv](/inputs/financials/cap_penalty.csv)
+---
+
   - [construction_schedules_default.csv](/inputs/financials/construction_schedules_default.csv)
 ---
 
@@ -1280,22 +1473,25 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [depreciation_schedules_default.csv](/inputs/financials/depreciation_schedules_default.csv)
 ---
 
-  - [financials_hydrogen.csv](/inputs/financials/financials_hydrogen.csv)
+  - [energy_communities.csv](/inputs/financials/energy_communities.csv)
 ---
 
-  - [financials_sys_ATB2022.csv](/inputs/financials/financials_sys_ATB2022.csv)
+  - [financials_hydrogen.csv](/inputs/financials/financials_hydrogen.csv)
 ---
 
   - [financials_sys_ATB2023.csv](/inputs/financials/financials_sys_ATB2023.csv)
 ---
 
-  - [financials_tech_ATB2022.csv](/inputs/financials/financials_tech_ATB2022.csv)
+  - [financials_sys_ATB2024.csv](/inputs/financials/financials_sys_ATB2024.csv)
 ---
 
   - [financials_tech_ATB2023.csv](/inputs/financials/financials_tech_ATB2023.csv)
 ---
 
   - [financials_tech_ATB2023_CRP20.csv](/inputs/financials/financials_tech_ATB2023_CRP20.csv)
+---
+
+  - [financials_tech_ATB2024.csv](/inputs/financials/financials_tech_ATB2024.csv)
 ---
 
   - [financials_transmission_30ITC_0pen_2022_2031.csv](/inputs/financials/financials_transmission_30ITC_0pen_2022_2031.csv)
@@ -1313,7 +1509,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [incentives_ira.csv](/inputs/financials/incentives_ira.csv)
 ---
 
-  - [incentives_ira_45q_extension.csv](/inputs/financials/incentives_ira_45q_extension.csv)
+  - [incentives_ira_45q_45v_extension.csv](/inputs/financials/incentives_ira_45q_45v_extension.csv)
 ---
 
   - [incentives_ira_hii.csv](/inputs/financials/incentives_ira_hii.csv)
@@ -1322,7 +1518,12 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [incentives_ira_lii.csv](/inputs/financials/incentives_ira_lii.csv)
 ---
 
+  - [incentives_none.csv](/inputs/financials/incentives_none.csv)
+---
+
   - [inflation_default.csv](/inputs/financials/inflation_default.csv)
+    - **Description:** Annual inflation factors from 1914 through 2200; historical values use the avg-avg values from https://www.usinflationcalculator.com/inflation/consumer-price-index-and-annual-percent-changes-from-1913-to-2008/
+    - **Indices:** t
 ---
 
   - [reg_cap_cost_mult_default.csv](/inputs/financials/reg_cap_cost_mult_default.csv)
@@ -1342,7 +1543,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [fuelprices](inputs/fuelprices) <a name='inputs/fuelprices'></a>
-  - [alpha_AEO_2022_HOG .csv](/inputs/fuelprices/alpha_AEO_2022_HOG.csv)
+  - [alpha_AEO_2022_HOG.csv](/inputs/fuelprices/alpha_AEO_2022_HOG.csv)
     - **File Type:** Input
     - **Description:** High Oil and Gas scenario census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
@@ -1637,7 +1838,10 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [geo_discovery_BAU.csv](/inputs/geothermal/geo_discovery_BAU.csv)
 ---
 
-  - [geo_discovery_factor.csv](/inputs/geothermal/geo_discovery_factor.csv)
+  - [geo_discovery_factor_ATB_2023.csv](/inputs/geothermal/geo_discovery_factor_ATB_2023.csv)
+---
+
+  - [geo_discovery_factor_reV.csv](/inputs/geothermal/geo_discovery_factor_reV.csv)
 ---
 
   - [geo_discovery_TI.csv](/inputs/geothermal/geo_discovery_TI.csv)
@@ -1655,6 +1859,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [growth_limit_absolute.csv](/inputs/growth_constraints/growth_limit_absolute.csv)
+    - **Description:** Maximum expected annual builds for wind, batteries, and UPV from 2024-2026 using observed record builds.
+    - **Units:** MW/year
+
 ---
 
   - [growth_penalty.csv](/inputs/growth_constraints/growth_penalty.csv)
@@ -1700,24 +1907,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [Commercial_GHP_Delta.csv](/inputs/load/Commercial_GHP_Delta.csv)
----
-
-  - [demand_AEO_2021_high.csv](/inputs/load/demand_AEO_2021_high.csv)
----
-
-  - [demand_AEO_2021_low.csv](/inputs/load/demand_AEO_2021_low.csv)
----
-
-  - [demand_AEO_2021_reference.csv](/inputs/load/demand_AEO_2021_reference.csv)
----
-
-  - [demand_AEO_2022_high.csv](/inputs/load/demand_AEO_2022_high.csv)
----
-
-  - [demand_AEO_2022_low.csv](/inputs/load/demand_AEO_2022_low.csv)
----
-
-  - [demand_AEO_2022_reference.csv](/inputs/load/demand_AEO_2022_reference.csv)
 ---
 
   - [demand_AEO_2023_high.csv](/inputs/load/demand_AEO_2023_high.csv)
@@ -1850,6 +2039,21 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [conv_ATB_2023_low_nuclear_cost.csv](/inputs/plant_characteristics/conv_ATB_2023_low_nuclear_cost.csv)
 ---
 
+  - [conv_ATB_2024.csv](/inputs/plant_characteristics/conv_ATB_2024.csv)
+---
+
+  - [conv_ATB_2024_adv_ccs.csv](/inputs/plant_characteristics/conv_ATB_2024_adv_ccs.csv)
+---
+
+  - [conv_ATB_2024_adv_nuclear.csv](/inputs/plant_characteristics/conv_ATB_2024_adv_nuclear.csv)
+---
+
+  - [conv_ATB_2024_con_ccs.csv](/inputs/plant_characteristics/conv_ATB_2024_con_ccs.csv)
+---
+
+  - [conv_ATB_2024_con_nuclear.csv](/inputs/plant_characteristics/conv_ATB_2024_con_nuclear.csv)
+---
+
   - [cost_opres_default.csv](/inputs/plant_characteristics/cost_opres_default.csv)
 ---
 
@@ -1912,7 +2116,19 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [geo_ATB_2023_moderate.csv](/inputs/plant_characteristics/geo_ATB_2023_moderate.csv)
 ---
 
+  - [geo_ATB_2024_advanced.csv](/inputs/plant_characteristics/geo_ATB_2024_advanced.csv)
+---
+
+  - [geo_ATB_2024_conservative.csv](/inputs/plant_characteristics/geo_ATB_2024_conservative.csv)
+---
+
+  - [geo_ATB_2024_moderate.csv](/inputs/plant_characteristics/geo_ATB_2024_moderate.csv)
+---
+
   - [h2-ct_ATB_2023.csv](/inputs/plant_characteristics/h2-ct_ATB_2023.csv)
+---
+
+  - [h2-ct_ATB_2024.csv](/inputs/plant_characteristics/h2-ct_ATB_2024.csv)
 ---
 
   - [heat_rate_adj.csv](/inputs/plant_characteristics/heat_rate_adj.csv)
@@ -1963,26 +2179,23 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [ofs-wind_ATB_2023_advanced.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_advanced.csv)
     - **File Type:** Inputs file
-    - **Description:** 2023 advanced ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year. Note: rsc_mult is outdated and not in use from 2024 anymore
+    - **Description:** 2023 advanced ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
     - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2023_conservative.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_conservative.csv)
     - **File Type:** Inputs file
-    - **Description:** 2023 conservative ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year. Note: rsc_mult is outdated and not in use from 2024 anymore
+    - **Description:** 2023 conservative ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
     - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2023_moderate.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_moderate.csv)
     - **File Type:** Inputs file
-    - **Description:** 2023 moderate ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year. Note: rsc_mult is outdated and not in use from 2024 anymore
+    - **Description:** 2023 moderate ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
     - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2023_moderate_noFloating.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_moderate_noFloating.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 moderate capital, fixed O&M and var O&M costs of non-floating type ofs-wind by class and year
-    - **Dollar year:** 2004
 ---
 
   - [ofs-wind_ATB_2024_advanced.csv](/inputs/plant_characteristics/ofs-wind_ATB_2024_advanced.csv)
@@ -2005,25 +2218,17 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [ofs-wind_ATB_2024_moderate_noFloating.csv](/inputs/plant_characteristics/ofs-wind_ATB_2024_moderate_noFloating.csv)
     - **File Type:** Inputs file
-    - **Description:** 2024 moderate_noFloating ofs-wind capital (5x floating capital cost), fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year 
+    - **Description:** 2024 moderate_noFloating ofs-wind capital (5x floating capital cost), fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year
     - **Dollar year:** 2022
 ---
 
   - [ons-wind_ATB_2023_advanced.csv](/inputs/plant_characteristics/ons-wind_ATB_2023_advanced.csv)
-    - **Description:** 2023 advanced ons-wind capacity factor multiplier, capital, fixed O&M and var O&M costs by class and year, with a reference 115 hh, 175 rd turbine type
-    - **Dollar year:** 2004
 ---
 
   - [ons-wind_ATB_2023_conservative.csv](/inputs/plant_characteristics/ons-wind_ATB_2023_conservative.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 conservative ons-wind capacity factor multiplier, capital, fixed O&M and var O&M costs by class and year, with a reference 115 hh, 175 rd turbine type
-    - **Dollar year:** 2004
 ---
 
   - [ons-wind_ATB_2023_moderate.csv](/inputs/plant_characteristics/ons-wind_ATB_2023_moderate.csv)
-    - **File Type:** Inputs file
-    - **Description:** 2023 moderate ons-wind capacity factor multiplier, capital, fixed O&M and var O&M costs by class and year, with a reference 115 hh, 175 rd turbine type
-    - **Dollar year:** 2004
 ---
 
   - [ons-wind_ATB_2024_advanced.csv](/inputs/plant_characteristics/ons-wind_ATB_2024_advanced.csv)
@@ -2063,8 +2268,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [startcost.csv](/inputs/plant_characteristics/startcost.csv)
 ---
 
-  - [temperature_celsius-ba.h5](/inputs/plant_characteristics/temperature_celsius-ba.h5)
-    - **Description:** Unweighted average hourly temperature (2007-2013) from NSRDB by ReEDS BA
+  - [temperature_outage_forced_murphy2019.csv](/inputs/plant_characteristics/temperature_outage_forced_murphy2019.csv)
 ---
 
   - [unitsize.csv](/inputs/plant_characteristics/unitsize.csv)
@@ -2521,12 +2725,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [nuclear_subsidies.csv](/inputs/state_policies/nuclear_subsidies.csv)
 ---
 
-  - [offshore_req_30by30.csv](/inputs/state_policies/offshore_req_30by30.csv)
-    - **File Type:** Inputs
-    - **Description:** state mandates of offshore wind capacity, 30 GW total by 2030
-    - **Indices:** st,allt
----
-
   - [offshore_req_default.csv](/inputs/state_policies/offshore_req_default.csv)
     - **File Type:** Inputs
     - **Description:** default state mandates of offshore wind capacity
@@ -2620,7 +2818,19 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [DUPV_supply_curves_cost_NARIS.csv](/inputs/supply_curve/DUPV_supply_curves_cost_NARIS.csv)
 ---
 
+  - [egs_supply_curve-reference_ba.csv](/inputs/supply_curve/egs_supply_curve-reference_ba.csv)
+---
+
+  - [egs_supply_curve-reference_county.csv](/inputs/supply_curve/egs_supply_curve-reference_county.csv)
+---
+
   - [geo_supply_curve_site-reference.csv](/inputs/supply_curve/geo_supply_curve_site-reference.csv)
+---
+
+  - [geohydro_supply_curve-reference_ba.csv](/inputs/supply_curve/geohydro_supply_curve-reference_ba.csv)
+---
+
+  - [geohydro_supply_curve-reference_county.csv](/inputs/supply_curve/geohydro_supply_curve-reference_county.csv)
 ---
 
   - [hyd_add_upg_cap.csv](/inputs/supply_curve/hyd_add_upg_cap.csv)
@@ -2921,6 +3131,12 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** wind-ofs supply curve using open siting assumptions at the county resolution
 ---
 
+  - [wind-ofs_supply_curve-reference_ba.csv](/inputs/supply_curve/wind-ofs_supply_curve-reference_ba.csv)
+---
+
+  - [wind-ofs_supply_curve-reference_county.csv](/inputs/supply_curve/wind-ofs_supply_curve-reference_county.csv)
+---
+
   - [wind-ons_supply_curve-limited_ba.csv](/inputs/supply_curve/wind-ons_supply_curve-limited_ba.csv)
     - **Description:** wind-ons supply curve using limited siting assumptions at the BA resolution
 ---
@@ -2965,6 +3181,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Cost for transmission hurdle rate by country
     - **Indices:** country
     - **Dollar year:** 2004
+---
+
+  - [cost_hurdle_intra.csv](/inputs/transmission/cost_hurdle_intra.csv)
 ---
 
   - [r_rr_adj_ba.csv](/inputs/transmission/r_rr_adj_ba.csv)
@@ -3242,13 +3461,16 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Concentrated Solar Power resource supply curve. Data is a capacity factor i.e. a fraction.
 ---
 
-  - [dupv_ba.h5](/inputs/variability/multi_year/dupv_ba.h5)
+  - [distpv-reference_ba.h5](/inputs/variability/multi_year/distpv-reference_ba.h5)
     - **File Type:** Resource supply curve
-    - **Description:** Distributed utility scale photovoltaics resource supply curve. Data is a capacity factor i.e. a fraction.
-    - **Indices:** v,r,t
+    - **Description:** Distributed photovoltaics resource supply curve. Data is a capacity factor i.e. a fraction.
+    - **Indices:** r,t
     - **Dollar year:** N/A
 
     - **Citation:** [(N/A)]
+---
+
+  - [temperature_celsius-ba.h5](/inputs/variability/multi_year/temperature_celsius-ba.h5)
 ---
 
   - [upv-limited_ba.h5](/inputs/variability/multi_year/upv-limited_ba.h5)
@@ -3312,6 +3534,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Dollar year:** N/A
 
     - **Citation:** [(N/A)]
+---
+
+  - [wind-ofs-reference_ba.h5](/inputs/variability/multi_year/wind-ofs-reference_ba.h5)
 ---
 
   - [wind-ons-limited_ba.h5](/inputs/variability/multi_year/wind-ons-limited_ba.h5)
@@ -3391,9 +3616,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [counties_H6C_high_stack_2017.csv](/postprocessing/air_quality/rcm_data/counties_H6C_high_stack_2017.csv)
 ---
 
-  - [marginal_damages_by_ReEDS_BA.csv](/postprocessing/air_quality/rcm_data/marginal_damages_by_ReEDS_BA.csv)
----
-
   - [states_ACS_high_stack_2017.csv](/postprocessing/air_quality/rcm_data/states_ACS_high_stack_2017.csv)
 ---
 
@@ -3402,6 +3624,10 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [bokehpivot](postprocessing/bokehpivot) <a name='postprocessing/bokehpivot'></a>
+  - [reeds_scenarios.csv](/postprocessing/bokehpivot/reeds_scenarios.csv)
+    - **Description:** Example data for ReEDS scenarios, each scenario with a custom style 
+---
+
 
 ##### [in](postprocessing/bokehpivot/in) <a name='postprocessing/bokehpivot/in'></a>
   - [example_custom_styles.csv](/postprocessing/bokehpivot/in/example_custom_styles.csv)
@@ -3410,10 +3636,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [example_data_US_electric_power_generation.csv](/postprocessing/bokehpivot/in/example_data_US_electric_power_generation.csv)
     - **Description:** Example data for US electric power generation
----
-
-  - [example_reeds_scenarios.csv](/postprocessing/bokehpivot/in/example_reeds_scenarios.csv)
-    - **Description:** Example data for ReEDS scenarios, each scenario with a custom style 
 ---
 
   - [gis_centroid_rb.csv](/postprocessing/bokehpivot/in/gis_centroid_rb.csv)
@@ -3508,10 +3730,18 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
+#### [combine_runs](postprocessing/combine_runs) <a name='postprocessing/combine_runs'></a>
+  - [combinefiles.csv](/postprocessing/combine_runs/combinefiles.csv)
+---
+
+  - [runlist.csv](/postprocessing/combine_runs/runlist.csv)
+---
+
+
 #### [land_use](postprocessing/land_use) <a name='postprocessing/land_use'></a>
 
 ##### [inputs](postprocessing/land_use/inputs) <a name='postprocessing/land_use/inputs'></a>
-  - [.csv](/postprocessing/land_use/inputs/federal_land_categories.csv)
+  - [federal_land_categories.csv](/postprocessing/land_use/inputs/federal_land_categories.csv)
 ---
 
   - [field_definitions.csv](/postprocessing/land_use/inputs/field_definitions.csv)
@@ -3670,6 +3900,12 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 ####### [inputs_case](reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case) <a name='reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case'></a>
+  - [forcedoutage_hourly.h5](/reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case/forcedoutage_hourly.h5)
+---
+
+  - [outage_forced_static.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case/outage_forced_static.csv)
+---
+
   - [resources.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case/resources.csv)
 ---
 
@@ -3692,9 +3928,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [energy_cap_2035.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur/augur_data/energy_cap_2035.csv)
 ---
 
-  - [forced_outage_2035.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur/augur_data/forced_outage_2035.csv)
----
-
   - [max_cap_2035.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur/augur_data/max_cap_2035.csv)
 ---
 
@@ -3710,5 +3943,26 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ### [ReEDS_Augur](ReEDS_Augur) <a name='ReEDS_Augur'></a>
   - [augur_switches.csv](/ReEDS_Augur/augur_switches.csv)
+---
+
+
+### [tests](tests) <a name='tests'></a>
+
+#### [data](tests/data) <a name='tests/data'></a>
+
+##### [county](tests/data/county) <a name='tests/data/county'></a>
+  - [csp.h5](/tests/data/county/csp.h5)
+---
+
+  - [distpv.h5](/tests/data/county/distpv.h5)
+---
+
+  - [upv.h5](/tests/data/county/upv.h5)
+---
+
+  - [wind-ofs.h5](/tests/data/county/wind-ofs.h5)
+---
+
+  - [wind-ons.h5](/tests/data/county/wind-ons.h5)
 ---
 

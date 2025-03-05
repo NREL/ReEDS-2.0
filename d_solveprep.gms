@@ -137,7 +137,7 @@ $endif.seq
 $ifthen.intwin ((%timetype%=="int") or (%timetype%=="win"))
 
 set
-    loadset "set used for loading in merged gdx files" / ReEDS_Augur_2010*ReEDS_Augur_%endyear% /
+    loadset "set used for loading in merged gdx files" / ReEDS_Augur_%startyear%*ReEDS_Augur_%endyear% /
 ;
 
 parameter

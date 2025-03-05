@@ -7,6 +7,7 @@ from collections import OrderedDict
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import pytest
+import numpy as np
 
 import path_fix as _  # noqa: F401
 
@@ -115,41 +116,6 @@ def test_validate_tech_supply_curves_bad_path(standard_config_json_data):
     tech_supply_curves = standard_config_json_data["tech_supply_curves"]
     tech_supply_curves["upv"] = False
     errors = reeds_to_rev_cli.validate_tech_supply_curves(tech_supply_curves)
-    assert len(errors) == 1
-
-
-def test_validate_new_incr_mw_happy(standard_config_json_data):
-    """
-    Happy path test for validate_new_incr_mw. Check that no error messages are
-    returned when valid data is provided.
-    """
-
-    new_incr_mw = standard_config_json_data["new_incr_mw"]
-    errors = reeds_to_rev_cli.validate_new_incr_mw(new_incr_mw)
-    assert len(errors) == 0
-
-
-def test_validate_new_incr_mw_bad_tech(standard_config_json_data):
-    """
-    Test that validate_new_incr_mw returns an error message if an invalid
-    technology is provided.
-    """
-
-    new_incr_mw = standard_config_json_data["new_incr_mw"]
-    new_incr_mw["bicycle_power"] = 100
-    errors = reeds_to_rev_cli.validate_new_incr_mw(new_incr_mw)
-    assert len(errors) == 1
-
-
-def test_validate_new_incr_mw_bad_value(standard_config_json_data):
-    """
-    Test that validate_new_incr_mw returns an error message if an invalid
-    (i.e., non-float) value is provided for a technology.
-    """
-
-    new_incr_mw = standard_config_json_data["new_incr_mw"]
-    new_incr_mw["upv"] = "ten"
-    errors = reeds_to_rev_cli.validate_new_incr_mw(new_incr_mw)
     assert len(errors) == 1
 
 
@@ -304,6 +270,19 @@ def from_config_integration_helper(
         )
         assert result.exit_code == 0, "Command encountered an error"
 
+        # check the output statements from the command to make sure all of the
+        # yearly capacity checks are close to zero
+        cap_checks = [
+            x
+            for x in result.output.split("\n")
+            if x.startswith("\tDifference (error):")
+        ]
+
+        cap_diffs = [float(x.split(":")[1]) for x in cap_checks]
+        assert np.isclose(
+            cap_diffs, 0, atol=3
+        ).all(), "Some capacity differences are not close to zero"
+
         for tech in config_data["tech_supply_curves"]:
             out_csv_name = f"df_sc_out_{tech}_reduced.csv"
             result_csv_path = out_dir_path.joinpath(out_csv_name)
@@ -315,20 +294,38 @@ def from_config_integration_helper(
             result_df = pd.read_csv(result_csv_path)
             expected_df = pd.read_csv(expected_csv_path)
 
-            assert_frame_equal(result_df, expected_df)
+            assert_frame_equal(result_df, expected_df, check_like=True)
 
 
-def test_from_config_standard_inputs(
-    test_cli_runner, standard_config_json_data, integration_data_path
-):
+@pytest.mark.parametrize(
+    "techs",
+    [
+        "geothermal",
+        "wind_and_pv",
+    ],
+)
+def test_from_config_standard_inputs(test_cli_runner, test_data_path, techs):
     """
     Integration test for from_config() CLI command. Ensure that it produces the expected
     outputs when passed a configuration file with "standard" inputs, which are
     consistent with the standard way of running rev_to_reeds.
     """
+    if techs == "wind_and_pv":
+        integration_data_path = test_data_path.joinpath("r2r_integration")
+    elif techs == "geothermal":
+        integration_data_path = test_data_path.joinpath("r2r_integration_geothermal")
+    else:
+        raise ValueError(f"Invalid input for techs: {techs}")
+
+    json_path = test_data_path.joinpath(
+        "r2r_from_config", f"standard_inputs_{techs}.json"
+    )
+    with open(json_path, "r") as f:
+        config_json_data = json.load(f)
+
     from_config_integration_helper(
         test_cli_runner,
-        standard_config_json_data,
+        config_json_data,
         integration_data_path,
         integration_data_path.joinpath("expected_results"),
     )
@@ -393,9 +390,12 @@ def test_from_config_multiple_priority_inputs(
     )
 
 
+@pytest.mark.parametrize(
+    "test_case", ["upv_case_1", "upv_case_2", "upv_case_3", "wind-ons_case_1"]
+)
 def test_from_config_expanded_capacity(
+    test_case,
     test_cli_runner,
-    expanded_inputs_config_json_data,
     expanded_data_path,
 ):
     """
@@ -404,30 +404,16 @@ def test_from_config_expanded_capacity(
     underreporting of the disaggregated capacity.
     """
 
-    from_config_integration_helper(
-        test_cli_runner,
-        expanded_inputs_config_json_data,
-        expanded_data_path,
-        expanded_data_path.joinpath("expected_results"),
-    )
-
-
-def test_from_config_wind_ons_6_mw_inputs(
-    test_cli_runner,
-    wind_ons_6mw_inputs_config_json_data,
-    integration_data_path,
-    from_config_data_path,
-):
-    """
-    Integration test for from_config() CLI command. Ensure that it produces the expected
-    outputs when passed a configuration file with new_incr_mw set to 6 MW for wind-ons.
-    """
+    test_case_data_path = expanded_data_path.joinpath(test_case)
+    json_path = test_case_data_path.joinpath("config.json")
+    with open(json_path, "r") as f:
+        config_json_data = json.load(f)
 
     from_config_integration_helper(
         test_cli_runner,
-        wind_ons_6mw_inputs_config_json_data,
-        integration_data_path,
-        from_config_data_path.joinpath("expected_results", "wind-ons_6mw_inputs"),
+        config_json_data,
+        test_case_data_path,
+        test_case_data_path.joinpath("expected_results"),
     )
 
 

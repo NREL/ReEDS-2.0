@@ -3,16 +3,8 @@ import os
 import numpy as np
 import pandas as pd
 import gdxpds
-# import numba
+import reeds
 
-from ReEDS_Augur.functions import dr_capacity_credit
-import ReEDS_Augur.functions as functions
-
-# import matplotlib.pyplot as plt
-# import site
-# site.addsitedir(os.path.expanduser('~/github/ReEDS-2.0/postprocessing'))
-# import plots
-# plots.plotparams()
 
 #%% Functions
 def get_relative_step_sizes(t, yearset, target_step):
@@ -63,7 +55,7 @@ def set_marg_vre_step_size(t, sw, gdx, hierarchy):
             if (t - target_last_step) < 5:
                 step_sizes.append(get_relative_step_sizes(t, yearset, target_last_step))
                 prev_year_list.append(target_last_step)
-        except:
+        except Exception:
             print('First Augur year so no previous steps')
 
     relative_step_sizes = pd.DataFrame(list(zip(prev_year_list, step_sizes)),
@@ -116,15 +108,17 @@ def reeds_cc(t, tnext, casedir):
     next iteration.
     '''
     #%% Get the switches
-    sw = functions.get_switches(casedir)
+    sw = reeds.io.get_switches(casedir)
 
     #%% Set up log
-    log = functions.makelog(
-        'capacity_credit.py', os.path.join(sw['casedir'], 'gamslog.txt'))
+    log = reeds.log.makelog(
+        'capacity_credit.py',
+        os.path.join(sw['casedir'], 'gamslog.txt'),
+    )
 
     #%% Load some inputs
     inputs_case = os.path.join(casedir, 'inputs_case')
-    hierarchy = functions.get_hierarchy(casedir).reset_index()
+    hierarchy = reeds.io.get_hierarchy(casedir).reset_index()
     resources = pd.read_csv(os.path.join(inputs_case, 'resources.csv'))
     
     augur_data = os.path.join(casedir,'ReEDS_Augur','augur_data')
@@ -286,7 +280,7 @@ def reeds_cc(t, tnext, casedir):
 
         try:
             eff_charge = cap_stor_agg_ccreg['rte'].values[0]
-        except:
+        except Exception:
             eff_charge = float(sw['cc_default_rte'])
 
         max_demand = load_profile_ccreg.max() / (1/float(sw['cc_max_stor_pen']))
@@ -882,7 +876,7 @@ def cc_storage(storage, pr, re, sdb, log):
         d = ds[i]
         try:
             d1 = ds[i+1]
-        except:
+        except Exception:
             d1 = d * 2
         e_base = 0
         p_base = 0
@@ -993,3 +987,59 @@ def cc_storage(storage, pr, re, sdb, log):
     # load profile for marginal CSP-TES CC calculations.
     return peak_stor[['peaking potential']].round(decimals=2).reset_index(
         ).rename(columns={'index': 'duration', 'peaking potential': 'MW'})
+
+
+def dr_dispatch(poss_dr_changes, ts_length, hrs, eff=1):
+    """
+    Calculate the battery level and curtailment recovery profiles.
+    Since everything here is in numpy, we can try using numba.jit to speed it up.
+    """
+    # Initialize some necessary arrays since numba can't do np.clip
+    curt = np.where(poss_dr_changes > 0, poss_dr_changes, 0)
+    avail = np.where(poss_dr_changes < 0, -poss_dr_changes, 0)
+    # Initialize the dr shifting and curtailment recovery to be 0 in all hours
+    curt_recovered = np.zeros((ts_length, poss_dr_changes.shape[1]))
+    # Loop through all hours and identify how much curtailment that hour could
+    # mitigate from the available load shifting
+    for n in range(0, ts_length):
+        n1 = max(0, n-hrs[0])
+        n2 = min(ts_length, n+hrs[1])
+        # maximum curtailment this hour can shift load into
+        # calculated as the cumulative sum of curtailment across all hours
+        # this hour can reach, identifying the max cumulative shifting allowed
+        # and subtracting off the desired shifting that can't happen
+        cum = np.cumsum(curt[n1:n2, :], axis=0)
+        curt_shift = np.maximum(curt[n1:n2, :] - (cum - np.minimum(cum, avail[n, :] / eff)), 0)
+        # Subtract realized curtailment reduction from appropriate hours
+        curt[n1:n2, :] -= curt_shift
+        # Record the amount of otherwise-curtailed energy that was
+        # recovered during appropriate hours
+        curt_recovered[n1:n2, :] += curt_shift
+    return curt_recovered
+
+
+def dr_capacity_credit(hrs, eff, ts_length, poss_dr_changes, marg_peak, cols,
+                       maxhrs):
+    """
+    Determines the ratio of peak load that could be shifted by DR.
+    """
+    # Get the DR profiles
+    # This is using the same function as curtailment, but with opposite meaning
+    # ("how much can I increase load in this hour in order to reduce load in any
+    # shiftable hours" instead of "how much can I decrease load in this hour
+    # in order to increase load in any shiftable hours"), so the efficiency
+    # gets applied to the opposite set of data. Hence the 1/eff.
+    # If maxhrs is included, that is used as the total number of hours the
+    # resource is able to be called. Really just for shed
+    peak_shift = dr_dispatch(
+        poss_dr_changes=poss_dr_changes,
+        ts_length=ts_length, hrs=hrs, eff=1/eff
+    )
+    # Sort and only take maximum allowed hours
+    sort_shift = np.sort(peak_shift, axis=0)[::-1]
+    sort_shift = sort_shift[0:int(min(maxhrs, ts_length)), :]
+    # Get the ratio of reduced peak to total peak
+    return pd.melt(
+        pd.DataFrame(data=[np.round(sort_shift.sum(0) / marg_peak, decimals=5), ],
+                     columns=cols)
+    )

@@ -14,15 +14,15 @@ import datetime
 import pandas as pd
 import gdxpds
 
+import reeds
 import ReEDS_Augur.prep_data as prep_data
 import ReEDS_Augur.capacity_credit as capacity_credit
 import ReEDS_Augur.stress_periods as stress_periods
-import ReEDS_Augur.functions as functions
 
 
 #%% Functions
 def run_pras(
-        casedir, t, sw, iteration=0, recordtime=True,
+        casedir, t, sw, start_year, timesteps, iteration=0, recordtime=True,
         repo=False, overwrite=True, include_samples=False,
         write_flow=False, write_surplus=False, write_energy=False,
     ):
@@ -44,8 +44,9 @@ def run_pras(
         f"--reeds_path={sw['reeds_path']}",
         f"--reedscase={casedir}",
         f"--solve_year={t}",
-        "--weather_year=2007",
-        "--timesteps=61320",
+        f"--weather_year={start_year}",
+        f"--timesteps={timesteps}",
+        f"--hydro_energylim={sw['pras_hydro_energylim']}",
         f"--write_flow={int(write_flow)}",
         f"--write_surplus={int(write_surplus)}",
         f"--write_energy={int(write_energy)}",
@@ -63,7 +64,7 @@ def run_pras(
 
     if recordtime:
         try:
-            functions.write_last_pras_runtime(year=t)
+            reeds.log.write_last_pras_runtime(year=t)
         except Exception as err:
             print(err)
 
@@ -76,30 +77,30 @@ def main(t, tnext, casedir, iteration=0):
     # #%% To debug, uncomment these lines and update the run path
     # t = 2020
     # tnext = 2023
-    # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0')
+    # reeds_path = os.path.dirname(__file__)
     # casedir = os.path.join(
-    #     reeds_path,'runs','v20240708_tforM1_Pacific')
+    #     reeds_path,'runs','v20241122_hydroM0_Pacific')
     # iteration = 0
     # assert tnext >= t
     # os.chdir(casedir)
-    # # ## Copy reeds2pras from repo to run folder
-    # # import shutil
-    # # shutil.rmtree(os.path.join(casedir, 'reeds2pras'))
-    # # shutil.copytree(
-    # #     os.path.join(reeds_path, 'reeds2pras'),
-    # #     os.path.join(casedir, 'reeds2pras'),
-    # #     ignore=shutil.ignore_patterns('test'),
-    # # )
+    # ## Copy reeds2pras from repo to run folder
+    # import shutil
+    # shutil.rmtree(os.path.join(casedir, 'reeds2pras'))
+    # shutil.copytree(
+    #     os.path.join(reeds_path, 'reeds2pras'),
+    #     os.path.join(casedir, 'reeds2pras'),
+    #     ignore=shutil.ignore_patterns('test'),
+    # )
 
-    #%% Get switches from inputs_case/switches.csv and ReEDS_Augur/augur_switches.csv
-    sw = functions.get_switches(casedir)
+    #%% Get run settings
+    sw = reeds.io.get_switches(casedir)
     sw['t'] = t
 
     #%% Prep data for resource adequacy
     print('Preparing data for resource adequacy calculations')
     tic = datetime.datetime.now()
     augur_csv, augur_h5 = prep_data.main(t, casedir)
-    functions.toc(tic=tic, year=t, process='ReEDS_Augur/prep_data.py')
+    reeds.log.toc(tic=tic, year=t, process='ReEDS_Augur/prep_data.py')
 
     #%% Calculate capacity credit if necessary; otherwise bypass
     print('calculating capacity credit...')
@@ -115,7 +116,7 @@ def main(t, tnext, casedir, iteration=0):
             'sdbin_size': pd.DataFrame(columns=['ccreg','szn','bin','t','Value']),
         }
 
-    functions.toc(tic=tic, year=t, process='ReEDS_Augur/capacity_credit.py')
+    reeds.log.toc(tic=tic, year=t, process='ReEDS_Augur/capacity_credit.py')
 
     #%% Run PRAS if necessary
     solveyears = pd.read_csv(
@@ -127,8 +128,14 @@ def main(t, tnext, casedir, iteration=0):
         2: True,
     }[int(sw['pras'])]
     if pras_this_solve_year or (not int(sw.GSw_PRM_CapCredit)):
+        start_year = min(sw['resource_adequacy_years_list'])
+        end_year = max(sw['resource_adequacy_years_list']) + 1
+        timesteps = (end_year - start_year) * 8760
         result = run_pras(
-            casedir, t, sw, iteration=iteration,
+            casedir, t, sw,
+            start_year=start_year,
+            timesteps=timesteps,
+            iteration=iteration,
             write_flow=(True if t == max(solveyears) else False),
             write_energy=True,
         )
@@ -142,7 +149,7 @@ def main(t, tnext, casedir, iteration=0):
     tic = datetime.datetime.now()
     if 'user' not in sw['GSw_PRM_StressModel'].lower():
         _eue_sorted_periods = stress_periods.main(sw=sw, t=t, iteration=iteration)
-    functions.toc(tic=tic, year=t, process='ReEDS_Augur/stress_periods.py')
+    reeds.log.toc(tic=tic, year=t, process='ReEDS_Augur/stress_periods.py')
 
     #%% Write gdx file explicitly to ensure that all entries
     ### (even empty dataframes) are written as parameters, not sets
@@ -188,8 +195,9 @@ if __name__ == '__main__':
     iteration = args.iteration
 
     #%% Set up logger
-    log = functions.makelog(
+    reeds.log.makelog(
         scriptname=f'{__file__} {t}-{tnext}',
-        logpath=os.path.join(casedir,'gamslog.txt'))
+        logpath=os.path.join(casedir,'gamslog.txt'),
+    )
 
     main(t=t, tnext=tnext, casedir=casedir, iteration=iteration)

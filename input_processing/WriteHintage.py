@@ -43,13 +43,15 @@ import argparse
 import math
 import numpy as np
 import os
+import sys
 import pandas as pd
 import warnings
+import datetime
 from sklearn.cluster import KMeans
 from sklearn.exceptions import ConvergenceWarning
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 # Time the operation of this script
-from ticker import toc, makelog
-import datetime
 tic = datetime.datetime.now()
 
 # ignore ConvergenceWarnings that occur in this file from the kmeans function 
@@ -297,8 +299,7 @@ def main(reeds_path, inputs_case):
     #     reeds_path,'runs','v20231027_yamM0_Z45_h_d_365_transreg_z69_core','inputs_case')
 
     #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+    sw = reeds.io.get_switches(inputs_case)
 
     nBin = int(sw.numhintage)
     retscen = sw.retscen
@@ -327,7 +328,7 @@ def main(reeds_path, inputs_case):
 
     # Import mapping files
     r_county = pd.read_csv(
-        os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze()
+        os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze(1)
 
     # Import generator database
     indat = pd.read_csv(os.path.join(inputs_case,'unitdata.csv'),
@@ -397,7 +398,6 @@ def main(reeds_path, inputs_case):
     tech_table = pd.read_csv(
         os.path.join(inputs_case, 'tech-subset-table.csv')).set_index('Unnamed: 0')
     coal_techs = [x.lower() for x in tech_table[tech_table['COAL'] == 'YES'].index.values.tolist()]
-    gas_techs = [x.lower() for x in tech_table[tech_table['GAS'] == 'YES'].index.values.tolist()]
 
     current_yr = datetime.date.today().year
 
@@ -741,13 +741,13 @@ if __name__ == '__main__':
     inputs_case = args.inputs_case
 
     #%% Set up logger
-    log = makelog(
+    log = reeds.log.makelog(
         scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
 
     #%% Run it
     main(reeds_path=reeds_path, inputs_case=inputs_case)
 
-    toc(tic=tic, year=0, process='input_processing/WriteHintage.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/WriteHintage.py', 
         path=os.path.join(inputs_case,'..'))
 
     print('Finished WriteHintage.py')

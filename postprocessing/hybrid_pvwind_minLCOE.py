@@ -4,10 +4,12 @@
 import pandas as pd
 import numpy as np
 import os
+import sys
 from tqdm import tqdm
 import scipy.optimize
-from input_processing.ticker import makelog
-import argparse 
+import argparse
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 
 ### Shared paths
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -50,7 +52,10 @@ else:
 # }
 
 #%% Set up logger
-log = makelog(scriptname=__file__, logpath=os.path.join(inp['case'],'gamslog.txt'))
+log = reeds.log.makelog(
+    scriptname=__file__,
+    logpath=os.path.join(inp['case'],'gamslog.txt'),
+)
 
 #################
 #%% HPC/SLURM ###
@@ -263,14 +268,8 @@ def cfcorr(dspv, dswind):
 #%% PROCEDURE ###
 
 #%% Get run settings
-switches = pd.read_csv(
-    os.path.join(inp['case'],'inputs_case','switches.csv'),
-    header=None, index_col=0,
-).squeeze(1)
-scalars = pd.read_csv(
-    os.path.join(inp['case'],'inputs_case','scalars.csv'),
-    header=None, index_col=0
-)[1]
+switches = reeds.io.get_switches(inp['case'])
+scalars = reeds.io.get_scalars(inp['case'])
 
 #%% Load CF profiles from ReEDS/reV
 cfpv = pd.read_csv(

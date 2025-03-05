@@ -3,7 +3,7 @@
         "option": "kestrel",
         "allocation": "wetosa",
         "walltime": 4,
-        "qos": "normal",
+        "qos": "high",
         "memory": null,
         "queue": null,
         "feature": null,

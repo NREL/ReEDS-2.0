@@ -20,12 +20,14 @@ import pandas as pd
 import numpy as np
 import gdxpds
 import os
+import sys
 import shutil
 from glob import glob
 from warnings import warn
-# Time the operation of this script
-from ticker import toc, makelog
 import datetime
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+# Time the operation of this script
 tic = datetime.datetime.now()
 
 #%%#################
@@ -152,11 +154,13 @@ if __name__ == '__main__':
     verbose = 2
 
     #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+    )
 
     #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+    sw = reeds.io.get_switches(inputs_case)
     endyear = int(sw.endyear)
     distpvscen = sw.distpvscen
     
@@ -448,7 +452,7 @@ if __name__ == '__main__':
                 'projected from {} to {}: {}'.format(lastdatayear, endyear, filename), 
                 flush=True)
 
-    toc(tic=tic, year=0, process='input_processing/forecast.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/forecast.py', 
         path=os.path.join(inputs_case,'..'))
     
     print('Finished forecast.py')

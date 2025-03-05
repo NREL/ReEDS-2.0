@@ -7,8 +7,7 @@ import numpy as np
 from glob import glob
 import re
 ### Local imports
-import ReEDS_Augur.functions as functions
-from input_processing.ldc_prep import read_file
+import reeds
 
 # #%% Debugging
 # sw['reeds_path'] = os.path.expanduser('~/github/ReEDS-2.0/')
@@ -38,11 +37,11 @@ def get_and_write_neue(sw, write=True):
         year_iteration = os.path.basename(infile)[len('PRAS_'):-len('.h5')].split('i')
         year = int(year_iteration[0])
         iteration = int(year_iteration[1])
-        eue[year,iteration] = functions.read_pras_results(infile)['USA_EUE'].sum()
+        eue[year,iteration] = reeds.io.read_pras_results(infile)['USA_EUE'].sum()
     eue = pd.Series(eue).rename('MWh')
     eue.index = eue.index.rename(['year','iteration'])
 
-    load = read_file(os.path.join(sw['casedir'],'inputs_case','load.h5'))
+    load = reeds.io.read_file(os.path.join(sw['casedir'],'inputs_case','load.h5'))
     loadyear = load.sum(axis=1).groupby('year').sum()
 
     neue = (
@@ -59,7 +58,7 @@ def get_rmap(sw, hierarchy_level='country'):
     """
     """
     ### Make the region aggregator
-    hierarchy = functions.get_hierarchy(sw.casedir)
+    hierarchy = reeds.io.get_hierarchy(sw.casedir)
 
     if hierarchy_level == 'r':
         rmap = pd.Series(hierarchy.index, index=hierarchy.index)
@@ -73,11 +72,11 @@ def get_pras_eue(sw, t, iteration=0):
     """
     """
     ### Get PRAS outputs
-    dfpras = functions.read_pras_results(
+    dfpras = reeds.io.read_pras_results(
         os.path.join(sw['casedir'], 'ReEDS_Augur', 'PRAS', f"PRAS_{t}i{iteration}.h5")
     )
     ### Create the time index
-    dfpras.index = functions.make_fulltimeindex()
+    dfpras.index = reeds.timeseries.get_timeindex(sw['resource_adequacy_years'])
 
     ### Keep the EUE columns by zone
     eue_tail = '_EUE'
@@ -116,8 +115,6 @@ def get_stress_periods(
     Returns:
         pd.DataFrame: Table of periods sorted in descending order by stress metric.
     """
-    site.addsitedir(os.path.join(sw['casedir'],'input_processing'))
-    from hourly_writetimeseries import timestamp2h
     ### Get the region aggregator
     rmap = get_rmap(sw=sw, hierarchy_level=hierarchy_level)
 
@@ -179,7 +176,7 @@ def get_stress_periods(
     )
     ## Convert to timestamp, then to ReEDS period
     dfmetric_top['actual_period'] = [
-        timestamp2h(pd.Timestamp(*d), sw['GSw_HourlyType']).split('h')[0]
+        reeds.timeseries.timestamp2h(pd.Timestamp(*d), sw['GSw_HourlyType']).split('h')[0]
         for d in dfmetric_top.index.values
     ]
 
@@ -252,18 +249,18 @@ def main(sw, t, iteration=0):
     )
 
     #%% Get storage state of charge (SOC) to use in selection of "shoulder" stress periods
-    dfenergy = functions.read_pras_results(
+    dfenergy = reeds.io.read_pras_results(
         os.path.join(sw['casedir'], 'ReEDS_Augur', 'PRAS', f"PRAS_{t}i{iteration}-energy.h5")
     )
-    fulltimeindex = functions.make_fulltimeindex()
-    dfenergy.index = fulltimeindex
+    timeindex = reeds.timeseries.get_timeindex(sw['resource_adequacy_years'])
+    dfenergy.index = timeindex
     ### Sum by region
     dfenergy_r = (
         dfenergy
         .rename(columns={c: c.split('|')[1] for c in dfenergy.columns})
         .groupby(axis=1, level=0).sum()
     )
-    hierarchy = functions.get_hierarchy(sw.casedir)
+    hierarchy = reeds.io.get_hierarchy(sw.casedir)
 
     #%% Parse the stress-period selection criteria and keep the associated periods
     _eue_sorted_periods = {}
@@ -351,11 +348,11 @@ def main(sw, t, iteration=0):
 
                 day_eue = high_eue_periods[criterion, f'high_{stress_metric}'].loc[i,'EUE']
                 day_index = np.where(
-                    fulltimeindex == dfenergy_agg.loc[day.strftime('%Y-%m-%d')].iloc[0].name
+                    timeindex == dfenergy_agg.loc[day.strftime('%Y-%m-%d')].iloc[0].name
                 )[0][0]
 
-                day_before = fulltimeindex[day_index - periodhours]
-                day_after = fulltimeindex[(day_index + periodhours) % len(fulltimeindex)]
+                day_before = timeindex[day_index - periodhours]
+                day_after = timeindex[(day_index + periodhours) % len(timeindex)]
 
                 if (
                     ((cutofftype == 'eue') and (end_headspace_MWh / day_eue >= float(cutoff)))
@@ -394,12 +391,13 @@ def main(sw, t, iteration=0):
         ).reset_index().drop_duplicates(subset='actual_period', keep='first')
 
         ## Reproduce the format of inputs_case/stress_period_szn.csv
+        p = 'w' if sw.GSw_HourlyType == 'wek' else 'd'
         new_stressperiods_write = pd.DataFrame({
             'rep_period': new_stress_periods.actual_period,
             'year': new_stress_periods.actual_period.map(
-                lambda x: int(x.strip('sy').split(sw['GSw_HourlyType'][0])[0])),
+                lambda x: int(x.strip('sy').split(p)[0])),
             'yperiod': new_stress_periods.actual_period.map(
-                lambda x: int(x.strip('sy').split(sw['GSw_HourlyType'][0])[1])),
+                lambda x: int(x.strip('sy').split(p)[1])),
             'actual_period': new_stress_periods.actual_period,
         })
 

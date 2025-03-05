@@ -13,8 +13,9 @@ The files used by PRAS are:
     * pras_vre_gen_{year}.h5
     * tran_cap_{year}.csv
 * In {case}/inputs_case:
-    * outage_forced_static.csv
     * forcedoutage_hourly.h5
+    * hydcf.csv
+    * outage_forced_static.csv
     * resources.csv
     * tech-subset-table.csv
     * unitdata.csv
@@ -27,8 +28,7 @@ import pandas as pd
 import numpy as np
 import gdxpds
 ### Local imports
-import ReEDS_Augur.functions as functions
-from input_processing.ldc_prep import read_file
+import reeds
 
 
 #%%### Procedure
@@ -54,24 +54,23 @@ def main(t, casedir):
     #%% Load other inputs from ReEDS
     inputs_case = os.path.join(casedir, 'inputs_case')
 
-    sw = functions.get_switches(casedir)
+    sw = reeds.io.get_switches(casedir)
     sw['t'] = t
 
     h_dt_szn = pd.read_csv(os.path.join(inputs_case, 'h_dt_szn.csv'))
-    hmap_7yr = pd.read_csv(os.path.join(inputs_case, 'hmap_7yr.csv'))
-    hmap_7yr['szn'] = h_dt_szn['season'].copy()
+    hmap_allyrs = pd.read_csv(os.path.join(inputs_case, 'hmap_allyrs.csv'), low_memory=False)
+    hmap_allyrs['szn'] = h_dt_szn['season'].copy()
 
     h_dt_szn = h_dt_szn.set_index(['year', 'hour'])
     # Add explicit timestamp index
     h_dt_szn['timestamp'] = pd.to_datetime(
-        h_dt_szn.index.map(hmap_7yr.set_index(['year', 'hour'])['*timestamp']))
+        h_dt_szn.index.map(hmap_allyrs.set_index(['year', 'hour'])['*timestamp']))
     h_dt_szn = h_dt_szn.reset_index().set_index('timestamp')
 
-    load = read_file(os.path.join(inputs_case, 'load.h5'), parse_timestamps=True)
+    load = reeds.io.read_file(os.path.join(inputs_case, 'load.h5'), parse_timestamps=True)
 
     resources = pd.read_csv(os.path.join(inputs_case, 'resources.csv'))
-
-    recf = pd.read_hdf(os.path.join(inputs_case, 'recf.h5')).astype(np.float32)
+    recf = reeds.io.read_file(os.path.join(inputs_case, 'recf.h5'), parse_timestamps=True)
     recf.columns = pd.MultiIndex.from_tuples([tuple(x.split('|')) for x in recf.columns],
                                              names=('i','r'))
 
@@ -243,7 +242,7 @@ def main(t, casedir):
     tran_cap = (
         trancap_reeds.set_index(['r','rr','trtype']).rename(columns={'Value':'MW'}))
     if sw.GSw_PRMTRADE_level != 'country':
-        hierarchy = functions.get_hierarchy(casedir)
+        hierarchy = reeds.io.get_hierarchy(casedir)
         if sw.GSw_PRMTRADE_level == 'r':
             rmap = dict(zip(hierarchy.index, hierarchy.index))
         else:

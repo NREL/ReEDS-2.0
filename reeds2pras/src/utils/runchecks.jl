@@ -205,4 +205,30 @@ function run_checks(data::ReEDSdatapaths)
             "Storage Capacity data is not available in ReEDS results. You are either using a ReEDS version not compatible with ReEDS2PRAS (or) the ReEDS case results location passed is erroneous (or) you don't have access to the energy_cap_$(string(data.year)) .csv file/ deleted it.",
         )
     end
+
+    # Hydro capacity factor data
+    filepath = joinpath(data.ReEDSfilepath, "inputs_case", "hydcf.csv")
+
+    io, bool = check_file(filepath)
+
+    if (bool)
+        close(io)
+    else
+        error(
+            "Hydroelectric capacity factor data is not available in ReEDS results. You are either using a ReEDS version not compatible with ReEDS2PRAS (or) the ReEDS case results location passed is erroneous (or) you don't have access to the hydcf.csv file/ deleted it.",
+        )
+    end
+
+    # Hydro capacity adjustment data
+    filepath = joinpath(data.ReEDSfilepath, "inputs_case", "hydcapadj.csv")
+
+    io, bool = check_file(filepath)
+
+    if (bool)
+        close(io)
+    else
+        error(
+            "Hydro capacity adjustment data is not available in ReEDS results. You are either using a ReEDS version not compatible with ReEDS2PRAS (or) the ReEDS case results location passed is erroneous (or) you don't have access to the hydcapadj.csv file/ deleted it.",
+        )
+    end
 end

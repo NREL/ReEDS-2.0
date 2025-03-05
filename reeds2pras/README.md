@@ -18,7 +18,7 @@ using ReEDS2PRAS
 
 reedscase = "/projects/ntps/llavin/ReEDS-2.0/runs/ntpsrerun_Xlim_DemHi_90by2035EarlyPhaseout__core" # path to completed ReEDS run
 solve_year = 2035 #need ReEDS Augur data for the input solve year
-weather_year = 2012 # must be 2007-2013
+weather_year = 2012 # must be 2007-2013 or 2016-2023
 timesteps = 8760
 user_descriptors = "your_user_descriptors_json_location_here" # Optional - if not passed uses default values
 
@@ -38,7 +38,7 @@ using ReEDS2PRAS
 # path to completed ReEDS run
 reedscase = "/projects/ntps/llavin/ReEDS-2.0/runs/ntpsrerun_Xlim_DemHi_90by2035EarlyPhaseout__core"
 solve_year = 2035 #need ReEDS Augur data for the input solve year
-weather_year = 2007 # must be 2007-2013
+weather_year = 2007 # must be 2007-2013 or 2016-2023
 timesteps = 61320
 user_descriptors = "your_user_descriptors_json_location_here" # Optional - if not passed uses default values
 
@@ -64,7 +64,3 @@ Please make sure you format your code to follow our guidelines using the snippet
 julia  -e 'using Pkg; Pkg.add("JuliaFormatter"); using JuliaFormatter; include(".github/workflows/formatter-code.jl")'
 ```
 **NOTE: You have to run the snippet above at the repo folder level.
-
-## Acknowledgements
-The developers are Luke Lavin, Surya Dhulipala, and Brandon Benton. They acknowlege Gord Stephen for many helpful comments for improving this package.
-

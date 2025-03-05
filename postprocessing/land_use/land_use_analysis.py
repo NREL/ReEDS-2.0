@@ -437,9 +437,9 @@ if __name__ == '__main__':
     if args.debug:
         print("In debug mode, skipping logging")
     else:
-        site.addsitedir(os.path.join(reeds_path,'input_processing'))
-        from ticker import makelog
-        log = makelog(scriptname=__file__, logpath=os.path.join(args.scenario,'gamslog.txt'))
+        site.addsitedir(reeds_path)
+        from reeds.log import makelog
+        makelog(scriptname=__file__, logpath=os.path.join(args.scenario,'gamslog.txt'))
 
     # convert techs to list
     if args.tech == "all":

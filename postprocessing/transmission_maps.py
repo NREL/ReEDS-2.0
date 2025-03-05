@@ -2,21 +2,18 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
-import site
+import sys
 import argparse
 import traceback
 import cmocean
-import plots
-import reedsplots as rplots 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+from reeds import plots
+from reeds import reedsplots
 
 os.environ['PROJ_NETWORK'] = 'OFF'
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-site.addsitedir(os.path.join(reeds_path,'input_processing'))
-
-# import makelog after setting the module path; if it's done before, the ticker module won't be found
-from ticker import makelog  # noqa: E402
 
 plots.plotparams()
 
@@ -42,6 +39,7 @@ gen_cmap = {
     'upv':plt.cm.Reds,
     'wind-ofs':plt.cm.Purples,
 }
+max_filename_length = 250
 ### For testing
 interactive = False
 write = True
@@ -62,21 +60,21 @@ year = args.year
 routes = args.routes
 
 # #%% Inputs for testing
-# case = (
-#     '/Volumes/ReEDS/Users/pbrown/ReEDSruns/20240112_stresspaper/20240313/'
-#     'v20240313_stresspaperE0_SP_DemHi_90by2035__core')
-# case = os.path.join(reeds_path,'runs','v20240806_tforK0_Ref_TFOR')
-# year = 2050
+# case = os.path.join(reeds_path,'runs','v20250228_hydroM0_Pacific')
+# year = 2032
 # routes = False
 # interactive = True
 # write = False
 # import importlib
-# importlib.reload(rplots)
+# importlib.reload(reedsplots)
 
 #############
 #%% PROCEDURE
 #%% Set up logger
-log = makelog(scriptname=__file__, logpath=os.path.join(case,'gamslog.txt'))
+log = reeds.log.makelog(
+    scriptname=__file__,
+    logpath=os.path.join(case,'gamslog.txt'),
+)
 
 #%% Make output directory
 savepath = os.path.join(case,'outputs','maps')
@@ -92,9 +90,7 @@ colors = pd.read_csv(
 colors = pd.concat([colors, trtypes.map(colors)])
 
 #%% Load switches
-sw = pd.read_csv(
-    os.path.join(case, 'inputs_case', 'switches.csv'),
-    header=None, index_col=0).squeeze(1)
+sw = reeds.io.get_switches(case)
 years = pd.read_csv(
     os.path.join(case,'inputs_case','modeledyears.csv')
 ).columns.astype(int).values
@@ -108,7 +104,7 @@ val_r = pd.read_csv(
 for subtract_baseyear in [None, 2020]:
     try:
         plt.close()
-        f, ax, _ = rplots.plot_trans_onecase(
+        f, ax, _ = reedsplots.plot_trans_onecase(
             case=case, pcalabel=False,
             routes=routes, simpletypes=None,
             wscale=(wscale_routes if routes else wscale_straight),
@@ -149,7 +145,7 @@ try:
     for network in ['rep','stress']:
         for plottype in ['mean','max']:
             plt.close()
-            f, ax, df = rplots.plot_transmission_utilization(
+            f, ax, df = reedsplots.plot_transmission_utilization(
                 case=case, year=year, plottype=plottype, network=network,
                 wscale=wscale_straight, alpha=1.0, cmap=cmap,
             )
@@ -166,7 +162,7 @@ except Exception:
 
 try:
     plt.close()
-    f,ax = rplots.plot_average_flow(
+    f,ax = reedsplots.plot_average_flow(
         case=case, year=year, wscale=wscale_routes*8e3,
     )
     savename = f'map_transmission_utilization-flowdirection-{year}.png'
@@ -182,7 +178,7 @@ except Exception:
 
 try:
     plt.close()
-    f,ax = rplots.plot_prmtrade(
+    f,ax = reedsplots.plot_prmtrade(
         case=case, year=year, wscale=wscale_straight*8e3,
     )
     savename = f'map_transmission_utilization-prmtrade-{year}.png'
@@ -199,7 +195,7 @@ except Exception:
 try:
     for level in ['r','st']:
         plt.close()
-        f,ax = rplots.map_net_imports(case=case, level=level)
+        f,ax = reedsplots.map_net_imports(case=case, level=level)
         savename = f'map_net_imports-{level}'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -214,7 +210,7 @@ except Exception:
 try:
     level = 'nercr'
     plt.close()
-    f, ax, df = rplots.plot_max_imports(case=case, level=level)
+    f, ax, df = reedsplots.plot_max_imports(case=case, level=level)
     savename = f"plot_max_imports-{level}"
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -231,7 +227,7 @@ except Exception:
 try:
     if int(sw.GSw_VSC):
         plt.close()
-        f,ax = rplots.plot_trans_vsc(
+        f,ax = reedsplots.plot_trans_vsc(
             case=case, year=year, wscale=wscale_straight*1e3,
             alpha=1.0, miles=300,
         )
@@ -257,7 +253,7 @@ techs = [
 ]
 for vmax in ['each', 'shared']:
     try:
-        f,ax = rplots.map_capacity_techs(
+        f,ax = reedsplots.map_capacity_techs(
             case, year=year, techs=techs, ncols=ncols, vmax=vmax,
         )
         savename = f'map_capacity-{year}-{vmax}.png'
@@ -274,7 +270,7 @@ for vmax in ['each', 'shared']:
 #%% Site VRE capacity
 try:
     plt.close()
-    f,ax = rplots.plot_vresites_transmission(
+    f,ax = reedsplots.plot_vresites_transmission(
         case, year, crs=crs, cm=gen_cmap,
         routes=False, wscale=wscale_straight, show_overlap=False,
         subtract_baseyear=None, show_transmission=False,
@@ -295,7 +291,7 @@ except Exception:
 #%% Site VRE capacity overlaid with transmission
 try:
     plt.close()
-    f,ax = rplots.plot_vresites_transmission(
+    f,ax = reedsplots.plot_vresites_transmission(
         case, year, crs=crs, cm=gen_cmap,
         routes=routes, show_overlap=False,
         wscale=wscale_routes,
@@ -317,7 +313,7 @@ except Exception:
 try:
     for val in ['cap','gen']:
         plt.close()
-        f,ax = rplots.map_agg(case=case, data=val, width_step=yearstep)
+        f,ax = reedsplots.map_agg(case=case, data=val, width_step=yearstep)
         savename = f'map_agg-FERC-{val}-{year}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -327,7 +323,7 @@ try:
         print(savename)
 
     plt.close()
-    f,ax = rplots.map_trans_agg(case=case, wscale=1000, drawzones=0.05, width_step=yearstep)
+    f,ax = reedsplots.map_trans_agg(case=case, wscale=1000, drawzones=0.05, width_step=yearstep)
     savename = f'map_agg-FERC-trans-{year}.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -337,7 +333,7 @@ try:
     print(savename)
 
     plt.close()
-    f,ax = rplots.map_agg(case=case, data='cap', width_step=yearstep, transmission=True)
+    f,ax = reedsplots.map_agg(case=case, data='cap', width_step=yearstep, transmission=True)
     savename = f'map_agg-FERC-cap,trans-{year}.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -377,7 +373,7 @@ for label, plottechs in subtechs.items():
             for plottype in plottypes:
                 for v in ([1] if ba else [0, 1]):
                     plt.close()
-                    f, ax, df = rplots.plot_dispatch_yearbymonth(
+                    f, ax, df = reedsplots.plot_dispatch_yearbymonth(
                         case=case, t=year, plottype=plottype, ba=ba,
                         techs=plottechs, highlight_rep_periods=v,
                     )
@@ -396,7 +392,7 @@ for label, plottechs in subtechs.items():
 
 try:
     plt.close()
-    f,ax = rplots.plot_dispatch_weightwidth(case=case)
+    f,ax = reedsplots.plot_dispatch_weightwidth(case=case)
     savename = f'plot_dispatch-weightwidth-{sw.endyear}.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -408,12 +404,29 @@ except Exception:
     print('plot_dispatch-weightwidth failed:')
     print(traceback.format_exc())
 
+### Plot interday storage state of charge
+try:
+    if int(sw.GSw_InterDayLinkage):
+        for ba in bas:
+            figpath = savepath_ba if ba else savepath
+            plt.close()
+            f, ax, df = reedsplots.plot_interday_soc(case=case, ba=ba, t=year)
+            savename = f'plot_soc_interday-{year}{"-"+ba if ba else ""}.png'
+            if write and (df is not None) and (not (df['storage_level'] == 0).all()):
+                plt.savefig(os.path.join(figpath, savename)) 
+            if interactive and (df is not None):
+                plt.show()
+            plt.close()
+            print(savename)
+except Exception:
+    print('plot_soc_interday failed:')
+    print(traceback.format_exc())
 
 #%% All-in-one map
 try:
     for sideplots in [False, True]:
         plt.close()
-        f,ax,eax = rplots.map_zone_capacity(case=case, year=year, sideplots=sideplots)
+        f,ax,eax = reedsplots.map_zone_capacity(case=case, year=year, sideplots=sideplots)
         savename = f'map_gencap_transcap-{year}{"-sideplots" if sideplots else ""}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -429,7 +442,7 @@ except Exception:
 #%% Interregional transmission / peak demand
 try:
     for level in ['transreg']:
-        f, ax, dfplot = rplots.plot_interreg_transfer_cap_ratio(case=case, level=level)
+        f, ax, dfplot = reedsplots.plot_interreg_transfer_cap_ratio(case=case, level=level)
         savename = f'plot_interreg_transfer_ratio-{level}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -445,7 +458,7 @@ except Exception:
 #%% Differences betweens solve years
 try:
     plt.close()
-    f,ax = rplots.plot_retire_add(case=case)
+    f,ax = reedsplots.plot_retire_add(case=case)
     savename = 'bars_retirements_additions.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -462,7 +475,7 @@ except Exception:
 try:
     if int(sw.GSw_H2):
         plt.close()
-        f,ax = rplots.map_h2_capacity(
+        f,ax = reedsplots.map_h2_capacity(
             case=case, year=year, cmap=cmap, wscale_h2=wscale_h2)
         savename = f'map_h2_capacity-{sw.endyear}.png'
         if write:
@@ -481,7 +494,7 @@ try:
     if int(sw['GSw_H2_Transport']):
         for plottype in ['mean','max']:
             plt.close()
-            f,ax = rplots.plot_transmission_utilization(
+            f,ax = reedsplots.plot_transmission_utilization(
                 case=case, year=year, plottype=plottype, network='h2',
                 wscale=wscale_h2/1000, alpha=1.0, cmap=cmap, extent='modeled',
             )
@@ -499,7 +512,7 @@ except Exception:
 try:
     if int(sw['GSw_H2_Transport']):
         plt.close()
-        f,ax = rplots.plot_average_flow(
+        f,ax = reedsplots.plot_average_flow(
             case=case, year=year, network='h2',
             cm=plt.cm.magma_r, extent='modeled', wscale=wscale_h2*1e4,
         )
@@ -521,7 +534,7 @@ try:
     if int(sw['GSw_H2']):
         agglevel = ('r' if len(val_r) <= 20 else ('st' if len(val_r) <= 30 else 'transreg'))
         plt.close()
-        f, ax, df = rplots.plot_h2_timeseries(
+        f, ax, df = reedsplots.plot_h2_timeseries(
             case=case, year=year, agglevel=agglevel, grid=0)
         savename = f'plot_h2_timeseries-{year}.png'
         if write and not df.empty:
@@ -539,7 +552,7 @@ except Exception:
 if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
     try:
         plt.close()
-        f,ax = rplots.plot_seed_stressperiods(case=case)
+        f,ax = reedsplots.plot_seed_stressperiods(case=case)
         savename = 'map_stressperiod_seeds.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -554,7 +567,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
     try:
         plt.close()
         level, regions = 'country', ['USA']
-        f,ax = rplots.plot_stressperiod_dispatch(case=case, level=level, regions=regions)
+        f,ax = reedsplots.plot_stressperiod_dispatch(case=case, level=level, regions=regions)
         savename = f'plot_stressperiod_dispatch-{",".join(regions)}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -568,7 +581,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
 
     try:
         plt.close()
-        f,ax = rplots.plot_stressperiod_days(case=case, repcolor='none', sharey=True)
+        f,ax = reedsplots.plot_stressperiod_days(case=case, repcolor='none', sharey=True)
         savename = 'plot_stressperiod_dates.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -581,10 +594,9 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
         print(traceback.format_exc())
 
     try:
-        metric = 'sum'
-        level = 'transgrp'
+        level, threshold, _, metric = sw['GSw_PRM_StressThreshold'].split('/')[0].split('_')
         plt.close()
-        f,ax = rplots.plot_stressperiod_evolution(
+        f,ax = reedsplots.plot_stressperiod_evolution(
             case=case, level=level, metric=metric)
         savename = f'plot_stressperiod_evolution-{metric}-{level}.png'
         if write:
@@ -600,7 +612,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
     try:
         plt.close()
         levels = ['country','interconnect','transreg','transgrp']
-        f, ax, _ = rplots.plot_neue_bylevel(case=case, levels=levels)
+        f, ax, _ = reedsplots.plot_neue_bylevel(case=case, levels=levels)
         savename = f"plot_stressperiod_neue-{','.join(levels)}.png"
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -617,7 +629,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
         periods = ['max gen','max load','min solar','min wind','min vre']
         for level, period in [(level,p) for level in levels for p in periods]:
             plt.close()
-            f, ax, _ = rplots.map_period_dispatch(
+            f, ax, _ = reedsplots.map_period_dispatch(
                 case=case, year=year, level=level, period=period, transmission=False,
                 )
             savename = f"map_dispatch_stressperiod-{level}-{year}-{period.replace(' ','')}.png"
@@ -632,7 +644,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
 
     try:
         plt.close()
-        f, ax, _ = rplots.plot_interface_flows(case=case, year=year)
+        f, ax, _ = reedsplots.plot_interface_flows(case=case, year=year)
         savename = f'plot_PRAS_flows-{year}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -646,7 +658,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
 
     try:
         plt.close()
-        f, ax, _ = rplots.plot_storage_soc(case=case, year=year)
+        f, ax, _ = reedsplots.plot_storage_soc(case=case, year=year)
         savename = f'plot_PRAS_storage-{year}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -662,7 +674,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
         level = 'transgrp'
         iteration = 'last'
         plt.close()
-        f, ax, df, i = rplots.plot_pras_eue_timeseries_full(
+        f, ax, df, i = reedsplots.plot_pras_eue_timeseries_full(
             case=case, year=year, level=level, iteration=iteration)
         savename = f'plot_PRAS_EUE-{level}-{year}i{i}.png'
         if write:
@@ -678,8 +690,8 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
     try:
         for y in [y for y in years if y >= 2025]:
             plt.close()
-            # f, ax, neue, _iteration = rplots.map_neue(case=case, year=y, iteration=0)
-            f, ax, neue, _iteration = rplots.map_neue(case=case, year=y)
+            # f, ax, neue, _iteration = reedsplots.map_neue(case=case, year=y, iteration=0)
+            f, ax, neue, _iteration = reedsplots.map_neue(case=case, year=y)
             savename = f"map_PRAS_neue-{y}i{_iteration}.png"
             if write:
                 plt.savefig(os.path.join(savepath, savename))
@@ -693,11 +705,22 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
 
     try:
         level = 'transreg'
+        metrics = [
+            'cap',
+            'rep_mean',
+            'stress_mean',
+            'stress_top5_load',
+            'stress_max_load',
+            'stress_max_price',
+        ]
         for units in ['percent', 'GW']:
             plt.close()
-            f, ax, df = rplots.plot_cap_rep_stress_mix(
-                case=case, year=year, level=level, units=units)
-            savename = f'plot_cap_rep_stress_mix-{units}-{level}-{year}.png'
+            f, ax, dictout = reedsplots.plot_cap_rep_stress_mix(
+                case=case, year=year, level=level, units=units, metrics=metrics,
+            )
+            savename = (
+                f"plot_techmix-{level}-{year}-{units}-{','.join(metrics)}"
+            )[:max_filename_length-len('.png')] + '.png'
             if write:
                 plt.savefig(os.path.join(savepath, savename))
             if interactive:
@@ -713,7 +736,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
         plot_for = False
         plottype = ('forced_outage_rate' if plot_for else 'capacity_offline')
         plt.close()
-        f, ax, df = rplots.plot_capacity_offline(
+        f, ax, df = reedsplots.plot_capacity_offline(
             case=case, year=year, level=level, plot_for=plot_for)
         savename = f'plot_{plottype}-{level}-{year}.png'
         if write:
@@ -733,7 +756,7 @@ try:
     ms = {'r':5, 'st':7}
     for level in ['r','st']:
         plt.close()
-        f,ax = rplots.map_capacity_markers(
+        f,ax = reedsplots.map_capacity_markers(
             case=case, level=level, year=year, ms=ms[level])
         savename = f'map_units-gencap-{level}.png'
         if write:
@@ -746,7 +769,7 @@ try:
     for subtract_baseyear in [None, 2020]:
         end = f'-since{subtract_baseyear}' if subtract_baseyear else ''
         plt.close()
-        f,ax = rplots.map_transmission_lines(
+        f,ax = reedsplots.map_transmission_lines(
             case=case, level='r', year=year, subtract_baseyear=subtract_baseyear)
         savename = f'map_units-transcap{end}.png'
         if write:
@@ -757,9 +780,9 @@ try:
         print(savename)
     ### Both
     plt.close()
-    f,ax = rplots.map_transmission_lines(
+    f,ax = reedsplots.map_transmission_lines(
         case=case, level='r', year=year, alpha=0.5, lw=0.15)
-    rplots.map_capacity_markers(case=case, level='r', year=year, f=f, ax=ax)
+    reedsplots.map_capacity_markers(case=case, level='r', year=year, f=f, ax=ax)
     savename = 'map_units-gencap-transcap.png'
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -784,7 +807,7 @@ try:
             ('site_gir','upv',plt.cm.turbo,2),
             ('site_gir','wind-ons',plt.cm.turbo,2),
         ]:
-            f,ax = rplots.map_hybrid_pv_wind(
+            f,ax = reedsplots.map_hybrid_pv_wind(
                 case=case,
                 year=year,
                 val=val, tech=tech, cmap=cmap, vmax=vmax,

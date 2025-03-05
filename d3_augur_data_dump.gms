@@ -10,7 +10,7 @@ This file creates a gdx file with all of the data necessary for the Augur module
     - technology sets
 $offtext
 
-$if not set start_year $setglobal start_year 2010
+$if not set start_year $setglobal start_year %startyear%
 
 *===============================
 * Set and parameter definitions

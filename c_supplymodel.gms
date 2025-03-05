@@ -36,19 +36,20 @@ positive variables
 
 * The units for all of the operational variables are average MW or MWh/time-slice hours
 * generation and storage variables
-  GEN(i,v,r,allh,t)                   "--MW-- electricity generation (post-curtailment) in hour h"
-  GEN_PLANT(i,v,r,allh,t)             "--MW-- average plant generation from hybrid generation/storage technologies in hour h"
-  GEN_STORAGE(i,v,r,allh,t)           "--MW-- average generation from hybrid storage technologies in hour h"
-  STORAGE_IN_PLANT(i,v,r,allh,t)      "--MW-- hybrid plant storage charging in hour h that is charging from a coupled technology"
+  GEN(i,v,r,allh,t)                      "--MW-- electricity generation (post-curtailment) in hour h"
+  GEN_PLANT(i,v,r,allh,t)                "--MW-- average plant generation from hybrid generation/storage technologies in hour h"
+  GEN_STORAGE(i,v,r,allh,t)              "--MW-- average generation from hybrid storage technologies in hour h"
+  STORAGE_IN_PLANT(i,v,r,allh,t)         "--MW-- hybrid plant storage charging in hour h that is charging from a coupled technology"
   STORAGE_IN_GRID(i,v,r,allh,t)          "--MW-- hybrid plant storage charging in hour h that is charging from the grid"
-  AVAIL_SITE(x,allh,t)                "--MW-- available generation from all resources at reV site x"
-  CURT(r,allh,t)                      "--MW-- curtailment from vre generators in hour h"
-  MINGEN(r,allszn,t)                  "--MW-- minimum generation level in each season"
-  STORAGE_IN(i,v,r,allh,t)            "--MW-- storage charging in hour h that is charging from a given source technology; not used for CSP-TES"
-  STORAGE_LEVEL(i,v,r,allh,t)         "--MWh per day-- storage level in hour h"
-  DR_SHIFT(i,v,r,allh,allhh,t)        "--MWh-- annual demand response load shifted to timeslice h from timeslice hh"
-  DR_SHED(i,v,r,allh,t)               "--MWh-- annual demand response load shed from timeslice h"
-  RAMPUP(i,r,allh,allhh,t)            "--MW-- upward change in generation from h to hh"
+  AVAIL_SITE(x,allh,t)                   "--MW-- available generation from all resources at reV site x"
+  CURT(r,allh,t)                         "--MW-- curtailment from vre generators in hour h"
+  MINGEN(r,allszn,t)                     "--MW-- minimum generation level in each season"
+  STORAGE_IN(i,v,r,allh,t)               "--MW-- storage charging in hour h that is charging from a given source technology; not used for CSP-TES"
+  STORAGE_LEVEL(i,v,r,allh,t)            "--MWh-- storage level in hour h"
+  STORAGE_INTERDAY_LEVEL(i,v,r,allszn,t) "--MWh-- storage level at hour 0 of the partition"
+  DR_SHIFT(i,v,r,allh,allhh,t)           "--MWh-- annual demand response load shifted to timeslice h from timeslice hh"
+  DR_SHED(i,v,r,allh,t)                  "--MWh-- annual demand response load shed from timeslice h"
+  RAMPUP(i,r,allh,allhh,t)               "--MW-- upward change in generation from h to hh"
 
 * flexible CCS variables
   CCSFLEX_POW(i,v,r,allh,t)                "--avg MW-- average power consumed for CCS system"
@@ -114,6 +115,11 @@ Variables
 * with negative emissions technologies (e.g. BECCS, DAC) - emissions
 * can become negative thus not restricted to the positive domain
   EMIT(e,r,t)                            "--metric tons-- total emissions in a region"
+
+* inter-day storage variables
+  STORAGE_INTERDAY_DISPATCH(i,v,r,allh,t)         "--MW--  net dispatch for storage in hour h"
+  STORAGE_INTERDAY_LEVEL_MAX_DAY(i,v,r,allszn,t)  "--MWh-- maximum relative state of charge on a representative period compared to hour 0 of the rep period"
+  STORAGE_INTERDAY_LEVEL_MIN_DAY(i,v,r,allszn,t)  "--MWh-- minimum relative state of charge on a representative period compared to hour 0 of the rep period"
 ;
 
 *========================================
@@ -169,7 +175,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_curt_gen_balance(r,allh,t)                 "--MW-- net generation and curtailment must equal gross generation"
  eq_dhyd_dispatch(i,v,r,allszn,t)              "--MWh-- dispatchable hydro seasonal energy constraint (when not allowing seasonal enregy shifting)"
  eq_min_cf(i,r,t)                              "--MWh-- minimum capacity factor constraint for each generator fleet, applied to (i,r)"
- eq_mingen_fixed(i,v,r,allh,t)                 "--MW-- Generation in each timeslice must be greater than mingen_fixed * capacity"
+ eq_mingen_fixed(i,v,r,allh,t)                 "--MW-- Generation in each timeslice must be greater than mingen_fixed * available capacity"
  eq_mingen_lb(r,allh,allszn,t)                 "--MW-- lower bound on minimum generation level"
  eq_mingen_ub(r,allh,allszn,t)                 "--MW-- upper bound on minimum generation level"
  eq_minloading(i,v,r,allh,allhh,t)             "--MW-- minimum loading across same-season hours"
@@ -267,12 +273,19 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_firm_transfer_limit_cc(nercr,ccseason,t) "--MW-- limit net firm capacity imports into NERC regions when using capacity credit"
 
 * storage-specific equations
- eq_storage_capacity(i,v,r,allh,t)                "--MW-- Second storage capacity constraint in addition to eq_capacity_limit"
+ eq_storage_capacity(i,v,r,allh,t)                "--MW-- second storage capacity constraint in addition to eq_capacity_limit"
  eq_storage_duration(i,v,r,allh,t)                "--MWh-- limit STORAGE_LEVEL based on hours of storage available"
  eq_storage_in_cap(i,v,r,allh,t)                  "--MW-- storage_in must be less than a given fraction of power output capacity"
  eq_storage_in_minloading(i,v,r,allh,allhh,t)     "--MW-- minimum level for storage_in across same-season hours"
- eq_storage_level(i,v,r,allh,t)                   "--MWh per day-- Storage level inventory balance from one time-slice to the next"
- eq_storage_opres(i,v,r,allh,t)                   "--MWh per day-- there must be sufficient energy in the storage to be able to provide operating reserves"
+ eq_storage_level(i,v,r,allh,t)                   "--MWh-- storage level inventory balance from one time-slice to the next"
+ eq_storage_interday_level_max_day(i,v,r,allszn,allh,t)   "--MWh-- define the maximum relative SOC on a representative period compared to hour 0 of the rep period"
+ eq_storage_interday_level_min_day(i,v,r,allszn,allh,t)   "--MWh-- define the minimum relative SOC on a representative period compared to hour 0 of the rep period"
+ eq_storage_interday_min_level_start(i,v,r,allszn,t)      "--MWh-- enforce minimun SOC at first period of each partition"
+ eq_storage_interday_min_level_end(i,v,r,allszn,t)        "--MWh-- enforce minimun SOC at last period of each partition"
+ eq_storage_interday_level(i,v,r,allszn,t)                "--MWh-- calculate SOC of each partition at its hour 0"
+ eq_storage_interday_max_level_start(i,v,r,allszn,t)      "--MWh-- enforce maximum SOC at first period of each partition"
+ eq_storage_interday_max_level_end(i,v,r,allszn,t)        "--MWh-- enforce maximum SOC at last period of each partition"
+ eq_storage_opres(i,v,r,allh,t)                   "--MWh-- there must be sufficient energy in the storage to be able to provide operating reserves"
  eq_storage_thermalres(i,v,r,allh,t)              "--MW-- thermal storage contribution to operating reserves is store_in only"
 
 * demand-response specific equations
@@ -1122,7 +1135,7 @@ eq_curt_gen_balance(r,h,t)$tmodel(t)..
 ;
 
 * ---------------------------------------------------------------------------
-* Generation in each timeslice must be greater than mingen_fixed * capacity
+* Generation in each timeslice must be greater than mingen_fixed * available capacity
 eq_mingen_fixed(i,v,r,h,t)
     $[Sw_MingenFixed$tmodel(t)$mingen_fixed(i)$valgen(i,v,r,t)
     $(yeart(t)>=Sw_StartMarkets)]..
@@ -1131,7 +1144,7 @@ eq_mingen_fixed(i,v,r,h,t)
 
     =g=
 
-    mingen_fixed(i) * CAP(i,v,r,t)
+    mingen_fixed(i) * avail(i,r,h) *  CAP(i,v,r,t)
 ;
 
 * ---------------------------------------------------------------------------
@@ -2670,16 +2683,22 @@ eq_storage_capacity(i,v,r,h,t)
 *  daily storage level in the current time-slice (h)
 *  plus daily net charging in the current time-slice (accounting for losses).
 *  CSP with storage energy accounting is also covered by this constraint.
+*  Does not apply for storage technologies that allow cross-season energy arbitrage.
+*  When inter-day linkage is used, the nexth will be disabled, and this equation will
+*  be used to calculate intra-day storage dispatch for further inter-day linkage use.
 eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$tmodel(t)]..
 
 *[plus] storage level in h+1
-    sum{(hh)$[nexth(h,hh)], STORAGE_LEVEL(i,v,r,hh,t) }
+    sum{(hh)$[nexth(h,hh)], STORAGE_LEVEL(i,v,r,hh,t)}$(not storage_interday(i))
+
+*[plus] the net dispatch of inter-day storage technologies
+    + STORAGE_INTERDAY_DISPATCH(i,v,r,h,t)$(storage_interday(i)) * hours_daily(h)
 
     =e=
 
 * only want to include storage_level from periods that have had a previous storage_level
 * otherwise it becomes a free variable, implying you can charge storage without bound
-    STORAGE_LEVEL(i,v,r,h,t)
+    STORAGE_LEVEL(i,v,r,h,t)$(not storage_interday(i))
 
 *[plus] storage charging
     + storage_eff(i,t) *  hours_daily(h) * (
@@ -2814,6 +2833,125 @@ eq_storage_in_minloading(i,v,r,h,hh,t)$[(storage_standalone(i) or hyd_add_pump(i
     =g=
 
     STORAGE_IN(i,v,r,hh,t) * minstorfrac(i,v,r)
+;
+
+* ---------------------------------------------------------------------------
+
+* Constraints for building inter-day storage linkage
+* The storage level at hour 0 of next partition
+* equals to the storage level at hour 0 of current partition
+* plus number of period of current partition multiply by storage net change of the rep period
+eq_storage_interday_level(i,v,r,allszn,t)$[valgen(i,v,r,t)$storage_interday(i)$tmodel(t)$numpartitions(allszn)]..
+    
+    sum{allsznn$[nextpartition(allszn,allsznn)],STORAGE_INTERDAY_LEVEL(i,v,r,allsznn,t)}
+
+    =e=
+
+    STORAGE_INTERDAY_LEVEL(i,v,r,allszn,t) 
+    
+    + numpartitions(allszn)
+    * sum{(szn)$[szn_actualszn(szn,allszn)$numpartitions(allszn)],
+          sum{h$[h_szn(h,szn)], (STORAGE_INTERDAY_DISPATCH(i,v,r,h,t) * hours_daily(h))}}
+;
+
+* ---------------------------------------------------------------------------
+
+* Constraints for building inter-day storage linkage
+* Define the maximum relative soc on a representative period compared to its hour 0
+* It's noted that STORAGE_INTERDAY_LEVEL_MAX_DAY can be nagative since it represent a relative value
+eq_storage_interday_level_max_day(i,v,r,szn,h,t)$[valgen(i,v,r,t)$storage_interday(i)$tmodel(t)$h_szn(h,szn)]..
+    
+    STORAGE_INTERDAY_LEVEL_MAX_DAY(i,v,r,szn,t)
+
+    =g=
+
+    sum{(hh)$[h_preh(h,hh)], (STORAGE_INTERDAY_DISPATCH(i,v,r,hh,t) * hours_daily(h))}
+;
+
+* ---------------------------------------------------------------------------
+
+* Constraints for building inter-day storage linkage
+* Define the minimum relative soc on a representative period compared to its hour 0
+* It's noted that STORAGE_INTERDAY_LEVEL_MIN_DAY can be nagative since it represent a relative value
+eq_storage_interday_level_min_day(i,v,r,szn,h,t)$[valgen(i,v,r,t)$storage_interday(i)$tmodel(t)$h_szn(h,szn)]..
+    
+    sum{(hh)$[h_preh(h,hh)], (STORAGE_INTERDAY_DISPATCH(i,v,r,hh,t) * hours_daily(h))}
+
+    =g=
+
+    STORAGE_INTERDAY_LEVEL_MIN_DAY(i,v,r,szn,t)
+;
+
+* ---------------------------------------------------------------------------
+
+* Constraints for building inter-day storage linkage
+* For all partitions, the soc at their hour 0 plus minimum soc of first period should greater than 0
+* This is to make sure not only their hour 0 but also the lowest point of the first period of each partition is greater than 0
+eq_storage_interday_min_level_start(i,v,r,allszn,t)$[valgen(i,v,r,t)$storage_interday(i)$tmodel(t)$numpartitions(allszn)]..
+
+    STORAGE_INTERDAY_LEVEL(i,v,r,allszn,t)
+    
+    + sum{(szn)$[szn_actualszn(szn,allszn)], STORAGE_INTERDAY_LEVEL_MIN_DAY(i,v,r,szn,t)}
+
+    =g=
+
+    0
+;
+
+* ---------------------------------------------------------------------------
+
+* Constraints for building inter-day storage linkage
+* For all partitions, the soc at their hour 0 plus minimum soc of last period should greater than 0
+* This is to make sure not only their hour 0 but also the lowest point of the last period of each partition is greater than 0
+eq_storage_interday_min_level_end(i,v,r,allszn,t)$[valgen(i,v,r,t)$storage_interday(i)$tmodel(t)$numpartitions(allszn)]..
+
+    STORAGE_INTERDAY_LEVEL(i,v,r,allszn,t)
+
+    + (numpartitions(allszn) - 1) 
+    * sum{(szn)$[szn_actualszn(szn,allszn)], 
+        sum{h$[h_szn(h,szn)], (STORAGE_INTERDAY_DISPATCH(i,v,r,h,t) * hours_daily(h))}}
+    
+    + sum{(szn)$[szn_actualszn(szn,allszn)], STORAGE_INTERDAY_LEVEL_MIN_DAY(i,v,r,szn,t)}
+
+    =g=
+
+    0
+;
+
+* ---------------------------------------------------------------------------
+
+* Constraints for building inter-day storage linkage
+* For all partitions, the soc at their hour 0 plus maximum soc of first period should lower than total storage capacity
+* This is to make sure not only their hour 0 but also the highest point of the first period of each partition is lower than maximum capacity
+eq_storage_interday_max_level_start(i,v,r,allszn,t)$[valgen(i,v,r,t)$storage_interday(i)$tmodel(t)$numpartitions(allszn)]..
+    
+    storage_duration(i) * CAP(i,v,r,t)
+
+    =g=
+    
+    STORAGE_INTERDAY_LEVEL(i,v,r,allszn,t)
+    
+    + sum{(szn)$[szn_actualszn(szn,allszn)], STORAGE_INTERDAY_LEVEL_MAX_DAY(i,v,r,szn,t)}
+;
+
+* ---------------------------------------------------------------------------
+
+* Constraints for building inter-day storage linkage
+* For all partitions, the soc at their hour 0 plus maximum soc of last period should lower than total storage capacity
+* This is to make sure not only their hour 0 but also the highest point of the last period of each partition is greater than maximum capacity
+eq_storage_interday_max_level_end(i,v,r,allszn,t)$[valgen(i,v,r,t)$storage_interday(i)$tmodel(t)$numpartitions(allszn)]..
+    
+    storage_duration(i) * CAP(i,v,r,t)
+
+    =g=
+    
+    STORAGE_INTERDAY_LEVEL(i,v,r,allszn,t)
+
+    + (numpartitions(allszn) - 1) 
+    * sum{(szn)$[szn_actualszn(szn,allszn)], 
+        sum{h$[h_szn(h,szn)], (STORAGE_INTERDAY_DISPATCH(i,v,r,h,t) * hours_daily(h))}}
+    
+    + sum{(szn)$[szn_actualszn(szn,allszn)], STORAGE_INTERDAY_LEVEL_MAX_DAY(i,v,r,szn,t)}
 ;
 
 * ---------------------------------------------------------------------------

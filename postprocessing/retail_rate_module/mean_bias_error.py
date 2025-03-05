@@ -6,11 +6,12 @@ to ReEDS-2.0/postprocessing/retail_rate_module/inputs/state-meanbiaserror_rate-a
 The results are written in ¢/kWh in {out_dollar_year} dollars.
 """
 
-###############
-#%% Imports ###
+#%% =====================================================================================
+### --- IMPORTS ---
+### =====================================================================================
+
 import pandas as pd
 import os
-import site
 import io
 import argparse
 import retail_rate_calculations
@@ -18,13 +19,12 @@ import retail_rate_calculations
 pd.options.display.max_columns = 200
 pd.options.display.max_rows = 50
 
-
 #######################
 #%% Argument inputs ###
 parser = argparse.ArgumentParser(description="Calculate retail rate bias errors")
 parser.add_argument('-b', '--reeds_path', help='ReEDS directory')
 parser.add_argument('-r', '--run_dir', help='ReEDS run directory')
-parser.add_argument('-y', '--out_dollar_year', type=int, default=2019,
+parser.add_argument('-y', '--out_dollar_year', type=int, default=2022,
                     help='Dollar year in which to write results')
 
 args = parser.parse_args()
@@ -32,17 +32,10 @@ reeds_path = args.reeds_path
 run_dir = args.run_dir
 out_dollar_year = args.out_dollar_year
 
-# #%% Testing
+# #%% Settings for testing/debugging
 # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0/')
 # run_dir = os.path.join(reeds_path,'runs','v20210716_main_Ref_2026')
-# out_dollar_year = 2019
-
-#%% Set up logger
-site.addsitedir(os.path.join(reeds_path,'input_processing'))
-# import makelog after setting the module path; if it's done before, the ticker module won't be found
-from ticker import makelog  # noqa: E402
-
-log = makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
+# out_dollar_year = 2022
 
 ##############
 #%% Inputs ###
@@ -61,8 +54,9 @@ inf_adjust = inflation.loc[
     'inflation_rate'
 ].cumprod()[out_dollar_year]
 
-#################
-#%% Functions ###
+#%% =====================================================================================
+### --- FUNCTIONS ---
+### =====================================================================================
 
 def getrate_state(retail_results, inf_adjust=inf_adjust):
     dfin = (
@@ -120,7 +114,7 @@ def getrevenue_usa(retail_results, units='billions', inf_adjust=inf_adjust):
     dfout = dfin.sum(axis=1)
     return dfout
 
-def inflatifier(inyear, outyear=2019, inflation=inflation):
+def inflatifier(inyear, outyear=out_dollar_year, inflation=inflation):
     if inyear == outyear:
         return 1
     elif inyear > outyear:
@@ -129,92 +123,101 @@ def inflatifier(inyear, outyear=2019, inflation=inflation):
         return inflation.loc[inyear+1:outyear,'inflation_rate'].cumprod()[outyear]
 
 
-#################
-#%% Procedure ###
+#%% =====================================================================================
+### --- MAIN FUNCTION: MEAN BIAS ERROR CALCULATION ---
+### =====================================================================================
+
 def main(write=True):
-    #%%### Run the retail rate module with state, regional, and national aggregation of FERC data
-    ### Load defaults
+    #%%#################################################################################
+    ### Run retail rate module w/ state, regional, and national aggregation of FERC data
+    # Load defaults
     inputs_default = pd.read_csv(os.path.join(retailmodulepath,'inputs_default.csv'))
-    ### Loop over aggregation settings
+    # Loop over aggregation settings
     aggs = ['state','region','nation']
     dfretail = {}
     for agg in aggs:
         print('Calculating retail rate for {} aggregation...'.format(agg))
         inputs = inputs_default.set_index(['input_dict','input_key']).copy()
         inputs.loc[('input_daproj','aggregation'), 'input_value'] = agg
-        ### Write it to a string stream that can be read by read_csv, since
-        ### retail_rate_calculations.main() expects to read_csv the inputs dataframe from a file
+        # Write it to a string stream that can be read by read_csv, since
+        # retail_rate_calculations.main() expects to read_csv the inputs dataframe from a file
         inputs_file = io.StringIO()
         inputs.reset_index().to_csv(inputs_file, index=False)
-        ## Reset the read position to the beginning of the string
+        # Reset the read position to the beginning of the string
         inputs_file.seek(0)
-        ### Run the retail rate calculation
+        # Run the retail rate calculation
         dfretail[agg] = retail_rate_calculations.main(
             run_dir=run_dir, inputpath=inputs_file, write=False, verbose=1)
 
-    #%% Get EIA861 data for comparison
+    #%%###################################
+    ### Get EIA861 data for comparison ###
     df861 = pd.read_csv(
         os.path.join(retailmodulepath,'df_f861_contiguous.csv')
     ).set_index('year').loc[validationyears]
 
-    df861['avg_retail_rate_2019'] = (
+    df861[f'avg_retail_rate_{out_dollar_year}'] = (
         df861.avg_retail_rate 
         * df861.index.map(lambda x: inflatifier(x,out_dollar_year)) * 100)
-    df861['rev_2019'] = df861.rev * df861.index.map(lambda x: inflatifier(x,out_dollar_year))
+    df861[f'rev_{out_dollar_year}'] = df861.rev * df861.index.map(lambda x: inflatifier(x,out_dollar_year))
 
-    df861 = df861[['avg_retail_rate_2019','rev_2019']].copy()
+    df861 = df861[[f'avg_retail_rate_{out_dollar_year}',f'rev_{out_dollar_year}']].copy()
 
-    ### Get EIA861 by state
+    # Get EIA861 by state
     df861_state = pd.read_csv(os.path.join(retailmodulepath,'df_f861_state.csv'))
     df861_state = df861_state.loc[df861_state.year.isin(validationyears)].copy()
 
-    df861_state['avg_retail_rate_2019'] = (
+    df861_state[f'avg_retail_rate_{out_dollar_year}'] = (
         df861_state.avg_retail_rate 
         * df861_state.year.map(lambda x: inflatifier(x,out_dollar_year)) * 100)
-    df861_state['rev_2019'] = (
+    df861_state[f'rev_{out_dollar_year}'] = (
         df861_state.rev
         * df861_state.year.map(lambda x: inflatifier(x,out_dollar_year)))
 
     df861_state = (
         df861_state.set_index(['state','year'])
-        [['avg_retail_rate_2019','rev_2019']].copy())
+        [[f'avg_retail_rate_{out_dollar_year}',f'rev_{out_dollar_year}']].copy())
 
-    #%% Determine which aggregation level gives the best fit for each state
+    #%%######################################################################## 
+    ### Determine which aggregation level gives the best fit for each state ###
     dicterror = {}
     for agg in aggs:
-        ### Get the data
+        # Get the data
         dfrate = getrate_state(dfretail[agg]).unstack()[validationyears].stack()
         dfcompare = pd.concat(
-            [dfrate.rename('modeled'), df861_state.avg_retail_rate_2019.rename('EIA861')],
+            [dfrate.rename('modeled'), df861_state[f'avg_retail_rate_{out_dollar_year}'].rename('EIA861')],
             axis=1)
-        dicterror[agg] = (dfcompare['modeled'] - dfcompare['EIA861']).mean(level=0).dropna()
+        dicterror[agg] = (dfcompare['modeled'] - dfcompare['EIA861']).groupby(level=0).mean().dropna()
     dferror = pd.concat(dicterror, axis=1)
-    ### Get the aggregation level with the lowest absolute bias error
+    # Get the aggregation level with the lowest absolute bias error
     dferror['aggregation'] = dferror.apply(lambda row: row.abs().nsmallest(1).index[0], axis=1)
-    ### For states in which region and state give same results and are best, keep region
+    # For states in which region and state give same results and are best, keep region
     dferror.loc[
         ((dferror['state'] == dferror['region']) & (dferror['aggregation'] == 'state')),
         'aggregation'
     ] = 'region'
-    ### Call the state index 'index' to avoid confusing with 'state' results column
+    # Call the state index 'index' to avoid confusing with 'state' results column
     dferror.index.name = 'index'
 
     #%% Take a look
     print(dferror.round(2),'\n')
     print(dferror.aggregation.value_counts(),'\n')
     for level in ['nation','region','state']:
-        print('{:<6} ({:>2}): {}'.format(
-            level, 
-            dferror.aggregation.value_counts()[level],
-            ','.join(dferror.loc[dferror.aggregation==level].index.values.tolist())))
+        if level not in dferror.aggregation.unique():
+            print(f'0 states where \'{level}\' is the best fit for aggregation level')
+        else:
+            print('{:<6} ({:>2}): {}'.format(
+                level, 
+                dferror.aggregation.value_counts()[level],
+                ','.join(dferror.loc[dferror.aggregation==level].index.values.tolist())))
 
-    #%% Save it
+    #%%############ 
+    ### Save it ###
     savename = os.path.join(
         retailmodulepath, 'inputs', 'state-meanbiaserror_rate-aggregation.csv')
     print(savename)
     if write:
         dferror.round(6).to_csv(savename)
 
-
+    #%%
 if __name__ == '__main__':
     main()

@@ -14,6 +14,7 @@ Hourlize is run by a call to `run_hourlize.py`, which assembles information on t
 1. Specify cases to run in `cases.json` or create your own cases file ([details](#cases-json)).
 1. If running on the HPC, specify run allocation or other submission settings in `hourlize/inputs/configs/srun_template.sh` ([details](#config-jsons)).
 1. Run using `run_hourlize.py resource` ([details](#running-hourlize)). 
+1. Sync up new supply curve files on HPC, nrelnas01, and Yampa as needed
 
 ### Quickstart: Load
 1. Update settings in `config_base.json` as needed ([details](#config-jsons)).
@@ -31,7 +32,7 @@ If you don't have new reV supply curves you can probably skip this section and g
 Before running resource hourlize the reV runs should be copied from their original location to the shared folder. Currently reV data used in ReEDS (along with hourlize inputs and outputs) are stored in three places:
 * on the nrelnas01 device at `\\nrelnas01\ReEDS\Supply_Curve_Data`
 * on Eagle at `/shared-projects/reeds/Supply_Curve_Data`
-* on Kestrel at `/projects/shared-projects-reeds/reeds/Supply_Curve_Data`
+* on Kestrel at `/kfs2/shared-projects/reeds/Supply_Curve_Data`
 
 Under the appropriate tech folder (UPV, ONSHORE, OFFSHORE, etc.) create a directory with a descrptive name for the supply curves (e.g., 2023_06_06_Update). Then copy the reV supply curves and profiles into a folder called `reV`. A good approach is to use rsync; below is an example copying original reV files from Eagle to Kestrel:
 
@@ -39,11 +40,9 @@ Under the appropriate tech folder (UPV, ONSHORE, OFFSHORE, etc.) create a direct
 rsync -aPu [username]@eagle.hpc.nrel.gov://shared-projects/rev/projects/seto/fy23/rev/standard_scenarios/aggregation/  /projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_06_06_Update/reV
 ```
 
-Note that sometimes all the necessary files are in each supply curve folder and sometimes the reV team creates a separate "post_processed_supply_curves" folder that should also be copied. 
-
 #### 2. Update the rev_paths files
 
-Update the reV paths file at `ReEDS-2.0/inputs/supplycurvedata/rev_paths.csv`. Typically this means updating the information for whichever techs (e.g., upv, wind-ons, wind-ofs) and access cases (e.g., reference, open, limited) you want to run. 
+Update the reV paths file at `ReEDS-2.0/inputs/supply_curve/rev_paths.csv`. Typically this means updating the information for whichever techs (e.g., upv, wind-ons, wind-ofs) and access cases (e.g., reference, open, limited) you want to run. 
 
 Some details on the additional columns to update:
 - `sc_path`: path to the supply curve folder on the shared drive; should be of the format tech/update_name (e.g. UPV/2023_06_06_Update, ONSHORE/2023_07_28_Update).
@@ -56,14 +55,14 @@ Some details on the additional columns to update:
 
 Follow setup details [here](#running-hourlize).
 
-Hourlize relies on a set of columns being in the reV supply curve. In some cases hourlize can fill in missing columns hourlize in a pre-processing step, but in others these missing columns can cause hourlize to fall. A list of required columns can be found in `hourlize/inputs/resource/rev_sc_columns_for_hourlize.csv`
+Hourlize relies on a set of columns being in the reV supply curve. In some cases hourlize can fill in missing columns hourlize in a pre-processing step, but in others these missing columns can cause hourlize to fall. A list of required columns can be found in `hourlize/inputs/resource/rev_sc_columns.csv`
 
 
 #### 4. Synchronize shared directories
 
-If you're copying the hourlize outputs back to the shared repository (`copy_to_shared=True`) you'll want to sync up the two shared folders, as the copy function currently only copies to one directory. 
+By default hourlize will copy the required files in your ReEDS repository (`copy_to_reeds=True`). You can also copy the hourlize outputs back to the shared repository by setting `copy_to_shared=True`. 
 
-When starting from the HPC be sure to open up permissions to the supply curve outputs you've just created (e.g., `chmod -R 777 UPV/2023_06_06_Update`). Then from your local computer use WinSCP or rsync to copy the files from Kestrel to nrelnas01:
+Note that hourlize copies to only one of the shared locations (either the HPC or nrelnas01, depending on where you are running it), so even with `copy_to_shared=True` you'll want to sync up the two shared folders. When starting from the HPC, be sure to open up permissions to the supply curve outputs you've just created (e.g., `chmod -R 777 UPV/2023_06_06_Update`). Then, from your local computer, use WinSCP or rsync to copy the files from Kestrel to nrelnas01:
 
 ```
 rsync -aPu [username]@kestrel.nrel.gov://projects/shared-projects-reeds/reeds/Supply_Curve_Data/UPV/2023_11_02_LandCover /Volumes/ReEDS/Supply_Curve_Data/UPV
@@ -152,7 +151,7 @@ By default, the outputs will be dumped to a subdirectory named `results` within 
 * `{tech}_supply_curve.csv`: A supply curve with rows for each site and columns for region, class, available capacity, and costs. E.g. see `inputs/supply_curve/wind-ons_supply_curve-reference_ba.csv` (within ReEDS repo)
 * `{tech}_exog_cap.csv`: Exogenous (built pre-2010) capacity with columns for region, site and year. This is not capacity builds in each year, but rather cumulative capacity of each existing site over time. E.g. see `inputs/capacity_exogenous/wind-ons_exog_cap_reference_ba.csv` (within ReEDS repo)
 * `{tech}_prescribed_builds.csv`: Capacity prescribed builds (2010 - present) with columns for region, year, capacity. This is the installed capacity in each year rather than cumulative capacity over time. E.g. see `inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_ba.csv` (within ReEDS repo)
-* `{tech}_.h5`: An hourly (7 weather year) generation profile file with a separate profile for each region/class. E.g. see `inputs/variability/multi_year/wind-ons-reference_ba.h5` (within ReEDS repo)
+* `{tech}_.h5`: Hourly capacity factor profiles for each region/class. See `inputs/variability/multi_year/wind-ons-reference_ba.h5` within the ReEDS repository as an example. These files include datasets with column names (class|region) and an index with datetime and timezone information. 
 
 ### Shared Drive Locations
 Hourlize resource inputs and outputs in the same places as the copies of the reV supply curves (see details [here](#1-copy-rev-runs-to-reeds-shared-directory)). Whereas the reV supply curves are stored within a folder called `reV`, the hourlize runs can be found directly in the corresponding tech folder (e.g., UPV, OFFSHORE, ONSHORE).
@@ -174,9 +173,9 @@ The `resource.py` script follows the following logic (in order of execution):
 1. `get_profiles_allyears_weightedave()`
     - The hourly generation profiles are gathered, and capacity-weighted average profiles are calculated for each region/class.
 1. `shift_timezones()`
-    - Roll the hourly profiles from `resource_source_timezone` to `output_timezone`.
+    - Profiles are updated to `output_timezone` by making use of datetime index. Hours at the end of a year are "rolled" to the beginning of the first year in the contiguous set. Because the reV data drops Dec 31 on leap years, timezone adjusted data is modified for these years to be Dec 30.
 1. `save_time_outputs()`
-    - Save the weighted average profiles by region/class to a `{tech}.h5` file.
+    - Weighted average profiles by region/class are saved to a `{tech}.h5` file. This method makes use of the same h5 format specified in the `write_profile_to_h5` function used by `ldc_prep.py` in ReEDS.
 1. `map_supplycurve()`
     - Create output maps for supply curve
 1. `copy_outputs()`
@@ -205,11 +204,11 @@ This section provides some descriptions and typical values for the settings in t
 | Setting | Description | Default |   
 | :------ | :---------- | :------ |   
 |	compression_opts 	|	 file compression options. can select from 0-9: 0 is faster and larger, 9 is slower and smaller, 4 is default	|	4	
+|	decimals 	|	Number of decimal points to round to for most outputs	|	 4
 |	filetype 	|	 output filetype: 'csv' or 'h5'. Note that load.py uses h5 regardless for default (historical) and EER load	|	 'h5'	
 |	hierarchy_path 	|	Path to ReEDS hiearchy file. Typically used for region mapping for resource.py and calibration/variability outputs for load.py	|	 '{reeds_path}/inputs/hierarchy.csv'
-|	output_timezone 	      |	'local' means convert to local standard time of the respective region. UTC is 0. EST is -5.	|	 'local' 	
+|	output_timezone 	      |	Either a timezone recognized by python (e.g., Etc/GMT+6 for Central Standard Time) or an integer providing UTC offset (e.g., UTC is 0; CST is 6)	|	 'Etc/GMT+6' 	
 |	select_year 	|	this is the year used for load and resource profile-derived inputs, although the profile outputs may still be multiyear (see hourly_out_years)	|	2012	
-|	start_1am 	|	False means start at 12am	|	 True 	
 
 ### Resource config
 
@@ -221,28 +220,26 @@ This section provides some descriptions and typical values for the settings in t
 |	copy_to_shared 	|	Copy hourlize outputs to the shared drive	|	 False 	
 |	driver 	|	'H5FD_CORE', None. H5FD_CORE will load the h5 into memory for better perforamnce, but None must be used for low-memory machines.	|	 'H5FD_CORE' 	
 |	dtype 	|	data type used to save hourly profiles	|	 np.float16 	
-|	existing_sites 	|	None or path to file with existing capacity	|	 this_dir_path + '../inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv' 	
+|	existing_sites 	|	None or path to file with existing capacity	|	 '{reeds_path}/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv' 	
 |	gather_method 	|	 'list', 'slice', 'smart'. This setting will take a slice of profile ids from the min to max, rather than using a list of ids, for improved performance when ids are close together for each group.	|	 'smart' 	
-|	hourly_out_years 	|	e.g. [2012] for just 2012 or list(range(2007,2014)) for 2007-2013	|	 list(range(2007,2014)) 
+|	hourly_out_years 	|	e.g. [2012] for just 2012 or a list of year [2011, 2012, 2013]	|	[2007, 2008, 2009, 2010, 2011, 2012, 2013],
 | inputfiles	| list of files to copy over to hourlize input folder | ["reg_map_file", "class_path"]
 |	profile_id_col 	|	Unique identifier for reV supply curve and profiles	|	 'sc_point_gid'	
 |	reg_map_path 	|	This file maps counties to reeds regions. By default uses the ReEDS hiearchy file.	| '{hierarchy_path}'	  		
 |	resource_source_timezone 	|	UTC would be 0, Eastern standard time would be -5	|	0	
-|	start_year 	|	The start year of the model, for existing and sites purposes.	|	2010	
-|	state_abbrev 	|		|	 this_dir_path + 'inputs/resource/state_abbrev.csv'	
+|	start_year 	|	The start year of the model, for existing capacity purposes.	|	2010	
+|	state_abbrev 	| Path to file with state abbreviations		|	'{hourlize_path}/inputs/resource/state_abbrev.csv'	
 |   subsetvars | list of columns in the rev_paths file to use to select the appropriate rev_path   | ['tech', 'access_case'] | 
 |	subtract_exog 	|	Indicate whether to remove exogenous (pre-start_year) capacity from the supply curve [default False]	|	 False 	
-|	test_filters 	|	dictionary definiting a set of columns and the corresponding values to subset the supply curve on	|	 {'region':['p97', 'p98']}	
-|	test_mode 	|	This limits the supply curve based on the dictionary defined in test_filers |	 False 	
 
 ### Tech configs
 
 | Setting | Description | Default |   
 | :------ | :---------- | :------ |   
 |	cost_out 	|	'combined_eos_trans' is a computed column from economies of scale and transmission cost. To turn off economies of scale, use 'trans_cap_cost'. 'combined_off_ons_trans' is a computed column from offshore (array and export) as well as onshore transmission cost.  	|	 upv, wind-ons: 'combined_eos_trans'<br>wind-ofs: 'combined_off_ons_trans' |
-|	capacity_col 	|	Format of the supply curve capacity column	|	 upv: 'capacity_mw_{upv_type}'<br>wind-ofs: 'capacity_mw'<br>wind-ons: 'capacity'  	
+|	capacity_col 	|	Format of the supply curve capacity column	|	 upv: 'capacity_mw_{upv_type_out}'<br>wind-ofs: 'capacity_mw'<br>wind-ons: 'capacity'  	
 |	class_bin 	|	This will layer dynamic bins. If class_path != None, we add region-specific bins for each of the classes defined in class_path.	|	 upv, wind-ons: true<br>wind-ofs: false
-|	class_bin_col 	|	The column to be binned (only used if class_bin = True)	|	 upv: 'mean_cf_{upv_type}'<br>wind-ofs,wind-ons: 'mean_cf'
+|	class_bin_col 	|	The column to be binned (only used if class_bin = True)	|	 upv: 'mean_cf_{upv_type_out}'<br>wind-ofs,wind-ons: 'mean_cf'
 |	class_bin_method 	|	The bin method, either 'kmeans', 'equal_cap_cut', or 'equal_cap_man' (only used if class_bin = True) 	|	 'kmeans' 	
 |	class_bin_num 	|	The number of class bins (only used if class_bin = True) 	|	upv: 10<br> wind-ofs, wind-ons: 10
 |	class_path 	|	null or path to class definitions file	|	 upv, wind-ons: null<br>wind-ofs: {hourlize_path}/inputs/resource/{tech}_resource_classes.csv  |
@@ -250,14 +247,12 @@ This section provides some descriptions and typical values for the settings in t
 |	distance_cols 	|	can include distances for spur lin, reinforcements, and offshore wind export cable (typically in km)	|	 upv, wind-ons: ['dist_spur_km','dist_reinforcement_km']<br>wind-ofs: ['dist_spur_km','dist_reinforcement_km','dist_export_km'] 	
 |	filter_cols 	|	{} means use the entire dataframe; {'offshore':['=',0]} means filter the supply curve to rows for which offshore is 0.	|	 upv, wind-ons: {}<br>wind-ofs: {'offshore':['=',0]} 
 |	min_cap 	|	MW  (LBNL utility-scale solar report & NREL PV cost benchmarks define utility-scale as ≥5 MW)	|	upv: 5, wind-ofs: 15, wind-ons: 0	
-|	profile_dir 	|	Use '' if .h5 files are in same folder as metadata, else point to them, e.g. f'../{rev_case}'	|	 upv: '{access_case}_{upv_type}'<br>wind-ons, wind-ofs: '' 	
+|	profile_dir 	|	Use '' if .h5 files are in same folder as metadata, else point to them, e.g. f'../{rev_case}'	|	 upv: '{access_case}_{upv_type_out}'<br>wind-ons, wind-ofs: '' 	
 |	profile_dset 	|	Name of hourly profiles in reV runs	|	 'rep_profiles_0'	
 |	profile_file_format 	|	Format for hourly profiles filename. Note: unused if single_profile	|	 upv: {rev_case}_rep-profiles<br>wind-ons, wind-ofs: '' 	
 |	profile_weight_col 	|	Name of column to use for weighted average of profiles. Using 'capacity' will link to whatever value is specified by 'capacity_col' 	|	 'capacity'	
 |	single_profile 	|	single_profile has different columns and a single h5 profile file (for all years).	|	 upv, wind-ofs: false, wind-ons: true 	
-|	upv_type 	|	type of UPV capacity and profiles to use; options are 'ac' and 'dc' 	|	 upv: 'dc'; wind-ons, wind-ofs: null
-|rev_jsons | list of reV json files to copy over | upv: ["config_aggregation.json", "config_pipeline.json", "config_supply-curve.json", "{access_case}_{upv_type}/config_rep-profiles_aggprof.json"] <br>wind-ofs: ["config_aggregation.json", "config_pipeline.json", "config_supply-curve.json", "config_rep-profiles.json"]<br>wind-ons: ["config_pipeline.json", "config_supply-curve.json", "sam.json", "config_bespoke.json"]
-
+|	upv_type_out 	|	type of UPV capacity and profiles to produce; options are 'ac' and 'dc' 	|	 upv: 'dc'; wind-ons, wind-ofs: null
 
 ### Load config		
 
@@ -275,6 +270,7 @@ This section provides some descriptions and typical values for the settings in t
 |	load_source 	|	The load source file's first column should be datetime, starting at Jan 1, 12am, stepping by 1 hour, and one column for each BA. It should be a csv or a compressed csv.	|	 '//nrelnas01/ReEDS/Supply_Curve_Data/LOAD/2020_Update/plexos_to_reeds/outputs/load_hourly_ba_EST.csv' 	
 |	load_source_hr_type 	|	Use 'end' if load_source data hour-ending or 'begin' for hour-beginning. For instantaneous use 'end'. For EER load use 'begin'.	|	 'begin' 	
 |	load_source_timezone 	|	UTC would be 0, Eastern standard time would be -5	|	-5	
+|	start_1am 	|	False means start at 12am	|	 False 	
 |	truncate_leaps 	|	Truncate leap years. This currently needs to be True for mapping properly to timeslices.	|	 True 	
 |	us_only 	|	Run only US BAs.	|	 True 	
 |	use_default_before_yr 	|	Either False or a year. If set to a year, this will pull in ReEDS default load data before that year (2012 weather year)	|	2021	

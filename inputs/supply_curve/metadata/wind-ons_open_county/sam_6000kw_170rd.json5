@@ -11,7 +11,7 @@
     "system_capacity": 6000,
 
     // capital, fixed operating, and variable operating costs filled in by bespoke on a per-plant basis during run time
-    "fixed_charge_rate": 0.07073,
+    "fixed_charge_rate": 0.07140832,
 
     // Icicing cutoff assumption (-30C == -22F)
     "en_icing_cutoff": 1,
