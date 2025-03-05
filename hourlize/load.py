@@ -275,11 +275,10 @@ if __name__== '__main__':
     cf = SimpleNamespace(**config)
 
     #%% setup logging
-    site.addsitedir(os.path.join(cf.reeds_path, "input_processing"))
-    # import makelog after setting the module path; if it's done before, the ticker module won't be found
-    from ticker import makelog
-    
-    log = makelog(scriptname=__file__, logpath=os.path.join(cf.outpath, f'log_{cf.casename}.txt'))
+    site.addsitedir(cf.reeds_path)
+    from reeds.log import makelog
+
+    makelog(scriptname=__file__, logpath=os.path.join(cf.outpath, f'log_{cf.casename}.txt'))
 
     # list of paths for passing to functions
     paths = {'ba_timezone_path':cf.ba_timezone_path,

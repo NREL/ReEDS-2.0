@@ -54,6 +54,18 @@ szn(allszn)$[szn_rep(allszn)] = yes ;
 szn(allszn)$[szn_stress(allszn)] = yes ;
 
 Sets
+$ONEMPTY
+h_preh(allh, allh) "mapping set between one timeslice and all other timeslices earlier in that period"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%h_preh.csv
+$include inputs_case%ds%stress%stress_year%%ds%h_preh.csv
+$offdelim
+$onlisting
+/
+$OFFEMPTY
+
 h_szn(allh,allszn) "mapping of hour blocks to seasons"
 /
 $offlisting
@@ -94,7 +106,16 @@ $include inputs_case%ds%h_actualszn.csv
 $offdelim
 $onlisting
 /
-
+$ONEMPTY
+szn_actualszn(allszn,allszn) "mapping from rep timeslices to actual periods"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%szn_actualszn.csv
+$offdelim
+$onlisting
+/
+$OFFEMPTY
 nexth_actualszn(allszn,allh,allszn,allh) "Mapping between one timeslice and the next for actual periods (szns)"
 /
 $offlisting
@@ -113,7 +134,16 @@ $include inputs_case%ds%stress%stress_year%%ds%nexth.csv
 $offdelim
 $onlisting
 /
-
+$ONEMPTY
+nextpartition(allszn,allszn) "Mapping between one partition (allszn) and the next"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%nextpartition.csv
+$offdelim
+$onlisting
+/
+$OFFEMPTY
 ;
 
 * Record the stress periods for each model year
@@ -159,7 +189,16 @@ $onlisting
 
 parameter numdays(allszn) "--number of days-- number of days for each season" ;
 numdays(szn) = sum{h$h_szn(h,szn),hours(h) } / 24 ;
-
+$ONEMPTY
+parameter numpartitions(allszn) "--number of periods-- number of partitions for each season in timeseries"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%numpartitions.csv
+$offdelim
+$onlisting
+/ ;
+$OFFEMPTY
 parameter numhours_nexth(allh,allhh) "--hours-- number of times hh follows h throughout year"
 /
 $offlisting
@@ -809,6 +848,6 @@ seas_cap_frac_delta(i,v,r,szn,t)$seas_cap_frac_delta(i,v,r,szn,t) = round(seas_c
 
 
 * Write the inputs for debugging purposes
-$ifthene.write %cur_year% == 2010
+$ifthene.write %cur_year% == %startyear%
 execute_unload 'inputs_case%ds%inputs.gdx' ;
 $endif.write

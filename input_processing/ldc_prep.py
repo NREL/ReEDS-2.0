@@ -21,200 +21,17 @@ RECF:
 
 import argparse
 import datetime
-import h5py
 import numpy as np
 import os
 import pandas as pd
-import re
 import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 
-import logging
-from pathlib import Path
-from pandas.api.types import is_float_dtype 
-
-logger = logging.getLogger(__file__)
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
 ### ===========================================================================
-
-def read_h5py_file(filename: Path | str) -> pd.DataFrame:
-    """Return dataframe object for a h5py file.
-
-    This function returns a pandas dataframe of a h5py file. If the file has multiple dataset on it
-    means it has yearly index.
-
-    Parameters
-    ----------
-    filename
-        File path to read
-
-    Returns
-    -------
-    pd.DataFrame
-        Pandas dataframe of the file
-    """
-    
-    valid_data_keys = ["data", "cf", "load", "evload"]
-
-    with h5py.File(filename, "r") as f:
-        # Identify keys in h5 file and check for overlap with valid key set
-        keys = list(f.keys())
-        datakey = list(set(keys).intersection(valid_data_keys))
-
-        # Adding safety check to validate that it only returns one key
-        assert len(datakey) <= 1, f"Multiple keys={datakey} found for {filename}"
-        datakey = datakey[0] if datakey else None
-
-        # standard approach for data with one of the matching keys
-        if datakey in keys:
-            # load data
-            df = pd.DataFrame(f[datakey][:])
-
-        # if none of these keys work, we're dealing with EER-formatted load
-        else:
-            years = [column for column in keys if column.isdigit()]
-            # Extract all the years and concat them in a single dataframe.
-            df = pd.concat({int(y): pd.DataFrame(f[y][...]) for y in years}, axis=0)
-            df.index = df.index.rename(["year", "hour"])
-        
-        # add columns to data if supplied
-        if 'columns' in keys:
-            df.columns = (pd.Series(f["columns"]).map(
-                lambda x: x if isinstance(x, str) else x.decode("utf-8")).values)
-
-        # add any index values
-        idx_cols = [c for c in keys if re.match('index_[0-9]',c)]
-        if len(idx_cols) > 0:
-            idx_cols.sort()
-            for idx_col in idx_cols:
-                df[idx_col] = pd.Series(f[idx_col]).values
-            df = df.set_index(idx_cols)
-
-        # add index names if supplied
-        if 'index_names' in keys:
-            df.index.names = (pd.Series(f["index_names"]).map(
-                lambda x: x if isinstance(x, str) else x.decode("utf-8")).values)
-    return df
-
-
-def write_h5_file(df, filename, outfolder, compression_opts=4):
-    """Writes dataframe to h5py file format used by ReEDS. Used in ReEDS and hourlize
-
-    This function takes a pandas dataframe and saves to a h5py file. Data is saved to h5 file as follows:
-        - the data itself is saved to a dataset named "data"
-        - column names are saved to a dataset named "columns"
-        - the index of the data is saved to a dataset named "index"; in the case of a multindex,
-          each index is saved to a separate dataset with the format "index_{index order}"
-        - the names of the index (or multindex) are saved to a dataset named "index_names"
-
-    Parameters
-    ----------
-    df
-        pandas dataframe to save to h5
-    filename
-        Name of h5 file
-    outfolder
-        Path to folder to save the file (in ReEDS this is usually the inputs_case folder)
-
-    Returns
-    -------
-    None
-    """
-    outfile = os.path.join(outfolder, filename) 
-    with h5py.File(outfile, 'w') as f:
-        # save index or multi-index in the format 'index_{index order}')
-        for i in range(0, df.index.nlevels):
-            # get values for specified index level
-            indexvals = df.index.get_level_values(i)
-            # save index
-            if isinstance(indexvals[0], bytes):
-                # if already formatted as bytes keep that way
-                f.create_dataset(f'index_{i}', data=indexvals, dtype='S30')
-            elif indexvals.name == 'datetime':
-                # if we have a formatted datetime index that isn't bytes, save as such
-                timeindex = indexvals.to_series().apply(datetime.datetime.isoformat).reset_index(drop=True)
-                f.create_dataset(f'index_{i}', data=timeindex.str.encode('utf-8'), dtype='S30')
-            else:
-                # other indices can be saved using their data type
-                f.create_dataset(f'index_{i}', data=indexvals, dtype=indexvals.dtype)
-
-        # save index names
-        index_names = pd.Index(df.index.names)
-        f.create_dataset('index_names', data=index_names, dtype=f'S{index_names.map(len).max()}')
-
-        # save column names as string type
-        f.create_dataset('columns', data=df.columns, dtype=f'S{df.columns.map(len).max()}')
-
-        # save data
-        if len(df.dtypes.unique()) > 1:
-            raise Exception(f"Multiple data types detected in {filename}, unclear which one to use for re-saving h5.")
-        else:
-            dftype_out = df.dtypes.unique()[0]    
-        f.create_dataset('data', data=df.values, dtype=dftype_out, compression='gzip', compression_opts=compression_opts,)
-
-def read_file(filename: Path | str, **kwargs) -> pd.DataFrame:
-    """Return dataframe object of input file for multiple file formats.
-
-    This function read multiple file formats for h5 file sand returns a dataframe from the file. 
-
-    Parameters
-    ----------
-    filename
-        File path to read
-
-    Returns
-    -------
-    pd.DataFrame
-        Pandas dataframe of the file
-
-    Raises
-    ------
-    FileNotFoundError
-        If the file does not exists
-    """
-    if isinstance(filename, str):
-        filename = Path(filename)
-
-    if not filename.exists():
-        raise FileNotFoundError(f"Mandatory file {filename} does not exist.")
-
-    # We have two cases, either the data is contained as a single dataframe or we have multiple
-    # datasets that composes the h5 file. For a single dataset we use pandas (since it is the most
-    # convenient) and h5py for the custom h5 file.
-    try:
-        df = pd.read_hdf(filename)
-
-    except ValueError:
-        df = read_h5py_file(filename)
-    
-    # parse timestamps if specified and if there is a datetime index
-    if (kwargs.get('parse_timestamps', False)) and ('datetime' in df.index.names):
-        if not isinstance(df.index.get_level_values('datetime')[0], bytes):
-            raise ValueError(
-                f"The indices for timestamp-indexed dataframes should be encoded as bytes. \
-                Please update {filename}."
-            )
-
-        df['datetime'] = pd.to_datetime(df.index.get_level_values('datetime').str.decode('utf-8'))
-        if isinstance(df.index, pd.MultiIndex):
-            df = df.droplevel('datetime').set_index('datetime', append=True)
-        else:
-            df = df.set_index('datetime')
-
-    # All values being NaN indicates that the region filtering in copy_files.py removed all
-    # data, leaving an empty dataframe.
-    # Return an empty dataframe with the original file's index if all values are NaN
-    if all(df.isnull().all()):
-        df = df.drop(columns=df.columns)
-        return df
-
-    # NOTE: Some files are saved as float16, so we cast to float32 to prevent issues with
-    # large/small numbers
-    numeric_cols = [c for c in df if is_float_dtype(df[c].dtype)]
-    df = df.astype({column:np.float32 for column in numeric_cols})
-    
-    return df
 
 def csp_dispatch(cfcsp, sm=2.4, storage_duration=10):
     """
@@ -286,43 +103,6 @@ def csp_dispatch(cfcsp, sm=2.4, storage_duration=10):
     return total_dispatch
 
 
-def get_distpv_profiles(inputs_case, recf):
-    """
-    We only have one year's profile (2012) for distributed PV. Because we want to
-    maintain weather coincidence between distpv and upv, we start with the lowest-cf
-    upv profile in each region, scale it by its CF ratio with distributed PV in that
-    region, and take that scaled profile as the distpv profile.
-    """
-    ### Get average CF (used to scale down UPV profiles to generate distpv profiles)
-    distpv_meancf = (
-        pd.read_csv(os.path.join(inputs_case,'distpvcf_hourly.csv'), index_col=0)
-          .mean(axis=1).rename_axis('ba').rename('cf')
-        )
-    ### Get the worst upv resource in each region and use its profile for distpv,
-    ### scaled by the distpv/upv CF ratio
-    upv_cf = (
-        recf[[c for c in recf if c.startswith('upv')]].mean()
-        .rename_axis('resource').rename('cf').reset_index()
-        )
-    upv_cf['r'] = upv_cf.resource.map(lambda x: x.split('|')[-1])
-    worst_upv = (
-        upv_cf.sort_values(['r','cf'])
-        .drop_duplicates('r', keep='first').set_index('r').resource
-        )
-    ### Get the distpv/upv CF ratio for those UPV resources
-    distpv_upv_cf_ratio = (
-        distpv_meancf / upv_cf.set_index('resource').loc[worst_upv].set_index('r').cf
-        )
-    ### Scale UPV Profiles by distpv/upv CF ratio
-    distpv_profiles = (
-        recf[worst_upv].rename(columns=dict(zip(worst_upv,worst_upv.index)))
-        * distpv_upv_cf_ratio
-    ).clip(upper=1)
-    distpv_profiles.columns = 'distpv|' + distpv_profiles.columns
-
-    return distpv_profiles
-
-
 #%% ===========================================================================
 ### --- MAIN FUNCTION ---
 ### ===========================================================================
@@ -332,13 +112,10 @@ def main(reeds_path, inputs_case):
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
     # inputs_case = os.path.join(
-    #     reeds_path,'runs','v20240904_vcM1_Everything','inputs_case')
+    #     reeds_path,'runs','v20250129_cspfixM0_ISONE','inputs_case')
 
     #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0,
-    ).squeeze(1)
-    demandscen = sw.demandscen
+    sw = reeds.io.get_switches(inputs_case)
     GSw_EFS1_AllYearLoad = sw.GSw_EFS1_AllYearLoad
     GSw_CSP_Types = [int(i) for i in sw.GSw_CSP_Types.split('_')]
     GSw_PVB_Types = sw.GSw_PVB_Types
@@ -349,14 +126,8 @@ def main(reeds_path, inputs_case):
 
 
     #%%### Load inputs
-
-    # -------- Datetime mapper --------
-    hdtmap = pd.read_csv(os.path.join(inputs_case, 'h_dt_szn.csv'))
-
-    ###### Load the input parameters
-    scalars = pd.read_csv(
-        os.path.join(inputs_case,'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0).squeeze(1)
+    ### Load the input parameters
+    scalars = reeds.io.get_scalars(inputs_case)
     ### distloss
     distloss = scalars['distloss']
 
@@ -383,7 +154,6 @@ def main(reeds_path, inputs_case):
         hierarchy['ccreg'] = hierarchy[sw.capcredit_hierarchy_level].copy()
         hierarchy_original['ccreg'] = hierarchy_original[sw.capcredit_hierarchy_level].copy()
     ### Map regions to new ccreg's
-    rb2fips = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
     r2ccreg = hierarchy['ccreg']
 
     # Get technology subsets
@@ -418,7 +188,10 @@ def main(reeds_path, inputs_case):
     # ------- Read in the static inputs for this run -------
 
     ### Onshore Wind
-    df_windons = read_file(os.path.join(inputs_case,'recf_wind-ons.h5'), parse_timestamps=True)
+    df_windons = reeds.io.read_file(
+        os.path.join(inputs_case,'recf_wind-ons.h5'),
+        parse_timestamps=True,
+    )
     df_windons.columns = ['wind-ons_' + col for col in df_windons]
     ### Don't do aggregation in this case, so make a 1:1 lookup table
     lookup = pd.DataFrame({'ragg':df_windons.columns.values})
@@ -426,25 +199,46 @@ def main(reeds_path, inputs_case):
     lookup['i'] = lookup.ragg.map(lambda x: x.rsplit('|',1)[0])
 
     ### Offshore Wind
-    df_windofs = read_file(os.path.join(inputs_case,'recf_wind-ofs.h5'), parse_timestamps=True)
+    df_windofs = reeds.io.read_file(
+        os.path.join(inputs_case,'recf_wind-ofs.h5'),
+        parse_timestamps=True,
+    )
     df_windofs.columns = ['wind-ofs_' + col for col in df_windofs]
 
     ### UPV
-    df_upv = read_file(os.path.join(inputs_case,'recf_upv.h5'), parse_timestamps=True)
+    df_upv = reeds.io.read_file(os.path.join(inputs_case,'recf_upv.h5'), parse_timestamps=True)
     df_upv.columns = ['upv_' + col for col in df_upv]
 
-    # If DUPV is turned off, create an empty dataframe with the same index as df_dupv to concat
+    # If DUPV is turned off, create an empty dataframe with the same index as df_upv to concat
     if int(sw['GSw_DUPV']) == 0: 
         df_dupv = pd.DataFrame(index=df_upv.index)
     elif int(sw['GSw_DUPV']) == 1:
-        df_dupv = read_file(os.path.join('recf_dupv.h5'), parse_timestamps=True)
+        df_dupv = reeds.io.read_file(
+            os.path.join(inputs_case,'recf_dupv.h5'),
+            parse_timestamps=True,
+        )
         df_dupv.columns = ['dupv_' + col for col in df_dupv]
 
+    # If DistPV is turned off, create an empty dataframe with the same index as df_upv to concat
+    if int(sw['GSw_distpv']) == 0: 
+        df_distpv = pd.DataFrame(index=df_upv.index)
+    else:
+        df_distpv = reeds.io.read_file(
+            os.path.join(inputs_case, 'recf_distpv.h5'),
+            parse_timestamps=True,
+        )
+        rename = {c: 'distpv|' + c for c in df_distpv if not c.startswith('distpv|')}
+        df_distpv = df_distpv.rename(columns=rename)
+
     ### CSP
-    cspcf = read_file(os.path.join(inputs_case,'recf_csp.h5'), parse_timestamps=True)
-    # If CSP is turned off, create an empty dataframe with an appropriate index
+    # If CSP is turned off, create an empty dataframe with the same index as df_upv to concat
     if int(sw['GSw_CSP']) == 0:
-        cspcf = pd.DataFrame(index=cspcf.index)
+        cspcf = pd.DataFrame(index=df_upv.index)
+    else:
+        cspcf = reeds.io.read_file(
+            os.path.join(inputs_case, 'recf_csp.h5'),
+            parse_timestamps=True,
+        )
 
     ### Format PV+battery profiles
     # Get the PVB types
@@ -461,19 +255,22 @@ def main(reeds_path, inputs_case):
         ilr = int(pvb_ilr['pvb{}'.format(pvb_type)] * 100)
         # If PVB uses same ILR as UPV then use its profile
         infile = 'recf_upv' if ilr == scalars['ilr_utility'] * 100 else f'recf_upv_{ilr}AC'
-        df_pvb[pvb_type] = read_file(os.path.join(inputs_case,infile+'.h5'), parse_timestamps=True)
+        df_pvb[pvb_type] = reeds.io.read_file(
+            os.path.join(inputs_case,infile+'.h5'),
+            parse_timestamps=True,
+        )
         df_pvb[pvb_type].columns = [f'pvb{pvb_type}_{c}'
                                     for c in df_pvb[pvb_type].columns]
         df_pvb[pvb_type].index = df_upv.index.copy()
 
     ### Concat RECF data
     recf = pd.concat(
-        [df_windons, df_windofs, df_upv, df_dupv]
+        [df_windons, df_windofs, df_upv, df_dupv, df_distpv]
         + [df_pvb[pvb_type] for pvb_type in df_pvb],
         sort=False, axis=1, copy=False)
     
     ### Downselect RECF data to resource adequacy and weather years
-    resource_adequacy_years = sw['resource_adequacy_years'].split('_')
+    resource_adequacy_years = sw['resource_adequacy_years_list']
     hourly_weather_years = sw['GSw_HourlyWeatherYears'].split('_')
     re_years = [int(year) for year in set(resource_adequacy_years + hourly_weather_years)]
     recf = recf.loc[recf.index.year.isin(re_years)]
@@ -493,7 +290,7 @@ def main(reeds_path, inputs_case):
     #############################################
 
     if GSw_EFS1_AllYearLoad == 'historic':
-        load_historical = read_file(
+        load_historical = reeds.io.read_file(
             os.path.join(inputs_case,'load_hourly.h5'), parse_timestamps=True)
         # Read load multipliers
         load_multiplier = pd.read_csv(os.path.join(inputs_case, 'load_multiplier.csv'))
@@ -526,7 +323,7 @@ def main(reeds_path, inputs_case):
         load_profiles = load_historical.pivot_table(
             index=['year', 'datetime'], columns='r', values='load')
     else:
-        load_profiles = read_file(
+        load_profiles = reeds.io.read_file(
             os.path.join(inputs_case,'load_hourly.h5'), parse_timestamps=True
         ).loc[solveyears]
         ### If using EFS-style demand with only a single 2012 weather year, concat each profile
@@ -539,15 +336,7 @@ def main(reeds_path, inputs_case):
                 .rename_axis('hour').stack('year')
                 .reorder_levels(['year','hour']).sort_index(axis=0, level=['year','hour'])
             )
-            fulltimeindex = pd.Series(
-                np.ravel([
-                    pd.date_range(
-                        f'{y}-01-01', f'{y+1}-01-01',
-                        freq='H', inclusive='left', tz='EST',
-                    )[:8760]
-                    for y in range(2007, 2014)
-                ])
-            )
+            fulltimeindex = pd.Series(reeds.timeseries.get_timeindex(sw.resource_adequacy_years))
             load_profiles['datetime'] = (
                 load_profiles.index.get_level_values('hour').map(fulltimeindex)
             )
@@ -636,20 +425,6 @@ def main(reeds_path, inputs_case):
     #%%%#############################################
     #    -- Performing Resource Modifications --    #
     #################################################
-    #### Distributed PV (distpv)
-    ### Get distpv profiles
-    distpv_profiles = get_distpv_profiles(inputs_case, recf)
-    ### Get distpv resources and include in list of resources
-    distpv_resources = pd.DataFrame({'resource':distpv_profiles.columns, 'tech':'distpv'})
-    distpv_resources['area'] = distpv_resources.resource.map(lambda x: x.split('|')[-1])
-
-    # Resetting indices before merging to assure there are no issues in the merge
-    resources = pd.concat([resources, distpv_resources], sort=False, ignore_index=True)
-    recf = pd.merge(left=recf, right=distpv_profiles, left_index=True, right_index=True, copy=False)
-
-    # Remove resources that are turned off
-    if int(sw['GSw_distpv']) == 0:
-        resources = resources[~resources['tech'].isin(['distpv'])]
     if int(sw['GSw_OfsWind']) == 0:
         wind_ofs_resource = ['wind-ofs_' + str(n) for n in range(1,16)]
         resources = resources[~resources['tech'].isin(wind_ofs_resource)]
@@ -707,6 +482,7 @@ def main(reeds_path, inputs_case):
     csp_system_cf.columns = ['_'.join(c) for c in csp_system_cf.columns]
 
     ### Add CSP to RE output dataframes
+    csp_system_cf = csp_system_cf.loc[recf.index]
     recf = pd.concat([recf, csp_system_cf], axis=1)
     resources = pd.concat([resources, csp_resources], axis=0)
 
@@ -731,20 +507,16 @@ def main(reeds_path, inputs_case):
     #    -- Data Write-Out --    #
     ##############################
 
-    write_h5_file(load_profiles, 'load.h5', inputs_case)
-    recf.astype(np.float16).to_hdf(
-        os.path.join(inputs_case,'recf.h5'), key='data', complevel=4, index=True)
+    reeds.io.write_profile_to_h5(load_profiles, 'load.h5', inputs_case)
+    reeds.io.write_profile_to_h5(recf.astype(np.float16), 'recf.h5', inputs_case)
     resources.to_csv(os.path.join(inputs_case,'resources.csv'), index=False)
     peakload.to_csv(os.path.join(inputs_case,'peakload.csv'))
     ### Write peak demand by NERC region to use in firm net import constraint
     peakload.loc['nercr'].stack('year').rename_axis(['*nercr','t']).rename('MW').to_csv(
         os.path.join(inputs_case,'peakload_nercr.csv'))
     ### Write the CSP solar field CF (no SM or storage) for hourly_writetimeseries.py
-    (cspcf
-        .rename(columns=dict(zip(cspcf.columns, [f'csp_{i}' for i in cspcf.columns])))
-        .astype(np.float32)
-    ).to_hdf(
-        os.path.join(inputs_case,'csp.h5'), key='data', complevel=4, index=False)
+    cspcf = cspcf.rename(columns=dict(zip(cspcf.columns, [f'csp_{i}' for i in cspcf.columns])))
+    reeds.io.write_profile_to_h5(cspcf.astype(np.float32), 'csp.h5', inputs_case)
     ### Overwrite the original hierarchy.csv based on capcredit_hierarchy_level
     hierarchy.rename_axis('*r').to_csv(
         os.path.join(inputs_case, 'hierarchy.csv'), index=True, header=True)
@@ -758,26 +530,30 @@ def main(reeds_path, inputs_case):
 
 if __name__ == '__main__':
     # Time the operation of this script
-    from ticker import toc, makelog
-    import datetime
     tic = datetime.datetime.now()
 
     ### Parse arguments
-    parser = argparse.ArgumentParser(description='Create run-specific pickle files for capacity value')
-    parser.add_argument('reeds_path', type=str, help='Base directory for all batch runs')
-    parser.add_argument('inputs_case', help='path to inputs_case directory')
+    parser = argparse.ArgumentParser(
+        description='Create run-specific hourly profiles',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument('reeds_path', help='ReEDS-2.0 directory')
+    parser.add_argument('inputs_case', help='ReEDS-2.0/runs/{case}/inputs_case directory')
 
     args = parser.parse_args()
     reeds_path = args.reeds_path
     inputs_case = args.inputs_case
 
     #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+    )
 
     #%% Run it
     main(reeds_path=reeds_path, inputs_case=inputs_case)
 
-    toc(tic=tic, year=0, process='input_processing/ldc_prep.py',
+    reeds.log.toc(tic=tic, year=0, process='input_processing/ldc_prep.py',
         path=os.path.join(inputs_case,'..'))
     
     print('Finished ldc_prep.py')

@@ -15,6 +15,7 @@ import math
 import numpy as np
 import os
 import pandas as pd
+import pytz
 import shutil
 import site
 import sklearn.cluster as sc
@@ -26,11 +27,7 @@ from glob import glob
 import shapely
 import geopandas as gpd
 
-reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__)))
-site.addsitedir(os.path.join(reeds_path))
-
-# import the geo_supply_curve_aggregation module after setting the module path 
-from preprocessing import geo_supply_curve_aggregation  # noqa: E402
+## ReEDS modules imported using reeds_path in main procedure
 
 #%% ===========================================================================
 ### --- HELPER FUNCTIONS ---
@@ -328,7 +325,7 @@ def add_land_fom(sc, tech, profile_id_col, hourlize_path, reeds_path, crf_year=2
 
     return sc
 
-def adjust_rev_cols(tech, df):
+def adjust_rev_cols(tech, df, hourlize_path):
     """ identifies any missing columns that can be filled in. The run_hourlize script calls this function earlier to
     check for required columns before submitting a job, but calling again here to fill in missing values where possible.
 
@@ -351,7 +348,7 @@ def adjust_rev_cols(tech, df):
     opt_cols_tech = ["multiplier_cc_eos", "multiplier_cc_regional"]
 
     from run_hourlize import check_cols
-    __, missing_cols = check_cols(df, [], opt_cols_tech)
+    __, missing_cols = check_cols(df, hourlize_path, [], opt_cols_tech)
 
     # these are instances of columns to rename to help manage differences 
     # in column names across rev versions or technologies
@@ -384,8 +381,7 @@ def add_ilr(tech, df, reeds_path, casename):
                   "Hourlize will run, but check whether ReEDS ILR assumptions to need to be updated.")
         # otherwise check that ILR matches ReEDS value
         else:
-            scalars = pd.read_csv(os.path.join(reeds_path, 'inputs', 'scalars.csv'),
-                                  header=None, usecols=[0,1], index_col=0).squeeze(1)
+            scalars = reeds.io.get_scalars()
             ilr_reeds = scalars["ilr_utility"]
             ilr_rev = ilr_unique[0]
 
@@ -411,7 +407,7 @@ def add_ilr(tech, df, reeds_path, casename):
 def get_supply_curve_and_preprocess(tech, original_sc_file, reeds_path, hourlize_path, outpath,
                                     reg_out_col, reg_map_file, min_cap, capacity_col, 
                                     existing_sites, state_abbrev, start_year, casename, 
-                                    filter_cols={}, profile_id_col="sc_point_gid", test_mode=False, test_filters={}):
+                                    filter_cols={}, profile_id_col="sc_point_gid"):
     """processes reV supply curve file; output is a dataframe with a row for each supply curve point
 
     Parameters
@@ -442,10 +438,6 @@ def get_supply_curve_and_preprocess(tech, original_sc_file, reeds_path, hourlize
         dictionary identifying columns to filter as well as filtering condition, by default {}
     profile_id_col, optional
         id for columns that links profiles with supply curve , by default "sc_point_gid"
-    test_mode, optional
-        boolean determining whether to run in test mode, by default False
-    test_filters, optional
-        dicitonary defining filter conditions, by default {}
 
     Returns
     -------
@@ -468,7 +460,7 @@ def get_supply_curve_and_preprocess(tech, original_sc_file, reeds_path, hourlize
     df = add_land_fom(df, tech, profile_id_col, hourlize_path, reeds_path)
 
     # handle any missing columns
-    df = adjust_rev_cols(tech, df)
+    df = adjust_rev_cols(tech, df, hourlize_path)
 
     # Add 'capacity' column to match specified capacity_col
     if 'capacity' not in df.columns:
@@ -542,10 +534,12 @@ def get_supply_curve_and_preprocess(tech, original_sc_file, reeds_path, hourlize
         df_cp['online_year'] = 0
         df_cp['retire_year'] = 0
         df_cp_out = pd.DataFrame()
-        #Restrict matching to within the same State
+        #Restrict matching to within the same state
+        print("{:<18} {:>} MW".format("Total", round(df_exist.cap.sum()))) 
+        print("{:<18} {:>}".format("-------", "-------")) 
         for st in df_exist['STATE'].unique():
-            print('Existing sites state: ' + st)
             df_exist_st = df_exist[df_exist['STATE'] == st].copy()
+            print("{:<18} {:>} MW".format(st, round(df_exist_st.cap.sum()))) 
             df_cp_st = df_cp[df_cp['state'] == st].copy()
             for i_exist, r_exist in df_exist_st.iterrows():
                 #Current way to deal with lats and longs that don't exist
@@ -562,7 +556,7 @@ def get_supply_curve_and_preprocess(tech, original_sc_file, reeds_path, hourlize
                     # TODO: handle missing UIDs
                     try:
                         df_cp_st.at[i_avail, 'existing_uid'] = r_exist['UID']
-                    except:
+                    except Exception:
                         df_cp_st.at[i_avail, 'existing_uid'] = 0
                     df_cp_st.at[i_avail, 'online_year'] = r_exist['Commercial.Online.Year']
                     df_cp_st.at[i_avail, 'retire_year'] = r_exist['RetireYear']
@@ -589,10 +583,6 @@ def get_supply_curve_and_preprocess(tech, original_sc_file, reeds_path, hourlize
     if min_cap > 0:
         #Remove sites with less than minimum capacity threshold, but keep sites that have existing capacity
         df = df[(df['capacity'] >= min_cap) | (df['existing_capacity'] > 0)].copy()
-    if test_mode:
-        #Test mode allows us to reduce the dataset further for speed
-        for k in test_filters.keys():
-            df = df[df[k].isin(test_filters[k])].copy()
     print('Done reading supply curve inputs and filtering: '+ str(datetime.datetime.now() - startTime))
     return df
 
@@ -727,7 +717,7 @@ def add_cost(df_sc, tech, reg_out_col):
 
     elif tech == "egs" or tech == "geohydro":
         df_sc['capital_adder_per_mw'] = 0
-        df_sc['trans_adder_per_mw'] = df_sc['trans_cap_cost_per_mw'] + df_sc['reinforcement_cost_per_mw']
+        df_sc['trans_adder_per_mw'] = df_sc['cost_total_trans_usd_per_mw']
 
         ## total supply curve cost adders
         df_sc['supply_curve_cost_per_mw'] = df_sc['trans_adder_per_mw'] + df_sc['capital_adder_per_mw']
@@ -768,12 +758,12 @@ def get_profiles_allyears_weightedave(
     """
     print('Getting multiyear profiles...')
     startTime = datetime.datetime.now()
-    ### Create df_rep, the dataframe to map reigon,class to timezone, using capacity weighting to assign timezone.
+    ## Create df_rep, the dataframe to map region,class to timezone, using capacity weighting to assign timezone.
     def wm(x):
         return np.average(x, weights=df_sc.loc[x.index, 'capacity']) if df_sc.loc[x.index, 'capacity'].sum() > 0 else 0
     df_rep = df_sc.groupby(['region','class'], as_index =False).agg({'timezone':wm})
     df_rep['timezone'] = df_rep['timezone'].round().astype(int)
-    #%% Get the weights
+    #%% Get the weights for weighted average of profiles
     dfweight_regionclass = df_sc.groupby(['region','class'])[profile_weight_col].sum()
     #%% consolidate sc to dimensions used to match with profile
     df_sc_grouped = df_sc.groupby(['region','class',profile_id_col], as_index=False)[profile_weight_col].sum()
@@ -795,11 +785,12 @@ def get_profiles_allyears_weightedave(
         dfweight_id[profile_weight_col+'_index']
         / dfweight_id[profile_weight_col+'_regionclass'])
     colweight = dfweight_id.set_index(profile_id_col).weight.copy()
+    ## get mappping of sites to region,class
     id_to_regionclass = pd.Series(
         index=dfweight_id[profile_id_col],
         data=zip(dfweight_id.region, dfweight_id['class']),
     )
-    ### Load hourly profile for each year
+    ## Load hourly profile for each year
     dfyears = []
     for year in hourly_out_years:
         if single_profile: #only one profile file
@@ -811,17 +802,25 @@ def get_profiles_allyears_weightedave(
                 # adjust profiles by scaling factor
                 scale_factor = h5[f'cf_profile-{year}'].attrs['scale_factor']
                 dfall = dfall/scale_factor
+                # read meta and time index
                 df_meta = pd.DataFrame(h5['meta'][:])
+                df_index = pd.Series(h5[f'time_index-{year}'][:])
         else:
             h5path = os.path.join(
                 rev_path, profile_dir, f'{profile_file_format}_{year}.h5')
             with h5py.File(h5path, 'r') as h5:
                 dfall = pd.DataFrame(h5[profile_dset][:])
+                # read meta and time index
                 df_meta = pd.DataFrame(h5['meta'][:])
-        ### Check that meta and profile are the same dimensions
+                df_index = pd.Series(h5['time_index'][:])
+
+        ## Check that meta and profile are the same dimensions
         assert dfall.shape[1] == df_meta.shape[0], f"Dimensions of profile ({dfall.shape[1]}) do not match meta file dimensions ({df_meta.shape[0]}) in {profile_file_format}_{year}.h5"        
-        ### Change hourly profile column names from simple index to associated id specified by profile_id_col (usually sc_point_gid)
+        ## Change hourly profile column names from simple index to associated id specified by profile_id_col (usually sc_point_gid)
         dfall.columns = dfall.columns.map(df_meta[profile_id_col])
+        ## Add time index
+        df_index = pd.to_datetime(df_index.str.decode("utf-8"))
+        dfall = dfall.set_index(df_index)
 
         ## reV only produces AC profiles so we always read in those. If we're running hourlize to produce 
         ## DC UPV outputs then we convert to 'DC' profiles here. Note that these do not actually represent 
@@ -835,32 +834,74 @@ def get_profiles_allyears_weightedave(
         dfall.dropna(axis=1, inplace=True)
         ### Switch to (region,class) index
         dfall.columns = dfall.columns.map(id_to_regionclass)
-        ### Sum by (region,class)
+        ### Sum by (region,class) to finish weighted average of site profiles
         dfall = dfall.T.groupby(level=[0,1]).sum().T
         ### Keep columns in the (region,class) order from df_rep
         dfall = dfall[list(zip(df_rep.region, df_rep['class']))].copy()
         dfyears.append(dfall)
         print('Done with ' + str(year))
-
+    
+    
     ### Concatenate individual years, drop indices
-    reps_arr_out = pd.concat(dfyears, axis=0).values
+    df_prof_out = pd.concat(dfyears, axis=0)
     print('Done getting multiyear profiles: '+ str(datetime.datetime.now() - startTime))
-    return df_rep, reps_arr_out
+    return df_rep, df_prof_out
 
-def shift_timezones(arr, df_rep, source_timezone, output_timezone):
-    #Shift timezone of hourly data
-    if output_timezone != source_timezone:
-        arr = arr.T
-        if output_timezone == 'local':
-            timezones = dict(zip(df_rep.index, df_rep['timezone']))
-            for n in range(len(arr)):
-                arr[n] = np.roll(arr[n], timezones[n] - source_timezone)
+def shift_timezones(df_prof, hourly_out_years, output_timezone):
+    # make sure profiles are sorted by timeindex
+    df_prof = df_prof.sort_index()
+    # preserve copy of original profile
+    df_prof_out = df_prof.copy()
+    # shift timezone of hourly data
+    if isinstance(output_timezone, int):
+        output_timezone = f"Etc/GMT{'+' if output_timezone > 0 else ''}{output_timezone}"
+    try:
+        df_prof_out = df_prof_out.tz_convert(output_timezone)
+    except pytz.exceptions.UnknownTimeZoneError:
+        raise ValueError(f"{output_timezone} is not a valid specification for 'output_timezone'.")        
+    # wrap hours shifted to years outside the dataset
+    data_years = df_prof_out.index.year.unique()
+    hourly_out_years.sort()
+    extra_years = [year for year in data_years if year not in hourly_out_years]
+    # identify groups of consecutive years in the data by looking for gaps > 1 year
+    year_diffs = np.diff(hourly_out_years)
+    year_groups = np.split(hourly_out_years, np.where(year_diffs != 1)[0]+1) 
+    year_groups = [(group[0], group[-1]) for group in year_groups]
+    # number of "extra" to wrap should match the number of consecutive year groups
+    assert (len(extra_years) == len(year_groups)
+            ), "ERROR: number extra years after timezone shifting do not match consecutive year groups."
+    for (ey, yg) in zip(extra_years, year_groups):
+        # determine whether wrapped data goes at the start or the end
+        if ey < yg[0]:
+            year_to_wrap = yg[1]
         else:
-            #Shift from source timezone to output timezone
-            for n in range(len(arr)):
-                arr[n] = np.roll(arr[n], output_timezone - source_timezone)
-        arr = arr.T
-    return arr
+            year_to_wrap = yg[0]
+        # subset extra year, update the year, and then add back to data
+        prof_wrap = df_prof_out.loc[df_prof_out.index.year == ey]
+        prof_wrap.index = prof_wrap.index.map(lambda t: t.replace(year=year_to_wrap))
+        df_prof_out = pd.concat([df_prof_out.loc[df_prof_out.index.year != ey], prof_wrap]).sort_index()
+
+    # for any leap years we need to adjust Dec 31 back to Dec 30 (Dec 31 dropped in reV to maintain 8760)
+    leap_years = [year for year in hourly_out_years if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)]
+    for ly in leap_years:
+        # get last 24 hours of the profile in that year
+        last_day = df_prof_out[df_prof_out.index.year == ly].tail(24)
+        # if there are two different dates in the last 24 hours, update the latter date to match the former
+        last_day_list = last_day.index.day.unique().to_list()
+        if len(last_day_list) > 1:
+            last_day_list.sort()
+            last_day_drop = last_day.index
+            last_day.index = last_day.index.map(lambda t: t.replace(day=last_day_list[0]))
+            df_prof_out = pd.concat([df_prof_out.drop(index=last_day_drop), last_day]).sort_index()
+
+    # verify that wrapping leaves same number of rows
+    assert (len(df_prof_out) == len(df_prof)
+            ), "ERROR: wrapping after timezone adjustment resulted in a different number of rows in the profile."
+    # check that we have the right years
+    assert len([year for year in df_prof_out.index.year.unique() if year not in hourly_out_years]
+               ) == 0, "ERROR: timezone shift resulted in a year outside of those specified in hourly_out_years."
+
+    return df_prof_out
 
 #%% ===========================================================================
 ### --- SAVE OUTPUTS ---
@@ -869,7 +910,7 @@ def shift_timezones(arr, df_rep, source_timezone, output_timezone):
 # save supply curve output files
 def save_sc_outputs(
         df_sc, existing_sites, start_year, outpath, tech,
-        distance_cols, cost_adder_components, subtract_exog, profile_id_col):
+        distance_cols, cost_adder_components, subtract_exog, profile_id_col, decimals):
     #Save resource supply curve outputs
     print('Saving supply curve outputs...')
     startTime = datetime.datetime.now()
@@ -878,7 +919,6 @@ def save_sc_outputs(
     # save copy of pre-processed reV supply curve
     df_sc.to_csv(os.path.join(outpath, 'results', tech + '_supply_curve_raw.csv'), index=False)
     #Round now to prevent infeasibility in model because existing (pre-2010 + prescribed) capacity is slightly higher than supply curve capacity
-    decimals = 3
     df_sc[['capacity','existing_capacity']] = df_sc[['capacity','existing_capacity']].round(decimals)
     if existing_sites:
         # bincol = ['sc_point_gid'] if exog_bin else []
@@ -935,19 +975,15 @@ def save_sc_outputs(
 
     print('Done saving supply curve outputs: '+ str(datetime.datetime.now() - startTime))
 
-def save_time_outputs(reps_arr_out, df_rep, start_1am, outpath, tech,
-                      filetype='h5', compression_opts=4, dtype=np.float16):
+def save_time_outputs(df_prof_out, df_rep, outpath, tech,
+                      filetype='h5', compression_opts=4, dtype=np.float16, decimals=4):
     #Save performance characteristics (capacity factor means, standard deviations, and corrections) and hourly profiles.
     print('Saving time-dependent outputs...')
     startTime = datetime.datetime.now()
-    df_hr = pd.DataFrame(reps_arr_out.round(4))
-    df_rep['class_reg'] = df_rep['class'].astype(str) + '_' + df_rep['region'].astype(str)
-    df_hr.columns = df_rep['class_reg']
-    if start_1am is True:
-        #to start at 1am instead of 12am, roll the data by -1 and add 1 to index
-        df_hr.index = df_hr.index + 1
-        for col in df_hr:
-            df_hr[col] = np.roll(df_hr[col], -1)
+    # round hourly profiles number of decimals specified in config
+    df_hr = df_prof_out.round(decimals)
+    # combine class,regional column index into 1 name using '|' delimiter 
+    df_hr.columns = df_hr.columns.map('{0[1]}|{0[0]}'.format)
 
     if 'csv' in filetype:
         df_hr.to_csv(os.path.join(outpath, 'results', tech + '.csv.gz'))
@@ -960,17 +996,10 @@ def save_time_outputs(reps_arr_out, df_rep, start_1am, outpath, tech,
             else:
                 dtype = getattr(np, dtype.replace("np.", "")) 
 
-        with h5py.File(os.path.join(outpath,'results',f'{tech}.h5'), 'w') as f:
-            f.create_dataset(
-                'cf', data=df_hr, dtype=dtype,
-                ### https://docs.h5py.org/en/stable/high/dataset.html#dataset-compression
-                compression='gzip', compression_opts=compression_opts,
-                ### chunking may speed up individual column reads, but slows down write;
-                ### for now we do not use chunking
-                # chunks=(df_windons.shape[0],1), 
-            )
-            f.create_dataset('columns', data=df_hr.columns, dtype=h5py.special_dtype(vlen=str))
-            f.create_dataset('index', data=df_hr.index, dtype=int)
+        df_hr.index.name = "datetime"
+        reeds.io.write_profile_to_h5(
+            df_hr, f'{tech}.h5', os.path.join(outpath, 'results'),
+            compression_opts=compression_opts)
 
     df_rep.to_csv(os.path.join(outpath, 'results', tech + '_rep_profiles_meta.csv'), index=False)
     print('Done saving time-dependent outputs: '+ str(datetime.datetime.now() - startTime))
@@ -1002,7 +1031,7 @@ def copy_outputs(outpath, reeds_path, sc_path, casename, reg_out_col,
                 os.path.join(resultspath, f'{tech}_prescribed_builds.csv'),
                 os.path.join(inputspath,'capacity_exogenous',f'{tech}_prescribed_builds_{case}.csv')
             )
-        except:
+        except Exception:
             print('WARNING: No prescribed builds')
         try:
             df = pd.read_csv(os.path.join(resultspath,f'{tech}_exog_cap.csv'))
@@ -1011,7 +1040,7 @@ def copy_outputs(outpath, reeds_path, sc_path, casename, reg_out_col,
                 os.path.join(inputspath,'capacity_exogenous',f'{tech}_exog_cap_{case}.csv'),
                 index=False
             )
-        except:
+        except Exception:
             print('WARNING: No exogenous capacity')
         #Hourly profiles
         if reg_out_col == "cnty_fips" or "county" in casename:
@@ -1024,7 +1053,7 @@ def copy_outputs(outpath, reeds_path, sc_path, casename, reg_out_col,
                     os.path.join(resultspath, f'{tech}.h5'),
                     os.path.join(inputspath,'variability','multi_year',f'{tech}-{case}.h5')
                 )
-            except:
+            except Exception:
                 print('WARNING: No hourly profiles')
 
         ## Metadata
@@ -1055,7 +1084,7 @@ def copy_outputs(outpath, reeds_path, sc_path, casename, reg_out_col,
                     os.path.join(outpath,'inputs','readme'+ext),
                     os.path.join(meta_path,''),
                 )
-            except:
+            except Exception:
                 pass
 
     if copy_to_shared:
@@ -1087,8 +1116,8 @@ def map_supplycurve(
     import cmocean
     os.environ['PROJ_NETWORK'] = 'OFF'
 
-    site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-    import plots
+    site.addsitedir(reeds_path)
+    from reeds import plots
     plots.plotparams()
     os.makedirs(os.path.join(outpath, 'plots'), exist_ok=True)
 
@@ -1289,11 +1318,17 @@ if __name__== '__main__':
     else:
         upv_type_out = None
 
+    #%% import additional modules using path to ReEDS
+    site.addsitedir(cf.reeds_path)
+    from preprocessing import geo_supply_curve_aggregation
+    import reeds
+    
     #%% setup logging
-    site.addsitedir(os.path.join(cf.reeds_path, "input_processing"))
-    from ticker import makelog
     if not nolog:
-        log = makelog(scriptname=__file__, logpath=os.path.join(cf.outpath, f'log_{cf.casename}.txt'))
+        log = reeds.log.makelog(
+            scriptname=__file__,
+            logpath=os.path.join(cf.outpath, f'log_{cf.casename}.txt'),
+        )
 
     #%% Make copies of rev jsons
     rev_jsons = copy_rev_jsons(cf.outpath, cf.rev_path)
@@ -1311,7 +1346,7 @@ if __name__== '__main__':
     df_sc = get_supply_curve_and_preprocess(
         cf.tech, cf.original_sc_file, cf.reeds_path, cf.hourlize_path, cf.outpath,
         cf.reg_out_col, cf.reg_map_file, cf.min_cap, cf.capacity_col, cf.existing_sites, cf.state_abbrev,
-        cf.start_year, cf.casename, cf.filter_cols, cf.profile_id_col, cf.test_mode, cf.test_filters)
+        cf.start_year, cf.casename, cf.filter_cols, cf.profile_id_col)
 
     #%% Add classes
     df_sc = add_classes(
@@ -1324,24 +1359,23 @@ if __name__== '__main__':
     #%% Save the supply curve
     save_sc_outputs(
         df_sc, cf.existing_sites,cf.start_year, cf.outpath, cf.tech,
-        cf.distance_cols, cf.cost_adder_components, cf.subtract_exog, cf.profile_id_col)
+        cf.distance_cols, cf.cost_adder_components, cf.subtract_exog, cf.profile_id_col, cf.decimals)
 
     if cf.process_profiles:
         #%% Get the profiles
-        df_rep, reps_arr_out = get_profiles_allyears_weightedave(
+        df_rep, df_prof_out = get_profiles_allyears_weightedave(
         df_sc, cf.rev_path, cf.rev_case,
             cf.hourly_out_years, cf.profile_dset,
             cf.profile_dir, cf.profile_id_col,
             cf.profile_weight_col, cf.tech, upv_type_out, cf.profile_file_format, cf.single_profile)
     
         #%% Shift timezones
-        reps_arr_out = shift_timezones(
-            arr=reps_arr_out, df_rep=df_rep,
-            source_timezone=cf.resource_source_timezone, output_timezone=cf.output_timezone)
+        df_prof_out = shift_timezones(
+            df_prof_out, cf.hourly_out_years, cf.output_timezone)
 
         #%% Save hourly profiles
         save_time_outputs(
-            reps_arr_out,df_rep, cf.start_1am, cf.outpath, cf.tech,
+            df_prof_out,df_rep, cf.outpath, cf.tech,
             cf.filetype, cf.compression_opts, cf.dtype)
 
     if cf.map_supply_curve:

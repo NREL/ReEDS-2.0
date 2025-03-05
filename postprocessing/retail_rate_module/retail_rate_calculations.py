@@ -1,16 +1,17 @@
-#%% ===========================================================================================
+#%% =====================================================================================
 ### --- IMPORTS ---
-### ===========================================================================================
+### =====================================================================================
 import argparse
-import copy
 import itertools
 import pandas as pd
 import numpy as np
 import gdxpds
 import os
+import sys
 ### Local imports
 import ferc_distadmin
-import plots
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from reeds import plots
 
 #########################
 ### Shared properties ###
@@ -31,19 +32,20 @@ tracelabels = {
     'op_h2ct_fuel_costs': 'Operation: H2-CT - Hydrogen',
     'op_h2_storage': 'Operation: Storage - Hydrogen',
     'op_h2_transport': 'Operation: Transport - Hydrogen',
-    'op_h2_transport_intrareg': 'Operation: Intraregional transport - Hydrogen',
+    'op_h2_transport_intrareg': 'Operation: Intraregional Transport - Hydrogen',
     'op_h2_fuel_costs': 'Operation: Fuel - Hydrogen', 
     'op_h2_vom': 'Operation: Variable O&M - Hydrogen',
-    'op_co2_transport_storage': 'Operation: CO2 Transport Storage',
-    'op_co2_storage': 'Operation: CO2 Storage',
-    'op_co2_network_fom_pipe': 'Operation: Fixed O&M - CO2 Pipe',
-    'op_co2_network_fom_spur': 'Operation: Fixed O&M - CO2 Spur',
+    'op_h2_45v_payment_dedelec': 'Operation: Incentives - 45V payments - Dedicated electrolyzer',
+    'op_co2_transport_storage': 'Operation: Transport/storage - CO2',
+    'op_co2_network_fom_pipe': 'Operation: Fixed O&M - CO2 pipe',
+    'op_co2_network_fom_spur': 'Operation: Fixed O&M - CO2 spur',
     'op_fom_costs': 'Operation: Fixed O&M',
     'op_spurline_fom': 'Operation: Fixed O&M - Spur line',
-    'op_transmission_intrazone_fom': 'Operation: Fixed O&M - Intrazone Transmission',
+    'op_transmission_intrazone_fom': 'Operation: Fixed O&M - Intrazone transmission',
     'op_co2_incentive_negative': 'Operation: Incentives - CO2 tax credits',
     'op_h2_ptc_payments_negative': 'Operation: Incentives - H2 PTC payments',
     'op_ptc_payments_negative': 'Operation: Incentives - PTC payments',
+    'op_ptc_payments_negative_dedGen': 'Operation: Incentives - PTC payments - Dedicated electrolyzer',
     'op_startcost': 'Operation: Startup/ramping',
     'op_wc_debt_interest': 'Capital: Working capital debt interest',
     'op_wc_equity_return': 'Capital: Working capital equity return',
@@ -251,9 +253,10 @@ def read_file(filename):
     return f
 
 
-#%% ===========================================================================================
+#%% =====================================================================================
 ### --- MAIN FUNCTION: RETAIL RATE CALCULATION ---
-### ===========================================================================================
+### =====================================================================================
+
 def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     """
     """
@@ -262,10 +265,10 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     mdir = os.path.dirname(os.path.abspath(__file__))
 
     # #%% Settings for testing/debugging
-    # run_dir = os.path.join('C:\\', 'Users', 'aschleif', 'Documents', 'ReEDS_', 'ReEDS-2.0',
-    #                         'runs', 'stdscen_091923_Mid_Case')
-    # mdir = os.path.join('C:\\', 'Users', 'aschleif', 'Documents', 'ReEDS_', 'ReEDS-2.0',
-    #                     'postprocessing', 'retail_rate_module')
+    # run_dir = os.path.join('/Users','jcarag','ReEDS','RRM_Fixes','ReEDS-2.0','runs',
+    #                         'NonLUSA_usa_base_D_DAC')
+    # mdir = os.path.join('/Users','jcarag','ReEDS','RRM_Fixes','ReEDS-2.0','postprocessing',
+    #                     'retail_rate_module')
     # inputpath = 'inputs.csv'
     # write = True
     # plots = True
@@ -273,7 +276,8 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # plot_dollar_year = 2022
     # startyear = 2010
 
-    #%% INPUTS - read and parse from inputs.csv (except for ReEDS case, which is provided via command line)
+    #%% INPUTS
+    ### Inputs (Retail Rate Module) - ingest and parse from retail_rate_module/inputs.csv
     dfinputs = pd.read_csv(inputpath)
     
     # Create a dictionary from the 'inputs' column of dfinputs
@@ -318,6 +322,19 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     input_depreciation_schedules = {
         key: str(int(input_depreciation_schedules[key])) for key in input_depreciation_schedules}
 
+    ### Inputs (ReEDS regions)
+    # Ingest hierarchy file
+    regions_map = pd.read_csv(
+        os.path.join(run_dir, 'inputs_case', 'hierarchy.csv')
+        ).rename(columns={'*r':'r','st':'state'})
+
+    stacked_regions_map = regions_map[['r', 'state']].drop_duplicates().rename(columns={'r':'region'})
+    reedsregion2state = dict(zip(stacked_regions_map.region.values, stacked_regions_map.state.values))
+    states = list(set(reedsregion2state.values()))
+    # Ingest map to convert s regions to p regions
+    rs_map = pd.read_csv(os.path.join(mdir, 'inputs', 'rsmap.csv'))
+    s2r = dict(zip(rs_map['rs'], rs_map['r']))
+
     if verbose > 1:
         print(f'inputs: \n{inputs}')
         print(f'input_daproj: \n{input_daproj}')
@@ -326,17 +343,6 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
 
     #%% Start calculations
     print(' - Gathering retail rate components')
-    # Load regions
-    regions_map = pd.read_csv(
-        os.path.join(run_dir, 'inputs_case', 'hierarchy.csv')
-        ).rename(columns={'*r':'r','st':'state'})
-
-    stacked_regions_map = regions_map[['r', 'state']].drop_duplicates().rename(columns={'r':'region'})
-    reedsregion2state = dict(zip(stacked_regions_map.region.values, stacked_regions_map.state.values))
-    states = list(set(reedsregion2state.values()))
-    # Load map to convert s regions to p regions
-    rs_map = pd.read_csv(os.path.join(mdir, 'inputs', 'rsmap.csv'))
-    s2r = dict(zip(rs_map['rs'], rs_map['r']))
     
     # Ingest load from ReEDS
     load_rt = (
@@ -553,10 +559,10 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
                               'op_h2_vom',
                               'op_consume_vom',
                               'op_consume_fom']
-    # Identify operational costs (by the op_ prefix) and extract just those
+    # Identify operational costs (by the "op_" prefix) and extract
     op_cost_types = [i for i in system_costs['cost_type'].drop_duplicates() 
-    # Leave out 'op_transmission_fom' for now since it's already accounted
-    # for separately in 'op_trans' (using FERC data instead of ReEDS)
+    # Leave out 'op_transmission_fom' for now since it's already accounted for
+    # separately in 'op_trans' (using FERC data instead of ReEDS)
                      if (('op_' in i) and (i not in op_costs_types_omitted))]
     op_costs_modeled_years = system_costs[system_costs['cost_type'].isin(op_cost_types)].copy()
     
@@ -581,12 +587,12 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     op_costs_pivot = op_costs.pivot_table(
         index=['t', 'state'], columns='cost_type', values='cost', fill_value=0.0).reset_index()
 
-    ### Redistributing the DAC op costs
+    ### Redistribute the DAC op costs
     # DAC has negative CO2 emissions, which allows fossil generators to continue to operate.
     # This redistribution shares the cost of the DAC with any region that is still emitting CO2.
     # In this way, states with fossil units but no DAC still incur costs for the DAC.
     if 'op_co2_transport_storage' in op_costs_pivot.columns:
-        # Reading in the BA-level emissions
+        # Read in the BA-level emissions
         emissions_r = (
             pd.read_csv(os.path.join(run_dir, 'outputs', 'emit_r.csv'))
             .rename(columns={'eall':'type', 'r':'r', 't':'t', 'Value':'emissions',
@@ -606,20 +612,18 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         # Remove negative emissions
         emissions_r.loc[emissions_r['emissions'] < 0, 'emissions'] = 0
         
-        # Matching the BAs with the respective states
-        # regions_map_emissions = pd.read_csv(os.path.join(run_dir, 'inputs_case', 'regions.csv')).rename(
-        #     columns={'p':'r','st':'state'})
+        # Match the BAs with the respective states
         regions_map_emissions = regions_map.copy()[['r','state']]
         regions_map_emissions = regions_map_emissions[regions_map_emissions['r'].isin(r_list_emissions)]
         ba_state_map_emissions = regions_map_emissions[['r', 'state']].drop_duplicates()
         
-        # Consolidating emissions by state
+        # Consolidate emissions by state
         emissions_r = emissions_r.merge(ba_state_map_emissions, on='r', how='left')
-        emissions_by_state = emissions_r.groupby(['state', 't'], as_index=False).sum()
+        emissions_by_state = emissions_r.groupby(['state', 't'], as_index=False).agg({'emissions':'sum'})
         emissions_by_state = emissions_by_state.pivot_table(
                 index='t', columns='state', values='emissions').fillna(0)
         
-        # Filling in zero for states where no emissions info is available
+        # Fill in zero for states where no emissions info is available
         num_states = len(state_list)
         if num_states != emissions_by_state.shape[1]:
             col_list = list(emissions_by_state.columns)
@@ -627,7 +631,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
             for state in missing_states:
                 emissions_by_state[state] = 0
         
-        # Calculating the fraction of emissions by state
+        # Calculate the fraction of emissions by state
         emissions_by_state['Total'] = emissions_by_state.sum(axis=1)
         emissions_by_state_fraction = emissions_by_state.copy()
         st_cols = [c for c in emissions_by_state.columns if c != 'Total']
@@ -637,7 +641,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         emissions_by_state_fraction.drop(columns=['Total'], inplace=True)
         del st_cols
         
-        # Redistributing DAC costs by emissions fraction
+        # Redistribute DAC costs by emissions fraction
         op_costs_dac_corrections = op_costs_pivot[['t','state','op_co2_transport_storage']].copy()
         op_costs_dac_corrections['op_co2_transport_storage'] = 0
         op_costs_dac_corrections = op_costs_dac_corrections.pivot_table(
@@ -650,9 +654,14 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
             assert(multiplier.shape[0]==num_states)
             op_costs_dac_corrections.loc[year] += (cost * multiplier)
         
-        # Assigining the redistributed DAC costs to the orginal dataframe
-        op_costs_dac_corrections = op_costs_dac_corrections.T    
+        # Assign the redistributed DAC costs to the original dataframe
+        op_costs_dac_corrections = op_costs_dac_corrections.T
         op_costs_dac_corrections_unstacked = op_costs_dac_corrections.unstack()
+        ## Ensure all op values for DAC post-distribution are accounted for
+        ## NOTE: near-zero values in op_costs_dac_corrections must be kept to ensure the assertion works,
+        ## but technically can be removed/ignored afterwards
+        assert(round(op_costs_pivot['op_co2_transport_storage'].values.sum(),2) 
+               == round(op_costs_dac_corrections_unstacked.values.sum(),2))
         op_costs_pivot['op_co2_transport_storage'] = op_costs_dac_corrections_unstacked.values
 #%%    
     # Extrapolate FOM costs backwards using the constant normalized cost by load 
@@ -752,32 +761,51 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     cap_new_ivrt_distributed = distribute_between_solve_years(
         cap_new_ivrt, 'cap_new', modeled_years, years_reeds)
 
-    # Calculate the capital cost multipliers. This includes the construction interest multiplier 
-    # and regional capital cost multipliers, but not other adjustments like the ITC or depreciation.
-    ccmult = pd.read_csv(
-        os.path.join(run_dir, 'inputs_case', 'ccmult.csv'))
-    reg_cap_cost_mult = pd.read_csv(
-        os.path.join(run_dir, 'inputs_case', 'reg_cap_cost_mult.csv'))
-    cap_cost_mult = ccmult.merge(reg_cap_cost_mult, on='*i', how='outer')
-    cap_cost_mult[['CCmult', 'reg_cap_cost_mult']] = (
-        cap_cost_mult[['CCmult', 'reg_cap_cost_mult']].fillna(1.0))
-    cap_cost_mult.rename(columns={'r':'region', '*i':'i'}, inplace=True)
-    cap_cost_mult['cap_cost_mult_for_ratebase'] = (
-        cap_cost_mult['CCmult'] * cap_cost_mult['reg_cap_cost_mult'])
-
-    # Ingest remaining technology capital costs, adjust for multipliers
-    cost_cap = pd.read_csv(
-        os.path.join(run_dir, 'outputs', 'cost_cap.csv')
-        ).rename(columns={
-            'i':'i', 't':'t', 'Value':'cost_cap', 
-            'Dim1':'i', 'Dim2':'t', 'Val':'cost_cap'})
-    cost_cap = cap_cost_mult.merge(cost_cap, on=['i', 't'], how='left')
-    cost_cap['cost_cap'] = cost_cap['cost_cap'] * cost_cap['cap_cost_mult_for_ratebase']
+    # Create dataframe from capacity additions to be merged later with capex
+    df_gen_capex = cap_new_ivrt_distributed[['i', 'region', 't', 'cap_new']].copy()
+    df_gen_capex = df_gen_capex.groupby(
+        by=['i', 'region', 't'], as_index=False).agg({'cap_new':'sum'})
     
-#%% ### Redistribute DAC Capital costs
-    # See comments above for the redistribution of DAC operating costs
-    if 'dac' in list(cost_cap['i'].drop_duplicates()):
-        # Reading in the BA-level emissions
+    # Read in generator capex
+    # All costs except upgrades are calculated using cost_cap_fin_mult_no_credits
+    # Upgrade costs are calculated using cost_cap_fin_mult_out (full ITC/PTC/depreciation)
+    df_capex_irt = pd.read_csv(
+        os.path.join(run_dir, 'outputs', 'capex_ivrt.csv')
+        ).rename(columns={'r':'region', 't':'t_modeled', 'Value':'capex'})
+    # Get rid of the v index
+    df_capex_irt = df_capex_irt.groupby(
+        by=['i', 'region', 't_modeled'], as_index=False).agg({'capex':'sum'})
+    
+    # Read in Tech|BA-Level system costs
+    # Most costs are calculated using cost_cap_fin_mult_noITC
+    # rsc tech costs are calculated using rsc_fin_mult or rsc_fin_mult_noITC
+    invcapcosts = ['inv_dac', 'inv_h2_production', 'inv_investment_capacity_costs', 
+                   'inv_investment_refurbishment_capacity',
+                   'inv_investment_spurline_costs_rsc_technologies',]
+    df_syscost_irt = pd.read_csv(
+        os.path.join(run_dir, 'outputs', 'systemcost_techba.csv')
+        ).rename(columns={'r':'region', 't':'t_modeled', 'Value':'capex'})
+    df_syscost_irt = df_syscost_irt[df_syscost_irt['sys_costs'].isin(invcapcosts)]
+    df_syscost_irt = df_syscost_irt.groupby(
+        by=['i', 'region', 't_modeled'], as_index=False).agg({'capex':'sum'})
+    
+    # Merge and take maximum of two capex sources 
+    df_capex_irt = df_capex_irt.merge(
+        df_syscost_irt, on=['i', 'region', 't_modeled'], how='outer', 
+        suffixes=('_capex','_syscost'))
+    df_capex_irt['capex'] = df_capex_irt[['capex_capex', 'capex_syscost']].max(axis=1)
+    df_capex_irt = df_capex_irt[['i', 'region', 't_modeled', 'capex']]
+    
+    # Distribute among all years / between solve years
+    df_capex_irt_distributed = distribute_between_solve_years(
+        df_capex_irt, 'capex', modeled_years, years_reeds)
+    
+    #%% Redistribute the DAC capex costs
+    # Just as with DAC operating costs, DAC capex costs should be redistributed to where 
+    # any region that is still emitting CO2 via operation of fossil units 
+    # incurs the costs of DAC 
+    if 'dac' in df_capex_irt_distributed['i'].unique():
+        # Read in the BA-level emissions
         emissions_r = pd.read_csv(os.path.join(run_dir, 'outputs', 'emit_r.csv'))
         
         if emissions_r.shape[1] == 4:
@@ -802,7 +830,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         # Remove negative emissions
         emissions_r.loc[emissions_r['emissions'] < 0, 'emissions'] = 0
         
-        # Calculating the fraction of emissions by BA
+        # Calculate the fraction of emissions by BA
         emissions_r = emissions_r.pivot_table(
             index='t', columns='r', values='emissions').fillna(0)
         emissions_r['Total'] = emissions_r.sum(axis=1)
@@ -814,95 +842,51 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         emissions_r_fraction.drop(columns=['Total'], inplace=True)
         del ba_cols
         
-        # Redistributing DAC costs by emissions fraction
-        cap_costs_dac = cost_cap[cost_cap['i']=='dac'].fillna(0)
-        # cap_costs_dac.drop(['i', 'cap_cost_mult_for_ratebase'], axis=1, inplace=True)
-        cap_costs_dac.drop(['i'], axis=1, inplace=True)
-        cap_costs_dac = cap_costs_dac.rename(columns={'region':'r'})
-        cap_costs_dac = cap_costs_dac.reset_index(drop=True)
-        cap_costs_dac_pivot = cap_costs_dac.pivot_table(
-            index='r', columns='t', values='cost_cap')
-        cap_costs_dac_corrections = copy.deepcopy(cap_costs_dac_pivot)
-        cap_costs_dac_corrections.loc[:, :] = 0
+        # Redistribute DAC costs by emissions fraction
+        dac_mask = df_capex_irt_distributed['i']=='dac'
+        capex_dac = df_capex_irt_distributed[dac_mask].copy().fillna(0)
+        capex_dac.drop(['i'], axis=1, inplace=True)
+        capex_dac = capex_dac.rename(columns={'region':'r'})
+        capex_dac = capex_dac.reset_index(drop=True)
+        
+        capex_dac_corrections = df_capex_irt_distributed.pivot_table(index='region',columns='t',values='capex')
+        capex_dac_corrections.loc[:, :] = 0
         
         # Remove missing BAs where emissions info is not available
-        missing_r = list(set(cap_costs_dac_corrections.index) - set(emissions_r_fraction.columns))
-        cap_costs_dac_corrections.drop(missing_r, axis=0, inplace=True)
+        missing_r = list(set(capex_dac_corrections.index) - set(emissions_r_fraction.columns))
+        capex_dac_corrections.drop(missing_r, axis=0, inplace=True)
         
-        num_r = cap_costs_dac_corrections.shape[0]
+        num_r = capex_dac_corrections.shape[0]
         
-        # Recalculate the DAC capital costs
-        for i in range(cap_costs_dac.shape[0]):
-            cost = cap_costs_dac.loc[i, 'cost_cap']
-            year = cap_costs_dac.loc[i, 't']
+        # Recalculate the DAC capex using fractional emissions
+        for i, row in capex_dac.iterrows():
+            cost = row['capex']
+            year = row['t']
             if year <= last_year:
                 multiplier = emissions_r_fraction.loc[year]
                 assert(multiplier.shape[0]==num_r)
-                cap_costs_dac_corrections.loc[:,year] += (cost * multiplier)
+                capex_dac_corrections.loc[:,year] += (cost * multiplier)
         
         # Assign zero to missing BAs
         for r in missing_r:
-            cap_costs_dac_corrections.loc[r, :] = 0
-            
-        # Assigning the redistributed DAC costs to the original dataframe
-        for i in range(cap_costs_dac.shape[0]):
-            year = cap_costs_dac.loc[i, 't']
-            if year <= last_year:
-                region = cap_costs_dac.loc[i, 'r']
-                cap_costs_dac.loc[i, 'cost_cap'] = cap_costs_dac_corrections.loc[region, year]
-        cost_cap.loc[cost_cap['i']=='dac', 'cost_cap'] = cap_costs_dac['cost_cap'].values
-
-#%%
-    # Merge on cost_cap to the cap additions
-    df_gen_capex = cap_new_ivrt_distributed[['i', 'region', 't', 'cap_new']].copy()
-    # Get rid of the v index
-    df_gen_capex = df_gen_capex.groupby(
-        by=['i', 'region', 't'], as_index=False).agg({'cap_new':'sum'})
-    
-    # Read in generator capex
-    # All costs except upgrades are calculated using cost_cap_fin_mult_no_credits
-    # Upgrade costs are calculated using cost_cap_fin_mult_out (full ITC/PTC/depreciation)
-    df_capex_irt = pd.read_csv(
-        os.path.join(run_dir, 'outputs', 'capex_ivrt.csv')
-        ).rename(columns={
-            'r':'region', 't':'t_modeled', 'Value':'capex', 
-            'Dim1':'i', 'Dim3':'region', 'Dim4':'t_modeled', 'Val':'capex'})
-    # Convert s regions to p regions if necessary
-    df_capex_irt.loc[df_capex_irt['region'].str.contains('s'), 'region'] = (
-        df_capex_irt.loc[df_capex_irt['region'].str.contains('s'), 'region'].map(s2r))
-    # Get rid of the v index
-    df_capex_irt = df_capex_irt.groupby(
-        by=['i', 'region', 't_modeled'], as_index=False).agg({'capex':'sum'})
-    
-    # Read in Tech|BA-Level system costs
-    # Most costs are calculated using cost_cap_fin_mult_noITC
-    # rsc tech costs are calculated using rsc_fin_mult or rsc_fin_mult_noITC
-    invcapcosts = ['inv_h2_production', 'inv_investment_capacity_costs', 
-                   'inv_investment_refurbishment_capacity',
-                   'inv_investment_spurline_costs_rsc_technologies',]
-    df_syscost_irt = pd.read_csv(
-        os.path.join(run_dir, 'outputs', 'systemcost_techba.csv')
-        ).rename(columns={
-            'r':'region', 't':'t_modeled', 'Value':'capex', 
-            'Dim1':'sys_costs', 'Dim2':'i', 'Dim3':'region', 'Dim4':'t_modeled', 'Val':'capex'})
-    df_syscost_irt = df_syscost_irt[df_syscost_irt['sys_costs'].isin(invcapcosts)]
-    # Convert s regions to p regions if necessary
-    df_syscost_irt.loc[df_syscost_irt['region'].str.contains('s'), 'region'] = (
-        df_syscost_irt.loc[df_syscost_irt['region'].str.contains('s'), 'region'].map(s2r))
-    df_syscost_irt = df_syscost_irt.groupby(
-        by=['i', 'region', 't_modeled'], as_index=False).agg({'capex':'sum'})
-    
-    # Merge and take maximum of two capex sources 
-    df_capex_irt = df_capex_irt.merge(
-        df_syscost_irt, on=['i', 'region', 't_modeled'], how='outer', 
-        suffixes=('_capex','_syscost'))
-    df_capex_irt['capex'] = df_capex_irt[['capex_capex', 'capex_syscost']].max(axis=1)
-    df_capex_irt = df_capex_irt[['i', 'region', 't_modeled', 'capex']]
+            capex_dac_corrections.loc[r, :] = 0
         
-    # Distribute among all years / between solve years
-    df_capex_irt_distributed = distribute_between_solve_years(
-        df_capex_irt, 'capex', modeled_years, years_reeds)
-    
+        # Reformat capex_dac_corrections df to long format to merge back onto the original df
+        ## Remove all years with zero total capex
+        capex_dac_corrections = capex_dac_corrections.loc[:, (capex_dac_corrections.sum(axis=0) != 0)]
+        capex_dac_corrections = capex_dac_corrections.reset_index().melt(id_vars='region', value_name='capex')
+        capex_dac_corrections = capex_dac_corrections.assign(i='dac')
+        ## Ensure all capex values for DAC post-distribution are accounted for
+        ## NOTE: near-zero values in capex_dac_corrections must be kept to ensure the assertion works,
+        ## but technically can be removed/ignored afterwards
+        assert(round(capex_dac_corrections['capex'].sum(),2) == round(capex_dac['capex'].sum(),2))
+        
+        ## Add the corrected DAC capex onto original df and remove old DAC capex rows
+        df_capex_irt_distributed = pd.concat([
+            df_capex_irt_distributed[~dac_mask][['i','region','t','capex']],
+            capex_dac_corrections[['i','region','t','capex']].sort_values(by=['region','t'])
+            ])
+        
     # Merge new capacity and capex
     df_gen_capex = df_gen_capex.merge(
         df_capex_irt_distributed[['i', 'region', 't', 'capex']], 
@@ -1004,7 +988,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     system_costs.loc[system_costs['cost_type']=='inv_transmission_intrazone_investment', 
                      'cost_type'] = 'inv_transmission_line_investment'
     system_costs = system_costs.copy().groupby(
-        by=['cost_type', 'region', 't', 'state']).agg({'cost':'sum'}).reset_index()
+        by=['cost_type', 'region', 't', 'state'], as_index=False).agg({'cost':'sum'})
     
     nongen_inv_eval_periods = pd.DataFrame(
         columns=['cost_type', 'eval_period'],
@@ -1225,12 +1209,11 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         excluded_costs = (
             ferc_distadmin.get_excluded_costs(
                 inflationpath=os.path.join(run_dir, 'inputs_case', 'inflation.csv'),
-                dollar_year=inputs['dollar_year']
-                ).rename(columns={
-                    'Year':'t', 'State':'state', 
-                    'A&G Oper Injuries & Damages $':'special_costs_year0'}
-                # Sum over columns (by t,state) in case we exclude multiple columns
-                ).groupby(['t','state'])['special_costs_year0'].sum()
+                dollar_year=inputs['dollar_year'])
+            .rename(columns={'Year':'t','State':'state'})
+            .groupby(['t','state']).sum(numeric_only=True)
+            ### Sum over columns (by t,state) in case we exclude multiple columns
+            .sum(axis=1).rename('special_costs_year0')
             )
 
         #% Get the CRF for the excluded costs
@@ -1459,7 +1442,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     dfall['retail_load'] = dfall['end_use_load'] - dfall['distpv_gen']
 
     # Note that this is essentially assuming that all distpv gen is self-consumed, 
-    #   therefore it does not contribute to retail sales. Alternatively, some
+    #   thus, it does not contribute to retail sales. Alternatively, some
     #   could be exported, but then we'd have to estimate sell rates. If we want 
     #   to be precise about the retail sales and revenue target (as opposed to just
     #   the $/kWh result), we may want to make this more sophisticated. 
@@ -1499,7 +1482,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         ### Align trans_opex_per_mwh (projected from FERC Form 1) 
         ### with national MW-miles and retail load by year
         trans_df = (
-            dist_admin_costs.drop('state',1).drop_duplicates()[['t','trans_opex_per_mwh']]
+            dist_admin_costs.drop('state',axis=1).drop_duplicates()[['t','trans_opex_per_mwh']]
             .merge(trans_cap.groupby('t')['MWmile'].sum(), on=['t'], how='left').dropna()
             .merge(dfall.groupby('t')['retail_load'].sum(), on=['t'], how='left').dropna()
             )
@@ -1736,8 +1719,6 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     #   also doesn't capture ramp-up properly. Absolutely should be fixed if 
     #   any serious work with PTC on retail rates is done. 
     
-    # ptc_values = (
-    #     ptc_values.sort_values('t', ascending=False).drop_duplicates(['i', 'v', 'r'], keep='first'))
     ptc_values_count = (
         ptc_values[['i','v','ptc_value']]
         .groupby(['i', 'v'], as_index=False).count())
@@ -1764,7 +1745,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     ptc_values = ptc_values.merge(gen_ivrt, on=['i', 'v', 't'], how='left')
 
     # Rows with nan's meant that there was a ptc available, but no [i,v] generation was there
-    ptc_values = ptc_values[ptc_values['gen'].isnull() is False]
+    ptc_values = ptc_values[~ptc_values['gen'].isnull()]
 
     # Calculate the value of the credits ($), and the effective after-tax value for a 
     # regulated utility
@@ -2087,11 +2068,11 @@ def retail_plots(run_dir, inputpath='inputs.csv', startyear=2010,
         mpl.patches.Patch(facecolor=colors[col], edgecolor='none', label=tracelabels[col])
         for col in list(colors)
         ]
-    leg = ax.legend(
+    ax.legend(
         handles=handles, loc='upper left', bbox_to_anchor=(1.05,1.05),
         ncol=3, handletextpad=0.3, handlelength=0.7, fontsize='large',
         frameon=False
-        )
+    )
     plots.despine(ax)
     savename = os.path.join(run_dir,'outputs','retail','retail_rate_USA_components_all.png')
     plt.savefig(savename)
@@ -2168,11 +2149,11 @@ def retail_plots(run_dir, inputpath='inputs.csv', startyear=2010,
             facecolor=catcolors[costcat], edgecolor='none', alpha=alpha, label=titles[costcat])
         for costcat in costcategories
         ]
-    leg = ax.legend(
+    ax.legend(
         handles=handles, loc='upper left', bbox_to_anchor=(1,1),
         ncol=1, handletextpad=0.3, handlelength=0.7, fontsize='large',
         frameon=False
-        )
+    )
     plots.despine(ax)
     savename = os.path.join(run_dir,'outputs','retail','retail_rate_USA_components_financial.png')
     plt.savefig(savename)
@@ -2310,11 +2291,11 @@ def retail_plots(run_dir, inputpath='inputs.csv', startyear=2010,
             if costcat not in ['_spurline', 'op_']
             ]
         )
-    leg = ax.legend(
+    ax.legend(
         handles=handles, loc='upper left', bbox_to_anchor=(1,1),
         ncol=1, handletextpad=0.3, handlelength=0.7, fontsize='large',
         frameon=False
-        )
+    )
     plots.despine(ax)
     savename = os.path.join(run_dir,'outputs','retail','retail_rate_USA_components_model.png')
     plt.savefig(savename)
@@ -2341,7 +2322,7 @@ def retail_plots(run_dir, inputpath='inputs.csv', startyear=2010,
     pd.concat([
         (dfeia.RetailTotal_real.rename('retailrate')
          .rename_axis('t').to_frame().assign(source='EIA861')),
-        (dfplot.loc[startyear:].sum(axis=1).rename('retailrate')
+        (dfplot.loc[startyear:].sum(axis=1,numeric_only=True).rename('retailrate')
          .rename_axis('t').to_frame().assign(source='ReEDS')),
     ]).to_csv(
         os.path.join(run_dir,'outputs','retail','retail_rate_USA_centsperkWh.csv'))
@@ -2356,10 +2337,10 @@ def retail_plots(run_dir, inputpath='inputs.csv', startyear=2010,
     ax.plot(dfeia.index, dfeia.RetailTotal_real, c='C0', ls='-', label='Historical (EIA)')
     ### Calculated
     ax.plot(dfplot.loc[startyear:].index, 
-            dfplot.loc[startyear:].sum(axis=1).values,
+            dfplot.loc[startyear:].sum(axis=1,numeric_only=True).values,
             label='Projected (with bias correction)', color='C3', ls='--')
     ax.plot(dfplot.loc[startyear:].index, 
-            dfplot.drop('bias_correction',axis=1).loc[startyear:].sum(axis=1).values,
+            dfplot.drop('bias_correction',axis=1).loc[startyear:].sum(axis=1,numeric_only=True).values,
             label='Projected (no bias correction)', color='C3', ls=':')
     ### Formatting
     ax.set_xlim(1960,endyear)
@@ -2408,8 +2389,8 @@ if __name__ == '__main__':
         tic = datetime.datetime.now()
         #%% Set up logger
         log = makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
-    except:
-        pass
+    except Exception as err:
+        print(err)
 
     #%% Get and write the component revenues
     main(
@@ -2432,5 +2413,5 @@ if __name__ == '__main__':
     try:
         toc(tic=tic, year=0, process='retail_rate_calculations.py', path=run_dir)
         print('Finished retail_rate_calculations.py')
-    except:
-        pass
+    except Exception as err:
+        print(err)

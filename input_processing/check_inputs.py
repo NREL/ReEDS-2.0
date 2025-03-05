@@ -1,11 +1,12 @@
 #%% Imports
 import gdxpds
-import pandas as pd
 import os
+import sys
 import argparse
 import datetime
 import yaml
-from ticker import toc, makelog
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 tic = datetime.datetime.now()
 
 #%% Argument inputs
@@ -127,15 +128,16 @@ def check_param(param, kwargs, inputs, sw):
 #%% Procedure
 if __name__ == '__main__':
     #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(casepath,'gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(casepath,'gamslog.txt'),
+    )
 
     #%% Get inputs dictionary and switches
     print('Load inputs.gdx for error checking')
     inputs = gdxpds.to_dataframes(os.path.join(casepath, 'inputs_case', 'inputs.gdx'))
 
-    sw = pd.read_csv(
-        os.path.join(casepath, 'inputs_case', 'switches.csv'), header=None, index_col=0,
-    ).squeeze(1)
+    sw = reeds.io.get_switches(casepath)
 
     #%% Get parameters to check
     yamlpath = os.path.join(casepath, 'inputs_case', 'objective_function_params.yaml')
@@ -150,4 +152,4 @@ if __name__ == '__main__':
         dfcheck = check_param(param, kwargs, inputs, sw)
 
     #%% Done
-    toc(tic=tic, year=0, process='input_processing/check_inputs.py', path=casepath)
+    reeds.log.toc(tic=tic, year=0, process='input_processing/check_inputs.py', path=casepath)

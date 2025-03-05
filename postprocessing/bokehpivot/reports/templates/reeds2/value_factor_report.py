@@ -3,7 +3,7 @@ This makes a report of value and value factor outputs. Gen Frac is included
 so that the value factors can be compared to market share. See comments in
 in reeds2.py for a description of each preset.
 '''
-storage_techs = ['pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10']
+storage_techs = ['pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']
 
 static_presets = [
     {'name': 'Full Value New Techs', 'result': 'Value New Techs', 'download_full_source': True},

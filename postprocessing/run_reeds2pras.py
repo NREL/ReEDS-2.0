@@ -78,11 +78,11 @@ def main(
     else:
         site.addsitedir(case)
     import Augur
+    import reeds
     import ReEDS_Augur.prep_data as prep_data
-    import ReEDS_Augur.functions as functions
 
     ### Get the switches, overwriting values as necessary
-    sw = functions.get_switches(case)
+    sw = reeds.io.get_switches(case)
     sw['reeds_path'] = reeds_path
     sw['pras_samples'] = samples
 

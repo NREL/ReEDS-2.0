@@ -49,7 +49,6 @@ degradation_annual.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,cons
 depreciation_schedules.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 df_capex_init.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 distpvcap.csv,.csv,0,None,wide,Unnamed: 0,1,0,constant,None,None,"constant, linear, or saturate?",constant
-distpvcf_hourly.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 dr_dec.csv,.csv,1,None,9999,None,9999,0,constant,None,None,,constant
 dr_decrease.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 dr_hrs.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant

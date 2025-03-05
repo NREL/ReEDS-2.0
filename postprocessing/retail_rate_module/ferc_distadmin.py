@@ -241,7 +241,7 @@ def get_ferc_costs(
     dfout : pd.DataFrame
         Historical and projected future distribution & administration costs
     """
-    # #%%##### DEBUG
+    # #%% Settings for testing/debugging:
     # numslopeyears = 10
     # numprojyears = 10
     # current_t = 2020
@@ -250,6 +250,8 @@ def get_ferc_costs(
     # inflationpath = os.path.join(
     #     os.path.expanduser('~/Documents/ReEDS_/ReEDS-2.0/runs/stdscen_091923_Mid_Case/'),
     #     'inputs_case', 'inflation.csv')
+    # inflationpath = os.path.join('/','Users','jcarag','ReEDS','RRM_Fixes','ReEDS-2.0',
+    #                               'runs','stdscen_091923_DAC_100by2035','inputs_case','inflation.csv')
     # drop_pgesce_20182019 = True
     # dollar_year = 2004
     # cleanup = True
@@ -435,7 +437,7 @@ def get_ferc_costs(
             {'t':[1994,1995,1996],
             'state':['UT','UT','UT'],
             'entry_type':['backfilled','backfilled','backfilled']})
-        dfout = pd.concat([dfout, insert]).sort_values(['state','t']).reset_index(drop=True)
+        dfout = pd.concat([dfout,insert]).sort_values(['state','t']).reset_index(drop=True)
         dfout.loc[(dfout.state=='UT')] = dfout.loc[dfout.state=='UT'].interpolate('bfill')
         # dfout.loc[(dfout.state=='MT')] = dfout.loc[dfout.state=='MT'].interpolate('linear')
 
@@ -504,6 +506,13 @@ def get_ferc_costs(
     dfout.loc[dfout['t'] < current_t, 'entry_type'] = 'historical'
     dfout.loc[dfout['t'] >= current_t, 'entry_type'] = 'projected'
     # dfout = dfout[~dfout.isin([np.nan, np.inf, -np.inf]).any(1)]
+
+    # Drop unnecessary spatial columns since the data in them is messed up
+    dropregcols = {'nation':['region','state'],
+                   'region':['nation','state'],
+                   'state':['nation','region']}
+    dfout = dfout[[x for x in dfout.columns if x not in dropregcols[aggregation]]]
+    
 
     #%% Write outputs
     dfout.reset_index(drop=True, inplace=True)

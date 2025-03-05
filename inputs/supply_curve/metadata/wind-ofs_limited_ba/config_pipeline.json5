@@ -1,0 +1,20 @@
+{
+    "logging": {
+        "log_file": null,
+        "log_level": "INFO"
+    },
+    "pipeline": [
+        {
+            "supply-curve-aggregation": "./config_aggregation.json5"
+        },
+        {
+            "supply-curve": "./config_supply_curve.json5"
+        },
+        {
+            "script": "./config_post_proc.json5"
+        },
+        {
+            "rep-profiles": "./config_rep-profiles.json5"
+        }
+    ]
+}

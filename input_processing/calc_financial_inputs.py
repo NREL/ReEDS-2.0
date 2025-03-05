@@ -6,10 +6,12 @@ import argparse
 import pandas as pd
 import numpy as np
 import os
-import support_functions as sFuncs
-# Time the operation of this script
-from ticker import toc, makelog
+import sys
 import datetime
+# Time the operation of this script
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
@@ -43,15 +45,11 @@ def calc_financial_inputs(inputs_case):
     # inputs_case = os.path.join(reeds_path,'runs','v20220621_NTPm0_ercot_seq_test','inputs_case')
 
     #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0,
-    ).squeeze(1)
+    sw = reeds.io.get_switches(inputs_case)
     sw['endyear'] = int(sw['endyear'])
     sw['sys_eval_years'] = int(sw['sys_eval_years'])
 
-    scalars = pd.read_csv(
-        os.path.join(inputs_case,'scalars.csv'),
-        header=None, names=['scalar','value','comment'], index_col='scalar')['value']
+    scalars = reeds.io.get_scalars(inputs_case)
     
     #%% Import some general data and maps
 
@@ -61,10 +59,10 @@ def calc_financial_inputs(inputs_case):
 
     # Import tech groups. Used to expand data inputs 
     # (e.g., 'UPV' expands to all of the upv subclasses, like upv_1, upv_2, etc)
-    tech_groups = sFuncs.import_tech_groups(os.path.join(inputs_case, 'tech-subset-table.csv'))
+    tech_groups = reeds.techs.import_tech_groups(os.path.join(inputs_case, 'tech-subset-table.csv'))
 
     # Set up scen_settings object
-    scen_settings = sFuncs.scen_settings(
+    scen_settings = reeds.financials.scen_settings(
         dollar_year=int(sw['dollar_year']), tech_groups=tech_groups, inputs_case=inputs_case,
         sw=sw)
 
@@ -73,27 +71,27 @@ def calc_financial_inputs(inputs_case):
     # Build df_ivt (for calculating various parameters at subscript [i,v,t])
 
     techs = pd.read_csv(os.path.join(inputs_case,'techs.csv'))
-    techs = sFuncs.expand_GAMS_tech_groups(techs)
+    techs = reeds.techs.expand_GAMS_tech_groups(techs)
     vintage_definition = pd.read_csv(os.path.join(inputs_case, 'ivt.csv')).rename(columns={'Unnamed: 0':'i'})
 
     annual_degrade = pd.read_csv(os.path.join(inputs_case,'degradation_annual.csv'),
         header=None, names=['i','annual_degradation'])
-    annual_degrade = sFuncs.expand_GAMS_tech_groups(annual_degrade)
+    annual_degrade = reeds.techs.expand_GAMS_tech_groups(annual_degrade)
     ### Assign the PV+battery values to values for standalone batteries
-    annual_degrade = sFuncs.append_pvb_parameters(
+    annual_degrade = reeds.financials.append_pvb_parameters(
         dfin=annual_degrade, 
         tech_to_copy='battery_{}'.format(scen_settings.sw['GSw_PVB_Dur']))
 
-    years, modeled_years, year_map = sFuncs.ingest_years(
+    years, modeled_years, year_map = reeds.financials.ingest_years(
         inputs_case, sw['sys_eval_years'], sw['endyear'])
 
-    df_ivt = sFuncs.build_dfs(years, techs, vintage_definition, year_map)
+    df_ivt = reeds.financials.build_dfs(years, techs, vintage_definition, year_map)
     print('df_ivt created for', inputs_case)
 
     #%% Import and merge data onto df_ivt
 
     # Import system-wide real discount rates, calculate present-value-factors, merge onto df's
-    financials_sys = sFuncs.import_sys_financials(
+    financials_sys = reeds.financials.import_sys_financials(
         sw['financials_sys_suffix'], inflation_df, modeled_years, 
         years, year_map, sw['sys_eval_years'], scen_settings, scalars['co2_capture_incentive_length'],scalars['h2_ptc_length'])
     financials_sys.to_csv(os.path.join(inputs_case,'financials_sys.csv'),index=False)
@@ -115,11 +113,11 @@ def calc_financial_inputs(inputs_case):
     df_ivt['annual_degradation'] = df_ivt['annual_degradation'].fillna(0.0)
     
     ### Import financial assumptions
-    financials_tech = sFuncs.import_data(
+    financials_tech = reeds.financials.import_data(
         file_root='financials_tech', file_suffix=sw['financials_tech_suffix'], 
         indices=['i','country','t'], scen_settings=scen_settings)
     # Apply the values for standalone batteries to PV+B batteries
-    financials_tech = sFuncs.append_pvb_parameters(
+    financials_tech = reeds.financials.append_pvb_parameters(
         dfin=financials_tech, 
         tech_to_copy='battery_{}'.format(scen_settings.sw['GSw_PVB_Dur']))
     # If the battery in PV+B gets the ITC, it gets 5-year MACRS depreciation as well
@@ -151,7 +149,7 @@ def calc_financial_inputs(inputs_case):
     #%% Process incentives
     
     # Import incentives, shift eligibility by safe harbor, merge incentives
-    incentive_df = sFuncs.import_and_mod_incentives(
+    incentive_df = reeds.financials.import_and_mod_incentives(
         incentive_file_suffix=sw['incentives_suffix'], 
         construction_times_suffix=sw['construction_times_suffix'],
         inflation_df=inflation_df, scen_settings=scen_settings)
@@ -162,7 +160,7 @@ def calc_financial_inputs(inputs_case):
     
     ### Calculate the tax impacts of the PTC, and calculate the adjustment to reflect the 
     # difference between the PTC duration and ReEDS evaluation period
-    df_ivt = sFuncs.adjust_ptc_values(df_ivt)
+    df_ivt = reeds.financials.adjust_ptc_values(df_ivt)
     
     # Expand co2_capture_value by the duration of the incentive. 
     co2_capture_value = df_ivt[['i', 'v', 't', 'co2_capture_value_monetized', 'co2_capture_dur']].copy()
@@ -234,7 +232,7 @@ def calc_financial_inputs(inputs_case):
 
     ### Calculate financial multipliers
     print('Calculating financial multipliers for', inputs_case, '...')
-    df_ivt = sFuncs.calc_financial_multipliers(
+    df_ivt = reeds.financials.calc_financial_multipliers(
         df_ivt, construction_schedules, depreciation_schedules, sw['timetype'])
     
 
@@ -250,17 +248,17 @@ def calc_financial_inputs(inputs_case):
     ### Get sys financials
     dftrans = dftrans.merge(financials_sys.dropna(how='any'), on='t', how='right')
     ### Get financial multipliers
-    dftrans = sFuncs.calc_financial_multipliers(
+    dftrans = reeds.financials.calc_financial_multipliers(
         df_inv=dftrans, construction_schedules=construction_schedules,
         depreciation_schedules=depreciation_schedules, timetype=sw['timetype'],
     )
         
     ### Get the CRF for transmission
-    dftrans['crf_tech'] = sFuncs.calc_crf(dftrans['d_real'], dftrans['eval_period'])
+    dftrans['crf_tech'] = reeds.financials.calc_crf(dftrans['d_real'], dftrans['eval_period'])
 
     ### Get the final capital cost multiplier (including the CRF scaler above)
-    dftrans['cap_cost_mult'] = sFuncs.calc_final_capital_cost_multiplier(dftrans)
-    dftrans['cap_cost_mult_noITC'] = sFuncs.calc_final_capital_cost_multiplier(dftrans, mult_type='finMult_noITC')
+    dftrans['cap_cost_mult'] = reeds.financials.calc_final_capital_cost_multiplier(dftrans)
+    dftrans['cap_cost_mult_noITC'] = reeds.financials.calc_final_capital_cost_multiplier(dftrans, mult_type='finMult_noITC')
 
     ### The transmission ITC is not meant to apply to currently-planned transmission.
     ### So for years before firstyear_trans, use cap_cost_mult_noITC;
@@ -298,30 +296,30 @@ def calc_financial_inputs(inputs_case):
         
     ### Get financial multipliers
     dfhydrogen_pipeline = dfhydrogen.copy().rename(columns={"eval_period_pipeline":"eval_period"})
-    dfhydrogen_pipeline = sFuncs.calc_financial_multipliers(
+    dfhydrogen_pipeline = reeds.financials.calc_financial_multipliers(
         df_inv=dfhydrogen_pipeline, construction_schedules=construction_schedules,
         depreciation_schedules=depreciation_schedules, timetype=sw['timetype'],
     )
     dfhydrogen_compressor = dfhydrogen.copy().rename(columns={"eval_period_compressor":"eval_period"})
-    dfhydrogen_compressor = sFuncs.calc_financial_multipliers(
+    dfhydrogen_compressor = reeds.financials.calc_financial_multipliers(
         df_inv=dfhydrogen_compressor, construction_schedules=construction_schedules,
         depreciation_schedules=depreciation_schedules, timetype=sw['timetype'],
     )
     dfhydrogen_storage = dfhydrogen.copy().rename(columns={"eval_period_storage":"eval_period"})
-    dfhydrogen_storage = sFuncs.calc_financial_multipliers(
+    dfhydrogen_storage = reeds.financials.calc_financial_multipliers(
         df_inv=dfhydrogen_storage, construction_schedules=construction_schedules,
         depreciation_schedules=depreciation_schedules, timetype=sw['timetype'],
     )
     
     ### Get the CRF for h2 pipelines
-    dfhydrogen_pipeline['crf_tech'] = sFuncs.calc_crf(dfhydrogen_pipeline['d_real'], dfhydrogen_pipeline['eval_period'])
-    dfhydrogen_compressor['crf_tech'] = sFuncs.calc_crf(dfhydrogen_compressor['d_real'], dfhydrogen_compressor['eval_period'])
-    dfhydrogen_storage['crf_tech'] = sFuncs.calc_crf(dfhydrogen_storage['d_real'], dfhydrogen_storage['eval_period'])
+    dfhydrogen_pipeline['crf_tech'] = reeds.financials.calc_crf(dfhydrogen_pipeline['d_real'], dfhydrogen_pipeline['eval_period'])
+    dfhydrogen_compressor['crf_tech'] = reeds.financials.calc_crf(dfhydrogen_compressor['d_real'], dfhydrogen_compressor['eval_period'])
+    dfhydrogen_storage['crf_tech'] = reeds.financials.calc_crf(dfhydrogen_storage['d_real'], dfhydrogen_storage['eval_period'])
 
     ### Get the final capital cost multiplier (including the CRF scaler above)   
-    dfhydrogen_pipeline["cap_cost_mult_pipeline"] = sFuncs.calc_final_capital_cost_multiplier(dfhydrogen_pipeline)
-    dfhydrogen_compressor["cap_cost_mult_compressor"] = sFuncs.calc_final_capital_cost_multiplier(dfhydrogen_compressor)
-    dfhydrogen_storage["cap_cost_mult_storage"] = sFuncs.calc_final_capital_cost_multiplier(dfhydrogen_storage)
+    dfhydrogen_pipeline["cap_cost_mult_pipeline"] = reeds.financials.calc_final_capital_cost_multiplier(dfhydrogen_pipeline)
+    dfhydrogen_compressor["cap_cost_mult_compressor"] = reeds.financials.calc_final_capital_cost_multiplier(dfhydrogen_compressor)
+    dfhydrogen_storage["cap_cost_mult_storage"] = reeds.financials.calc_final_capital_cost_multiplier(dfhydrogen_storage)
     
     ### Write it
     dfhydrogen_pipeline.rename(columns={'t':'*t'})[['*t','cap_cost_mult_pipeline']].round(6).to_csv(
@@ -333,12 +331,12 @@ def calc_financial_inputs(inputs_case):
 
     #%%
     # Import regional capital cost multipliers, create multipliers for csp configurations
-    reg_cap_cost_mult = sFuncs.import_data(
+    reg_cap_cost_mult = reeds.financials.import_data(
         file_root='regional_cap_cost_mult', file_suffix=sw['reg_cap_cost_mult_suffix'], 
         indices=['i','r'], scen_settings=scen_settings)
     
     # Apply the values for standalone batteries to PV+B batteries
-    reg_cap_cost_mult = sFuncs.append_pvb_parameters(
+    reg_cap_cost_mult = reeds.financials.append_pvb_parameters(
         dfin=reg_cap_cost_mult, 
         tech_to_copy=f'battery_{scen_settings.sw["GSw_PVB_Dur"]}')
 
@@ -385,57 +383,57 @@ def calc_financial_inputs(inputs_case):
     #%% Write the scenario-specific output files
     
     # Write out the components of the financial multiplier
-    sFuncs.inv_param_exporter(
+    reeds.financials.inv_param_exporter(
         df_ivt, modeled_years, 'CCmult', ['i', 't'], 
         'ccmult', inputs_case)
-    sFuncs.inv_param_exporter(
+    reeds.financials.inv_param_exporter(
         df_ivt, modeled_years, 'tax_rate', ['t'], 
         'tax_rate', inputs_case)
-    sFuncs.inv_param_exporter(
+    reeds.financials.inv_param_exporter(
         df_ivt, modeled_years, 'itc_frac_monetized', ['i', 't'], 
         'itc_frac_monetized', inputs_case)
-    sFuncs.inv_param_exporter(
+    reeds.financials.inv_param_exporter(
         df_ivt, modeled_years, 'PV_fraction_of_depreciation', ['i', 't'], 
         'pv_frac_of_depreciation', inputs_case)
-    sFuncs.inv_param_exporter(
+    reeds.financials.inv_param_exporter(
         df_ivt, modeled_years, 'Degradation_Adj', ['i', 't'], 
         'degradation_adj', inputs_case)  
-    sFuncs.inv_param_exporter(
+    reeds.financials.inv_param_exporter(
         df_ivt, modeled_years, 'financing_risk_mult', ['i', 't'], 
         'financing_risk_mult', inputs_case) 
-    sFuncs.inv_param_exporter(
+    reeds.financials.inv_param_exporter(
         reg_cap_cost_mult, None, 'reg_cap_cost_mult', ['i', 'r'], 
         'reg_cap_cost_mult', inputs_case)
     
     # Write out the energy community itc bonus
-    sFuncs.param_exporter(
+    reeds.financials.param_exporter(
         e_df[['i','r','itc_energy_comm_bonus']],
         'itc_energy_comm_bonus', 'itc_energy_comm_bonus', inputs_case
     )
 
     # Write out the adjustment multiplier for non-standard evaluation periods
-    sFuncs.param_exporter(
+    reeds.financials.param_exporter(
         df_ivt[['i', 't', 'eval_period_adj_mult']], 
         'eval_period_adj_mult', 'eval_period_adj_mult', inputs_case)
     
     # Write out the maximum safe harbor window for each tech, for determining
     # the tax credit phaseout schedules
-    sFuncs.param_exporter(
+    reeds.financials.param_exporter(
         df_ivt[['i', 't', 'safe_harbor_max']], 
         'safe_harbor_max', 'safe_harbor_max', inputs_case)
     
     # Write out the carbon capture incentive values
-    sFuncs.param_exporter(
+    reeds.financials.param_exporter(
         co2_capture_value[['i', 'v', 't', 'co2_capture_value_monetized']], 
         'co2_capture_value_monetized', 'co2_capture_incentive', inputs_case)
 
     # Write out the H2 production incentive values
-    sFuncs.param_exporter(
+    reeds.financials.param_exporter(
         h2_ptc_value[['i', 'v', 't', 'h2_ptc_value_monetized']], 
         'h2_ptc_value_monetized', 'h2_ptc', inputs_case)   
     
     # Write out the ptc_value_scaled (which incorporates all the adjustments reeds expects)
-    sFuncs.param_exporter(
+    reeds.financials.param_exporter(
         ptc_values_df[['i', 'v', 't', 'ptc_value_scaled']], 
         'ptc_value_scaled', 'ptc_value_scaled', inputs_case)
 
@@ -453,22 +451,22 @@ def calc_financial_inputs(inputs_case):
 
     # CRF used in sequential case for calculating pvf_onm values (pvf)
     crf_df = financials_sys[financials_sys['t']==financials_sys['modeled_year']].copy()
-    sFuncs.param_exporter(crf_df[['t', 'crf']], 'crf', 'crf', inputs_case)
+    reeds.financials.param_exporter(crf_df[['t', 'crf']], 'crf', 'crf', inputs_case)
 
     # 12-year crf used in sequential case for calculating 12-year payback time of co2_captured_incentive
-    sFuncs.param_exporter(crf_df[['t', 'crf_co2_incentive']], 'crf_co2_incentive', 'crf_co2_incentive', inputs_case)
+    reeds.financials.param_exporter(crf_df[['t', 'crf_co2_incentive']], 'crf_co2_incentive', 'crf_co2_incentive', inputs_case)
 
     # 10-year crf used in sequential case for calculating 10-year payback time of h2_ptc
-    sFuncs.param_exporter(crf_df[['t', 'crf_h2_incentive']], 'crf_h2_incentive', 'crf_h2_incentive', inputs_case)
+    reeds.financials.param_exporter(crf_df[['t', 'crf_h2_incentive']], 'crf_h2_incentive', 'crf_h2_incentive', inputs_case)
 
     # pvf_onm used in intertemporal
     pvf_onm_int = financials_sys[['modeled_year', 'pvf_onm']].groupby(by=['modeled_year']).sum()
     pvf_onm_int = pvf_onm_int.reset_index()
     pvf_onm_int = pvf_onm_int.rename(columns={'modeled_year':'t'})
-    sFuncs.param_exporter(pvf_onm_int, 'pvf_onm', 'pvf_onm_int', inputs_case)
+    reeds.financials.param_exporter(pvf_onm_int, 'pvf_onm', 'pvf_onm_int', inputs_case)
 
     # pvf_cap (used in both seq and int modes)
-    sFuncs.inv_param_exporter(df_ivt, modeled_years, 'pvf_capital', ['t'], 'pvf_cap', inputs_case)
+    reeds.financials.inv_param_exporter(df_ivt, modeled_years, 'pvf_capital', ['t'], 'pvf_cap', inputs_case)
 
     # Output some values used in the retail rate module
     retail_eval_period = df_ivt[['i', 't', 'eval_period']].drop_duplicates(['i', 't'])
@@ -505,14 +503,17 @@ if __name__ == '__main__':
     inputs_case = args.inputs_case
 
     #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+    )
 
     #%% Run it
     tic = datetime.datetime.now()
 
     calc_financial_inputs(inputs_case)
 
-    toc(tic=tic, year=0, process='input_processing/calc_financial_inputs.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/calc_financial_inputs.py', 
         path=os.path.join(inputs_case,'..'))
     
     print('Finished calc_financial_inputs.py')

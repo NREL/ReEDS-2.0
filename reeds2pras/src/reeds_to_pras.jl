@@ -13,6 +13,11 @@
         Number of timesteps
     weather_year : Int
         The weather year for variable gen profiles and load
+    hydro_energylim : Bool
+        If this is false we process hydro with fixed capacity based one
+        name plate from the max_cap file. If true, we process non-dispatchable
+        hydro as a VRE with varying capacity and dispatchable hydro as
+        a generator storage with monthly inflows
 
     Returns
     -------
@@ -26,7 +31,8 @@ function reeds_to_pras(
     reedscase::String,
     solve_year::Int64,
     timesteps::Int,
-    weather_year::Int;
+    weather_year::Int,
+    hydro_energylim::Bool = false,
     user_descriptors::Union{Nothing, String} = nothing,
 )
     if (user_descriptors === nothing)
@@ -39,7 +45,7 @@ function reeds_to_pras(
     if weather_year ∉ user_inputs["weather_years"]
         error(
             "The weather year $weather_year is not a valid year for available VG & Load data " *
-            "year. Currrently, it should be an Int in [2007-2013].",
+            "year. Currrently, it should be an Int in [2007-2013] or [2016-2023].",
         )
     end
 
@@ -49,8 +55,14 @@ function reeds_to_pras(
     run_checks(ReEDS_data)
 
     @info "Parsing ReEDS data and creating ReEDS2PRAS objects..."
-    out =
-        parse_reeds_data(ReEDS_data, weather_year, timesteps, solve_year, 2007, user_inputs)
+    out = parse_reeds_data(
+        ReEDS_data,
+        weather_year,
+        timesteps,
+        solve_year,
+        user_inputs,
+        hydro_energylim = hydro_energylim,
+    )
     lines, regions, gens, storages, genstors = out
 
     @info "ReEDS data successfully parsed, creating a PRAS system"

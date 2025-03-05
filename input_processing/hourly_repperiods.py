@@ -27,12 +27,13 @@ import argparse
 import json
 import numpy as np
 import os
-import pandas as pd
-from ldc_prep import read_file
-import hourly_writetimeseries
-##% Time the operation of this script
-from ticker import toc, makelog
+import sys
 import datetime
+import pandas as pd
+import hourly_writetimeseries
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+## Time the operation of this script
 tic = datetime.datetime.now()
 
 
@@ -45,7 +46,7 @@ interactive = False
 ### Indicate whether to save the old h17 inputs for comparison
 debug = True
 ### Indicate the full possible collection of weather years
-all_weatheryears = list(range(2007,2014))
+all_weatheryears = list(range(2007,2014)) + list(range(2016,2024))
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
@@ -77,15 +78,12 @@ def get_load(inputs_case, keep_modelyear=None, keep_weatheryears=[2012]):
     """
     """
     ### Subset to modeled regions
-    load = read_file(
-        os.path.join(inputs_case,'load.h5'), parse_timestamps=True, index_columns=2)
+    load = reeds.io.read_file(os.path.join(inputs_case,'load.h5'), parse_timestamps=True)
     ### Subset to keep_modelyear if provided
     if keep_modelyear:
         load = load.loc[keep_modelyear].copy()
     ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
-    scalars = pd.read_csv(
-        os.path.join(inputs_case,'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0).squeeze(1)
+    scalars = reeds.io.get_scalars(inputs_case)
     load *= (1 - scalars['distloss'])
 
     ### Downselect to weather years if provided
@@ -405,10 +403,9 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
     modelyears = pd.read_csv(
         os.path.join(inputs_case, 'modeledyears.csv')).columns.astype(int)
-    # ReEDS only supports a single entry for agglevel right now, so use the
-    # first value from the list (copy_files.py already ensures that only one
-    # value is present)
-    agglevel = pd.read_csv(os.path.join(inputs_case, 'agglevels.csv')).squeeze(1).tolist()[0]
+
+    # Use agglevel_variables function to obtain spatial resolution variables 
+    agglevel_variables  = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)
 
     ### Get original seasons (for 8760)
     d_szn_in = pd.read_csv(
@@ -460,7 +457,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     timestamps.index = np.ravel([
         pd.date_range(
             f'{y}-01-01', f'{y+1}-01-01',
-            freq='H', inclusive='left', tz='EST',
+            freq='H', inclusive='left', tz='Etc/GMT+6',
         )[:8760]
         for y in all_weatheryears
     ])
@@ -474,13 +471,13 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         os.path.join(inputs_case,'hierarchy_original.csv'))
     
     if sw.GSw_HourlyClusterRegionLevel == 'r':
-        rmap = pd.Series(hierarchy.index, index=hierarchy.index)
-    elif agglevel == 'county':
+        rmap = pd.Series(hierarchy_orig.index, index=hierarchy_orig.index)
+    elif agglevel_variables['agglevel'] == 'county' or 'county' in agglevel_variables['agglevel']:
         rmap = hierarchy[sw['GSw_HourlyClusterRegionLevel']]
-    elif agglevel in ['ba','aggreg']:
+    elif agglevel_variables['agglevel'] in ['ba','aggreg']:
         rmap = (hierarchy_orig.loc[hierarchy_orig['ba'].isin(val_r_all)]
                 [['aggreg',sw['GSw_HourlyClusterRegionLevel']]]
-                .drop_duplicates().set_index('aggreg')).squeeze()        
+                .drop_duplicates().set_index('aggreg')).squeeze(1)
     ### Get r-to-county map
     r_county = pd.read_csv(
         os.path.join(inputs_case,'r_county.csv'), index_col='county').squeeze(1)
@@ -513,7 +510,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     #%%### Load RE CF data, then take available-capacity-weighted average by (tech,region)
     print("Collecting 8760 capacity factor data")
-    recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5'))
+    recf = reeds.io.read_file(os.path.join(inputs_case, 'recf.h5'), parse_timestamps=True)
     ### Downselect to techs used for rep-period selection
     keep = sw['GSw_HourlyClusterWeights'].index.tolist()
     recf = recf[[c for c in recf if any([c.startswith(p) for p in keep])]].copy()
@@ -526,7 +523,13 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
     # rmap1 is used in conjuntion with rmap2 (created in identify_min_periods) 
     # to map regional data from BA/county (depending on desired spatial aggregation) 
     # to the spatial aggregation defined by sw['GSw_HourlyMinRElevel']
-    rmap1 = r_ba if agglevel in ['ba','aggreg'] else r_county
+    if agglevel_variables['agglevel'] in ['ba','aggreg']:
+        rmap1 = r_ba
+    elif agglevel_variables['agglevel'] == 'county':
+        rmap1 = r_county
+    elif agglevel_variables['lvl'] == 'mult':
+        rmap1 = r_county
+
     ### Identify outlying periods if using capacity credit instead of stress periods
     if (int(sw.GSw_PRM_CapCredit)
         and (sw['GSw_HourlyMinRElevel'].lower() not in ['false','none'])):
@@ -546,6 +549,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         .merge(sc.set_index('resource')[['tech','region']], left_index=True, right_index=True)
         )
     columns = tmp.loc[tmp.index.isin(recf.columns)]
+    recf_agg = recf_agg[tmp.index]
     columns['region'] = columns.region.map(rmap)
     recf_agg.columns = pd.MultiIndex.from_frame(columns[['tech','region']])
     recf_agg = recf_agg.groupby(axis=1, level=['tech','region']).sum()
@@ -880,16 +884,18 @@ if __name__ == '__main__':
     # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # inputs_case = os.path.join(
     #     reeds_path,'runs',
-    #     'v20240111_mainM1_Pacific_stress','inputs_case','')
+    #     'v20250129_cspfixM0_ISONE','inputs_case','')
     # make_plots = 0
     # interactive = True
 
     #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+    )
 
     #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+    sw = reeds.io.get_switches(inputs_case)
     make_plots = int(sw.hourly_cluster_plots)
     ## Parse some switches
     sw['GSw_HourlyClusterWeights'] = pd.Series(json.loads(
@@ -948,5 +954,5 @@ if __name__ == '__main__':
         )
 
     #%% All done
-    toc(tic=tic, year=0, process='input_processing/hourly_repperiods.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/hourly_repperiods.py', 
         path=os.path.join(inputs_case,'..'))

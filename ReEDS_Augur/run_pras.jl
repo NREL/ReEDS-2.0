@@ -30,7 +30,7 @@ function parse_commandline()
             arg_type = Int
             required = true
         "--weather_year"
-            help = "The weather year to start from, in [2007..2013]"
+            help = "The weather year to start from, in [2007..2013,2016..2023]"
             arg_type = Int
             default = 2007
             required = true
@@ -43,6 +43,11 @@ function parse_commandline()
             help = "Number of hourly timesteps to use"
             arg_type = Int
             default = 61320
+            required = false
+        "--hydro_energylim"
+            help = "Model hydropower as an energy-limited resource"
+            arg_type = Int
+            default = 0
             required = false
         "--write_flow"
             help = "Write the hourly interface flows"
@@ -280,6 +285,7 @@ function main(args::Dict)
                 args["solve_year"],
                 args["timesteps"],
                 args["weather_year"],
+                args["hydro_energylim"] == 1, # convert from integer to boolean
             ),
             pras_system_path,
             verbose=true,

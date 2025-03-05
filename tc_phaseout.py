@@ -18,8 +18,7 @@ import pandas as pd
 import numpy as np
 import gdxpds
 import os
-import input_processing.support_functions as sFuncs
-from ReEDS_Augur.functions import makelog
+import reeds
 
 ##########
 #%% INPUTS
@@ -43,20 +42,19 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
     # case = os.path.expanduser('~/github2/ReEDS-2.0/runs/v20230305_reccM0_ref_seq')
 
     #%% Get switches
-    sw = pd.read_csv(
-        os.path.join(case, 'inputs_case', 'switches.csv'),
-        header=None, index_col=0).squeeze(1)
+    sw = reeds.io.get_switches(case)
     GSw_TCPhaseout_trigger_f = float(sw.GSw_TCPhaseout_trigger_f)
     GSw_TCPhaseout_ref_year = int(sw.GSw_TCPhaseout_ref_year)
     GSw_TCPhaseout_start = int(sw.GSw_TCPhaseout_start)
     GSw_TCPhaseout_forceyear = int(sw.GSw_TCPhaseout_forceyear)
+    startyear=int(sw.startyear)
 
     ### Set input/output path
     tc_file_dir = os.path.join(case, 'outputs', 'tc_phaseout_data')
 
     # Import tech groups. Used to expand const_times
     # (e.g., 'UPV' expands to all of the upv subclasses, like upv_1, upv_2, etc)
-    tech_groups = sFuncs.import_tech_groups(
+    tech_groups = reeds.techs.import_tech_groups(
         os.path.join(case, 'inputs_case', 'tech-subset-table.csv'))
 
     # The phasedown schedule is defined starting with the first year following the trigger year
@@ -108,7 +106,7 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
     const_times = const_times.drop_duplicates(['i', 't_online'])   
 
     # Append pvb construction times, based on battery_4 construction times
-    const_times = sFuncs.append_pvb_parameters(
+    const_times = reeds.financials.append_pvb_parameters(
         dfin=const_times, tech_to_copy='battery_4')
 
     const_times = const_times.merge(safe_harbors, on=['i', 't_online'])
@@ -132,14 +130,12 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
         emit_nat['emit_nat'] = emit_nat['emit_nat'].astype(float)
 
         # Interpolate the emissions and calc the fraction of the reference year's emissions
-        df = pd.DataFrame(index=np.arange(2010, max(yearset), 1))
+        df = pd.DataFrame(index=np.arange(startyear, max(yearset), 1))
         df['emit_nat'] = emit_nat
         df['emit_nat'] = df['emit_nat'].interpolate()
         # Get historical emissions if desired
         if use_historical:
-            scalars = pd.read_csv(
-                os.path.join(case, 'inputs_case', 'scalars.csv'),
-                header=None, usecols=[0,1], index_col=0).squeeze(1)
+            scalars = reeds.io.get_scalars(case)
             ref_emissions = scalars['co2_emissions_2022'] * 1e6
         # Otherwise use modeled emissions
         else:
@@ -221,7 +217,10 @@ if __name__ == '__main__':
     case = args.case
 
     ### Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(case,'gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(case,'gamslog.txt'),
+    )
 
     print(f'starting tc_phaseout.py for {year}')
     calc_tc_phaseout_mult(year, case, use_historical=use_historical)

@@ -2,7 +2,7 @@
 ### --- IMPORTS ---
 ### ===========================================================================
 import os
-import site
+import sys
 import logging
 import pandas as pd
 import numpy as np
@@ -10,10 +10,13 @@ import h5py
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import patheffects as pe
-import geopandas as gpd
 import cmocean
 
 import hourly_repperiods
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+from reeds import plots
+plots.plotparams()
 
 ## Turn off logging for imported packages
 for i in ['matplotlib']:
@@ -30,9 +33,6 @@ interactive = False
 def plot_unclustered_periods(profiles, sw, reeds_path, figpath):
     """
     """
-    site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-    import plots
-    plots.plotparams()
     ### Overlapping days
     for label, dfin in [
         # ('unscaled',profiles),
@@ -99,11 +99,6 @@ def plot_unclustered_periods(profiles, sw, reeds_path, figpath):
 def plot_feature_scatter(profiles_fitperiods, reeds_path, figpath):
     """
     """
-    import matplotlib.pyplot as plt
-    import site
-    site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-    import plots
-    plots.plotparams()
     ### Settings
     colors = plots.rainbowmapper(profiles_fitperiods.columns.get_level_values('region').unique())
     props = ['load','upv','wind-ons']
@@ -140,10 +135,6 @@ def plot_ldc(
         forceperiods_write, sw, reeds_path, figpath):
     """
     """
-    site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-    import plots
-    plots.plotparams()
-
     ### Get clustered load, repeating representative periods based on how many
     ### periods they represent
     numperiods = period_szn.value_counts().rename('numperiods').to_frame()
@@ -240,11 +231,6 @@ def plot_ldc(
 def plot_maps(sw, inputs_case, reeds_path, figpath):
     """
     """
-    ### Imports
-    site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-    import plots
-    import reedsplots
-    plots.plotparams()
     ### Settings
     cmaps = {
         'cf_actual':plt.cm.turbo, 'cf_rep':plt.cm.turbo, 'cf_diff':plt.cm.RdBu_r,
@@ -272,10 +258,10 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
 
     hierarchy = pd.read_csv(
         os.path.join(inputs_case, 'hierarchy.csv')).rename(columns={'*r':'r'}).set_index('r')
-    dfmap = reedsplots.get_dfmap(os.path.abspath(os.path.join(inputs_case,'..')))
+    dfmap = reeds.io.get_dfmap(os.path.abspath(os.path.join(inputs_case,'..')))
 
     ### Get the CF data over all years, take the mean over weather years
-    recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5'))
+    recf = reeds.io.read_file(os.path.join(inputs_case, 'recf.h5'), parse_timestamps=True)
     recf = recf.loc[recf.index.year.isin(sw['GSw_HourlyWeatherYears'])].mean()
 
 
@@ -448,9 +434,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
         load_raw.index.map(lambda x: x.year in sw.GSw_HourlyWeatherYears)
     ].mean() / 1000
     ## load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
-    scalars = pd.read_csv(
-        os.path.join(inputs_case,'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0).squeeze(1)
+    scalars = reeds.io.get_scalars(inputs_case)
     load_mean *= (1 - scalars['distloss'])
     ### Get the representative data, take the mean for the cluster year
     load_allyear = (
@@ -516,10 +500,6 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
 
 
 def plot_8760(profiles, period_szn, sw, reeds_path, figpath):
-    site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-    import plots
-    plots.plotparams()
-
     def get_profiles(regions, year):
         """Assemble 8760 profiles from original and representative days"""
         timeindex = pd.date_range(f'{year}-01-01',f'{year+1}-01-01',freq='H',inclusive='left')[:8760]
@@ -625,10 +605,6 @@ def plots_original(
     ):
     """
     """
-    site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-    import plots
-    plots.plotparams()
-
     ### Input processing
     idx_reedsyr = period_szn.map(hourly_repperiods.szn2yearperiod)
     medoid_profiles = profiles.loc[rep_periods]
@@ -683,8 +659,7 @@ def plots_original(
         ax[0].xaxis.set_minor_locator(
             mpl.ticker.MultipleLocator(3 if sw['GSw_HourlyType']=='day' else 12))
         ax[0].annotate(
-            'Cluster Comparison (All Days in {} Shown)'.format(
-                '2007–2013' if len(profiles.index.unique(level='year')) > 1 else '2012' ),
+            'Cluster Comparison (All Days of All Weather Years Shown)',
             xy=(0,1.2), xycoords='axes fraction', ha='left',
         )
         plots.despine(ax)
@@ -694,5 +669,3 @@ def plots_original(
         plt.close()
     except Exception as err:
         print('day_comparison_all.png failed with the following error:\n{}'.format(err))
-
-

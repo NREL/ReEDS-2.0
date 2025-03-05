@@ -8,15 +8,22 @@ import sys
 import shutil
 import traceback
 from collections import OrderedDict
-import math
 import site
 
 import h5py
 import numpy as np
 import pandas as pd
 
-VALID_TECHS = ["wind-ons", "wind-ofs", "upv", "dupv", "csp"]
-DEF_NEW_INCR_MW = 1e10
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+
+pd.options.mode.chained_assignment = "raise"
+
+VALID_TECHS = ["wind-ons", "wind-ofs", "upv", "csp", "geohydro_allkm", "egs_allkm"]
+TECH_ALIASES = {
+    "egs": "egs_allkm",
+    "geohydro": "geohydro_allkm",
+}
 
 
 def get_reeds_years(run_folder, first_year=2009):
@@ -145,7 +152,7 @@ def get_reeds_formatted_rev_supply_curve(sc_file, tech, run_folder):
         Path to supply curve data.
     tech : str
         Technology associated with the supply curve. Expected values are:
-        ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        ["upv", "wind-ofs", "wind-ons", "csp"].
     run_folder : str
         Path to the folder containing the ReEDS run of interest. Must contain the
         following file: inputs_case/site_bin_map.csv.
@@ -182,11 +189,8 @@ def get_reeds_formatted_rev_supply_curve(sc_file, tech, run_folder):
             },
             inplace=True,
         )
-        rname = "p" if tech in ["upv", "dupv"] else "s"
+        rname = "p" if tech == "upv" else "s"
         in_sc_df["region"] = rname + in_sc_df["model_region"].map(str)
-        in_sc_df["bin"] = None
-
-    if tech == "dupv":
         in_sc_df["bin"] = None
 
     return in_sc_df
@@ -213,11 +217,7 @@ def reaggregate_supply_curve_regions(df_sc_in, run_folder):
         ``df_sc_in`` where values of "region" are remapped to aggregated regions.
         If not, returns ``df_sc_in`` unchanged.
     """
-    sw = pd.read_csv(
-        os.path.join(run_folder, "inputs_case", "switches.csv"),
-        header=None,
-        index_col=0,
-    ).squeeze(1)
+    sw = reeds.io.get_switches(run_folder)
     if sw["GSw_RegionResolution"] == "county":
         ### Map original sc regions to county
         # pylint: disable-next=consider-using-f-string
@@ -226,10 +226,10 @@ def reaggregate_supply_curve_regions(df_sc_in, run_folder):
     elif sw["GSw_RegionResolution"] == "aggreg":
         ### Load  hierarchy file
         hierarchy = pd.read_csv(
-            os.path.join(run_folder, "inputs_case", "hierarchy.csv"),
-            index_col="*r",
+            os.path.join(run_folder, "inputs_case", "hierarchy_original.csv"),
+            index_col="ba",
         )
-        if 'aggreg' in hierarchy.columns:
+        if "aggreg" in hierarchy.columns:
             r2aggreg = hierarchy.aggreg.copy()
             ### Map original regions to new aggreg's
             df_sc_in["region"] = df_sc_in["region"].map(r2aggreg)
@@ -248,10 +248,10 @@ def subset_supply_curve_columns(df_sc_in, tech, priority_cols):
         Supply curve dataframe, typically from get_reeds_formatted_rev_supply_curve()
         (via reaggregate_supply_curve_regions()). Must contain the following columns:
         ["sc_gid", "sc_point_gid", "latitude", "longitude", "region", "class", "bin",
-        "capacity"] and, if ``tech="dupv"`, "compare".
+        "capacity"].
     tech : str
         Technology associated with the supply curve. Expected values are:
-        ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        ["upv", "wind-ofs", "wind-ons", "csp"].
     priority_cols : list[str]
         List of priority columns that will be used downstream in
         disaggregate_reeds_to_rev(). This list has the effect of ensuring these
@@ -285,15 +285,21 @@ def subset_supply_curve_columns(df_sc_in, tech, priority_cols):
         "class",
         "bin",
         "capacity",
+        "existing_capacity",
+        "online_year",
+        "retire_year",
     ]
-    if tech == "dupv":
-        subset_cols.insert(-2, "compare")
-    elif tech == "upv":
+    if tech == "upv":
         # reeds output capacity is in AC, but tech potential for UPV is in DC
         # to avoid overbuilding sites, set buildable capacity to AC MW
         df_sc_in["capacity"] = df_sc_in["capacity_ac_mw"]
         # existing capacity for upv is also in dc. change to ac using derived ILR
         df_sc_in["existing_capacity"] = df_sc_in["existing_capacity"] / df_sc_in["ilr"]
+    elif tech == "egs_allkm":
+        add_cols = ["online_year", "retire_year"]
+        for add_col in add_cols:
+            if add_col not in df_sc_in.columns:
+                df_sc_in[add_col] = np.nan
 
     df_sc_subset = df_sc_in[subset_cols].copy()
     rename = {"capacity": "cap_avail"}
@@ -320,8 +326,8 @@ def get_preexisting_capacity(df_sc_in, tech, first_model_year=2009):
         ["existing_capacity", "online_year", "tech", "region", "year", "class", "bin",
         "MW"].
     tech : str
-        Technology associated with the supply curve. Expected values are:
-        ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        Technology associated with the supply curve. Expected values are defined in
+        VALID_TECHS.
     first_model_year : int, optional
         First year modeled by ReEDs, by default 2009.
 
@@ -382,7 +388,7 @@ def get_capacity_check_data(run_folder, tech):
         Path to the folder containing the ReEDS run of interest. Must contain the
         following file: outputs/cap.csv.
     tech : str
-        Technology. Expected values are: ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        Technology. Expected values are defined in VALID_TECHS.
 
     Returns
     -------
@@ -396,10 +402,10 @@ def get_capacity_check_data(run_folder, tech):
     df_cap_chk = pd.read_csv(
         cap_chk, low_memory=False, names=["tech", "region", "year", "MW"], header=0
     )
-    df_cap_chk = df_cap_chk[df_cap_chk["tech"].str.startswith(tech)].copy()
-    df_cap_chk[["tech_cat", "class"]] = df_cap_chk["tech"].str.split(
+    df_cap_chk[["tech_cat", "class"]] = df_cap_chk["tech"].str.rsplit(
         "_", n=1, expand=True
     )
+    df_cap_chk = df_cap_chk[df_cap_chk["tech_cat"] == tech].copy()
     df_cap_chk = df_cap_chk[["year", "region", "class", "MW"]].dropna(subset=["class"])
     df_cap_chk["class"] = df_cap_chk["class"].astype("int")
 
@@ -417,7 +423,7 @@ def get_new_investments(run_folder, tech):
         Path to the folder containing the ReEDS run of interest. Must contain the
         following file: outputs/cap_new_bin_out.csv.
     tech : str
-        Technology. Expected values are: ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        Technology. Expected values are defined in VALID_TECHS.
 
     Returns
     -------
@@ -463,7 +469,7 @@ def combine_preexisting_and_new_investments(df_bin_exist, df_inv_rsc):
     # Concatenate existing and inv_rsc
     df_inv = pd.concat([df_bin_exist, df_inv_rsc], sort=False, ignore_index=True)
     # Split tech from class
-    df_inv[["tech_cat", "class"]] = df_inv["tech"].str.split("_", n=1, expand=True)
+    df_inv[["tech_cat", "class"]] = df_inv["tech"].str.rsplit("_", n=1, expand=True)
     df_inv = df_inv[["year", "region", "class", "bin", "MW"]]
     df_inv["class"] = df_inv["class"].astype("int")
     df_inv["bin"] = df_inv["bin"].str.replace("bin", "", regex=False).astype("int")
@@ -482,7 +488,7 @@ def get_input_refurbishments(run_folder, tech):
         Path to the folder containing the ReEDS run of interest. Must contain the
         following file: outputs/cap_new_ivrt_refurb.csv.
     tech : str
-        Technology. Expected values are: ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        Technology. Expected values are defined in VALID_TECHS.
 
     Returns
     -------
@@ -640,7 +646,7 @@ def get_exogenous_capacity(run_folder, tech):
         Path to the folder containing the ReEDS run of interest. Must contain the
         following file: outputs/cap_exog.csv.
     tech : str
-        Technology. Expected values are: ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        Technology. Expected values are defined in VALID_TECHS.
 
     Returns
     -------
@@ -759,7 +765,7 @@ def combine_retirements(
     df_ret = df_ret[df_ret["year"].isin(years)].copy()
     # Split tech from class
     if not df_ret.empty:
-        df_ret[["tech_cat", "class"]] = df_ret["tech"].str.split("_", n=1, expand=True)
+        df_ret[["tech_cat", "class"]] = df_ret["tech"].str.rsplit("_", n=1, expand=True)
         df_ret = df_ret[["year", "region", "class", "MW"]]
         df_ret["class"] = df_ret["class"].astype("int")
         df_ret = df_ret.sort_values(by=["year", "region", "class"])
@@ -795,8 +801,8 @@ def prepare_data(run_folder, sc_file, tech, priority_cols, check_results=True):
     sc_file : str
         Path to supply curve file used by this ReEDS model run.
     tech : str
-        Name of the technology that was run through ReEDs to rev. Expected values are:
-        ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        Name of the technology that was run through ReEDs to rev. Expected values are
+        defined in VALID_TECHS.
     priority_cols : list[str]
         List of priority columns that will be used in downstream disaggregation. This
         list has the effect of ensuring that these columns are included in the output
@@ -844,9 +850,9 @@ def prepare_data(run_folder, sc_file, tech, priority_cols, check_results=True):
     input_sc_df = get_reeds_formatted_rev_supply_curve(sc_file, tech, run_folder)
     input_sc_df = reaggregate_supply_curve_regions(input_sc_df, run_folder)
 
-    df_bin_exist = get_preexisting_capacity(input_sc_df, tech, first_model_year=2009)
-
     df_sc_in = subset_supply_curve_columns(input_sc_df, tech, priority_cols)
+
+    df_bin_exist = get_preexisting_capacity(df_sc_in, tech, first_model_year=2009)
 
     # Prepare Capital Stock Data
     # new and existing investments
@@ -874,8 +880,10 @@ def prepare_data(run_folder, sc_file, tech, priority_cols, check_results=True):
         "df_ret": df_ret,
         "df_refurbishments": df_refurbishments,
         "df_new_and_preexisting_investments": df_new_and_preexisting_investments,
+        "df_new_investments": df_new_investments,
         "df_cap_chk": df_cap_chk,
         "years": years,
+        "tech_lifetimes": lifetimes,
     }
 
     return reeds_to_rev_data
@@ -956,19 +964,48 @@ def sort_sites_by_priority(df_sc, priority):
     return sorted_df
 
 
+def check_overbuilt(df_sc_out):
+    """
+    Check whether any sites in the input supply curve dataframe have been overbuilt
+    relative to their technical potential. This is a helper function for
+    disaggregate_reeds_to_rev.
+
+    Parameters
+    ----------
+    df_sc_out : pandas.DataFrame
+        Supply curve dataframe. Must contain the following columns:
+        - "cap" = Capacity in MW deployed to the site
+        - "cap_sc" = Developable capacity in MW of the site
+
+    Raises
+    ----------
+    ValueError
+        If any sites are overbuilt by more than a negligible amount, a ValueError will
+        be raised.
+    """
+
+    overbuilt_sites = (df_sc_out["cap"] - df_sc_out["cap_sc"]) >= 1e-5
+    count_overbuilt = overbuilt_sites.sum()
+    if count_overbuilt > 0:
+        raise ValueError(
+            f"{count_overbuilt} sites have investments of capacity exceeding their "
+            "technical potential"
+        )
+
+
 def disaggregate_reeds_to_rev(
     df_sc_in,
-    df_ret,
     df_refurbishments,
-    df_new_and_preexisting_investments,
+    df_new_investments,
     df_cap_chk,
     priority,
     years,
+    tech_lifetimes,
+    tech,
     constrain_to_bins=True,
-    new_incr_mw=DEF_NEW_INCR_MW,
-    refurb_incr_mw=1e10,
+    **kwargs,
 ):
-    # pylint: disable=too-many-branches,too-many-statements
+    # pylint: disable=too-many-branches,too-many-statements,unused-argument
     """
     Performs the actual disaggregation of capacity from ReEDS regions to reV supply
     curve project sites. Loops through years and determins the investment
@@ -984,14 +1021,11 @@ def disaggregate_reeds_to_rev(
         including: ["sc_gid", "sc_point_gid", "latitude", "longitude", "region",
         "class", "bin", "cap_avail"] plus any priority columns specified by the input
         ``priority`` (e.g., "supply_curve_cost_per_mw").
-    df_ret : pandas.DataFrame
-        Defines the retirements of capacity by year, region, and class.
-        Columns include: ["year", "region", "class", "MW"].
     df_refurbishments : pandas.DataFrame
         Defines the refurbishments of capacity by year, region, and class.
         Columns include: ["year", "region", "class", "MW"].
-    df_new_and_preexisting_investments : pandas.DataFrame
-        Defines the new and pre-existing deployments of capacity by year, region, class,
+    df_new_investments : pandas.DataFrame
+        Defines the new deployments of capacity by year, region, class,
         and resource bin. Columns include: ["year", "region", "class", "bin", "MW"].
     df_cap_chk : pandas.DataFrame
         Defines the aggregate capacity by year, region and class.
@@ -1005,25 +1039,15 @@ def disaggregate_reeds_to_rev(
         ``{"supply_curve_cost_per_mw": "ascending"}``.
     years : list[int]
         Years to disaggregate. Typically from get_reeds_years().
+    tech_lifetimes : pandas.DataFrame
+        Defines lifetimes of technology (i.e., time to retirement or refurbishment).
+        Columns include: [TODO].
     constrain_to_bins : bool, optional
         If True (default), disaggregation of new and pre-exising capacity will be
         constrained by region, class, and bin. If False, disaggregation will only be
         constrained by region and class. The latter option will result in greater
         flexibility of the disaggregation, but less fidelity to the ReEDS results, and
         is intended primarily for sensitivity testing or bounding scenarios.
-    new_incr_mw : float, optional
-        Optional size of incremental capacity investments to make for new capacity.
-        Controls the incremental amount of capacity invested in each site. The default
-        value (1e10) has the effect of not making incremental investments. Instead,
-        each site is filled up before moving on to the next. Setting this to a lower
-        value (e.g., 6), will result in adding up to 6 MW to each site (limited to the
-        capacity available at the site) with a region, resource class, and cost bin, in
-        a round-robin fashion, and repeating until all new capacity has been invested.
-    refurb_incr_mw : float, optional
-        Optional. Similar to new_incr_mw, but affects refurbished capacity instead of
-        new capacity. Generally, this should not be changed since refurbished capacity
-        is associated with pre-existing capacity, which is spatially concentrated
-        at only a small number of sites.
 
     Returns
     -------
@@ -1036,248 +1060,430 @@ def disaggregate_reeds_to_rev(
         disaggregation (["cap_expand", "cap_left", "cap", "inv_rsc", "ret",  "refurb",
         "expanded", "year"]).
     """
-
+    print("Adding accounting columns")
     df_sc = add_accounting_columns(df_sc_in)
-    df_sc_sorted = sort_sites_by_priority(df_sc, priority)
+    df_sc["lifetime_cap_left"] = np.nan
+    df_sc.drop(columns=["cap_expand"], inplace=True)
+    df_sc.rename(columns={"cap_avail": "cap_sc"}, inplace=True)
 
-    df_sc_out = pd.DataFrame()
-    for year in years:
-        print(f"Starting {year}")
-        df_sc_sorted["year"] = year
+    # apply tech lifetime as a new value to the sc dataframe
+    print("Adding tech lifetimes to dataframe")
+    tech_lifetimes[["tech_cat", "class"]] = tech_lifetimes["tech"].str.rsplit(
+        "_", n=1, expand=True
+    )
+    tech_lifetimes_filter = tech_lifetimes[tech_lifetimes["tech_cat"] == tech].copy()
+    tech_lifetimes_lkup = dict(
+        tech_lifetimes_filter[["class", "lifetime"]].values.tolist()
+    )
+    df_sc["tech_lifetime"] = df_sc["class"].astype(str).map(tech_lifetimes_lkup)
 
-        # First retirements
-        # reset retirements associated with gids for each year.
-        df_sc_sorted["ret"] = 0
-        df_ret_yr = df_ret[df_ret["year"] == year].copy()
-
-        for _, r in df_ret_yr.iterrows():
-            # This loops through all the retirements
-            df_sc_rc = df_sc_sorted[
-                (df_sc_sorted["region"] == r["region"])
-                & (df_sc_sorted["class"] == r["class"])
-            ].copy()
-            rcy = str(r["region"]) + "_" + str(r["class"]) + "_" + str(year)
-            ret_left = r["MW"]
-            for sc_i, sc_r in df_sc_rc.iterrows():
-                # This loops through each gid of the supply curve for this
-                # ReEDS region and class
-                # Floor is to ensure rounding doesn't lead to small overbuilds
-                if np.floor(ret_left * 100) / 100 > np.floor(sc_r["cap"] * 100) / 100:
-                    # retirement is too large for just this gid. Fill up this
-                    # gid and move to the next.
-                    df_sc_sorted.loc[sc_i, "ret"] = sc_r["cap"]
-                    ret_left = ret_left - sc_r["cap"]
-                    df_sc_sorted.loc[sc_i, "cap"] = 0
-                else:
-                    # Remaining retirement is smaller than capacity in this gid
-                    # so assign remaining retirement to this gid and break the
-                    # loop through gids to move to the next retirement by
-                    # ReEDS region and class.
-                    df_sc_sorted.loc[sc_i, "ret"] = ret_left
-                    df_sc_sorted.loc[sc_i, "cap"] = sc_r["cap"] - ret_left
-                    ret_left = 0
-                    break
-            if np.floor(ret_left * 100) / 100 != 0:
-                print(
-                    "ERROR at rcy=%s: ret_left should be 0 and it is:%s",
-                    rcy,
-                    str(ret_left),
-                )
-
-        df_sc_sorted["cap_left"] = df_sc_sorted["cap_expand"] - df_sc_sorted["cap"]
-
-        # Then refurbishments
-        # reset refurbishments associated with gids for each year.
-        df_sc_sorted["refurb"] = 0
-        df_inv_refurb_yr = df_refurbishments[df_refurbishments["year"] == year].copy()
-
-        for _, r in df_inv_refurb_yr.iterrows():
-            # This loops through all the refurbishments
-            rcy = str(r["region"]) + "_" + str(r["class"]) + "_" + str(year)
-            inv_left = r["MW"]
-            # continue making incremental refurbishment investments until either
-            # (a) no investments remains to be made or
-            # (b) no investments were allocated in the previous loop, indicating
-            #       that the available capacity is exhausted
-            while round(inv_left, 2) > 0:
-                # Subset the sites for this region and class. Do this for each loop so
-                # that we are get the updated "cap_left" values from the last iteration
-                df_sc_rc = df_sc_sorted[
-                    (df_sc_sorted["region"] == r["region"])
-                    & (df_sc_sorted["class"] == r["class"])
-                ].copy()
-                prev_inv_left = inv_left
-                # This loops through each gid of the supply curve for this
-                # ReEDS region and class
-                for sc_i, sc_r in df_sc_rc.iterrows():
-                    # the refurbishment investment whichever of the following is
-                    # the smallest:
-                    # 1. the incremental investent amount
-                    # 2. the investment left to be made in this region + class
-                    # 3. the capacity left in this supply curve site
-                    refurb_investment = min(
-                        refurb_incr_mw, inv_left, max(sc_r["cap_left"], 0)
-                    )
-
-                    # invest the full increment up to the capacity left in this site
-                    df_sc_sorted.loc[sc_i, "refurb"] += refurb_investment
-
-                    # update the capacity left for the site
-                    df_sc_sorted.loc[sc_i, "cap_left"] -= refurb_investment
-
-                    # update the overall investment left
-                    inv_left -= refurb_investment
-                    if round(inv_left, 2) <= 0:
-                        # no investment left, break the loop and move onto the next
-                        # region + class
-                        break
-
-                # if the investment left has not changed, we have exhausted the
-                # available capacity in this region + class and should break out of the
-                # loop. an error message will be logged below
-                # Note: using isclose here just in case there are floating point issues
-                if math.isclose(inv_left, prev_inv_left, abs_tol=1e-3):
-                    break
-
-            if round(inv_left, 2) != 0:
-                print(
-                    f"ERROR at rcy={rcy}: inv_left for refurb should be 0 "
-                    f"and it is {inv_left}"
-                )
-
-        df_sc_sorted["cap"] = df_sc_sorted["cap_expand"] - df_sc_sorted["cap_left"]
-
-        # Finally, new site investments
-        # reset investments associated with gids for each year.
-        df_sc_sorted["inv_rsc"] = 0
-
-        if constrain_to_bins:
-            df_inv_yr = df_new_and_preexisting_investments[
-                df_new_and_preexisting_investments["year"] == year
-            ].copy()
+    print("Setting up full dataset with all years")
+    # build up the accounting table, which consists of all supply curve points
+    # replicated for each model year.
+    year_dfs = []
+    for i, year in enumerate(years):
+        year_df = df_sc.copy()
+        year_df["year"] = year
+        # add an attribute indicating the previous model year. this is used to
+        # identify the correct timestamp in which to retire exogenous/pre-existing
+        # capacity.
+        if i == 0:
+            # for the first model year, set the "prior year" to zero. this is unlikely
+            # to have any effect, since retirements do not seem to be applied in the
+            # first model year, but hard-coding to zero is a safe fallback in case this
+            # logic changes in the future.
+            prior_year = 0
         else:
-            # need to aggregate results to just year, region, and class before iterating
-            # otherwise the investment_bool results may not be correct in cases
-            # where a given year+region+class has investments for multiple bins
-            df_inv_yr = (
-                df_new_and_preexisting_investments[
-                    df_new_and_preexisting_investments["year"] == year
-                ]
-                .groupby(["year", "region", "class"])["MW"]
-                .sum()
-                .reset_index()
-            )
+            prior_year = years[i - 1]
+        year_df["prev_year"] = prior_year
+        year_dfs.append(year_df)
 
-        for _, r in df_inv_yr.iterrows():
-            # This loops through all the investments
-            # old h5 files don't include bin, so only filter on bin if constrain_to_bins
-            # is True and the bin col exists
-            df_sc_rc_filter = (df_sc_sorted["region"] == r["region"]) & (
-                df_sc_sorted["class"] == r["class"]
-            )
+    # combine all the yearly dataframes together to build the full accounting dataframe
+    df_sc_out = pd.concat(year_dfs, axis=0)
+    df_sc_out.set_index(
+        ["sc_point_gid", "year"], inplace=True, verify_integrity=True, drop=False
+    )
+    df_sc_out.rename(
+        columns={"year": "inv_year", "sc_point_gid": "sc_point_gid_"}, inplace=True
+    )
+
+    # --------------------------------------------------------------------------------
+    # Exogenous capacity
+    # make investments of exogenous capacity
+    print("Disaggregating exogenous capacity")
+    # Mark new investments of resource for exogenous capacity. These investments are
+    # made to supply curve sites that have pre-existing capacity that came online before
+    # the first model year and are marked as "inv_rsc" for the applicable sc records
+    # in the first model year.
+    new_exog_capacity = np.where(
+        (df_sc_out["existing_capacity"] > 0)
+        & (df_sc_out["online_year"] <= years[0])
+        & (df_sc_out["inv_year"] == years[1]),
+        df_sc_out["existing_capacity"],
+        0,
+    )
+    df_sc_out["inv_rsc"] += new_exog_capacity
+    # Account for this pre-existing capacity as installed capacity in the following
+    # years as well, up til retirement.
+    carryover_exog_capacity = np.where(
+        (df_sc_out["existing_capacity"] > 0)
+        & (df_sc_out["online_year"] <= years[0])
+        & (df_sc_out["inv_year"] <= df_sc_out["retire_year"]),
+        df_sc_out["existing_capacity"],
+        0,
+    )
+    df_sc_out["cap"] += carryover_exog_capacity
+    # update the capacity left that is available in each supply curve point by year
+    df_sc_out["cap_left"] = df_sc_out["cap_sc"] - df_sc_out["cap"]
+
+    # Mark the corresponding retirements, which occur in the last timestep preceding
+    # the retirement year
+    prescribed_retirements = np.where(
+        (df_sc_out["existing_capacity"] > 0)
+        & (df_sc_out["online_year"] <= years[0])
+        & (df_sc_out["retire_year"] < df_sc_out["inv_year"])
+        & (df_sc_out["retire_year"] >= df_sc_out["prev_year"]),
+        df_sc_out["existing_capacity"],
+        0,
+    )
+    df_sc_out["ret"] += prescribed_retirements
+    # make sure that no sites have been overbuilt relative to their developable capacity
+    check_overbuilt(df_sc_out)
+
+    # --------------------------------------------------------------------------------
+    # New Investments
+    print("Disaggregating new investments")
+    if not df_new_investments.empty:
+        df_new_investments[["tech_cat", "class"]] = df_new_investments[
+            "tech"
+        ].str.rsplit("_", n=1, expand=True)
+        df_new_investments = df_new_investments[
+            ["year", "region", "class", "bin", "MW"]
+        ].copy()
+        df_new_investments["class"] = df_new_investments["class"].astype("int")
+        df_new_investments["bin"] = (
+            df_new_investments["bin"].str.replace("bin", "", regex=False).astype("int")
+        )
+        df_new_investments.sort_values(
+            by=["region", "class", "bin", "year"], inplace=True
+        )
+
+        # loop over the new investments for each region x class x (bin) x year
+        for i, new_inv in df_new_investments.iterrows():
+            # identify the candidate sc sites corresponding to this investment.
+            # include points in the correct region x class x (bin) for years
+            # starting at the year of the investment and ending before the retirement
+            # year
             if constrain_to_bins:
-                df_sc_filter = df_sc_rc_filter & (
-                    (df_sc_sorted["bin"] == r["bin"]) | df_sc_sorted["bin"].isnull()
-                )
-                bin_label = f"{r['bin']}_"
+                candidate_sites = df_sc_out[
+                    (df_sc_out["bin"] == new_inv["bin"])
+                    & (df_sc_out["class"] == new_inv["class"])
+                    & (df_sc_out["region"] == new_inv["region"])
+                    & (df_sc_out["inv_year"] >= new_inv["year"])
+                    & (
+                        df_sc_out["inv_year"]
+                        < new_inv["year"] + df_sc_out["tech_lifetime"]
+                    )
+                ].copy()
             else:
-                df_sc_filter = df_sc_rc_filter
-                bin_label = ""
-            rcby = f"{r['region']}_{r['class']}_{bin_label}{year}"
-            inv_left = r["MW"]
+                candidate_sites = df_sc_out[
+                    (df_sc_out["class"] == new_inv["class"])
+                    & (df_sc_out["region"] == new_inv["region"])
+                    & (df_sc_out["inv_year"] >= new_inv["year"])
+                    & (
+                        df_sc_out["inv_year"]
+                        < new_inv["year"] + df_sc_out["tech_lifetime"]
+                    )
+                ].copy()
 
-            # continue making incremental new investments until either
-            # (a) no investments remains to be made or
-            # (b) no investments were allocated in the previous loop, indicating
-            #       that the available capacity is exhausted
-            prev_inv_left = None
-            expand = False
-            while round(inv_left, 2) > 0:
-                df_sc_rcb = df_sc_sorted[df_sc_filter].copy()
-                if len(df_sc_rcb) == 0:
-                    # if there are no supply curve points in this region+class+bin
-                    # skip disaggregation (otherwise will be stuck in an infinite loop)
-                    break
-                # if the investment left has not changed, we have exhausted the
-                # available capacity and will expand beyond the available capacity
-                # for the remaining investments
-                # Note: using isclose here just in case there are floating point issues
-                if prev_inv_left is not None and math.isclose(
-                    inv_left, prev_inv_left, abs_tol=1e-3
-                ):
-                    expand = True
+            # for each candidate site, determine the smallest amount of available
+            # developable capacity over all of the years during which the investment.
+            # This effectively determines the size of the investment that can be made
+            # since otherwise, you'd risk overbuilding a given site in a later year.
+            lifetime_cap_left = (
+                candidate_sites.sort_values(
+                    by=["sc_point_gid_", "inv_year"], ascending=[True, False]
+                )
+                .groupby(["sc_point_gid_"])["cap_left"]
+                .cummin()
+            )
+            candidate_sites.loc[
+                lifetime_cap_left.index, "lifetime_cap_left"
+            ] = lifetime_cap_left
+
+            # filter to just the copy of each site for the current investment year
+            # and sort the sites by the user-defined priorities
+            candidate_sites_year = sort_sites_by_priority(
+                candidate_sites[candidate_sites["inv_year"] == new_inv["year"]],
+                priority=priority,
+            )
+            if candidate_sites_year.empty:
+                raise ValueError("No candidate sites found")
+
+            # find the subset of sites to allocate capacity to. start at the first site
+            # and continue down the list until the total developable capacity of the
+            # rows is enough to make the required investment.
+            cumulative_cap_left = np.cumsum(candidate_sites_year["lifetime_cap_left"])
+            enough_capacity_left = cumulative_cap_left > new_inv["MW"]
+            if enough_capacity_left.any():
+                stop_site = np.argmax(enough_capacity_left) + 1
+            else:
+                stop_site = len(enough_capacity_left)
+            # make the investments, looping over each of the sites and filling up
+            # capacity up to the lifetime_cap_left.
+            inv_left = new_inv["MW"]
+            candidate_sites_year["site_inv"] = 0
+            for i in range(0, stop_site):
+                site_inv = np.maximum(
+                    np.minimum(
+                        inv_left, candidate_sites_year["lifetime_cap_left"].iloc[i]
+                    ),
+                    0,
+                )
+                candidate_sites_year.iloc[
+                    i, candidate_sites_year.columns.get_loc("site_inv")
+                ] = site_inv
+                inv_left -= site_inv
+
+            # check that the total investments made to sites is effectively equal to
+            # the expected investment.
+            total_investments = candidate_sites_year["site_inv"].sum()
+            if not np.isclose(total_investments, new_inv["MW"], atol=1e-2):
+                rcy = (
+                    f"{new_inv['region']}{new_inv['class']}{new_inv['bin']}"
+                    f"{new_inv['year']}"
+                )
+                if total_investments > new_inv["MW"]:
+                    inv_extra = total_investments - new_inv["MW"]
                     print(
-                        f"WARNING at rcby={rcby}. Available capacity exhausted and we "
-                        f"have {round(inv_left, 1)} MW remaining to build. Capacity of some "
-                        "supply curve project sites will be expanded."
+                        f"WARNING at rcby={rcy}. Aggregate site investments exceed "
+                        f" expected investments by {round(inv_extra, 2)} MW."
+                    )
+                if total_investments < new_inv["MW"]:
+                    inv_left = new_inv["MW"] - total_investments
+                    print(
+                        f"WARNING at rcby={rcy}. Available capacity exhausted and we "
+                        f"have {round(inv_left, 2)} MW remaining to invest."
                     )
 
-                prev_inv_left = inv_left
-                # This loops through each gid of the supply curve for this
-                # combination of region/class/bin
-                for sc_i, sc_r in df_sc_rcb.iterrows():
-                    if expand:
-                        # This condition will be triggered if we have maxed out the
-                        # available  capacity in these sites.
+            # Attribute this capacity to the future years for these sites (within the
+            # tech lifetime).
+            add_cap_df = candidate_sites_year.reset_index()[
+                ["sc_point_gid", "site_inv"]
+            ]
+            add_cap_lkup = dict(
+                add_cap_df[["sc_point_gid", "site_inv"]].values.tolist()
+            )
+            candidate_sites["cap"] += (
+                candidate_sites["sc_point_gid_"].map(add_cap_lkup).fillna(0)
+            )
 
-                        # In this case, allow deployment of the remaining investment,
-                        # in increments, starting with the first sites (ignore the
-                        # capacity left)
-                        new_investment = min(new_incr_mw, inv_left)
+            # apply the results back to the full accounting dataframe
+            df_sc_out.loc[candidate_sites.index, "cap"] = candidate_sites["cap"]
+            df_sc_out.loc[
+                candidate_sites_year.index, "inv_rsc"
+            ] += candidate_sites_year["site_inv"]
+            # update the capacity left
+            df_sc_out["cap_left"] = df_sc_out["cap_sc"] - df_sc_out["cap"]
 
-                        # mark this site as expanded
-                        df_sc_sorted.loc[sc_i, "expanded"] = "yes"
-                    else:
-                        # This is the typical condition, where we still have capacity
-                        # available in the sites to which we can deploy the investment.
+            # Account for the corresponding retirements of these investments
+            retirements = candidate_sites_year[
+                ["sc_point_gid_", "inv_year", "site_inv", "tech_lifetime"]
+            ].reset_index(drop=True)
+            retirements.rename(columns={"sc_point_gid_": "sc_point_gid"}, inplace=True)
+            retirements["year"] = retirements["inv_year"] + retirements["tech_lifetime"]
+            # filter out any retirements past the modeled years
+            retirements_modeled = retirements[retirements["year"].isin(years)]
+            retirements_modeled.set_index(["sc_point_gid", "year"], inplace=True)
+            df_sc_out.loc[retirements_modeled.index, "ret"] += retirements_modeled[
+                "site_inv"
+            ]
+            # make sure that no sites have been overbuilt relative to their developable
+            # capacity
+            check_overbuilt(df_sc_out)
 
-                        # the new investment is whichever of the following is
-                        # the smallest:
-                        # 1. the incremental investent amount
-                        # 2. the investment left to be made in this region + class
-                        # 3. the capacity left in this supply curve site
-                        new_investment = min(
-                            new_incr_mw, inv_left, max(sc_r["cap_left"], 0)
-                        )
+    # --------------------------------------------------------------------------------
+    # Refurbishments
+    print("Disaggregating refurbishments")
+    if not df_refurbishments.empty:
+        df_refurbishments.sort_values(by=["region", "class", "year"], inplace=True)
+        # loop over the refurbishments for each region x class x year
+        for i, refurb_inv in df_refurbishments.iterrows():
+            # identify the candidate sc sites corresponding to these refurbishments
+            # and extract rows corresponding to the years preceding the actual refurb.
+            # include points in the correct region x class for years. Previous years
+            # are extracted so that we can prioritize refurbishments to sites based on
+            # installed capacity that existed in earlier years.
+            candidate_sites_prior_years = df_sc_out[
+                (df_sc_out["class"] == refurb_inv["class"])
+                & (df_sc_out["region"] == refurb_inv["region"])
+                & (df_sc_out["inv_year"] <= refurb_inv["year"])
+            ].copy()
+            # determine previous max installed capacity for prior years of candidate
+            # sites and attribute this back to the main accounting data frame
+            max_prev_cap = (
+                candidate_sites_prior_years.sort_values(
+                    by=["sc_point_gid_", "inv_year"]
+                )
+                .groupby(["sc_point_gid_"])["cap"]
+                .cummax()
+            )
+            df_sc_out.loc[max_prev_cap.index, "max_prev_cap"] = max_prev_cap
 
-                    df_sc_sorted.loc[sc_i, "inv_rsc"] += new_investment
-                    df_sc_sorted.loc[sc_i, "cap_left"] -= new_investment
+            # extract out the actual candidate sites for refurbishment. similar to
+            # how we did for new investments, include years from the time of investment
+            # retirement.
+            candidate_sites = df_sc_out[
+                (df_sc_out["class"] == refurb_inv["class"])
+                & (df_sc_out["region"] == refurb_inv["region"])
+                & (df_sc_out["inv_year"] >= refurb_inv["year"])
+                & (
+                    df_sc_out["inv_year"]
+                    < refurb_inv["year"] + df_sc_out["tech_lifetime"]
+                )
+            ].copy()
 
-                    # update the overall investment left
-                    inv_left -= new_investment
-                    if inv_left < 0:
-                        print(f"ERROR at rcby={rcby}: inv_left is negative: {inv_left}")
+            # same as for new investments, determine the minimum developable capacity
+            # left for each site across the years
+            lifetime_cap_left = (
+                candidate_sites.sort_values(
+                    by=["sc_point_gid_", "inv_year"], ascending=[True, False]
+                )
+                .groupby(["sc_point_gid_"])["cap_left"]
+                .cummin()
+            )
+            candidate_sites.loc[
+                lifetime_cap_left.index, "lifetime_cap_left"
+            ] = lifetime_cap_left
 
-                    if round(inv_left, 2) <= 0:
-                        # no investment left, break the loop and move onto the next
-                        # region/class/bin
-                        break
+            # filter to the current year
+            # prioritize sites that have previous had some amount of installed capacity
+            # but don't limit to these sites because sometimes more capacity will be
+            # needed than these sites can provide.
+            refurb_priority = OrderedDict({"max_prev_cap": "descending"})
+            refurb_priority.update(priority)
+            candidate_sites_year = sort_sites_by_priority(
+                candidate_sites[(candidate_sites["inv_year"] == refurb_inv["year"])],
+                priority=refurb_priority,
+            )
 
-            if round(inv_left, 2) > 0:
-                print(
-                    f"ERROR at rcby={rcby}: inv_left should be zero "
-                    f"and it is: {inv_left}"
+            if candidate_sites_year.empty:
+                raise ValueError("No candidate sites found")
+
+            # drop sites without capacity in the refurb year from candidate sites
+            drop_sites = candidate_sites.index[
+                ~candidate_sites["sc_point_gid_"].isin(
+                    candidate_sites_year["sc_point_gid_"]
+                )
+            ]
+            candidate_sites.drop(drop_sites, axis=0, inplace=True)
+
+            # find the subset of sites to allocate capacity to. logic is the same as
+            # used in new investments
+            cumulative_cap_left = np.cumsum(candidate_sites_year["lifetime_cap_left"])
+            enough_capacity_left = cumulative_cap_left > refurb_inv["MW"]
+            if enough_capacity_left.any():
+                stop_site = np.argmax(enough_capacity_left) + 1
+            else:
+                stop_site = len(enough_capacity_left)
+            # make the investments
+            inv_left = refurb_inv["MW"]
+            candidate_sites_year["site_inv"] = 0
+            for i in range(0, stop_site):
+                site_inv = np.maximum(
+                    np.minimum(
+                        inv_left, candidate_sites_year["lifetime_cap_left"].iloc[i]
+                    ),
+                    0,
                 )
 
-        df_sc_sorted["cap"] = df_sc_sorted["cap_expand"] - df_sc_sorted["cap_left"]
-        # now that cap is updated, fix any values of cap_left that are negative
-        # by changing them to zero. this fixes any other potential issues that could
-        # occur due to cap_left being negative
-        if (df_sc_sorted["cap_left"] < 0).sum() > 0:
-            df_sc_sorted.loc[df_sc_sorted["cap_left"] < 0, "cap_left"] = 0
+                candidate_sites_year.iloc[
+                    i, candidate_sites_year.columns.get_loc("site_inv")
+                ] = site_inv
 
-        df_sc_out = pd.concat([df_sc_out, df_sc_sorted], sort=False)
+                inv_left -= site_inv
+
+            # check total investments made to sites are equal to the total refurbishment
+            total_investments = candidate_sites_year["site_inv"].sum()
+            if not np.isclose(total_investments, refurb_inv["MW"], atol=1e-2):
+                rcy = f"{refurb_inv['region']}{refurb_inv['class']}{refurb_inv['year']}"
+                if total_investments > refurb_inv["MW"]:
+                    inv_extra = total_investments - refurb_inv["MW"]
+                    print(
+                        f"WARNING at rcy={rcy}. Aggregate site investments exceed "
+                        f"expected investments by {round(inv_extra, 2)} MW."
+                    )
+                if total_investments < refurb_inv["MW"]:
+                    inv_left = refurb_inv["MW"] - total_investments
+                    print(
+                        f"WARNING at rcy={rcy}. Available capacity exhausted and we "
+                        f"have {round(inv_left, 2)} MW remaining to refurbish."
+                    )
+
+            # apply invested capacity to future years
+            add_cap_df = candidate_sites_year.reset_index()[
+                ["sc_point_gid", "site_inv"]
+            ]
+            add_cap_lkup = dict(
+                add_cap_df[["sc_point_gid", "site_inv"]].values.tolist()
+            )
+            candidate_sites["cap"] += (
+                candidate_sites["sc_point_gid_"].map(add_cap_lkup).fillna(0)
+            )
+
+            df_sc_out.loc[candidate_sites.index, "cap"] = candidate_sites["cap"]
+            df_sc_out.loc[candidate_sites_year.index, "refurb"] += candidate_sites_year[
+                "site_inv"
+            ]
+            # update the capacity left
+            df_sc_out["cap_left"] = df_sc_out["cap_sc"] - df_sc_out["cap"]
+
+            # account for the corresponding retirements
+            retirements = candidate_sites_year[
+                ["sc_point_gid_", "inv_year", "site_inv", "tech_lifetime"]
+            ].reset_index(drop=True)
+            retirements.rename(columns={"sc_point_gid_": "sc_point_gid"}, inplace=True)
+            retirements["year"] = retirements["inv_year"] + retirements["tech_lifetime"]
+            # filter out any retirements past the modeled years
+            retirements_modeled = retirements[retirements["year"].isin(years)]
+            retirements_modeled.set_index(["sc_point_gid", "year"], inplace=True)
+            df_sc_out.loc[retirements_modeled.index, "ret"] += retirements_modeled[
+                "site_inv"
+            ]
+            # make sure that no sites have been overbuilt relative to their developable
+            # capacity
+            check_overbuilt(df_sc_out)
 
     if df_cap_chk is not None:
-        final_year = years[-1]
-        check_reeds_to_rev(
-            df_sc_sorted,
-            df_new_and_preexisting_investments,
-            df_refurbishments,
-            df_ret,
-            df_cap_chk,
-            final_year,
-        )
+        # run the overall aggregate capacity checks, showing how the total disaggregated
+        # values compare to the expected totals, by year.
+        # note that errors are not raised, but differences may indicate a bug
+        print("Aggregate Capacity Checks")
+        for year in years[1:]:
+            df_sc_out_final_year = df_sc_out[df_sc_out["inv_year"] == year]
+            agg_site_cap = df_sc_out_final_year["cap"].sum()
+            agg_check_cap = df_cap_chk[df_cap_chk["year"] == year]["MW"].sum()
+            cap_diff = np.round(agg_site_cap - agg_check_cap, 2)
+            print(f"Year = {year}")
+            print(f"\tAggregate capacity disaggregated to sites: {agg_site_cap}")
+            print(f"\tAggregate capacity expected from cap.csv: {agg_check_cap}")
+            print(f"\tDifference (error): {cap_diff}")
+
+    # fix column names for year and sc_point_gid
+    df_sc_out.reset_index(inplace=True)
+    # drop columns that are not consistent with outputs from
+    # reeds_to_rev.disaggregate_reeds_to_rev
+    drop_cols = [
+        "sc_point_gid_",
+        "inv_year",
+        "prev_year",
+        "lifetime_cap_left",
+        "tech_lifetime",
+        "max_prev_cap",
+    ]
+    df_sc_out.drop(
+        columns=[c for c in drop_cols if c in df_sc_out.columns], inplace=True
+    )
 
     return df_sc_out
 
@@ -1290,8 +1496,9 @@ def simultaneous_fill(
     df_cap_chk,
     years,
     constrain_to_bins=True,
+    **kwargs,
 ):
-    # pylint: disable=too-many-branches,too-many-statements
+    # pylint: disable=too-many-branches,too-many-statements,unused-argument
     """
     Performs the actual disaggregation of capacity from ReEDS regions to reV supply
     curve project sites. Loops through years and determines the investment
@@ -1700,8 +1907,8 @@ def save_outputs(out_df, out_dir_path, tech, reduced_only):
     out_dir_path : pathlib.Path
         Path to the output directory where the CSV will be saved.
     tech : str
-        Name of the technology that was run through ReEDs to rev. Expected values are:
-        ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        Name of the technology that was run through ReEDs to rev. Expected values are
+        defined in VALID_TECHS.
     reduced_only : bool
         If True, the output will be saved with a suffix of "_reduced". If False,
         this suffix will not be included in the output file name. Should correspond to
@@ -1720,8 +1927,7 @@ def get_sc_file_path(row):
     row of the (amended) supply curve metadata.
 
     For most technologies, the path is built dynamically from the attributes of the
-    row. For DUPV and CSP, the path is built dynamically but the file name is
-    hard-coded.
+    row. For CSP, the path is built dynamically but the file name is hard-coded.
 
     Note that paths are not validated to ensure the supply curve file actually exists.
 
@@ -1739,17 +1945,11 @@ def get_sc_file_path(row):
         Returns the path to the supply curve dataset for the input row.
     """
 
-    # Pre 2020 update, hdf5 files were used, with a different file structure
-    # DUPV is special and somewhat janky on the reV side, so gets its own thing
-    # DUPV profiles should be updated to be more consistent across reV and ReEDS
-
     # NOTE: use os.path.join rather than Path().joinpath() here because the latter
     #   cannot correctly handle the slash and backslash pattern in the row["sc_path"]
     #   and will mistakenly strip one of the leading backslashes from the fileserver
     #   path
-    if row["tech"] == "dupv":
-        sc_file = os.path.join(row["sc_path"], "dupv_sc_naris_scaled.csv")
-    elif row.tech == "csp":
+    if row["tech"] == "csp":
         sc_file = os.path.join(row["sc_path"], "vision_sn2_csp_conus_2012.h5")
     else:
         sc_file = row["sc_file"]
@@ -1769,7 +1969,7 @@ def get_cost_col(tech, sc_file):
     ----------
     tech : str
         Name of the technology for which to determine the cost columns.
-        Allowable values are: ["upv", "wind-ofs", "wind-ons", "dupv", "csp"].
+        Expected values are defined in VALID_TECHS.
     sc_file : str
         Path to supply curve file. This is typically a full file path but just passing a
         filename will also work.
@@ -1781,7 +1981,7 @@ def get_cost_col(tech, sc_file):
     """
 
     # transmission cost column of supply curve data frame
-    if tech in ["wind-ons", "wind-ofs", "upv"]:
+    if tech in ["wind-ons", "wind-ofs", "upv", "geohydro_allkm", "egs_allkm"]:
         cost_col = "supply_curve_cost_per_mw"
     elif os.path.splitext(sc_file)[1] == ".csv":
         cost_col = "trans_cap_cost"
@@ -1808,8 +2008,7 @@ def get_supply_curve_info(
             `inputs_case/rev_paths.csv`.
     filter_tech : str, optional
         Optional technology to run (e.g., `wind-ons`). If None, all applicable
-        technologies will be run. Allowable values are: ["upv", "wind-ofs", "wind-ons",
-        "dupv", "csp"].
+        technologies will be run. Expected values are defined in VALID_TECHS.
     rev_case : str, optional
         Optional name of the rev_case, which is used to look up the actual supply curve
         files. If None, the rev_case in the supply curve metadata will be used.  Will
@@ -1832,6 +2031,8 @@ def get_supply_curve_info(
 
     source_path = reeds_run_path.joinpath("inputs_case", "rev_paths.csv")
     sc_info_df = pd.read_csv(source_path)
+
+    sc_info_df["tech"] = sc_info_df["tech"].replace(TECH_ALIASES)
 
     if bins is not None:
         print("Warning: bins option is deprecated and has no effect.")
@@ -1863,6 +2064,32 @@ def get_supply_curve_info(
     return filtered_sc_info_df
 
 
+def check_tech(run_folder, tech):
+    """
+    Check that the selcted technology is present in the ReEDS outputs.
+
+    Parameters
+    ----------
+    run_folder : str
+        Path to the folder containing the ReEDS run of interest. Must contain the
+        following file: outputs/cap.csv.
+    tech : str
+        Technology. Expected values are defined in VALID_TECHS.
+
+    Returns
+    -------
+    bool
+        Returns True if the technology is present in the ReEDS outputs, False if not.
+    """
+    cap_chk = os.path.join(run_folder, "outputs", "cap.csv")
+    df_cap = pd.read_csv(
+        cap_chk, low_memory=False, names=["tech", "region", "year", "MW"], header=0
+    )
+    tech_included = df_cap["tech"].str.startswith(tech).any()
+
+    return tech_included
+
+
 def run(
     run_folder,
     method,
@@ -1872,7 +2099,6 @@ def run(
     bins=None,
     rev_case=None,
     sc_path=None,
-    new_incr_mw=DEF_NEW_INCR_MW,
     **kwargs,  # pylint: disable=unused-argument
 ):
     """
@@ -1907,8 +2133,7 @@ def run(
         If True, save a simpler/reduced format of outputs. If False, save full outputs.
     tech : str, optional
         Optional technology to run (e.g., `wind-ons`). If None, all applicable
-        technologies will be run.  Allowable values are: ["upv", "wind-ofs", "wind-ons",
-        "dupv", "csp"].
+        technologies will be run. Expected values are defined in VALID_TECHS.
     bins : int, optional
         Number of bins used in the supply curve bins. This has no effect, but is
         maintained for compatibility with legacy ReEDS to reV options.
@@ -1920,14 +2145,6 @@ def run(
         Optional path to supply curve files where the specified version resides. If not
         specified (i.e., None), the sc_path will in the supply curve metadata will
         be used. Will have no effect if specified but tech is None.
-    new_incr_mw : float, optional
-        Optional size of incremental capacity investments to make for new capacity.
-        Controls the incremental amount of capacity invested in each site. The default
-        value (1e10) has the effect of not making incremental investments. Instead,
-        each site is filled up before moving on to the next. Setting this to a lower
-        value (e.g., 6), will result in adding up to 6 MW to each site (limited to the
-        capacity available at the site) with a region, resource class, and cost bin, in
-        a round-robin fashion, and repeating until all new capacity has been invested.
 
     Raises
     ------
@@ -1968,6 +2185,13 @@ def run(
             cost_col = rev_row["cost_col"]
             tech = rev_row["tech"]
 
+            if not check_tech(run_folder, tech):
+                print(
+                    f"Technology {tech} is not present in ReEDS outputs. "
+                    "Skipping disaggregation."
+                )
+                continue
+
             print(
                 "Preparing required data to disaggregate built capacity "
                 f"for {rev_row['tech']}."
@@ -1990,12 +2214,12 @@ def run(
                 disagg_df = simultaneous_fill(**reeds_to_rev_data)
             else:
                 print(
-                    f"Filling each region/class/bin in priority order for {rev_row['tech']} "
-                    f"using increments of {new_incr_mw} MW"
+                    "Filling each region/class/bin in priority order for "
+                    f"{rev_row['tech']} "
                 )
                 disagg_df = disaggregate_reeds_to_rev(
                     priority={cost_col: "ascending"},
-                    new_incr_mw=new_incr_mw,
+                    tech=tech,
                     **reeds_to_rev_data,
                 )
 
@@ -2005,8 +2229,9 @@ def run(
             )
             save_outputs(df_sc_out, out_dir_path, tech, reduced_only)
 
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"***Error for {rev_row.tech}...\n{traceback.format_exc()}")
+            raise e
 
     print("Completed reeds_to_rev!")
 
@@ -2060,18 +2285,6 @@ def build_parser():
         choices=VALID_TECHS,
     )
     parser.add_argument(
-        "--new_incr_mw",
-        default=DEF_NEW_INCR_MW,
-        type=float,
-        help="Controls the incremental amount of capacity invested in each site. "
-        + "The default value (1e10) has the effect of not making incremental "
-        + "investments. Instead, each site is filled up before moving on to the next. "
-        + "Setting this to a lower value (e.g., 6), will result in adding up to 6 MW "
-        + "to each site (limited to the capacity available at the site) with a region, "
-        + "resource class, and cost bin, in a round-robin fashion, and repeating until "
-        + "all new capacity has been invested.",
-    )
-    parser.add_argument(
         "-l",
         "--logname",
         default="reeds_to_rev.log",
@@ -2117,10 +2330,10 @@ def main():
     args = parser.parse_args()
 
     # setup logging
-    site.addsitedir(os.path.join(args.reeds_path, "input_processing"))
-    from ticker import makelog
+    site.addsitedir(args.reeds_path)
+    from reeds.log import makelog
 
-    log = makelog(
+    makelog(
         scriptname=__file__, logpath=os.path.join(args.run_folder, args.logname)
     )
 

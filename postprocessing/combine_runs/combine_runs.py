@@ -16,6 +16,9 @@ import subprocess
 import traceback
 import matplotlib.pyplot as plt
 from glob import glob
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import reeds
+from reeds import reedsplots
 
 # print list of cases to run
 def print_cases(cases):
@@ -192,10 +195,9 @@ def combine_scenario_files(scenario, combine_cases, reeds_path, output_path):
 def run_combine_case(scen, reeds_path, output_path):
     ## Setup
     # logging
-    input_processing_path =  os.path.join(reeds_path, 'input_processing')
-    site.addsitedir(os.path.join(input_processing_path))
-    from ticker import makelog
-    log = makelog(scriptname=__file__, logpath=os.path.join(output_path,'combine_log.txt'))
+    site.addsitedir(reeds_path)
+    from reeds.log import makelog
+    makelog(scriptname=__file__, logpath=os.path.join(output_path,'combine_log.txt'))
     # read in details on cases to combine
     combine_case = pd.read_csv(os.path.join(output_path, 'cases_combined.csv'))
 
@@ -217,11 +219,6 @@ def run_combine_case(scen, reeds_path, output_path):
         print("Error running bokeh.")
         print(traceback.format_exc())
 
-    ## Create combined transmission maps
-    site.addsitedir(os.path.join(reeds_path, "postprocessing"))
-    # import reedsplots after setting the module path; if it's done before, the reedsplots module won't be found
-    import reedsplots
-
     # Map properties:
     wscale = 0.0003
     alpha = 0.8
@@ -230,8 +227,7 @@ def run_combine_case(scen, reeds_path, output_path):
     ncols=1
     
     # get end year from first run. assumes all runs were run with the same endyear.
-    sw = pd.read_csv(
-        os.path.join(combine_case.path[0],"inputs_case", 'switches.csv'), header=None, index_col=0).squeeze(1)
+    sw = reeds.io.get_switches(combine_case.path[0])
     yearend = int(sw.endyear)
 
     # Map colors:

@@ -72,13 +72,19 @@ function main()
     pras_system = 
     if isnothing(parsed_args["user_descriptors_filepath"])
         ReEDS2PRAS.reeds_to_pras(
-        parsed_args["reedscase"], parse(Int64, parsed_args["solve_year"]),
-        parse(Int64, parsed_args["timesteps"]),parse(Int64, parsed_args["weather_year"]))
+            parsed_args["reedscase"],
+            parse(Int64, parsed_args["solve_year"]),
+            parse(Int64, parsed_args["timesteps"]),
+            parse(Int64, parsed_args["weather_year"])
+        )
     else
         ReEDS2PRAS.reeds_to_pras(
-        parsed_args["reedscase"], parse(Int64, parsed_args["solve_year"]),
-        parse(Int64, parsed_args["timesteps"]),parse(Int64, parsed_args["weather_year"]),
-        user_descriptors = parsed_args["user_descriptors_filepath"])
+            parsed_args["reedscase"],
+            parse(Int64, parsed_args["solve_year"]),
+            parse(Int64, parsed_args["timesteps"]),
+            parse(Int64, parsed_args["weather_year"]),
+            user_descriptors = parsed_args["user_descriptors_filepath"]
+        )
     end
     
     if ~isnothing(parsed_args["output_filepath"])

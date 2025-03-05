@@ -126,9 +126,11 @@ for case in runs_failed:
     if any([os.path.basename(i).startswith('report') for i in lstfiles]):
         restart_tag = '# Output processing'
     elif len(lstfiles) == 2: 
-        ## if there are only 2 lst files, then one of them will be environment.csv and the other will be 1_inputs.lst so the run failed during the model compilation 
+        # If there are only 2 lst files, then one of them will be environment.csv and the other will be 1_inputs.lst so the run failed during the model compilation 
         restart_tag = '# Compile model'
     else:
+        # Drop environment file
+        lstfiles = [l for l in lstfiles if "environment.csv" not in l]
         lastfile = lstfiles[-1]
         restart_year = int(os.path.splitext(lastfile)[0].split('_')[-1].split('i')[0])
         restart_tag = f'# Year: {restart_year}'

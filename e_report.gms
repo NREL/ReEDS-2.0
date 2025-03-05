@@ -637,6 +637,8 @@ stor_inout(i,v,r,t,"out")$[valgen(i,v,r,t)$storage(i)] = gen_ivrt(i,v,r,t) ;
 stor_in(i,v,r,h,t)$[storage(i)$valgen(i,v,r,t)$(not storage_hybrid(i)$(not csp(i)))] = STORAGE_IN.l(i,v,r,h,t) ;
 stor_out(i,v,r,h,t)$[storage(i)$valgen(i,v,r,t)] = GEN.l(i,v,r,h,t) ;
 stor_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)] = STORAGE_LEVEL.l(i,v,r,h,t) ;
+stor_interday_level(i,v,r,allszn,t)$[valgen(i,v,r,t)$storage_interday(i)] = STORAGE_INTERDAY_LEVEL.l(i,v,r,allszn,t) ;
+stor_interday_dispatch(i,v,r,h,t)$[valgen(i,v,r,t)$storage_interday(i)] = STORAGE_INTERDAY_DISPATCH.l(i,v,r,h,t) ;
 
 *=====================================================================
 * WATER ACCOUNTING, CAPACITY, NEW CAPACITY, AND RETIRED CAPACITY
@@ -888,7 +890,7 @@ cap_new_cc(i,r,ccseason,t)$[(vre(i) or storage(i) or storage_hybrid(i)$(not csp(
 
 cc_new(i,r,ccseason,t)$[valcap_irt(i,r,t)$cap_new_cc(i,r,ccseason,t)] = sum{v$ivt(i,v,t), cc_all_out(i,v,r,ccseason,t) } ;
 
-cap_firm(i,r,ccseason,t)$[valcap_irt(i,r,t)$[not consume(i)]$tmodel_new(t)] =
+cap_firm(i,r,ccseason,t)$[valcap_irt(i,r,t)$[not consume(i)]$tmodel_new(t)$Sw_PRM_CapCredit] =
       sum{v$[(not vre(i))$(not hydro(i))$(not storage(i))$(not storage_hybrid(i)$(not csp(i)))$(not demand_flex(i))$valcap(i,v,r,t)],
           CAP.l(i,v,r,t) * (1 + ccseason_cap_frac_delta(i,v,r,ccseason,t)) }
     + cc_old(i,r,ccseason,t)

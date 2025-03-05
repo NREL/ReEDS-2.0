@@ -11,13 +11,6 @@
   "tech_supply_curves": {
     "upv": "DATA_PATH/supply_curves/upv_reference/results/upv_supply_curve_raw.csv",
     "wind-ofs": "DATA_PATH/supply_curves/wind-ofs_0_open_moderate/results/wind-ofs_supply_curve_raw.csv",
-    "wind-ons": "DATA_PATH/supply_curves/wind-ons_reference/results/wind-ons_supply_curve_raw.csv",
-    "dupv": "DATA_PATH/supply_curves/dupv_sc_naris_scaled.csv"
-  },
-  "new_incr_mw": {
-    "upv": 1e10,
-    "wind-ofs": 1e10,
-    "wind-ons": 1e10,
-    "dupv": 1e10
+    "wind-ons": "DATA_PATH/supply_curves/wind-ons_reference/results/wind-ons_supply_curve_raw.csv"
   }
 }

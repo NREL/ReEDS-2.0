@@ -35,15 +35,13 @@ Date Created: 2/22/2022
 #%% Imports
 import argparse
 import os
+import sys
 import pandas as pd
-import site
 import traceback
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import reeds
 
 reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-site.addsitedir(os.path.join(reeds_path,'input_processing'))
-site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-from ticker import makelog  # noqa: E402
-import reedsplots
 
 ### Functions
 def get_marginal_damage_rates(casepath):
@@ -83,14 +81,28 @@ def get_marginal_damage_rates(casepath):
         )
         .rename(columns={'FIPS':'fips'}).set_index('fips').ba
     )
+
     ## Keep county resolution if using it in this ReEDS run
-    sw = pd.read_csv(
-        os.path.join(casepath, 'inputs_case', 'switches.csv'),
-        header=None, index_col=0).squeeze(1)
-    if sw.GSw_RegionResolution != 'county':
-        pass
+    agglevel_variables = reeds.spatial.get_agglevel_variables(
+        reeds_path,
+        os.path.join(casepath,'inputs_case'),
+    )
+    if 'county' in agglevel_variables['agglevel']: 
+        # For mixed resolution runs county2zone will include county-county and county-BA mapping
+        if agglevel_variables['lvl'] == 'mult':
+            # BA, Aggreg resolution map
+            county2zone_ba = county2zone[county2zone.isin(agglevel_variables['ba_regions'])]
+            # County resolution map 
+            county2zone_county = county2zone[county2zone.isin(agglevel_variables['county_regions2ba'])]
+            county2zone_county.loc[:] = 'p'+county2zone_county.index.astype(str).values
+            # Combine to create mixed resolution map
+            county2zone = pd.concat([county2zone_ba,county2zone_county])
+        
+        # Pure county resolution runs
+        else:
+            county2zone.loc[:] = 'p'+county2zone.index.astype(str).values
     else:
-        county2zone.loc[:] = 'p'+county2zone.index.astype(str).values
+        pass
 
     mds_mapped = (
         mds
@@ -147,7 +159,10 @@ for casename, casepath in casepaths.items():
     print("Processing health damages for " + casename)
     try:
         # Set up logger
-        log = makelog(scriptname=__file__, logpath=os.path.join(casepath,'gamslog.txt'))
+        log = reeds.log.makelog(
+            scriptname=__file__,
+            logpath=os.path.join(casepath,'gamslog.txt'),
+        )
 
         # get deflator
         deflator = pd.read_csv(
@@ -166,10 +181,10 @@ for casename, casepath in casepaths.items():
 
         # read emissions data by BA
         emit = (
-            reedsplots.read_output(casepath, 'emit_r', valname='tons')
+            reeds.io.read_output(casepath, 'emit_r', valname='tons')
             .rename(columns={'e':'pollutant', 'r':'ba', 't':'year'})
         )
-
+        
         # inner join with marginal damages to capture only pollutants that
         # have marginal damages and only marginal damages where there are emissions
         damages = emit.merge(mds, how="inner", on=['ba', 'pollutant'])

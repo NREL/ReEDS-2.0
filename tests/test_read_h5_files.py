@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from pandas import HDFStore
 
-from input_processing.ldc_prep import read_file, read_h5py_file
+import reeds
 
 
 @pytest.fixture
@@ -39,10 +39,10 @@ def load_h5(tmp_path, n_cols=10):
 def test_read_file(pandas_h5):
     # Assert that we raise if the file is not found.
     with pytest.raises(FileNotFoundError):
-        _ = read_file("random_non_existing_path.h5")
+        _ = reeds.io.read_file("random_non_existing_path.h5")
 
     pandas_df = pd.read_hdf(pandas_h5)
-    pandas_test = read_file(pandas_h5)
+    pandas_test = reeds.io.read_file(pandas_h5)
     assert isinstance(
         pandas_df, pd.DataFrame
     ), "Function did not return a pandas dataframe."
@@ -55,7 +55,7 @@ def test_read_file(pandas_h5):
 
 
 def test_read_h5py_file(load_h5):
-    h5_df = read_h5py_file(load_h5)
+    h5_df = reeds.io.read_h5py_file(load_h5)
     assert isinstance(h5_df, pd.DataFrame)
     assert h5_df.size == 720  # 3 years * 24 rows * 10 colums
     assert h5_df.index.names == ["year", "hour"]

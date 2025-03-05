@@ -6,8 +6,10 @@ import argparse
 import pandas as pd
 import numpy as np
 import os
-from ticker import toc, makelog
+import sys
 import datetime
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 tic = datetime.datetime.now()
 
 #%% Parse arguments
@@ -20,8 +22,8 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing ###
-#reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-#inputs_case = os.path.join(reeds_path,'runs','hr_test_none_Pacific','inputs_case','')
+# reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+# inputs_case = os.path.join(reeds_path,'runs','v20240916_unitsM0_TN','inputs_case','')
 
 #%%#################
 ### FIXED INPUTS ###
@@ -34,12 +36,14 @@ weight = 'cost'
 costcol = 'USD{}perMW'.format(dollar_year)
 
 #%% Set up logger
-log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+log = reeds.log.makelog(
+    scriptname=__file__,
+    logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+)
 print('Starting transmission.py', flush=True)
 
 #%% Inputs from switches
-sw = pd.read_csv(
-    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+sw = reeds.io.get_switches(inputs_case)
 GSw_TransScen = sw.GSw_TransScen
 GSw_TransRestrict = sw.GSw_TransRestrict
 GSw_VSC = int(sw.GSw_VSC)
@@ -66,7 +70,7 @@ trans_cap_future_file = os.path.join(
 ### ===========================================================================
 
 def finish(inputs_case=inputs_case):
-    toc(tic=tic, year=0, process='input_processing/transmission.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/transmission.py', 
         path=os.path.join(inputs_case,'..'))
     print('Finished transmission.py', flush=True)
     quit()
@@ -214,9 +218,7 @@ if (tline_data.loc[
 
 
 #%% Load the transmission scalars
-scalars = pd.read_csv(
-    os.path.join(inputs_case,'scalars.csv'),
-    header=None, names=['scalar','value','comment'], index_col='scalar').value
+scalars = reeds.io.get_scalars(inputs_case)
 ### Get the contingency levels for energy and PRM trading
 nlevel = {
     'energy': int(scalars['trans_contingency_level_energy']),
@@ -249,7 +251,10 @@ def getloss(row):
     """
     return row.miles * tranloss_permile[row.trtype] + tranloss_fixed[row.trtype] * 2
 
-tline_data['loss'] = tline_data.apply(getloss, axis=1)
+if tline_data.empty:
+    tline_data['loss'] = None
+else:
+    tline_data['loss'] = tline_data.apply(getloss, axis=1)
 
 ### Set the identifier index for easier indexing later
 tline_data.set_index(['r','rr','trtype'], inplace=True)
@@ -301,7 +306,10 @@ transmission_distance.round(3).reset_index().rename(columns={'r':'*r'}).to_csv(
 
 ### tranloss
 tranloss = transmission_distance.reset_index()
-tranloss['loss'] = tranloss.apply(getloss, axis=1)
+if tranloss.empty:
+    tranloss['loss'] = None
+else:
+    tranloss['loss'] = tranloss.apply(getloss, axis=1)
 tranloss[['r','rr','trtype','loss']].round(decimals).rename(columns={'r':'*r'}).to_csv(
     os.path.join(inputs_case,'tranloss.csv'), index=False, header=True)
 

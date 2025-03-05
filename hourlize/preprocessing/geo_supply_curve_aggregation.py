@@ -4,7 +4,7 @@ import os
 def aggregate_by_lowest_lcoe_depth(sc_list):
     df_sc_agg = pd.concat(sc_list)
     df_sc_lowest_lcoe = (
-        df_sc_agg.sort_values(["total_lcoe", "mean_lcoe"], ascending=True)
+        df_sc_agg.sort_values(["lcoe_all_in_usd_per_mwh", "lcoe_site_usd_per_mwh"], ascending=True)
         .groupby(["sc_point_gid"], as_index=False)
         .first()
         .reset_index(drop=True)

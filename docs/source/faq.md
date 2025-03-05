@@ -6,6 +6,7 @@
     - [Is there a trial version of the GAMS license so that I can test ReEDS?](#is-there-a-trial-version-of-the-gams-license-so-that-i-can-test-reeds)
     - [What computer hardware is necessary to run ReEDS?](#what-computer-hardware-is-necessary-to-run-reeds)
     - [Can I configure a ReEDS case to run as an isolated interconnect?](#can-i-configure-a-reeds-case-to-run-as-an-isolated-interconnect)
+    - [Can I change the spatial resolution of a ReEDS case?](#can-i-change-the-spatial-resolution-of-a-reeds-case)
     - [Is there a way to reduce solve time?](#is-there-a-way-to-reduce-solve-time)
     - [How often are updates made to ReEDS?](#how-often-are-updates-made-to-reeds)
     - [What are the limitations, caveats, and known issues?](#what-are-the-limitations-caveats-and-known-issues)
@@ -49,6 +50,19 @@ Yes, you can configure ReEDS as a single interconnect. Limiting the spatial exte
   * RGGI only applies to a subset of states in the northeast 
   * California policies (e.g., SB32, California Storage Mandate) only apply to California
 
+<a name="spatial-resolution-reeds"></a>
+### Can I change the spatial resolution of a ReEDS case?
+
+The ReEDS model is capable of capturing several spatial resolutions. This aspect of the model is controlled by the `GSw_Region`, `GSw_RegionResolution`, and `GSw_HierarchyFile` switches, and sometimes by the inputs/userinput/modeled_regions.csv file.
+* Balancing areas (BAs) and aggregated groups of BAs: Aggregation level is controlled by the 'aggreg' column of the inputs/hierarchy_{GSw_HierarchyFile}.csv file.
+    * 134 zones: `GSw_RegionResolution = ba`
+    * 133 zones (**default**): `GSw_RegionResolution = aggreg`, `GSw_HierarchyFile = default`. Merges p119 into p122.
+    * 126 zones: `GSw_RegionResolution = aggreg`, `GSw_HierarchyFile = agg1`. Merges p119 into p122, p49 into p50, p124 into p99, p19 into p20, p44 into p68, p120 into p122, p29 into p28, and p71 into p72, obeying state, interconnect, NERC, and FERC region boundaries.
+    * 69 zones: `GSw_RegionResolution = aggreg`, `GSw_HierarchyFile = agg2`. Obeys state, interconnect, NERC, and FERC region boundaries; most other zones below these levels are aggregated together.
+    * 54 zones: `GSw_RegionResolution = aggreg`, `GSw_HierarchyFile = agg3`. Obeys state boundaries but nudges the edges of interconnect, NERC, and FERC region boundaries to align with states. Keeps CA, IL, and NY split into 2 zones and TX split into 4 zones.
+
+* Counties: `GSw_RegionResolution = county`. Only solves in tolerable time when running a subset of the U.S. as specified by the `GSw_Region` switch.
+* Mixed resolution: `GSw_RegionResolution = mixed`, `GSw_Region` set to a column in the inputs/userinput/modeled_regions.csv file. Can be used to model some regions at county resolution and others at BA or aggregated-region resolution.
 <a name="reduce-solve-time"></a>
 ### Is there a way to reduce solve time?
 
@@ -63,10 +77,6 @@ If you'd like to reduce the model solve time, consider making some of the follow
   * Reduce the number of representative periods
 * `GSw_RegionResolution = aggreg`
   * Aggregate the native 134 zones into fewer (larger) zones, with the amount of aggregation controlled by `GSw_HierarchyFile`
-    * `GSw_HierarchyFile = default`: 133 zones: merges p119 -> p122 (obeys state, interconnect, NERC, and FERC region boundaries)
-    * `GSw_HierarchyFile = agg1`: 126 zones: p119 -> p122; p49 -> p50; p124 -> p99; p19 -> p20; p44 -> p68; p120 -> p122; p29 -> p28; p71 -> p72 (obeys state, interconnect, NERC, and FERC region boundaries)
-    * `GSw_HierarchyFile = agg2`: 69 zones (obeys state, interconnect, NERC, and FERC region boundaries)
-    * `GSw_HierarchyFile = agg3`: 54 zones (obeys state boundaries)
 
 <a name="reeds-updates"></a>
 ### How often are updates made to ReEDS?

@@ -1,6 +1,19 @@
+# Declare files that use git large file storage (LFS)
 *.pkl filter=lfs diff=lfs merge=lfs -text
 *.gz filter=lfs diff=lfs merge=lfs -text
 *.h5 filter=lfs diff=lfs merge=lfs -text
 *.gpkg filter=lfs diff=lfs merge=lfs -text
-*.ipynb filter=strip_ipynb_output
 *.shp filter=lfs diff=lfs merge=lfs -text
+*.png filter=lfs diff=lfs merge=lfs -text
+*unitdata.csv filter=lfs diff=lfs merge=lfs -text
+*hydcf.csv filter=lfs diff=lfs merge=lfs -text
+# Declare text files that will always have their line endings converted
+*.csv text eol=lf
+*.py text eol=lf
+*.gms text eol=lf
+*.jl text eol=lf
+*.md text eol=lf
+*.sh text eol=lf
+*.toml text eol=lf
+*.txt text eol=lf
+*.bat text eol=crlf

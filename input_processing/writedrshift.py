@@ -13,11 +13,13 @@ Created on Feb 24 2021
 ### --- IMPORTS ---
 ### ===========================================================================
 import os
+import sys
 import argparse
 import pandas as pd
-# Time the operation of this script
-from ticker import toc, makelog
 import datetime
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+# Time the operation of this script
 tic = datetime.datetime.now()
 
 #%%#################
@@ -25,88 +27,6 @@ tic = datetime.datetime.now()
 
 decimals = 4
 
-#%% ===========================================================================
-### --- FUNCTIONS ---
-### ===========================================================================
-
-def get_dr_shifts(sw, inputs_case, native_data=True,
-                  hmap_7yr=None, chunkmap=None, hours=None):
-    """
-    part of shift demand response handling compatible both with h17 and hourly ReEDS
-    hours, hmap_7yr, and chunkmap are needed for mapping hourly because there is no
-    fixed assumption for temporal structure of run
-    """
-
-    dr_hrs = pd.read_csv(
-        os.path.join(
-            inputs_case, 'dr_shifts.csv')
-    )
-    
-    # write out dr_hrs for Augur
-    dr_hrs.to_csv(os.path.join(inputs_case, 'dr_hrs.csv'), index=False)
-
-    dr_pos = dr_hrs[['dr_type', 'pos_hrs']].reindex(dr_hrs.index.repeat(dr_hrs.pos_hrs))
-    dr_pos['shift'] = dr_pos['pos_hrs'] - dr_pos.groupby(['dr_type']).cumcount()
-
-    dr_neg = dr_hrs[['dr_type', 'neg_hrs']].reindex(dr_hrs.index.repeat(-1*dr_hrs.neg_hrs))
-    dr_neg['shift'] = dr_neg['neg_hrs'] + dr_neg.groupby(['dr_type']).cumcount()
-
-    dr_shifts = pd.concat([dr_pos.rename({'pos_hrs': 'hrs'}, axis=1),
-                           dr_neg.rename({'neg_hrs': 'hrs'}, axis=1)])
-
-    #### native_data reads in inputs directly
-    if native_data:
-        hr_ts = pd.read_csv(
-            os.path.join(inputs_case, 'h_dt_szn.csv'))
-        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
-
-        num_hrs = pd.read_csv(
-            os.path.join(inputs_case, 'numhours.csv'),
-            header=0, names=['h', 'numhours'], index_col='h').squeeze(1)
-    # otherwise reformat to hourly timeslice subsets
-    else:
-        hr_ts = hmap_7yr[['h','season','year','hour']].assign(h=hmap_7yr.h.map(chunkmap))
-        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
-        num_hrs = (
-            hours.reset_index().assign(h=hours.index.map(chunkmap))
-            .groupby('h').numhours.sum().reset_index())
-
-    #### after here the rest is the same
-    dr_shifts['key'] = 1
-    hr_ts['key'] = 1
-    hr_shifts = pd.merge(dr_shifts, hr_ts, on='key').drop('key', axis=1)
-    hr_shifts['shifted_hr'] = hr_shifts['hour'] + hr_shifts['shift']
-    # Adjust hrs to be between 1 and 8760
-    lt0 = hr_shifts.shifted_hr <= 0
-    gt8760 = hr_shifts.shifted_hr > 8760
-    hr_shifts.loc[lt0, 'shifted_hr'] += 8760
-    hr_shifts.loc[gt8760, 'shifted_hr'] -= 8760
-
-    # Merge on hr_ts again to the shifted hours to see what timeslice DR
-    # can move load into
-    hr_shifts = pd.merge(hr_shifts,
-                         hr_ts.rename({'h':'shifted_h', 'hour':'shifted_hr',
-                                       'season':'shifted_season'}, axis=1),
-                         on='shifted_hr').drop('key', axis=1)
-    # Only allow shifts within the same season
-    hr_shifts = hr_shifts[hr_shifts.season == hr_shifts.shifted_season]
-    hr_shifts.drop(['shifted_season'], axis=1, inplace=True)
-
-    hr_shifts2 = (
-        hr_shifts[['dr_type','h','hour','shifted_h']]
-        .drop_duplicates()
-        .groupby(['dr_type','h','shifted_h'])
-        .size()
-        .reset_index()
-    )
-
-    ts_shifts = pd.merge(hr_shifts2, num_hrs, on='h')
-    ts_shifts['shift_frac'] = ts_shifts[0] / ts_shifts['numhours']
-
-    shift_out = ts_shifts.loc[ts_shifts['h'] != ts_shifts['shifted_h'], :]
-    shift_out = shift_out.round(4)
-
-    return shift_out, dr_shifts
 
 #%% ===========================================================================
 ### --- MAIN FUNCTION ---
@@ -128,12 +48,14 @@ if __name__ == '__main__':
     # inputs_case = os.path.join(reeds_path,'runs','dr1_Pacific','inputs_case')
 
     #%% Set up logger
-    log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+    )
     print('Starting writedrshift.py')
 
     #%% Inputs from switches
-    sw = pd.read_csv(
-        os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+    sw = reeds.io.get_switches(inputs_case)
 
     val_r = pd.read_csv(
         os.path.join(inputs_case, 'val_r.csv'), header=None).squeeze(1).tolist()
@@ -162,5 +84,5 @@ if __name__ == '__main__':
     
     print('Finished writedrshift.py')
 
-    toc(tic=tic, year=0, process='input_processing/writedrshift.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/writedrshift.py', 
         path=os.path.join(inputs_case,'..'))

@@ -1,19 +1,17 @@
 ###############
 #%% IMPORTS ###
 import os
+import sys
 import time
-import site
 import pandas as pd
 import numpy as np
 import requests
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from tqdm.notebook import tqdm
-
-reeds_path = os.path.join(os.path.sep, *(os.path.abspath(__file__).split(os.sep)[:-3]))
-site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-# import plots after setting the module path; if it's done before, the plots module won't be found
-import plots  # noqa: E402
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from reeds import plots
+reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 plots.plotparams()
 

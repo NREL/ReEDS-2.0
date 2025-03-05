@@ -3,49 +3,19 @@
 # %% Imports
 # System packages
 import argparse
-import ctypes
 import datetime
 import os
 import site
 import traceback
 import sys
-import h5py
 
 # Third-party packages
-import numpy as np
 import pandas as pd
 import gdxpds
 
+import reeds
 
 #%% Generic functions
-def get_dtype(col, df=None):
-    if col.lower() == "value":
-        return np.float32
-    elif col in ["t", "allt"]:
-        return np.uint16
-    else:
-        maxlength = df[col].str.len().max()
-        return f"S{maxlength}"
-
-
-def make_columns_unique(df):
-    """
-    Rename columns in place to avoid duplicates.
-    Example: [*,*,r,*,t,Value] becomes [*,*.1,r,*.2,t,Value].
-    """
-    duplicated = df.columns.duplicated()
-    if any(duplicated):
-        columns_old = df.columns
-        columns_new = []
-        times_used = {}
-        for i, column in enumerate(columns_old):
-            if not duplicated[i]:
-                columns_new.append(column)
-            else:
-                times_used[column] = times_used.get(column, 1)
-                columns_new.append(f'{column}.{times_used[column]}')
-                times_used[column] += 1
-        df.columns = columns_new
 
 
 def dfdict_to_csv(dfdict, filepath, symbol_list=None, rename=dict(), decimals=6):
@@ -87,71 +57,6 @@ def dfdict_to_csv(dfdict, filepath, symbol_list=None, rename=dict(), decimals=6)
         df_out.round(decimals).to_csv(os.path.join(filepath, f"{file_out}.csv"), index=False)
 
 
-def write_to_h5(
-    df,
-    key,
-    filepath,
-    overwrite=False,
-    drop_ctypes=False,
-    verbose=0,
-    compression='gzip',
-    compression_opts=4,
-    **kwargs,
-):
-    """
-    Write a dataframe of GAMS outputs to a .h5 file.
-    This function only works for long dataframes where the single column
-    of numeric data is named "Value".
-    A group of name {key} is created in the .h5 file at {filepath} and each column
-    in {df} is written to its own dataset.
-    String columns need to be decoded when read.
-    """
-    dfwrite = df.copy()
-    if not len(dfwrite):
-        if verbose:
-            print(f'{key} dataframe is empty, so it was not written to {filepath}')
-        return dfwrite
-    ## Sets have `c_bool(True)` as the value for every entry, so just
-    ## drop the Value column if it's a set
-    if (
-        drop_ctypes
-        and ("Value" in dfwrite)
-        and isinstance(dfwrite.Value.values[0], ctypes.c_bool)
-    ):
-        dfwrite.drop("Value", axis=1, inplace=True)
-    ## Make column names unique (necessary if '*' is overused)
-    make_columns_unique(dfwrite)
-    ## Normalize column data types
-    dfwrite = dfwrite.astype({col: get_dtype(col, dfwrite) for col in dfwrite})
-    ### Write to .h5 file
-    with h5py.File(filepath, 'a') as f:
-        if (key in list(f)):
-            if overwrite:
-                del f[key]
-            else:
-                raise ValueError(f'{key} is already used in {filepath}')
-
-        group = f.create_group(key)
-        ## Write columns to maintain order
-        group.create_dataset(
-            'columns',
-            data=dfwrite.columns,
-            dtype=f"S{dfwrite.columns.str.len().max()}",
-        )
-        ## Write data
-        for col in dfwrite:
-            group.create_dataset(
-                col,
-                data=dfwrite[col],
-                dtype=dfwrite.dtypes[col],
-                compression=compression,
-                compression_opts=compression_opts,
-                **kwargs,
-            )
-
-    return dfwrite
-
-
 def dfdict_to_h5(
     dfdict,
     filepath,
@@ -179,7 +84,7 @@ def dfdict_to_h5(
     ### iterate over symbols and add to .h5 file
     for key in _symbol_list:
         try:
-            write_to_h5(
+            reeds.io.write_output_to_h5(
                 df=dfdict[key],
                 key=rename.get(key, key),
                 filepath=_filepath,
@@ -277,53 +182,6 @@ def write_dfdict(
 
 
 #%% Functions for extra postprocessing of particular outputs
-def timeslice_to_timestamp(case, param):
-    ### Load the timestamps and other ReEDS settings
-    # timestamps = pd.read_csv(os.path.join(case,'inputs_case','timestamps.csv'))
-    # h_szn = pd.read_csv(os.path.join(case,'inputs_case','h_szn.csv'))
-    h_dt_szn = pd.read_csv(os.path.join(case,'inputs_case','h_dt_szn.csv'))
-    sw = pd.read_csv(
-        os.path.join(runname, 'inputs_case', 'switches.csv'), header=None, index_col=0
-    ).squeeze(1)
-    sw['GSw_HourlyWeatherYears'] = [int(y) for y in sw['GSw_HourlyWeatherYears'].split('_')]
-    ### Get the timestamps for the modeled weather yeras
-    hs = h_dt_szn.loc[
-        h_dt_szn.year.isin(sw['GSw_HourlyWeatherYears']),
-        'h'
-    ].to_frame()
-    hs['timestamp'] = pd.concat([
-        pd.Series(
-            pd.date_range(
-                f'{y}-01-01', f'{y+1}-01-01', inclusive='left', freq='H', tz='EST',
-            )[:8760])
-        for y in sw['GSw_HourlyWeatherYears']
-    ]).values
-    hs = hs.set_index('timestamp').h.tz_localize('UTC').tz_convert('EST')
-    ### Load the ReEDS output file
-    rename = {'allh':'h', 'allt':'t'}
-    dfin_timeslice = pd.read_csv(
-        os.path.join(case,'outputs',f'{param}.csv')
-    ).rename(columns=rename)
-    ## check if empty
-    if dfin_timeslice.empty:
-        raise Exception(f'{param}.csv is empty; skipping timestamp processing')
-    indices = [c for c in dfin_timeslice if c != 'Value']
-    if 'h' not in indices:
-        raise Exception(f"{param} does not have an h index: {indices}")
-    indices_fixed = [c for c in indices if c != 'h']
-    ### Convert to an hourly timeseries
-    dfout_h = (
-        dfin_timeslice
-        .pivot(index='h', columns=indices_fixed, values='Value')
-        ## Create entries for each timestamp but labeled by timeslices
-        .loc[hs]
-        .fillna(0)
-        ## Add the timestamp index
-        .set_index(hs.index)
-    )
-    return dfout_h
-
-
 def timestamp_to_month(dfin_timestamp):
     """
     Index should be a DateTimeIndex
@@ -347,40 +205,38 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Convert ReEDS run results from gdx to specified filetype"
     )
-    parser.add_argument("runname", help="ReEDS scenario name")
+    parser.add_argument("case", help="ReEDS scenario name")
     parser.add_argument('--csv', '-c', action='store_true', help='write csv files')
     parser.add_argument('--xlsx', '-x', action='store_true', help='write xlsx file')
 
     args = parser.parse_args()
-    runname = args.runname
+    case = args.case
     write_csv = args.csv
     write_xlsx = args.xlsx
 
     # #%% Inputs for debugging
-    # runname = os.path.expanduser('~/github2/ReEDS-2.0/runs/v20260106_h5M0_Pacific')
+    # case = os.path.expanduser('~/github2/ReEDS-2.0/runs/v20250302_commonM0_Pacific')
 
     #%% Set up logger
     reeds_path = os.path.abspath(os.path.dirname(__file__))
     site.addsitedir(os.path.join(reeds_path, 'input_processing'))
     try:
-        from ticker import toc, makelog
-        log = makelog(scriptname=__file__, logpath=os.path.join(runname, "gamslog.txt"))
+        from reeds.log import toc, makelog
+        log = makelog(scriptname=__file__, logpath=os.path.join(case, "gamslog.txt"))
     except ModuleNotFoundError:
-        print("ticker.py not found, so not logging output")
+        print("reeds/log.py not found, so not logging output")
 
     print("Starting e_report_dump.py")
 
     # %%### Parse inputs and get switches
-    outputs_path = os.path.join(runname, "outputs")
+    outputs_path = os.path.join(case, "outputs")
 
     ### Get switches
-    sw = pd.read_csv(
-        os.path.join(runname, "inputs_case", "switches.csv"), header=None, index_col=0
-    ).squeeze(1)
+    sw = reeds.io.get_switches(case)
 
     ### Get new file names if applicable
     dfparams = pd.read_csv(
-        os.path.join(runname, "e_report_params.csv"),
+        os.path.join(case, "e_report_params.csv"),
         comment="#",
         index_col="param",
     )
@@ -393,7 +249,7 @@ if __name__ == '__main__':
     ### outputs gdx
     print("Loading outputs gdx")
     dict_out = gdxpds.to_dataframes(
-        os.path.join(outputs_path, f"rep_{os.path.basename(runname)}.gdx")
+        os.path.join(outputs_path, f"rep_{os.path.basename(case)}.gdx")
     )
     print("Finished loading outputs gdx")
 
@@ -409,7 +265,7 @@ if __name__ == '__main__':
     if int(sw.GSw_calc_powfrac):
         print("Loading powerfrac gdx")
         dict_powerfrac = gdxpds.to_dataframes(
-            os.path.join(outputs_path, f"rep_powerfrac_{os.path.basename(runname)}.gdx")
+            os.path.join(outputs_path, f"rep_powerfrac_{os.path.basename(case)}.gdx")
         )
         print("Finished loading powerfrac gdx")
 
@@ -422,7 +278,7 @@ if __name__ == '__main__':
     #%% Special handling of particular outputs
     ## Hydrogen prices by month
     try:
-        dfin_timestamp = timeslice_to_timestamp(runname, 'h2_price_h')
+        dfin_timestamp = reeds.timeseries.timeslice_to_timestamp(case, 'h2_price_h')
         dfout_month = timestamp_to_month(dfin_timestamp)
         dfout_month.rename(columns={'Value':'$2004/kg'}).to_csv(
             os.path.join(outputs_path, 'h2_price_month.csv'), index=False)
@@ -433,6 +289,6 @@ if __name__ == '__main__':
     #%% All done
     print("Completed e_report_dump.py")
     try:
-        toc(tic=tic, year=0, path=runname, process="e_report_dump.py")
+        toc(tic=tic, year=0, path=case, process="e_report_dump.py")
     except NameError:
-        print("ticker.py not found, so not logging output")
+        print("reeds/log.py not found, so not logging output")

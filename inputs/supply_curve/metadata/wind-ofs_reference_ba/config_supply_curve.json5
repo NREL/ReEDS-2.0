@@ -1,0 +1,19 @@
+{
+    "execution_control": {
+        "allocation": "wetosa",
+        "option": "kestrel",
+        "nodes": 1,
+        "walltime": 1,
+        "feature": "-p debug"
+    },
+    "log_directory": "./logs",
+    "log_level": "INFO",
+    "trans_table": [
+        "/projects/rev/data/transmission/north_america/conus/least_cost/offshore/reinforcement_v3/transmission_reinforced_1000MW_176.csv"
+    ],
+    "sc_points": "PIPELINE",
+    "sc_capacity_col": "capacity_ac_mw",
+    "simple": true,
+    "sort_on": "lcoe_all_in_usd_per_mwh",
+    "fixed_charge_rate": 0.07073
+}

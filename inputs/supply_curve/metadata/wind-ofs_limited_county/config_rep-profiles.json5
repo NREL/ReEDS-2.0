@@ -1,0 +1,35 @@
+{
+    "cf_dset": "cf_profile-{}",
+    "log_directory": "./logs",
+    "execution_control": {
+        "allocation": "wetosa",
+        "nodes": 1,
+        "option": "kestrel",
+        "sites_per_worker": 100,
+        "walltime": 1
+
+    },
+    "gen_fpath": "/projects/rev/projects/weto/fy24/standard_scenarios/osw/rev/hrrr_generation/hrrr_generation_multi_year.h5",
+    "analysis_years": [
+        2007,
+        2008,
+        2009,
+        2010,
+        2011,
+        2012,
+        2013,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023
+    ],
+    "log_level": "INFO",
+    "rev_summary": "/projects/rev/projects/weto/fy24/standard_scenarios/osw/rev/aggregation/hrrr_limited/hrrr_limited_supply-curve_post_proc.csv",
+    "aggregate_profiles": true,
+    "reg_cols": "sc_gid"
+}

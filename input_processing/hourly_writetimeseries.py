@@ -2,17 +2,16 @@
 ### --- IMPORTS ---
 ### ===========================================================================
 import os
+import sys
 import logging
 import shutil
+import datetime
 import pandas as pd
 import numpy as np
 import h5py
-### Local imports
-from ldc_prep import read_file
-from writedrshift import get_dr_shifts
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 ##% Time the operation of this script
-from ticker import makelog
-import datetime
 tic = datetime.datetime.now()
 ## Turn off logging for imported packages
 for i in ['matplotlib']:
@@ -26,122 +25,77 @@ decimals = 3
 interactive = False
 ### Indicate whether to save the old h17 inputs for comparison
 debug = True
-### Indicate the full possible collection of weather years
-all_weatheryears = list(range(2007,2014))
 
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
 ### ===========================================================================
-
-def h2timestamp(h, tz='EST'):
-    """
-    Map ReEDS timeslice to actual timestamp
-    """
-    hr = (int(h.split('h')[1]) - 1 if 'h' in h else 0)
-    if 'd' in h:
-        y = int(h.strip('sy').split('d')[0])
-        d = int(h.split('d')[1].split('h')[0])
-    else:
-        y = int(h.strip('sy').split('w')[0])
-        w = int(h.split('w')[1].split('h')[0])
-        d = (w-1) * 5 + 1 + hr // 24
-    out = pd.to_datetime(f'y{y}d{d}h{hr%24}', format='y%Yd%jh%H').tz_localize(tz)
-    return out
-
-
-def timestamp2h(ts, GSw_HourlyType='day'):
-    """
-    Map actual timestamp to ReEDS period
-    """
-    # ts = pd.Timestamp(year=2007, month=3, day=28)
-    y = ts.year
-    d = int(ts.strftime('%j').lstrip('0'))
-    if GSw_HourlyType == 'wek':
-        w = d // 5
-        h = (d % 5) * 24 + ts.hour + 1
-        out = f'y{y}w{w:>03}h{h:>03}'
-    else:
-        h = ts.hour + 1
-        out = f'y{y}d{d:>03}h{h:>03}'
-    return out
-
-def get_timeindex(firstyear=2007, lastyear=2013, tz='EST'):
-    """
-    ReEDS time indices are in EST, and leap years drop Dec 31 instead of Feb 29
-    """
-    timeindex = np.ravel([
-        pd.date_range(
-            f'{y}-01-01', f'{y+1}-01-01',
-            freq='H', inclusive='left', tz=tz,
-        )[:8760]
-        for y in range(firstyear, lastyear+1)
-    ])
-    return timeindex
-
-
 def make_8760_map(period_szn, sw):
     """
     """
     hoursperperiod = {'day':24, 'wek':120, 'year':24}[sw['GSw_HourlyType']]
     periodsperyear = {'day':365, 'wek':73, 'year':365}[sw['GSw_HourlyType']]
+    fulltimeindex = reeds.timeseries.get_timeindex(sw.resource_adequacy_years_list)
     ### Start with all weather years
-    hmap_7yr = pd.DataFrame({
-        'timestamp': get_timeindex(firstyear=2007, lastyear=2013),
-        'year': np.ravel([[y]*8760 for y in all_weatheryears]),
+    hmap_allyrs = pd.DataFrame({
+        'timestamp': fulltimeindex,
+        'year': np.ravel([[y]*8760 for y in sw.resource_adequacy_years_list]),
         'yearperiod': np.ravel([
             [h+1 for d in range(365) for h in (d,)*24] if sw['GSw_HourlyType'] == 'year'
             else [h+1 for d in range(periodsperyear)
                   for h in (d,)*hoursperperiod]
-            for y in all_weatheryears]),
-        'hour': range(1, 8760*len(all_weatheryears) + 1),
-        'hour0': range(8760*len(all_weatheryears)),
-        'yearhour': np.ravel(list(range(1,8761))*len(all_weatheryears)),
+            for y in sw.resource_adequacy_years_list]),
+        'hour': range(1, 8760*len(sw.resource_adequacy_years_list) + 1),
+        'hour0': range(8760*len(sw.resource_adequacy_years_list)),
+        'yearhour': np.ravel(list(range(1,8761))*len(sw.resource_adequacy_years_list)),
         'periodhour': (
-            list(range(1,25))*365*len(all_weatheryears)
+            list(range(1,25))*365*len(sw.resource_adequacy_years_list)
             if sw['GSw_HourlyType'] == 'year'
-            else list(range(1,hoursperperiod+1))*periodsperyear*len(all_weatheryears)),
+            else (
+                list(range(1, hoursperperiod+1))
+                * periodsperyear
+                * len(sw.resource_adequacy_years_list))
+        ),
     })
-    hmap_7yr['actual_period'] = (
-        'y' + hmap_7yr.year.astype(str)
+    hmap_allyrs['actual_period'] = (
+        'y' + hmap_allyrs.year.astype(str)
         + ('w' if sw.GSw_HourlyType == 'wek' else 'd')
-        + hmap_7yr.yearperiod.astype(str).map('{:>03}'.format)
+        + hmap_allyrs.yearperiod.astype(str).map('{:>03}'.format)
     )
-    hmap_7yr['actual_h'] = (
-        hmap_7yr.actual_period
-        + 'h' + hmap_7yr.periodhour.astype(str).map('{:>03}'.format)
+    hmap_allyrs['actual_h'] = (
+        hmap_allyrs.actual_period
+        + 'h' + hmap_allyrs.periodhour.astype(str).map('{:>03}'.format)
     )
-    hmap_7yr['season'] = hmap_7yr.actual_period.map(
+    hmap_allyrs['season'] = hmap_allyrs.actual_period.map(
         period_szn.set_index('actual_period').season)
-    hmap_7yr['month'] = hmap_7yr.timestamp.dt.strftime('%b').str.upper()
+    hmap_allyrs['month'] = hmap_allyrs.timestamp.dt.strftime('%b').str.upper()
     ### create the timestamp index: y{20xx}d{xxx}h{xx} (left-padded with 0)
     if sw['GSw_HourlyType'] == 'year':
         ### If using a chronological year (i.e. 8760) the day index uses actual days
-        hmap_7yr['h'] = (
-            'y' + hmap_7yr.year.astype(str)
-            + 'd' + hmap_7yr.yearperiod.astype(str).map('{:>03}'.format)
-            + 'h' + hmap_7yr.periodhour.astype(str).map('{:>03}'.format)
+        hmap_allyrs['h'] = (
+            'y' + hmap_allyrs.year.astype(str)
+            + 'd' + hmap_allyrs.yearperiod.astype(str).map('{:>03}'.format)
+            + 'h' + hmap_allyrs.periodhour.astype(str).map('{:>03}'.format)
         )
     else:
         ### If using representative periods (days/weks) the period index uses
         ### representative periods, which are in the 'season' column
-        hmap_7yr['h'] = (
-            hmap_7yr.season
-            + 'h' + hmap_7yr.periodhour.astype(str).map('{:>03}'.format)
+        hmap_allyrs['h'] = (
+            hmap_allyrs.season
+            + 'h' + hmap_allyrs.periodhour.astype(str).map('{:>03}'.format)
         )
     ### hmap_myr (for "model years") only contains the actually-modeled periods
-    hmap_myr = hmap_7yr.dropna(subset=['season']).copy()
+    hmap_myr = hmap_allyrs.dropna(subset=['season']).copy()
 
-    return hmap_7yr, hmap_myr
+    return hmap_allyrs, hmap_myr
 
 
 def get_ccseason_peaks_hourly(load, sw, inputs_case, hierarchy, h2ccseason, val_r_all):
-
     ### Aggregate demand by GSw_PRM_hierarchy_level
     if sw['GSw_PRM_hierarchy_level'] == 'r':
         rmap = pd.Series(hierarchy.index, index=hierarchy.index)
     else:
-        rmap = hierarchy[sw['GSw_PRM_hierarchy_level']].squeeze()
+        rmap = hierarchy[sw['GSw_PRM_hierarchy_level']]
     load_agg = (
         load.assign(region=load.r.map(rmap))
         .groupby(['h','region']).MW.sum()
@@ -189,6 +143,92 @@ def append_csp_profiles(cf_rep, sw):
     return cf_combined
 
 
+def get_dr_shifts(
+    sw,
+    inputs_case,
+    native_data=True,
+    hmap_7yr=None,
+    chunkmap=None,
+    hours=None,
+):
+    """
+    part of shift demand response handling compatible both with h17 and hourly ReEDS
+    hours, hmap_7yr, and chunkmap are needed for mapping hourly because there is no
+    fixed assumption for temporal structure of run
+    """
+
+    dr_hrs = pd.read_csv(
+        os.path.join(
+            inputs_case, 'dr_shifts.csv')
+    )
+    
+    # write out dr_hrs for Augur
+    dr_hrs.to_csv(os.path.join(inputs_case, 'dr_hrs.csv'), index=False)
+
+    dr_pos = dr_hrs[['dr_type', 'pos_hrs']].reindex(dr_hrs.index.repeat(dr_hrs.pos_hrs))
+    dr_pos['shift'] = dr_pos['pos_hrs'] - dr_pos.groupby(['dr_type']).cumcount()
+
+    dr_neg = dr_hrs[['dr_type', 'neg_hrs']].reindex(dr_hrs.index.repeat(-1*dr_hrs.neg_hrs))
+    dr_neg['shift'] = dr_neg['neg_hrs'] + dr_neg.groupby(['dr_type']).cumcount()
+
+    dr_shifts = pd.concat([dr_pos.rename({'pos_hrs': 'hrs'}, axis=1),
+                           dr_neg.rename({'neg_hrs': 'hrs'}, axis=1)])
+
+    #### native_data reads in inputs directly
+    if native_data:
+        hr_ts = pd.read_csv(
+            os.path.join(inputs_case, 'h_dt_szn.csv'))
+        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
+
+        num_hrs = pd.read_csv(
+            os.path.join(inputs_case, 'numhours.csv'),
+            header=0, names=['h', 'numhours'], index_col='h').squeeze(1)
+    # otherwise reformat to hourly timeslice subsets
+    else:
+        hr_ts = hmap_7yr[['h','season','year','hour']].assign(h=hmap_7yr.h.map(chunkmap))
+        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
+        num_hrs = (
+            hours.reset_index().assign(h=hours.index.map(chunkmap))
+            .groupby('h').numhours.sum().reset_index())
+
+    #### after here the rest is the same
+    dr_shifts['key'] = 1
+    hr_ts['key'] = 1
+    hr_shifts = pd.merge(dr_shifts, hr_ts, on='key').drop('key', axis=1)
+    hr_shifts['shifted_hr'] = hr_shifts['hour'] + hr_shifts['shift']
+    # Adjust hrs to be between 1 and 8760
+    lt0 = hr_shifts.shifted_hr <= 0
+    gt8760 = hr_shifts.shifted_hr > 8760
+    hr_shifts.loc[lt0, 'shifted_hr'] += 8760
+    hr_shifts.loc[gt8760, 'shifted_hr'] -= 8760
+
+    # Merge on hr_ts again to the shifted hours to see what timeslice DR
+    # can move load into
+    hr_shifts = pd.merge(hr_shifts,
+                         hr_ts.rename({'h':'shifted_h', 'hour':'shifted_hr',
+                                       'season':'shifted_season'}, axis=1),
+                         on='shifted_hr').drop('key', axis=1)
+    # Only allow shifts within the same season
+    hr_shifts = hr_shifts[hr_shifts.season == hr_shifts.shifted_season]
+    hr_shifts.drop(['shifted_season'], axis=1, inplace=True)
+
+    hr_shifts2 = (
+        hr_shifts[['dr_type','h','hour','shifted_h']]
+        .drop_duplicates()
+        .groupby(['dr_type','h','shifted_h'])
+        .size()
+        .reset_index()
+    )
+
+    ts_shifts = pd.merge(hr_shifts2, num_hrs, on='h')
+    ts_shifts['shift_frac'] = ts_shifts[0] / ts_shifts['numhours']
+
+    shift_out = ts_shifts.loc[ts_shifts['h'] != ts_shifts['shifted_h'], :]
+    shift_out = shift_out.round(4)
+
+    return shift_out, dr_shifts
+
+
 def get_minloading_windows(sw, h_szn, chunkmap):
     """
     Create combinations of h's within GSw_HourlyWindow of each other,
@@ -228,24 +268,22 @@ def get_minloading_windows(sw, h_szn, chunkmap):
 
 
 def get_yearly_demand(
-        sw, hmap_myr, hmap_7yr, inputs_case,
+        sw, hmap_myr, hmap_allyrs, inputs_case,
     ):
     """
     After clustering based on GSw_HourlyClusterYear and identifying the modeled days,
     reload the raw demand and extract the demand on the modeled days for each year.
     """
     ### Get original demand data, subset to cluster year
-    load_in = read_file(
-        os.path.join(inputs_case,'load.h5'), parse_timestamps=True, index_columns=2).unstack(level=0)
+    load_in = reeds.io.read_file(
+        os.path.join(inputs_case,'load.h5'), parse_timestamps=True).unstack(level=0)
     load_in.columns = load_in.columns.rename(['r','t'])
     ### load.h5 is busbar load, but b_inputs.gms ingests end-use load, so scale down by distloss
-    scalars = pd.read_csv(
-        os.path.join(inputs_case,'scalars.csv'),
-        header=None, usecols=[0,1], index_col=0).squeeze(1)
+    scalars = reeds.io.get_scalars(inputs_case)
     load_in *= (1 - scalars['distloss'])
 
     ### Add time index
-    load_in.index = load_in.index.map(hmap_7yr.set_index('timestamp')['actual_h']).rename('h')
+    load_in.index = load_in.index.map(hmap_allyrs.set_index('timestamp')['actual_h']).rename('h')
 
     load_out = load_in.copy()
     ### If using representative (i.e. medoid) periods, pull out the representative periods.
@@ -254,7 +292,7 @@ def get_yearly_demand(
     ### Otherwise, if using full year, we keep the modeled years
     else:
         load_out = load_out.loc[
-            load_out.index.map(hmap_7yr.set_index('actual_h').year)
+            load_out.index.map(hmap_allyrs.set_index('actual_h').year)
             .isin(sw['GSw_HourlyWeatherYears'])
         ].copy()
 
@@ -369,8 +407,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
     # inputs_case = os.path.join(reeds_path, 'runs', 'v20240708_tforM3_Pacific', 'inputs_case')
-    # sw = pd.read_csv(
-    #     os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
+    # sw = reeds.io.get_switches(inputs_case)
     # periodtype = 'rep'
     # periodtype = 'stress2010i0'
     # make_plots = int(sw.hourly_cluster_plots)
@@ -378,7 +415,10 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     # figpathtail = ''
 
     #%% Set up logger
-    _log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+    _log = reeds.log.makelog(
+        scriptname=__file__,
+        logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+    )
 
     #%% Parse some switches
     if not isinstance(sw['GSw_HourlyWeatherYears'], list):
@@ -427,6 +467,10 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         write = {
             'set_h': ['*h'],
             'set_szn': ['*szn'],
+            'h_preh': ['*h','preh'],
+            'szn_actualszn': ['*season', 'actual_period'],
+            'numpartitions': ['*actual_period', 'next_actual_period'],
+            'nextpartition': ['*actual_period', 'next_actual_period'],
             'h_szn': ['*h','season'],
             'h_dt_szn': ['h','season','ccseason','year','hour'],
             'numhours': ['*h','numhours'],
@@ -473,12 +517,12 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     #%%### Process the representative period weights
     #%% Generate map from actual to representative periods
-    hmap_7yr, hmap_myr = make_8760_map(period_szn=period_szn, sw=sw)
+    hmap_allyrs, hmap_myr = make_8760_map(period_szn=period_szn, sw=sw)
     ### Add prefix if necessary
     if tprefix:
         for col in ['actual_period','actual_h','season','h']:
             hmap_myr[col] = tprefix + hmap_myr[col]
-            hmap_7yr[col] = tprefix + hmap_7yr[col]
+            hmap_allyrs[col] = tprefix + hmap_allyrs[col]
         for col in ['rep_period','actual_period']:
             period_szn[col] = tprefix + period_szn[col]
         if not ((sw['GSw_HourlyType'] == 'year') and (periodtype == 'rep')):
@@ -489,19 +533,18 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     ### Add ccseasons
     h_dt_szn_h17 = pd.read_csv(os.path.join(inputs_case,'h_dt_szn_h17.csv'))
-    hmap_7yr['ccseason'] = h_dt_szn_h17.ccseason.values
+    hmap_allyrs['ccseason'] = h_dt_szn_h17.ccseason.values
 
     #%%### Load full hourly RE CF, for downselection below
     #%% VRE
-    recf = pd.read_hdf(os.path.join(inputs_case,'recf.h5'))
-    resources = pd.read_csv(os.path.join(inputs_case,'resources.csv'))
+    recf = reeds.io.read_file(os.path.join(inputs_case, 'recf.h5'), parse_timestamps=True)
     ### Overwrite CSP CF (which in recf.h5 is post-storage) with solar field CF
-    cspcf = pd.read_hdf(os.path.join(inputs_case,'csp.h5'))
+    cspcf = reeds.io.read_file(os.path.join(inputs_case, 'csp.h5'), parse_timestamps=True)
     recf = (
         recf.drop([c for c in recf if c.startswith('csp')], axis=1)
         .merge(cspcf, left_index=True, right_index=True)
-    ).loc[hmap_7yr.timestamp]
-    recf.index = hmap_7yr.actual_h
+    ).loc[hmap_allyrs.timestamp]
+    recf.index = hmap_allyrs.actual_h
 
     #%% Get data for representative periods
     rep_periods = sorted(period_szn.rep_period.unique())
@@ -536,7 +579,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     # create the timeslice-to-season and timeslice-to-ccseason mappings
     h_szn = hmap_myr[['h','season']].drop_duplicates().reset_index(drop=True)
-    h_ccseason = hmap_7yr[['h','ccseason']].drop_duplicates().reset_index(drop=True)
+    h_ccseason = hmap_allyrs[['h','ccseason']].drop_duplicates().reset_index(drop=True)
 
     ### create the set of szn's modeled in ReEDS
     set_szn = pd.DataFrame({'szn':period_szn.season.sort_values().unique()})
@@ -597,8 +640,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             frac_h_weights[season] = frac_h_weights[season].reset_index()
     else:
         for season in ['quarter','ccseason']:
-            frac_h_weights[season] = hmap_7yr.copy()
-            frac_h_weights[season][season] = hmap_7yr.yearhour.map(
+            frac_h_weights[season] = hmap_allyrs.copy()
+            frac_h_weights[season][season] = hmap_allyrs.yearhour.map(
                 {'quarter':quarters, 'ccseason':ccseasons}[season])
             frac_h_weights[season] = (
                 frac_h_weights[season].groupby(['actual_h',season]).actual_period.count()
@@ -611,7 +654,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ### Calculate the fraction of hours of each h associated with each calendar month,
     ### for compatibility with model inputs that are defined by quarter
     # Get a map from hour-of-year to ReEDS month
-    months = hmap_7yr.iloc[:8760].set_index('hour').month
+    months = hmap_allyrs.iloc[:8760].set_index('hour').month
     
     if periodtype == 'rep':
         frac_h_month_weights = hmap_myr.copy()
@@ -625,8 +668,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         ).rename('weight')
         frac_h_month_weights = frac_h_month_weights.reset_index()
     else:
-        frac_h_month_weights = hmap_7yr.copy()
-        frac_h_month_weights['month'] = hmap_7yr.yearhour.map(months)
+        frac_h_month_weights = hmap_allyrs.copy()
+        frac_h_month_weights['month'] = hmap_allyrs.yearhour.map(months)
         frac_h_month_weights = (
             frac_h_month_weights.groupby(['actual_h','month']).actual_period.count()
         ).rename_axis(['h','month']).rename('weight').reset_index()
@@ -706,34 +749,34 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         np.ravel([[c]*GSw_HourlyChunkLength for c in outchunks])
     ))
 
-    outchunks_7yr = hmap_7yr.actual_h[GSw_HourlyChunkLength-1::GSw_HourlyChunkLength]
-    chunkmap_7yr = dict(zip(
-        hmap_7yr.actual_h.values,
-        np.ravel([[c]*GSw_HourlyChunkLength for c in outchunks_7yr])
+    outchunks_allyrs = hmap_allyrs.actual_h[GSw_HourlyChunkLength-1::GSw_HourlyChunkLength]
+    chunkmap_allyrs = dict(zip(
+        hmap_allyrs.actual_h.values,
+        np.ravel([[c]*GSw_HourlyChunkLength for c in outchunks_allyrs])
     ))
 
     #%%### h_dt_szn for Augur
     if not len(hmap_myr) % 8760:
-        ## Important: When modeling a single weather year, rep periods in the 7-year
-        ## h_dt_szn table are just the single-year periods concatenated 7 times.
+        ## Important: When modeling a single weather year, rep periods in the
+        ## h_dt_szn table are just the single-year periods concatenated n times.
         ## In that case electrolyzer demand (optimized for GSw_HourlyWeatherYears, usually
         ## 2012) won't line up with optimal operation times (low demand / high wind/solar)
         ## outside of the single reprsentative year.
         h_dt_szn = pd.concat(
             {y: hmap_myr.drop_duplicates(['yearhour']).drop('year', axis=1)
-            for y in range(2007,2014)}, names=('year',),
+            for y in sw.resource_adequacy_years_list}, names=('year',),
             axis=0,
         ).reset_index(level='year').reset_index(drop=True)
         h_dt_szn['ccseason'] = h_dt_szn_h17.ccseason.values
-        h_dt_szn['hour'] = (h_dt_szn.year-2007)*8760 + h_dt_szn.yearhour
-        h_dt_szn['hour0'] = h_dt_szn.hour - 1
+        h_dt_szn['hour0'] = h_dt_szn.index
+        h_dt_szn['hour'] = h_dt_szn['hour0'] + 1
         for col in ['actual_period', 'actual_h']:
             h_dt_szn[col] = 'y' + h_dt_szn.year.astype(str) + h_dt_szn[col].str[5:]
     ## If hmap_myr contains less than a full year (e.g. for stress periods),
     ## just use hmap_myr as-is.
     else:
         h_dt_szn = hmap_myr.copy()
-        h_dt_szn['ccseason'] = h_dt_szn.actual_h.map(hmap_7yr.set_index('actual_h').ccseason)
+        h_dt_szn['ccseason'] = h_dt_szn.actual_h.map(hmap_allyrs.set_index('actual_h').ccseason)
 
     ################################################
     #    -- Season starting and ending hours --    #
@@ -749,7 +792,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ### next timeslice
     nexth_actualszn = (
         hmap_myr.assign(h=hmap_myr.h.map(chunkmap))
-        [[('season' if ((sw.GSw_HourlyType == 'year') and (periodtype == 'rep')) else 'actual_period'),'h']]
+        [[('season' if ((sw.GSw_HourlyType == 'year') and (periodtype == 'rep')) 
+           else 'actual_period'),'h']]
         .drop_duplicates()
         .rename(columns={'actual_period':'allszn', 'season':'allszn'})
     ).copy()
@@ -760,8 +804,75 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     ### h-to-actual-period mapping for inter-period storage
     h_actualszn = (
         hmap_myr.assign(h=hmap_myr.h.map(chunkmap))
-        [['h',('season' if ((sw.GSw_HourlyType == 'year') and (periodtype == 'rep')) else 'actual_period')]]
+        [['h',('season' if ((sw.GSw_HourlyType == 'year') and (periodtype == 'rep'))
+                else 'actual_period')]]
         .drop_duplicates())
+    
+    ### The following four sets are used for the inter-day linkage constraints for energy storage
+    ### Inter-day linkage only applicable to rep day and wek scenarios, so we only need to calculate these sets for
+    ### rep day and wek scenarios, otherwise they are empty
+    if sw.GSw_HourlyType in ['day', 'wek']:
+        ### Write rep period to actual period mapping set for inter-day storage linkage
+        szn_actualszn = (
+            hmap_myr.assign(h=hmap_myr.h.map(chunkmap))
+            [['season', 'actual_period']]
+            .drop_duplicates())
+        
+        ### Group actual period to partitions and count number of partitions of for each actual period
+        numpartitions = (
+            hmap_myr.assign(h=hmap_myr.h.map(chunkmap))
+            [['season', 'actual_period']]
+            .drop_duplicates()).copy()
+
+        if 'actual_period' not in numpartitions.columns:
+            numpartitions['actual_period'] = numpartitions['season']
+
+        numpartitions['partition'] = (
+            numpartitions['season'] != numpartitions['season'].shift()
+        ).cumsum()
+
+        count_partition = numpartitions.groupby('partition').size()
+        numpartitions['partition_count'] = numpartitions['partition'].map(count_partition)
+
+        numpartitions = (
+            numpartitions.drop_duplicates('partition')
+            [['actual_period', 'partition_count']]
+            .reset_index(drop=True)
+        )
+
+        ### Write next partition mapping set
+        nextpartition = numpartitions[['actual_period']].copy()
+        nextpartition['next_actual_period'] = nextpartition['actual_period'].shift(-1)
+        nextpartition.iloc[-1, nextpartition.columns.get_loc('next_actual_period')
+                           ] = nextpartition['actual_period'].iloc[0]
+
+        ### Write mapping set between current hour and previous hours before current hour 
+        ### of the period to assist the inter-day linkage constraints. For example:
+        ### y2012d001h004 -> [y2012d001h004]
+        ### y2012d001h008 -> [y2012d001h004, y2012d001h008]
+        ### y2012d001h012 -> [y2012d001h004, y2012d001h008, y2012d001h012]
+        unique_timeslices = (
+            hmap_myr
+            .assign(h=hmap_myr.h.map(chunkmap))
+            .drop_duplicates('h')
+            .sort_values('h')
+        )
+        h_preh = pd.Series(
+            index=unique_timeslices.h,
+            data=(
+                unique_timeslices
+                .groupby('season')
+                .h.apply(lambda x: (x+' ').cumsum().str.strip().str.split())
+                .values
+            ),
+            name='preh',
+        ).explode().reset_index()
+
+    else:
+        szn_actualszn = pd.DataFrame(columns=['season', 'actual_period'])
+        numpartitions = pd.DataFrame(columns=['actual_period', 'partition_count'])
+        nextpartition = pd.DataFrame(columns=['actual_period', 'next_actual_period'])
+        h_preh = pd.DataFrame(columns=['h', 'preh'])
 
     ### Number of times one h follows another h (for startup/ramping costs)
     numhours_nexth = (
@@ -791,12 +902,12 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
                 }
     else:
         ### Get runs of periods
-        ## Two copies in case it loops from 2013-12-31 to 2007-01-01
+        ## Two copies in case it loops from end of timeseries to beginning
         unique_periods = list(hmap_myr.actual_period.unique())*2
         ## Map from each actual period to the next actual period
         next_actual_period = dict(zip(
-            hmap_7yr.actual_period.drop_duplicates().values,
-            np.roll(hmap_7yr.actual_period.drop_duplicates().values, -1),
+            hmap_allyrs.actual_period.drop_duplicates().values,
+            np.roll(hmap_allyrs.actual_period.drop_duplicates().values, -1),
         ))
         _runs = []
         for period in unique_periods:
@@ -825,14 +936,14 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         ### Cyclic boundary conditions within each run of periods
         nexth_unchunked = {}
         for i, row in longest_run.items():
-            hs = hmap_7yr.set_index('actual_period').loc[row,'h']
+            hs = hmap_allyrs.set_index('actual_period').loc[row,'h']
             nexth_unchunked = {
                 **nexth_unchunked,
                 **dict(zip(hs, np.roll(hs, -1)))
             }
 
     nexth = pd.Series({
-        chunkmap_7yr[k]: chunkmap_7yr[v] for k,v in nexth_unchunked.items()
+        chunkmap_allyrs[k]: chunkmap_allyrs[v] for k,v in nexth_unchunked.items()
     }).rename_axis('*h').rename('h')
 
 
@@ -847,14 +958,14 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
     #############################
 
     load_in, load_h = get_yearly_demand(
-        sw=sw, hmap_myr=hmap_myr, hmap_7yr=hmap_7yr, inputs_case=inputs_case)
+        sw=sw, hmap_myr=hmap_myr, hmap_allyrs=hmap_allyrs, inputs_case=inputs_case)
 
     ###### Get the peak demand in each (r,szn,modelyear) for GSw_HourlyWeatherYears
     load_full_yearly = load_in.loc[
-        load_in.index.map(hmap_7yr.set_index('actual_h').year.isin(sw['GSw_HourlyWeatherYears']))
+        load_in.index.map(hmap_allyrs.set_index('actual_h').year.isin(sw['GSw_HourlyWeatherYears']))
     ].stack('r').reset_index()
 
-    h2ccseason = hmap_7yr.set_index('actual_h').ccseason
+    h2ccseason = hmap_allyrs.set_index('actual_h').ccseason
     years = pd.read_csv(os.path.join(inputs_case,'modeledyears.csv')).columns.astype(int).values
 
     peak_all = {}
@@ -935,7 +1046,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     #%%### Outage rates ######
     infile = os.path.join(inputs_case, 'forcedoutage_hourly.h5')
-    tz = 'Etc/GMT+5'
+    tz = 'Etc/GMT+6'
     with h5py.File(infile, 'r') as f:
         forcedoutage_hourly = pd.DataFrame(
             index=pd.to_datetime(pd.Series(f['index']).map(lambda x: x.decode())),
@@ -950,6 +1061,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
 
     ### Aggregate to model resolution
     aggmethod = 'mean' if periodtype == 'rep' else 'max'
+
     forcedoutage_h = forcedoutage_hourly.loc[hmap_myr.timestamp].copy()
     forcedoutage_h.index = hmap_myr.h.map(chunkmap)
     forcedoutage_h = (
@@ -971,7 +1083,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
             inputs_case=inputs_case, drcat='dr')
         shift_out, dr_shifts = get_dr_shifts(
             sw=sw, inputs_case=inputs_case, native_data=False,
-            hmap_7yr=hmap_7yr, hours=hours, chunkmap=chunkmap)
+            hmap_allyrs=hmap_allyrs, hours=hours, chunkmap=chunkmap)
     else:
         dr_inc = pd.DataFrame(columns=['*i','r','h'])
         dr_dec = pd.DataFrame(columns=['*i','r','h'])
@@ -990,7 +1102,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         ## Concat for each weather year
         evmc_baseline_load_weatheryears = evmc_baseline_load.pivot(index='hour', columns=['t','r'], values='net')
         evmc_baseline_load_weatheryears = pd.concat(
-            {y: evmc_baseline_load_weatheryears for y in all_weatheryears},
+            {y: evmc_baseline_load_weatheryears for y in sw.resource_adequacy_years_list},
             axis=0, ignore_index=True).loc[hmap_myr.hour0]
         ## Map 8760 hours to modeled hours
         evmc_baseline_load_weatheryears.index = hmap_myr.h
@@ -1030,6 +1142,8 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         'set_h': [hset.map(chunkmap).drop_duplicates().to_frame(), False, False],
         ## szn set for representative periods
         'set_szn': [set_szn, False, False],
+        ## Previous hour for each h of the period
+        'h_preh': [h_preh, False, False],
         ## Hours to season mapping (h,szn)
         'h_szn': [
             h_szn.assign(h=h_szn.h.map(chunkmap)).drop_duplicates(),
@@ -1065,6 +1179,12 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         'nexth': [nexth, True, True],
         ## Hours to actual season mapping (h,allszn)
         'h_actualszn': [h_actualszn, False, False],
+        ## season to actual season mapping (szn,allszn)
+        'szn_actualszn': [szn_actualszn, False, False],
+        ## actual season partition
+        'numpartitions': [numpartitions, False, False],
+        ## next partition
+        'nextpartition': [nextpartition, False, False],
         ## mapping from one timeslice to the next for actual periods
         'nexth_actualszn': [nexth_actualszn, False, False],
         ## first timeslice in season (szn,h)
@@ -1157,9 +1277,9 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1, figpathtai
         'hmap_myr': [
             hmap_myr.assign(h=hmap_myr.h.map(chunkmap)),
             False, False],
-        ## Mapping from representative h to actual h for full 7 years
-        'hmap_7yr': [
-            hmap_7yr.assign(h=hmap_7yr.h.map(chunkmap)),
+        ## Mapping from representative h to actual h for full set of years
+        'hmap_allyrs': [
+            hmap_allyrs.assign(h=hmap_allyrs.h.map(chunkmap)),
             False, False],
         ## Mapping from representative period to actual period
         'periodmap_1yr': [

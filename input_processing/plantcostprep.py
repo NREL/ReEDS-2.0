@@ -5,11 +5,12 @@
 import pandas as pd
 import numpy as np
 import os
+import sys
 import argparse
-import support_functions as sFuncs
-# Time the operation of this script
-from ticker import toc, makelog
 import datetime
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+# Time the operation of this script
 tic = datetime.datetime.now()
 
 #%% Parse arguments
@@ -28,33 +29,15 @@ inputs_case = args.inputs_case
 #inputs_case = '/Users/apham/Documents/GitHub/ReEDS/ReEDS-2.0/runs/test_Pacific/inputs_case/'
 
 #%% Set up logger
-log = makelog(scriptname=__file__, logpath=os.path.join(inputs_case,'..','gamslog.txt'))
+log = reeds.log.makelog(
+    scriptname=__file__,
+    logpath=os.path.join(inputs_case,'..','gamslog.txt'),
+)
 print('Starting plantcostprep.py')
 
 #%% Inputs from switches
-sw = pd.read_csv(
-    os.path.join(inputs_case, 'switches.csv'), header=None, index_col=0).squeeze(1)
-convscen = sw.convscen
-onswindscen = sw.onswindscen
-ofswindscen = sw.ofswindscen
-upvscen = sw.upvscen
-cspscen = sw.cspscen
-batteryscen = sw.batteryscen
-drscen = sw.drscen
-evmcscen = sw.evmcscen
-pvbscen = sw.pvbscen
-geoscen = sw.geoscen
-hydroscen = sw.hydroscen
-beccsscen = sw.beccsscen
-ccsflexscen = sw.ccsflexscen
-h2ctscen = sw.h2ctscen
-dacscen = sw.dacscen
-GSw_DAC_Gas_Case = sw.GSw_DAC_Gas_Case
-upgradescen = sw.upgradescen
-degrade_suffix = sw.degrade_suffix
+sw = reeds.io.get_switches(inputs_case)
 caesscen = "caes_reference"
-GSw_PVB_Dur = int(sw.GSw_PVB_Dur)
-GSw_UpgradeCost_Mult = int(sw.GSw_UpgradeCost_Mult)
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
@@ -84,9 +67,7 @@ deflator = pd.read_csv(
 dollaryear = dollaryear.merge(deflator,on="Dollar.Year",how="left")
 
 #%% Get ILR_ATB from scalars
-scalars = pd.read_csv(
-    os.path.join(inputs_case,'scalars.csv'),
-    header=None, names=['scalar','value','comment'], index_col='scalar')['value']
+scalars = reeds.io.get_scalars(inputs_case)
 
 #%%###############
 #    -- PV --    #
@@ -94,12 +75,12 @@ scalars = pd.read_csv(
 
 # Adjust cost data to 2004$
 upv = pd.read_csv(os.path.join(inputs_case,'plantchar_upv.csv'))
-upv = deflate_func(upv,upvscen).set_index('t')
+upv = deflate_func(upv, sw.upvscen).set_index('t')
 
 # Prior to ATB 2020, PV costs are in $/kW_DC
 # Starting with ATB 2020 cost inputs, PV costs are in $/kW_AC
 # ReEDS uses DC capacity, so divide by inverter loading ratio
-if '2019' not in upvscen:
+if '2019' not in sw.upvscen:
     upv[['capcost','fom','vom']] = upv[['capcost','fom','vom']] / scalars['ilr_utility']
 
 # Broadcast costs to all UPV resource classes
@@ -113,20 +94,20 @@ upv_stack = pd.concat(
 ###########################
 
 conv = pd.read_csv(os.path.join(inputs_case,'plantchar_conv.csv'))
-conv = deflate_func(conv,convscen)
+conv = deflate_func(conv, sw.convscen)
 
 ccsflex = pd.read_csv(os.path.join(inputs_case,'plantchar_ccsflex_cost.csv'))
-ccsflex = deflate_func(ccsflex,ccsflexscen)
+ccsflex = deflate_func(ccsflex, sw.ccsflexscen)
 
 beccs = pd.read_csv(os.path.join(inputs_case,'plantchar_beccs.csv'))
-beccs = deflate_func(beccs,beccsscen)
+beccs = deflate_func(beccs, sw.beccsscen)
 
 h2ct = pd.read_csv(os.path.join(inputs_case,'plantchar_h2ct.csv'))
-h2ct = deflate_func(h2ct,h2ctscen)
+h2ct = deflate_func(h2ct, sw.h2ctscen)
 
-if upgradescen != 'default':
+if sw.upgradescen != 'default':
     upgrade = pd.read_csv(os.path.join(inputs_case,'plantchar_upgrades.csv'))
-    upgrade = deflate_func(upgrade,upgradescen)
+    upgrade = deflate_func(upgrade, sw.upgradescen)
     upgrade = upgrade.rename(columns={'capcost':'upgradecost'})
     upgrade = upgrade[['i','t','upgradecost']]
     upgrade['upgradecost'] *= 1000
@@ -147,7 +128,7 @@ for turb in onswinddata['turbine'].unique():
 df_class_turb = pd.DataFrame({'turbine':turb_ls, 'class':range(1, len(turb_ls) + 1)})
 onswinddata = onswinddata.merge(df_class_turb, on='turbine', how='inner')
 onswinddata = onswinddata[['tech','class','t','cf_mult','capcost','fom','vom']]
-onswinddata = deflate_func(onswinddata,onswindscen)
+onswinddata = deflate_func(onswinddata, sw.onswindscen)
 
 #%%##########################
 #    -- Offshore Wind --    #
@@ -182,7 +163,7 @@ else:
     ofswind_rsc_mult = ofswind_rsc_mult.pivot_table(index='t',columns='tech', values='rsc_mult')
     ofswinddata = ofswinddata.drop(columns=['rsc_mult'])
     ofswinddata.columns = ['tech','class','t','cf_mult','capcost','fom','vom']
-ofswinddata = deflate_func(ofswinddata,ofswindscen)
+ofswinddata = deflate_func(ofswinddata, sw.ofswindscen)
 winddata = pd.concat([onswinddata.copy(),ofswinddata.copy()])
 
 winddata.loc[winddata['tech'].str.contains('ONSHORE'),'tech'] = 'wind-ons'
@@ -197,7 +178,7 @@ wind_stack = winddata[['t','i','capcost','fom','vom']].copy()
 geodata = pd.read_csv(os.path.join(inputs_case,'plantchar_geo.csv'))
 geodata.columns = ['tech','class','depth','t','capcost','fom','vom']
 geodata['i'] = geodata['tech'] + '_' + geodata['depth'] + '_' + geodata['class'].astype(str)
-geodata = deflate_func(geodata,geoscen)
+geodata = deflate_func(geodata, sw.geoscen)
 geo_stack = geodata[['t','i','capcost','fom','vom']].copy()
 
 
@@ -207,7 +188,7 @@ geo_stack = geodata[['t','i','capcost','fom','vom']].copy()
 
 
 csp = pd.read_csv(os.path.join(inputs_case,'plantchar_csp.csv'))
-csp = deflate_func(csp,cspscen)
+csp = deflate_func(csp, sw.cspscen)
 
 csp_stack = pd.DataFrame(columns=csp.columns)
 
@@ -224,16 +205,16 @@ csp_stack = csp_stack[['t','capcost','fom','vom','i']]
 #######################
 
 battery = pd.read_csv(os.path.join(inputs_case,'plantchar_battery.csv'))
-battery = deflate_func(battery,batteryscen)
+battery = deflate_func(battery, sw.batteryscen)
 
 dr = pd.read_csv(os.path.join(inputs_case,'plantchar_dr.csv'))
-dr = deflate_func(dr,'dr_'+drscen)
+dr = deflate_func(dr, 'dr_' + sw.drscen)
 
 evmc_storage = pd.read_csv(os.path.join(inputs_case,'plantchar_evmc_storage.csv'))
-evmc_storage = deflate_func(evmc_storage,'evmc_storage_'+evmcscen)
+evmc_storage = deflate_func(evmc_storage, 'evmc_storage_' + sw.evmcscen)
 
 evmc_shape = pd.read_csv(os.path.join(inputs_case,'plantchar_evmc_shape.csv'))
-evmc_shape = deflate_func(evmc_shape,'evmc_shape_'+evmcscen)
+evmc_shape = deflate_func(evmc_shape, 'evmc_shape_' + sw.evmcscen)
 
 caes = pd.read_csv(os.path.join(inputs_case,'plantchar_caes.csv'))
 caes = deflate_func(caes,caesscen)
@@ -245,7 +226,7 @@ caes['i'] = 'caes'
 
 alldata = pd.concat([conv,upv_stack,wind_stack,geo_stack,csp_stack,battery,dr,evmc_storage,evmc_shape,caes,beccs,ccsflex,h2ct],sort=False)
 
-if upgradescen != 'default':
+if sw.upgradescen != 'default':
     alldata = pd.concat([alldata,upgrade])
 
 alldata['t'] = alldata['t'].astype(int)
@@ -307,7 +288,7 @@ degrade = pd.read_csv(
 	os.path.join(inputs_case,'degradation_annual.csv'),
 	header=None)
 degrade.columns = ['i','rate']
-degrade = sFuncs.expand_GAMS_tech_groups(degrade)
+degrade = reeds.techs.expand_GAMS_tech_groups(degrade)
 degrade = degrade.set_index('i').round(6)
 
 #%%##################################
@@ -322,7 +303,7 @@ pvb_bir = pd.read_csv(
     os.path.join(inputs_case, 'pvb_bir.csv'),
     header=0, names=['pvb_type','bir'], index_col='pvb_type').squeeze(1)
 # Get PV and battery $/Wac costs for PVB
-battery_USDperWac = battery.loc[battery.i=='battery_{}'.format(GSw_PVB_Dur)].set_index('t').capcost
+battery_USDperWac = battery.loc[battery.i==f'battery_{sw.GSw_PVB_Dur}'].set_index('t').capcost
 UPV_defaultILR_USDperWac = upv.capcost * scalars['ilr_utility']
 # Get cost-sharing assumptions
 pvbvalues = pd.read_csv(os.path.join(inputs_case,'plantchar_pvb.csv'), index_col='parameter')
@@ -410,7 +391,7 @@ pvb = pd.concat(pvb, axis=1)
 # For electric DAC, we assume a sorbent system: https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a
 # FYI, for DAC-gas we assume a solvent system: https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987
 dac_elec = pd.read_csv(os.path.join(inputs_case,'dac_elec.csv'))
-dac_elec = deflate_func(dac_elec, f'dac_elec_{dacscen}').round(4)
+dac_elec = deflate_func(dac_elec, f'dac_elec_{sw.dacscen}').round(4)
 # Fill empty values with 0, melt to long format
 outdac_elec = (
     dac_elec.fillna(0)
@@ -423,7 +404,7 @@ outdac_elec = (
 ## Create Gas DAC scenario output
 # For DAC-gas we assume a solvent system: https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987
 dac_gas = pd.read_csv(os.path.join(inputs_case,'dac_gas.csv'))
-dac_gas = deflate_func(dac_gas, f'dac_gas_{GSw_DAC_Gas_Case}').round(4)
+dac_gas = deflate_func(dac_gas, f'dac_gas_{sw.GSw_DAC_Gas_Case}').round(4)
 
 
 #%%###################################################
@@ -433,17 +414,17 @@ upgrade_mult_mid = pd.read_csv(os.path.join(inputs_case,"upgrade_mult_mid.csv"))
 upgrade_mult_advanced = pd.read_csv(os.path.join(inputs_case,"upgrade_mult_advanced.csv"))
 upgrade_mult_conservative = pd.read_csv(os.path.join(inputs_case,"upgrade_mult_conservative.csv"))
 
-if GSw_UpgradeCost_Mult == 0:
+if int(sw.GSw_UpgradeCost_Mult) == 0:
     upgrade_mult = upgrade_mult_mid
-elif GSw_UpgradeCost_Mult == 1:
+elif int(sw.GSw_UpgradeCost_Mult) == 1:
     upgrade_mult = upgrade_mult_advanced
-elif GSw_UpgradeCost_Mult == 2:
+elif int(sw.GSw_UpgradeCost_Mult) == 2:
     upgrade_mult = upgrade_mult_conservative
-elif GSw_UpgradeCost_Mult == 3:
+elif int(sw.GSw_UpgradeCost_Mult) == 3:
     upgrade_mult = 1
-elif GSw_UpgradeCost_Mult == 4:
+elif int(sw.GSw_UpgradeCost_Mult) == 4:
     upgrade_mult = 1 + (1-upgrade_mult_mid)
-elif GSw_UpgradeCost_Mult == 5:
+elif int(sw.GSw_UpgradeCost_Mult) == 5:
     upgrade_mult = 1.2
 
 #%%###########################
@@ -464,7 +445,7 @@ upgrade_mult.round(4).to_csv(os.path.join(inputs_case,'upgrade_mult_final.csv'),
 outdac_elec.to_csv(os.path.join(inputs_case,'consumechardac.csv'), index=False)
 dac_gas.to_csv(os.path.join(inputs_case,'dac_gas.csv'), index=False)
 
-toc(tic=tic, year=0, process='input_processing/plantcostprep.py', 
+reeds.log.toc(tic=tic, year=0, process='input_processing/plantcostprep.py', 
     path=os.path.join(inputs_case,'..'))
 
 print('Finished plantcostprep.py')
