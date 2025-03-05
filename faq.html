@@ -60,6 +60,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#is-there-a-trial-version-of-the-gams-license-so-that-i-can-test-reeds">Is there a trial version of the GAMS license so that I can test ReEDS?</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#what-computer-hardware-is-necessary-to-run-reeds">What computer hardware is necessary to run ReEDS?</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#can-i-configure-a-reeds-case-to-run-as-an-isolated-interconnect">Can I configure a ReEDS case to run as an isolated interconnect?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#can-i-change-the-spatial-resolution-of-a-reeds-case">Can I change the spatial resolution of a ReEDS case?</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#is-there-a-way-to-reduce-solve-time">Is there a way to reduce solve time?</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#how-often-are-updates-made-to-reeds">How often are updates made to ReEDS?</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#what-are-the-limitations-caveats-and-known-issues">What are the limitations, caveats, and known issues?</a></li>
@@ -106,6 +107,7 @@
 <li><p><a class="reference internal" href="#is-there-a-trial-version-of-the-gams-license-so-that-i-can-test-reeds"><span class="xref myst">Is there a trial version of the GAMS license so that I can test ReEDS?</span></a></p></li>
 <li><p><a class="reference internal" href="#what-computer-hardware-is-necessary-to-run-reeds"><span class="xref myst">What computer hardware is necessary to run ReEDS?</span></a></p></li>
 <li><p><a class="reference internal" href="#can-i-configure-a-reeds-case-to-run-as-an-isolated-interconnect"><span class="xref myst">Can I configure a ReEDS case to run as an isolated interconnect?</span></a></p></li>
+<li><p><a class="reference internal" href="#can-i-change-the-spatial-resolution-of-a-reeds-case"><span class="xref myst">Can I change the spatial resolution of a ReEDS case?</span></a></p></li>
 <li><p><a class="reference internal" href="#is-there-a-way-to-reduce-solve-time"><span class="xref myst">Is there a way to reduce solve time?</span></a></p></li>
 <li><p><a class="reference internal" href="#how-often-are-updates-made-to-reeds"><span class="xref myst">How often are updates made to ReEDS?</span></a></p></li>
 <li><p><a class="reference internal" href="#what-are-the-limitations-caveats-and-known-issues"><span class="xref myst">What are the limitations, caveats, and known issues?</span></a></p>
@@ -155,7 +157,25 @@
 </ul>
 </li>
 </ul>
-<p><a name="reduce-solve-time"></a></p>
+<p><a name="spatial-resolution-reeds"></a></p>
+</section>
+<section id="can-i-change-the-spatial-resolution-of-a-reeds-case">
+<h3>Can I change the spatial resolution of a ReEDS case?<a class="headerlink" href="#can-i-change-the-spatial-resolution-of-a-reeds-case" title="Link to this heading"></a></h3>
+<p>The ReEDS model is capable of capturing several spatial resolutions. This aspect of the model is controlled by the <code class="docutils literal notranslate"><span class="pre">GSw_Region</span></code>, <code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution</span></code>, and <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span></code> switches, and sometimes by the inputs/userinput/modeled_regions.csv file.</p>
+<ul class="simple">
+<li><p>Balancing areas (BAs) and aggregated groups of BAs: Aggregation level is controlled by the ‘aggreg’ column of the inputs/hierarchy_{GSw_HierarchyFile}.csv file.</p>
+<ul>
+<li><p>134 zones: <code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution</span> <span class="pre">=</span> <span class="pre">ba</span></code></p></li>
+<li><p>133 zones (<strong>default</strong>): <code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution</span> <span class="pre">=</span> <span class="pre">aggreg</span></code>, <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span> <span class="pre">=</span> <span class="pre">default</span></code>. Merges p119 into p122.</p></li>
+<li><p>126 zones: <code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution</span> <span class="pre">=</span> <span class="pre">aggreg</span></code>, <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span> <span class="pre">=</span> <span class="pre">agg1</span></code>. Merges p119 into p122, p49 into p50, p124 into p99, p19 into p20, p44 into p68, p120 into p122, p29 into p28, and p71 into p72, obeying state, interconnect, NERC, and FERC region boundaries.</p></li>
+<li><p>69 zones: <code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution</span> <span class="pre">=</span> <span class="pre">aggreg</span></code>, <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span> <span class="pre">=</span> <span class="pre">agg2</span></code>. Obeys state, interconnect, NERC, and FERC region boundaries; most other zones below these levels are aggregated together.</p></li>
+<li><p>54 zones: <code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution</span> <span class="pre">=</span> <span class="pre">aggreg</span></code>, <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span> <span class="pre">=</span> <span class="pre">agg3</span></code>. Obeys state boundaries but nudges the edges of interconnect, NERC, and FERC region boundaries to align with states. Keeps CA, IL, and NY split into 2 zones and TX split into 4 zones.</p></li>
+</ul>
+</li>
+<li><p>Counties: <code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution</span> <span class="pre">=</span> <span class="pre">county</span></code>. Only solves in tolerable time when running a subset of the U.S. as specified by the <code class="docutils literal notranslate"><span class="pre">GSw_Region</span></code> switch.</p></li>
+<li><p>Mixed resolution: <code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution</span> <span class="pre">=</span> <span class="pre">mixed</span></code>, <code class="docutils literal notranslate"><span class="pre">GSw_Region</span></code> set to a column in the inputs/userinput/modeled_regions.csv file. Can be used to model some regions at county resolution and others at BA or aggregated-region resolution.
+<a name="reduce-solve-time"></a></p></li>
+</ul>
 </section>
 <section id="is-there-a-way-to-reduce-solve-time">
 <h3>Is there a way to reduce solve time?<a class="headerlink" href="#is-there-a-way-to-reduce-solve-time" title="Link to this heading"></a></h3>
@@ -183,14 +203,7 @@
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">GSw_RegionResolution</span> <span class="pre">=</span> <span class="pre">aggreg</span></code></p>
 <ul>
-<li><p>Aggregate the native 134 zones into fewer (larger) zones, with the amount of aggregation controlled by <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span></code></p>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span> <span class="pre">=</span> <span class="pre">default</span></code>: 133 zones: merges p119 -&gt; p122 (obeys state, interconnect, NERC, and FERC region boundaries)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span> <span class="pre">=</span> <span class="pre">agg1</span></code>: 126 zones: p119 -&gt; p122; p49 -&gt; p50; p124 -&gt; p99; p19 -&gt; p20; p44 -&gt; p68; p120 -&gt; p122; p29 -&gt; p28; p71 -&gt; p72 (obeys state, interconnect, NERC, and FERC region boundaries)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span> <span class="pre">=</span> <span class="pre">agg2</span></code>: 69 zones (obeys state, interconnect, NERC, and FERC region boundaries)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span> <span class="pre">=</span> <span class="pre">agg3</span></code>: 54 zones (obeys state boundaries)</p></li>
-</ul>
-</li>
+<li><p>Aggregate the native 134 zones into fewer (larger) zones, with the amount of aggregation controlled by <code class="docutils literal notranslate"><span class="pre">GSw_HierarchyFile</span></code></p></li>
 </ul>
 </li>
 </ul>

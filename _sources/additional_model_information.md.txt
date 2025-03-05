@@ -59,3 +59,21 @@ To re-run a failed case from the year it failed:
 2. Re-run "/runs/{batch_prefix}_{case}/call_{batch_prefix}_{case}.bat"
 
 Additionally, 'restart_runs.py' is a helper script that can be used to restart any failed runs. For more information on how to use this script, see the section on [Helper Scripts and Tools](postprocessing_tools.md#helper-scripts-and-tools). 
+
+### Diagnoses of ReEDS Case
+The ReEDS repository includes a diagnostic tool that provides detailed model information, such as right-hand side values, the A matrix, and statistics for variables and equations. To facilitate this, GAMS offers the CONVERT tool, which transforms a GAMS model instance into a scalar model, converting it into formats compatible with other modeling and solution systems. For more information about CONVERT, please refer to the(https://www.gams.com/47/docs/S_CONVERT.html#:~:text=CONVERT%20is%20a%20utility%20which,other%20modeling%20and%20solution%20systems.).
+The diagnose_process.py script, is located in "postprocessing/diagnose", analyzes the CONVERT outputs to generate model characteristics in CSV files. These characteristics include:
+- The number of variables, equations, and non-zero values.
+- Reporting variables (if any), along with their names.
+- Dense columns and their counts.
+- Matrix statistics:
+    - Minimum, maximum, absolute minimum, absolute maximum.
+    - Ratio of max(abs) to min(abs).
+    - Number of reporting variables.
+    - Share of reporting variables in total variables.
+    - Share of reporting variables in total non-zero variables.
+- Equation RHS statistics:
+    - Maximum, minimum, absolute maximum, and absolute minimum values.
+    - The equations with the maximum and minimum RHS values.
+
+For more information on how to generate these report, see the [diagnose documentation](diagnose.md).

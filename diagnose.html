@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diagnoses &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/customtheme.css?v=299ffeb9" />
+
+  
+    <link rel="shortcut icon" href="_static/reeds-icon.png"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html">Model Switches</a></li>
+<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Diagnoses</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/diagnose.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <!--
+This is a reference to the diagnose tool documentation that can be found in postprocessing/diagnose/README.md
+-->
+<section class="tex2jax_ignore mathjax_ignore" id="diagnoses">
+<h1>Diagnoses<a class="headerlink" href="#diagnoses" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">diagnose_process.py</span></code> script generates reports from ReEDS A and B matrices to obtain model characteristics.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">diagnose_process.py</span></code> script provides detailed statistics of ReEDS using the CONVERT solver. CONVERT is a tool that transforms a GAMS model instance into a scalar model, converting it into formats used by other modeling and solution systems. It requires the GAMS model and a GDX file as inputs.
+The <code class="docutils literal notranslate"><span class="pre">diagnose_process.py</span></code> script analyzes the CONVERT outputs to generate model characteristics in CSV files. These characteristics include:</p>
+<ul class="simple">
+<li><p>The number of variables, equations, and non-zero values.</p></li>
+<li><p>Reporting variables (if any), along with their names.</p></li>
+<li><p>Dense columns and their counts.</p></li>
+<li><p>Matrix statistics:</p>
+<ul>
+<li><p>Minimum, maximum, absolute minimum, absolute maximum.</p></li>
+<li><p>Ratio of max(abs) to min(abs).</p></li>
+<li><p>Number of reporting variables.</p></li>
+<li><p>Share of reporting variables in total variables.</p></li>
+<li><p>Share of reporting variables in total non-zero variables.</p></li>
+</ul>
+</li>
+<li><p>Equation RHS statistics:</p>
+<ul>
+<li><p>Maximum, minimum, absolute maximum, and absolute minimum values.</p></li>
+<li><p>The equations with the maximum and minimum RHS values.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="how-to-run">
+<h2>How to run<a class="headerlink" href="#how-to-run" title="Link to this heading"></a></h2>
+<p>The diagnose analysis can be run as part of a ReEDS run by setting <code class="docutils literal notranslate"><span class="pre">diagnose</span> <span class="pre">=</span> <span class="pre">1</span></code>. If diagnose is  is set to 1, ReEDS runs as usual and provides solutions with CONVERT outputs. At the end of batch run, the model runs automatically <code class="docutils literal notranslate"><span class="pre">/postprocessing/diagnose/diagnose_process.py</span></code> to generate model statistics. Alternatively, if the run has CONVERT outputs, the script can be run as a standalone for a specified ReEDS run by passing the folder of the run.</p>
+<p>The GAMS provides a Python API that includes several sub-modules for controlling the GAMS system. One of the sub-modules, <code class="docutils literal notranslate"><span class="pre">gams.transfer</span></code>, facilitates data transfer between GAMS and the target programming language. More information about <code class="docutils literal notranslate"><span class="pre">gams.transfer</span></code> can be found here: <a class="reference external" href="https://www.gams.com/latest/docs/API_PY_GAMSTRANSFER.html">gams.tranfer</a>. To install the API, use the following command:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>```pip install gamsapi[transfer]==xx.y.z```
+</pre></div>
+</div>
+<p>Here,<code class="docutils literal notranslate"><span class="pre">xx.y.z</span></code> represents the installed GAMS version number. Note that, the <code class="docutils literal notranslate"><span class="pre">gams.transfer</span></code> library is available starting from GAMS 37 version. If you have installation problem, <a class="reference external" href="https://www.gams.com/latest/docs/API_PY_GETTING_STARTED.html#PY_PIP_INSTALL_BDIST">GAMS API</a> explains how to install the library.</p>
+<p>Complex model like ReEDS has a larger number of equations and variables, which increases the size of matrix and RHS informations. To limited the output size, <code class="docutils literal notranslate"><span class="pre">diagnose_process.py</span></code> has three switches to explicitly generate these reports. These switches, have default values of 0, are ;</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_matrix</span></code>: Generates the matrix values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_rhs</span></code>: Retrieves the RHS values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_var_count_by_block</span></code>: Provides the variable count by block.</p></li>
+</ul>
+<p>Additionally, <code class="docutils literal notranslate"><span class="pre">diagnose_process.py</span></code> includes a <code class="docutils literal notranslate"><span class="pre">year</span></code> switch, which is used to specify a single year for reporting. The default value of <code class="docutils literal notranslate"><span class="pre">year</span></code> is 0, meaning the code will report all years or which dump GDX files and scalars are available.</p>
+<p>Example call: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">postprocessing/diagnose/diagnose_process.py</span> <span class="pre">--casepath</span> <span class="pre">[case</span> <span class="pre">path]</span> <span class="pre">--year</span> <span class="pre">2050</span> <span class="pre">--GSw_matrix</span> <span class="pre">1</span> <span class="pre">--GSw_rhs</span> <span class="pre">1</span> <span class="pre">--GSw_var_count_by_block</span> <span class="pre">1</span> </code></p>
+</section>
+<section id="outputs">
+<h2>Outputs<a class="headerlink" href="#outputs" title="Link to this heading"></a></h2>
+<p>The CONVERT solver produces <code class="docutils literal notranslate"><span class="pre">reeds_[year].gdx</span></code> and <code class="docutils literal notranslate"><span class="pre">scalar_model_[year].gms</span></code> files for each modeled years which are located in <code class="docutils literal notranslate"><span class="pre">[casedir]\outputs\model_diagnose</span></code>. The script uses these files to produce csv files named in the format <code class="docutils literal notranslate"><span class="pre">.csv</span></code> in same location of CONVERT outputs location. These csv files are;</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">describe_matrix.csv</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">describe_rhs.csv</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reeds_[year].png</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">var_count.csv</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">matrix.csv</span></code>(optional)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rhs.csv</span></code>(optional)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">var_count_by_block.csv</span></code>(optional)</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

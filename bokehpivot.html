@@ -87,31 +87,16 @@ This is a reference to the bokeh pivot documentation that can be found in postpr
 <h1>Exploding Pivot Charts<a class="headerlink" href="#exploding-pivot-charts" title="Link to this heading"></a></h1>
 <section id="intro">
 <h2>Intro<a class="headerlink" href="#intro" title="Link to this heading"></a></h2>
-<p>This python bokeh app creates multiple pivot charts from data. A helpful tutorial is here: https://youtu.be/8Xi59M4bB6I. Note that some of this documentation might be outdated.</p>
+<p>This python bokeh app creates multiple pivot charts from data. A helpful tutorial is here: https://youtu.be/8Xi59M4bB6I. Note that some of this documentation might be outdated. Also note that the bokehpivot interface is currently broken on the reeds2 conda environment. Description of the issue and instructions for a workaround are here: https://github.nrel.gov/ReEDS/ReEDS-2.0/issues/1146</p>
 </section>
-<section id="installing-bokeh">
-<h2>Installing Bokeh<a class="headerlink" href="#installing-bokeh" title="Link to this heading"></a></h2>
-<ol class="arabic">
-<li><p>You can check if you already have bokeh by going to
-command line and simply entering:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bokeh</span>
-</pre></div>
-</div>
-<p>If you get a message that says</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ERROR</span><span class="p">:</span> <span class="n">Must</span> <span class="n">specify</span> <span class="n">subcommand</span><span class="o">...</span>
-</pre></div>
-</div>
-<p>you already have Bokeh. If not, here are the Bokeh installation instructions:
-http://bokeh.pydata.org/en/latest/docs/installation.html. The easiest way is to use conda,
-e.g. from the command line:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="n">bokeh</span>
-</pre></div>
-</div>
-</li>
+<section id="quickstart-for-using-bokehpivot-via-command-line-to-build-comparison-reports">
+<h2>Quickstart for using bokehpivot via command line to build comparison reports<a class="headerlink" href="#quickstart-for-using-bokehpivot-via-command-line-to-build-comparison-reports" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>See instructions at top of bokehpivot/run_report.py</p></li>
 </ol>
 </section>
-<section id="running-bokehpivot-windows">
-<h2>Running Bokehpivot (Windows)<a class="headerlink" href="#running-bokehpivot-windows" title="Link to this heading"></a></h2>
+<section id="running-bokehpivot-interface-windows">
+<h2>Running Bokehpivot Interface (Windows)<a class="headerlink" href="#running-bokehpivot-interface-windows" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
 <li><p>In the ReEDS repo, simply double click on bokehpivot/launch.bat to launch the tool. This will start a bokeh server in a terminal window and a browser window with an interactive interface.</p></li>
 <li><p>After the tool is launched, go to the <em>Loading Model data</em> section below.</p></li>
@@ -131,8 +116,8 @@ e.g. from the command line:</p>
 </li>
 </ul>
 </section>
-<section id="running-bokehpivot-macos">
-<h2>Running Bokehpivot (MacOS)<a class="headerlink" href="#running-bokehpivot-macos" title="Link to this heading"></a></h2>
+<section id="running-bokehpivot-interface-macos">
+<h2>Running Bokehpivot Interface (MacOS)<a class="headerlink" href="#running-bokehpivot-interface-macos" title="Link to this heading"></a></h2>
 <p>In the bokehpivot directory in VSCode or terminal, launch bokehpivot by:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">/.</span><span class="n">launch</span><span class="o">.</span><span class="n">sh</span>
 </pre></div>
@@ -153,7 +138,7 @@ e.g. from the command line:</p>
 <li><p>Enter a path to a Model run folder. This works using shared drives too. For example,  <em>\nrelqnap01d\ReEDS\someProject\runs\someRun</em>.</p></li>
 <li><p>Enter a path to a folder containing run folders. For example,  <em>\nrelqnap01d\ReEDS\someProject\runs</em>.</p></li>
 <li><p>Enter any number of the path types above, each separated by a | (pipe) symbol</p></li>
-<li><p>Enter a path to a csv file that contains a list of runs. Using this method allows scenarios to be ordered as desired and colors to be specified as well. See <em>in/reeds_scenarios.csv</em> for an example. It’s easiest to just copy <em>reeds_scenarios.csv</em> to some other location and edit/use the copy. Note that the file name must end with <em>reeds_scenarios.csv</em>.</p></li>
+<li><p>Enter a path to a csv file that contains a list of runs. Using this method allows scenarios to be ordered as desired and colors to be specified as well. See <em>bokehpivot/reeds_scenarios.csv</em> for an example. It’s easiest to just copy <em>reeds_scenarios.csv</em> to some other location and edit/use the copy. Note that the file name must end with <em>reeds_scenarios.csv</em>.</p></li>
 <li><p>After entering one of the above, see the <em>ReEDS Widgets</em> and <em>Core Pivot Functionality</em> sections below.</p></li>
 </ul>
 </li>

@@ -62,6 +62,7 @@
 <li class="toctree-l1"><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#key-areas-for-error-checking">Key Areas for Error Checking</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#re-running-a-failed-reeds-case">Re-running a Failed ReEDS Case</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#diagnoses-of-reeds-case">Diagnoses of ReEDS Case</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
@@ -261,6 +262,32 @@
 <li><p>Re-run “/runs/{batch_prefix}<em>{case}/call</em>{batch_prefix}_{case}.bat”</p></li>
 </ol>
 <p>Additionally, ‘restart_runs.py’ is a helper script that can be used to restart any failed runs. For more information on how to use this script, see the section on <a class="reference internal" href="postprocessing_tools.html#helper-scripts-and-tools"><span class="std std-ref">Helper Scripts and Tools</span></a>.</p>
+</section>
+<section id="diagnoses-of-reeds-case">
+<h2>Diagnoses of ReEDS Case<a class="headerlink" href="#diagnoses-of-reeds-case" title="Link to this heading"></a></h2>
+<p>The ReEDS repository includes a diagnostic tool that provides detailed model information, such as right-hand side values, the A matrix, and statistics for variables and equations. To facilitate this, GAMS offers the CONVERT tool, which transforms a GAMS model instance into a scalar model, converting it into formats compatible with other modeling and solution systems. For more information about CONVERT, please refer to the(https://www.gams.com/47/docs/S_CONVERT.html#:~:text=CONVERT%20is%20a%20utility%20which,other%20modeling%20and%20solution%20systems.).
+The diagnose_process.py script, is located in “postprocessing/diagnose”, analyzes the CONVERT outputs to generate model characteristics in CSV files. These characteristics include:</p>
+<ul class="simple">
+<li><p>The number of variables, equations, and non-zero values.</p></li>
+<li><p>Reporting variables (if any), along with their names.</p></li>
+<li><p>Dense columns and their counts.</p></li>
+<li><p>Matrix statistics:</p>
+<ul>
+<li><p>Minimum, maximum, absolute minimum, absolute maximum.</p></li>
+<li><p>Ratio of max(abs) to min(abs).</p></li>
+<li><p>Number of reporting variables.</p></li>
+<li><p>Share of reporting variables in total variables.</p></li>
+<li><p>Share of reporting variables in total non-zero variables.</p></li>
+</ul>
+</li>
+<li><p>Equation RHS statistics:</p>
+<ul>
+<li><p>Maximum, minimum, absolute maximum, and absolute minimum values.</p></li>
+<li><p>The equations with the maximum and minimum RHS values.</p></li>
+</ul>
+</li>
+</ul>
+<p>For more information on how to generate these report, see the <a class="reference internal" href="diagnose.html"><span class="std std-doc">diagnose documentation</span></a>.</p>
 </section>
 </section>
 
