@@ -456,15 +456,16 @@ eq_growthlimit_absolute(r,tg,t)$[growth_limit_absolute(r,tg)$tmodel(t)$Sw_Growth
 
 ;
 
-*for some technologies and region, maximum amount of capacity that can be developed based on policy/environmental/resource constraints
+*for some technologies and years, the maximum amount of capacity that can be developed
+* implemented as temporary fix to restrict unreasonably large wind buildouts
 eq_growthlimit_by_tech(i,t)$[growth_limit_by_tech(i,t)$Sw_GrowthLimTech]..
 
-* the absolute limit of growth (in MW)
+* the growth of tech i in year t (in MW)
      growth_limit_by_tech(i,t)
 
      =g=
 
-* must exceed the total capacity
+* must be less than the growth limit defined in growthlimit_by_tech.csv
     sum{(v,r)$[valinv(i,v,r,t)$tmodel(t)],
         INV(i,v,r,t)}
 
