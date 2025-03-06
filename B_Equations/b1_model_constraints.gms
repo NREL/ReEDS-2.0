@@ -87,6 +87,7 @@ EQUATION
  eq_growthbin_limit(gbin,state,tg,t) "--MW-- capacity limit for each growth bin"
  eq_growthlimit_absolute(r,tg,t) "--MW-- absolute growth limit on technologies in growlim(i)"
  eq_growthlimit_initial(r,tg,t)
+ eq_growthlimit_by_tech(i,t)       "--MW-- yearly growth limit on technologies in growth_limit_by_tech(i,t)"
  eq_tech_phase_out(i,v,r,t)        "--MW-- mandated phase out of select technologies"
  eq_prescribedre_pre2023(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
 *eq_prescribedre_pre2024(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
@@ -455,6 +456,19 @@ eq_growthlimit_absolute(r,tg,t)$[growth_limit_absolute(r,tg)$tmodel(t)$Sw_Growth
 
 ;
 
+*for some technologies and region, maximum amount of capacity that can be developed based on policy/environmental/resource constraints
+eq_growthlimit_by_tech(i,t)$[growth_limit_by_tech(i,t)$tmodel(t)$Sw_GrowthLimTech]..
+
+* the absolute limit of growth (in MW)
+     growth_limit_by_tech(i,t)
+
+     =g=
+
+* must exceed the total capacity
+    sum{(i,t)$[valinv(i,v,r,t)$growth_limit_by_tech(i,t)],
+        INV(i,v,r,t)}
+
+;
 
 eq_regen_mandate(t)$[tmodel(t)$Sw_REGenMandate]..
 

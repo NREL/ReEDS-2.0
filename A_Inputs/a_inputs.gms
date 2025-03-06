@@ -38,6 +38,7 @@ Sw_MinCF                      "Switch to turn minimum CF for new capacity on [1]
 Sw_GrowthRel                  "Switch for the relative growth constraint + growth penalties"          /%GSw_GrowthRel%/,
 Sw_GrowthAbs                  "Switch for the absolute growth constraint"                             /%GSw_GrowthAbs%/,
 Sw_GrowthInit                 "Switch for setting initial year growth limit"                          /%GSw_GrowthInit%/,
+Sw_GrowthLimTech              "Switch for setting annual growth limit on techs"                       /%GSw_GrowthLimTech%/,
 Sw_OpRes                      "Switch to turn on operating reserve constraint"                        /%GSw_OpRes%/,
 Sw_OpResTrade                 "Switch to allow trading operating reserves between regions"            /%GSw_OpResTrade%/,
 Sw_Refurb                     "Switch to allow refurbishments"                                        /%GSw_Refurb%/,
@@ -1557,6 +1558,12 @@ $offdelim
           /
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%growth_penalty.csv
+$offdelim
+          /,
+          growth_limit_by_tech(i,t) "--MW-- growth limit for tech i in year t"
+          /
+$ondelim
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%growth_limit_by_tech.csv
 $offdelim
           /,
 *gbin_min is based on the representative plant size for a single plant in that tech group

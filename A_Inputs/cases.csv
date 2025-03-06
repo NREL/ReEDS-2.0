@@ -36,7 +36,8 @@ CC/Curtailment Iterations,Iterations between ReEDs and CC/Curtailment modules to
 GSw_MinCF,Turn minimum CF for new capacity on [1] or off [0],1,,,,,,,,,,,,,,,,
 GSw_GrowthRel,Turn relative growth constraint on [1] or off [0],0,,,,1,0,1,,,1,1,,1,,,,1
 GSw_GrowthAbs,Turn absolute growth constraint on [1] or off [0],1,,,,,,,,,,,,,,,,
-Gsw_GrowthInit,Turn initial growth constraint on [1] or off [0],0,,,1,,,,,,,,,,,,,
+GSw_GrowthInit,Turn initial growth constraint on [1] or off [0],0,,,1,,,,,,,,,,,,,
+GSw_GrowthLimTech,Turn annual growth limit for techs on [1] or off [0],0,1,,,,,,,,,,,,,,,
 GSw_OpRes,Turn operating reserve constraints on [1] or off [0],1,,,,,,,,,,,,,,,,
 GSw_OpResTrade,Turn operating reserve trading between regions on [1] or off [0],0,,,,,,,,,,,,,,,,
 GSw_Refurb,Turn refurbishments on [1] or off [0],1,,,,,,,,,,,,,,,,
