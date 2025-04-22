@@ -1532,6 +1532,7 @@ def get_coordinates(keys, aspect=None, nrows=None, ncols=None):
     """
     if (not aspect) and (not nrows) and (not ncols):
         aspect = 1.618
+
     if ncols:
         _ncols = ncols
     else:

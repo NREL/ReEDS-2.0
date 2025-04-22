@@ -18,6 +18,7 @@ These files are stored in `inputs/load/{switch_name}_load_hourly.h5`.
 | EER_IRAlow  | Modeling load change under conservative assumptions about the Inflation Reduction Act   | Purchased from Evolved Energy Research in June 2023 for the National Transmission Planning Study and to update our load profiles in general. More information can be found in EER's Annual Decarbonization Report https://www.evolved.energy/post/adp2022. |
 | EER_Baseline_AEO2022  | Business as usual load growth. Based on the service demand projections from AEO 2022. This does not include the impacts of the Inflation Reduction Act.   | Purchased from Evolved Energy Research in June 2023 for the National Transmission Planning Study and to update our load profiles in general. More information can be found in EER's Annual Decarbonization Report https://www.evolved.energy/post/adp2022. |
 | historic | Historic demand from 2007-2013. This is multiplied by annual growth factors from AEO to forecast load growth. | NEED INFO HERE |
+| historic_post2015 | Historic demand from 2016-2023. This is multiplied by annual growth factors from AEO to forecast load growth. | NEED INFO HERE |
 
 The h5 files stored here have one of two formats:
 1. EER style format: 7 weather years (2007-2013), these data are produced by the script `ReEDS-2.0/hourize/eer_to_reeds/eer_to_reeds.py`

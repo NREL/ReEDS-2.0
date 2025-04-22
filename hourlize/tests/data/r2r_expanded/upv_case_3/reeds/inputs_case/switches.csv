@@ -275,7 +275,6 @@ demandscen,AEO_2023_reference
 depreciation_schedules_suffix,default
 distpvscen,stscen2023_mid_case
 dollar_year,2004
-drscen,none
 dump_alldata,0
 egsnearfieldsupplycurve,ATB_2023
 egssupplycurve,reV

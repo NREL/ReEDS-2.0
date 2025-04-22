@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 The purpose of this script is to collect 8760 data as it is output by
 hourlize and perform a temporal aggregation to produce load and capacity 
@@ -384,35 +382,12 @@ def cluster_profiles(profiles_fitperiods, sw, forceperiods_yearperiod):
     return rep_periods, period_szn
 
 
-#%% ===========================================================================
-### --- MAIN FUNCTION ---
-### ===========================================================================
-
-def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
-    """
-    """
-    #%% Direct plots to outputs folder
-    figpath = os.path.join(inputs_case,'..','outputs',f'hourly{figpathtail}')
-    os.makedirs(figpath, exist_ok=True)
-
+def make_timestamps(sw):
     ### Get some useful constants
     hoursperperiod = {'day':24, 'wek':120, 'year':24}
     periodsperyear = {'day':365, 'wek':73, 'year':365}
 
-    val_r_all = pd.read_csv(
-        os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
-    modelyears = pd.read_csv(
-        os.path.join(inputs_case, 'modeledyears.csv')).columns.astype(int)
-
-    # Use agglevel_variables function to obtain spatial resolution variables 
-    agglevel_variables  = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)
-
-    ### Get original seasons (for 8760)
-    d_szn_in = pd.read_csv(
-        os.path.join(inputs_case,'d_szn_1yr.csv'),
-        index_col='*d').squeeze(1)
-
-    #%% Get map from yperiod, hour, and h_of_period to timestamp
+    ### Get map from yperiod, hour, and h_of_period to timestamp
     timestamps = pd.DataFrame({
         'year': np.ravel([[y]*8760 for y in all_weatheryears]),
         'h_of_year': np.ravel([list(range(1,8761)) * len(all_weatheryears)]),
@@ -461,7 +436,57 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
         )[:8760]
         for y in all_weatheryears
     ])
-    
+
+    return timestamps
+
+
+#%% ===========================================================================
+### --- MAIN FUNCTION ---
+### ===========================================================================
+
+def main(
+    sw,
+    reeds_path,
+    inputs_case,
+    periodtype='rep',
+    minimal=0,
+    make_plots=1,
+    figpathtail='',
+):
+    """
+    """
+    #%% Parse inputs if necessary
+    if not isinstance(sw['GSw_HourlyClusterWeights'], pd.Series):
+        sw['GSw_HourlyClusterWeights'] = pd.Series(json.loads(
+            '{"'
+            + (':'.join(','.join(sw['GSw_HourlyClusterWeights'].split('__')).split('_'))
+            .replace(':','":').replace(',',',"'))
+            +'}'
+        ))
+    if not isinstance(sw['GSw_HourlyWeatherYears'], list):
+        sw['GSw_HourlyWeatherYears'] = [int(y) for y in sw['GSw_HourlyWeatherYears'].split('_')]
+    if not isinstance(sw['GSw_CSP_Types'], list):
+        sw['GSw_CSP_Types'] = [int(i) for i in sw['GSw_CSP_Types'].split('_')]
+
+    #%% Direct plots to outputs folder
+    figpath = os.path.join(inputs_case,'..','outputs',f'hourly{figpathtail}')
+    os.makedirs(figpath, exist_ok=True)
+    os.makedirs(os.path.join(inputs_case, periodtype), exist_ok=True)
+
+    val_r_all = pd.read_csv(
+        os.path.join(inputs_case, 'val_r_all.csv'), header=None).squeeze(1).tolist()
+    modelyears = pd.read_csv(
+        os.path.join(inputs_case, 'modeledyears.csv')).columns.astype(int)
+    # Use agglevel_variables function to obtain spatial resolution variables 
+    agglevel_variables  = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)
+
+    ### Get original seasons (for 8760)
+    d_szn_in = pd.read_csv(
+        os.path.join(inputs_case,'d_szn_1yr.csv'),
+        index_col='*d').squeeze(1)
+
+    #%% Get map from yperiod, hour, and h_of_period to timestamp
+    timestamps = make_timestamps(sw)
     timestamps_myr = timestamps.loc[timestamps.year.isin(sw['GSw_HourlyWeatherYears'])].copy()
 
     ### Get region hierarchy for use with GSw_HourlyClusterRegionLevel
@@ -658,7 +683,7 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     ## Representative days or weeks
     if sw['GSw_HourlyType'] in ['day','wek']:
-        # profiles_fitperiods.to_csv(os.path.join(inputs_case, 'profiles_fitperiods.csv'))
+        # profiles_fitperiods.to_csv(os.path.join(inputs_case, periodtype, 'profiles_fitperiods.csv'))
         rep_periods, period_szn = cluster_profiles(
             profiles_fitperiods=profiles_fitperiods, sw=sw,
             forceperiods_yearperiod=forceperiods_yearperiod)
@@ -742,13 +767,27 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
 
     #%% Get some other convenience sets
-    set_allszn = pd.concat(
-        [(period_szn_write['season'].drop_duplicates() if sw['GSw_HourlyType'] == 'year'
-          else period_szn_write['actual_period']),
-         's'+timestamps['period'].drop_duplicates()]
+    timestamps_day = make_timestamps(sw=pd.Series({**sw, **{'GSw_HourlyType':'day'}}))
+    timestamps_wek = make_timestamps(sw=pd.Series({**sw, **{'GSw_HourlyType':'wek'}}))
+    ## Include all possible seasons so dispatch mode can be rerun with any of them
+    quarters = pd.read_csv(
+        os.path.join(inputs_case, 'sets', 'quarter.csv'),
+        header=None,
+    ).squeeze(1).tolist()
+    set_allszn = pd.Series(
+        list(timestamps_day.period.unique())
+        + list(timestamps_wek.period.unique())
+        + quarters
     )
+    ## Include stress periods
+    set_allszn = pd.concat([set_allszn, 's'+set_allszn])
 
-    set_allh = pd.concat([timestamps['timestamp'], 's'+timestamps['timestamp']])
+    set_allh = pd.concat([
+        timestamps_day['timestamp'],
+        timestamps_wek['timestamp'],
+        's'+timestamps_day['timestamp'],
+        's'+timestamps_wek['timestamp'],
+    ])
 
     set_actualszn = (
         period_szn_write['season'].drop_duplicates() if sw['GSw_HourlyType'] == 'year'
@@ -807,14 +846,20 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     #%%### Write the outputs
     period_szn_write.drop('period', axis=1).to_csv(
-        os.path.join(inputs_case, 'period_szn.csv'), index=False)
-
-    timestamps.to_csv(
-        os.path.join(inputs_case, 'timestamps.csv'), index=False)
+        os.path.join(inputs_case, periodtype, 'period_szn.csv'), index=False)
 
     if 'user' not in sw['GSw_HourlyClusterAlgorithm']:
         forceperiods_write.to_csv(
-            os.path.join(inputs_case, 'forceperiods.csv'), index=False)
+            os.path.join(inputs_case, periodtype, 'forceperiods.csv'), index=False)
+
+    timestamps.to_csv(
+        os.path.join(inputs_case, periodtype, 'timestamps.csv'), index=False)
+
+    set_actualszn.to_csv(
+        os.path.join(inputs_case, periodtype, 'set_actualszn.csv'), header=False, index=False)
+
+    if minimal:
+        return period_szn_write
 
     #%% Write the sets over all possible periods (representative and stress)
     set_allszn.to_csv(
@@ -822,9 +867,6 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
 
     set_allh.to_csv(
         os.path.join(inputs_case, 'set_allh.csv'), header=False, index=False)
-
-    set_actualszn.to_csv(
-        os.path.join(inputs_case, 'set_actualszn.csv'), header=False, index=False)
 
     #%% Write the seed stress periods to use for the PRM constraint
     if 'user' in sw.GSw_PRM_StressModel:
@@ -863,6 +905,8 @@ def main(sw, reeds_path, inputs_case, make_plots=1, figpathtail=''):
                 stress_period_szn.loc[[t]].to_csv(
                     os.path.join(inputs_case, f'stress{t}i0', 'period_szn.csv'), index=False)
 
+    return period_szn_write
+
 
 #%% ===========================================================================
 ### --- PROCEDURE ---
@@ -897,37 +941,10 @@ if __name__ == '__main__':
     #%% Inputs from switches
     sw = reeds.io.get_switches(inputs_case)
     make_plots = int(sw.hourly_cluster_plots)
-    ## Parse some switches
-    sw['GSw_HourlyClusterWeights'] = pd.Series(json.loads(
-        '{"'
-        + (':'.join(','.join(sw['GSw_HourlyClusterWeights'].split('__')).split('_'))
-           .replace(':','":').replace(',',',"'))
-        +'}'
-    ))
-    sw['GSw_HourlyWeatherYears'] = [int(y) for y in sw['GSw_HourlyWeatherYears'].split('_')]
-    # Reformat GSw_CSP_Types from '_'-delimited string to list
-    sw['GSw_CSP_Types'] = [int(i) for i in sw['GSw_CSP_Types'].split('_')]
     figpathtail = ''
 
     #######################################
     #%% Identify the representative periods
-    # make_plots = 1
-    # for GSw_HourlyClusterAlgorithm in ['optimized']:
-    #     for GSw_HourlyClusterRegionLevel in ['transreg']:
-    #         for GSw_HourlyType in ['day']:
-    #             for GSw_HourlyClusterTimestep in ['hour']:
-    #                 for GSw_HourlyNumClusters in range(26,51):
-    #                     sw.GSw_HourlyClusterAlgorithm = GSw_HourlyClusterAlgorithm
-    #                     sw.GSw_HourlyClusterRegionLevel = GSw_HourlyClusterRegionLevel
-    #                     sw.GSw_HourlyType = GSw_HourlyType
-    #                     sw.GSw_HourlyClusterTimestep = GSw_HourlyClusterTimestep
-    #                     sw.GSw_HourlyNumClusters = GSw_HourlyNumClusters
-    # figpathtail='_{}_{}_{}_{}{}'.format(
-    #     sw.GSw_HourlyClusterAlgorithm,
-    #     sw.GSw_HourlyClusterRegionLevel,
-    #     sw.GSw_HourlyClusterTimestep,
-    #     sw.GSw_HourlyType[0], sw.GSw_HourlyNumClusters,
-    # )
     main(
         sw=sw, reeds_path=reeds_path, inputs_case=inputs_case,
         make_plots=make_plots, figpathtail=figpathtail,

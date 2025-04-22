@@ -60,17 +60,11 @@ function parse_reeds_data(
     FOR_dict = Dict(forced_outage_data[!, "ResourceType"] .=> forced_outage_data[!, "FOR"])
 
     @info "reading hourly forced outage rates"
-    filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "forcedoutage_hourly.h5")
-    # forcedoutage_hourly = HDF5.h5read(infile, "data")
-    forcedoutage_hourly_index = HDF5.h5read(filepath, "index")
-    first_ts = filter(x -> contains(x, "$weather_year"), forcedoutage_hourly_index)[1]
-    start_idx = findfirst(isequal(first_ts), forcedoutage_hourly_index)
-    end_idx = start_idx + timesteps - 1
+    filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "outage_forced_hourly.h5")
     forcedoutage_hourly = DataFrames.DataFrame(
         HDF5.h5read(filepath, "data")',
         HDF5.h5read(filepath, "columns"),
     )
-    forcedoutage_hourly = forcedoutage_hourly[start_idx:end_idx, :]
 
     @info "reading in ATB unit size data for use with disaggregation..."
     unitsize_data = get_unitsize_mapping(ReEDS_data)

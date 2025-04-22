@@ -2489,20 +2489,25 @@ if detailed:
 #%%### Copy some premade single-case plots
 level = dictin_sw[basecase]['GSw_PRM_StressThreshold'].split('_')[0]
 wide = 1 if len(hierarchy[basecase]['transreg'].unique()) > 6 else 0
+metrics = [
+    'cap',
+    'rep_mean',
+    'stress_mean',
+    'stress_top5_load',
+    'stress_max_load',
+    'stress_max_price',
+]
 for figname, width, height in [
     (f'map_gencap_transcap-{lastyear}', None, SLIDE_HEIGHT),
     (f'plot_stressperiod_evolution-sum-{level}', SLIDE_WIDTH, None),
     (f'plot_dispatch-yearbymonth-1-{lastyear}', SLIDE_WIDTH, None),
+] + [
     (
-        f'plot_cap_rep_stress_mix-GW-transreg-{lastyear}',
+        f"plot_techmix-transreg-{lastyear}-{units}-{','.join(metrics)}",
         (SLIDE_WIDTH if wide else None),
         (None if wide else SLIDE_HEIGHT)
-    ),
-    (
-        f'plot_cap_rep_stress_mix-percent-transreg-{lastyear}',
-        (SLIDE_WIDTH if wide else None),
-        (None if wide else SLIDE_HEIGHT)
-    ),
+    )
+    for units in ['GW', 'percent']
 ]:
     for case in cases:
         try:

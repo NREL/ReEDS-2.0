@@ -145,7 +145,7 @@ function run_checks(data::ReEDSdatapaths)
     end
 
     # Hourly Forced Outage Rate
-    filepath = joinpath(data.ReEDSfilepath, "inputs_case", "forcedoutage_hourly.h5")
+    filepath = joinpath(data.ReEDSfilepath, "inputs_case", "outage_forced_hourly.h5")
 
     io, bool = check_file(filepath)
 

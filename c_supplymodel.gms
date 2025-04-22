@@ -47,8 +47,6 @@ positive variables
   STORAGE_IN(i,v,r,allh,t)               "--MW-- storage charging in hour h that is charging from a given source technology; not used for CSP-TES"
   STORAGE_LEVEL(i,v,r,allh,t)            "--MWh-- storage level in hour h"
   STORAGE_INTERDAY_LEVEL(i,v,r,allszn,t) "--MWh-- storage level at hour 0 of the partition"
-  DR_SHIFT(i,v,r,allh,allhh,t)           "--MWh-- annual demand response load shifted to timeslice h from timeslice hh"
-  DR_SHED(i,v,r,allh,t)                  "--MWh-- annual demand response load shed from timeslice h"
   RAMPUP(i,r,allh,allhh,t)               "--MW-- upward change in generation from h to hh"
 
 * flexible CCS variables
@@ -288,14 +286,6 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_storage_opres(i,v,r,allh,t)                   "--MWh-- there must be sufficient energy in the storage to be able to provide operating reserves"
  eq_storage_thermalres(i,v,r,allh,t)              "--MW-- thermal storage contribution to operating reserves is store_in only"
 
-* demand-response specific equations
- eq_dr_max_shed(i,v,r,allh,t)             "--MW-- total shed allowed by demand response technologies from timeslice h"
- eq_dr_max_shed_hrs(i,v,r,t)              "--MW-- total hours shed is allowed to operate over the year"
- eq_dr_max_shift(i,v,r,allh,allhh,t)      "--MW-- total shifting allowed by demand response technologies to timeslice h from timeslice hh"
- eq_dr_max_decrease(i,v,r,allh,t)         "--MW-- maximum allowed decrease of load from demand response in timeslice h"
- eq_dr_max_increase(i,v,r,allh,t)         "--MW-- maximum allowed increase of load from demand response in timeslice h"
- eq_dr_gen(i,v,r,allh,t)                  "--MW-- link demand response shifting to generation"
-
 * hybrid plant equations
  eq_plant_total_gen(i,v,r,allh,t)           "--MW-- generation post curtailment = generation from pv (post curtailment) + generation from battery - charging from PV"
  eq_hybrid_plant_energy_limit(i,v,r,allh,t) "--MW-- PV energy to storage (no curtailment recovery) + PV energy to inverter <= PV resource"
@@ -498,7 +488,7 @@ $offtext
 * ---------------------------------------------------------------------------
 
 eq_cap_init_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
-                           $(not retiretech(i,v,r,t))]..
+                           $(not retiretech(i,v,r,t))$(not Sw_PCM)]..
 
     m_capacity_exog(i,v,r,t)
 
@@ -525,7 +515,7 @@ eq_cap_init_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 * ---------------------------------------------------------------------------
 
 eq_cap_init_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
-                           $retiretech(i,v,r,t)]..
+                           $retiretech(i,v,r,t)$(not Sw_PCM)]..
 
     m_capacity_exog(i,v,r,t)
 
@@ -553,7 +543,7 @@ eq_cap_init_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 * ---------------------------------------------------------------------------
 
 eq_cap_init_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
-                           $retiretech(i,v,r,t)]..
+                           $retiretech(i,v,r,t)$(not Sw_PCM)]..
 
     sum{tt$[tprev(t,tt)$valcap(i,v,r,tt)],
 
@@ -594,7 +584,7 @@ eq_cap_init_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 * ---------------------------------------------------------------------------
 
 eq_cap_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
-                          $(not retiretech(i,v,r,t))]..
+                          $(not retiretech(i,v,r,t))$(not Sw_PCM)]..
 
     sum{tt$[inv_cond(i,v,r,t,tt)$(tmodel(tt) or tfix(tt))$valcap(i,v,r,tt)],
               degrade(i,tt,t) * (INV(i,v,r,tt) + INV_REFURB(i,v,r,tt)$[refurbtech(i)$Sw_Refurb])
@@ -624,7 +614,7 @@ eq_cap_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 * ---------------------------------------------------------------------------
 
 eq_cap_new_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
-                          $retiretech(i,v,r,t)]..
+                          $retiretech(i,v,r,t)$(not Sw_PCM)]..
 
     sum{tt$[inv_cond(i,v,r,t,tt)$(tmodel(tt) or tfix(tt))$valcap(i,v,r,tt)],
               degrade(i,tt,t) * (INV(i,v,r,tt) + INV_REFURB(i,v,r,tt)$[refurbtech(i)$Sw_Refurb])
@@ -653,7 +643,7 @@ eq_cap_new_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 * ---------------------------------------------------------------------------
 
 eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
-                          $retiretech(i,v,r,t)]..
+                          $retiretech(i,v,r,t)$(not Sw_PCM)]..
 
     sum{tt$[tprev(t,tt)$valcap(i,v,r,tt)],
          degrade(i,tt,t) * CAP(i,v,r,tt)
@@ -694,7 +684,8 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 eq_cap_rsc(i,v,r,rscbin,t)
     $[tmodel(t)
     $rsc_i(i)$(not sccapcosttech(i))
-    $valcap(i,v,r,t)]..
+    $valcap(i,v,r,t)
+    $(not Sw_PCM)]..
 
     sum{tt$[tfirst(tt)$exog_rsc(i)],
          capacity_exog_rsc(i,v,r,rscbin,tt) }
@@ -712,7 +703,7 @@ eq_cap_rsc(i,v,r,rscbin,t)
 
 * ---------------------------------------------------------------------------
 
-eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)]..
+eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)$(not Sw_PCM)]..
 
 * without peristent upgrades, all upgrades correspond to their original bintage
     + sum{(tt)$[(tfix(tt) or tmodel(tt))
@@ -763,7 +754,7 @@ eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)]..
 
 * Capacity upsizing limit
 *   This uses rscbin to constrain hydropower upsizing using supply curve data.
-eq_cap_up(i,v,r,rscbin,t)$[tmodel(t)$allow_cap_up(i,v,r,rscbin,t)]..
+eq_cap_up(i,v,r,rscbin,t)$[tmodel(t)$allow_cap_up(i,v,r,rscbin,t)$(not Sw_PCM)]..
 
     cap_cap_up(i,v,r,rscbin,t)
 
@@ -776,7 +767,7 @@ eq_cap_up(i,v,r,rscbin,t)$[tmodel(t)$allow_cap_up(i,v,r,rscbin,t)]..
 
 *Energy upsizing limit
 *   This uses rscbin to constrain hydropower upsizing using supply curve data.
-eq_ener_up(i,v,r,rscbin,t)$[tmodel(t)$allow_ener_up(i,v,r,rscbin,t)]..
+eq_ener_up(i,v,r,rscbin,t)$[tmodel(t)$allow_ener_up(i,v,r,rscbin,t)$(not Sw_PCM)]..
 
     cap_ener_up(i,v,r,rscbin,t)
 
@@ -787,8 +778,10 @@ eq_ener_up(i,v,r,rscbin,t)$[tmodel(t)$allow_ener_up(i,v,r,rscbin,t)]..
 
 * ---------------------------------------------------------------------------
 
-eq_forceprescription(pcat,r,t)$[tmodel(t)$force_pcat(pcat,t)$Sw_ForcePrescription
-                               $sum{(i,newv)$[prescriptivelink(pcat,i)], valinv(i,newv,r,t) }]..
+eq_forceprescription(pcat,r,t)
+    $[tmodel(t)$force_pcat(pcat,t)$Sw_ForcePrescription
+    $sum{(i,newv)$[prescriptivelink(pcat,i)], valinv(i,newv,r,t) }
+    $(not Sw_PCM)]..
 
 *capacity built in the current period or prior
     sum{(i,newv,tt)$[valinv(i,newv,r,tt)$prescriptivelink(pcat,i)
@@ -819,7 +812,7 @@ eq_forceprescription(pcat,r,t)$[tmodel(t)$force_pcat(pcat,t)$Sw_ForcePrescriptio
 *this is the sum of all previous year's investment that is now beyond the age
 *limit (i.e. it has exited service) plus the amount of retired exogenous capacity
 *that we begin with
-eq_refurblim(i,r,t)$[tmodel(t)$refurbtech(i)$Sw_Refurb]..
+eq_refurblim(i,r,t)$[tmodel(t)$refurbtech(i)$Sw_Refurb$(not Sw_PCM)]..
 
 *investments that meet the refurbishment requirement (i.e. they've expired)
     sum{(vv,tt)$[m_refurb_cond(i,vv,r,t,tt)$(tmodel(tt) or tfix(tt))$valinv(i,vv,r,tt)],
@@ -844,7 +837,7 @@ eq_refurblim(i,r,t)$[tmodel(t)$refurbtech(i)$Sw_Refurb]..
 
 * ---------------------------------------------------------------------------
 
-eq_rsc_inv_account(i,v,r,t)$[tmodel(t)$valinv(i,v,r,t)$rsc_i(i)]..
+eq_rsc_inv_account(i,v,r,t)$[tmodel(t)$valinv(i,v,r,t)$rsc_i(i)$(not Sw_PCM)]..
 
   sum{rscbin$m_rscfeas(r,i,rscbin), INV_RSC(i,v,r,rscbin,t) }
 
@@ -864,7 +857,8 @@ eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)
                             $rsc_i(i)
                             $m_rscfeas(r,i,rscbin)
                             $m_rsc_con(r,i)
-                            $(not flag_eq_rsc_INVlim(r,i,rscbin,t))]..
+                            $(not flag_eq_rsc_INVlim(r,i,rscbin,t))
+                            $(not Sw_PCM)]..
 *With water constraints, some RSC techs are expanded to include cooling technologies
 *but the combination of m_rsc_con and rsc_agg allows for those investments
 *to be limited by the numeraire techs' m_rsc_dat
@@ -875,24 +869,19 @@ eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)
         1$[not geo_hydro(i)] + geo_discovery(i,r,t)$geo_hydro(i))
 * available hydro upgrade capacity
     + hyd_add_upg_cap(r,i,rscbin,t)$(Sw_HydroCapEnerUpgradeType=1)
-* available DR capacity
-    + rsc_dr(i,r,"cap",rscbin,t)
 * available EVMC capacity
     + rsc_evmc(i,r,"cap",rscbin,t)
 
     =g=
 
 *must exceed the cumulative invested capacity in that region/class/bin...
-    sum{(ii,v,tt)$[valinv(ii,v,r,tt)$(yeart(tt) <= yeart(t))$rsc_agg(i,ii)$(not dr(i))],
+    sum{(ii,v,tt)$[valinv(ii,v,r,tt)$(yeart(tt) <= yeart(t))$rsc_agg(i,ii)],
          INV_RSC(ii,v,r,rscbin,tt) * resourcescaler(ii) }
 
 *plus exogenous (pre-start-year) capacity, using its level in the first year (tfirst)
-    + sum{(ii,v,tt)$[tfirst(tt)$rsc_agg(i,ii)$(not dr(i))$exog_rsc(i)],
+    + sum{(ii,v,tt)$[tfirst(tt)$rsc_agg(i,ii)$exog_rsc(i)],
          capacity_exog_rsc(ii,v,r,rscbin,tt) }
 
-* in that year for DR (since DR investment is annual)
-    +  sum{(ii,v)$[valinv(ii,v,r,t)$rsc_agg(i,ii)$dr(i)],
-           INV_RSC(ii,v,r,rscbin,t) * resourcescaler(ii) }
 ;
 
 * ---------------------------------------------------------------------------
@@ -902,7 +891,8 @@ eq_growthlimit_relative(i,st,t)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }
                                 $stfeas(st)
                                 $Sw_GrowthPenalties
                                 $(yeart(t)<=Sw_GrowthPenLastYear)
-                                $(yeart(t)>=model_builds_start_yr)]..
+                                $(yeart(t)>=model_builds_start_yr)
+                                $(not Sw_PCM)]..
 
 *the annual growth limit
      (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) })
@@ -915,12 +905,15 @@ eq_growthlimit_relative(i,st,t)$[sum{r$[r_st(r,st)], valinv_irt(i,r,t) }
          INV(i,v,r,t) }
 ;
 
+* ---------------------------------------------------------------------------
+
 eq_growthbin_limit(gbin,st,tg,t)$[valinv_tg(st,tg,t)
                                  $tmodel(t)
                                  $stfeas(st)
                                  $Sw_GrowthPenalties
                                  $(yeart(t)<=Sw_GrowthPenLastYear)
-                                 $(yeart(t)>=model_builds_start_yr)]..
+                                 $(yeart(t)>=model_builds_start_yr)
+                                 $(not Sw_PCM)]..
 
 *the growth bin limit
      growth_bin_limit(gbin,st,tg,t)
@@ -935,7 +928,8 @@ eq_growthbin_limit(gbin,st,tg,t)$[valinv_tg(st,tg,t)
 
 eq_growthlimit_absolute(tg,t)$[growth_limit_absolute(tg)$tmodel(t)
                                $Sw_GrowthAbsCon$(yeart(t)<=Sw_GrowthConLastYear)
-                               $(yeart(t)>=model_builds_start_yr)]..
+                               $(yeart(t)>=model_builds_start_yr)
+                               $(not Sw_PCM)]..
 
 * the absolute limit of growth (in MW)
      (sum{tt$[tprev(tt,t)], yeart(tt) } - yeart(t))
@@ -1217,9 +1211,11 @@ eq_dhyd_dispatch(i,v,r,szn,t)
 
 * ---------------------------------------------------------------------------------------
 * Limit near-term capacity deployments by tech and region based on interconnection queues
-eq_interconnection_queues(tg,r,t)$[tmodel(t)$(yeart(t)>=model_builds_start_yr)
-                                            $(sum{(tgg,rr), cap_limit(tgg,rr,t)})
-                                            $sum{(i,newv)$tg_i(tg,i), valinv(i,newv,r,t)}]..
+eq_interconnection_queues(tg,r,t)
+    $[tmodel(t)$(yeart(t)>=model_builds_start_yr)
+    $(sum{(tgg,rr), cap_limit(tgg,rr,t)})
+    $sum{(i,newv)$tg_i(tg,i), valinv(i,newv,r,t)}
+    $(not Sw_PCM)]..
 
 * the capacity limit from the interconnection queue data
 * (with CAP_ABOVE_LIM as a slack variable to address infeasibilities)
@@ -1273,14 +1269,9 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
 * [minus] energy into storage for hybrid+storage from grid
     - sum{(i,v)$[valcap(i,v,r,t)$storage_hybrid(i)$(not csp(i))], STORAGE_IN_GRID(i,v,r,h,t) }$Sw_HybridPlant
 
-* [minus] load shifting from demand response
-* NOTE: This is probably messed up for stress periods with nonzero hours(h)
-    - sum{[i,v,hh]$[valgen(i,v,r,t)$dr1(i)$allowed_shifts(i,h,hh)],
-                     DR_SHIFT(i,v,r,h,hh,t) / hours(h) / storage_eff(i,t) }$Sw_DR
-
 * [plus] dropped/excess load ONLY if before Sw_StartMarkets
-    + DROPPED(r,h,t)$(yeart(t)<Sw_StartMarkets)
-    - EXCESS(r,h,t)$(yeart(t)<Sw_StartMarkets)
+    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
+    - EXCESS(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
 
     =e=
 
@@ -1403,7 +1394,7 @@ eq_OpRes_requirement(ortype,r,h,t)
     - sum{rr$opres_routes(r,rr,t), OPRES_FLOW(ortype,r,rr,h,t) }
 
 *[plus] dropped load (operating reserves) ONLY if before Sw_StartMarkets
-    + DROPPED(r,h,t)$(yeart(t)<Sw_StartMarkets)
+    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
 
     =g=
 
@@ -1435,7 +1426,8 @@ eq_PRMTRADELimit(r,rr,trtype,ccseason,t)
     $[tmodel(t)
     $routes(r,rr,trtype,t)
     $routes_prm(r,rr)
-    $Sw_PRM_CapCredit]..
+    $Sw_PRM_CapCredit
+    $(not Sw_PCM)]..
 
 *[plus] transmission capacity
     + CAPTRAN_PRM(r,rr,trtype,t) * sum{h$h_ccseason_prm(h,ccseason), (1 + trans_cap_delta(h,t)) }
@@ -1451,7 +1443,8 @@ eq_PRMTRADELimit(r,rr,trtype,ccseason,t)
 eq_PRMTRADE_VSC(r,ccseason,t)
     $[tmodel(t)
     $Sw_PRM_CapCredit
-    $Sw_VSC]..
+    $Sw_VSC
+    $(not Sw_PCM)]..
 
 *[plus] net VSC DC imports - exports of firm capacity with imports reduced by losses
     + sum{rr$[routes(rr,r,"VSC",t)$routes_prm(rr,r)], (1-tranloss(rr,r,"VSC")) * PRMTRADE(rr,r,"VSC",ccseason,t) }
@@ -1472,7 +1465,7 @@ eq_PRMTRADE_VSC(r,ccseason,t)
 * binned capacity for capacity credit must be the same as capacity
 * (except for CSP, which is treated like VRE for capacity credit)
 eq_cap_sdbin_balance(i,v,r,ccseason,t)
-    $[tmodel(t)$valcap(i,v,r,t)$storage(i)$(not csp(i))$Sw_PRM_CapCredit]..
+    $[tmodel(t)$valcap(i,v,r,t)$storage(i)$(not csp(i))$Sw_PRM_CapCredit$(not Sw_PCM)]..
 
 *total capacity in each region
     bcr(i) * CAP(i,v,r,t)
@@ -1486,7 +1479,7 @@ eq_cap_sdbin_balance(i,v,r,ccseason,t)
 * ---------------------------------------------------------------------------
 
 *binned capacity cannot exceed sdbin size
-eq_sdbin_limit(ccreg,ccseason,sdbin,t)$[tmodel(t)$Sw_PRM_CapCredit]..
+eq_sdbin_limit(ccreg,ccseason,sdbin,t)$[tmodel(t)$Sw_PRM_CapCredit$(not Sw_PCM)]..
 
 *sdbin size from CC script
     sdbin_size(ccreg,ccseason,sdbin,t)
@@ -1507,7 +1500,10 @@ eq_sdbin_limit(ccreg,ccseason,sdbin,t)$[tmodel(t)$Sw_PRM_CapCredit]..
 
 * ---------------------------------------------------------------------------
 
-eq_reserve_margin(r,ccseason,t)$[tmodel(t)$(yeart(t)>=model_builds_start_yr)$Sw_PRM_CapCredit]..
+eq_reserve_margin(r,ccseason,t)
+    $[tmodel(t)$(yeart(t)>=model_builds_start_yr)
+    $Sw_PRM_CapCredit
+    $(not Sw_PCM)]..
 
 * forced_retire is used here because forced_retire capacity is removed from valgen 
 * but not valcap. It remains in valcap to allow for upgrades, but if it is not upgraged
@@ -1515,7 +1511,7 @@ eq_reserve_margin(r,ccseason,t)$[tmodel(t)$(yeart(t)>=model_builds_start_yr)$Sw_
 * Because it can provide no services, it will either upgrade or retire.
 
 *[plus] sum of all non-rsc and non-storage capacity
-    + sum{(i,v)$[valcap(i,v,r,t)$(not vre(i))$(not hydro(i))$(not storage(i))$(not dr(i))$(not consume(i))$(not forced_retire(i,r,t))],
+    + sum{(i,v)$[valcap(i,v,r,t)$(not vre(i))$(not hydro(i))$(not storage(i))$(not consume(i))$(not forced_retire(i,r,t))],
           CAP(i,v,r,t)
           * (1 + ccseason_cap_frac_delta(i,v,r,ccseason,t))
          }
@@ -1542,10 +1538,6 @@ eq_reserve_margin(r,ccseason,t)$[tmodel(t)$(yeart(t)>=model_builds_start_yr)$Sw_
 *hybrid PV+battery
     + sum{(i,v,sdbin)$[storage_hybrid(i)$(not csp(i))$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
           cc_storage(i,sdbin) * hybrid_cc_derate(i,r,ccseason,sdbin,t) * CAP_SDBIN(i,v,r,ccseason,sdbin,t)
-         }
-*[plus] firm capacity contribution from all demand flexibility
-    + sum{(i,v)$[demand_flex(i)$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
-          m_cc_dr(i,r,ccseason,t) * CAP(i,v,r,t)
          }
 
 *[plus] average capacity credit times capacity of VRE and storage
@@ -1621,7 +1613,8 @@ eq_reserve_margin(r,ccseason,t)$[tmodel(t)$(yeart(t)>=model_builds_start_yr)$Sw_
 *plus the investment in transmission capacity
 eq_CAPTRAN_ENERGY(r,rr,trtype,t)
     $[routes(r,rr,trtype,t)
-    $tmodel(t)]..
+    $tmodel(t)
+    $(not Sw_PCM)]..
 
     CAPTRAN_ENERGY(r,rr,trtype,t)
 
@@ -1655,7 +1648,8 @@ eq_CAPTRAN_ENERGY(r,rr,trtype,t)
 eq_CAPTRAN_PRM(r,rr,trtype,t)
     $[routes(r,rr,trtype,t)
     $routes_prm(r,rr)
-    $tmodel(t)]..
+    $tmodel(t)
+    $(not Sw_PCM)]..
 
     CAPTRAN_PRM(r,rr,trtype,t)
 
@@ -1681,7 +1675,9 @@ eq_CAPTRAN_PRM(r,rr,trtype,t)
 * ---------------------------------------------------------------------------
 
 eq_prescribed_transmission(r,rr,trtype,t)
-    $[routes_inv(r,rr,trtype,t)$tmodel(t)$(yeart(t)<firstyear_trans_nearterm)]..
+    $[routes_inv(r,rr,trtype,t)
+    $tmodel(t)$(yeart(t)<firstyear_trans_nearterm)
+    $(not Sw_PCM)]..
 
 *all available transmission capacity expansion that is 'possible'
 *note we allow for possible future transmission to accumulate
@@ -1703,7 +1699,8 @@ eq_prescribed_transmission(r,rr,trtype,t)
 * added for new generation capacity
 eq_POI_cap(r,t)
     $[tmodel(t)
-    $Sw_TransIntraCost]..
+    $Sw_TransIntraCost
+    $(not Sw_PCM)]..
 
 * The sum of POI capacity...
     poi_cap_init(r)
@@ -1754,7 +1751,8 @@ eq_transmission_limit(r,rr,h,t,trtype)$[tmodel(t)$routes(r,rr,trtype,t)]..
 eq_CAPTRAN_GRP(transgrp,transgrpp,t)
     $[tmodel(t)
     $Sw_TransGroupContraint
-    $sum{(r,rr), routes_transgroup(transgrp,transgrpp,r,rr) }]..
+    $sum{(r,rr), routes_transgroup(transgrp,transgrpp,r,rr) }
+    $(not Sw_PCM)]..
 
     CAPTRAN_GRP(transgrp,transgrpp,t)
 
@@ -1803,7 +1801,8 @@ eq_transgrp_limit_prm(transgrp,transgrpp,ccseason,t)
     $[tmodel(t)
     $Sw_PRM_CapCredit
     $Sw_TransGroupContraint
-    $sum{(r,rr), routes_transgroup(transgrp,transgrpp,r,rr) }]..
+    $sum{(r,rr), routes_transgroup(transgrp,transgrpp,r,rr) }
+    $(not Sw_PCM)]..
 
     CAPTRAN_GRP(transgrp,transgrpp,t)
     * sum{h$h_ccseason_prm(h,ccseason), (1 + trans_cap_delta(h,t)) }
@@ -1844,7 +1843,8 @@ eq_firm_transfer_limit(nercr,h,t)
 eq_firm_transfer_limit_cc(nercr,ccseason,t)
     $[tmodel(t)
     $Sw_PRM_NetImportLimit
-    $Sw_PRM_CapCredit]..
+    $Sw_PRM_CapCredit
+    $(not Sw_PCM)]..
 
 * max net import fraction [.] * peak demand by ccseason [MW]
     firm_import_limit(nercr,t)
@@ -1869,7 +1869,8 @@ eq_firm_transfer_limit_cc(nercr,ccseason,t)
 eq_CAP_CONVERTER(r,t)
     $[tmodel(t)
     $val_converter(r,t)
-    $Sw_VSC]..
+    $Sw_VSC
+    $(not Sw_PCM)]..
 
     CAP_CONVERTER(r,t)
 
@@ -1884,7 +1885,9 @@ eq_CAP_CONVERTER(r,t)
 * CAP_SPUR accumulates INV_SPUR from years <= t
 eq_CAP_SPUR(x,t)
     $[Sw_SpurScen
-    $tmodel(t)]..
+    $tmodel(t)
+    $(not Sw_PCM)]..
+
     CAP_SPUR(x,t)
 
     =e=
@@ -1914,7 +1917,9 @@ eq_CONVERSION_limit_energy(r,h,t)
 eq_CONVERSION_limit_prm(r,ccseason,t)
     $[tmodel(t)
     $val_converter(r,t)
-    $Sw_VSC]..
+    $Sw_PRM_CapCredit
+    $Sw_VSC
+    $(not Sw_PCM)]..
 
     CAP_CONVERTER(r,t)
 
@@ -1929,7 +1934,8 @@ eq_CONVERSION_limit_prm(r,ccseason,t)
 eq_transmission_investment_max(t)
     $[tmodel(t)
     $trans_inv_max(t)
-    $Sw_TransInvMaxTypes]..
+    $Sw_TransInvMaxTypes
+    $(not Sw_PCM)]..
 
 * Sw_TransInvMax [TWmile/year] * [1e6 MW / 1 TW] * [year/solvestep]
     trans_inv_max(t) * 1e6 * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) })
@@ -1955,7 +1961,8 @@ eq_transmission_investment_max(t)
 * Limit the total transmission capacity of each interface trtype to captran_max [MW]
 eq_CAPTRAN_max(r,rr,trtype,t)
     $[tmodel(t)$Sw_TransCapMaxEachType
-    $routes(r,rr,trtype,t)$trtypemax(trtype)]..
+    $routes(r,rr,trtype,t)$trtypemax(trtype)
+    $(not Sw_PCM)]..
 
     Sw_TransCapMaxEachType * 1000
 
@@ -1970,7 +1977,8 @@ eq_CAPTRAN_max(r,rr,trtype,t)
 * summed over all transmission types [MW]
 eq_CAPTRAN_max_total(r,rr,t)
     $[tmodel(t)$Sw_TransCapMaxAllTypes
-    $sum{trtype$trtypemax(trtype), routes(r,rr,trtype,t) }]..
+    $sum{trtype$trtypemax(trtype), routes(r,rr,trtype,t) }
+    $(not Sw_PCM)]..
 
     Sw_TransCapMaxAllTypes * 1000
 
@@ -1986,7 +1994,8 @@ eq_converter_max(r,t)
     $[tmodel(t)
     $val_converter(r,t)
     $Sw_VSC
-    $Sw_VSC_ConverterMax]..
+    $Sw_VSC_ConverterMax
+    $(not Sw_PCM)]..
 
     Sw_VSC_ConverterMax
 
@@ -2440,7 +2449,7 @@ eq_REC_launder(RPSCat,st,t)$[RecStates(RPSCat,st,t)$(not tfirst(t))$(yeart(t)>=f
 
 eq_RPS_OFSWind(st,t)$[tmodel(t)$stfeas(st)$offshore_cap_req(st,t)$Sw_StateRPS
                       $sum{(i,v,r)$[r_st(r,st)$ofswind(i)], valcap(i,v,r,t) }
-                      $(yeart(t)>=firstyear_RPS)]..
+                      $(yeart(t)>=firstyear_RPS)$(not Sw_PCM)]..
 
 * existing capacity of wind
     sum{(i,v,r)$[r_st(r,st)$ofswind(i)], m_capacity_exog(i,v,r,t) }
@@ -2457,8 +2466,10 @@ eq_RPS_OFSWind(st,t)$[tmodel(t)$stfeas(st)$offshore_cap_req(st,t)$Sw_StateRPS
 
 * ---------------------------------------------------------------------------
 
-eq_batterymandate(st,t)$[tmodel(t)$batterymandate(st,t)$(yeart(t)>=firstyear_battery)
-                        $Sw_BatteryMandate]..
+eq_batterymandate(st,t)
+    $[tmodel(t)$batterymandate(st,t)$(yeart(t)>=firstyear_battery)
+    $Sw_BatteryMandate
+    $(not Sw_PCM)]..
 *battery capacity
     sum{(i,v,r)$[r_st(r,st)$valcap(i,v,r,t)$(battery(i) or pvb(i))], bcr(i) * CAP(i,v,r,t) }
 
@@ -3042,78 +3053,6 @@ eq_pvb_itc_charge_reqt(i,v,r,t)$[pvb(i)$tmodel(t)$valgen(i,v,r,t)$pvb_itc_qual_f
 
 * ---------------------------------------------------------------------------
 
-*============================
-* --- DEMAND RESPONSE CONSTRAINTS ---
-*============================
-
-*maximum energy shifted to timeslice h from timeslice hh
-eq_dr_max_shift(i,v,r,h,hh,t)$[allowed_shifts(i,h,hh)$valgen(i,v,r,t)$valcap(i,v,r,t)$dr1(i)$tmodel(t)$Sw_DR]..
-
-    CAP(i,v,r,t) * dr_decrease(i,r,hh) * hours(hh) * allowed_shifts(i,h,hh)
-
-    =g=
-
-    DR_SHIFT(i,v,r,h,hh,t)
-;
-
-*total allowable load decrease in timeslice h
-eq_dr_max_decrease(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)$dr1(i)$tmodel(t)$Sw_DR]..
-
-    CAP(i,v,r,t) * dr_decrease(i,r,h) * hours(h)
-
-    =g=
-
-    sum{hh$[allowed_shifts(i,hh,h)], DR_SHIFT(i,v,r,hh,h,t) }
-;
-
-*total allowable load increase in timeslice h
-* DR efficiency applied to the load increase, so shows up here and not in above
-* DR Shift tracks the total energy decreased, so the increase will be proportionally
-* larger, requiring division here to ensure it doesn't exceed allowed increase
-eq_dr_max_increase(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)$dr1(i)$tmodel(t)$Sw_DR]..
-
-    CAP(i,v,r,t) * dr_increase(i,r,h) * hours(h)
-
-    =g=
-
-    sum{hh$[allowed_shifts(i,h,hh)], DR_SHIFT(i,v,r,h,hh,t) }
-
-    / storage_eff(i,t)
-;
-
-* tie load reductions from demand response to generation
-eq_dr_gen(i,v,r,h,t)$[valgen(i,v,r,t)$dr(i)$tmodel(t)$SW_DR]..
-* [plus] DR shift types reduction in load
-    sum{hh$[allowed_shifts(i,hh,h)$dr1(i)], DR_SHIFT(i,v,r,hh,h,t) / hours(h) }$Sw_DR
-
-* [plus] DR shed types reduction in load
-    + DR_SHED(i,v,r,h,t)$dr2(i) / hours(h)
-
-    =e=
-
-    GEN(i,v,r,h,t)
-;
-
-*total allowable load decrease in timeslice h from shed types DR
-eq_dr_max_shed(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)$dr2(i)$tmodel(t)$Sw_DR]..
-
-    CAP(i,v,r,t) * dr_decrease(i,r,h) * hours(h)
-
-    =g=
-
-    DR_SHED(i,v,r,h,t)
-;
-
-eq_dr_max_shed_hrs(i,v,r,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)$dr2(i)$tmodel(t)$Sw_DR]..
-
-    CAP(i,v,r,t) * allowed_shed(i)
-
-    =g=
-
-    sum{h$dr_decrease(i,r,h), DR_SHED(i,v,r,h,t) / dr_decrease(i,r,h) }
-;
-
-
 *===================================
 * --- CANADIAN IMPORTS EQUATIONS ---
 *===================================
@@ -3225,6 +3164,8 @@ eq_prod_capacity_limit(i,v,r,h,t)
 * production in that timeslice
     sum{p$i_p(i,p), PRODUCE(p,i,v,r,h,t) }
 ;
+
+* ---------------------------------------------------------------------------
 
 * H2 demand balance; national and annual. Active only when Sw_H2=1.
 eq_h2_demand(p,t)$[(sameas(p,"H2"))$tmodel(t)$(yeart(t)>=h2_demand_start)$(Sw_H2=1)]..
@@ -3339,7 +3280,8 @@ eq_h2_storage_level_szn(h2_stor,r,actualszn,t)
 * H2 storage capacity [metric tons]
 eq_h2_storage_capacity(h2_stor,r,t)
     $[tmodel(t)$(Sw_H2=2)
-    $h2_stor_r(h2_stor,r)$(yeart(t)>=h2_demand_start)]..
+    $h2_stor_r(h2_stor,r)$(yeart(t)>=h2_demand_start)
+    $(not Sw_PCM)]..
 
 * [metric tons]
     sum{tt$[(yeart(tt)<=yeart(t))$(tmodel(tt) or tfix(tt))],
@@ -3353,7 +3295,7 @@ eq_h2_storage_capacity(h2_stor,r,t)
 
 * ---------------------------------------------------------------------------
 
-eq_h2_min_storage_cap(r,t)$[tmodel(t)$(Sw_H2=2)$Sw_H2_MinStorHours]..
+eq_h2_min_storage_cap(r,t)$[tmodel(t)$(Sw_H2=2)$Sw_H2_MinStorHours$(not Sw_PCM)]..
 
 * [metric tons]
     sum{h2_stor$h2_stor_r(h2_stor,r), H2_STOR_CAP(h2_stor,r,t) }

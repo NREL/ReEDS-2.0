@@ -2,48 +2,7 @@
 import os
 import sys
 import logging
-from collections.abc import Iterable
 from datetime import datetime
-
-# Third-party packages
-import pandas as pd
-
-
-def get_missing_columns(fpath: str, column_names: list) -> list:
-    """List of missing columns from a csv file.
-
-    Read the first row of a CSV to check the name of the columns match us
-
-    Args:
-        fpath: Path to the csv file
-        column_names: list of columns to verify
-
-    Returns:
-        A list of missing columns or empty list
-    """
-    try:
-        df = (
-            pd.read_csv(fpath, nrows=0)
-            .rename(columns=str.lower)
-        )
-    except pd.errors.EmptyDataError:
-        raise ValueError(f"Required file for R2X: {fpath} is empty!")
-
-    return [col for col in column_names if col not in df.columns.str.lower()]
-
-
-def get_missing_files(
-    file_list: Iterable[os.PathLike]
-) -> list:
-    """Get missing files from reeds inputs_case/outputfolder.
-
-    Args:
-        file_list: Iterable object that contains Path's to check.
-
-    Returns:
-        A list with the missing files or an empty list
-    """
-    return [f for f in file_list if not os.path.exists(f)]
 
 
 #%% Imports

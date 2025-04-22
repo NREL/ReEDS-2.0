@@ -375,8 +375,7 @@ for i,r in df_scens.iterrows():
     df_hier_run = pd.read_csv(f'{reeds_run_path}/inputs_case/hierarchy.csv')
     df_county_map = pd.read_csv(hier_file, usecols=['county','ba'])
     df_county_map.columns = ['reeds_county', 'reeds_ba']
-    df_hmap = pd.read_csv(f'{reeds_run_path}/inputs_case/hmap_myr.csv')
-    # df_hmap_allyrs = pd.read_csv(f'{reeds_run_path}/inputs_case/hmap_allyrs.csv')
+    df_hmap = pd.read_csv(f'{reeds_run_path}/inputs_case/rep/hmap_myr.csv')
     #Only fetch prices if we haven't already for this reeds run and year
     #TODO: Include tech here in the dct_prices tuple key? For now I disallow multiple techs
     if (reeds_run_path, year) not in dct_prices:

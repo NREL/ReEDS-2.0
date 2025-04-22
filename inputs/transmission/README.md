@@ -1,23 +1,27 @@
-# Input files
-1. *cost_hurdle_country.csv*: Indicates the hurdle rate for transmission flows between USA/Canada and USA/Mexico. **Unknown source.**
+# Transmission
+
+## Input files
+
+1. *cost_hurdle_country.csv*: Indicates the hurdle rate for transmission flows between USA/Canada and USA/Mexico.
 1. *r_rr_adj.csv*: Set of zones that are adjacent to each other, including Canada/Mexico zones.
-1. *rev_transmission_basecost.csv*: Base transmission costs (before terrain mlutipliers) used in reV. Sources for numeric values are:
-    1. TEPPC: https://www.wecc.org/Administrative/TEPPC_TransCapCostCalculator_E3_2019_Update.xlsx
-    1. SCE: http://www.caiso.com/Documents/SCE2019DraftPerUnitCostGuide.xlsx
-    1. MISO: https://cdn.misoenergy.org/20190212%20PSC%20Item%2005a%20Transmission%20Cost%20Estimation%20Guide%20for%20MTEP%202019_for%20review317692.pdf
-        1. A more recent guide with a working link (as of 20230227) is available at https://cdn.misoenergy.org/Transmission%20Cost%20Estimation%20Guide%20for%20MTEP22337433.pdf.
-    1. Southeast: **Unknown source**
+1. *rev_transmission_basecost.csv*: Base transmission costs (before terrain multipliers) used in reV. Sources for numeric values are:
+    1. TEPPC: <https://www.wecc.org/Administrative/TEPPC_TransCapCostCalculator_E3_2019_Update.xlsx>
+    1. SCE: <http://www.caiso.com/Documents/SCE2019DraftPerUnitCostGuide.xlsx>
+    1. MISO: <https://cdn.misoenergy.org/20190212%20PSC%20Item%2005a%20Transmission%20Cost%20Estimation%20Guide%20for%20MTEP%202019_for%20review317692.pdf>
+        1. A more recent guide with a working link (as of 20230227) is available at <https://cdn.misoenergy.org/Transmission%20Cost%20Estimation%20Guide%20for%20MTEP22337433.pdf>.
+    1. Southeast: Private communication with a representative Southeastern utility
 1. *routes_adjacent.csv*: Set of US zones that are adjacent to each other.
-1. *transmission_capacity_future_baseline.csv*: Historically installed (since 2010) and currently planned transmission capacity additions. **Many unknown sources.**
+1. *transmission_capacity_future_baseline.csv*: Historically installed (since 2010) and currently planned transmission capacity additions.
 1. *transmission_capacity_future_{`GSw_TransScen`}.csv*: Available future routes for transmission capacity as specified by `GSw_TransScen`.
-1. *transmission_capacity_init_AC_NARIS2024.csv*: Initial AC transmission capacities between 134 US ReEDS zones. Calculated using the code available at https://github.nrel.gov/pbrown/TSC and nodal network data from https://www.nrel.gov/docs/fy21osti/79224.pdf. The method is described by Brown, P.R. et al 2023, "A general method for estimating zonal transmission interface limits from nodal network data", in prep.
-1. *transmission_capacity_init_AC_REFS2009.csv*: Initial AC transmission capacities between 134 US ReEDS zones. Calculated for https://www.nrel.gov/analysis/re-futures.html.
-1. *transmission_capacity_init_nonAC.csv*: Initial DC transmission capacities between 134 US ReEDS zones. **Many unknown sources.**
+1. *transmission_capacity_init_AC_NARIS2024.csv*: Initial AC transmission capacities between 134 US ReEDS zones. Calculated using the code available at <https://github.nrel.gov/pbrown/TSC> and nodal network data from <https://www.nrel.gov/docs/fy21osti/79224.pdf>. The method is described by Brown, P.R. et al 2023, "A general method for estimating zonal transmission interface limits from nodal network data", in prep.
+1. *transmission_capacity_init_AC_REFS2009.csv*: Initial AC transmission capacities between 134 US ReEDS zones. Calculated for <https://www.nrel.gov/analysis/re-futures.html>.
+1. *transmission_capacity_init_nonAC.csv*: Initial DC transmission capacities between 134 US ReEDS zones.
 1. *transmission_distance_cost_500kVac.csv*: Distance and cost for a representative transmission route between each pair of 134 US ReEDS zones, assuming a 500 kV single-circuit line. Routes are determined by the reV model using a least-cost-path algorithm accounting for terrain and land type multipliers. Costs represent the appropriate base cost from rev_transmission_basecost.csv multiplied by the appropriate terrain and land type multipliers for each 90m pixel crossed by the path. Endpoints are in inputs/shapefiles/transmission_endpoints and represent a point within the largest urban area in each of the 134 ReEDS zones.
 1. *transmission_distance_cost_500kVdc.csv*: Same as transmission_distance_cost_500kVdc.csv except assuming a 500 kV bipole DC line.
 
 
-# Relevant switches
+## Relevant switches
+
 1. `GSw_HierarchyFile`: Indicate the suffix of the inputs/hierarchy.csv file you wish to use.
     1. By default the transreg boundaries are used for operating reserve sharing, capacity credit calculations, and the boundaries for limited-transmission cases.
 1. `GSw_TransInvMaxLongTerm`: Limit on annual transmission deployment nationwide **IN/AFTER** `firstyear_trans_longterm`, measured in TW-miles

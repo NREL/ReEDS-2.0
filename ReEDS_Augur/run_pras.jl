@@ -256,17 +256,10 @@ end
 """
 function main(args::Dict)
     #%% Define some intermediate filenames
-    if args["timesteps"] == 8760
-        pras_system_path = joinpath(
-            args["reedscase"],"ReEDS_Augur","PRAS",
-            "PRAS_m$(args["solve_year"])i$(args["iteration"])_w$(args["weather_year"]).pras"
-        )
-    else
-        pras_system_path = joinpath(
-            args["reedscase"],"ReEDS_Augur","PRAS",
-            "PRAS_$(args["solve_year"])i$(args["iteration"]).pras"
-        )
-    end
+    pras_system_path = joinpath(
+        args["reedscase"],"ReEDS_Augur","PRAS",
+        "PRAS_$(args["solve_year"])i$(args["iteration"]).pras"
+    )
 
     #%% Set up the logger
     setup_logger(pras_system_path, args)

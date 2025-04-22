@@ -1,6 +1,3 @@
-*add the just-solved year to tfix and fix variables for next solve year
-tfix("%cur_year%") = yes ;
-
 *load variable
     LOAD.fx(r,h,tfix) = LOAD.l(r,h,tfix) ;
     FLEX.fx(flex_type,r,h,tfix)$Sw_EFS_flex  = FLEX.l(flex_type,r,h,tfix) ;
@@ -36,8 +33,6 @@ tfix("%cur_year%") = yes ;
     STORAGE_INTERDAY_DISPATCH.fx(i,v,r,allh,tfix)$[valgen(i,v,r,tfix)$storage_interday(i)] = STORAGE_INTERDAY_DISPATCH.l(i,v,r,allh,tfix) ;
     STORAGE_INTERDAY_LEVEL_MAX_DAY.fx(i,v,r,allszn,tfix)$[valgen(i,v,r,tfix)$storage_interday(i)] = STORAGE_INTERDAY_LEVEL_MAX_DAY.l(i,v,r,allszn,tfix) ;
     STORAGE_INTERDAY_LEVEL_MIN_DAY.fx(i,v,r,allszn,tfix)$[valgen(i,v,r,tfix)$storage_interday(i)] = STORAGE_INTERDAY_LEVEL_MIN_DAY.l(i,v,r,allszn,tfix) ;
-    DR_SHIFT.fx(i,v,r,h,hh,tfix)$[valgen(i,v,r,tfix)$dr1(i)] = DR_SHIFT.l(i,v,r,h,hh,tfix) ;
-    DR_SHED.fx(i,v,r,h,tfix)$[valgen(i,v,r,tfix)$dr2(i)] = DR_SHED.l(i,v,r,h,tfix) ;
     AVAIL_SITE.fx(x,h,tfix)$[Sw_SpurScen$xfeas(x)] = AVAIL_SITE.l(x,h,tfix) ;
     RAMPUP.fx(i,r,h,hh,tfix)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,tfix)] = RAMPUP.l(i,r,h,hh,tfix) ;
 

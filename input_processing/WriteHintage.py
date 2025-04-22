@@ -538,15 +538,23 @@ def main(reeds_path, inputs_case):
     #%%############################################################################
     #    -- Get forced retirement dataframe and merge onto output dataframe --    #
     ###############################################################################
-
     forced_retire = pd.read_csv(
         os.path.join(inputs_case, 'forced_retirements.csv'),
-        header=0, names=['tech','ba','retire_year'])
+        header=0, names=['tech','st','retire_year'])
     
-    r2ba = pd.read_csv(os.path.join(inputs_case,'r_ba.csv'))
-
-    # Forced retirements are at the ba level, so merge on the regions
-    forced_retire = pd.merge(forced_retire, r2ba, on='ba').drop(columns='ba').drop_duplicates()
+    # Forced retirements are at the state level, so use hierarchy to get the regions
+    state2r = (
+        pd.read_csv(
+            os.path.join(inputs_case, 'hierarchy.csv'),
+            usecols=['*r', 'st']
+        )
+        .rename(columns={'*r': 'r'})
+    )
+    forced_retire = (
+        pd.merge(forced_retire, state2r, on='st')
+        .drop(columns='st')
+        .drop_duplicates()
+    )
 
     zout = zout.merge(forced_retire, how='left', on=['tech', 'r']).fillna(9000)
     

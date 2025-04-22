@@ -240,7 +240,7 @@ def get_dfmap(case=None):
         dfmap = {}
         for level in ['r'] + list(hierarchy.columns):
             dfmap[level] = gpd.read_file(mapsfile, layer=level).rename(columns={'rb': 'r'})
-            dfmap[level] = dfmap[level].set_index(dfmap[level].columns[0])
+            dfmap[level] = dfmap[level].set_index(dfmap[level].columns[0]).rename_axis(level)
         return dfmap
 
     dfba = get_zonemap(case)
@@ -260,13 +260,14 @@ def get_dfmap(case=None):
 
 
 ### Read files from a ReEDS case
-def read_output(case, filename=None, valname=None):
+def read_output(case, filename=None, valname=None, low_memory=False):
     """
     Read a ReEDS output csv file or a key from outputs.h5.
     If outputs.h5 doesn't exist, falls back to outputs/{filename}.csv file.
 
     Args:
         case: Path to a single ReEDS run folder
+            OR path to an outputs.h5 file (used for plotting PCM results)
         filename: Name of a ReEDS output (e.g. 'cap', 'tran_out').
             If filename ends with '.csv', always read the .csv version.
             Otherwise, read the {filename} key from {case}/outputs/outputs.h5.
@@ -275,7 +276,10 @@ def read_output(case, filename=None, valname=None):
     Returns:
         dict of pd.DataFrame's if filename is None, otherwise pd.DataFrame
     """
-    h5path = os.path.join(case, 'outputs', 'outputs.h5')
+    if case.endswith('.h5'):
+        h5path = case
+    else:
+        h5path = os.path.join(case, 'outputs', 'outputs.h5')
     if os.path.exists(h5path) and not filename.endswith('.csv'):
         key = os.path.basename(filename)
         try:
@@ -302,13 +306,16 @@ def read_output(case, filename=None, valname=None):
         _filename = filename if filename.endswith('.csv') else filename + '.csv'
         df = pd.read_csv(os.path.join(case, 'outputs', _filename))
 
+    df = df.rename(columns={'allh':'h', 'allt':'t', 'eall':'e'})
+
+    ## If desired, change datatypes to reduce memory use
+    if low_memory:
+        _newtypes = {'Value': np.float32, 't': np.int16}
+        newtypes = {col: _newtypes.get(col, 'category') for col in df}
+        df = df.astype(newtypes)
+
     if valname is not None:
         df = df.rename(columns={'Value': valname})
-    df = df.rename(columns={'allh': 'h', 'eall': 'e'})
-    to_retype = df.dtypes.loc[df.dtypes == 'category'].index
-    for col in to_retype:
-        if col in df:
-            df = df.astype({col: str})
 
     return df
 
@@ -397,33 +404,33 @@ def get_switches(case):
     case = standardize_case(case)
     inputs_case = os.path.join(case, 'inputs_case')
     ### ReEDS switches
-    rsw = pd.read_csv(
+    sw = pd.read_csv(
         os.path.join(inputs_case, 'switches.csv'),
         index_col=0,
         header=None,
     ).squeeze(1)
     ### Augur-specific switches
-    asw = pd.read_csv(
-        os.path.join(case, 'ReEDS_Augur', 'augur_switches.csv'),
-        index_col='key',
-    )
-    for i, row in asw.iterrows():
-        if row['dtype'] == 'list':
-            row.value = row.value.split(',')
-            try:
-                row.value = [int(i) for i in row.value]
-            except ValueError:
-                pass
-        elif row['dtype'] == 'boolean':
-            row.value = False if row.value.lower() == 'false' else True
-        elif row['dtype'] == 'str':
-            row.value = str(row.value)
-        elif row['dtype'] == 'int':
-            row.value = int(row.value)
-        elif row['dtype'] == 'float':
-            row.value = float(row.value)
-    ### Combine
-    sw = pd.concat([rsw, asw.value])
+    try:
+        fpath_asw = os.path.join(case, 'ReEDS_Augur', 'augur_switches.csv')
+        asw = pd.read_csv(fpath_asw, index_col='key')
+        for i, row in asw.iterrows():
+            if row['dtype'] == 'list':
+                row.value = row.value.split(',')
+                try:
+                    row.value = [int(i) for i in row.value]
+                except ValueError:
+                    pass
+            elif row['dtype'] == 'boolean':
+                row.value = False if row.value.lower() == 'false' else True
+            elif row['dtype'] == 'str':
+                row.value = str(row.value)
+            elif row['dtype'] == 'int':
+                row.value = int(row.value)
+            elif row['dtype'] == 'float':
+                row.value = float(row.value)
+        sw = pd.concat([sw, asw.value])
+    except FileNotFoundError:
+        print(f"{fpath_asw} not found so leaving out Augur switches")
     ### Add derivative switches
     sw['resource_adequacy_years_list'] = [int(y) for y in sw['resource_adequacy_years'].split('_')]
     sw['num_resource_adequacy_years'] = len(sw['resource_adequacy_years_list'])
@@ -574,11 +581,16 @@ def read_file(filename, parse_timestamps=False):
     if parse_timestamps and ('datetime' in df.index.names):
         if not isinstance(df.index.get_level_values('datetime')[0], bytes):
             raise ValueError(
-                f"The indices for timestamp-indexed dataframes should be encoded as bytes. \
-                Please update {filename}."
+                "The time index for timestamp-indexed dataframes should be encoded as "
+                f"bytes. Please update {filename}."
             )
 
-        df['datetime'] = pd.to_datetime(df.index.get_level_values('datetime').str.decode('utf-8'))
+        unique_indices = df.index.get_level_values('datetime').unique()
+        index2datetime = dict(zip(
+            unique_indices,
+            pd.to_datetime(unique_indices.str.decode('utf-8'), format='ISO8601')
+        ))
+        df['datetime'] = df.index.get_level_values('datetime').map(index2datetime)
         if isinstance(df.index, pd.MultiIndex):
             df = df.droplevel('datetime').set_index('datetime', append=True)
         else:
@@ -608,6 +620,84 @@ def read_pras_results(filepath):
         else:
             df = pd.DataFrame()
         return df
+
+
+def get_temperatures(case, tz_in='UTC', tz_out='Etc/GMT+6', subset_years=True):
+    ### Derived inputs
+    inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
+    h5path = os.path.join(inputs_case, 'temperature_celsius-ba.h5')
+    sw = reeds.io.get_switches(inputs_case)
+    ## Add one more year on either end of weather years to allow for timezone conversion
+    weather_years = sw.resource_adequacy_years_list
+    read_years = [min(weather_years) - 1] + weather_years + [max(weather_years) + 1]
+    val_ba = (
+        pd.read_csv(os.path.join(inputs_case, 'val_ba.csv'), header=None)
+        .squeeze(1).values
+    )
+    ### Load temperatures
+    _temperatures = {}
+    with h5py.File(h5path, 'r') as f:
+        years = read_years if subset_years else [int(i) for i in list(f) if i.isdigit()]
+        for year in years:
+            timeindex = pd.to_datetime(
+                pd.Series(f[f"index_{year}"][:])
+                .str.decode('utf-8')
+            )
+            _temperatures[year] = pd.DataFrame(
+                index=timeindex,
+                columns=pd.Series(f['columns']).map(lambda x: x.decode()),
+                data=f[str(year)],
+            )
+
+    temperatures = (
+        pd.concat(_temperatures, names=('year','timestamp')).rename_axis(columns='r')
+        ## Round to integers for lookup
+        .round(0).astype(int)
+        .reset_index('year', drop=True)
+        .tz_localize(tz_in)
+        .tz_convert(tz_out)
+        ## Subset to weather years used in ReEDS
+        .loc[str(min(weather_years)):str(max(weather_years))]
+    )
+    ### On leap years, drop Dec 31
+    leap_year = temperatures.iloc[:,:1].groupby(temperatures.index.year).count().squeeze(1) == 8784
+    for year in weather_years:
+        if leap_year[year]:
+            temperatures.drop(temperatures.loc[f'{year}-12-31'].index, inplace=True)
+    assert len(temperatures) == len(weather_years) * 8760
+    ### Subset to states used in this run
+    temperatures = temperatures[[c for c in temperatures if c in val_ba]].copy()
+
+    return temperatures
+
+
+def get_outage_hourly(
+    case,
+    outage_type='forced',
+    tz='Etc/GMT+6',
+    multilevel=True,
+):
+    assert outage_type in ['forced', 'scheduled']
+    inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
+    with h5py.File(os.path.join(inputs_case, f'outage_{outage_type}_hourly.h5'), 'r') as f:
+        column_levels = [x.decode() for x in list(f['column_levels'])]
+        if multilevel:
+            columns = {
+                c: pd.Series(f[f'columns_{c}']).map(lambda x: x.decode())
+                for c in column_levels
+            }
+            columns = pd.MultiIndex.from_arrays(list(columns.values()), names=columns.keys())
+        else:
+            columns = pd.Series(f['columns']).map(lambda x: x.decode())
+        dfout = pd.DataFrame(
+            index=pd.to_datetime(pd.Series(f['index']).map(lambda x: x.decode())),
+            columns=columns,
+            data=f['data'],
+        ).tz_localize('UTC').tz_convert(tz)
+    ## If the columns only have one level, collapse the MultiIndex
+    if len(column_levels) == 1:
+        dfout.columns = dfout.columns.get_level_values(0)
+    return dfout
 
 
 #   ##      ## ########  #### ######## ########

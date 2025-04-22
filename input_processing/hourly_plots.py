@@ -228,7 +228,7 @@ def plot_ldc(
         plt.close()
 
 
-def plot_maps(sw, inputs_case, reeds_path, figpath):
+def plot_maps(sw, inputs_case, reeds_path, figpath, periodtype='rep'):
     """
     """
     ### Settings
@@ -290,9 +290,9 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
 
     ### Get the hourly data
     hours = pd.read_csv(
-        os.path.join(inputs_case,'numhours.csv')
+        os.path.join(inputs_case, periodtype, 'numhours.csv')
     ).rename(columns={'*h':'h'}).set_index('h').numhours
-    dfcf = pd.read_csv(os.path.join(inputs_case,'cf_vre.csv')).rename(columns={'*i':'i'})
+    dfcf = pd.read_csv(os.path.join(inputs_case, periodtype, 'cf_vre.csv')).rename(columns={'*i':'i'})
 
     for tech in techs:
         ### Get the annual average CF of the hourly-processed data
@@ -438,7 +438,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath):
     load_mean *= (1 - scalars['distloss'])
     ### Get the representative data, take the mean for the cluster year
     load_allyear = (
-        pd.read_csv(os.path.join(inputs_case, 'load_allyear.csv')).rename(columns={'*r':'r'})
+        pd.read_csv(os.path.join(inputs_case, periodtype, 'load_allyear.csv')).rename(columns={'*r':'r'})
         .set_index(['t','r','h']).MW.loc[keepyear]
         .multiply(hours).groupby('r').sum()
         / hours.sum()

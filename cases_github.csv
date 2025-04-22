@@ -3,7 +3,7 @@ ignore,0,,,,,,,
 endyear,2032,,2026,,2029,2035,2035,2035
 GSw_Region,cendiv/Pacific,,ba/p6,st/PA.NJ.DE.MD.VA,st/TX,st/NE.IA.IL,st/ID.WY.NE.IA.IL,st/OR
 GSw_RegionResolution,,,county,,,,aggreg,
-GSw_HierarchyFile,,,,,,,agg3,
+GSw_HierarchyFile,,,,,,,agg54,
 GSw_GasCurve,2,,,,,,,
 GSw_PRM_CapCredit,,,,1,,,,
 GSw_CO2_Detail,,,,1,,,1,

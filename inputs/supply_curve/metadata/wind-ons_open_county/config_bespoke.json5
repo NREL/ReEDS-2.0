@@ -4,7 +4,8 @@
         "option": "kestrel",
         "walltime": 12,
         "nodes": 300,
-        "memory": 245
+        "memory": 245,
+        "qos": "normal"
     },
     "log_level": "INFO",
     "log_directory": "./logs",
@@ -44,8 +45,8 @@
         "onshore": "./sam_6000kw_170rd.json5"
     },
     "excl_fpath": [
-        "/projects/rev/data/layers/north_america/conus/rasters/official_weto_seto/hdf/official_weto_seto_v1.h5",
-        "/projects/rev/data/layers/north_america/conus/rasters/official_weto_seto/hdf/techmaps.h5",
+        "/projects/rev/data/layers/north_america/conus_legacy/rasters/official_weto_seto/hdf/official_weto_seto_v1.h5",
+        "/projects/rev/data/layers/north_america/conus_legacy/rasters/official_weto_seto/hdf/techmaps.h5",
     ],
     "excl_dict": {
       "conus_landmass_2023-06": {

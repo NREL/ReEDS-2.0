@@ -25,7 +25,7 @@ param,units,comment,reeds2x,output_rename,input
 "cap_new_out(i,r,t)",MW,"new capacity by region, which are investments and upgrades from one solve year to the next",,,
 "cap_out(i,r,t)",MW,capacity by region,1,cap,
 "cap_out_ivrt(i,v,r,t)",MW,capacity by region and vintage,,,
-"capacity_offline(i,r,allh,t)",MW,capacity offline due to forced or planned outages,,,
+"capacity_offline(i,r,allh,t)",MW,capacity offline due to forced or scheduled outages,,,
 "capex_ivrt(i,v,r,t)",$,"capital expenditure for new capacity, no ITC/depreciation/PTC reductions",,,
 "cap_upgrade(i,r,t)",MW,upgraded capacity by region,,,
 "cap_upgrade_ivrt(i,v,r,t)",MW,upgraded capacity by region and vintage,,,
@@ -55,8 +55,6 @@ curt_rate(t),frac,fraction of VRE generation that is curtailed,,,
 "gen_new_uncurt(i,r,allh,t)",MWh,uncurtailed generation from new VRE techs,,,
 "curt_new(i,r,allh,t)",frac,curtailment frac for new VRE techs,,,
 "cc_all_out(i,v,r,ccseason,t)",frac,combined cc_int and m_cc_mar output,,,
-"dr_out(i,v,r,allh,allhh,t)",MW,dr shifting from timeslice hh to h,,,
-"dr_net(i,v,r,allh,t)",MW,net DR shifting in timeslice h,,,
 "dropped_load(r,allh,t)",MW,level values of DROPPED variable for dropped load,,,
 "emit_captured_irt(i,r,t)",metric tons,CO2 emissions captured by tech and region,,,
 "emit_captured_nat(i,t)",metric tons,"CO2 emissions captured, national",,,
@@ -74,6 +72,7 @@ error_check(*),unitless,set of checks to determine if there is an error - values
 "expenditure_flow_int(r,t)",2004$,expenditures from exogenous international imports/exports,,,
 "flex_load_out(flex_type,r,allh,t)",MWh,flexible load consumed in each timeslice,,,
 forced_outage(i),fraction,average forced outage rate (h-weighted; r-unweighted) by technology during representative periods,,,
+planned_outage(i),fraction,average scheduled outage rate (h-weighted) by technology during representative periods,,,
 "gen_ivrt_uncurt(i,v,r,t)",MWh,annual uncurtailed generation from VREs,,,
 "gen_ivrt(i,v,r,t)",MWh,annual generation,,,
 "gen_h(i,r,allh,t)",MW,generation by timeslice with charge and production load as negative generation,1,,
@@ -247,7 +246,7 @@ hierarchy,,,,,1
 hours,,,,,1
 hydmin,,,,,1
 ilr,,,,,1
-planned_outage,,,,,1
+outage_scheduled_h,,,,,1
 pvf_capital,,,,,1
 pvf_onm,,,,,1
 r,,,,,1
