@@ -53,7 +53,7 @@
 <li class="toctree-l1"><a class="reference internal" href="additional_model_information.html">Model Switches</a></li>
 <li class="toctree-l1"><a class="reference internal" href="additional_model_information.html#troubleshooting">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Analysis tools and helper scripts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
 </ul>
 
@@ -87,43 +87,73 @@
 <section class="tex2jax_ignore mathjax_ignore" id="reeds-2-0">
 <h1>ReEDS 2.0<a class="headerlink" href="#reeds-2-0" title="Link to this heading"></a></h1>
 <section id="welcome-to-the-regional-energy-deployment-system-reeds-model">
-<h2>Welcome to the Regional Energy Deployment System (ReEDS) Model!<a class="headerlink" href="#welcome-to-the-regional-energy-deployment-system-reeds-model" title="Link to this heading"></a></h2>
-<p>This GitHub repository contains the source code for NREL’s ReEDS model. The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS model can be downloaded or cloned from <a class="reference external" href="https://github.com/NREL/ReEDS-2.0">https://github.com/NREL/ReEDS-2.0</a>.</p>
-<p><strong>For more information about the model, see the <a class="reference external" href="https://pages.github.nrel.gov/ReEDS/ReEDS-2.0">ReEDS-2.0 Documentation</a></strong></p>
-<!-- **For more information about the model, see the [open source ReEDS-2.0 Documentation](https://nrel.github.io/ReEDS-2.0)** -->
-<p>A ReEDS training video (based on the 2020 version of ReEDS) is available on the NREL YouTube channel at <a class="reference external" href="https://youtu.be/aGj3Jnspk9M?si=iqCRNn5MbGZc8ZIO">https://youtu.be/aGj3Jnspk9M?si=iqCRNn5MbGZc8ZIO</a>.</p>
+<h2>Welcome to the Regional Energy Deployment System (ReEDS) Model<a class="headerlink" href="#welcome-to-the-regional-energy-deployment-system-reeds-model" title="Link to this heading"></a></h2>
+<p>This GitHub repository contains the source code for NREL’s ReEDS model.
+The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory.
+The ReEDS model can be downloaded or cloned from <a class="reference external" href="https://github.com/NREL/ReEDS-2.0">https://github.com/NREL/ReEDS-2.0</a>.</p>
+<p><strong>For more information about the model, see the <a class="reference external" href="https://nrel.github.io/ReEDS-2.0">open source ReEDS-2.0 Documentation</a>.</strong></p>
+<p>ReEDS training videos are available on the NREL YouTube channel at <a class="reference external" href="https://youtu.be/aGj3Jnspk9M?si=iqCRNn5MbGZc8ZIO">https://youtu.be/aGj3Jnspk9M?si=iqCRNn5MbGZc8ZIO</a>.</p>
 <p><a name="Introduction"></a></p>
 </section>
-</section>
-<section class="tex2jax_ignore mathjax_ignore" id="introduction-https-www-nrel-gov-analysis-reeds">
-<h1>Introduction (<a class="reference external" href="https://www.nrel.gov/analysis/reeds/">https://www.nrel.gov/analysis/reeds/</a>)<a class="headerlink" href="#introduction-https-www-nrel-gov-analysis-reeds" title="Link to this heading"></a></h1>
-<p>The Regional Energy Deployment System (ReEDS) is a capacity planning and dispatch model for the North American electricity system.</p>
-<p>As NREL’s flagship long-term power sector model, ReEDS has served as the primary analytic tool for many studies (<a class="reference external" href="https://www.nrel.gov/analysis/reeds/publications.html">https://www.nrel.gov/analysis/reeds/publications.html</a>) of important energy sector research questions, including clean energy policy, renewable grid integration, technology innovation, and forward-looking issues of the generation and transmission infrastructure. Data from the most recent base case and a suite of Standard Scenarios are provided.</p>
-<p>ReEDS uses high spatial resolution and high-fidelity modeling. Though it covers a broad geographic and technological scope, ReEDS is designed to reflect the regional attributes of energy production and consumption. Unique among long-term capacity expansion models, ReEDS possesses advanced algorithms and data to represent the cost and value of variable renewable energy; the full suite of other major generation technologies, including fossil and nuclear; and transmission and storage expansion options. Used in combination with other NREL tools, data, and expertise, ReEDS can provide objective and comprehensive electricity system futures.</p>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h2>
+<p><a class="reference external" href="https://www.nrel.gov/analysis/reeds/">ReEDS</a> is a capacity planning and dispatch model for the U.S. electricity system.</p>
+<p>As NREL’s flagship long-term power sector model, ReEDS has served as the primary analytic tool for <a class="reference external" href="https://www.nrel.gov/analysis/reeds/publications.html">many studies</a> of electricity sector research questions.
+Example model results are available in the <a class="reference external" href="https://scenarioviewer.nrel.gov/">Scenario Viewer</a>.</p>
 <p><a name="Software"></a></p>
 </section>
-<section class="tex2jax_ignore mathjax_ignore" id="required-software">
-<h1>Required Software<a class="headerlink" href="#required-software" title="Link to this heading"></a></h1>
-<p>The ReEDS model is written primarily in GAMS with auxiliary modules written in Python. At present, NREL uses the following software versions: GAMS 45.2; Python 3.11. Other versions of these software may be compatible with ReEDS, but NREL has not tested other versions at this time.</p>
-<p>GAMS is a mathematical programming software from the GAMS Development Corporation. “The use of GAMS beyond the limits of the free demo system requires the presence of a valid GAMS license file.” [<a class="reference external" href="https://www.gams.com/latest/docs/UG_License.html">1</a>] The ReEDS model requires the GAMS Base Module and a linear programming (LP) solver (e.g., CPLEX). The LP solver should be connected to GAMS with either a GAMS/Solver license or a GAMS/Solver-Link license. “A GAMS/Solver connects the GAMS Base module to a particular solver and includes a license for this solver to be used through GAMS. It is not necessary to install additional software. A GAMS/Solver-Link connects the GAMS Base Module to a particular solver, but does not include a license for the solver. It may be necessary to install additional software before the solver can be used.” [<a class="reference external" href="https://www.gams.com/products/buy-gams/">2</a>]</p>
-<p>NREL subscribes to the GAMS/CPLEX license for the LP solver, but open-source solvers and free, internet-based services are also available.</p>
-<ul class="simple">
-<li><p>The <a class="reference external" href="https://www.coin-or.org/downloading/"><em>COIN-OR Optimization Suite</em></a> includes open-source solvers that can be linked with GAMS through the GAMS Base Module. NREL has tested the use of the COIN-OR Linear Programming (CLP) solver for ReEDS. More information about using CLP for ReEDS can be found <a class="reference external" href="https://www.nrel.gov/docs/fy21osti/77907.pdf"><em>here</em></a>.</p></li>
-<li><p>The <a class="reference external" href="https://neos-server.org/neos/"><em>NEOS Server</em></a> is a free, internet-based service for solving numerical optimization problems. Links with NEOS can be made through <a class="reference external" href="https://www.gams.com/latest/docs/S_KESTREL.html"><em>KESTREL</em></a> which is included in GAMS Base Module. In its current form, ReEDS cannot be solved using NEOS due to the 16 MB limit on submissions to the server. However, modifications <em>could</em> be made to ReEDS to <em>potentially</em> reduce the data below to the required submission size. Note that some solvers available on the NEOS server are limited to non-commercial use.</p></li>
-</ul>
-<p>Python is “an object-oriented programming language, comparable to Perl, Ruby, Scheme, or Java.” [<a class="reference external" href="https://wiki.python.org/moin/BeginnersGuide/Overview">3</a>] “ Python is developed under an OSI-approved open source license, making it freely usable and distributable, even for commercial use. Python’s license is administered by the Python Software Foundation.” [<a class="reference external" href="https://www.python.org/about/">4</a>]. NREL uses Conda to build the python environment necessary for ReEDS. Conda is a “package, dependency and environment management for any language.” [<a class="reference external" href="https://docs.conda.io/en/latest/">5</a>]</p>
-<p>Git is a version-control tool used to manage code repositories. Included in Git is a unix style command line emulator called Git Bash, which is used by ReEDS to perform some initial setup tasks.</p>
+<section id="quick-start-guide">
+<h2>Quick-start guide<a class="headerlink" href="#quick-start-guide" title="Link to this heading"></a></h2>
+<p>The ReEDS model is written in <a class="reference external" href="https://www.python.org/">Python</a>, <a class="reference external" href="https://www.gams.com/">GAMS</a>, and <a class="reference external" href="https://julialang.org/">Julia</a>.
+Python and Julia are free, open-source languages;
+GAMS requires a software license from the vendor.
+A step-by-step guide for getting started with ReEDS is available <a class="reference external" href="https://pages.github.nrel.gov/ReEDS/ReEDS-2.0/setup.html">here</a>, and a quick-start guide for advanced users is outlined below.</p>
+<ol class="arabic simple">
+<li><p>Install Python using the Anaconda Distribution: <a class="reference external" href="https://www.anaconda.com/download/success">https://www.anaconda.com/download/success</a></p></li>
+<li><p>Set up GAMS:</p>
+<ol class="arabic simple">
+<li><p>Install GAMS: <a class="reference external" href="https://www.gams.com/download/">https://www.gams.com/download/</a></p></li>
+<li><p>Obtain a combined GAMS/CPLEX license: <a class="reference external" href="https://www.gams.com/sales/licensing/">https://www.gams.com/sales/licensing/</a></p>
+<ol class="arabic simple">
+<li><p>Small ReEDS systems have been solved using the open-source <a class="reference external" href="https://www.coin-or.org/">COIN-OR</a> solver as described <a class="reference external" href="https://www.nrel.gov/docs/fy21osti/77907.pdf">here</a>, but this capability is not actively maintained.</p></li>
+<li><p>Other commercial solvers have also been succussfully applied to ReEDS, but setup details and some solver tuning are specific to the CPLEX solver.</p></li>
+</ol>
+</li>
+</ol>
+</li>
+<li><p>Install Julia: <a class="reference external" href="https://julialang.org/downloads/">https://julialang.org/downloads/</a></p></li>
+<li><p>Open a command-line interface and set up your environments:</p>
+<ol class="arabic simple">
+<li><p>Clone the ReEDS repository: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">git&#64;github.com:NREL/ReEDS-2.0.git</span></code> or <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/NREL/ReEDS-2.0.git</span></code></p></li>
+<li><p>Navigate to the cloned repository</p></li>
+<li><p>Create the <code class="docutils literal notranslate"><span class="pre">reeds2</span></code> <a class="reference external" href="https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html">conda environment</a>: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">env</span> <span class="pre">create</span> <span class="pre">-f</span> <span class="pre">environment.yml</span></code></p>
+<ol class="arabic simple">
+<li><p>Linux and Mac users can use the environment.yml directly. Windows users need to comment out the <code class="docutils literal notranslate"><span class="pre">-</span> <span class="pre">julia=1.8</span></code> line from the environment.yml file before creating the enviroment and use the version of Julia installed above.</p></li>
+</ol>
+</li>
+<li><p>Activate the <code class="docutils literal notranslate"><span class="pre">reeds2</span></code> environment: <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">activate</span> <span class="pre">reeds2</span></code></p></li>
+<li><p>Instantiate the Julia environment: <code class="docutils literal notranslate"><span class="pre">julia</span> <span class="pre">--project=.</span> <span class="pre">instantiate.jl</span></code></p></li>
+</ol>
+</li>
+<li><p>Run ReEDS on a test case from the root of the cloned repository:</p>
+<ol class="arabic simple">
+<li><p>For interactive setup: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runbatch.py</span></code></p></li>
+<li><p>For one-line operation: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">runbatch.py</span> <span class="pre">-b</span> <span class="pre">v20250314_main</span> <span class="pre">-c</span> <span class="pre">test</span></code>. In this example, “v20250314_main” is the prefix for a batch of cases, and “test” is the suffix of a cases_{}.csv file located in the root of the repository (in this case, cases_test.csv).</p></li>
+</ol>
+</li>
+</ol>
 <p><a name="Contact"></a></p>
 </section>
-<section class="tex2jax_ignore mathjax_ignore" id="contact-us">
-<h1>Contact Us:<a class="headerlink" href="#contact-us" title="Link to this heading"></a></h1>
-<p>If you have comments and/or questions, you can contact the ReEDS team at <a class="reference external" href="mailto:ReEDS&#46;Inquiries&#37;&#52;&#48;nrel&#46;gov">ReEDS<span>&#46;</span>Inquiries<span>&#64;</span>nrel<span>&#46;</span>gov</a></p>
+<section id="contact-us">
+<h2>Contact Us<a class="headerlink" href="#contact-us" title="Link to this heading"></a></h2>
+<p>If you have comments and/or questions, you can contact the ReEDS team at <a class="reference external" href="mailto:ReEDS&#46;Inquiries&#37;&#52;&#48;nrel&#46;gov">ReEDS<span>&#46;</span>Inquiries<span>&#64;</span>nrel<span>&#46;</span>gov</a> or post a question on the <a class="reference external" href="https://github.com/NREL/ReEDS-2.0/discussions">discussion pages</a>.</p>
 <p>Alternatively, you can post questions at ReEDS repository <a class="reference external" href="https://github.com/NREL/ReEDS-2.0/discussions">discussion page</a>.</p>
 <div class="toctree-wrapper compound">
 </div>
 <!--
 note: to change the maxdepth of the toctree, you need to change 'navigation_depth' found in conf.py under 'html_theme_options'
 -->
+</section>
 </section>
 
 

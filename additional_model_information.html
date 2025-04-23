@@ -66,7 +66,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Post-Processing and Analysis Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Analysis tools and helper scripts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
 </ul>
 
@@ -119,9 +119,11 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm</span></code></p>
 <ul>
 <li><p>If set to ‘hierarchical’, then hierarchical clustering is used via</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sklearn</span><span class="o">.</span><span class="n">cluster</span><span class="o">.</span><span class="n">AgglomerativeClustering</span><span class="p">(</span>
-    <span class="n">n_clusters</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">sw</span><span class="p">[</span><span class="s1">&#39;GSw_HourlyNumClusters&#39;</span><span class="p">]),</span>
-    <span class="n">affinity</span><span class="o">=</span><span class="s1">&#39;euclidean&#39;</span><span class="p">,</span> <span class="n">linkage</span><span class="o">=</span><span class="s1">&#39;ward&#39;</span><span class="p">)</span>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>```python
+sklearn.cluster.AgglomerativeClustering(
+    n_clusters=int(sw[&#39;GSw_HourlyNumClusters&#39;]),
+    affinity=&#39;euclidean&#39;, linkage=&#39;ward&#39;)
+```
 </pre></div>
 </div>
 </li>
