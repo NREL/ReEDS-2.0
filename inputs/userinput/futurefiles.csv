@@ -50,12 +50,8 @@ depreciation_schedules.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,
 df_capex_init.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 distpvcap.csv,.csv,0,None,wide,Unnamed: 0,1,0,constant,None,None,"constant, linear, or saturate?",constant
 dr_dec.csv,.csv,1,None,9999,None,9999,0,constant,None,None,,constant
-dr_decrease.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 dr_hrs.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 dr_inc.csv,.csv,1,None,9999,None,9999,0,constant,None,None,,constant
-dr_increase.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
-dr_shed.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
-dr_shifts.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 dr_types.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 emit_rate.csv,.csv,0,None,t,"e,i,v,r",0,0,constant,0,None,done,constant
 emitrate.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
@@ -132,7 +128,7 @@ offshore_req.csv,.csv,0,None,wide,st,1,0,constant,0,None,done,constant
 ofswind_rsc_mult.csv,.csv,0,None,Unnamed: 0,None,1,0,constant,0,None,done,linear_5
 orperc.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 outage_forced_static.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
-outage_planned_static.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
+outage_scheduled_static.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 peak_ccseason.csv,.csv,2,None,wide,"r,ccseason",1,0,linear_5,None,None,"ignore if not EFS, else apply projection",linear_10
 prescribed_nonRSC.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 prescribed_rsc.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant

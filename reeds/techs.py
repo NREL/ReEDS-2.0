@@ -1,7 +1,16 @@
+import os
+import sys
 import re
 import pandas as pd
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 
 
+### Constants
+ignore_techs = ['ocean', 'caes', 'ice', 'mhkwave']
+
+
+### Functions
 def expand_GAMS_tech_groups(df):
     '''
     GAMS has a convention for expanding rows (e.g. upv_1*upv_10 is expanded to upv_1, upv_2,..., upv_10)
@@ -53,3 +62,49 @@ def import_tech_groups(file_path):
         tech_groups[col] = list(tech_subset_table[col][tech_subset_table[col] == 'YES'].index)
 
     return tech_groups
+
+
+def get_tech_subset_table(case):
+    """Output techs are in lower case"""
+    inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
+    tech_subset_table = (
+        pd.read_csv(os.path.join(inputs_case, 'tech-subset-table.csv'), index_col=0)
+        .rename_axis(index='i', columns='tech_group')
+        .stack().dropna()
+        .reorder_levels(['tech_group','i']).sort_index()
+        .reset_index('i').i
+        .str.lower()
+    )
+    return tech_subset_table
+
+
+def get_techlist_after_bans(case):
+    sw = reeds.io.get_switches(case)
+    tech_subset_table = get_tech_subset_table(case)
+    techlist = sorted(tech_subset_table.unique())
+    if not int(sw.GSw_BECCS):
+        techlist = [i for i in techlist if 'beccs' not in i]
+    if not int(sw.GSw_Biopower):
+        techlist = [i for i in techlist if i != 'biopower']
+    if not int(sw.GSw_DAC):
+        techlist = [i for i in techlist if i not in tech_subset_table.loc['DAC'].values]
+    if not int(sw.GSw_H2_SMR):
+        techlist = [i for i in techlist if i not in tech_subset_table.loc['SMR'].values]
+    match int(sw.GSw_Storage):
+        case 0:
+            techlist = [i for i in techlist if i not in tech_subset_table.loc['STORAGE_STANDALONE'].values]
+        case 3:
+            techlist = [
+                i for i in techlist if (
+                    (i not in tech_subset_table.loc['STORAGE_STANDALONE'].values)
+                    or (i in ['battery_4','battery_8','pumped-hydro'])
+                )
+            ]
+    if not int(sw.GSw_CCSFLEX_BYP):
+        techlist = [i for i in techlist if i not in tech_subset_table.loc['CCSFLEX_BYP'].values]
+    if not int(sw.GSw_CCSFLEX_STO):
+        techlist = [i for i in techlist if i not in tech_subset_table.loc['CCSFLEX_STO'].values]
+    if not int(sw.GSw_CCSFLEX_DAC):
+        techlist = [i for i in techlist if i not in tech_subset_table.loc['CCSFLEX_DAC'].values]
+
+    return techlist

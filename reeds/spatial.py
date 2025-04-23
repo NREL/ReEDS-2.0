@@ -82,8 +82,8 @@ def get_agglevel_variables(reeds_path, inputs_case):
                 ]
                 ba_regions = list(set(ba_regions + aggreg_regions_2_ba))
             # Create list of counties that belong to regions being solved at BA
-            BA_county_list = county2zone[county2zone['ba'].isin(ba_regions)]
-            BA_county_list['FIPS'] = 'p' + BA_county_list['FIPS'].astype(str)
+            BA_county_list = county2zone[county2zone['ba'].isin(ba_regions)].copy()
+            BA_county_list.loc[:,'FIPS'] = 'p' + BA_county_list['FIPS'].astype(str)
             # Map these counties to their BA
             BA_2_county = BA_county_list.set_index('FIPS')['ba'].to_dict()
             BA_county_list = BA_county_list['FIPS'].tolist()

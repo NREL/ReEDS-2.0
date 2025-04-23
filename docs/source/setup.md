@@ -6,7 +6,7 @@ New users may also wish to start with some ReEDS training videos which are avail
 ## Computer Setup for Microsoft Windows 10
 The setup and execustion of the ReEDS model can be accomplished using a command-line interpreter application and launching a command line interface (referred to as a "terminal window" in this documentation). For example, initiating the Windows Command Prompt application, i.e., cmd.exe, will launch a terminal window {numref}`figure-windows-command-prompt`. (Note: If you have issues using command prompt, try using anaconda prompt or a git bash window)
 
-```{figure} ../../images/cmd-prompt.png
+```{figure} figs/readme/cmd-prompt.png
 :name: figure-windows-command-prompt
 
 Screenshot of a Windows Command Prompt terminal window
@@ -16,13 +16,13 @@ Screenshot of a Windows Command Prompt terminal window
 
 **IMPORTANT:** Users should exercise Administrative Privileges when installing software. For example, right click on the installer executable for one of the required software (e.g., Anaconda3-2019.07-Windows-x86\_64.exe) and click on "Run as administrator" ({numref}`figure-run-as-admin`). Alternatively, right click on the executable for the command line interface (e.g., Command Prompt) and click on "Run as administrator" ({numref}`figure-run-as-admin-2`). Then run the required software installer executables from the command line.
 
-```{figure} ../../images/run-as-admin.png
+```{figure} figs/readme/run-as-admin.png
 :name: figure-run-as-admin
 
 Screenshot of running an installer executable using "Run as administrator"
 ```
 
-```{figure} ../../images/run-as-admin-2.png
+```{figure} figs/readme/run-as-admin-2.png
 :name: figure-run-as-admin-2
 
 Screenshot of running "Command Prompt" with "Run as administrator"
@@ -38,13 +38,13 @@ Add Python to the "path" environment variable
 
 1. In the Windows start menu, search for "environment variables" and click "Edit the system environment variables" ({numref}`figure-search-env-var`). This will open the "System Properties" window ({numref}`figure-sys-prop-win`).
 
-```{figure} ../../images/search-env-var.png
+```{figure} figs/readme/search-env-var.png
 :name: figure-search-env-var
 
 Screenshot of a search for "environment variables" in the Windows start menu
 ```
 
-```{figure} ../../images/sys-prop-win.png
+```{figure} figs/readme/sys-prop-win.png
 :name: figure-sys-prop-win
 
 Screenshot of the "System Properties" window.
@@ -54,7 +54,7 @@ Screenshot of the "System Properties" window.
 2. Click the "Environment Variables" button on the bottom right of the window ({numref}`figure-sys-prop-win`). This will open the "Environment Variables" window ({numref}`figure-env-var-wind`).
 
 
-```{figure} ../../images/env-var-win.png
+```{figure} figs/readme/env-var-win.png
 :name: figure-env-var-wind
 
 Edit the Path environment variable
@@ -63,7 +63,7 @@ Edit the Path environment variable
 
 3. Highlight the Path variable and click "Edit" ({numref}`figure-env-var-wind`). This will open the "Edit environment variable" window ({numref}`figure-edit-env-var-win`).
 
-```{figure} ../../images/edit-env-var-win.png
+```{figure} figs/readme/edit-env-var-win.png
 :name: figure-edit-env-var-win
 
 Append the Path environment
@@ -74,7 +74,7 @@ Append the Path environment
 
 **IMPORTANT** : Test the Python installation from the command line by typing "python" (no quotes) in the terminal window. The Python program should initiate ({numref}`figure-python-test`).
 
-```{figure} ../../images/py-test.png
+```{figure} figs/readme/py-test.png
 :name: figure-python-test
 
 Screenshot of a test of Python in the terminal window
@@ -104,7 +104,7 @@ Add GAMS to the "path" environment variable. Follow the same instructions as for
 
 **IMPORTANT** : Test the GAMS installation from the command line by typing "gams" (no quotes) in the terminal window. The GAMS program should initiate ({numref}`figure-gams-test`).
 
-```{figure} ../../images/gams-test.png
+```{figure} figs/readme/gams-test.png
 :name: figure-gams-test
 
 Screenshot of a test of GAMS from the terminal window
@@ -124,7 +124,7 @@ git lfs install
 
 1. Clone the ReEDS-2.0 repository on your desktop. Alternatively, download a ZIP from GitHub ({numref}`figure-github-download`).
 
-```{figure} ../../images/github-download.png
+```{figure} figs/readme/github-download.png
 :name: figure-github-download
 
 Screenshot of GitHub links to clone the ReEDS repository or download ZIP of the ReEDS files
@@ -138,13 +138,13 @@ Download the latest **Intel** version of Anaconda: [https://www.anaconda.com/dow
 
 **IMPORTANT**: Make sure to download the Intel version even if your machine has an Apple Silicon / ARM processor. 
 
-```{figure} ../../images/anaconda-intel.png
+```{figure} figs/readme/anaconda-intel.png
 :name: figure-anaconda-intel
 ```
 
 During Installation, select to install Anaconda for your machine only.
 
-```{figure} ../../images/anaconda-install-mac.png
+```{figure} figs/readme/anaconda-install-mac.png
 :name: figure-anaconda-install-mac
 
 Image of Anaconda Install Mac
@@ -152,7 +152,7 @@ Image of Anaconda Install Mac
 
 To have the installer automatically add anaconda to PATH, ensure that you've selected the box to "Add conda initialization to the shell"
 
-```{figure} ../../images/anaconda-custom-install-mac.png
+```{figure} figs/readme/anaconda-custom-install-mac.png
 :name: figure-anaconda-custom-insatll-mac
 
 Image of Anaconda Install Mac - Customize Installation Type
@@ -180,7 +180,7 @@ Install GAMS: [https://www.gams.com/download/](https://www.gams.com/download/). 
 
 **IMPORTANT**: When installing on Mac, on the 'Installlation Type' page, click 'customize' and ensure the box to 'Add GAMS to PATH' is checked.
 
-```{figure} ../../images/gams-install-mac.png
+```{figure} figs/readme/gams-install-mac.png
 :name: figure-gams-install-mac
 
 Image of GAMS Install Mac
@@ -276,7 +276,7 @@ Within column E, the case name is specified in row 1. The value for each switch 
 
 **Note:** all monetary switches should be entered in 2004 dollars.
 
-```{figure} ../../images/cases-csv.png
+```{figure} figs/readme/cases-csv.png
 :name: figure-cases-csv
 
 Screenshot of cases.csv
@@ -299,7 +299,7 @@ The user may also create custom case configuration files by using the suffix in 
 
 For each case that is run, a new subfolder will be created under the "runs/" subdirectory of ReEDS. If you run the default case found in "cases.csv", you can expect to find the outputs from the run at "/ReEDS-2.0/runs/{batch prefix}_Ref/outputs".
 
-```{figure} ../../images/exe-runbatch.png
+```{figure} figs/readme/exe-runbatch.png
 :name: figure-exe-runbatch
 
 Screenshot of initiating "runbatch.py" from the command line

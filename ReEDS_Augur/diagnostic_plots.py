@@ -142,7 +142,7 @@ def get_inputs(sw):
     fulltimeindex = reeds.timeseries.get_timeindex(sw.resource_adequacy_years)
 
     h_dt_szn = (
-        pd.read_csv(os.path.join(sw['casedir'],'inputs_case','h_dt_szn.csv'))
+        pd.read_csv(os.path.join(sw['casedir'], 'inputs_case', 'rep', 'h_dt_szn.csv'))
         .assign(hr=(['hr{:>03}'.format(i+1) for i in range(sw['hoursperperiod'])]
                     * sw['periodsperyear'] * len(sw.resource_adequacy_years_list)))
         .assign(datetime=fulltimeindex)

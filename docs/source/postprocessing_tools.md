@@ -1,176 +1,109 @@
-# Post-Processing and Analysis Tools
-There are several tools that can be found in the ReEDS repository. 
+# Analysis tools and helper scripts
 
-## Helper Scripts and Tools
-### Comparison
+The ReEDS model includes several tools for setting up new cases, managing active cases, and analyzing case results.
+Most of these scripts have command-line interfaces, the details of which can be printed by running `python path/to/scriptname.py -h`.
 
-**postprocessing/compare_cases.py**
+## Setting up new cases
 
-Compare_cases.py will take two ReEDS case paths and create a powerpoint comparing the cases.
+### Create a new cases_{}.csv file: `preprocessing/casemaker.py`
 
-Command to run this script: `python postprocessing/compare_cases.py [path to ReEDS run #1] [path to ReEDS run #2]`
+This script does not have a command-line interface, but can be edited by the user and used to create a cases_{}.csv file with a matrix of switch settings.
 
-Example: 
-```
-$ python postprocessing/compare_cases.py /Users/km/ReEDS-2.0/runs/v20231221_USA /Users/km/ReEDS-2.0/runs/v20231221_USA_ref
-```
+### Fix representative/stress periods: `preprocessing/get_case_periods.py`
 
-**postprocessing/compare_casegroup.py**
+This script takes as its required argument a filepath to a completed ReEDS case.
 
-Compare_casegroup.py will take any number of ReEDS case paths and create a powerpoint comparing all cases. The only required argument is a comma-delimited list of ReEDS case paths. 
+- If the optional `-r/--rep` flag is added (as in `python preprocessing/get_case_periods.py path/to/casename -r`), the representative periods for the provided run are written to `inputs/variability/period_szn_user_{name}.csv`, where `name` is either provided by the `-n/--name` argument or (if no name is provided) given by the case name.
+  - In a subsequent case, these representative periods can be used by setting `GSw_HourlyClusterAlgorithm` to `user_{name}`.
+- If the optional `-s/--stress` flag is added, the stress periods for the provided run are written to `inputs/variability/stressperiods_user_{name}.csv`.
+  - In a subsequent case, these stress periods can be used by setting `GSw_PRM_StressModel` to `user_{name}`.
 
-Example: 
+## Managing currently-running cases
 
-```
-$ python postprocessing/compare_casegroup.py /Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_ref,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_lim,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_open,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_transgrp --casenames=Ref,Lim,Open,transgrp
-```
+### Print details for active HPC runs: `runstatus.py`
 
-or similarly: 
+This script prints details about cases that are currently running on the HPC.
 
-```
-$ python postprocessing/compare_casegroup.py /Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_ref,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_lim,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_open,/Volumes/ReEDS/Users/pb/ReEDSruns/20231103_stress/v20231218_casegroupK0_USA_transgrp --titleshorten=26
-```
+- If run without arguments (`python runstatus.py`), it uses `squeue` to get a list of the active runs under your username.
+- If run with an argument (e.g. `python runstatus.py v20250310`), it only prints details for runs whose name begins with the provided argument.
+- Adding the `-f` flag will print the names of the finished runs: `python runstatus.py v20231112 -f`
+- If you increase the verbosity by adding `-v` flags, it prints a number of lines from the end of that run's gamslog.txt equal to the number of v's in the flag: `python runstatus.py v20231112 -vvvvv`
 
-Other optional arguments are: 
+### Manage HPC runs: `restart_runs.py`
 
-```
- --casenames CASENAMES, -n CASENAMES
-      comma-delimited list of shorter case names to use in plots (default: )
- --titleshorten TITLESHORTEN, -s TITLESHORTEN
-      characters to cut from start of case name (only used if no casenames) (default: 0)
- --startyear STARTYEAR, -y STARTYEAR
-      First year to show (default: 2020)
-```
+This script restarts failed runs on the HPC whose case name starts with the provided prefix: `python restart_runs.py case_name_prefix`
 
-### Run Management
+## Analyzing finished cases
 
-**runstatus.py**
+### Compare results: `postprocessing/compare_cases.py`
 
-runstatus.py can be used to print details about runs that are currently running on the HPC.
+This script creates a powerpoint file comparing the results of the cases provided via the `caselist` argument.
+The list of cases to compare can be provided in one of two ways: as a space-delimited list of filepaths, or as a single filepath to a .csv file in the format of postprocessing/example.csv.
+The first case in the list is treated as the base case, and other cases are all compared to that same case.
 
-Command to run this script: `python runstatus.py [batch prefix]`
+Example for two cases:
 
-Example:
-```
-$ python runstatus.py v20231112
+```bash
+python postprocessing/compare_cases.py /Users/username/github/ReEDS-2.0/runs/v20250310_main_USA /Users/username/github/ReEDS-2.0/runs/v20250310_newthing_USA
 ```
 
-Adding the `-f` flag will print the names of the finished runs: `$ python runstatus.py v20231112 -f`
+Example for three cases:
 
-If you increase the verbosity by adding `-v` flags, it prints a number of lines from the end of that run's gamslog.txt equal to the number of v's in the flag: `$ python runstatus.py v20231112 -vvvvv`
-
-**restart_runs.py**
-
-restart_runs.py can be used to restart any failed runs for a given batch. **This only works on HPC currently.**
-
-Command to run this script: `python restart_runs.py [batch prefix]`
-
-Example:
-```
-$ python restart_runs.py v20231112
+```bash
+python postprocessing/compare_cases.py /Users/username/github/ReEDS-2.0/runs/v20250310_main_USA /Users/username/github/ReEDS-2.0/runs/v20250310_newthing1_USA /Users/username/github/ReEDS-2.0/runs/v20250310_newthing2_USA
 ```
 
-**interim_report.py**
+Example for a .csv file of cases:
 
-interim_report.py can be used to [**todo: fill in additional details**]
-
-Command to run this script: `python interim_report.py [path to ReEDS run]`
-
-Example:
-```
-$ python interim_report.py /Users/km/ReEDS-2.0/runs/v20231221_USA_ref
+```bash
+python postprocessing/compare_cases.py /Users/username/github/ReEDS-2.0/postprocessing/example.csv
 ```
 
-**runs/{case}/meta.csv**
+### Run PRAS: `postprocessing/run_reeds2pras.py`
 
-The meta.csv file is generated for each run. 
+The PRAS model is typically run multiple times during each ReEDS case (as long as `GSw_PRM_CapCredit = 0`) to ensure resource adequacy.
+This script reruns PRAS on a finished ReEDS case (provided by the single required command-line argument) and allows the settings to be changed.
+For example, to use a different number of samples than are specified by the default `pras_samples` switch, use the `-s/--samples` command-line argument.
 
-Information found in the meta.csv file: 
-   1. Computer & Github information for the run (computer, repo, branch, commit, description)
-   2. Information for each process of the run (year, process, starttime, stoptime, processtime)  
+### Run a dispatch model: `run_pcm.py`
 
+This script reruns a completed ReEDS case as a dispatch simulation at higher time resolution.
+The operational constraints in `c_supplymodel.gms` are used directly, but the investment and capacity variables are fixed to their previously optimized values; only the operational variables are re-optimized.
+365 representative 1-day periods at 1-hour resolution are used by default, but these settings can be changed using the `-s/--switch_mods` switch.
 
-### Preprocessing
+This approach is distinct from the [R2X](https://github.com/NREL/R2X) tool, which formats the results of a ReEDS case as inputs to a separate production cost modeling tool such as [Sienna](https://github.com/NREL-Sienna) or [PLEXOS](https://www.energyexemplar.com/plexos).
+Those tools provide more advanced and realistic features like unit commitment and rolling forecast horizons;
+by contrast, `run_pcm.py` simply reuses the existing ReEDS formulation at higher time resolution,
+and is subject to all the normal caveats and limitations of ReEDS (linear variables, pipe-and-bubble transmission flow, etc.).
 
-**preprocessing/casemaker.py**
+### Generate static plots: `postprocessing/transmission_maps.py`
 
-**[todo: add additional information]**
+This script runs automatically at the end of a ReEDS case and writes static maps to the {case}/outputs/maps folder as .png files.
 
-Example: 
-```
-$ python casemaker.py ...
-```
+### Generate interactive plots: `postprocessing/bokehpivot`
 
-**preprocessing/get_case_periods.py**
+The bokehpivot module can be used to visualize the outputs of ReEDS runs.
+For more information on how to use bokehpivot, see the [bokehpivot guide](bokehpivot.md).
 
-**[todo: add additional information]**
+If you're new to bokehpivot, the following YouTube video will be a good starting point: [Viewing ReEDS Outputs Using the BokehPivot Module](https://www.youtube.com/watch?v=8Xi59M4bB6I&list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&index=3)
 
-Example: 
-```
-$ python get_case_periods.py ...
-```
+### Calculate hourly prices and technology value metrics: `postprocessing/reValue`
 
+reValue is used for two main things:
 
-### Tool Linkages
-
-**postprocessing/run_reeds2pras.py**
-
-run_reeds2pras.py can be used to [**todo: fill in additional details**]
-
-Example:
-```
-$ python postprocessing/run_reeds2pras.py ...
-```
-
-### Visualization
-
-**postprocessing/plots.py**
-
-**[todo: add additional information]**
-
-Example:
-```
-$ python postprocessing/plots.py
-```
-
-**postprocessing/reedsplots.py**
-
-**[todo: add additional information]**
-
-Example:
-```
-$ python postprocessing/reedsplots.py
-```
-
-**postprocessing/transmission_maps.py**
-
-**[todo: add additional information]**
-
-Example:
-```
-$ python postprocessing/transmission_maps.py
-```
-
-
-## Analysis Modules
-### BokehPivot
-Bokehpivot can be used for visualizing the outputs of ReEDS runs. For more information on how to use bokehpivot, see the [bokehpivot guide](bokehpivot.md).
-
-If you're new to BokehPivot, the following YouTube video will be a good starting point: [Viewing ReEDS Outputs Using the BokehPivot Module](https://www.youtube.com/watch?v=8Xi59M4bB6I&list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&index=3)
-
-### reValue
-reValue is used for two main things: 
-   * extracting regional hourly prices from ReEDS scenarios and years
-   * (Optional) using extracted prices to calculate value and competitiveness-related metrics for a set of regional generation or load profiles.
+- extracting regional hourly prices from ReEDS scenarios and years
+- (Optional) using extracted prices to calculate value and competitiveness-related metrics for a set of regional generation or load profiles.
 
 More more information on reValue, see the [reValue documentation](revalue.md).
 
-### retail_rate_module
-The retail rate module can be used after finishing a ReEDS run to calculate retail electricity rates by state and year, where each state is served by its own investor-owned utility (IOU). 
+### Estimate retail rates: `postprocessing/retail_rate_module`
+
+The retail rate module can be used after finishing a ReEDS run to calculate retail electricity rates by state and year, where each state is served by its own investor-owned utility (IOU).
 
 For more information on this module, see the [retail_rate_module documentation](retail_rate_module.md).
 
-### Analysis of ReEDS in Tableau
-Tableau can be used for the analysis of ReEDS and ReEDS-to-PLEXOS results in Tableau. 
+### Generate a Tableau results viewer: `postprocessing/tableau`
+
+Tableau can be used for the analysis of ReEDS and ReEDS-to-PLEXOS results in Tableau.
 
 For more information on how to use Tableau with ReEDS, see the [Tableau documentation](tableau.md).

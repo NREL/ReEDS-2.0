@@ -128,7 +128,7 @@ def main(reeds_path, inputs_case, agglevel, regions):
     
     # #%% Settings for testing
     # reeds_path = os.path.expanduser('~/github/ReEDS-2.0')
-    # inputs_case = os.path.join(reeds_path,'runs','nd1_ND','inputs_case')
+    # inputs_case = os.path.join(reeds_path,'runs','v20250206_pcmM0_Pacific','inputs_case')
 
 
     #########################
@@ -673,8 +673,16 @@ def main(reeds_path, inputs_case, agglevel, regions):
     can_imports_year_mwh.columns = can_imports_year_mwh.columns.astype(int)
     can_imports_year_mwh = can_imports_year_mwh.reindex(years, axis=1).dropna(axis=1)
 
-    h_dt_szn = pd.read_csv(os.path.join(inputs_case,'h_dt_szn_h17.csv'))
-    quarterhours = h_dt_szn.loc[h_dt_szn.year==2012].groupby('quarter').year.count()
+    ## Get hours per quarter
+    year = sw['GSw_HourlyWeatherYears'].split('_')[0]
+    timestamps = pd.Series(index=pd.date_range(f'{year}-01-01', periods=8760, freq='H'))
+
+    month2quarter = pd.read_csv(
+        os.path.join(inputs_case, 'month2quarter.csv'),
+        index_col='month',
+    ).squeeze(1)
+
+    quarterhours = timestamps.index.month.map(month2quarter).value_counts()
     quarterhours.index = quarterhours.index.map(lambda x: quartershorten.get(x,x)).rename('szn')
 
     can_imports_quarter_frac = pd.read_csv(os.path.join(inputs_case,'can_imports_quarter_frac.csv'),

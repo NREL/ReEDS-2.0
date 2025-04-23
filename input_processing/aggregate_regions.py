@@ -1141,7 +1141,7 @@ if os.path.exists(mapsfile):
     os.remove(mapsfile)
 dfmap = reeds.io.get_dfmap(os.path.join(inputs_case,'..'))
 for level in dfmap:
-    dfmap[level].to_file(mapsfile, layer=level)
+    dfmap[level].rename_axis(level).to_file(mapsfile, layer=level)
 
 dfmap = reeds.io.get_dfmap(os.path.join(inputs_case,'..'))
 
@@ -1178,7 +1178,12 @@ else:
     if os.path.exists(mapsfile):
         os.remove(mapsfile)
     for level in dfmap:
-        dfmap[level].drop(columns='aggreg', errors='ignore').to_file(mapsfile, layer=level)
+        (
+            dfmap[level]
+            .drop(columns='aggreg', errors='ignore')
+            .rename_axis(level)
+            .to_file(mapsfile, layer=level)
+        )
 
 #%%
 if agglevel_variables['lvl'] == 'mult' or agglevel == 'county':

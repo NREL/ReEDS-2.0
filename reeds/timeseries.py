@@ -66,7 +66,7 @@ def timestamp2h(ts, GSw_HourlyType='day'):
 
 def timeslice_to_timestamp(case, param):
     ### Load the timestamps and other ReEDS settings
-    h_dt_szn = pd.read_csv(os.path.join(case, 'inputs_case', 'h_dt_szn.csv'))
+    h_dt_szn = pd.read_csv(os.path.join(case, 'inputs_case', 'rep', 'h_dt_szn.csv'))
     sw = reeds.io.get_switches(case)
     sw['GSw_HourlyWeatherYears'] = [int(y) for y in sw['GSw_HourlyWeatherYears'].split('_')]
     ### Get the timestamps for the modeled weather yeras

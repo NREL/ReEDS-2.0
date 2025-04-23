@@ -157,7 +157,7 @@ def reeds_cc(t, tnext, casedir):
     sdb = [int(x) for x in sdb['bin']]
 
     # Temporal definitions
-    h_dt_szn = pd.read_csv(os.path.join('inputs_case', 'h_dt_szn.csv'))
+    h_dt_szn = pd.read_csv(os.path.join('inputs_case', 'rep', 'h_dt_szn.csv'))
 
     ccseasons = []
     if sw['cc_calc_annual']:
@@ -199,24 +199,6 @@ def reeds_cc(t, tnext, casedir):
         # Restrict capacity credit evaluation to use 2012 only (rather than multi-year)
         load_profiles = load_profiles[load_profiles.index.get_level_values('year') == 2012].copy()
 
-    if int(sw['GSw_DR']):
-        # Get DR props
-        marg_dr_props = gdx['storage_eff'][gdx['storage_eff']['i'].str.contains('dr1')]
-        dr_hrs = pd.read_csv(os.path.join(inputs_case,'dr_hrs.csv'))
-        dr_hrs['hrs'] = list(zip(dr_hrs.pos_hrs, -dr_hrs.neg_hrs))
-        dr_hrs['max_hrs'] = 8760
-        dr_shed = pd.read_csv(os.path.join(inputs_case,'dr_shed.csv'), header=None,names=['dr_type','max_hrs'])
-        dr_shed['hrs'] = [(1, 1)]*len(dr_shed.index)
-        dr_hrs = pd.concat([dr_hrs, dr_shed])
-        dr_hrs.rename(columns={"dr_type": "i"},inplace=True)
-        marg_dr_props.rename(columns={"Value":"RTE"},inplace=True)
-        marg_dr_props = pd.merge(marg_dr_props, dr_hrs, on='i', how='right').drop_duplicates('i').set_index('i')
-        # Fill missing data
-        marg_dr_props.loc[marg_dr_props.RTE != marg_dr_props.RTE, 'RTE'] = 1
-        marg_dr_props = marg_dr_props[['hrs', 'max_hrs', 'RTE']]
-        drcf_inc = load_dr_data('dr_increase.csv',inputs_case,h_dt_szn)
-        drcf_dec = load_dr_data('dr_decrease.csv',inputs_case,h_dt_szn)
-
     # Get EVMC data if necessary
     if int(sw['GSw_EVMC']):
         # Get EVMC props
@@ -248,15 +230,8 @@ def reeds_cc(t, tnext, casedir):
         )
 
         # Hourly profiles
-        load_profile_ccreg = load_profiles[ccreg]
-        # DR profile
-        if int(sw['GSw_DR']):
-            dr_reg = [r for r in resources_ccreg.r.drop_duplicates()
-                      if r in drcf_inc.columns]
-            dr_inc_ccreg = drcf_inc[['i'] + dr_reg]
-            dr_reg = [r for r in resources_ccreg.r.drop_duplicates()
-                      if r in drcf_dec.columns]
-            dr_dec_ccreg = drcf_dec[['i'] + dr_reg]
+        load_profile_ccreg = load_profiles[ccreg]      
+
         # EVMC profile
         if int(sw['GSw_EVMC']):
             evmc_shape_reg = [r for r in resources_ccreg.r.drop_duplicates()
@@ -303,9 +278,6 @@ def reeds_cc(t, tnext, casedir):
             if ccseason == 'year':
                 load_profile_ccseason = load_profile_ccreg.copy()
                 hours_considered = int(sw['cc_ann_hours'])
-                if int(sw['GSw_DR']):
-                    dr_inc_ccseason = dr_inc_ccreg.copy()
-                    dr_dec_ccseason = dr_dec_ccreg.copy()
                 if int(sw['GSw_EVMC']):
                     evmc_shape_load_ccseason = evmccf_shape_increase_ccreg.copy()
                     evmc_shape_gen_ccseason = evmccf_shape_decrease_ccreg.copy()
@@ -315,11 +287,6 @@ def reeds_cc(t, tnext, casedir):
                     ccseason, axis=0, level='ccseason').reset_index()
                 hours_considered = int(sw['GSw_PRM_CapCreditHours'])
 
-                if int(sw['GSw_DR']):
-                    dr_inc_ccseason = dr_inc_ccreg.xs(
-                        ccseason, axis=0, level='ccseason').reset_index()
-                    dr_dec_ccseason = dr_dec_ccreg.xs(
-                        ccseason, axis=0, level='ccseason').reset_index()
                 if int(sw['GSw_EVMC']):
                     evmc_shape_load_ccseason = evmccf_shape_increase_ccreg.xs(
                         ccseason, axis=0, level='ccseason').reset_index()
@@ -437,64 +404,6 @@ def reeds_cc(t, tnext, casedir):
                     evmc_cc_i[['r', 'i', 'value']]])
                 else:
                     dict_cc_dr[ccreg, ccseason] = evmc_cc_i[['r', 'i', 'value']]
-            
-            if int(sw['GSw_DR']):
-                # Pivot DR data
-                inc_timestamp = pd.pivot_table(
-                    pd.melt(dr_inc_ccseason,
-                            id_vars=['h','year','hour','i'],
-                            var_name='r'),
-                    index=['h','year','hour'],
-                    columns=['i','r'], values='value')
-                dec_timestamp = pd.pivot_table(
-                    pd.melt(dr_dec_ccseason,
-                            id_vars=['h','year','hour','i'],
-                            var_name='r'),
-                    index=['h','year','hour'],
-                    columns=['i','r'], values='value')
-                # Loop through techs with a DR profile
-                for i in dec_timestamp.columns.get_level_values(0).unique()[1:]:
-                    if 2012 not in years:
-                        log.info("WARNING!\nDR data does not exist for weather years "+
-                                 "other than 2012.\nYou are running without 2012")
-                    for y in years:
-                        if y not in dec_timestamp.index.get_level_values('year').unique():
-                            continue
-
-                        # Get DR data in numpy array and multiply by marginal capacity
-                        dec_temp = dec_timestamp[i].xs(y, level='year').values * float(sw['marg_dr_mw'])
-                        if i in techs['dr2']:
-                            # For shed, there is no increase in energy required so just make sure
-                            # there is sufficient energy to shift into from the decrease hour
-                            inc_temp = dec_temp.copy() * 2
-                        else:
-                            inc_temp = inc_timestamp[i].xs(y, level='year').values * float(sw['marg_dr_mw'])
-                        # Replicate net load data for each DR type and region
-                        net_load_profile_temp = net_load_profile_timestamp.iloc[
-                            :, 0][net_load_profile_timestamp.index == y].to_numpy()
-
-                        net_load_profile_temp = np.array([net_load_profile_temp, ]*len(dec_timestamp[i].columns)
-                                                         ).transpose()
-                        # Get load to shift out of top hours, analagous to curtailment
-                        top_load = (net_load_profile_temp
-                                    - (net_load_profile_temp.max() - float(sw['marg_dr_mw'])) )
-                        tot_top_load = top_load.clip(min=0).sum(0)
-                        top_load = top_load.clip(-inc_temp, dec_temp)
-                        dr_cc_i = dr_capacity_credit(
-                            hrs=marg_dr_props.loc[i, 'hrs'], eff=marg_dr_props.loc[i, 'RTE'],
-                            ts_length=top_load.shape[0], poss_dr_changes=top_load,
-                            marg_peak=tot_top_load, cols=dec_timestamp[i].columns,
-                            maxhrs=marg_dr_props.loc[i, 'max_hrs'])
-
-                        # If more than just 2012 DR year added, add min as above
-                    dr_cc_i['i'] = i
-                    if (ccreg, ccseason) in dict_cc_dr.keys():
-                        dict_cc_dr[ccreg, ccseason] = pd.concat(
-                            [dict_cc_dr[ccreg, ccseason],
-                             dr_cc_i[['r', 'i', 'value']]])
-                    else:
-                        dict_cc_dr[ccreg, ccseason] = dr_cc_i[['r', 'i', 'value']]
-
 
     # ------ AGGREGATE OUTPUTS ------
     cc_old = (
@@ -551,7 +460,7 @@ def reeds_cc(t, tnext, casedir):
     ### Reorder to match ReEDS convention
     net_load_2012 = net_load_2012.reindex(['ccreg','ccseason','year','h','hour','t','value'], axis=1)
 
-    if int(sw['GSw_DR']) or int(sw['GSw_EVMC']):
+    if int(sw['GSw_EVMC']):
         cc_dr = (
             pd.concat(dict_cc_dr, axis=0)
             .reset_index().drop(['level_2', 'level_0'], axis=1)

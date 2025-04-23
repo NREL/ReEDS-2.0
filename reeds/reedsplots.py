@@ -1305,11 +1305,11 @@ def plot_transmission_utilization(
     ## First try the hourly version; if it doesn't exist load the h17 version
     try:
         hours = pd.read_csv(
-            os.path.join(case,'inputs_case','hours_hourly.csv'),
+            os.path.join(case,'inputs_case', 'rep', 'hours_hourly.csv'),
             header=0, names=['h','hours'], index_col='h').squeeze(1)
     except FileNotFoundError:
         hours = pd.read_csv(
-            os.path.join(case,'inputs_case','numhours.csv'),
+            os.path.join(case,'inputs_case', 'rep', 'numhours.csv'),
             header=0, names=['h','hours'], index_col='h').squeeze(1)
     utilization['Valh'] = utilization.apply(
         lambda row: hours.get(row.get('h', 1), 1) * abs(row.Val_flow),
@@ -1794,7 +1794,7 @@ def plot_prmtrade(
     _vmax = dfplot.MW.abs().max() if vmax in [None, 0, 0.] else vmax
     if int(sw.get('GSw_PRM_CapCredit', 1)):
         ccseasons = pd.read_csv(
-            os.path.join(case,'inputs_case','h_dt_szn.csv')
+            os.path.join(case, 'inputs_case', 'rep', 'h_dt_szn.csv')
         ).ccseason.unique()
     else:
         ccseasons = dfplot.ccseason.sort_values().unique()
@@ -1882,7 +1882,7 @@ def plot_average_flow(
 
     ### Load results
     hours = pd.read_csv(
-        os.path.join(case,'inputs_case','numhours.csv'),
+        os.path.join(case,'inputs_case', 'rep', 'numhours.csv'),
         header=0, names=['h','hours'], index_col='h',
     ).squeeze(1)
     if both_directions:
@@ -3747,8 +3747,8 @@ def map_hybrid_pv_wind(
 
 
 def plot_dispatch_yearbymonth(
-        case, t=2050, plottype='gen',
-        techs=None, ba=None,
+        case, t=2050, plottype='gen', periodtype='rep',
+        techs=None, region=None,
         f=None, ax=None, figsize=(12,6), highlight_rep_periods=1,
     ):
     """
@@ -3758,6 +3758,13 @@ def plot_dispatch_yearbymonth(
     techs: None to plot all techs, or list of subset techs, or single tech string
     plottype: 'soc' for storage state of charge, anything else for dispatch
     """
+    if (periodtype != 'rep') and not (periodtype.startswith('pcm')):
+        raise ValueError(
+            f"periodtype={periodtype}: must be 'rep' or start with 'pcm'. "
+            "If it starts with 'pcm' it should be formatted as '{pcm}_{label}_{t} and "
+            "match a folder of the same name in {case}/outputs."
+        )
+    inputs_path = os.path.join(case, 'inputs_case', periodtype)
     ### Load bokeh tech map and colors
     tech_map = pd.read_csv(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'))
@@ -3771,19 +3778,39 @@ def plot_dispatch_yearbymonth(
 
     ### Load run files
     sw = reeds.io.get_switches(case)
-    hmap_myr = pd.read_csv(os.path.join(case, 'inputs_case', 'hmap_myr.csv'))
+    hmap_myr = pd.read_csv(os.path.join(inputs_path, 'hmap_myr.csv'))
+    hierarchy = reeds.io.get_hierarchy(case)
+    output_path = (
+        case if periodtype == 'rep'
+        else os.path.join(case, 'outputs', f'{periodtype}_{t}', 'outputs.h5')
+    )
 
     if plottype.lower() in ['soc', 'stateofcharge', 'energy_level', 'stor_level']:
-        dfin = reeds.io.read_output(case, 'stor_level')
+        dfin = reeds.io.read_output(output_path, 'stor_level')
         dfin.i = dfin.i.str.lower().map(lambda x: tech_map.get(x,x))
     else:
-        dfin = reeds.io.read_output(case, 'gen_h')
+        dfin = reeds.io.read_output(output_path, 'gen_h')
         dfin.i = dfin.i.map(
             lambda x: x if x.startswith('battery') else x.strip('_01234567890*')
         ).str.lower().map(lambda x: tech_map.get(x,x))
 
-    if ba is not None:
-        dfin = dfin.loc[dfin.r==ba].copy()
+    if region is not None:
+        err = (
+                f"region = {region} but must be formatted as "
+                + "{hierarchy level}/{.-delimited list of regions at that level}"
+            )
+        if (
+            ('/' not in region)
+            or (region.split('/')[0] not in hierarchy.columns.tolist() + ['r'])
+        ):
+            raise ValueError(err)
+        level = region.split('/')[0]
+        regions = region.split('/')[1].split('.')
+        if level == 'r':
+            keep_r = regions
+        else:
+            keep_r = hierarchy.loc[hierarchy[level].isin(regions)].index
+        dfin = dfin.loc[dfin.r.isin(keep_r)].copy()
 
     dfyear = (
         dfin.loc[dfin.t==t]
@@ -3798,16 +3825,19 @@ def plot_dispatch_yearbymonth(
             dfyear = dfyear[[techs]].copy()
 
     if dfyear.empty:
-        print(f"No values to plot for t={t}, ba={ba}, plottype={plottype}")
+        print(f"No values to plot for t={t}, region={region}, plottype={plottype}")
         return None, None, None
 
     ### Broadcast representative days to actual days
-    dffull = (
-        hmap_myr[['actual_h','h']]
-        .merge(dfyear, left_on='h', right_index=True, how='left')
-        .fillna(0)
-        .sort_values('actual_h').set_index('actual_h').drop('h', axis=1)
-    )
+    if len(dfyear) != len(hmap_myr):
+        dffull = (
+            hmap_myr[['actual_h','h']]
+            .merge(dfyear, left_on='h', right_index=True, how='left')
+            .fillna(0)
+            .sort_values('actual_h').set_index('actual_h').drop('h', axis=1)
+        )
+    else:
+        dffull = dfyear.copy()
 
     dffull.index = dffull.index.map(reeds.timeseries.h2timestamp)
 
@@ -3832,9 +3862,11 @@ def plot_dispatch_yearbymonth(
 
     ### Read rep periods if necessary
     if highlight_rep_periods:
-        # timestamps = pd.read_csv(os.path.join(case,'inputs_case','timestamps.csv'))
-        period_szn = pd.read_csv(os.path.join(case,'inputs_case','period_szn.csv'))
-        period_szn['timestamp'] = (period_szn.actual_period+'h001').map(reeds.timeseries.h2timestamp)
+        period_szn = pd.read_csv(os.path.join(inputs_path, 'period_szn.csv'))
+        period_szn['timestamp'] = (
+            (period_szn.actual_period + 'h001')
+            .map(reeds.timeseries.h2timestamp)
+        )
         period_szn['rep'] = (period_szn.rep_period == period_szn.actual_period)
         repnum = dict(zip(
             sorted(period_szn.rep_period.unique()),
@@ -3891,7 +3923,7 @@ def plot_dispatch_weightwidth(
     Rep period dispatch for final year with period width given by period weight
     """
     ### Load run files
-    hmap_myr = pd.read_csv(os.path.join(case, 'inputs_case', 'hmap_myr.csv'))
+    hmap_myr = pd.read_csv(os.path.join(case, 'inputs_case', 'rep', 'hmap_myr.csv'))
     dispatch = (
         reeds.io.read_report(case, val)
         .drop(['scenario','Net Level Generation (GW)'], axis=1, errors='ignore')
@@ -4179,7 +4211,7 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
         f'{yplot}-01-01', f'{yplot+1}-01-01', freq='H', tz='Etc/GMT+6')[:8760]
     ### Get rep periods
     szn_rep = pd.read_csv(
-        os.path.join(case,'inputs_case','set_szn.csv')
+        os.path.join(case, 'inputs_case', 'rep', 'set_szn.csv')
     ).squeeze(1).sort_values()
     rep_starts = [reeds.timeseries.h2timestamp(d+'h01') for d in szn_rep]
     rep_hours = np.ravel([
@@ -4639,7 +4671,7 @@ def plot_h2_timeseries(
     prod_produce = reeds.io.read_output(case, 'prod_produce')
     h2_usage = reeds.io.read_output(case, 'h2_usage')
     ### Timeseries data
-    hmap_myr = pd.read_csv(os.path.join(case,'inputs_case','hmap_myr.csv'))
+    hmap_myr = pd.read_csv(os.path.join(case, 'inputs_case', 'rep', 'hmap_myr.csv'))
 
     ###### Total across modeled area
     hierarchy = reeds.io.get_hierarchy(case)
@@ -5444,9 +5476,9 @@ def plot_seed_stressperiods(
     load_allyears = hourly_repperiods.get_load(
         os.path.join(case, 'inputs_case'),
         keep_weatheryears='all').loc[years]
-    timestamps = pd.read_csv(os.path.join(case,'inputs_case','timestamps.csv'))
+    timestamps = pd.read_csv(os.path.join(case, 'inputs_case', 'rep', 'timestamps.csv'))
     resource_adequacy_years = [int(y) for y in sw.resource_adequacy_years.split('_')]
-    timestamps = timestamps.loc[timestamps.year.isin(resource_adequacy_years)]
+    timestamps = timestamps.loc[timestamps.year.isin(resource_adequacy_years)].copy()
     ## Add descriptive index
     load_allyears.index = (
         pd.concat(
@@ -5691,7 +5723,7 @@ def plot_cap_rep_stress_mix(
     ### Standard inputs
     bokehcolors, plotorder = get_tech_colors_order('fuel_storage_vre')
     numhours = pd.read_csv(
-        os.path.join(case,'inputs_case','numhours.csv'),
+        os.path.join(case,'inputs_case', 'rep', 'numhours.csv'),
     ).rename(columns={'*h':'h'}).set_index('h').squeeze(1)
 
     sw = reeds.io.get_switches(case)
@@ -5918,8 +5950,7 @@ def plot_capacity_offline(
     ):
     """Plot capacity offline and temperature for rep and stress periods"""
     ### Get temperatures
-    import outage_rates
-    temperatures = outage_rates.get_temperatures(case)
+    temperatures = reeds.io.get_temperatures(case)
 
     ## Aggregate if necessary
     sw = reeds.io.get_switches(case)
@@ -5976,36 +6007,36 @@ def plot_capacity_offline(
 
     ### Get outage rates
     if plot_for:
-        forcedoutage_hourly = (
-            outage_rates.get_forcedoutage_hourly(case)
+        outage_forced_hourly = (
+            reeds.io.get_outage_hourly(case, 'forced')
             .reorder_levels(['r','i'], axis=1))
-        forcedoutage_hourly.columns = forcedoutage_hourly.columns.map(
+        outage_forced_hourly.columns = outage_forced_hourly.columns.map(
             lambda x: (r2level[x[0]], x[1])
         )
         ## Get max by region, convert to percent
-        forcedoutage_hourly = forcedoutage_hourly.T.groupby(['r','i']).max().T
+        outage_forced_hourly = outage_forced_hourly.T.groupby(['r','i']).max().T
         for_techs = ['nuclear','coaloldscr','gas-cc','gas-ct','hydro']
         rename = {'coaloldscr':'coal'}
         for_techs_rename = [rename.get(i,i) for i in for_techs]
-        forcedoutage_hourly = (
-            forcedoutage_hourly[[c for c in forcedoutage_hourly if c[1] in for_techs]]
+        outage_forced_hourly = (
+            outage_forced_hourly[[c for c in outage_forced_hourly if c[1] in for_techs]]
             .rename(columns=rename, level='i')
             * 100
         )
-        forcedoutage_hourly = forcedoutage_hourly.groupby([
-            forcedoutage_hourly.index.year,
-            forcedoutage_hourly.index.month,
-            forcedoutage_hourly.index.day,
+        outage_forced_hourly = outage_forced_hourly.groupby([
+            outage_forced_hourly.index.year,
+            outage_forced_hourly.index.month,
+            outage_forced_hourly.index.day,
         ]).max()
-        forcedoutage_hourly.index = forcedoutage_hourly.index.map(
+        outage_forced_hourly.index = outage_forced_hourly.index.map(
             lambda x: pd.Timestamp(year=x[0], month=x[1], day=x[2]))
     else:
-        forcedoutage_hourly = None
+        outage_forced_hourly = None
 
     dictout = {
         'temperature_minmax': dftemp,
         'capacity_offline': capacity_offline,
-        'forcedoutage_hourly': forcedoutage_hourly,
+        'outage_forced_hourly': outage_forced_hourly,
     }
 
     ### Plot it
@@ -6049,8 +6080,8 @@ def plot_capacity_offline(
             )
         ## Forced outage rates
         else:
-            dff = forcedoutage_hourly[region][
-                [c for c in forcedoutage_hourly[region] if c in df]].copy()
+            dff = outage_forced_hourly[region][
+                [c for c in outage_forced_hourly[region] if c in df]].copy()
             for col in dff:
                 par.plot(
                     dff.index, dff[col].values, color=bokehcolors[col],

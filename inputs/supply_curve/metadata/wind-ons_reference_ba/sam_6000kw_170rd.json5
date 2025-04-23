@@ -23,7 +23,7 @@
     // FY24 2030 ATB total loss assumption for moderate tech is 13.4%
     // Annika tracked down that FY24 2030 ATB wake loss percentage is 2.4%
     // remaining power curve losses are 13.4 - 2.4 = 11%
-    "reV-power_curve_losses": {
+    "reV_power_curve_losses": {
         "target_losses_percent": 11,
         "transformation": "exponential_stretching"
     },

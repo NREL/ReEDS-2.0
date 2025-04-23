@@ -3,59 +3,98 @@
 ## Table of Contents
 
 
-  - ### [](#) 
-    - #### [hourlize](#hourlize) 
-      - ##### [inputs](#hourlize/inputs) 
-      - ##### [plexos_to_reeds](#hourlize/plexos_to_reeds) 
-      - ##### [tests](#hourlize/tests) 
-    - #### [inputs](#inputs) 
-      - ##### [canada_imports](#inputs/canada_imports) 
-      - ##### [capacity_exogenous](#inputs/capacity_exogenous) 
-      - ##### [climate](#inputs/climate) 
-      - ##### [consume](#inputs/consume) 
-      - ##### [ctus](#inputs/ctus) 
-      - ##### [degradation](#inputs/degradation) 
-      - ##### [demand_response](#inputs/demand_response) 
-      - ##### [dgen_model_inputs](#inputs/dgen_model_inputs) 
-      - ##### [disaggregation](#inputs/disaggregation) 
-      - ##### [emission_constraints](#inputs/emission_constraints) 
-      - ##### [financials](#inputs/financials) 
-      - ##### [fuelprices](#inputs/fuelprices) 
-      - ##### [geothermal](#inputs/geothermal) 
-      - ##### [growth_constraints](#inputs/growth_constraints) 
-      - ##### [hydro](#inputs/hydro) 
-      - ##### [load](#inputs/load) 
-      - ##### [national_generation](#inputs/national_generation) 
-      - ##### [plant_characteristics](#inputs/plant_characteristics) 
-      - ##### [reserves](#inputs/reserves) 
-      - ##### [sets](#inputs/sets) 
-      - ##### [shapefiles](#inputs/shapefiles) 
-      - ##### [state_policies](#inputs/state_policies) 
-      - ##### [storage](#inputs/storage) 
-      - ##### [supply_curve](#inputs/supply_curve) 
-      - ##### [techs](#inputs/techs) 
-      - ##### [transmission](#inputs/transmission) 
-      - ##### [upgrades](#inputs/upgrades) 
-      - ##### [userinput](#inputs/userinput) 
-      - ##### [valuestreams](#inputs/valuestreams) 
-      - ##### [variability](#inputs/variability) 
-      - ##### [waterclimate](#inputs/waterclimate) 
-    - #### [postprocessing](#postprocessing) 
-      - ##### [air_quality](#postprocessing/air_quality) 
-      - ##### [bokehpivot](#postprocessing/bokehpivot) 
-      - ##### [combine_runs](#postprocessing/combine_runs) 
-      - ##### [land_use](#postprocessing/land_use) 
-      - ##### [plots](#postprocessing/plots) 
-      - ##### [retail_rate_module](#postprocessing/retail_rate_module) 
-      - ##### [reValue](#postprocessing/reValue) 
-      - ##### [tableau](#postprocessing/tableau) 
-    - #### [preprocessing](#preprocessing) 
-      - ##### [atb_updates_processing](#preprocessing/atb_updates_processing) 
-    - #### [reeds2pras](#reeds2pras) 
-      - ##### [test](#reeds2pras/test) 
-    - #### [ReEDS_Augur](#ReEDS_Augur) 
-    - #### [tests](#tests) 
-      - ##### [data](#tests/data) 
+- [ReEDS 2.0](#reeds-20)
+  - [Table of Contents](#table-of-contents)
+  - [Input Files](#input-files)
+  - [ ](#-)
+    - [hourlize ](#hourlize-)
+      - [inputs ](#inputs-)
+        - [load ](#load-)
+        - [resource ](#resource-)
+      - [plexos\_to\_reeds ](#plexos_to_reeds-)
+        - [inputs ](#inputs--1)
+      - [tests ](#tests-)
+        - [data ](#data-)
+          - [r2r\_expanded ](#r2r_expanded-)
+          - [r2r\_from\_config ](#r2r_from_config-)
+          - [r2r\_integration ](#r2r_integration-)
+          - [r2r\_integration\_geothermal ](#r2r_integration_geothermal-)
+    - [inputs ](#inputs--2)
+      - [canada\_imports ](#canada_imports-)
+      - [capacity\_exogenous ](#capacity_exogenous-)
+      - [climate ](#climate-)
+        - [GFDL-ESM2M\_RCP4p5\_WM ](#gfdl-esm2m_rcp4p5_wm-)
+        - [HadGEM2-ES\_RCP2p6 ](#hadgem2-es_rcp2p6-)
+        - [HadGEM2-ES\_rcp45\_AT ](#hadgem2-es_rcp45_at-)
+        - [HadGEM2-ES\_RCP4p5 ](#hadgem2-es_rcp4p5-)
+        - [HadGEM2-ES\_rcp85\_AT ](#hadgem2-es_rcp85_at-)
+        - [HadGEM2-ES\_RCP8p5 ](#hadgem2-es_rcp8p5-)
+        - [IPSL-CM5A-LR\_RCP8p5\_WM ](#ipsl-cm5a-lr_rcp8p5_wm-)
+      - [consume ](#consume-)
+      - [ctus ](#ctus-)
+      - [degradation ](#degradation-)
+      - [demand\_response ](#demand_response-)
+      - [dgen\_model\_inputs ](#dgen_model_inputs-)
+        - [stscen2023\_electrification ](#stscen2023_electrification-)
+        - [stscen2023\_highng ](#stscen2023_highng-)
+        - [stscen2023\_highre ](#stscen2023_highre-)
+        - [stscen2023\_lowng ](#stscen2023_lowng-)
+        - [stscen2023\_lowre ](#stscen2023_lowre-)
+        - [stscen2023\_mid\_case ](#stscen2023_mid_case-)
+        - [stscen2023\_mid\_case\_95\_by\_2035 ](#stscen2023_mid_case_95_by_2035-)
+        - [stscen2023\_mid\_case\_95\_by\_2050 ](#stscen2023_mid_case_95_by_2050-)
+        - [stscen2023\_taxcredit\_extended2050 ](#stscen2023_taxcredit_extended2050-)
+      - [disaggregation ](#disaggregation-)
+      - [emission\_constraints ](#emission_constraints-)
+      - [financials ](#financials-)
+      - [fuelprices ](#fuelprices-)
+      - [geothermal ](#geothermal-)
+      - [growth\_constraints ](#growth_constraints-)
+      - [hydro ](#hydro-)
+      - [load ](#load--1)
+      - [national\_generation ](#national_generation-)
+      - [plant\_characteristics ](#plant_characteristics-)
+      - [reserves ](#reserves-)
+      - [sets ](#sets-)
+      - [shapefiles ](#shapefiles-)
+        - [WKT\_csvs ](#wkt_csvs-)
+      - [state\_policies ](#state_policies-)
+      - [storage ](#storage-)
+      - [supply\_curve ](#supply_curve-)
+      - [techs ](#techs-)
+      - [transmission ](#transmission-)
+      - [upgrades ](#upgrades-)
+      - [userinput ](#userinput-)
+      - [valuestreams ](#valuestreams-)
+      - [variability ](#variability-)
+        - [multi\_year ](#multi_year-)
+      - [waterclimate ](#waterclimate-)
+    - [postprocessing ](#postprocessing-)
+      - [air\_quality ](#air_quality-)
+        - [rcm\_data ](#rcm_data-)
+      - [bokehpivot ](#bokehpivot-)
+        - [in ](#in-)
+          - [reeds2 ](#reeds2-)
+      - [combine\_runs ](#combine_runs-)
+      - [land\_use ](#land_use-)
+        - [inputs ](#inputs--3)
+      - [plots ](#plots-)
+      - [retail\_rate\_module ](#retail_rate_module-)
+        - [calc\_historical\_capex ](#calc_historical_capex-)
+        - [inputs ](#inputs--4)
+      - [reValue ](#revalue-)
+      - [tableau ](#tableau-)
+    - [preprocessing ](#preprocessing-)
+      - [atb\_updates\_processing ](#atb_updates_processing-)
+        - [input\_files ](#input_files-)
+    - [reeds2pras ](#reeds2pras-)
+      - [test ](#test-)
+        - [reeds\_cases ](#reeds_cases-)
+          - [USA\_VSC\_2035 ](#usa_vsc_2035-)
+    - [ReEDS\_Augur ](#reeds_augur-)
+    - [tests ](#tests--1)
+      - [data ](#data--1)
+        - [county ](#county-)
 
 
 ## Input Files
@@ -650,7 +689,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Nuclear-smr demonstration plants; active when GSw_NuclearDemo=1
     - **Indices:** t,r,i,coolingwatertech,ctt,wst,value
 
-    - **Citation:** [(See 'notes' column in the file)]
+    - **Citation:** [(See 'notes' column in the file and https://www.energy.gov/oced/advanced-reactor-demonstration-projects-0)]
     - **Units:** MW
 
 ---
@@ -1202,93 +1241,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [demand_response](inputs/demand_response) <a name='inputs/demand_response'></a>
-  - [dr_decrease_none.csv](/inputs/demand_response/dr_decrease_none.csv)
----
-
-  - [dr_decrease_profile_Baseline.csv](/inputs/demand_response/dr_decrease_profile_Baseline.csv)
-    - **File Type:** inputs
-    - **Description:** Average capacity factor for dr profile which leads to an increase in load in timeslice h for Baseline demand response profile. The demand response profiles are not being actively developed and may be outdated. 
-    - **Units:** fraction
-
----
-
-  - [dr_decrease_profile_Baseline_shed.csv](/inputs/demand_response/dr_decrease_profile_Baseline_shed.csv)
----
-
-  - [dr_decrease_profile_Baseline_shift.csv](/inputs/demand_response/dr_decrease_profile_Baseline_shift.csv)
----
-
-  - [dr_decrease_profile_none.csv](/inputs/demand_response/dr_decrease_profile_none.csv)
----
-
-  - [dr_increase_none.csv](/inputs/demand_response/dr_increase_none.csv)
----
-
-  - [dr_increase_profile_Baseline.csv](/inputs/demand_response/dr_increase_profile_Baseline.csv)
-    - **File Type:** inputs
-    - **Description:** Average capacity factor for dr profile which leads to a reduction in load in timeslice h for Baseline demand response profile. The demand response profiles are not being actively developed and may be outdated.
-    - **Units:** fraction
-
----
-
-  - [dr_increase_profile_Baseline_shed.csv](/inputs/demand_response/dr_increase_profile_Baseline_shed.csv)
----
-
-  - [dr_increase_profile_Baseline_shift.csv](/inputs/demand_response/dr_increase_profile_Baseline_shift.csv)
----
-
-  - [dr_increase_profile_none.csv](/inputs/demand_response/dr_increase_profile_none.csv)
----
-
-  - [dr_rsc_Baseline.csv](/inputs/demand_response/dr_rsc_Baseline.csv)
----
-
-  - [dr_rsc_Baseline_shed.csv](/inputs/demand_response/dr_rsc_Baseline_shed.csv)
----
-
-  - [dr_rsc_Baseline_shift.csv](/inputs/demand_response/dr_rsc_Baseline_shift.csv)
----
-
-  - [dr_rsc_none.csv](/inputs/demand_response/dr_rsc_none.csv)
----
-
-  - [dr_shed_Baseline.csv](/inputs/demand_response/dr_shed_Baseline.csv)
----
-
-  - [dr_shed_Baseline_shed.csv](/inputs/demand_response/dr_shed_Baseline_shed.csv)
----
-
-  - [dr_shed_Baseline_shift.csv](/inputs/demand_response/dr_shed_Baseline_shift.csv)
----
-
-  - [dr_shed_none.csv](/inputs/demand_response/dr_shed_none.csv)
----
-
-  - [dr_shifts_Baseline.csv](/inputs/demand_response/dr_shifts_Baseline.csv)
-    - **Description:** How much load each dr type is allowed to shift into h from hh
----
-
-  - [dr_shifts_Baseline_shed.csv](/inputs/demand_response/dr_shifts_Baseline_shed.csv)
----
-
-  - [dr_shifts_Baseline_shift.csv](/inputs/demand_response/dr_shifts_Baseline_shift.csv)
----
-
-  - [dr_shifts_none.csv](/inputs/demand_response/dr_shifts_none.csv)
----
-
-  - [dr_types_Baseline.csv](/inputs/demand_response/dr_types_Baseline.csv)
----
-
-  - [dr_types_Baseline_shed.csv](/inputs/demand_response/dr_types_Baseline_shed.csv)
----
-
-  - [dr_types_Baseline_shift.csv](/inputs/demand_response/dr_types_Baseline_shift.csv)
----
-
-  - [dr_types_none.csv](/inputs/demand_response/dr_types_none.csv)
----
-
   - [ev_load_Baseline.h5](/inputs/demand_response/ev_load_Baseline.h5)
     - **File Type:** inputs
     - **Description:** Baseline electricity load from EV charging by timeslice h and year t
@@ -1951,6 +1903,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [historic_load_hourly.h5](/inputs/load/historic_load_hourly.h5)
 ---
 
+  - [historic_post2015_load_hourly.h5](/inputs/load/historic_post2015_load_hourly.h5)
+---
+
   - [mex_growth_rate.csv](/inputs/load/mex_growth_rate.csv)
     - **Description:** Mexico load growth multiplier
 ---
@@ -2084,21 +2039,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [dollaryear.csv](/inputs/plant_characteristics/dollaryear.csv)
     - **Description:** Dollar year mapping for each plant cost scenario
----
-
-  - [dr_Baseline.csv](/inputs/plant_characteristics/dr_Baseline.csv)
----
-
-  - [dr_Baseline_shed.csv](/inputs/plant_characteristics/dr_Baseline_shed.csv)
----
-
-  - [dr_Baseline_shift.csv](/inputs/plant_characteristics/dr_Baseline_shift.csv)
----
-
-  - [dr_none.csv](/inputs/plant_characteristics/dr_none.csv)
----
-
-  - [dr_test.csv](/inputs/plant_characteristics/dr_test.csv)
 ---
 
   - [evmc_shape_Baseline.csv](/inputs/plant_characteristics/evmc_shape_Baseline.csv)
@@ -2254,8 +2194,8 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Forced outage rates by technology
 ---
 
-  - [outage_planned_static.csv](/inputs/plant_characteristics/outage_planned_static.csv)
-    - **Description:** Planned outage rate by technology
+  - [outage_scheduled_static.csv](/inputs/plant_characteristics/outage_scheduled_static.csv)
+    - **Description:** Scheduled outage rate by technology
 ---
 
   - [pvb_benchmark2020.csv](/inputs/plant_characteristics/pvb_benchmark2020.csv)
@@ -2718,10 +2658,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [nuclear_ba_ban_list.csv](/inputs/state_policies/nuclear_ba_ban_list.csv)
-    - **Description:** List of BAs where nuclear technology development is banned.
----
-
   - [nuclear_subsidies.csv](/inputs/state_policies/nuclear_subsidies.csv)
 ---
 
@@ -2751,8 +2687,8 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Energy storage mandates by region
 ---
 
-  - [techs_banned.csv](/inputs/state_policies/techs_banned.csv)
-    - **Description:** Table that bans certain technologies by state
+  - [techs_banned.csv](/inputs/state_policies/techs_banned.yaml)
+    - **Description:** Table that bans certain technologies by state. Input file is also used to create a list of BAs where nuclear technology development is banned in inputs_case/nuclear_ba_ban_list.csv.
 ---
 
   - [techs_banned_ces.csv](/inputs/state_policies/techs_banned_ces.csv)
@@ -3424,9 +3360,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [d_szn_7yr.csv](/inputs/variability/d_szn_7yr.csv)
----
-
-  - [h_dt_szn.csv](/inputs/variability/h_dt_szn.csv)
 ---
 
   - [hourly_operational_characteristics.csv](/inputs/variability/hourly_operational_characteristics.csv)

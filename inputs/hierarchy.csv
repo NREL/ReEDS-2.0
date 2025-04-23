@@ -26,9 +26,9 @@ p24,WECC_NW,WestConnect,WestConnect_North,Mountain,WY,western,WY,USA,mountain,Mo
 p25,WECC_NW,NorthernGrid,NorthernGrid_South,Mountain,UT,western,UT,USA,mountain,Mountain,PacifiCorp_East,p25
 p26,WECC_NW,NorthernGrid,NorthernGrid_South,Mountain,UT,western,UT,USA,mountain,Mountain,PacifiCorp_East,p26
 p27,WECC_SW,WestConnect,WestConnect_South,Mountain,AZ,western,AZ,USA,mountain,Southwest,WAPA_Desert_Southwest_Region,p27
-p28,WECC_SW,WestConnect,WestConnect_South,Mountain,AZ,western,AZ,USA,mountain,Southwest,Arizona_Public_Service_Co,p28
+p28,WECC_SW,WestConnect,WestConnect_South,Mountain,AZ,western,AZ,USA,mountain,Southwest,Arizona_Public_Service_Co,z28
 p29,WECC_SW,WestConnect,WestConnect_South,Mountain,AZ,western,AZ,USA,mountain,Southwest,Arizona_Public_Service_Co,p29
-p30,WECC_SW,WestConnect,WestConnect_South,Mountain,AZ,western,AZ,USA,mountain,Southwest,Arizona_Public_Service_Co,p30
+p30,WECC_SW,WestConnect,WestConnect_South,Mountain,AZ,western,AZ,USA,mountain,Southwest,Arizona_Public_Service_Co,z28
 p31,WECC_SW,WestConnect,WestConnect_South,Mountain,NM,western,NM_western,USA,mountain,Southwest,Public_Service_Co_of_New_Mexico,p31
 p32,WECC_NW,WestConnect,WestConnect_North,Mountain,SD,western,SD_western,USA,northern-plains,Plains,WAPA_Rocky_Mountain_Region,p32
 p33,WECC_NW,WestConnect,WestConnect_North,Mountain,CO,western,CO,USA,mountain,Mountain,Public_Service_Co_of_Colorado,p33

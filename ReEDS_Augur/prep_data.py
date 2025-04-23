@@ -13,8 +13,8 @@ The files used by PRAS are:
     * pras_vre_gen_{year}.h5
     * tran_cap_{year}.csv
 * In {case}/inputs_case:
-    * forcedoutage_hourly.h5
     * hydcf.csv
+    * outage_forced_hourly.h5
     * outage_forced_static.csv
     * resources.csv
     * tech-subset-table.csv
@@ -57,8 +57,11 @@ def main(t, casedir):
     sw = reeds.io.get_switches(casedir)
     sw['t'] = t
 
-    h_dt_szn = pd.read_csv(os.path.join(inputs_case, 'h_dt_szn.csv'))
-    hmap_allyrs = pd.read_csv(os.path.join(inputs_case, 'hmap_allyrs.csv'), low_memory=False)
+    h_dt_szn = pd.read_csv(os.path.join(inputs_case, 'rep', 'h_dt_szn.csv'))
+    hmap_allyrs = pd.read_csv(
+        os.path.join(inputs_case, 'rep', 'hmap_allyrs.csv'),
+        low_memory=False,
+    )
     hmap_allyrs['szn'] = h_dt_szn['season'].copy()
 
     h_dt_szn = h_dt_szn.set_index(['year', 'hour'])

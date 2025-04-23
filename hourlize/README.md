@@ -13,7 +13,9 @@ Hourlize is run by a call to `run_hourlize.py`, which assembles information on t
 1. Update settings in the relevant `config_[tech].json` files as needed ([details](#config-jsons)).
 1. Specify cases to run in `cases.json` or create your own cases file ([details](#cases-json)).
 1. If running on the HPC, specify run allocation or other submission settings in `hourlize/inputs/configs/srun_template.sh` ([details](#config-jsons)).
-1. Run using `run_hourlize.py resource` ([details](#running-hourlize)). 
+1. Run using `run_hourlize.py resource` ([details](#running-hourlize)).
+1. Run `tests/get_subset_h5.py` to produce the county-level test h5 files, after specifying the relevant techs at the top of that file.
+1. Update `inputs/supply_curve/dollaryear.csv` if needed. The dollar year typically aligns with the ATB year of the reV run, although it's best to confirm with the reV team to make sure all their costs have been converted to that dollar year.
 1. Sync up new supply curve files on HPC, nrelnas01, and Yampa as needed
 
 ### Quickstart: Load

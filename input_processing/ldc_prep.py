@@ -289,7 +289,7 @@ def main(reeds_path, inputs_case):
     #    -- Performing Load Modifications --    #
     #############################################
 
-    if GSw_EFS1_AllYearLoad == 'historic':
+    if GSw_EFS1_AllYearLoad in ['historic', 'historic_post2015']:
         load_historical = reeds.io.read_file(
             os.path.join(inputs_case,'load_hourly.h5'), parse_timestamps=True)
         # Read load multipliers

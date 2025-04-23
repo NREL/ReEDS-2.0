@@ -1,0 +1,86 @@
+# Note the only allowed regional scopes / nested keys are 'st' and 'county'.
+Coal-IGCC:
+  st:
+  - OR
+  - VT
+CoalOldScr:
+  st:
+  - OR
+  - VT
+CoalOldUns:
+  st:
+  - OR
+  - VT
+CofireNew:
+  st:
+  - OR
+  - VT
+CofireOld:
+  st:
+  - OR
+  - VT
+Gas-CC:
+  st:
+  - OR
+  - VT
+Gas-CC-CCS_max:
+  st:
+  - NY
+  - OR
+  - VT
+Gas-CC-CCS_mod:
+  st:
+  - NY
+  - OR
+  - VT
+Gas-CT:
+  st:
+  - OR
+  - VT
+beccs_max:
+  st:
+  - NY
+beccs_mod:
+  st:
+  - NY
+biopower:
+  st:
+  - NY
+coal-CCS_max:
+  st:
+  - NY
+  - OR
+  - VT
+coal-CCS_mod:
+  st:
+  - NY
+  - OR
+  - VT
+coal-new:
+  st:
+  - OR
+  - VT
+geothermal:
+  st:
+  - NY
+lfill-gas:
+  st:
+  - NY
+nuclear:
+  # source: https://www.ncsl.org/environment-and-natural-resources/states-restrictions-on-new-nuclear-power-facility-construction
+  county:
+  - 36059
+  - 36103
+  st:
+  - OR
+  - CA
+  - MN
+  - NJ
+  - VT
+  - MA
+  - CT
+  - RI
+  - ME
+o-g-s:
+  st:
+  - OR

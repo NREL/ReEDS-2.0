@@ -59,10 +59,6 @@ eq_ObjFn_inv(t)$tmodel(t)..
                   + sum{(i,v,r,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$rsc_i(i)$(not spur_techs(i))],
                       m_rsc_dat(r,i,rscbin,"cost") * rsc_fin_mult(i,r,t) * sum{ii$rsc_agg(i,ii), INV_RSC(ii,v,r,rscbin,t) } }
 
-* ---cost of demand response---
-                  + sum{(i,v,r,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$dr(i)],
-                      rsc_dr(i,r,"cost",rscbin,t) * rsc_fin_mult(i,r,t) * INV_RSC(i,v,r,rscbin,t) }
-
 * ---cost of adopted EVMC---
                   + sum{(i,v,r,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$evmc(i)],
                       rsc_evmc(i,r,"cost",rscbin,t) * rsc_fin_mult(i,r,t) * INV_RSC(i,v,r,rscbin,t) }
@@ -297,7 +293,8 @@ eq_Objfn_op(t)$tmodel(t)..
               - sum{(r,h), CURT(r,h,t) * hours(h) * cost_curt(t) }$Sw_CurtMarket
 
 * --- dropped/excess load (ONLY if before Sw_StartMarkets)
-              + sum{(r,h)$[(yeart(t)<Sw_StartMarkets)], (DROPPED(r,h,t) + EXCESS(r,h,t) ) * hours(h) * cost_dropped_load }
+              + sum{(r,h)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)],
+                    (DROPPED(r,h,t) + EXCESS(r,h,t) ) * hours(h) * cost_dropped_load }
 
 * --- costs from producing products (for now DAC and/or H2)---
               + sum{(p,i,v,r,h)$[(h2(i) or dac(i))$valcap(i,v,r,t)$i_p(i,p)$h_rep(h)],

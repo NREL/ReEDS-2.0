@@ -81,14 +81,6 @@ rsc_fin_mult:
   indexsets:
   - valinv
   - rsc_i
-rsc_dr:
-  indexsets:
-  - valinv
-  - m_rscfeas
-  - dr
-  skip:
-    sc_cat:
-    - cap
 rsc_evmc:
   indexsets:
   - valinv

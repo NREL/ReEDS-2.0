@@ -25,8 +25,6 @@
     STORAGE_IN_PLANT.lo(i,v,r,h,t)$tmodel(t) = 0 ;
     STORAGE_IN_GRID.lo(i,v,r,h,t)$tmodel(t) = 0 ;
     STORAGE_LEVEL.lo(i,v,r,h,t)$tmodel(t) = 0 ;
-    DR_SHIFT.lo(i,v,r,h,hh,t)$tmodel(t) = 0 ;
-    DR_SHED.lo(i,v,r,h,t)$tmodel(t) = 0 ;
     PRODUCE.lo(p,i,v,r,h,t)$tmodel(t) = 0 ;
 
 * flexible CCS variables
@@ -96,8 +94,6 @@ STORAGE_IN.up(i,v,r,h,t)$tmodel(t) = +inf ;
 STORAGE_IN_PLANT.up(i,v,r,h,t)$tmodel(t) = +inf ;
 STORAGE_IN_GRID.up(i,v,r,h,t)$tmodel(t) = +inf ;
 STORAGE_LEVEL.up(i,v,r,h,t)$tmodel(t) = +inf ;
-DR_SHIFT.up(i,v,r,h,hh,t)$tmodel(t) = +inf ;
-DR_SHED.up(i,v,r,h,t)$tmodel(t) = +inf ;
 PRODUCE.up(p,i,v,r,h,t)$tmodel(t) = +inf ;
 CCSFLEX_POW.up(i,v,r,h,t)$tmodel(t) = +inf ;
 CCSFLEX_POWREQ.up(i,v,r,h,t)$tmodel(t) = +inf ;

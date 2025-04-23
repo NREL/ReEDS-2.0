@@ -329,13 +329,38 @@ def check_compatibility(sw):
             raise ValueError(f'PVB with ILR!={scalars["ilr_utility"]} does not work at county resolution.'
                              f'\nRemove any ILR!={scalars["ilr_utility"]} from GSw_PVB_ILR.')
 
-    for year in sw['resource_adequacy_years'].split('_'):
-        if not ((2007 <= int(year) <= 2013) or (2016 <= int(year) <= 2023)):
-            raise ValueError("Fix resource_adequacy_years")
+    match sw['GSw_EFS1_AllYearLoad']:
+        case 'historic_post2015':
+            allowed_years = list(range(2016,2024))
+            allowed_years_string = (
+                f"{','.join([str(year) for year in allowed_years])}"
+                f" if GSw_EFS1_AllYearLoad is set to '{sw['GSw_EFS1_AllYearLoad']}'"
+            )
+        case _:
+            allowed_years = list(range(2007,2014))
+            allowed_years_string = ','.join([str(year) for year in allowed_years])
+
+    resource_adequacy_years = [int(y) for y in sw['resource_adequacy_years'].split('_')]
+    for year in resource_adequacy_years:
+        if year not in allowed_years:
+            raise ValueError(
+                f"resource_adequacy_years must be in {allowed_years_string} but is "
+                f"{sw['resource_adequacy_years']}"
+            )
 
     for year in sw['GSw_HourlyWeatherYears'].split('_'):
-        if not ((2007 <= int(year) <= 2013) or (2016 <= int(year) <= 2023)):
-            raise ValueError("Fix GSw_HourlyWeatherYears")
+        if int(year) not in allowed_years:
+            raise ValueError(
+                f"GSw_HourlyWeatherYears must be in {allowed_years_string} but is "
+                f"{sw['GSw_HourlyWeatherYears']}"
+            )
+
+        if int(year) not in resource_adequacy_years:
+            raise ValueError(
+                "GSw_HourlyWeatherYears must be a subset of resource_adequacy_years but "
+                f"GSw_HourlyWeatherYears={sw['GSw_HourlyWeatherYears']} and "
+                f"resource_adequacy_years={sw['resource_adequacy_years']}"
+            )
 
     if '/' in sw['GSw_Region']:
         level, regions = sw['GSw_Region'].split('/')
@@ -353,13 +378,9 @@ def check_compatibility(sw):
             raise ValueError("No column in modeled_regions.csv matching GSw_Region")
 
     ### Compatible switch combinations
-    if sw['GSw_EFS1_AllYearLoad'] == 'historic' :
+    if sw['GSw_EFS1_AllYearLoad'] in ['historic', 'historic_post2015']:
         if ('demand_' + sw['demandscen'] +'.csv') not in os.listdir(os.path.join(reeds_path, 'inputs','load')) :
             raise ValueError("The demand file specified by the demandscen switch is not in the inputs/load folder")
-
-    if sw['GSw_PRM_scenario'] == 'none':
-        if int(sw['GSw_PRM_CapCredit']) !=1 :
-            raise ValueError("To disable both the capacity credit and stress period formulations GSw_PRM_CapCredit must be set to 1")
 
     ### Dependent model availability
     if (
@@ -378,6 +399,17 @@ def check_compatibility(sw):
         raise ValueError(
             "'reeds_to_rev' must be enable for land_use analysis to run."
         )
+    
+    disallowed_characters = ['~', '|']
+    invalid_switches = [
+        key for key, val in sw.items()
+        if any([char in val for char in disallowed_characters])
+    ]
+    if len(invalid_switches) > 0:
+        raise ValueError(
+            "The following switches have values with disallowed characters "
+            f"({', '.join(disallowed_characters)}): {', '.join(invalid_switches)}"
+        )
 
 
 def solvestring_sequential(
@@ -385,6 +417,7 @@ def solvestring_sequential(
         cur_year, next_year, prev_year, restartfile,
         toLogGamsString=' logOption=4 logFile=gamslog.txt appendLog=1 ',
         hpc=0, iteration=0, stress_year=None,
+        temporal_inputs='rep',
     ):
     """
     Typical inputs:
@@ -406,6 +439,7 @@ def solvestring_sequential(
         + f" --next_year={next_year}"
         + f" --prev_year={prev_year}"
         + f" --stress_year={_stress_year}"
+        + f" --temporal_inputs={temporal_inputs}"
         + ''.join([f" --{s}={caseSwitches[s]}" for s in [
             'GSw_SkipAugurYear',
             'GSw_HourlyType', 'GSw_HourlyWrapLevel', 'GSw_ClimateWater',
@@ -586,7 +620,6 @@ def setup_intertemporal(
                 + yearset_augur + " " + savefile + " " + str(begyear) + " "
                 + str(endyear) + " " + caseSwitches['distpvscen'] + " "
                 + str(caseSwitches['calc_csp_cc']) + " "
-                + str(caseSwitches['GSw_DR']) + " "
                 + str(caseSwitches['timetype']) + " "
                 + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
                 + str(caseSwitches['marg_vre_mw']) + " "
@@ -653,7 +686,6 @@ def setup_window(
                 + yearset_augur + " " + savefile + " " + str(begyear) + " "
                 + str(endyear) + " " + caseSwitches['distpvscen'] + " "
                 + str(caseSwitches['calc_csp_cc']) + " "
-                + str(caseSwitches['GSw_DR']) + " "
                 + str(caseSwitches['timetype']) + " "
                 + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
                 + str(caseSwitches['marg_vre_mw']) + " "
@@ -1494,21 +1526,32 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             OPATH.writelines('')
 
         if int(caseSwitches['transmission_maps']):
-            OPATH.writelines('python postprocessing/transmission_maps.py -c {} -y {}\n'.format(
+            OPATH.writelines('python postprocessing/transmission_maps.py -c {} -y {}\n\n'.format(
                 casedir, (
                     solveyears[-1]
                     if int(caseSwitches['transmission_maps']) > int(solveyears[-1])
                     else caseSwitches['transmission_maps'])
             ))
 
-        ### Write the call to the R2X tests
-        pipe = '2>&1 | tee -a' if LINUXORMAC else '>>'
-        tolog = f"{pipe} {os.path.join(casedir,'gamslog.txt')}"
-        OPATH.writelines(
-            f"\npython -m pytest -v -l tests/test_r2x_integration.py --casepath {casedir} {tolog}\n"
-        )
+        ### Run R2X if using debug mode
+        ### First install uvx: https://docs.astral.sh/uv/getting-started/installation/
+        if int(caseSwitches['debug']):
+            r2xpath = os.path.join(casedir, 'outputs', 'r2x')
+            os.makedirs(r2xpath, exist_ok=True)
+            OPATH.writelines(
+                "uvx --python 3.11 --from git+https://github.com/nrel/r2x@main r2x -vv run "
+                f"-i {casedir} "
+                f"-o {r2xpath} "
+                "--input-model=reeds-US "
+                "--output-model=plexos "
+                f"--year={endyear} "
+                f"--weather-year={caseSwitches['GSw_HourlyWeatherYears'].split('_')[0]} "
+                "\n"
+            )
 
         ### Check the error level
+        pipe = '2>&1 | tee -a' if LINUXORMAC else '>>'
+        tolog = f"{pipe} {os.path.join(casedir,'gamslog.txt')}"
         OPATH.writelines(f"\npython postprocessing/check_error.py {casedir} {tolog}\n")
 
     ### =====================================================================================

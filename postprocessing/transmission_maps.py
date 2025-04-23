@@ -374,7 +374,8 @@ for label, plottechs in subtechs.items():
                 for v in ([1] if ba else [0, 1]):
                     plt.close()
                     f, ax, df = reedsplots.plot_dispatch_yearbymonth(
-                        case=case, t=year, plottype=plottype, ba=ba,
+                        case=case, t=year, plottype=plottype,
+                        region=(None if ba is None else f"r/{ba}"),
                         techs=plottechs, highlight_rep_periods=v,
                     )
                     savename = (

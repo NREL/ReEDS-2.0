@@ -53,6 +53,8 @@ def test_hierarchy_files(reeds_path, country='USA'):
         aggreg_errors = check_aggreg_unique(hierarchy)
         if len(aggreg_errors):
             hierarchy_errors[os.path.basename(hierarchy_path)] = aggreg_errors
+        else:
+            print(f'{os.path.basename(hierarchy_path)}: passed')
     return hierarchy_errors
 
 

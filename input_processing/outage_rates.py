@@ -11,23 +11,23 @@ import reeds
 ## Time the operation of this script
 tic = datetime.datetime.now()
 
-reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
+reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
 #%%### Fixed inputs
 tz_in = 'UTC'
 tz_out = 'Etc/GMT+6'
 temp_min = -50
 temp_max = 60
-ignore_techs = ['ocean', 'caes', 'ice']
-h5pytypes = ['h5py', 'julia', 'simple', 'manual']
+## Only use during_quarters for techs without a monthly scheduled outage rate
+during_quarters = ['spring', 'fall']
 
 primemover2techgroup = {
-    'CC': ['GAS_CC'],
-    'CT': ['GAS_CT', 'H2_CT'],
-    'DS': ['OGS'],
-    'HD': ['HYDRO'],
-    'NU': ['NUCLEAR'],
-    'ST': ['COAL', 'BIO'],
+    'combined_cycle': ['GAS_CC'],
+    'combustion_turbine': ['GAS_CT', 'H2_CT'],
+    'diesel': ['OGS'],
+    'hydro_and_psh': ['HYDRO', 'PSH'],
+    'nuclear': ['NUCLEAR'],
+    'steam': ['COAL', 'BIO'],
 }
 
 #%%### Functions
@@ -83,133 +83,179 @@ def extrapolate_forward_backward(
     return dfout
 
 
-def get_temperatures(case, tz_in='UTC', tz_out='Etc/GMT+6', subset_years=True):
-    ### Derived inputs
-    inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
-    h5path = os.path.join(inputs_case, 'temperature_celsius-ba.h5')
-    sw = reeds.io.get_switches(inputs_case)
-    ## Add one more year on either end of weather years to allow for timezone conversion
-    weather_years = sw.resource_adequacy_years_list
-    read_years = [min(weather_years) - 1] + weather_years + [max(weather_years) + 1]
+def pm_to_tech(df, inputs_case):
+    """
+    Broadcast prime mover timeseries data to techs.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        index = timeseries
+        top column level = prime movers
+    inputs_case: str
+        path to ReEDS-2.0/runs/{case}/inputs_case
+
+    Returns
+    -------
+    pd.DataFrame
+        Same format as df but with prime movers broadcasted to techs
+    """
+    tech_subset_table = reeds.techs.get_tech_subset_table(inputs_case)
+    df_prefill = pd.concat(
+        {
+            i: df[pm]
+            for pm in df.columns.get_level_values('prime_mover').unique()
+            for i in tech_subset_table.loc[primemover2techgroup[pm]].unique()
+        },
+        axis=1, names=('i',)
+    )
+
+    return df_prefill
+
+
+def fill_empty_techs(df_prefill, inputs_case, fillvalues_tech=None, during_quarters='all'):
+    """
+    Parameters
+    ----------
+    fillvalues_tech: pd.Series or dict with average values with which to fill missing techs.
+        keys = technologies.
+    during_quarters: 'all' or list of quarters.
+        If a list of quarters is provided, the annual fill values will be scaled and
+        applied only during the provided quarters.
+
+    Returns
+    -------
+    """
+    ### Parse inputs
+    quarters = pd.read_csv(
+        os.path.join(inputs_case, 'sets', 'quarter.csv'),
+        header=None,
+    ).squeeze(1).map(lambda x: x[:4]).tolist()
+    if isinstance(during_quarters, str):
+        assert during_quarters == 'all'
+    elif isinstance(during_quarters, list):
+        during_quarters = [q[:4] for q in during_quarters]
+        assert all([i in quarters for i in during_quarters])
+    else:
+        raise ValueError(
+            f"during_quarters={during_quarters} but must be 'all' or a list of quarters"
+        )
+
+    ### Case inputs
+    techlist = reeds.techs.get_techlist_after_bans(inputs_case)
     val_ba = (
         pd.read_csv(os.path.join(inputs_case, 'val_ba.csv'), header=None)
         .squeeze(1).values
     )
-    ### Load temperatures
-    _temperatures = {}
-    with h5py.File(h5path, 'r') as f:
-        years = read_years if subset_years else [int(i) for i in list(f) if i.isdigit()]
-        for year in years:
-            timeindex = pd.to_datetime(
-                pd.Series(f[f"index_{year}"][:])
-                .str.decode('utf-8')
+
+    ### Identify techs with nonzero values that are not yet included in dataframe
+    keep_techs = [i for i in fillvalues_tech.index if i in techlist]
+
+    included_techs = df_prefill.columns.get_level_values('i').unique()
+    missing_techs = [
+        c for c in fillvalues_tech.loc[fillvalues_tech > 0].index
+        if ((c.lower() not in included_techs) and (c.lower() in keep_techs))
+    ]
+    print(f"included ({len(included_techs)}): {' '.join(sorted(included_techs))}")
+    print(f"missing ({len(missing_techs)}): {' '.join(sorted(missing_techs))}")
+
+    ### Fill data for missing techs
+    if len(missing_techs):
+        if 'r' in df_prefill.columns.names:
+            dfout_filled = pd.concat(
+                {
+                    (i,r): pd.Series(index=df_prefill.index, data=fillvalues_tech[i])
+                    for i in missing_techs for r in val_ba
+                },
+                axis=1, names=('i','r'),
             )
-            _temperatures[year] = pd.DataFrame(
-                index=timeindex,
-                columns=pd.Series(f['columns']).map(lambda x: x.decode()),
-                data=f[str(year)],
-            )
-
-    temperatures = (
-        pd.concat(_temperatures, names=('year','timestamp')).rename_axis(columns='r')
-        ## Round to integers for lookup
-        .round(0).astype(int)
-        .reset_index('year', drop=True)
-        .tz_localize(tz_in)
-        .tz_convert(tz_out)
-        ## Subset to weather years used in ReEDS
-        .loc[str(min(weather_years)):str(max(weather_years))]
-    )
-    ### On leap years, drop Dec 31
-    leap_year = temperatures.iloc[:,:1].groupby(temperatures.index.year).count().squeeze(1) == 8784
-    for year in weather_years:
-        if leap_year[year]:
-            temperatures.drop(temperatures.loc[f'{year}-12-31'].index, inplace=True)
-    assert len(temperatures) == len(weather_years) * 8760
-    ### Subset to states used in this run
-    temperatures = temperatures[[c for c in temperatures if c in val_ba]].copy()
-
-    return temperatures
-
-
-def get_tech_subset_table(case):
-    """Output techs are in lower case"""
-    inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
-    tech_subset_table = (
-        pd.read_csv(os.path.join(inputs_case, 'tech-subset-table.csv'), index_col=0)
-        .rename_axis(index='i', columns='tech_group')
-        .stack().dropna()
-        .reorder_levels(['tech_group','i']).sort_index()
-        .reset_index('i').i
-        .str.lower()
-    )
-    return tech_subset_table
-
-
-def get_techlist_after_bans(case):
-    sw = reeds.io.get_switches(case)
-    tech_subset_table = get_tech_subset_table(case)
-    techlist = sorted(tech_subset_table.unique())
-    if not int(sw.GSw_BECCS):
-        techlist = [i for i in techlist if 'beccs' not in i]
-    if not int(sw.GSw_Biopower):
-        techlist = [i for i in techlist if i != 'biopower']
-    if not int(sw.GSw_DAC):
-        techlist = [i for i in techlist if i not in tech_subset_table.loc['DAC'].values]
-    if not int(sw.GSw_H2_SMR):
-        techlist = [i for i in techlist if i not in tech_subset_table.loc['SMR'].values]
-    match int(sw.GSw_Storage):
-        case 0:
-            techlist = [i for i in techlist if i not in tech_subset_table.loc['STORAGE_STANDALONE'].values]
-        case 3:
-            techlist = [
-                i for i in techlist if (
-                    (i not in tech_subset_table.loc['STORAGE_STANDALONE'].values)
-                    or (i in ['battery_4','battery_8','pumped-hydro'])
-                )
-            ]
-    if not int(sw.GSw_CCSFLEX_BYP):
-        techlist = [i for i in techlist if i not in tech_subset_table.loc['CCSFLEX_BYP'].values]
-    if not int(sw.GSw_CCSFLEX_STO):
-        techlist = [i for i in techlist if i not in tech_subset_table.loc['CCSFLEX_STO'].values]
-    if not int(sw.GSw_CCSFLEX_DAC):
-        techlist = [i for i in techlist if i not in tech_subset_table.loc['CCSFLEX_DAC'].values]
-
-    return techlist
-
-
-def get_forcedoutage_hourly(case, tz='Etc/GMT+6', multilevel=True):
-    inputs_case = case if 'inputs_case' in case else os.path.join(case, 'inputs_case')
-    with h5py.File(os.path.join(inputs_case, 'forcedoutage_hourly.h5'), 'r') as f:
-        if multilevel:
-            columns = {
-                c: pd.Series(f[f'columns_{c}']).map(lambda x: x.decode()) for c in ['i','r']
-            }
-            columns = pd.MultiIndex.from_arrays(list(columns.values()), names=columns.keys())
         else:
-            columns = pd.Series(f['columns']).map(lambda x: x.decode())
-        forcedoutage_hourly = pd.DataFrame(
-            index=pd.to_datetime(pd.Series(f['index']).map(lambda x: x.decode())),
-            columns=columns,
-            data=f['data'],
-        ).tz_localize('UTC').tz_convert(tz)
-    return forcedoutage_hourly
+            dfout_filled = pd.concat(
+                {
+                    i: pd.Series(index=df_prefill.index, data=fillvalues_tech[i])
+                    for i in missing_techs
+                },
+                axis=1, names=('i'),
+            )
+
+        ## If during_quarters is provided, only apply outages during those quarters
+        if isinstance(during_quarters, list):
+            month2quarter = pd.read_csv(
+                os.path.join(inputs_case, 'month2quarter.csv'),
+                index_col='month',
+            ).squeeze(1).map(lambda x: x[:4])
+            total_hours = len(dfout_filled)
+            outage_hours = (
+                dfout_filled.index.month.map(month2quarter)
+                .isin(during_quarters).sum()
+            )
+            dfout_filled *= (total_hours / outage_hours)
+            dfout_filled.loc[
+                ~dfout_filled.index.month.map(month2quarter).isin(during_quarters)
+            ] = 0
+            ## Make sure it worked
+            assert (
+                dfout_filled.mean().round(3)
+                == fillvalues_tech.loc[dfout_filled.columns].round(3)
+            ).all()
+
+        dfout = pd.concat([df_prefill, dfout_filled], axis=1)
+    else:
+        dfout = df_prefill
+
+    return dfout
 
 
-#%%### Main function
-def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
+def aggregate_regions(df, inputs_case):
+    r2aggreg = pd.read_csv(
+        os.path.join(inputs_case, 'hierarchy_original.csv')
+    ).rename(columns={'ba':'r'}).set_index('r').aggreg
+    agglevel_variables = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)
+    county2zone = pd.read_csv(
+        os.path.join(inputs_case, 'county2zone.csv'),
+        dtype={'FIPS':str},
+    )
+    county2zone = (
+        county2zone
+        .assign(FIPS='p'+county2zone.FIPS)
+        .set_index('FIPS')
+        .ba.loc[agglevel_variables['county_regions']]
+    )
+
+    dfout = df.copy()
+    if 'aggreg' in agglevel_variables['agglevel']:
+        county2zone = county2zone.map(r2aggreg)
+        dfout.columns = dfout.columns.map(
+            lambda x: (x[0], r2aggreg[x[1]]))
+        dfout = dfout.groupby(axis=1, level=['i','r']).mean()
+
+    if 'county' in agglevel_variables['agglevel']:
+        val_r = pd.read_csv(
+            os.path.join(inputs_case, 'val_r.csv'),
+            header=None,
+        ).squeeze(1)
+        dfout = pd.concat(
+            {
+                i: (
+                    dfout[i]
+                    ## Get the zone for each county, or if it's already a zone, keep the zone.
+                    ## Every county in a zone thus gets the same profile.
+                    [val_r.map(lambda x: county2zone.get(x,x))]
+                    ## Set the actual regions (could be mix of zones and counties) as index
+                    .set_axis(val_r.values, axis=1)
+                )
+                for i in dfout.columns.get_level_values('i').unique()
+            },
+            axis=1, names=('i','r'),
+        )
+
+    return dfout
+
+
+def calc_outage_forced(reeds_path, inputs_case):
     """
     """
-    # #%% Settings for testing
-    # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # inputs_case = os.path.join(
-    #     reeds_path,'runs',
-    #     'v20240709_tforM0_USA','inputs_case','')
-    # hdftype = 'h5py'
-    # debug = 1
-    # interactive = True
-
-    #%% Derived inputs
+    ### Derived inputs
     sw = reeds.io.get_switches(inputs_case)
     val_ba = (
         pd.read_csv(os.path.join(inputs_case, 'val_ba.csv'), header=None)
@@ -221,26 +267,34 @@ def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
         header=None, index_col=0,
     ).squeeze(1)
     outage_forced_static.index = outage_forced_static.index.str.lower()
-    outage_forced_static = outage_forced_static.drop(ignore_techs, errors='ignore').copy()
+    outage_forced_static = (
+        outage_forced_static
+        .drop(reeds.techs.ignore_techs, errors='ignore')
+        .copy()
+    )
 
-    tech_subset_table = get_tech_subset_table(inputs_case)
+    ### Load temperatures
+    print('Load temperatures')
+    temperatures = reeds.io.get_temperatures(inputs_case)
 
-    #%% Input data
+    ### Input data
     if sw.GSw_OutageScen.lower() == 'static':
         ### Fill static data for all techs and modeled regions
-        fulltimeindex = reeds.timeseries.get_timeindex(sw.resource_adequacy_years_list)
-        forcedoutage_prefill = pd.concat(
-            {
-                (i,r): pd.Series(index=fulltimeindex, data=outage_forced_static[i])
-                for i in outage_forced_static.index for r in val_ba
-            }, axis=1, names=('i','r'),
-        )
+        df = pd.concat(
+            {r: outage_forced_static for r in val_ba},
+            axis=0,
+            names=('r','i'),
+        ).reorder_levels(['i','r']).sort_index()
+        forcedoutage_prefill = pd.concat({i: df for i in temperatures.index}, axis=1).T
+        fits_forcedoutage = pd.DataFrame()
+        forcedoutage_pm = pd.DataFrame()
+
     else:
         ### Load temperatures
         print('Load temperatures')
-        temperatures = get_temperatures(inputs_case)
+        temperatures = reeds.io.get_temperatures(inputs_case)
         fits_forcedoutage_in = pd.read_csv(
-            os.path.join(inputs_case, 'temperature_outage_forced.csv'),
+            os.path.join(inputs_case, 'outage_forced_temperature.csv'),
             comment='#',
         ).pivot(index='deg_celsius', columns='prime_mover', values='outage_frac')
 
@@ -249,160 +303,192 @@ def main(reeds_path, inputs_case, hdftype='h5py', debug=0, interactive=False):
             dfin=fits_forcedoutage_in, xmin=temp_min, xmax=temp_max)
 
         ### Get temperature-dependent outage rate by prime mover and state
-        print('Calculate outage rates')
         forcedoutage_pm = pd.concat(
             {pm: temperatures.replace(fits_forcedoutage[pm]) for pm in fits_forcedoutage},
             axis=1, names=('prime_mover',),
         ).astype(np.float32)
 
         ### Map from prime movers to techs
-        forcedoutage_prefill = pd.concat(
-            {
-                i: forcedoutage_pm[pm]
-                for pm in fits_forcedoutage_in
-                for i in tech_subset_table.loc[primemover2techgroup[pm]].unique()
-            },
-            axis=1, names=('i',)
-        )
+        forcedoutage_prefill = pm_to_tech(df=forcedoutage_pm, inputs_case=inputs_case)
 
-    #%% Identify techs with nonzero FORs that are not yet included in hourly FORs
-    techlist = get_techlist_after_bans(inputs_case)
-    keep_techs = [i for i in outage_forced_static.index if i in techlist]
+    ### Fill missing hourly data with tech-specific static values
+    outage_forced_hourly = fill_empty_techs(
+        df_prefill=forcedoutage_prefill,
+        inputs_case=inputs_case,
+        fillvalues_tech=outage_forced_static,
+    )
 
-    included_techs = forcedoutage_prefill.columns.get_level_values('i').unique()
-    missing_techs = [
-        c for c in outage_forced_static.loc[outage_forced_static > 0].index
-        # if (c.lower() not in included_techs)
-        if ((c.lower() not in included_techs) and (c.lower() in keep_techs))
-    ]
-    print(f"included ({len(included_techs)}): {' '.join(included_techs)}")
-    print(f"missing ({len(missing_techs)}): {' '.join(missing_techs)}")
+    ### This file has a unique format so aggregate it now if necessary
+    outage_forced_hourly = aggregate_regions(outage_forced_hourly, inputs_case)
 
-    #%% Fill data for missing techs
-    if len(missing_techs):       
-        forcedoutage_filled = pd.concat(
-            {
-                (i,r): pd.Series(index=forcedoutage_prefill.index, data=outage_forced_static[i])
-                for i in missing_techs for r in val_ba
-            },
-            axis=1, names=('i','r'),
-        )
-        forcedoutage_hourly = pd.concat([forcedoutage_prefill, forcedoutage_filled], axis=1)
-    else:
-        forcedoutage_hourly = forcedoutage_prefill
+    return {
+        'fits_forcedoutage': fits_forcedoutage,
+        'forcedoutage_pm': forcedoutage_pm,
+        'outage_forced_hourly': outage_forced_hourly,
+    }
 
-   
-    #%% forcedoutage_hourly.h5 has a unique format so aggregate it now if necessary
-    val_r = pd.read_csv(os.path.join(inputs_case, 'val_r.csv'), header=None).squeeze(1)
-    r2aggreg = pd.read_csv(
-        os.path.join(inputs_case, 'hierarchy_original.csv')
-    ).rename(columns={'ba':'r'}).set_index('r').aggreg
-    agglevel_variables = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)
 
-    county2zone = pd.read_csv(os.path.join(inputs_case, 'county2zone.csv'), dtype={'FIPS':str})
-    county2zone.FIPS = 'p' + county2zone.FIPS
-    county2zone = county2zone.set_index('FIPS').ba.loc[agglevel_variables['county_regions']]
-
-    if 'aggreg' in agglevel_variables['agglevel']:
-        county2zone = county2zone.map(r2aggreg)
-        forcedoutage_hourly.columns = forcedoutage_hourly.columns.map(
-            lambda x: (x[0], r2aggreg[x[1]]))
-        forcedoutage_hourly = forcedoutage_hourly.groupby(axis=1, level=['i','r']).mean()
-
-    if 'county' in agglevel_variables['agglevel']:
-        forcedoutage_hourly = pd.concat(
-            {
-                i: (
-                    forcedoutage_hourly[i]
-                    ## Get the zone for each county, or if it's already a zone, keep the zone.
-                    ## Every county in a zone thus gets the same profile.
-                    [val_r.map(lambda x: county2zone.get(x,x))]
-                    ## Set the actual regions (could be mix of zones and counties) as index
-                    .set_axis(val_r.values, axis=1)
-                )
-                for i in forcedoutage_hourly.columns.get_level_values('i').unique()
-            },
-            axis=1, names=('i','r'),
-        )
-
-    #%% Write it at tech resolution
-    print('Write outage rates')
-    outfile = os.path.join(inputs_case, 'forcedoutage_hourly.h5')
-    if hdftype.lower() in h5pytypes:
-        names = ['i', 'r']
-        namelengths = {
-            name: forcedoutage_hourly.columns.get_level_values(name).map(len).max()
-            for name in names
-        }
-        with h5py.File(outfile, 'w') as f:
-            f.create_dataset('index', data=forcedoutage_hourly.index, dtype='S29')
-            ## Save both the individual column levels and the single-level delimited version
-            for name in names:
-                f.create_dataset(
-                    f'columns_{name}',
-                    data=forcedoutage_hourly.columns.get_level_values(name),
-                    dtype=f'S{namelengths[name]}')
+def write_outages(df, h5path):
+    names = df.columns.names
+    namelengths = {
+        name: df.columns.get_level_values(name).map(len).max()
+        for name in names
+    }
+    column_level_type = f'S{max([len(i) for i in names])}'
+    with h5py.File(h5path, 'w') as f:
+        f.create_dataset('index', data=df.index, dtype='S29')
+        ## Save both the individual column levels and the single-level delimited version
+        for name in names:
             f.create_dataset(
-                'columns',
-                data=forcedoutage_hourly.columns.map(lambda x: '|'.join(x)).rename('|'.join(names)),
-                dtype=f'S{sum(namelengths.values()) + 1}')
-            f.create_dataset(
-                'data', data=forcedoutage_hourly, dtype=np.float32,
-                compression='gzip', compression_opts=4,
-            )
+                f'columns_{name}',
+                data=df.columns.get_level_values(name),
+                dtype=f'S{namelengths[name]}')
+        f.create_dataset(
+            'columns',
+            data=df.columns.map(lambda x: '|'.join(x)).rename('|'.join(names)),
+            dtype=f'S{sum(namelengths.values()) + 1}')
+        f.create_dataset(
+            'data', data=df, dtype=np.float32,
+            compression='gzip', compression_opts=4,
+        )
+        
+        f.create_dataset(
+            'column_levels',
+            data=np.array(names, dtype=column_level_type),
+            dtype=column_level_type)
+
+
+def plot_outage_forced(
+    case,
+    fits_forcedoutage,
+    forcedoutage_pm,
+    interactive=True,
+):
+    ### Prep plots
+    import matplotlib.pyplot as plt
+    import site
+    site.addsitedir(os.path.join(reeds_path, 'postprocessing'))
+    import plots
+    import reedsplots
+    plots.plotparams()
+    case = os.path.dirname(inputs_case.rstrip(os.sep))
+    figpath = os.path.join(case,'outputs','hourly')
+    os.makedirs(figpath, exist_ok=True)
+
+    ### Plot the fits
+    plt.close()
+    f,ax = plt.subplots()
+    (fits_forcedoutage*100).plot(ax=ax)
+    ax.set_ylabel('Outage rate [%]')
+    ax.set_xlabel('Temperature [°C]')
+    ax.set_ylim(0,100)
+    ax.set_xlim(temp_min, temp_max)
+    plots.despine(ax)
+    plt.savefig(os.path.join(figpath, 'FOR-fits.png'))
+    if interactive:
+        plt.show()
     else:
-        forcedoutage_hourly.to_hdf(
-            outfile, mode='w', complevel=4, key='data', format='fixed')
-
-    #%% Test it
-    if debug:
-        #%% Prep plots
-        import matplotlib.pyplot as plt
-        from reeds import plots
-        plots.plotparams()
-        case = os.path.dirname(inputs_case.rstrip(os.sep))
-        figpath = os.path.join(case,'outputs','hourly')
-        os.makedirs(figpath, exist_ok=True)
-
-        #%% Plot the fits
         plt.close()
-        f,ax = plt.subplots()
-        (fits_forcedoutage*100).plot(ax=ax)
-        ax.set_ylabel('Outage rate [%]')
-        ax.set_xlabel('Temperature [°C]')
-        ax.set_ylim(0,100)
-        ax.set_xlim(temp_min, temp_max)
-        plots.despine(ax)
-        plt.savefig(os.path.join(figpath, 'FOR-fits.png'))
+
+    ### Plot forced outage rates
+    val_ba = (
+        pd.read_csv(os.path.join(case, 'inputs_case', 'val_ba.csv'), header=None)
+        .squeeze(1).values
+    )
+    dfmap = reedsplots.get_dfmap(case)
+    dfzones = dfmap['r'].loc[val_ba]
+    aggfunc = 'mean'
+
+    for pm in primemover2techgroup:
+        dfdata = forcedoutage_pm[pm].copy() * 100
+
+        plt.close()
+        f, ax = plots.map_years_months(
+            dfzones=dfzones, dfdata=dfdata, aggfunc=aggfunc,
+            title=f"Monthly {aggfunc}\nforced outage rate,\n{pm} [%]",
+        )
+        plt.savefig(os.path.join(figpath, f'FOR_monthly-{aggfunc}-{pm}.png'))
         if interactive:
             plt.show()
         else:
             plt.close()
 
-        #%% Make sure output is readable
-        if hdftype.lower() in h5pytypes:
-            get_forcedoutage_hourly(case)
-        else:
-            pd.read_hdf(outfile)
 
-        #%% Plot forced outage rates
-        dfmap = reeds.io.get_dfmap(case)
-        dfzones = dfmap['r'].loc[val_ba]
-        aggfunc = 'mean'
+def calc_outage_scheduled(reeds_path, inputs_case, during_quarters=during_quarters):
+    sw = reeds.io.get_switches(inputs_case)
+    ## Static scheduled outage rates (for filling empties)
+    outage_scheduled_static = pd.read_csv(
+        os.path.join(inputs_case, 'outage_scheduled_static.csv'),
+        header=None, index_col=0,
+    ).squeeze(1)
+    outage_scheduled_static.index = outage_scheduled_static.index.str.lower()
+    outage_scheduled_static = (
+        outage_scheduled_static
+        .drop(reeds.techs.ignore_techs, errors='ignore')
+        .copy()
+    )
 
-        for pm in primemover2techgroup:
-            dfdata = forcedoutage_pm[pm].copy() * 100
+    ### Monthly scheduled outage rates
+    outage_scheduled_monthly = pd.read_csv(
+        os.path.join(inputs_case, 'outage_scheduled_monthly.csv'),
+        index_col=['prime_mover','month'],
+    ).squeeze(1).unstack('prime_mover')
 
-            plt.close()
-            f, ax = plots.map_years_months(
-                dfzones=dfzones, dfdata=dfdata, aggfunc=aggfunc,
-                title=f"Monthly {aggfunc}\nforced outage rate,\n{pm} [%]",
-            )
-            plt.savefig(os.path.join(figpath, f'FOR_monthly-{aggfunc}-{pm}.png'))
-            if interactive:
-                plt.show()
-            else:
-                plt.close()
+    timeindex = pd.Series(
+        index=reeds.timeseries.get_timeindex(sw.resource_adequacy_years_list)
+    )
+    outage_scheduled_pm = pd.DataFrame(
+        {
+            pm: timeindex.index.month.map(outage_scheduled_monthly[pm]).values
+            for pm in outage_scheduled_monthly
+        },
+        index=timeindex.index,
+        dtype=np.float32,
+    )
+    outage_scheduled_pm.columns = outage_scheduled_pm.columns.rename('prime_mover')
+
+    outage_scheduled_tech = pm_to_tech(outage_scheduled_pm, inputs_case)
+
+    outage_scheduled_hourly = fill_empty_techs(
+        df_prefill=outage_scheduled_tech,
+        inputs_case=inputs_case,
+        fillvalues_tech=outage_scheduled_static,
+        during_quarters=during_quarters,
+    )
+
+    return outage_scheduled_hourly
+
+
+#%%
+def main(reeds_path, inputs_case, debug=0, interactive=False):
+    ### Forced outages
+    print('Get forced outage rates')
+    dfforced = calc_outage_forced(reeds_path, inputs_case)
+    print('Write forced outage rates')
+    write_outages(
+        df=dfforced['outage_forced_hourly'],
+        h5path=os.path.join(inputs_case, 'outage_forced_hourly.h5'),
+    )
+    ## Make sure it worked
+    reeds.io.get_outage_hourly(inputs_case, 'forced')
+    if debug:
+        plot_outage_forced(
+            case=os.path.abspath(os.path.join(inputs_case, '..')),
+            fits_forcedoutage=dfforced['fits_forcedoutage'],
+            forcedoutage_pm=dfforced['forcedoutage_pm'],
+            interactive=interactive,
+        )
+
+    ### Scheduled outages
+    print('Get scheduled outage rates')
+    outage_scheduled_hourly = calc_outage_scheduled(reeds_path, inputs_case)
+    print('Write scheduled outage rates')
+    write_outages(
+        df=outage_scheduled_hourly,
+        h5path=os.path.join(inputs_case, 'outage_scheduled_hourly.h5'),
+    )
+    ## Make sure it worked
+    reeds.io.get_outage_hourly(inputs_case, 'scheduled')
 
 
 #%%### Run it
@@ -418,6 +504,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
     reeds_path = args.reeds_path
     inputs_case = args.inputs_case
+
+    # #%% Settings for testing
+    # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # inputs_case = os.path.join(
+    #     reeds_path,'runs',
+    #     'v20250311_scheduledM1_Pacific', 'inputs_case')
+    # interactive = True
+    # debug = 1
 
     #%% Set up logger
     log = reeds.log.makelog(
