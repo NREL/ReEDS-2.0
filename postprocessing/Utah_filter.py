@@ -1,0 +1,319 @@
+#%%
+import pandas as pd
+import numpy as np
+import os
+import shutil
+import reeds
+
+# Path for folder where the ReEDS runs are located
+runs_folder = os.path.join("Z:\FY25_UOED\\runs")
+# Path to folder where ReEDS repo is
+reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+
+# Function to copy specific subfolders from a source folder to a destination folder
+def copy_specific_folders(src, dest, folders_to_copy):
+    try:
+        os.makedirs(dest, exist_ok=True)
+        for folder in folders_to_copy:
+            src_folder = os.path.join(src, folder)
+            dest_folder = os.path.join(dest, folder)
+            if os.path.exists(src_folder):
+                shutil.copytree(src_folder, dest_folder)
+                print(f"Copied {src_folder} to {dest_folder}")
+            else:
+                print(f"Folder {src_folder} does not exist.")
+    except Exception as e:
+        print(f"Error copying specific folders: {e}")
+
+
+
+#%%
+# Populate folders list with file paths to runs that you want to extract Utah data from 
+# Folders = [os.path.join(runs_folder, "v1_040925_WI_county_PRAS"),           
+#             ]
+Folders = [os.path.join(runs_folder, "sf_updated_2_western_BA_BAU"),           
+            ]
+
+# List of ReEDS BAs that belong to Utah 
+regions  = ['p25','p26']
+
+# List of counties that belong to Utah if running at county resolution 
+# Comment out if using BA resolution runs
+# county2zone = pd.read_csv(os.path.join(reeds_path,'inputs','county2zone.csv'))
+# regions = ['p' + str(fips) for fips in county2zone.loc[county2zone['ba'].isin(regions), 'FIPS'].tolist()]
+
+
+#%%
+## This section is used to overwrite the ReEDS report with a new report that contains only Utah data 
+
+for f in Folders:
+    # Copy outputs and inputs folder to create a version where the filtered data will live 
+    source_folder = f
+    destination_folder = os.path.join(runs_folder, f.split('\\')[-1] + '_isolated')
+    copy_specific_folders(source_folder, destination_folder,['outputs','inputs_case'])
+    # change folder path to copied folder
+    f = destination_folder
+    # Path to folder where ReEDS output report is located
+    # This report is automatically generated when a ReEDS run is completed
+    report_dir = '\\'.join([f,'outputs','reeds-report','report.xlsx'])
+    
+
+    #### Generation
+    # Generation in report is at national level 
+    report_GEN= pd.read_excel(report_dir, sheet_name = '3_Generation (TWh)')
+    scenario = report_GEN.scenario.tolist()[0]
+    output_dir = '//'.join([f,'outputs'])
+    # Get generation by region data
+    output_GEN = pd.read_csv('\\'.join([output_dir,'gen_ann.csv']))
+    # Filter to region of interest
+    output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
+
+    # Reformat to match report data
+    output_GEN['scenario'] = scenario       
+    GEN_table = output_GEN.pivot_table(index = ['scenario','i','t'],
+                                       values = 'Value',
+                                       aggfunc = 'sum')
+    GEN_table.Value/=1e6
+    
+    GEN_table.reset_index(inplace=True, drop = False)
+    for y in GEN_table.t.unique():
+        GEN_table.loc[GEN_table.t == y,'Net Level Generation (TWh)'] = GEN_table.loc[GEN_table.t == y,'Value'].sum()
+    
+    # Reformat technology names to match report data technology names 
+    GEN_table.loc[['hydN' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydU' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydE' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['oal' in x for x in GEN_table.i],'i'] = 'coal'
+    GEN_table.loc[['CC' in x for x in GEN_table.i],'i'] = 'gas-cc'
+    GEN_table.loc[['CT' in x for x in GEN_table.i],'i'] = 'gas-ct'
+    GEN_table.loc[['upv' in x for x in GEN_table.i],'i'] = 'upv'
+    GEN_table.loc[['wind-ons' in x for x in GEN_table.i],'i'] = 'wind-ons'
+    GEN_table.loc[['wind-ofs' in x for x in GEN_table.i],'i'] = 'wind-ofs'
+    GEN_table.loc[['geo' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['egs' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
+    GEN_table.columns = report_GEN.columns
+
+    # Write the region-specific generation data to the report
+    with pd.ExcelWriter('//'.join([f,'outputs','reeds-report','report.xlsx']),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
+        GEN_table.to_excel(writer, sheet_name = '3_Generation (TWh)', index = False)
+
+
+    #### Capacity
+
+    report_GEN= pd.read_excel(report_dir, sheet_name = '4_Capacity (GW)')
+    output_GEN = pd.read_csv('//'.join([output_dir,'cap.csv']))
+    output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
+    output_GEN['scenario'] = scenario
+    
+    
+    GEN_table = output_GEN.pivot_table(index = ['scenario','i','t'],
+                                       values = 'Value',
+                                       aggfunc = 'sum')
+    GEN_table.Value/=1e3
+    
+    GEN_table.reset_index(inplace=True, drop = False)
+    for y in GEN_table.t.unique():
+        GEN_table.loc[GEN_table.t == y,'Net Level Capacity (GW)'] = GEN_table.loc[GEN_table.t == y,'Value'].sum()
+    
+
+    GEN_table.loc[['hydN' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydU' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydE' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['oal' in x for x in GEN_table.i],'i'] = 'coal'
+    GEN_table.loc[['CC' in x for x in GEN_table.i],'i'] = 'gas-cc'
+    GEN_table.loc[['CT' in x for x in GEN_table.i],'i'] = 'gas-ct'
+    GEN_table.loc[['upv' in x for x in GEN_table.i],'i'] = 'upv'
+    GEN_table.loc[['wind-ons' in x for x in GEN_table.i],'i'] = 'wind-ons'
+    GEN_table.loc[['wind-ofs' in x for x in GEN_table.i],'i'] = 'wind-ofs'
+    GEN_table.loc[['geo' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['egs' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
+    GEN_table.columns = report_GEN.columns
+
+    with pd.ExcelWriter('//'.join([f,'outputs','reeds-report','report.xlsx']),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
+        GEN_table.to_excel(writer, sheet_name = '4_Capacity (GW)', index = False)
+
+    
+    #### new Capacity
+
+    report_GEN= pd.read_excel(report_dir, sheet_name = '5_New Annual Capacity (GW)')
+    output_GEN = pd.read_csv('//'.join([output_dir,'cap_new_ann.csv']))
+    output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
+    output_GEN['scenario'] = scenario
+    
+    
+    GEN_table = output_GEN.pivot_table(index = ['scenario','i','t'],
+                                       values = 'Value',
+                                       aggfunc = 'sum')
+    GEN_table.Value/=1e3
+    
+    GEN_table.reset_index(inplace=True, drop = False)
+    for y in GEN_table.t.unique():
+        GEN_table.loc[GEN_table.t == y,'Net Level Capacity (GW)'] = GEN_table.loc[GEN_table.t == y,'Value'].sum()
+    
+
+    GEN_table.loc[['hydN' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydU' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydE' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['oal' in x for x in GEN_table.i],'i'] = 'coal'
+    GEN_table.loc[['CC' in x for x in GEN_table.i],'i'] = 'gas-cc'
+    GEN_table.loc[['CT' in x for x in GEN_table.i],'i'] = 'gas-ct'
+    GEN_table.loc[['upv' in x for x in GEN_table.i],'i'] = 'upv'
+    GEN_table.loc[['wind-ons' in x for x in GEN_table.i],'i'] = 'wind-ons'
+    GEN_table.loc[['wind-ofs' in x for x in GEN_table.i],'i'] = 'wind-ofs'
+    GEN_table.loc[['geo' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['egs' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
+    GEN_table.columns = report_GEN.columns
+
+    with pd.ExcelWriter('//'.join([f,'outputs','reeds-report','report.xlsx']),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
+        GEN_table.to_excel(writer, sheet_name = '5_New Annual Capacity (GW)', index = False)
+
+
+    #### Retirements 
+
+    report_GEN= pd.read_excel(report_dir, sheet_name = '6_Annual Retirements (GW)')
+    output_GEN = pd.read_csv('//'.join([output_dir,'ret_ann.csv']))
+    output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
+    output_GEN['scenario'] = scenario
+    
+    
+    GEN_table = output_GEN.pivot_table(index = ['scenario','i','t'],
+                                       values = 'Value',
+                                       aggfunc = 'sum')
+    GEN_table.Value/=1e3
+    
+    GEN_table.reset_index(inplace=True, drop = False)
+    for y in GEN_table.t.unique():
+        GEN_table.loc[GEN_table.t == y,'Net Level Capacity (GW)'] = GEN_table.loc[GEN_table.t == y,'Value'].sum()
+    
+
+    GEN_table.loc[['hydN' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydU' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydE' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['oal' in x for x in GEN_table.i],'i'] = 'coal'
+    GEN_table.loc[['CC' in x for x in GEN_table.i],'i'] = 'gas-cc'
+    GEN_table.loc[['CT' in x for x in GEN_table.i],'i'] = 'gas-ct'
+    GEN_table.loc[['upv' in x for x in GEN_table.i],'i'] = 'upv'
+    GEN_table.loc[['wind-ons' in x for x in GEN_table.i],'i'] = 'wind-ons'
+    GEN_table.loc[['wind-ofs' in x for x in GEN_table.i],'i'] = 'wind-ofs'
+    GEN_table.loc[['geo' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['egs' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
+    GEN_table.columns = report_GEN.columns
+
+    with pd.ExcelWriter('//'.join([f,'outputs','reeds-report','report.xlsx']),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
+        GEN_table.to_excel(writer, sheet_name = '6_Annual Retirements (GW)', index = False)
+
+
+    #### Firm Capacity 
+
+    report_GEN= pd.read_excel(report_dir, sheet_name = '11_Firm Capacity (GW)')
+    output_GEN = pd.read_csv('//'.join([output_dir,'cap_firm.csv']))
+    output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
+    output_GEN['scenario'] = scenario
+    
+    
+    GEN_table = output_GEN.pivot_table(index = ['ccseason','scenario','i','t'],
+                                       values = 'Value',
+                                       aggfunc = 'sum')
+    GEN_table.Value/=1e3
+    
+    GEN_table.reset_index(inplace=True, drop = False)
+    for y in GEN_table.t.unique():
+        GEN_table.loc[GEN_table.t == y,'Net Level Capacity (GW)'] = GEN_table.loc[GEN_table.t == y,'Value'].sum()
+    
+
+    GEN_table.loc[['hydN' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydU' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['hydE' in x for x in GEN_table.i],'i'] = 'hydro'
+    GEN_table.loc[['oal' in x for x in GEN_table.i],'i'] = 'coal'
+    GEN_table.loc[['CC' in x for x in GEN_table.i],'i'] = 'gas-cc'
+    GEN_table.loc[['CT' in x for x in GEN_table.i],'i'] = 'gas-ct'
+    GEN_table.loc[['upv' in x for x in GEN_table.i],'i'] = 'upv'
+    GEN_table.loc[['wind-ons' in x for x in GEN_table.i],'i'] = 'wind-ons'
+    GEN_table.loc[['wind-ofs' in x for x in GEN_table.i],'i'] = 'wind-ofs'
+    GEN_table.loc[['geo' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['egs' in x for x in GEN_table.i],'i'] = 'geothermal'
+    GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
+    GEN_table.columns = report_GEN.columns
+
+    with pd.ExcelWriter('//'.join([f,'outputs','reeds-report','report.xlsx']),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
+        GEN_table.to_excel(writer, sheet_name = '11_Firm Capacity (GW)', index = False)
+
+
+    #### Emissions
+
+    report_GEN= pd.read_excel(report_dir, sheet_name = '25_Emissions National (metric t')
+    output_GEN = pd.read_csv('//'.join([output_dir,'emit_r.csv']))
+    output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
+    output_GEN['scenario'] = scenario
+    
+    
+    GEN_table = output_GEN.pivot_table(index = ['eall','scenario','t'],
+                                       values = 'Value',
+                                       aggfunc = 'sum')
+    GEN_table.Value/=1e3
+    
+    GEN_table.reset_index(inplace=True, drop = False)
+    for y in GEN_table.t.unique():
+        GEN_table.loc[GEN_table.t == y,'Emissions (metric tons)'] = GEN_table.loc[GEN_table.t == y,'Value'].sum()
+    
+
+
+    with pd.ExcelWriter('//'.join([f,'outputs','reeds-report','report.xlsx']),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
+        GEN_table.to_excel(writer, sheet_name = '25_Emissions National (metric t', index = False)
+
+
+GEN_table
+
+
+#%%
+# This section is used to filter the ReEDS output files to only include data for Utah regions
+for f in Folders:
+    f = os.path.join(runs_folder, f.split('\\')[-1] + '_isolated')
+    output_dir = '\\'.join([f,'outputs'])
+    for file in os.listdir(output_dir):
+        if '.csv' in file:
+            output_file = pd.read_csv('\\'.join([output_dir,file]))
+            if 'r' in output_file.columns.tolist():
+                print(file)
+                output_file = output_file.loc[output_file.r.isin(regions)]
+                output_file.to_csv('\\'.join([output_dir,file]),index = False)
+
+# This section is used to filter the ReEDS input case files to only include data for Utah regions
+for f in Folders:
+    f = os.path.join(runs_folder, f.split('\\')[-1] + '_isolated')
+    output_dir = '\\'.join([f,'inputs_case'])
+    for file in os.listdir(output_dir):
+        if '.csv' in file:
+            try:
+                output_file = pd.read_csv('\\'.join([output_dir,file]))
+                if 'r' in output_file.columns.tolist():
+                    print(file)
+                    output_file = output_file.loc[output_file.r.isin(regions)]
+                    output_file.to_csv('//'.join([output_dir,file]),index = False)
+            except:
+                print('Failed',file)
+
+        if '.h5' in file:
+            if 'load' in file:
+                try:
+                    output_file = reeds.io.read_file('\\'.join([output_dir,file]))                               
+                    print(file)
+                    output_file = output_file[regions]
+                    reeds.io.write_profile_to_h5(output_file, file, output_dir)  
+                except:
+                    print('Failed',file)
+
+            if 'recf' in file:
+                try:
+                    output_file = reeds.io.read_file('\\'.join([output_dir,file]))                               
+                    print(file)
+                    col_list = [col for col in output_file.columns if any(region in col for region in regions)]                  
+                    output_file = output_file[col_list]
+                    reeds.io.write_profile_to_h5(output_file, file, output_dir)      
+                except:
+                    print('Failed',file)
+
