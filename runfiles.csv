@@ -221,7 +221,7 @@ hydadjann.csv,inputs/climate/{climatescen}/hydadjann.csv,,,mean,uniform,r,t,,0,0
 hydadjsea.csv,inputs/climate/{climatescen}/hydadjsea.csv,,,mean,uniform,r,"szn,t",,0,0,,,,,,
 hydcap.csv,inputs/supply_curve/hydcap.csv,,,sum,geosize,wide,"tech,class",,1,0,,,,,,
 hydcapadj.csv,inputs/hydro/SeaCapAdj_hy.csv,,,mean,uniform,r,"*i,month",,0,0,,,,,,
-hydcf.csv,inputs/hydro/hydcf_{lvl}.h5,,,mean,uniform,r,"*i,month,t",,0,0,,,,,,test differentiating filetype_out (derived from filename) from filetype variables in copy_files.py
+hydcf.csv,inputs/hydro/hydcf_{lvl}.h5,,,mean,ignore,r,"*i,month,t",,0,0,,,,,,test differentiating filetype_out (derived from filename) from filetype variables in copy_files.py
 hydcost.csv,inputs/supply_curve/hydcost.csv,,,mean,uniform,wide,"tech,class",,1,0,,,,,,
 hydro_mingen.csv,inputs/hydro/hydro_mingen.csv,,,mean,uniform,r,"*i,quarter",,0,0,,,,,,might be better to do something capacity-weighted
 hydrocapcostmult.csv,,,,ignore,ignore,,,,1,0,,,,,,

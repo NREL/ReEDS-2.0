@@ -90,16 +90,15 @@ def get_techlist_after_bans(case):
         techlist = [i for i in techlist if i not in tech_subset_table.loc['DAC'].values]
     if not int(sw.GSw_H2_SMR):
         techlist = [i for i in techlist if i not in tech_subset_table.loc['SMR'].values]
-    match int(sw.GSw_Storage):
-        case 0:
-            techlist = [i for i in techlist if i not in tech_subset_table.loc['STORAGE_STANDALONE'].values]
-        case 3:
-            techlist = [
-                i for i in techlist if (
-                    (i not in tech_subset_table.loc['STORAGE_STANDALONE'].values)
-                    or (i in ['battery_4','battery_8','pumped-hydro'])
-                )
-            ]
+    if int(sw.GSw_Storage) == 0:
+        techlist = [i for i in techlist if i not in tech_subset_table.loc['STORAGE_STANDALONE'].values]
+    elif int(sw.GSw_Storage) == 3:
+        techlist = [
+            i for i in techlist if (
+                (i not in tech_subset_table.loc['STORAGE_STANDALONE'].values)
+                or (i in ['battery_4', 'battery_8', 'pumped-hydro'])
+            )
+        ]
     if not int(sw.GSw_CCSFLEX_BYP):
         techlist = [i for i in techlist if i not in tech_subset_table.loc['CCSFLEX_BYP'].values]
     if not int(sw.GSw_CCSFLEX_STO):
