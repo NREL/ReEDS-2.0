@@ -588,11 +588,11 @@ def subset_to_valid_regions(
                                     valid_regions ,val_st,val_cs, filename = filename)
             # Assign the counties that are not being solved at county resolution to the correct BA
             for idx,region in df_county['r'].items():
-                if region not in agglevel_variables['county_regions']:
-                    df_county['r'][idx] = agglevel_variables['BA_2_county'][df_county['r'][idx]]
+                if region not in agglevel_variables['county_regions']:         
+                    df_county.loc[idx, 'r'] = agglevel_variables['BA_2_county'][df_county.loc[idx, 'r']]
             for idx,region in df_county['rr'].items():
                 if region not in agglevel_variables['county_regions']:
-                    df_county['rr'][idx] = agglevel_variables['BA_2_county'][df_county['rr'][idx]]
+                    df_county.loc[idx, 'rr'] = agglevel_variables['BA_2_county'][df_county.loc[idx, 'rr']]
             # Drop if *r and rr are same region
             df_county = df_county.drop(df_county[df_county['r']==df_county['rr']].index)
             # Drop if line is BA-to-BA
@@ -1150,9 +1150,9 @@ def write_region_indexed_file(
                 # Mixed resolution procedure
                 elif agglevel_variables['lvl'] == 'mult':
                     # Filter out BA regions and aggregate
-                    df_ba = df[df['r'].isin(agglevel_variables['BA_county_list'])]
-                    df_ba['r'] = df_ba['r'].map(agglevel_variables['BA_2_county'])
-                    df_ba = df_ba.groupby('r',as_index=False).sum()
+                    df_ba = df[df['r'].isin(agglevel_variables['BA_county_list'])].copy()  
+                    df_ba.loc[:, 'r'] = df_ba['r'].map(agglevel_variables['BA_2_county']) 
+                    df_ba = df_ba.groupby('r', as_index=False).sum()
 
                     # Filter out county regions
                     df_county = df[df['r'].isin(agglevel_variables['county_regions'])]
