@@ -44,7 +44,7 @@ list_of_regions_to_isolate = ['p25','p26']
 # Populate folders list with file paths to runs that you want to extract Utah data from  
 
 
-Folders = [os.path.join(runs_folder, "spatialflex_training_Utah_mixed"),           
+Folders = [os.path.join(runs_folder, "test_Western_BA"),           
             ]
 
 #%%
@@ -238,7 +238,7 @@ for f in Folders:
 
     # If using PRAS instead of capacity credit method for Resource Adequacy then firm_cap is not populated 
     switches = pd.read_csv(os.path.join(f,'inputs_case','switches.csv'))
-    if switches[switches['AWS']=='GSw_PRM_CapCredit'][0] ==1:
+    if switches[switches['AWS']=='GSw_PRM_CapCredit']['0'].item() ==1:
         report_GEN= pd.read_excel(report_dir, sheet_name = '11_Firm Capacity (GW)')
         output_GEN = pd.read_csv(os.path.join(output_dir,'cap_firm.csv'))
         output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
@@ -292,7 +292,7 @@ for f in Folders:
     
 
 
-    with pd.ExcelWriter(os.path.join([f,'outputs','reeds-report','report.xlsx']),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
+    with pd.ExcelWriter(os.path.join(f,'outputs','reeds-report','report.xlsx'),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
         GEN_table.to_excel(writer, sheet_name = '25_Emissions National (metric t', index = False)
 
 
@@ -347,3 +347,5 @@ for f in Folders:
                 except:
                     print('Failed',file)
 
+
+# %%
