@@ -1094,7 +1094,7 @@ def write_county_vre_hourly_profiles(inputs_case, reeds_path):
             "Files:\n"
             +"\n".join(missing_file_versions)+"\n\n"
             +"OpenEI files link:\n"
-            "[https://data.openei.org/submissions/5986]"
+            "[https://data.openei.org/submissions/8379]"
         )
         raise ValueError(error)
     # Write out the new file version file if there are any updates
