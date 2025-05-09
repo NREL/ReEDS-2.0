@@ -1280,6 +1280,52 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
 ;
 
 * ---------------------------------------------------------------------------
+* Operation GW constraint options 
+* Option 1: An annual MWh target (e.g., Annual Utah generation > 1000 MWh)
+* Option 2: A proportion of annual load (e.g., Annual Utah generation > 2 x Annual Utah load)
+* Option 3: A proportion of hourly load (e.g., Utah generation in a given hour > 2 x Utah load in a given hour)
+
+*----- Option 1
+eq_option1(t)$[tmodel(t)$valgen_irt(i,r,t)
+                            $if Sw_OPGW = 1                                                              
+                            ]..
+*  annual generation 
+    sum{r$r_st(r,st),                "sum over all BAs in Utah"
+        hours(h) * GEN(i,v,r,h,t)}   "multiply hourly generation by number of hours in each time block "
+
+* must be greater than or equal to exogenously defined annual target
+    =g=
+        annual_generation_target(t,st)
+
+*---- Option 2
+eq_option2(t)$[tmodel(t)$valgen_irt(i,r,t)
+                            $if Sw_OPGW = 2                                                              
+                            ]..
+*  annual generation 
+    sum{r$r_st(r,st),                 "sum over all BAs in Utah"
+        hours(h) * GEN(i,v,r,h,t)}    "multiply hourly generation by number of hours in each time block "
+
+* must be greater than or equal to 2 x Annual Utah load 
+    =g=
+        sum{r$r_st(r,st)                  "sum over all BAs in Utah"
+            hours(h) * LOAD(r,h,t) } * 2  "multiply hourly load by number of hours in each time block "
+        
+*---- Option 3
+eq_option3(t)$[tmodel(t)$valgen_irt(i,r,t)
+                            $if Sw_OPGW = 3                                                              
+                            ]..
+*  hourly generation 
+    sum{r$r_st(r,st),       "sum over all BAs in Utah"
+        GEN(i,v,r,h,t)}     "generation indexed by tech,vintage,region,hour,year"
+
+* must be greater than or equal to 2 x hourly Utah load 
+    =g=
+        sum{r$r_st(r,st)     "sum over all BAs in Utah"
+            LOAD(r,h,t) } * 2  "load indexed by region, hour,year"
+        
+* ---------------------------------------------------------------------------
+
+* ---------------------------------------------------------------------------
 
 eq_vsc_flow(r,h,t)
     $[tmodel(t)
