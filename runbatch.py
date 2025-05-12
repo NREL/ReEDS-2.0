@@ -1499,7 +1499,9 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             'python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" '
             + os.path.join(reeds_path,"runs",batch_case) + " all No none "
             + os.path.join(bokehdir,"templates","reeds2","standard_report_reduced.py") + ' "html,excel,csv" one '
-            + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-reduced") + ' No\n')
+            + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-reduced") + ' No\n'
+            + os.path.join(bokehdir,"templates","reeds2","utah_report.py") + ' "html,excel,csv" one '
+            + os.path.join(reeds_path,"runs",batch_case,"outputs","utah-report") + ' No\n')        
         OPATH.writelines(
             'python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" '
             + os.path.join(reeds_path,"runs",batch_case) + " all No none "
