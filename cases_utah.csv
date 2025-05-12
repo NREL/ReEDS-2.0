@@ -1,8 +1,9 @@
-,Utah_county,Western_county,Western_BA,utah_mixed,Western_BA_opgw1
-ignore,1,1,1,1,1
-endyear,2030,2030,2030,2030,2030
-GSw_Region,st/UT,western,western,WECC_ba_UT_county,western
-GSw_RegionResolution,county,county,ba,mixed,ba
-GSw_GasCurve,2,2,2,2,2
-GSw_HierarchyFile,,,,,
-GSw_OPGW,0,0,0,0,1
+,Utah_county,Western_county,Western_BA,utah_mixed,Western_BA_opgw1,Western_BA_opgw1
+ignore,1,1,1,1,0,1
+endyear,2030,2030,2030,2030,2040,2030
+GSw_Region,st/UT,western,western,WECC_ba_UT_county,western,western
+GSw_RegionResolution,county,county,ba,mixed,ba,ba
+GSw_GasCurve,2,2,2,2,2,2
+GSw_HierarchyFile,,,,,,
+GSw_OPGW,0,0,0,0,1,2
+GSw_OPGW_load_mult,,,,,,2

@@ -211,7 +211,7 @@ GSw_NoFossilOffsetCDR,If on (=1) then CO2 removal from DAC/BECCS is only allowed
 GSw_Nuclear,Turn on/off new nuclear (existing nuclear still remains),0; 1,1,
 GSw_NuclearDemo,Turn on or off nuclear demonstration plants,0; 1,0,
 GSw_NuclearSMR,Turn on [1] / off [0] Nuclear-SMR,0; 1,1,
-GSw_NukeCoalFOM,Turn on or off nuclear and coal FOM adders similar to NEMS,0; 1,1,
+GSw_NukeCoalFOM,Turn on or off nuclear and coal FOM adders similar to NEMS,0; 1,1,s
 GSw_NukeFlex,"Switch to enable more flexible nuclear operations (lower mingen, higher ramp rate)",0; 1,0,
 GSw_NukeNoRetire,Switch to prevent nuclear from retiring before the year in GSw_NukeNoRetireYear has passed,0; 1,1,
 GSw_NukeNoRetireYear,If GSw_NukeNoRetire is enabled nuclear cannot retire through the end of this year,N/A,2032,
@@ -223,7 +223,8 @@ GSw_NumGeoclasses,Number of resource classes for Geothermal,1; 2; 3; 4; 5; 6; 7;
 GSw_OfsWind,Turn on/off offshore wind,0; 1,1,
 GSw_OfsWindForceScen,Scenario for state offshore mandates. Select {suffix} from state_policies/offshore_req_{suffix}.csv. Only active if GSw_StateRPS is on,N/A,default,
 GSw_OnsWind6to10,Turn on/off onshore wind 6-10,0; 1,1,
-GSw_OPGW,Switch to enforce Utah's operation GW. 0=off; 1=annual generation target; 2=proportion of annual load; 3=proportion of hourly load,1; 2; 3, 1
+GSw_OPGW,Switch to enforce Utah's operation GW. 0=off; 1=annual generation target; 2=proportion of annual load; 3=proportion of hourly load,0; 1; 2; 3, 1
+GSw_OPGW_load_mult,Load multiplier for the operation GW constraint options 2 and 3 ,float,1,
 GSw_OpRes,Turn on/off operating reserve constraints (0/1) or use simplified version (2),0; 1; 2,2,
 GSw_OpResCost,"Case used to select values used for the cost of operating reserves (e.g. default, market)",default; market,default,
 GSw_OpResPeriods,Indicate which periods the operating reserve constraint should apply within (representative = clustered; stress/peakload/minre refer to peak load & min-RE periods) (has no effect for GSw_HourlyType=year),representative; all; stress; peakload; minre; peak; vre,peakload,

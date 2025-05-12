@@ -127,6 +127,9 @@ EQUATION
 
 * load constraint to compute proper marginal value
  eq_loadcon(r,allh,t)                    "--MW-- load constraint used for computing the marginal energy price"
+ eq_option1(st,t)                        "--MWh -- generation constraint used to enforce annual in-state generation by exogeneously defined valued"
+ eq_option2(st,t)                        "--MWh -- generation constraint used to enforce annual in-state generation by scaled load"
+ eq_option3(st,t)                        "--MWh -- generation constraint used to enforce hourly in-state generation by scaled load"
 
 * load flexibility constraints
  eq_load_flex_day(flex_type,r,allszn,t)  "--MWh-- total flexible load in each season is equal to the exogenously-specified flexible load"
@@ -1285,43 +1288,52 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
 * Option 2: A proportion of annual load (e.g., Annual Utah generation > 2 x Annual Utah load)
 * Option 3: A proportion of hourly load (e.g., Utah generation in a given hour > 2 x Utah load in a given hour)
 
-*----- Option 1
-eq_option1(t)$[tmodel(t)$valgen_irt(i,r,t)
-                            $if Sw_OPGW = 1                                                              
+
+*----- Option 1 -----
+eq_option1(st,t)$[tmodel(t)     "apply constraint in year t"
+                $sum{(i,r)$[r_st(r,st)],valgen_irt(i,r,t)}  "sum valgen_irt over i,r sets and sum BAs to state level"
+                $(Sw_OPGW = 1) 
+                $annual_generation_target(st,t)   "filter to apply constraint only to states with annual targets defined"                                                         
                             ]..
 *  annual generation 
-    sum{r$r_st(r,st),                "sum over all BAs in Utah"
+    sum{(i,v,r,h)$r_st(r,st),   "sum over i,v,r,h sets and map BAs to state level"        
         hours(h) * GEN(i,v,r,h,t)}   "multiply hourly generation by number of hours in each time block "
 
+       
 * must be greater than or equal to exogenously defined annual target
     =g=
-        annual_generation_target(t,st)
+        annual_generation_target(st,t) ;
 
-*---- Option 2
-eq_option2(t)$[tmodel(t)$valgen_irt(i,r,t)
-                            $if Sw_OPGW = 2                                                              
-                            ]..
+*---- Option 2 -----
+eq_option2(st,t)$[tmodel(t)      "apply constraint in year t"
+                $sum{(i,r)$[r_st(r,st)],valgen_irt(i,r,t)}  "sum valgen_irt over i,r sets and map BAs to state level"
+                $(Sw_OPGW = 2)      
+                $sameas(st,"UT")   "filter to apply constraint only to Utah"                                                      
+                ]..
 *  annual generation 
-    sum{r$r_st(r,st),                 "sum over all BAs in Utah"
-        hours(h) * GEN(i,v,r,h,t)}    "multiply hourly generation by number of hours in each time block "
+    sum{(i,v,r,h)$r_st(r,st),   "sum over i,v,r,h sets and sum BAs to state level"        
+        hours(h) * GEN(i,v,r,h,t)}   "multiply hourly generation by number of hours in each time block "
 
-* must be greater than or equal to 2 x Annual Utah load 
+* must be greater than or equal to Sw_OPGW_load_mult x Annual Utah load 
     =g=
-        sum{r$r_st(r,st)                  "sum over all BAs in Utah"
-            hours(h) * LOAD(r,h,t) } * 2  "multiply hourly load by number of hours in each time block "
+        sum{(r,h)$r_st(r,st)              "sum over all hours and map BAs to state-level"
+            hours(h) * LOAD(r,h,t) } * Sw_OPGW_load_mult ;  "multiply hourly load by number of hours in each time block"
+                                                           "and multiplied by Sw_OPGW_load_mult"
         
-*---- Option 3
-eq_option3(t)$[tmodel(t)$valgen_irt(i,r,t)
-                            $if Sw_OPGW = 3                                                              
-                            ]..
+*---- Option 3 ----
+eq_option3(st,h,t)$[tmodel(t)
+                    $sum{(i,r)$[r_st(r,st)],valgen_irt(i,r,t)}
+                    $(Sw_OPGW = 3)    
+                    $sameas(st,"UT")   "filter to apply constraint only to Utah"                                                             
+                    ]..
 *  hourly generation 
-    sum{r$r_st(r,st),       "sum over all BAs in Utah"
-        GEN(i,v,r,h,t)}     "generation indexed by tech,vintage,region,hour,year"
+    sum{(i,v,r)$r_st(r,st),       "sum over i,v,r sets and sum BAs to state-level"
+        GEN(i,v,r,h,t)}     "hourly generation"
 
-* must be greater than or equal to 2 x hourly Utah load 
+* must be greater than or equal to Sw_OPGW_load_mult x hourly Utah load 
     =g=
         sum{r$r_st(r,st)     "sum over all BAs in Utah"
-            LOAD(r,h,t) } * 2  "load indexed by region, hour,year"
+            LOAD(r,h,t) } * Sw_OPGW_load_mult ;  "load indexed by region, hour,year and multiplied by Sw_OPGW_load_mult"
         
 * ---------------------------------------------------------------------------
 
