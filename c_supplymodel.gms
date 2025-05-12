@@ -129,7 +129,7 @@ EQUATION
  eq_loadcon(r,allh,t)                    "--MW-- load constraint used for computing the marginal energy price"
  eq_option1(st,t)                        "--MWh -- generation constraint used to enforce annual in-state generation by exogeneously defined valued"
  eq_option2(st,t)                        "--MWh -- generation constraint used to enforce annual in-state generation by scaled load"
- eq_option3(st,h,t)                        "--MWh -- generation constraint used to enforce hourly in-state generation by scaled load"
+ eq_option3(st,allh,t)                      "--MWh -- generation constraint used to enforce hourly in-state generation by scaled load"
 
 * load flexibility constraints
  eq_load_flex_day(flex_type,r,allszn,t)  "--MWh-- total flexible load in each season is equal to the exogenously-specified flexible load"
@@ -1292,32 +1292,34 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
 *----- Option 1 -----
 eq_option1(st,t)
     $[tmodel(t)$(Sw_OPGW=1)    
-    $(sum{(i,r)$[r_st(r,st)],valgen_irt(i,r,t)})  
+    $(sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) })  
     $(annual_generation_target(t,st))    
     ]..                                                        
                 
 *  annual generation 
     sum{(i,v,r,h)$r_st(r,st),          
-        hours(h) * GEN(i,v,r,h,t)}   
-
+        hours(h) * GEN(i,v,r,h,t) }   
        
-* must be greater than or equal to exogenously defined annual target
     =g=
+
+* must be greater than or equal to exogenously defined annual target
     annual_generation_target(t,st) 
 ;
 
 *---- Option 2 -----
 eq_option2(st,t)$[tmodel(t)      
-                $sum{(i,r)$[r_st(r,st)],valgen_irt(i,r,t)}  
+                $sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) }   
                 $(Sw_OPGW = 2)      
-                $sameas(st,"UT")                                                       
+                $sameas(st,"UT")                                                        
                 ]..
+
 *  annual generation 
     sum{(i,v,r,h)$r_st(r,st),          
-        hours(h) * GEN(i,v,r,h,t)}   
+        hours(h) * GEN(i,v,r,h,t) }   
+
+    =g=
 
 * must be greater than or equal to Sw_OPGW_load_mult x Annual Utah load 
-    =g=
         sum{(r,h)$r_st(r,st) ,           
             hours(h) * LOAD(r,h,t) } * Sw_OPGW_load_mult   
                                                            
@@ -1325,21 +1327,22 @@ eq_option2(st,t)$[tmodel(t)
 
 *---- Option 3 ----
 eq_option3(st,h,t)$[tmodel(t)
-                    $sum{(i,r)$[r_st(r,st)],valgen_irt(i,r,t)}
+                    $sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) }
                     $(Sw_OPGW = 3)    
                     $sameas(st,"UT")                                                               
                     ]..
+
 *  hourly generation 
     sum{(i,v,r)$r_st(r,st),       
-        GEN(i,v,r,h,t)}     
+        GEN(i,v,r,h,t) }     
+
+
+    =g=
 
 * must be greater than or equal to Sw_OPGW_load_mult x hourly Utah load 
-    =g=
-        sum{r$r_st(r,st) ,  
+        sum{r$r_st(r,st),  
             LOAD(r,h,t) } * Sw_OPGW_load_mult   
 ;
-* ---------------------------------------------------------------------------
-
 * ---------------------------------------------------------------------------
 
 eq_vsc_flow(r,h,t)
