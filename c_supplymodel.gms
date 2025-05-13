@@ -1292,6 +1292,7 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
 *----- Option 1 -----
 eq_option1(st,t)
     $[tmodel(t)$(Sw_OPGW=1)    
+    $(yeart(t)>=model_builds_start_yr)
     $(sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) })  
     $(annual_generation_target(t,st))    
     ]..                                                        
@@ -1308,13 +1309,14 @@ eq_option1(st,t)
 
 *---- Option 2 -----
 eq_option2(st,t)$[tmodel(t)      
+                $(yeart(t)>=model_builds_start_yr)
                 $sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) }   
                 $(Sw_OPGW = 2)      
                 $sameas(st,"UT")                                                        
                 ]..
 
 *  annual generation 
-    sum{(i,v,r,h)$r_st(r,st),          
+    sum{(i,v,r,h)$[r_st(r,st)$valgen(i,v,r,t)],          
         hours(h) * GEN(i,v,r,h,t) }   
 
     =g=
@@ -1327,13 +1329,14 @@ eq_option2(st,t)$[tmodel(t)
 
 *---- Option 3 ----
 eq_option3(st,h,t)$[tmodel(t)
+                    $(yeart(t)>=model_builds_start_yr)  
                     $sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) }
                     $(Sw_OPGW = 3)    
                     $sameas(st,"UT")                                                               
                     ]..
 
 *  hourly generation 
-    sum{(i,v,r)$r_st(r,st),       
+    sum{(i,v,r)$[r_st(r,st)$valgen(i,v,r,t)],       
         GEN(i,v,r,h,t) }     
 
 
