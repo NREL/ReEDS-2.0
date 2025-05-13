@@ -1,23 +1,20 @@
-utah_bas = ['p26','p25']
+utah_bas = ['p26','p25', 'p49001', 'p49003', 'p49005', 'p49007', 'p49011', 'p49015', 'p49017', 
+    'p49019', 'p49021', 'p49023', 'p49025', 'p49027', 'p49031', 'p49035', 
+    'p49037', 'p49039', 'p49041', 'p49045', 'p49049', 'p49053', 'p49055', 
+    'p49057', 'p49009', 'p49013', 'p49029', 'p49033', 'p49043', 'p49047', 
+    'p49051']
 static_presets = [
-    #Full
-    {'name': 'Generation (TWh)', 'sheet_name':'gen', 'result': 'Generation National (TWh)', 'preset': 'Stacked Bars'},
-    {'name': 'Capacity (GW)', 'sheet_name':'cap', 'result': 'Capacity National (GW)', 'preset': 'Stacked Bars'},
-    {'name': 'New Annual Capacity (GW)', 'sheet_name':'cap_new_ann', 'result': 'New Annual Capacity National (GW)', 'preset': 'Stacked Bars'},
-    {'name': 'Annual Retirements (GW)', 'sheet_name':'retire_ann', 'result': 'Annual Retirements National (GW)', 'preset': 'Stacked Bars'},
-    {'name': 'Final Gen by timeslice (GW)', 'sheet_name':'gen_final_timeslice', 'result': 'Gen by timeslice national (GW)', 'preset': 'Stacked Bars Final'},
-    {'name': 'Bulk System Electricity Price ($/MWh)', 'sheet_name':'elec_price', 'result': 'Requirement Prices and Quantities National', 'preset': 'Bulk System Electricity Price ($/MWh)'},
-    {'name': 'Present Value of System Cost through 2050 (Bil $)', 'sheet_name':'sys_cost', 'result': 'Sys Cost Annualized (Bil $)', 'preset': 'Undiscounted by Year'},
-    {'name': 'Emissions National (metric tons)', 'sheet_name':'emissions', 'result': 'Emissions National (metric tons)', 'preset': 'Scenario Lines Over Time'},
-    {'name': 'Runtime (hours)', 'sheet_name':'runtime', 'result': 'Runtime', 'preset': 'Stacked Bars'},
 
     #Utah
-    {'name': 'Generation (TWh) SoCo', 'sheet_name':'gen_soco', 'result': 'Generation BA (TWh)', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':utah_bas}}},
-    {'name': 'Capacity (GW) SoCo', 'sheet_name':'cap_soco', 'result': 'Capacity BA (GW)', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':utah_bas}}},
+    {'name': 'Generation (TWh) Utah', 'sheet_name':'gen_Utah', 'result': 'Generation BA (TWh)', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':utah_bas}}},
+    {'name': 'Capacity (GW) Utah', 'sheet_name':'cap_Utah', 'result': 'Capacity BA (GW)', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':utah_bas}}},
     {'name': 'New Annual Capacity (GW)', 'sheet_name':'cap_new_ann', 'result': 'New Annual Capacity National (GW)', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':utah_bas}}},
-    {'name': 'Bulk System Electricity Price ($/MWh) SoCo', 'sheet_name':'elec_price_soco', 'result': 'Requirement Prices and Quantities BA', 'preset': 'Bulk System Electricity Price ($/MWh)', 'config':{'filter':{'rb':utah_bas}}},
-    {'name': 'Present Value of System Cost through 2050 (Bil $) SoCo', 'sheet_name':'sys_cost_soco', 'result': 'Sys Cost Annualized BA/State (Bil $)', 'preset': 'Undiscounted by Year - BA', 'config':{'filter':{'r':utah_bas}}},
-    {'name': 'CO2 Emissions (metric tons) SoCo', 'sheet_name':'emissions_soco', 'result': 'CO2 Emissions BA (metric tons)', 'preset': 'Scenario Lines Over Time', 'config':{'filter':{'rb':utah_bas}}},
+    {'name': 'Bulk System Electricity Price ($/MWh) Utah', 'sheet_name':'elec_price_Utah', 'result': 'Requirement Prices and Quantities BA', 'preset': 'Bulk System Electricity Price ($/MWh)', 'config':{'filter':{'rb':utah_bas}}},
+    {'name': 'Present Value of System Cost through 2050 (Bil $) Utah', 'sheet_name':'sys_cost_Utah', 'result': 'Sys Cost Annualized BA/State (Bil $)', 'preset': 'Undiscounted by Year - BA', 'config':{'filter':{'r':utah_bas}}},
+    {'name': 'CO2 Emissions (metric tons) Utah', 'sheet_name':'emissions_Utah', 'result': 'CO2 Emissions BA (metric tons)', 'preset': 'Scenario Lines Over Time', 'config':{'filter':{'rb':utah_bas}}},
 
 
 ]
+
+
+
