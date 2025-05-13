@@ -1499,9 +1499,12 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             'python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" '
             + os.path.join(reeds_path,"runs",batch_case) + " all No none "
             + os.path.join(bokehdir,"templates","reeds2","standard_report_reduced.py") + ' "html,excel,csv" one '
-            + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-reduced") + ' No\n'
+            + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-reduced") + ' No\n')
+        OPATH.writelines(
+            'python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" '
+            + os.path.join(reeds_path,"runs",batch_case) + " all No none "
             + os.path.join(bokehdir,"templates","reeds2","utah_report.py") + ' "html,excel,csv" one '
-            + os.path.join(reeds_path,"runs",batch_case,"outputs","utah-report") + ' No\n')        
+            + os.path.join(reeds_path,"runs",batch_case,"outputs","utah-report") + ' No\n')
         OPATH.writelines(
             'python ' + os.path.join(bokehdir,"interface_report_model.py") + ' "ReEDS 2.0" '
             + os.path.join(reeds_path,"runs",batch_case) + " all No none "
@@ -1534,6 +1537,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                     if int(caseSwitches['transmission_maps']) > int(solveyears[-1])
                     else caseSwitches['transmission_maps'])
             ))
+            
 
         ### Run R2X if using debug mode
         ### First install uvx: https://docs.astral.sh/uv/getting-started/installation/
@@ -1555,6 +1559,20 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         pipe = '2>&1 | tee -a' if LINUXORMAC else '>>'
         tolog = f"{pipe} {os.path.join(casedir,'gamslog.txt')}"
         OPATH.writelines(f"\npython postprocessing/check_error.py {casedir} {tolog}\n")
+
+        ### Add postprocessing to filter out Utah data
+        OPATH.writelines(
+            f"python {os.path.join(reeds_path,'postprocessing','Utah_filter.py')} -c {casedir}\n"
+            
+        )
+        # if int(caseSwitches['transmission_maps']):
+        #     OPATH.writelines('python postprocessing/transmission_maps.py -c {} -y {}\n\n'.format(
+        #         f'{casedir}_isolated', (
+        #             solveyears[-1]
+        #             if int(caseSwitches['transmission_maps']) > int(solveyears[-1])
+        #             else caseSwitches['transmission_maps'])
+        #     ))
+
 
     ### =====================================================================================
     ### --- CALL THE CREATED BATCH FILE ---

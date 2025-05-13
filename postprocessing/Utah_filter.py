@@ -6,26 +6,19 @@ import shutil
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
+import subprocess
+import argparse
 
+#%% ARGUMENT INPUTS
+parser = argparse.ArgumentParser(description='Utah Filter')
+parser.add_argument('--case', '-c', type=str, required=True,
+                    help='Path to the ReEDS run folder')
+
+args = parser.parse_args()
+case = args.case
 
 # Path to folder where ReEDS repo is
 reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-
-# Function to copy specific subfolders from a source folder to a destination folder
-def copy_specific_folders(src, dest, folders_to_copy):
-    try:
-        os.makedirs(dest, exist_ok=True)
-        for folder in folders_to_copy:
-            src_folder = os.path.join(src, folder)
-            dest_folder = os.path.join(dest, folder)
-            if os.path.exists(src_folder):
-                shutil.copytree(src_folder, dest_folder)
-                print(f"Copied {src_folder} to {dest_folder}")
-            else:
-                print(f"Folder {src_folder} does not exist.")
-    except Exception as e:
-        print(f"Error copying specific folders: {e}")
-
 
 
 #%%
@@ -35,8 +28,9 @@ User Inputs
 # Path for folder where the ReEDS runs are located
 runs_folder = os.path.join(reeds_path,'runs')
 
-# Options: 'BA' or 'county' or 'mixed
-resolution = 'BA'  
+# Read switch setting for spatial resolution of case
+switches = pd.read_csv(os.path.join(case,'inputs_case','switches.csv'))
+resolution = switches[switches['AWS']=='GSw_RegionResolution']['0'].item() 
 
 # List of ReEDS BAs that belong to Utah 
 list_of_regions_to_isolate = ['p25','p26']
@@ -44,14 +38,14 @@ list_of_regions_to_isolate = ['p25','p26']
 # Populate folders list with file paths to runs that you want to extract Utah data from  
 
 
-Folders = [os.path.join(runs_folder, "test_Western_BA"),           
+Folders = [case,           
             ]
 
 #%%
 
 inputs_case = os.path.join(reeds_path,'runs',Folders[0],'inputs_case')
 
-if resolution == 'BA':
+if resolution == 'ba':
     # List of ReEDS BAs that belong to Utah 
     regions  = list_of_regions_to_isolate 
 
@@ -76,8 +70,33 @@ elif resolution == 'mixed':
 for f in Folders:
     # Copy outputs and inputs folder to create a version where the filtered data will live 
     source_folder = f
-    destination_folder = os.path.join(runs_folder, f.split(os.sep)[-1] + '_isolated')
-    copy_specific_folders(source_folder, destination_folder,['outputs','inputs_case'])
+    destination_folder = os.path.join(runs_folder, f.split(os.sep)[-1] + '_isolated') 
+
+    # Copy specific subfolders but exclude certain folders within them
+    folders_to_copy = ['outputs', 'inputs_case','ReEDS_Augur']
+    exclude_folders = ['Augur_plots', 'hourly','maps','tc_pahseout_data','maps','vizit',
+                       '_pychache_','augur_data','PRAS']        
+
+    for folder in folders_to_copy:
+        src_folder = os.path.join(source_folder, folder)
+        dest_folder = os.path.join(destination_folder, folder)
+        if os.path.exists(src_folder):
+            try:
+                os.makedirs(dest_folder, exist_ok=True)
+                for item in os.listdir(src_folder):
+                    item_path = os.path.join(src_folder, item)
+                    if os.path.isdir(item_path) and item not in exclude_folders:
+                        shutil.copytree(item_path, os.path.join(dest_folder, item))
+                    elif os.path.isfile(item_path):
+                        shutil.copy2(item_path, dest_folder)
+                print(f"Copied {src_folder} to {dest_folder} excluding {exclude_folders}")
+            except Exception as e:
+                print(f"Error copying {src_folder}: {e}")
+        else:
+            print(f"Folder {src_folder} does not exist.")
+
+    # copy_specific
+
     # change folder path to copied folder
     f = destination_folder
     # Path to folder where ReEDS output report is located
@@ -347,5 +366,33 @@ for f in Folders:
                 except:
                     print('Failed',file)
 
+# This section is used to copy misc files to isolated run folder
+misc_files =['gamslog.txt','e_report_params.csv']
+for f in Folders:
+    f_destination = os.path.join(runs_folder, os.path.basename(f) + '_isolated')
+    output_dir = os.path.join(f,'inputs_case')
+    for file in misc_files:
+        try:
+            shutil.copy(os.path.join(f, file), os.path.join(output_dir, file))
+            print(f"Copied {file} to {output_dir}")
+        except Exception as e:
+            print(f"Failed to copy {file}: {e}")
 
 # %%
+# # Re-Run transmission_maps.py for isolated data
+# for f in Folders:
+#     casedir = os.path.join(runs_folder, f.split(os.sep)[-1] + '_isolated')
+#     caseSwitches = pd.read_csv(os.path.join(runs_folder, casedir,'inputs_case', 'switches.csv'))
+#     solveyears = pd.read_csv(os.path.join(runs_folder, casedir,'inputs_case', 'modeledyears.csv')).T.reset_index()['index'].tolist()
+        
+#     # Call the transmission_maps.py script to re-run for isolated data
+#     transmission_maps_script = os.path.join(reeds_path, 'postprocessing', 'transmission_maps.py -c {} -y {}'.format(
+#                     casedir, (
+#                         solveyears[-1]
+#                         if int(caseSwitches[caseSwitches['AWS']=='transmission_maps']['0'].item()) > int(solveyears[-1])
+#                         else caseSwitches[caseSwitches['AWS']=='transmission_maps']['0'].item())
+#                 ))
+    
+#     subprocess.run(['python', transmission_maps_script], check=True)
+
+
