@@ -223,7 +223,7 @@ GSw_NumGeoclasses,Number of resource classes for Geothermal,1; 2; 3; 4; 5; 6; 7;
 GSw_OfsWind,Turn on/off offshore wind,0; 1,1,
 GSw_OfsWindForceScen,Scenario for state offshore mandates. Select {suffix} from state_policies/offshore_req_{suffix}.csv. Only active if GSw_StateRPS is on,N/A,default,
 GSw_OnsWind6to10,Turn on/off onshore wind 6-10,0; 1,1,
-GSw_OPGW,Switch to enforce Utah's operation GW. 0=off; 1=annual generation target; 2=proportion of annual load; 3=proportion of hourly load,0; 1; 2; 3, 1
+GSw_OPGW,Switch to enforce Utah's operation GW. 0=off; 1=annual generation target; 2=proportion of annual load; 3=proportion of hourly load,0; 1; 2; 3,1
 GSw_OPGW_load_mult,Load multiplier for the operation GW constraint options 2 and 3 ,float,1,
 GSw_OpRes,Turn on/off operating reserve constraints (0/1) or use simplified version (2),0; 1; 2,2,
 GSw_OpResCost,"Case used to select values used for the cost of operating reserves (e.g. default, market)",default; market,default,
