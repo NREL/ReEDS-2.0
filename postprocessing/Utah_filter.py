@@ -6,8 +6,11 @@ import shutil
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
+import e_report_dump
 import subprocess
 import argparse
+import h5py
+import gdxpds
 
 #%% ARGUMENT INPUTS
 parser = argparse.ArgumentParser(description='Utah Filter')
@@ -37,6 +40,9 @@ list_of_regions_to_isolate = ['p25','p26']
 
 # Populate folders list with file paths to runs that you want to extract Utah data from  
 
+# Folders = ['/data/shared/projects/lserpe/public/ReEDS-2.0/runs/v1_050725_Utah_mixed',
+#            #'/data/shared/projects/lserpe/public/ReEDS-2.0/runs/v1_050725_WI_county_PRAS'           
+#             ]
 
 Folders = [case,           
             ]
@@ -49,11 +55,13 @@ if resolution == 'ba':
     # List of ReEDS BAs that belong to Utah 
     regions  = list_of_regions_to_isolate 
 
+
 elif resolution == 'county':
 # List of counties that belong to Utah if running at county resolution 
 # Comment out if using BA resolution runs
     county2zone = pd.read_csv(os.path.join(reeds_path,'inputs','county2zone.csv'))
     regions = ['p' + str(fips) for fips in county2zone.loc[county2zone['ba'].isin(list_of_regions_to_isolate), 'FIPS'].tolist()]
+
 
 elif resolution == 'mixed':
     county2zone = pd.read_csv(os.path.join(reeds_path,'inputs','county2zone.csv'))
@@ -64,6 +72,7 @@ elif resolution == 'mixed':
     county_regions = list(set(agglevel_variables['county_regions']) & set(ba2county))
     regions = list(set(ba_regions + county_regions))
     
+
 #%%
 ## This section is used to overwrite the ReEDS report with a new report that contains only Utah data 
 
@@ -140,6 +149,9 @@ for f in Folders:
     GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
     GEN_table.columns = report_GEN.columns
 
+    GEN_table = GEN_table.groupby(['scenario','tech','year','Net Level Generation (TWh)']).sum().reset_index()
+    GEN_table = GEN_table[['scenario','tech','year','Generation (TWh)','Net Level Generation (TWh)']]
+
     # Write the region-specific generation data to the report
     with pd.ExcelWriter(os.path.join(f, 'outputs', 'reeds-report', 'report.xlsx'), engine="openpyxl", mode="a", if_sheet_exists='replace') as writer:
         GEN_table.to_excel(writer, sheet_name = '3_Generation (TWh)', index = False)
@@ -177,6 +189,9 @@ for f in Folders:
     GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
     GEN_table.columns = report_GEN.columns
 
+    GEN_table = GEN_table.groupby(['scenario','tech','year','Net Level Capacity (GW)']).sum().reset_index()
+    GEN_table = GEN_table[['scenario','tech','year','Capacity (GW)','Net Level Capacity (GW)']]
+
     with pd.ExcelWriter('//'.join([f,'outputs','reeds-report','report.xlsx']),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
         GEN_table.to_excel(writer, sheet_name = '4_Capacity (GW)', index = False)
 
@@ -213,6 +228,9 @@ for f in Folders:
     GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
     GEN_table.columns = report_GEN.columns
 
+    GEN_table = GEN_table.groupby(['scenario','tech','year','Net Level Capacity (GW)']).sum().reset_index()
+    GEN_table = GEN_table[['scenario','tech','year','Capacity (GW)','Net Level Capacity (GW)']]
+
     with pd.ExcelWriter(os.path.join(f,'outputs','reeds-report','report.xlsx'),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
         GEN_table.to_excel(writer, sheet_name = '5_New Annual Capacity (GW)', index = False)
 
@@ -248,6 +266,9 @@ for f in Folders:
     GEN_table.loc[['egs' in x for x in GEN_table.i],'i'] = 'geothermal'
     GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
     GEN_table.columns = report_GEN.columns
+
+    GEN_table = GEN_table.groupby(['scenario','tech','year','Net Level Capacity (GW)']).sum().reset_index()
+    GEN_table = GEN_table[['scenario','tech','year','Capacity (GW)','Net Level Capacity (GW)']]
 
     with pd.ExcelWriter(os.path.join(f,'outputs','reeds-report','report.xlsx'),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
         GEN_table.to_excel(writer, sheet_name = '6_Annual Retirements (GW)', index = False)
@@ -288,6 +309,10 @@ for f in Folders:
         GEN_table.loc[['csp' in x for x in GEN_table.i],'i'] = 'csp'
         GEN_table.columns = report_GEN.columns
 
+        GEN_table = GEN_table.groupby(['scenario','tech','year','Net Level Capacity (GW)']).sum().reset_index()
+        GEN_table = GEN_table[['scenario','tech','year','Capacity (GW)','Net Level Capacity (GW)']]
+
+
         with pd.ExcelWriter(os.path.join(f,'outputs','reeds-report','report.xlsx'),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
             GEN_table.to_excel(writer, sheet_name = '11_Firm Capacity (GW)', index = False)
 
@@ -315,6 +340,37 @@ for f in Folders:
         GEN_table.to_excel(writer, sheet_name = '25_Emissions National (metric t', index = False)
 
 
+    #### Transmission
+
+    # report_GEN= pd.read_excel(report_dir, sheet_name = '14_Transmission (GW-mi)')
+    # output_GEN = pd.read_csv(os.path.join(output_dir,'tran_out.csv'))
+    # output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
+    # output_GEN = output_GEN.loc[output_GEN.rr.isin(regions)]
+    # output_GEN['scenario'] = scenario
+    
+    
+    # GEN_table = output_GEN.pivot_table(index = ['scenario','trtype','t'],
+    #                                    values = 'Value',
+    #                                    aggfunc = 'sum')
+    # GEN_table.Value/=1e3
+    
+    # GEN_table.reset_index(inplace=True, drop = False)
+    # for y in GEN_table.t.unique():
+    #     GEN_table.loc[GEN_table.t == y,'Net Level Amount (GW-mi)'] = GEN_table.loc[GEN_table.t == y,'Value'].sum()
+
+    # GEN_table.columns = report_GEN.columns
+    
+    # GEN_table = GEN_table.groupby(['scenario','trtype','t','Net Level Amount (GW-mi)']).sum().reset_index()
+    # GEN_table = GEN_table[['scenario','tech','year','Amount (GW-mi)','Net Level Amount (GW-mi)']]
+
+
+    # with pd.ExcelWriter(os.path.join(f,'outputs','reeds-report','report.xlsx'),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
+    #     GEN_table.to_excel(writer, sheet_name = '25_Emissions National (metric t', index = False)
+
+
+    
+
+    
 GEN_table
 
 
@@ -325,11 +381,49 @@ for f in Folders:
     output_dir = os.path.join(f,'outputs')
     for file in os.listdir(output_dir):
         if '.csv' in file:
-            output_file = pd.read_csv(os.path.join(output_dir,file))
-            if 'r' in output_file.columns.tolist():
-                print(file)
-                output_file = output_file.loc[output_file.r.isin(regions)]
-                output_file.to_csv(os.path.join(output_dir,file),index = False)
+            try:
+                output_file = pd.read_csv(os.path.join(output_dir,file))
+                if 'r' in output_file.columns.tolist():
+                    print(file)
+                    output_file = output_file.loc[output_file.r.isin(regions)]
+                    output_file.to_csv(os.path.join(output_dir,file),index = False)
+            except:
+                print('Failed',file)
+
+        if '.h5' in file:
+            if 'outputs' in file:
+                    try:
+                        ### outputs gdx
+                        gdx_file_name = f.split('/')[-1].split("_")
+                        gdx_file_name  = '_'.join(gdx_file_name[:-1])
+                        dict_out = gdxpds.to_dataframes(
+                            os.path.join(output_dir, f"rep_{os.path.basename(gdx_file_name)}.gdx")
+                        )
+                        outputs_list = list(dict_out.keys())
+                        for i in outputs_list:
+                            if 'r' in dict_out[i].columns.tolist():
+                                print(i)
+                                dict_out[i] = dict_out[i].loc[dict_out[i].r.isin(regions)]
+                            elif 'rr' in dict_out[i].columns.tolist():
+                                dict_out[i] = dict_out[i].loc[dict_out[i].rr.isin(regions)]
+
+
+                            ## re- write the h5
+                        e_report_dump.dfdict_to_h5(
+                            dfdict=dict_out,
+                            filepath=os.path.join(output_dir, 'outputs.h5'),
+                            overwrite=True,
+                            symbol_list=None,
+                            rename=dict(),
+                            errors="warn",
+                            #**kwargs,
+                        )
+
+                    except:
+                        print('Failed',file)
+
+
+
 
 # This section is used to filter the ReEDS input case files to only include data for Utah regions
 for f in Folders:
@@ -366,15 +460,16 @@ for f in Folders:
                 except:
                     print('Failed',file)
 
+
+
 # This section is used to copy misc files to isolated run folder
 misc_files =['gamslog.txt','e_report_params.csv']
 for f in Folders:
-    f_destination = os.path.join(runs_folder, os.path.basename(f) + '_isolated')
-    output_dir = os.path.join(f,'inputs_case')
+    f_destination = os.path.join(runs_folder, os.path.basename(f) + '_isolated')  
     for file in misc_files:
         try:
-            shutil.copy(os.path.join(f, file), os.path.join(output_dir, file))
-            print(f"Copied {file} to {output_dir}")
+            shutil.copy(os.path.join(f, file), os.path.join(f_destination, file))
+            print(f"Copied {file} to {f_destination}")
         except Exception as e:
             print(f"Failed to copy {file}: {e}")
 
