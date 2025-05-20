@@ -2,7 +2,7 @@
 #SBATCH --account=southasia
 #SBATCH --time=30:00:00  #TIME FOR RUN
 #SBATCH --nodes=1
-#SBATCH --mail-user=ilya.chernyakhovskiy@NREL.gov
+#SBATCH --mail-user=prateek.joshi@NREL.gov
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mem=80000    # RAM in MB
 #SBATCH --qos=high
