@@ -607,7 +607,7 @@ def write_outputs(dir):
     pnf.to_csv(os.path.join(csvsdir, 'pnf.csv'), index = False)
 
     # copy visit.html and report.json into the directory
-    shutil.copyfile('vizit.html', os.path.join(csvsdir, "..", 'vizit.html'))
+    shutil.copyfile('vizit.html', os.path.join(csvsdir, 'vizit.html'))
     shutil.copyfile('vizit-config_2070.json', os.path.join(csvsdir, 'vizit-config_2070.json'))
     shutil.copyfile('style.csv', os.path.join(csvsdir, 'style.csv'))
 
