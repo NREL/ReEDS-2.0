@@ -62,7 +62,7 @@ GSw_REdiversity,Turn geographic diversity constraint for RE additions on [1] or 
 GSw_MinGen,Turn min loading constraint on [1] or off [0],1,,,,,,,,,,,
 GSw_CarbonTax,Turn CO2 tax on [1] or off [0],0,,,,,,,,,,,
 GSw_CO2Limit,Turn national CO2 emissions limit on [1] or off [0],0,,,,,,,,,,,
-GSw_SAsia_Trade,Turn South Asia trade on[1] or off [0],1,,,,,,,,,,,
+GSw_SAsia_Trade,Turn South Asia trade on [1] or off [0],1,,,,,,,,,,,
 GSw_SAsia_PRM,Importing countries able to contribute to India's PRM,0,,,,,,,,,,,
 GSw_ValStr,Turn value streams on [1] or off [0],0,,,,,,,,,,,
 GSw_CCcurtAvg,Select method for average CC/curt calculations,2,,,,,,,,,,,
