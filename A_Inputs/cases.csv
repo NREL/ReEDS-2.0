@@ -1,4 +1,4 @@
-case,Description,Default Value,RefATB,RefATB2070gc,RefITC,RefITC2070gc
+case,Description,Default Value,RefATB,RefATBgc,RefITC,RefITCgc
 timetype,Sequential or Intertemporal,int,,,,
 solver,Solver for GAMS to use,CPLEX,,,,
 augur_workers,Number of windows for Augur module runs,36,,,,
