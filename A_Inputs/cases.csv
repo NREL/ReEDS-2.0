@@ -11,7 +11,7 @@ PRMregion_file,file name of the PRM by region,prm_region.csv,,
 PRMstate_file,file name of PRM by state,prm_state.csv,,
 FuelLimit_file,file name of the fuel limit file to be used in scenario run,fuel_limit.csv,,
 FuelPrice_file,file name of the fuel price file to be used in scenario run,fprice.csv,,
-TechCost_file,file name of the technology cost to be used in the scenario run,tech_costs_atb22.csv,,tech_costs_itc22_RMI.csv
+TechCost_file,file name of the technology cost to be used in the scenario run,tech_costs_itc22.csv,,
 MinLoad_file,file name of the min loading limits to be used in the scenario run,minloadfrac0.csv,,
 Hours_file,file name of the hours in each time block to be used in the scenario run,hours_NREL_India_Baseline.csv,,
 Load_file,file name of the load in each time block to be used in the scenario run,load_NREL_India_Baseline.csv,,
