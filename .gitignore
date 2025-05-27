@@ -65,3 +65,8 @@ slurm*.out
 
 # documentation files 
 docs/build/*
+/usrep_windc
+*.gsp
+b_sets.gms
+e_report_params.gms
+*.out

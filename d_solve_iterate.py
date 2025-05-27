@@ -31,8 +31,11 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
     tprev = {**{years[0]:years[0]}, **dict(zip(years[1:], years))}
     tnext = {**dict(zip(years, years[1:])), **{years[-1]:years[-1]}}
 
+
+    # 
     #%%### Run GAMS LP
     if not onlyaugur:
+            
         #%% Get the command to run GAMS for this solve year
         batch_case = os.path.basename(casepath)
         stress_year = f"{t}i{iteration}"
@@ -43,39 +46,82 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
             restartfile = sorted(
                 glob(os.path.join(casepath,'g00files',f"{batch_case}_{tprev[t]}i*"))
             )[-1]
-
-        cmd_gams = runbatch.solvestring_sequential(
-            batch_case=batch_case,
-            caseSwitches=sw,
-            cur_year=t,
-            next_year=tnext[t],
-            prev_year=tprev[t],
-            stress_year=stress_year,
-            restartfile=restartfile,
-            hpc=int(sw['hpc']),
-            iteration=iteration,
-        )
-        print(cmd_gams)
-
-        ### Run GAMS LP
-        result = subprocess.run(cmd_gams, shell=True)
-        if result.returncode:
-            raise Exception(f'd_solveoneyear.gms failed with return code {result.returncode}')
-
-        #%% Add solve time to run metadata
-        try:
-            cmd_log = (
-                f"python {os.path.join(casepath, 'reeds', 'log.py')}"
-                f" --year={t}\n"
+        # If we are not running the linked usrep-reeds model, can solve as normal
+        if sw['timetype'] != 'ur' or (t < int(sw.ru_startyr_USREP)):
+            cmd_gams = runbatch.solvestring_sequential(
+                batch_case=batch_case,
+                caseSwitches=sw,
+                cur_year=t,
+                next_year=tnext[t],
+                prev_year=tprev[t],
+                stress_year=stress_year,
+                restartfile=restartfile,
+                hpc=int(sw['hpc']),
+                iteration=iteration,
             )
-            subprocess.run(cmd_log, shell=True)
-        except Exception as err:
-            print(err)
+            print(cmd_gams)
 
-        #%% Check to see if the restart file exists
-        savefile = f"{batch_case}_{t}i{iteration}"
-        if not os.path.isfile(os.path.join("g00files", savefile+".g00")):
-            raise Exception(f"Missing {savefile}.g00")
+            ### Run GAMS LP
+            result = subprocess.run(cmd_gams, shell=True)
+            if result.returncode:
+                raise Exception(f'd_solveoneyear.gms failed with return code {result.returncode}')
+
+                    #%% Add solve time to run metadata
+            try:
+                cmd_log = (
+                    f"python {os.path.join(casepath, 'reeds', 'log.py')}"
+                    f" --year={t}\n"
+                )
+                subprocess.run(cmd_log, shell=True)
+            except Exception as err:
+                print(err)
+
+            #%% Check to see if the restart file exists
+            savefile = f"{batch_case}_{t}i{iteration}"
+            if not os.path.isfile(os.path.join("g00files", savefile+".g00")):
+                raise Exception(f"Missing {savefile}.g00")
+
+        if sw['timetype'] == 'ur' and (t >= int(sw.ru_startyr_USREP)):
+            #loop over iterations specified in cases.csv
+            ru_iter = 1
+            if t >= int(sw.ru_firstyeariter):
+                ru_iter = int(sw.ru_iter)
+            for i in range(int(ru_iter)):
+                # Run ReEDS
+                # Note here - could iterate with PRAS via removing
+                # the condition earlier limiting the outer loops rangs
+                cmd_reeds = runbatch.solvestring_sequential(
+                    batch_case=batch_case,
+                    caseSwitches=sw,
+                    cur_year=t,
+                    next_year=tnext[t],
+                    prev_year=tprev[t],
+                    stress_year=stress_year,
+                    restartfile=restartfile,
+                    hpc=int(sw['hpc']),
+                    iteration=int(i),
+                )
+                print(cmd_reeds)
+                result = subprocess.run(cmd_reeds, shell=True)
+                if result.returncode:
+                    raise Exception(f'd_solveoneyear.gms failed with return code {result.returncode}')
+
+                # Run USREP
+                cmd_usrep = runbatch.solvestring_usrep(
+                    batch_case=batch_case,
+                    caseSwitches=sw,
+                    cur_year=t,
+                    next_year=tnext[t],
+                    prev_year=tprev[t],
+                    stress_year=stress_year,
+                    restartfile=restartfile,
+                    hpc=int(sw['hpc']),
+                    iteration=int(i),
+                )
+                print(cmd_usrep)
+                result = subprocess.run(cmd_usrep, shell=True)
+                if result.returncode:
+                    raise Exception(f'USREP failed with return code {result.returncode}')
 
 
     #%%### Run Augur
@@ -97,7 +143,12 @@ def main(casepath, t, overwrite=False):
     """
     ### Get the run settings
     sw = reeds.io.get_switches(casepath)
-    for iteration in range(int(sw.GSw_PRM_StressIterateMax)):
+    main_iter = int(sw.GSw_PRM_StressIterateMax)
+    # want to make sure we only iterate once with reeds-usrep
+    # while the iterations between models occurs in run_reeds
+    if sw['timetype'] == 'ur':
+        main_iter = 1 
+    for iteration in range(int(main_iter)):
         #%% If not overwriting, skip iterations that have already finished
         if (
             (not overwrite)

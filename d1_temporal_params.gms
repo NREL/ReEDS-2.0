@@ -780,6 +780,54 @@ load_exog_static(r,allh,t) = 0 ;
 load_exog_static(r,h,t) = load_exog(r,h,t) - sum{flex_type, load_exog_flex(flex_type,r,h,t) } ;
 
 
+$ifthen.usrep_reeds %timetype%=='ur'
+load_exog_u(usrep_r,t)$tmodel_new(t) = sum((h,r)$r_u(r,usrep_r),hours(h) * load_exog(r,h,t));	
+
+loadrh(r,h,t)$[tmodel(t)] = 
+	(load_exog_static(r,h,t) + can_exports_h(r,h,t)$[Sw_Canada = 1])
+	/ sum((rr,hh)$[sum(usrep_r$[r_u(rr,usrep_r)$r_u(r,usrep_r)],1)$hours(hh)], 
+		hours(hh) * (load_exog_static(rr,hh,t) + can_exports_h(rr,hh,t)$[Sw_Canada = 1]) ) ; 
+
+
+ref_qprop_usrep(r,usrep_r,t)$[r_u(r,usrep_r)$tmodel_new(t)] = 	
+        sum((h),hours(h) * load_exog(r,h,t)) / 	
+        sum((h,rr)$r_u(rr,usrep_r),hours(h) * load_exog(rr,h,t));	
+
+avg_demand(r,t)$tmodel_new(t) = sum(h,load_exog(r,h,t)) / sum(h,1);	
+
+ref_rh_index(r,h,t)$tmodel_new(t) = load_exog(r,h,t) / avg_demand(r,t);	
+
+$if not set ru_runbenchmark $setglobal ru_runbenchmark 1
+
+*load in the values from the benchmark case to use as reference points	
+$ifthene.rub %ru_runbenchmark% == 0	
+$gdxin link%ds%ur0.gdx	
+$loadr ur0=ur	
+$gdxin	
+$gdxin link%ds%ru0.gdx	
+$loadr price_in = price_out	
+$gdxin
+
+load_exog0(r,h,t)$(tmodel(t))	
+  = 1e6*sum(usrep_r$r_u(r,usrep_r),ur0(usrep_r,"ele","TWh",t))*loadrh(r,h,t);	
+
+* replace the exogenous amount with that scaled value	
+* this will be replaced within each solve's first iteration	
+    load_exog(r,h,t) = load_exog0(r,h,t);	
+
+d_quant(dbin,usrep_r,t)$tmodel(t) = ur0(usrep_r,"ele","TWh",t) * dbin_width ;
+
+d_price(dbin,usrep_r,t)$[tmodel(t)$ur0(usrep_r,"ele","TWh",t)] = 
+	ur0(usrep_r,"ele","dolperMWh",t) 
+    * (sum(ddbin$[ord(ddbin)<=ord(dbin)], d_quant(dbin,usrep_r,t) ) 
+		/ ur0(usrep_r,"ele","TWh",t) ) ** (-0.35)  ;
+
+* Note: base price is zero for co2 
+
+$endif.rub
+
+$endif.usrep_reeds
+
 
 set maxload_szn(r,allh,t,allszn)   "hour with highest load within each szn" ;
 maxload_szn(r,allh,t,allszn) = 0 ;

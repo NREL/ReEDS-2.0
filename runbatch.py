@@ -424,8 +424,10 @@ def solvestring_sequential(
     * restartfile: batch_case if first solve year else {batch_case}_{prev_year}
     * caseSwitches: loaded from {batch_case}/inputs_case/switches.csv
     """
+    
     savefile = f"{batch_case}_{cur_year}i{iteration}"
     _stress_year = f"{cur_year}i0" if stress_year is None else stress_year
+
     out = (
         "gams d_solveoneyear.gms"
         + (" license=gamslice.txt" if hpc else '')
@@ -440,6 +442,7 @@ def solvestring_sequential(
         + f" --prev_year={prev_year}"
         + f" --stress_year={_stress_year}"
         + f" --temporal_inputs={temporal_inputs}"
+        + f" --iter={iteration}"
         + ''.join([f" --{s}={caseSwitches[s]}" for s in [
             'GSw_SkipAugurYear',
             'GSw_HourlyType', 'GSw_HourlyWrapLevel', 'GSw_ClimateWater',
@@ -448,12 +451,62 @@ def solvestring_sequential(
             'GSw_StateCO2ImportLevel',
             'GSw_PVB_Dur',
             'GSw_ValStr', 'GSw_gopt', 'solver',
-            'debug','startyear','diagnose','diagnose_year'
+            'debug','startyear','diagnose','diagnose_year','timetype',
+            'ru_runbenchmark','ru_udb','ru_case', 'ru_bau'
         ]])
         + '\n'
     )
 
     return out
+
+def solvestring_usrep(
+        batch_case, caseSwitches,
+        cur_year, next_year, prev_year, restartfile,
+        toLogGamsString=' logOption=4 logFile=gamslog.txt appendLog=1 ',
+        hpc=0, iteration=0, stress_year=None,
+        temporal_inputs='rep',
+    ):
+    """
+    Typical inputs:
+    * restartfile: batch_case if first solve year else {batch_case}_{prev_year}
+    * caseSwitches: loaded from {batch_case}/inputs_case/switches.csv
+    """
+    udir = os.path.join(os.getcwd(),caseSwitches['ru_udir'])
+
+    loopfn = "loop.gms"
+    if caseSwitches["ru_udb"]=="windc":
+        loopfn = "loop_windc_hhtrn.gms"
+
+    usrep_tag = "bau"
+    if int(caseSwitches['ru_ref'])==0:
+        usrep_tag = "scn"
+    print("USREP loop for " + str(cur_year) + " iteration:" + str(iteration))
+    usrep_iter = caseSwitches['ru_iter'] 
+    if cur_year == int(caseSwitches['ru_startyr_USREP']):
+        usrep_restartfile = "core_"+batch_case  
+    else: 
+        usrep_restartfile = f"{batch_case}_{prev_year}"
+    
+    out = ("gams " + os.path.join(caseSwitches['ru_udir'],"core",loopfn) 
+        + (" license=gamslice.txt" if hpc else '')
+        + " --linked=on "
+        + " --udir=" + udir + " --udb=" + caseSwitches['ru_udb']
+        + " --baufdn=" + caseSwitches['ru_baufdn'] 
+        + " --bau=" + caseSwitches['ru_bau'] 
+        + " --tag=" + usrep_tag
+        + " --case=" + caseSwitches['ru_case'] 
+        + " --year=" + str(int(cur_year)) 
+        + " --loadyr=" + str(int(prev_year))
+        + " --it=" + str(int(iteration)) + " --maxitr=" + str(int(usrep_iter)-1) 
+        + " r=" + os.path.join(udir,"restart",usrep_restartfile)
+        + toLogGamsString
+        + " --reeds_case=" + batch_case
+        + " s=" + os.path.join(udir,"restart",batch_case+"_"+str(cur_year))
+        + " o=" + os.path.join(udir,"lst",batch_case+"_"+str(cur_year)+"_"+str(iteration)+".lst")
+    )
+
+    return out
+
 
 
 def setup_sequential_year(
@@ -567,6 +620,51 @@ def setup_sequential(
             f"python {os.path.join('ReEDS_Augur','diagnostic_plots.py')} "
             f"--reeds_path={reeds_path} --casedir={casedir} --t={cur_year} &\n")
 
+def setup_usrep_reeds(caseSwitches,reeds_path,casedir,batch_case,OPATH,hpc):
+    #if running linkage with usrep, copy over USREP directory
+    #!SW - when switching to the distinct/separate repo, this is where we can 
+    # change the directory setup by loading in the src directory as an option
+    if caseSwitches['timetype'] == 'ur':
+        udir = os.path.join(casedir,caseSwitches['ru_udir'])
+        # create the directories for storing linked info
+        if not os.path.exists(os.path.join(reeds_path,"linkage_gdx")): os.mkdir(os.path.join(reeds_path,"linkage_gdx"))
+        if not os.path.exists(os.path.join(casedir,"link")): os.mkdir(os.path.join(casedir,"link"))
+        if not os.path.exists(os.path.join(casedir,"lstfiles")): os.mkdir(os.path.join(casedir,"lstfiles"))
+        if not os.path.exists(os.path.join(casedir,"outputs")): os.mkdir(os.path.join(casedir,"outputs"))
+        if not os.path.exists(os.path.join(casedir,"link","reeds_out")): os.mkdir(os.path.join(casedir,"link","reeds_out"))
+        if not os.path.exists(os.path.join(casedir,"link","usrep_out")): os.mkdir(os.path.join(casedir,"link","usrep_out"))                
+
+    #if this is not the benchmark case	
+        if int(caseSwitches['ru_bm']) == 0:	
+            #copy over ru0 and ur0 gdx files to link folder	
+            #! - make these case-dependent.. no static ur0/ru0
+            shutil.copy(os.path.join(reeds_path,"linkage_gdx",caseSwitches['ru_gdx0case']+"_ur0.gdx"),os.path.join(casedir,"link","ur0.gdx"))	
+            shutil.copy(os.path.join(reeds_path,"linkage_gdx",caseSwitches['ru_gdx0case']+"_ru0.gdx"),os.path.join(casedir,"link","ru0.gdx"))	
+            
+    # copy over model folders as needed
+        for usrepmodel in ["usrep_windc"]:	
+            usrep_dir = os.path.join(os.getcwd(),usrepmodel)	
+            if os.path.exists(os.path.join(casedir,usrepmodel)) == True:	
+                shutil.rmtree(os.path.join(casedir,usrepmodel))                	
+            shutil.copytree(os.path.join(usrep_dir), os.path.join(casedir,usrepmodel))
+            # create subdirectory that hold various usrep info
+            for i in ['restart','lst','temp']:
+                if not os.path.exists(os.path.join(casedir,usrepmodel,i)): os.mkdir(os.path.join(casedir,usrepmodel,i))
+        
+        # copy the report folder too
+        #if os.path.exists(os.path.join(casedir,"report")) == True:
+        #    shutil.rmtree(os.path.join(casedir,"report"))
+        #shutil.copytree(os.path.join("report"), os.path.join(casedir,"report"))
+
+        big_comment('EXEC call for USREP', OPATH)
+        restart_usrep="core_" + batch_case
+
+        #! note need to also compute tint and gamslicense if needed
+        OPATH.writelines("gams " + os.path.join(caseSwitches['ru_udir'],"core","exec.gms") + " --udir=" + caseSwitches['ru_udir']
+                        + (" license=gamslice.txt" if hpc else '')
+                        + " --udb=" + caseSwitches['ru_udb'] + " --linked=on --dataset=" + caseSwitches['ru_usrepdata']
+                        + " --tint=" + caseSwitches['ru_tint'] + " s="+os.path.join(udir,"restart",restart_usrep)
+                        + " o=" + os.path.join(udir,"lst",restart_usrep) + ".lst" + "\n")
 
 def setup_intertemporal(
         caseSwitches, startiter, niter, ccworkers,
@@ -953,6 +1051,9 @@ def setupEnvironment(
             skip = str(input('Do you want to run them and skip the rest? [y]/n: ') or 'y')
             if skip.lower() not in ['y','yes']:
                 raise IsADirectoryError('\n'+'\n'.join(existing_outpaths))
+    
+    ru_udir = df_cases['Default Value']['ru_udir']
+    ru_repo_dir = df_cases['Default Value']['ru_repo_dir']
 
     df_cases.drop(
         ['Choices','Description','Default Value'],
@@ -993,7 +1094,25 @@ def setupEnvironment(
 
         if reschoice==1:
             startiter = int(input('Iteration to start from (recall it starts at zero): '))
+    
+    # if running with the linkage with usrep
+    # prompt if you want to re-copy the usrep repository
+    if 'ur' in df_cases.loc['timetype'].tolist():
+        print("")
+        print("Your switch settings indicate that you are running the linkage with USREP")
+        print("If the directory specified as 'ru_udir' in cases.csv does not exist, it will be created with a copy of ru_repo_dir")
+        print("If it does exist, you will be prompted if you want to replace it \n")
+        
+        print("Note, default values of:")
+        print("ru_udir = " + str(ru_udir) +"\n")
+        print("ru_repo_dir = " + str(ru_repo_dir) +"\n")
 
+        if not os.path.isdir(os.path.join(os.getcwd(),ru_udir)):
+            shutil.copytree(ru_repo_dir,os.path.join(os.getcwd(),ru_udir))
+        else:
+            recopy_choice = str(input('Re-copy usrep repository? y/[n]: ') or 'n')
+            if recopy_choice in ['y','Y','yes','Yes','YES']:
+                shutil.copytree(ru_repo_dir,os.path.join(os.getcwd(),ru_udir),dirs_exist_ok=True)
 
     envVar = {
         'WORKERS': WORKERS,
@@ -1376,7 +1495,11 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         ################################
         #    -- CORE MODEL SETUP --    #
         ################################
-        if caseSwitches['timetype'] == 'seq':
+
+        if caseSwitches['timetype'] == 'ur':
+            setup_usrep_reeds(caseSwitches,reeds_path,casedir,batch_case,OPATH,hpc)
+
+        if caseSwitches['timetype'] == 'seq'  or caseSwitches['timetype'] == 'ur':
             setup_sequential(
                 caseSwitches, reeds_path, hpc,
                 solveyears, casedir, batch_case, toLogGamsString, OPATH, logger,
@@ -1426,6 +1549,19 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             + f" --GSw_calc_powfrac={caseSwitches['GSw_calc_powfrac']} \n"
         )
         OPATH.writelines(writescripterrorcheck("e_report.gms"))
+
+#!!!! USREP reporting template
+#        if caseSwitches['timetype'] == 'ur':
+#            OPATH.writelines("gams " + os.path.join(caseSwitches['ru_udir'],"report","urpt.gms")
+#                + f" o={os.path.join('lstfiles',f'report_{batch_case}.lst')}"
+#                + (' license=gamslice.txt' if hpc else '')
+#                + (' r=$r' if LINUXORMAC else ' r=!r!')
+#                + ' gdxcompress=1'
+#                + toLogGamsString
+#                + f"--fname={batch_case}"
+#                + f" --GSw_calc_powfrac={caseSwitches['GSw_calc_powfrac']} \n"
+#             )
+
         if not LINUXORMAC:
             OPATH.writelines("endlocal\n")
         OPATH.writelines(f'python {logger}\n')
@@ -1554,6 +1690,22 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         tolog = f"{pipe} {os.path.join(casedir,'gamslog.txt')}"
         OPATH.writelines(f"\npython postprocessing/check_error.py {casedir} {tolog}\n")
 
+        # if you have run a benchmark case with reeds-usrep
+        # make sure to copy the files back to the parent directory
+        if ((caseSwitches['timetype'] == 'ur') and (caseSwitches['ru_runbenchmark'] == '1')):
+            OPATH.writelines('\n')
+            comment("Copying over GDX file from benchmark case to [root repo]/linkage_gdx/[case_ur0 or ru0].gdx",OPATH)
+            usrep_iter = str(int(caseSwitches['ru_iter'])-1)
+            copycom = "copy "
+            if LINUXORMAC:
+                copycom = "cp "
+            #copy over final iteration's file back as ru0.gdx and ur0.gdx
+            OPATH.writelines(copycom + os.path.join(casedir,"link","reeds_out",batch_case+"_"+str(caseSwitches['endyear'])+"_it"+usrep_iter+'.gdx ') 
+                            + os.path.join(reeds_path,"linkage_gdx",batch_case+"_ru0.gdx \n") )
+            OPATH.writelines(copycom + os.path.join(casedir,"link","usrep_out",caseSwitches['ru_case']+"_"+str(caseSwitches['endyear'])+"_it"+usrep_iter+'.gdx ') 
+                            + os.path.join(reeds_path,"linkage_gdx",batch_case+"_ur0.gdx \n") )
+                
+
     ### =====================================================================================
     ### --- CALL THE CREATED BATCH FILE ---
     ### =====================================================================================
@@ -1567,10 +1719,10 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             # Give execution rights to the shell script
             os.chmod(os.path.join(casedir, call + batch_case + ext), 0o777)
             # Open it up - note the in/out/err will be written to the shellscript parameter
-            shellscript = subprocess.Popen(
-                [os.path.join(casedir, call + batch_case + ext)], shell=True)
+            #shellscript = subprocess.Popen(
+            #    [os.path.join(casedir, call + batch_case + ext)], shell=True)
             # Wait for it to finish before killing the thread
-            shellscript.wait()
+            #shellscript.wait()
         else:
             if int(caseSwitches['keep_run_terminal']) == 1:
                 terminal_keep_flag = ' /k '

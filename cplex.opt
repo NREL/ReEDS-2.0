@@ -1,6 +1,6 @@
 *** https://www.gams.com/latest/docs/S_CPLEX.html
 *** threads (integer): global default thread count
-threads = 8
+threads = 4
 
 *** lpmethod (integer): algorithm to be used for LP problems [4 = barrier]
 lpmethod = 4
@@ -12,7 +12,7 @@ advind 0
 reslim 172800
 
 *** scaind (integer): matrix scaling on/off [1 = modified, more aggressive scaling method]
-scaind 1
+scaind 0
 
 *** aggind (integer): aggregator on/off [5 = aggregator will be applied 5 times]
 aggind 5
@@ -43,7 +43,7 @@ barepcomp = 1e-8
 *## https://iea-etsap.org/webinar/CPLEX%20options%20for%20running%20TIMES%20models.pdf
 
 *** numericalemphasis (boolean): emphasizes precision in numerically unstable or difficult problems [default 0]
-* numericalemphasis 1
+numericalemphasis 1
 
 *** depind (integer): dependency checker on/off. 3 = turn on at beginning and end of preprocessing [default -1]
 * depind 3

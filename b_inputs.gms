@@ -71,7 +71,7 @@ scalar Sw_Prod "Scalar value for whether Sw_H2 or Sw_DAC are enabled" ;
 Sw_Prod$[Sw_H2 or Sw_DAC or Sw_DAC_Gas] = 1 ;
 
 set timetype "Type of time method used in the model"
-/ seq, win, int / ;
+/ seq, win, int, ur / ;
 
 parameter Sw_Timetype(timetype) "Switch that specifies the type of time method used in the model" ;
 
@@ -132,6 +132,8 @@ $ifthene.hydup2 %GSw_HydroAddPumpDispUpgSwitch% == 0
     hydEND_hydED
     hydED_pumped-hydro
 $endif.hydup2
+*!!!! need to debug lfill gas with reeds-usrep
+    lfill-gas
   /,
 
   bannew(i) "banned from creating new capacity, usually due to lacking data or represention"
@@ -6390,6 +6392,279 @@ cost_co2_stor_bec(cs,t) =        %GSw_CO2_CostAdj% * cost_co2_stor_bec(cs,t) ;
 cost_co2_spurline_fom(r,cs,t) =  %GSw_CO2_CostAdj% * cost_co2_spurline_fom(r,cs,t) ;
 cost_co2_spurline_cap(r,cs,t) =  %GSw_CO2_CostAdj% * cost_co2_spurline_cap(r,cs,t) ;
 
+
+*=============================
+* --- USREP-ReEDS Linkage ---
+*=============================
+
+$ifthen.usrep_reeds %timetype%=='ur'
+
+* USREP region definition includes states not representated by ReEDS (i.e. AK, HI, DC)
+set USREP_R "usrep regions" / AK, CA, FL, NY, TX, NENGL, NEAST, SEAST, NCENT, SCENT, MOUNT, PACIF /,
+
+* map reeds states to usrep regions
+st_ur(st,USREP_r)
+  /
+  CA.CA
+  FL.FL
+  NY.NY
+  TX.TX
+  (ME,NH,VT,MA,CT,RI).NENGL
+  (WV,DE,MD,WI,IL,MI,IN,OH,PA,NJ).NEAST
+  (VA,KY,NC,TN,SC,GA,AL,MS).SEAST
+  (MO,ND,SD,NE,KS,MN,IA).NCENT
+  (OK,AR,LA).SCENT
+  (MT,ID,WY,NV,UT,CO,AZ,NM).MOUNT
+  (OR,WA).PACIF
+  /,
+
+urpar "list of parameter names that are included in ur linking parameter" 
+   /
+    GAS, COL, ELE, OIL, SRV, TRN, AGR, EIS, OTH, lab, cap, emis, delas-pele, delas-pcarb, 
+    co2prc, vom, emisnonele, pele0, pcarb0, emisnonele0, pele1, pcarb1, emisnonele1
+   /,
+rupar "list of parameter names that are included in ru linking parameter" 
+   /
+    GAS, COL, ELE, nuclear, hydro, Total, cap, qco2, ql, qk, co2prc, nonele
+   /,
+urunit "list of parameter units that are included in ur linking parameter" 
+   /
+    delas, TWh, MMTCO2, dolpertCO2, dolperMMBtu, dolperMWh, PrcIdx, MMBtu
+   /,
+ruunit "list of parameter units that are included in ru linking parameter" 
+   /
+    TWh, Quads, MMTCO2, dollars, dolpertCO2, dolperMWh
+   /,
+
+urpar0(urpar) "list of parameter names to be initialized in iter 0 from reference values, not prior solutions"
+   /
+    delas-pele, delas-pcarb
+   /,
+
+r_u(r,usrep_r) "mapping between BA and USREP regions",
+ufeas(usrep_r) "modeled USREP regions";
+
+r_u(r,usrep_r) = no;
+r_u(r,usrep_r)$(sum(st$(r_st(r,st)$st_ur(st,usrep_r)),1)) = yes;
+
+ufeas(usrep_r)$sum{r, r_u(r,usrep_r)} = yes ;
+
+
+parameter 
+  loadrh          "--%-- regional and hourly demand represented as a fraction of usrep regions total annual demand"
+  ref_qprop_usrep "--%-- reference ratio of total annaul demand in a BA to the USREP regions total annual demand"
+  avg_demand      "--MWh-- average demand per hour, used to help calculate ref_rh_index"
+  ref_rh_index    "--%-- regional and hourly demand represented as a fraction of usrep regions total annual demand"
+  chkdev          "--ratio-- deviation check for iterations between usrep and reeds"
+  baseprc         "--$/mwh-- reference price of demand curve"
+  baseload        "--mwh-- reference load of demand curve"
+  eledelas        "--delta Q / delta P-- marshallian demand elasticity"
+  baseemisprc     "--$/tonne co2-- reference carbon price"
+  baseemisnonele  "--tonne co2-- reference non-ELE emissions (metric ton)"
+  delasemis       "--delta Q / delta P-- marshallian demand elasticity for non-ELE emissions"
+  ur0_demandQCP   "--various-- reference demand curve parameters for qcp approach"
+  emit_scale(e)   "emissions scaling factor between reeds and usrep"
+  price_out       "--$/mwh-- price for sending to USREP, various calculation methods in d2_elecost"
+;
+
+* populate with values to avoid errors before enabling solve
+* these will get replaced with value from USREP
+emit_scale(e) = 1 ; 
+
+* note this default elasticity value is only used for the benchmark steps
+* before reeds and usrep iterate - that is, it is only used to test for replication of
+* the inelastic demand and elastic demand portrayals (which should make w/o perturbation)
+* when running the benchmark scenarios. otherwise, it is sent from USREP
+eledelas(usrep_r) = 0.35;
+baseemisprc(e,usrep_r,t) = 0;
+baseemisnonele(e,usrep_r,t) = 0;
+delasemis(e,usrep_r) = 0.1;
+
+* --- EMISSION POLICY ---
+parameter 
+  cappol          "--N/A-- flag for emission cap policy enabled"
+  emiscap         "--tonnes-- economy-wide emissions cap"
+;
+
+* initalize flag to zero and limit to some large number
+cappol(e,"USA") = 0;
+emiscap(e,"USA") = 1e+10;
+
+Scalar SwElas  "switch to enable or disable elastic demand" /0/, 
+SwRU_Benchmark "Flag for running the ReEDS-USREP benchmark" /%ru_runbenchmark%/
+;
+
+*only enable elastic demand if not running the benchmark case
+SwElas$[SwRU_Benchmark=0] = 1 ;
+
+* -- piecewise-linear elastic demand setup --
+
+* note that we center the demand curve across bins based on the product of dbin_width with the count of all previously number bins (for each bin)
+* so if you have a dbin_width of 0.01 then the sum of the 1st-100th bins will be the reference quantity
+set dbin "demand curve bin" /d1*d250/;
+alias(dbin,ddbin);
+
+scalar dbin_bound "bound on minimum amount of qref within the dbin set" /0.01/,
+       dbin_width "width of each dbin in percentage"                    /0.01/;
+
+parameter d_price(dbin,usrep_r,t)         "--$/MWh-- price for each bin",
+          d_quant(dbin,usrep_r,t)         "--MWh--   quantity for each demand bin",
+          d_perc_q(dbin)                  "--%-- percentage of reference demand for each dbin"
+          d_price_emit(dbin,e,usrep_r,t)  "--$/tCO2-- price for each bin",
+          d_quant_emit(dbin,e,usrep_r,t)  "--tCO2-- quantity for each demand bin"
+;
+
+* initial to zero - computed in d1_temporal_params.gms when linkage is enabled
+d_price(dbin,usrep_r,t) = 0 ; 
+d_quant(dbin,usrep_r,t) = 0 ; 
+d_perc_q(dbin) = 0 ; 
+d_price_emit(dbin,e,usrep_r,t) = 0 ; 
+d_quant_emit(dbin,e,usrep_r,t) = 0 ; 
+
+* following line will have each bin based on its cardinal location:
+* dbind_bound + dbin_width * ord(dbin)
+d_perc_q(dbin) = dbin_bound + (ord(dbin)-1) * dbin_width ;
+
+* -- Tracking of original, non-modified parameters -- *
+
+*Establish ReEDS-USREP Benchmark cost values	
+parameters	
+  fuel_price0(i,r,t)        "--$ / mmbtu-- benchmark fuel prices for ReEDS-USREP linkage"	
+  cost_cap0(i,t)            "--$/mw-- benchmark capital costs for ReEDS-USREP scaling in D_solveoneyearRU.gms"	
+  m_rsc_dat0                "--$/mw-- benchmark value for m_rsc_dat ---- for hydro"	
+  cost_vom0(i,v,r,t)        "--$ per MWh-- variable OM, original"	
+  cost_fom0(i,v,r,t)        "--$ per mw-yr-- fixed OM, original"	
+  cost_cap_fin_mult0(i,r,t) "benchmark financial capital cost multiplier for regions and technologies"	
+  rsc_fin_mult0(i,r,t)      "benchmark financial capital cost multiplier for rsc techs"	
+  rsc_fin_mult00(i,r,t)     "benchmark financial capital cost multiplier for rsc techs - used for comparison"	
+;	
+
+fuel_price0(i,r,t) = fuel_price(i,r,t) ;	
+cost_cap0(i,t) = cost_cap(i,t) ;	
+m_rsc_dat0(r,i,t,rscbin,"cost") = m_rsc_dat(r,i,rscbin,"cost") ;	
+cost_vom0(i,v,r,t) = cost_vom(i,v,r,t) ;	
+cost_fom0(i,v,r,t) = cost_fom(i,v,r,t) ;	
+
+*End ReEDS-USREP Benchmark Values	
+
+
+*!!!! following needs clean-up
+
+parameters	
+        ru        "data transferred from reeds to usrep",	
+        ru_       "placeholder for ru for each iteration",	
+        ur        "data transferred from usrep to reeds",	
+        ur0       "reference values from usrep benchmark case",
+        ur_cendiv "ur, aggregated by census division",	
+        rep_ru    "reporting parameter for ru",	
+        rep_rudiv "reporting parameter for ru over ru0"	
+        pdiv      "placeholder calculation of usrep price ratios"	
+* If USREP running ctax_emf case, make sure to adjust ReEDS for specific case being run.	
+        load_exog_u(usrep_r,t) "reference annual reeds load by usrep region",	
+        tempreq, pricetemp, annload_r, ur_prev	
+        reqt_price_ru(*,r,t)   "price requirements component decomposition",
+        reqt_quant_ru(*,r,t)   "quantity requirements component decomposition"
+        cvt
+;
+* placeholder to avoid divzero error
+ur_cendiv("pgas",cendiv,t) = 1;	
+
+cvt = deflator("%ru_startyr_USREP%") ;
+
+*!!!! remove hardcoding
+Table AEOeleload(*,*)	"--twh-- load assumed in USREP"
+  	2006	2010	2015	2016	2017	2018	2019	2020	2021	2022	2023	2024	2025	2026	2027	2028	2029	2030	2031	2032	2033	2034	2035	2036	2037	2038	2039	2040	2041	2042	2043	2044	2045	2046	2047	2048	2049	2050
+USA	3921	4017	4016	4021	3939	3986	4033	3930	3948	4018	4064	4110	4159	4185	4208	4231	4254	4279	4306	4333	4360	4392	4424	4457	4494	4533	4573	4608	4647	4691	4742	4790	4837	4886	4936	4989	5045	5105
+;
+
+
+* $if not set udir	$setglobal udir usrep
+$if not set udir	$setglobal udir usrep_windc
+
+$setglobal wd %gams.workdir%
+
+*	USREP directory
+$set uwd %wd%%udir%/
+
+set	sedst	/ 1960*2020 /
+	fe	/ col, gas, oil /
+	sedsfe	/ coal, "natural gas", "all petroleum products avergage" /
+	mapsedsfuel(fe,sedsfe) / col."coal", gas."natural gas", 
+				oil."all petroleum products avergage" /,
+  seds_sec / industrial,  residential, total-end-use, total, transportation, commercial/            
+    ;
+
+parameter elecon(st,seds_sec,sedst)
+/
+$ondelim
+$include %uwd%data%ds%eia%ds%seds_elecon_in.csv
+$offdelim
+/
+;
+
+parameter elefuelcon(st,*,sedst)
+/
+$ondelim
+$include %uwd%data%ds%eia%ds%seds_elefuelcon_in.csv
+$offdelim
+/;
+
+parameter elefuelprice(*,*,sedst)
+/
+$ondelim
+$include %uwd%data%ds%eia%ds%seds_fuelprice_in.csv
+$offdelim
+/;
+
+
+parameter co2_tax_ru_init(allt) "initial guesses at carbon price in reeds from USREP economy-wide cap - helps with convergence in emissions policy counterfactuals"
+/
+2020  0,
+2025  0,
+2030  0,
+2035  20,
+2040  20,
+2045  50,
+2050  80
+/;
+
+parameter 
+	sedsfuelprice(usrep_r,fe,sedst)
+	sedselefuelcon(usrep_r,fe,sedst)
+	sedselecon(usrep_r,sedst);
+
+loop((fe,sedsfe,sedst)$(mapsedsfuel(fe,sedsfe)$(sedst.val ge 2010)),
+
+* calculate regional average price weighted by consumption
+  sedsfuelprice(usrep_r,fe,sedst)$(sum(st_ur(st,usrep_r),elefuelcon(st,sedsfe,sedst)) gt eps)
+	  = sum(st_ur(st,usrep_r),elefuelprice(st,sedsfe,sedst)
+		  * elefuelcon(st,sedsfe,sedst))
+	  / sum(st_ur(st,usrep_r),elefuelcon(st,sedsfe,sedst));
+
+* fill the zero prices with USA average price
+  sedsfuelprice(usrep_r,fe,sedst)$(not sedsfuelprice(usrep_r,fe,sedst)) 
+	  = elefuelprice("USA",sedsfe,sedst);
+
+* electricity fuel consumption (billion Btu)
+  sedselefuelcon(usrep_r,fe,sedst)
+	  = sum(st_ur(st,usrep_r),elefuelcon(st,sedsfe,sedst));
+
+* electricity consumption (million kWh)
+  sedselecon(usrep_r,sedst) = sum(st_ur(st,usrep_r),elecon(st,"total",sedst));
+);
+
+
+set tamort(t,tt)  "connection set for t to tt for amortization years used in calculating annualized capacity payment costs sent to USREP";	
+
+tamort(t,tt) = no;	
+
+tamort(t,tt)$[tmodel_new(t)$tmodel_new(tt)$((t.val-tt.val)<20)
+              $((t.val-tt.val) < (t.val-20))$((t.val-tt.val) < t.val-2010)
+              $((t.val-tt.val)>=0)]=yes;
+
+
+$endif.usrep_reeds
+
 *================================================================================================
 *== h- and szn-dependent sets and parameters (declared here, populated in d1_temporal_params) ===
 *================================================================================================
@@ -6533,6 +6808,14 @@ Parameter
 * Fossil gas supply curve
     gasadder_cd(cendiv,t,allh)             "--$/MMbtu-- adder for NG census divsion"
     szn_adj_gas(allh)                      "--fraction-- seasonal adjustment for gas prices"
+
+$ifthen.usrep_reeds %timetype%=='ur'
+        price_ru(r,allh,t)   "--2004$/MWh-- timeslice BA wholesale energy prices"	
+        price_temp(r,allh,t) "placeholder price to simplify calculations when communicating with USREP"
+        ref_rh_index(r,allh,t) "reference index of demand in timeslice h relative to demand in all other periods"
+        price_in(r,allh,t)        "reference price from reeds-usrep benchmark case"
+$endif.usrep_reeds
+
 ;
 
 alias(allh,allhh,allhhh) ;

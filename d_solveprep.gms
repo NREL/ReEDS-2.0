@@ -4,8 +4,6 @@ $ifthen.unix %system.filesys% == UNIX
 $setglobal ds /
 $endif.unix
 
-Model ReEDSmodel /all/ ;
-
 *=================================
 * -- MODEL AND SOLVER OPTIONS --
 *=================================
@@ -244,6 +242,32 @@ $offdelim
 ;
 
 $endif.win
+
+
+$ifthen.ur %timetype%=="ur"
+
+* Parameter tracking
+parameter
+    m_capacity_exog0(i,v,r,t) "--MW-- original value of m_capacity_exog used in d_solveoneyear to make sure upgraded capacity isnt forced into retirement"
+    z_rep(t)      "--$-- objective function value by year"
+    z_rep_inv(t)  "--$-- investment component of objective function by year"
+    z_rep_op(t)   "--$-- operation component of objective function by year"
+;
+
+* -- upgrade capacity tracking --
+m_capacity_exog0(i,v,r,t) = m_capacity_exog(i,v,r,t) ;
+
+* remove cc_int as it is only used in the intertemporal setting
+cc_int(i,v,r,ccseason,t) = 0 ;
+
+*for the sequential solve, what matters is the relative ratio of the pvf for capital and the pvf for onm
+*therefore, we set the pvf capital to one, and then pvf_onm to the relative 20 year present value by using the crf
+pvf_capital(t) = 1 ;
+pvf_onm(t)$tmodel_new(t) = round(1 / crf(t),6) ;
+
+$endif.ur
+
+
 
 
 *======================

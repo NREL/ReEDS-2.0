@@ -353,6 +353,44 @@ eq_Objfn_op(t)$tmodel(t)..
                    (crf(t) / crf_h2_incentive(t)) * h2_ptc("electrolyzer",v,r,t) * 1e3} 
                    $[Sw_H2_PTC$Sw_H2$h2_ptc_years(t)$(yeart(t) >= h2_demand_start)]
 
+$ifthen.usrep_reeds %timetype%=='ur'
+* --- USREP-ReEDS linkage ---
+* for piecewise linear demand in usrep-reeds, additional terms are needed
+* in the operational portion of the objective function to account for the 
+* total value of consumer surplus in both the electricity and emissions markets
+               - sum{(dbin,usrep_r)$d_quant(dbin,usrep_r,t), LOAD_BIN(dbin,usrep_r,t) * d_price(dbin,usrep_r,t) }$[SwElas = 1]
+               - sum{(dbin,e,usrep_r)$[ufeas(usrep_r)$(cappol(e,"USA"))], EMITNonELE_BIN(dbin,e,usrep_r,t) * d_price_emit(dbin,e,usrep_r,t) }$[(SwElas = 1)]
+$endif.usrep_reeds
 *end multiplier for pvf_onm
          )
+
 ;
+
+Model ReEDSmodel /all/ ;
+
+$ifthen.usrep_reeds %timetype%=='ur'
+* objective function for ReEDS-USREP model
+variable  QCPZ      "--$s-- QCP objective for USREP-ReEDS";	
+equation  eq_QCPObj "QCP objective function";	
+
+eq_QCPObj ..	
+	QCPZ =e= Z 	
+		- sum((usrep_r,t)$(sum(r,r_u(r,usrep_r))$tmodel(t)),	
+			cost_scale * pvf_onm(t)
+			* (baseprc(usrep_r,t) * LOADU(usrep_r,t)	
+			* (1 - (LOADU(usrep_r,t) - 2 * baseload(usrep_r,t))	
+				/(2 * baseload(usrep_r,t) * eledelas(usrep_r)) 	
+			  )))	
+		- sum(e, sum((usrep_r,t)$(sum(r,r_u(r,usrep_r))$tmodel(t)),	
+			cost_scale * pvf_onm(t)
+			* (baseemisprc(e,usrep_r,t) * EMITNonELE(e,usrep_r,t)	
+			* (1 - (EMITNonELE(e,usrep_r,t) - 2 * baseemisnonele(e,usrep_r,t))	
+				/(2 * baseemisnonele(e,usrep_r,t) * delasemis(e,usrep_r)) 	
+			  )))$cappol(e,"USA") )	
+;	
+* note - the reedsmodel was already defined before these additional equations
+* were created and populated so the only difference between reedsmodel
+* and reedsmodelqcp are the qcp objective function
+model ReEDSmodelqcp / all /;	
+
+$endif.usrep_reeds

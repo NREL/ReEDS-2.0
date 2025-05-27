@@ -107,6 +107,14 @@ positive variables
   WATCAP(i,v,r,t)                        "--million gallons/year; Mgal/yr-- total water access capacity available in terms of withdraw/consumption per year"
   WAT(i,v,w,r,allh,t)                    "--Mgal-- quantity of water withdrawn or consumed in hour h"
   WATER_CAPACITY_LIMIT_SLACK(wst,r,t)    "--Mgal/yr-- insufficient water supply in region r, of water type wst, in year t "
+
+$ifthen.usrep_reeds %timetype%=='ur'
+* variables related to USREP-ReEDS linkage
+  LOAD_BIN(dbin,usrep_r,t)       "--MWh-- busbar load per timeslice per bin"	
+  LOADU(usrep_r,t)           "--MWh-- USREP regional load"	
+  EMITNonELE(e,usrep_r,t)   "--metric tons co2-- Non-ELE co2 emissions in a USREP region"
+  EMITNonELE_BIN(dbin,e,usrep_r,t)  "--metric tons co2-- Non-ele co2 emissions in usrep region binned"	
+$endif.usrep_reeds
 ;
 
 Variables
@@ -307,6 +315,16 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_ccsflex_sto_ccsenergy_balance(i,v,r,allszn,t)    "--MWh-- Total CCS energy requirement can be distributed across a characteristic day"
  eq_ccsflex_sto_storage_level(i,v,r,allh,t)          "--varies-- Track the level of the CCS storage balance for each time-slice"
  eq_ccsflex_sto_storage_level_max(i,v,r,allh,t)      "--varies-- Limit the level of the CCS storage system"
+
+
+$ifthen.usrep_reeds %timetype%=='ur'
+*!!! equations related to USREP-ReEDS linkage
+ eq_loadcon_bin(dbin,usrep_r,t)
+ eq_natemis(e,t)
+ eq_emit_bin(dbin,e,usrep_r,t)
+ eq_emitnonele(e,usrep_r,t)	
+$endif.usrep_reeds
+
 ;
 
 *==========================
@@ -326,7 +344,7 @@ eq_loadcon(r,h,t)$tmodel(t)..
     =e=
 
 *[plus] the static, exogenous load
-    + load_exog_static(r,h,t)
+    (load_exog_static(r,h,t)
 
 *[plus] exogenously defined exports to Canada
 * note net canadian load (when Sw_Canada = 2) is included
@@ -359,6 +377,26 @@ eq_loadcon(r,h,t)$tmodel(t)..
     + sum{rr$h2_routes(r,rr),
         h2_network_load("h2_compressor",t)
         * (( H2_FLOW(r,rr,h,t) + H2_FLOW(rr,r,h,t) ) / 2) }$Sw_H2_CompressorLoad
+    )$[not SwElas]
+$ifthen.usrep_reeds %timetype%=='ur'
+* [plus] load related to usrep-reeds linkage computed as
+* .. piecewise linear demand summed over all bins
+    + sum((dbin,usrep_r)$[r_u(r,usrep_r)$d_quant(dbin,usrep_r,t)], 
+        loadrh(r,h,t) * LOAD_BIN(dbin,usrep_r,t))$[SwElas = 1]
+
+* .. or continuous demand from QCP setup
+    + sum(usrep_r$r_u(r,usrep_r),
+        loadrh(r,h,t) * LOADU(usrep_r,t))$[SwElas = 2]
+;
+* for USREP-ReEDS linkage and with the piecewise linear demand function
+* endogenous demand in each bin is bound by exogenous limit
+eq_loadcon_bin(dbin,usrep_r,t)$[tmodel(t)$(SwElas=1)$d_quant(dbin,usrep_r,t)]..	
+    d_quant(dbin,usrep_r,t)	
+    	
+    =g=	
+    	
+    LOAD_BIN(dbin,usrep_r,t)          
+$endif.usrep_reeds
 ;
 
 * ---------------------------------------------------------------------------
@@ -3593,3 +3631,28 @@ eq_ccsflex_sto_storage_level_max(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)$ccs
 ;
 
 * ---------------------------------------------------------------------------
+
+$ifthen.usrep_reeds %timetype%=='ur'
+*=====================
+* -- USREP Linkage --
+*=====================
+
+eq_natemis(e,t)$[cappol(e,"USA")$tmodel(t)]..	
+    emiscap(e,"USA")
+    =g=	
+    sum((r,usrep_r)$(r_u(r,usrep_r)), EMIT(e,r,t)) 	
+    + sum(usrep_r, EMITNonELE(e,usrep_r,t)) 
+;	
+
+eq_emit_bin(dbin,e,usrep_r,t)$[ufeas(usrep_r)$tmodel(t)$(SwElas=1)$cappol(e,"USA")]..
+    d_quant_emit(dbin,e,usrep_r,t)
+    =g=	
+    EMITNonELE_BIN(dbin,e,usrep_r,t)
+;
+
+eq_emitnonele(e,usrep_r,t)$[ufeas(usrep_r)$tmodel(t)$(SwElas=1)$cappol(e,"USA")]..
+    sum(dbin,EMITNonELE_BIN(dbin,e,usrep_r,t))    	
+    =e=	    	
+    EMITNonELE(e,usrep_r,t)
+;
+$endif.usrep_reeds

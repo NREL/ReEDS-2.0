@@ -247,7 +247,16 @@ ReEDSmodel.optfile = %GSw_gopt% ;
 OPTION savepoint = 1 ;
 $endif.valstr
 
+* if not solving linked model can solve as normal
+$ifthen.seq %timetype%=="seq"
 solve ReEDSmodel minimizing z using lp ;
+$endif.seq
+
+* include additional steps when solving linked model
+$ifthen.ur %timetype%=="ur"
+$include d_solve_usrep_reeds.gms
+$endif.ur
+
 tsolved(t)$tmodel(t) = yes ;
 
 * record objective function values right after solve
