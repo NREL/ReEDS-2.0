@@ -72,7 +72,7 @@ Sw_SolarPlusStorage           "Switch to turn on solar plus storage constraint" 
 Sw_StorHAV                    "Switch to turn on hourly arbitrage value for storage"                  /%GSw_StorHAV%/,
 Sw_FocusRegionZeroTXCost      "Zero transmission capital cost between focus regions"                  /%GSw_FocusRegionZeroTXCost%/,
 Sw_TxLimit                    "Switch to enable transmission flow limits"                             /%GSw_TxLimit%/,
-Sw_CurtLim				"Switch to enable curtailment limit"			                  /%GSw_CurtLim%/,
+Sw_CurtLim				      "Switch to enable curtailment limit"			                          /%GSw_CurtLim%/,
 Sw_OfsWind                    "Switch to turn on/off offshore wind"                                   /%GSw_OfsWind%/,
 Sw_H2CT                       "Switch to turn on/off H2CT and H2CC techs on [1] or off [0]"           /%GSw_H2CT%/
 ;
@@ -558,28 +558,28 @@ $offdelim
 table capnonrsc(i,r,*) "--MW-- raw capacity data for non-RSC tech"
 
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%capnonrsc.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%CapNonRsc_file%
 $offdelim
 ;
 
 table caprsc(i,r,rs,*) "--MW-- raw capacity data for RSC techs"
 
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%caprsc.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%CapRsc_file%
 $offdelim
 ;
 
 table prescribednonrsc(t,i,r,*) "--MW-- raw prescribed capacity data for non-RSC tech"
 
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%prescribednonrsc.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%PrescribedNonRsc_file%
 $offdelim
 ;
 
 table prescribedrsc(t,i,r,rs,*) "--MW-- raw prescribed capacity data for RSC tech"
 
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%prescribedrsc.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%PrescribedRsc_file%
 $offdelim
 ;
 
@@ -731,7 +731,7 @@ $offdelim
 table cf_in(r,rs,i,h,*) "capacity factors for renewable technologies"
 
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%cfout.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%CfOut_file%
 $offdelim
 ;
 
@@ -1249,7 +1249,7 @@ parameter
           rsc_dat(r,rs,i,rscbin,rscvar)              "Resource supply curve data"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%rsc_dat.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%RscDat_file%
 $offdelim
           / ,
           remainder(i,r,rs)       "remaining amount of capacity in rscbin after existing stock has been deducted",
