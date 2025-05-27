@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=southasia
-#SBATCH --time=30:00:00  #TIME FOR RUN
+#SBATCH --time=48:00:00  #TIME FOR RUN
 #SBATCH --nodes=1
 #SBATCH --mail-user=prateek.joshi@NREL.gov
 #SBATCH --mail-type=BEGIN,END,FAIL
