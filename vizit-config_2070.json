@@ -32,13 +32,18 @@
               "x": "year",
               "name": "tech",
               "col": "scenario",
-              "y": "Capacity (MW)"
+              "y": "Capacity (MW)",
+              "filter": {}
             }
           ],
           "style": {
             "Plot Width (px)": "1000",
-            "Plot Height (px)": "420",
-            "Plot Title": "National installed capacity"
+            "Plot Height (px)": "500",
+            "Plot Title": "Installed Capacity",
+            "X Title": "Year",
+            "X Label Angle (deg)": "30",
+            "Y Title": "Capacity (GW)",
+            "Y Scale": "0.001"
           }
         },
         {
@@ -55,8 +60,12 @@
           ],
           "style": {
             "Plot Width (px)": "1000",
-            "Plot Height (px)": "420",
-            "Plot Title": "Annual capacity additions"
+            "Plot Height (px)": "500",
+            "Plot Title": "Annual Capacity Additions",
+            "X Title": "Year",
+            "X Label Angle (deg)": "30",
+            "Y Title": "Investments (GW)",
+            "Y Scale": "0.001"
           }
         },
         {
@@ -84,8 +93,12 @@
           ],
           "style": {
             "Plot Width (px)": "1000",
-            "Plot Height (px)": "800",
-            "Plot Title": "Firm capacity and PRM requirement"
+            "Plot Height (px)": "1000",
+            "Plot Title": "Firm Capacity and Planning Reserve Margin (PRM) Requirement",
+            "X Title": "Year",
+            "X Label Angle (deg)": "30",
+            "Y Title": "PRM Requirement (GW)",
+            "Y Scale": "0.001"
           }
         },
         {
@@ -101,26 +114,20 @@
             }
           ],
           "style": {
-            "Plot Width (px)": "1000"
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "500",
+            "Plot Title": "Difference: Installed Capacity",
+            "X Title": "Year",
+            "X Label Angle (deg)": "30",
+            "Y Title": "Capacity Difference (GW)",
+            "Y Scale": "0.001"
           }
         },
-        {
-          "traces": [
-            {}
-          ]
-        },
-        {
-          "traces": [
-            {}
-          ]
-        },
-        {
-          "traces": [
-            {}
-          ]
-        }
+        {},
+        {},
+        {}
       ],
-      "title": "Annual capacity results",
+      "title": "Annual Capacity Results",
       "description": ""
     },
     {
@@ -144,7 +151,8 @@
           ],
           "style": {
             "Plot Title": "Capacity",
-            "Y Title": "Fraction of total capacity (%)"
+            "Y Title": "Fraction of Total Capacity (%)",
+            "X Title": "Year"
           }
         },
         {
@@ -166,16 +174,13 @@
           ],
           "style": {
             "Plot Title": "Generation",
-            "Y Title": "Fraction of total generation (%)"
+            "Y Title": "Fraction of Total Generation (%)",
+            "X Title": "Year"
           }
         },
-        {
-          "traces": [
-            {}
-          ]
-        }
+        {}
       ],
-      "title": "Non-fossil fraction",
+      "title": "Non-Fossil Fraction",
       "description": ""
     },
     {
@@ -189,13 +194,23 @@
               "x": "year",
               "name": "cost_cat",
               "col": "scenario",
-              "y": "Cost"
+              "y": "Cost",
+              "filter": {
+                "year": {
+                  "filter_type": "greater-or-equal",
+                  "filter_val": "2026"
+                }
+              }
             }
           ],
           "style": {
-            "Y Title": "Undiscounted cost (INR)",
+            "Y Title": "Undiscounted Cost (Crore INR)",
             "Plot Width (px)": "1000",
-            "Plot Title": "Costs by year"
+            "Plot Height (px)": "500",
+            "Plot Title": "Annual Costs",
+            "X Title": "Year",
+            "X Label Angle (deg)": "30",
+            "Y Scale": " 0.0000001"
           }
         },
         {
@@ -210,9 +225,12 @@
             }
           ],
           "style": {
-            "Y Title": "Undiscounted cost (INR)",
+            "Y Title": "Undiscounted Cost (Crore INR)",
             "Plot Width (px)": "800",
-            "Plot Title": "Total costs"
+            "Plot Height (px)": "500",
+            "Plot Title": "Total Costs",
+            "X Title": "Scenario",
+            "Y Scale": " 0.0000001"
           }
         },
         {
@@ -228,19 +246,15 @@
           ],
           "style": {
             "Plot Width (px)": "800",
-            "Plot Title": "Cost difference from reference scenario"
+            "Plot Height (px)": "500",
+            "Plot Title": "Difference: Total Costs",
+            "X Title": "Scenario",
+            "Y Title": "Undiscounted Cost Difference (Crore INR)",
+            "Y Scale": "0.0000001"
           }
         },
-        {
-          "traces": [
-            {}
-          ]
-        },
-        {
-          "traces": [
-            {}
-          ]
-        }
+        {},
+        {}
       ],
       "title": "Costs",
       "description": ""
@@ -256,7 +270,13 @@
               "x": "year",
               "name": "tech",
               "col": "scenario",
-              "y": "Generation (MWh)"
+              "y": "Generation (MWh)",
+              "filter": {
+                "year": {
+                  "filter_type": "greater-or-equal",
+                  "filter_val": "2026"
+                }
+              }
             },
             {
               "dataSource": "demand.csv",
@@ -265,14 +285,23 @@
               "x": "year",
               "name": "type",
               "col": "scenario",
-              "y": "Demand (MWh)"
+              "y": "Demand (MWh)",
+              "filter": {
+                "year": {
+                  "filter_type": "greater-or-equal",
+                  "filter_val": "2026"
+                }
+              }
             }
           ],
           "style": {
             "Plot Width (px)": "1000",
-            "Plot Height (px)": "400",
-            "Plot Title": "National generation and demand",
-            "Y Title": "Generation (MWh)"
+            "Plot Height (px)": "500",
+            "Plot Title": "Generation and Demand",
+            "Y Title": "Generation (TWh)",
+            "Y Scale": "0.000001",
+            "X Title": "Year",
+            "X Label Angle (deg)": "30"
           }
         },
         {
@@ -284,13 +313,23 @@
               "x": "year",
               "name": "tech",
               "col": "scenario",
-              "y": "Operating Reserves (MWh)"
+              "y": "Operating Reserves (MWh)",
+              "filter": {
+                "year": {
+                  "filter_type": "greater-or-equal",
+                  "filter_val": "2026"
+                }
+              }
             }
           ],
           "style": {
             "Plot Width (px)": "1000",
-            "Plot Height (px)": "400",
-            "Plot Title": "Operating reserves provision"
+            "Plot Height (px)": "500",
+            "Plot Title": "Operating Reserves Provision",
+            "X Title": "Year",
+            "X Label Angle (deg)": "30",
+            "Y Title": "Operating Reserves (TWh)",
+            "Y Scale": "0.000001"
           }
         },
         {
@@ -306,9 +345,11 @@
             }
           ],
           "style": {
-            "Plot Title": "Annual curtailment",
-            "Y Title": "Fraction of available generation (%)",
-            "Plot Width (px)": "1000"
+            "Plot Title": "Annual Curtailment",
+            "Y Title": "Fraction of Available Generation (%)",
+            "Plot Width (px)": "1000",
+            "Plot Height (px)": "500",
+            "X Title": "Year"
           }
         },
         {
@@ -318,20 +359,26 @@
               "type": "bar",
               "agg": "sum",
               "x": "t",
+              "explode": "scenario",
               "y": "Level",
-              "explode": "scenario"
+              "filter": {
+                "t": {
+                  "filter_type": "greater-or-equal",
+                  "filter_val": "2026"
+                }
+              }
             }
           ],
           "style": {
             "Plot Width (px)": "1000",
             "X Title": "Year",
             "Y Title": "Metric Tons CO2",
-            "Plot Title": "National CO2 Emissions"
+            "Plot Title": "Annual CO2 Emissions",
+            "X Label Angle (deg)": "30"
           }
-        },
-        {}
+        }
       ],
-      "title": "Annual generation results",
+      "title": "Annual Generation Results",
       "description": ""
     },
     {
@@ -344,8 +391,14 @@
               "agg": "sum",
               "filter": {
                 "year": {
-                  "filter_type": "equals",
-                  "filter_val": "2030"
+                  "filter_type": "include",
+                  "filter_val": [
+                    2030,
+                    2040,
+                    2050,
+                    2060,
+                    2070
+                  ]
                 }
               },
               "x": "time",
@@ -361,8 +414,14 @@
               "agg": "sum",
               "filter": {
                 "year": {
-                  "filter_type": "equals",
-                  "filter_val": "2030"
+                  "filter_type": "include",
+                  "filter_val": [
+                    2030,
+                    2040,
+                    2050,
+                    2060,
+                    2070
+                  ]
                 }
               },
               "x": "time",
@@ -378,8 +437,14 @@
               "agg": "sum",
               "filter": {
                 "year": {
-                  "filter_type": "equals",
-                  "filter_val": "2030"
+                  "filter_type": "include",
+                  "filter_val": [
+                    2030,
+                    2040,
+                    2050,
+                    2060,
+                    2070
+                  ]
                 }
               },
               "x": "time",
@@ -393,12 +458,14 @@
           "style": {
             "Plot Width (px)": "1000",
             "Plot Height (px)": "1600",
-            "Plot Title": "National timeslice generation and demand",
-            "Y Title": "Dispatch (MW)"
+            "Plot Title": "National Time Slice Generation and Demand",
+            "Y Title": "Dispatch (GW)",
+            "Y Scale": "0.001",
+            "X Title": "Time Slice"
           }
         }
       ],
-      "title": "Timeslice generation",
+      "title": "Timeslice Generation",
       "description": ""
     },
     {
@@ -412,7 +479,7 @@
               "filter": {
                 "year": {
                   "filter_type": "slider",
-                  "filter_val": "2030"
+                  "filter_val": "2070"
                 },
                 "tech": {
                   "filter_type": "select",
@@ -432,13 +499,13 @@
             "Plot Width (px)": "400",
             "Colorscale (region)": "Blues",
             "Reverse Colorscale (region)": "true",
-            "Plot Title": "Wind capacity in 2030",
+            "Plot Title": "Wind Capacity in 2070 (MW)",
             "Mapbox Center Latitude": "23",
             "Mapbox Center Longitude": "83",
             "Mapbox Zoom": "2.9",
-            "Colorscale Max (region)": "50000",
             "Colorscale Min (region)": "0",
-            "Mapbox Style": "white-bg"
+            "Mapbox Style": "white-bg",
+            "Colorscale Max (region)": "120000"
           }
         },
         {
@@ -453,8 +520,8 @@
                   "filter_val": "Solar PV"
                 },
                 "year": {
-                  "filter_type": "select",
-                  "filter_val": "2030"
+                  "filter_type": "slider",
+                  "filter_val": "2070"
                 }
               },
               "featureidkey": "properties.id",
@@ -467,10 +534,10 @@
             }
           ],
           "style": {
-            "Colorscale (region)": " [[0, 'rgb(0,0,255)'], [1, 'rgb(255,0,0)']]",
+            "Colorscale (region)": "Reds",
             "Reverse Colorscale (region)": "false",
             "Plot Width (px)": "400",
-            "Plot Title": "Solar capacity in 2030",
+            "Plot Title": "Solar PV Capacity in 2070 (MW)",
             "Mapbox Style": "white-bg"
           }
         },
@@ -484,13 +551,12 @@
                 "tech": {
                   "filter_type": "include",
                   "filter_val": [
-                    "Sub-Coal",
                     "Super-Coal"
                   ]
                 },
                 "year": {
-                  "filter_type": "select",
-                  "filter_val": "2030"
+                  "filter_type": "slider",
+                  "filter_val": "2070"
                 }
               },
               "featureidkey": "properties.id",
@@ -504,14 +570,123 @@
           ],
           "style": {
             "Plot Width (px)": "400",
-            "Plot Title": "Coal capacity in 2030",
+            "Plot Title": "Coal Capacity in 2070 (MW)",
             "Colorscale (region)": "Greys",
             "Reverse Colorscale (region)": "true",
-            "Mapbox Style": "white-bg"
+            "Mapbox Style": "white-bg",
+            "Colorscale Max (region)": "40000"
+          }
+        },
+        {},
+        {
+          "traces": [
+            {
+              "dataSource": "cap.csv",
+              "type": "custom region map (mapbox)",
+              "agg": "sum",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
+              "featureidkey": "properties.id",
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
+              "locations": "json.states",
+              "z": "Capacity (MW)",
+              "text": "tech",
+              "explode": "scenario",
+              "filter": {
+                "tech": {
+                  "filter_type": "include",
+                  "filter_val": [
+                    "Gas CC"
+                  ]
+                },
+                "year": {
+                  "filter_type": "slider",
+                  "filter_val": "2070"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "400",
+            "Plot Title": "Natural Gas Capacity in 2070 (MW)",
+            "Colorscale (region)": "Greys",
+            "Mapbox Style": "white-bg",
+            "Reverse Colorscale (region)": "true"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "cap.csv",
+              "type": "custom region map (mapbox)",
+              "agg": "sum",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
+              "featureidkey": "properties.id",
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
+              "locations": "json.states",
+              "z": "Capacity (MW)",
+              "text": "tech",
+              "explode": "scenario",
+              "filter": {
+                "tech": {
+                  "filter_type": "include",
+                  "filter_val": [
+                    "Nuclear"
+                  ]
+                },
+                "year": {
+                  "filter_type": "slider",
+                  "filter_val": "2070"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "400",
+            "Plot Title": "Nuclear Capacity in 2070 (MW)",
+            "Colorscale (region)": "Greys",
+            "Mapbox Style": "white-bg",
+            "Reverse Colorscale (region)": "true"
+          }
+        },
+        {
+          "traces": [
+            {
+              "dataSource": "cap.csv",
+              "type": "custom region map (mapbox)",
+              "agg": "sum",
+              "geojson": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
+              "featureidkey": "properties.id",
+              "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india-states-w-Ladakh-and-DVC.geojson",
+              "locations": "json.states",
+              "z": "Capacity (MW)",
+              "text": "tech",
+              "explode": "scenario",
+              "filter": {
+                "tech": {
+                  "filter_type": "include",
+                  "filter_val": [
+                    "BESS 2hr",
+                    "BESS 4hr",
+                    "BESS 8hr"
+                  ]
+                },
+                "year": {
+                  "filter_type": "slider",
+                  "filter_val": "2070"
+                }
+              }
+            }
+          ],
+          "style": {
+            "Plot Width (px)": "400",
+            "Plot Title": "Battery Storage Capacity in 2070 (MW)",
+            "Colorscale (region)": "Greens",
+            "Mapbox Style": "white-bg",
+            "Reverse Colorscale (region)": "true"
           }
         }
       ],
-      "title": "State-wise capacity maps",
+      "title": "Capacity Maps: States",
       "description": ""
     },
     {
@@ -525,7 +700,7 @@
               "filter": {
                 "year": {
                   "filter_type": "slider",
-                  "filter_val": "2030"
+                  "filter_val": "2070"
                 },
                 "tech": {
                   "filter_type": "select",
@@ -544,7 +719,8 @@
           "style": {
             "Colorscale (region)": "Blues",
             "Reverse Colorscale (region)": "true",
-            "Plot Width (px)": "400"
+            "Plot Width (px)": "400",
+            "Plot Title": "Wind Capacity in 2070 (MW)"
           }
         },
         {
@@ -560,7 +736,7 @@
                 },
                 "year": {
                   "filter_type": "slider",
-                  "filter_val": "2030"
+                  "filter_val": "2070"
                 }
               },
               "geojsonboundaries": "https://raw.githubusercontent.com/sinskeep/maps/refs/heads/main/ReEDS-India/india_rrs-w-Ladakh-and-DVC.geojson",
@@ -573,17 +749,14 @@
             }
           ],
           "style": {
-            "Colorscale (region)": "[[0, 'rgb(0,0,255)'], [1, 'rgb(255,0,0)']]",
-            "Plot Width (px)": "400"
+            "Colorscale (region)": "Reds",
+            "Plot Width (px)": "400",
+            "Plot Title": "Solar PV Capacity in 2070 (MW)"
           }
         },
-        {
-          "traces": [
-            {}
-          ]
-        }
+        {}
       ],
-      "title": "Resource region maps",
+      "title": "Capacity Maps: Resource Regions",
       "description": ""
     },
     {
@@ -628,8 +801,8 @@
   "globalStyleFile": "style.csv",
   "filter": {
     "year": {
-      "filter_type": "less-or-equal",
-      "filter_val": "2070"
+      "filter_type": "greater-or-equal",
+      "filter_val": "2026"
     },
     "season": {
       "filter_type": "include",
