@@ -209,16 +209,6 @@ def main(reeds_path, inputs_case):
     df_upv = reeds.io.read_file(os.path.join(inputs_case,'recf_upv.h5'), parse_timestamps=True)
     df_upv.columns = ['upv_' + col for col in df_upv]
 
-    # If DUPV is turned off, create an empty dataframe with the same index as df_upv to concat
-    if int(sw['GSw_DUPV']) == 0: 
-        df_dupv = pd.DataFrame(index=df_upv.index)
-    elif int(sw['GSw_DUPV']) == 1:
-        df_dupv = reeds.io.read_file(
-            os.path.join(inputs_case,'recf_dupv.h5'),
-            parse_timestamps=True,
-        )
-        df_dupv.columns = ['dupv_' + col for col in df_dupv]
-
     # If DistPV is turned off, create an empty dataframe with the same index as df_upv to concat
     if int(sw['GSw_distpv']) == 0: 
         df_distpv = pd.DataFrame(index=df_upv.index)
@@ -265,7 +255,7 @@ def main(reeds_path, inputs_case):
 
     ### Concat RECF data
     recf = pd.concat(
-        [df_windons, df_windofs, df_upv, df_dupv, df_distpv]
+        [df_windons, df_windofs, df_upv, df_distpv]
         + [df_pvb[pvb_type] for pvb_type in df_pvb],
         sort=False, axis=1, copy=False)
     
@@ -433,7 +423,7 @@ def main(reeds_path, inputs_case):
     resources = resources.sort_values(['resource','area'])
     recf = recf.reindex(labels=resources['resource'].drop_duplicates(), axis=1, copy=False)
 
-    ### Scale up dupv and distpv by 1/(1-distloss)
+    ### Scale up distpv by 1/(1-distloss)
     recf.loc[
         :, resources.loc[resources.tech.isin(vre_dist),'resource'].values
     ] /= (1 - distloss)

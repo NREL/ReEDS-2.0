@@ -1126,8 +1126,9 @@ def map_supplycurve(
         cmap = cmocean.cm.rain
     else:
         cmap = cm
-    ms = {'wind-ofs':1.75, 'wind-ons':2.65, 'upv':2.65}[tech]  
-    
+    ## Use 4.5 for limited access wind-ofs
+    ms = {'wind-ofs':4.1, 'wind-ons':2.65, 'upv':2.65}[tech]
+
     labels = {
         'capacity_mw': 'Available capacity [MW]',
         'spur_cost_per_kw': 'Spur-line cost [$/kW]', 
@@ -1136,6 +1137,7 @@ def map_supplycurve(
         'reinforcement_cost_per_kw': 'Reinforcement cost [$/kW]',
         'trans_cap_cost_per_kw': 'Total transmission interconnection cost [$/kW]',
         'land_cap_adder_per_kw': 'Land cost adder [$/kW]',
+        'supply_curve_cost_per_kw': 'Supply-curve cost [$/kW]',
         'multiplier_cc_regional': 'Regional multipler',
         'mean_cf': 'Capacity factor [.]',
         'dist_spur_km': 'Spur-line distance [km]',
@@ -1145,19 +1147,18 @@ def map_supplycurve(
         'lcoe_site_usd_per_mwh': 'LCOE [$/MWh]',
         'lcot_usd_per_mwh': 'LCOT [$/MWh]',
         'lcoe_all_in_usd_per_mwh': 'LCOE + LCOT [$/MWh]',
-
     }
     vmax = {
-        ## use 402 for wind with 6 MW turbines
-        'capacity_mw': {'wind-ons':400.,'wind-ofs':1100.,'upv':4000.}[tech],
+        'capacity_mw': {'wind-ons':348.,'wind-ofs':1100.,'upv':5700.}[tech],
         'spur_cost_per_kw': 2000.,
         'poi_cost_per_kw': 2000.,
         'export_cost_per_kw': 2000.,
         'reinforcement_cost_per_kw': 2000.,
         'trans_cap_cost_per_kw': 2000.,
         'land_cap_adder_per_kw': 2000.,
+        'supply_curve_cost_per_kw': 2000.,
         'multiplier_cc_regional': 1.5,
-        'mean_cf': 0.60,
+        'mean_cf': 0.55,
         'dist_spur_km': 50.,
         'dist_export_km': 200.,
         'dist_reinforcement_km': 200.,
@@ -1174,6 +1175,7 @@ def map_supplycurve(
         'reinforcement_cost_per_kw': 0.,
         'trans_cap_cost_per_kw': 0.,
         'land_cap_adder_per_kw': 0.,
+        'supply_curve_cost_per_kw': 0.,
         'multiplier_cc_regional': 0.5,
         'mean_cf': 0.,
         'dist_spur_km': 0.,
@@ -1193,6 +1195,7 @@ def map_supplycurve(
         'reinforcement_cost_per_kw': True,
         'trans_cap_cost_per_kw': True,
         'land_cap_adder_per_kw': True,
+        'supply_curve_cost_per_kw': True,
         'multiplier_cc_regional': True,
         'mean_cf': True,
         'dist_spur_km': True,
@@ -1246,6 +1249,7 @@ def map_supplycurve(
         dfplot['export_cost_per_kw'] = dfplot['cost_export_usd_per_mw'] / 1000
     dfplot['trans_cap_cost_per_kw'] = dfplot['cost_total_trans_usd_per_mw'] / 1000
     dfplot['land_cap_adder_per_kw'] = dfplot['land_cap_adder_per_mw'] / 1000
+    dfplot['supply_curve_cost_per_kw'] = dfplot['supply_curve_cost_per_mw'] / 1000
 
     #%% Plot it
     for col in labels:
@@ -1276,8 +1280,9 @@ def map_supplycurve(
             vmin=vmin[col], vmax=vmax[col],
             orientation='horizontal', labelpad=2.1, cbarbottom=-0.06,
             cbarheight=0.7, log=False,
-            ## use nbins=68 for wind with 6 MW turbines
-            nbins=101, histratio=2,
+            ## For onshore wind, align nbins with number of 6 MW turbines
+            nbins=int(vmax['capacity_mw'] // 6 + 1 if tech == 'wind-ons' else 101),
+            histratio=2,
             ticklabel_fontsize=20, title_fontsize=24,
             extend='neither',
         )

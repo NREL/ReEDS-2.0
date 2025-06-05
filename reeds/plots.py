@@ -1854,6 +1854,8 @@ def stackbar(df, ax, colors, width=1, net=True, align='center', bottom=0, x0=0, 
         dfneg = row[negcols]
         dfpos = row[poscols]
         x = index if isinstance(index, (int,float,pd.Timestamp)) else i
+        if isinstance(x, pd.Timestamp) and isinstance(x0, (int, float, str)):
+            x0 = pd.Timedelta(x0)
         ### Positive
         if len(dfpos):
             ax.bar(
@@ -1879,7 +1881,7 @@ def stackbar(df, ax, colors, width=1, net=True, align='center', bottom=0, x0=0, 
                 **netargs
             }
             ax.plot([x0+x], [row.sum()], **netargs)
-            
+
     return ax
 
 
@@ -2106,7 +2108,7 @@ def plot_region_bars(
 def map_years_months(
         dfzones, dfdata, cmap=cmocean.cm.rain, aggfunc='mean',
         colwidth=1.2, rowheight=1.0, simplify=10000, mapbuffer=1.08,
-        vmin=0., vmax=None, outline=0.25,
+        vmin=0., vmax=None, outline=0.25, labels=True,
         **colorbarkwargs,
     ):
     """Array of small maps with years as rows and months as columns.
@@ -2114,6 +2116,10 @@ def map_years_months(
     """
     import geopandas as gpd
     import shapely
+    monthlabels = dict(zip(
+        range(1,13),
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    ))
     ### Process input data
     dfyearmonth = dfdata.groupby(
         [dfdata.index.year, dfdata.index.month]
@@ -2126,13 +2132,12 @@ def map_years_months(
     _vmax = dfyearmonth.max().max() if vmax is None else vmax
     ### Process spatial data
     r_base = dfzones.copy()
+    xstep = r_base.dissolve().bounds.loc[0,['minx','maxx']].diff().dropna().squeeze() * mapbuffer
+    ystep = -r_base.dissolve().bounds.loc[0,['miny','maxy']].diff().dropna().squeeze() * mapbuffer
     r_base['geometry'] = r_base['geometry'].simplify(simplify)
 
     outline_base = dfzones.dissolve().copy()
     outline_base['geometry'] = outline_base['geometry'].buffer(0.).simplify(simplify)
-
-    xstep = r_base.dissolve().bounds.loc[0,['minx','maxx']].diff().dropna().squeeze() * mapbuffer
-    ystep = -r_base.dissolve().bounds.loc[0,['miny','maxy']].diff().dropna().squeeze() * mapbuffer
 
     ### Plot it
     plt.close()
@@ -2146,7 +2151,7 @@ def map_years_months(
                     for r in _outline.index
                 ]).values
                 _outline.plot(ax=ax, facecolor='none', edgecolor='k', lw=0.25, zorder=1e6)
-            ## Outage rate by region
+            ## Data
             dfplot = r_base.copy()
             dfplot['data'] = dfyearmonth.loc[(year,month)]
             dfplot.geometry = gpd.GeoSeries([
@@ -2154,6 +2159,18 @@ def map_years_months(
                 for r in dfplot.index
             ]).values
             dfplot.plot(ax=ax, column='data', lw=0, cmap=cmap, vmin=_vmin, vmax=_vmax)
+            ## Formatting
+            if labels:
+                if col == 0:
+                    ax.annotate(
+                        year, (-xstep*0.55, row*ystep), ha='right', va='center',
+                        fontsize=12, weight='bold',
+                    )
+                if row == 0:
+                    ax.annotate(
+                        monthlabels[month], (col*xstep, -ystep*0.45), ha='center', va='bottom',
+                        fontsize=12, weight='bold',
+                    )
     ## Colorbar
     colorbarkwargs = {
         **{

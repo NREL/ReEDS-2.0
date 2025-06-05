@@ -6,28 +6,22 @@ import matplotlib.pyplot as plt
 from matplotlib import patheffects as pe
 import os
 import sys
-import io
 import argparse
-import site
 import subprocess as sp
 import platform
 from glob import glob
 from tqdm import tqdm
 import traceback
 import cmocean
-import pptx
-from pptx.util import Inches, Pt
+from pptx.util import Inches
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
 from reeds import plots
 from reeds import reedsplots
+from reeds.results import SLIDE_HEIGHT, SLIDE_WIDTH
 from bokehpivot.defaults import DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-### Format plots and load other convenience functions
-site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-
 plots.plotparams()
 
 #%% Argument inputs
@@ -75,13 +69,13 @@ parser.add_argument(
     help="Don't wrap subplot titles")
 
 args = parser.parse_args()
-_caselist = args.caselist
-_casenames = args.casenames
+caselist = args.caselist
+casenames = args.casenames
 try:
     titleshorten = int(args.titleshorten)
 except ValueError:
     titleshorten = len(args.titleshorten)
-_basecase = args.basecase
+basecase_in = args.basecase
 startyear = args.startyear
 sharey = True if args.sharey else 'row'
 bpreport = args.bpreport
@@ -94,12 +88,12 @@ interactive = False
 
 #%% Inputs for testing
 # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# _caselist = [os.path.join(reeds_path,'postprocessing','example.csv')]
-# _casenames = ''
+# caselist = [os.path.join(reeds_path,'postprocessing','example.csv')]
+# casenames = ''
 # titleshorten = 0
 # startyear = 2020
 # sharey = 'row'
-# _basecase = ''
+# basecase_in = ''
 # skipbp = True
 # bpreport = 'standard_report_reduced'
 # interactive = True
@@ -121,8 +115,6 @@ central_health = {'cr':'ACS', 'model':'EASIUR'}
 reeds_dollaryear = 2004
 output_dollaryear = DEFAULT_DOLLAR_YEAR
 startyear_notes = DEFAULT_PV_YEAR
-SLIDE_HEIGHT = 6.88
-SLIDE_WIDTH = 13.33
 
 colors_social = {
     'CO2': plt.cm.tab20b(4),
@@ -132,7 +124,6 @@ colors_social = {
 
 techmap = {
     **{f'upv_{i}':'Utility PV' for i in range(20)},
-    **{f'dupv_{i}':'Utility PV' for i in range(20)},
     **{f'wind-ons_{i}':'Land-based wind' for i in range(20)},
     **{f'wind-ofs_{i}':'Offshore wind' for i in range(20)},
     **dict(zip(['nuclear','nuclear-smr'], ['Nuclear']*20)),
@@ -189,54 +180,6 @@ mapdiff = 'cap'
 
 
 #%%### Functions
-def add_to_pptx(
-        title=None, file=None, left=0, top=0.62, width=SLIDE_WIDTH, height=None,
-        verbose=1, slide=None,
-    ):
-    """Add current matplotlib figure (or file if specified) to new powerpoint slide"""
-    if not file:
-        image = io.BytesIO()
-        plt.savefig(image, format='png')
-    else:
-        image = file
-        if not os.path.exists(image):
-            raise FileNotFoundError(image)
-
-    if slide is None:
-        slide = prs.slides.add_slide(blank_slide_layout)
-        slide.shapes.title.text = title
-    slide.shapes.add_picture(
-        image,
-        left=(None if left is None else Inches(left)),
-        top=(None if top is None else Inches(top)),
-        width=(None if width is None else Inches(width)),
-        height=(None if height is None else Inches(height)),
-    )
-    if verbose:
-        print(title)
-    return slide
-
-
-def add_textbox(
-        text, slide,
-        left=0, top=7.2, width=SLIDE_WIDTH, height=0.3,
-        fontsize=14,
-    ):
-    """Add a textbox to the specified slide"""
-    textbox = slide.shapes.add_textbox(
-        left=(None if left is None else Inches(left)),
-        top=(None if top is None else Inches(top)),
-        width=(None if width is None else Inches(width)),
-        height=(None if height is None else Inches(height)),
-    )
-    p = textbox.text_frame.paragraphs[0]
-    run = p.add_run()
-    run.text = text
-    font = run.font
-    font.size = Pt(fontsize)
-    return slide
-
-
 def plot_bars_abs_stacked(
         dfplot, basecase, colors, ax, col=0,
         net=True, label=True, ypad=0.02, fontsize=9,
@@ -278,135 +221,16 @@ def plot_bars_abs_stacked(
 
 #%%### Procedure
 #%% Parse arguments
-use_table_casenames = False
-use_table_colors = False
-use_table_bases = False
-if len(_caselist) == 1:
-    ## If it's a .csv, read the cases to compare
-    if _caselist[0].endswith('.csv'):
-        dfcase = pd.read_csv(_caselist[0], header=None, comment='#', quoting=3)
-        ## First check it's a simple csv with one case per row
-        if dfcase.shape[1] == 1:
-            caselist = dfcase[0].tolist()
-        ## Then check if it's a csv with [casepath,casename] in the header
-        elif (
-            ('casepath' in dfcase.loc[0].tolist())
-             and ('casename' in dfcase.loc[0].tolist())
-        ):
-            dfcase = dfcase.T.set_index(0).T
-            ## Drop cases that haven't finished yet
-            unfinished = dfcase.loc[
-                ~dfcase.casepath.map(
-                    lambda x: os.path.isfile(os.path.join(x,'outputs','reeds-report','report.xlsx')))
-            ].index
-            if len(unfinished):
-                print('The following cases have not yet finished:')
-                print('\n'.join(dfcase.loc[unfinished].casepath.tolist()))
-            dfcase = dfcase.drop(unfinished).copy()
-            caselist = dfcase.casepath.tolist()
-            use_table_casenames = True
-            if 'color' in dfcase:
-                if not dfcase.color.isnull().any():
-                    use_table_colors = True
-            if 'base' in dfcase:
-                if not dfcase.base.isnull().any():
-                    use_table_bases = True
-        ## Otherwise assume it's a copy of a cases_{batchname}.csv file in a case folder
-        ## This approach is less robust; the others are preferred.
-        else:
-            prefix_plus_tail = os.path.dirname(_caselist[0])
-            tails = [i for i in dfcase.iloc[0] if i not in ['Default Value',np.nan]]
-            prefix = prefix_plus_tail[:-len([i for i in tails if prefix_plus_tail.endswith(i)][0])]
-            caselist = [prefix+i for i in tails]
-    ## Otherwise look for all runs starting with the provided string
-    else:
-        caselist = sorted(glob(_caselist[0]+'*'))
-        ## If no titleshorten is provided, use the provided prefix
-        if not titleshorten:
-            titleshorten = len(os.path.basename(_caselist))
-else:
-    caselist = _caselist
-
-## Remove cases that haven't finished yet
-caselist = [
-    i for i in caselist
-    if os.path.isfile(os.path.join(i,'outputs','reeds-report','report.xlsx'))
-]
-
-## Get the casenames
-if use_table_casenames:
-    casenames = [c.replace('\\n','\n') for c in dfcase.casename.tolist()]
-else:
-    casenames = (
-        _casenames.split(',') if len(_casenames)
-        else [os.path.basename(c)[titleshorten:] for c in caselist]
-    )
-
-if len(caselist) != len(casenames):
-    err = (
-        f"len(caselist) = {len(caselist)} but len(casenames) = {len(casenames)}\n\n"
-        'caselist:\n' + '\n'.join(caselist) + '\n\n'
-        'casenames:\n' + '\n'.join(casenames) + '\n'
-    )
-    raise ValueError(err)
-
-cases = dict(zip(casenames, caselist))
+cases, colors, basecase, basemap = reeds.results.parse_caselist(
+    caselist,
+    casenames,
+    basecase_in,
+    titleshorten,
+)
 maxlength = max([len(c) for c in cases])
-
-# check to ensure there are at least two cases
-if len(cases) <= 1: 
-    err = f"There are less than two cases being compared: {', '.join(cases.values())}"
-    raise ValueError(err)
-
-### Get the base cases
-if not len(_basecase):
-    basecase = list(cases.keys())[0]
-else:
-    basepath = [c for c in cases.values() if c.endswith(_basecase)]
-    if len(basepath) == 0:
-        err = (
-            f"Use a basecase that matches one case.\nbasecase={_basecase} matches none of:\n"
-            + '\n'.join(basepath)
-        )
-        raise ValueError(err)
-    elif len(basepath) > 1:
-        err = (
-            f"Use a basecase that only matches one case.\nbasecase={_basecase} matches:\n"
-            + '\n'.join(basepath)
-        )
-        raise ValueError(err)
-    else:
-        basepath = basepath[0]
-        ## basecase is the short name; basepath is the full path
-        basecase = casenames[caselist.index(basepath)]
-        ## Put it first in the list
-        cases = {**{basecase:cases[basecase]}, **{k:v for k,v in cases.items() if k != basecase}}
-
-## Make case->base dictionary
-if use_table_bases:
-    basemap = dfcase.set_index('casename').base.to_dict()
-else:
-    basemap = dict(zip(cases, [basecase]*len(cases)))
-
-## Get the colors
-if use_table_colors:
-    colors = dict(zip(dfcase.casename, dfcase.color))
-    for k, v in colors.items():
-        if v.startswith('plt.cm.') or v.startswith('cmocean.cm.'):
-            colors[k] = eval(v)
-else:
-    colors = plots.rainbowmapper(cases)
 
 ## Arrange the maps
 nrows, ncols, coords = plots.get_coordinates(cases, aspect=2)
-
-## Take a look
-print('Analyzing the following cases:')
-for case, path in cases.items():
-    print(
-        f'{path} -> {case}'
-        + (' (base)' if ((not use_table_bases) and (case == basecase)) else '')
-    )
 
 #%% Create output folder
 firstcasepath = list(cases.values())[0]
@@ -433,8 +257,8 @@ if not skipbp:
     auto_open = 'Yes'
     bp_colors = pd.read_csv(f'{bp_path}/reeds_scenarios.csv')['color'].tolist()
     bp_colors = bp_colors*10 #Up to 200 scenarios
-    bp_colors = bp_colors[:len(casenames)]
-    df_scenarios = pd.DataFrame({'name':casenames, 'color':bp_colors, 'path':caselist})
+    bp_colors = bp_colors[:len(cases.keys())]
+    df_scenarios = pd.DataFrame({'name':cases.keys(), 'color':bp_colors, 'path':cases.values()})
     scenarios_path = f'{outpath}/scenarios.csv'
     df_scenarios.to_csv(scenarios_path, index=False)
     call_str = (
@@ -445,8 +269,8 @@ if not skipbp:
 
 #%%### Load data
 #%% Shared
-sw = reeds.io.get_switches(cases[case])
-scalars = reeds.io.get_scalars(cases[case])
+sw = reeds.io.get_switches(cases[basecase])
+scalars = reeds.io.get_scalars(cases[basecase])
 phaseout_trigger = float(scalars.co2_emissions_2022) * float(sw.GSw_TCPhaseout_trigger_f)
 
 inflatable = reeds.io.get_inflatable(os.path.join(
@@ -605,8 +429,17 @@ dictin_emissions = {}
 for case in tqdm(cases, desc='national emissions'):
     dictin_emissions[case] = (
         reeds.io.read_output(cases[case], 'emit_nat', valname='ton')
-        .set_index(['e','t']).squeeze(1).unstack('e')
     )
+    if int(dictin_sw[case].get('GSw_Precombustion', 1)):
+        dictin_emissions[case] = dictin_emissions[case].groupby(['e','t']).ton.sum().unstack('e')
+    else:
+        dictin_emissions[case] = (
+            dictin_emissions[case]
+            .set_index(['etype','e','t'])
+            .loc['combustion']
+            .groupby(['e','t']).ton.sum()
+            .unstack('e')
+        )
 
 dictin_trans = {}
 for case in tqdm(cases, desc='national transmission'):
@@ -806,8 +639,7 @@ if detailed:
 
 #%%### Plots ######
 ### Set up powerpoint file
-prs = pptx.Presentation(os.path.join(reeds_path,'postprocessing','template.pptx'))
-blank_slide_layout = prs.slide_layouts[3]
+prs = reeds.results.init_pptx()
 
 
 #%%### System cost error
@@ -855,7 +687,7 @@ plots.despine(ax)
 
 ### Save it
 title = 'Error check'
-slide = add_to_pptx(title, width=None, height=SLIDE_HEIGHT)
+slide = reeds.results.add_to_pptx(title, prs=prs, width=None, height=SLIDE_HEIGHT)
 if interactive:
     plt.show()
 
@@ -866,7 +698,7 @@ aggtechsplot = {
     'Land-based\nwind': ['wind-ons'],
     'Offshore\nwind': ['wind-ofs'],
     # 'Wind': ['wind-ons', 'wind-ofs'],
-    'Solar': ['upv', 'dupv', 'distpv', 'csp', 'pvb'],
+    'Solar': ['upv', 'distpv', 'csp', 'pvb'],
     'Battery': ['battery_{}'.format(i) for i in [2,4,6,8,10]],
     'Pumped\nstorage\nhydro': ['pumped-hydro'],
     # 'Storage': ['battery_{}'.format(i) for i in [2,4,6,8,10]] + ['pumped-hydro'],
@@ -983,8 +815,8 @@ plots.despine(ax)
 plt.draw()
 plots.shorten_years(ax[1,0])
 ### Save it
-slide = add_to_pptx('Capacity')
-add_textbox(printstring, slide)
+slide = reeds.results.add_to_pptx('Capacity', prs=prs)
+reeds.results.add_textbox(printstring, slide)
 if interactive:
     print(printstring)
     plt.show()
@@ -1004,7 +836,7 @@ if (len(cases) == 2) and (not forcemulti):
                 yearmin=(2025 if 'NEUE' in val else startyear), yearmax=lastyear,
                 # plot_kwds={'figsize':(4,4), 'gridspec_kw':{'wspace':0.7}},
             )
-            slide = add_to_pptx(val, verbose=0)
+            slide = reeds.results.add_to_pptx(val, prs=prs, verbose=0)
             textbox = slide.shapes.add_textbox(
                 left=Inches(0), top=Inches(7),
                 width=Inches(SLIDE_WIDTH), height=Inches(0.5))
@@ -1110,7 +942,8 @@ else:
         plt.draw()
         plots.shorten_years(ax[1,0])
         ### Save it
-        slide = add_to_pptx(slidetitle+' stack', width=min(figwidth, SLIDE_WIDTH))
+        slide = reeds.results.add_to_pptx(
+            slidetitle+' stack', prs=prs, width=min(figwidth, SLIDE_WIDTH))
         if interactive:
             plt.show()
 
@@ -1143,7 +976,7 @@ aggstack = {
         'geothermal':'Geothermal',
 
         'csp':'CSP',
-        'upv':'PV', 'dupv':'PV', 'distpv':'PV',
+        'upv':'PV', 'distpv':'PV',
         'pvb':'PVB',
 
         'wind-ofs':'Offshore wind',
@@ -1268,7 +1101,7 @@ if len(cases) <= 4:
     plots.despine(ax)
     plt.draw()
     ### Save it
-    slide = add_to_pptx('Capacity stacks', width=width)
+    slide = reeds.results.add_to_pptx('Capacity stacks', prs=prs, width=width)
     if interactive:
         plt.show()
 
@@ -1359,7 +1192,8 @@ plt.tight_layout()
 plots.despine(ax)
 plt.draw()
 ### Save it
-slide = add_to_pptx('Capacity, generation, transmission, runtime', width=width)
+slide = reeds.results.add_to_pptx(
+    'Capacity, generation, transmission, runtime', prs=prs, width=width)
 if interactive:
     plt.show()
 
@@ -1373,7 +1207,7 @@ for col, datum in enumerate(handles):
         handletextpad=0.3, handlelength=0.7, columnspacing=0.5, 
     )
     ax[col].axis('off')
-add_to_pptx(slide=slide, width=width, top=7.5)
+reeds.results.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
 
 
 #%% Costs: NPV of system cost, NPV of climate + health costs
@@ -1450,7 +1284,7 @@ plt.tight_layout()
 plots.despine(ax)
 plt.draw()
 ### Save it
-slide = add_to_pptx('NPV of system, climate, health costs', width=width)
+slide = reeds.results.add_to_pptx('NPV of system, climate, health costs', width=width)
 if interactive:
     plt.show()
 
@@ -1465,7 +1299,7 @@ for col, datum in enumerate(handles):
     )
 for col in range(4):
     ax[col].axis('off')
-add_to_pptx(slide=slide, width=width, top=7.5)
+reeds.results.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
 
 
 #%% Simplifed NPV
@@ -1550,7 +1384,8 @@ plt.tight_layout()
 plots.despine(ax)
 
 ### Save it
-slide = add_to_pptx('NPV of system, climate, health costs', width=min(width, SLIDE_WIDTH))
+slide = reeds.results.add_to_pptx(
+    'NPV of system, climate, health costs', prs=prs, width=min(width, SLIDE_WIDTH))
 if interactive:
     plt.show()
 
@@ -1654,7 +1489,7 @@ for col in [0,1] + ([2] if len(dictin_neue) else []):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = add_to_pptx('Cost, reliability', width=width)
+slide = reeds.results.add_to_pptx('Cost, reliability', prs=prs, width=width)
 if interactive:
     plt.show()
 
@@ -1738,7 +1573,7 @@ for col in range(4):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = add_to_pptx('Emissions', width=width)
+slide = reeds.results.add_to_pptx('Emissions', prs=prs, width=width)
 if interactive:
     plt.show()
 
@@ -1825,7 +1660,7 @@ for col in range(len(dfplot)):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = add_to_pptx('Generation share')
+slide = reeds.results.add_to_pptx('Generation share', prs=prs)
 if interactive:
     plt.show()
 
@@ -1923,7 +1758,7 @@ if len(capcreditcases):
         plots.shorten_years(ax[1,col])
 
     ### Save it
-    slide = add_to_pptx('Firm capacity, capacity credit')
+    slide = reeds.results.add_to_pptx('Firm capacity, capacity credit', prs=prs)
     if interactive:
         plt.show()
 
@@ -2061,8 +1896,10 @@ for interzonal_only in [False, True]:
         ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
         plots.shorten_years(ax[col])
     ### Save it
-    slide = add_to_pptx(
-        'Interzonal transmission' if interzonal_only else 'Transmission (all types)')
+    slide = reeds.results.add_to_pptx(
+        'Interzonal transmission' if interzonal_only else 'Transmission (all types)',
+        prs=prs,
+    )
     if interactive:
         plt.show()
 
@@ -2153,7 +1990,7 @@ for col in [0,1,2,3]:
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = add_to_pptx('Transmission at different resolutions')
+slide = reeds.results.add_to_pptx('Transmission at different resolutions', prs=prs)
 if interactive:
     plt.show()
 
@@ -2168,8 +2005,9 @@ try:
         ymax=None,
     )
     ### Save it
-    slide = add_to_pptx(
+    slide = reeds.results.add_to_pptx(
         'Interregional transmission / peak demand',
+        prs=prs,
         height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
         width=(SLIDE_WIDTH if ax.shape[1] > 8 else None),
     )
@@ -2189,8 +2027,9 @@ try:
         level='nercr', tstart=startyear,
     )
     ### Save it
-    slide = add_to_pptx(
+    slide = reeds.results.add_to_pptx(
         'Max net stress imports / peak demand',
+        prs=prs,
         height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
         width=(SLIDE_WIDTH if ax.shape[1] > 8 else None),
     )
@@ -2215,7 +2054,7 @@ if (len(cases) == 2) and (not forcemulti):
         alpha=1, dpi=150,
         titleshorten=titleshorten,
     )
-    add_to_pptx(f'Transmission ({lastyear})')
+    reeds.results.add_to_pptx(f'Transmission ({lastyear})', prs=prs)
     if interactive:
         plt.show()
 else:
@@ -2254,7 +2093,7 @@ else:
                 else:
                     ax[row,col].axis('off')
         ### Save it
-        slide = add_to_pptx(title)
+        slide = reeds.results.add_to_pptx(title, prs=prs)
         if interactive:
             plt.show()
 
@@ -2303,7 +2142,7 @@ else:
             else:
                 ax[row,col].axis('off')
     ### Save it
-    slide = add_to_pptx(title)
+    slide = reeds.results.add_to_pptx(title, prs=prs)
     if interactive:
         plt.show()
 
@@ -2481,7 +2320,7 @@ if detailed:
 
         ### Save it
         title = f'{ralevel} {label} RA flows'
-        slide = add_to_pptx(title)
+        slide = reeds.results.add_to_pptx(title, prs=prs)
         if interactive:
             plt.show()
 
@@ -2511,8 +2350,9 @@ for figname, width, height in [
 ]:
     for case in cases:
         try:
-            slide = add_to_pptx(
+            slide = reeds.results.add_to_pptx(
                 case,
+                prs=prs,
                 file=os.path.join(cases[case], 'outputs', 'maps', f'{figname}.png'),
                 width=width, height=height,
             )
@@ -2566,7 +2406,7 @@ if (len(cases) == 2) and (not forcemulti):
                 casebase_name),
             (0.1,1), xycoords='axes fraction', fontsize=10)
 
-        add_to_pptx(f'{i_plot} capacity {lastyear} [GW]')
+        reeds.results.add_to_pptx(f'{i_plot} capacity {lastyear} [GW]', prs=prs)
         if interactive:
             plt.show()
 else:
@@ -2642,7 +2482,7 @@ else:
                 else:
                     ax[row,col].axis('off')
         ### Save it
-        slide = add_to_pptx(f'{tech} capacity {lastyear} [GW]')
+        slide = reeds.results.add_to_pptx(f'{tech} capacity {lastyear} [GW]', prs=prs)
         if interactive:
             plt.show()
 
@@ -2725,7 +2565,7 @@ else:
                 else:
                     ax[row,col].axis('off')
         ### Save it
-        slide = add_to_pptx(f'Difference: {tech} capacity {lastyear} [GW]')
+        slide = reeds.results.add_to_pptx(f'Difference: {tech} capacity {lastyear} [GW]', prs=prs)
         if interactive:
             plt.show()
 

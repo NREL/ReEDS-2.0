@@ -39,7 +39,8 @@ cap_exist(i,v,r)                   "--MW-- capacity that exists in the current s
 cap_exog_filt(i,v,r)               "--MW-- exogenous capacity"
 cap_hyd_szn_adj_filt(i,allszn,r)   "--fraction-- seasonal hydro capacity adjustment filtered for the previous solve year"
 cap_init(i,v,r)                    "--MW-- initial capacity"
-cap_ivrt(i,v,r,t)                  "--MW-- generation capacity"
+cap_ivrt(i,v,r,t)                  "--MW-- generation power capacity"
+cap_energy_ivrt(i,v,r,t)           "--MWh-- generation energy capacity"
 cap_pvb(i,v,r)                     "--MW-- Hybrid PV+battery capacity (PV)"
 cap_trans_energy(r,rr,trtype)      "--MW-- transmission capacity for energy trading"
 cap_trans_prm(r,rr,trtype)         "--MW-- transmission capacity for PRM trading"
@@ -58,7 +59,8 @@ fuel_price_filt(i,r)               "--$/mmBTU-- fuel prices filtered for the pre
 heat_rate_filt(i,v,r)              "--MMBtu/MWh-- heat rate"
 h2_usage_regional(r,allh,t)        "--metric tons-- H2 usage by region"
 inv_cond_filt(i,v,t)               "--set-- vintage-year mapping for investments by technology"
-inv_ivrt(i,v,r,t)                  "--MW-- investments in generation capacity"
+inv_ivrt(i,v,r,t)                  "--MW-- investments in power generation capacity"
+inv_energy_ivrt(i,v,r,t)           "--MWh-- investments in energy generation capacity"
 m_cf_filt(i,v,r,allh)              "--fraction-- capacity factor used in the model"
 m_cf_szn_filt(i,v,r,allszn)        "--fraction-- modelled capacity factors filtered for hydro resources to set seasonal energy constraints"
 minloadfrac_filt(r,i,allszn)       "--fraction-- modelled mingen fraction filtered for hydro resources to set mingen constraints"
@@ -120,14 +122,16 @@ cap_exist_ir(i,r)$valcap_ir_filt(i,r) = sum{v, cap_exist(i,v,r) } ;
 cap_exist_iv(i,v)$valcap_iv_filt(i,v) = sum{r, cap_exist(i,v,r) } ;
 cap_exist_i(i)$valcap_i_filt(i) = sum{(r,v), cap_exist(i,v,r) } ;
 
-cap_ivrt(i,v,r,t)$([not (upv(i) or dupv(i) or wind(i))]$valcap(i,v,r,t)$trange(t)) = CAP.l(i,v,r,t) ;
-cap_ivrt(i,v,r,t)$([upv(i) or dupv(i) or wind(i)]$valcap(i,v,r,t)) =
+cap_ivrt(i,v,r,t)$([not (upv(i) or wind(i))]$valcap(i,v,r,t)$trange(t)) = CAP.l(i,v,r,t) ;
+cap_energy_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)$continuous_battery(i)] = CAP_ENERGY.l(i,v,r,t) ;
+cap_ivrt(i,v,r,t)$([upv(i) or wind(i)]$valcap(i,v,r,t)) =
     m_capacity_exog(i,v,r,t)$trange(t)
     + sum{tt$[inv_cond(i,v,r,t,tt)$trange(tt)],
           INV.l(i,v,r,tt) + INV_REFURB.l(i,v,r,tt)$[refurbtech(i)$Sw_Refurb]} ;
 cap_init(i,v,r)$([not distpv(i)]$valcap_ivr(i,v,r)) = sum{t$tcur(t), cap_ivrt(i,v,r,t)$initv(v) } ;
 cap_init(i,v,r)$(distpv(i)$valcap_ivr(i,v,r)) = sum{t$tfirst(t), cap_ivrt(i,v,r,t) } ;
 inv_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)] = [INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)]$valinv(i,v,r,t) + UPGRADES.l(i,v,r,t)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades] ;
+inv_energy_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)$continuous_battery(i)] = INV_ENERGY.l(i,v,r,t);
 inv_ivrt("distpv",v,r,t)$([trange(t)$(not tfirst(t))]$valcap("distpv",v,r,t)) = cap_ivrt("distpv",v,r,t) - sum{tt$tprev(t,tt), cap_ivrt("distpv",v,r,tt) } ;
 inv_ivrt("distpv","init-1",r,"%next_year%") = inv_distpv(r,"%next_year%") ;
 
@@ -245,7 +249,7 @@ ctt_i_ii_filt(i,ii) = ctt_i_ii(i,ii)$cap_exist_i(i) ;
 
 ctt_i_ii_psh(i,ii) = ctt_i_ii(i,ii)$[valcap_i_filt(i)$psh(i)] ;
 
-emit_rate_filt(e,i,v,r)$cap_exist(i,v,r) = sum{t$tcur(t), emit_rate(e,i,v,r,t) } ;
+emit_rate_filt(e,i,v,r)$cap_exist(i,v,r) = sum{(t,etype)$tcur(t), emit_rate(etype,e,i,v,r,t) } ;
 
 heat_rate_filt(i,v,r)$cap_exist(i,v,r) = sum{t$tcur(t), heat_rate(i,v,r,t) } ;
 
@@ -339,6 +343,7 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     cap_hyd_szn_adj_filt
     cap_init
     cap_ivrt
+    cap_energy_ivrt
     cap_trans_energy
     cap_trans_prm
     cf_adj_t_filt
@@ -378,6 +383,7 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     i_subsets
     inv_cond_filt
     inv_ivrt
+    inv_energy_ivrt
     ivt_num
     m_cf_filt
     m_cf_szn_filt

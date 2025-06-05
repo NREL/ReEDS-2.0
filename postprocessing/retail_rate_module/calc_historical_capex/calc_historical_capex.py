@@ -253,7 +253,6 @@ init_cap['i'] = np.where(init_cap['i']=='gas-CT',    'Gas-CT',    init_cap['i'])
 init_cap['i'] = np.where(init_cap['i']=='gas-CC',    'Gas-CC',    init_cap['i'])
 init_cap['i'] = np.where(init_cap['i']=='nuclear',   'Nuclear',   init_cap['i'])
 init_cap['i'] = np.where(init_cap['i']=='UPV',       'upv_1',     init_cap['i'])
-init_cap['i'] = np.where(init_cap['i']=='DUPV',      'dupv_1',    init_cap['i'])
 init_cap['i'] = np.where(init_cap['i']=='coal-IGCC', 'Coal-IGCC', init_cap['i'])
 
 # These are just labelled as generic 'hydro', so assigning them a middle-cost hydro tech

@@ -4,8 +4,8 @@
 * Adapted from input_processing/R/writesupplycurves.R
 * All supply curves are organized by BA
 
-This script gathers supply curve data for on/offshore wind, upv, dupv, csp, hydro, and
-psh into a single inputs_case file, rsc_combined.csv.
+This script gathers supply curve data for on/offshore wind, upv, csp, hydro, and
+psh into a single inputs_case file, rsc_combined.csv. 
 
 This script contains additional procedures for gathering geothermal supply curve data
 and EV managed charging supply curve data, and spurline supply curve data
@@ -817,26 +817,10 @@ def main(
     ).round(3)
 
     # %%###################################
-    #    -- DUPV Supply Curve Data --    #
+    #    -- Supply Curve Data --    #
     ######################################
 
-    # Using 2018 version for everything else
-    dupvcost = pd.read_csv(os.path.join(inputs_case, "dupv_supply_curves_cost.csv"))
-    dupvcap = pd.read_csv(os.path.join(inputs_case, "dupv_supply_curves_capacity.csv"))
-    # If DUPV is turned off, then zero out the cost and capacity data
-    if int(sw["GSw_DUPV"]) == 0:
-        print("DUPV turned off")
-        dupvcost = pd.DataFrame(columns=dupvcost.columns)
-        dupvcap = pd.DataFrame(columns=dupvcap.columns)
-
-    # Convert dollar years
-    dupvcost[dupvcost.select_dtypes(include=["number"]).columns] *= deflate[
-        "DUPV_supply_curves_cost_2018"
-    ]
-
     # %% Reformat the supply curve dataframes
-    ### Non-wind bins
-    bins = list(range(1, numbins_other + 1))
     ### Wind bins (flexible)
     bins_wind = list(range(1, max(numbins["wind-ons"], numbins["wind-ofs"]) + 1))
     ### UPV bins (flexible)
@@ -847,10 +831,6 @@ def main(
     ### NOTE: wind capacity and costs also differentiate between 'class' and 'tech'
     rcolnames = {"region": "r", "type": "tech"}
 
-    dupvcap.rename(
-        columns={**{"dupvsc{}".format(i): "bin{}".format(i) for i in bins}},
-        inplace=True,
-    )
     upvcap.rename(
         columns={
             **rcolnames,
@@ -873,10 +853,6 @@ def main(
         inplace=True,
     )
 
-    dupvcost.rename(
-        columns={**{"dupvsc{}".format(i): "bin{}".format(i) for i in bins}},
-        inplace=True,
-    )
     upvcost.rename(
         columns={
             **rcolnames,
@@ -899,15 +875,13 @@ def main(
         inplace=True,
     )
 
-    dupvcap["tech"] = "dupv"
     upvcap["tech"] = "upv"
 
-    dupvcost["tech"] = "dupv"
     upvcost["tech"] = "upv"
 
     # %% Combine the supply curves
-    alloutcap_list = [windcap, cspcap, upvcap, dupvcap]
-    alloutcost_list = [windcost, cspcost, upvcost, dupvcost]
+    alloutcap_list = [windcap, cspcap, upvcap]
+    alloutcost_list = [windcost, cspcost, upvcost]
 
     if use_geohydro_rev_sc or use_egs_rev_sc:
         alloutcap_list.append(geocap)
@@ -942,12 +916,11 @@ def main(
     wndofst2 = t2.loc[t2.tech == "wind-ofs"].copy()
     cspt2 = t2.loc[t2.tech.isin(["csp{}".format(i) for i in range(1, csp_configs + 1)])]
     upvt2 = t2.loc[t2.tech == "upv"].copy()
-    dupvt2 = t2.loc[t2.tech == "dupv"].copy()
     geohydrot2 = t2.loc[t2.tech == "geohydro_allkm"].copy()
     egst2 = t2.loc[t2.tech == "egs_allkm"].copy()
 
     ### Get the combined outputs
-    outcap = pd.concat([wndonst2, wndofst2, upvt2, dupvt2, cspt2, geohydrot2, egst2])
+    outcap = pd.concat([wndonst2, wndofst2, upvt2, cspt2, geohydrot2, egst2])
 
     moutcap = pd.melt(outcap, id_vars=["r", "tech", "var"])
     moutcap = moutcap.loc[~moutcap.variable.isin(["exist", "temp"])].copy()
@@ -1099,6 +1072,7 @@ def main(
 
     ### Stack the final versions
     alloutm = pd.melt(allout, id_vars=["r", "tech", "var"])
+    alloutm.rename(columns={"bin":"variable"}, inplace=True)
     alloutm = alloutm.loc[alloutm.variable != "class"].copy()
     alloutm = pd.concat([alloutm, hyddat, psh_out])
 

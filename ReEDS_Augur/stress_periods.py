@@ -307,6 +307,13 @@ def main(sw, t, iteration=0):
                 ## overall, use .nlargest(int(sw.GSw_PRM_StressIncrement), stress_metric)
                 .groupby('r').head(int(sw.GSw_PRM_StressIncrement))
             )
+            for period, row in high_eue_periods[criterion, f'high_{stress_metric}'].iterrows():
+                print(
+                    f"Added {period} "
+                    f"({reeds.timeseries.h2timestamp(period).strftime('%Y-%m-%d')}) "
+                    f"as stress period for {row.r} "
+                    f"({stress_metric} = {row[stress_metric]})"
+                )
 
             ###### Include "shoulder periods" before or after each period if the storage
             ###### state of charge is low.
@@ -424,7 +431,7 @@ def main(sw, t, iteration=0):
             sw=sw, reeds_path=sw['reeds_path'],
             inputs_case=os.path.join(sw['casedir'], 'inputs_case'),
             periodtype=newstresspath,
-            make_plots=0, figpathtail='',
+            make_plots=0,
         )
         ### Write a few tables for debugging
         eue_sorted_periods.round(2).rename(columns={'EUE':'EUE_MWh','NEUE':'NEUE_ppm'}).to_csv(

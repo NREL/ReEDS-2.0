@@ -382,6 +382,30 @@ cost_hurdle_rate = {
 for i in hurdle_levels:
     cost_hurdle_rate[i].to_csv(os.path.join(inputs_case, f'cost_hurdle_rate{i}.csv'))
 
+#%%#########################
+# -- pipeline_cost_mult --  #
+############################
+# Calculate H2 pipeline cost multipliers by dividing the cost of AC transmission
+# between each pair of regions by the minimum base cost of AC transmission
+ac_transcost_base_single = rev_transcost_base.loc['AC'].min()
+ac_transcost = (
+    tline_data.loc[tline_data.index.get_level_values('trtype') == 'AC']
+    .copy()
+    .reset_index()
+)
+pipeline_cost_mult = (
+    ac_transcost.assign(
+        multiplier=lambda x: x['USD2004perMW'] / x['miles'] / ac_transcost_base_single
+    )
+    [['r','rr','multiplier']]
+    .rename(columns={'r':'*r'})
+    .round(3)
+)
+pipeline_cost_mult.to_csv(
+    os.path.join(inputs_case, 'pipeline_cost_mult.csv'),
+    index=False
+)
+
 #%%#####################################################################
 #    -- Create the inputs for the VSC DC macrogrid, if necessary --    #
 ########################################################################

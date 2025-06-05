@@ -53,7 +53,6 @@ GSw_DAC_Gas,0
 GSw_DAC_Gas_Case,BVRE_2021_mid
 GSw_DR,0
 GSw_DRReserves,0
-GSw_DUPV,0
 GSw_EFS1_AllYearLoad,EER_100by2050
 GSw_EFS2_FlexCase,EPMEDIUM_EnhancedflexStretch2046
 GSw_EFS_Flex,0
@@ -125,7 +124,7 @@ GSw_LoadAdjust_Adoption,commercial__residential
 GSw_LoadAdjust_Profiles,commercial__residential
 GSw_Loadpoint,0
 GSw_MaxCaptureCCSTechs,0
-GSw_MethaneGWP,34
+GSw_Precombustion,0
 GSw_MethaneLeakageScen,Alvarez2018_30by2030
 GSw_MinCF,1
 GSw_MinLoadTechs,4
@@ -145,7 +144,6 @@ GSw_NukeNoRetireYear,2032
 GSw_NukeStateBan,1
 GSw_NukeStateBanCostMult,1.5
 GSw_NumCSPclasses,12
-GSw_NumDUPVclasses,7
 GSw_NumGeoclasses,9
 GSw_OfsWind,1
 GSw_OfsWindForceScen,default
@@ -253,8 +251,8 @@ GSw_calc_powfrac,0
 GSw_distpv,1
 GSw_gopt,1
 GSw_hydED,1
-batteryscen,battery_ATB_2024_moderate
-beccsscen,beccs_reference
+plantchar_battery,battery_ATB_2024_moderate
+plantchar_beccs,beccs_reference
 calc_csp_cc,0
 capcredit_hierarchy_level,transreg
 ccs_upgrade_cost_case,atb22_1p2_moderate
@@ -265,8 +263,13 @@ coalretireyrs,10
 coalscen,AEO_2023_reference
 construction_schedules_suffix,default
 construction_times_suffix,default
-convscen,conv_ATB_2024
-cspscen,csp_ATB_2024_moderate
+plantchar_gas,gas_ATB_2024
+plantchar_coal,coal_ATB_2024
+plantchar_biopower,biopower_ATB_2024_moderate
+plantchar_other,other_plantchar
+plantchar_nuclear,nuclear_ATB_2024_moderate
+plantchar_nuclear_smr,nuclear-smr_ATB_2024_moderate
+plantchar_csp,csp_ATB_2024_moderate
 dacscen,BVRE_2021_mid
 debug,0
 degrade_suffix,default
@@ -286,11 +289,11 @@ financials_tech_suffix,ATB2023
 financials_trans_suffix,default
 geodiscov,BAU
 geohydrosupplycurve,reV
-geoscen,geo_ATB_2023_moderate
+plantchar_geo,geo_ATB_2023_moderate
 h2ctfuelscen,reference
-h2ctscen,h2-ct_ATB_2023
+plantchar_h2ct,h2-ct_ATB_2023
 hourly_cluster_plots,1
-hydroscen,hydro_ATB_2019_mid
+plantchar_hydro,hydro_ATB_2019_mid
 ignore,0
 incentives_suffix,ira
 inflation_suffix,default
@@ -311,8 +314,8 @@ numbins_upv,10
 numbins_windofs,5
 numbins_windons,10
 numhintage,6
-ofswindscen,ofs-wind_ATB_2024_moderate
-onswindscen,ons-wind_ATB_2024_moderate
+plantchar_ofswind,ofs-wind_ATB_2024_moderate
+plantchar_onswind,ons-wind_ATB_2024_moderate
 plot_ba_level,0
 pras,2
 pras_include_h2dac,0
@@ -332,7 +335,7 @@ timetype,seq
 transmission_maps,2050
 unitdata,EIA-NEMS
 upgradescen,default
-upvscen,upv_ATB_2024_moderate
+plantchar_upv,upv_ATB_2024_moderate
 uraniumscen,AEO_2023_reference
 windows_suffix,default
 yearset_suffix,5yr

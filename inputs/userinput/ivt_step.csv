@@ -10,6 +10,7 @@ battery_24,0
 battery_48,0
 battery_72,0
 battery_100,0
+battery_li,0
 biopower,5
 beccs_mod,5
 beccs_max,5
@@ -47,7 +48,6 @@ o-g-s,5
 pumped-hydro,1
 pumped-hydro-flex,1
 upv_1*upv_10,1
-dupv_1*dupv_10,1
 pvb1_1 * pvb1_10,1
 pvb2_1 * pvb2_10,1
 pvb3_1 * pvb3_10,1

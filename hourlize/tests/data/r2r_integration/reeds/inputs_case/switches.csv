@@ -4,7 +4,6 @@ GSw_45Q,1
 GSw_AVG_iter,1
 GSw_AggregateRegions,0
 GSw_AnnualCap,0
-GSw_AnnualCapCO2e,0
 GSw_AnnualCapScen,default
 GSw_AugurCurtailment,0
 GSw_BECCS,0
@@ -50,7 +49,6 @@ GSw_CurtMarket,0
 GSw_DAC,0
 GSw_DAC_Gas,0
 GSw_DAC_Gas_Case,BVRE_2021_mid
-GSw_DUPV,1
 GSw_EFS1_AllYearLoad,EPMEDIUMStretch2046
 GSw_EFS2_FlexCase,EPMEDIUM_EnhancedflexStretch2046
 GSw_EFS_Flex,0
@@ -111,7 +109,6 @@ GSw_LfillGas,1
 GSw_LoadDemand,0
 GSw_Loadpoint,0
 GSw_MaxCaptureCCSTechs,0
-GSw_MethaneGWP,34
 GSw_MethaneLeakageScen,Alvarez2018_30by2030
 GSw_MinCF,1
 GSw_MinLoadTechs,4
@@ -129,7 +126,6 @@ GSw_NukeNoRetireYear,2032
 GSw_NukeStateBan,1
 GSw_NukeStateBanCostMult,1.5
 GSw_NumCSPclasses,12
-GSw_NumDUPVclasses,7
 GSw_OfsWind,1
 GSw_OfsWindForceScen,default
 GSw_OnsWind6to10,1
@@ -212,8 +208,8 @@ GSw_WindRelLim,25
 GSw_calc_powfrac,0
 GSw_gopt,1
 GSw_hydED,1
-batteryscen,battery_ATB_2022_moderate
-beccsscen,beccs_reference
+plantchar_battery,battery_ATB_2022_moderate
+plantchar_beccs,beccs_reference
 calc_csp_cc,0
 capcredit_hierarchy_level,transreg
 capcredit_szn_hours,1
@@ -225,8 +221,15 @@ coalretireyrs,10
 coalscen,AEO_2022_reference
 construction_schedules_suffix,default
 construction_times_suffix,default
-convscen,conv_ATB_2022
-cspscen,csp_ATB_2022_moderate
+plantchar_gas,gas_ATB_2024_moderate
+plantchar_gas_ccs,gas-ccs_ATB_2024_moderate
+plantchar_coal,coal_ATB_2024_moderate
+plantchar_coal_ccs,coal-ccs_ATB_2024_moderate
+plantchar_biopower,biopower_ATB_2024_moderate
+plantchar_other,other_plantchar
+plantchar_nuclear,nuclear_ATB_2024_moderate
+plantchar_nuclear_smr,nuclear-smr_ATB_2024_moderate
+plantchar_csp,csp_ATB_2022_moderate
 dacscen,BVRE_2021_mid
 degrade_suffix,default
 delete_big_files,0
@@ -243,10 +246,10 @@ financials_sys_suffix,ATB2022
 financials_tech_suffix,ATB2022
 financials_trans_suffix,default
 geodiscov,BAU
-geoscen,geo_ATB_2022_moderate
+plantchar_geo,geo_ATB_2022_moderate
 geosupplycurve,ATB_2022
 hourly_cluster_plots,1
-hydroscen,hydro_ATB_2019_mid
+plantchar_hydro,hydro_ATB_2019_mid
 ignore,0
 incentives_suffix,ira
 inflation_suffix,default
@@ -263,8 +266,8 @@ numbins_upv,20
 numbins_windofs,5
 numbins_windons,5
 numhintage,6
-ofswindscen,ofs-wind_ATB_2022_moderate
-onswindscen,ons-wind_ATB_2022_moderate
+plantchar_ofswind,ofs-wind_ATB_2022_moderate
+plantchar_onswind,ons-wind_ATB_2022_moderate
 osprey_load_year,prev
 osprey_prm,1
 osprey_years,2012
@@ -274,6 +277,7 @@ rectfuelscen,reference
 rectscen,re-ct_ATB_2022
 reeds_to_rev,1
 reg_cap_cost_mult_suffix,default
+resource_adequacy_years,2007_2008_2009_2010_2011_2012_2013
 retscen,Nuke80RetireYear
 run_osprey_years,0
 solver,CPLEX
@@ -284,7 +288,7 @@ timetype,seq
 transmission_maps,2050
 unitdata,EIA-NEMS
 upgradescen,default
-upvscen,upv_ATB_2022_moderate
+plantchar_upv,upv_ATB_2022_moderate
 uraniumscen,AEO_2022_reference
 windows_suffix,default
 yearset_suffix,3yr

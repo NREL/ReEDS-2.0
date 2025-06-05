@@ -26,8 +26,8 @@ coststreams = ['eq_gasaccounting_regional','eq_gasaccounting_national','eq_bious
 vf_valstreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
 # valuestreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_national_gen','eq_annual_cap','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min','eq_emit_accounting','eq_mingen_lb','eq_mingen_ub','eq_rps_ofswind']
 energy_valstreams = ['eq_supply_demand_balance','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
-cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','dupv','pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']
-battery_techs=['battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']
+cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']
+battery_techs=['battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100', 'battery_li']
 h2_techs = ['smr', 'smr-ccs', 'electrolyzer']
 prod_techs = h2_techs + ['dac']
 niche_techs =  ['hydro','csp','geothermal','beccs','lfill-gas','biopower']
@@ -503,14 +503,6 @@ def sort_timeslices(df, **kw):
         }
         df = df.replace({timeslice:replace}).copy()
         return df
-    ###### Otherwise, remove the h prefix, then sort by the timeslice column
-    ### Replace the h with left-filled zeros
-    def remove_h(x):
-        try:
-            return '{:0>6}'.format(int(x[1:]))
-        except ValueError:
-            return x
-    df[timeslice] = df[timeslice].map(remove_h)
     ### Sort it
     df = df.sort_values(timeslice, ascending=True)
     return df
@@ -576,7 +568,7 @@ def pre_valnew(df, **kw):
     df['vf_spatial_simult'] = (df['val_tot']/df['mwh']) / (df['val_tot_sys']/df['mwh'])
     df['vf_interaction'] = df['vf_spatial_simult'] / df['vf_spatial']
     df['vf_load'] = (df['val_load']/df['mwh']) / (df['val_load_bench_sys']/df['mwh_bench_sys'])
-    df['vf_no_rps'] = ((df['val_tot'] - df['val_rps'])/df['mwh']) / ((df['val_tot_bench_sys'] - df['val_rps_bench_sys'])/df['mwh_bench_sys'])
+    df['vf_resmarg'] = (df['val_resmarg']/df['mwh']) / (df['val_resmarg_bench_sys']/df['mwh_bench_sys'])
     df['vf_resmarg_permw'] = (df['val_resmarg']/df['mw']) / (df['val_resmarg_bench_sys']/df['mw_bench_sys'])
     return df
 
@@ -911,6 +903,12 @@ def pre_cf(dfs, **kw):
     df['CF'] = df['MWh']/(df['MW']*8760)
     return df
 
+def pre_duration(dfs, **kw):
+    index_cols = ['tech', 'vintage', 'rb', 'year']
+    dfs['duration'] =  dfs['duration'].groupby(index_cols, sort=False, as_index=False).sum()
+    df = pd.merge(left=dfs['duration'], right=dfs['cap_energy'], how='left',on=index_cols, sort=False)
+    return df
+
 def pre_h2_cf(dfs, **kw):
     index_cols = ['tech', 'rb', 'year']
     dfs['cap'] =  dfs['cap'].groupby(index_cols, sort=False, as_index=False).sum()
@@ -957,14 +955,17 @@ def pre_prices(dfs, **kw):
     #Apply inflation
     dfs['p']['p'] = inflate_series(dfs['p']['p'])
     #Join prices and quantities
-    df = pd.merge(left=dfs['q'], right=dfs['p'], how='left', on=['type', 'subtype', 'rb', 'timeslice', 'year'], sort=False)
+    merge_cols = [c for c in ['type', 'subtype', 'rb', 'timeslice', 'year'] if c in dfs['q'].columns]
+    df = pd.merge(left=dfs['q'], right=dfs['p'], how='left', on=merge_cols, sort=False)
     df['p'].fillna(0, inplace=True)
     #Calculate $
     df['$'] = df['p'] * df['q']
     df.drop(['p', 'q'], axis='columns',inplace=True)
     #Calculate total $
     df_tot = df[df['type'].isin(price_types)].copy()
-    df_tot = df_tot.groupby(['rb', 'timeslice', 'year'], sort=False, as_index=False).sum()
+    df_tot = df_tot.drop(columns=['type','subtype'])
+    group_cols = [c for c in ['rb', 'timeslice', 'year'] if c in df_tot.columns]
+    df_tot = df_tot.groupby(group_cols, sort=False, as_index=False).sum()
     df_tot['type'] = 'tot'
     df_tot['subtype'] = 'na'
     #Reformat quantities
@@ -981,6 +982,29 @@ def pre_quants(dfs, **kw):
     df_hours.rename(columns={'timeslice':'ts'}, inplace=True)
     df = pd.merge(left=df_q, right=df_hours, how='left', on='ts', sort=False)
     df.loc[df['type'] == 'load' , 'q'] = df['q'] / df['hours']
+    return df
+
+def pre_revenue(dfs, **kw):
+    df = dfs['revenue']
+    #Rename 'charge' to 'load' in 'rev_cat' column, and sum results
+    df['rev_cat'] = df['rev_cat'].replace({'charge': 'load'})
+    group_cols = [c for c in ['rev_cat', 'tech', 'rb', 'year'] if c in df.columns]
+    df = df.groupby(group_cols, sort=False, as_index=False).sum()
+    #Add 'total' rev_cat by summing all rev_cat
+    cols = [c for c in ['tech', 'rb', 'year'] if c in df.columns]
+    df_tot = df.groupby(cols, sort=False, as_index=False).sum()
+    df_tot['rev_cat'] = 'total'
+    df = pd.concat([df, df_tot], sort=False, ignore_index=True)
+    #Apply inflation
+    df['$/yr'] = inflate_series(df['$/yr'])
+    #Convert to billions
+    df['Bil$/yr'] = df['$/yr'] * 1e-9
+    #Marge with capacity and generation
+    df = df.merge(dfs['cap'], how='left', on=cols)
+    df = df.merge(dfs['gen'], how='left', on=cols)
+    #Calculate $/kW-yr and $/MWh
+    df['$/kW-yr'] = df['$/yr'] / (df['MW'] * 1000)
+    df['$/MWh'] = df['$/yr'] / df['MWh/yr']
     return df
 
 def pre_ng_price(dfs, **kw):
@@ -1077,7 +1101,9 @@ def pre_runtime(dictin, **kw):
 
 def net_co2(dfs, **kw):
     co2 = dfs['emit'].copy()
+    co2 = co2[co2['e']=='CO2e']
     co2['Cumulative CO2e (MMton)'] = co2.groupby(['e','tech'])['CO2e (MMton)'].cumsum()
+    print(co2['Cumulative CO2e (MMton)'])
     # scale to million metric tons
     co2['CO2e (MMton)'] /= 1e6
     co2['Cumulative CO2e (MMton)'] /= 1e6
@@ -1323,10 +1349,9 @@ columns_meta = {
 #Presets may also be defined.
 results_meta = collections.OrderedDict((
     ('Capacity National (GW)',
-        {'file':'cap',
-        'columns': ['tech', 'rb', 'year', 'Capacity (GW)'],
+        {'file':'cap_nat',
+        'columns': ['tech', 'year', 'Capacity (GW)'],
         'preprocess': [
-            {'func': sum_over_cols, 'args': {'drop_cols': ['rb'], 'group_cols': ['tech', 'year']}},
             {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Capacity (GW)'}},
         ],
         'index': ['tech', 'year'],
@@ -1392,6 +1417,37 @@ results_meta = collections.OrderedDict((
         }
     ),
 
+    ('Energy Capacity ivrt (GWh)',
+        {'file':'cap_energy_ivrt',
+        'columns': ['tech', 'vintage', 'rb', 'year','Energy Capacity (GWh)'],
+        'preprocess': [
+            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Energy Capacity (GWh)'}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Stacked Area',{'x':'year', 'y':'Energy Capacity (GWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area'}),
+            ('Stacked Bars',{'x':'year', 'y':'Energy Capacity (GWh)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'1.75'}),
+            ('Explode By Tech',{'x':'year', 'y':'Energy Capacity (GWh)', 'series':'scenario', 'explode':'tech', 'chart_type':'Line'}),
+            ('PCA Map Final by Tech',{'x':'rb', 'y':'Energy Capacity (GWh)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
+            ('State Map Final by Tech',{'x':'st', 'y':'Energy Capacity (GWh)', 'explode':'scenario', 'explode_group':'tech', 'chart_type':'Area Map', 'filter': {'year':'last'}}),
+        )),
+        }
+    ),
+
+    ('Battery Duration (h)',
+        {'sources': [
+            {'name': 'duration', 'file': 'storage_duration_out', 'columns': ['tech', 'vintage', 'rb', 'year','Storage Duration (h)']},
+            {'name': 'cap_energy', 'file': 'cap_energy_ivrt', 'columns': ['tech', 'vintage', 'rb', 'year','Energy Capacity (GWh)']},
+        ],
+        'preprocess': [
+            {'func': pre_duration, 'args': {}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Boxplot',{'chart_type':'Dot', 'x':'year', 'y':'Storage Duration (h)', 'y_agg':'None', 'range':'Boxplot', 'explode':'tech', 'explode_group':'scenario', 'y_min':'0', 'circle_size':r'3', 'bar_width':r'1.75', }),
+            ('Weighted Average',{'chart_type':'Line', 'x':'year', 'y':'Storage Duration (h)', 'y_agg':'sum(a*b)/sum(b)', 'y_b':'Energy Capacity (GWh)', 'explode':'tech', 'series':'scenario', 'y_min':'0', 'filter':{'tech':{'exclude':prod_techs}}}),
+        )),
+        }
+    ),
+
     ('Storage Capacity (GW or GWh)',
 
         {'sources': [
@@ -1410,10 +1466,9 @@ results_meta = collections.OrderedDict((
     ),
 
     ('New Annual Capacity National (GW)',
-        {'file':'cap_new_ann',
-        'columns': ['tech', 'rb', 'year', 'Capacity (GW)'],
+        {'file':'cap_new_ann_nat',
+        'columns': ['tech', 'year', 'Capacity (GW)'],
         'preprocess': [
-            {'func': sum_over_cols, 'args': {'drop_cols': ['rb'], 'group_cols': ['tech', 'year']}},
             {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Capacity (GW)'}},
         ],
         'index': ['tech', 'year'],
@@ -1445,10 +1500,9 @@ results_meta = collections.OrderedDict((
     ),
 
     ('Annual Retirements National (GW)',
-        {'file':'ret_ann',
-        'columns': ['tech', 'rb', 'year', 'Capacity (GW)'],
+        {'file':'ret_ann_nat',
+        'columns': ['tech', 'year', 'Capacity (GW)'],
         'preprocess': [
-            {'func': sum_over_cols, 'args': {'drop_cols': ['rb'], 'group_cols': ['tech', 'year']}},
             {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Capacity (GW)'}},
         ],
         'index': ['tech', 'year'],
@@ -1494,10 +1548,9 @@ results_meta = collections.OrderedDict((
     ),
 
     ('Generation National (TWh)',
-        {'file':'gen_ann',
-        'columns': ['tech', 'rb', 'year', 'Generation (TWh)'],
+        {'file':'gen_ann_nat',
+        'columns': ['tech', 'year', 'Generation (TWh)'],
         'preprocess': [
-            {'func': sum_over_cols, 'args': {'drop_cols': ['rb'], 'group_cols': ['tech', 'year']}},
             {'func': scale_column, 'args': {'scale_factor': 1e-6, 'column':'Generation (TWh)'}},
         ],
         'index': ['tech', 'year'],
@@ -1777,10 +1830,9 @@ results_meta = collections.OrderedDict((
     ),
 
     ('Gen by timeslice national (GW)',
-        {'file':'gen_h',
-        'columns': ['tech', 'rb', 'timeslice', 'year', 'Generation (GW)'],
+        {'file':'gen_h_nat',
+        'columns': ['tech', 'timeslice', 'year', 'Generation (GW)'],
         'preprocess': [
-            {'func': sum_over_cols, 'args': {'drop_cols': ['rb'], 'group_cols': ['tech', 'year', 'timeslice']}},
             {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Generation (GW)'}},
             {'func': sort_timeslices, 'args': {}},
         ],
@@ -1793,6 +1845,34 @@ results_meta = collections.OrderedDict((
 
     ('Gen by timeslice regional (GW)',
         {'file':'gen_h',
+        'columns': ['tech', 'rb', 'timeslice', 'year', 'Generation (GW)'],
+        'preprocess': [
+            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Generation (GW)'}},
+            {'func': sort_timeslices, 'args': {}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Stacked Bars Final',{'x':'timeslice', 'y':'Generation (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'filter': {'year':'last'}}),
+            ('Stacked Bars Final by State',{'x':'timeslice', 'y':'Generation (GW)', 'series':'tech', 'explode':'scenario', 'explode_group':'st', 'chart_type':'Bar', 'sync_axes':'No', 'filter': {'year':'last'}}),
+        )),
+        }
+    ),
+
+    ('Gen by stress timeslice national (GW)',
+        {'file':'gen_h_stress_nat',
+        'columns': ['tech', 'timeslice', 'year', 'Generation (GW)'],
+        'preprocess': [
+            {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Generation (GW)'}},
+            {'func': sort_timeslices, 'args': {}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Stacked Bars Final',{'x':'timeslice', 'y':'Generation (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'width':'1000', 'x_major_label_size':'0', 'net_levels':'No', 'filter': {'year':'last'}}),
+            ('Stacked Area Final',{'x':'timeslice', 'y':'Generation (GW)', 'series':'tech', 'explode':'scenario', 'chart_type':'Area', 'width':'1000', 'x_major_label_size':'0', 'net_levels':'No', 'filter': {'year':'last'}}),
+        )),
+        }
+    ),
+
+    ('Gen by stress timeslice regional (GW)',
+        {'file':'gen_h_stress',
         'columns': ['tech', 'rb', 'timeslice', 'year', 'Generation (GW)'],
         'preprocess': [
             {'func': scale_column, 'args': {'scale_factor': .001, 'column':'Generation (GW)'}},
@@ -1930,10 +2010,10 @@ results_meta = collections.OrderedDict((
 
     ('Emissions National (metric tons)',
         {'file':'emit_nat',
-        'columns': ['e', 'year', 'Emissions (metric tons)'],
+        'columns': ['etype', 'e', 'year', 'Emissions (metric tons)'],
         'preprocess': [
         ],
-        'index': ['e', 'year'],
+        'index': ['etype', 'e', 'year'],
         'presets': collections.OrderedDict((
             ('Scenario Lines Over Time',{'x':'year', 'y':'Emissions (metric tons)', 'series':'scenario', 'explode':'e', 'chart_type':'Line', 'sync_axes':'No'}),
         )),
@@ -1942,10 +2022,10 @@ results_meta = collections.OrderedDict((
 
     ('CO2 Emissions BA (metric tons)',
         {'file':'emit_r',
-        'columns': ['e', 'rb', 'year', 'Emissions (metric tons)'],
+        'columns': ['etype', 'e', 'rb', 'year', 'Emissions (metric tons)'],
         'preprocess': [
         ],
-        'index': ['e', 'rb', 'year'],
+        'index': ['etype', 'e', 'rb', 'year'],
         'presets': collections.OrderedDict((
             ('Scenario Lines Over Time',{'x':'year', 'y':'Emissions (metric tons)', 'series':'scenario', 'explode':'e', 'chart_type':'Line', 'sync_axes':'No', 'filter': {'e':['co2']}}),
             ('Scenario Lines Over Time by State',{'x':'year', 'y':'Emissions (metric tons)', 'series':'scenario', 'explode':'e', 'explode_group':'st', 'chart_type':'Line', 'sync_axes':'No', 'filter': {'e':['co2']}}),
@@ -1956,7 +2036,7 @@ results_meta = collections.OrderedDict((
 
     ('Net CO2e Emissions National (MMton)',
         {'sources': [
-            {'name': 'emit', 'file': 'emit_nat_tech', 'columns': ['e', 'tech', 'year', 'CO2e (MMton)']},
+            {'name': 'emit', 'file': 'emit_nat_tech', 'columns': ['etype', 'e', 'tech', 'year', 'CO2e (MMton)']},
         ],
         'preprocess': [
             {'func': net_co2, 'args': {}},
@@ -1970,14 +2050,14 @@ results_meta = collections.OrderedDict((
 
     ('Net CO2 Emissions National (MMton)',
         {'sources': [
-            {'name': 'emit', 'file': 'emit_nat_tech', 'columns': ['tech', 'year', 'CO2 (MMton)']},
+            {'name': 'emit', 'file': 'emit_nat_tech', 'columns': ['tech', 'etype', 'year', 'CO2 (MMton)']},
         ],
         'preprocess': [
             {'func': net_co2, 'args': {}},
         ],
         'presets': collections.OrderedDict((
-            ('Stacked Bars Over Time',{'x':'year', 'y':'CO2 (MMton)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.75'}),
-            ('Cumulative Stacked Bars Over Time',{'x':'year', 'y':'Cumulative CO2 (MMton)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.75'}),
+            ('Stacked Bars Over Time',{'x':'year', 'y':'CO2 (MMton)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.75', 'filter':{'e':['co2']}}),
+            ('Cumulative Stacked Bars Over Time',{'x':'year', 'y':'Cumulative CO2 (MMton)', 'series':'tech', 'explode':'scenario', 'chart_type':'Bar', 'bar_width':'0.75', 'filter':{'e':['co2']}}),
         )),
         }
     ),
@@ -2036,12 +2116,11 @@ results_meta = collections.OrderedDict((
 
     ('Requirement Prices and Quantities National',
         {'sources': [
-            {'name': 'p', 'file': 'reqt_price', 'columns': ['type', 'subtype', 'rb', 'timeslice', 'year', 'p']},
-            {'name': 'q', 'file': 'reqt_quant', 'columns': ['type', 'subtype', 'rb', 'timeslice', 'year', 'q']},
+            {'name': 'p', 'file': 'reqt_price_sys', 'columns': ['type', 'subtype', 'timeslice', 'year', 'p']},
+            {'name': 'q', 'file': 'reqt_quant_sys', 'columns': ['type', 'subtype', 'timeslice', 'year', 'q']},
         ],
         'preprocess': [
             {'func': pre_prices, 'args': {}},
-            {'func': sum_over_cols, 'args': {'drop_cols': ['rb'], 'group_cols': ['type', 'subtype', 'timeslice', 'year']}},
             {'func': sort_timeslices, 'args': {}},
         ],
         'presets': collections.OrderedDict((
@@ -2055,7 +2134,28 @@ results_meta = collections.OrderedDict((
             ('OpRes Price by Timeslice Final ($/MW-h)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'subtype', 'explode_group':'scenario', 'chart_type':'Bar', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_oper_res', 'filter': {'type':['oper_res','q_oper_res'], 'year':'last'}}),
             ('Energy Price Area by Timeslice Final ($/MWh)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'scenario', 'chart_type':'Area', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load'], 'year':'last'}}),
             ('OpRes Price Area by Timeslice Final ($/MW-h)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'subtype', 'explode_group':'scenario', 'chart_type':'Area', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_oper_res', 'filter': {'type':['oper_res','q_oper_res'], 'year':'last'}}),
-            ('Bulk System Electricity Price ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load']}}),
+            ('Bulk System Electricity Price ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load'], 'year': {'start':DEFAULT_PV_YEAR}}}),
+            ('Total Bulk System Electricity Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode':'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': ['tot', 'q_load']}}),
+        )),
+        }
+    ),
+
+    ('Requirement Prices and Quantities National Annual',
+        {'sources': [
+            {'name': 'p', 'file': 'reqt_price_sys', 'columns': ['type', 'subtype', 'timeslice', 'year', 'p']},
+            {'name': 'q', 'file': 'reqt_quant_sys', 'columns': ['type', 'subtype', 'timeslice', 'year', 'q']},
+        ],
+        'preprocess': [
+            {'func': pre_prices, 'args': {}},
+            {'func': sum_over_cols, 'args': {'drop_cols': ['timeslice'], 'group_cols': ['type', 'subtype', 'year']}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Energy Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load']}}),
+            ('OpRes Price Lines ($/MW-h)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'subtype', 'explode_group':'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_oper_res', 'filter': {'type':['oper_res','q_oper_res']}}),
+            ('ResMarg Price Lines ($/kW-yr)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_res_marg_ann', 'y_scale':'1e-3', 'filter': {'type':['res_marg_ann','q_res_marg_ann']}}),
+            ('National RPS Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_nat_gen', 'filter': {'type':['nat_gen','q_nat_gen']}}),
+            ('CO2 Price Lines ($/metric ton)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_annual_cap', 'y_scale':'1e-6', 'filter': {'type':['annual_cap','q_annual_cap'],'subtype':['co2']}}),
+            ('Bulk System Electricity Price ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load'], 'year': {'start':DEFAULT_PV_YEAR}}}),
             ('Total Bulk System Electricity Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode':'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': ['tot', 'q_load']}}),
         )),
         }
@@ -2082,7 +2182,30 @@ results_meta = collections.OrderedDict((
             ('Energy Price Area by Timeslice Final ($/MWh)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'scenario', 'chart_type':'Area', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load'], 'year':'last'}}),
             ('OpRes Price Area by Timeslice Final ($/MW-h)',{'x':'timeslice', 'y':'$', 'series':'type', 'explode':'subtype', 'explode_group':'scenario', 'chart_type':'Area', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_oper_res', 'filter': {'type':['oper_res','q_oper_res'], 'year':'last'}}),
             ('Energy Price Final BA Map ($/MWh)',{'x':'rb', 'y':'$', 'explode': 'scenario', 'explode_group': 'type', 'chart_type':'Area Map', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load'], 'year':'last'}}),
-            ('Bulk System Electricity Price ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load']}}),
+            ('Bulk System Electricity Price ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load'], 'year': {'start':DEFAULT_PV_YEAR}}}),
+            ('Bulk System Electricity Price by State ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'explode_group': 'st', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load']}}),
+            ('Total Bulk System Electricity Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode':'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': ['tot', 'q_load']}}),
+        )),
+        }
+    ),
+
+    ('Requirement Prices and Quantities BA Annual',
+        {'sources': [
+            {'name': 'p', 'file': 'reqt_price', 'columns': ['type', 'subtype', 'rb', 'timeslice', 'year', 'p']},
+            {'name': 'q', 'file': 'reqt_quant', 'columns': ['type', 'subtype', 'rb', 'timeslice', 'year', 'q']},
+        ],
+        'preprocess': [
+            {'func': pre_prices, 'args': {}},
+            {'func': sum_over_cols, 'args': {'drop_cols': ['timeslice'], 'group_cols': ['type', 'subtype', 'rb','year']}},
+        ],
+        'presets': collections.OrderedDict((
+            ('Energy Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load']}}),
+            ('OpRes Price Lines ($/MW-h)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'subtype', 'explode_group':'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_oper_res', 'filter': {'type':['oper_res','q_oper_res']}}),
+            ('ResMarg Price Lines ($/kW-yr)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_res_marg_ann', 'y_scale':'1e-3', 'filter': {'type':['res_marg_ann','q_res_marg_ann']}}),
+            ('National RPS Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_nat_gen', 'filter': {'type':['nat_gen','q_nat_gen']}}),
+            ('CO2 Price Lines ($/metric ton)',{'x':'year', 'y':'$', 'series':'scenario', 'explode': 'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_annual_cap', 'y_scale':'1e-6', 'filter': {'type':['annual_cap','q_annual_cap'],'subtype':['co2']}}),
+            ('Energy Price Final BA Map ($/MWh)',{'x':'rb', 'y':'$', 'explode': 'scenario', 'explode_group': 'type', 'chart_type':'Area Map', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type':['load','q_load'], 'year':'last'}}),
+            ('Bulk System Electricity Price ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load'], 'year': {'start':DEFAULT_PV_YEAR}}}),
             ('Bulk System Electricity Price by State ($/MWh)',{'x':'year', 'y':'$', 'series':'type', 'explode': 'scenario', 'explode_group': 'st', 'chart_type':'Bar', 'bar_width':'1.75', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': price_types+['q_load']}}),
             ('Total Bulk System Electricity Price Lines ($/MWh)',{'x':'year', 'y':'$', 'series':'scenario', 'explode':'type', 'chart_type':'Line', 'adv_op':'Ratio', 'adv_col':'type', 'adv_col_base':'q_load', 'filter': {'type': ['tot', 'q_load']}}),
         )),
@@ -2104,6 +2227,25 @@ results_meta = collections.OrderedDict((
             ('Load by Region & Timeslice 2020', {'chart_type':'Line', 'x':'ts', 'y':'q', 'series':'scenario', 'explode':'custreg', 'sync_axes': 'No', 'filter': {'type':['load'], 'year':['2020'], }}),
             ('Load by State & Timeslice for each Region 2020', {'chart_type':'Line', 'x':'ts', 'y':'q', 'series':'st', 'explode':'scenario', 'explode_group':'custreg', 'sync_axes': 'No', 'filter': {'type':['load'], 'year':['2020'], }}),
             ('Load by BA & Timeslice for each Region 2020', {'chart_type':'Line', 'x':'ts', 'y':'q', 'series':'rb', 'explode':'scenario', 'explode_group':'custreg', 'sync_axes': 'No', 'filter': {'type':['load'], 'year':['2020'], }}),
+        )),
+        }
+    ),
+
+    ('Annual Revenue National',
+        {'sources': [
+            {'name': 'revenue', 'file': 'revenue_nat', 'columns': ['rev_cat', 'tech', 'year', '$/yr']},
+            {'name': 'cap', 'file': 'cap_nat', 'columns': ['tech', 'year', 'MW']},
+            {'name': 'gen', 'file': 'gen_uncurtailed_nat', 'columns': ['tech', 'year', 'MWh/yr']},
+        ],
+        'preprocess': [
+            {'func': pre_revenue, 'args': {}},
+        ],
+        # 'index': ['rev_cat','tech', 'year'],
+        'presets': collections.OrderedDict((
+            #All results below need to separate out rev_cat (otherwise totals and weighted averages won't work). A 'total' rev_cat has been added.
+            ('Bil$/yr Stack Techs Explode Services',{'x':'year', 'y':'Bil$/yr', 'series':'tech', 'explode': 'rev_cat', 'explode_group': 'scenario', 'chart_type':'Bar', 'bar_width':'1.75', 'sync_axes':'No', 'filter': {'year': {'start':DEFAULT_PV_YEAR}}}),
+            ('$/kW-yr Tech Lines Explode Services',{'x':'year', 'y':'$/kW-yr', 'y_b':'MW', 'y_agg':'sum(a*b)/sum(b)', 'series':'tech', 'explode': 'rev_cat', 'explode_group': 'scenario', 'chart_type':'Dot-Line', 'sync_axes':'No', 'filter': {'year': {'start':DEFAULT_PV_YEAR}}}),
+            ('$/MWh Tech Lines Explode Services',{'x':'year', 'y':'$/MWh', 'y_b':'MWh/yr', 'y_agg':'sum(a*b)/sum(b)', 'series':'tech', 'explode': 'rev_cat', 'explode_group': 'scenario', 'chart_type':'Dot-Line', 'sync_axes':'No', 'filter': {'year': {'start':DEFAULT_PV_YEAR}}}),
         )),
         }
     ),
@@ -2294,10 +2436,22 @@ results_meta = collections.OrderedDict((
             ('VF by Year Explode Scenario', {'x':'year','y':'vf','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'tech','explode':'scenario','chart_type':'Dot-Line', 'sync_axes':'No', 'y_min':'0','y_max':'2'}),
             #Value factor of energy alone, that is, energy value per MWh of a tech compared to that of the benchmark
             ('VF Energy by Year', {'x':'year','y':'vf_load','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            #Value factor of firm capacity alone, that is, capacity value per MWh of a tech compared to that of the benchmark
+            ('VF Firm Capacity by Year', {'x':'year','y':'vf_resmarg','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
             #Value factor of firm capacity alone, that is, capacity value per MW of a tech compared to that of the benchmark
-            ('VF Firm Capacity by Year', {'x':'year','y':'vf_resmarg_permw','y_b':'mw','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
-            #Total value factor by year, excluding state RPS value in both technology and benchmark
-            ('VF No RPS by Year', {'x':'year','y':'vf_no_rps','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            ('VF Firm Capacity per MW by Year', {'x':'year','y':'vf_resmarg_permw','y_b':'mw','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            #Temporal, spatial, and interaction value factors
+            ('VF Spatial by Year', {'x':'year','y':'vf_spatial','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            ('VF Temporal by Year', {'x':'year','y':'vf_temporal','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            ('VF Interaction by Year', {'x':'year','y':'vf_interaction','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            ('VF Spatial Simultaneous by Year', {'x':'year','y':'vf_spatial_simult','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            ('VF Temporal Local by Year', {'x':'year','y':'vf_temporal_local','y_b':'mwh','y_agg':'sum(a*b)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            #LVOE and LVOE components
+            ('LVOE by Year', {'x':'year','y':'val_tot','y_b':'mwh','y_agg':'sum(a)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            ('LVOE Energy by Year', {'x':'year','y':'val_load','y_b':'mwh','y_agg':'sum(a)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            ('LVOE Firm Capacity by Year', {'x':'year','y':'val_resmarg','y_b':'mwh','y_agg':'sum(a)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            ('LVOE Operating Reserves by Year', {'x':'year','y':'val_opres','y_b':'mwh','y_agg':'sum(a)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
+            ('LVOE State RPS by Year', {'x':'year','y':'val_rps','y_b':'mwh','y_agg':'sum(a)/sum(b)','series':'scenario','explode':'tech','chart_type':'Dot-Line', 'sync_axes':'No'}),
         )),
         }
     ),

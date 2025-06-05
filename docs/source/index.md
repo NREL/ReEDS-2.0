@@ -13,9 +13,6 @@
 :hidden:
 
 setup
-internal/additional_setup
-internal/developer_best_practices
-internal/onboarding
 model_documentation
 additional_model_information
 sources

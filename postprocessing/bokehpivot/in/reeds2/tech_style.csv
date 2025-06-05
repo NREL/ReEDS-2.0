@@ -45,6 +45,7 @@ battery_24,#9B054F
 battery_48,#9B214F
 battery_72,#9B334F
 battery_100,#9B454F
+battery_li,#9B574F
 dr,#B9CBF5
 evmc_storage,#a55194
 evmc_shape,#ce6dbd

@@ -1,13 +1,13 @@
 import argparse
 import os
-import pandas as pd
+import sys
 from warnings import warn
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
+
 
 def check_error(case, cutoff=0.01, errors='print', printcase=False):
-    e = pd.read_csv(
-        os.path.join(case,'outputs','error_check.csv'),
-        index_col=0,
-    ).squeeze(1)['z']
+    e = reeds.io.read_output(case, 'error_check').set_index('*').Value['z']
     errortext = (
         f"Your system cost error is {e}, which is too big!"
         + (f" ← {os.path.basename(case)}" if printcase else '')

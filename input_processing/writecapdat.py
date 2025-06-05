@@ -54,7 +54,7 @@ def create_rsc_wsc(gendb,TECH,scalars,startyear):
     rsc_wsc = rsc_wsc[['r','tech','cap']].rename(columns={'tech':'i','cap':'value'})
     # Multiply all PV capacities by ILR
     for j,row in rsc_wsc.iterrows():
-        if row['i'] in ['dupv','upv']:
+        if row['i'] == 'upv':
             rsc_wsc.loc[j,'value'] *= scalars['ilr_utility']
 
     return rsc_wsc
@@ -91,12 +91,12 @@ TECH = {
                   'battery_10','battery_12','battery_24','battery_48',
                   'battery_72','battery_100', 'pumped-hydro'
     ],
-    'rsc_all': ['dupv','upv','pvb','csp-ns'],
+    'rsc_all': ['upv','pvb','csp-ns'],
     'rsc_csp': ['csp-ns'],
-    'rsc_wsc': ['dupv','upv','pvb','csp-ns','csp-ws','wind-ons','wind-ofs',
+    'rsc_wsc': ['upv','pvb','csp-ns','csp-ws','wind-ons','wind-ofs',
                 'geohydro_allkm','egs_allkm'],
-    'prsc_all': ['dupv','upv','pvb','csp-ns','csp-ws'],
-    'prsc_upv': ['dupv','upv','pvb'],
+    'prsc_all': ['upv','pvb','csp-ns','csp-ws'],
+    'prsc_upv': ['upv','pvb'],
     'prsc_w': ['wind-ons','wind-ofs'],
     'prsc_csp': ['csp-ns','csp-ws'],
     'prsc_geo': ['geohydro_allkm','egs_allkm'],
@@ -110,7 +110,7 @@ TECH = {
     # This is not all technologies that do not having cooling, but technologies
     # that are (or could be) in the plant database.
     'no_cooling': [
-        'dupv', 'upv', 'pvb', 'gas-ct', 'geohydro_allkm','egs_allkm',
+        'upv', 'pvb', 'gas-ct', 'geohydro_allkm','egs_allkm',
         'battery_2', 'battery_4', 'battery_6', 'battery_8',
         'battery_10','battery_12','battery_24','battery_48',
         'battery_72','battery_100', 'pumped-hydro', 'pumped-hydro-flex', 
@@ -144,7 +144,6 @@ def main(reeds_path, inputs_case, agglevel, regions):
     sw = reeds.io.get_switches(inputs_case)
     retscen = sw.retscen
     GSw_WaterMain = int(sw.GSw_WaterMain)
-    GSw_DUPV = int(sw.GSw_DUPV)
     GSw_PVB = int(sw.GSw_PVB)
     startyear = int(sw.startyear)
 
@@ -234,9 +233,8 @@ def main(reeds_path, inputs_case, agglevel, regions):
         gdb_use['tech'] = gdb_use['tech'].replace('pvb_pv','pvb')
 
 
-    # If DUPV is turned off, consider all DUPV as UPV for existing and prescribed builds.
-    if GSw_DUPV == 0:
-        gdb_use['tech'] = gdb_use['tech'].replace('dupv','upv')  
+    # Consider all DUPV as UPV for existing and prescribed builds.
+    gdb_use['tech'] = gdb_use['tech'].replace('dupv','upv')  
 
     # Change tech category of hydro that will be prescribed to use upgrade tech
     # This is a coarse assumption that all recent new hydro is upgrades

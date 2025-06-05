@@ -1,0 +1,283 @@
+# Description: This file defines the distributions used for Monte Carlo Sampling (MCS) analysis.
+
+# Distribution definition fields:
+# 1. name: A unique identifier for the distribution group, used in the 'MCS_dist_groups' switch.
+#    - All switches listed under the same group will be sampled in a correlated way.
+#    - For example, if batteries and UPV are in the same group and a sample selects a high-cost battery trajectory,
+#      UPV will also be assigned a high-cost value for that same sample.
+#    - To enforce independence between switches, place them in separate groups.
+#
+# 2. assignments_list (list of dict): A list of dictionaries. Each dictionary contains:
+#    - Key: the switch name
+#    - Value: a list of values that should be sampled for that switch
+#    Example: [switch1: [value1, value2], switch2: [value1, value2]]
+#
+# 3. dist: Type of distribution to use. Options are:
+#    - dirichlet (weighted average)
+#    - discrete
+#    - triangular_multiplier
+#    - uniform_multiplier
+#
+# 4. dist_params (list): Parameters that define the distribution, based on its type:
+#    - dirichlet: [alpha1, alpha2, ...] — concentration parameters
+#    - discrete: [w1, w2, ...] — prob weights (normalized internally)
+#    - triangular_multiplier: [low, center, high]
+#    - uniform_multiplier: [low, high]
+#
+# 5. weight_r: For some files (those with regional data) we support the possibility of applying
+#    different weights to different ReEDS hierarchies. This field specifies the hierarchy 
+#    considered (e.g. country, st, ba, transgrp, etc- weight_r: country is always supported).
+#
+# Special cases:
+# 1. switches.csv: If you want to apply a distribution to a value in switches.csv,
+#    see the 'transmission_1' example in this file.
+
+
+### ---------------------------------------------------###
+### --- Distributions for tech trajectories
+### ---------------------------------------------------###
+
+# --- Individual technology cost trajectories ---
+# These distributions apply independently to each technology
+- name: gas
+  assignments_list:
+    - plantchar_gas: [gas_ATB_2024_conservative, gas_ATB_2024_moderate, gas_ATB_2024_advanced]
+    - plantchar_gas_ccs: [gas-ccs_ATB_2024_conservative, gas-ccs_ATB_2024_moderate, gas-ccs_ATB_2024_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: coal
+  assignments_list:
+    - plantchar_coal: [coal_ATB_2024_conservative, coal_ATB_2024_moderate, coal_ATB_2024_advanced]
+    - plantchar_coal_ccs: [coal-ccs_ATB_2024_conservative, coal-ccs_ATB_2024_moderate, coal-ccs_ATB_2024_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: geo
+  assignments_list:
+    - plantchar_geo: [geo_ATB_2023_conservative, geo_ATB_2023_moderate, geo_ATB_2023_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: hydro
+  assignments_list: 
+    - plantchar_hydro: [hydro_ATB_2019_constant, hydro_ATB_2019_mid, hydro_ATB_2019_low]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: nuclear
+  assignments_list:
+    - plantchar_nuclear: [nuclear_ATB_2024_conservative, nuclear_ATB_2024_moderate, nuclear_ATB_2024_advanced]
+    - plantchar_nuclear_smr: [nuclear-smr_ATB_2024_conservative, nuclear-smr_ATB_2024_moderate, nuclear-smr_ATB_2024_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: battery
+  assignments_list:
+    - plantchar_battery: [battery_ATB_2024_conservative, battery_ATB_2024_moderate, battery_ATB_2024_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: upv
+  assignments_list:
+    - plantchar_upv: [upv_ATB_2024_conservative, upv_ATB_2024_moderate, upv_ATB_2024_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: csp
+  assignments_list:
+    - plantchar_csp: [csp_ATB_2024_conservative, csp_ATB_2024_moderate, csp_ATB_2024_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: ofswind
+  assignments_list:
+    - plantchar_ofswind: [ofs-wind_ATB_2024_conservative, ofs-wind_ATB_2024_moderate, ofs-wind_ATB_2024_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: onswind
+  assignments_list:
+    - plantchar_onswind: [ons-wind_ATB_2024_conservative, ons-wind_ATB_2024_moderate, ons-wind_ATB_2024_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+# --- Combined technology sampling ---
+# These distributions sample multiple technologies together with shared correlation
+- name: tech
+  assignments_list:
+    - plantchar_battery: [battery_ATB_2024_conservative, battery_ATB_2024_moderate, battery_ATB_2024_advanced]
+    - plantchar_upv: [upv_ATB_2024_conservative, upv_ATB_2024_moderate, upv_ATB_2024_advanced]
+    - plantchar_csp: [csp_ATB_2024_conservative, csp_ATB_2024_moderate, csp_ATB_2024_advanced]
+    - plantchar_ofswind: [ofs-wind_ATB_2024_conservative, ofs-wind_ATB_2024_moderate, ofs-wind_ATB_2024_advanced]
+    - plantchar_onswind: [ons-wind_ATB_2024_conservative, ons-wind_ATB_2024_moderate, ons-wind_ATB_2024_advanced]
+    - plantchar_geo: [geo_ATB_2023_conservative, geo_ATB_2023_moderate, geo_ATB_2023_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: tech_discrete
+  assignments_list:
+    - plantchar_battery: [battery_ATB_2024_conservative, battery_ATB_2024_moderate, battery_ATB_2024_advanced]
+    - plantchar_upv: [upv_ATB_2024_conservative, upv_ATB_2024_moderate, upv_ATB_2024_advanced]
+    - plantchar_csp: [csp_ATB_2024_conservative, csp_ATB_2024_moderate, csp_ATB_2024_advanced]
+    - plantchar_ofswind: [ofs-wind_ATB_2024_conservative, ofs-wind_ATB_2024_moderate, ofs-wind_ATB_2024_advanced]
+    - plantchar_onswind: [ons-wind_ATB_2024_conservative, ons-wind_ATB_2024_moderate, ons-wind_ATB_2024_advanced]
+    - plantchar_geo: [geo_ATB_2023_conservative, geo_ATB_2023_moderate, geo_ATB_2023_advanced]
+  dist: discrete
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+
+### ---------------------------------------------------###
+### --- Distributions for NG-fuel prices
+### ---------------------------------------------------###
+- name: ng_fuel_price
+  assignments_list:
+    - ngscen: [AEO_2023_LOG, AEO_2023_reference, AEO_2023_HOG]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+
+### ---------------------------------------------------###
+### --- Distributions for load
+### ---------------------------------------------------###
+- name: load_country
+  assignments_list: 
+    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAmoderate, EER_IRAlow]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+
+- name: load_st
+  assignments_list: 
+    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAmoderate, EER_IRAlow]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: st
+
+- name: load_ba
+  assignments_list: 
+    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAmoderate, EER_IRAlow]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: ba
+
+- name: load_discrete_st
+  assignments_list: 
+    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAmoderate, EER_IRAlow]
+  dist: discrete
+  dist_params: [1, 1, 1]
+  weight_r: st
+
+
+### ---------------------------------------------------###
+### --- Distributions for siting switches
+### ---------------------------------------------------###
+
+# --- Individual technology cost trajectories ---
+# These distributions apply independently to each technology
+- name: windon_siting
+  assignments_list:
+    - GSw_SitingWindOns: [limited, reference]
+  dist: dirichlet
+  dist_params: [1, 1]
+  weight_r: country
+
+- name: windoff_siting
+  assignments_list:
+    - GSw_SitingWindOfs: [limited, reference]
+  dist: dirichlet
+  dist_params: [1, 1]
+  weight_r: country
+
+- name: upv_siting
+  assignments_list:
+    - GSw_SitingUPV: [limited, reference]
+  dist: dirichlet
+  dist_params: [1, 1]
+  weight_r: country
+
+# --- Combined technology sampling ---
+# These distributions sample multiple technologies together with shared correlation
+- name: wind_siting_country
+  assignments_list:
+    - GSw_SitingWindOfs: [limited, reference]
+    - GSw_SitingWindOns: [limited, reference]
+  dist: dirichlet
+  dist_params: [1, 1]
+  weight_r: country
+
+- name: wind_solar_siting_country
+  assignments_list:
+    - GSw_SitingUPV: [limited, reference]
+    - GSw_SitingWindOfs: [limited, reference]
+    - GSw_SitingWindOns: [limited, reference]
+  dist: dirichlet
+  dist_params: [1, 1]
+  weight_r: country
+
+- name: wind_solar_siting_st
+  assignments_list:
+    - GSw_SitingUPV: [limited, reference]
+    - GSw_SitingWindOfs: [limited, reference]
+    - GSw_SitingWindOns: [limited, reference]
+  dist: dirichlet
+  dist_params: [1, 1]
+  weight_r: st
+
+- name: wind_solar_siting_ba
+  assignments_list:
+    - GSw_SitingUPV: [limited, reference]
+    - GSw_SitingWindOfs: [limited, reference]
+    - GSw_SitingWindOns: [limited, reference]
+  dist: dirichlet
+  dist_params: [1, 1]
+  weight_r: ba
+
+- name: wind_solar_siting_discrete_st
+  assignments_list:
+    - GSw_SitingUPV: [limited, reference]
+    - GSw_SitingWindOfs: [limited, reference]
+    - GSw_SitingWindOns: [limited, reference]
+  dist: discrete
+  dist_params: [1, 1]
+  weight_r: st
+
+
+### ---------------------------------------------------###
+### --- Miscellaneous distributions
+### ---------------------------------------------------###
+- name: transmission_1
+  assignments_list:
+    - GSw_TransInvMaxLongTerm: [0.9]
+    - GSw_TransInvMaxNearTerm: [0.9]
+  dist: triangular_multiplier
+  dist_params: [1, 1, 2]
+  weight_r: country
+  
+- name: transmission_2
+  assignments_list:
+    - GSw_TransInvMaxLongTerm: [1.4]
+    - GSw_TransInvMaxNearTerm: [1.4]
+  dist: uniform_multiplier
+  dist_params: [0.5, 1]
+  weight_r: country
+
+- name: h2_demand
+  assignments_list:
+    - GSw_H2_Demand_Case: [LTS, Decarb]
+  dist: dirichlet
+  dist_params: [1, 1]
+  weight_r: country

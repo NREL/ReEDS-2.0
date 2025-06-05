@@ -8,6 +8,7 @@ import ctypes
 import numpy as np
 import pandas as pd
 import geopandas as gpd
+from glob import glob
 from pathlib import Path
 from pandas.api.types import is_float_dtype
 
@@ -74,6 +75,20 @@ def get_hierarchy(case=None, original=False, country='USA'):
     hierarchy = hierarchy.loc[hierarchy.country.str.lower() == country.lower()].copy()
     return hierarchy
 
+def get_countymap(exclude_water_areas=False):
+    """Get geodataframe of US counties"""
+    crs = 'ESRI:102008'
+    dfcounty = gpd.read_file(
+        os.path.join(reeds_path, 'inputs', 'shapefiles', 'US_COUNTY_2022')
+    ).to_crs(crs)
+
+    if exclude_water_areas:
+        dfmap = get_dfmap(levels=['country'])
+        dfcounty['geometry'] = (
+            dfcounty.intersection(dfmap['country'].loc['USA','geometry'])
+        )
+    
+    return dfcounty
 
 def get_zonemap(case=None):
     """
@@ -125,10 +140,7 @@ def get_zonemap(case=None):
             dfba = dfba.dissolve('rb').loc[aggreg2anchorreg.aggreg].copy()
 
         ### Get the county map
-        crs = 'ESRI:102008'
-        dfcounty = gpd.read_file(
-            os.path.join(reeds_path, 'inputs', 'shapefiles', 'US_COUNTY_2022')
-        ).to_crs(crs)
+        dfcounty = get_countymap()
         state_fips = pd.read_csv(
             os.path.join(reeds_path, 'inputs', 'shapefiles', "state_fips_codes.csv"),
             names=["STATE", "STCODE", "STATEFP", "CONUS"],
@@ -201,10 +213,7 @@ def get_zonemap(case=None):
                 .set_index('r')
             )
             ### Get the county map
-            crs = 'ESRI:102008'
-            dfba = gpd.read_file(
-                os.path.join(reeds_path, 'inputs', 'shapefiles', 'US_COUNTY_2022')
-            ).to_crs(crs)
+            dfba = get_countymap()
 
             ### Add US state code and drop states outside of CONUS
             state_fips = pd.read_csv(
@@ -231,14 +240,17 @@ def get_zonemap(case=None):
     return dfba
 
 
-def get_dfmap(case=None):
+def get_dfmap(case=None, levels=None):
     """Get dictionary of maps at different hierarchy levels"""
     hierarchy = get_hierarchy(case, original=True).drop(columns=['aggreg'], errors='ignore')
+    hierarchy_levels = list(hierarchy.columns)
+    if levels:
+        hierarchy_levels = [col for col in hierarchy_levels if col in levels]
 
     mapsfile = os.path.join(str(case), 'inputs_case', 'maps.gpkg')
     if os.path.exists(mapsfile):
         dfmap = {}
-        for level in ['r'] + list(hierarchy.columns):
+        for level in ['r'] + hierarchy_levels:
             dfmap[level] = gpd.read_file(mapsfile, layer=level).rename(columns={'rb': 'r'})
             dfmap[level] = dfmap[level].set_index(dfmap[level].columns[0]).rename_axis(level)
         return dfmap
@@ -248,7 +260,7 @@ def get_dfmap(case=None):
     dfmap = {'r': dfba.dropna(subset='country').copy()}
     dfmap['r']['centroid_x'] = dfmap['r'].centroid.x
     dfmap['r']['centroid_y'] = dfmap['r'].centroid.y
-    for col in hierarchy:
+    for col in hierarchy_levels:
         dfmap[col] = dfba.copy()
         dfmap[col]['geometry'] = dfmap[col].buffer(0.0)
         dfmap[col] = dfmap[col].dissolve(col)
@@ -612,11 +624,22 @@ def read_file(filename, parse_timestamps=False):
 
 
 def read_pras_results(filepath):
-    """Read a run_pras.jl output file"""
+    """
+    Read a run_pras.jl output file.
+    If results are grouped by sample, return a dictionary of dataframes;
+    otherwise return a dataframe.
+    """
     with h5py.File(filepath, 'r') as f:
         keys = list(f)
         if len(keys):
-            df = pd.concat({c: pd.Series(f[c][...]) for c in keys}, axis=1)
+            ## If all the keys are integers, we have groups labeled by sample
+            if all([s.isdigit() for s in keys]):
+                df = {}
+                for s in keys:
+                    skeys = list(f[s])
+                    df[int(s)] = pd.concat({c: pd.Series(f[s][c][...]) for c in skeys}, axis=1)
+            else:
+                df = pd.concat({c: pd.Series(f[c][...]) for c in keys}, axis=1)
         else:
             df = pd.DataFrame()
         return df
@@ -698,6 +721,214 @@ def get_outage_hourly(
     if len(column_levels) == 1:
         dfout.columns = dfout.columns.get_level_values(0)
     return dfout
+
+
+def get_years(case):
+    return pd.read_csv(
+        os.path.join(case, 'inputs_case', 'modeledyears.csv')
+    ).columns.astype(int).values
+
+
+def get_last_iteration(case, year=2050, datum=None, samples=None):
+    """Get the last iteration of PRAS for a given case/year"""
+    if datum not in [None,'flow','energy']:
+        raise ValueError(f"datum must be in [None,'flow','energy'] but is {datum}")
+    infile = sorted(glob(
+        os.path.join(
+            case, 'ReEDS_Augur', 'PRAS',
+            f"PRAS_{year}i*"
+            + (f'-{samples}' if samples is not None else '')
+            + (f'-{datum}' if datum is not None else '')
+            + '.h5'
+        )
+    ))[-1]
+    iteration = int(
+        os.path.splitext(os.path.basename(infile))[0]
+        .split('-')[0].split('_')[1].split('i')[1]
+    )
+    return infile, iteration
+
+
+def get_pras_system(case, year=None, iteration='last', verbose=0):
+    """
+    Read a .pras .h5 file and return a dict of dataframes
+    """
+    ### Read all the tables in the .pras file
+    t = get_years(case)[-1] if year in [0, None, 'last'] else year
+    _iteration = (
+        get_last_iteration(case, t)[1] if iteration in [None, 'last']
+        else iteration
+    )
+    infile = os.path.join(case, 'ReEDS_Augur', 'PRAS', f"PRAS_{t}i{_iteration}.pras")
+    if not os.path.exists(infile):
+        raise FileNotFoundError(
+            f'{infile} does not exist; run postprocessing/run_reeds2pras.py or rerun '
+            'the ReEDS case with keep_augur_files=1'
+        )
+    pras = {}
+    with h5py.File(infile,'r') as f:
+        keys = list(f)
+        if verbose:
+            print(keys)
+        vals = {}
+        for key in keys:
+            vals[key] = list(f[key])
+            if verbose:
+                print(f"{key}:\n    {','.join(vals[key])}\n")
+            for val in vals[key]:
+                pras[key,val] = pd.DataFrame(f[key][val][...])
+                if verbose:
+                    print(f"{key}/{val}: {pras[key,val].shape}")
+            if verbose:
+                print('\n')
+
+    def get_pras_unit(name):
+        unit = name.split('|')[-1]
+        try:
+            return int(unit)
+        except ValueError:
+            return 0
+
+    ### Combine into more easily-usable dataframes
+    dfpras = {}
+    ## Generation and storage
+    keys = {
+        ## our name: [pras key, pras capacity table name]
+        'storcap': ['storages', 'dischargecapacity'],
+        'gencap': ['generators', 'capacity'],
+        'genfailrate': ['generators', 'failureprobability'],
+        'genrepairrate': ['generators', 'repairprobability'],
+        'genstorcap': ['generatorstorages', 'gridinjectioncapacity'],
+    }
+    for key, val in keys.items():
+        dfpras[key] = pras[val[0], val[1]]
+        dfpras[key].columns = pd.MultiIndex.from_arrays(
+            [
+                pras[val[0],'_core'].category.str.decode('UTF-8'),
+                pras[val[0],'_core'].region.str.decode('UTF-8'),
+                pras[val[0],'_core'].name.str.decode('UTF-8').map(get_pras_unit),
+                pras[val[0],'_core'].name.str.decode('UTF-8').str.strip('_'),
+            ],
+            names=['i', 'r', 'unit', 'name'],
+        )
+        if verbose:
+            print(key)
+            print(dfpras[key].columns.get_level_values('i').unique())
+
+    ## Transmission (use 'lines' but 'interfaces' should be the same)
+    keys = {
+        'trans_forward': ['lines', 'forwardcapacity'],
+        'trans_backward': ['lines', 'backwardcapacity'],
+    }
+    for key, val in keys.items():
+        dfpras[key] = pras[val[0], val[1]]
+        dfpras[key].columns = pd.MultiIndex.from_arrays(
+            [
+                pras[val[0],'_core'].category.str.decode('UTF-8'),
+                pras[val[0],'_core'].region_from.str.decode('UTF-8'),
+                pras[val[0],'_core'].region_to.str.decode('UTF-8'),
+                pras[val[0],'_core'].name.str.decode('UTF-8'),
+            ],
+            names=['trtype', 'r', 'rr', 'name'],
+        )
+
+    ## Load
+    dfpras['load'] = pras['regions','load'].rename(
+        columns=pras['regions','_core'].name.str.decode('UTF-8'))
+
+    return dfpras
+
+
+def get_available_capacity_weighted_cf(case, level='country'):
+    """
+    Get hourly wind and solar CF and take available-capacity-weighted-average across
+    specified region hierarchy level
+    """
+    hierarchy = reeds.io.get_hierarchy(case)
+    if level in ['r', 'rb', 'ba']:
+        r2region = dict(zip(hierarchy.index, hierarchy.index))
+    else:
+        r2region = hierarchy[level]
+    ## Get available capacity from supply curves
+    sc = {
+        i: pd.read_csv(
+            os.path.join(case, 'inputs_case', f'{i}_sc.csv')
+        ).groupby(['region', 'class'], as_index=False).capacity.sum()
+        for i in ['upv', 'wind-ons', 'wind-ofs']
+    }
+    sc = (
+        pd.concat(sc, names=['tech', 'drop'], axis=0)
+        .reset_index(level='drop', drop=True).reset_index()
+    )
+    sc['i'] = sc.tech+'_'+sc['class'].astype(str)
+    sc['resource'] = sc.i + '|' + sc.region
+    sc['aggreg'] = sc.region.map(r2region)
+    ## Get CF
+    recf = reeds.io.read_file(
+        os.path.join(case, 'inputs_case', 'recf.h5'),
+        parse_timestamps=True,
+    )
+    ## CF * cap / cap = available-capacity-weighted-average CF
+    recapcf = (recf * sc.set_index('resource')['capacity']).dropna(axis=1, how='all')
+    recapcf.columns = pd.MultiIndex.from_arrays([
+        recapcf.columns.map(lambda x: x.split('|')[0].strip('_0123456789')),
+        recapcf.columns.map(lambda x: r2region[x.split('|')[1]]),
+    ], names=['i', 'r'])
+    dfout = (
+        recapcf.groupby(['i','r'], axis=1).sum()
+        / sc.groupby(['tech','aggreg']).capacity.sum().rename_axis(['i','r'])
+    )
+    return dfout
+
+
+def get_sitemap(offshore=False, from_rev=False, overwrite=False):
+    """
+    Get mapping from sc_point_gid to geographic points.
+    If from_rev is True, pull from raw reV outputs
+    If overwrite is True, rewrite data stored in repo
+    """
+    techs = ['wind-ofs'] if offshore else ['upv', 'wind-ons']
+    fpath = os.path.join(
+        reeds_path,
+        'inputs',
+        'supply_curve',
+        f"sitemap{'_offshore' if offshore else ''}.csv"
+    )
+    if from_rev:
+        ## Get reV outputs
+        rev_paths = pd.read_csv(
+            os.path.join(reeds_path, 'inputs', 'supply_curve', 'rev_paths.csv')
+        )
+        rev_paths = rev_paths.loc[rev_paths.tech.isin(techs)].copy()
+        remotepath = os.path.join(
+            ('/Volumes' if sys.platform == 'darwin' else '//nrelnas01'), 'ReEDS'
+        )
+        dictin_sc = {}
+        for i, row in rev_paths.iterrows():
+            dictin_sc[row.tech, row.access_case] = pd.read_csv(
+                os.path.join(
+                    remotepath,
+                    'Supply_Curve_Data',
+                    row.sc_path,
+                    'reV',
+                    row.original_sc_file,
+                ),
+                usecols=['sc_point_gid','latitude','longitude']
+            )
+        sitemap = (
+            pd.concat(dictin_sc)
+            .drop_duplicates('sc_point_gid')
+            .set_index('sc_point_gid')
+            .sort_index()
+        )
+        if overwrite:
+            sitemap.to_csv(fpath)
+    ## Read it and convert to geopandas dataframe
+    else:
+        sitemap = pd.read_csv(fpath, index_col='sc_point_gid')
+
+    sitemap = reeds.plots.df2gdf(sitemap)
+    return sitemap
 
 
 #   ##      ## ########  #### ######## ########
@@ -849,7 +1080,7 @@ def write_profile_to_h5(df, filename, outfolder, compression_opts=4):
             if isinstance(indexvals[0], bytes):
                 # if already formatted as bytes keep that way
                 f.create_dataset(f'index_{i}', data=indexvals, dtype='S30')
-            elif indexvals.name == 'datetime':
+            elif indexvals.name in ['datetime', 'timestamp']:
                 # if we have a formatted datetime index that isn't bytes, save as such
                 timeindex = (
                     indexvals.to_series().apply(datetime.datetime.isoformat).reset_index(drop=True)
@@ -888,3 +1119,39 @@ def write_profile_to_h5(df, filename, outfolder, compression_opts=4):
             raise ValueError(f"{outfile} can only contain one datatype but it contains {types}")
 
         return df
+
+
+def write_gswitches(sw_df: pd.DataFrame, inputs_case: str) -> str:
+    """
+    Write GAMS switches by filtering those that start with 'GSw' and have a numeric value.
+    Converts the filtered switches to a CSV and saves it in the inputs_case directory.
+
+    Args:
+        sw_df (pd.DataFrame): A DataFrame with the switches.
+        inputs_case (str): The path to the inputs case directory.
+
+    Returns:
+        str: The path to the generated CSV file.
+    """
+    switches = sw_df.squeeze()
+
+    def is_numeric(val):
+        try:
+            float(val)
+            return '_' not in str(val)
+        except (ValueError, TypeError):
+            return False
+
+    gswitches = switches.loc[
+        switches.index.str.lower().str.startswith('gsw') & switches.map(is_numeric)
+    ].copy()
+
+    # Change 'GSw' to 'Sw' by removing the initial 'G'
+    gswitches.index = gswitches.index.map(lambda x: x[1:])
+
+    # Add a 'comment' column and save to CSV
+    csv_path = os.path.join(inputs_case, 'gswitches.csv')
+    gswitches.reset_index().assign(comment='').to_csv(
+        csv_path, header=False, index=False)
+
+    return csv_path

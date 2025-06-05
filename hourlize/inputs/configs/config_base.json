@@ -32,21 +32,18 @@
   },
 
   "load": {
-    "aeo_default": "{reeds_path}/inputs/load/demand_AEO_2023_reference.csv",
+    "load_default": "{reeds_path}/inputs/load/EER_IRAlow_load_hourly.h5",
     "ba_frac_path":"{hourlize_path}/inputs/load/load_participation_factors_st_to_ba.csv",
-    "ba_timezone_path":"{hourlize_path}/inputs/load/ba_timezone.csv",
     "calibrate_path":"{hourlize_path}/inputs/load/EIA_loadbystate.csv",
-    "calibrate_type":"one_year",
+    "calibrate_type":"all_years",
     "calibrate_year":2010,
     "dtypeLoad":"np.float32",
     "hourly_out_years": "{eval_list(range(2021,2051))}",
     "hourly_process":true,
-    "inputfiles": ["ba_timezone_path", "calibrate_path", "ba_frac_path", "hierarchy_path", "aeo_default"],
+    "inputfiles": ["calibrate_path", "ba_frac_path", "hierarchy_path", "load_default"],
     "load_source_hr_type":"begin",
-    "load_source_timezone":-5,
-    "load_source": "{remotepath}/Supply_Curve_Data/LOAD/2020_Update/plexos_to_reeds/outputs/load_hourly_ba_EST.csv",
-    "start_1am": false,
-    "truncate_leaps":true,
+    "load_source_timezone":"Etc/GMT+5",
+    "load_source": "C:/ReEDS/ReEDS-2.0_mm_load/hourlize/eer_to_reeds/outputs/load_hourly_ba_EST_EER_20230604_reeds_load_baseline_2025-04-14_23-27-48",
     "us_only":true,
     "use_default_before_yr": 2021
   }

@@ -1,6 +1,8 @@
 """
 Functions for processing load data for use in ReEDS.
-Run using "run_hourlize.py" -- see README for setup and details.
+Run using "python run_hourlize.py load"
+The output of this script is timestamped as hour-ending, e.g. 12am refers to 11pm-12am.
+See README for setup and details.
 """
 
 #%% ===========================================================================
@@ -29,16 +31,16 @@ def get_hourly_load(load_source, us_only):
     if us_only:
         us_bas = ['p'+str(i+1) for i in range(134)]
         df = df[us_bas].copy()
+    df.index.rename('datetime', inplace=True)
     df = df.reindex(sorted(df.columns), axis=1)
     print('Done gathering hourly inputs: '+ str(datetime.datetime.now() - startTime))
     return df
 
 def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, select_year, output_timezone, 
-                   truncate_leaps, calibrate_type, calibrate_year, use_default_before_yr, load_source_hr_type, outpath):
+                   calibrate_type, calibrate_year, load_source_hr_type, outpath):
     print('Processing hourly data...')
     startTime = datetime.datetime.now()
     df_hr = df_hr_input.copy()
-    df_hr.index.rename('datetime', inplace=True)
     df_hr = df_hr.sort_index()
 
     #Add logic for testmode?
@@ -47,13 +49,8 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
     #First remove other years' data
     df_hr = df_hr[df_hr.index.year.isin(hourly_out_years)].copy()
 
-    if truncate_leaps is True:
-        #Remove December 31 for leap years
-        df_hr = df_hr[~((df_hr.index.year % 4 == 0) & (df_hr.index.month == 12) & (df_hr.index.day == 31))].copy()
-
-    if 'p19' not in df_hr:
-        #Fill p19 with p20 and scale by guess of 1/6 (although calibration below will obviate this scaling)
-        df_hr['p19'] = df_hr['p20'] / 6
+    #Remove December 31 for leap years
+    df_hr = df_hr[~((df_hr.index.year % 4 == 0) & (df_hr.index.month == 12) & (df_hr.index.day == 31))].copy()
 
     if paths['calibrate_path'] is not False:
         #Scale the ba hourly profiles to state-level annual loads with state-to-ba participation factors
@@ -136,125 +133,36 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
 
     df_hr = df_hr.reindex(sorted(df_hr.columns), axis=1)
     df_hr = df_hr.round()
-
     #Shift hourly data based on desired timezones. Shift each year independently.
     df_hr_ls = []
     for year in hourly_out_years:
         df_hr_yr = df_hr[df_hr.index.year == year].copy()
-        df_hr_yr = roll_hourly_data(df_hr_yr, paths, load_source_timezone, output_timezone, load_source_hr_type)
+        df_hr_yr = roll_hourly_data(df_hr_yr, load_source_timezone, output_timezone, load_source_hr_type)
         df_hr_ls.append(df_hr_yr)
     df_hr = pd.concat(df_hr_ls)
 
-    #Splice in default data, for which the first entry is Jan 1, 1am hour ending, which is 12am-1am, which is 12am hour beginning.
-    if use_default_before_yr is not False:
-        print('Splicing in default load before ' + str(use_default_before_yr))
-        #Read in hierarchy to map census division / state to BA
-        df_hier = pd.read_csv(os.path.join(outpath, 'inputs', 'hierarchy.csv'))
-        df_hier = df_hier.rename(columns= {'ba' : 'r'})
-        #Read in load multipliers
-        df_loadgrowth = pd.read_csv(cf.aeo_default)
-        if 'cendiv' in df_loadgrowth.columns:
-            #AEO multipliers at the census division level are in a wide format
-            #Change AEO multipliers to a long format
-            df_loadgrowth = pd.melt(df_loadgrowth, id_vars=['cendiv'], 
-                                    var_name='year', value_name='multiplier')
-            df_loadgrowth['year'] = df_loadgrowth['year'].astype(int)
-            #Map census division multipliers to BAs
-            cd2rb = df_hier[['r', 'cendiv']]
-            df_loadgrowth = df_loadgrowth.merge(cd2rb, on=['cendiv'], how='outer'
-                                                ).dropna(axis=0, how='any')
-        else:
-            #AEO multipliers at the state level are already in a long format
-            #Map state multipliers to BAs
-            st2rb = df_hier.reset_index(drop=False)[['r', 'st']]
-            df_loadgrowth = df_loadgrowth.merge(st2rb, on=['st'], how='outer'
-                                                ).dropna(axis=0, how='any')
-        #Remove years >= use_default_before_yr
-        df_loadgrowth = df_loadgrowth[df_loadgrowth['year']<use_default_before_yr
-                                      ][['year', 'r', 'multiplier']]
-        df_loadgrowth['year'] = df_loadgrowth['year'].astype(int)
-        print('Reading default load and selecting ' + str(select_year) + ' profiles')
-        df_bau = pd.read_hdf('../inputs/load/historic_load_hourly.h5')
-        df_bau.index += -1 # Re-index to 0-8759 instead of 1-8760
-        df_bau = df_bau[(df_bau.index >= 8760*(select_year-2007)) &
-                        (df_bau.index < 8760*(select_year-2006))].reset_index(drop=True) #selecting select_year profiles, which have been scaled to 2010 totals
-        if 'Unnamed: 0' in df_bau.columns:
-            df_bau = df_bau.drop(columns=['Unnamed: 0'])
-        #Since the default load data starts at 1am hour ending while our load source
-        #data starts at 12 am hour ending, we need to roll to line them up.
-        df_bau = df_bau.apply(np.roll, shift=1)
-        df_bau['hour'] = df_bau.index + 1
-        df_bau = pd.melt(df_bau, id_vars=['hour'], var_name='r', value_name= 'value')
-        #Merge load growth multipliers to historical load
-        df_loadgrowth = df_loadgrowth[df_loadgrowth['r'].isin(df_bau['r'].unique())]
-        df_bau = df_bau.merge(df_loadgrowth, on=['r'], how='outer').reset_index(drop=True)
-        print('Growing default load')
-        df_bau['value'] *= df_bau['multiplier']
-        print('Reshaping default load')
-        df_bau = df_bau.pivot_table(index=['year','hour'], columns='r', values='value').reset_index()
-        print('Concatenating with default load')
-        ls_df_bau = []
-        for year in range(2010,use_default_before_yr):
-            df_yr = df_bau[df_bau['year'] == year].copy()
-            df_yr['year'] = year
-            df_yr.drop(columns=['year','hour'], inplace=True)
-            df_yr.index = pd.date_range('1/1/' + str(year) + ' 00:00', periods=8760, freq='1H')
-            ls_df_bau.append(df_yr)
-        df_bau = pd.concat(ls_df_bau).round().astype(int)
-        df_bau.index.rename('datetime', inplace=True)
-        df_hr = pd.concat([df_bau,df_hr])
-        print('Done splicing in default load')
+    #Convert format to multi-index with levels of 'year' and 'datetime', where 'year' is model year and datetime is weather year
+    #Add the timezone to the index
+    df_hr['year'] = df_hr.index.year
+    for model_yr in df_hr['year'].unique():
+        df_hr.loc[df_hr['year'] == model_yr, 'datetime'] = pd.date_range('1/1/' + str(select_year) + ' 00:00', periods=8760, freq='1H', tz=output_timezone)
+    df_hr = df_hr.set_index(['year', 'datetime'])
 
     print('Done processing hourly: '+ str(datetime.datetime.now() - startTime))
     return df_hr
 
-def roll_hourly_data(df_hr, paths, source_timezone, output_timezone, load_source_hr_type):
+def roll_hourly_data(df_hr, source_timezone, output_timezone, load_source_hr_type):
     #If hour-beginning, we shift data down (+1) to convert to hour ending
     hour_end_shift = 1 if load_source_hr_type == 'begin' else 0
+    #Extract the integer adjustment from UTC for source and output timezones
+    source_tz_num = -1 * int(source_timezone.replace('Etc/GMT', ''))
+    output_tz_num = -1 * int(output_timezone.replace('Etc/GMT', ''))
     #Shift timezone of hourly data
-    if output_timezone != source_timezone:
-        if output_timezone == 'local':
-            #Shift from source timezone to local standard time
-            df_tz = pd.read_csv(paths['ba_timezone_path'])
-            timezones = dict(zip(df_tz['ba'], df_tz['timezone']))
-            for ba in df_hr:
-                df_hr[ba] = np.roll(df_hr[ba], timezones[ba] - source_timezone + hour_end_shift)
-        else:
-            #Shift from source timezone to output timezone
-            for ba in df_hr:
-                df_hr[ba] = np.roll(df_hr[ba], output_timezone - source_timezone + hour_end_shift)
+    shift = output_tz_num - source_tz_num + hour_end_shift
+    if shift != 0:
+        for ba in df_hr:
+            df_hr[ba] = np.roll(df_hr[ba], shift)
     return df_hr
-
-def shift_to_1am(df_hr):
-    #to start at 1am instead of 12am, roll the data by -1
-    df_hr_ls = []
-    for year in df_hr.index.year.unique():
-        df_hr_yr = df_hr[df_hr.index.year == year].copy()
-        df_hr_yr = df_hr_yr.reindex(np.roll(df_hr_yr.index,-1))
-        df_hr_ls.append(df_hr_yr)
-    df_hr = pd.concat(df_hr_ls)
-    return df_hr
-
-def save_outputs(df_hr, outpath, compression_opts, dtypeLoad):
-    print('Saving outputs...')
-    startTime = datetime.datetime.now()
-    df_hr = df_hr.copy()
-    #Reformat df_hr for outputting to h5 file
-    df_hr['year'] = df_hr.index.year
-    df_hr['hour'] = df_hr.groupby('year').cumcount() + 1
-    df_hr = df_hr.reset_index(drop=True)
-    new_cols = ['year','hour'] + [c for c in df_hr.columns if c not in ['year','hour']]
-    df_hr = df_hr[new_cols].copy().sort_values(['year','hour'])
-
-    #Write df_hr to h5 file with each table (year) being 8760 (hours) x 134 (regions)
-    f = h5py.File(os.path.join(outpath, 'results', 'load_hourly.h5'), 'w')
-    f.create_dataset('columns', data=df_hr.columns[2:], dtype=h5py.special_dtype(vlen=str))
-    for year in df_hr['year'].unique():
-        df_h = df_hr[df_hr['year'] == year].copy()
-        df_h.drop(columns=['year','hour'], inplace=True)
-        f.create_dataset(str(year), data=df_h, dtype=dtypeLoad, compression='gzip')
-    f.close()
-    print('Done saving outputs: '+ str(datetime.datetime.now() - startTime))
 
 #%% ===========================================================================
 ### --- PROCEDURE ---
@@ -276,63 +184,40 @@ if __name__== '__main__':
 
     #%% setup logging
     site.addsitedir(cf.reeds_path)
+    import reeds
     from reeds.log import makelog
 
     makelog(scriptname=__file__, logpath=os.path.join(cf.outpath, f'log_{cf.casename}.txt'))
 
     # list of paths for passing to functions
-    paths = {'ba_timezone_path':cf.ba_timezone_path,
-             'calibrate_path':cf.calibrate_path,
+    paths = {'calibrate_path':cf.calibrate_path,
              'ba_frac_path':cf.ba_frac_path,
              'hierarchy_path':cf.hierarchy_path,
-             'aeo_multipliers':cf.aeo_default,
+             'load_default':cf.load_default,
             }
     
     #If load source is a directory (as it is for EER load), the csv files inside need to be labeled like w2007.csv.
-    if os.path.isdir(cf.load_source):
-        f = h5py.File(os.path.join(cf.outpath,'results','load_hourly_multi.h5'), 'w')
-        ls_df_hr = []
-        for year in list(range(2007,2014)):
-            print('processing weather year ' + str(year) + '...')
-            df_hr_input = get_hourly_load(os.path.join(cf.load_source,'w'+str(year)+'.csv'), cf.us_only)
-            if cf.hourly_process is False:
-                df_hr = df_hr_input.copy()
-            else:
-                df_hr = process_hourly(df_hr_input, cf.load_source_timezone, paths, 
-                                       cf.hourly_out_years, year, cf.output_timezone, 
-                                       cf.truncate_leaps, cf.calibrate_type, 
-                                       cf.calibrate_year, cf.use_default_before_yr, 
-                                       cf.load_source_hr_type)
-            if year == cf.select_year:
-                if cf.start_1am:
-                    df_hr = shift_to_1am(df_hr)
-                save_outputs(df_hr, cf.outpath, cf.compression_opts, cf.dtypeLoad)
-            else:
-                if cf.start_1am:
-                    df_hr = shift_to_1am(df_hr)
-            df_hr['weather_year'] = year
-            df_hr['model_year'] = df_hr.index.year
-            ls_df_hr.append(df_hr)
-        df_multi = pd.concat(ls_df_hr, ignore_index=True)
-        #Save ba columns. Remove the final two columns (weather_year and model_year).
-        f.create_dataset('columns', data=df_multi.columns[:-2], dtype=h5py.special_dtype(vlen=str))
-        #Create h5 datasets, one for each model year
-        for year in df_multi['model_year'].unique():
-            df_h = df_multi[df_multi['model_year'] == year].copy()
-            df_h.drop(columns=['weather_year','model_year'], inplace=True)
-            f.create_dataset(str(year), data=df_h, dtype=cf.dtypeLoad, compression='gzip')
-        f.close()
-    else:
-        df_hr_input = get_hourly_load(cf.load_source, cf.us_only)
+    ls_df_hr = []
+    for year in list(range(2007,2014)):
+        print('processing weather year ' + str(year) + '...')
+        df_hr_input = get_hourly_load(os.path.join(cf.load_source,'w'+str(year)+'.csv'), cf.us_only)
         if cf.hourly_process is False:
             df_hr = df_hr_input.copy()
         else:
             df_hr = process_hourly(df_hr_input, cf.load_source_timezone, paths, 
-                                   cf.hourly_out_years, cf.select_year, cf.output_timezone, 
-                                   cf.truncate_leaps, cf.calibrate_type, cf.calibrate_year, 
-                                   cf.use_default_before_yr, cf.load_source_hr_type, cf.outpath)
-        #Compare df_hr and df_hr_input to see the combined effect of all the processing steps.
-        if cf.start_1am:
-            df_hr = shift_to_1am(df_hr)
-        save_outputs(df_hr, cf.outpath, cf.compression_opts, cf.dtypeLoad)
+                                    cf.hourly_out_years, year, cf.output_timezone, 
+                                    cf.calibrate_type, cf.calibrate_year,
+                                    cf.load_source_hr_type, cf.outpath)
+        ls_df_hr.append(df_hr)
+    df_multi = pd.concat(ls_df_hr)
+    df_multi = df_multi.sort_index()
+    #Splice in default data, for which the first entry is Jan 1, 1am hour ending, which is 12am-1am, which is 12am hour beginning.
+    if cf.use_default_before_yr is not False:
+        print('Splicing in default load before ' + str(cf.use_default_before_yr))
+        df_hist = reeds.io.read_file(paths['load_default'], parse_timestamps=True)
+        df_hist = df_hist[df_hist.index.get_level_values('year') < cf.use_default_before_yr].copy()
+        df_multi = pd.concat([df_hist,df_multi])
+        print('Done splicing in default load')
+    #Save output
+    reeds.io.write_profile_to_h5(df_multi, 'load_hourly.h5', f'{cf.outpath}/results', compression_opts=cf.compression_opts)
     print('All done! total time: '+ str(datetime.datetime.now() - startTime))

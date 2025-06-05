@@ -456,7 +456,7 @@ def setup_load(args):
     config_string_formatter(configout, args.verbose)
 
     # setup run folder
-    casename = os.path.basename(configout['load_source'])[:-4]
+    casename = os.path.basename(configout['load_source'])
     outpath = make_output_dir(casename)
 
     # copy input files to run folder

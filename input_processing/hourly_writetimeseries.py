@@ -151,92 +151,6 @@ def append_csp_profiles(cf_rep, sw):
     return cf_combined
 
 
-def get_dr_shifts(
-    sw,
-    inputs_case,
-    native_data=True,
-    hmap_7yr=None,
-    chunkmap=None,
-    hours=None,
-):
-    """
-    part of shift demand response handling compatible both with h17 and hourly ReEDS
-    hours, hmap_7yr, and chunkmap are needed for mapping hourly because there is no
-    fixed assumption for temporal structure of run
-    """
-
-    dr_hrs = pd.read_csv(
-        os.path.join(
-            inputs_case, 'dr_shifts.csv')
-    )
-    
-    # write out dr_hrs for Augur
-    dr_hrs.to_csv(os.path.join(inputs_case, 'dr_hrs.csv'), index=False)
-
-    dr_pos = dr_hrs[['dr_type', 'pos_hrs']].reindex(dr_hrs.index.repeat(dr_hrs.pos_hrs))
-    dr_pos['shift'] = dr_pos['pos_hrs'] - dr_pos.groupby(['dr_type']).cumcount()
-
-    dr_neg = dr_hrs[['dr_type', 'neg_hrs']].reindex(dr_hrs.index.repeat(-1*dr_hrs.neg_hrs))
-    dr_neg['shift'] = dr_neg['neg_hrs'] + dr_neg.groupby(['dr_type']).cumcount()
-
-    dr_shifts = pd.concat([dr_pos.rename({'pos_hrs': 'hrs'}, axis=1),
-                           dr_neg.rename({'neg_hrs': 'hrs'}, axis=1)])
-
-    #### native_data reads in inputs directly
-    if native_data:
-        hr_ts = pd.read_csv(
-            os.path.join(inputs_case, 'rep', 'h_dt_szn.csv'))
-        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
-
-        num_hrs = pd.read_csv(
-            os.path.join(inputs_case, 'numhours.csv'),
-            header=0, names=['h', 'numhours'], index_col='h').squeeze(1)
-    # otherwise reformat to hourly timeslice subsets
-    else:
-        hr_ts = hmap_7yr[['h','season','year','hour']].assign(h=hmap_7yr.h.map(chunkmap))
-        hr_ts = hr_ts.loc[(hr_ts['hour'] <= 8760), ['h', 'hour', 'season']]
-        num_hrs = (
-            hours.reset_index().assign(h=hours.index.map(chunkmap))
-            .groupby('h').numhours.sum().reset_index())
-
-    #### after here the rest is the same
-    dr_shifts['key'] = 1
-    hr_ts['key'] = 1
-    hr_shifts = pd.merge(dr_shifts, hr_ts, on='key').drop('key', axis=1)
-    hr_shifts['shifted_hr'] = hr_shifts['hour'] + hr_shifts['shift']
-    # Adjust hrs to be between 1 and 8760
-    lt0 = hr_shifts.shifted_hr <= 0
-    gt8760 = hr_shifts.shifted_hr > 8760
-    hr_shifts.loc[lt0, 'shifted_hr'] += 8760
-    hr_shifts.loc[gt8760, 'shifted_hr'] -= 8760
-
-    # Merge on hr_ts again to the shifted hours to see what timeslice DR
-    # can move load into
-    hr_shifts = pd.merge(hr_shifts,
-                         hr_ts.rename({'h':'shifted_h', 'hour':'shifted_hr',
-                                       'season':'shifted_season'}, axis=1),
-                         on='shifted_hr').drop('key', axis=1)
-    # Only allow shifts within the same season
-    hr_shifts = hr_shifts[hr_shifts.season == hr_shifts.shifted_season]
-    hr_shifts.drop(['shifted_season'], axis=1, inplace=True)
-
-    hr_shifts2 = (
-        hr_shifts[['dr_type','h','hour','shifted_h']]
-        .drop_duplicates()
-        .groupby(['dr_type','h','shifted_h'])
-        .size()
-        .reset_index()
-    )
-
-    ts_shifts = pd.merge(hr_shifts2, num_hrs, on='h')
-    ts_shifts['shift_frac'] = ts_shifts[0] / ts_shifts['numhours']
-
-    shift_out = ts_shifts.loc[ts_shifts['h'] != ts_shifts['shifted_h'], :]
-    shift_out = shift_out.round(4)
-
-    return shift_out, dr_shifts
-
-
 def get_minloading_windows(sw, h_szn, chunkmap):
     """
     Create combinations of h's within GSw_HourlyWindow of each other,
@@ -279,9 +193,7 @@ def get_minloading_windows(sw, h_szn, chunkmap):
     return hour_szn_group
 
 
-def get_yearly_demand(
-        sw, hmap_myr, hmap_allyrs, inputs_case,
-    ):
+def get_yearly_demand(sw, hmap_myr, hmap_allyrs, inputs_case, periodtype='rep'):
     """
     After clustering based on GSw_HourlyClusterYear and identifying the modeled days,
     reload the raw demand and extract the demand on the modeled days for each year.
@@ -298,15 +210,15 @@ def get_yearly_demand(
     load_in.index = load_in.index.map(hmap_allyrs.set_index('timestamp')['actual_h']).rename('h')
 
     load_out = load_in.copy()
-    ### If using representative (i.e. medoid) periods, pull out the representative periods.
-    if sw["GSw_HourlyType"] != "year":
-        load_out = load_out.loc[hmap_myr.h.unique()].copy()
-    ### Otherwise, if using full year, we keep the modeled years
-    else:
+    ### For full year, keep all periods in the modeled years
+    if (sw.GSw_HourlyType == 'year') and (periodtype == 'rep'):
         load_out = load_out.loc[
             load_out.index.map(hmap_allyrs.set_index('actual_h').year)
             .isin(sw['GSw_HourlyWeatherYears'])
         ].copy()
+    ### Otherwise, pull out the specified periods
+    else:
+        load_out = load_out.loc[hmap_myr.h.unique()].copy()
 
     ### Reshape for ReEDS
     load_out = load_out.stack("r").reorder_levels(["r", "h"], axis=0).sort_index()
@@ -451,17 +363,15 @@ def get_yearly_flexibility(
 # %% ===========================================================================
 ### --- MAIN FUNCTION ---
 ### ===========================================================================
-def main(sw, reeds_path, inputs_case, periodtype="rep", make_plots=1, figpathtail=""):
+def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
     """ """
     # #%% Settings for testing
     # reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-    # inputs_case = os.path.join(reeds_path, 'runs', 'v20240708_tforM3_Pacific', 'inputs_case')
+    # inputs_case = os.path.join(reeds_path, 'runs', 'v20250313_chunkM0_Pacific_r4mean_s4max', 'inputs_case')
     # sw = reeds.io.get_switches(inputs_case)
-    # periodtype = 'rep'
     # periodtype = 'stress2010i0'
-    # make_plots = int(sw.hourly_cluster_plots)
+    # periodtype = 'rep'
     # make_plots = 0
-    # figpathtail = ''
 
     #%% Set up logger
     _log = reeds.log.makelog(
@@ -482,10 +392,6 @@ def main(sw, reeds_path, inputs_case, periodtype="rep", make_plots=1, figpathtai
     os.makedirs(outpath, exist_ok=True)
     ## Designate prefix for timestamps
     tprefix = 's' if periodtype.startswith('stress') else ''
-
-    ### Direct plots to outputs folder
-    figpath = os.path.join(inputs_case, "..", "outputs", f"hourly{figpathtail}")
-    os.makedirs(figpath, exist_ok=True)
 
     # %%### Load shared files
     val_r_all = (
@@ -651,12 +557,9 @@ def main(sw, reeds_path, inputs_case, periodtype="rep", make_plots=1, figpathtai
 
     ### List of periods in which to apply operating reserve constraints
     if (not periodtype.startswith('stress')) and ('user' in sw['GSw_HourlyClusterAlgorithm']):
-        period_szn_user = pd.read_csv(
-            os.path.join(inputs_case,'period_szn_user.csv')
-        )
+        period_szn_user = pd.read_csv(os.path.join(inputs_case, 'period_szn_user.csv'))
         opres_periods = period_szn_user.loc[
-            (period_szn_user.scenario==sw['GSw_HourlyClusterAlgorithm'])
-            & (~period_szn_user.opres.isnull())
+            ~period_szn_user.opres.isnull()
         ].rep_period.drop_duplicates().rename('szn').to_frame()
     elif (sw["GSw_OpResPeriods"] == "all") or (sw["GSw_HourlyType"] == "year"):
         opres_periods = set_szn
@@ -1068,7 +971,9 @@ def main(sw, reeds_path, inputs_case, periodtype="rep", make_plots=1, figpathtai
     #############################
 
     load_in, load_h = get_yearly_demand(
-        sw=sw, hmap_myr=hmap_myr, hmap_allyrs=hmap_allyrs, inputs_case=inputs_case)
+        sw=sw, hmap_myr=hmap_myr, hmap_allyrs=hmap_allyrs, inputs_case=inputs_case,
+        periodtype=periodtype,
+    )
 
     ###### Get the peak demand in each (r,szn,modelyear) for GSw_HourlyWeatherYears
     load_full_yearly = load_in.loc[
@@ -1255,10 +1160,60 @@ def main(sw, reeds_path, inputs_case, periodtype="rep", make_plots=1, figpathtai
         evmc_storage_energy = pd.DataFrame(columns=["*i", "r", "h", "t"])
         evmc_baseline_load_out = pd.DataFrame(columns=["r", "h", "t", "MWh"])
 
+
+    #%% Chunk the profiles
+    if sw.GSw_HourlyChunkAggMethod == 'mean':
+        aggmethod = 'mean'
+        args = []
+    else:
+        if sw.GSw_HourlyChunkAggMethod == 'mid':
+            ## Round up:
+            ## For 2 hours, keep hour 2;
+            ## for 3 hours, keep hour 2;
+            ## for 4 hours, keep hour 3; etc.
+            keephour = int(np.ceil((GSw_HourlyChunkLength + 0.1) / 2))
+        else:
+            keephour = int(sw.GSw_HourlyChunkAggMethod)
+            assert 0 < keephour <= GSw_HourlyChunkLength
+        aggmethod = 'nth'
+        ## Change from start-at-1 index to Python's start-at-0 index
+        args = [keephour - 1]
+
+    if ('stress' in periodtype) and (aggmethod == 'mean'):
+        aggmethod_load = sw.GSw_PRM_StressLoadAggMethod
+    else:
+        aggmethod_load = aggmethod
+    print(f'{periodtype} load aggregation method: {aggmethod_load} {args}')
+
+    cf_vre = (
+        cf_out
+        .sort_values(['i','r','h'])
+        .assign(h=cf_out.h.map(chunkmap))
+        .groupby(['i','r','h'], as_index=False)
+        .agg(aggmethod, *args)
+    )
+
+    load_long = (
+        load_h
+        .stack('t')
+        .rename('MW')
+        .reorder_levels(['t','r','h'])
+        .sort_index()
+        .reset_index()
+    )
+    load_allyear = (
+        load_long
+        .assign(h=load_long.h.map(chunkmap))
+        .groupby(['t','r','h'], as_index=False)
+        .agg(aggmethod_load, *args)
+        .set_index(['r','h','t'])
+        .reset_index()
+    )
+
+
     # %%###################################################################################
     #    -- Write outputs, aggregating hours to GSw_HourlyChunkLength if necessary --    #
     ######################################################################################
-
     write = {
         ### Contents are [dataframe, header, index]
         ## h set for representative timeslices
@@ -1351,39 +1306,11 @@ def main(sw, reeds_path, inputs_case, periodtype="rep", make_plots=1, figpathtai
             False,
         ],
         ## Annual timeslice demand
-        "load_allyear": [
-            (
-                load_h.reset_index()
-                .assign(h=load_h.reset_index().h.map(chunkmap))
-                .groupby(["r", "h"])
-                .agg(
-                    (
-                        sw["GSw_PRM_StressLoadAggMethod"]
-                        if "stress" in periodtype
-                        else "mean"
-                    )
-                )
-                .stack("t")
-                .rename("MW")
-                .round(decimals)
-                .reset_index()
-            ),
-            False,
-            False,
-        ],
+        'load_allyear': [load_allyear.round(decimals), False, False],
         ## Seasonal peak demand
         "peak_ccseason": [peak_all.round(decimals), False, False],
         ## Capacity factors (i,r,h)
-        "cf_vre": [
-            (
-                cf_out.assign(h=cf_out.h.map(chunkmap))
-                .groupby(["i", "r", "h"], as_index=False)
-                .cf.mean()
-                .round(5)
-            ),
-            False,
-            False,
-        ],
+        'cf_vre': [cf_vre.round(5), False, False],
         ## Exports to Canada [fraction] (h)
         "can_exports_h_frac": [
             (
@@ -1516,20 +1443,24 @@ def main(sw, reeds_path, inputs_case, periodtype="rep", make_plots=1, figpathtai
         ### Write the new hourly parameters
         write[f][0].to_csv(
             os.path.join(outpath, f+'.csv'),
-            # os.path.join(inputs_case, f+f'{figpathtail}.csv'),
             index=write[f][2],
         )
 
-    ###########################################################################
-    #    -- Map resulting annual capacity factor and deviation from h17 --    #
-    ###########################################################################
-
-    if make_plots >= 1:
+    #%% Map weighted average profile values and difference from full-resolution mean
+    if make_plots:
+        figpath = os.path.abspath(
+            os.path.join(os.path.dirname(inputs_case.rstrip(os.sep)), 'outputs', 'maps')
+        )
         try:
-            import hourly_plots as plots_h
-
-            plots_h.plot_maps(sw, inputs_case, reeds_path, figpath)
-        except Exception as err:
-            print("plot_maps failed with the following error:\n{}".format(err))
+            import matplotlib.pyplot as plt
+            import hourly_plots
+            ## Capacity factor and load
+            hourly_plots.plot_maps(sw, inputs_case, reeds_path, figpath)
+            ## Representative days
+            f, ax, _ = reeds.reedsplots.plot_repdays(os.path.dirname(os.path.abspath(inputs_case)))
+            plt.savefig(os.path.join(figpath, 'inputs_repdays.png'))
+        except Exception:
+            import traceback
+            print(traceback.format_exc())
 
     return write
