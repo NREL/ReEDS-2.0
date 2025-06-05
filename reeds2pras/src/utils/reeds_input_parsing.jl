@@ -130,6 +130,31 @@ function get_vg_cf_data(data::ReEDSdatapaths)
 end
 
 """
+    Get tech-dependent MTTR.
+
+    Parameters
+    ----------
+    data : ReEDSdatapaths
+        Struct containing relevant datapaths and year from which to extract
+        the data.
+
+    Returns
+    -------
+    DataFrames.DataFrame
+        Dataframe MTTR data.
+"""
+function get_MTTR_data(data::ReEDSdatapaths)
+    filepath = joinpath(
+        data.ReEDSfilepath,
+        "ReEDS_Augur",
+        "augur_data",
+        "mttr_data_$(string(data.year)).csv",
+    )
+    return DataFrames.DataFrame(CSV.File(filepath))
+end
+
+
+"""
     Get the forced outage data from the augur files.
 
     Parameters

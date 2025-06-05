@@ -182,9 +182,9 @@ for casename, casepath in casepaths.items():
         # read emissions data by BA
         emit = (
             reeds.io.read_output(casepath, 'emit_r', valname='tons')
-            .rename(columns={'e':'pollutant', 'r':'ba', 't':'year'})
+            .rename(columns={'e':'pollutant', 'etype':'type', 'r':'ba', 't':'year'})
         )
-        
+        emit = emit[emit['type']=='combustion']
         # inner join with marginal damages to capture only pollutants that
         # have marginal damages and only marginal damages where there are emissions
         damages = emit.merge(mds, how="inner", on=['ba', 'pollutant'])

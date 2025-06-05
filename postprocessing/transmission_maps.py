@@ -645,7 +645,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
 
     try:
         plt.close()
-        f, ax, _ = reedsplots.plot_interface_flows(case=case, year=year)
+        f, ax, _ = reeds.prasplots.plot_interface_flows(case=case, year=year)
         savename = f'plot_PRAS_flows-{year}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -659,7 +659,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
 
     try:
         plt.close()
-        f, ax, _ = reedsplots.plot_storage_soc(case=case, year=year)
+        f, ax, _ = reeds.prasplots.plot_storage_soc(case=case, year=year)
         savename = f'plot_PRAS_storage-{year}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
@@ -675,7 +675,7 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
         level = 'transgrp'
         iteration = 'last'
         plt.close()
-        f, ax, df, i = reedsplots.plot_pras_eue_timeseries_full(
+        f, ax, df, i = reeds.prasplots.plot_pras_eue_timeseries_full(
             case=case, year=year, level=level, iteration=iteration)
         savename = f'plot_PRAS_EUE-{level}-{year}i{i}.png'
         if write:
@@ -711,16 +711,28 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
             'rep_mean',
             'stress_mean',
             'stress_top5_load',
+            'stress_top5_netload',
+            'stress_bottom5_vregen',
             'stress_max_load',
             'stress_max_price',
         ]
+        shortmetrics = (
+            (','.join(metrics))
+            .replace('rep', 'r')
+            .replace('stress', 's')
+            .replace('cap', 'c')
+            .replace('netload', 'nl')
+            .replace('load', 'l')
+            .replace('price', 'p')
+            .replace('vregen', 'vg')
+        )
         for units in ['percent', 'GW']:
             plt.close()
             f, ax, dictout = reedsplots.plot_cap_rep_stress_mix(
                 case=case, year=year, level=level, units=units, metrics=metrics,
             )
             savename = (
-                f"plot_techmix-{level}-{year}-{units}-{','.join(metrics)}"
+                f"plot_techmix-{level}-{year}-{units}-{shortmetrics}"
             )[:max_filename_length-len('.png')] + '.png'
             if write:
                 plt.savefig(os.path.join(savepath, savename))
@@ -730,6 +742,24 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
             print(savename)
     except Exception:
         print('plot_cap_rep_stress_mix failed:')
+        print(traceback.format_exc())
+
+    try:
+        units = 'GW'
+        for metric in metrics:
+            plt.close()
+            f, ax, dictout = reedsplots.plot_stress_mix(
+                case=case, level=level, units=units, metric=metric,
+            )
+            savename = f"plot_stressmix-{level}-{units}-{metric}.png"
+            if write:
+                plt.savefig(os.path.join(savepath, savename))
+            if interactive:
+                plt.show()
+            plt.close()
+            print(savename)
+    except Exception:
+        print('plot_stress_mix failed:')
         print(traceback.format_exc())
 
     try:

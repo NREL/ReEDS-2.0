@@ -19,6 +19,7 @@ dependencies:
   - gitpython=3.1 # for complete run metadata
   - ipykernel=6.25 # for interactive python in VS Code
   - ipywidgets=8.0 # for jupyter notebooks
+  - scikit-learn-extra=0.2 # for alternative period clustering methods
   ## vvv Keep julia here if you're installing on the HPC.
   ## vvv If you're installing on a local machine, it's suggested to comment out
   ## vvv julia and install directly from https://julialang.org/downloads/.

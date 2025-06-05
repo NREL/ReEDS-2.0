@@ -4,7 +4,8 @@ This file allows reports to be run directly from this python script (without nee
 Easiest process:
 1. Update bokehpivot/reeds_scenarios.csv with desired scenario names and paths.
 2. If a different report is desired (other than standard_report_reduced), update 'report_path' (below).
-3. Run this file. If you haven't updated 'output_dir', you'll find the results in bokehpivot/out.
+3. Set diff to 'Yes' if differences are desired with the first listed case in reeds_scenarios.csv. Change any other switches described below.
+4. Run this file. If you haven't updated 'output_dir', you'll find the results in bokehpivot/out.
 
 If you run this file from another location, update 'bokehpivot_dir' below.
 '''
@@ -20,7 +21,7 @@ import reeds_bokeh as rb
 
 #EDIT THE FOLLOWING FIELDS
 report_path = f'{bokehpivot_dir}/reports/templates/reeds2/standard_report_reduced.py' #Path to report that is to be run
-diff = 'Yes' #Use 'Yes' if adding differences to a base case, specified below (default base case is first scenario in reeds_scenarios.csv)
+diff = 'No' #Use 'Yes' if adding differences to a base case, specified below (default base case is first scenario in reeds_scenarios.csv)
 
 data_source = f'{bokehpivot_dir}/reeds_scenarios.csv' #either a scenarios.csv file or ReEDS run directory (or directories separated by pipe symbols).
 base = pd.read_csv(data_source)['name'][0] #Name of base case for when diff='Yes'. Defaults to first case in reeds_scenarios.csv.

@@ -27,10 +27,6 @@ STORAGE_IN_GRID.lo(i,v,r,h,t_unfix)$[valgen(i,v,r,t_unfix)$storage_hybrid(i)$(no
 STORAGE_IN_GRID.up(i,v,r,h,t_unfix)$[valgen(i,v,r,t_unfix)$storage_hybrid(i)$(not csp(i))$Sw_HybridPlant] = +inf ;
 STORAGE_LEVEL.lo(i,v,r,h,t_unfix)$[valgen(i,v,r,t_unfix)$storage(i)] = 0 ;
 STORAGE_LEVEL.up(i,v,r,h,t_unfix)$[valgen(i,v,r,t_unfix)$storage(i)] = +inf ;
-DR_SHIFT.lo(i,v,r,h,hh,t_unfix)$[valgen(i,v,r,t_unfix)$dr1(i)] = 0 ;
-DR_SHIFT.up(i,v,r,h,hh,t_unfix)$[valgen(i,v,r,t_unfix)$dr1(i)] = +inf ;
-DR_SHED.lo(i,v,r,h,t_unfix)$[valgen(i,v,r,t_unfix)$dr2(i)] = 0 ;
-DR_SHED.up(i,v,r,h,t_unfix)$[valgen(i,v,r,t_unfix)$dr2(i)] = +inf ;
 AVAIL_SITE.lo(x,h,t_unfix)$[Sw_SpurScen$xfeas(x)] = 0 ;
 AVAIL_SITE.up(x,h,t_unfix)$[Sw_SpurScen$xfeas(x)] = +inf ;
 RAMPUP.lo(i,r,h,hh,t_unfix)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t_unfix)] = 0 ;
@@ -71,8 +67,8 @@ RECS.lo(RPSCat,i,st,ast,t_unfix)$[stfeas(st)$RecMap(i,RPSCat,st,ast,t_unfix)$(st
 RECS.up(RPSCat,i,st,ast,t_unfix)$[stfeas(st)$RecMap(i,RPSCat,st,ast,t_unfix)$(stfeas(ast) or sameas(ast,"voluntary"))$Sw_StateRPS] = +inf ;
 ACP_PURCHASES.lo(RPSCat,st,t_unfix)$[(stfeas(st) or sameas(st,"voluntary"))$Sw_StateRPS] = 0 ;
 ACP_PURCHASES.up(RPSCat,st,t_unfix)$[(stfeas(st) or sameas(st,"voluntary"))$Sw_StateRPS] = +inf ;
-EMIT.lo(e,r,t_unfix)$emit_modeled(e,r,t_unfix) = -inf ;
-EMIT.up(e,r,t_unfix)$emit_modeled(e,r,t_unfix) = +inf ;
+EMIT.lo(etype,e,r,t_unfix)$emit_modeled(e,r,t_unfix) = -inf ;
+EMIT.up(etype,e,r,t_unfix)$emit_modeled(e,r,t_unfix) = +inf ;
 
 * transmission
 CONVERSION.lo(r,h,intype,outtype,t_unfix)$Sw_VSC = 0 ;

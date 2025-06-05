@@ -256,6 +256,7 @@ function process_thermals_with_disaggregation(
     unitsize_dict::Dict,
     timesteps::Int,
     year::Int,
+    mttr_dict::Dict,
     user_inputs::Dict{Any, Any};
     all_generators = Generator[],
 )
@@ -301,6 +302,13 @@ function process_thermals_with_disaggregation(
             )
         end
 
+        # get MTTR values if available
+        if tech in keys(mttr_dict)
+            mttr = Int64(mttr_dict[tech])
+        else
+            mttr = user_inputs["MTTR"]
+        end
+
         generator_array = disagg_existing_capacity(
             ReEDS_data,
             EIA_db,
@@ -311,6 +319,7 @@ function process_thermals_with_disaggregation(
             gen_for,
             timesteps,
             year,
+            mttr,
             user_inputs,
         )
         append!(all_generators, generator_array)
@@ -352,6 +361,7 @@ function process_hd_as_generator!(
     unitsize_dict::Dict,
     timesteps::Int,
     year::Int,
+    mttr_dict::Dict,
     user_inputs::Dict{Any, Any};
 )
 
@@ -394,6 +404,13 @@ function process_hd_as_generator!(
             )
         end
 
+        # get MTTR values if available
+        if tech in keys(mttr_dict)
+            mttr = Int64(mttr_dict[tech])
+        else
+            mttr = user_inputs["MTTR"]
+        end
+
         generator_array = disagg_existing_capacity(
             ReEDS_data,
             EIA_db,
@@ -404,6 +421,7 @@ function process_hd_as_generator!(
             gen_for,
             timesteps,
             year,
+            mttr,
             user_inputs,
         )
         append!(all_generators, generator_array)
@@ -444,7 +462,8 @@ function process_vg(
     FOR_dict::Dict,
     ReEDS_data,
     timesteps::Int,
-    user_inputs::Dict{Any, Any},
+    mttr_dict::Dict,
+    user_inputs::Dict{Any, Any};
 )
     cf_info = get_vg_cf_data(ReEDS_data)
     vg_profiles = cf_info["block0_values"]
@@ -466,6 +485,13 @@ function process_vg(
         end
         name = "$(name)_"
 
+        # get MTTR values if available
+        if category in keys(mttr_dict)
+            mttr = Int64(mttr_dict[category])
+        else
+            mttr = user_inputs["MTTR"]
+        end      
+
         push!(
             generators_array,
             Variable_Gen(
@@ -477,7 +503,7 @@ function process_vg(
                 type = category,
                 legacy = "New",
                 FOR = gen_for,
-                MTTR = user_inputs["MTTR"],
+                MTTR = mttr,
             ),
         )
     end
@@ -532,6 +558,7 @@ function process_hydro(
     ReEDS_data,
     year::Int64,
     timesteps::Int,
+    mttr_dict::Dict,
     user_inputs::Dict{Any, Any},
     unitsize_dict;
     hydro_energylim = false,
@@ -550,6 +577,7 @@ function process_hydro(
             unitsize_dict,
             timesteps,
             year,
+            mttr_dict,
             user_inputs;
         )
 
@@ -562,6 +590,7 @@ function process_hydro(
             unitsize_dict,
             timesteps,
             year,
+            mttr_dict,
             user_inputs;
         )
         genstor_array = Gen_Storage[]
@@ -635,6 +664,13 @@ function process_hydro(
             gen_for = 0.00 # make this 0 for vg if no match
         end
 
+        # get MTTR values if available
+        if category in keys(mttr_dict)
+            mttr = Int64(mttr_dict[category])
+        else
+            mttr = user_inputs["MTTR"]
+        end 
+        
         # - Charging to genstore is limited by charge_capacity whether from grid or from 
         # inflows. So, that charge_capacity should be equal to the genflow timeseries.
         # - Powerflow into grid is limited by grid_injection, which can come from discharge
@@ -657,7 +693,7 @@ function process_hydro(
                 type = category,
                 legacy = "New",
                 FOR = 0.0, 
-                MTTR = user_inputs["MTTR"],
+                MTTR = mttr,
             ),
         )
     end
@@ -699,6 +735,13 @@ function process_hydro(
             gen_for = 0.00 # make this 0 for vg if no match
         end
 
+        # get MTTR values if available
+        if category in keys(mttr_dict)
+            mttr = Int64(mttr_dict[category])
+        else
+            mttr = user_inputs["MTTR"]
+        end 
+
         push!(
             generators_array,
             Variable_Gen(
@@ -710,7 +753,7 @@ function process_hydro(
                 type = category,
                 legacy = "New",
                 FOR = 0.0, 
-                MTTR = user_inputs["MTTR"],
+                MTTR = mttr,
             ),
         )
     end
@@ -747,7 +790,8 @@ function process_storages(
     ReEDS_data,
     timesteps::Int,
     year::Int64,
-    user_inputs::Dict{Any, Any},
+    mttr_dict::Dict,
+    user_inputs::Dict{Any, Any};
 )
     storage_energy_capacity_data = get_storage_energy_capacity_data(ReEDS_data)
     @debug "storage_energy_capacity_data is $(storage_energy_capacity_data)"
@@ -776,6 +820,13 @@ function process_storages(
         #we need to know if the storage is battery or not
         #batteries will be deflated...
 
+        # get MTTR values if available
+        if string(row.i) in keys(mttr_dict)
+            mttr = Int64(mttr_dict[string(row.i)])
+        else
+            mttr = user_inputs["MTTR"]
+        end 
+
         # as per discussion w/ patrick, find duration of storage, then make
         # energy capacity on that duration?
         int_duration = round(energy_capacity_df[idx, "MWh_sum"] / row.MW)
@@ -795,7 +846,7 @@ function process_storages(
                     discharge_eff = 1.0,
                     carryover_eff = 1.0,
                     FOR = 0.0,
-                    MTTR = user_inputs["MTTR"],
+                    MTTR = mttr,
                 ),
             )
         else
@@ -812,7 +863,7 @@ function process_storages(
                 gen_for,
                 timesteps,
                 year,
-                user_inputs["MTTR"],
+                mttr,
             )
         end
     end
@@ -840,6 +891,8 @@ end
         Number of timesteps.
     year : int
         The year.
+    mttr : int
+        mean time to repaire (mttr)
 
     Returns
     -------
@@ -857,6 +910,7 @@ function disagg_existing_capacity(
     gen_for::Vector{Float32},
     timesteps::Int,
     year::Int,
+    mttr::Int,
     user_inputs::Dict{Any, Any},
 )
     tech_ba_year_existing = DataFrames.subset(
@@ -881,7 +935,7 @@ function disagg_existing_capacity(
             gen_for,
             timesteps,
             year,
-            user_inputs["MTTR"],
+            mttr,
         )
         return generators_array
     elseif DataFrames.nrow(tech_ba_year_existing) == 0 && gen_for == 0.0
@@ -895,7 +949,7 @@ function disagg_existing_capacity(
                 fuel = tech,
                 legacy = "New",
                 FOR = gen_for,
-                MTTR = user_inputs["MTTR"],
+                MTTR = mttr,
             ),
         ]
     end
@@ -924,7 +978,7 @@ function disagg_existing_capacity(
             fuel = tech,
             legacy = "Existing",
             FOR = gen_for,
-            MTTR = user_inputs["MTTR"],
+            MTTR = mttr,
         )
         push!(generators_array, gen)
     end
@@ -943,7 +997,7 @@ function disagg_existing_capacity(
             gen_for,
             timesteps,
             year,
-            user_inputs["MTTR"],
+            mttr,
         )
     end
 

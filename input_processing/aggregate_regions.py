@@ -190,7 +190,7 @@ def aggreg_methods(
         else:
             df1.set_index(row.fix_cols+region_cols,inplace=True)
         df1 = refilter_regions(df1, region_cols,region_col, val_r_all)
-    elif aggfunc in ['population','geosize','translinesize','hydroexist']:
+    elif aggfunc in ['population','geosize','hydroexist']:
         if 'sc_cat' in columns:
             # Split cap and cost
             df1_cap = df1[df1['sc_cat']=='cap']
@@ -560,7 +560,7 @@ def agg_disagg(filepath, r2aggreg_glob, r_ba_glob, runfiles_row):
                 indexnames = ['index']
             # Special Case: change index name for recf_csp.h5 to 'index to be
             # consistent with the other recf_{tech}.h5 files
-            if (filepath in ['recf_csp.h5','recf_dupv.h5']) and (indexnames[0] == 'hour'):
+            if (filepath == 'recf_csp.h5') and (indexnames[0] == 'hour'):
                 dfin.index.name = 'index'
                 indexnames = ['index']
             dfin.reset_index(inplace=True)
@@ -661,16 +661,16 @@ def agg_disagg(filepath, r2aggreg_glob, r_ba_glob, runfiles_row):
                     # To maintain these interfaces the filtering of the data needs to ensure that BA-BA interfaces
                     # are dropped but county-county and county-BA interfaces are kept
                     df_disagg_list = []
-                    for idx, row in dfin.iterrows():
-                        cond1 = ((row[region_col[0]] in agglevel_variables['ba_regions']+agglevel_variables['ba_transgrp'])
-                                  and (row[region_col[1]] in agglevel_variables['county_regions']+agglevel_variables['county_transgrp']))
-                        cond2 = ((row[region_col[1]] in agglevel_variables['ba_regions']+ agglevel_variables['ba_transgrp'])
-                                    and (row[region_col[0]] in agglevel_variables['county_regions']+agglevel_variables['county_transgrp']))
-                        cond3 = ((row[region_col[0]] in agglevel_variables['county_regions']+agglevel_variables['county_transgrp'])
-                                    and (row[region_col[1]] in agglevel_variables['county_regions']+agglevel_variables['county_transgrp']))
+                    for idx, tx_row in dfin.iterrows():
+                        cond1 = ((tx_row[region_col[0]] in agglevel_variables['ba_regions']+agglevel_variables['ba_transgrp'])
+                                    and (tx_row[region_col[1]] in agglevel_variables['county_regions']+agglevel_variables['county_transgrp']))
+                        cond2 = ((tx_row[region_col[1]] in agglevel_variables['ba_regions']+ agglevel_variables['ba_transgrp'])
+                                    and (tx_row[region_col[0]] in agglevel_variables['county_regions']+agglevel_variables['county_transgrp']))
+                        cond3 = ((tx_row[region_col[0]] in agglevel_variables['county_regions']+agglevel_variables['county_transgrp'])
+                                    and (tx_row[region_col[1]] in agglevel_variables['county_regions']+agglevel_variables['county_transgrp']))
 
                         if cond1 or cond2 or cond3:
-                            df_disagg_list.append(row)
+                            df_disagg_list.append(tx_row)
 
                     df_disagg_in = pd.DataFrame(df_disagg_list).drop_duplicates()
 
@@ -977,10 +977,6 @@ else:
             os.path.join(inputs_case,'disagg_geosize.csv'),
             header=0,
         ),
-        'translinesize': pd.read_csv(
-            os.path.join(inputs_case,'disagg_translinesize.csv'),
-            header=0,
-        ),
         'hydroexist': pd.read_csv(
             os.path.join(inputs_case,'disagg_hydroexist.csv'),
             header=0,
@@ -1079,9 +1075,9 @@ else:
     rscweight_nobin=None
 
 #%% Get the mapping to reduced-resolution technology classes
-original_num_classes = {**{'dupv':7}, **{f'csp{i}':12 for i in range(1,5)}}
+original_num_classes = {**{f'csp{i}':12 for i in range(1,5)}}
 new_classes = {}
-for tech in ['dupv'] + [f'csp{i}' for i in range(1,5)]:
+for tech in [f'csp{i}' for i in range(1,5)]:
     GSw_NumClasses = int(sw['GSw_Num{}classes'.format(tech.upper().strip('1234'))])
     ## Spread the new classes roughly evenly out over the old classes
     num_in_step = original_num_classes[tech] // GSw_NumClasses

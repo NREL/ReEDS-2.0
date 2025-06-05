@@ -47,9 +47,13 @@ def deflate_func(data,case):
     deflate = dollaryear.loc[dollaryear['Scenario'] == case,'Deflator'].values[0]
     if 'capcost' in data.columns:
         data['capcost'] *= deflate
+    if 'capcost_energy' in data.columns:
+        data['capcost_energy'] *= deflate
     if 'fom' in data.columns:
         data['fom'] *= deflate
         data['vom'] *= deflate
+    if 'fom_energy' in data.columns:
+        data['fom_energy'] *= deflate
     return data
 
 #%% ===========================================================================
@@ -75,12 +79,12 @@ scalars = reeds.io.get_scalars(inputs_case)
 
 # Adjust cost data to 2004$
 upv = pd.read_csv(os.path.join(inputs_case,'plantchar_upv.csv'))
-upv = deflate_func(upv, sw.upvscen).set_index('t')
+upv = deflate_func(upv, sw.plantchar_upv).set_index('t')
 
 # Prior to ATB 2020, PV costs are in $/kW_DC
 # Starting with ATB 2020 cost inputs, PV costs are in $/kW_AC
 # ReEDS uses DC capacity, so divide by inverter loading ratio
-if '2019' not in sw.upvscen:
+if '2019' not in sw.plantchar_upv:
     upv[['capcost','fom','vom']] = upv[['capcost','fom','vom']] / scalars['ilr_utility']
 
 # Broadcast costs to all UPV resource classes
@@ -93,17 +97,24 @@ upv_stack = pd.concat(
 #    -- Other Techs --    #
 ###########################
 
-conv = pd.read_csv(os.path.join(inputs_case,'plantchar_conv.csv'))
-conv = deflate_func(conv, sw.convscen)
+conv_in = []
+conv_techs = ['gas', 'gas_ccs', 'coal', 'coal_ccs', 'biopower', 'nuclear', 'nuclear_smr', 'other']
+for ct in conv_techs:
+    print(f"Loading plantchar_{ct}")
+    df = pd.read_csv(os.path.join(inputs_case,f'plantchar_{ct}.csv'))
+    df = deflate_func(df, sw[f'plantchar_{ct}'])
+    conv_in.append(df)
+# combine into one set of "conventional" generators
+conv = pd.concat(conv_in).reset_index(drop=True)
 
 ccsflex = pd.read_csv(os.path.join(inputs_case,'plantchar_ccsflex_cost.csv'))
 ccsflex = deflate_func(ccsflex, sw.ccsflexscen)
 
 beccs = pd.read_csv(os.path.join(inputs_case,'plantchar_beccs.csv'))
-beccs = deflate_func(beccs, sw.beccsscen)
+beccs = deflate_func(beccs, sw.plantchar_beccs)
 
 h2ct = pd.read_csv(os.path.join(inputs_case,'plantchar_h2ct.csv'))
-h2ct = deflate_func(h2ct, sw.h2ctscen)
+h2ct = deflate_func(h2ct, sw.plantchar_h2ct)
 
 if sw.upgradescen != 'default':
     upgrade = pd.read_csv(os.path.join(inputs_case,'plantchar_upgrades.csv'))
@@ -128,7 +139,7 @@ for turb in onswinddata['turbine'].unique():
 df_class_turb = pd.DataFrame({'turbine':turb_ls, 'class':range(1, len(turb_ls) + 1)})
 onswinddata = onswinddata.merge(df_class_turb, on='turbine', how='inner')
 onswinddata = onswinddata[['tech','class','t','cf_mult','capcost','fom','vom']]
-onswinddata = deflate_func(onswinddata, sw.onswindscen)
+onswinddata = deflate_func(onswinddata, sw.plantchar_onswind)
 
 #%%##########################
 #    -- Offshore Wind --    #
@@ -163,7 +174,7 @@ else:
     ofswind_rsc_mult = ofswind_rsc_mult.pivot_table(index='t',columns='tech', values='rsc_mult')
     ofswinddata = ofswinddata.drop(columns=['rsc_mult'])
     ofswinddata.columns = ['tech','class','t','cf_mult','capcost','fom','vom']
-ofswinddata = deflate_func(ofswinddata, sw.ofswindscen)
+ofswinddata = deflate_func(ofswinddata, sw.plantchar_ofswind)
 winddata = pd.concat([onswinddata.copy(),ofswinddata.copy()])
 
 winddata.loc[winddata['tech'].str.contains('ONSHORE'),'tech'] = 'wind-ons'
@@ -178,7 +189,7 @@ wind_stack = winddata[['t','i','capcost','fom','vom']].copy()
 geodata = pd.read_csv(os.path.join(inputs_case,'plantchar_geo.csv'))
 geodata.columns = ['tech','class','depth','t','capcost','fom','vom']
 geodata['i'] = geodata['tech'] + '_' + geodata['depth'] + '_' + geodata['class'].astype(str)
-geodata = deflate_func(geodata, sw.geoscen)
+geodata = deflate_func(geodata, sw.plantchar_geo)
 geo_stack = geodata[['t','i','capcost','fom','vom']].copy()
 
 
@@ -188,7 +199,7 @@ geo_stack = geodata[['t','i','capcost','fom','vom']].copy()
 
 
 csp = pd.read_csv(os.path.join(inputs_case,'plantchar_csp.csv'))
-csp = deflate_func(csp, sw.cspscen)
+csp = deflate_func(csp, sw.plantchar_csp)
 
 csp_stack = pd.DataFrame(columns=csp.columns)
 
@@ -205,7 +216,9 @@ csp_stack = csp_stack[['t','capcost','fom','vom','i']]
 #######################
 
 battery = pd.read_csv(os.path.join(inputs_case,'plantchar_battery.csv'))
-battery = deflate_func(battery, sw.batteryscen)
+continuous_battery = pd.read_csv(os.path.join(inputs_case,'plantchar_continuous_battery.csv'))
+battery = deflate_func(battery, sw.plantchar_battery)
+continuous_battery = deflate_func(continuous_battery, sw.plantchar_battery)
 
 evmc_storage = pd.read_csv(os.path.join(inputs_case,'plantchar_evmc_storage.csv'))
 evmc_storage = deflate_func(evmc_storage, 'evmc_storage_' + sw.evmcscen)
@@ -221,7 +234,8 @@ caes['i'] = 'caes'
 #    -- Concat all data --    #
 ###############################
 
-alldata = pd.concat([conv,upv_stack,wind_stack,geo_stack,csp_stack,battery,evmc_storage,evmc_shape,caes,beccs,ccsflex,h2ct],sort=False)
+alldata = pd.concat([conv,upv_stack,wind_stack,geo_stack,csp_stack,battery,
+                     evmc_storage,evmc_shape,caes,beccs,ccsflex,h2ct],sort=False)
 
 if sw.upgradescen != 'default':
     alldata = pd.concat([alldata,upgrade])
@@ -245,7 +259,30 @@ outdata = (
 	.rename(columns={'i':'*i'})
 )
 
-outdata = outdata.loc[outdata.variable.isin(['capcost','fom','vom','heatrate','upgradecost','rte'])]
+### Add continuous battery informaton
+#Convert from $/kw to $/MW
+continuous_battery['capcost'] = continuous_battery['capcost']*1000
+continuous_battery['capcost_energy'] = continuous_battery['capcost_energy']*1000
+continuous_battery['fom'] = continuous_battery['fom']*1000
+continuous_battery['fom_energy'] = continuous_battery['fom_energy']*1000
+#Round to nearest integer
+continuous_battery['capcost'] = continuous_battery['capcost'].round(0).astype(int)
+continuous_battery['capcost_energy'] = continuous_battery['capcost_energy'].round(0).astype(int)
+continuous_battery['fom'] = continuous_battery['fom'].round(0).astype(int)
+continuous_battery['fom_energy'] = continuous_battery['fom_energy'].round(0).astype(int)
+# Fill empty values with 0, melt to long format
+continuous_battery = (
+    continuous_battery.fillna(0)
+    .melt(id_vars=['i','t'])
+    ### Rename the columns so GAMS reads them as a comment
+    .rename(columns={'i':'*i'})
+)
+# Add to outdata
+outdata = pd.concat([outdata,continuous_battery])
+
+outdata = outdata.loc[outdata.variable.isin(['capcost', 'capcost_energy',
+                                             'fom', 'fom_energy',
+                                             'vom','heatrate','upgradecost','rte'])]
 
 #%%##################################
 #    -- Wind Capacity Factors --    #

@@ -300,7 +300,7 @@ Given the high spatial resolution, large number of technologies, and multi-decad
 these temporal inputs---and the temporal resolution used within the linear optimization---must be simplified to achieve a tractable model size.
 Two methods of time series aggregation are combined in ReEDS:
 A reduced number of **representative periods** (33 days by default) are selected and weighted to minimize deviation in regional wind/solar capacity factors and electricity demand between the weighted representative periods and complete time series;
-within the representative periods, hours are combined into **chunks** (of 4-hour duration by default), with operational constraints (such as chronological energy balancing for storage) acting on the aggregated chunks.
+within the representative periods, hours are combined into **chunks** (of 3-hour duration by default), with operational constraints (such as chronological energy balancing for storage) acting on the aggregated chunks.
 
 
 ```{figure} figs/docs/temporal-dispatch-yearbymonth.png
@@ -309,7 +309,7 @@ within the representative periods, hours are combined into **chunks** (of 4-hour
 National dispatch stack for an illustrative ReEDS scenario, organized by month of the year.
 Representative periods (here, days) are highlighted by dashed boxes.
 Each other day is represented by the representative day noted by the label in the upper left corner of the day.
-For example, January 1 and 2 are represented by the first representative day, which is January 23.
+For example, December 1 is represented by the 27th representative day, which is November 1.
 The dispatch for each day represented by a given representative day is the same.
 (Dispatch is simulated within each of the model zones but is here aggregated to a national profile in postprocessing for visualization.)
 ```
@@ -324,7 +324,7 @@ The width of each day is proportional to its weight---i.e., the number of days i
 
 #### Representative periods
 
-Representative periods are selected and weighted using the procedure described by {cite}`brownSelectionWeightingRepresentative2024`.
+Representative periods are selected and weighted using the procedure described by {cite}`brownInterregionalOptimizationApproach2025`.
 
 
 
@@ -351,10 +351,11 @@ These switches and their allowable settings are described in the "Description" a
 Some of the most important switches related to temporal resolution are briefly outlined below.
 
 - `GSw_HourlyType` (default `day`): Length of representative periods modeled (`day` for 24-hour days, `wek` for 5-day periods, or `year` for a chronological 365-day year).
-- `GSw_HourlyChunkLengthRep` (default `4`) and `GSw_HourlyChunkLengthStress` (default `4`): Length of timesteps (in hours) used within representative and stress periods, respectively
+- `GSw_HourlyChunkLengthRep` (default `3`) and `GSw_HourlyChunkLengthStress` (default `3`): Length of timesteps (in hours) used within representative and stress periods, respectively.
+  - `GSw_HourlyChunkAggMethod` (default `mean`): How to aggregate hourly data within the chunks specified by the `GSw_HourlyChunkLength` switches. If using `GSw_HourlyChunkLengthRep = 3`, setting `GSw_HourlyChunkAggMethod` to `mean` will average over the 3 hours in each chunk; `mid` will take the hourly value in the middle (second) hour; 1, 2, or 3 will take the hourly value in the 1st, 2nd, or 3rd hour.
 - `GSw_HourlyWeatherYears` (default `2012`): Weather years from which to select representative periods. Multiple years can be used by passing a `_`-delimited string; for example, to select representative periods from 2007--2013, set the value to `2007_2008_2009_2010_2011_2012_2013`.
 - `GSw_HourlyClusterAlgorithm` (default `optimized`): Algorithm used to select representative periods. Choices are `optimized` (for the method described in the text), `hierarchical` (for hierarchical clustering), or `user{label}` (for user-defined periods and weights as specified by a file located at `inputs/variability/period_szn_user{label}`).
-- `GSw_HourlyNumClusters` (default `33`): Maximum number of representative periods. When using `GSw_HourlyClusterAlgorithm = optimized`, fewer periods may be required. If more periods are desired than the number identified by the optimized method, either set `GSw_HourlyClusterRegionLevel` to a finer region level (such as `r` or `st`) or set `GSw_HourlyClusterAlgorithm` to `hierarchical`).
+- `GSw_HourlyNumClusters` (default `33`): Maximum number of representative periods. When using `GSw_HourlyClusterAlgorithm = optimized`, fewer periods may be required. If more periods are desired than the number identified by the optimized method, either set `GSw_HourlyClusterRegionLevel` to a finer region level (such as `r` or `st`) or set `GSw_HourlyClusterAlgorithm` to `hierarchical`.
 ```
 
 
@@ -507,7 +508,7 @@ The geothermal resource has two distinct subcategories in ReEDS:
 
 EGS is further separated into near-field EGS and deep EGS based upon proximity to known hydrothermal features. Near-field EGS represents additional geothermal resource available near hydrothermal fields which have been identified. Deep EGS represents available geothermal resource not tied to existing hydrothermal sites and at depths below 3.5 km.
 
-Geothermal in ReEDS represents a geothermal power production with representative size up to 100 megawatts electric (MW<sub>e</sub>). Geothermal resource classes are defined by reservoir temperature ranges which are closely linked to the cost of a plant normalized by generation capacity. Energy conversion processes, binary and flash cycles, are linked to reservoir temperature and are specified by resource class. Plants with reservoir temperatures \< 200 °C (Class 7-10) use a binary cycle, which uses a heat exchanger and secondary working fluid with a lower boiling point to drive a turbine. All other reservoir temperatures assume that a turbine is driven directly by working fluid from the geothermal wells. These assumptions are aligned with those in ATB 2023.
+Geothermal in ReEDS represents a geothermal power production with representative size up to 100 megawatts electric (MW<sub>e</sub>). Geothermal resource classes are defined by reservoir temperature ranges which are closely linked to the cost of a plant normalized by generation capacity. Energy conversion processes, binary and flash cycles are linked to reservoir temperature and are specified by resource class. Plants with reservoir temperatures \< 200 °C (Class 7-10) use a binary cycle, which uses a heat exchanger and secondary working fluid with a lower boiling point to drive a turbine. All other reservoir temperatures assume that a turbine is driven directly by working fluid from the geothermal wells. These assumptions are aligned with those in ATB 2024.
 
 {numref}`technical-resource-potential` lists the technical resource potential for the different geothermal categories.
 
@@ -516,20 +517,26 @@ Geothermal in ReEDS represents a geothermal power production with representative
 
 | **Resource Class** | Reservoir Temperature **(°C)** | **Hydrothermal** | **Near-Field EGS** | **Deep EGS** |
 |:--:|:--:|:--:|:--:|:--:|
-|           Class 1  |                         \> 325 |               \- |                0.2 |           \- |
-|           Class 2  |                      300 – 325 |              1.8 |                0.2 |           \- |
-|           Class 3  |                      275 – 300 |              9.3 |                0.1 |          1.2 |
-|           Class 4  |                      250 – 275 |              0.7 |                0.1 |          8.2 |
-|           Class 5  |                      225 – 250 |              1.1 |                0.1 |           74 |
-|           Class 6  |                      200 – 225 |              2.4 |                0.2 |          320 |
-|           Class 7  |                      175 – 200 |              0.2 |                0.3 |          709 |
-|           Class 8  |                      150 – 175 |              2.6 |                0.3 |          995 |
-|           Class 9  |                      125 – 150 |              1.1 |               0.03 |         1270 |
-|           Class 10 |                         \< 125 |              4.7 |                 \- |           \- |
-|              Total |                                |             23.9 |                1.4 |        3,375 |
+|           Class 1  |                         \> 325 |               \- |                0.2 |          7.3 |
+|           Class 2  |                      300 – 325 |              2.2 |                0.2 |           35 |
+|           Class 3  |                      275 – 300 |              1.2 |                0.1 |          177 |  
+|           Class 4  |                      250 – 275 |              0.7 |                0.1 |         1696 |  
+|           Class 5  |                      225 – 250 |              0.2 |                0.1 |         4633 |  
+|           Class 6  |                      200 – 225 |              0.9 |                0.2 |         6467 | 
+|           Class 7  |                      175 – 200 |               12 |                0.3 |         3234 | 
+|           Class 8  |                      150 – 175 |              342 |                0.3 |           \- | 
+|           Class 9  |                      125 – 150 |             2823 |               0.03 |           \- | 
+|           Class 10 |                         \< 125 |              699 |                 \- |           \- | 
+|              Total |                                |             3881 |                1.4 |        16249 |
 ```
 
-The default geothermal resource assumptions allow for hydrothermal sites. Hydrothermal resources have a defined fraction which are considered identified resources based upon the U.S. Geological Survey’s 2008 geothermal resource assessment. The undiscovered portion of the hydrothermal resource is limited by a discovery rate defined as part of the GeoVision Study {cite}`doeGeoVisionHarnessingHeat2019`. The geothermal supply curves are based on the analysis described by Augustine et al. {cite:year}`augustineGeoVisionAnalysisSupporting2019` and are shown in {numref}`figure-csp-resource-availability`. The hydrothermal and near-field EGS resource potential is derived from the U.S. Geological Survey’s 2008 geothermal resource assessment {cite}`williamsReviewMethodsApplied2008a`, while the deep EGS resource potential is based on an update of the EGS potential from the Massachusetts Institute of Technology {cite}`testerFutureGeothermalEnergy2006`. As with other technologies, geothermal cost and performance projections are from the ATB {cite}`nrel2024AnnualTechnology2024`. Alternate resource supply curves can be incorporated from reV analysis but are currently not part of the default resource representation. Spurline transmission costs are available when using reV based supply curves.
+```{figure} figs/docs/geothermal-resource-availability.png
+:name: figure-geothermal-resource-availability
+
+Resource availability for hydrothermal (left) and deep EGS (right) for the contiguous United States 
+```
+
+The default geothermal resource assumptions allow for hydrothermal sites. Hydrothermal resources have a defined fraction which are considered identified resources based upon the U.S. Geological Survey’s 2008 geothermal resource assessment. The undiscovered portion of the hydrothermal resource is limited by a discovery rate defined as part of the GeoVision Study {cite}`doeGeoVisionHarnessingHeat2019`. The geothermal supply curves are based on the analysis described by Augustine et al. {cite:year}`augustineGeoVisionAnalysisSupporting2019` and are shown in {numref}`figure-geothermal-resource-availability`. The hydrothermal and near-field EGS resource potential is derived from the U.S. Geological Survey’s 2008 geothermal resource assessment {cite}`williamsReviewMethodsApplied2008a`, while the deep EGS resource potential is based on an update of the EGS potential from the Massachusetts Institute of Technology {cite}`testerFutureGeothermalEnergy2006`. As with other technologies, geothermal cost and performance projections are from the ATB {cite}`nrel2024AnnualTechnology2024`. Default geothermal capacity representation in ReEDS is categorized by depth and is based on reV analysis {cite}`pinchukpaulDevelopmentGeothermalModule2023` which estimates potential and site-based LCOE based on resource assessment at different depths, development constraints, land use characteristics and grid infrastructure (spurline transmission) costs. While hydrothermal supply curves are based on a 3.5km resource depth reV scenario, deep EGS supply curves are aggregated based on lowest total LCOE from different reV scenario depths ranging from 3.5-6.5 km (most of the resource in Table 6 is at 6.5km depth) highlighting the assumption that for EGS it is not possible to develop multiple resource depths simultaneously at a site.    
 
 
 #### Hydropower
@@ -670,19 +677,19 @@ Where renewable energy technologies have many unique characteristics, fossil and
 
 - Scheduled and forced outage rates (%).
 
-Cost and performance assumptions for all new fossil and nuclear technologies are taken from the ATB {cite}`nrel2024AnnualTechnology2024` with options for the conservative, moderate, and advanced trajectories from the ATB. Regional variations and adjustments are included and described in the [Hydrogen section](#hydrogen). Fixed operation and maintenance costs for coal and nuclear plants increase over time with the plants age. These escalation factors are taken from the AEO2023.
-
-Within the model, forced outages are applied uniformly throughout the year.
-Scheduled (planned and maintenance) outage rates are derived from the NERC GADS database (<https://www.nerc.com/pa/RAPA/gads/Pages/GeneratingAvailabilityDataSystem-(GADS).aspx>).
-Scheduled outage rates for combined cycle, combustion turbine, nuclear, steam (coal), and hydro technologies are measured and applied at monthly resolution using GADS data from 2013--2023.
-Scheduled outage rates for other technologies are measured as time-independent average values using GADS data from 2014--2018;
-scheduled outages for these technologies are only applied during spring and fall, with the outage rates during those months scaled to reproduce the measured time-independent averages.
+Cost and performance assumptions for all new fossil and nuclear technologies are taken from the ATB {cite}`nrel2024AnnualTechnology2024` with options for the conservative, moderate, and advanced trajectories from the ATB.
+Regional variations and adjustments are included and described in the [Hydrogen section](#hydrogen).
+Fixed operation and maintenance costs for coal and nuclear plants increase over time with the plants age.
+These escalation factors are taken from the AEO2023.
 
 In addition to the performance parameters listed above, technologies are differentiated by their ability to provide operating reserves.
 In general, natural gas plants, especially combustion turbines, are better suited for ramping and reserve provision, while coal and nuclear plants are typically designed for steady operation.
 See [Operational Reliability](#operational-reliability) for more details.
 
-The existing fleet of generators in ReEDS is taken from the NEMS unit database from AEO2023 {cite}`eiaAnnualEnergyOutlook2023`, with data supplemented from the March 2024 EIA 860M. In particular, ReEDS uses the net summer capacity, net winter capacity,[^ref23] location, heat rate, variable O&M, and fixed O&M to characterize the existing fleet. ReEDS uses a modified "average" heat rate for any builds occurring after 2010: a technology-specific increase on the full-load heat rate is applied to accommodate for units not always operating at their design point. The modifiers, shown in {numref}`heat-rate-adjustments`, are based on the relationship between the reported heat rate the ATB, and the actual observed heat rate, calculated on a fleet-wide basis for each fuel type.
+The existing fleet of generators in ReEDS is taken from the NEMS unit database from AEO2023 {cite}`eiaAnnualEnergyOutlook2023`, with data supplemented from the March 2024 EIA 860M.
+In particular, ReEDS uses the net summer capacity, net winter capacity,[^ref23] location, heat rate, variable O&M, and fixed O&M to characterize the existing fleet.
+ReEDS uses a modified "average" heat rate for any builds occurring after 2010: a technology-specific increase on the full-load heat rate is applied to accommodate for units not always operating at their design point.
+The modifiers, shown in {numref}`heat-rate-adjustments`, are based on the relationship between the reported heat rate the ATB, and the actual observed heat rate, calculated on a fleet-wide basis for each fuel type.
 
 ```{table} Multipliers Applied to Full-Load Heat Rates to Approximate Actual Observed Heat Rates
 :name: heat-rate-adjustments
@@ -731,19 +738,46 @@ ReEDS includes three utility-scale energy storage options[^ref26]: PSH, batterie
 
 The nameplate capacity of storage can contribute toward planning reserves, though at a potentially reduced rate based on either its capacity credit or its energy availability during stress periods. The contribution of storage toward the reserve margin requirement is discussed further in [Resource Adequacy](#resource-adequacy). Capacity not being used for charge or discharging can also be utilized to provide any of the operating reserves products represented in ReEDS (see [Electricity System Operation and Reliability](#electricity-system-operation-and-reliability) on how reserves are differentiated in ReEDS). An energy penalty is associated with storage to provide regulation reserves that reflect losses due to charging and discharging. Storage is also required to have sufficient charge to provide operating reserves in addition to any charge already required for generation in the appropriate timestep.
 
-Storage is represented with a fixed energy/power capacity ratio, characterized by the number of hours (duration) that the battery could discharge at its rated power capacity. The storage technologies can be modified using `GSw_Storage`. Batteries are primarily represented with durations of 2, 4, 6, 8, and 10 hours. The model can also represent long-duration batteries of 12, 24, 48, 72, 100 hour durations, such long duration storage's accurate modeling will requires temopral resolution selection that allows inter-period linkage, either by choose hourly resolution that `GSw_HourlyType = 'year'`, or `GSw_HourlyType = 'day' or 'wek'` with inter-day linkage turned on using `GSw_InterDayLinkage`. The detail of inter-day linkage can refer to [Temporal Resolution](#temporal-resolution). CAES is assumed to have a duration of 12 hours, and the PSH storage duration is either 8, 10, or 12 hours depending on the chosen PSH supply curve (8 hours being the default).
+Storage is represented using both a fixed energy-to-power capacity ratio—characterized by the number of hours (duration) the battery can discharge at its rated power capacity—and a flexible energy-to-power capacity ratio, where the rated power and energy capacities can be sized independently, making the duration an output rather than an input. Storage can be selected using GSw_Storage. The model can also represent long-duration energy storage, though accurate modeling requires selecting a temporal resolution that supports inter-period linkage. This can be achieved either by choosing hourly resolution with GSw_HourlyType = 'year', or by using GSw_HourlyType = 'day' or 'wek' with inter-day linkage enabled. 
+
+```{admonition} Storage options
+ReEDS provides several switches to configure storage modeling, allowing users to control whether storage duration is fixed or continuous, and whether inter-period state-of-charge tracking is enabled:
+
+- `GSw_Storage`: Controls the battery modeling approach and technology inclusion.
+  - `0`: **Disable all storage** — no storage technologies are included in the model.
+  - `1`: **Enable all storage technologies except continuous battery** — includes all fixed-duration batteries and PSH.
+  - `2`: **Use only continuous battery**
+  - `3`: **Use only 4-hour and 8-hour batteries, plus PSH** — restricts the model to a subset of fixed-duration options.
+  - `4`: **Use only 4-hour battery** — applies a single-duration battery assumption common in some regulatory and planning contexts.
+  - `5`: **Exclude LDES and continuous battery** — includes short and mid-duration batteries and PSH; excludes continuous and LDES.
+  - `6`: **Use only 4-hour, 8-hour, and 12-hour batteries, plus PSH**
+  - `7`: **Use only continuous batteries and PSH** — enables continuous-duration battery and PSH.
+
+  Default setting: `3`.
+
+- `GSw_HourlyType`: Sets the temporal resolution of representative periods.
+  - `year`: Models the full 8760-hour year chronologically, allowing accurate tracking of storage state-of-charge over time.
+  - `day` or `wek`: Models representative days (24-hour) or weeks (5-day) to reduce computational complexity.
+
+- `GSw_InterDayLinkage`: Enables tracking of storage state-of-charge across representative periods when `GSw_HourlyType = 'day'` or `'wek'`. This is essential for realistic modeling of LDES.
+
+These options are configured in `cases.csv` or a user-defined `cases_{label}.csv` file. For more detail on temporal configuration, see [Temporal Resolution](#temporal-resolution).
+```
+
+Battery costs are originally sourced from the ATB {cite}`nrelAnnualTechnologyBaseline2024`. The capital cost of a battery consists of two components: the overnight power unit cost (in $/kW), which reflects the cost associated with the battery’s maximum power output, and the overnight energy unit cost (in $/kWh), which represents the cost associated with its maximum energy storage capacity. In the discrete-duration setup, power and energy unit costs are combined into a single overnight capital cost expressed in $/kW. In contrast, the continuous battery formulation keeps power and energy costs separate, allowing the model to independently size power and energy capacities based on the respective unit costs. FOM costs also differ between the two approaches. For discrete-duration batteries, FOM is applied at 2.5% per year of the combined capital cost in the discrete-duration battery setup. For continuous batteries, FOM costs are divided into two components: a 2.5% per year power FOM based on the power-related capital cost, and a 2.5% per year energy FOM based on the energy-related capital cost.
 
 Existing PSH capacity is represented in the model per the input plant database (see inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv).
 New PSH potential is derived from a national PSH resource assessment described in Rosenlieb et al. {cite:year}`rosenliebClosedLoopPumpedStorage2022` and at <https://www.nrel.gov/gis/psh-supply-curves.html>.
 Several PSH supply curves are available in ReEDS, including alternative storage durations (8, 10, or 12 hours) and alternative environmental site exclusions, specifically whether or not new PSH reservoir construction can occur where there are ephemeral streams as defined by the National Hydrography Dataset.
 The PSH resource assessment includes site-level capital costs calculated from a detailed bottom-up cost model that incorporates dam, reservoir, and other site characteristics {cite}`cohenComponentLevelBottomUpCost2023`. PSH fixed O&M costs and round-trip efficiency are taken from Mongird et al. {cite:year}`mongird2020GridEnergy2020`, and PSH cost and resource assumptions are taken from the ATB {cite}`nrelAnnualTechnologyBaseline2024`.
 The choice of PSH supply curve in the model is governed by the `pshsupplycurve` switch.
+PSH storage duration is either 8, 10, or 12 hours depending on the chosen PSH supply curve (with 8 hours as the default). 
 There is also an option to require new PSH to purchase water access from water supply curves in order to fill new PSH reservoirs, and this constraint can add cost and further restrict PSH deployment via the `GSw_PSHwatercon` switch.
 When requiring PSH to acquire water from the supply curves, the switch `GSw_PSHwatertypes` can define which water sources may be used, and `GSw_PSHfillyears` scales the water requirement by the number of years it is assumed to take to fill the PSH reservoirs (default is 3 years).
 
-ReEDS includes the sole existing CAES facility in Alabama. New CAES site development costs are estimated based on the underground geology, where domal salt is the least costly resource at \$1170/kW (22.6 GW available), bedded salt is the next most costly resource at \$1,420/kW (37.0 GW), and aquifers (porous rock) are the most costly resource at \$1,680/kW (61.6 GW) {cite:p}`blackveatchCostPerformanceData2012b, lazardLazardLevelizedCost2016`.[^ref27] CAES requires a natural gas fuel input when supplying power output, and its heat rate is assumed to be 4.91 MMBtu/MWh. This additional fuel input to the electrical power input during compression results in a round-trip efficiency of 125%. CAES is included as an option in ReEDS, it is turned off by default to reduce model complexity.
+ReEDS includes the sole existing CAES facility in Alabama. CAES is assumed to have a duration of 12 hours. New CAES site development costs are estimated based on the underground geology, where domal salt is the least costly resource at \$1170/kW (22.6 GW available), bedded salt is the next most costly resource at \$1,420/kW (37.0 GW), and aquifers (porous rock) are the most costly resource at \$1,680/kW (61.6 GW) {cite:p}`blackveatchCostPerformanceData2012b, lazardLazardLevelizedCost2016`.[^ref27] CAES requires a natural gas fuel input when supplying power output, and its heat rate is assumed to be 4.91 MMBtu/MWh. This additional fuel input to the electrical power input during compression results in a round-trip efficiency of 125%. CAES is included as an option in ReEDS, it is turned off by default to reduce model complexity.
 
-Unlike PSH and CAES, utility-scale batteries are not restricted by location-specific resource constraints. Battery cost and performance assumptions are based on lithium-ion battery systems, with costs taken from the 2024 ATB for durations up to 100 hours. Low, mid, and high cost projections are available and scale with the user-defined battery duration. For longer duration batteries (12 hours and above), costs are based on linear extrapolations using the per unit power and energy capacity costs established by the ATB. For all battery durations the cost scenario is set by `batteryscen`. An additional switch, `GSw_Storage`, can be used to limit the model to select durations in order to reduce solve time. In contrast to all other generator technologies in ReEDS which have lifetimes that meet or exceed typical model evaluation windows for book life, the battery is assumed to last 15 years. As a result, its capital cost is uprated by the ratio of a 15-year evaluation window and the evaluation window used by the run. The batteries are assumed to have a round-trip efficiency of 85%. Battery storage has a representative size of 60 MW.
+Unlike PSH and CAES, utility-scale batteries are not restricted by location-specific resource constraints. Battery cost and performance assumptions are based on lithium-ion battery systems, with costs taken from the 2024 ATB for durations up to 100 hours. Low, mid, and high cost projections are available and scale with the user-defined battery duration. For longer duration batteries (12 hours and above), costs are based on linear extrapolations using the per unit power and energy capacity costs established by the ATB. For all battery durations the cost scenario is set by `plantchar_battery`. An additional switch, `GSw_Storage`, can be used to limit the model to select durations in order to reduce solve time. In contrast to all other generator technologies in ReEDS which have lifetimes that meet or exceed typical model evaluation windows for book life, the battery is assumed to last 15 years. As a result, its capital cost is uprated by the ratio of a 15-year evaluation window and the evaluation window used by the run. The batteries are assumed to have a round-trip efficiency of 85%. Battery storage has a representative size of 60 MW.
 
 ### Hydrogen
 
@@ -808,12 +842,16 @@ Under this representation of hydrogen, ReEDS ensures sufficient hydrogen product
 
 #### Endogenous production with zonal balancing, transport, and storage
 
-In this approach hydrogen production is explicitly represented, but instead of matching hydrogen supply and demand at the national level is matched zonally in each of the model’s balancing areas. The equation below reflects how for each region *r* in each time period *h* the model balances hydrogen supply, which includes production (Prod), storage withdrawals (StorOut), and transfers from neighboring regions *rr* (Flow), with hydrogen demand, including storage injections (StorIn), transfers to neighboring regions, and demand from H2CTs and other sectors.
+In this approach hydrogen production is explicitly represented, but instead of matching hydrogen supply and demand at the national level it is matched zonally in each of the model’s balancing areas.
+The equation below reflects how for each region *r* in each time period *h* the model balances hydrogen supply, which includes production (Prod), storage withdrawals (StorOut), and transfers from neighboring regions *rr* (Flow), with hydrogen demand, including storage injections (StorIn), transfers to neighboring regions, and demand from H2-CTs and other sectors.
 
 $$Prod_(h,r) + StorOut_(h,r) + \sum_(rr) Flow_(h,rr,r) \\
 = StorIn_(h,r) + \sum_(rr) Flow_(h,rr,r) + H2CT_(h,r) + Exog_(h,r)$$
 
-Hydrogen demand from the power sector is attributed to balancing area based on H2-CTs usage, whereas exogenous hydrogen demand is allocated to balancing using regional demand fractions.
+Hydrogen demand from the power sector is attributed to a given balancing area based on H2-CTs usage within that balancing area, whereas exogenous hydrogen demand is allocated to balancing area using regional demand fractions.
+These regional demand fractions calculated based on values from Ruth et al. {cite:t}`ruthH2ScaleHydrogenEconomic2020`.
+The 2021 regional demand fractions are based on the reference scenario and exclude demands for light-duty vehicles, biofuels, and methanol.
+The 2050 regional demand fractions are based on the low cost electrolysis scenario and include all demands from the dataset.
 
 To store hydrogen a balancing area must invest in storage capacity. ReEDS currently represents two forms of geological hydrogen storage---either in salt caverns or hard rock formations---as well as the ability to construct storage in underground pipe systems. Data on the availability of geological storage are taken from {cite}`lordGeologicStorageHydrogen2014a`, depicted in {numref}`figure-hydrogen-storage-availability`. Because of the lack of credible estimates on available reservoir capacity, ReEDS does not impose limits on the amount of storage that a balancing area connected to reservoir can build. However, to ensure that hydrogen combustion turbine dispatch is correctly represented during stress periods the minimum storage duration is set to 24 hours.
 
@@ -826,6 +864,7 @@ Assumed availability of geological hydrogen storage reservoirs. Data are from Lo
 Costs of hydrogen storage are based on estimates from {cite}`papadiasBulkStorageHydrogen2021`.
 For geological storage ReEDS assumes \$/kg based on the economies-of-scale from constructing 2-3 caverns.
 To reduce model complexity, ReEDS assumes that each balancing area can only build the cheapest storage option that it has available to it.
+At least 1% of the region's land-area must overlap with the storage availability estimates from {numref}`figure-hydrogen-storage-availability` in order for that storage type to be an option in that region.
 ReEDS requires that any hydrogen storage be sized to hold at least 24 hours worth of hydrogen to run the H2-CTs in a given region.
 This minimum duration helps ensure that the representative year has the storage needed for serving stress periods outside of the representative year.
 
@@ -849,7 +888,17 @@ The network representation includes only saline aquifers with a reservoir cost o
 ### Capital Stock
 #### Initial Capital Stock, Prescribed Builds, and Restrictions
 
-Existing electricity generation capacity is taken from the EIA NEMS unit database {cite}`eiaAnnualEnergyOutlook2023` and updated using the March 2024 EIA 860M (see inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv). Units are mapped to ReEDS technologies based on a combination of fuel source and prime mover of the generation technology. Units of the same technology type within a region can be aggregated or represented individually.[^ref29] If they are aggregated, the aggregation is done by clustering the units based on heat rates.
+Existing electricity generation capacity is taken from the EIA NEMS unit database {cite}`eiaAnnualEnergyOutlook2023` and updated using the March 2024 EIA 860M ({numref}`figure-capacity-existing`).
+Units are mapped to ReEDS technologies based on a combination of fuel source and prime mover of the generation technology.
+Units of the same technology type within a region can be aggregated or represented individually.[^ref29]
+If they are aggregated, the aggregation is done by clustering the units based on heat rates.
+
+<!-- postprocessing/input_plots.plot_units_existing() -->
+```{figure} figs/docs/capacity-existing.png
+:name: figure-capacity-existing
+
+Existing generation and storage units, taken from the EIA NEMS database {cite}`eiaAnnualEnergyOutlook2023`.
+```
 
 The binning structure is designed flexibly such that users can choose the appropriate levels of model fidelity and computational speed for each application. Historical units are binned using a k-means clustering algorithm for each BA and technology category (e.g., coal with or without SO<sub>2</sub> scrubbers, and natural gas combined cycle) combination. The user specifies a maximum number of bins and a minimum deviation across unit heat rates. Any two plants are eligible to form separate bins if the difference between their heat rates is greater than the minimum deviation parameter. The number of bins formed is then equal to the smaller of the maximum bin number parameter and the number of units after applying the minimum deviation criteria. For each bin, the assigned heat rate is equal to the capacity-weighted average of the heat rates for the units inside the bin. An illustrative example of the results is depicted for two BAs in {numref}`figure-capacity-binning-example`, assuming a maximum of seven bins and minimum deviation of 50 BTU per kWh. The horizontal axis corresponds to the heat rate for a given power plant unit from the NEMS database, while the vertical axis corresponds to the heat rate each bin is assigned in ReEDS. Points on the 45-degree line illustrate units for which the ReEDS heat rate is the same as the NEMS heat rate. The more tightly clustered the points are around this line, the less the model will suffer from aggregation bias. The figure illustrates that, in general, the fewer the number of units in a given technology category (in this example, nuclear and scrubbed coal), the closer the binned heat rates are to the actual heat rates. The aggregation is set by "numhintage" in cases.csv, and is set to 6 by default.
 
@@ -941,6 +990,11 @@ To incentivize near-term capacity deployments to be more aligned with the curren
 
 To avoid infeasibility, the constraint allows for a technology to be built over the capacity limits with a penalty of $10,000/kW.
 
+
+
+
+
+
 ### Regional Parameter Variations and Adjustments
 
 For most generation technologies, regional cost multipliers are applied to reflect variations in installation costs across the United States (see {numref}`figure-regional-capital-cost-multipliers`). These regional multipliers are applied to the base overnight capital cost presented in earlier sections. The regional multipliers are technology-specific and are derived primarily from the EIA/Leidos Engineering report {cite}`eiaCapitalCostEstimates2016` that is the source of capital cost assumptions for the NEMS model. While the regional costs presented in the EIA/Leidos Engineering report are based on particular cities, the regional multipliers for ReEDS are calculated by interpolating between these cities and using the average value over the ReEDS regions for each technology. For technologies such as CSP that are not included in the newer report, we rely on the older EIA/Science Applications International Corporation report {cite}`eiaUpdatedCapitalCost2013`.
@@ -958,10 +1012,67 @@ Regional capital cost multipliers for the above technologies are available at th
 
 
 
+### Outage rates
+
+Forced outages for combined cycle, combustion turbine, nuclear, steam (coal), nuclear, hydro and pumped hydro, and diesel generators
+are modeled using temperature-dependent forced outage rates from {cite}`murphyTimedependentModelGenerator2019`.
+Some regions experience air temperatures outside the -15--35°C range reported in {cite}`murphyTimedependentModelGenerator2019`;
+outage rates outside this temperature range are linearly extrapolated up to a maximum of 40%,
+where 40% is the ELCC derate applied to gas combustion turbines in {cite}`pjmELCCClassRatings2025`.
+{numref}`figure-outage_forced-fits` shows the resulting forced outage rates as a function of temperature.
+Forced outage rates for other technologies are taken from the NERG GADS database {cite}`nercGeneratingAvailabilityData2023` for 2014--2018 and are applied as time-invariant average values.
+
+```{figure} figs/docs/outage_forced-fits.png
+:name: figure-outage_forced-fits
+
+Forced outage rates as a function of temperature.
+Solid lines indicate the portion of the data taken from {cite}`murphyTimedependentModelGenerator2019`;
+dashed lines indicate extrapolated data.
+```
+
+Hourly surface air temperatures from 2007--2013 are taken from the NSRDB {cite}`NSRDB_web`.
+Temperatures are averaged over each model zone, and the hourly average temperatures are converted to hourly forced outage rates using the relationships shown in {numref}`figure-outage_forced-fits`.
+{numref}`figure-outage_forced-examples` shows illustrative monthly average forced outage rates for gas combustion turbines and nuclear.
+
+```{figure} figs/docs/outage_forced-examples.png
+:name: figure-outage_forced-examples
+
+Example forced outage rates for gas combustion turbines (top) and nuclear (bottom).
+Note the difference in color scales.
+```
+
+
+Scheduled (planned and maintenance) outage rates are derived from the NERC GADS database {cite}`nercGeneratingAvailabilityData2023`.
+Scheduled outage rates for combined cycle, combustion turbine, nuclear, steam (coal), and hydro technologies are measured and applied at monthly resolution using GADS data from 2013--2023.
+Scheduled outage rates for other technologies are measured as time-independent average values using GADS data from 2014--2018;
+scheduled outages for these technologies are only applied during spring and fall, with the outage rates during those months scaled to reproduce the measured time-independent averages.
+{numref}`figure-outage_scheduled` shows scheduled outage rates for the technologies used by default.
+
+```{figure} figs/docs/outage_scheduled.png
+:name: figure-outage_scheduled
+
+Scheduled outage rates for the default collection of technologies.
+```
+
+
+Outage rates for wind power are handled upstream in the reV model and included in the hourly capacity factor profiles, as described by Lopez et al. {cite:year}`lopezRenewableEnergyTechnical2025`.
+In addition to static losses of 11% (including the effects of forced and scheduled outages) and endogenously modeled hourly wake losses (ranging from 0.05--25%),
+two types of weather-driven shutoffs are considered, both of which are assumed to reduce site-level wind generation to zero in affected hours:
+extreme cold shutoffs, applied when air temperature at hub height reaches ≤-20°C,
+and shutoffs for potential icing events, applied when air temperature reaches ≤0°C and relative humidity reaches ≥95%.
+{numref}`figure-outage_wind` shows an example week illustrating these shutoffs for a site near Fargo, ND.
+
+```{figure} figs/docs/outage_wind.png
+:name: figure-outage_wind
+
+Air temperature, relative humidity, cold/icing shutoff indicators, modeled wind capacity factor, and wind speed for an example week at a site near Fargo, ND.
+```
+
+
 
 ## Fuel Prices
 
-Natural gas, coal, and uranium prices in ReEDS are based on the AEO 2023. Coal prices are provided for each of the nine EIA census divisions. Low and high natural gas price alternatives are taken from the Low and High Oil and Gas Resource and Technology scenarios. ReEDS includes only a single national uranium price trajectory. Base fuel price trajectories are shown in {numref}`figure-input-fuel-price-assumptions` for the AEO2023 {cite}`eiaAnnualEnergyOutlook2023`. Biomass fuel prices are represented using supply curves as described in the [Biopower section](#biopower).
+Natural gas, coal, and uranium prices in ReEDS are based on the AEO2025. Coal prices are taken from the Reference scenario, with any missing values from the Reference scenario forward-filled using prior years. Coal prices are provided for each of the nine EIA census divisions. Default natural gas prices and demand levels are from the AEO2025 Reference scenarios. Low and high natural gas price alternatives are taken from the High and Low Oil and Gas Resource and Technology scenarios, respectively. ReEDS includes only a single national uranium price trajectory based on the AEO 2025 Reference scenario. Base fuel price trajectories are shown in {numref}`figure-input-fuel-price-assumptions` for the AEO2025 {cite}`eiaAnnualEnergyOutlook2025`. Biomass fuel prices are represented using supply curves as described in the [Biopower section](#biopower).
 
 ```{figure} figs/docs/input-fuel-price-assumptions.png
 :name: figure-input-fuel-price-assumptions
@@ -973,7 +1084,11 @@ Natural gas fuel prices are adjusted by the model as explained below.
 
 Coal and uranium are assumed to be perfectly inelastic; the price is predetermined and insensitive to the ReEDS demand for the fuel. With natural gas, however, the price and demand are linked. Actual natural gas prices in ReEDS are based on the AEO scenario prices but are not exactly the same; instead, they are price-responsive to ReEDS natural gas demand. In each year, each census division is characterized by a price-demand "set point" taken from the AEO Reference scenario but also by two elasticity coefficients: regional (β<sub>r</sub>) and national (β<sub>n</sub>) elasticity coefficients for the rate of regional price change with respect to (1) the change in the regional gas demand from its set-point and (2) the overall change in the national gas demand from the national price-demand set point respectively. The set of regional and national elasticity coefficients are developed through a linear regression analysis across an ensemble of AEO scenarios[^ref32]<sup>,</sup>[^ref33] to estimate changes in fuel prices driven solely by electric sector natural gas demand (as described in Logan et al. {cite:year}`loganNaturalGasScenarios2013` and Cole, Medlock III, and Jani {cite:year}`coleViewFutureNatural`, though the coefficients have since been updated for the latest AEO data). Though there is no explicit representation of natural gas demand beyond the electricity sector, the regional supply curves reflect natural gas resource, infrastructure, and nonelectric sector demand assumptions embedded within the AEO modeling. For details, see the Natural Gas Supply Curves section of the appendix.
 
-ReEDS includes options for other types of fuel supply curve representations. Supply curves can be national-only, census-region-only, or static. With the national-only supply curve, there are census division multipliers to adjust prices across the census divisions. In the static case, fuel prices are not responsive to demand.
+ReEDS includes options for other types of fuel supply curve representations. Supply curves can be national-only, census-division-only, or static. With the national-only supply curve, there are census division multipliers to adjust prices across the census divisions. In the static case, fuel prices are not responsive to demand.
+
+```{admonition} Transmission assumptions
+The switch GSw_GasCurve controls the choice of natural gas supply curve. 0 = census-division-only, 1 = national + census division, 2 = static, 3 = national-only
+```
 
 The natural gas fuel prices also include a seasonal price adjustor, making winter prices higher than the natural gas prices seen during the other seasons of the year. For details, see the [Seasonal Natural Gas Price Adjustments section](#seasonal-natural-gas-price-adjustments) of the appendix.
 
@@ -1152,7 +1267,7 @@ The representation of existing interzonal transmission capacity is discussed fir
 ##### AC
 
 Interface transfer limits, abbreviated here as "ITL",
-are calculated as described by {cite}`brownGeneralMethodEstimating2023a`.
+are calculated as described by {cite}`brownGeneralMethodEstimating2023`.
 (The ITL is similar to the total transfer capability (TTC) metric used elsewhere {cite}`nercInterregionalTransferCapability2024,mohammedAvailableTransferCapability2019`, but the ITL uses more flexible assumptions for load and generation.)
 In this calculation, the existing transmission system is approximated using the nodal network model developed for the NARIS study {cite}`brinkmanNorthAmericanRenewable2021a`, which represents a 2017-era projection of a then-future 2024 network.
 For each interzonal interface (where an interface is defined as the collection of transmission lines that cross between a pair of model zones),
@@ -1165,7 +1280,7 @@ Published WECC path limits are also applied as constraints on the combined line 
 A separate, independent optimization is performed for each direction on each interface;
 in general, the ITL for power flow from zone A to zone B is not the same as the ITL for power flow from zone B to zone A.
 
-As discussed in {cite}`brownGeneralMethodEstimating2023a`, because of the constraints imposed by Kirchhoff's voltage law and nodal LPFs, the ITL tends to be smaller than the sum of line ratings that cross an interface;
+As discussed in {cite}`brownGeneralMethodEstimating2023`, because of the constraints imposed by Kirchhoff's voltage law and nodal LPFs, the ITL tends to be smaller than the sum of line ratings that cross an interface;
 that is, every transmission line between a pair of regions cannot in general be used at their rated capacities at the same time.
 The same effect is observed for larger interfaces;
 when modeled at nodal resolution,
@@ -1517,9 +1632,9 @@ The syntax for these switches is described in the "Description" column of `cases
   - `GSw_PRM_NetImportLimit` [1]: Turn on (1) / off (0) constraint on net firm imports
   - `GSw_PRM_NetImportLimitScen` [2031_hist/2050_100]: Specify net firm import limit scenario
 - Specify the assumed evolution of the PRM across regions
-  - `GSw_PRM_scenario` [nerc]: Scenario specifying assumed PRM levels by NERC region and year
+  - `GSw_PRM_scenario` [0.12]: Scenario specifying assumed PRM levels by NERC region and year
 - Additional RA modeling details
-  - `GSw_HourlyChunkLengthStress` [4]: Hours per time chunk modeled during stress periods
+  - `GSw_HourlyChunkLengthStress` [3]: Hours per time chunk modeled during stress periods
   - `pras_samples` [10]: Number of Monte Carlo outage draws modeled in PRAS
   - `GSw_PRM_StressLoadAggMethod` [max]: How to aggregate load within time chunks: "mean" or "max"
   - `GSw_PRM_StressOutages` [1]: Turn on (1) / off (0) outages during stress periods in ReEDS
@@ -1881,7 +1996,7 @@ where $EMIT(e)$ is emission from pollutant $e$ and $gwp(e)$ is global warming po
 
 ```{admonition} Global warming potentials
 The GWP values are located at `inputs/emission_constraints/gwp.csv`.
-Users can add their own GWPs by adding a new column to this file and then specifying their GWP scenario using the `GSw_GWP` switch in `cases.csv`.
+Users can add their own GWPs by adding a new column to this file and then specifying their GWP scenario using the `GSw_GWP` switch in `cases.csv` or by specifying the `GSw_GWP` switch following the `CH4_{value}/N2O_{value}`format directly in `cases.csv`.
 ```
 
 ```{table} Global Warming Potential Options in ReEDS
@@ -1895,7 +2010,7 @@ Users can add their own GWPs by adding a new column to this file and then specif
 
 ```{admonition} National emissions constraints
 The current setting options for CO<sub>2</sub>/CO<sub>2</sub>e annual emission caps in ReEDS are:
-- If setting `GSw_Precombustion = 1`: CO<sub>2</sub>/CO<sub>2</sub>e emissions includes both precombustion and combustion emissions, only combustion emission if =0 (model default).
+- If setting `GSw_Precombustion = 1`: CO<sub>2</sub>/CO<sub>2</sub>e emissions includes both precombustion and combustion emissions in emission constraints, only combustion emission if =0 (model default). This switch only specifies which type of emission is included in the emission constraints. The emission output files will include both precombustion and combustion emissions regardless of whether is switch is turned on or not.
 - If setting `GSw_AnnualCap = 0` (model default): There are no emission caps for both CO<sub>2 and CO<sub>2</sub>e.
 - If setting `GSw_AnnualCap = 1`: Only CO<sub>2</sub> emission is capped following emission trajectories defined in `inputs/emission_constraints/co2_cap.csv` (can be both precombustion + combustion or just combustion depending on `GSw_Precombustion` setting).
 - If setting `GSw_AnnualCap = 2`: CO<sub>2</sub>e emission is capped following emission trajectories defined in `inputs/emission_constraints/co2_cap.csv` (can be both precombustion + combustion or just combustion depending on GSw_Precombustion setting).
@@ -1945,9 +2060,9 @@ In August 2023 Deleware passed House Bill 99 which established a series of emiss
 
 #### Regional Greenhouse Gas Initiative
 
-The Regional Greenhouse Gas Initiative (RGGI) cap-and-trade program limits the CO<sub>2</sub> emissions for fossil fuel-fired power plants in eleven states: Connecticut, Delaware, Maine, Maryland, Massachusetts, New Hampshire, New Jersey, New York, Rhode Island, Vermont, and Virginia.
+The Regional Greenhouse Gas Initiative (RGGI) cap-and-trade program limits the CO<sub>2</sub> emissions for fossil fuel-fired power plants in ten states: Connecticut, Delaware, Maine, Maryland, Massachusetts, New Hampshire, New Jersey, New York, Rhode Island, and Vermont.
 
-We enforce allowance budgets from the model rule adopted in 2017.[^ref48] We ignore the provision for privately banked allowances and therefore use the unadjusted budgets: 165 million short tons in 2012 declining to 91 million by 2014, then declining 2.5% per year from 2015 to 2020. According to the 2017 Model Rule, the 2021 cap is set at 75 million short tons and decreases by 2.275 million tons per year until 2030. Beginning in 2020, we also enforce an additional budget of 18 million short tons for the addition of New Jersey to the set of states included in the RGGI[^ref49]. The budget for New Jersey is set to decline by 30% through 2030[^ref50]. Similarly, beginning in 2021, we apply an additional cap of 27.16 million short tons for the addition of Virginia as a RGGI state. This cap is set to decline at a rate of 0.84 short tons per year.[^ref51] We assume the budget remains constant beyond 2030. We do not model banking of allowances, emissions offsets, or recycling of initiative allowance revenues.
+1 RGGI allowance equals the authorization of a regulated fossil fuel power plant 25 MW and greater to emit 1 short ton of CO<sub>2</sub>.  Past and current RGGI allowances can be downloaded from https://www.rggi.org/allowance-tracking/allowance-distribution. The sum for the column 'CO<sub>2</sub> Allowance or Base Budget' was used (total number of CO<sub>2</sub> allowances allocated by each state). This column was used because it best represents the total CO<sub>2</sub>, amounts that are permitted to be emitted. The 'CO<sub>2</sub>, Allowance Adjusted Budget' column, for example, shows the budgets of each state after the banked allowances have been subtracted from the base budget. Banked allowances are stored CO<sub>2</sub> allowances that have accumulated through the previous control periods, which are roughly the previous 4-5 years.  Future RGGI allowances (regional scale) through 2030 were provided by RGGI employee Cooper Tamayo, cooper.tamayo@rggi.org. We assume the budget remains constant beyond 2030. We do not model banking of allowances, emissions offsets, or recycling of initiative allowance revenues.
 
 ### Federal and State Tax Incentives
 #### Federal Tax Credits for Clean Electricity and Captured Carbon
@@ -1960,7 +2075,7 @@ Four clean electricity production and investment tax credits are represented in 
 - **Clean Electricity Investment Tax Credit (ITC):** 30%, plus a domestic content bonus credit that starts at an additional 2.5% and increases to 5% by 2028 (for totals of 32.5% and 35% respectively). Energy community bonuses are also applied based on the location of the new build, with an additional 10% bonus for building within an energy community. For ReEDS regions that are ony partially covered by energy communities, the 10% bonus is derated by the portion of the region (by land area) that is made up of energy communities.
 - **Captured CO<sub>2</sub> Incentive (45Q):** \$85 per metric ton of CO<sub>2</sub> for 12 years for fossil-CCS and bioenergy-CCS, and \$180 per metric ton of CO<sub>2</sub> for 12 years for direct air capture; nominal through 2026 and inflation adjusted after that
 - **Existing Nuclear Production Tax Credit (45U):** This tax credit is \$15/MWh (2022 dollars), but it is reduced if the market value of the electricity produced by the generator exceeds \$25/MWh. As a simplification, this dynamic calculation was not directly represented in ReEDS. Instead, to represent the effect of this provision, existing nuclear generators are not subject to economic retirement in ReEDS through 2032.
-- **Hydrogen Production Tax Credit (45V):** Up to $3/kg of hydrogen produced, based on the lifecycle emissions of hydrogen production. To ensure the low carbon intensity of the electricity powering hydrogen producers and receive the 45V credit, hydrogen producers must purchase and retire Energy Attribute Credits for all electricity they consume.
+- **Hydrogen Production Tax Credit (45V):** Up to $3/kg of hydrogen produced, based on the lifecycle emissions of hydrogen production, with more emitting generation able to claim lower levels of the tax credit. $3/kg is in 2022 USD and the credit amount is [inflation adjusted in subsequent years](https://www.taxnotes.com/research/federal/irs-guidance/notices/irs-releases-clean-hydrogen-credit-inflation-adjustment/7kd80). Since the $3/kg is so lucrative, ReEDS assumes that all hydrogen producers will comply with the mechanisms required to prove the cleanliness of their electricity and therefore only allow generation technologies which qualify for the lowest lifecycle emissions category to contribute. To ensure the low carbon intensity of their electricity and to receive the 45V credit, hydrogen producers must purchase and retire Energy Attribute Credits (EAC) for all electricity they consume. The generation resources that produce EACs are subject to the "three pillars", namely incrementality, time-matching, deliverability, as described in the [final rules](https://www.federalregister.gov/public-inspection/2024-31513/credit-for-production-of-clean-hydrogen-and-energy-credit) released by the Department of the Treasury in January 2025. ReEDS uses a simplified representation of the incrementality pillar, stating that all generators with a commercial online date of 2024 or later qualify as an EAC producer, and does not represent the additional pathways for nuclear plants, CCS plants and states with robust greenhouse gas emission caps to qualify. ReEDS models the time-matching and deliverability pillars as written in the final rules, where EACs must be purchased and retired in the same year (pre-2030) or hour (post-2030), and geographic region that they are produced. The ITC or PTC can be stacked with 45V i.e. a wind plant can receive both the PTC and 45V for its generation. However, 45V and 45Q cannot both be claimed by the same plant i.e. a Steam Methane Reforming plant with CCS cannot claim both 45V and 45Q. 
 
 Note that IRA allows for bonus credits for both the clean electricity PTC and ITC (but not applicable to 45U or 45Q) if a project either meet certain domestic manufacturing requirements or is in an "energy community." Projects can obtain both bonus credits if they meet both requirements, which would equate to \$5.2/MWh for the PTC and 20% for the ITC. In ReEDS, this is simplified per the summary above. In practice, there will likely be greater diversity of captured credits amongst projects. Relatedly, the values above are based on the assumption that all projects will meet the prevailing wage requirements.
 
@@ -2728,7 +2843,13 @@ Transmission capacity between counties is based on nodal transmission network da
 Nodal transmission network data. Black lines are those from the dataset, and red lines are the lines that were added to ensure that every county included at least one interface.
 ```
 
-Power flow constraints imposed by the topology of the network can limit the true transfer capacity between two counties to a level below the physical capacity of the lines connecting those counties. ReEDS estimates these interface capacity limits using an optimization method that finds the maximum transfer values given network characteristics, the location of generators and load, and other constraints {cite}`brownGeneralMethodEstimating2023a`. Because interface limits are typically less influenced by parts of the network that are further away, the method is run on a subset of the network. This subset is selected by including all parts of the network that are a specified number of "hops" away from the interface being optimized. A comparison of the results from the optimization method with different hops found that total transfer capacity saturated after 6 hops, so this value was used when calculating the county-level transfer limits used in ReEDS. Since the transfer capacity can differ depending on the direction, the optimization is run once in each direction (forward and reverse) for each interface. Further information on the development of county-level transmission interfaces is provided by Sergi et al. {cite:year}`sergiTransmissionInterfaceLimits2024`
+Power flow constraints imposed by the topology of the network can limit the true transfer capacity between two counties to a level below the physical capacity of the lines connecting those counties.
+ReEDS estimates these interface capacity limits using an optimization method that finds the maximum transfer values given network characteristics, the location of generators and load, and other constraints {cite}`brownGeneralMethodEstimating2023`.
+Because interface limits are typically less influenced by parts of the network that are further away, the method is run on a subset of the network.
+This subset is selected by including all parts of the network that are a specified number of "hops" away from the interface being optimized.
+A comparison of the results from the optimization method with different hops found that total transfer capacity saturated after 6 hops, so this value was used when calculating the county-level transfer limits used in ReEDS.
+Since the transfer capacity can differ depending on the direction, the optimization is run once in each direction (forward and reverse) for each interface.
+Further information on the development of county-level transmission interfaces is provided by Sergi et al. {cite:year}`sergiTransmissionInterfaceLimits2024`
 
 After the optimization, some counties have zero transfer capacity in one or both directions; these are replaced with either the transfer capacity estimated in the other direction if it is non-zero or the thermal capacity of the line. To estimate metrics such as TW-mi of transfer capacity, ReEDS uses the distance between the centroids of the two counties in the interface. The final transmission limits calculated using this method are show in {numref}`figure-transfer-limits`.
 

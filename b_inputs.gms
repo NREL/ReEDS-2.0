@@ -279,6 +279,7 @@ $onlisting
 set
 *technology-specific subsets
   battery(i)           "battery storage technologies",
+  continuous_battery(i) "continuous battery storage technologies",
   beccs(i)             "Bio with CCS",
   bio(i)               "technologies that use only biofuel",
   boiler(i)            "technologies that use steam boilers"
@@ -305,7 +306,6 @@ set
   dac(i)               "direct air capture technologies",
   distpv(i)            "distpv (i.e., rooftop PV) generation technologies",
   demand_flex(i)       "demand flexibility technologies (includes DR and EVMC)",
-  dupv(i)              "dupv generation technologies",
   evmc(i)              "ev flexibility technologies",
   evmc_storage(i)      "ev flexibility as direct load control",
   evmc_shape(i)        "ev flexibility as adoptable change to load from response to pricing",
@@ -429,6 +429,13 @@ set e(eall) "emission categories used in model"
 /
 $offlisting
 $include inputs_case%ds%e.csv
+$onlisting
+/ ;
+
+set etype "emission types used in model (precombustion and combustion)"
+/
+$offlisting
+$include inputs_case%ds%etype.csv
 $onlisting
 / ;
 
@@ -679,10 +686,6 @@ if(Sw_DAC_Gas = 0,
   ban("dac_gas") = yes ;
 );
 
-if(Sw_DUPV = 0,
-  ban(i)$i_subsets(i,'dupv') = yes ;
-) ;
-
 if(Sw_EVMC = 0,
   ban(i)$i_subsets(i,'evmc') = yes ;
 ) ;
@@ -797,27 +800,67 @@ if(Sw_Storage = 0,
  ban(i)$i_subsets(i,'storage_standalone') = yes ;
  Sw_BatteryMandate = 0 ;
 ) ;
-* 3: Ban 2-, 6-, 10-, 12-, 24-, 48-, 72-, and 100- batteries (keep 4- and 8-hour batteries and PSH)
+
+* 1: Keep all storage except continuous battery
+if(Sw_Storage = 1,
+ ban(i)$[i_subsets(i,'storage_standalone')
+       $(sameas(i,'battery_li'))] = yes ;
+) ;
+
+* 2: Ban all battery storage except continuous batteries
+if(Sw_Storage = 2,
+ ban(i)$[i_subsets(i,'storage_standalone')
+       $(not (sameas(i,'battery_li')))] = yes ;
+) ;
+
+* 3: Ban 2-, 6-, 10-, 12-, 24-, 48-, 72-, 100- and continuous batteries (keep 4- and 8-hour batteries and PSH)
 if(Sw_Storage = 3,
  ban(i)$[i_subsets(i,'storage_standalone')
-       $(sameas(i,'battery_2') or sameas(i,'battery_6') or sameas(i,'battery_10') or sameas(i,'battery_12') or sameas(i,'battery_24') or sameas(i,'battery_48') or sameas(i,'battery_72') or sameas(i,'battery_100'))] = yes ;
+       $(sameas(i,'battery_2') or sameas(i,'battery_6') 
+       or sameas(i,'battery_10') or sameas(i,'battery_12') 
+       or sameas(i,'battery_24') or sameas(i,'battery_48') 
+       or sameas(i,'battery_72') or sameas(i,'battery_100')
+       or sameas(i, 'battery_li'))] = yes ;
 ) ;
+
 * 4: Ban everything except 4-hour batteries
 if(Sw_Storage = 4,
- ban(i)$[i_subsets(i,'storage_standalone')$(not sameas(i,'battery_4'))] = yes ;
+ ban(i)$[i_subsets(i,'storage_standalone')
+      $(not (sameas(i,'battery_4')))] = yes ;
 ) ;
 
-* 5: Ban LDES batteries
+* 5: Ban LDES and continuous batteries (keep 2-, 4-, 6-, 8-, 10-hour batteries and PSH)
 if(Sw_Storage = 5,
   ban(i)$[i_subsets(i,'storage_standalone')
-       $(sameas(i,'battery_12') or sameas(i,'battery_24') or sameas(i,'battery_48') or sameas(i,'battery_72') or sameas(i,'battery_100'))] = yes ;
+       $(sameas(i,'battery_12') or sameas(i,'battery_24') 
+       or sameas(i,'battery_48') or sameas(i,'battery_72') 
+       or sameas(i,'battery_100') or sameas(i, 'battery_li'))] = yes ;
 ) ;
 
-* 6: Ban 2-, 6-, 10-, 24-, 48-, 72 and 100- batteries (keep 4-, 8-, 12-hour batteries and PSH)
+* 6: Ban 2-, 6-, 10-, 24-, 48-, 72, 100- and continuous batteries (keep 4-, 8-, 12-hour batteries and PSH)
 if(Sw_Storage = 6,
  ban(i)$[i_subsets(i,'storage_standalone')
-       $(sameas(i,'battery_2') or sameas(i,'battery_6') or sameas(i,'battery_10') or sameas(i,'battery_24') or sameas(i,'battery_48') or sameas(i,'battery_72') or sameas(i,'battery_100'))] = yes ;
+       $(sameas(i,'battery_2') or sameas(i,'battery_6') 
+       or sameas(i,'battery_10') or sameas(i,'battery_24') 
+       or sameas(i,'battery_48') or sameas(i,'battery_72') 
+       or sameas(i,'battery_100') or sameas(i, 'battery_li'))] = yes ;
 ) ;
+
+* 7: Ban all battery storage except continuous batteries and PSH
+if(Sw_Storage = 7,
+ ban(i)$[i_subsets(i,'storage_standalone')
+       $(sameas(i,'battery_2') or sameas(i,'battery_4') 
+       or sameas(i,'battery_6') or sameas(i,'battery_8') 
+       or sameas(i,'battery_10') or sameas(i,'battery_12') 
+       or sameas(i,'battery_24') or sameas(i,'battery_48') 
+       or sameas(i,'battery_72') or sameas(i,'battery_100'))] = yes ;
+) ;
+
+* continuous battery related constraints should not be turned on when 
+* Sw_Storage = 0, 1, 3, 4, 5, and 6
+continuous_battery(i)$(Sw_Storage = 0 or Sw_Storage = 1 
+                  or Sw_Storage = 3 or Sw_Storage = 4
+                  or Sw_Storage = 5 or Sw_Storage = 6) = no ;
 
 * option to ban upgrades
 ban(i)$[upgrade(i)$(not Sw_Upgrades)] = yes ;
@@ -879,13 +922,6 @@ ban(i)$[i_subsets(i,'csp')
       $sum{resourceclass$tech_resourceclass(i,resourceclass),
            resourceclassnum(resourceclass)=Sw_NumCSPclasses }] = yes ;
 ) ;
-* There are 7 DUPV resource classes by default. If Sw_NumDUPVclasses < 7, we ban the
-* DUPV techs with resource class > Sw_NumDUPVclasses
-if(Sw_NumDUPVclasses < 7,
-ban(i)$[i_subsets(i,'dupv')
-      $sum{resourceclass$tech_resourceclass(i,resourceclass),
-           resourceclassnum(resourceclass)>Sw_NumDUPVclasses }] = yes ;
-) ;
 
 *Ban Geothermal resources that do not remain after aggregation
 if(Sw_NumGeoclasses < 10,
@@ -934,6 +970,7 @@ coal_ccs(i)$(not ban(i))            = yes$i_subsets(i,'coal_ccs') ;
 coal(i)$(not ban(i))                = yes$i_subsets(i,'coal') ;
 cofire(i)$(not ban(i))              = yes$i_subsets(i,'cofire') ;
 consume(i)$(not ban(i))             = yes$i_subsets(i,'consume') ;
+continuous_battery(i)$(not ban(i))  = yes$i_subsets(i,'continuous_battery') ;
 conv(i)$(not ban(i))                = yes$i_subsets(i,'conv') ;
 csp_storage(i)$(not ban(i))         = yes$i_subsets(i,'csp_storage') ;
 csp(i)$(not ban(i))                 = yes$i_subsets(i,'csp') ;
@@ -944,7 +981,6 @@ csp4(i)$(not ban(i))                = yes$i_subsets(i,'csp4') ;
 dac(i)$(not ban(i))                 = yes$i_subsets(i,'dac') ;
 distpv(i)$(not ban(i))              = yes$i_subsets(i,'distpv') ;
 demand_flex(i)$(not ban(i))         = yes$i_subsets(i,'demand_flex') ;
-dupv(i)$(not ban(i))                = yes$i_subsets(i,'dupv') ;
 evmc(i)$(not ban(i))                = yes$i_subsets(i,'evmc') ;
 evmc_storage(i)$(not ban(i))        = yes$i_subsets(i,'evmc_storage') ;
 evmc_shape(i)$(not ban(i))          = yes$i_subsets(i,'evmc_shape') ;
@@ -1533,7 +1569,6 @@ firstyear(i)$upgrade(i) = sum{ii$upgrade_to(i,ii), firstyear(ii) } ;
 parameter firstyear_pcat(pcat) ;
 firstyear_pcat(pcat)$[sum{i$[sameas(i,pcat)$(not ban(i))], firstyear(i) }] = sum{i$sameas(i,pcat), firstyear(i) } ;
 firstyear_pcat("upv") = firstyear("upv_1") ;
-firstyear_pcat("dupv") = firstyear("dupv_1") ;
 firstyear_pcat("wind-ons") = firstyear("wind-ons_1") ;
 firstyear_pcat("wind-ofs") = firstyear("wind-ofs_1") ;
 firstyear_pcat("csp-ws") = firstyear("csp2_1") ;
@@ -1773,7 +1808,7 @@ $include inputs_case%ds%h2_existing_smr_cap.csv
 $offdelim
 $onlisting
 / ;
-$onempty
+$offempty
 
 *==========================================
 *     --- Canadian Imports/Exports ---
@@ -3071,7 +3106,7 @@ RPSTechMult("RPS_bundled",i,st)$[hydro(i)$valcap_i(i)] = RPSTechMult("RPS_All",i
 RPSTechMult("CES_bundled",i,st)$[hydro(i)$valcap_i(i)] = RPSTechMult("CES",i,st) ;
 
 *Reduce RPS/CES values for distributed PV based on distloss because we increase their generation to the busbar level
-RPSTechMult(RPSCat,i,st)$[(distpv(i) or dupv(i))$RPSTechMult(RPSCat,i,st)] = 1 - distloss ;
+RPSTechMult(RPSCat,i,st)$[(distpv(i))$RPSTechMult(RPSCat,i,st)] = 1 - distloss ;
 
 $onempty
 table techs_banned_imports_rps(i,st) "Techs that are not allowed to be imported into a state to meet the RPS"
@@ -4196,7 +4231,7 @@ $onlisting
 parameter ilr(i) "--unitless-- inverter loading ratio - used to convert DC capacity to AC capacity for PV" ;
 * assign a default value of 1.0 for every technology (used in e_report.gms)
 ilr(i)$[valcap_i(i)] = 1 ;
-ilr(i)$[upv(i) or dupv(i)] = ilr_utility ;
+ilr(i)$[upv(i)] = ilr_utility ;
 ilr(i)$distpv(i) = ilr_dist ;
 * assign an ILR to hybrid PV+battery technologies based on the ILR for the configurations
 ilr(pvb) = sum{pvb_config$pvb_agg(pvb_config,pvb), ilr_pvb_config(pvb_config) } ;
@@ -4220,11 +4255,13 @@ bcr(i)$[storage_standalone(i) or csp_storage(i) or hyd_add_pump(i)] = 1 ;
 *=========================================
 
 parameter cost_cap(i,t)           "--2004$/MW-- overnight capital costs",
-          cost_upgrade(i,v,r,t)   "--2004$/MW-- overnight costs of upgrading to tech i"
+          cost_cap_energy(i,t)    "--2004$/MWh-- overnight capital costs of energy storage capacity",
+          cost_upgrade(i,v,r,t)   "--2004$/MW-- overnight costs of upgrading to tech i",
           upgrade_derate(i,v,r,t) "--unitless [0-1]-- reduction in capacity from nameplate when upgrading a unit given need to power CCS equipment"
 ;
 
 cost_cap(i,t) = plant_char0(i,t,"capcost") ;
+cost_cap_energy(i,t)$continuous_battery(i) = plant_char0(i,t,"capcost_energy") ;
 
 * apply user-defined cost reduction to Flexible CCS uniformly in all years
 cost_cap(i,t)$ccsflex(i) = cost_cap(i,t) * %GSw_CCSFLEX_cost_mult% ;
@@ -4261,18 +4298,6 @@ $onlisting
 
 hydrocapmult(t,i)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), hydrocapmult(t,ii) } ;
-
-set dupv_upv_corr(i,ii) "correlation set for cost of capital calculations of dupv"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%dupv_upv_corr.csv
-$offdelim
-$onlisting
-/ ;
-
-cost_cap(i,t)$dupv(i) = sum{ii$dupv_upv_corr(ii,i),cost_cap(ii,t) } * dupv_cost_cap_mult ;
-
 
 *====================
 * --- Variable OM ---
@@ -4341,10 +4366,13 @@ cost_vom(i,newv,r,t)$[upgrade(i)$Sw_Upgrades$valcap(i,newv,r,t)] =
 * --- Fixed OM ---
 *=================
 
-parameter cost_fom(i,v,r,t) "--2004$/MW-yr-- fixed OM" ;
+parameter cost_fom(i,v,r,t)           "--2004$/MW-yr-- fixed O&M",
+          cost_fom_energy(i,v,r,t)    "--2004$/MWh-yr-- fixed O&M of the energy capacity of a storage system"
+;
 
 *previous calculation (without tech binning)
 cost_fom(i,v,r,t)$[(not Sw_binOM)$valcap(i,v,r,t)] = plant_char(i,v,t,'fom') ;
+cost_fom_energy(i,v,r,t)$[(continuous_battery(i))$valcap(i,v,r,t)] = plant_char(i,v,t,'fom_energy') ;
 
 *if using binned costs, still need to assign default values to cost_fom for new plants
 cost_fom(i,newv,r,t)$[(Sw_binOM)$valcap(i,newv,r,t)] = plant_char(i,newv,t,'fom') ;
@@ -4424,8 +4452,6 @@ $onlisting
 cost_fom(i,v,r,t)$[valcap(i,v,r,t)$hydro(i)$hyd_fom(i,r)] = hyd_fom(i,r) ;
 
 cost_fom(i,initv,r,t)$[(not Sw_BinOM)$valcap(i,initv,r,t)] = sum{tt$tfirst(tt), cost_fom(i,initv,r,tt) } ;
-
-cost_fom(i,v,r,t)$[valcap(i,v,r,t)$dupv(i)] = sum{ii$dupv_upv_corr(ii,i), cost_fom(ii,v,r,t) } ;
 
 *upgrade fom costs for initial classes are the fom costs for that tech
 *plus the delta between upgrade_to and upgrade_from for the initial year
@@ -4508,10 +4534,8 @@ heat_rate(i,initv,r,t)$[upgrade(i)$Sw_Upgrades$ccs(i)
 heat_rate(i,newv,r,t)$[upgrade(i)$Sw_Upgrades$valcap(i,newv,r,t)] =
         sum{ii$upgrade_to(i,ii), heat_rate(ii,newv,r,t) } ;
 
-
 heat_rate(i,v,r,t)$[heat_rate_adj(i,'pre2010')$initv(v)] = heat_rate_adj(i,'pre2010') * heat_rate(i,v,r,t) ;
 heat_rate(i,v,r,t)$[heat_rate_adj(i,'post2010')$newv(v)] = heat_rate_adj(i,'post2010') * heat_rate(i,v,r,t) ;
-
 
 *=========================================
 * --- Fuel Prices ---
@@ -4731,11 +4755,9 @@ cost_opres(i,ortype,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), cost_opres(ii,ortyp
 cost_opres(i,"combo",t) = smax{ortype, cost_opres(i,ortype,t) } ;
 
 
-
 *======================================================
 * --- MinLoading (only used if Sw_MinLoading != 0) ---
 *======================================================
-
 
 parameter minloadfrac0(i) "--fraction-- initial minimum loading fraction"
 /
@@ -4996,7 +5018,10 @@ parameter rsc_fin_mult_noITC(i,r,t) "capital cost multiplier excluding ITC for r
 * --- Emission Rate ---
 *=========================================
 
-table emit_rate_fuel(i,e)  "--metric tons per MMBtu-- emissions rate of fuel by technology type"
+* Emission rate by technology and etype (broken down to combustion and precombustion)
+* Note that CH4 precombustion emission rate of natural gas is 0 here 
+* as we will use CH4 methane leakage from GSw_MethaneLeakageScen for it later)
+table emit_rate_fuel(i,etype,e)  "--metric tons per MMBtu-- emissions rate of fuel by technology and emission type"
 $offlisting
 $ondelim
 $include inputs_case%ds%emitrate.csv
@@ -5028,31 +5053,38 @@ capture_rate_input(i,"CO2")$[upgrade(i)$(coal_ccs(i) or gas_cc_ccs(i))$ccs_mod(i
 capture_rate_input(i,"CO2")$[upgrade(i)$(coal_ccs(i) or gas_cc_ccs(i))$ccs_max(i)]=Sw_CCS_Rate_Upgrade_max;
 
 * emit_rate_fuel water expansion
-emit_rate_fuel(i,e)$[i_water_cooling(i)$Sw_WaterMain] =
-  sum{ii$ctt_i_ii(i,ii), emit_rate_fuel(ii,e) } ;
-
+emit_rate_fuel(i,etype,e)$[i_water_cooling(i)$Sw_WaterMain] =
+  sum{ii$ctt_i_ii(i,ii), emit_rate_fuel(ii,etype,e) } ;
+  
 * Assign the appropriate % of generation for each technology to count toward CES requirements.
 * Exclude capture rates of BECCS, which receive full credit in a CES and were already set to 1 above in the "RPS" section.
 RPSTechMult(RPSCat,i,st)$[ccs(i)$(sameas(RPSCat,"CES") or sameas(RPSCat,"CES_Bundled"))$(not beccs(i))] = capture_rate_input(i,"CO2") ;
 
-* calculate emit rate for CCS techs (except beccs techs, which are defined directly in emitrate.csv)
-emit_rate_fuel(i,e)$[ccs(i)$(not beccs(i))] =
-  (1 - capture_rate_input(i,e)) * sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,e) } ;
+* calculate combustion emit rate for CCS techs (except beccs techs, which are defined directly in emitrate.csv)
+emit_rate_fuel(i,"combustion",e)$[ccs(i)$(not beccs(i))] =
+  (1 - capture_rate_input(i,e)) * sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"combustion",e) } ;
 
-* assign flexible ccs the same emission rate as the uncontrolled technology to allow variable CO2 removal (e.g., for gas-cc-ccs-f1, use gas-cc)
-emit_rate_fuel(i,e)$[ccsflex(i)] = sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,e) } ;
+* calculate precombustion emit rate for CCS techs (except beccs techs, which are defined directly in emitrate.csv)
+emit_rate_fuel(i,"precombustion",e)$[ccs(i)$(not beccs(i))] = sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"precombustion",e) } ;
 
-* set upgrade tech emissions for non-CCS upgrades (e.g. gas-ct -> h2-ct); CCS upgrade emissions are handled above
-emit_rate_fuel(i,e)$[upgrade(i)$(not ccs(i))] = sum{ii$upgrade_to(i,ii), emit_rate_fuel(ii,e) } ;
+* assign flexible ccs the same combustion emission rate as the uncontrolled technology to allow variable CO2 removal (e.g., for gas-cc-ccs-f1, use gas-cc)
+emit_rate_fuel(i,"combustion",e)$[ccsflex(i)] = sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"combustion",e) } ;
+
+* set upgrade tech combustion emissions for non-CCS upgrades (e.g. gas-ct -> h2-ct); CCS upgrade emissions are handled above
+emit_rate_fuel(i,"combustion",e)$[upgrade(i)$(not ccs(i))] = sum{ii$upgrade_to(i,ii), emit_rate_fuel(ii,"combustion",e) } ;
+
+* set upgrade tech precombustion emissions for upgrades
+emit_rate_fuel(i,"precombustion",e)$[upgrade(i)] = sum{ii$upgrade_to(i,ii), emit_rate_fuel(ii,"precombustion",e) } ;
+
 
 * parameters for calculating captured emissions
 parameter capture_rate_fuel(i,e) "--metric tons per MMBtu-- emissions capture rate of fuel by technology type";
-capture_rate_fuel(i,e) = capture_rate_input(i,e) * sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,e) } ;
+capture_rate_fuel(i,e) = capture_rate_input(i,e) * sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"combustion",e) } ;
 
 * capture_rate_fuel is used to calculate how much CO2 is captured and stored;
 * for beccs, the captured CO2 is the entire negative emissions rate
 * since any uncontrolled emissions are assumed to be lifecycle net zero
-capture_rate_fuel(i,"CO2")$beccs(i) = - emit_rate_fuel(i,"CO2") ;
+capture_rate_fuel(i,"CO2")$beccs(i) = - emit_rate_fuel(i,"combustion","CO2")
 
 parameter capture_rate(e,i,v,r,t) "--metric tons per MWh-- emissions capture rate" ;
 
@@ -5068,13 +5100,14 @@ $onlisting
 
 scalar methane_tonperMMBtu "--metric tons per MMBtu-- methane content of natural gas" ;
 * [ton CO2 / MMBtu] * [ton CH4 / ton CO2]
-methane_tonperMMBtu = emit_rate_fuel("gas-CC","CO2") * molWeightCH4 / molWeightCO2 ;
+methane_tonperMMBtu = emit_rate_fuel("gas-CC","combustion","CO2") * molWeightCH4 / molWeightCO2 ;
 
-parameter prod_emit_rate(e,i,allt) "--metric tons emitted per metric ton product-- emissions rate per metric ton of product (e.g. tonCO2/tonH2 for SMR & SMR-CCS)" ;
-prod_emit_rate("CO2","smr",t) = smr_co2_intensity ;
-prod_emit_rate("CO2","smr_ccs",t) = smr_co2_intensity * (1 - smr_capture_rate) ;
-prod_emit_rate("CO2","dac",t)$Sw_DAC = -1 ;
-prod_emit_rate("CO2","dac_gas",t)$Sw_DAC_Gas = -1 ;
+parameter prod_emit_rate(etype,e,i,allt) "--metric tons emitted per metric ton product-- emissions rate per metric ton of product (e.g. tonCO2/tonH2 for SMR & SMR-CCS)" ;
+* Steam methane reformer (SMR)'s combustion emission here refers to emissions from steam methane reforming process
+prod_emit_rate("combustion","CO2","smr",t) = smr_co2_intensity ;
+prod_emit_rate("combustion","CO2","smr_ccs",t) = smr_co2_intensity * (1 - smr_capture_rate) ;
+prod_emit_rate("combustion","CO2","dac",t)$Sw_DAC = -1 ;
+prod_emit_rate("combustion","CO2","dac_gas",t)$Sw_DAC_Gas = -1 ;
 
 scalar smr_methane_rate  "--metric tons CH4 per metric ton H2-- methane used to produce a metric ton of H2 via SMR" ;
 * NOTE that we don't yet include the impact of CCS on methane use
@@ -5084,7 +5117,7 @@ smr_methane_rate = smr_co2_intensity * molWeightCH4 / molWeightCO2 ;
 
 * Upstream fuel emissions for SMR
 *** [ton CH4 used / ton H2] * [ton CH4 leaked / ton CH4 produced] * [ton CH4 produced / ton CH4 used]
-prod_emit_rate(e,i,t)
+prod_emit_rate("precombustion",e,i,t)
     $[sameas(e,"CH4")
     $smr(i)
     $methane_leakage_rate(t)]
@@ -5092,37 +5125,46 @@ prod_emit_rate(e,i,t)
 ;
 
 parameter
-    emit_rate(eall,i,v,r,t) "--metric tons per MWh-- emissions rate"
+    emit_rate(etype,eall,i,v,r,t) "--metric tons per MWh-- emissions rate"
     emit_r_tc(r,t)  "--metric tons-- CO2 emissions, regional"
     emit_nat_tc(t)  "--metric tons-- CO2 emissions, national"
 ;
 
-emit_rate(e,i,v,r,t)$[emit_rate_fuel(i,e)$valcap(i,v,r,t)]
-  = round(heat_rate(i,v,r,t) * emit_rate_fuel(i,e),6) ;
+emit_rate(etype,e,i,v,r,t)$[emit_rate_fuel(i,etype,e)$valcap(i,v,r,t)]
+  = round(heat_rate(i,v,r,t) * emit_rate_fuel(i,etype,e),10) ;
 
 *only emissions from the coal portion of cofire plants are considered
-emit_rate(e,i,v,r,t)$[sameas(i,"cofire")$emit_rate_fuel("coal-new",e)$valcap(i,v,r,t)]
-  = round((1-bio_cofire_perc) * heat_rate(i,v,r,t) * emit_rate_fuel("coal-new",e),6) ;
+emit_rate(etype,e,i,v,r,t)$[sameas(i,"cofire")$emit_rate_fuel("coal-new",etype,e)$valcap(i,v,r,t)]
+  = round((1-bio_cofire_perc) * heat_rate(i,v,r,t) * emit_rate_fuel("coal-new",etype,e),10) ;
 
-* Upstream fuel emissions
+* Fill in CH4 precombustion emission rate
 *** [MMBtu/MWh] * [ton methane used / MMBtu] * [ton methane leaked / ton methane produced]
 *** * [ton methane produced / ton methane used] = [ton methane leaked / MWh]
-emit_rate(e,i,v,r,t)
+emit_rate("precombustion",e,i,v,r,t)
     $[methane_leakage_rate(t)
     $gas(i)
     $sameas(e,"CH4")]
     = heat_rate(i,v,r,t) * methane_tonperMMBtu * methane_leakage_rate(t) / (1 - methane_leakage_rate(t))
 ;
 
+* Global warming potential of different pollutants
+parameter gwp(e)   "--metric ton CO2-equivalents --global warming potential"
+
+/
+$ondelim
+$include inputs_case%ds%gwp.csv
+$offdelim
+/ ;
+
 * CO2(e) emissions rate (used in postprocessing only)
-emit_rate("CO2e",i,v,r,t)
-  = round(emit_rate("CO2",i,v,r,t) + emit_rate("CH4",i,v,r,t) * Sw_MethaneGWP,6) ;
+emit_rate(etype,"CO2e",i,v,r,t)
+  = round(sum{e, emit_rate(etype,e,i,v,r,t) * gwp(e)},10) ;
 
 * calculate emissions capture rates (same logic as emissions calc above)
 capture_rate(e,i,v,r,t)$[capture_rate_fuel(i,e)$valcap(i,v,r,t)]
-  = round(heat_rate(i,v,r,t) * capture_rate_fuel(i,e),6) ;
+  = round(heat_rate(i,v,r,t) * capture_rate_fuel(i,e),10) ;
 
-capture_rate(e,i,v,r,t)$[upgrade(i)$capture_rate_fuel(i,e)] = round(heat_rate(i,v,r,t) * capture_rate_fuel(i,e),6) ;
+capture_rate(e,i,v,r,t)$[upgrade(i)$capture_rate_fuel(i,e)] = round(heat_rate(i,v,r,t) * capture_rate_fuel(i,e),10) ;
 
 * Declare regional emissions rate (used in c_supplymodel, defined in d_solveoneyear)
 parameter
@@ -5684,6 +5726,11 @@ bin_duration(sdbin) = sdbin.val ;
 * For capacity credit, CSP is treated like VRE rather than storage
 cc_storage(i,sdbin)$[(not ban(i))$(not csp(i))] = storage_duration(i) / bin_duration(sdbin) ;
 cc_storage(i,sdbin)$(cc_storage(i,sdbin) > 1) = 1 ;
+
+* for continuous battery, the capacity credit for each bin is always 1,
+* since the duration of continuous battery will be automatically greater than the sdbin duration.
+cc_storage(i,sdbin)$(continuous_battery(i)) = 1 ;
+
 * The 8760 bin is included as a safety valve so that the model can build additional storage
 * beyond what is available for diurnal peaking capacity
 cc_storage(i,'8760') = 0 ;
@@ -5858,6 +5905,9 @@ upgrade_derate(i,initv,r,t)$[upgrade(i)$ccs(i)$gas(i)
 upgrade_derate(i,newv,r,t)$[upgrade(i)$ccs(i)$coal(i)$valcap(i,newv,r,t)] = 0.29 ;
 upgrade_derate(i,newv,r,t)$[upgrade(i)$ccs(i)$gas(i)$valcap(i,newv,r,t)] = 0.14 ;
 
+* If a technology is not retired, its upgrade_derate value is zero.
+upgrade_derate(i,v,r,t)$[upgrade(i)$(not noret_upgrade_tech(i))] = 0 ;
+
 if((not Sw_UpgradeDerate),
  upgrade_derate(i,v,r,t) = 0
 ) ;
@@ -5930,9 +5980,9 @@ cost_curt(t)$[yeart(t)>=model_builds_start_yr] = Sw_CurtMarket ;
 * Emissions cap and tax
 *======================
 
-parameter emit_cap(e,t)   "--metric tons per year-- annual CO2 emissions cap",
-          yearweight(t)   "--unitless-- weights applied to each solve year for the banking and borrowing cap - updated in d_solveprep.gms",
-          emit_tax(e,r,t) "--$ per metric ton-- tax applied to emissions" ;
+parameter emit_cap(eall,t)    "--metric tons per year-- annual CO2 emissions cap",
+          yearweight(t)       "--unitless-- weights applied to each solve year for the banking and borrowing cap - updated in d_solveprep.gms",
+          emit_tax(e,r,t)     "--$ per metric ton-- tax applied to emissions" ;
 
 emit_cap(e,t) = 0 ;
 emit_tax(e,r,t) = 0 ;
@@ -5952,6 +6002,10 @@ $onlisting
 / ;
 if(Sw_AnnualCap = 1,
     emit_cap("CO2",t) = co2_cap(t) ;
+) ;
+
+if(Sw_AnnualCap = 2,
+    emit_cap("CO2e",t) = co2_cap(t) ;
 ) ;
 
 parameter co2_tax(allt)      "--$/metric ton-- CO2 tax used when Sw_CarbTax is on"
@@ -5988,16 +6042,8 @@ emit_modeled("CO2",r,t)$[
 * Emissions with an emission rate limit constraint
 emit_modeled(e,r,t)$emit_rate_con(e,r,t) = yes ;
 
-* Emissions with an emission cap (model only functions with CO2 only right now)
-emit_modeled("CO2",r,t)$[
-  sum{tt, emit_cap("CO2",tt) }
-  $Sw_AnnualCap] = yes ;
-
-* CH4 emissions when Sw_MethaneGWP is on
-emit_modeled("CH4",r,t)$[
-  sum{tt, emit_cap("CO2",tt) }
-  $Sw_AnnualCap
-  $Sw_MethaneGWP] = yes ;
+* Model all emissions with global warming potential
+emit_modeled(e,r,t)$gwp(e) = yes ;
 
 * Emissions associated with bankbarrowcap
 emit_modeled(e,r,t)$[
@@ -6513,7 +6559,7 @@ Parameter
     can_exports_h(r,allh,t)                "--MW-- [Sw_Canada=1] timeslice exports to Canada by year"
     can_exports_h_frac(allh)               "--fraction-- [Sw_Canada=1] fraction of annual exports by timeslice"
 * Capacity credit
-    sdbin_size(ccreg,ccseason,sdbin,t)     "--MW-- available capacity by storage duration bin - used to bin the peaking power capacity contribution of storage by duration"
+    sdbin_size(ccreg,ccseason,sdbin,t)     "--MW-- available power capacity by storage duration bin - used to bin the peaking power capacity contribution of storage by duration"
     cc_old(i,r,ccseason,t)                 "--MW-- capacity credit for existing capacity - used in sequential solve similar to heritage reeds"
     cc_mar(i,r,ccseason,t)                 "--fraction--  cc_mar loading inititalized to some reasonable value for the 2010 solve"
     cc_int(i,v,r,ccseason,t)               "--fraction--  average fractional capacity credit - used in intertemporal solve"
@@ -6554,8 +6600,7 @@ cost_vom(i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
 cost_fom(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
 heat_rate(i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
 m_capacity_exog(i,v,r,t)$[not valcap(i,v,r,t)] = 0 ;
-emit_rate(e,i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
-
+emit_rate(etype,e,i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
 
 *============================================================
 * -- Initial state of parameters that change as model runs --

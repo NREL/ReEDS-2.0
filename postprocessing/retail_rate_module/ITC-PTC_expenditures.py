@@ -432,8 +432,6 @@ for i in itc_out_deduplicated.i.unique():
         icat[i] = 'CSP'
     elif 'distpv' in i.lower():
         icat[i] = 'Distributed PV'
-#     elif 'dupv' in i.lower():
-#         icat[i] = 'Distributed Utility PV'
     elif 'upv' in i.lower():
         icat[i] = 'Utility PV'
     elif ('pflash' in i) or ('geo' in i.lower()):

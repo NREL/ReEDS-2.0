@@ -47,7 +47,6 @@ pumped-hydro,0,0,0,0
 pumped-hydro-flex,0,0,0,0
 distpv,1,1,1,1
 upv_1*upv_10,1,1,1,1
-dupv_1*dupv_10,1,1,1,1
 wind-ofs_1*wind-ofs_10,1,1,1,1
 wind-ons_1*wind-ons_10,1,1,1,1
 csp1_1*csp1_12,1,1,1,1

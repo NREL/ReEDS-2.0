@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Mar 16 16:30:25 2020
-
-@author: afrazier
-"""
-
 #%% Imports
 import argparse
 import os
@@ -22,15 +15,27 @@ import ReEDS_Augur.stress_periods as stress_periods
 
 #%% Functions
 def run_pras(
-        casedir, t, sw, start_year, timesteps, iteration=0, recordtime=True,
-        repo=False, overwrite=True, include_samples=False,
-        write_flow=False, write_surplus=False, write_energy=False,
+        casedir,
+        t,
+        sw,
+        iteration=0,
+        recordtime=True,
+        repo=False,
+        overwrite=True,
+        include_samples=False,
+        write_flow=False,
+        write_surplus=False,
+        write_energy=False,
+        write_availability=False,
     ):
     """
     """
     ### Get the PRAS settings for this solve year
     print('Running ReEDS2PRAS and PRAS')
     scriptpath = (sw['reeds_path'] if repo else casedir)
+    start_year = min(sw['resource_adequacy_years_list'])
+    ## ReEDS2PRAS runs at hourly resolution
+    timesteps = sw['num_resource_adequacy_years'] * 8760
     command = [
         "julia",
         f"--project={sw['reeds_path']}",
@@ -50,6 +55,7 @@ def run_pras(
         f"--write_flow={int(write_flow)}",
         f"--write_surplus={int(write_surplus)}",
         f"--write_energy={int(write_energy)}",
+        f"--write_availability={int(write_availability)}",
         f"--iteration={iteration}",
         f"--samples={sw['pras_samples']}",
         f"--overwrite={int(overwrite)}",
@@ -75,11 +81,11 @@ def run_pras(
 def main(t, tnext, casedir, iteration=0):
 
     # #%% To debug, uncomment these lines and update the run path
-    # t = 2020
-    # tnext = 2023
+    # t = 2026
+    # tnext = 2029
     # reeds_path = os.path.dirname(__file__)
     # casedir = os.path.join(
-    #     reeds_path,'runs','v20241122_hydroM0_Pacific')
+    #     reeds_path,'runs','v20250320_prasplotsM0_WestConnectSouth')
     # iteration = 0
     # assert tnext >= t
     # os.chdir(casedir)
@@ -112,7 +118,7 @@ def main(t, tnext, casedir, iteration=0):
         cc_results = {
             'cc_mar': pd.DataFrame(columns=['i','r','ccreg','szn','t','Value']),
             'cc_old': pd.DataFrame(columns=['i','r','ccreg','szn','t','Value']),
-            'cc_dr': pd.DataFrame(columns=['i','r','szn','t','Value']),
+            'cc_evmc': pd.DataFrame(columns=['i','r','szn','t','Value']),
             'sdbin_size': pd.DataFrame(columns=['ccreg','szn','bin','t','Value']),
         }
 
@@ -128,13 +134,8 @@ def main(t, tnext, casedir, iteration=0):
         2: True,
     }[int(sw['pras'])]
     if pras_this_solve_year or (not int(sw.GSw_PRM_CapCredit)):
-        start_year = min(sw['resource_adequacy_years_list'])
-        end_year = max(sw['resource_adequacy_years_list']) + 1
-        timesteps = (end_year - start_year) * 8760
         result = run_pras(
             casedir, t, sw,
-            start_year=start_year,
-            timesteps=timesteps,
             iteration=iteration,
             write_flow=(True if t == max(solveyears) else False),
             write_energy=True,

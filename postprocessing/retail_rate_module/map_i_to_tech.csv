@@ -167,6 +167,7 @@ battery_24,battery,#FF4A88
 battery_48,battery,#FF4A88
 battery_72,battery,#FF4A88
 battery_100,battery,#FF4A88
+battery_li,battery,#FF4A88
 gas-CT,gas-ct,#C2A1DB
 gas-CC,gas-cc,#52216B
 pumped-hydro,phs,#FF4A88

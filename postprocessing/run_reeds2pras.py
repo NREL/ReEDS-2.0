@@ -17,9 +17,17 @@ def check_slurm(forcelocal=False):
 
 
 def submit_job(
-        case, year=0, samples=0, repo=False, overwrite=False,
-        write_flow=False, write_surplus=False, write_energy=False,
-    ):
+    case,
+    year=0,
+    iteration=None,
+    samples=0,
+    repo=False,
+    overwrite=False,
+    write_flow=False,
+    write_surplus=False,
+    write_energy=False,
+    write_availability=False,
+):
     """
     """
     ### Make the run file
@@ -41,16 +49,20 @@ def submit_job(
         + [f"#SBATCH --job-name={jobname}"]
         + [f"#SBATCH --output={os.path.join(case, 'slurm-%j.out')}"]
         + commands_other + ['']
-        + [(
+        + [
             f"python {os.path.join(reeds_path,'postprocessing','run_reeds2pras.py')}"
             + f" {case}"
-            + f" -y {year} -s {samples} --local"
+            + f" -y {year}"
+            + ('' if iteration is None else f' -i {iteration}')
+            + f" -s {samples}"
+            + " --local"
             + (' --repo' if repo else '')
             + (' --overwrite' if overwrite else '')
             + (' --flow' if write_flow else '')
             + (' --surplus' if write_surplus else '')
             + (' --energy' if write_energy else '')
-        )]
+            + (' --availability' if write_availability else '')
+        ]
     )
     ### Write the SLURM command
     callfile = os.path.join(case, 'call_pras.sh')
@@ -65,9 +77,17 @@ def submit_job(
 
 #%% Main function
 def main(
-        case, year=0, samples=0, repo=False, overwrite=False,
-        write_flow=False, write_surplus=False, write_energy=False,
-    ):
+    case,
+    year=0,
+    iteration=None,
+    samples=0,
+    repo=False,
+    overwrite=False,
+    write_flow=False,
+    write_surplus=False,
+    write_energy=False,
+    write_availability=False,
+):
     """
     Run prep_data, ReEDS2PRAS, and PRAS as necessary.
     If running PRAS, append the number of samples to the filename.
@@ -95,13 +115,16 @@ def main(
     t = year if (year in years) else years[-1]
     sw['t'] = t
 
-    ### Get the largest iteration and run on that system
-    iteration = int(
-        os.path.splitext(
-            sorted(glob(os.path.join(case,'lstfiles',f'*{t}i*.lst')))[-1]
-        )[0]
-        .split(f'{t}i')[-1]
-    )
+    if iteration is None:
+        ### Get the largest iteration and run on that system
+        iteration = int(
+            os.path.splitext(
+                sorted(glob(os.path.join(case,'lstfiles',f'*{t}i*.lst')))[-1]
+            )[0]
+            .split(f'{t}i')[-1]
+        )
+
+    print(f'Running PRAS for {t}i{iteration}')
 
     ### Check if prep_data.py outputs exist; if not, run it
     augur_data = os.path.join(case,'ReEDS_Augur','augur_data')
@@ -121,9 +144,18 @@ def main(
 
     ### Run ReEDS2PRAS
     Augur.run_pras(
-        case, t, sw, iteration=iteration,
-        recordtime=False, repo=repo, overwrite=overwrite, include_samples=True,
-        write_flow=write_flow, write_surplus=write_surplus, write_energy=write_energy,
+        case,
+        t,
+        sw,
+        iteration=iteration,
+        recordtime=False,
+        repo=repo,
+        overwrite=overwrite,
+        include_samples=True,
+        write_flow=write_flow,
+        write_surplus=write_surplus,
+        write_energy=write_energy,
+        write_availability=write_availability,
     )
 
 
@@ -144,6 +176,8 @@ if __name__ == '__main__':
                         help='path to ReEDS run folder')
     parser.add_argument('--year', '-y', type=int, default=0,
                         help='year to run')
+    parser.add_argument('--iteration', '-i', type=str, default='',
+                        help='iteration to run (if not provided, runs last iteration)')
     parser.add_argument('--samples', '-s', type=int, default=0,
                         help='PRAS samples to run')
     parser.add_argument('--repo', '-r', action='store_true',
@@ -159,10 +193,15 @@ if __name__ == '__main__':
                         help="Write hourly surplus from PRAS")
     parser.add_argument('--energy', '-e', action='store_true',
                         help="Write hourly storage energy from PRAS")
+    parser.add_argument('--availability', '-a', action='store_true',
+                        help="Write hourly unit availability by sample from PRAS")
 
     args = parser.parse_args()
     case = args.case
     year = args.year
+    iteration = args.iteration
+    if not len(iteration):
+        iteration = None
     samples = args.samples
     repo = args.repo
     local = args.local
@@ -170,10 +209,12 @@ if __name__ == '__main__':
     write_flow = args.flow
     write_surplus = args.surplus
     write_energy = args.energy
+    write_availability = args.availability
 
     # #%% Inputs for testing
     # case = '/Users/pbrown/github2/ReEDS-2.0/runs/v20230605_ntpM1_Pacific'
     # year = 2026
+    # iteration = None
     # samples = 0
     # repo = True
     # local = False
@@ -181,6 +222,7 @@ if __name__ == '__main__':
     # write_flow = False
     # write_surplus = False
     # write_energy = False
+    # write_availability = False
 
     #%% Determine whether to submit SLURM job
     hpc = check_slurm(forcelocal=local)
@@ -188,13 +230,27 @@ if __name__ == '__main__':
     ### Run it
     if hpc:
         submit_job(
-            case=case, year=year, samples=samples, repo=repo,
+            case=case,
+            year=year,
+            iteration=iteration,
+            samples=samples,
+            repo=repo,
             overwrite=overwrite,
-            write_flow=write_flow, write_surplus=write_surplus, write_energy=write_energy,
+            write_flow=write_flow,
+            write_surplus=write_surplus,
+            write_energy=write_energy,
+            write_availability=write_energy,
         )
     else:
         main(
-            case=case, year=year, samples=samples, repo=repo,
+            case=case,
+            year=year,
+            iteration=iteration,
+            samples=samples,
+            repo=repo,
             overwrite=overwrite,
-            write_flow=write_flow, write_surplus=write_surplus, write_energy=write_energy,
+            write_flow=write_flow,
+            write_surplus=write_surplus,
+            write_energy=write_energy,
+            write_availability=write_availability,
         )

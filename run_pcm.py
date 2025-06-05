@@ -9,12 +9,11 @@ import gdxpds
 import pandas as pd
 
 ## Local imports
+import reeds
+import e_report_dump
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'input_processing')))
-from ticker import makelog
 import hourly_repperiods
 import hourly_writetimeseries
-from ReEDS_Augur.functions import get_switches
-import e_report_dump
 
 
 # %% Inferred inputs
@@ -26,6 +25,8 @@ switch_mods_default = {
     'GSw_HourlyNumClusters': 365,
     'GSw_HourlyType': 'day',
     'GSw_HourlyChunkLengthRep': 1,
+    'GSw_HourlyChunkLengthStress': 1,
+    'GSw_HourlyChunkAggMethod': 1,
 }
 
 
@@ -92,6 +93,7 @@ def solvestring_pcm(
                     'GSw_gopt',
                     'solver',
                     'debug',
+                    'startyear',
                 ]
             ]
         )
@@ -117,7 +119,7 @@ def pcm_report_string(batch_case, sw, t, iteration=0, hpc=0, label=''):
     return out
 
 
-def submit_job(casepath, command_string, jobname='', joblabel=''):
+def submit_job(casepath, command_string, jobname='', joblabel='', bigmem=0):
     """
     Create a slurm job submission script for `command_string` at `casepath`,
     then submit it.
@@ -127,6 +129,9 @@ def submit_job(casepath, command_string, jobname='', joblabel=''):
     commands_header, commands_sbatch, commands_other = [], [], []
     with open(os.path.join(reeds_path, 'srun_template.sh'), 'r') as f:
         for line in f:
+            if bigmem and ('--mem=' in line):
+                line = '#SBATCH --mem=500000'
+
             if line.strip().startswith('#!'):
                 commands_header.append(line.strip())
             elif line.strip().startswith('#SBATCH'):
@@ -164,7 +169,7 @@ def main(casepath, t, switch_mods=switch_mods_default, label='', overwrite=False
     os.chdir(casepath)
 
     # %% Get the run settings
-    sw = get_switches(casepath)
+    sw = reeds.io.get_switches(casepath)
     years = (
         pd.read_csv(os.path.join(casepath, 'inputs_case', 'modeledyears.csv'))
         .columns.astype(int)
@@ -173,7 +178,7 @@ def main(casepath, t, switch_mods=switch_mods_default, label='', overwrite=False
     _t = t if t > 0 else max(years)
 
     # %% Set up logger
-    makelog(
+    reeds.log.makelog(
         scriptname=__file__,
         logpath=os.path.join(casepath, f'gamslog_pcm_{label}_{_t}.txt'),
     )
@@ -332,6 +337,7 @@ if __name__ == '__main__':
         action='store_true',
         help='Run locally (including on a compute node as part of a job)',
     )
+    parser.add_argument('--bigmem', '-b', action='store_true', help='Use bigmem node')
 
     args = parser.parse_args()
     casepath = args.casepath
@@ -343,6 +349,7 @@ if __name__ == '__main__':
         label = f"{switch_mods['GSw_HourlyType'][0]}{switch_mods['GSw_HourlyChunkLengthRep']}h"
     overwrite = args.overwrite
     forcelocal = args.forcelocal
+    bigmem = args.bigmem
 
     # #%% Inputs for debugging
     # casepath = os.path.join(reeds_path, 'runs', 'v20250206_pcmM0_Pacific')
@@ -358,6 +365,7 @@ if __name__ == '__main__':
     # label = f"{switch_mods['GSw_HourlyType'][0]}{switch_mods['GSw_HourlyChunkLengthRep']}h"
     # forcelocal = False
     # overwrite = False
+    # bigmem = True
 
     # %% Determine whether to submit slurm job
     hpc = check_slurm(forcelocal=forcelocal)
@@ -381,4 +389,5 @@ if __name__ == '__main__':
             command_string=command_string,
             jobname=jobname,
             joblabel=joblabel,
+            bigmem=bigmem,
         )

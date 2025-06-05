@@ -9,6 +9,7 @@ battery_24
 battery_48
 battery_72
 battery_100
+battery_li
 biopower
 beccs_mod
 beccs_max
@@ -60,16 +61,6 @@ upv_7
 upv_8
 upv_9
 upv_10
-dupv_1
-dupv_2
-dupv_3
-dupv_4
-dupv_5
-dupv_6
-dupv_7
-dupv_8
-dupv_9
-dupv_10
 pvb1_1
 pvb1_2
 pvb1_3

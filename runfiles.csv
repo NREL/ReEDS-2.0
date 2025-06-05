@@ -31,7 +31,7 @@ can_exports.csv,inputs/canada_imports/can_exports.csv,GSw_Canada,~0,sum,ignore,r
 can_exports_h_frac.csv,,,,ignore,ignore,,,,,0,,,,,,
 can_exports_szn_frac.csv,inputs/canada_imports/can_exports_szn_frac.csv,GSw_Canada,~0,ignore,ignore,,,,,0,,,,,,
 can_imports.csv,inputs/canada_imports/can_imports.csv,GSw_Canada,~0,sum,ignore,r,wide,,1,0,,,,,,
-can_imports_capacity.csv,,,,sum,translinesize,*r,t,,0,0,,1,,,,disaggfunc set to ignore because data will be written at county resolution by writecapdat.py
+can_imports_capacity.csv,,,,sum,ignore,*r,t,,0,0,,1,,,,disaggfunc set to ignore because data will be written at county resolution by writecapdat.py
 can_imports_quarter_frac.csv,inputs/canada_imports/can_imports_quarter_frac.csv,GSw_Canada,~0,ignore,ignore,,,,,0,,,,,,
 can_imports_szn_frac.csv,,,,ignore,ignore,,,,,0,,1,,,,
 cangrowth.csv,inputs/load/cangrowth.csv,GSw_Canada,~0,ignore,ignore,st,,,1,0,,,,,,
@@ -97,20 +97,17 @@ csapr_group2_ex.csv,inputs/emission_constraints/csapr_group2_ex.csv,GSw_CSAPR,~0
 csapr_ozone_season.csv,inputs/emission_constraints/csapr_ozone_season.csv,GSw_CSAPR,~0,ignore,ignore,st,,,,0,,,,,,
 csp_supply_curve.csv,inputs/supply_curve/csp_supply_curve-reference_{lvl}.csv,GSw_CSP,~0,ignore,ignore,region,,,,0,,,,,,
 currency_incentives.csv,inputs/financials/currency_incentives.csv,,,ignore,ignore,,,,,0,,,,,,
-d_szn_1yr.csv,inputs/variability/d_szn_1yr.csv,,,ignore,ignore,,,,,0,,,,,,
-d_szn_7yr.csv,inputs/variability/d_szn_7yr.csv,,,ignore,ignore,,,,,0,,,,,,
 dac_elec.csv,inputs/consume/dac_elec_{dacscen}.csv,GSw_DAC,~0,ignore,ignore,,,,1,0,,,,,,
 dac_gas.csv,inputs/consume/dac_gas_{GSw_DAC_Gas_Case}.csv,GSw_DAC,~0,ignore,ignore,,,,1,0,,1,,,,
 deflator.csv,inputs/financials/deflator.csv,,,ignore,ignore,,,,,0,,,,,,
 degradation_annual.csv,inputs/degradation/degradation_annual_{degrade_suffix}.csv,,,ignore,ignore,,,,,0,,,,,,
-demonstration_plants.csv,inputs/capacity_exogenous/demonstration_plants.csv,GSw_NuclearDemo,~0,ignore,ignore,r,"t,i,coolingwatertech,ctt,wst,notes",i,0,0,,,,,,
+demonstration_plants.csv,inputs/capacity_exogenous/demonstration_plants.csv,GSw_NuclearDemo,~0,sum,ignore,r,"t,i,coolingwatertech,ctt,wst,notes",i,0,0,,,,,,
 depreciation_schedules.csv,inputs/financials/depreciation_schedules_{depreciation_schedules_suffix}.csv,,,ignore,ignore,,,,1,0,,,,,,
 df_capex_init.csv,postprocessing/retail_rate_module/calc_historical_capex/df_capex_init.csv,,,sum,geosize,region,"i,t",,0,0,,,,,,
 diagnose.gms,postprocessing/diagnose/diagnose.gms,,,ignore,ignore,,,,,,,,,,,
-disagg_geosize.csv,inputs/disaggregation/disagg_geosize.csv,,,ignore,ignore,,,,,0,,,,,,
+disagg_geosize.csv,,,,ignore,ignore,,,,,0,,,,,,
 disagg_hydroexist.csv,inputs/disaggregation/disagg_hydroexist.csv,,,ignore,ignore,,,,,0,,,,,,
-disagg_population.csv,inputs/disaggregation/disagg_population.csv,,,ignore,ignore,,,,,0,,,,,,
-disagg_translinesize.csv,inputs/disaggregation/disagg_translinesize.csv,,,ignore,ignore,,,,,0,,,,,,
+disagg_population.csv,inputs/disaggregation/county_population.csv,,,ignore,ignore,FIPS,,,,0,,,,,,
 distance_reinforcement.csv,,,,ignore,ignore,r,"*i,rscbin",*i,0,0,,1,,,,
 distance_spur.csv,,,,ignore,ignore,r,"*i,rscbin",*i,0,0,,1,,,,
 distpvcap.csv,inputs/dgen_model_inputs/{distpvscen}/distpvcap_{distpvscen}.csv,,,sum,ignore,r,wide,,1,0,,,,,,
@@ -118,16 +115,13 @@ dollaryear_consume.csv,inputs/consume/dollaryear.csv,GSw_DAC,~0,ignore,ignore,,,
 dollaryear_plant.csv,inputs/plant_characteristics/dollaryear.csv,,,ignore,ignore,,,,,0,,,,,,Do we really need 3 separate instances of dollaryear?
 dollaryear_fuel.csv,inputs/fuelprices/dollaryear.csv,,,ignore,ignore,,,,,0,,,,,,
 dollaryear_sc.csv,inputs/supply_curve/dollaryear.csv,,,ignore,ignore,,,,,0,,,,,,
-dr_hrs.csv,,,,ignore,ignore,,,,,0,,,,,,
-dupv_supply_curves_capacity.csv,inputs/supply_curve/DUPV_supply_curves_capacity_2018.csv,,,ignore,ignore,r,,,,0,,,,,,Will need agg/disagg entries once aggregate_regions.py is moved up
-dupv_supply_curves_cost.csv,inputs/supply_curve/DUPV_supply_curves_cost_2018.csv,,,ignore,ignore,r,,,,0,,,,,,Will need agg/disagg entries once aggregate_regions.py is moved up
-dupv_upv_corr.csv,inputs/sets/dupv_upv_corr.csv,,,ignore,ignore,,,,,0,,,,dupv_upv_corr,,
 e.csv,inputs/sets/e.csv,,,ignore,ignore,,,,,0,,,,e,,
 eall.csv,inputs/sets/eall.csv,,,ignore,ignore,,,,,,,,,eall,,
 egs_supply_curve.csv,inputs/supply_curve/egs_supply_curve-reference_{lvl}.csv,,,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
-emit_rate.csv,,,,ignore,ignore,,"e,i,v,r",,0,0,,,,,,ReEDS-to-PLEXOS output
+emit_rate.csv,,,,ignore,ignore,,"etype,e,i,v,r",,0,0,,,,,,ReEDS-to-PLEXOS output
 emitrate.csv,inputs/emission_constraints/emitrate.csv,,,ignore,ignore,,,,,0,,,,,,
 energy_communities.csv,inputs/financials/energy_communities.csv,,,ignore,ignore,,,,,0,,,,,,region aggregation and filtering is handled in copy_files
+etype.csv,inputs/sets/etype.csv,,,ignore,ignore,,,,,,,,,etype,,
 eval_period_adj_mult.csv,,,,ignore,ignore,,,,,0,,,,,,
 evmc_baseline_load.h5,inputs/demand_response/ev_load_{evmcscen}.h5,,,sum,population,*r,"h,t",,0,0,,1,,,,
 evmc_baseline_load.csv,,,,sum,population,*r,"h,t",,0,0,,1,,,,
@@ -182,7 +176,8 @@ growth_bin_size_mult.csv,inputs/growth_constraints/growth_bin_size_mult.csv,,,ig
 growth_limit_absolute.csv,inputs/growth_constraints/growth_limit_absolute.csv,,,ignore,ignore,,,,,0,,,,,,
 growth_penalty.csv,inputs/growth_constraints/growth_penalty.csv,,,ignore,ignore,,,,,0,,,,,,
 gswitches.csv,,,,ignore,ignore,,,,,0,,,,,,
-h2_ba_share.csv,inputs/consume/h2_ba_share.csv,GSw_H2,~0,sum,geosize,*r,t,,0,0,,,,,,
+h2_ba_share.csv,inputs/consume/h2_demand_county_share.csv,GSw_H2,~0,sum,ignore,*r,t,,0,0,,,,,,
+gwp.csv,inputs/emission_constraints/gwp.csv,,,ignore,ignore,,,,,0,,,,gwp,,
 h2_existing_smr_cap.csv,,,,sum,population,*r,t,,0,0,,1,,,,
 h_preh.csv,,,,ignore,ignore,,,,,0,,,,,,
 h2_exogenous_demand.csv,inputs/consume/h2_exogenous_demand.csv,GSw_H2,~0,ignore,ignore,,p,,1,0,,,,,,
@@ -190,7 +185,7 @@ h2_pipeline_cap_cost_mult.csv,,,,ignore,ignore,,,,,,,1,,,,
 h2_ptc.csv,,,,ignore,ignore,,,*i,,0,,,,,,
 h2_st.csv,inputs/sets/h2_st.csv,,,ignore,ignore,,,,,,,,,h2_st,,
 h2_stor.csv,inputs/sets/h2_stor.csv,,,ignore,ignore,,,,,0,,,,h2_stor,,
-h2_storage_rb.csv,inputs/consume/h2_storage_rb.csv,GSw_H2,~0,first,uniform,rb,,,0,0,,,,,,
+h2_storage_rb.csv,inputs/consume/h2_storage_{lvl}.csv,GSw_H2,~0,first,ignore,rb,,,0,0,,,,,,
 h2_transport_and_storage_costs.csv,inputs/consume/h2_transport_and_storage_costs.csv,GSw_H2,~0,ignore,ignore,,,,,,,,,,,
 h_actualszn.csv,,,,ignore,ignore,,,,,0,,,,,,
 h_ccseason_prm.csv,,,,ignore,ignore,,,,,0,,,,,,
@@ -236,7 +231,6 @@ i_p.csv,inputs/sets/i_p.csv,,,ignore,ignore,,,,,0,,,,i_p,,
 i_water_nocooling.csv,inputs/sets/i_water_nocooling.csv,,,ignore,ignore,,,,,0,,,,i_water_nocooling,,
 ice_fom.csv,inputs/plant_characteristics/ice_fom.csv,,,ignore,ignore,,,,0,,,,,,,
 incentives.csv,inputs/financials/incentives_{incentives_suffix}.csv,,,ignore,ignore,,,,,0,,,,,,
-index_hr_map.csv,inputs/variability/index_hr_map_{num_resource_adequacy_years}.csv,,,ignore,ignore,,,,,0,,,,,,
 inflation.csv,inputs/financials/inflation_{inflation_suffix}.csv,,,ignore,ignore,,,,0,0,,,,,,
 interconnection_queues.csv,inputs/capacity_exogenous/interconnection_queues.csv,,,ignore,ignore,r,"tg,r",,1,0,,,,,,
 itc_energy_comm_bonus.csv,,,,mean,ignore,r,*i,,0,0,,1,,,,
@@ -251,6 +245,8 @@ load_multiplier.csv,inputs/load/demand_{demandscen}.csv,,,ignore,ignore,,,,,0,,,
 load_multiplier_r.csv,,,,ignore,ignore,,,,1,0,,,,,,
 maps.gpkg,,,,ignore,ignore,,,,,,,1,,,,
 maxage.csv,inputs/plant_characteristics/maxage.csv,,,ignore,ignore,,,,,0,,,,,,
+mcs_distributions.yaml,inputs/userinput/mcs_distributions_{MCS_dist}.yaml,MCS_runs,~0,ignore,ignore,,,,,,,,,,,
+mcs_group_weights.csv,,,,ignore,ignore,,,,,,,,,,,
 methane_leakage_rate.csv,,,,ignore,ignore,,,,0,0,,,,,,
 mex_growth_rate.csv,inputs/load/mex_growth_rate.csv,,,ignore,ignore,,,,0,,,,,,,
 minCF.csv,inputs/plant_characteristics/minCF.csv,GSw_MinCF,~0,ignore,ignore,,,,,0,,,,,,
@@ -294,34 +290,43 @@ outage_forced_temperature.csv,inputs/plant_characteristics/outage_forced_tempera
 outage_scheduled_static.csv,inputs/plant_characteristics/outage_scheduled_static.csv,,,ignore,ignore,,,,,0,,,,,,
 outage_scheduled_monthly.csv,inputs/plant_characteristics/outage_scheduled_monthly.csv,,,ignore,ignore,,,,,0,,,,,,
 p.csv,inputs/sets/p.csv,,,ignore,ignore,,,,,,,,,p,,
+pcm_defaults.json,inputs/plant_characteristics/pcm_defaults.json,,,ignore,ignore,ignore,,,,,,,,,,
 peak_ccseason.csv,,,,sum,ignore,*r,"ccseason,t",,0,0,,1,,,,ok because it's load during peak NERC hour
 peak_h.csv,,,,sum,ignore,r,"h,wide",,1,0,,1,,,,
 peakload.csv,,,,ignore,ignore,,,,,0,,1,,,,
 peakload_nercr.csv,,,,ignore,ignore,,,,,0,,1,,,,
 period_szn.csv,,,,ignore,ignore,,,,,0,,,,,,
-period_szn_user.csv,inputs/variability/period_szn_user.csv,,,ignore,ignore,,,,,0,,,,,,
+period_szn_user.csv,inputs/variability/period_szn_{GSw_HourlyClusterAlgorithm}.csv,GSw_HourlyClusterAlgorithm,user*,ignore,ignore,,,,,,,,,,,
 period_weights.csv,,,,ignore,ignore,,,,,0,,,,,,
 periodmap_1yr.csv,,,,ignore,ignore,,,,0,0,,,,,,
-pipeline_cost_mult.csv,inputs/consume/pipeline_cost_mult.csv,GSw_H2,~0,trans_lookup,uniform,"*r,rr",,,0,0,drop_dup_r,,,,,
+pipeline_cost_mult.csv,,GSw_H2,~0,trans_lookup,uniform,"*r,rr",,,0,0,drop_dup_r,1,,,,
 plantcat.csv,inputs/sets/plantcat.csv,,,ignore,ignore,,,,,,,,,plantcat,,
 plantcharout.csv,,,,ignore,ignore,,"0,2",,0,,,,,,,
-plantchar_battery.csv,inputs/plant_characteristics/{batteryscen}.csv,GSw_Storage,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_beccs.csv,inputs/plant_characteristics/{beccsscen}.csv,GSw_BECCS,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_battery.csv,inputs/plant_characteristics/{plantchar_battery}.csv,GSw_Storage,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_beccs.csv,inputs/plant_characteristics/{plantchar_beccs}.csv,GSw_BECCS,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_biopower.csv,inputs/plant_characteristics/{plantchar_biopower}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_caes.csv,inputs/plant_characteristics/caes_reference.csv,GSw_Storage,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_ccsflex_cost.csv,inputs/plant_characteristics/{ccsflexscen}_cost.csv,GSw_CCSFLEX_BYP|GSw_CCSFLEX_DAC|GSw_CCSFLEX_STO,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_ccsflex_perf.csv,inputs/plant_characteristics/{ccsflexscen}_perf.csv,GSw_CCSFLEX_BYP|GSw_CCSFLEX_DAC|GSw_CCSFLEX_STO,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_conv.csv,inputs/plant_characteristics/{convscen}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_csp.csv,inputs/plant_characteristics/{cspscen}.csv,GSw_CSP,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_coal_ccs.csv,inputs/plant_characteristics/{plantchar_coal_ccs}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_coal.csv,inputs/plant_characteristics/{plantchar_coal}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_continuous_battery.csv,inputs/plant_characteristics/continuous_{plantchar_battery}.csv,GSw_Storage,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_csp.csv,inputs/plant_characteristics/{plantchar_csp}.csv,GSw_CSP,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_evmc_shape.csv,inputs/plant_characteristics/evmc_shape_{evmcscen}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_evmc_storage.csv,inputs/plant_characteristics/evmc_storage_{evmcscen}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_geo.csv,inputs/plant_characteristics/{geoscen}.csv,GSw_Geothermal,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_h2ct.csv,inputs/plant_characteristics/{h2ctscen}.csv,GSw_H2CT,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_hydro.csv,inputs/plant_characteristics/{hydroscen}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_ofswind.csv,inputs/plant_characteristics/{ofswindscen}.csv,GSw_OfsWind,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_onswind.csv,inputs/plant_characteristics/{onswindscen}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_gas_ccs.csv,inputs/plant_characteristics/{plantchar_gas_ccs}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_gas.csv,inputs/plant_characteristics/{plantchar_gas}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_geo.csv,inputs/plant_characteristics/{plantchar_geo}.csv,GSw_Geothermal,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_h2ct.csv,inputs/plant_characteristics/{plantchar_h2ct}.csv,GSw_H2CT,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_hydro.csv,inputs/plant_characteristics/{plantchar_hydro}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_nuclear_smr.csv,inputs/plant_characteristics/{plantchar_nuclear_smr}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_nuclear.csv,inputs/plant_characteristics/{plantchar_nuclear}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_ofswind.csv,inputs/plant_characteristics/{plantchar_ofswind}.csv,GSw_OfsWind,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_onswind.csv,inputs/plant_characteristics/{plantchar_onswind}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_other.csv,inputs/plant_characteristics/{plantchar_other}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_pvb.csv,inputs/plant_characteristics/pvb_{pvbscen}.csv,GSw_PVB,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_upgrades.csv,inputs/upgrades/{upgradescen}.csv,upgradescen,~default,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_upv.csv,inputs/plant_characteristics/{upvscen}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_upv.csv,inputs/plant_characteristics/{plantchar_upv}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 poi_cap_init.csv,,,,sum,ignore,*r,,,0,0,,1,,,,disaggfunc set to ignore because data will be written at county resolution by writecapdat.py
 prepost.csv,inputs/sets/prepost.csv,,,ignore,ignore,,,,,,,,,prepost,,
 prescribed_nonRSC.csv,,,,sum,ignore,r,"t,i",,0,0,,1,,,,disaggfunc set to ignore because data will be written at county resolution by writecapdat.py
@@ -352,7 +357,7 @@ rb_aggreg.csv,,,,ignore,ignore,,,,,,,,,,,
 recstyle.csv,inputs/state_policies/recstyle.csv,GSw_StateRPS,~0,ignore,ignore,*st,"RPSCat,style",,,0,,,,,,
 rectable.csv,inputs/state_policies/rectable.csv,GSw_StateRPS,~0,ignore,ignore,st_st,st,,,0,,,,,,
 reeds_region_tz_map.csv,inputs/variability/reeds_region_tz_map.csv,,,trans_lookup,ignore,r,,,0,0,,,,,,disaggfunc set to ignore because input file is already at county resolution
-regional_cap_cost_mult.csv,inputs/financials/reg_cap_cost_mult_{reg_cap_cost_mult_suffix}.csv,,,mean,uniform,r,i,,0,0,,,,,,precursor data to reg_cap_cost_mult.csv
+regional_cap_cost_mult.csv,inputs/financials/reg_cap_cost_mult_{reg_cap_cost_mult_suffix}.csv,,,mean,ignore,r,i,,0,0,,,,,,precursor data to reg_cap_cost_mult.csv
 regions.csv,,,,ignore,ignore,,,,,0,,,,,,not done but only for retail
 resourceclass.csv,inputs/sets/resourceclass.csv,,,ignore,ignore,,,,,,,,,resourceclass,,
 resources.csv,,,,resources,ignore,r,"i,ccreg",i,0,0,,1,,,,disaggfunc set to ignore because this file contains all spatial resolutions valid to the model run
@@ -372,7 +377,7 @@ set_actualszn.csv,,,,ignore,ignore,,,,,0,,,,,,
 set_allh.csv,,,,ignore,ignore,,,,,0,,,,,,
 set_allszn.csv,,,,ignore,ignore,,,,,0,,,,,,
 set_h.csv,,,,ignore,ignore,,,,,,,,,,,
-set_szn.csv,inputs/variability/set_szn.csv,,,ignore,ignore,,,,,,,,,,,
+set_szn.csv,,,,ignore,ignore,,,,,,,,,,,
 site_bin_map.csv,,,,ignore,ignore,,,,,0,,,,,,
 spur_parameters.csv,,,,ignore,ignore,,,,,0,,,,,,"TODO (only used for plotting so ignoring for now, but should be fixed)"
 spur_cost.csv,inputs/supply_curve/spurline_cost.csv,,,ignore,ignore,r,,,,0,,,,,,
@@ -385,7 +390,7 @@ storage_duration.csv,inputs/storage/storage_duration.csv,GSw_Storage,~0,ignore,i
 storage_duration_pshdata.csv,inputs/storage/storage_duration_pshdata.csv,GSw_Storage,1|3|5|6,mean,uniform,r,"*i,v",,0,0,,,,,,probably better to do something capacity-weighted
 storage_mandates.csv,inputs/state_policies/storage_mandates.csv,GSw_BatteryMandate,~0,ignore,ignore,*st,t,,0,0,,,,,,
 storinmaxfrac.csv,inputs/storage/storinmaxfrac.csv,,,mean,uniform,r,"*i,v",,0,0,,,,,,
-stressperiods_user.csv,inputs/variability/stressperiods_user.csv,,,ignore,ignore,,,,,0,,,,,,
+stressperiods_user.csv,inputs/variability/stressperiods_{GSw_PRM_StressModel}.csv,GSw_PRM_StressModel,user*,ignore,ignore,,,,,,,,,,,
 stressperiods_seed.csv,,,,ignore,ignore,,,,,0,,,,,,
 supply_chain_adjust.csv,inputs/financials/supply_chain_adjust.csv,,,ignore,ignore,,,,,0,,,,,,
 sw.csv,inputs/sets/sw.csv,,,ignore,ignore,,,,,0,,,,sw,,

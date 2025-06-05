@@ -443,7 +443,8 @@ def vizit_report(data_type, data_source, vizit_data, output_dir, auto_open):
         df_scen = pd.read_csv(data_source)
         df_scen['column_name'] = 'scenario'
         df_scen = df_scen.rename(columns={'name':'column_value'})
-        df_scen = df_scen[['column_name','column_value','color']].copy()
+        cols = [c for c in ['column_name','column_value','color'] if c in df_scen.columns]
+        df_scen = df_scen[cols].copy()
         df_style = pd.concat([df_style, df_scen],sort=False,ignore_index=True)
     data_dict['vizit_styles.csv'] = df_style.to_dict(orient='list')
     vizit_config['fileNames'].append('vizit_styles.csv')
@@ -515,13 +516,20 @@ def preset_wdg(preset, download_full_source=False):
                             new_active = [len(wdg_fil.labels) - 1]
                     elif isinstance(preset_filter, dict):
                         new_active = list(range(len(wdg_fil.labels)))
+                        start = 0 #Initiatlization of beginning index
+                        end = len(wdg_fil.labels) - 1 #Initialization of final index
                         if 'start' in preset_filter:
-                            start = wdg_fil.labels.index(str(preset_filter['start']))
-                            if 'end' in preset_filter:
-                                end = wdg_fil.labels.index(str(preset_filter['end']))
+                            #If preset_filter['start'] is a number, find the index of the smallest number that is greater than or equal to it
+                            if isinstance(preset_filter['start'], (int, float)):
+                                start = min([i for i in range(len(wdg_fil.labels)) if float(wdg_fil.labels[i]) >= preset_filter['start']])
                             else:
-                                end = len(wdg_fil.labels) - 1
-                            new_active = list(range(start,end+1))
+                                start = wdg_fil.labels.index(str(preset_filter['start']))
+                        if 'end' in preset_filter:
+                            if isinstance(preset_filter['end'], (int, float)):
+                                end = max([i for i in range(len(wdg_fil.labels)) if float(wdg_fil.labels[i]) <= preset_filter['end']])
+                            else:
+                                end = wdg_fil.labels.index(str(preset_filter['end']))
+                        new_active = list(range(start, end+1))
                         if 'exclude' in preset_filter:
                             new_active = [n for n in new_active if wdg_fil.labels[n] not in preset_filter['exclude']]
                     else: #we are using a list of labels
