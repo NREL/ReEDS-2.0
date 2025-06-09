@@ -118,7 +118,7 @@ jobs:
 
       - name: Check ReEDS ouputs
         if: ${{ hashFiles(format('{0}/outputs/cap_ivrt.csv', env.RUN_FOLDER)) == '' }}
-        uses: actions/github-script@v3
+        uses: actions/github-script@v4
         with:
           script: |
               core.setFailed('ReEDS run failed. Check log to diagnose.')
@@ -127,7 +127,7 @@ jobs:
         run: python -m pytest tests/test_outputs.py --casepath "$GITHUB_WORKSPACE/runs/${{ env.batch }}_${{ matrix.scenario }}"
 
       - name: Save ReEDS run
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.scenario }}
           compression-level: 9 # 0 no compression, 9 max compression
@@ -154,9 +154,9 @@ jobs:
             solve-year: 2026
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Retrieve ReEDS runs for ${{ matrix.scenario }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.scenario }}
           path: ${{ matrix.scenario }}-${{ matrix.solve-year}}
