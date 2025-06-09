@@ -1,0 +1,168 @@
+# This workflow will install and set up conda and gams, run ReEDS, and run tests
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push: 
+    branches: 
+      - km/test-workflow
+
+permissions:
+  contents: read
+  actions: write
+
+defaults:
+  run:
+    shell: bash -le {0}
+env:
+  CACHE_NUMBER: 1
+  REEDS_ENV_NAME: reeds2
+
+jobs:
+  julia-setup:
+    name: "Julia environment"
+    runs-on: reeds-runners
+    steps:
+    - uses: actions/checkout@v4
+    - uses: julia-actions/setup-julia@v2
+    - run: julia --project=. instantiate.jl
+    # NOTE: At some point we might be able to add this to avoid double instantiation of the environment.
+    # - uses: julia-actions/cache@v2
+    #   with:
+    #     include-matrix: false
+
+  python-setup:
+    name: "Python environment"
+    runs-on: reeds-runners
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          cache-environment: true
+          post-cleanup: 'all'
+          cache-environment-key: ${{runner.os}}-conda-${{env.CACHE_NUMBER}}-${{hashFiles('environment.yml')}}
+
+  define-scenarios:
+    runs-on: reeds-runners
+    outputs:
+      scenarios: ${{ steps.scenarios.outputs.scenarios }}
+    steps:
+      - name: Define Scenarios
+        id: scenarios
+        run: |
+          echo 'scenarios=["p6_County", "Pacific", "Everything"]' >> "$GITHUB_OUTPUT"
+
+  run-ReEDS:
+    runs-on: reeds-runners
+    needs:
+      - define-scenarios
+      - julia-setup
+      - python-setup
+    continue-on-error: true
+    strategy:
+      max-parallel: 4
+      matrix:
+        scenario: ${{ fromJSON(needs.define-scenarios.outputs.scenarios) }}
+    env:
+      batch: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          lfs: true
+
+      - uses: mamba-org/setup-micromamba@v1
+        id: mamba
+        with:
+          environment-file: environment.yml
+          cache-environment: true
+          post-cleanup: 'all'
+          cache-environment-key: ${{runner.os}}-conda-${{env.CACHE_NUMBER}}-${{hashFiles('environment.yml')}}
+
+      - name: Removing julia from python
+        run: micromamba remove -y julia
+
+      - uses: julia-actions/setup-julia@v2
+        id: setup-julia
+      # NOTE: At some point we might be able to add this to avoid double instantiation of the environment.
+      # - uses: julia-actions/cache@v1
+      #   with:
+      #     include-matrix: false
+      - run: julia --project=. instantiate.jl
+
+      - name: Prepend Julia install to PATH.
+        run: echo "${{ steps.setup-julia.outputs.julia-bindir }}" >> $GITHUB_PATH
+
+      - name: Setup environment variables
+        run: |
+          echo "GAMSDIR=$(python -c 'from gamspy_base import directory;print(directory)')" >> "$GITHUB_ENV"
+          echo "$(python -c 'from gamspy_base import directory;print(directory)')" >> "$GITHUB_PATH"
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GAMSDIR" >> "$GITHUB_ENV"
+
+      - name: Setting county run adjustment
+        if: matrix.scenario == 'p6_County'
+        run: echo "GITHUB_COUNTY_TEST=True" >> $GITHUB_ENV
+
+      - name: Run ReEDS model ${{ matrix.scenario }}
+        run: |
+          python runbatch.py -b ${{ env.batch }} -c test -s ${{ matrix.scenario }}
+          echo "RUN_FOLDER=$GITHUB_WORKSPACE/runs/${{ env.batch }}_${{ matrix.scenario }}" >> "$GITHUB_ENV"
+
+      - name: Print GAMS log
+        if:  runner.debug == '1'
+        run: |
+          cat $RUN_FOLDER/gamslog.txt
+
+      - name: Check ReEDS ouputs
+        if: ${{ hashFiles(format('{0}/outputs/cap_ivrt.csv', env.RUN_FOLDER)) == '' }}
+        uses: actions/github-script@v3
+        with:
+          script: |
+              core.setFailed('ReEDS run failed. Check log to diagnose.')
+
+      - name: Run output validation tests
+        run: python -m pytest tests/test_outputs.py --casepath "$GITHUB_WORKSPACE/runs/${{ env.batch }}_${{ matrix.scenario }}"
+
+      - name: Save ReEDS run
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.scenario }}
+          compression-level: 9 # 0 no compression, 9 max compression
+          retention-days: 1 # in days
+          path: |
+            ${{ env.RUN_FOLDER }}/inputs_case/**/*.csv
+            ${{ env.RUN_FOLDER }}/inputs_case/**/*.h5
+            ${{ env.RUN_FOLDER }}/outputs/**/*.csv
+            ${{ env.RUN_FOLDER }}/outputs/**/*.h5
+  run-R2X:
+    runs-on: reeds-runners
+    needs:
+      - define-scenarios
+      - run-ReEDS
+    continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          - scenario: "Pacific"
+            solve-year: 2026
+          - scenario: "Everything"
+            solve-year: 2035
+          - scenario: "p6_County"
+            solve-year: 2026
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Retrieve ReEDS runs for ${{ matrix.scenario }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.scenario }}
+          path: ${{ matrix.scenario }}-${{ matrix.solve-year}}
+      - name: R2X compatibility
+        uses: ./.github/actions/r2x-check
+        id: r2x-check
+        with:
+          reeds-run-path: ${{ matrix.scenario }}-${{ matrix.solve-year }}
+          solve-year: ${{ matrix.solve-year }}
