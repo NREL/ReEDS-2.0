@@ -3677,3 +3677,24 @@ eq_ccsflex_sto_storage_level_max(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)$ccs
 ;
 
 * ---------------------------------------------------------------------------
+
+
+equation eq_mat_track "--tonnes-- material demand tracking";
+positive variable mat_demand "--tonnes-- demand for materials";
+
+
+eq_mat_track(mat,r,t)$tmodel(t)..
+ 
+    mat_demand(mat,r,t)
+    
+    =e=
+    
+    sum{(i,v)$[valinv(i,v,r,t)$i_int(i,mat)],
+        i_int(i,mat) * INV(i,v,r,t) }
+ 
+    + sum{(i,v)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$i_int(i,mat)],
+        i_int(i,mat) * UPGRADES(i,v,r,t) }
+ 
+    + sum((rr,trtype)$routes_inv(r,rr,trtype,t),
+        i_int_tran(mat) * INVTRAN(r,rr,trtype,t) * distance(r,rr,trtype)) 
+;

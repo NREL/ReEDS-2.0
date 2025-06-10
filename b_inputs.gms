@@ -6608,3 +6608,86 @@ emit_rate(etype,e,i,v,r,t)$[not valgen(i,v,r,t)] = 0 ;
 
 valinv_init(i,v,r,t) = valinv(i,v,r,t) ;
 valcap_init(i,v,r,t) = valcap(i,v,r,t) ;
+
+
+*============================================================
+* -- Materials Tracking --
+*============================================================
+ 
+set mat "materials"     
+  /phosphaterock, bauxite, gold, ironore, Aluminum, Boron, Cadmium, Chromium, Cobalt, Copper, Dysprosium, Gallium, Hafnium, Indium, Lead, Lithium, Magnesium, Manganese, Molybdenum, Neodymium, Nickel, Niobium, Praseodymium, Selenium, Silicon, Silver, Steel, Tantalum, Tellurium, Terbium, Tin, Titanium, Tungsten, Vanadium, Yttrium, Zinc, Zirconium/ ;
+ 
+set tcat "tech category for materials tracking"
+  /Oil, Coal, CoalCCS, NaturalGas, NaturalGasCCS, Nuclear, BiomassAndWaste, BiomassCCS, Hydro, Geothermal, WindOnshore, WindOffshore, SolarPV, SolarCSP, Ocean, StationaryLiionbatteries, EVLiionbatteries, SolarPVCSi, SolarPVCIGS, SolarPVCdte, SolarCSPtrough, SolarCSPtower/ ;
+ 
+set i_tcat(i,tcat);
+ 
+i_tcat(i,"Oil")$[ogs(i)] = yes ;
+i_tcat(i,"Coal")$[coal(i)$(not ccs(i))] = yes ;
+i_tcat(i,"CoalCCS")$[coal(i)$ccs(i)] = yes ;
+i_tcat(i,"NaturalGas")$[gas(i)$(not ccs(i))] = yes ;
+i_tcat(i,"NaturalGasCCS")$[gas(i)$ccs(i)] = yes ;
+i_tcat(i,"Nuclear")$[nuclear(i)] = yes ;
+i_tcat(i,"BiomassAndWaste")$[bio(i)$(not ccs(i))] = yes ;
+i_tcat(i,"BiomassCCS")$[bio(i)$ccs(i)] = yes ;
+i_tcat(i,"Hydro")$[hydro(i)] = yes ;
+i_tcat(i,"Geothermal")$[geo(i)] = yes ;
+i_tcat(i,"WindOnshore")$[onswind(i)] = yes ;
+i_tcat(i,"WindOffshore")$[ofswind(i)] = yes ;
+i_tcat(i,"SolarPV")$[pv(i)$(not sameas(i,"distpv"))] = yes ;
+i_tcat(i,"SolarCSP")$[csp(i)] = yes ;
+i_tcat(i,"StationaryLiionbatteries")$[battery(i)] = yes ;
+ 
+table mat_int(tcat,mat)
+$ondelim
+tcat,Aluminum,Boron,Cadmium,Chromium,Cobalt,Copper,Dysprosium,Gallium,Hafnium,Indium,Lead,Lithium,Magnesium,Manganese,Molybdenum,Neodymium,Nickel,Niobium,Praseodymium,Selenium,Silicon,Silver,Steel,Tantalum,Tellurium,Terbium,Tin,Titanium,Tungsten,Vanadium,Yttrium,Zinc,Zirconium
+Oil,500,0,0,0,0,90,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,52500,0,0,0,0,0,0,0,0,0,0
+Coal,500,0,0,0,0,90,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,52500,0,0,0,0,0,0,0,0,0,0
+CoalCCS,500,0,0,326,8,782,0,0,0,0,0,0,0,3761,8,0,1145,100,0,0,0,0,52500,0,0,0,0,0,0,100,0,0,0
+NaturalGas,500,0,0,0,0,90,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,52500,0,0,0,0,0,0,0,0,0,0
+NaturalGasCCS,500,0,0,326,8,782,0,0,0,0,0,0,0,3761,8,0,1145,100,0,0,0,0,52500,0,0,0,0,0,0,100,0,0,0
+Nuclear,0,0,1,427,0,60,0,0,1,2,4,0,0,0,71,0,256,2,0,0,0,8,468600,0,0,0,5,0,5,1,1,0,31
+BiomassAndWaste,3900,0,0,2,2,2270,0,0,0,0,104,0,0,0,0,0,20,0,0,0,0,0,138000,0,0,0,0,0,0,0,0,160,0
+BiomassCCS,3900,0,0,328,10,2962,0,0,0,0,104,0,0,3761,8,0,1165,100,0,0,0,0,138000,0,0,0,0,0,0,100,0,160,0
+Hydro,3400,0,0,1500,0,1050,0,0,0,0,300,0,100,200,250,0,0,0,0,0,0,0,175000,0,0,0,0,0,0,0,0,400,0
+Geothermal,0,0,0,64405,0,2335,0,0,0,0,0,0,0,4325,7209,0,120155,128,0,0,0,0,818000,64,0,0,0,0,0,0,0,0,0
+WindOnshore,1372,1,0,683,0,2497,0,0,0,0,0,0,0,57,335,0,427,38,3,0,0,0,119985,0,0,1,90,0,0,90,0,5450,0
+WindOffshore,2063,7,0,372,0,9371,16,0,0,0,0,0,0,57,335,148,427,38,33,0,0,0,333500,0,0,7,90,0,0,700,0,5450,0
+SolarPV,34827.408,0.0008064,5.046,3790.08,0,4389.248,0,1.71,0,2.79,34.004,0,0,0,22.27,0,1816.7,0,0,5.49,5528.08,25.8,1209600,0,5.336,0,334.656,0,0,2.016,0,1467.648,0
+SolarCSP,36626,0,0,4216.5,0,2287.5,0,0,0,0,0,0,2000,3218,128,0,1135.5,70,0,0,0,10,488166.5,0,0,0,0,12.5,0,2,0,1025,0
+Ocean,27500,0,0,0,0,15000,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,410000,0,0,0,0,0,0,0,0,0,0
+StationaryLiionbatteries,600,0,0,0,95,0,0,0,0,0,0,95,0,55,0,0,415,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+EVLiionbatteries,2960.511628,0,0,275.5813953,313.0232558,2151.162791,6.488372093,0,0,0,7.209302326,157.3953488,4.651162791,838.372093,0,22.53488372,804.3953488,0,0,0,0,0,21151.16279,0,0,0,0,0,0,0,0,2.325581395,0
+SolarPVCSi,34551,0.0008,0,3760,0,4223,0,0,0,0,39,0,0,0,1,0,1801,0,0,0,6428,30,1200000,0,0,0,332,0,0,2,0,1456,0
+SolarPVCIGS,34551,0.0008,0,3760,0,3998,0,19,0,31,0,0,0,0,109,0,1816,0,0,61,0,0,1200000,0,0,0,332,0,0,2,0,1456,0
+SolarPVCdte,34551,0.0008,87,3760,0,6856,0,0,0,0,8,0,0,0,200,0,1800,0,0,0,0,0,1200000,0,92,0,332,0,0,2,0,1456,0
+SolarCSPtrough,285,0,0,4733,0,3175,0,0,0,0,0,0,1400,736,200,0,471,0,0,0,0,8,583333,0,0,0,0,25,0,2,0,650,0
+SolarCSPtower,72967,0,0,3700,0,1400,0,0,0,0,0,0,2600,5700,56,0,1800,140,0,0,0,12,393000,0,0,0,0,0,0,2,0,1400,0
+$offdelim
+;
+
+mat_int("StationaryLiionbatteries","steel") = 12692;
+ 
+parameter i_int(i,mat) "material intensity in tonnes / mw" ;
+ 
+* divide by 1e3 to convert from (tonnes / gw) to (tonnes / mw)
+i_int(i,mat) = sum(tcat$i_tcat(i,tcat),mat_int(tcat,mat)) / 1000 ;
+ 
+* steel intensity is converted to iron ore via
+* factor of 1.6 tonnes of iron ore per tonne of steel
+* from: https://www.bhp.com/what-we-do/products/iron-ore
+*i_int(i,"ironore") = 1.6 * i_int(i,"steel") ;
+ 
+set
+md 'mat dim' /resource, cost/,
+ops 'operators'
+/o1*o200/;
+ 
+alias(ops,oops) ;
+
+* from: https://www.sciencedirect.com/science/article/pii/S0921344920305176?fr=RR-2&ref=pdf_download&rr=8c50028e1bbb9e99
+parameter i_int_tran(mat) ;
+i_int_tran("Aluminum") = 12.9 / 449 ;
+i_int_tran("steel") = 52.3 / 449 ;
+i_int_tran("copper") = 11.3 / 449 ;
+
