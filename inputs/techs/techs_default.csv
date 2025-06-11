@@ -10,6 +10,7 @@ battery_24,p
 battery_48,p
 battery_72,p
 battery_100,p
+battery_li,p
 biopower,p
 beccs_mod,p
 beccs_max,p
@@ -53,7 +54,6 @@ hydNPND,p
 hydED,p
 hydEND,p
 upv_1*upv_10,p
-dupv_1*dupv_10,p
 pvb1_1*pvb1_10,p
 pvb2_1*pvb2_10,p
 pvb3_1*pvb3_10,p

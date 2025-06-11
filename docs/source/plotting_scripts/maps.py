@@ -3,6 +3,7 @@
 #%% Imports
 import os
 import sys
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patheffects as pe
@@ -21,11 +22,12 @@ reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..',
 #%% Fixed inputs
 interactive = False
 write = 'png'
-savepath = os.path.expanduser('~/Projects/ReEDS/figures')
+date = datetime.datetime.now().strftime('%Y%m%d')
+savepath = os.path.expanduser(f'~/Projects/ReEDS/figures/{date}')
+os.makedirs(savepath, exist_ok=True)
 
 
 #%% Shared data
-hierarchy = reeds.io.get_hierarchy()
 dfmap = reeds.io.get_dfmap()
 
 dfcounty = gpd.read_file(

@@ -92,7 +92,7 @@ def set_marg_vre_step_size(t, sw, gdx, hierarchy):
 
     return marg_vre_mw_cc
 
-def load_dr_data(csv_path,inputs_case,h_dt_szn,
+def load_evmc_data(csv_path,inputs_case,h_dt_szn,
                 set_h_szn_cols=['h','ccseason','hour'],
                 set_idx_cols=['h','hour', 'year','ccseason']):
     df = pd.read_csv(os.path.join(inputs_case,csv_path))
@@ -129,7 +129,9 @@ def reeds_cc(t, tnext, casedir):
     techs.columns = techs.columns.str.lower()
     r = gdx['rfeas']
 
-    cap_stor = cap.loc[cap['i'].isin(gdx['storage_standalone'].i)].rename(columns={'Value':'MW'})
+    cap_stor = cap.loc[cap['i'].isin(gdx['storage_standalone'].i) & 
+                       ~cap['i'].isin(gdx['i_subsets'][gdx['i_subsets']['i_subtech'] == 'CONTINUOUS_BATTERY'].i)] \
+                       .rename(columns={'Value':'MW'})
     cap_stor['duration'] = cap_stor.i.map(gdx['storage_duration'].set_index('i').Value)
     cap_stor['MWh'] = cap_stor['MW'] * cap_stor['duration']
     #Adding a check if there is no storage - populate with 0 MW and 0 MWh in each r
@@ -138,10 +140,10 @@ def reeds_cc(t, tnext, casedir):
         r_values = r['r'].tolist()
         for tech_name in stor_techs:
             for r_val in r_values:
-                        cap_stor.loc[len(cap_stor)] = [tech_name,'', r_val,  0, 0, 0]
-                        cap_stor['duration'] = cap_stor.i.map(gdx['storage_duration'].set_index('i').Value)
+                cap_stor.loc[len(cap_stor)] = [tech_name,'', r_val,  0, 0, 0]
+                cap_stor['duration'] = cap_stor.i.map(gdx['storage_duration'].set_index('i').Value)
 
-    cap_stor_agg = cap_stor.merge(hierarchy[['r','ccreg']], on = 'r')
+    cap_stor_agg = cap_stor.merge(hierarchy[['r','ccreg']], on='r')
     cap_stor_agg = cap_stor_agg.groupby('ccreg', as_index=False)[['MW','MWh']].sum()
     sdb = gdx['sdbin'].rename(columns={'*':'bin'})[['bin']]
 
@@ -202,14 +204,14 @@ def reeds_cc(t, tnext, casedir):
     # Get EVMC data if necessary
     if int(sw['GSw_EVMC']):
         # Get EVMC props
-        evmccf_shape_increase = load_dr_data('evmc_shape_profile_increase.csv',inputs_case,h_dt_szn)
-        evmccf_shape_decrease = load_dr_data('evmc_shape_profile_decrease.csv',inputs_case,h_dt_szn)
+        evmccf_shape_increase = load_evmc_data('evmc_shape_profile_increase.csv',inputs_case,h_dt_szn)
+        evmccf_shape_decrease = load_evmc_data('evmc_shape_profile_decrease.csv',inputs_case,h_dt_szn)
 
     # Initialize dataframes to store results
     dict_cc_old = {}
     dict_cc_mar = {}
     dict_sdbin_size = {}
-    dict_cc_dr = {}
+    dict_cc_evmc = {}
     dict_net_load = {}
     dict_net_load_2012 = {}
 
@@ -354,15 +356,18 @@ def reeds_cc(t, tnext, casedir):
 
             # Get the peaking storage potential by duration
             peaking_stor = cc_storage(
-                storage=cap_stor_ccreg.copy(), pr=peak_reductions.copy(),
-                re=required_MWhs.copy(), sdb=sdb.copy(), log=log)
-            # Store it
+                pr=peak_reductions.copy(),
+                re=required_MWhs.copy(), 
+                sdb=sdb.copy(), log=log)
+            
+            # Store the storage capacity credit along with the energy capacity.
+            # For the safety bin, compute MWh as safety_bin * cc_safety_bin_size.
             dict_sdbin_size[ccreg, ccseason] = pd.concat([
-                peaking_stor[['duration','MW']],
-                ### Add the safety bin
-                pd.DataFrame(
-                    {'duration': [safety_bin], 'MW': float(sw['cc_safety_bin_size'])}
-                ),
+                peaking_stor[['duration', 'MW']],
+                pd.DataFrame({
+                    'duration': [safety_bin],
+                    'MW': float(sw['cc_safety_bin_size'])
+                }),
             ], ignore_index=True)
             
             def pivot_melt_data(df):
@@ -392,18 +397,18 @@ def reeds_cc(t, tnext, casedir):
                     load_net=cc_vg_results['load_net'],
                     top_hours_net=cc_vg_results['top_hours_net'],
                     top_hours_n=hours_considered,
-                    evmc_shape_marg_power=evmc_shape_marg_power*float(sw['marg_dr_mw']),
-                    cap_marg=float(sw['marg_dr_mw']))
+                    evmc_shape_marg_power=evmc_shape_marg_power*float(sw['marg_evmc_mw']),
+                    cap_marg=float(sw['marg_evmc_mw']))
 
                 evmc_cc_i = pd.melt(pd.DataFrame(data=[np.round(results_evmc_shape, decimals=5), ],
                                         columns=evmc_shape_dec_timestamp.columns))
 
-                if (ccreg, ccseason) in dict_cc_dr.keys():
-                    dict_cc_dr[ccreg, ccseason] = pd.concat(
-                    [dict_cc_dr[ccreg, ccseason],
+                if (ccreg, ccseason) in dict_cc_evmc.keys():
+                    dict_cc_evmc[ccreg, ccseason] = pd.concat(
+                    [dict_cc_evmc[ccreg, ccseason],
                     evmc_cc_i[['r', 'i', 'value']]])
                 else:
-                    dict_cc_dr[ccreg, ccseason] = evmc_cc_i[['r', 'i', 'value']]
+                    dict_cc_evmc[ccreg, ccseason] = evmc_cc_i[['r', 'i', 'value']]
 
     # ------ AGGREGATE OUTPUTS ------
     cc_old = (
@@ -461,22 +466,22 @@ def reeds_cc(t, tnext, casedir):
     net_load_2012 = net_load_2012.reindex(['ccreg','ccseason','year','h','hour','t','value'], axis=1)
 
     if int(sw['GSw_EVMC']):
-        cc_dr = (
-            pd.concat(dict_cc_dr, axis=0)
+        cc_evmc = (
+            pd.concat(dict_cc_evmc, axis=0)
             .reset_index().drop(['level_2', 'level_0'], axis=1)
             .rename(columns={'level_1':'ccseason'})
             .assign(t=str(tnext))
             .reindex(['i','r','ccseason','t','value'], axis=1)
             )
     else:
-        cc_dr = pd.DataFrame(columns=['i', 'r', 'ccseason', 't', 'value'])
+        cc_evmc = pd.DataFrame(columns=['i', 'r', 'ccseason', 't', 'value'])
 
     # ---------------- RETURN A DICTIONARY WITH THE OUTPUTS FOR REEDS --------
 
     cc_results = {
         'cc_mar': cc_mar,
         'cc_old': cc_old,
-        'cc_dr': cc_dr,
+        'cc_evmc': cc_evmc,
         'sdbin_size': sdbin_size,
         'net_load': net_load,
         'net_load_2012': net_load_2012,
@@ -707,19 +712,23 @@ def calc_required_mwh(load_profile, peak_reductions, eff_charge, stor_buffer_min
 
 
 # --------------------- CALC CC OF MARGINAL STORAGE ---------------------------
-def cc_storage(storage, pr, re, sdb, log):
-    '''Determine the amount of peaking capacity that can be provided by
-       energy storage with incrementally increasing durations.
-       Args:
-           storage: cap_stor_ccreg - dataframe with existing storage capacity
-           pr: peak_reductions - set of storage power capacities analyzed
-           re: required_MWhs - set of corresponding energy capacities
-           sdb: storage duration bins - set of storage duration bins in ReEDS
-       Returns:
-           cc: storage capacity credit
-           peak_stor: peaking potential of storage by duration
-    '''
+def cc_storage(pr, re, sdb, log=None):
+    """
+    Determine the theoretical peaking capacity (MW) for incrementally increasing 
+    storage durations, based on the MW–MWh curve (pr, re).
 
+    Args:
+        pr (array-like): 
+            Array of storage power capacities (MW) analyzed.
+        re (array-like): 
+            Array of corresponding energy capacities (MWh).
+        sdb (list or array-like): 
+            Storage duration bins (in hours) to evaluate (e.g., [2,4,6,8,...]).
+
+    Returns:
+        pd.DataFrame with columns:
+            - MW: The theoretical peaking potential for each bin.
+    """
     # Initializing terms
     ds = sdb.copy()
     min_bin = min(ds)
@@ -740,16 +749,20 @@ def cc_storage(storage, pr, re, sdb, log):
         dur_marg[i] = ((re[i] - re[i-1]) / (pr[i] - pr[i-1]))
     dur_marg = dur_marg.round(3)
 
+    # ----------------------------------------------------------------
+    # 1) Determine peaking potential for the smallest duration bin
+    # ----------------------------------------------------------------
+
     # Find the limit of 2-hour storage capacity
     dur_temp = dur[dur <= min_bin].copy()
     dur_marg_temp = dur_marg[dur_marg < float(min(ds))].copy()
-    # If the storage potential for the lowest duration bin bleeds into the
-    # marginal addition of the next storage bin, grab the capacity before the
-    # marginal duration is equal to the duration of the next bin.
+
+
+    # Case 1: Storage potential bleeds into the next bin's marginal addition
     if len(dur_marg_temp) < len(dur_temp):
         peak_stor.loc[min_bin, 'peaking potential'] = pr[len(dur_marg_temp)-1]
-    # If there is storage potential for the lowest duration bin, find the
-    # potential.
+
+    # Case 2: There's storage potential for the smallest bin
     elif len(dur_temp) > 1:
         # If the marginal duration is acceptable at the crossover point, find
         # the crossover point.
@@ -775,10 +788,14 @@ def cc_storage(storage, pr, re, sdb, log):
             # value (limited by the marg duration and p_step size).
             peak_stor.loc[min_bin, 'peaking potential'] = min(
                 max_interp, min_p[len(min_dur_temp) - 1])
-    # If there is not storage potential for lowest duration bin, set it to 0.
+
+    # Case 3: No storage potential for the smallest bin
     elif len(dur_temp) == 1:
         peak_stor.loc[min_bin, 'peaking potential'] = 0
 
+    # ----------------------------------------------------------------
+    # 2) Determine peaking potential for the remaining duration bins
+    # ----------------------------------------------------------------
     # Iterate through the rest of the storage duration bins to find the
     # peaking potential.
     for i in range(0, len(ds)):
@@ -831,124 +848,15 @@ def cc_storage(storage, pr, re, sdb, log):
 
     peak_stor['existing power'] = 0
 
-    # Allocate storage into bins to get the fleetwide capacity credit
-    for i in range(0, len(storage)):
-        p = storage.loc[i, 'MW']
-        d = storage.loc[i, 'duration']
-        if peak_stor.loc[d, 'peaking potential'] > peak_stor.loc[
-                d, 'existing power'] + p:
-            p_temp = peak_stor.loc[d, 'existing power']
-            peak_stor.loc[d, 'existing power'] += p
-            p -= (peak_stor.loc[d, 'peaking potential'] - p_temp)
-        else:
-            p -= (peak_stor.loc[d, 'peaking potential']
-                  - peak_stor.loc[d, 'existing power'])
-            peak_stor.loc[d, 'existing power'] = peak_stor.loc[
-                d, 'peaking potential']
-        if p > 0:
-            ds_temp = [i for i in ds if i < d]
-            ds_temp.reverse()
-            for d1 in ds_temp:
-                val = peak_stor.loc[d1, 'existing power'] + p
-                if peak_stor.loc[d1, 'peaking potential'] > val:
-                    p_temp = peak_stor.loc[d1, 'existing power']
-                    peak_stor.loc[d1, 'existing power'] += p
-                    p -= (peak_stor.loc[d1, 'peaking potential'] - p_temp)
-                else:
-                    p -= (peak_stor.loc[d1, 'peaking potential']
-                          - peak_stor.loc[d1, 'existing power'])
-                    peak_stor.loc[d1, 'existing power'] = peak_stor.loc[
-                        d1, 'peaking potential']
-                if p < 0:
-                    break
-        if p > 0:
-            ds_temp = [i for i in ds if i > d]
-            ds_temp.remove(max(ds_temp))
-            for d1 in ds_temp:
-                val = peak_stor.loc[d1, 'existing power'] + p * (d/d1)
-                if peak_stor.loc[d1, 'peaking potential'] > val:
-                    p_temp = peak_stor.loc[d1, 'existing power']
-                    peak_stor.loc[d1, 'existing power'] += (p * (d/d1))
-                    p -= (peak_stor.loc[d1, 'peaking potential']
-                          - p_temp) * (d1/d)
-                else:
-                    p -= (peak_stor.loc[d1, 'peaking potential']
-                          - peak_stor.loc[d1, 'existing power']) * (d1/d)
-                    peak_stor.loc[d1, 'existing power'] = peak_stor.loc[
-                        d1, 'peaking potential']
-                if p < 0:
-                    break
-        if p > 0:
-            d_max = max(ds)
-            peak_stor.loc[d_max, 'existing power'] = min(
-                peak_stor.loc[d_max, 'peaking potential'],
-                peak_stor.loc[d_max, 'existing power'] + (p * (d/d_max)))
-
-    peak_stor['remaining potential'] = peak_stor['peaking potential'] \
-        - peak_stor['existing power']
-
-    # Setting the data type for peaking potential so that it can be rounded
-    # before sent back to ReEDS
-    peak_stor['peaking potential'] = pd.to_numeric(
-        peak_stor['peaking potential'])
-
-    # CC is used to determine the peak shaving & charging needed to adjust the
-    # load profile for marginal CSP-TES CC calculations.
-    return peak_stor[['peaking potential']].round(decimals=2).reset_index(
-        ).rename(columns={'index': 'duration', 'peaking potential': 'MW'})
-
-
-def dr_dispatch(poss_dr_changes, ts_length, hrs, eff=1):
-    """
-    Calculate the battery level and curtailment recovery profiles.
-    Since everything here is in numpy, we can try using numba.jit to speed it up.
-    """
-    # Initialize some necessary arrays since numba can't do np.clip
-    curt = np.where(poss_dr_changes > 0, poss_dr_changes, 0)
-    avail = np.where(poss_dr_changes < 0, -poss_dr_changes, 0)
-    # Initialize the dr shifting and curtailment recovery to be 0 in all hours
-    curt_recovered = np.zeros((ts_length, poss_dr_changes.shape[1]))
-    # Loop through all hours and identify how much curtailment that hour could
-    # mitigate from the available load shifting
-    for n in range(0, ts_length):
-        n1 = max(0, n-hrs[0])
-        n2 = min(ts_length, n+hrs[1])
-        # maximum curtailment this hour can shift load into
-        # calculated as the cumulative sum of curtailment across all hours
-        # this hour can reach, identifying the max cumulative shifting allowed
-        # and subtracting off the desired shifting that can't happen
-        cum = np.cumsum(curt[n1:n2, :], axis=0)
-        curt_shift = np.maximum(curt[n1:n2, :] - (cum - np.minimum(cum, avail[n, :] / eff)), 0)
-        # Subtract realized curtailment reduction from appropriate hours
-        curt[n1:n2, :] -= curt_shift
-        # Record the amount of otherwise-curtailed energy that was
-        # recovered during appropriate hours
-        curt_recovered[n1:n2, :] += curt_shift
-    return curt_recovered
-
-
-def dr_capacity_credit(hrs, eff, ts_length, poss_dr_changes, marg_peak, cols,
-                       maxhrs):
-    """
-    Determines the ratio of peak load that could be shifted by DR.
-    """
-    # Get the DR profiles
-    # This is using the same function as curtailment, but with opposite meaning
-    # ("how much can I increase load in this hour in order to reduce load in any
-    # shiftable hours" instead of "how much can I decrease load in this hour
-    # in order to increase load in any shiftable hours"), so the efficiency
-    # gets applied to the opposite set of data. Hence the 1/eff.
-    # If maxhrs is included, that is used as the total number of hours the
-    # resource is able to be called. Really just for shed
-    peak_shift = dr_dispatch(
-        poss_dr_changes=poss_dr_changes,
-        ts_length=ts_length, hrs=hrs, eff=1/eff
+    # ----------------------------------------------------------------
+    # 3) Prepare final output: duration and MW
+    # ----------------------------------------------------------------
+    peak_stor['peaking potential'] = pd.to_numeric(peak_stor['peaking potential'])
+    result = (
+        peak_stor[['peaking potential']]
+        .round(decimals=2)
+        .reset_index()
+        .rename(columns={'index': 'duration', 'peaking potential': 'MW'})
     )
-    # Sort and only take maximum allowed hours
-    sort_shift = np.sort(peak_shift, axis=0)[::-1]
-    sort_shift = sort_shift[0:int(min(maxhrs, ts_length)), :]
-    # Get the ratio of reduced peak to total peak
-    return pd.melt(
-        pd.DataFrame(data=[np.round(sort_shift.sum(0) / marg_peak, decimals=5), ],
-                     columns=cols)
-    )
+
+    return result

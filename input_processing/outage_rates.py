@@ -20,6 +20,10 @@ temp_min = -50
 temp_max = 60
 ## Only use during_quarters for techs without a monthly scheduled outage rate
 during_quarters = ['spring', 'fall']
+## Cap the extrapolation of forced outage rates at high/low temperatures to 0.4 because
+## PJM uses a 60% capacity credit (40% = 0.4 derate) for gas CT:
+## https://www.pjm.com/-/media/DotCom/planning/res-adeq/elcc/2026-27-bra-elcc-class-ratings.pdf
+max_extrapolated_outage_forced = 0.4
 
 primemover2techgroup = {
     'combined_cycle': ['GAS_CC'],
@@ -207,6 +211,16 @@ def fill_empty_techs(df_prefill, inputs_case, fillvalues_tech=None, during_quart
 
 
 def aggregate_regions(df, inputs_case):
+    """
+    Parameters
+    ----------
+    df: pd.DataFrame with (techcol, r) MultiIndex columns and timestamp rows
+    inputs_case: string path to ReEDS-2.0/runs/{casename}/inputs_case
+
+    Returns
+    -------
+    pd.DataFrame with regions dimension aggregated according to case settings
+    """
     r2aggreg = pd.read_csv(
         os.path.join(inputs_case, 'hierarchy_original.csv')
     ).rename(columns={'ba':'r'}).set_index('r').aggreg
@@ -221,13 +235,14 @@ def aggregate_regions(df, inputs_case):
         .set_index('FIPS')
         .ba.loc[agglevel_variables['county_regions']]
     )
+    techcol = df.columns.names[0]
 
     dfout = df.copy()
     if 'aggreg' in agglevel_variables['agglevel']:
         county2zone = county2zone.map(r2aggreg)
         dfout.columns = dfout.columns.map(
             lambda x: (x[0], r2aggreg[x[1]]))
-        dfout = dfout.groupby(axis=1, level=['i','r']).mean()
+        dfout = dfout.groupby(axis=1, level=[techcol,'r']).mean()
 
     if 'county' in agglevel_variables['agglevel']:
         val_r = pd.read_csv(
@@ -244,15 +259,19 @@ def aggregate_regions(df, inputs_case):
                     ## Set the actual regions (could be mix of zones and counties) as index
                     .set_axis(val_r.values, axis=1)
                 )
-                for i in dfout.columns.get_level_values('i').unique()
+                for i in dfout.columns.get_level_values(techcol).unique()
             },
-            axis=1, names=('i','r'),
+            axis=1, names=(techcol,'r'),
         )
 
     return dfout
 
 
-def calc_outage_forced(reeds_path, inputs_case):
+def calc_outage_forced(
+    reeds_path,
+    inputs_case,
+    max_extrapolated_outage_forced=max_extrapolated_outage_forced,
+):
     """
     """
     ### Derived inputs
@@ -300,7 +319,9 @@ def calc_outage_forced(reeds_path, inputs_case):
 
         ### Extrapolate slopes and fill gaps in integer steps
         fits_forcedoutage = extrapolate_forward_backward(
-            dfin=fits_forcedoutage_in, xmin=temp_min, xmax=temp_max)
+            dfin=fits_forcedoutage_in, xmin=temp_min, xmax=temp_max,
+            ymax=max_extrapolated_outage_forced,
+        )
 
         ### Get temperature-dependent outage rate by prime mover and state
         forcedoutage_pm = pd.concat(
@@ -319,6 +340,7 @@ def calc_outage_forced(reeds_path, inputs_case):
     )
 
     ### This file has a unique format so aggregate it now if necessary
+    forcedoutage_pm = aggregate_regions(forcedoutage_pm, inputs_case)
     outage_forced_hourly = aggregate_regions(outage_forced_hourly, inputs_case)
 
     return {
@@ -366,24 +388,45 @@ def plot_outage_forced(
 ):
     ### Prep plots
     import matplotlib.pyplot as plt
-    import site
-    site.addsitedir(os.path.join(reeds_path, 'postprocessing'))
-    import plots
-    import reedsplots
-    plots.plotparams()
+    import matplotlib as mpl
+    reeds.plots.plotparams()
     case = os.path.dirname(inputs_case.rstrip(os.sep))
     figpath = os.path.join(case,'outputs','hourly')
     os.makedirs(figpath, exist_ok=True)
 
     ### Plot the fits
+    nicelabels = {
+        'combined_cycle': 'Combined cycle',
+        'combustion_turbine': 'Combustion turbine',
+        'steam': 'Steam turbine',
+        'nuclear': 'Nuclear',
+        'hydro_and_psh': 'Hydro and PSH',
+        'diesel': 'Diesel',
+    }
+    colors = dict(zip(nicelabels.values(), [f'C{i}' for i in range(10)]))
+    fits_in = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'outage_forced_temperature.csv'),
+        comment='#',
+    )
+    mintemp = fits_in.deg_celsius.min()
+    maxtemp = fits_in.deg_celsius.max()
+
+    temperatures = reeds.io.get_temperatures(case)
+
     plt.close()
     f,ax = plt.subplots()
-    (fits_forcedoutage*100).plot(ax=ax)
-    ax.set_ylabel('Outage rate [%]')
+    df = fits_forcedoutage.rename(columns=nicelabels)*100
+    for k, v in nicelabels.items():
+        df.loc[mintemp:maxtemp, v].plot(ax=ax, color=colors[v], label=v, ls='-')
+        df.loc[:, v].plot(ax=ax, color=colors[v], ls='--', label='_nolabel')
+    ax.legend(frameon=False, title=None, fontsize='large')
+    ax.set_ylabel('Forced outage rate [%]')
     ax.set_xlabel('Temperature [°C]')
-    ax.set_ylim(0,100)
-    ax.set_xlim(temp_min, temp_max)
-    plots.despine(ax)
+    ax.set_ylim(0)
+    ax.set_xlim(temperatures.min().min(), temperatures.max().max())
+    ax.xaxis.set_minor_locator(mpl.ticker.MultipleLocator(10))
+    ax.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
+    reeds.plots.despine(ax)
     plt.savefig(os.path.join(figpath, 'FOR-fits.png'))
     if interactive:
         plt.show()
@@ -391,21 +434,17 @@ def plot_outage_forced(
         plt.close()
 
     ### Plot forced outage rates
-    val_ba = (
-        pd.read_csv(os.path.join(case, 'inputs_case', 'val_ba.csv'), header=None)
-        .squeeze(1).values
-    )
-    dfmap = reedsplots.get_dfmap(case)
-    dfzones = dfmap['r'].loc[val_ba]
+    dfmap = reeds.io.get_dfmap(case)
+    dfzones = dfmap['r']
     aggfunc = 'mean'
 
     for pm in primemover2techgroup:
         dfdata = forcedoutage_pm[pm].copy() * 100
 
         plt.close()
-        f, ax = plots.map_years_months(
+        f, ax = reeds.plots.map_years_months(
             dfzones=dfzones, dfdata=dfdata, aggfunc=aggfunc,
-            title=f"Monthly {aggfunc}\nforced outage rate,\n{pm} [%]",
+            title=f"Monthly {aggfunc}\nforced outage rate,\n{nicelabels.get(pm,pm)} [%]",
         )
         plt.savefig(os.path.join(figpath, f'FOR_monthly-{aggfunc}-{pm}.png'))
         if interactive:
@@ -507,9 +546,7 @@ if __name__ == '__main__':
 
     # #%% Settings for testing
     # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # inputs_case = os.path.join(
-    #     reeds_path,'runs',
-    #     'v20250311_scheduledM1_Pacific', 'inputs_case')
+    # inputs_case = os.path.join(reeds_path, 'runs', 'v20250408_tforM0_USA', 'inputs_case')
     # interactive = True
     # debug = 1
 

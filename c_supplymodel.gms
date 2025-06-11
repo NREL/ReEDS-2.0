@@ -20,19 +20,22 @@ positive variables
   EXCESS(r,allh,t)                "--MW-- excess load (only allowed before Sw_StartMarkets)"
 
 * capacity and investment variables
-  CAP_SDBIN(i,v,r,ccseason,sdbin,t) "--MW-- generation capacity by storage duration bin for relevant technologies"
-  CAP(i,v,r,t)                     "--MW-- total generation capacity in MWac (MWdc for PV); PV capacity of hybrid PV+battery; max native, flexible EV load for EVMC"
-  CAP_ABOVE_LIM(tg,r,t)            "--MW-- amount of capacity that is deployed above the interconnection queue limits"
-  CAP_RSC(i,v,r,rscbin,t)          "--MW-- total generation capacity in MWac (MWdc for PV) for wind-ons and upv"
-  GROWTH_BIN(gbin,i,st,t)          "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
-  INV(i,v,r,t)                     "--MW-- generation capacity add in year t"
-  EXTRA_PRESCRIP(pcat,r,t)         "--MW-- builds beyond those prescribed once allowed in firstyear(pcat) - exceptions for gas-ct, wind-ons, and wind-ofs"
-  INV_CAP_UP(i,v,r,rscbin,t)       "--MW-- upsized generation capacity addition in year t"
-  INV_ENER_UP(i,v,r,rscbin,t)      "--MW-- upsized energy addition in year t using capacity factor to convert to capacity units"
-  INV_REFURB(i,v,r,t)              "--MW-- investment in refurbishments of technologies that use a resource supply curve"
-  INV_RSC(i,v,r,rscbin,t)          "--MW-- investment in technologies that use a resource supply curve"
-  UPGRADES(i,v,r,t)                "--MW-- investments in upgraded capacity from ii to i"
-  UPGRADES_RETIRE(i,v,r,t)         "--MW-- upgrades that have been retired - used as a free slack variable in eq_cap_upgrade"
+  CAP_SDBIN(i,v,r,ccseason,sdbin,t)        "--MW-- generation power capacity by storage duration bin for relevant technologies"
+  CAP_SDBIN_ENERGY(i,v,r,ccseason,sdbin,t) "--MWh-- generation energy capacity by storage duration bin for relevant technologies"
+  CAP(i,v,r,t)                             "--MW-- total generation capacity in MWac (MWdc for PV); PV capacity of hybrid PV+battery; max native, flexible EV load for EVMC"
+  CAP_ENERGY(i,v,r,t)                      "--MWh-- battery capacity in terms of energy"
+  CAP_ABOVE_LIM(tg,r,t)                    "--MW-- amount of capacity that is deployed above the interconnection queue limits"
+  CAP_RSC(i,v,r,rscbin,t)                  "--MW-- total generation capacity in MWac (MWdc for PV) for wind-ons and upv"
+  GROWTH_BIN(gbin,i,st,t)                  "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
+  INV(i,v,r,t)                             "--MW-- generation capacity additions in year t"
+  INV_ENERGY(i,v,r,t)                      "--MWh-- generation energy capacity additions in year t"
+  EXTRA_PRESCRIP(pcat,r,t)                 "--MW-- builds beyond those prescribed once allowed in firstyear(pcat) - exceptions for gas-ct, wind-ons, and wind-ofs"
+  INV_CAP_UP(i,v,r,rscbin,t)               "--MW-- upsized generation capacity addition in year t"
+  INV_ENER_UP(i,v,r,rscbin,t)              "--MW-- upsized energy addition in year t using capacity factor to convert to capacity units"
+  INV_REFURB(i,v,r,t)                      "--MW-- investment in refurbishments of technologies that use a resource supply curve"
+  INV_RSC(i,v,r,rscbin,t)                  "--MW-- investment in technologies that use a resource supply curve"
+  UPGRADES(i,v,r,t)                        "--MW-- investments in upgraded capacity from ii to i"
+  UPGRADES_RETIRE(i,v,r,t)                 "--MW-- upgrades that have been retired - used as a free slack variable in eq_cap_upgrade"
 
 * The units for all of the operational variables are average MW or MWh/time-slice hours
 * generation and storage variables
@@ -56,12 +59,12 @@ positive variables
   CCSFLEX_STO_STORAGE_CAP(i,v,r,t)         "--varies-- capacity of process storage (e.g., chemical solvent) in the CCS system"
 
 * trade variables
-  FLOW(r,rr,allh,t,trtype)        "--MW-- electricity flow on transmission lines in hour h"
-  OPRES_FLOW(ortype,r,rr,allh,t)  "--MW-- interregional trade of operating reserves by operating reserve type"
+  FLOW(r,rr,allh,t,trtype)         "--MW-- electricity flow on transmission lines in hour h"
+  OPRES_FLOW(ortype,r,rr,allh,t)   "--MW-- interregional trade of operating reserves by operating reserve type"
   PRMTRADE(r,rr,trtype,ccseason,t) "--MW-- planning reserve margin capacity traded from r to rr"
 
 * operating reserve variables
-  OPRES(ortype,i,v,r,allh,t)      "--MW-- operating reserves by type"
+  OPRES(ortype,i,v,r,allh,t)       "--MW-- operating reserves by type"
 
 * variable fuel amounts
   GASUSED(cendiv,gb,allh,t)             "--MMBtu/hour-- total gas used by gas bin",
@@ -112,7 +115,7 @@ positive variables
 Variables
 * with negative emissions technologies (e.g. BECCS, DAC) - emissions
 * can become negative thus not restricted to the positive domain
-  EMIT(e,r,t)                            "--metric tons-- total emissions in a region"
+  EMIT(etype,eall,r,t)                            "--metric tons-- emissions (broken down to precombustion and combustion) in a region"
 
 * inter-day storage variables
   STORAGE_INTERDAY_DISPATCH(i,v,r,allh,t)         "--MW--  net dispatch for storage in hour h"
@@ -141,7 +144,8 @@ EQUATION
  eq_cap_init_noret(i,v,r,t)               "--MW-- Existing capacity that cannot be retired is equal to exogenously-specified amount"
  eq_cap_init_retmo(i,v,r,t)               "--MW-- Existing capacity that can be retired must be monotonically decreasing"
  eq_cap_init_retub(i,v,r,t)               "--MW-- Existing capacity that can be retired is less than or equal to exogenously-specified amount"
- eq_cap_new_noret(i,v,r,t)                "--MW-- New capacity that cannot be retired is equal to sum of all previous years investment"
+ eq_cap_new_noret(i,v,r,t)                "--MW-- New power capacity that cannot be retired is equal to sum of all previous years investment"
+ eq_cap_energy_new_noret(i,v,r,t)         "--MWh-- New energy capacity that cannot be retired is equal to sum of all previous years investment"
  eq_cap_new_retmo(i,v,r,t)                "--MW-- New capacity that can be retired must be monotonically decreasing unless increased by investment"
  eq_cap_new_retub(i,v,r,t)                "--MW-- New capacity that can be retired is less than or equal to all previous years investment"
  eq_cap_rsc(i,v,r,rscbin,t)               "--MW-- Capacity accounting for techs with exogenous capacity tracked by rscbin"
@@ -163,8 +167,10 @@ EQUATION
 eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit based on interconnection queues"  
 
 * storage capacity credit supply curves
- eq_cap_sdbin_balance(i,v,r,ccseason,t)    "--MW-- total binned storage capacity must be equal to total storage capacity"
- eq_sdbin_limit(ccreg,ccseason,sdbin,t)    "--MW-- binned storage capacity cannot exceed storage duration bin size"
+ eq_cap_sdbin_balance(i,v,r,ccseason,t)             "--MW-- total binned storage power capacity must be greater than total storage capacity"
+ eq_cap_sdbin_energy_balance(i,v,r,ccseason,t)      "--MWh-- total binned storage energy capacity must be greater than total storage capacity"
+ eq_sdbin_power_energy_link(i,v,r,ccseason,sdbin,t) "--MWh-- binned storage energy capacity equal to binned power storage capacity times bin duration"
+ eq_sdbin_power_limit(ccreg,ccseason,sdbin,t)       "--MW-- binned storage power capacity cannot exceed storage duration bin size"
 
 * operation and reliability
  eq_site_cf(x,allh,t)                          "--MW-- generation at site x <= CF * capacity of constituent resources"
@@ -192,9 +198,9 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_ORCap_small_res_frac(ortype,i,v,r,allh,t)  "--MW-- operating reserve capacity availability constraint for generators with reserve_frac <= 0.5"
 
 * regional and national policies
- eq_emit_accounting(e,r,t)                "--metric tons-- accounting for total emissions in a region"
+ eq_emit_accounting(etype,e,r,t)                "--metric tons-- accounting for total emissions in a region"
  eq_emit_rate_limit(e,r,t)                "--metric tons per MWh-- emission rate limit"
- eq_annual_cap(e,t)                       "--metric tons-- annual (year-specific) emissions cap",
+ eq_annual_cap(eall,t)                    "--metric tons-- annual (year-specific) emissions cap",
  eq_bankborrowcap(e)                      "--weighted metric tons-- flexible banking and borrowing cap (to be used w/intertemporal solve only"
  eq_RGGI_cap(t)                           "--metric tons CO2-- RGGI constraint -- Regions' emissions must be less than the RGGI cap"
  eq_state_cap(st,t)                       "--metric tons CO2-- state-level CO2 cap constraint -- used to represent California cap and trade program"
@@ -288,6 +294,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_storage_interday_max_level_end(i,v,r,allszn,t)        "--MWh-- enforce maximum SOC at last period of each partition"
  eq_storage_opres(i,v,r,allh,t)                   "--MWh-- there must be sufficient energy in the storage to be able to provide operating reserves"
  eq_storage_thermalres(i,v,r,allh,t)              "--MW-- thermal storage contribution to operating reserves is store_in only"
+ eq_battery_minduration(i,v,r,t)                  "--MWh-- when power capacity is built, energy capacity should have a minimum capacity"
 
 * hybrid plant equations
  eq_plant_total_gen(i,v,r,allh,t)           "--MW-- generation post curtailment = generation from pv (post curtailment) + generation from battery - charging from PV"
@@ -503,8 +510,11 @@ eq_cap_init_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
     CAP(i,v,r,t)
 
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)],
-          CAP(ii,v,r,t) / (1 - upgrade_derate(ii,v,r,t))}$[Sw_Upgrades = 1]
+    + sum{(ii,tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))
+                   $valcap(ii,v,r,tt)$upgrade_from(ii,i)],
+                     UPGRADES(ii,v,r,tt) 
+                     - (UPGRADES_RETIRE(ii,v,r,tt)$[not noret_upgrade_tech(ii)])}
+                       $[(Sw_Upgrades = 1)]
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
@@ -530,8 +540,11 @@ eq_cap_init_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
     CAP(i,v,r,t)
 
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)],
-          CAP(ii,v,r,t) / (1 - upgrade_derate(ii,v,r,t))}$[Sw_Upgrades = 1]
+    + sum{(ii,tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))
+                   $valcap(ii,v,r,tt)$upgrade_from(ii,i)],
+                     UPGRADES(ii,v,r,tt) 
+                     - (UPGRADES_RETIRE(ii,v,r,tt)$[not noret_upgrade_tech(ii)])}
+                       $[(Sw_Upgrades = 1)]
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
@@ -552,8 +565,11 @@ eq_cap_init_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
          CAP(i,v,r,tt)
 
-         + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)],
-               CAP(ii,v,r,tt) / (1 - upgrade_derate(ii,v,r,tt)) }$[Sw_Upgrades = 1]
+         + sum{(ii,ttt)$[(tfix(ttt) or tmodel(ttt))$(yeart(ttt)<=yeart(tt))
+                         $valcap(ii,v,r,ttt)$upgrade_from(ii,i)],
+                          UPGRADES(ii,v,r,ttt) 
+                          - (UPGRADES_RETIRE(ii,v,r,ttt)$[not noret_upgrade_tech(ii)])}
+                            $[(Sw_Upgrades = 1)]
 
          + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
                CAP(ii,v,r,tt) }$[Sw_Upgrades = 2]
@@ -566,8 +582,11 @@ eq_cap_init_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$initv(v)$(not upgrade(i))
 
     CAP(i,v,r,t)
 
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)],
-          CAP(ii,v,r,t) / (1 - upgrade_derate(ii,v,r,t))}$[Sw_Upgrades = 1]
+    + sum{(ii,tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))
+                   $valcap(ii,v,r,tt)$upgrade_from(ii,i)],
+                     UPGRADES(ii,v,r,tt) 
+                     - (UPGRADES_RETIRE(ii,v,r,tt)$[not noret_upgrade_tech(ii)])}
+                       $[(Sw_Upgrades = 1)]
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
@@ -601,8 +620,11 @@ eq_cap_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
     CAP(i,v,r,t)
 
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)],
-          CAP(ii,v,r,t) / (1 - upgrade_derate(ii,v,r,t))}$[Sw_Upgrades = 1]
+    + sum{(ii,tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))
+                   $valcap(ii,v,r,tt)$upgrade_from(ii,i)],
+                     UPGRADES(ii,v,r,tt) 
+                     - (UPGRADES_RETIRE(ii,v,r,tt)$[not noret_upgrade_tech(ii)])}
+                       $[(Sw_Upgrades = 1)]
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
@@ -611,6 +633,20 @@ eq_cap_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
     + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
           CAP(ii,v,r,t) }$[Sw_Upgrades = 2]
+
+;
+
+* ---------------------------------------------------------------------------
+
+eq_cap_energy_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$continuous_battery(i)]..
+    
+    sum{tt$[inv_cond(i,v,r,t,tt)$(tmodel(tt) or tfix(tt))$valcap(i,v,r,tt)],
+              degrade(i,tt,t) * INV_ENERGY(i,v,r,tt)
+        }
+
+    =e=
+
+    CAP_ENERGY(i,v,r,t)
 
 ;
 
@@ -631,8 +667,11 @@ eq_cap_new_retub(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
     CAP(i,v,r,t)
 
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)],
-          CAP(ii,v,r,t) / (1 - upgrade_derate(ii,v,r,t))}$[Sw_Upgrades = 1]
+    + sum{(ii,tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))
+                   $valcap(ii,v,r,tt)$upgrade_from(ii,i)],
+                     UPGRADES(ii,v,r,tt) 
+                     - (UPGRADES_RETIRE(ii,v,r,tt)$[not noret_upgrade_tech(ii)])}
+                       $[(Sw_Upgrades = 1)]
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
@@ -651,8 +690,11 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
     sum{tt$[tprev(t,tt)$valcap(i,v,r,tt)],
          degrade(i,tt,t) * CAP(i,v,r,tt)
 
-         + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)],
-               CAP(ii,v,r,tt) / (1 - upgrade_derate(ii,v,r,tt)) }$[Sw_Upgrades = 1]
+         + sum{(ii,ttt)$[(tfix(ttt) or tmodel(ttt))$(yeart(ttt)<=yeart(tt))
+                        $valcap(ii,v,r,ttt)$upgrade_from(ii,i)],
+                         UPGRADES(ii,v,r,ttt) 
+                         - (UPGRADES_RETIRE(ii,v,r,ttt)$[not noret_upgrade_tech(ii)])}
+                           $[(Sw_Upgrades = 1)]
 
          + sum{ii$[valcap(ii,v,r,tt)$upgrade_from(ii,i)$sameas(ii,'hydEND_hydED')],
                CAP(ii,v,r,tt) }$[Sw_Upgrades = 2]
@@ -670,8 +712,11 @@ eq_cap_new_retmo(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
     CAP(i,v,r,t)
 
-    + sum{ii$[valcap(ii,v,r,t)$upgrade_from(ii,i)],
-           CAP(ii,v,r,t) / (1 - upgrade_derate(ii,v,r,t))}$[Sw_Upgrades = 1]
+    + sum{(ii,tt)$[(tfix(tt) or tmodel(tt))$(yeart(tt)<=yeart(t))
+                   $valcap(ii,v,r,tt)$upgrade_from(ii,i)],
+                   UPGRADES(ii,v,r,tt) 
+                   - (UPGRADES_RETIRE(ii,v,r,tt)$[not noret_upgrade_tech(ii)])}
+                      $[(Sw_Upgrades = 1)]
 
 * include contemporaneous upgrades when they are intended to
 * persist as new bintages with sw_upgrades = 2
@@ -1248,10 +1293,7 @@ eq_interconnection_queues(tg,r,t)
 * therefore treated separately through the CONVERSION variable and eq_vsc_flow equation.
 eq_supply_demand_balance(r,h,t)$tmodel(t)..
 
-* generation from all sources, including storage discharge and DR
-*  for DR - GEN represents the reduction in load from shifting away
-*  from the focal timeslice load to another timeslice - this
-*  included both DR_SHIFT and DR_SHED variables amounts
+* generation from all sources, including storage discharge
     sum{(i,v)$valgen(i,v,r,t), GEN(i,v,r,h,t) }
 
 * [plus] net AC and LCC DC transmission with imports reduced by losses
@@ -1473,7 +1515,7 @@ eq_OpRes_requirement(ortype,r,h,t)
     + orperc(ortype,"or_wind") * sum{(i,v)$[wind(i)$valgen(i,v,r,t)],
         GEN(i,v,r,h,t) }
 
-*final portion is from upv, dupv, and distpv capacity
+*final portion is from upv, and distpv capacity
 *note that pv capacity is held at the balancing area
 *include the hybrid PV+battery PV capacity here
     + orperc(ortype,"or_pv") * sum{(i,v)$[(pv(i) or pvb(i))$valcap(i,v,r,t)],
@@ -1529,7 +1571,7 @@ eq_PRMTRADE_VSC(r,ccseason,t)
 
 * ---------------------------------------------------------------------------
 
-* binned capacity for capacity credit must be the same as capacity
+* binned power capacity for capacity credit must be the greater than power capacity
 * (except for CSP, which is treated like VRE for capacity credit)
 eq_cap_sdbin_balance(i,v,r,ccseason,t)
     $[tmodel(t)$valcap(i,v,r,t)$storage(i)$(not csp(i))$Sw_PRM_CapCredit$(not Sw_PCM)]..
@@ -1537,7 +1579,7 @@ eq_cap_sdbin_balance(i,v,r,ccseason,t)
 *total capacity in each region
     bcr(i) * CAP(i,v,r,t)
 
-    =e=
+    =g=
 
 *sum of all binned capacity within each region
     sum{sdbin, CAP_SDBIN(i,v,r,ccseason,sdbin,t) }
@@ -1545,8 +1587,39 @@ eq_cap_sdbin_balance(i,v,r,ccseason,t)
 
 * ---------------------------------------------------------------------------
 
-*binned capacity cannot exceed sdbin size
-eq_sdbin_limit(ccreg,ccseason,sdbin,t)$[tmodel(t)$Sw_PRM_CapCredit$(not Sw_PCM)]..
+* energy capacity must be greater than the binned value
+eq_cap_sdbin_energy_balance(i,v,r,ccseason,t)
+    $[tmodel(t)$valcap(i,v,r,t)$continuous_battery(i)$Sw_PRM_CapCredit]..
+
+*total capacity in each region
+    CAP_ENERGY(i,v,r,t)
+
+    =g=
+
+*sum of all binned capacity within each region
+    sum{sdbin, CAP_SDBIN_ENERGY(i,v,r,ccseason,sdbin,t) }
+;
+
+* ---------------------------------------------------------------------------
+
+* for each bin, binned energy capacity must equal to binned power capacity
+* times bin duration
+eq_sdbin_power_energy_link(i,v,r,ccseason,sdbin,t)
+    $[tmodel(t)$valcap(i,v,r,t)$continuous_battery(i)$Sw_PRM_CapCredit]..
+
+*binned energy capacity
+    CAP_SDBIN_ENERGY(i,v,r,ccseason,sdbin,t)
+
+    =e=
+
+*binned power capacity times bin duration
+    bin_duration(sdbin) * CAP_SDBIN(i,v,r,ccseason,sdbin,t)
+;
+
+* ---------------------------------------------------------------------------
+
+*binned power capacity cannot exceed sdbin size
+eq_sdbin_power_limit(ccreg,ccseason,sdbin,t)$[tmodel(t)$Sw_PRM_CapCredit]..
 
 *sdbin size from CC script
     sdbin_size(ccreg,ccseason,sdbin,t)
@@ -2081,14 +2154,14 @@ eq_converter_max(r,t)
 
 * Because EMIT is only evaluated for emit_modeled, the full emissions need to be
 * calculated in the e_report rather than relying on the EMIT variable
-eq_emit_accounting(e,r,t)$[emit_modeled(e,r,t)$tmodel(t)]..
+eq_emit_accounting(etype,e,r,t)$[emit_modeled(e,r,t)$tmodel(t)]..
 
-    EMIT(e,r,t)
+    EMIT(etype,e,r,t)
 
     =e=
 
     sum{(i,v,h)$[valgen(i,v,r,t)$h_rep(h)],
-        hours(h) * emit_rate(e,i,v,r,t)
+        hours(h) * emit_rate(etype,e,i,v,r,t)
         * (GEN(i,v,r,h,t)
            + CCSFLEX_POW(i,v,r,h,t)$[ccsflex(i)$(Sw_CCSFLEX_BYP OR Sw_CCSFLEX_STO OR Sw_CCSFLEX_DAC)])
        }
@@ -2096,7 +2169,7 @@ eq_emit_accounting(e,r,t)$[emit_modeled(e,r,t)$tmodel(t)]..
 * Plus emissions produced via production activities (SMR, SMR-CCS, DAC)
 * The "production" of negative CO2 emissions via DAC is also included here
     + sum{(p,i,v,h)$[valcap(i,v,r,t)$i_p(i,p)$h_rep(h)],
-          hours(h) * prod_emit_rate(e,i,t)
+          hours(h) * prod_emit_rate(etype,e,i,t)
           * PRODUCE(p,i,v,r,h,t)
          }
 
@@ -2120,7 +2193,7 @@ eq_RGGI_cap(t)$[tmodel(t)$(yeart(t)>=RGGI_start_yr)$Sw_RGGI]..
 
     =g=
 
-    sum{r$RGGI_r(r), EMIT("CO2",r,t) }
+    sum{r$RGGI_r(r), EMIT("combustion","CO2",r,t) } 
 ;
 
 * ---------------------------------------------------------------------------
@@ -2135,7 +2208,7 @@ eq_state_cap(st,t)
 
     =g=
 
-    sum{r$r_st(r,st), EMIT("CO2",r,t) }
+    sum{r$r_st(r,st), EMIT("combustion","CO2",r,t) }
 
 * Import emissions intensity is taken from the previous solve year.
 * Here the receiving regions (r) are the cap regions and the sending
@@ -2145,7 +2218,7 @@ eq_state_cap(st,t)
           $h_rep(h)
 * If there is a national zero-carbon cap in the present year,
 * set emissions intensity of imports to zero.
-          $(not (Sw_AnnualCap and not emit_cap("CO2",t)))],
+          $(not ((Sw_AnnualCap>0) and not emit_cap("CO2",t) and not emit_cap("CO2e",t)))],
           hours(h) * FLOW(rr,r,h,t,trtype)
           * sum{tt$tprev(t,tt), co2_emit_rate_r(rr,tt) }
     }
@@ -2165,7 +2238,7 @@ eq_CSAPR_Budget(csapr_group,t)$[Sw_CSAPR$tmodel(t)$(yeart(t)>=csapr_startyr)]..
 *must exceed the summed-over-state hourly-weighted nox emissions by csapr group
     sum{st$csapr_group_st(csapr_group,st),
       sum{(i,v,h,r)$[r_st(r,st)$valgen(i,v,r,t)$h_rep(h)],
-         h_weight_csapr(h) * hours(h) * emit_rate("NOX",i,v,r,t) * GEN(i,v,r,h,t)
+         h_weight_csapr(h) * hours(h) * emit_rate("combustion","NOX",i,v,r,t) * GEN(i,v,r,h,t)
        }
       }
 ;
@@ -2184,7 +2257,7 @@ eq_CSAPR_Assurance(st,t)$[stfeas(st)$(yeart(t)>=csapr_startyr)
 
 *must exceed the csapr-hourly-weighted nox emissions by state
     sum{(i,v,h,r)$[r_st(r,st)$valgen(i,v,r,t)$h_rep(h)],
-      h_weight_csapr(h) * hours(h) * emit_rate("NOX",i,v,r,t) * GEN(i,v,r,h,t)
+      h_weight_csapr(h) * hours(h) * emit_rate("combustion","NOX",i,v,r,t) * GEN(i,v,r,h,t)
     }
 ;
 
@@ -2198,25 +2271,23 @@ eq_emit_rate_limit(e,r,t)$[emit_rate_con(e,r,t)$tmodel(t)]..
 
     =g=
 
-    EMIT(e,r,t)
+    EMIT("combustion",e,r,t) + EMIT("precombustion",e,r,t)$Sw_Precombustion
 ;
 
 * ---------------------------------------------------------------------------
+* This equation enforces emission caps for both the CO2 (Sw_AnnualCap = 1) 
+* and CO2e emission (Sw_AnnualCap =2) scenarios 
+eq_annual_cap(eall,t)$[sum{tt, emit_cap(eall,tt) }$tmodel(t)$(Sw_AnnualCap>0)]..
 
-eq_annual_cap(e,t)$[sum{tt, emit_cap(e,tt) }$tmodel(t)$sameas(e,"CO2")$Sw_AnnualCap]..
-
-*exogenous cap
-    emit_cap(e,t)
+* exogenous CO2 cap (Sw_AnnualCap = 1) or CO2e cap (Sw_AnnualCap = 2)
+    emit_cap(eall,t)
 
     =g=
 
-*must exceed annual endogenous emissions
-* Direct CO2 emissions
-    sum{r, EMIT(e,r,t) }
-* Methane emissions * global warming potential
-* [metric ton CH4] * [metric ton CO2 / metric ton CH4]
-    + sum{r$Sw_AnnualCapCO2e,
-          EMIT("CH4",r,t) * Sw_MethaneGWP }
+* must exceed annual endogenous emissions by CO2 pollutant only when Sw_AnnualCap=1
+    sum{r, EMIT("combustion",eall,r,t) + EMIT("precombustion",eall,r,t)$Sw_Precombustion }$[Sw_AnnualCap=1]
+* or by CO2e emissions (CO2, CH4, NO2 pollutants) when Sw_AnnualCap=2    
+  + sum{(e,r), (EMIT("combustion",e,r,t) + EMIT("precombustion",e,r,t)$Sw_Precombustion) * gwp(e) }$[Sw_AnnualCap=2]    
 ;
 
 * ---------------------------------------------------------------------------
@@ -2231,35 +2302,33 @@ eq_bankborrowcap(e)$[Sw_BankBorrowCap$sum{t, emit_cap(e,t) }]..
 
 * must exceed weighted endogenous emissions
     sum{(r,t)$[tmodel(t)$emit_cap(e,t)],
-        yearweight(t) * EMIT(e,r,t) }
+        yearweight(t) * (EMIT("combustion",e,r,t) + EMIT("precombustion",e,r,t)$Sw_Precombustion)}
 ;
 
 * ---------------------------------------------------------------------------
 
 eq_cdr_cap(t)
     $[tmodel(t)
-    $Sw_AnnualCap
+    $(Sw_AnnualCap>0)
     $Sw_NoFossilOffsetCDR]..
 
-*** CO2 emissions from fossil CCS...
-    + sum{(i,v,r,h)$[valgen(i,v,r,t)$ccs(i)$(not beccs(i))$h_rep(h)],
-        hours(h) * emit_rate("CO2",i,v,r,t) * GEN(i,v,r,h,t) }
-
-*** ...and methane leakage from fossil CCS (if included in national policy)...
-* Methane emissions * global warming potential
-* [metric ton CH4] * [metric ton CO2 / metric ton CH4]
-    + sum{(i,v,r,h)$[valgen(i,v,r,t)$ccs(i)$(not beccs(i))$h_rep(h)$Sw_AnnualCapCO2e],
-        hours(h) * emit_rate("CH4",i,v,r,t) * GEN(i,v,r,h,t) * Sw_MethaneGWP }
+*** GHG emissions from fossil CCS...
+* CO2 emissions from fossil CCS...
+    + sum{(i,v,r,h)$[valgen(i,v,r,t)$ccs(i)$(not beccs(i))$h_rep(h)$(Sw_AnnualCap<2)],
+            hours(h) * GEN(i,v,r,h,t) * (emit_rate("combustion","CO2",i,v,r,t) + emit_rate("precombustion","CO2",i,v,r,t)$Sw_Precombustion) }
+* GHG emissions * global warming potential
+    + sum{(i,v,r,h)$[valgen(i,v,r,t)$ccs(i)$(not beccs(i))$h_rep(h)$(Sw_AnnualCap=2)],
+        hours(h) * GEN(i,v,r,h,t) * sum{e, (emit_rate("combustion",e,i,v,r,t) + emit_rate("precombustion",e,i,v,r,t)$Sw_Precombustion) * gwp(e) } }      
 
     =g=
 
 *** ...must be greater than emissions offset by CDR (negative emissions so negative signs here)
 ** DAC
     - sum{(p,i,v,r,h)$[valcap(i,v,r,t)$i_p(i,p)$dac(i)$sameas(p,"DAC")$h_rep(h)],
-          hours(h) * prod_emit_rate("CO2",i,t) * PRODUCE(p,i,v,r,h,t) }
+          hours(h) * (prod_emit_rate("combustion","CO2",i,t) + prod_emit_rate("precombustion","CO2",i,t)$Sw_Precombustion) * PRODUCE(p,i,v,r,h,t) }
 ** BECCS
     - sum{(i,v,r,h)$[valgen(i,v,r,t)$beccs(i)$h_rep(h)],
-        hours(h) * emit_rate("CO2",i,v,r,t) * GEN(i,v,r,h,t) }
+        hours(h) * (emit_rate("combustion","CO2",i,v,r,t) + emit_rate("precombustion","CO2",i,v,r,t)$Sw_Precombustion) * GEN(i,v,r,h,t) }
 ;
 
 * ---------------------------------------------------------------------------
@@ -2302,7 +2371,7 @@ eq_caa_rate_standard(st,t)$[tmodel(t)
 
 *coal emissions in that state [metric tons CO2]
     sum{(i,v,r,h)$[valgen(i,v,r,t)$coal(i)$(not cofire(i))$r_st(r,st)], 
-         GEN(i,v,r,h,t) * emit_rate("co2",i,v,r,t)}
+         GEN(i,v,r,h,t) * emit_rate("combustion","CO2",i,v,r,t)}
 ;
 
 *==========================
@@ -2399,7 +2468,7 @@ eq_REC_Requirement(RPSCat,st,t)$[RecPerc(RPSCat,st,t)$(not tfirst(t))
 *for CES (similar to the left-hand-side). Also, because GEN from pvb(i) includes grid charging,
 *subtract out its grid charging (see eq_REC_Generation above).
       + ( sum{(i,v)$[valgen(i,v,r,t)$(not storage_standalone(i))], GEN(i,v,r,h,t)
-          - (distloss * GEN(i,v,r,h,t))$(distpv(i) or dupv(i))
+          - (distloss * GEN(i,v,r,h,t))$(distpv(i))
           - (STORAGE_IN_GRID(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant] }
           - can_exports_h(r,h,t)$[(Sw_Canada=1)$sameas(RPSCat,"CES")]
         )$(RecStyle(st,RPSCat)=2)
@@ -2868,10 +2937,13 @@ eq_storage_duration(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)
                                $tmodel(t)]..
 
 * [plus] storage duration times storage capacity
-    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$(battery(i) or pvb(i)))
+    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$(battery(i)$(not continuous_battery(i)) or pvb(i)))
 
 * [plus] EVMC storage has time-varying energy capacity
     + evmc_storage_energy_hours(i,r,h,t) * CAP(i,v,r,t) * (bcr(i)$evmc_storage(i))
+
+* [plus] continuous battery storage capacity
+    + CAP_ENERGY(i,v,r,t)$continuous_battery(i)
 
     =g=
 
@@ -2911,6 +2983,18 @@ eq_storage_in_minloading(i,v,r,h,hh,t)$[(storage_standalone(i) or hyd_add_pump(i
     =g=
 
     STORAGE_IN(i,v,r,hh,t) * minstorfrac(i,v,r)
+;
+
+* ---------------------------------------------------------------------------
+* for continuous batteries
+* when power capacity is built, energy capacity must be greater than the minimum duration
+eq_battery_minduration(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$continuous_battery(i)]..
+
+    CAP_ENERGY(i,v,r,t)
+
+    =g=
+
+    minbatteryduration * CAP(i,v,r,t)
 ;
 
 * ---------------------------------------------------------------------------
@@ -3436,13 +3520,13 @@ eq_h2_storage_caplimit_szn(h2_stor,r,actualszn,t)
 
 * ---------------------------------------------------------------------------
 
-* Hydrogen production tax credit - before and in h2_ptc_temporal_match_year, electric generation must occur in the same 
+* Hydrogen production tax credit - before h2_ptc_temporal_match_year, electric generation must occur in the same 
 * region ('h2ptcreg' level) and year that the electrolyzer produces the hydrogen, to qualify for the credit
 eq_h2_ptc_region_balance(h2ptcreg,t)$[tmodel(t)
                             $h2_ptc_years(t)
                             $(yeart(t)>=h2_demand_start)
                             $(Sw_H2_PTC)
-                            $(yeart(t)<=h2_ptc_temporal_match_year)
+                            $(yeart(t)<h2_ptc_temporal_match_year)
                             ]..
 
 * generation from clean technologies which qualify to receive hydrogen production tax credits [MW]
@@ -3457,14 +3541,14 @@ eq_h2_ptc_region_balance(h2ptcreg,t)$[tmodel(t)
 
 * ---------------------------------------------------------------------------
 
-* Hydrogen production tax credit - after h2_ptc_temporal_match_year, electric generation must occur in the same 
+* Hydrogen production tax credit - after and in h2_ptc_temporal_match_year, electric generation must occur in the same 
 * region ('h2ptcreg' level), hour and year that the electrolyzer produces the hydrogen, to qualify for the credit
 eq_h2_ptc_region_hour_balance(h2ptcreg,h,t)$[hours(h)$tmodel(t)
                                 $h_rep(h)
                                 $h2_ptc_years(t)
                                 $(yeart(t)>=h2_demand_start)
                                 $(Sw_H2_PTC)
-                                $(yeart(t)>h2_ptc_temporal_match_year)
+                                $(yeart(t)>=h2_ptc_temporal_match_year)
                                 ]..
 
 * generation from clean technologies which qualify to receive hydrogen production tax credits [MW]

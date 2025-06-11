@@ -40,14 +40,14 @@ tload(t)$tmodel(t) = yes ;
 $gdxin ReEDS_Augur%ds%augur_data%ds%ReEDS_Augur_merged_%niter%.gdx
 $loaddcr cc_old_load2 = cc_old
 $loaddcr cc_mar_load2 = cc_mar
-$loaddcr cc_dr_load2 = cc_dr
+$loaddcr cc_evmc_load2 = cc_evmc
 $loaddcr sdbin_size_load2 = sdbin_size
 $gdxin
 
 cc_old_load(i,r,szn,t) = sum{loadset, sum{ccreg$r_ccreg(r,ccreg), cc_old_load2(loadset,i,r,ccreg,szn,t) } } ;
 cc_mar_load(i,r,szn,t) = sum{loadset, sum{ccreg$r_ccreg(r,ccreg), cc_mar_load2(loadset,i,r,ccreg,szn,t) } } ;
 
-cc_dr_load(i,r,szn,t) = sum{loadset, cc_dr_load2(loadset,i,r,szn,t) } ;
+cc_evmc_load(i,r,szn,t) = sum{loadset, cc_evmc_load2(loadset,i,r,szn,t) } ;
 
 sdbin_size_load(ccreg,szn,sdbin,t) = sum{loadset, sdbin_size_load2(loadset,ccreg,szn,sdbin,t) } ;
 
@@ -157,7 +157,9 @@ execute_unload 'gdxfiles%ds%%case%_load.gdx' ;
 *============================
 
 cap_iter(i,v,r,t,"%niter%")$valcap(i,v,r,t) = CAP.l(i,v,r,t) ;
+cap_energy_iter(i,v,r,t,"%niter%")$valcap(i,v,r,t) = CAP_ENERGY.l(i,v,r,t) ;
 gen_iter(i,v,r,t,"%niter%")$valcap(i,v,r,t) = sum{h, GEN.l(i,v,r,h,t) * hours(h) } ;
 gen_iter(i,v,r,t,"%niter%")$[vre(i)$valcap(i,v,r,t)] = sum{h, m_cf(i,v,r,h,t) * CAP.l(i,v,r,t) * hours(h) } ;
 cap_firm_iter(i,v,r,szn,t,"%niter%")$cc_int(i,v,r,szn,t) = cc_int(i,v,r,szn,t) * CAP.l(i,v,r,t) ;
 cap_firm_iter(i,v,r,szn,t,"%niter%")$storage(i) = sum{sdbin, CAP_SDBIN.l(i,v,r,szn,sdbin,t) * cc_storage(i,sdbin) } ;
+cap_energy_firm_iter(i,v,r,szn,t,"%niter%")$storage(i) = sum{sdbin, CAP_SDBIN_ENERGY.l(i,v,r,szn,sdbin,t) } ;

@@ -49,7 +49,9 @@ Note: please be aware that ReEDS's solutions are very sensitive to this switch. 
 # Hydrogen Production Tax Credit (45V)
 
 # The regulation itself
-The hydrogen production tax credit was enacted in the Inflation Reduction Act in 2022. It is commonly referred to as 45V due to the section of the tax code it is in. It provides up to $3 per kg of H2 produced, based on the lifecycle emissions of hydrogen production as shown in the table below. These lifecycle greenhouse gas emissions only includes emissions only through the point of production (i.e. does not include hydrogen transport or storage). Since the largest component of the lifecycle emissions of electrolytic hydrogen production is the carbon intensity of the generators powering the electrolyzer, the main point of contention for this regulation has been how to define the carbon intensity of electricity. The Department of the Treasury proposed [guidance](https://www.federalregister.gov/documents/2023/12/26/2023-28359/section-45v-credit-for-production-of-clean-hydrogen-section-48a15-election-to-treat-clean-hydrogen) on December 22, 2023 stating the requirements for demonstrating the CO2 intensity of H2 production. 
+The hydrogen production tax credit was enacted in the Inflation Reduction Act in 2022. It is commonly referred to as 45V due to the section of the tax code it is in. It provides up to $3 per kg of H2 produced (2022 USD, credit amount is [inflation adjusted in subsequent years](https://www.taxnotes.com/research/federal/irs-guidance/notices/irs-releases-clean-hydrogen-credit-inflation-adjustment/7kd80)), based on the lifecycle emissions of hydrogen production as shown in the table below. These lifecycle greenhouse gas emissions only includes emissions only through the point of production (i.e. does not include hydrogen transport or storage). 
+
+Since the largest component of the lifecycle emissions of electrolytic hydrogen production is the carbon intensity of the generators powering the electrolyzer, the main point of contention for this regulation has been how to define the carbon intensity of electricity. The Department of the Treasury proposed [guidance](https://www.federalregister.gov/documents/2023/12/26/2023-28359/section-45v-credit-for-production-of-clean-hydrogen-section-48a15-election-to-treat-clean-hydrogen) on December 22, 2023 stating the requirements for demonstrating the CO2 intensity of H2 production and published their [final rules](https://www.federalregister.gov/public-inspection/2024-31513/credit-for-production-of-clean-hydrogen-and-energy-credit) on January 3, 2025. This press release has a nice [summary](https://home.treasury.gov/news/press-releases/jy2768).
 
 | Life-cycle Emissions (kg CO2-e / kg H2) | PTC (2022$ / kg H2) | CO2 intensity of electricity to meet incentive required through electrolysis (tonnes CO2 / MWh) |
 | --------------- | ---------- | --------------- |
@@ -58,8 +60,8 @@ The hydrogen production tax credit was enacted in the Inflation Reduction Act in
 | (1.5, 0.45] | 1 | (.027, .007] |
 | (0.45, 0] | 3 | (.008, 0] |
 
-To ensure the low carbon intensity of the electricityy powering electrolyzers, the hydrogen production tax credit has three "pillars" or core components, as described below:  
-1. Incrementality (also referred to as additionality): generators must have a commercial online date no more than three years before a H2 production facility's placed in service date to qualify. Example: if an electrolyzer is put in service in 2027, only generators whose commercial operations dates are between 2024-2027 may qualify to power this electrolyzer. This requirement starts immediately.
+To ensure the low carbon intensity of the electricity powering electrolyzers, the hydrogen production tax credit has three "pillars" or core components, as described below:  
+1. Incrementality (also referred to as additionality): generators must have a commercial online date no more than three years before a H2 production facility's placed in service date to qualify. Example: if an electrolyzer is put in service in 2028, only generators whose commercial operations dates are between 2025-2028 may qualify to power this electrolyzer. This requirement starts immediately. There are special exceptions for nuclear, CCS and states with robust GHG emission caps - we do not model these additional pathways in ReEDS. 
 2. Hourly matching: each MWh must be consumed by an electrolyzer in the same hour of the year in which it was generated.
 3. Deliverablity: each MWh must be consumed by an electrolyzer in the same region in which it was generated. Regional matching is required at the National Transmission Needs Study region level, as shown in the image below. 
 
@@ -68,10 +70,10 @@ To ensure the low carbon intensity of the electricityy powering electrolyzers, t
 Source: [Guidelines to Determine Well-to-Gate GHG Emissions of Hydrogen Production Pathways using 45VH2-GREET 2023](https://www.energy.gov/sites/default/files/2023-12/greet-manual_2023-12-20.pdf), 2023, Figure 2
 
 These three pillars are combined differently depending on which year it is:
-- 2024-2027: annual matching, regional matching, additionality required
-- 2028 onwards: hourly matching, regional matching, additionality required
+- 2024-2029: annual matching, regional matching, additionality required
+- 2030 onwards: hourly matching, regional matching, additionality required
 
-Please see the Department of the Treasury proposed [guidance](https://www.federalregister.gov/documents/2023/12/26/2023-28359/section-45v-credit-for-production-of-clean-hydrogen-section-48a15-election-to-treat-clean-hydrogen) if you want to learn more.
+Please see the Department of the Treasury [final rules](https://www.federalregister.gov/public-inspection/2024-31513/credit-for-production-of-clean-hydrogen-and-energy-credit) if you want to learn more.
 
 ## How is this regulated? 
 There will be a system of trading credits, which are called Energy Attribute Credit (EACs). This is similar to Renewable Energy Credits (RECs). Qualifying clean technologies produce EACs which are tracked by region, vintage (commercial online year), and hour in which they are produced. Electrolyzers must purchase and retire EACs for all MWh used in order to receive the 45V credit.
@@ -98,7 +100,7 @@ The hydrogen production tax credit took effect immediately, so in 2023. Projects
     - These are defined by the set i_h2_ptc_gen(i) and carried through the model as valcap_h2ptc and valgen_h2ptc
 - Electrolyzers must purchase and retire EACs for all MWh used in order to receive the 45V credit
     - This is accomplished via the new variable CREDIT_H2PTC(i,v,r,allh,t)
-- Pre-2028 those EACs can be generated at any time within the year the H2 is generated; 2028 and later the EACs must be matched hourly
+- Pre-2030 those EACs can be generated at any time within the year the H2 is generated; 2030 and later the EACs must be matched hourly
 - Simplifying assumption used for vintage: generators must have a commercial online date in 2024 or later in order to qualify as an EAC producer
     - Applied by restricting valcap_h2ptc to have firstyear_v(i,v)>=h2_ptc_firstyear
 

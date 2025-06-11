@@ -9,6 +9,7 @@ battery_24,0
 battery_48,0
 battery_72,0
 battery_100,0
+battery_li,0
 biopower,2
 beccs_mod,4
 beccs_max,4
@@ -31,7 +32,6 @@ evmc_storage_1*evmc_storage_10,0
 evmc_shape_1*evmc_shape_10,0
 egs_allkm_1*egs_allkm_10,8
 distpv,0
-dupv_1*dupv_10,0
 Gas-CC,0
 Gas-CC-CCS_mod,4
 Gas-CC-CCS_max,4

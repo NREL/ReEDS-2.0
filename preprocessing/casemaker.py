@@ -76,7 +76,7 @@ sw = {
         'SitingLim': { # high priority
             'GSw_SitingUPV':'limited', 'GSw_SitingWindOns':'limited'},
         'PVbattCostLo': {
-            'upvscen':'upv_ATB_2022_advanced', 'batteryscen':'battery_ATB_2022_advanced'},
+            'upvscen':'upv_ATB_2022_advanced', 'plantchar_battery':'battery_ATB_2022_advanced'},
         'WindCostLo': {
             'onswindscen':'ons-wind_ATB_2022_advanced',
             'ofswindscen':'ofs-wind_ATB_2022_advanced'},

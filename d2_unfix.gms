@@ -5,8 +5,11 @@
 
 * capacity and investment variables
   CAP_SDBIN.lo(i,v,r,ccseason,sdbin,t)$tmodel(t) = 0 ;
+    CAP_SDBIN_ENERGY.lo(i,v,r,ccseason,sdbin,t)$tmodel(t) = 0 ;
     CAP.lo(i,v,r,t)$tmodel(t) = 0 ;
+    CAP_ENERGY.lo(i,v,r,t)$tmodel(t) = 0 ;
     INV.lo(i,v,r,t)$tmodel(t) = 0 ;
+    INV_ENERGY.lo(i,v,r,t)$tmodel(t) = 0 ;
     EXTRA_PRESCRIP.lo(pcat,r,t)$tmodel(t) = 0 ;
     INV_CAP_UP.lo(i,v,r,rscbin,t)$tmodel(t) = 0 ;
     INV_ENER_UP.lo(i,v,r,rscbin,t)$tmodel(t) = 0 ;
@@ -77,8 +80,11 @@ FLEX.up(flex_type,r,h,t)$tmodel(t) = +inf ;
 PEAK_FLEX.up(r,ccseason,t)$tmodel(t) = +inf ;
 GROWTH_BIN(gbin,i,st,t).up$tmodel(t) = +inf ;
 CAP_SDBIN.up(i,v,r,ccseason,sdbin,t)$tmodel(t) = +inf ;
+CAP_SDBIN_ENERGY.up(i,v,r,ccseason,sdbin,t)$tmodel(t) = +inf ;
 CAP.up(i,v,r,t)$tmodel(t) = +inf ;
+CAP_ENERGY.up(i,v,r,t)$tmodel(t) = +inf ;
 INV.up(i,v,r,t)$tmodel(t) = +inf ;
+INV_ENERGY.up(i,v,r,t)$tmodel(t) = +inf ;
 EXTRA_PRESCRIP.up(pcat,r,t)$tmodel(t) = +inf ;
 INV_CAP_UP.up(i,v,r,rscbin,t)$tmodel(t) = +inf ;
 INV_ENER_UP.up(i,v,r,rscbin,t)$tmodel(t) = +inf ;

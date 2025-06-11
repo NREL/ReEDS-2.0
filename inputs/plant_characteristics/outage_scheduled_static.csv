@@ -40,6 +40,7 @@ battery_24,0.006
 battery_48,0.006
 battery_72,0.006
 battery_100,0.006
+battery_li,0.006
 CAES,0.04
 ice,0.01
 hydD,0.02

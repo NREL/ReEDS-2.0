@@ -3,98 +3,60 @@
 ## Table of Contents
 
 
-- [ReEDS 2.0](#reeds-20)
-  - [Table of Contents](#table-of-contents)
-  - [Input Files](#input-files)
-  - [ ](#-)
-    - [hourlize ](#hourlize-)
-      - [inputs ](#inputs-)
-        - [load ](#load-)
-        - [resource ](#resource-)
-      - [plexos\_to\_reeds ](#plexos_to_reeds-)
-        - [inputs ](#inputs--1)
-      - [tests ](#tests-)
-        - [data ](#data-)
-          - [r2r\_expanded ](#r2r_expanded-)
-          - [r2r\_from\_config ](#r2r_from_config-)
-          - [r2r\_integration ](#r2r_integration-)
-          - [r2r\_integration\_geothermal ](#r2r_integration_geothermal-)
-    - [inputs ](#inputs--2)
-      - [canada\_imports ](#canada_imports-)
-      - [capacity\_exogenous ](#capacity_exogenous-)
-      - [climate ](#climate-)
-        - [GFDL-ESM2M\_RCP4p5\_WM ](#gfdl-esm2m_rcp4p5_wm-)
-        - [HadGEM2-ES\_RCP2p6 ](#hadgem2-es_rcp2p6-)
-        - [HadGEM2-ES\_rcp45\_AT ](#hadgem2-es_rcp45_at-)
-        - [HadGEM2-ES\_RCP4p5 ](#hadgem2-es_rcp4p5-)
-        - [HadGEM2-ES\_rcp85\_AT ](#hadgem2-es_rcp85_at-)
-        - [HadGEM2-ES\_RCP8p5 ](#hadgem2-es_rcp8p5-)
-        - [IPSL-CM5A-LR\_RCP8p5\_WM ](#ipsl-cm5a-lr_rcp8p5_wm-)
-      - [consume ](#consume-)
-      - [ctus ](#ctus-)
-      - [degradation ](#degradation-)
-      - [demand\_response ](#demand_response-)
-      - [dgen\_model\_inputs ](#dgen_model_inputs-)
-        - [stscen2023\_electrification ](#stscen2023_electrification-)
-        - [stscen2023\_highng ](#stscen2023_highng-)
-        - [stscen2023\_highre ](#stscen2023_highre-)
-        - [stscen2023\_lowng ](#stscen2023_lowng-)
-        - [stscen2023\_lowre ](#stscen2023_lowre-)
-        - [stscen2023\_mid\_case ](#stscen2023_mid_case-)
-        - [stscen2023\_mid\_case\_95\_by\_2035 ](#stscen2023_mid_case_95_by_2035-)
-        - [stscen2023\_mid\_case\_95\_by\_2050 ](#stscen2023_mid_case_95_by_2050-)
-        - [stscen2023\_taxcredit\_extended2050 ](#stscen2023_taxcredit_extended2050-)
-      - [disaggregation ](#disaggregation-)
-      - [emission\_constraints ](#emission_constraints-)
-      - [financials ](#financials-)
-      - [fuelprices ](#fuelprices-)
-      - [geothermal ](#geothermal-)
-      - [growth\_constraints ](#growth_constraints-)
-      - [hydro ](#hydro-)
-      - [load ](#load--1)
-      - [national\_generation ](#national_generation-)
-      - [plant\_characteristics ](#plant_characteristics-)
-      - [reserves ](#reserves-)
-      - [sets ](#sets-)
-      - [shapefiles ](#shapefiles-)
-        - [WKT\_csvs ](#wkt_csvs-)
-      - [state\_policies ](#state_policies-)
-      - [storage ](#storage-)
-      - [supply\_curve ](#supply_curve-)
-      - [techs ](#techs-)
-      - [transmission ](#transmission-)
-      - [upgrades ](#upgrades-)
-      - [userinput ](#userinput-)
-      - [valuestreams ](#valuestreams-)
-      - [variability ](#variability-)
-        - [multi\_year ](#multi_year-)
-      - [waterclimate ](#waterclimate-)
-    - [postprocessing ](#postprocessing-)
-      - [air\_quality ](#air_quality-)
-        - [rcm\_data ](#rcm_data-)
-      - [bokehpivot ](#bokehpivot-)
-        - [in ](#in-)
-          - [reeds2 ](#reeds2-)
-      - [combine\_runs ](#combine_runs-)
-      - [land\_use ](#land_use-)
-        - [inputs ](#inputs--3)
-      - [plots ](#plots-)
-      - [retail\_rate\_module ](#retail_rate_module-)
-        - [calc\_historical\_capex ](#calc_historical_capex-)
-        - [inputs ](#inputs--4)
-      - [reValue ](#revalue-)
-      - [tableau ](#tableau-)
-    - [preprocessing ](#preprocessing-)
-      - [atb\_updates\_processing ](#atb_updates_processing-)
-        - [input\_files ](#input_files-)
-    - [reeds2pras ](#reeds2pras-)
-      - [test ](#test-)
-        - [reeds\_cases ](#reeds_cases-)
-          - [USA\_VSC\_2035 ](#usa_vsc_2035-)
-    - [ReEDS\_Augur ](#reeds_augur-)
-    - [tests ](#tests--1)
-      - [data ](#data--1)
-        - [county ](#county-)
+  - ### [](#) 
+    - #### [hourlize](#hourlize) 
+      - ##### [eer_to_reeds](#hourlize/eer_to_reeds) 
+      - ##### [inputs](#hourlize/inputs) 
+      - ##### [plexos_to_reeds](#hourlize/plexos_to_reeds) 
+      - ##### [tests](#hourlize/tests) 
+    - #### [inputs](#inputs) 
+      - ##### [canada_imports](#inputs/canada_imports) 
+      - ##### [capacity_exogenous](#inputs/capacity_exogenous) 
+      - ##### [climate](#inputs/climate) 
+      - ##### [consume](#inputs/consume) 
+      - ##### [ctus](#inputs/ctus) 
+      - ##### [degradation](#inputs/degradation) 
+      - ##### [demand_response](#inputs/demand_response) 
+      - ##### [dgen_model_inputs](#inputs/dgen_model_inputs) 
+      - ##### [disaggregation](#inputs/disaggregation) 
+      - ##### [emission_constraints](#inputs/emission_constraints) 
+      - ##### [financials](#inputs/financials) 
+      - ##### [fuelprices](#inputs/fuelprices) 
+      - ##### [geothermal](#inputs/geothermal) 
+      - ##### [growth_constraints](#inputs/growth_constraints) 
+      - ##### [hydro](#inputs/hydro) 
+      - ##### [load](#inputs/load) 
+      - ##### [national_generation](#inputs/national_generation) 
+      - ##### [plant_characteristics](#inputs/plant_characteristics) 
+      - ##### [reserves](#inputs/reserves) 
+      - ##### [sets](#inputs/sets) 
+      - ##### [shapefiles](#inputs/shapefiles) 
+      - ##### [state_policies](#inputs/state_policies) 
+      - ##### [storage](#inputs/storage) 
+      - ##### [supply_curve](#inputs/supply_curve) 
+      - ##### [techs](#inputs/techs) 
+      - ##### [transmission](#inputs/transmission) 
+      - ##### [upgrades](#inputs/upgrades) 
+      - ##### [userinput](#inputs/userinput) 
+      - ##### [valuestreams](#inputs/valuestreams) 
+      - ##### [variability](#inputs/variability) 
+      - ##### [waterclimate](#inputs/waterclimate) 
+    - #### [postprocessing](#postprocessing) 
+      - ##### [air_quality](#postprocessing/air_quality) 
+      - ##### [bokehpivot](#postprocessing/bokehpivot) 
+      - ##### [combine_runs](#postprocessing/combine_runs) 
+      - ##### [land_use](#postprocessing/land_use) 
+      - ##### [plots](#postprocessing/plots) 
+      - ##### [retail_rate_module](#postprocessing/retail_rate_module) 
+      - ##### [reValue](#postprocessing/reValue) 
+      - ##### [tableau](#postprocessing/tableau) 
+    - #### [preprocessing](#preprocessing) 
+      - ##### [atb_updates_processing](#preprocessing/atb_updates_processing) 
+    - #### [reeds2pras](#reeds2pras) 
+      - ##### [test](#reeds2pras/test) 
+    - #### [ReEDS_Augur](#ReEDS_Augur) 
+    - #### [tests](#tests) 
+      - ##### [data](#tests/data) 
 
 
 ## Input Files
@@ -108,9 +70,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Dollar year:** 2004
 
     - **Citation:** [(https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/38e6610a8c6a92291804598c95c11b707bf187b9/cases.csv)]
----
-
-  - [cases_github.csv](/cases_github.csv)
 ---
 
   - [cases_hourly.csv](/cases_hourly.csv)
@@ -152,6 +111,21 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 ### [hourlize](hourlize) <a name='hourlize'></a>
+
+#### [eer_to_reeds](hourlize/eer_to_reeds) <a name='hourlize/eer_to_reeds'></a>
+
+##### [eer_load_participation_factors](hourlize/eer_to_reeds/eer_load_participation_factors) <a name='hourlize/eer_to_reeds/eer_load_participation_factors'></a>
+  - [ba_state_map.csv](/hourlize/eer_to_reeds/eer_load_participation_factors/ba_state_map.csv)
+---
+
+
+##### [eer_splice](hourlize/eer_to_reeds/eer_splice) <a name='hourlize/eer_to_reeds/eer_splice'></a>
+  - [ba_timezone.csv](/hourlize/eer_to_reeds/eer_splice/ba_timezone.csv)
+---
+
+  - [load_factors.csv](/hourlize/eer_to_reeds/eer_splice/load_factors.csv)
+---
+
 
 #### [inputs](hourlize/inputs) <a name='hourlize/inputs'></a>
 
@@ -623,13 +597,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [hierarchy.csv](/inputs/hierarchy.csv)
 ---
 
-  - [hierarchy_agg1.csv](/inputs/hierarchy_agg1.csv)
+  - [hierarchy_agg125.csv](/inputs/hierarchy_agg125.csv)
 ---
 
-  - [hierarchy_agg2.csv](/inputs/hierarchy_agg2.csv)
+  - [hierarchy_agg54.csv](/inputs/hierarchy_agg54.csv)
 ---
 
-  - [hierarchy_agg3.csv](/inputs/hierarchy_agg3.csv)
+  - [hierarchy_agg69.csv](/inputs/hierarchy_agg69.csv)
 ---
 
   - [modeledyears.csv](/inputs/modeledyears.csv)
@@ -1174,9 +1148,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Citation:** [(N/A)]
 ---
 
-  - [h2_ba_share.csv](/inputs/consume/h2_ba_share.csv)
+  - [h2_demand_county_share.csv](/inputs/consume/h2_demand_county_share.csv)
     - **File Type:** Inputs
-    - **Description:** The fraction of hydrogen demand in that year that corresponds to a particular ReEDS BA.
+    - **Description:** The fraction of national hydrogen demand in that year that corresponds to each county. Demand estimates come from https://data.openei.org/submissions/5655. 2021 demand shares correspond to the "Reference" scenario with light-duty vehicles / biofuels / methanol demand removed and 2050 shares correspond to the "Low Cost Electrolysis" scenario.
     - **Indices:** r,t
     - **Dollar year:** N/A
 
@@ -1192,9 +1166,18 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Citation:** [(N/A)]
 ---
 
-  - [h2_storage_rb.csv](/inputs/consume/h2_storage_rb.csv)
+  - [h2_storage_ba.csv](/inputs/consume/h2_storage_ba.csv)
     - **File Type:** Inputs
-    - **Description:** Mapping of types of storage that exist in various ReEDS BAs.
+    - **Description:** Cheapest H2 storage type that exists in each ReEDS BA. Storage locations come from https://www.sciencedirect.com/science/article/pii/S0360319914021223.
+    - **Indices:** r
+    - **Dollar year:** N/A
+
+    - **Citation:** [(N/A)]
+---
+
+  - [h2_storage_county.csv](/inputs/consume/h2_storage_county.csv)
+    - **File Type:** Inputs
+    - **Description:** Cheapest H2 storage type that exists in each county. Storage locations come from https://www.sciencedirect.com/science/article/pii/S0360319914021223.
     - **Indices:** r
     - **Dollar year:** N/A
 
@@ -1206,15 +1189,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Transport and storage costs of hydrogen per year
     - **Indices:** t
     - **Dollar year:** 2004
-
-    - **Citation:** [(N/A)]
----
-
-  - [pipeline_cost_mult.csv](/inputs/consume/pipeline_cost_mult.csv)
-    - **File Type:** Inputs
-    - **Description:** Multiplier to the cost of hydrogen pipelines in various r-->r combinations.
-    - **Indices:** r
-    - **Dollar year:** N/A
 
     - **Citation:** [(N/A)]
 ---
@@ -1327,23 +1301,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [disaggregation](inputs/disaggregation) <a name='inputs/disaggregation'></a>
-  - [disagg_geosize.csv](/inputs/disaggregation/disagg_geosize.csv)
-    - **Description:** The geographic area fraction of each county within a given ReEDS BA, used as multipliers for disaggregating spatial data
-    - **Indices:** r
+  - [county_population.csv](/inputs/disaggregation/county_population.csv)
+    - **Description:** The population of each county, relative values are used as multipliers for downselecting data. Data come from the U.S. Census Bureau 2021 county population estimates (https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-total.html).
+    - **Indices:** FIPS
 ---
 
   - [disagg_hydroexist.csv](/inputs/disaggregation/disagg_hydroexist.csv)
     - **Description:** The hydropower capacity fraction of each county within a given ReEDS BA, used as multipliers for downselecting data
-    - **Indices:** r
----
-
-  - [disagg_population.csv](/inputs/disaggregation/disagg_population.csv)
-    - **Description:** The population fraction of each county within a given ReEDS BA, used as multipliers for downselecting data
-    - **Indices:** r
----
-
-  - [disagg_translinesize.csv](/inputs/disaggregation/disagg_translinesize.csv)
-    - **Description:** The ratio of transmission capacity between a given US county and Canadian BA in relation to the total transmission capacity between the Canadian BA and the US BA that said county is in. 
     - **Indices:** r
 ---
 
@@ -1380,6 +1344,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Indices:** i,e
 ---
 
+  - [gwp.csv](/inputs/emission_constraints/gwp.csv)
+---
+
   - [methane_leakage_rate.csv](/inputs/emission_constraints/methane_leakage_rate.csv)
 ---
 
@@ -1395,10 +1362,15 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [rggi_states.csv](/inputs/emission_constraints/rggi_states.csv)
+    - **Description:** Participating RGGI states
+
+    - **Citation:** [(https://www.rggi.org/program-overview-and-design/elements)]
 ---
 
   - [rggicon.csv](/inputs/emission_constraints/rggicon.csv)
     - **Description:** CO2 caps for RGGI states in metric tons
+
+    - **Citation:** [(https://www.rggi.org/allowance-tracking/allowance-distribution)]
 ---
 
   - [state_cap.csv](/inputs/emission_constraints/state_cap.csv)
@@ -1495,36 +1467,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [fuelprices](inputs/fuelprices) <a name='inputs/fuelprices'></a>
-  - [alpha_AEO_2022_HOG.csv](/inputs/fuelprices/alpha_AEO_2022_HOG.csv)
-    - **File Type:** Input
-    - **Description:** High Oil and Gas scenario census division alpha values, used in the calculation of natural gas demand curves
-    - **Indices:** allt,cendiv
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO 2022)]
----
-
-  - [alpha_AEO_2022_LOG.csv](/inputs/fuelprices/alpha_AEO_2022_LOG.csv)
-    - **File Type:** Input
-    - **Description:** Low Oil and Gas scenario census division alpha values, used in the calculation of natural gas demand curves
-    - **Indices:** allt,cendiv
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO 2022)]
----
-
-  - [alpha_AEO_2022_reference.csv](/inputs/fuelprices/alpha_AEO_2022_reference.csv)
-    - **File Type:** Input
-    - **Description:** reference census division alpha values, used in the calculation of natural gas demand curves
-    - **Indices:** allt,cendiv
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO 2022)]
----
-
   - [alpha_AEO_2023_HOG.csv](/inputs/fuelprices/alpha_AEO_2023_HOG.csv)
     - **File Type:** Input
-    - **Description:** High Oil and Gas scenario census division alpha values, used in the calculation of natural gas demand curves
+    - **Description:** High Oil and Gas Resource and Technology scenario census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
     - **Dollar year:** 2004
 
@@ -1533,7 +1478,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [alpha_AEO_2023_LOG.csv](/inputs/fuelprices/alpha_AEO_2023_LOG.csv)
     - **File Type:** Input
-    - **Description:** Low Oil and Gas scenario census division alpha values, used in the calculation of natural gas demand curves
+    - **Description:** Low Oil and Gas Resource and Technology scenario census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
     - **Dollar year:** 2004
 
@@ -1547,6 +1492,33 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Dollar year:** 2004
 
     - **Citation:** [(AEO 2023)]
+---
+
+  - [alpha_AEO_2025_HOG.csv](/inputs/fuelprices/alpha_AEO_2025_HOG.csv)
+    - **File Type:** Input
+    - **Description:** High Oil and Gas Resource and Technology scenario census division alpha values, used in the calculation of natural gas demand curves
+    - **Indices:** allt,cendiv
+    - **Dollar year:** 2004
+
+    - **Citation:** [(AEO 2025)]
+---
+
+  - [alpha_AEO_2025_LOG.csv](/inputs/fuelprices/alpha_AEO_2025_LOG.csv)
+    - **File Type:** Input
+    - **Description:** Low Oil and Gas Resource and Technology scenario census division alpha values, used in the calculation of natural gas demand curves
+    - **Indices:** allt,cendiv
+    - **Dollar year:** 2004
+
+    - **Citation:** [(AEO 2025)]
+---
+
+  - [alpha_AEO_2025_reference.csv](/inputs/fuelprices/alpha_AEO_2025_reference.csv)
+    - **File Type:** Input
+    - **Description:** reference census division alpha values, used in the calculation of natural gas demand curves
+    - **Indices:** allt,cendiv
+    - **Dollar year:** 2004
+
+    - **Citation:** [(AEO 2025)]
 ---
 
   - [cd_beta0.csv](/inputs/fuelprices/cd_beta0.csv)
@@ -1568,16 +1540,16 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Indices:** r,cendiv
 ---
 
-  - [coal_AEO_2022_reference.csv](/inputs/fuelprices/coal_AEO_2022_reference.csv)
+  - [coal_AEO_2023_reference.csv](/inputs/fuelprices/coal_AEO_2023_reference.csv)
     - **Description:** reference case census division fuel price of coal
     - **Indices:** t,cendiv
     - **Dollar year:** 2022
 ---
 
-  - [coal_AEO_2023_reference.csv](/inputs/fuelprices/coal_AEO_2023_reference.csv)
-    - **Description:** reference case census division fuel price of coal
+  - [coal_AEO_2025_reference.csv](/inputs/fuelprices/coal_AEO_2025_reference.csv)
+    - **Description:** reference case census division fuel price of coal with missing values forward-filled from earlier years
     - **Indices:** t,cendiv
-    - **Dollar year:** 2023
+    - **Dollar year:** 2024
 ---
 
   - [dollaryear.csv](/inputs/fuelprices/dollaryear.csv)
@@ -1593,42 +1565,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [h2-ct_reference.csv](/inputs/fuelprices/h2-ct_reference.csv)
 ---
 
-  - [ng_AEO_2022_HOG.csv](/inputs/fuelprices/ng_AEO_2022_HOG.csv)
-    - **File Type:** Input
-    - **Description:** High Oil and Gas scenario census division fuel price of natural gas
-    - **Indices:** cendiv,t
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** 2004$/MMBtu
-
----
-
-  - [ng_AEO_2022_LOG.csv](/inputs/fuelprices/ng_AEO_2022_LOG.csv)
-    - **File Type:** Input
-    - **Description:** Low Oil and Gas scenario census division fuel price of natural gas
-    - **Indices:** cendiv,t
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** 2004$/MMBtu
-
----
-
-  - [ng_AEO_2022_reference.csv](/inputs/fuelprices/ng_AEO_2022_reference.csv)
-    - **File Type:** Input
-    - **Description:** Reference scenario census division fuel price of natural gas
-    - **Indices:** cendiv,t
-    - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** 2004$/MMBtu
-
----
-
   - [ng_AEO_2023_HOG.csv](/inputs/fuelprices/ng_AEO_2023_HOG.csv)
     - **File Type:** Input
-    - **Description:** High Oil and Gas scenario census division fuel price of natural gas
+    - **Description:** High Oil and Gas Resource and Technology scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
     - **Dollar year:** 2004
 
@@ -1639,7 +1578,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [ng_AEO_2023_LOG.csv](/inputs/fuelprices/ng_AEO_2023_LOG.csv)
     - **File Type:** Input
-    - **Description:** Low Oil and Gas scenario census division fuel price of natural gas
+    - **Description:** Low Oil and Gas Resource and Technology scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
     - **Dollar year:** 2004
 
@@ -1659,39 +1598,42 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [ng_demand_AEO_2022_HOG.csv](/inputs/fuelprices/ng_demand_AEO_2022_HOG.csv)
+  - [ng_AEO_2025_HOG.csv](/inputs/fuelprices/ng_AEO_2025_HOG.csv)
     - **File Type:** Input
-    - **Description:** High Oil and Gas census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
+    - **Description:** High Oil and Gas Resource and Technology scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
+    - **Dollar year:** 2004
 
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
+    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Units:** 2004$/MMBtu
 
 ---
 
-  - [ng_demand_AEO_2022_LOG.csv](/inputs/fuelprices/ng_demand_AEO_2022_LOG.csv)
+  - [ng_AEO_2025_LOG.csv](/inputs/fuelprices/ng_AEO_2025_LOG.csv)
     - **File Type:** Input
-    - **Description:** Low Oil and Gas census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
+    - **Description:** Low Oil and Gas Resource and Technology scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
+    - **Dollar year:** 2004
 
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
+    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Units:** 2004$/MMBtu
 
 ---
 
-  - [ng_demand_AEO_2022_reference.csv](/inputs/fuelprices/ng_demand_AEO_2022_reference.csv)
+  - [ng_AEO_2025_reference.csv](/inputs/fuelprices/ng_AEO_2025_reference.csv)
     - **File Type:** Input
-    - **Description:** Reference census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
+    - **Description:** Reference scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
+    - **Dollar year:** 2004
 
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
-    - **Units:** Quads
+    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Units:** 2004$/MMBtu
 
 ---
 
   - [ng_demand_AEO_2023_HOG.csv](/inputs/fuelprices/ng_demand_AEO_2023_HOG.csv)
     - **File Type:** Input
-    - **Description:** High Oil and Gas census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
+    - **Description:** High Oil and Gas Resource and Technology census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
 
     - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
@@ -1701,7 +1643,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [ng_demand_AEO_2023_LOG.csv](/inputs/fuelprices/ng_demand_AEO_2023_LOG.csv)
     - **File Type:** Input
-    - **Description:** Low Oil and Gas census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
+    - **Description:** Low Oil and Gas Resource and Technology census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
 
     - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
@@ -1719,39 +1661,39 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [ng_tot_demand_AEO_2022_HOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2022_HOG.csv)
+  - [ng_demand_AEO_2025_HOG.csv](/inputs/fuelprices/ng_demand_AEO_2025_HOG.csv)
     - **File Type:** Input
-    - **Description:** High Oil and Gas census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
+    - **Description:** High Oil and Gas Resource and Technology census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
 
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
     - **Units:** Quads
 
 ---
 
-  - [ng_tot_demand_AEO_2022_LOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2022_LOG.csv)
+  - [ng_demand_AEO_2025_LOG.csv](/inputs/fuelprices/ng_demand_AEO_2025_LOG.csv)
     - **File Type:** Input
-    - **Description:** Low Oil and Gas census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
+    - **Description:** Low Oil and Gas Resource and Technology census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
 
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
     - **Units:** Quads
 
 ---
 
-  - [ng_tot_demand_AEO_2022_reference.csv](/inputs/fuelprices/ng_tot_demand_AEO_2022_reference.csv)
+  - [ng_demand_AEO_2025_reference.csv](/inputs/fuelprices/ng_demand_AEO_2025_reference.csv)
     - **File Type:** Input
-    - **Description:** Reference census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
+    - **Description:** Reference census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
 
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
     - **Units:** Quads
 
 ---
 
   - [ng_tot_demand_AEO_2023_HOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2023_HOG.csv)
     - **File Type:** Input
-    - **Description:** High Oil and Gas census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
+    - **Description:** High Oil and Gas Resource and Technology census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
 
     - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
@@ -1761,7 +1703,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [ng_tot_demand_AEO_2023_LOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2023_LOG.csv)
     - **File Type:** Input
-    - **Description:** Low Oil and Gas census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
+    - **Description:** Low Oil and Gas Resource and Technology census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
 
     - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
@@ -1779,10 +1721,40 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [uranium_AEO_2022_reference.csv](/inputs/fuelprices/uranium_AEO_2022_reference.csv)
+  - [ng_tot_demand_AEO_2025_HOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2025_HOG.csv)
+    - **File Type:** Input
+    - **Description:** High Oil and Gas Resource and Technology census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
+    - **Indices:** cendiv,t
+
+    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Units:** Quads
+
+---
+
+  - [ng_tot_demand_AEO_2025_LOG.csv](/inputs/fuelprices/ng_tot_demand_AEO_2025_LOG.csv)
+    - **File Type:** Input
+    - **Description:** Low Oil and Gas Resource and Technology census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
+    - **Indices:** cendiv,t
+
+    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Units:** Quads
+
+---
+
+  - [ng_tot_demand_AEO_2025_reference.csv](/inputs/fuelprices/ng_tot_demand_AEO_2025_reference.csv)
+    - **File Type:** Input
+    - **Description:** Reference census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
+    - **Indices:** cendiv,t
+
+    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Units:** Quads
+
 ---
 
   - [uranium_AEO_2023_reference.csv](/inputs/fuelprices/uranium_AEO_2023_reference.csv)
+---
+
+  - [uranium_AEO_2025_reference.csv](/inputs/fuelprices/uranium_AEO_2025_reference.csv)
 ---
 
 
@@ -1825,7 +1797,10 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Regional FOM costs for hydro
 ---
 
-  - [hydcf.h5](/inputs/hydro/hydcf.h5)
+  - [hydcf_ba.h5](/inputs/hydro/hydcf_ba.h5)
+---
+
+  - [hydcf_county.h5](/inputs/hydro/hydcf_county.h5)
 ---
 
   - [hydro_mingen.csv](/inputs/hydro/hydro_mingen.csv)
@@ -1965,6 +1940,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [beccs_reference.csv](/inputs/plant_characteristics/beccs_reference.csv)
 ---
 
+  - [biopower_ATB_2024_moderate.csv](/inputs/plant_characteristics/biopower_ATB_2024_moderate.csv)
+---
+
   - [caes_reference.csv](/inputs/plant_characteristics/caes_reference.csv)
     - **Description:** CAES costs for the reference cost scenario
 ---
@@ -1975,38 +1953,35 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [ccsflex_ATB_2020_perf.csv](/inputs/plant_characteristics/ccsflex_ATB_2020_perf.csv)
 ---
 
+  - [coal-ccs_ATB_2024_advanced.csv](/inputs/plant_characteristics/coal-ccs_ATB_2024_advanced.csv)
+---
+
+  - [coal-ccs_ATB_2024_conservative.csv](/inputs/plant_characteristics/coal-ccs_ATB_2024_conservative.csv)
+---
+
+  - [coal-ccs_ATB_2024_moderate.csv](/inputs/plant_characteristics/coal-ccs_ATB_2024_moderate.csv)
+---
+
+  - [coal_ATB_2024_advanced.csv](/inputs/plant_characteristics/coal_ATB_2024_advanced.csv)
+---
+
+  - [coal_ATB_2024_conservative.csv](/inputs/plant_characteristics/coal_ATB_2024_conservative.csv)
+---
+
+  - [coal_ATB_2024_moderate.csv](/inputs/plant_characteristics/coal_ATB_2024_moderate.csv)
+---
+
   - [coal_fom_adj.csv](/inputs/plant_characteristics/coal_fom_adj.csv)
     - **Dollar year:** 2017
 ---
 
-  - [conv_ATB_2023.csv](/inputs/plant_characteristics/conv_ATB_2023.csv)
+  - [continuous_battery_ATB_2024_advanced.csv](/inputs/plant_characteristics/continuous_battery_ATB_2024_advanced.csv)
 ---
 
-  - [conv_ATB_2023_ccs_advanced.csv](/inputs/plant_characteristics/conv_ATB_2023_ccs_advanced.csv)
+  - [continuous_battery_ATB_2024_conservative.csv](/inputs/plant_characteristics/continuous_battery_ATB_2024_conservative.csv)
 ---
 
-  - [conv_ATB_2023_ccs_conservative.csv](/inputs/plant_characteristics/conv_ATB_2023_ccs_conservative.csv)
----
-
-  - [conv_ATB_2023_conservative.csv](/inputs/plant_characteristics/conv_ATB_2023_conservative.csv)
----
-
-  - [conv_ATB_2023_low_nuclear_cost.csv](/inputs/plant_characteristics/conv_ATB_2023_low_nuclear_cost.csv)
----
-
-  - [conv_ATB_2024.csv](/inputs/plant_characteristics/conv_ATB_2024.csv)
----
-
-  - [conv_ATB_2024_adv_ccs.csv](/inputs/plant_characteristics/conv_ATB_2024_adv_ccs.csv)
----
-
-  - [conv_ATB_2024_adv_nuclear.csv](/inputs/plant_characteristics/conv_ATB_2024_adv_nuclear.csv)
----
-
-  - [conv_ATB_2024_con_ccs.csv](/inputs/plant_characteristics/conv_ATB_2024_con_ccs.csv)
----
-
-  - [conv_ATB_2024_con_nuclear.csv](/inputs/plant_characteristics/conv_ATB_2024_con_nuclear.csv)
+  - [continuous_battery_ATB_2024_moderate.csv](/inputs/plant_characteristics/continuous_battery_ATB_2024_moderate.csv)
 ---
 
   - [cost_opres_default.csv](/inputs/plant_characteristics/cost_opres_default.csv)
@@ -2045,6 +2020,24 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [evmc_storage_Baseline.csv](/inputs/plant_characteristics/evmc_storage_Baseline.csv)
+---
+
+  - [gas-ccs_ATB_2024_advanced.csv](/inputs/plant_characteristics/gas-ccs_ATB_2024_advanced.csv)
+---
+
+  - [gas-ccs_ATB_2024_conservative.csv](/inputs/plant_characteristics/gas-ccs_ATB_2024_conservative.csv)
+---
+
+  - [gas-ccs_ATB_2024_moderate.csv](/inputs/plant_characteristics/gas-ccs_ATB_2024_moderate.csv)
+---
+
+  - [gas_ATB_2024_advanced.csv](/inputs/plant_characteristics/gas_ATB_2024_advanced.csv)
+---
+
+  - [gas_ATB_2024_conservative.csv](/inputs/plant_characteristics/gas_ATB_2024_conservative.csv)
+---
+
+  - [gas_ATB_2024_moderate.csv](/inputs/plant_characteristics/gas_ATB_2024_moderate.csv)
 ---
 
   - [geo_ATB_2023_advanced.csv](/inputs/plant_characteristics/geo_ATB_2023_advanced.csv)
@@ -2111,6 +2104,24 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [minloadfrac0.csv](/inputs/plant_characteristics/minloadfrac0.csv)
     - **Description:** characteristics/minloadfrac0 database of minloadbed generator cs
+---
+
+  - [nuclear-smr_ATB_2024_advanced.csv](/inputs/plant_characteristics/nuclear-smr_ATB_2024_advanced.csv)
+---
+
+  - [nuclear-smr_ATB_2024_conservative.csv](/inputs/plant_characteristics/nuclear-smr_ATB_2024_conservative.csv)
+---
+
+  - [nuclear-smr_ATB_2024_moderate.csv](/inputs/plant_characteristics/nuclear-smr_ATB_2024_moderate.csv)
+---
+
+  - [nuclear_ATB_2024_advanced.csv](/inputs/plant_characteristics/nuclear_ATB_2024_advanced.csv)
+---
+
+  - [nuclear_ATB_2024_conservative.csv](/inputs/plant_characteristics/nuclear_ATB_2024_conservative.csv)
+---
+
+  - [nuclear_ATB_2024_moderate.csv](/inputs/plant_characteristics/nuclear_ATB_2024_moderate.csv)
 ---
 
   - [nuke_fom_adj.csv](/inputs/plant_characteristics/nuke_fom_adj.csv)
@@ -2189,9 +2200,18 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Dollar year:** 2022
 ---
 
+  - [other_plantchar.csv](/inputs/plant_characteristics/other_plantchar.csv)
+---
+
   - [outage_forced_static.csv](/inputs/plant_characteristics/outage_forced_static.csv)
     - **File Type:** Inputs file
     - **Description:** Forced outage rates by technology
+---
+
+  - [outage_forced_temperature_murphy2019.csv](/inputs/plant_characteristics/outage_forced_temperature_murphy2019.csv)
+---
+
+  - [outage_scheduled_monthly.csv](/inputs/plant_characteristics/outage_scheduled_monthly.csv)
 ---
 
   - [outage_scheduled_static.csv](/inputs/plant_characteristics/outage_scheduled_static.csv)
@@ -2206,9 +2226,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [startcost.csv](/inputs/plant_characteristics/startcost.csv)
----
-
-  - [temperature_outage_forced_murphy2019.csv](/inputs/plant_characteristics/temperature_outage_forced_murphy2019.csv)
 ---
 
   - [unitsize.csv](/inputs/plant_characteristics/unitsize.csv)
@@ -2322,11 +2339,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** set of cooling technology types
 ---
 
-  - [dupv_upv_corr.csv](/inputs/sets/dupv_upv_corr.csv)
-    - **File Type:** GAMS set
-    - **Description:** correlation set for cost of capital calculations of dupv
----
-
   - [e.csv](/inputs/sets/e.csv)
     - **File Type:** GAMS set
     - **Description:** set of emission categories used in model
@@ -2335,6 +2347,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [eall.csv](/inputs/sets/eall.csv)
     - **File Type:** GAMS set
     - **Description:** set of emission categories used in reporting
+---
+
+  - [etype.csv](/inputs/sets/etype.csv)
 ---
 
   - [f.csv](/inputs/sets/f.csv)
@@ -2687,10 +2702,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Energy storage mandates by region
 ---
 
-  - [techs_banned.csv](/inputs/state_policies/techs_banned.yaml)
-    - **Description:** Table that bans certain technologies by state. Input file is also used to create a list of BAs where nuclear technology development is banned in inputs_case/nuclear_ba_ban_list.csv.
----
-
   - [techs_banned_ces.csv](/inputs/state_policies/techs_banned_ces.csv)
     - **Description:** Indicates which technolgies are not eligible to contribute to CES 
 ---
@@ -2740,18 +2751,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [dollaryear.csv](/inputs/supply_curve/dollaryear.csv)
----
-
-  - [DUPV_supply_curves_capacity_2018.csv](/inputs/supply_curve/DUPV_supply_curves_capacity_2018.csv)
----
-
-  - [DUPV_supply_curves_capacity_NARIS.csv](/inputs/supply_curve/DUPV_supply_curves_capacity_NARIS.csv)
----
-
-  - [DUPV_supply_curves_cost_2018.csv](/inputs/supply_curve/DUPV_supply_curves_cost_2018.csv)
----
-
-  - [DUPV_supply_curves_cost_NARIS.csv](/inputs/supply_curve/DUPV_supply_curves_cost_NARIS.csv)
 ---
 
   - [egs_supply_curve-reference_ba.csv](/inputs/supply_curve/egs_supply_curve-reference_ba.csv)
@@ -3356,33 +3355,19 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [variability](inputs/variability) <a name='inputs/variability'></a>
-  - [d_szn_1yr.csv](/inputs/variability/d_szn_1yr.csv)
----
-
-  - [d_szn_7yr.csv](/inputs/variability/d_szn_7yr.csv)
+  - [ccseason_dates.csv](/inputs/variability/ccseason_dates.csv)
 ---
 
   - [hourly_operational_characteristics.csv](/inputs/variability/hourly_operational_characteristics.csv)
 ---
 
-  - [index_hr_map_1.csv](/inputs/variability/index_hr_map_1.csv)
-    - **Description:** Mapping for day set to season for a single year (365 days)
----
-
-  - [index_hr_map_7.csv](/inputs/variability/index_hr_map_7.csv)
-    - **Description:** Mapping for day set to season for a 7 years (2555 days)
+  - [month2quarter.csv](/inputs/variability/month2quarter.csv)
 ---
 
   - [period_szn_user.csv](/inputs/variability/period_szn_user.csv)
 ---
 
   - [reeds_region_tz_map.csv](/inputs/variability/reeds_region_tz_map.csv)
----
-
-  - [set_allszn.csv](/inputs/variability/set_allszn.csv)
----
-
-  - [set_szn.csv](/inputs/variability/set_szn.csv)
 ---
 
   - [stressperiods_user.csv](/inputs/variability/stressperiods_user.csv)
@@ -3663,6 +3648,30 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
+##### [out](postprocessing/bokehpivot/out) <a name='postprocessing/bokehpivot/out'></a>
+  - [main vs PR diff.csv](/postprocessing/bokehpivot/out/main%20vs%20PR%20diff.csv)
+---
+
+  - [main-view.csv](/postprocessing/bokehpivot/out/main-view.csv)
+---
+
+  - [PR-view.csv](/postprocessing/bokehpivot/out/PR-view.csv)
+---
+
+  - [view.csv](/postprocessing/bokehpivot/out/view.csv)
+---
+
+
+###### [report-2025-03-21-13-05-27](postprocessing/bokehpivot/out/report-2025-03-21-13-05-27) <a name='postprocessing/bokehpivot/out/report-2025-03-21-13-05-27'></a>
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-03-21-13-05-27/report.xlsx)
+---
+
+
+###### [view](postprocessing/bokehpivot/out/view) <a name='postprocessing/bokehpivot/out/view'></a>
+  - [view.csv](/postprocessing/bokehpivot/out/view/view.csv)
+---
+
+
 #### [combine_runs](postprocessing/combine_runs) <a name='postprocessing/combine_runs'></a>
   - [combinefiles.csv](/postprocessing/combine_runs/combinefiles.csv)
 ---
@@ -3824,6 +3833,62 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ##### [reeds_cases](reeds2pras/test/reeds_cases) <a name='reeds2pras/test/reeds_cases'></a>
 
+###### [Pacific](reeds2pras/test/reeds_cases/Pacific) <a name='reeds2pras/test/reeds_cases/Pacific'></a>
+
+####### [inputs_case](reeds2pras/test/reeds_cases/Pacific/inputs_case) <a name='reeds2pras/test/reeds_cases/Pacific/inputs_case'></a>
+  - [hydcf.csv](/reeds2pras/test/reeds_cases/Pacific/inputs_case/hydcf.csv)
+---
+
+  - [outage_forced_hourly.h5](/reeds2pras/test/reeds_cases/Pacific/inputs_case/outage_forced_hourly.h5)
+---
+
+  - [outage_forced_static.csv](/reeds2pras/test/reeds_cases/Pacific/inputs_case/outage_forced_static.csv)
+---
+
+  - [outage_scheduled_hourly.h5](/reeds2pras/test/reeds_cases/Pacific/inputs_case/outage_scheduled_hourly.h5)
+---
+
+  - [outage_scheduled_static.csv](/reeds2pras/test/reeds_cases/Pacific/inputs_case/outage_scheduled_static.csv)
+---
+
+  - [resources.csv](/reeds2pras/test/reeds_cases/Pacific/inputs_case/resources.csv)
+---
+
+  - [tech-subset-table.csv](/reeds2pras/test/reeds_cases/Pacific/inputs_case/tech-subset-table.csv)
+---
+
+  - [unitdata.csv](/reeds2pras/test/reeds_cases/Pacific/inputs_case/unitdata.csv)
+---
+
+  - [unitsize.csv](/reeds2pras/test/reeds_cases/Pacific/inputs_case/unitsize.csv)
+---
+
+  - [upgrade_link.csv](/reeds2pras/test/reeds_cases/Pacific/inputs_case/upgrade_link.csv)
+---
+
+
+####### [ReEDS_Augur](reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur) <a name='reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur'></a>
+
+####### [augur_data](reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data) <a name='reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data'></a>
+  - [cap_converter_2032.csv](/reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data/cap_converter_2032.csv)
+---
+
+  - [energy_cap_2032.csv](/reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data/energy_cap_2032.csv)
+---
+
+  - [max_cap_2032.csv](/reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data/max_cap_2032.csv)
+---
+
+  - [pras_load_2032.h5](/reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data/pras_load_2032.h5)
+---
+
+  - [pras_vre_gen_2032.h5](/reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data/pras_vre_gen_2032.h5)
+---
+
+  - [tran_cap_2032.csv](/reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data/tran_cap_2032.csv)
+---
+
+
 ###### [USA_VSC_2035](reeds2pras/test/reeds_cases/USA_VSC_2035) <a name='reeds2pras/test/reeds_cases/USA_VSC_2035'></a>
   - [cases_USA_VSC_2035.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/cases_USA_VSC_2035.csv)
 ---
@@ -3834,6 +3899,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ####### [inputs_case](reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case) <a name='reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case'></a>
   - [forcedoutage_hourly.h5](/reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case/forcedoutage_hourly.h5)
+---
+
+  - [hydcf.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case/hydcf.csv)
 ---
 
   - [outage_forced_static.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case/outage_forced_static.csv)
@@ -3849,6 +3917,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [unitsize.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case/unitsize.csv)
+---
+
+  - [upgrade_link.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case/upgrade_link.csv)
 ---
 
 

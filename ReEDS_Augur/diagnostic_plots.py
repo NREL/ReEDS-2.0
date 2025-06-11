@@ -1,7 +1,6 @@
 #%%### Imports
 import os
 import sys
-import site
 import pandas as pd
 import numpy as np
 import matplotlib as mpl
@@ -78,58 +77,6 @@ def group_techs(dfin, dfs, technamecol='i'):
             .map(lambda x: tech_map.get(x,x))
         )
     return dfout
-
-
-### Input-formatting functions
-def get_pras_system(sw, verbose=0):
-    """
-    Read a .pras .h5 file and return a dict of dataframes
-    """
-    import h5py
-    ###### Read all the tables in the .pras file
-    infile = os.path.join(sw['casedir'], 'ReEDS_Augur', 'PRAS',
-                          f"PRAS_{sw.t}i{sw.iteration}.pras")
-    pras = {}
-    with h5py.File(infile,'r') as f:
-        keys = list(f)
-        vals = {}
-        for key in keys:
-            vals[key] = list(f[key])
-            if verbose:
-                print(f"{key}:\n    {','.join(vals[key])}\n")
-            for val in vals[key]:
-                pras[key,val] = pd.DataFrame(f[key][val][...])
-                if verbose:
-                    print(f"{key}/{val}: {pras[key,val].shape}")
-            if verbose:
-                print('\n')
-
-    ###### Combine into more easily-usable dataframes
-    dfpras = {}
-    keys = {
-        ## our name: [pras key, pras capacity table name]
-        'storcap': ['storages', 'dischargecapacity'],
-        'gencap': ['generators', 'capacity'],
-        'genfailrate': ['generators', 'failureprobability'],
-        'genrepairrate': ['generators', 'repairprobability'],
-        # 'genstorcap': ['generatorstorages', 'gridinjectioncapacity'],
-    }
-    for key, val in keys.items():
-        dfpras[key] = pras[val[0], val[1]]
-        dfpras[key].columns = pd.MultiIndex.from_arrays(
-            [pras[val[0],'_core'].category.str.decode('UTF-8'),
-             pras[val[0],'_core'].region.str.decode('UTF-8')],
-            names=['i','r'],
-        )
-        if verbose:
-            print(key)
-            print(dfpras[key].columns.get_level_values('i').unique())
-
-    ### Load
-    dfpras['load'] = pras['regions','load'].rename(
-        columns=pras['regions','_core'].name.str.decode('UTF-8'))
-
-    return dfpras
 
 
 #%% Input-loading function
@@ -272,9 +219,12 @@ def get_inputs(sw):
 
     ### Load the PRAS system
     try:
-        pras_system = get_pras_system(sw)
+        pras_system = reeds.io.get_pras_system(
+            case=sw.casedir, year=sw.t, iteration=sw.iteration)
         for key in pras_system:
             pras_system[key].index = fulltimeindex
+        for key in ['gencap', 'storcap', 'genstorcap', 'genfailrate', 'genrepairrate']:
+            pras_system[key].columns = pras_system[key].columns.droplevel(['unit','name'])
     except FileNotFoundError as err:
         print(f"Failed to load .pras system: {err}")
         pras_system = dict()
@@ -548,13 +498,10 @@ def plot_pras_ICAP(sw, dfs):
         print('PRAS system was not loaded')
         return
     ### Collect the PRAS system capacities
-    gencap = dfs['pras_system']['gencap'].groupby(axis=1, level=0).sum()
-    storcap = dfs['pras_system']['storcap'].groupby(axis=1, level=0).sum()
-    # genstorcap = dfs['pras_system']['genstorcap'].groupby(axis=1, level=0).sum()
     cap = pd.concat([
-        gencap,
-        storcap,
-        # genstorcap,
+        dfs['pras_system']['gencap'].groupby(axis=1, level=0).sum(),
+        dfs['pras_system']['storcap'].groupby(axis=1, level=0).sum(),
+        dfs['pras_system']['genstorcap'].groupby(axis=1, level=0).sum(),
     ], axis=1)
     ## Drop any empties
     cap = cap.replace(0,np.nan).dropna(axis=1, how='all').fillna(0).astype(int)
@@ -619,15 +566,11 @@ def plot_augur_pras_capacity(sw, dfs):
     ### Get the colors
     tech_style = dfs['tech_style']
     ### Collect the PRAS system capacities
-    gencap = dfs['pras_system']['gencap']
-    storcap = dfs['pras_system']['storcap']
-    # genstorcap = dfs['pras_system']['genstorcap']
-    # load = dfs['pras_system']['load'] / 1e3
     cap = {}
     cap['pras'] = pd.concat([
-        gencap,
-        storcap,
-        # genstorcap,
+        dfs['pras_system']['gencap'],
+        dfs['pras_system']['storcap'],
+        dfs['pras_system']['genstorcap'],
     ], axis=1) / 1e3
     ## Drop any empties
     cap['pras'] = cap['pras'].replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
@@ -720,14 +663,11 @@ def plot_pras_ICAP_regional(sw, dfs, numdays=5):
     ).sum().nlargest(numdays).replace(0,np.nan).dropna()
 
     ### Collect the PRAS system capacities
-    gencap = dfs['pras_system']['gencap']
-    storcap = dfs['pras_system']['storcap']
-    # genstorcap = dfs['pras_system']['genstorcap']
     load = dfs['pras_system']['load'] / 1e3
     cap = pd.concat([
-        gencap,
-        storcap,
-        # genstorcap,
+        dfs['pras_system']['gencap'],
+        dfs['pras_system']['storcap'],
+        dfs['pras_system']['genstorcap'],
     ], axis=1) / 1e3
     ## Drop any empties
     cap = cap.replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
@@ -739,13 +679,13 @@ def plot_pras_ICAP_regional(sw, dfs, numdays=5):
     ## Aggregate by type
     def renamer(x):
         out = (x if x[0].startswith('battery')
-               else (x[0].strip('_01234567890*').lower(), x[1]))
+               else (x[0].strip('_01234567890*').lower(), *x[1:]))
         return out
     cap.columns = cap.columns.map(renamer)
     cap.columns = (
         cap.columns
-        .map(lambda x: ([i for i in tech_map.index if x[0].startswith(i)][0], x[1]))
-        .map(lambda x: (tech_map.get(x[0],x[0]), x[1]))
+        .map(lambda x: ([i for i in tech_map.index if x[0].startswith(i)][0], *x[1:]))
+        .map(lambda x: (tech_map.get(x[0],x[0]), *x[1:]))
     )
     cap = cap.groupby(axis=1, level=[1,0]).sum()
 
@@ -771,13 +711,18 @@ def plot_pras_ICAP_regional(sw, dfs, numdays=5):
             df = df[order]
             ### Plot it
             plots.stackbar(
-                df=df, ax=ax[coords[r]], colors=tech_style, net=False, align='edge')
-            ax[coords[r]].plot(range(len(df)), load.loc[date][r].values, c='k', lw=1)
+                df=df, ax=ax[coords[r]], colors=tech_style, net=False, align='edge',
+                width=pd.Timedelta('1H'),
+            )
+            ax[coords[r]].plot(
+                load.loc[date].index, load.loc[date][r].values, c='k', lw=1,
+                path_effects=[pe.withStroke(linewidth=1.7, foreground='w', alpha=0.8)],
+            )
             ### Formatting
             ax[coords[r]].set_title(r)
         ### Formatting
         plots.trim_subplots(ax=ax, nrows=nrows, ncols=ncols, nsubplots=len(zones))
-        ax[coords[zones[0]]].set_xlim(0,24)
+        ax[coords[zones[0]]].set_xlim(df.index[0], df.index[-1] + pd.Timedelta('1H'))
         ax[coords[zones[0]]].set_xticks([])
         ax[-1, 0].set_xlabel(date, x=0, ha='left', labelpad=10)
         ax[-1, 0].set_ylabel('ICAP [GW]', y=0, ha='left')
@@ -798,14 +743,11 @@ def plot_pras_unitsize_distribution(sw, dfs):
         print('PRAS system was not loaded')
         return
     savename = f"PRAS-unitcap-{sw['t']}.png"
-    gencap = dfs['pras_system']['gencap']
-    storcap = dfs['pras_system']['storcap']
-    # genstorcap = dfs['pras_system']['genstorcap']
     cap = (
         pd.concat([
-            gencap,
-            storcap,
-            # genstorcap,
+            dfs['pras_system']['gencap'],
+            dfs['pras_system']['storcap'],
+            dfs['pras_system']['genstorcap'],
         ], axis=1)
         .max().rename('MW').reset_index()
     )
@@ -826,9 +768,6 @@ def plot_pras_unitsize_distribution(sw, dfs):
         .str.replace('_upgrade','')
         .str.replace('_mod','')
     )
-    if 'new_blank_genstor' in cap.i.values:
-        if (cap.loc[cap.i=='new_blank_genstor','MW'] == 0).all():
-            cap = cap.loc[cap.i != 'new_blank_genstor'].copy()
 
     techs = cap.i.unique()
     nondisaggtechs = (
@@ -853,7 +792,7 @@ def plot_pras_unitsize_distribution(sw, dfs):
             range(len(df)), df.MW.sort_values().values,
             c=tech_style.get(i,'k'), label=i)
         ax[col].annotate(
-            f' {i}', (len(df), df.MW.max()),
+            f' {i}', (len(df)-1, df.MW.max()),
             fontsize=10, color=tech_style.get(i,'k'),
             path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.7)],
         )
@@ -869,6 +808,87 @@ def plot_pras_unitsize_distribution(sw, dfs):
     ax[0].set_title('Disaggregated techs')
     ax[1].set_title('Aggregated techs (PRAS FOR=0)')
     plots.despine(ax)
+    ## Save it
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
+    plt.close()
+
+
+def plot_pras_unitnumber(sw, dfs, level='country'):
+    """Number of PRAS units by technology, grouped by region level"""
+    if not len(dfs['pras_system']):
+        print('PRAS system was not loaded')
+        return
+    savename = f"PRAS-unitnumber-{level}-{sw['t']}.png"
+    cap = (
+        pd.concat([
+            dfs['pras_system']['gencap'],
+            dfs['pras_system']['storcap'],
+            dfs['pras_system']['genstorcap'],
+        ], axis=1)
+        .max().rename('MW').reset_index()
+    )
+    ## Get the colors
+    tech_map = dfs['tech_map'].copy()
+    tech_map.index = tech_map.index.str.lower()
+    tech_map = tech_map.str.lower()
+    tech_style = dfs['tech_style'].copy()
+    toadd = tech_style.loc[tech_style.index.str.endswith('_mod')]
+    toadd.index = toadd.index.str.replace('_mod','')
+    tech_style = pd.concat([tech_style,toadd])
+    ## Aggregate by type
+    cap.i = cap.i.map(
+        lambda x: x if x.startswith('battery') else (x.strip('_01234567890*').lower()))
+    cap.i = (
+        cap.i
+        .map(lambda x: tech_map.get(x,x))
+        .str.replace('_upgrade','')
+        .str.replace('_mod','')
+    )
+
+    order = cap.i.value_counts().index
+    colors = order.map(lambda x: tech_style.get(x, mpl.colors.to_hex('k')))
+
+    ## Group by hierarchy level
+    regions = sorted((
+        dfs['hierarchy'].index if level == 'r' else dfs['hierarchy'][level]
+    ).unique())
+    nrows, ncols, coords = plots.get_coordinates(regions)
+
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(max(ncols*2, 5), max(nrows*2, 3.75)),
+        sharex=True, sharey=True,
+    )
+    for region in regions:
+        _ax = (ax if nrows == ncols == 1 else ax[coords[region]])
+        rs = (
+            [region] if level == 'r'
+            else dfs['hierarchy'].loc[dfs['hierarchy'][level]==region].index
+        )
+        df = cap.loc[cap.r.isin(rs)].i.value_counts().reindex(order).fillna(0)
+        _ax.bar(
+            df.index, df.values, color=colors,
+        )
+        _ax.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
+        _ax.set_xticks(range(len(order)))
+        _ax.set_xticklabels(order, rotation=90, fontsize=9)
+        _ax.set_xlim(-0.5, len(order)-0.5)
+        _ax.annotate(
+            region.replace('_','\n') + f'\n{df.sum():.0f}',
+            (0.95,0.95), xycoords='axes fraction', ha='right', va='top',
+            fontsize='large', weight='bold',
+        )
+    labelax = (
+        ax if (nrows == ncols == 1)
+        else ax[0] if ((nrows == 1) or (ncols == 1))
+        else ax[-1,0]
+    )
+    labelax.set_ylabel('Number of units', y=0, ha='left')
+    plots.despine(ax)
+    plots.trim_subplots(ax, nrows, ncols, len(regions))
     ## Save it
     if savefig:
         plt.savefig(os.path.join(sw['savepath'],savename))
@@ -940,7 +960,10 @@ def plot_pras_load(sw, dfs):
 
 
 def map_pras_failure_rate(sw, dfs, aggfunc='mean', repair=False):
-    """Failure rates from PRAS"""
+    """
+    Failure rates from PRAS, indicating the probability that an online unit will fail
+    (which is different from the outage rate, which gives the average fraction of units
+    that are on outage over time, including mean time to repair)."""
     dfmap = reeds.io.get_dfmap(sw['casedir'])
     dfzones = dfmap['r']
 
@@ -1148,10 +1171,6 @@ def main(sw, augur_plots=1):
     """
     augur_plots [0-3]: Indicate how many plots to make (higher number = more plots)
     """
-    ### Local imports
-    site.addsitedir(os.path.join(sw['reeds_path'],'postprocessing'))
-    plots.plotparams()
-
     #%% Get the inputs
     dfs = get_inputs(sw)
 
@@ -1166,6 +1185,12 @@ def main(sw, augur_plots=1):
             plot_pras_unitsize_distribution(sw, dfs)
         except Exception:
             print('plot_pras_unitsize_distribution() failed:', traceback.format_exc())
+
+        try:
+            for level in ['country', 'transgrp', 'r']:
+                plot_pras_unitnumber(sw, dfs, level)
+        except Exception:
+            print('plot_pras_unitnumber() failed:', traceback.format_exc())
 
         try:
             plot_augur_pras_capacity(sw, dfs)
@@ -1219,12 +1244,6 @@ def main(sw, augur_plots=1):
     except Exception:
         print('plot_netloadhours_histogram() failed:', traceback.format_exc())
 
-    if int(sw['GSw_H2']) or int(sw['GSw_DAC']):
-        try:
-            plot_h2dac_load_timeseries(sw, dfs)
-        except Exception:
-            print('plot_h2dac_load_timeseries() failed:', traceback.format_exc())
-
     if augur_plots >= 2:
         try:
             plot_netload_profile(sw, dfs)
@@ -1256,14 +1275,11 @@ if __name__ == '__main__':
     iteration = args.iteration
 
     # #%%### Inputs for debugging
-    # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0/')
-    # casedir = (
-    #     '/Volumes/ReEDS/Users/pbrown/ReEDSruns/'
-    #     '20240112_stresspaper/20240313/v20240313_stresspaperE1_SP_DemHi_90by2035__core'
-    # )
-    # t = 2050
+    # reeds_path = os.path.expanduser('~/github3/ReEDS-2.0/')
+    # casedir = os.path.join(reeds_path, 'runs', 'v20250320_prasplotsM0_WestConnectSouth')
+    # t = 2026
     # interactive = True
-    # iteration = -1
+    # iteration = 0
     # augur_plots = 3
 
     #%%### INPUTS

@@ -37,9 +37,9 @@ tload(t) = no ;
 
 parameter
     cc_old_load(i,r,ccreg,ccseason,t)        "--MW-- cc_old loading in from the cc_out gdx file"
-    sdbin_size_load(ccreg,ccseason,sdbin,t)  "--MW-- bin_size loading in from the cc_out gdx file"
+    sdbin_size_load(ccreg,ccseason,sdbin,t)  "--MW-- bin_size power loading in from the cc_out gdx file"
     cc_mar_load(i,r,ccreg,ccseason,t)        "--fraction-- cc_mar loading in from the cc_out gdx file"
-    cc_dr_load(i,r,ccseason,t)               "--fraction--  cc_dr loading in from the cc_out gdx file"
+    cc_evmc_load(i,r,ccseason,t)               "--fraction--  cc_evmc loading in from the cc_out gdx file"
 ;
 
 
@@ -58,12 +58,14 @@ biosupply(usda_region,bioclass,"cap") = round(biosupply(usda_region,bioclass,"ca
 cc_storage(i,sdbin)$cc_storage(i,sdbin) = round(cc_storage(i,sdbin),3) ;
 cendiv_weights(r,cendiv)$cendiv_weights(r,cendiv) = round(cendiv_weights(r,cendiv), 3) ;
 cost_cap(i,t)$cost_cap(i,t) = round(cost_cap(i,t),2) ;
+cost_cap_energy(i,t)$cost_cap_energy(i,t) = round(cost_cap_energy(i,t),2) ;
 cost_co2_pipeline_fom(r,rr,t) =round(cost_co2_pipeline_fom(r,rr,t),2) ;
 cost_co2_pipeline_cap(r,rr,t) =round(cost_co2_pipeline_cap(r,rr,t),2) ;
 cost_co2_spurline_fom(r,cs,t) =  round(cost_co2_spurline_fom(r,cs,t),2) ;
 cost_co2_spurline_cap(r,cs,t) =  round(cost_co2_spurline_cap(r,cs,t),2) ;
 cost_co2_stor_bec(cs,t) = round(cost_co2_stor_bec(cs,t),2) ;
 cost_fom(i,v,r,t)$cost_fom(i,v,r,t) = round(cost_fom(i,v,r,t),2) ;
+cost_fom_energy(i,v,r,t)$cost_fom_energy(i,v,r,t) = round(cost_fom_energy(i,v,r,t),2) ;
 cost_h2_storage_cap(h2_stor,t) = round(cost_h2_storage_cap(h2_stor,t), 2) ;
 cost_h2_transport_cap(r,rr,t)$cost_h2_transport_cap(r,rr,t) = round(cost_h2_transport_cap(r,rr,t),2) ;
 cost_h2_transport_fom(r,rr,t)$cost_h2_transport_fom(r,rr,t) = round(cost_h2_transport_fom(r,rr,t),2) ;
@@ -77,7 +79,7 @@ degrade(i,tt,t)$degrade(i,tt,t) = round(degrade(i,tt,t),3) ;
 derate_geo_vintage(i,v)$derate_geo_vintage(i,v) = round(derate_geo_vintage(i,v),3) ;
 distance(r,rr,trtype)$distance(r,rr,trtype) = round(distance(r,rr,trtype),3) ;
 * non-CO2 emission/capture rates get small, here making sure accounting stays correct
-emit_rate(e,i,v,r,t)$valgen(i,v,r,t) = round(emit_rate(e,i,v,r,t),6) ;
+emit_rate(etype,e,i,v,r,t)$valgen(i,v,r,t) = round(emit_rate(etype,e,i,v,r,t),10) ;
 capture_rate(e,i,v,r,t)$valgen(i,v,r,t) = round(capture_rate(e,i,v,r,t),6) ;
 fuel_price(i,r,t)$fuel_price(i,r,t) = round(fuel_price(i,r,t),2) ;
 gasmultterm(cendiv,t)$gasmultterm(cendiv,t) = round(gasmultterm(cendiv,t),3) ;
@@ -141,13 +143,13 @@ set
 ;
 
 parameter
-    cc_dr_load2(loadset,i,r,ccseason,t)  "--fraction--  cc_dr loading in from the cc_out gdx file"
+    cc_evmc_load2(loadset,i,r,ccseason,t)  "--fraction--  cc_evmc loading in from the cc_out gdx file"
     cc_iter(i,v,r,ccseason,t,cciter)     "--fraction-- Actual capacity value in iteration cciter"
     cc_mar_load2(loadset,i,r,ccseason,t) "--fraction-- cc_mar loading in from the cc_out gdx file"
     cc_old_load2(loadset,i,r,ccseason,t) "--MW-- cc_old loading in from the cc_out gdx file"
     cc_scale(i,r,ccseason,t)             "--unitless-- scaling of marginal capacity value levels in intertemporal runs to equal total capacity value"
     cc_totmarg(i,r,ccseason,t)           "--MW-- original estimate of total capacity value for intertemporal, based on marginals"
-    sdbin_size_load2(loadset,ccreg,ccseason,sdbin,t) "--MW-- bin_size loading in from the cc_out gdx file"
+    sdbin_size_load2(loadset,ccreg,ccseason,sdbin,t)  "--MW-- bin_size power loading in from the cc_out gdx file"
 ;
 
 cc_scale(i,r,ccseason,t) = 0 ;
@@ -164,11 +166,14 @@ $ifthen.int %timetype%=="int"
 
 * Iteration tracking
 set cciter "placeholder for iteration number for tracking CC" /0*20/ ;
-parameter cap_iter(i,v,r,t,cciter)             "--MW-- Capacity by iteration"
-          gen_iter(i,v,r,t,cciter)             "--MWh-- Annual uncurtailed generation by iteration"
-          cap_firm_iter(i,v,r,ccseason,t,cciter) "--MW-- VRE Firm capacity by iteration"
+parameter cap_iter(i,v,r,t,cciter)                      "--MW-- Power apacity by iteration"
+          cap_energy_iter(i,v,r,t,cciter)               "--MWh-- Energy capacity by iteration"
+          gen_iter(i,v,r,t,cciter)                      "--MWh-- Annual uncurtailed generation by iteration"
+          cap_firm_iter(i,v,r,ccseason,t,cciter)        "--MW-- VRE Firm capacity by iteration"
+          cap_energy_firm_iter(i,v,r,ccseason,t,cciter) "--MWh-- VRE Firm energy capacity by iteration"
 ;
 cap_iter(i,v,r,t,cciter) = 0 ;
+cap_energy_iter(i,v,r,t,cciter) = 0 ;
 gen_iter(i,v,r,t,cciter) = 0 ;
 
 

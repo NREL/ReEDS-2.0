@@ -10,6 +10,7 @@ import shutil
 startTime = datetime.now()
 this_dir_path = os.path.dirname(os.path.realpath(__file__)) + '/'
 
+#USER INPUTS
 beg_year = 2021
 end_year = 2050
 weather_years = list(range(2007,2014))
@@ -17,6 +18,8 @@ known_years = [2021] + [x for x in range(2025, 2051, 5)]
 years = [x for x in range(beg_year, end_year+1)]
 eer_scenario = '20230604_reeds_load_baseline'
 input_file_dir = r'//nrelnas01/ReEDS/Users/ahamilto/NTPS/Demand_Analysis/6.4.23/6.4.23_load_files'
+
+#Get list of load source files and create output directory
 input_file_list = os.listdir(input_file_dir)
 output_dir = this_dir_path + 'outputs/load_hourly_ba_EST_EER_' + eer_scenario + '_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 os.mkdir(output_dir)

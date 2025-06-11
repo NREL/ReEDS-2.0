@@ -28,7 +28,11 @@ import os
 import sys
 import datetime
 import pandas as pd
+import scipy
+import sklearn.cluster
+import sklearn.neighbors
 import hourly_writetimeseries
+import hourly_plots
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
 ## Time the operation of this script
@@ -39,12 +43,12 @@ tic = datetime.datetime.now()
 ### FIXED INPUTS ###
 
 decimals = 3
-### Indicate whether to show plots interactively [default False]
+### Whether to show plots interactively [default False]
 interactive = False
-### Indicate whether to save the old h17 inputs for comparison
-debug = True
-### Indicate the full possible collection of weather years
+### Full possible collection of weather years
 all_weatheryears = list(range(2007,2014)) + list(range(2016,2024))
+### VRE techs considered for GSw_PRM_StressSeedMinRElevel and GSw_HourlyMinRElevel
+techs_min_vre = ['upv', 'wind-ons']
 
 #%% ===========================================================================
 ### --- FUNCTIONS ---
@@ -145,39 +149,26 @@ def optimize_period_weights(profiles_fitperiods, numclusters=100):
 
     ### Truncate based on numclusters, scale appropriately, and convert to integers
     ### Keep the the 'numclusters' highest-weighted days
-    rweights = (weights.sort_values(ascending=False)[:numclusters].iloc[::-1])
+    rweights = (weights.sort_values(ascending=False)[:numclusters])
     ### Scale so that the weights sum to numdays (have to do if numclusters is small)
     rweights *= numdays / rweights.sum()
-    ### Sort from smallest to largest and convert to integers
-    iweights = rweights.iloc[::-1].round(0).astype(int)
+    ### Convert to integers
+    iweights = rweights.round(0).astype(int)
+    ### Scale all weights little by little until they sum to number of actual days
     sumweights = iweights.sum()
     diffweights = sumweights - numdays
-    ### Add or drop days as necessary to sum to numdays
-    if diffweights < 0:
-        ### Scale it up little by little until it sums to 365
-        for i in range(1000000):
-            iweights = (rweights.iloc[::-1]*(1+0.00001*i)).round(0).astype(int)
-            sumweights = iweights.sum()
-            diffweights = sumweights - numdays
-            if diffweights >= 0:
-                break
-    elif diffweights > 0:
-        for d in iweights.index:
-            if iweights[d] >= diffweights:
-                ### Just subtract diffweights from the smallest weight and stop
-                iweights[d] -= diffweights
-                break
-            else:
-                ### Subtract the whole value of the smallest weight, then keep going
-                diffweights -= iweights[d]
-                iweights[d] = 0
+    increment = 0.00001 * (1 if diffweights < 0 else -1)
+    for i in range(1000000):
+        iweights = (rweights * (1 + increment*i)).round(0).astype(int)
+        if iweights.sum() == numdays:
+            break
 
-    iweights = iweights.replace(0,np.nan).dropna().astype(int).iloc[::-1]
+    iweights = iweights.replace(0,np.nan).dropna().astype(int)
     ### Make sure it worked
     if iweights.sum() != numdays:
         raise ValueError(f'Sum of rounded weights = {iweights.sum()} != {numdays}')
 
-    return profiles_day, iweights
+    return profiles_day, iweights, weights
 
 
 def assign_representative_days(profiles_day, rweights):
@@ -302,23 +293,52 @@ def cluster_profiles(profiles_fitperiods, sw, forceperiods_yearperiod):
         cf_representative - hourly profile of centroid or medoid capacity factor values
                             for all regions and technologies
         load_representative - hourly profile of centroid or medoid load values for all regions
-        period_szn - day indices of each cluster center
+    period_szn - day indices of each cluster center
     """
     ###### Run the clustering
-    if sw['GSw_HourlyClusterAlgorithm'] == 'hierarchical':
-        print("Performing hierarchical clustering")
-        import scipy
-        from sklearn.cluster import AgglomerativeClustering
-        from sklearn.neighbors import NearestCentroid
-        #run the clustering and get centroids based on all years of data input
-        clusters = AgglomerativeClustering(
-            n_clusters=int(sw['GSw_HourlyNumClusters']), affinity='euclidean', linkage='ward')
+    print(f"Performing {sw.GSw_HourlyClusterAlgorithm} clustering")
+    if (
+        sw['GSw_HourlyClusterAlgorithm'].startswith('hierarchical')
+        or sw['GSw_HourlyClusterAlgorithm'].lower().startswith('kme')
+    ):
+        if sw['GSw_HourlyClusterAlgorithm'].startswith('hierarchical'):
+            args = sw['GSw_HourlyClusterAlgorithm'].split('_')
+            if len(args) > 1:
+                metric = args[1]
+                linkage = args[2]
+            else:
+                metric = 'euclidean'
+                linkage = 'ward'
+            clusters = sklearn.cluster.AgglomerativeClustering(
+                n_clusters=int(sw['GSw_HourlyNumClusters']),
+                metric=metric, linkage=linkage,
+            )
+        elif sw['GSw_HourlyClusterAlgorithm'].lower().startswith('kmeans'):
+            clusters = sklearn.cluster.KMeans(
+                n_clusters=int(sw['GSw_HourlyNumClusters']),
+                random_state=0, n_init='auto', max_iter=1000,
+            )
+        elif sw['GSw_HourlyClusterAlgorithm'].lower().startswith('kmedoids'):
+            import sklearn_extra.cluster
+            args = sw['GSw_HourlyClusterAlgorithm'].split('_')
+            if len(args) > 1:
+                metric = args[1]
+                init = args[2]
+            else:
+                metric = 'euclidean'
+                init = 'heuristic'
+            clusters = sklearn_extra.cluster.KMedoids(
+                n_clusters=int(sw['GSw_HourlyNumClusters']),
+                metric=metric, init=init, method='pam',
+                max_iter=1000, random_state=0,
+            )
+        ### Generate the fits
         idx = clusters.fit_predict(profiles_fitperiods)
+        ### Get nearest period to each centroid
         centroids = pd.DataFrame(
-            NearestCentroid().fit(profiles_fitperiods, idx).centroids_,
+            sklearn.neighbors.NearestCentroid().fit(profiles_fitperiods, idx).centroids_,
             columns=profiles_fitperiods.columns,
         )
-        ### Get nearest period to each centroid
         nearest_period = {
             i:
             profiles_fitperiods.loc[:,idx==i,:].apply(
@@ -344,9 +364,8 @@ def cluster_profiles(profiles_fitperiods, sw, forceperiods_yearperiod):
         ]).sort_values('period').set_index('period').szn
 
     elif sw['GSw_HourlyClusterAlgorithm'] in ['opt','optimized','optimize']:
-        print("Performing optimized clustering")
         ### Optimize the weights of representative days
-        profiles_day, rweights = optimize_period_weights(
+        profiles_day, rweights, weights = optimize_period_weights(
             profiles_fitperiods=profiles_fitperiods, numclusters=int(sw['GSw_HourlyNumClusters']))
         ### Optimize the assignment of actual days to representative days
         a2r = assign_representative_days(profiles_day=profiles_day.round(4), rweights=rweights)
@@ -366,12 +385,9 @@ def cluster_profiles(profiles_fitperiods, sw, forceperiods_yearperiod):
 
     elif 'user' in sw['GSw_HourlyClusterAlgorithm'].lower():
         print('Using user-defined representative period weights')
-        period_szn_user = pd.read_csv(
+        period_szn = pd.read_csv(
             os.path.join(inputs_case,'period_szn_user.csv')
-        )
-        period_szn = period_szn_user.loc[
-            period_szn_user.scenario==sw['GSw_HourlyClusterAlgorithm']
-        ].set_index('actual_period').rep_period.rename('szn')
+        ).set_index('actual_period').rep_period.rename('szn')
         period_szn.index = period_szn.index.map(szn2yearperiod).values
         period_szn.index = period_szn.index.rename('period')
 
@@ -450,8 +466,6 @@ def main(
     inputs_case,
     periodtype='rep',
     minimal=0,
-    make_plots=1,
-    figpathtail='',
 ):
     """
     """
@@ -459,17 +473,23 @@ def main(
     if not isinstance(sw['GSw_HourlyClusterWeights'], pd.Series):
         sw['GSw_HourlyClusterWeights'] = pd.Series(json.loads(
             '{"'
-            + (':'.join(','.join(sw['GSw_HourlyClusterWeights'].split('__')).split('_'))
+            + (':'.join(','.join(sw['GSw_HourlyClusterWeights'].split('/')).split('_'))
             .replace(':','":').replace(',',',"'))
             +'}'
         ))
+        sw['GSw_HourlyClusterWeights'].index = sw['GSw_HourlyClusterWeights'].index.rename('property')
+        sw['GSw_HourlyClusterWeights'] = (
+            sw['GSw_HourlyClusterWeights'].loc[sw['GSw_HourlyClusterWeights'] != 0]
+        ).copy()
     if not isinstance(sw['GSw_HourlyWeatherYears'], list):
         sw['GSw_HourlyWeatherYears'] = [int(y) for y in sw['GSw_HourlyWeatherYears'].split('_')]
     if not isinstance(sw['GSw_CSP_Types'], list):
         sw['GSw_CSP_Types'] = [int(i) for i in sw['GSw_CSP_Types'].split('_')]
+    ## VRE techs that can be used for profiles
+    techs_vre = ['upv', 'wind-ons', 'wind-ofs'] if int(sw.GSw_OfsWind) else ['upv', 'wind-ons']
 
     #%% Direct plots to outputs folder
-    figpath = os.path.join(inputs_case,'..','outputs',f'hourly{figpathtail}')
+    figpath = os.path.join(inputs_case,'..','outputs','maps')
     os.makedirs(figpath, exist_ok=True)
     os.makedirs(os.path.join(inputs_case, periodtype), exist_ok=True)
 
@@ -479,11 +499,6 @@ def main(
         os.path.join(inputs_case, 'modeledyears.csv')).columns.astype(int)
     # Use agglevel_variables function to obtain spatial resolution variables 
     agglevel_variables  = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)
-
-    ### Get original seasons (for 8760)
-    d_szn_in = pd.read_csv(
-        os.path.join(inputs_case,'d_szn_1yr.csv'),
-        index_col='*d').squeeze(1)
 
     #%% Get map from yperiod, hour, and h_of_period to timestamp
     timestamps = make_timestamps(sw)
@@ -512,12 +527,10 @@ def main(
 
     #%% Load supply curves to use for available capacity weighting
     sc = {
-        'wind-ons': pd.read_csv(
-            os.path.join(inputs_case,"wind-ons_sc.csv")
-        ).groupby(['region','class'], as_index=False).capacity.sum(),
-        'upv': pd.read_csv(
-            os.path.join(inputs_case,'upv_sc.csv')
-        ).groupby(['region','class'], as_index=False).capacity.sum(),
+        tech: pd.read_csv(
+            os.path.join(inputs_case, f'{tech}_sc.csv')
+        ).groupby(['region','class'], as_index=False).capacity.sum()
+        for tech in techs_vre
     }
     sc = (
         pd.concat(sc, names=['tech','drop'], axis=0)
@@ -527,18 +540,12 @@ def main(
     sc['i'] = sc.tech+'_'+sc['class'].astype(str)
     sc['resource'] = sc.i + '|' + sc.region
     sc['aggreg'] = sc.region.map(rmap)
-    ### Keep all resource classes for now
-    useclass = {'upv': range(1,11), 'wind-ons': range(1,11)}
-    for tech, classes in useclass.items():
-        drop = sc.loc[(sc.tech==tech) & ~(sc['class'].isin(classes))].index
-        sc.drop(drop, axis=0, inplace=True)
 
     #%%### Load RE CF data, then take available-capacity-weighted average by (tech,region)
     print("Collecting 8760 capacity factor data")
     recf = reeds.io.read_file(os.path.join(inputs_case, 'recf.h5'), parse_timestamps=True)
     ### Downselect to techs used for rep-period selection
-    keep = sw['GSw_HourlyClusterWeights'].index.tolist()
-    recf = recf[[c for c in recf if any([c.startswith(p) for p in keep])]].copy()
+    recf = recf[[c for c in recf if any([c.startswith(p) for p in techs_vre])]].copy()
     ### Multiply by available capacity for weighted average
     recf *= sc.set_index('resource')['capacity']
     ### Downselect to modeled years, add descriptive time index
@@ -562,10 +569,10 @@ def main(
             tech: identify_min_periods(
                 df=recf, hierarchy=hierarchy, rmap1=rmap1,
                 level=sw['GSw_HourlyMinRElevel'], prefix=tech)
-            for tech in ['upv','wind-ons']
+            for tech in techs_min_vre
         }
     else:
-        forceperiods_minre = {'upv':set(), 'wind-ons':set()}
+        forceperiods_minre = {tech: set() for tech in techs_min_vre}
 
     ### Aggregate to (tech,GSw_HourlyClusterRegionLevel)
     recf_agg = recf.copy()
@@ -607,8 +614,22 @@ def main(
     load_agg = load.copy()
     load_agg.columns = load_agg.columns.map(rmap)
     load_agg = load_agg.groupby(axis=1, level=0).sum()
-    ### Normalize to [0,1] to match range of PV and wind CF
-    load_agg /= load_agg.max()
+    match sw.GSw_HourlyClusterLoadNorm:
+        case 'none':
+            ## Don't normalize load
+            pass
+        case 'regionmax':
+            ## Normalize each region to [0,1]
+            load_agg /= load_agg.max()
+        case 'maxmax':
+            ## Divide each region by largest regional max across all regions
+            load_agg /= load_agg.max().max()
+        case 'maxmin':
+            ## Divide each region by smallest regional max across all regions
+            load_agg /= load_agg.max().min()
+        case _:
+            ## Like 'maxmin' but scaled by the provided numeric value
+            load_agg /= load_agg.max().min() * float(sw.GSw_HourlyClusterLoadNorm)
 
     ### Get the full list of forced periods
     forceperiods = forceperiods_load.copy()
@@ -641,9 +662,12 @@ def main(
     forceperiods_write.drop_duplicates('szn', inplace=True)
 
     ### Package profiles into one dataframe
-    profiles = pd.concat(
-        {'load':load_agg, 'upv':recf_agg['upv'], 'wind-ons':recf_agg['wind-ons']},
-        axis=1, names=('property', 'region'),
+    profiles = pd.concat({
+        **{'load': load_agg},
+        **{tech: recf_agg[tech] for tech in techs_vre if tech in recf_agg}
+    },
+        axis=1,
+        names=('property', 'region'),
     ).unstack('h_of_period')
 
     ### Drop forceperiods for clustering
@@ -660,40 +684,50 @@ def main(
         profiles_fitperiods = profiles_fitperiods_hourly.copy()
 
     #%% Plots
-    if make_plots:
+    if int(sw.debug):
         try:
-            import hourly_plots as plots_h
-        except Exception as err:
-            print(f'import of hourlyPlots failed with the following error:\n{err}')
-    if make_plots >= 3:
-        try:
-            plots_h.plot_unclustered_periods(profiles, sw, reeds_path, figpath)
+            hourly_plots.plot_unclustered_periods(profiles, sw, reeds_path, figpath)
         except Exception as err:
             print('plot_unclustered_periods failed with the following error:\n{}'.format(err))
 
         try:
-            plots_h.plot_feature_scatter(profiles_fitperiods, reeds_path, figpath)
+            hourly_plots.plot_feature_scatter(profiles_fitperiods, reeds_path, figpath)
         except Exception as err:
             print('plot_feature_scatter failed with the following error:\n{}'.format(err))
 
 
     #%%### Determine representative periods
-    print("Beginning clustering of capacity factors and load")
-    #identify clusters mapping 8760 to some number of periods based on input arguments:
+    print("Identify and weight representative periods")
+    ## First weight the profiles
+    profiles_fitperiods_weighted = (
+        profiles_fitperiods
+        .multiply(sw.GSw_HourlyClusterWeights, axis=1, level='property')
+        .dropna(axis=1, how='all')
+    )
 
     ## Representative days or weeks
     if sw['GSw_HourlyType'] in ['day','wek']:
-        # profiles_fitperiods.to_csv(os.path.join(inputs_case, periodtype, 'profiles_fitperiods.csv'))
         rep_periods, period_szn = cluster_profiles(
-            profiles_fitperiods=profiles_fitperiods, sw=sw,
-            forceperiods_yearperiod=forceperiods_yearperiod)
+            profiles_fitperiods=profiles_fitperiods_weighted,
+            sw=sw,
+            forceperiods_yearperiod=forceperiods_yearperiod,
+        )
         print("Clustering complete")
 
     ## 8760
     elif sw['GSw_HourlyType']=='year':
         ### For 8760 we use the original seasons
-        period_szn = pd.Series(d_szn_in.values, index=range(1,366), name='szn')
-        period_szn.index = period_szn.index.rename('period')
+        month2quarter = pd.read_csv(
+            os.path.join(inputs_case, 'month2quarter.csv'),
+            index_col='month',
+        ).squeeze(1).map(lambda x: x[:4])
+
+        period_szn = pd.Series(
+            index=timestamps_myr.drop_duplicates('yperiod').yperiod.values,
+            data=timestamps_myr.drop_duplicates('yperiod').index.month.map(month2quarter),
+            name='szn',
+        ).rename_axis('period')
+
         rep_periods = period_szn.index.tolist()
         forceperiods_write = pd.DataFrame(columns=['property','region','reason','year','yperiod'])
 
@@ -705,9 +739,9 @@ def main(
         stressperiods_minre = {
             tech: identify_min_periods(
                 df=recf, hierarchy=hierarchy, rmap1 = rmap1, level=sw['GSw_PRM_StressSeedMinRElevel'], prefix=tech)
-            for tech in ['upv','wind-ons']}
+            for tech in techs_min_vre}
     else:
-        stressperiods_minre = {'upv':set(), 'wind-ons':set()}
+        stressperiods_minre = {tech: set() for tech in techs_min_vre}
 
     if ((not int(sw.GSw_PRM_CapCredit))
         and (sw['GSw_PRM_StressSeedLoadLevel'].lower() not in ['false','none'])
@@ -807,39 +841,21 @@ def main(
 
 
     #%%### Plot some stuff
-    if make_plots >= 3:
+    try:
+        hourly_plots.plot_ldc(
+            period_szn, profiles, rep_periods,
+            forceperiods_write, sw, reeds_path, figpath)
+    except Exception as err:
+        print('plot_ldc failed with the following error:\n{}'.format(err))
+
+    if int(sw.debug):
         try:
-            plots_h.plot_clustered_days(
-                profiles_fitperiods_hourly, profiles, rep_periods,
-                forceperiods_yearperiod, sw, reeds_path, figpath)
+            hourly_plots.plot_load_days(profiles, rep_periods, period_szn, sw, reeds_path, figpath)
         except Exception as err:
-            print('plot_clustered_days failed with the following error:\n{}'.format(err))
+            print('plot_load_days failed with the following error:\n{}'.format(err))
 
         try:
-            plots_h.plot_clusters_pca(profiles_fitperiods_hourly, sw, reeds_path, figpath)
-        except Exception as err:
-            print('plot_clusters_pca failed with the following error:\n{}'.format(err))
-
-    if make_plots >= 2:
-        try:
-            plots_h.plots_original(
-                profiles, rep_periods, period_szn,
-                sw, reeds_path, figpath, make_plots)
-        except Exception as err:
-            print('plots_original failed with the following error:\n{}'.format(err))
-
-    ### Plot duration curves
-    if make_plots >= 1:
-        try:
-            plots_h.plot_ldc(
-                period_szn, profiles, rep_periods,
-                forceperiods_write, sw, reeds_path, figpath)
-        except Exception as err:
-            print('plot_ldc failed with the following error:\n{}'.format(err))
-
-    if make_plots >= 3:
-        try:
-            plots_h.plot_8760(profiles, period_szn, rep_periods, sw, reeds_path, figpath)
+            hourly_plots.plot_8760(profiles, period_szn, sw, reeds_path, figpath)
         except Exception as err:
             print('plot_8760 failed with the following error:\n{}'.format(err))
 
@@ -870,10 +886,8 @@ def main(
 
     #%% Write the seed stress periods to use for the PRM constraint
     if 'user' in sw.GSw_PRM_StressModel:
-        stressperiods_seed = pd.read_csv(
-            os.path.join(
-               inputs_case, f'stressperiods_{sw.GSw_PRM_StressModel}.csv')
-        )
+        stressperiods_seed = pd.read_csv(os.path.join(inputs_case, 'stressperiods_user.csv'))
+        stressperiods_seed.to_csv(os.path.join(inputs_case, 'stressperiods_seed.csv'), index=False)
         _missing = [t for t in modelyears if t not in stressperiods_seed.t.unique()]
         if len(_missing):
             raise Exception(f"Missing user-defined stress periods for {','.join(map(str, _missing))}")
@@ -928,8 +942,7 @@ if __name__ == '__main__':
     # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # inputs_case = os.path.join(
     #     reeds_path,'runs',
-    #     'v20250129_cspfixM0_ISONE','inputs_case','')
-    # make_plots = 0
+    #     'v20250522_yamM0_KS','inputs_case','')
     # interactive = True
 
     #%% Set up logger
@@ -940,22 +953,17 @@ if __name__ == '__main__':
 
     #%% Inputs from switches
     sw = reeds.io.get_switches(inputs_case)
-    make_plots = int(sw.hourly_cluster_plots)
-    figpathtail = ''
 
     #######################################
     #%% Identify the representative periods
-    main(
-        sw=sw, reeds_path=reeds_path, inputs_case=inputs_case,
-        make_plots=make_plots, figpathtail=figpathtail,
-    )
+    main(sw=sw, reeds_path=reeds_path, inputs_case=inputs_case)
 
     ####################################################
     #%% Write timeseries data for representative periods
     hourly_writetimeseries.main(
         sw=sw, reeds_path=reeds_path, inputs_case=inputs_case,
         periodtype='rep',
-        make_plots=make_plots, figpathtail=figpathtail,
+        make_plots=1,
     )
 
     ############################################
@@ -967,7 +975,7 @@ if __name__ == '__main__':
         hourly_writetimeseries.main(
             sw=sw, reeds_path=reeds_path, inputs_case=inputs_case,
             periodtype=f'stress{t}i0',
-            make_plots=0, figpathtail=figpathtail,
+            make_plots=0,
         )
 
     #%% All done

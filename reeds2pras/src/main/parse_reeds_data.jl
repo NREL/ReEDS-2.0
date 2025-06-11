@@ -70,6 +70,10 @@ function parse_reeds_data(
     unitsize_data = get_unitsize_mapping(ReEDS_data)
     unitsize_dict = Dict(unitsize_data[!, "tech"] .=> unitsize_data[!, "atb_capacity_MW"])
 
+    @info "reading MTTR data"
+    mttr_df = get_MTTR_data(ReEDS_data)
+    mttr_dict = Dict(mttr_df[!, "tech"] .=> mttr_df[!, "mean_time_to_repair"])
+
     @info "Processing conventional/thermal generators..."
     thermal_gens = process_thermals_with_disaggregation(
         ReEDS_data,
@@ -79,6 +83,7 @@ function parse_reeds_data(
         unitsize_dict,
         timesteps,
         solve_year,
+        mttr_dict,
         user_inputs,
     )
     @info "Processing variable generation..."
@@ -88,6 +93,7 @@ function parse_reeds_data(
         FOR_dict,
         ReEDS_data,
         timesteps,
+        mttr_dict,
         user_inputs,
     )
 
@@ -100,6 +106,7 @@ function parse_reeds_data(
         ReEDS_data,
         timesteps,
         solve_year,
+        mttr_dict,
         user_inputs,
     )
 
@@ -113,6 +120,7 @@ function parse_reeds_data(
         ReEDS_data,
         solve_year,
         timesteps,
+        mttr_dict,
         user_inputs,
         unitsize_dict,
         hydro_energylim = hydro_energylim,

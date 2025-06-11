@@ -64,6 +64,11 @@ function parse_commandline()
             arg_type = Int
             default = 0
             required = false
+        "--write_availability"
+            help = "Write the sample-level generator and storage availability"
+            arg_type = Int
+            default = 0
+            required = false
         "--iteration"
             help = "Solve-year iteration number (only used in file label)"
             arg_type = Int
@@ -133,36 +138,47 @@ end
 """
 function run_pras(pras_system_path::String, args::Dict)
     #%% Load the system model
-    sys = 
-    try
-        @info "Parsing PRAS System ..."
-        PRAS.SystemModel(pras_system_path);
-    catch
-        error("Cannot parse the PRAS System ...")
+    @info "Parsing PRAS System ..."
+    sys = PRAS.SystemModel(pras_system_path);
+
+    #%% Specify the results to save
+    resultspec = Dict{String,Any}("short" => PRAS.Shortfall())
+    if args["write_flow"] == 1
+        resultspec["flow"] = PRAS.Flow()
     end
-   
+    if args["write_surplus"] == 1
+        resultspec["surplus"] = PRAS.Surplus()
+    end
+    if args["write_energy"] == 1
+        resultspec["energy"] = PRAS.StorageEnergy()
+    end
+    if args["write_availability"] == 1
+        resultspec["avail_gen"] = PRAS.GeneratorAvailability()
+        resultspec["avail_stor"] = PRAS.StorageAvailability()
+        resultspec["avail_genstor"] = PRAS.GeneratorStorageAvailability()
+        resultspec["energy_samples"] = PRAS.StorageEnergySamples()
+    end
+
     #%% Run PRAS
-    short, flow, surplus, energy = PRAS.assess(
+    results_tuple = PRAS.assess(
         sys,
         PRAS.SequentialMonteCarlo(
             samples=args["samples"], threaded=true, verbose=true, seed=1),
-        PRAS.Shortfall(),
-        PRAS.Flow(),
-        PRAS.Surplus(),
-        PRAS.StorageEnergy()
+        values(resultspec)...
     )
+    results = Dict{String,Any}(zip(keys(resultspec), results_tuple))
 
     #%% Print some results for the entire modeled region to show it worked
-    @info "$(PRAS.LOLE(short)) event-h"
-    @info "$(PRAS.EUE(short)) MWh"
-    @info "NEUE = $(1e6 * PRAS.EUE(short).eue.estimate / sum(sys.regions.load)) ppm"
+    @info "$(PRAS.LOLE(results["short"])) event-h"
+    @info "$(PRAS.EUE(results["short"])) MWh"
+    @info "NEUE = $(1e6 * PRAS.EUE(results["short"]).eue.estimate / sum(sys.regions.load)) ppm"
 
     #%% Print some more detailed results if debugging
     for (i, reg) in enumerate(sys.regions.names)
-        @debug "$reg: $(round(PRAS.LOLE(short,reg).lole.estimate)) event-h"
-        @debug "$reg: $(round(PRAS.EUE(short,reg).eue.estimate)) MWh"
+        @debug "$reg: $(round(PRAS.LOLE(results["short"],reg).lole.estimate)) event-h"
+        @debug "$reg: $(round(PRAS.EUE(results["short"],reg).eue.estimate)) MWh"
         @debug "$reg: NEUE = $(round(
-            1e6 * PRAS.EUE(short,reg).eue.estimate
+            1e6 * PRAS.EUE(results["short"],reg).eue.estimate
             / sum(sys.regions.load[i,:])
         )) ppm\n\n"
     end
@@ -174,13 +190,13 @@ function run_pras(pras_system_path::String, args::Dict)
     ## First for the whole modeled area (labeled as "USA" but if modeling a smaller
     ## region (speicified by GSw_Region) it will be for that modeled region)
     dfout = DF.DataFrame(
-        USA_LOLE=[PRAS.LOLE(short,h).lole.estimate for h in sys.timestamps],
-        USA_EUE=[PRAS.EUE(short,h).eue.estimate for h in sys.timestamps],
+        USA_LOLE=[PRAS.LOLE(results["short"],h).lole.estimate for h in sys.timestamps],
+        USA_EUE=[PRAS.EUE(results["short"],h).eue.estimate for h in sys.timestamps],
     )
     ## Now for each constituent region
     for (i,r) in enumerate(sys.regions.names)
-        dfout[!, "$(r)_LOLE"] = [PRAS.LOLE(short,r,h).lole.estimate for h in sys.timestamps]
-        dfout[!, "$(r)_EUE"] = [PRAS.EUE(short,r,h).eue.estimate for h in sys.timestamps]
+        dfout[!, "$(r)_LOLE"] = [PRAS.LOLE(results["short"],r,h).lole.estimate for h in sys.timestamps]
+        dfout[!, "$(r)_EUE"] = [PRAS.EUE(results["short"],r,h).eue.estimate for h in sys.timestamps]
     end
 
     #%% Write it
@@ -200,9 +216,9 @@ function run_pras(pras_system_path::String, args::Dict)
     ### Flow
     if args["write_flow"] == 1
         dfflow = DF.DataFrame()
-        for i in flow.interfaces
+        for i in results["flow"].interfaces
             ## Flow results are tuples of (mean, standard deviation). Keep the mean.
-            dfflow[!, "$(i)"] = [flow[i,h][1] for h in sys.timestamps]
+            dfflow[!, "$(i)"] = [results["flow"][i,h][1] for h in sys.timestamps]
         end
         ## Write it
         flowfile = replace(outfile, ".h5"=>"-flow.h5")
@@ -213,12 +229,13 @@ function run_pras(pras_system_path::String, args::Dict)
         end
         @info("Wrote PRAS flow to $(flowfile)")
     end
+
     ### Surplus
     if args["write_surplus"] == 1
         dfsurplus = DF.DataFrame()
         for r in sys.regions.names
             ## Surplus results are tuples of (mean, standard deviation). Keep the mean.
-            dfsurplus[!, "$(r)"] = [surplus[r,h][1] for h in sys.timestamps]
+            dfsurplus[!, "$(r)"] = [results["surplus"][r,h][1] for h in sys.timestamps]
         end
         ## Write it
         surplusfile = replace(outfile, ".h5"=>"-surplus.h5")
@@ -234,7 +251,7 @@ function run_pras(pras_system_path::String, args::Dict)
         dfenergy = DF.DataFrame()
         for i in sys.storages.names
             ## Energy results are tuples of (mean, standard deviation). Keep the mean.
-            dfenergy[!, strip("$(i)", '_')] = [energy[i,h][1] for h in sys.timestamps]
+            dfenergy[!, strip("$(i)", '_')] = [results["energy"][i,h][1] for h in sys.timestamps]
         end
         ## Write it
         energyfile = replace(outfile, ".h5"=>"-energy.h5")
@@ -245,6 +262,59 @@ function run_pras(pras_system_path::String, args::Dict)
         end
         @info("Wrote PRAS storage energy to $(energyfile)")
     end
+
+    ### Sample-level generator and storage availability
+    if args["write_availability"] == 1
+        dictavail = Dict(s => DF.DataFrame() for s = 1:args["samples"])
+        for s in range(1, args["samples"])
+            dictavail[s] = hcat(
+                DF.DataFrame(
+                    transpose(getindex.(results["avail_gen"][:, :], s)),
+                    strip.(results["avail_gen"].generators, '_')
+                ),
+                DF.DataFrame(
+                    transpose(getindex.(results["avail_stor"][:, :], s)),
+                    strip.(results["avail_stor"].storages, '_')
+                ),
+                DF.DataFrame(
+                    transpose(getindex.(results["avail_genstor"][:, :], s)),
+                    strip.(results["avail_genstor"].generatorstorages, '_')
+                ),
+            )
+        end
+        ## Write it
+        availabilityfile = replace(outfile, ".h5"=>"-avail.h5")
+        HDF5.h5open(availabilityfile, "w") do f
+            ## Create a group for each sample. Within each group, write an array for each unit.
+            for s in range(1, args["samples"])
+                HDF5.create_group(f, "$s")
+                for column in DF._names(dictavail[s])
+                    f["$s"]["$column", compress=4] = convert(Array, dictavail[s][!, column])
+                end
+            end
+        end
+        @info("Wrote PRAS unit availability to $(availabilityfile)")
+        ### Same for storage energy by sample
+        dictstoravail = Dict(s => DF.DataFrame() for s = 1:args["samples"])
+        for s in range(1, args["samples"])
+            dictstoravail[s] = DF.DataFrame(
+                transpose(getindex.(results["energy_samples"][:, :], s)),
+                strip.(results["energy_samples"].storages, '_')
+            )
+        end
+        ## Write it
+        energysamplesfile = replace(outfile, ".h5"=>"-energy_samples.h5")
+        HDF5.h5open(energysamplesfile, "w") do f
+            for s in range(1, args["samples"])
+                HDF5.create_group(f, "$s")
+                for column in DF._names(dictstoravail[s])
+                    f["$s"]["$column", compress=4] = convert(Array, dictstoravail[s][!, column])
+                end
+            end
+        end
+        @info("Wrote PRAS storage energy by sample to $(energysamplesfile)")
+    end
+
     #%%
     return dfout
 end
@@ -304,16 +374,17 @@ if abspath(PROGRAM_FILE) == @__FILE__
     #     "reeds_path" => "/Users/pbrown/github2/ReEDS-2.0",
     #     "reedscase" => (
     #         "/Users/pbrown/github2/ReEDS-2.0/runs/"
-    #         *"v20240705_tforM2_Pacific"),
-    #     "solve_year" => 2020,
+    #         *"v20250411_cleanupM1_Pacific"),
+    #     "solve_year" => 2026,
     #     "weather_year" => 2007,
     #     "samples" => 10,
     #     "iteration" => 0,
-    #     # "timesteps" => 8760,
     #     "timesteps" => 61320,
+    #     "hydro_energylim" => 1,
     #     "write_flow" => 1,
     #     "write_surplus" => 1,
     #     "write_energy" => 1,
+    #     "write_availability" => 1,
     #     "overwrite" => 1,
     #     "debug" => 0,
     #     "include_samples" => 0,

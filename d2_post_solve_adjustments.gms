@@ -72,7 +72,7 @@ emit_r_tc(r,t)$tmodel_new(t) =
 
 * Emissions from generation
     sum{(i,v,h)$[valgen(i,v,r,t)$h_rep(h)],
-        hours(h) * emit_rate("CO2",i,v,r,t)
+        hours(h) * emit_rate("combustion","CO2",i,v,r,t)
         * (GEN.l(i,v,r,h,t)
            + CCSFLEX_POW.l(i,v,r,h,t)$[ccsflex(i)$(Sw_CCSFLEX_BYP OR Sw_CCSFLEX_STO OR Sw_CCSFLEX_DAC)])
        }
@@ -80,7 +80,7 @@ emit_r_tc(r,t)$tmodel_new(t) =
 * Plus emissions produced via production activities (SMR, SMR-CCS, DAC)
 * The "production" of negative CO2 emissions via DAC is also included here
     + sum{(p,i,v,h)$[valcap(i,v,r,t)$i_p(i,p)$h_rep(h)],
-          hours(h) * prod_emit_rate("CO2",i,t)
+          hours(h) * prod_emit_rate("combustion","CO2",i,t)
           * PRODUCE.l(p,i,v,r,h,t)
          }
 

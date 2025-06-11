@@ -27,6 +27,7 @@ import os
 import pandas as pd
 import numpy as np
 import gdxpds
+import json
 ### Local imports
 import reeds
 
@@ -78,8 +79,7 @@ def main(t, casedir):
                                              names=('i','r'))
 
     techs = gdxreeds['i_subsets'].pivot(columns='i_subtech',index='i',values='Value')
-
-
+    
     #%%### Set up the output containers and a few other inputs
     csvout, h5out = {}, {}
 
@@ -115,6 +115,12 @@ def main(t, casedir):
         return dfout
 
     cap_ivr = _devint_storage(cap_ivr_realvint)
+
+    #%%### Nameplate energy capacity
+    cap_energy_ivr = (
+        gdxreeds['cap_energy_ivrt'].loc[gdxreeds['cap_energy_ivrt'].t==t].drop('t', axis=1)
+        .groupby(['i','v','r'], as_index=False).Value.sum()
+    )
 
     #%% Remove VRE techs (i.e. techs with profiles in recf) and H2 production / DAC
     vretechs_i = resources.i.str.lower().unique()
@@ -237,6 +243,18 @@ def main(t, casedir):
         .set_index(['ccseason', 'year', 'h', 'hour'])
     )
 
+    # Get mean time to repair (mttr) data
+    with open((os.path.join(inputs_case, 'pcm_defaults.json'))) as f:
+        pcm_data_dict = json.load(f)
+
+    mttr_df = pd.Series(
+        index=pcm_data_dict.keys(),
+        data=[pcm_data_dict[tech]['mean_time_to_repair'] for tech in pcm_data_dict.keys()],
+        name='mean_time_to_repair',
+        dtype=int,
+    ).rename_axis('tech')
+
+    csvout['mttr_data'] = mttr_df
 
     #%%### Collect some csv's for ReEDS2PRAS
     csvout['cap_converter'] = (
@@ -266,6 +284,13 @@ def main(t, casedir):
         .multiply(duration)
         .rename('MWh')
     )
+    ## Append continuous batteries energy capacity
+    energy_cap = pd.concat([
+        energy_cap,
+        cap_energy_ivr.set_index(['i','v','r'])['Value'].rename('MWh')
+    ])
+    energy_cap = energy_cap.round(2)
+    energy_cap = energy_cap[energy_cap > 0]
     ## Drop storage with energy or power capacity below the PRAS cutoff
     too_small_storage = list(set(
         energy_cap.loc[energy_cap < sw['storcap_cutoff']].index.tolist()
@@ -313,6 +338,7 @@ def main(t, casedir):
         csvout[key].round(int(sw['decimals'])).to_csv(
             os.path.join(casedir,'ReEDS_Augur','augur_data',f'{key}_{t}.csv'),
         )
+        
     #%% .h5 files
     for key in h5out:
         h5out[key].astype(np.float32).to_hdf(

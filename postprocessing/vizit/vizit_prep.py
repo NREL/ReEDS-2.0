@@ -48,7 +48,7 @@ shutil.move(os.path.join(outputDir,'reeds-report-state','csvs'), os.path.join(ou
 shutil.rmtree(os.path.join(outputDir,'reeds-report-state'))
 
 #If we have ReEDS to reV outputs, produce vizit report of capacity by site
-techs = ['wind-ons', 'wind-ofs', 'upv', 'dupv']
+techs = ['wind-ons', 'wind-ofs', 'upv']
 df_ls = []
 for tech in techs:
     rev_file = os.path.join(outputDir, f'df_sc_out_{tech}_reduced.csv')

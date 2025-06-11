@@ -8,7 +8,6 @@ from matplotlib import patheffects as pe
 from glob import glob
 import os
 import sys
-import site
 import re
 from warnings import warn
 import geopandas as gpd
@@ -20,18 +19,7 @@ from reeds import plots
 
 os.environ['PROJ_NETWORK'] = 'OFF'
 
-reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-remotepath = '/Volumes/ReEDS/' if sys.platform == 'darwin' else r'//nrelnas01/ReEDS/'
-
-### Format plots and load other convenience functions
-# add necessary directories to the site path
-site.addsitedir(reeds_path)
-site.addsitedir(os.path.join(reeds_path,'postprocessing'))
-site.addsitedir(os.path.join(reeds_path,'input_processing'))
-site.addsitedir(os.path.join(reeds_path,'ReEDS_Augur'))
-
-# import functions from modules after adding them to the path 
-import hourly_repperiods   # noqa: E402
+reeds_path = reeds.io.reeds_path
 
 plots.plotparams()
 
@@ -41,6 +29,42 @@ zone_label_offset = {
     'SPP_South': (0.1e6, 0.1e6),
     'MISO_Central': (0.1e6, -0.1e6),
     'MISO_North': (0, -0.1e6),
+}
+techmarkers = {
+    'upv': 'o',
+    'distpv': 'o',
+    'csp': 'o',
+    'pvb': 'o',
+
+    'wind-ons': '^',
+    'wind-ofs': 'v',
+
+    'battery_4': (4,1,0),
+    'battery_8': (8,1,0),
+    'battery_12': (12,1,0),
+    'battery_24': (24,1,0),
+    'battery_48': (48,1,0),
+    'battery_72': (72,1,0),
+    'battery_100': (100,1,0),
+    'pumped-hydro': (8,1,0),
+    'battery': (4,1,0),
+
+    'hydro': 's',
+    'nuclear': 'p', # '☢️',
+    'nuclear-smr': 'p',
+    'biopower': (5,1,0),
+    'lfill-gas': (5,1,0),
+    'beccs_mod': (5,1,180),
+    'geothermal': 'h',
+
+    'h2-ct': '>',
+
+    'gas-cc': '<',
+    'gas-cc-ccs_mod': 'D',
+    'gas-ct': '>',
+    'o-g-s': 'd',
+    'coal': 'X',
+    'coal-ccs_mod': 'P',
 }
 
 
@@ -2788,7 +2812,6 @@ def map_capacity_techs(
     ### Tech simplifications
     techmap = {
         **{f'upv_{i}':'Utility PV' for i in range(20)},
-        **{f'dupv_{i}':'Utility PV' for i in range(20)},
         **{f'wind-ons_{i}':'Land-based wind' for i in range(20)},
         **{f'wind-ofs_{i}':'Offshore wind' for i in range(20)},
         **dict(zip(['nuclear','nuclear-smr'], ['Nuclear']*20)),
@@ -2885,40 +2908,6 @@ def map_capacity_markers(
     """
     ### Additional settings
     decrement = 0.02
-    markers = {
-        'upv': 'o',
-        'distpv': 'o',
-        'csp': 'o',
-
-        'wind-ons': '^',
-        'wind-ofs': 'v',
-
-        'battery_4': (4,1,0),
-        'battery_8': (8,1,0),
-        'battery_12': (12,1,0),
-        'battery_24': (24,1,0),
-        'battery_48': (48,1,0),
-        'battery_72': (72,1,0),
-        'battery_100': (100,1,0),
-        'pumped-hydro': (12,1,0),
-
-        'hydro': 's',
-        'nuclear': 'p', # '☢️',
-        'nuclear-smr': 'p',
-        'biopower': (5,1,0),
-        'lfill-gas': (5,1,0),
-        'beccs_mod': (5,1,180),
-        'geothermal': 'h',
-
-        'h2-ct': '>',
-
-        'gas-cc': '<',
-        'gas-cc-ccs_mod': 'D',
-        'gas-ct': '>',
-        'o-g-s': 'd',
-        'coal': 'X',
-        'coal-ccs_mod': 'P',
-    }
     drop = [
         'canada',
         'electrolyzer',
@@ -2945,8 +2934,8 @@ def map_capacity_markers(
     cap.i = simplify_techs(cap.i)
     cap = cap.loc[~cap.i.isin(drop)].copy()
     techs = cap.i.unique()
-    if any([i not in markers for i in techs]):
-        print([i for i in techs if i not in markers])
+    if any([i not in techmarkers for i in techs]):
+        print([i for i in techs if i not in techmarkers])
     ### Group by region
     if level not in ['r','rb']:
         cap.r = cap.r.map(hierarchy[level])
@@ -3010,14 +2999,14 @@ def map_capacity_markers(
         ### Plot it
         for tech in dfplot.tech.unique():
             dfplot.loc[dfplot.tech==tech].plot(
-                ax=ax, marker=markers.get(tech,'o'),
+                ax=ax, marker=techmarkers.get(tech,'o'),
                 color=tech_style.get(tech,'k'),
                 lw=0, markersize=ms)
 
     ### Legend
     handles = [
         mpl.lines.Line2D(
-            [], [], marker=markers[i], markerfacecolor=tech_style[i],
+            [], [], marker=techmarkers[i], markerfacecolor=tech_style[i],
             markeredgewidth=0, lw=0, label=i)
         for i in tech_style.index if i in techs
     ][::-1]
@@ -3292,7 +3281,6 @@ def map_zone_capacity(
     """
     ###### Shared inputs
     sw = reeds.io.get_switches(case)
-
     years = pd.read_csv(
         os.path.join(case,'inputs_case','modeledyears.csv')).columns.astype(int).values
     yearstep = years[-1] - years[-2]
@@ -3372,10 +3360,16 @@ def map_zone_capacity(
         dfcap_nat = (
             dfcap_nat.groupby(['tech','year'], as_index=False)['Capacity (GW)'].sum())
 
-        emit_nat_tech = (
-            reeds.io.read_output(case, 'emit_nat_tech', valname='ton')
-            .set_index(['e','i','t']).squeeze(1)
-        )
+        emit_nat_tech = reeds.io.read_output(case, 'emit_nat_tech', valname='ton')
+        if int(sw.get('GSw_Precombustion', 1)):
+            emit_nat_tech = emit_nat_tech.groupby(['e','i','t']).ton.sum()
+        else:
+            emit_nat_tech = (
+                emit_nat_tech
+                .set_index(['etype','e','i','t'])
+                .loc['combustion']
+                .groupby(['e','i','t']).ton.sum()
+            )
 
         dfin_trans = reeds.io.read_report(case, 'Transmission (GW-mi)')
 
@@ -3384,7 +3378,7 @@ def map_zone_capacity(
         axbounds = {
             ## left, bottom, width, height
             'Trans [TW-mi]': [0.92, 0.62, 0.1, 0.17],
-            'CO2e [MMT]': [0.92, 0.41, 0.1, 0.17],
+            'CO2 [MMT]': [0.92, 0.41, 0.1, 0.17],
             'Cap [GW]': [0.83, 0.2, 0.1, 0.17],
             'Gen [TWh]': [1.0, 0.2, 0.1, 0.17],
         }
@@ -3438,26 +3432,23 @@ def map_zone_capacity(
             colors=transcolors, width=yearstep, net=False)
 
         ### Side plot of emissions over time
-        dfco2e = (
+        dfco2 = (
             emit_nat_tech['CO2']
-            .add(emit_nat_tech['CH4']
-                / 1e3 * float(sw.GSw_MethaneGWP),
-                fill_value=0)
             .unstack('i') / 1e3
         )
-        dfco2e.columns = simplify_techs(dfco2e.columns)
-        dfco2e = dfco2e.groupby(axis=1, level='i').sum()
-        dfco2e = (
-            dfco2e[[c for c in bokehcolors.index if c in dfco2e]]
+        dfco2.columns = simplify_techs(dfco2.columns)
+        dfco2 = dfco2.groupby(axis=1, level='i').sum()
+        dfco2 = (
+            dfco2[[c for c in bokehcolors.index if c in dfco2]]
             .round(3).replace(0,np.nan)
             .dropna(axis=1, how='all').fillna(0)
             .loc[2020:]
         )
         plots.stackbar(
-            df=dfco2e, ax=eax['CO2e [MMT]'],
+            df=dfco2, ax=eax['CO2 [MMT]'],
             colors=bokehcolors, width=yearstep, net=True,
             markerfacecolor=(1,1,1,0.8), markersize=4.5)
-        eax['CO2e [MMT]'].axhline(0, c='k', ls=':', lw=0.75)
+        eax['CO2 [MMT]'].axhline(0, c='k', ls=':', lw=0.75)
 
         plt.draw()
         for a in eax:
@@ -3814,7 +3805,7 @@ def plot_dispatch_yearbymonth(
 
     dfyear = (
         dfin.loc[dfin.t==t]
-        .groupby(['i','h']).Value.sum()
+        .groupby(['i','h']).Value.sum().round(3)
         .unstack('i').fillna(0)
         / 1e3
     )
@@ -3937,11 +3928,10 @@ def plot_dispatch_weightwidth(
     GSw_HourlyChunkLength = int(sw.GSw_HourlyChunkLengthRep)
     hours_per_period = {'day':24, 'wek':120, 'year':24}[sw.GSw_HourlyType]
     dfplot = dispatch[[c for c in bokehcolors.index if c in dispatch]].copy()
-    sznweights = (
-        hmap_myr['actual_period' if sw.GSw_HourlyType == 'year' else 'season']
-        .value_counts()
-        // hours_per_period
-    )
+    if sw.GSw_HourlyType == 'year':
+        sznweights = hmap_myr['actual_period'].value_counts().sort_index() // hours_per_period
+    else:
+        sznweights = hmap_myr['season'].value_counts() // hours_per_period
 
     ### Plot it
     plt.close()
@@ -4205,14 +4195,14 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
     """
     ### Get shared parameters
     sw = reeds.io.get_switches(case)
-    period_days = 1 if sw['GSw_HourlyType'] == 'day' else 5
+    period_days = 5 if sw['GSw_HourlyType'] == 'wek' else 1
     yplot = 2012
     timeindex = pd.date_range(
         f'{yplot}-01-01', f'{yplot+1}-01-01', freq='H', tz='Etc/GMT+6')[:8760]
     ### Get rep periods
     szn_rep = pd.read_csv(
-        os.path.join(case, 'inputs_case', 'rep', 'set_szn.csv')
-    ).squeeze(1).sort_values()
+        os.path.join(case, 'inputs_case', 'rep', 'period_szn.csv')
+    ).rep_period.sort_values()
     rep_starts = [reeds.timeseries.h2timestamp(d+'h01') for d in szn_rep]
     rep_hours = np.ravel([
         pd.date_range(h, h+pd.Timedelta(f'{period_days}D'), freq='H', inclusive='left')
@@ -4484,7 +4474,7 @@ def map_neue(
 
     ### Get data
     if iteration == 'last':
-        _, _iteration = get_last_iteration(
+        _, _iteration = reeds.io.get_last_iteration(
             case=case, year=year, samples=samples)
     else:
         _iteration = iteration
@@ -4794,234 +4784,6 @@ def plot_h2_timeseries(
     return f, ax, dfchunk
 
 
-def get_last_iteration(case, year=2050, datum=None, samples=None):
-    """Get the last iteration of PRAS for a given case/year"""
-    if datum not in [None,'flow','energy']:
-        raise ValueError(f"datum must be in [None,'flow','energy'] but is {datum}")
-    infile = sorted(glob(
-        os.path.join(
-            case, 'ReEDS_Augur', 'PRAS',
-            f"PRAS_{year}i*"
-            + (f'-{samples}' if samples is not None else '')
-            + (f'-{datum}' if datum is not None else '')
-            + '.h5'
-        )
-    ))[-1]
-    iteration = int(
-        os.path.splitext(os.path.basename(infile))[0]
-        .split('-')[0].split('_')[1].split('i')[1]
-    )
-    return infile, iteration
-
-
-def plot_interface_flows(
-        case, year=2050,
-        source='pras', iteration='last', samples=None,
-        level='transreg', weatheryear=2012, decimals=0,
-        flowcolors={'forward':'C0', 'reverse':'C3'},
-        onlydata=False,
-    ):
-    """
-    """
-    sw = reeds.io.get_switches(case)
-    timeindex = reeds.timeseries.get_timeindex(sw.resource_adequacy_years_list)
-    hierarchy = reeds.io.get_hierarchy(case)
-
-    if source.lower() == 'pras':
-        infile, _iteration = get_last_iteration(
-            case=case, year=year, datum='flow', samples=samples)
-        dfflow = reeds.io.read_pras_results(infile).set_index(timeindex)
-        ## Filter out AC/DC converters from scenarios with VSC
-        dfflow = dfflow[[c for c in dfflow if '"DC_' not in c]].copy()
-        ## Normalize the interface names
-        renamer = {i: '→'.join(i.replace('"','').split(' => ')) for i in dfflow}
-    else:
-        raise NotImplementedError(f"source must be 'pras' but is '{source}'")
-
-    ### Group by hierarchy level
-    df = dfflow.rename(columns=renamer)
-    aggcols = {c: '→'.join([hierarchy[level][i] for i in c.split('→')]) for c in df}
-    df = df.rename(columns=aggcols).groupby(axis=1, level=0).sum()
-    df = df[[c for c in df if c.split('→')[0] != c.split('→')[1]]].copy()
-    if df.shape[1] == 0:
-        raise NotImplementedError(
-            "No interfaces to plot (expected if you're only modeling one hierarchy level)")
-    ### Keep only a single direction
-    dflevel = {}
-    for c in df:
-        r, rr = c.split('→')
-        ## Sort alphabetically
-        if r < rr:
-            dflevel[f'{r}→{rr}'] = dflevel.get(f'{r}→{rr}', 0) + df[c]
-        else:
-            dflevel[f'{rr}→{r}'] = dflevel.get(f'{rr}→{r}', 0) - df[c]
-    dflevel = pd.concat(dflevel, axis=1)
-    ## Redefine the dominant direction as "forward"
-    toswap = {}
-    for c in dflevel:
-        if dflevel[c].mean() < 0:
-            dflevel[c] *= -1
-            toswap[c] = '→'.join(c.split('→')[::-1])
-    dfplot = dflevel.rename(columns=toswap)
-    if onlydata:
-        return dfplot
-
-    ###### Plot it
-    ## Sort interfaces by fraction of flow that is "forward"
-    forward_fraction = (
-        dfplot.clip(lower=0).sum() / dfplot.abs().sum()
-    ).sort_values(ascending=False)
-    interfaces = forward_fraction.index
-    nrows = len(interfaces)
-    if nrows == 0:
-        raise NotImplementedError(
-            "No interfaces to plot (expected if you're only modeling one hierarchy level)")
-    elif nrows == 1:
-        coords = {'distribution':{interfaces[0]: 0}, 'profile':{interfaces[0]: 1}}
-    else:
-        coords = {
-            'distribution': {interface: (row,0) for row, interface in enumerate(interfaces)},
-            'profile': {interface: (row,1) for row, interface in enumerate(interfaces)},
-        }
-    index = dfplot.loc[str(weatheryear)].index
-    plt.close()
-    f,ax = plt.subplots(
-        nrows, 2, figsize=(10,nrows*0.5), sharex='col', sharey='row',
-        gridspec_kw={'width_ratios':[0.06,1], 'wspace':0.1},
-    )
-    for interface in interfaces:
-        ### Hourly
-        ## Positive
-        ax[coords['profile'][interface]].fill_between(
-            index,
-            dfplot.loc[str(weatheryear)][interface].clip(lower=0),
-            color=flowcolors['forward'], lw=0.1, label='Forward')
-        ## Negative
-        ax[coords['profile'][interface]].fill_between(
-            index,
-            dfplot.loc[str(weatheryear)][interface].clip(upper=0),
-            color=flowcolors['reverse'], lw=0.1, label='Reverse')
-        ### Distribution
-        ## Positive
-        ax[coords['distribution'][interface]].fill_between(
-            np.linspace(0,1,len(dfplot)),
-            dfplot[interface].sort_values(ascending=False).clip(lower=0),
-            color=flowcolors['forward'], lw=0,
-        )
-        ## Negative
-        ax[coords['distribution'][interface]].fill_between(
-            np.linspace(0,1,len(dfplot)),
-            dfplot[interface].sort_values(ascending=False).clip(upper=0),
-            color=flowcolors['reverse'], lw=0,
-        )
-        ### Formatting
-        ax[coords['profile'][interface]].axhline(0,c='C7',ls=':',lw=0.5)
-        ax[coords['distribution'][interface]].set_yticks([0])
-        ax[coords['distribution'][interface]].set_yticklabels([])
-        ax[coords['distribution'][interface]].set_ylabel(
-            f'{interface}\n({forward_fraction[interface]*100:.{decimals}f}% →)',
-            rotation=0, ha='right', va='center', fontsize='medium')
-    ### Formatting
-    ax[coords['distribution'][interfaces[-1]]].set_xticks([0,0.5,1])
-    ax[coords['distribution'][interfaces[-1]]].set_xticklabels([0,'','100%'])
-    ax[coords['profile'][interfaces[0]]].annotate(
-        'Forward ', (0.5,1), xycoords='axes fraction', ha='right', annotation_clip=False,
-        weight='bold', fontsize='large', color=flowcolors['forward'],
-    )
-    ax[coords['profile'][interfaces[0]]].annotate(
-        ' Reverse', (0.5,1), xycoords='axes fraction', ha='left', annotation_clip=False,
-        weight='bold', fontsize='large', color=flowcolors['reverse'],
-    )
-    ax[coords['profile'][interfaces[0]]].annotate(
-        f'{os.path.basename(case)}\nsystem year: {year}i{iteration}\nweather year: {weatheryear}',
-        (1,1), xycoords='axes fraction', ha='right', annotation_clip=False,
-    )
-    ## Full time range
-    ax[coords['profile'][interfaces[-1]]].set_xlim(index[0]-pd.Timedelta('1D'), index[-1])
-    ax[coords['profile'][interfaces[-1]]].xaxis.set_major_locator(mpl.dates.MonthLocator())
-    ax[coords['profile'][interfaces[-1]]].xaxis.set_major_formatter(mpl.dates.DateFormatter('%b'))
-    plots.despine(ax)
-    return f, ax, dfplot
-
-
-def plot_storage_soc(
-        case, year=2050,
-        source='pras', samples=None,
-        level='transgrp',
-        onlydata=False,
-    ):
-    """Plot storage state of charge from PRAS"""
-    sw = reeds.io.get_switches(case)
-    timeindex = reeds.timeseries.get_timeindex(sw.resource_adequacy_years_list)
-    hierarchy = reeds.io.get_hierarchy(case)
-
-    ### Get storage state of charge
-    if source.lower() == 'pras':
-        infile, _iteration = get_last_iteration(
-            case=case, year=year, datum='energy', samples=samples)
-        dfenergy = reeds.io.read_pras_results(infile).set_index(timeindex)
-    else:
-        raise NotImplementedError(f"source must be 'pras' but is '{source}'")
-    ## Sum by hierarchy level
-    dfenergy_r = (
-        dfenergy
-        .rename(columns={c: c.split('|')[1] for c in dfenergy.columns})
-        .groupby(axis=1, level=0).sum()
-    )
-    dfenergy_agg = (
-        dfenergy_r.rename(columns=hierarchy[level])
-        .groupby(axis=1, level=0).sum()
-    )
-    # dfheadspace_MWh = dfenergy_agg.max() - dfenergy_agg
-    # dfheadspace_frac = dfheadspace_MWh / dfenergy_agg.max()
-    dfsoc_frac = dfenergy_agg / dfenergy_agg.max()
-    if onlydata:
-        return dfsoc_frac
-
-    ### Get stress periods
-    set_szn = pd.read_csv(
-        os.path.join(case, 'inputs_case', f'stress{year}i{_iteration}', 'set_szn.csv')
-    ).rename(columns={'*szn':'szn'})
-    set_szn['datetime'] = set_szn.szn.map(reeds.timeseries.h2timestamp)
-    set_szn['date'] = set_szn.datetime.map(lambda x: x.strftime('%Y-%m-%d'))
-    set_szn['year'] = set_szn.datetime.map(lambda x: x.year)
-
-    ### Plot it
-    years = range(dfenergy.index.year.min(), dfenergy.index.year.max()+1)
-    colors = plots.rainbowmapper(dfsoc_frac.columns)
-    plt.close()
-    f,ax = plt.subplots(
-        len(years), 1, sharey=True, figsize=(13.33,8),
-        gridspec_kw={'hspace':1.0},
-    )
-    for row, y in enumerate(years):
-        df = dfsoc_frac.loc[str(y)]
-        for region, color in colors.items():
-            (df-1)[region].plot.area(
-                ax=ax[row], stacked=False, legend=False, lw=0.1, color=color, alpha=0.8)
-            # ax[row].fill_between(
-            #     df.index, df[region].values, 1, lw=0.1, color=color, label=region, alpha=0.8,
-            # )
-        for tstart in set_szn.loc[set_szn.year==y, 'datetime'].values:
-            ax[row].axvspan(tstart, tstart + pd.Timedelta('1D'), lw=0, color='k', alpha=0.15)
-        ax[row].set_ylim(-1,0)
-        # ax[row].set_ylim(0,1)
-    ax[0].set_yticks([])
-    # ax[-1].xaxis.set_minor_locator(mpl.dates.DayLocator())
-    ax[0].legend(
-        loc='upper left', bbox_to_anchor=(1,1),
-        frameon=False, columnspacing=0.5, handlelength=0.7, handletextpad=0.3,
-        title=f'Storage\nstate of charge\nby {level},\n{year}i{_iteration}\n[fraction]',
-        title_fontsize=12,
-    )
-    # ax[0].annotate(
-    #     f'{os.path.basename(case)}\nsystem year: {year}i{_iteration}',
-    #     (1,1.2), xycoords='axes fraction', ha='right', annotation_clip=False,
-    # )
-    plots.despine(ax, left=False)
-    return f, ax, dfsoc_frac
-
-
 def get_import_export(region, df):
     """"""
     firsts = [c for c in df if c.startswith(region)]
@@ -5170,7 +4932,7 @@ def map_period_dispatch(
     dfload_allperiods = dfload_allperiods.reset_index().set_index(['szn','h'])
 
     sw = reeds.io.get_switches(case)
-    numsteps = 24 // int(sw['GSw_HourlyChunkLengthStress']) * (1 if sw['GSw_HourlyType'] == 'day' else 5)
+    numsteps = 24 // int(sw['GSw_HourlyChunkLengthStress']) * (5 if sw['GSw_HourlyType'] == 'wek' else 1)
 
     ### Map dispatch to level
     gen_h_stress['aggreg'] = gen_h_stress.r.map(r2aggreg)
@@ -5374,82 +5136,15 @@ def map_period_dispatch(
     return f, ax, out
 
 
-def plot_pras_eue_timeseries_full(
-        case, year=2050, iteration='last', samples=None, level='transgrp', ymax=None,
-        figsize=(6, 5)):
-    """
-    Dropped load timeseries
-    """
-    sw = reeds.io.get_switches(case)
-    if iteration == 'last':
-        _, _iteration = get_last_iteration(
-            case=case, year=year, samples=samples)
-    else:
-        _iteration = iteration
-    infile = os.path.join(
-        case, 'ReEDS_Augur', 'PRAS',
-        f"PRAS_{year}i{_iteration}" + (f'-{samples}' if samples is not None else '') + '.h5'
-    )
-    dfpras = reeds.io.read_pras_results(infile)
-    dfpras.index = reeds.timeseries.get_timeindex(sw.resource_adequacy_years)
-    ## Only keep EUE
-    dfpras = dfpras[[
-        c for c in dfpras if (c.endswith('EUE') and not c.lower().startswith('usa'))
-    ]].copy()
-
-    ### Sum by hierarchy level
-    hierarchy = reeds.io.get_hierarchy(case)
-    dfpras_agg = (
-        dfpras
-        .rename(columns={c: c[:-len('_EUE')] for c in dfpras})
-        .rename(columns=hierarchy[level])
-        .groupby(axis=1, level=0).sum()
-        / 1e3
-    )
-
-    wys = range(2007,2014)
-    colors = plots.rainbowmapper(dfpras_agg.columns)
-
-    ### Plot it
-    plt.close()
-    f,ax = plt.subplots(len(wys), 1, sharex=False, sharey=True, figsize=figsize)
-    for row, y in enumerate(wys):
-        timeindex_y = pd.date_range(
-            f"{y}-01-01", f"{y+1}-01-01", inclusive='left', freq='H',
-            tz='Etc/GMT+6')[:8760]
-        for region, color in colors.items():
-            ax[row].fill_between(
-                timeindex_y, dfpras_agg.loc[str(y),region:].sum(axis=1).values,
-                lw=1, color=color, label=region)
-        ### Formatting
-        ax[row].annotate(
-            y, (0.01,1), xycoords='axes fraction',
-            fontsize=14, weight='bold', va='top')
-        ax[row].set_xlim(
-            pd.Timestamp(f"{y}-01-01 00:00-05:00"),
-            pd.Timestamp(f"{y}-12-31 23:59-05:00"))
-        ax[row].xaxis.set_major_locator(mpl.dates.MonthLocator(tz='Etc/GMT+6'))
-        ax[row].xaxis.set_minor_locator(mpl.dates.WeekdayLocator(byweekday=mpl.dates.SU))
-        if row == len(wys) - 1:
-            ax[row].xaxis.set_major_formatter(mpl.dates.DateFormatter('%b'))
-        else:
-            ax[row].set_xticklabels([])
-    ax[0].legend(
-        loc='upper left', bbox_to_anchor=(1,1),
-        frameon=False, columnspacing=0.5, handlelength=0.7, handletextpad=0.3,
-    )
-    ax[0].set_ylim(0, ymax)
-    ax[len(wys)-1].set_ylabel('Expected unserved energy [GWh/h]', y=0, ha='left')
-    plots.despine(ax)
-    return f, ax, dfpras, _iteration
-
-
 def plot_seed_stressperiods(
     case, cmap=cmocean.cm.phase, startfrom=200,
     alpha=0.7, fontsize=5, pealpha=0.8, pelinewidth=1.5,
 ):
     """
     """
+    sys.path.append(os.path.join(reeds.io.reeds_path, 'input_processing'))
+    import hourly_repperiods
+
     sw = reeds.io.get_switches(case)
     hierarchy = reeds.io.get_hierarchy(case)
     dfmap = reeds.io.get_dfmap(case)
@@ -5608,6 +5303,74 @@ def plot_seed_stressperiods(
     return f, ax
 
 
+def plot_repdays(case, cmap=cmocean.cm.phase, alpha=0.7, startfrom=200):
+    """Plot representative days in (12month)x(monthdays) format"""
+    ### Setup
+    months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ]
+    ### Get color map
+    days_of_year = pd.date_range('2004-01-01','2004-12-31',freq='D')
+    monthdays = days_of_year.strftime('%m/%d')
+    colorvals = (
+        list(np.linspace(0,1,len(monthdays))[startfrom:])
+        + list(np.linspace(0,1,len(monthdays))[:startfrom])
+    )
+    monthday2val = dict(zip(monthdays, colorvals))
+
+    ### Data
+    sw = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'switches.csv'), header=None, index_col=0
+    ).squeeze(1)
+
+    hmap_myr = pd.read_csv(
+        os.path.join(case, 'inputs_case', 'rep', 'hmap_myr.csv'),
+        index_col='*timestamp', parse_dates=True,
+    )
+
+    hmap_myr['timestamp_rep'] = hmap_myr.h.map(reeds.timeseries.h2timestamp)
+    hmap_myr['repday'] = hmap_myr.season.map(reeds.timeseries.h2timestamp)
+
+    actualday2repday = hmap_myr.drop_duplicates('yearperiod', keep='first').timestamp_rep
+    repdaycounts = actualday2repday.value_counts()
+
+    ### Plot it
+    plt.close()
+    f, ax = plt.subplots(12, 1, figsize=(12,6), sharex=True, sharey=True)
+    ax[0].set_xlim(0,31)
+    for row, month in enumerate(months):
+        ## Formatting
+        ax[row].set_ylabel(month, rotation=0, ha='right', va='center')
+        for which in ['left', 'right', 'top', 'bottom']:
+                    ax[row].spines[which].set_visible(False)
+        ax[row].tick_params(left=False,right=False,top=False,bottom=False)
+        ax[row].set_yticks([])
+        ax[row].set_xticks([])
+    ### Data
+    for actualday, repday in actualday2repday.items():
+        row = actualday.month - 1
+        xstart = actualday.day - 1
+        xend = xstart + (5 if sw.GSw_HourlyType == 'wek' else 1)
+        monthday = repday.strftime('%m/%d')
+        ## Background color
+        ax[row].axvspan(xstart, xend, color=cmap(monthday2val[monthday]), alpha=alpha, lw=0)
+        ## Date
+        ax[row].annotate(
+            repday.strftime('%-m/%-d'),
+            (xstart+0.5, 0.5), ha='center', va='center', fontsize=8,
+            path_effects=[pe.withStroke(linewidth=2.1, foreground='w', alpha=1)],
+        )
+        ## Box
+        if (actualday.month == repday.month) and (actualday.day == repday.day):
+            ax[row].axvspan(xstart, xend, facecolor='none', edgecolor='k', zorder=1e6, clip_on=False)
+            ax[row].annotate(
+                f'×{repdaycounts[repday]}', (xend-0.03, 0.05), ha='right', fontsize=7,
+            )
+
+    return f, ax, actualday2repday
+
+
 def get_tech_colors_order(order='fuel_storage_vre'):
     ### Colors
     bokehcolors = pd.read_csv(
@@ -5670,6 +5433,225 @@ def separate_charge_discharge(df):
     df.loc[df.i.isin(storage_techs), 'i'] += '|discharge'
 
 
+def get_cap_rep_stress_mix(
+    case,
+    years=None,
+    level='transreg',
+    units='GW',
+    metrics=[
+        'cap',
+        'rep_mean',
+        'stress_mean',
+        'stress_top5_load',
+        'stress_top5_netload',
+        'stress_bottom5_vregen',
+        'stress_max_load',
+        'stress_max_price',
+    ],
+):
+    ### Check inputs
+    allowed = (
+        r'(cap|rep_mean|stress_(mean|(max|min|top\d+|bottom\d+)_(gen|load|netload|price|vregen)))'
+    )
+    for key in metrics:
+        if not re.match(allowed, key):
+            raise ValueError(f"{key} in metrics must match {allowed}")
+
+    ### Parse inputs
+    allyears = pd.read_csv(
+        os.path.join(case,'inputs_case','modeledyears.csv')).columns.astype(int).tolist()
+    if isinstance(years, int):
+        years = [years]
+    elif years is None:
+        years = allyears
+    assert all([y in allyears for y in years]), f"years={years} but must be in {allyears}"
+    if units.lower() in ['%', 'percent', 'fraction', 'share', 'mix']:
+        scale = 'percent'
+    else:
+        scale = {'MW':1, 'GW':1e-3, 'TW':1e-6}[units.upper()]
+    ## Replace 'max' with 'top1' since they're handled the same
+    keys = [key.replace('max','top1').replace('min','bottom1') for key in metrics]
+
+    ### Standard inputs
+    bokehcolors, plotorder = get_tech_colors_order('fuel_storage_vre')
+    numhours = pd.read_csv(
+        os.path.join(case,'inputs_case', 'rep', 'numhours.csv'),
+    ).rename(columns={'*h':'h'}).set_index('h').squeeze(1)
+
+    dfmap = reeds.io.get_dfmap(case)
+    hierarchy = reeds.io.get_hierarchy(case)
+
+    techs_vre = simplify_techs(
+        reeds.techs.expand_GAMS_tech_groups(
+            reeds.techs.get_tech_subset_table(case).loc[['VRE']].reset_index()
+        ).i
+    ).unique()
+
+    ## Sort regions west to east
+    regions = dfmap[level].loc[hierarchy[level].unique()].bounds.minx.sort_values().index
+
+    ## Aggregate
+    if level == 'r':
+        r2agg = pd.Series(index=hierarchy.index, data=hierarchy.index)
+    else:
+        r2agg = hierarchy[level].copy()
+
+    ### Rep generation
+    gen_h = reeds.io.read_output(case, 'gen_h', valname='MW')
+    gen_h = gen_h.loc[gen_h.t.isin(years)].copy()
+    gen_h.i = simplify_techs(gen_h.i)
+    gen_h.r = gen_h.r.map(r2agg)
+    gen_h = gen_h.groupby(['t','i','r','h'], as_index=False).MW.sum()
+    separate_charge_discharge(gen_h)
+
+    ### Stress generation
+    gen_h_stress = reeds.io.read_output(case, 'gen_h_stress', valname='MW')
+    gen_h_stress = gen_h_stress.loc[gen_h_stress.t.isin(years)].copy()
+    gen_h_stress.i = simplify_techs(gen_h_stress.i)
+    gen_h_stress.r = gen_h_stress.r.map(r2agg)
+    gen_h_stress = gen_h_stress.groupby(['t','i','r','h'], as_index=False).MW.sum()
+    separate_charge_discharge(gen_h_stress)
+
+    ### Load hours
+    load_stress = reeds.io.read_output(case, 'load_stress')
+    load_stress = load_stress.loc[load_stress.t.isin(years)].copy()
+    load_stress.r = load_stress.r.map(r2agg)
+    load_stress = load_stress.groupby(['t','r','h']).Value.sum().unstack('r')
+
+    ### Price hours
+    reqt_price = reeds.io.read_output(case, 'reqt_price')
+    price_stress = reqt_price.loc[
+        (reqt_price['*'] == 'res_marg')
+        & (reqt_price.t.isin(years))
+    ].rename(columns={'*.2':'h'}).copy()
+    price_stress.r = price_stress.r.map(r2agg)
+    price_stress = price_stress.groupby(['t','r','h']).Value.max().unstack('r')
+
+    ### VRE generation hours
+    vregen_stress = (
+        gen_h_stress.loc[gen_h_stress.i.isin(techs_vre)]
+        .groupby(['t','r','h']).MW.sum().unstack('r')
+    )
+
+    ### Net load hours
+    netload_stress = load_stress - vregen_stress
+
+    ### Collect results
+    dictout = {}
+    for key in keys:
+        ### Capacity by region
+        if key == 'cap':
+            df = reeds.io.read_output(case, 'cap')
+            df = df.loc[df.t.isin(years)].copy()
+            df.i = simplify_techs(df.i)
+            df.r = df.r.map(r2agg)
+            df = df.groupby(['t','i','r']).Value.sum().unstack('r').fillna(0)
+            df = df.loc[
+                ~df.index.get_level_values('i').isin(['electrolyzer','smr','smr-ccs','canada'])
+            ].copy()
+
+        ### Timeslice generation by region
+        elif key == 'rep_mean':
+            ## Average generation
+            gen_h_energy = gen_h.copy()
+            gen_h_energy['MWh'] = gen_h_energy['MW'] * gen_h_energy['h'].map(numhours)
+            gen_h_energy = gen_h_energy.groupby(['t','i','r']).MWh.sum().unstack('r').fillna(0)
+            ## Convert back to power
+            df = gen_h_energy / numhours.sum()
+
+        ## Stress period dispatch
+        elif key.startswith('stress'):
+            if key == 'stress_mean':
+                df = (
+                    ## Assuming stress periods are all weighted equally; if not, should
+                    ## multiply by numhours
+                    gen_h_stress.groupby(['t','i','r']).MW.sum()
+                    .unstack('r').fillna(0)
+                    .divide(gen_h_stress.groupby('t').h.unique().map(len), axis=0)
+                )
+
+            ## Generation during regional max hours
+            elif key.startswith('stress'):
+                direction = ('top' if 'top' in key else 'bottom')
+                numslices = int(key.split(direction)[1].split('_')[0])
+                if key.split('_')[-1] == 'load':
+                    dfindex = load_stress.stack('r').reorder_levels(['t','r','h'])
+                elif key.split('_')[-1] == 'gen':
+                    dfindex = gen_h_stress.groupby(['t','r','h']).MW.sum()
+                elif key.split('_')[-1] == 'price':
+                    dfindex = price_stress.stack('r').reorder_levels(['t','r','h'])
+                elif key.split('_')[-1] == 'vregen':
+                    dfindex = vregen_stress.stack('r').reorder_levels(['t','r','h'])
+                elif key.split('_')[-1] == 'netload':
+                    dfindex = netload_stress.stack('r').reorder_levels(['t','r','h'])
+                else:
+                    raise KeyError(f'Invalid key: {key}')
+                idhours = (
+                    dfindex
+                    .sort_values(ascending=(False if 'top' in key else True))
+                    .groupby(['t','r']).head(numslices)
+                    .reset_index()
+                    .groupby(['t','r']).h.apply(list)
+                )
+                ## Get generation
+                df = pd.concat(
+                    {
+                        (t,r):
+                        gen_h_stress.loc[
+                            (gen_h_stress.r==r)
+                            & (gen_h_stress.t==t)
+                            & (gen_h_stress.h.isin(idhours[t,r]))
+                        ].groupby('i').MW.mean()
+                        for r in regions for t in years
+                    }, axis=1, names=('t','r')
+                ).fillna(0).stack('t').reorder_levels(['t','i'])
+                ## Also include average load and net load
+                for loadkey, dfload in [
+                    (f'load_{key}', load_stress),
+                    (f'netload_{key}', netload_stress),
+                ]:
+                    dictout[loadkey] = (
+                        dfload
+                        .stack('r')
+                        .reorder_levels(['t','r','h'])
+                        .loc[idhours.explode().reset_index().set_index(['t','r','h']).index]
+                        .groupby(['t','r']).mean()
+                        .unstack('r')
+                    )
+
+        dfwide = df.unstack('t').reorder_levels(['t','r'], axis=1)
+        dfplot = dfwide.loc[[c for c in plotorder if c in dfwide.index]].copy()
+        if len(dfplot) != len(dfwide):
+            print('Before sorting by plotorder:\n', dfwide.columns)
+            print('After sorting by plotorder:\n', dfplot.columns)
+            err = f"{key}: {len(dfwide)} -> {len(dfplot)} after sorting by plotorder"
+            raise ValueError(err)
+        dictout[key] = scale_outputs(dfplot, scale)
+
+    return dictout
+
+
+def stress_mix_label(case, metric):
+    sw = reeds.io.get_switches(case)
+    if metric == 'cap':
+        xlabel = 'Capacity'
+    elif metric.startswith('rep'):
+        xlabel = f"Rep {metric.split('_')[1]} gen"
+    elif metric == 'stress_mean':
+        xlabel = 'Stress mean gen'
+    elif ('top' in metric) or ('bottom' in metric):
+        direction = ('top' if 'top' in metric else 'bottom')
+        xlabel = "Stress: {} {} {} hours".format(
+            direction,
+            int(metric.split(direction)[1].split('_')[0])
+            * int(sw.GSw_HourlyChunkLengthStress),
+            metric.split('_')[-1],
+        )
+    else:
+        raise ValueError(f'Could not parse metric: {metric}')
+    return xlabel
+
+
 def plot_cap_rep_stress_mix(
     case,
     year=2050,
@@ -5680,34 +5662,30 @@ def plot_cap_rep_stress_mix(
         'rep_mean',
         'stress_mean',
         'stress_top5_load',
+        'stress_top5_netload',
+        'stress_bottom5_vregen',
         'stress_max_load',
         'stress_max_price',
     ],
     drawpeak=True,
     drawgrid=True,
-    onlydata=False,
 ):
     """
     Plot stacked tech bars for each region for the outputs specified by `metrics`:
     - 'cap': Nameplate capacity
     - '(rep|stress)_mean': Representative or stress period mean generation
-    - 'stress_max_(gen|load|price)': Stress period max generation, load, or price
-    - 'stress_top{integer}_(gen|load|price)': Stress period top {integer} (gen|load|price)
-        timeslices (number of hours is GSw_HourlyChunkLengthStress * {integer})
+    - 'stress_(max|min)_(gen|load|netload|vregen|price)': Stress period max/min
+        generation, load, net load, VRE generation, or price
+    - 'stress_(top|bottom){integer}_(gen|load|netload|vregen|price)': Stress period
+        top/bottom {integer} (gen|load|netload|vregen|price) timeslices
+        (number of hours is GSw_HourlyChunkLengthStress * {integer})
 
     Other arguments:
     - units: 'MW' or 'GW' or 'TW' for absolute, or '%' or 'percent' for relative
-    - onlydata: Return output dictionary and stop before generating the plot
 
     Returns:
     tuple (f, ax, dictout). Keys of dictout are the provided metrics.
     """
-    ### Check inputs
-    allowed = r'(cap|rep_mean|stress_(mean|(max|top\d+)_(gen|load|price)))'
-    for key in metrics:
-        if not re.match(allowed, key):
-            raise ValueError(f"{key} in metrics must match {allowed}")
-
     ### Parse inputs
     if units.lower() in ['%', 'percent', 'fraction', 'share', 'mix']:
         scale = 'percent'
@@ -5717,44 +5695,17 @@ def plot_cap_rep_stress_mix(
         scale = {'MW':1, 'GW':1e-3, 'TW':1e-6}[units.upper()]
         ylabel = f'Capacity or generation [{units}]'
         _drawpeak = drawpeak
-    ## Replace 'max' with 'top1' since they're handled the same
-    keys = [key.replace('max','top1') for key in metrics]
 
-    ### Standard inputs
-    bokehcolors, plotorder = get_tech_colors_order('fuel_storage_vre')
-    numhours = pd.read_csv(
-        os.path.join(case,'inputs_case', 'rep', 'numhours.csv'),
-    ).rename(columns={'*h':'h'}).set_index('h').squeeze(1)
-
-    sw = reeds.io.get_switches(case)
     dfmap = reeds.io.get_dfmap(case)
     hierarchy = reeds.io.get_hierarchy(case)
-
+    bokehcolors, plotorder = get_tech_colors_order('fuel_storage_vre')
+    ## Replace 'max' with 'top1' since they're handled the same
+    keys = [key.replace('max','top1').replace('min','bottom1') for key in metrics]
     ## Sort regions west to east
     regions = dfmap[level].loc[hierarchy[level].unique()].bounds.minx.sort_values().index
     ncols = len(regions)
-
-    ## Aggregate
-    if level == 'r':
-        r2agg = pd.Series(index=hierarchy.index, data=hierarchy.index)
-    else:
-        r2agg = hierarchy[level].copy()
-
     ## x axis labels
-    xlabels = {}
-    for key in keys:
-        if key == 'cap':
-            xlabels[key] = 'Capacity'
-        elif key.startswith('rep'):
-            xlabels[key] = f"Rep {key.split('_')[1]} gen"
-        elif key == 'stress_mean':
-            xlabels[key] = 'Stress mean gen'
-        elif '_top' in key:
-            xlabels[key] = "Stress: top {} {} hours".format(
-                int(key.split('top')[1].split('_')[0])
-                * int(sw.GSw_HourlyChunkLengthStress),
-                key.split('_')[-1],
-            )
+    xlabels = {key: stress_mix_label(case, key) for key in keys}
 
     ### Peak load
     peakload = pd.read_csv(
@@ -5764,108 +5715,15 @@ def plot_cap_rep_stress_mix(
     if scale != 'percent':
         peakload *= scale
 
-    ### Top load hours
-    if any([('top' in k) and ('load' in k) for k in keys]):
-        load_stress = reeds.io.read_output(case, 'load_stress')
-        load_stress = load_stress.loc[load_stress.t==year].copy()
-        load_stress.r = load_stress.r.map(r2agg)
-        load_stress = load_stress.groupby(['r','h']).Value.sum().unstack('r')
-
-    ### Top price hours
-    if any([('top' in k) and ('price' in k) for k in keys]):
-        reqt_price = reeds.io.read_output(case, 'reqt_price')
-        price_stress = reqt_price.loc[
-            (reqt_price['*'] == 'res_marg')
-            & (reqt_price.t == year)
-        ].rename(columns={'*.2':'h'}).copy()
-        price_stress.r = price_stress.r.map(r2agg)
-        price_stress = price_stress.groupby(['r','h']).Value.max().unstack('r')
-
-    ### Collect results
-    dictout = {}
-    for key in keys:
-        ### Capacity by region
-        if key == 'cap':
-            df = reeds.io.read_output(case, 'cap')
-            df = df.loc[df.t==year].copy()
-            df.i = simplify_techs(df.i)
-            df.r = df.r.map(r2agg)
-            df = df.groupby(['i','r']).Value.sum().unstack('r').fillna(0)
-            df = df.loc[
-                ~df.index.isin(['electrolyzer','smr','smr-ccs','canada'])
-            ].copy()
-
-        ### Timeslice generation by region
-        elif key == 'rep_mean':
-            gen_h = reeds.io.read_output(case, 'gen_h', valname='MW')
-            gen_h = gen_h.loc[gen_h.t==year].copy()
-            gen_h.i = simplify_techs(gen_h.i)
-            gen_h.r = gen_h.r.map(r2agg)
-            gen_h = gen_h.groupby(['i','r','h'], as_index=False).MW.sum()
-            separate_charge_discharge(gen_h)
-
-            ## Average generation
-            gen_h_energy = gen_h.copy()
-            gen_h_energy['MWh'] = gen_h_energy['MW'] * gen_h_energy['h'].map(numhours)
-            gen_h_energy = gen_h_energy.groupby(['i','r']).MWh.sum().unstack('r').fillna(0)
-            ## Convert back to power
-            df = gen_h_energy / numhours.sum()
-
-        ## Stress period dispatch
-        elif key.startswith('stress'):
-            gen_h_stress = reeds.io.read_output(case, 'gen_h_stress', valname='MW')
-            gen_h_stress = gen_h_stress.loc[gen_h_stress.t==year].copy()
-            gen_h_stress.i = simplify_techs(gen_h_stress.i)
-            gen_h_stress.r = gen_h_stress.r.map(r2agg)
-            gen_h_stress = gen_h_stress.groupby(['i','r','h'], as_index=False).MW.sum()
-            separate_charge_discharge(gen_h_stress)
-
-            if key == 'stress_mean':
-                df = (
-                    ## Assuming stress periods are all weighted equally; if not, should
-                    ## multiply by numhours
-                    gen_h_stress.groupby(['i','r']).MW.sum()
-                    .unstack('r').fillna(0)
-                    / len(gen_h_stress.h.unique())
-                )
-
-            ## Generation during regional max hours
-            elif key.startswith('stress_top'):
-                numslices = int(key.split('top')[1].split('_')[0])
-                if key.endswith('load'):
-                    dfindex = load_stress.stack('r').reorder_levels(['r','h'])
-                elif key.endswith('gen'):
-                    dfindex = gen_h_stress.groupby(['r','h']).MW.sum()
-                elif key.endswith('price'):
-                    dfindex = price_stress.stack('r').reorder_levels(['r','h'])
-                maxhours = (
-                    dfindex
-                    .sort_values(ascending=False)
-                    .groupby('r').head(numslices)
-                    .reset_index()
-                    .groupby('r').h.apply(list)
-                )
-                df = pd.concat(
-                    {
-                        r:
-                        gen_h_stress.loc[
-                            (gen_h_stress.r==r)
-                            & (gen_h_stress.h.isin(maxhours[r]))
-                        ].groupby('i').MW.mean()
-                        for r in regions
-                    }, axis=1, names=('r',)
-                ).fillna(0)
-
-        dfplot = df.loc[[c for c in plotorder if c in df.index]].copy()
-        if len(dfplot) != len(df):
-            print('Before sorting by plotorder:\n', df.columns)
-            print('After sorting by plotorder:\n', dfplot.columns)
-            err = f"{key}: {len(df)} -> {len(dfplot)} after sorting by plotorder"
-            raise ValueError(err)
-        dictout[key] = scale_outputs(dfplot, scale)
-
-    if onlydata:
-        return dictout
+    ### Get results
+    dictout = get_cap_rep_stress_mix(
+        case=case,
+        years=year,
+        level=level,
+        units=units,
+        metrics=metrics,
+    )
+    dictout = {key: dictout[key][year] for key in keys}
 
     ###### Plot it
     ymin = min([
@@ -5941,6 +5799,103 @@ def plot_cap_rep_stress_mix(
     plots.despine(ax)
 
     return f, ax, dictout
+
+
+def plot_stress_mix(
+    case,
+    level='transreg',
+    units='GW',
+    metric='stress_max_price',
+    drawload=False,
+    startyear=2022,
+):
+    ### Parse inputs
+    allowed = (
+        r'(cap|rep_mean|stress_(mean|(max|min|top\d+|bottom\d+)_(gen|load|netload|price|vregen)))'
+    )
+    if not re.match(allowed, metric):
+        raise ValueError(f"metric={metric} must match {allowed}")
+    ## Replace 'max' with 'top1' since they're handled the same
+    metric = metric.replace('max','top1').replace('min','bottom1')
+
+    if units.lower() in ['%', 'percent', 'fraction', 'share', 'mix']:
+        scale = 'percent'
+        ylabel = 'Technology mix [%]'
+        _drawload = False
+    else:
+        scale = {'MW':1, 'GW':1e-3, 'TW':1e-6}[units.upper()]
+        ylabel = f'Generation [{units}]'
+        _drawload = drawload
+    ylabel = f"{stress_mix_label(case, metric)} [{'%' if scale == 'percent' else units}]"
+    ### Get results
+    dictout = get_cap_rep_stress_mix(
+        case=case,
+        level=level,
+        units=units,
+        metrics=[metric],
+    )
+    dfout = dictout[metric].copy()
+
+    years = [y for y in dfout.columns.get_level_values('t').unique() if y >= startyear]
+    yearstep = int(pd.Series(years).diff().max())
+
+    loadmetric = f'netload_{metric}' if 'netload' in metric else f'load_{metric}'
+    if loadmetric in dictout:
+        dfload = dictout[loadmetric]
+        dfload = dfload.loc[years].copy()
+        if scale != 'percent':
+            dfload *= scale
+    else:
+        _drawload = False
+
+    ### Shared settings
+    bokehcolors, plotorder = get_tech_colors_order('fuel_storage_vre')
+    dfmap = reeds.io.get_dfmap(case)
+    hierarchy = reeds.io.get_hierarchy(case)
+    ## Plot settings
+    regions = dfmap[level].loc[hierarchy[level].unique()].bounds.minx.sort_values().index
+    ncols = len(regions)
+    ymin = dfout[dfout < 0].sum().min()
+    #%% Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        2, ncols, sharex='row', sharey='row', figsize=(ncols*1.5, 6),
+        gridspec_kw={'hspace':0.1, 'height_ratios':[0.2,1]},
+    )
+    for col, r in enumerate(regions):
+        _ax = ax[1,col] if ncols > 1 else ax[1]
+        ### Data
+        df = dfout.xs(r, 1, 'r')[years].T
+        plots.stackbar(
+            df=df,
+            ax=_ax,
+            colors=bokehcolors,
+            net=False,
+            width=yearstep*0.9,
+        )
+        ### Peak load
+        if _drawload:
+            _ax.plot(
+                dfload.index,
+                dfload[r].values,
+                c='k', ls='--', lw=1.5
+            )
+        ### Formatting
+        _ax.axhline(0, c='k', ls=':', lw=0.75)
+        _ax.set_title(r, weight='bold')
+        if col == 0:
+            _ax.set_ylabel(ylabel)
+        ### Maps at top
+        _max = ax[0,col] if ncols > 1 else ax[0]
+        dfmap[level].plot(ax=_max, facecolor='0.99', edgecolor='0.75', lw=0.2)
+        dfmap[level].loc[[r]].plot(ax=_max, facecolor='k', edgecolor='none')
+        _max.axis('off')
+        _max.patch.set_facecolor('none')
+    ### Formatting
+    _ax.set_ylim(ymin)
+    plots.despine(ax)
+
+    return f, ax, dfout
 
 
 def plot_capacity_offline(

@@ -60,6 +60,7 @@ battery_24,15
 battery_48,15
 battery_72,15
 battery_100,15
+battery_li,15
 dr1_1*dr1_20,1
 dr2_1*dr2_20,1
 evmc_storage_1*evmc_storage_10,1

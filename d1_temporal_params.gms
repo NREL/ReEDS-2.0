@@ -458,8 +458,6 @@ cf_in(i,r,h)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), cf_in(ii,r,h) } ;
 
 *initial assignment of capacity factors
-*Note that DUPV does not face the same distribution losses as UPV
-*The DUPV capacity factors have already been adjusted by (1.0 - distloss)
 cf_rsc(i,v,r,allh,t) = 0 ;
 cf_rsc(i,v,r,h,t)$[cf_in(i,r,h)$cf_tech(i)$valcap(i,v,r,t)] = cf_in(i,r,h) ;
 

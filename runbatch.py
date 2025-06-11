@@ -14,10 +14,9 @@ import subprocess
 import re
 from datetime import datetime
 import argparse
-from builtins import input
 from glob import glob
 import reeds
-
+from input_processing import mcs_sampler as mcs
 
 # Assert core programs are accessible
 CORE_PROGRAMS = ["gams"]
@@ -174,11 +173,10 @@ def check_compatibility(sw):
         or int(sw['GSw_ClimateWater'])
         or int(sw['GSw_EFS_Flex'])
         or (int(sw['GSw_Canada']) == 2)
-        or int(sw['GSw_DUPV'])
     ):
         raise NotImplementedError(
             'At least one of GSw_Canada, GSw_ClimateHydro, GSw_ClimateDemand, GSw_ClimateWater, '
-            'endyear, startyear, GSw_EFS_Flex, or GSw_DUPV '
+            'endyear, startyear, or GSw_EFS_Flex '
             'are using a currently-unsupported setting.')
     
     if (sw['GSw_HourlyType'] in ['year']) and int(sw['GSw_InterDayLinkage']):
@@ -199,14 +197,29 @@ def check_compatibility(sw):
             '\nGSw_HourlyWindow = {}\nGSw_HourlyWindowOverlap = {}'.format(
                 sw['GSw_HourlyWindow'], sw['GSw_HourlyWindowOverlap'])))
 
-    if ((sw['GSw_HourlyClusterAlgorithm'] not in ['hierarchical','optimized'])
+    if ((sw['GSw_HourlyClusterAlgorithm'] not in ['hierarchical','optimized','kmeans','kmedoids'])
         and ('user' not in sw['GSw_HourlyClusterAlgorithm'])
     ):
-        raise ValueError(
-            "GSw_HourlyClusterAlgorithm must be set to 'hierarchical' or 'optimized', or must "
-            "contain the substring 'user' and match a scenario in "
-            "inputs/variability/period_szn_user.csv"
-        )
+        if sw['GSw_HourlyClusterAlgorithm'].startswith('hierarchical'):
+            args = sw['GSw_HourlyClusterAlgorithm'].split('_')
+            assert len(args) == 3
+            ## https://scikit-learn.org/stable/modules/generated/sklearn.cluster.AgglomerativeClustering.html
+            assert args[1] in ['euclidean','l1','l2','manhattan','cosine']
+            assert args[2] in ['ward', 'complete', 'average', 'single']
+            if args[2] == 'ward':
+                assert args[1] == 'euclidean'
+        elif sw['GSw_HourlyClusterAlgorithm'].startswith('kmedoids'):
+            args = sw['GSw_HourlyClusterAlgorithm'].split('_')
+            assert len(args) == 3
+            assert args[1] in ['euclidean','l1','l2','manhattan','cosine']
+            assert args[2] in ['heuristic','k-medoids++','random','build']
+        else:
+            raise ValueError(
+                "GSw_HourlyClusterAlgorithm must be set to 'hierarchical', 'optimized', "
+                "'kmeans', or 'kmedoids', or must "
+                "contain the substring 'user' and match a scenario in "
+                "inputs/variability/period_szn_user.csv"
+            )
 
     if ((sw['GSw_PRM_StressModel'].lower() not in ['pras'])
         and ('user' not in sw['GSw_PRM_StressModel'])):
@@ -229,13 +242,10 @@ def check_compatibility(sw):
         )
 
     ### Aggregation
-    if (sw['GSw_RegionResolution'] != 'aggreg') and (
-        (int(sw['GSw_NumCSPclasses']) != 12)
-        or (int(sw['GSw_NumDUPVclasses']) != 7)
-    ):
+    if (sw['GSw_RegionResolution'] != 'aggreg') and (int(sw['GSw_NumCSPclasses']) != 12):
         raise NotImplementedError(
-            'Aggregated CSP/DUPV classes only work with aggregated regions. '
-            'At least one of GSw_NumCSPclasses and GSw_NumDUPVclasses are incompatible with '
+            'Aggregated CSP classes only work with aggregated regions. '
+            'GSw_NumCSPclasses is incompatible with '
             'GSw_RegionResolution != aggreg')
 
     ### Parsed string switches
@@ -400,7 +410,7 @@ def check_compatibility(sw):
             "'reeds_to_rev' must be enable for land_use analysis to run."
         )
     
-    disallowed_characters = ['~', '|']
+    disallowed_characters = ['~', '|', '*']
     invalid_switches = [
         key for key, val in sw.items()
         if any([char in val for char in disallowed_characters])
@@ -624,7 +634,7 @@ def setup_intertemporal(
                 + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
                 + str(caseSwitches['marg_vre_mw']) + " "
                 + str(caseSwitches['marg_stor_mw']) + " "
-                + str(caseSwitches['marg_dr_mw']) + " "
+                + str(caseSwitches['marg_evmc_mw']) + " "
                 + '\n')
             ## merge all the resulting gdx files
             ## the output file will be for the next iteration
@@ -690,7 +700,7 @@ def setup_window(
                 + str(caseSwitches['GSw_WaterMain']) + " " + str(i) + " "
                 + str(caseSwitches['marg_vre_mw']) + " "
                 + str(caseSwitches['marg_stor_mw']) + " "
-                + str(caseSwitches['marg_dr_mw']) + " "
+                + str(caseSwitches['marg_evmc_mw']) + " "
                 + '\n')
             ## merge all the resulting r2_in gdx files
             ## the output file will be for the next iteration
@@ -832,6 +842,55 @@ def setupEnvironment(
         df_cases_suf.drop(['Choices','Default Value'], axis='columns',inplace=True, errors='ignore')
         df_cases = df_cases.join(df_cases_suf, how='outer')
 
+    # If doing a Monte Carlo run modify df_cases by adding new columns for each scenario run
+    # Also validate the distribution file
+    warned_about_cluster_alg = False
+    if 'MCS_runs' in df_cases.index:        
+        for c in df_cases.columns:
+            if (
+                c not in ['Description','Default Value','Choices']
+                and (df_cases.loc['MCS_runs',c] not in [np.nan,'NaN'])
+                and (int(df_cases.loc['MCS_runs',c]) > 0)
+                and (not int(df_cases.loc['ignore',c]))
+            ):
+                # Warn user if the hourly clustering algorithm is not fixed for Monte Carlo runs
+                if not df_cases.at['GSw_HourlyClusterAlgorithm', c].startswith('user') and not warned_about_cluster_alg:
+                    print(f"\n[Warning] Case Column: '{c}'")
+                    print(
+                        "You are attempting to run a Monte Carlo simulation with "
+                        "`GSw_HourlyClusterAlgorithm` set to a value other than 'user'.\n"
+                        "This may result in inconsistent representative days across MCS runs.\n\n"
+                        "To ensure consistency, we strongly recommend setting "
+                        "`GSw_HourlyClusterAlgorithm = user` in your switch configuration.\n"
+                        "Do you want to proceed with the current setup?"
+                    )
+                    user_input = input("Type 'yes' to proceed, or 'no' to exit: ").strip().lower()
+                    if user_input not in ['yes', 'y']:
+                        print("\nExiting. Please update the `GSw_HourlyClusterAlgorithm` switch and try again.")
+                        quit()
+                    warned_about_cluster_alg = True
+                    print()
+  
+                # Validate the distribution file
+                sw = df_cases[c].fillna(df_cases['Default Value'])
+                mcs_dist_path = os.path.join(
+                    reeds_path, 'inputs', 'userinput',
+                    'mcs_distributions_{}.yaml'.format(sw.MCS_dist)
+                )
+                mcs.general_mcs_dist_validation(reeds_path, mcs_dist_path, sw)
+
+                # c (column) is a case with monte carlo runs, replicate this column N (NumMonteCarloRuns) times
+                NumMonteCarloRuns = int(df_cases.loc['MCS_runs',c])
+                NewColumnNames = [
+                    f"{c}_MC{str(i).zfill(len(str(NumMonteCarloRuns)))}"
+                    for i in range(1, NumMonteCarloRuns + 1)
+                ]
+
+                # Each new column is a copy of the original column with name c_{MC1,MC2,...}
+                df_cases_MC = pd.DataFrame(data=np.array([df_cases[c].values]*NumMonteCarloRuns).T, index=df_cases.index, columns=NewColumnNames)
+                df_cases = pd.concat([df_cases, df_cases_MC], axis=1)
+                df_cases.drop(c, axis=1, inplace=True) #drop the original column
+
     # Initiate the empty lists which will be filled with info from cases
     caseList = []
     caseSwitches = [] #list of dicts, one dict for each case
@@ -840,18 +899,28 @@ def setupEnvironment(
     choices = df_cases.Choices.copy()
 
     for case in casenames:
-        #Fill any missing switches with the defaults in cases.csv
+        # Fill any missing switches with the defaults in cases.csv
         df_cases[case] = df_cases[case].fillna(df_cases['Default Value'])
-        # Ignore cases with ignore flag
-        if int(df_cases.loc['ignore',case]) == 1:
-            continue
-        # Ignore cases that don't match the "single" case
-        if len(single) and (case not in single.split(',')):
-            continue
+
+        # If --single/-s was passed, only keep those cases (regardless of ignore)
+        # otherwise, drop any case marked ignore
+        if single:
+            if case not in single.split(','):
+                continue
+        else: 
+            if int(df_cases.loc['ignore', case]) == 1:
+                continue
+
         # Check to make sure the switch setting is valid
         for i, val in df_cases[case].items():
             if skip_checks:
                 continue
+            # check that the switch isn't duplicated
+            if isinstance(choices[i], pd.Series) and len(choices[i]) > 1:
+                error = (
+                        f'Duplicate entries for "{i}", delete one and restart.'
+                        )
+                raise ValueError(error)
             ### Split choices by either '; ' or ','
             if choices[i] in ['N/A',None,np.nan]:
                 pass
@@ -906,10 +975,15 @@ def setupEnvironment(
         caseList.append(shcom)
         caseSwitches.append(df_cases[case].to_dict())
 
-    # ignore cases with ignore flag
-    casenames = [case for case in casenames if int(df_cases.loc['ignore',case]) != 1]
-    df_cases.drop(
-        df_cases.loc['ignore'].loc[df_cases.loc['ignore']=='1'].index, axis=1, inplace=True)
+    # If no --single/-s, drop the ignored cases, otherwise leave them
+    if not single: 
+        casenames = [case for case in casenames 
+                     if int(df_cases.loc['ignore',case]) != 1]
+        df_cases.drop(
+            df_cases.loc['ignore'].loc[df_cases.loc['ignore']=='1'].index,
+            axis=1,
+            inplace=True
+        )
     # If the "single" argument is provided, only run that case
     if single:
         for s in single.split(','):
@@ -972,14 +1046,11 @@ def setupEnvironment(
         print("Only one case is to be run, therefore only one thread is needed")
         WORKERS = 1
     elif simult_runs < 0 or hpc:
-        WORKERS = len(caseList)
+        WORKERS = min(10, len(caseList))
     elif simult_runs > 0:
         WORKERS = simult_runs
     else:
         WORKERS = int(input('Number of simultaneous runs [integer]: '))
-
-    print(WORKERS)
-    print("")
 
     if 'int' in df_cases.loc['timetype'].tolist() or 'win' in df_cases.loc['timetype'].tolist():
         ccworkers = int(input('Number of simultaneous CC/Curt runs [integer]: '))
@@ -1099,33 +1170,17 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
         os.makedirs(os.path.join(reeds_path,'runs',batch_case), exist_ok=True)
         os.makedirs(os.path.join(reeds_path,'runs',batch_case,'g00files'), exist_ok=True)
         os.makedirs(os.path.join(reeds_path,'runs',batch_case,'lstfiles'), exist_ok=True)
-        os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs'), exist_ok=True)
+        os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs', 'maps'), exist_ok=True)
         os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs','tc_phaseout_data'), exist_ok=True)
-        os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs','model_diagnose'), exist_ok=True) if int(caseSwitches['diagnose'])!=0 else ''
+        if int(caseSwitches['diagnose']):
+            os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs','model_diagnose'), exist_ok=True)
         os.makedirs(inputs_case, exist_ok=True)
 
     #%% Stop now if any switches are incompatible
     check_compatibility(caseSwitches)
 
-    #%% Write the GAMS switches
-    gswitches = pd.Series(caseSwitches)
-    ## Only keep switches that start with 'GSw' and have a numeric value
-    def isnumeric(x):
-        try:
-            float(x)
-            if '_' not in x:
-                return True
-        except Exception:
-            return False
-    gswitches = gswitches.loc[
-        gswitches.index.str.lower().str.startswith('gsw')
-        & gswitches.map(isnumeric)
-    ].copy()
-    ## In GAMS we change 'GSw' to 'Sw'
-    gswitches.index = gswitches.index.map(lambda x: x[1:])
-    ## Add a 'comment' column and write to csv and GAMS-readable text
-    gswitches.reset_index().assign(comment='').to_csv(
-        os.path.join(inputs_case,'gswitches.csv'), header=False, index=False)
+    # Write the GAMS switches ('gswitches.csv')
+    reeds.io.write_gswitches(pd.Series(caseSwitches), inputs_case)
 
     #%% Information on reV supply curves associated with this run
     shutil.copytree(os.path.join(reeds_path,'inputs','supply_curve','metadata'),
@@ -1338,6 +1393,7 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             big_comment('Input processing', OPATH)
             for s in [
                 'copy_files',
+                'mcs_sampler',
                 'aggregate_regions',
                 'calc_financial_inputs',
                 'fuelcostprep',
@@ -1517,19 +1573,6 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
             + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-state") + ' No\n\n')
         OPATH.writelines('python postprocessing/vizit/vizit_prep.py ' + '"{}"'.format(os.path.join(casedir,'outputs')) + '\n\n')
 
-        if int(caseSwitches['delete_big_files']):
-            for file in [
-                os.path.join(inputs_case, 'recf.h5'),
-                os.path.join(inputs_case, 'load.h5'),
-                os.path.join(inputs_case, 'csp_profiles.h5'),
-                os.path.join(inputs_case, 'rsc_combined.csv'),
-                ### Uncomment the following two lines to delete the .g00 files
-                # os.path.join('g00files', restartfile + '.g00'),
-                # os.path.join('g00files', restartfile.rstrip(str(cur_year)+'_') + '.g00'),
-            ]:
-                write_delete_file(checkfile=file, deletefile=file, PATH=OPATH)
-            OPATH.writelines('')
-
         if int(caseSwitches['transmission_maps']):
             OPATH.writelines('python postprocessing/transmission_maps.py -c {} -y {}\n\n'.format(
                 casedir, (
@@ -1538,6 +1581,12 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                     else caseSwitches['transmission_maps'])
             ))
             
+
+        ### Remove unnecessary files from case folder
+        OPATH.writelines(
+            f"python postprocessing/cleanup_files.py {casedir} --force --quiet "
+            f"--level {caseSwitches['cleanup_level']}\n"
+        )
 
         ### Run R2X if using debug mode
         ### First install uvx: https://docs.astral.sh/uv/getting-started/installation/
@@ -1573,6 +1622,9 @@ def runModel(options, caseSwitches, niter, reeds_path, ccworkers, startiter,
                     else caseSwitches['transmission_maps'])
             ))
 
+        ### Run dispatch mode if desired
+        if int(caseSwitches['pcm']):
+            OPATH.writelines(f'\npython run_pcm.py {casedir} -b\n\n')
 
     ### =====================================================================================
     ### --- CALL THE CREATED BATCH FILE ---

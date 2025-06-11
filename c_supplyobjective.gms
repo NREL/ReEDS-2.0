@@ -39,6 +39,10 @@ eq_ObjFn_inv(t)$tmodel(t)..
                        cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INV(i,v,r,t)
                       }
 
+                  + sum{(i,v,r)$[valinv(i,v,r,t)$continuous_battery(i)],
+                       cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) * INV_ENERGY(i,v,r,t) 
+                      }
+
 * --- penalty for exceeding interconnection queue limit  ---
                   + sum{(tg,r), cap_penalty(tg) * CAP_ABOVE_LIM(tg,r,t) }    
 
@@ -164,6 +168,9 @@ eq_Objfn_op(t)$tmodel(t)..
               + sum{(i,v,r)$[valcap(i,v,r,t)],
                    cost_fom(i,v,r,t) * CAP(i,v,r,t) }
 
+              + sum{(i,v,r)$[valcap(i,v,r,t)$continuous_battery(i)],
+                   cost_fom_energy(i,v,r,t) * CAP_ENERGY(i,v,r,t) }
+
 * transmission lines
               + sum{(r,rr,trtype)$routes(r,rr,trtype,t),
                     transmission_line_fom(r,rr,trtype) * CAPTRAN_ENERGY(r,rr,trtype,t) }
@@ -270,7 +277,7 @@ eq_Objfn_op(t)$tmodel(t)..
                    cost_hurdle(r,rr,t) * FLOW(r,rr,h,t,trtype) * hours(h) }
 
 * --- taxes on emissions---
-              + sum{(e,r), EMIT(e,r,t) * emit_tax(e,r,t) }
+              + sum{(e,r), (EMIT("combustion",e,r,t) + EMIT("precombustion",e,r,t)$Sw_Precombustion) * emit_tax(e,r,t) }
 
 * --cost of CO2 transport and storage from CCS--
               + sum{(i,v,r,h)$[valgen(i,v,r,t)],
