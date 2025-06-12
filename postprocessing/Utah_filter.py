@@ -51,7 +51,7 @@ Folders = [case,
 
 inputs_case = os.path.join(reeds_path,'runs',Folders[0],'inputs_case')
 
-if resolution == 'ba':
+if resolution == 'ba' or resolution == 'aggreg':
     # List of ReEDS BAs that belong to Utah 
     regions  = list_of_regions_to_isolate 
 
