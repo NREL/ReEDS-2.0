@@ -858,8 +858,8 @@ eq_forceprescription(pcat,r,t)
 
 * require specific amounts of capacity to be built in a state
 eq_build_requirement(pcat,st,t)
-    $tmodel(t)
-    $[sum{(pcat,t), required_investment(pcat,st,t) }
+    $[tmodel(t)
+    $sum{(ppcat,tt), required_investment(ppcat,st,tt) }
     $(yeart(t) >= model_builds_start_yr)
     $Sw_BuildRequirements
     $(not Sw_PCM)]..
