@@ -198,7 +198,7 @@ for f in Folders:
     
     #### new Capacity
 
-    report_GEN= pd.read_excel(report_dir, sheet_name = '5_New Annual Capacity (GW)')
+    report_GEN= pd.read_excel(report_dir, sheet_name = '6_New Annual Capacity (GW)')
     output_GEN = pd.read_csv('//'.join([output_dir,'cap_new_ann.csv']))
     output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
     output_GEN['scenario'] = scenario
@@ -232,12 +232,12 @@ for f in Folders:
     GEN_table = GEN_table[['scenario','tech','year','Capacity (GW)','Net Level Capacity (GW)']]
 
     with pd.ExcelWriter(os.path.join(f,'outputs','reeds-report','report.xlsx'),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
-        GEN_table.to_excel(writer, sheet_name = '5_New Annual Capacity (GW)', index = False)
+        GEN_table.to_excel(writer, sheet_name = '6_New Annual Capacity (GW)', index = False)
 
 
     #### Retirements 
 
-    report_GEN= pd.read_excel(report_dir, sheet_name = '6_Annual Retirements (GW)')
+    report_GEN= pd.read_excel(report_dir, sheet_name = '7_Annual Retirements (GW)')
     output_GEN = pd.read_csv(os.path.join(output_dir,'ret_ann.csv'))
     output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
     output_GEN['scenario'] = scenario
@@ -271,7 +271,7 @@ for f in Folders:
     GEN_table = GEN_table[['scenario','tech','year','Capacity (GW)','Net Level Capacity (GW)']]
 
     with pd.ExcelWriter(os.path.join(f,'outputs','reeds-report','report.xlsx'),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
-        GEN_table.to_excel(writer, sheet_name = '6_Annual Retirements (GW)', index = False)
+        GEN_table.to_excel(writer, sheet_name = '7_Annual Retirements (GW)', index = False)
 
 
     #### Firm Capacity 
@@ -279,7 +279,7 @@ for f in Folders:
     # If using PRAS instead of capacity credit method for Resource Adequacy then firm_cap is not populated 
     switches = pd.read_csv(os.path.join(f,'inputs_case','switches.csv'))
     if switches[switches['AWS']=='GSw_PRM_CapCredit']['0'].item() ==1:
-        report_GEN= pd.read_excel(report_dir, sheet_name = '11_Firm Capacity (GW)')
+        report_GEN= pd.read_excel(report_dir, sheet_name = '13_Firm Capacity (GW)')
         output_GEN = pd.read_csv(os.path.join(output_dir,'cap_firm.csv'))
         output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
         output_GEN['scenario'] = scenario
@@ -314,12 +314,12 @@ for f in Folders:
 
 
         with pd.ExcelWriter(os.path.join(f,'outputs','reeds-report','report.xlsx'),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
-            GEN_table.to_excel(writer, sheet_name = '11_Firm Capacity (GW)', index = False)
+            GEN_table.to_excel(writer, sheet_name = '13_Firm Capacity (GW)', index = False)
 
 
     #### Emissions
 
-    report_GEN= pd.read_excel(report_dir, sheet_name = '25_Emissions National (metric t')
+    report_GEN= pd.read_excel(report_dir, sheet_name = '30_Emissions National (metric t')
     output_GEN = pd.read_csv(os.path.join(output_dir,'emit_r.csv'))
     output_GEN = output_GEN.loc[output_GEN.r.isin(regions)]
     output_GEN['scenario'] = scenario
@@ -337,7 +337,7 @@ for f in Folders:
 
 
     with pd.ExcelWriter(os.path.join(f,'outputs','reeds-report','report.xlsx'),engine="openpyxl", mode="a",if_sheet_exists='replace') as writer:
-        GEN_table.to_excel(writer, sheet_name = '25_Emissions National (metric t', index = False)
+        GEN_table.to_excel(writer, sheet_name = '30_Emissions National (metric t', index = False)
 
 
     #### Transmission
