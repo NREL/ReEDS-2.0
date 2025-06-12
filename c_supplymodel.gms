@@ -153,6 +153,7 @@ EQUATION
  eq_cap_upgrade(i,v,r,t)                  "--MW-- All purchased upgrades are greater than or equal to the sum of upgraded capacity"
  eq_ener_up(i,v,r,rscbin,t)               "--MW-- limit on energy upsizing"
  eq_forceprescription(pcat,r,t)           "--MW-- total investment in prescribed capacity must equal amount from exogenous prescriptions"
+ eq_build_requirement(pcat,st,t)          "--MW-- investments in a state must equal the user-specified investments"
  eq_refurblim(i,r,t)                      "--MW-- total refurbishments cannot exceed the amount of capacity that has reached the end of its life"
 
 * renewable supply curves
@@ -851,6 +852,26 @@ eq_forceprescription(pcat,r,t)
     + EXTRA_PRESCRIP(pcat,r,t)$[r_offshore(r,t)$sameas(pcat,'wind-ofs')
                                $(yeart(t)>=firstyear_RPS)
                                $sum{st$r_st(r,st), offshore_cap_req(st,t) }]
+;
+
+* ---------------------------------------------------------------------------
+
+* require specific amounts of capacity to be built in a state
+eq_build_requirement(pcat,st,t)
+    $tmodel(t)
+    $[sum{(pcat,t), required_investment(pcat,st,t) }
+    $(yeart(t) >= model_builds_start_yr)
+    $Sw_BuildRequirements
+    $(not Sw_PCM)]..
+
+* Sum of investments in the state
+    sum{(i,v,r)$[prescriptivelink(pcat,i)$r_st(r,st)$valinv(i,v,r,t)], INV(i,v,r,t) }
+    
+    =e=
+
+* must equal the required amount
+    required_investment(pcat,st,t)
+
 ;
 
 

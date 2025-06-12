@@ -2321,6 +2321,11 @@ prescription_check(i,newv,r,t)$[sum{pcat$prescriptivelink(pcat,i), noncumulative
 *Only enable for bin1 if there is no resource in any bins to keep parameter size down.
 m_rscfeas(r,i,"bin1")$[sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) }$rsc_i(i)$(not bannew(i))$(sum{rscbin, rsc_dat(i,r,"cap",rscbin) }=0)] = yes ;
 
+parameter required_investment(pcat,st,t) "--MW-- user-specified required investments by state" ;
+
+* Initialize required_investment to zero until user data is available
+required_investment(pcat,st,t) = 0 ;
+
 *==========================================================
 *--- Interconnection queues (Capacity deployment limit) ---
 *==========================================================

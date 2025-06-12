@@ -24,6 +24,7 @@ eq_csapr_assurance,#ff7f0e
 eq_csapr_budget,#2ca02c
 eq_dhyd_dispatch,#d62728
 eq_forceprescription,#9467bd
+eq_build_requirement,#000000
 eq_growthlimit_relative,#8c564b
 eq_minloading,#7f7f7f
 eq_orcap,#bcbd22

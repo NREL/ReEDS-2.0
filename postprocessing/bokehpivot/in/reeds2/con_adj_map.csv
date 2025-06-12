@@ -25,6 +25,7 @@ eq_curtailment,Curtailment Caused
 eq_dhyd_dispatch,eq_dhyd_dispatch
 eq_emit_accounting,Emissions
 eq_forceprescription,eq_forceprescription
+eq_build_requirement,eq_build_requirement
 eq_gasused,NG Fuel
 eq_gasaccounting_national,Variable O&M and Fuel
 eq_gasaccounting_regional,Variable O&M and Fuel
