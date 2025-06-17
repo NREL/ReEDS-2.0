@@ -106,6 +106,11 @@ jobs:
         if: matrix.scenario == 'p6_County'
         run: echo "GITHUB_COUNTY_TEST=True" >> $GITHUB_ENV
 
+      - name: Setup licence
+        run: |
+          echo "${{ secrets.GAMSLICENSE }}" >> gamslice.txt
+          cp "${GITHUB_WORKSPACE}/gamslice.txt" "${{ steps.mamba.outputs.environment-path}}/lib/python3.11/site-packages/gamspy_base/gamslice.txt"
+
       - name: Run ReEDS model ${{ matrix.scenario }}
         run: |
           python runbatch.py -b ${{ env.batch }} -c test -s ${{ matrix.scenario }}

@@ -56,6 +56,7 @@ inputs/variability/multi_year/file_version.csv
 
 # GAMS project files
 *.gpr
+gamslice.txt
 
 # IDE files
 *.vscode
