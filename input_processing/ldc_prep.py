@@ -412,6 +412,29 @@ def main(reeds_path, inputs_case):
     load_profiles /= (1 - distloss)
     load_profiles = load_profiles.astype(np.float32)
 
+    ## Add data center load if GSw_LargeLoadAdd is on
+    if int(sw['GSw_LargeLoadAdd']) == 1:
+        dc_load = pd.read_csv(os.path.join(inputs_case,'large_load_additions.csv'))
+
+        # First check that data center load data exist for regions included in the run
+        val_r_all = sorted(
+                        pd.read_csv(
+                            os.path.join(inputs_case, 'val_r_all.csv'), header=None,
+                        ).squeeze(1).tolist())
+        list_reg = []
+        for item in dc_load['*r'].unique().tolist():
+            if item in val_r_all:
+                list_reg.append(item)
+        if len(list_reg) == 0:
+            raise ValueError(
+                "There are no data center load data for the regions included in this run. " 
+                "If this is intentional, set GSw_LargeLoadAdd to 0"
+            )
+
+        # Assign data center load as flat block starting in the year indicated
+        
+
+
     #%%%#############################################
     #    -- Performing Resource Modifications --    #
     #################################################
