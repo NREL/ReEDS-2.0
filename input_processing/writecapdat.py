@@ -698,7 +698,48 @@ def main(reeds_path, inputs_case, agglevel, regions):
         ## Reshape for GAMS
         .stack().rename_axis(['*r','t']).rename('MW').round(3)
     )
+    #%%----------------------------------------------------------------------------
+    ##############################
+    #  -- State Required Builds --    #
+    ##############################
+    # If enforcing state required builds then the prescribed builds and existing capacity need to added to the list of required capacity
+    if int(sw.GSw_BuildRequirements) == 1:
+        req_builds = pd.read_csv(os.path.join(inputs_case,'required_investments.csv'))
 
+        # Map regions to states
+        r_st = pd.read_csv(os.path.join(inputs_case,'hierarchy.csv')).set_index('*r')['st'].to_dict()
+
+        # Prescribed nonRSC
+        prescribed_nonRSC_st = prescribed_nonRSC.copy()
+        prescribed_nonRSC_st['r'] = prescribed_nonRSC_st['r'].map(r_st)
+        prescribed_nonRSC_st =  prescribed_nonRSC_st.groupby(['t','i','r']).sum().reset_index()
+
+        # Prescribed RSC
+        prescribed_rsc_st = prescribed_rsc.copy()
+        prescribed_rsc_st['r'] = prescribed_rsc_st['r'].map(r_st)
+        prescribed_rsc_st = prescribed_rsc_st.groupby(['t','i','r']).sum().reset_index()
+
+        # Existing nonRSC CAP
+        capnonrsc_st = capnonrsc.copy()
+        capnonrsc_st['r'] = capnonrsc_st['r'].map(r_st)
+        capnonrsc_st = capnonrsc_st.groupby(['i','r']).sum().reset_index()
+        capnonrsc_st['t'] = startyear       
+
+        # Existing RSC CAP
+        caprsc_st = caprsc.copy()
+        caprsc_st['r'] = caprsc_st['r'].map(r_st)
+        caprsc_st = caprsc_st.groupby(['i','r']).sum().reset_index()
+        caprsc_st['t'] = startyear      
+
+        additions = pd.concat([prescribed_nonRSC_st, prescribed_rsc_st,capnonrsc_st,caprsc_st])
+        additions = additions.groupby(['t','i','r']).sum().reset_index()
+        additions = additions.rename(columns={'i':'*i','r':'st'})
+        additions = additions[['*i','st','t','value']]
+
+        req_builds = pd.concat([req_builds,additions])
+
+    else:
+        req_builds = pd.DataFrame(columns=['*i', 'st', 't', 'value'])
 
     #%%----------------------------------------------------------------------------
     ##############################
@@ -706,7 +747,7 @@ def main(reeds_path, inputs_case, agglevel, regions):
     ##############################
 
     #Round outputs before writing out
-    for df in [rets, capnonrsc, prescribed_nonRSC, caprsc, prescribed_rsc, h2_existing_smr_cap]:
+    for df in [rets, capnonrsc, prescribed_nonRSC, caprsc, prescribed_rsc, h2_existing_smr_cap,req_builds]:
         df['value'] = df['value'].round(6)
         # Set all years to integer datatype
         if 't' in df.columns:
@@ -727,7 +768,8 @@ def main(reeds_path, inputs_case, agglevel, regions):
                 'rsc_wsc':rsc_wsc,
                 'hydcapadj_ccszn' : hydcapadj_ccszn[['*i','ccseason','r','value']],
                 'can_imports_capacity' : can_imports_capacity,
-                'geoexist' : geoexist
+                'geoexist' : geoexist,
+                'req_builds' : req_builds[['*i','st','t','value']],
                 }
 
     return files_out 
