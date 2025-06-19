@@ -422,7 +422,7 @@ def main(reeds_path, inputs_case):
                             os.path.join(inputs_case, 'val_r_all.csv'), header=None,
                         ).squeeze(1).tolist())
         list_reg = []
-        for item in dc_load['*r'].unique().tolist():
+        for item in dc_load['r'].unique().tolist():
             if item in val_r_all:
                 list_reg.append(item)
         if len(list_reg) == 0:
@@ -430,10 +430,18 @@ def main(reeds_path, inputs_case):
                 "There are no data center load data for the regions included in this run. " 
                 "If this is intentional, set GSw_LargeLoadAdd to 0"
             )
-
         # Assign data center load as flat block starting in the year indicated
+        else:
+            # Add the data center load to the load profiles as a flat addition
+            for reg in list_reg:
+               # Get the first year the data center load is online
+               t_dc = dc_load.loc[dc_load['r'] == reg, 't'].item()
+               # Only add the data center load to the load profiles for t_dc and beyond
+               load_profiles = load_profiles.reset_index()               
+               load_profiles.loc[load_profiles['year'] >= t_dc, reg] += dc_load.loc[dc_load['r'] == reg, 'value'].values[0]
         
-
+        load_profiles = load_profiles.set_index(['year', 'datetime'])
+        load_profiles = load_profiles.astype(np.float32)
 
     #%%%#############################################
     #    -- Performing Resource Modifications --    #

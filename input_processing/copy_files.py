@@ -1506,6 +1506,38 @@ def write_miscellaneous_files(
 
     cap_queue = cap_queue.groupby(['tg','r'],as_index=False).sum()
     cap_queue.to_csv(os.path.join(inputs_case,'cap_limit.csv'), index=False)
+
+    # Add large load additions
+    large_load_additions = pd.read_csv(os.path.join(reeds_path,'inputs','load','large_load_additions.csv'))
+    # Single resolution procedure
+    if (agglevel_variables["lvl"] != 'county') and ('county' not in agglevel_variables['agglevel']):
+        large_load_additions = large_load_additions.rename(columns={'*r':'county'})
+        large_load_additions = pd.merge(
+            large_load_additions, regions_and_agglevel["r_county"], on='county', how='left'
+        ).dropna()
+        large_load_additions = large_load_additions.drop('county', axis=1)
+    # Mixed resolution procedure
+    elif agglevel_variables['lvl'] == 'mult':
+        # Filter out BA regions and aggregate
+        large_load_additions_ba = large_load_additions[
+            large_load_additions['*r'].isin(agglevel_variables['BA_county_list'])]
+        if 'aggreg' in agglevel_variables['agglevel'] :
+            r_county_dict = regions_and_agglevel["r_county"].set_index('county')['r'].to_dict()
+            large_load_additions_ba['*r'] = large_load_additions_ba['*r'].map(r_county_dict)
+        else:
+            large_load_additions_ba['*r'] = large_load_additions_ba['*r'].map(
+                agglevel_variables['BA_2_county'])
+
+        # Filter out county regions
+        large_load_additions_county = large_load_additions[
+            large_load_additions['*r'].isin(agglevel_variables['county_regions'])]
+
+        # Combine county and BA
+        large_load_additions = pd.concat([large_load_additions_ba,large_load_additions_county])
+
+    large_load_additions = large_load_additions.groupby(['*r'],as_index=False).sum()
+    large_load_additions.to_csv(os.path.join(inputs_case,'large_load_additions.csv'), index=False)
+
     # ----  Miscelanous files in non_region_files or region_files (in this case we are overwriting them)
     # Expand i (technologies) set if modeling water use. Overwrite originals.
     if int(sw['GSw_WaterMain']):
