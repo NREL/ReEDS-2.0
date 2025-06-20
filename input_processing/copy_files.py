@@ -1507,8 +1507,8 @@ def write_miscellaneous_files(
     cap_queue = cap_queue.groupby(['tg','r'],as_index=False).sum()
     cap_queue.to_csv(os.path.join(inputs_case,'cap_limit.csv'), index=False)
 
-    # Add large load additions
-    large_load_additions = pd.read_csv(os.path.join(reeds_path,'inputs','load','large_load_additions.csv'))
+    # Add large load additions (input data always at county resolution)
+    large_load_additions = pd.read_csv(os.path.join(reeds_path, 'inputs', 'load', f"large_load_additions_{sw['GSw_LargeLoadFile']}.csv"))
     # Single resolution procedure
     if (agglevel_variables["lvl"] != 'county') and ('county' not in agglevel_variables['agglevel']):
         large_load_additions = large_load_additions.rename(columns={'*r':'county'})
