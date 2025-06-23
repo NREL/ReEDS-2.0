@@ -719,25 +719,31 @@ def main(reeds_path, inputs_case, agglevel, regions):
         prescribed_rsc_st['r'] = prescribed_rsc_st['r'].map(r_st)
         prescribed_rsc_st = prescribed_rsc_st.groupby(['t','i','r']).sum().reset_index()
 
-        # Existing nonRSC CAP
-        capnonrsc_st = capnonrsc.copy()
-        capnonrsc_st['r'] = capnonrsc_st['r'].map(r_st)
-        capnonrsc_st = capnonrsc_st.groupby(['i','r']).sum().reset_index()
-        capnonrsc_st['t'] = startyear       
+        # # Existing nonRSC CAP
+        # capnonrsc_st = capnonrsc.copy()
+        # capnonrsc_st['r'] = capnonrsc_st['r'].map(r_st)
+        # capnonrsc_st = capnonrsc_st.groupby(['i','r']).sum().reset_index()
+        # capnonrsc_st['t'] = startyear       
 
-        # Existing RSC CAP
-        caprsc_st = caprsc.copy()
-        caprsc_st['r'] = caprsc_st['r'].map(r_st)
-        caprsc_st = caprsc_st.groupby(['i','r']).sum().reset_index()
-        caprsc_st['t'] = startyear      
+        # # Existing RSC CAP
+        # caprsc_st = caprsc.copy()
+        # caprsc_st['r'] = caprsc_st['r'].map(r_st)
+        # caprsc_st = caprsc_st.groupby(['i','r']).sum().reset_index()
+        # caprsc_st['t'] = startyear      
 
-        additions = pd.concat([prescribed_nonRSC_st, prescribed_rsc_st,capnonrsc_st,caprsc_st])
+        # additions = pd.concat([prescribed_nonRSC_st, prescribed_rsc_st,capnonrsc_st,caprsc_st])
+        additions = pd.concat([prescribed_nonRSC_st, prescribed_rsc_st])
         additions = additions.groupby(['t','i','r']).sum().reset_index()
         additions = additions.rename(columns={'i':'*i','r':'st'})
         additions = additions[['*i','st','t','value']]
 
-        req_builds = pd.concat([req_builds,additions])
+        req_builds = pd.concat([req_builds,additions]).reset_index()
 
+        # Report cumulative capacity by tech
+        for tech_type in req_builds['*i'].unique():
+           req_builds.loc[req_builds['*i']==tech_type, 'value'] = (
+                req_builds.loc[req_builds['*i']==tech_type].sort_values(by='t')['value'].cumsum()
+            )
     else:
         req_builds = pd.DataFrame(columns=['*i', 'st', 't', 'value'])
 
