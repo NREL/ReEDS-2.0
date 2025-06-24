@@ -429,7 +429,7 @@ def main(reeds_path, inputs_case):
         if len(list_reg) == 0:
             raise ValueError(
                 "There are no data center load data for the regions included in this run. " 
-                "If this is intentional, set GSw_LargeLoadAdd to 0"
+                "If this is intentional, set GSw_LargeLoadAdd to 'none' "
             )
         # Assign data center load as flat block starting in the year indicated
         else:
