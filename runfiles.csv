@@ -240,7 +240,7 @@ itc_fractions.csv,,,,ignore,ignore,,"i,country,t",,0,0,,,,,,
 ivt.csv,,,,ignore,ignore,,,,,0,,,,,,created in runbatch.py
 ivt_step.csv,,,,ignore,ignore,,,,,0,,,,,,
 lcclike.csv,inputs/sets/lcclike.csv,,,ignore,ignore,,,,,0,,,,lcclike,,
-large_load_additions.csv,inputs/load/large_load_additions_{GSw_LargeLoadFile}.csv,GSw_LargeLoadFile,,sum,ignore,*r,"*r,t",,0,1,,,,,,disaggfunc set to ignore because load will already be at county resolution
+large_load_additions.csv,inputs/load/large_load_additions_{GSw_LargeLoadAdd}.csv,GSw_LargeLoadAdd,,sum,ignore,*r,"*r,t",,0,1,,,,,,disaggfunc set to ignore because load will already be at county resolution
 load_2010.csv,,,,sum,ignore,r,wide,,1,0,,1,,,,disaggfunc set to ignore because load will already be in correct spatial resolution
 load_allyear.csv,,,,sum,ignore,*r,"h,t",,0,0,,1,,,,disaggfunc set to ignore because load will already be in correct spatial resolution
 load_multiplier.csv,inputs/load/demand_{demandscen}.csv,,,ignore,ignore,,,,,0,,,,,,
