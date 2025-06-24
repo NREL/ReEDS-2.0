@@ -1516,7 +1516,7 @@ def write_miscellaneous_files(
         large_load_additions = pd.merge(
             large_load_additions, regions_and_agglevel["r_county"], on='county', how='left'
         ).dropna()
-        large_load_additions = large_load_additions.drop('county', axis=1)
+        large_load_additions = large_load_additions.rename(columns ={'r':'*r'}).drop('county', axis=1)[['*r', 't', 'value']]
     # Mixed resolution procedure
     elif agglevel_variables['lvl'] == 'mult':
         # Filter out BA regions and aggregate
