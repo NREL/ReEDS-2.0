@@ -1023,7 +1023,36 @@ def write_county_vre_hourly_profiles(inputs_case, reeds_path):
             # tries to get environment variable from github, if it's not found it defaults to False
             github_test = os.getenv("GITHUB_COUNTY_TEST", False)
 
-            if 'github.nrel.gov' in remote_url:
+            if ('github.com' in remote_url) and github_test:
+                sc_path = row['sc_path']
+                print(f'Copying county-level hourly profiles for {row["tech"]} {row["access_case"]}')
+
+                shutil.copy(
+                    os.path.join(reeds_path,'tests','data','county',f'{row["tech"]}.h5'),
+                    os.path.join(
+                        reeds_path,'inputs','variability','multi_year',
+                        f'{row["tech"]}-{access_case}_county.h5')
+                )
+                # Update the file version information
+                condition = (
+                    (file_version_new['tech'] == row['tech'])
+                    & (file_version_new['access_case'] == row['access_case'])
+                )
+
+                if condition.any():
+                    file_version_new.loc[condition, 'file version'] = sc_path.split("/")[-1]
+                else:
+                    newrow = pd.DataFrame(
+                        data={
+                            'tech': [row['tech']],
+                            'access_case': [row['access_case']],
+                            'file version': [sc_path.split("/")[-1]]
+                        }
+                    )
+                    file_version_new = pd.concat([file_version_new, newrow])
+                file_version_updates += 1
+
+            elif 'github.nrel.gov' in remote_url:
                 sc_path = row['sc_path']
                 print(f'Copying county-level hourly profiles for {row["tech"]} {row["access_case"]}')
 
