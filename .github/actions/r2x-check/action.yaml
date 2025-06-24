@@ -1,0 +1,39 @@
+name: r2x-compatibility
+description: "Action to run R2X."
+inputs:
+  reeds-run-path:
+    required: true
+    type: string
+  python-version:
+    type: string
+    default: "3.11"
+  r2x-exporter:
+    type: string
+    default: plexos
+  weather-year:
+    type: int
+    default: 2012
+  solve-year:
+    type: int
+    default: 2035
+
+
+runs:
+  using: composite
+  steps:
+    - name: Install uv and set the python version
+      uses: astral-sh/setup-uv@v5
+      with:
+        python-version: ${{ inputs.python-version}}
+
+    - name: Run R2X translation
+      shell: bash -le {0}
+      run: |
+        uvx --from git+https://github.com/nrel/r2x@main r2x --version
+        uvx --from git+https://github.com/nrel/r2x@main r2x -vv run \
+          -i ${{ inputs.reeds-run-path }} \
+          --input-model=reeds-US \
+          --output-model=${{ inputs.r2x-exporter }} \
+          --year=${{ inputs.solve-year }} \
+          --weather-year=${{ inputs.weather-year }} \
+          --upgrade
