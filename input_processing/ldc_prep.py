@@ -413,7 +413,7 @@ def main(reeds_path, inputs_case):
     load_profiles = load_profiles.astype(np.float32)
 
     ## Add data center load if GSw_LargeLoadAdd is on
-    if int(sw['GSw_LargeLoadAdd']) == 'none':
+    if sw['GSw_LargeLoadAdd'] == 'none':
         pass
     else:
         dc_load = pd.read_csv(os.path.join(inputs_case,'large_load_additions.csv'))
