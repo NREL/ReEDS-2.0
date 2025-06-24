@@ -872,6 +872,12 @@ eq_build_requirement(pcat,st,t)
 * must equal the required amount
     required_investment(pcat,st,t)
 
+* plus the existing amount
+*    + sum{(i,v,r)$[prescriptivelink(pcat,i)$r_st(r,st)], m_capacity_exog(i,v,r,t) }
+
+* plus the prescribed amount
+*    + sum{(i,r)$[prescriptivelink(pcat,i)$r_st(r,st)], cap_prescribed(i,r) }
+
 ;
 
 
@@ -1357,7 +1363,8 @@ eq_option1(st,t)
     $[tmodel(t)$(Sw_OPGW=1)    
     $(yeart(t)>=model_builds_start_yr)
     $(sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) })  
-    $(annual_generation_target(t,st))    
+    $(annual_generation_target(t,st))
+    $(not storage(i))    
     ]..                                                        
                 
 *  annual generation 
@@ -1375,7 +1382,8 @@ eq_option2(st,t)$[tmodel(t)
                 $(yeart(t)>=model_builds_start_yr)
                 $sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) }   
                 $(Sw_OPGW = 2)      
-                $sameas(st,"UT")                                                        
+                $sameas(st,"UT")
+                $(not storage(i))                                                           
                 ]..
 
 *  annual generation 
@@ -1395,7 +1403,8 @@ eq_option3(st,h,t)$[tmodel(t)
                     $(yeart(t)>=model_builds_start_yr)  
                     $sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) }
                     $(Sw_OPGW = 3)    
-                    $sameas(st,"UT")                                                               
+                    $sameas(st,"UT")
+                    $(not storage(i))                                                                  
                     ]..
 
 *  hourly generation 
