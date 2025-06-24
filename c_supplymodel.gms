@@ -1379,8 +1379,7 @@ eq_option1(st,t)
 *---- Option 2 -----
 eq_option2(st,t)$[tmodel(t)      
                 $(yeart(t)>=model_builds_start_yr)
-                $sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) }
-                $sum{(i)$[(not storage(i))], valgen_irt(i,r,t) }     
+                $sum{(i,r)$[r_st(r,st)], valgen_irt(i,r,t) }  
                 $(Sw_OPGW = 2)      
                 $sameas(st,"UT")                                                       
                 ]..
