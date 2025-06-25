@@ -1367,8 +1367,8 @@ eq_option1(st,t)
     ]..                                                        
                 
 *  annual generation 
-    sum{(i,v,r,h)$r_st(r,st),          
-        hours(h) * GEN(i,v,r,h,t)$(not storage(i))}   
+    sum{(i,v,r,h)$[r_st(r,st)$valgen(i,v,r,t)$(not storage(i))],          
+        hours(h) * GEN(i,v,r,h,t) }   
        
     =g=
 
@@ -1385,8 +1385,8 @@ eq_option2(st,t)$[tmodel(t)
                 ]..
 
 *  annual generation 
-    sum{(i,v,r,h)$[r_st(r,st)$valgen(i,v,r,t)],          
-        hours(h) * GEN(i,v,r,h,t)$(not storage(i)) }   
+    sum{(i,v,r,h)$[r_st(r,st)$valgen(i,v,r,t)$(not storage(i))],          
+        hours(h) * GEN(i,v,r,h,t) }   
 
     =g=
 
@@ -1405,8 +1405,8 @@ eq_option3(st,h,t)$[tmodel(t)
                     ]..
 
 *  hourly generation 
-    sum{(i,v,r)$[r_st(r,st)$valgen(i,v,r,t)],       
-        GEN(i,v,r,h,t)$(not storage(i)) }     
+    sum{(i,v,r)$[r_st(r,st)$valgen(i,v,r,t)$(not storage(i))],       
+        GEN(i,v,r,h,t) }     
 
 
     =g=
