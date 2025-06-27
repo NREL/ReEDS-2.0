@@ -2189,6 +2189,7 @@ h2_demand_start = smin{t$[sum{p, h2_exogenous_demand(p,t)}], yeart(t) } ;
 h2_demand_start$[h2_gen_firstyear<h2_demand_start] = h2_gen_firstyear ;
 
 
+$onempty
 parameter h2_share(r,allt) "--fraction-- regional share of national hydrogen demand"
 /
 $offlisting
@@ -2197,6 +2198,7 @@ $include inputs_case%ds%h2_ba_share.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 *Units for electrolyzer:
 *  Overnight Capital Cost ($/kW)

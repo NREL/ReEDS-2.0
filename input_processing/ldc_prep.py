@@ -434,11 +434,11 @@ def main(reeds_path, inputs_case):
         # Assign data center load as flat block starting in the year indicated
         else:
             # Add the data center load to the load profiles as a flat addition
+            load_profiles = load_profiles.reset_index()   
             for reg in list_reg:
                # Get the first year the data center load is online
                t_dc = dc_load.loc[dc_load['*r'] == reg, 't'].item()
-               # Only add the data center load to the load profiles for t_dc and beyond
-               load_profiles = load_profiles.reset_index()               
+               # Only add the data center load to the load profiles for t_dc and beyond                      
                load_profiles.loc[load_profiles['year'] >= t_dc, reg] += dc_load.loc[dc_load['*r'] == reg, 'value'].values[0]
         
         load_profiles = load_profiles.set_index(['year', 'datetime'])
