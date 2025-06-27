@@ -448,11 +448,11 @@ def main(reeds_path, inputs_case):
                        load_profiles.loc[load_profiles['year'] >= t_dc, reg] += \
                            dc_load.loc[(dc_load['*r'] == reg) &(dc_load['t'] == t_dc) , 'value'].values[0]          
                else:
-                # Get the first year the data center load is online
-                t_dc = dc_load.loc[dc_load['*r'] == reg, 't'].item()
-                # Only add the data center load to the load profiles for t_dc and beyond                      
-                load_profiles.loc[load_profiles['year'] >= t_dc, reg] += dc_load.loc[dc_load['*r'] == reg, 'value'].values[0]
-            
+                    # Get the first year the data center load is online
+                    t_dc = dc_load.loc[dc_load['*r'] == reg, 't'].item()
+                    # Only add the data center load to the load profiles for t_dc and beyond                      
+                    load_profiles.loc[load_profiles['year'] >= t_dc, reg] += dc_load.loc[dc_load['*r'] == reg, 'value'].values[0]
+                
         load_profiles = load_profiles.set_index(['year', 'datetime'])
         load_profiles = load_profiles.astype(np.float32)
 
