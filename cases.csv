@@ -85,6 +85,7 @@ GSw_Biopower,Turn on/off biopower,0; 1,1,
 GSw_BioSupply,Multiplier to adjust total biomass supply,N/A,1,
 GSw_BioTransportCost,Biomass collection and transport costs ($2004 per dry ton),N/A,22,
 GSw_BuildRequirements,Turn on/off user-specified build requirements,0; 1,0,
+GSw_BuildRequirementsFile,specifies which input file to use from inputs/state_policies/required_investments_{}.csv,N/A,none
 GSw_calc_powfrac,Switch to compute powfrac in e_report and e_powfrac_calc - dramatically reduces calculation times with hourly resolution,0; 1,0,
 GSw_Canada,"Turn canada off [0], or use flexible (dispatchable-hydro-like) representation [1]",0; 1,1,
 GSw_CarbTax,Turn on/off CO2 tax,0; 1,0,
