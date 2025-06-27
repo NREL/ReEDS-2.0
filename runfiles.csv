@@ -361,7 +361,7 @@ rectable.csv,inputs/state_policies/rectable.csv,GSw_StateRPS,~0,ignore,ignore,st
 reeds_region_tz_map.csv,inputs/variability/reeds_region_tz_map.csv,,,trans_lookup,ignore,r,,,0,0,,,,,,disaggfunc set to ignore because input file is already at county resolution
 regional_cap_cost_mult.csv,inputs/financials/reg_cap_cost_mult_{reg_cap_cost_mult_suffix}.csv,,,mean,ignore,r,i,,0,0,,,,,,precursor data to reg_cap_cost_mult.csv
 regions.csv,,,,ignore,ignore,,,,,0,,,,,,not done but only for retail
-required_investments.csv,inputs/state_policies/required_investment.csv,,,ignore,ignore,,,,,,,,,,,
+required_investments.csv,inputs/state_policies/required_investment_{GSw_BuildRequirementsFile}.csv,,,ignore,ignore,,,,,,,,,,,
 resourceclass.csv,inputs/sets/resourceclass.csv,,,ignore,ignore,,,,,,,,,resourceclass,,
 resources.csv,,,,resources,ignore,r,"i,ccreg",i,0,0,,1,,,,disaggfunc set to ignore because this file contains all spatial resolutions valid to the model run
 retire_penalty.csv,inputs/financials/retire_penalty.csv,,,ignore,ignore,,,,,0,,,,,,
