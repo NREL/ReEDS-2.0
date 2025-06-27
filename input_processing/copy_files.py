@@ -1536,7 +1536,7 @@ def write_miscellaneous_files(
         # Combine county and BA
         large_load_additions = pd.concat([large_load_additions_ba,large_load_additions_county])
 
-    large_load_additions = large_load_additions.groupby(['*r'],as_index=False).sum()
+    large_load_additions = large_load_additions.groupby(['*r','t'],as_index=False).sum()
     large_load_additions.to_csv(os.path.join(inputs_case,'large_load_additions.csv'), index=False)
 
     # ----  Miscelanous files in non_region_files or region_files (in this case we are overwriting them)
