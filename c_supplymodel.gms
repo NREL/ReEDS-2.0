@@ -866,17 +866,16 @@ eq_build_requirement(pcat,st,t)
 
 * Sum of investments in the state
     sum{(i,v,r)$[prescriptivelink(pcat,i)$r_st(r,st)$valinv(i,v,r,t)], INV(i,v,r,t) }
+* plus sum of refurbishments
+     + sum{(i,v,r)$[prescriptivelink(pcat,i)$r_st(r,st)$valinv(i,v,r,t)], INV_REFURB(i,v,r,t) }
     
     =e=
 
 * must equal the required amount
     required_investment(pcat,st,t)
 
-* plus the existing amount
-*    + sum{(i,v,r)$[prescriptivelink(pcat,i)$r_st(r,st)], m_capacity_exog(i,v,r,t) }
-
-* plus the prescribed amount
-*    + sum{(i,r)$[prescriptivelink(pcat,i)$r_st(r,st)], cap_prescribed(i,r) }
+* plus prescribed capacity
+    + sum{r$r_st(r,st),noncumulative_prescriptions(pcat,r,t)}
 
 ;
 
@@ -1342,9 +1341,10 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
     - sum{(i,v)$[valcap(i,v,r,t)$storage_hybrid(i)$(not csp(i))], STORAGE_IN_GRID(i,v,r,h,t) }$Sw_HybridPlant
 
 * [plus] dropped/excess load ONLY if before Sw_StartMarkets
-    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
-    - EXCESS(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
-
+*    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
+*    - EXCESS(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
+    + DROPPED(r,h,t)$[(Sw_PCM=1)]
+    - EXCESS(r,h,t)$[(Sw_PCM=1)]
     =e=
 
 * must equal demand
@@ -1530,7 +1530,8 @@ eq_OpRes_requirement(ortype,r,h,t)
     - sum{rr$opres_routes(r,rr,t), OPRES_FLOW(ortype,r,rr,h,t) }
 
 *[plus] dropped load (operating reserves) ONLY if before Sw_StartMarkets
-    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
+*    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
+     + DROPPED(r,h,t)$[(Sw_PCM=1)]
 
     =g=
 
