@@ -866,8 +866,6 @@ eq_build_requirement(pcat,st,t)
 
 * Sum of investments in the state
     sum{(i,v,r)$[prescriptivelink(pcat,i)$r_st(r,st)$valinv(i,v,r,t)], INV(i,v,r,t) }
-* plus sum of refurbishments
-     + sum{(i,v,r)$[prescriptivelink(pcat,i)$r_st(r,st)$valinv(i,v,r,t)], INV_REFURB(i,v,r,t) }
     
     =e=
 
