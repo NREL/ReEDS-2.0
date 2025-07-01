@@ -434,13 +434,25 @@ def main(reeds_path, inputs_case):
         # Assign data center load as flat block starting in the year indicated
         else:
             # Add the data center load to the load profiles as a flat addition
+            load_profiles = load_profiles.reset_index()   
             for reg in list_reg:
-               # Get the first year the data center load is online
-               t_dc = dc_load.loc[dc_load['*r'] == reg, 't'].item()
-               # Only add the data center load to the load profiles for t_dc and beyond
-               load_profiles = load_profiles.reset_index()               
-               load_profiles.loc[load_profiles['year'] >= t_dc, reg] += dc_load.loc[dc_load['*r'] == reg, 'value'].values[0]
-        
+               # In mixed resolution runs it's possible a single region will have multiple large 
+               # load additions that come online in different years
+               # Check for multiple large loads in the same region
+               if len(dc_load.loc[dc_load['*r'] == reg, 't'].unique()) > 1:
+                   # Sort the years 
+                   ordered_years = sorted(dc_load.loc[dc_load['*r'] == reg, 't'])
+                   # Add the loads in the order they should come online
+                   for t_dc in ordered_years:
+                       # Only add the data center load to the load profiles for t_dc and beyond
+                       load_profiles.loc[load_profiles['year'] >= t_dc, reg] += \
+                           dc_load.loc[(dc_load['*r'] == reg) &(dc_load['t'] == t_dc) , 'value'].values[0]          
+               else:
+                    # Get the first year the data center load is online
+                    t_dc = dc_load.loc[dc_load['*r'] == reg, 't'].item()
+                    # Only add the data center load to the load profiles for t_dc and beyond                      
+                    load_profiles.loc[load_profiles['year'] >= t_dc, reg] += dc_load.loc[dc_load['*r'] == reg, 'value'].values[0]
+                
         load_profiles = load_profiles.set_index(['year', 'datetime'])
         load_profiles = load_profiles.astype(np.float32)
 
