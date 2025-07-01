@@ -807,6 +807,10 @@ if __name__ == '__main__':
                     combined_data[key] = county_data[key]
                 else:
                     combined_data[key] = pd.concat([aggreg_data[key], county_data[key]])
+
+        # Since required builds are defined at the state level, mixed resolution runs will duplicate 
+        # the data in req_builds. Remove the duplicates here
+        combined_data['req_builds'] = combined_data['req_builds'].drop_duplicates()
         
         data = combined_data
 
