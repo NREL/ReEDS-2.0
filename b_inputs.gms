@@ -2322,7 +2322,7 @@ prescription_check(i,newv,r,t)$[sum{pcat$prescriptivelink(pcat,i), noncumulative
 m_rscfeas(r,i,"bin1")$[sum{(pcat,t)$[sameas(pcat,i)$tmodel_new(t)], noncumulative_prescriptions(pcat,r,t) }$rsc_i(i)$(not bannew(i))$(sum{rscbin, rsc_dat(i,r,"cap",rscbin) }=0)] = yes ;
 
 $onempty
-parameter required_investment(pcat,st,t) "--MW-- user-specified required investments by state"
+parameter required_investment(pcat,st,allt) "--MW-- user-specified required investments by state"
 /
 $offlisting
 $ondelim
@@ -2331,6 +2331,16 @@ $offdelim
 $onlisting
 / ;
 $offempty
+
+* need to fill in for unmodeled, gap years via tprev but
+required_investment(pcat,st,t)$tmodel_new(t)
+                  = sum{tt$[(yeart(tt)<=yeart(t)
+* this condition populates values of tt which exist between the
+* previous modeled year and the current year
+                      $(yeart(tt)>sum{ttt$tprev(t,ttt), yeart(ttt) }))
+                      ],
+                      required_investment(pcat,st,tt)
+                    } ;
 
 *==========================================================
 *--- Interconnection queues (Capacity deployment limit) ---

@@ -708,61 +708,9 @@ def main(reeds_path, inputs_case, agglevel, regions):
     # If enforcing state required builds then the prescribed builds and existing capacity need to added to the list of required capacity
     else :
         req_builds = pd.read_csv(os.path.join(inputs_case,'required_investments.csv'))
-
-        # # Map regions to states
-        # r_st = pd.read_csv(os.path.join(inputs_case,'hierarchy.csv')).set_index('*r')['st'].to_dict()
-
-        # # Prescribed nonRSC
-        # prescribed_nonRSC_st = prescribed_nonRSC.copy()
-        # prescribed_nonRSC_st['r'] = prescribed_nonRSC_st['r'].map(r_st)
-        # prescribed_nonRSC_st =  prescribed_nonRSC_st.groupby(['t','i','r']).sum().reset_index()
-
-        # # Prescribed RSC
-        # prescribed_rsc_st = prescribed_rsc.copy()
-        # prescribed_rsc_st['r'] = prescribed_rsc_st['r'].map(r_st)
-        # prescribed_rsc_st = prescribed_rsc_st.groupby(['t','i','r']).sum().reset_index()
-
-        # # Existing nonRSC CAP
-        # capnonrsc_st = capnonrsc.copy()
-        # capnonrsc_st['r'] = capnonrsc_st['r'].map(r_st)
-        # capnonrsc_st = capnonrsc_st.groupby(['i','r']).sum().reset_index()
-        # capnonrsc_st['t'] = startyear       
-
-        # # Existing RSC CAP
-        # caprsc_st = caprsc.copy()
-        # caprsc_st['r'] = caprsc_st['r'].map(r_st)
-        # caprsc_st = caprsc_st.groupby(['i','r']).sum().reset_index()
-        # caprsc_st['t'] = startyear      
-
-        #additions = pd.concat([prescribed_nonRSC_st, prescribed_rsc_st,capnonrsc_st,caprsc_st])
-        # additions = pd.concat([prescribed_nonRSC_st, prescribed_rsc_st])
-        # additions = additions.groupby(['t','i','r']).sum().reset_index()
-        # additions = additions.rename(columns={'i':'*i','r':'st'})
-        # additions = additions[['*i','st','t','value']]
-
-        # # Add last reported year of prescribed capacity to first years of required builds
-        # first_req_year = req_builds['t'].min()
-        # for tech_type in additions['*i'].unique():
-        #     if tech_type not in req_builds['*i'].unique():
-        #         continue
-        #     else:
-        #         max_year = additions.loc[additions['*i']==tech_type, 't'].max()
-        #         val_max_year = additions.loc[(additions['*i']==tech_type) & (additions['t']==max_year)]['value'].item()            
-
-        #         req_builds.loc[(req_builds['*i']==tech_type) & (req_builds['t']==first_req_year), 'value'] = (
-        #             req_builds.loc[(req_builds['*i']==tech_type) & (req_builds['t']==first_req_year), 'value'].item() + val_max_year
-        #         )
-
-        #req_builds = pd.concat([req_builds,additions]).reset_index()
-
-        # Report cumulative capacity by tech
-        # for tech_type in req_builds['*i'].unique():
-        #    req_builds.loc[req_builds['*i']==tech_type, 'value'] = (
-        #         req_builds.loc[req_builds['*i']==tech_type].sort_values(by='t')['value'].cumsum()
-        #     )
            
         # Filter to only include modeled years
-        req_builds = req_builds[req_builds['t'].isin(years)]
+        req_builds = req_builds[req_builds['t']<= max(years)]
 
     #%%----------------------------------------------------------------------------
     ##############################
