@@ -1341,10 +1341,10 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
     - sum{(i,v)$[valcap(i,v,r,t)$storage_hybrid(i)$(not csp(i))], STORAGE_IN_GRID(i,v,r,h,t) }$Sw_HybridPlant
 
 * [plus] dropped/excess load ONLY if before Sw_StartMarkets
-*    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
-*    - EXCESS(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
-    + DROPPED(r,h,t)$[(Sw_PCM=1)]
-    - EXCESS(r,h,t)$[(Sw_PCM=1)]
+    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
+    - EXCESS(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
+*    + DROPPED(r,h,t)$[(Sw_PCM=1)]
+*    - EXCESS(r,h,t)$[(Sw_PCM=1)]
     =e=
 
 * must equal demand
@@ -1530,8 +1530,8 @@ eq_OpRes_requirement(ortype,r,h,t)
     - sum{rr$opres_routes(r,rr,t), OPRES_FLOW(ortype,r,rr,h,t) }
 
 *[plus] dropped load (operating reserves) ONLY if before Sw_StartMarkets
-*    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
-     + DROPPED(r,h,t)$[(Sw_PCM=1)]
+    + DROPPED(r,h,t)$[(yeart(t)<Sw_StartMarkets) or (Sw_PCM=1)]
+*     + DROPPED(r,h,t)$[(Sw_PCM=1)]
 
     =g=
 
