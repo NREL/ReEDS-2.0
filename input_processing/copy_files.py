@@ -78,6 +78,10 @@ def read_runfiles(reeds_path, inputs_case, sw, agglevel_variables):
                   'depends_on_switch_value':''})
     )
 
+    # Temp hard coded fix for reading supply curve files with reinforcement costs included
+    if sw['GSw_NoReinforcement']=='none' :
+        sw['GSw_NoReinforcement'] = ''
+
     runfiles['file_is_required'] = runfiles.apply(
         axis=1,
         func=is_required_file,

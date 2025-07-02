@@ -10,3 +10,4 @@ GSw_OPGW_load_mult,,,,2,2,,,,,
 GSw_BuildRequirements,,,,,,,,,1,1
 GSw_BuildRequirementsFile,,,,,,,,,pacificorp25,pacificorp25
 GSw_LargeLoadAdd,,,,,,test,add3,add3,,add3
+GSw_NoReinforcement,,_no_reinforcement,,,,,,_no_reinforcement,_no_reinforcement,_no_reinforcement

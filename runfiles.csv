@@ -118,7 +118,7 @@ dollaryear_fuel.csv,inputs/fuelprices/dollaryear.csv,,,ignore,ignore,,,,,0,,,,,,
 dollaryear_sc.csv,inputs/supply_curve/dollaryear.csv,,,ignore,ignore,,,,,0,,,,,,
 e.csv,inputs/sets/e.csv,,,ignore,ignore,,,,,0,,,,e,,
 eall.csv,inputs/sets/eall.csv,,,ignore,ignore,,,,,,,,,eall,,
-egs_supply_curve.csv,inputs/supply_curve/egs_supply_curve-reference_{lvl}.csv,,,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
+egs_supply_curve.csv,inputs/supply_curve/egs_supply_curve-reference{GSw_NoReinforcement}_{lvl}.csv,,,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 emit_rate.csv,,,,ignore,ignore,,"etype,e,i,v,r",,0,0,,,,,,ReEDS-to-PLEXOS output
 emitrate.csv,inputs/emission_constraints/emitrate.csv,,,ignore,ignore,,,,,0,,,,,,
 energy_communities.csv,inputs/financials/energy_communities.csv,,,ignore,ignore,,,,,0,,,,,,region aggregation and filtering is handled in copy_files
@@ -169,7 +169,7 @@ geo_retirements.csv,,,,sum,ignore,r,"i,v,wide",,1,0,,1,,,,disaggfunc set to igno
 geo_rsc.csv,inputs/geothermal/geo_rsc_ATB_2023.csv,GSw_Geothermal,~0,sc_cat,geosize,r,*i,,0,0,value,,,,,
 geocapcostmult.csv,,,,ignore,ignore,,,,1,0,,,,,,
 geoexist.csv,,,,ignore,ignore,r,*i,,0,0,,1,,,,written to proper spatial aggregation in writecapdat.py
-geohydro_supply_curve.csv,inputs/supply_curve/geohydro_supply_curve-reference_{lvl}.csv,,,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
+geohydro_supply_curve.csv,inputs/supply_curve/geohydro_supply_curve-reference{GSw_NoReinforcement}_{lvl}.csv,,,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 geohydro_exog_cap.csv,inputs/capacity_exogenous/geohydro_exog_cap_{GSw_SitingGeo}_{lvl}.csv,,,sum,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,
 ghp_delta_commercial.csv,inputs/load/Commercial_GHP_Delta.csv,,,ignore,ignore,wide,hour,,1,0,,,,,,
 ghp_delta_residential.csv,inputs/load/Residential_GHP_Delta.csv,,,ignore,ignore,wide,hour,,1,0,,,,,,
@@ -450,7 +450,7 @@ upgrade_mult_final.csv,,,,ignore,ignore,,,,,0,,,,,,
 upgrade_mult_mid.csv,inputs/upgrades/upgrade_mult_atb23_ccs_mid.csv,GSw_UpgradeCost_Mult,0|4,ignore,ignore,,,,,0,,,,,,
 upgradelink_water.csv,inputs/upgrades/upgradelink_water.csv,,,ignore,ignore,,,,,0,,,,,,
 upv_exog_cap.csv,inputs/capacity_exogenous/upv_exog_cap_{GSw_SitingUPV}_{lvl}.csv,,,sum,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,
-upv_supply_curve.csv,inputs/supply_curve/upv_supply_curve-{GSw_SitingUPV}_{lvl}.csv,,,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
+upv_supply_curve.csv,inputs/supply_curve/upv_supply_curve-{GSw_SitingUPV}{GSw_NoReinforcement}_{lvl}.csv,,,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 uranium_price.csv,inputs/fuelprices/uranium_{uraniumscen}.csv,,,ignore,ignore,,,,0,0,,,,,,
 va_ng_crf_penalty.csv,,,,ignore,ignore,,,,0,0,,,,,,
 val_aggreg.csv,,,,ignore,ignore,,,,0,none,,,,,,
@@ -477,10 +477,10 @@ wind_retirements.csv,,,,sum,ignore,r,"i,v,wide",,1,0,,1,,,,disaggfunc set to ign
 windcfmult.csv,,,,ignore,ignore,,,,1,0,,,,,,
 windcfout.csv,,,,ignore,ignore,,,,1,0,,,,,,
 wind-ofs_prescribed_builds.csv,inputs/capacity_exogenous/wind-ofs_prescribed_builds_{GSw_SitingWindOfs}_{lvl}.csv,GSw_OfsWind,~0,sum,ignore,region,year,,0,0,,,,,,disaggfunc set to ignore because data will be read in at the correct spatial resolution
-wind-ofs_supply_curve.csv,inputs/supply_curve/wind-ofs_supply_curve-{GSw_SitingWindOfs}_{lvl}.csv,GSw_OfsWind,~0,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
+wind-ofs_supply_curve.csv,inputs/supply_curve/wind-ofs_supply_curve-{GSw_SitingWindOfs}{GSw_NoReinforcement}_{lvl}.csv,GSw_OfsWind,~0,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 wind-ons_exog_cap.csv,inputs/capacity_exogenous/wind-ons_exog_cap_{GSw_SitingWindOns}_{lvl}.csv,,,sum,ignore,region,"*tech,sc_point_gid,year",,0,0,,,,,,
 wind-ons_prescribed_builds.csv,inputs/capacity_exogenous/wind-ons_prescribed_builds_{GSw_SitingWindOns}_{lvl}.csv,,,sum,ignore,region,year,,0,0,,,,,,disaggfunc set to ignore because data will be read in at the correct spatial resolution
-wind-ons_supply_curve.csv,inputs/supply_curve/wind-ons_supply_curve-{GSw_SitingWindOns}_{lvl}.csv,,,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
+wind-ons_supply_curve.csv,inputs/supply_curve/wind-ons_supply_curve-{GSw_SitingWindOns}{GSw_NoReinforcement}_{lvl}.csv,,,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 windows.csv,inputs/userinput/windows_{windows_suffix}.csv,,,ignore,ignore,,,,,0,,,,,,
 wst_climate.csv,inputs/sets/wst_climate.csv,,,ignore,ignore,,,,,0,,,,wst_climate,,
 x.csv,,,,ignore,ignore,,,,,0,,,,,,

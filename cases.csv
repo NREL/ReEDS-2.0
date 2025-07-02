@@ -218,6 +218,7 @@ GSw_MinLoadTechs,Specify collection of techs to which to apply min-gen and min-l
 GSw_NewValCapShrink,switch to shrink valcap and related conditioning sets post-solve,0; 1,0,
 GSw_NG_CRF_penalty,Specify the scenario used for the natural gas CRF penalty,none; ramp_2023_2035; ramp_2045; ramp_2050; reverseramp_2022_2030; reverseramp_high_2022_2030,none,
 GSw_NoFossilOffsetCDR,If on (=1) then CO2 removal from DAC/BECCS is only allowed to offset emissions from fossil+CCS and methane leakage,0; 1,0,
+GSw_NoReinforcement, Switch to remove network reinforcement costs from BA supply curves. Points to the files in inputs/supply_curves without reinforcement costs,N/A,none,
 GSw_Nuclear,Turn on/off new nuclear (existing nuclear still remains),0; 1,1,
 GSw_NuclearDemo,Turn on or off nuclear demonstration plants,0; 1,0,
 GSw_NuclearSMR,Turn on [1] / off [0] Nuclear-SMR,0; 1,1,
