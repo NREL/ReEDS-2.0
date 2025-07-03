@@ -42,6 +42,13 @@ eq_ObjFn_inv(t)$tmodel(t)..
                   + sum{(i,v,r)$[valinv(i,v,r,t)$continuous_battery(i)],
                        cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) * INV_ENERGY(i,v,r,t) 
                       }
+* slack for req builds equations
+*                  + sum{(pcat,st)$sum{(ppcat,tt), required_investment(ppcat,st,tt) }
+*                          $[(yeart(t) >= model_builds_start_yr)
+*                              $Sw_BuildRequirements], REQ_SLACK_RHS(pcat,st,t) + REQ_SLACK_LHS(pcat,st,t) } *1E9
+* slack for req builds equations
+                      + sum{(pcat,st)$[(yeart(t) >= model_builds_start_yr)$Sw_BuildRequirements],
+                              REQ_SLACK_RHS(pcat,st,t) + REQ_SLACK_LHS(pcat,st,t) } * 1E9
 
 * --- penalty for exceeding interconnection queue limit  ---
                   + sum{(tg,r), cap_penalty(tg) * CAP_ABOVE_LIM(tg,r,t) }    

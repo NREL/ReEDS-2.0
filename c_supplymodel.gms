@@ -36,6 +36,8 @@ positive variables
   INV_RSC(i,v,r,rscbin,t)                  "--MW-- investment in technologies that use a resource supply curve"
   UPGRADES(i,v,r,t)                        "--MW-- investments in upgraded capacity from ii to i"
   UPGRADES_RETIRE(i,v,r,t)                 "--MW-- upgrades that have been retired - used as a free slack variable in eq_cap_upgrade"
+  REQ_SLACK_LHS(pcat,st,t)                "--MW-- left-hand side of the slack variable for required builds"
+  REQ_SLACK_RHS(pcat,st,t)                "--MW-- right-hand side of the slack variable for required builds"
 
 * The units for all of the operational variables are average MW or MWh/time-slice hours
 * generation and storage variables
@@ -866,6 +868,8 @@ eq_build_requirement(pcat,st,t)
 
 * Sum of investments in the state
     sum{(i,v,r)$[prescriptivelink(pcat,i)$r_st(r,st)$valinv(i,v,r,t)], INV(i,v,r,t) }
+* add slack
+     + REQ_SLACK_LHS(pcat,st,t)
     
     =e=
 
@@ -874,7 +878,9 @@ eq_build_requirement(pcat,st,t)
 
 * plus prescribed capacity
     + sum{r$r_st(r,st),noncumulative_prescriptions(pcat,r,t)}
-
+* add slack
+    + REQ_SLACK_RHS(pcat,st,t)
+  
 ;
 
 

@@ -1641,6 +1641,13 @@ error_check('z') = (
               cost_growth(i,st,t) * growth_penalty(gbin) * GROWTH_BIN.l(gbin,i,st,t)
               * (yeart(t) - sum{tt$[tprev(t,tt)], yeart(tt) })
         }$[(yeart(t)>=model_builds_start_yr)$Sw_GrowthPenalties$(yeart(t)<=Sw_GrowthPenLastYear)]
+
+
+* slack for req builds equations
+        - sum{(pcat,st)$(sum{(ppcat,tt), required_investment(ppcat,st,tt) } and (yeart(t) >= model_builds_start_yr) and Sw_BuildRequirements),
+               REQ_SLACK_RHS.l(pcat,st,t) + REQ_SLACK_LHS.l(pcat,st,t) } *1E9
+
+                    
 * minus small penalty to move storage into shorter duration bins
         - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
             bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) }
