@@ -1,5 +1,5 @@
 ,Default Value,Utah_bl,Utah_bl_CAA,Utah_opgw1,Utah_opgw2,Utah_opgw3,Utah_lowcostnuclear,Utah_IRP_builds,Utah_add3_DC_load
-ignore,1,1,1,0,1,1,1,1,1
+ignore,1,0,1,0,0,0,0,0,0
 endyear,,2050,2050,2050,2050,2050,2050,2050,2050
 GSw_Region,usa,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county
 GSw_RegionResolution,aggreg,mixed,mixed,mixed,mixed,mixed,mixed,mixed,mixed
