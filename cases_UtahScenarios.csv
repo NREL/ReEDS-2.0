@@ -1,0 +1,16 @@
+,Default Value,Utah_bl,Utah_bl_CAA,Utah_opgw1,Utah_opgw2,Utah_opgw3,Utah_lowcostnuclear,Utah_IRP_builds,Utah_add3_DC_load
+ignore,1,1,1,0,1,1,1,1,1
+endyear,,2050,2050,2050,2050,2050,2050,2050,2050
+GSw_Region,usa,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county
+GSw_RegionResolution,aggreg,mixed,mixed,mixed,mixed,mixed,mixed,mixed,mixed
+GSw_GasCurve,1,2,2,2,2,2,2,2,2
+GSw_HierarchyFile,,,,,,,,,
+GSw_OPGW,0,0,0,1,2,3,0,0,0
+GSw_OPGW_load_mult,1,,,,2,2,,,
+GSw_BuildRequirements,0,0,0,0,0,0,0,1,0
+GSw_BuildRequirementsFile,none,none,none,none,none,none,none,pacificorp25,none
+GSw_LargeLoadAdd,none,,,,,,,,add3_750
+GSw_NoReinforcement,none,_no_reinforcement,_no_reinforcement,_no_reinforcement,_no_reinforcement,_no_reinforcement,_no_reinforcement,_no_reinforcement,_no_reinforcement
+GSw_Clean_Air_Act,1,0,1,0,0,0,0,0,0
+plantchar_nuclear_smr,nuclear-smr_ATB_2024_moderate,,,,,,nuclear-smr_ATB_2024_advanced,,
+plantchar_nuclear,nuclear_ATB_2024_moderate,,,,,,nuclear_ATB_2024_advanced,,
