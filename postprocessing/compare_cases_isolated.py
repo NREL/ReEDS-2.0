@@ -151,7 +151,6 @@ maptechs = [
     'Land-based wind',
     'Offshore wind',
     'Nuclear',
-    'H2 turbine',
     'Battery/PSH',
     'Fossil+CCS',
     'Fossil'
