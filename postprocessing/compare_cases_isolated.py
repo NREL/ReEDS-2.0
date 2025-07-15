@@ -132,9 +132,9 @@ techmap = {
          'gas-cc_h2-ct','gas-ct_h2-ct','h2-cc','h2-ct',],
         ['H2 turbine']*20)),
     **{f'battery_{i}':'Battery/PSH' for i in range(20)}, **{'pumped-hydro':'Battery/PSH'},
-    **dict(zip(
-        ['coal-igcc', 'coaloldscr', 'coalolduns', 'gas-cc', 'gas-ct', 'coal-new', 'o-g-s',],
-        ['Fossil']*20)),
+    # **dict(zip(
+    #     ['coal-igcc', 'coaloldscr', 'coalolduns', 'gas-cc', 'gas-ct', 'coal-new', 'o-g-s',],
+    #     ['Fossil']*20)),
     **dict(zip(
         ['gas-cc_gas-cc-ccs_mod','gas-cc_gas-cc-ccs_max','gas-cc-ccs_mod','gas-cc-ccs_max',
          'gas-cc_gas-cc-ccs_mod','coal-igcc_coal-ccs_mod','coal-new_coal-ccs_mod',
@@ -144,6 +144,12 @@ techmap = {
         'cofirenew_coal-ccs_max','cofireold_coal-ccs_max',],
         ['Fossil+CCS']*50)),
     **dict(zip(['dac','beccs_mod','beccs_max'],['CO2 removal']*20)),
+    **dict(zip(
+        ['gas-cc', 'gas-ct', ],
+        ['Gas']*20)),
+    **dict(zip(
+        ['coal-igcc', 'coaloldscr', 'coalolduns', 'coal-new', 'o-g-s',],
+        ['Other Fossil']*20)),
 }
 
 maptechs = [
@@ -153,7 +159,8 @@ maptechs = [
     'Nuclear',
     'Battery/PSH',
     'Fossil+CCS',
-    'Fossil'
+    'Fossil',
+    'Gas',
 ]
 
 plotdiffvals = [
@@ -1036,7 +1043,117 @@ if len(cases) <= 4:
     slide = reeds.results.add_to_pptx('Capacity stacks', prs=prs, width=width)
     if interactive:
         plt.show()
+#%%
+## Capacity and generation bars aggtechs
 
+toplot = {
+    'Capacity': {
+        'data': dictin_cap,
+        'colors':techcolors,
+        'columns':'tech',
+        'values':'Capacity (GW)',
+        'label':'Capacity [GW]'
+    },
+    'Generation': {
+        'data': dictin_gen,
+        'colors':techcolors,
+        'columns':'tech',
+        'values':'Generation (TWh)',
+        'label':'Generation [TWh]'
+    },
+}
+plotwidth = 2.0
+figwidth = plotwidth * len(cases)
+dfbase = {}
+for slidetitle, data in toplot.items():
+    plt.close()
+    f,ax = plt.subplots(
+        2, len(cases), figsize=(figwidth, 6.8),
+        sharex=True, sharey=sharey, dpi=None,
+    )
+    ax[0,0].set_ylabel(data['label'], y=-0.075)
+    ax[0,0].set_xlim(2017.5, lastyear+2.5)
+    ax[1,0].annotate(
+        f'Diff\nfrom\n{basecase}', (0.03,0.03), xycoords='axes fraction',
+        fontsize='x-large', weight='bold')
+    ###### Absolute
+    alltechs = set()
+    for col, case in enumerate(cases):
+        if case not in data['data']:
+            continue
+        
+        dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
+        #dfplot = dfplot[dfplot.index < 2046]
+        dfplot = dfplot.rename(columns=aggstack).groupby(axis=1, level='tech').sum()
+        unmapped = [c for c in dfplot if c not in aggcolors]
+        if len(unmapped):
+            raise Exception(f"Unmapped techs: {unmapped}")
+        dfplot = (
+            dfplot[[c for c in aggcolors if c in dfplot]]
+            .round(3).replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
+        )
+
+        if case == basecase:
+            dfbase[slidetitle] = dfplot.copy()
+        alltechs.update(dfplot.columns)
+        plots.stackbar(df=dfplot, ax=ax[0,col], colors=aggcolors, width=yearstep[case], net=False)
+        ax[0,col].set_title(
+            (case if nowrap else plots.wraptext(case, width=plotwidth*0.9, fontsize=14)),
+            fontsize=14, weight='bold', x=0, ha='left', pad=8,)
+        ax[0,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+        ax[0,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
+
+
+    ### Legend
+    handles = [
+        mpl.patches.Patch(
+            facecolor=aggcolors[i], edgecolor='none',
+            label=i.replace('Canada','imports').split('/')[-1]
+        )
+        for i in aggcolors if i in alltechs
+    ]
+    leg = ax[0,-1].legend(
+        handles=handles[::-1], loc='upper left', bbox_to_anchor=(1.0,1.0), 
+        fontsize='medium', ncol=1,  frameon=False,
+        handletextpad=0.3, handlelength=0.7, columnspacing=0.5, 
+    )
+
+    ###### Difference
+    for col, case in enumerate(cases):
+        ax[1,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+        ax[1,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
+        ax[1,col].axhline(0,c='k',ls='--',lw=0.75)
+
+        if (case not in data['data']) or (case == basecase):
+            continue
+        dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
+        #dfplot = dfplot[dfplot.index < 2046]
+        dfplot = dfplot.rename(columns=aggstack).groupby(axis=1, level='tech').sum()
+        unmapped = [c for c in dfplot if c not in aggcolors]
+        if len(unmapped):
+            raise Exception(f"Unmapped techs: {unmapped}")
+        dfplot = (
+            dfplot[[c for c in aggcolors if c in dfplot]]
+            .round(3).replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
+        )
+        # dfplot = (
+        #     dfplot
+        #     .round(3).replace(0,np.nan)
+        #     .dropna(axis=1, how='all')
+        # )
+        dfplot = dfplot.subtract(dfbase[slidetitle], fill_value=0)
+        # dfplot = dfplot[[c for c in aggcolors if c in dfplot]].copy()
+        # alltechs.update(dfplot.columns)
+        plots.stackbar(df=dfplot, ax=ax[1,col], colors=aggcolors, width=yearstep[case], net=True)
+
+    plots.despine(ax)
+    plt.draw()
+    plots.shorten_years(ax[1,0])
+    ### Save it
+    slide = reeds.results.add_to_pptx(
+        'Aggregated techs stack', prs=prs, width=min(figwidth, SLIDE_WIDTH))
+    if interactive:
+        plt.show()
 
 #%%### Generation fraction
 ycol = 'Generation (TWh)'
@@ -1221,8 +1338,9 @@ base = cases[list(cases.keys())[0]]
 val_r = dictin_cap_r[basecase].r.unique()
 dfmap = reeds.io.get_dfmap(base)
 dfba = dfmap['r']
+dfba = dfba[dfba.index.isin(val_r)].copy()
 dfstates = dfmap['st']
-
+dfstates = dfstates[dfstates.index.isin(val_r)].copy()
 
 figwidth = SLIDE_WIDTH
 #### Absolute maps
