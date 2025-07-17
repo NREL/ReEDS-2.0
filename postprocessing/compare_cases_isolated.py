@@ -1045,6 +1045,73 @@ if len(cases) <= 4:
         plt.show()
 #%%
 ## Capacity and generation bars aggtechs
+aggstack = {
+    **{f'battery_{i}':'Storage' for i in [2,4,6,8,10]},
+    **{f'battery_{i}|charge':'Storage|charge' for i in [2,4,6,8,10]},
+    **{f'battery_{i}|discharge':'Storage|discharge' for i in [2,4,6,8,10]},
+    **{
+        'pumped-hydro':'Storage',
+        'pumped-hydro|charge':'Storage|charge', 'pumped-hydro|discharge':'Storage|discharge',
+
+        'h2-cc':'H2 turbine', 'h2-ct':'H2 turbine',
+
+        # 'beccs_mod':'Bio/BECCS',
+        # 'biopower':'Bio/BECCS', 'lfill-gas':'Bio/BECCS', 'cofire':'Bio/BECCS',
+        'beccs_mod':'Biopower',
+        'biopower':'Biopower', 'lfill-gas':'Biopower', 'cofire':'Biopower',
+
+        'gas-cc-ccs_mod':'Gas+CCS',
+        'coal-ccs_mod':'Coal+CCS',
+        'gas-cc':'Gas', 'gas-ct':'Gas', 'o-g-s':'Gas',
+        'coal':'Coal',
+
+        'Canada':'Canadian imports', 'canada':'Canadian imports',
+
+        'hydro':'Hydro',
+        'geothermal':'Geothermal',
+
+        'csp':'PV',
+        'upv':'PV', 'distpv':'Dist PV',
+        'pvb':'PVB',
+
+        'wind-ofs':'Offshore wind',
+        'wind-ons':'Land-based wind',
+
+        'nuclear':'Nuclear', 'nuclear-smr':'Nuclear',
+    }
+}
+aggcolors = {
+    'Nuclear':'C3',
+
+    'Coal':plt.cm.binary(1.0),
+    'Gas':plt.cm.tab20(8),
+    'Coal+CCS':'C7',
+    'Gas+CCS':plt.cm.tab20(9),
+
+    'Hydro': techcolors['hydro'],
+    'Geothermal': techcolors['geothermal'],
+    'Canadian imports': techcolors['dr'],
+
+    # 'Bio/BECCS':plt.cm.tab20(4),
+    # 'H2 turbine':plt.cm.tab20(5),
+    'Biopower':techcolors['biopower'],
+    'H2 turbine':techcolors['h2-ct'],
+
+    'Land-based wind':techcolors['wind-ons'],
+    'Offshore wind':techcolors['wind-ofs'],
+
+    'CSP':techcolors['csp'],
+    'PV':techcolors['upv'],
+    'PVB':techcolors['pvb'],
+    'Dist PV':techcolors['distpv'],
+
+    # 'Storage':plt.cm.tab20(12),
+    # 'Storage|charge':plt.cm.tab20(12),
+    # 'Storage|discharge':plt.cm.tab20(12),
+    'Storage':techcolors['battery_8'],
+    'Storage|charge':techcolors['battery_8'],
+    'Storage|discharge':techcolors['battery_8'],
+}
 
 toplot = {
     'Capacity': {
@@ -1092,7 +1159,7 @@ for slidetitle, data in toplot.items():
             dfplot[[c for c in aggcolors if c in dfplot]]
             .round(3).replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
         )
-
+        #dfplot = dfplot.drop(columns ='Canadian imports')
         if case == basecase:
             dfbase[slidetitle] = dfplot.copy()
         alltechs.update(dfplot.columns)
@@ -1136,6 +1203,7 @@ for slidetitle, data in toplot.items():
             dfplot[[c for c in aggcolors if c in dfplot]]
             .round(3).replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
         )
+        #dfplot = dfplot.drop(columns ='Canadian imports')
         # dfplot = (
         #     dfplot
         #     .round(3).replace(0,np.nan)

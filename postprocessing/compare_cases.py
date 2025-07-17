@@ -154,6 +154,7 @@ maptechs = [
     'H2 turbine',
     'Battery/PSH',
     'Fossil+CCS',
+    'Fossil'
 ]
 
 plotdiffvals = [
@@ -947,7 +948,6 @@ else:
         if interactive:
             plt.show()
 
-
 #%% Alternate view: Stacks with bars labeled
 barwidth = 0.35
 labelpad = 0.08
@@ -1105,6 +1105,185 @@ if len(cases) <= 4:
     if interactive:
         plt.show()
 
+#%%
+## Capacity and generation bars aggtechs
+aggstack = {
+    **{f'battery_{i}':'Storage' for i in [2,4,6,8,10]},
+    **{f'battery_{i}|charge':'Storage|charge' for i in [2,4,6,8,10]},
+    **{f'battery_{i}|discharge':'Storage|discharge' for i in [2,4,6,8,10]},
+    **{
+        'pumped-hydro':'Storage',
+        'pumped-hydro|charge':'Storage|charge', 'pumped-hydro|discharge':'Storage|discharge',
+
+        'h2-cc':'H2 turbine', 'h2-ct':'H2 turbine',
+
+        # 'beccs_mod':'Bio/BECCS',
+        # 'biopower':'Bio/BECCS', 'lfill-gas':'Bio/BECCS', 'cofire':'Bio/BECCS',
+        'beccs_mod':'Biopower',
+        'biopower':'Biopower', 'lfill-gas':'Biopower', 'cofire':'Biopower',
+
+        'gas-cc-ccs_mod':'Gas+CCS',
+        'coal-ccs_mod':'Coal+CCS',
+        'gas-cc':'Gas', 'gas-ct':'Gas', 'o-g-s':'Gas',
+        'coal':'Coal',
+
+        'Canada':'Canadian imports', 'canada':'Canadian imports',
+
+        'hydro':'Hydro',
+        'geothermal':'Geothermal',
+
+        'csp':'PV',
+        'upv':'PV', 'distpv':'Dist PV',
+        'pvb':'PVB',
+
+        'wind-ofs':'Offshore wind',
+        'wind-ons':'Land-based wind',
+
+        'nuclear':'Nuclear', 'nuclear-smr':'Nuclear',
+    }
+}
+aggcolors = {
+    'Nuclear':'C3',
+
+    'Coal':plt.cm.binary(1.0),
+    'Gas':plt.cm.tab20(8),
+    'Coal+CCS':'C7',
+    'Gas+CCS':plt.cm.tab20(9),
+
+    'Hydro': techcolors['hydro'],
+    'Geothermal': techcolors['geothermal'],
+    'Canadian imports': techcolors['dr'],
+
+    # 'Bio/BECCS':plt.cm.tab20(4),
+    # 'H2 turbine':plt.cm.tab20(5),
+    'Biopower':techcolors['biopower'],
+    'H2 turbine':techcolors['h2-ct'],
+
+    'Land-based wind':techcolors['wind-ons'],
+    'Offshore wind':techcolors['wind-ofs'],
+
+    'CSP':techcolors['csp'],
+    'PV':techcolors['upv'],
+    'PVB':techcolors['pvb'],
+    'Dist PV':techcolors['distpv'],
+
+    # 'Storage':plt.cm.tab20(12),
+    # 'Storage|charge':plt.cm.tab20(12),
+    # 'Storage|discharge':plt.cm.tab20(12),
+    'Storage':techcolors['battery_8'],
+    'Storage|charge':techcolors['battery_8'],
+    'Storage|discharge':techcolors['battery_8'],
+}
+
+toplot = {
+    'Capacity': {
+        'data': dictin_cap,
+        'colors':techcolors,
+        'columns':'tech',
+        'values':'Capacity (GW)',
+        'label':'Capacity [GW]'
+    },
+    'Generation': {
+        'data': dictin_gen,
+        'colors':techcolors,
+        'columns':'tech',
+        'values':'Generation (TWh)',
+        'label':'Generation [TWh]'
+    },
+}
+plotwidth = 2.0
+figwidth = plotwidth * len(cases)
+dfbase = {}
+for slidetitle, data in toplot.items():
+    plt.close()
+    f,ax = plt.subplots(
+        2, len(cases), figsize=(figwidth, 6.8),
+        sharex=True, sharey=sharey, dpi=None,
+    )
+    ax[0,0].set_ylabel(data['label'], y=-0.075)
+    ax[0,0].set_xlim(2017.5, lastyear+2.5)
+    ax[1,0].annotate(
+        f'Diff\nfrom\n{basecase}', (0.03,0.03), xycoords='axes fraction',
+        fontsize='x-large', weight='bold')
+    ###### Absolute
+    alltechs = set()
+    for col, case in enumerate(cases):
+        if case not in data['data']:
+            continue
+        
+        dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
+        #dfplot = dfplot[dfplot.index < 2046]
+        dfplot = dfplot.rename(columns=aggstack).groupby(axis=1, level='tech').sum()
+        unmapped = [c for c in dfplot if c not in aggcolors]
+        if len(unmapped):
+            raise Exception(f"Unmapped techs: {unmapped}")
+        dfplot = (
+            dfplot[[c for c in aggcolors if c in dfplot]]
+            .round(3).replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
+        )
+        dfplot = dfplot.drop(columns ='Canadian imports')
+        if case == basecase:
+            dfbase[slidetitle] = dfplot.copy()
+        alltechs.update(dfplot.columns)
+        plots.stackbar(df=dfplot, ax=ax[0,col], colors=aggcolors, width=yearstep[case], net=False)
+        ax[0,col].set_title(
+            (case if nowrap else plots.wraptext(case, width=plotwidth*0.9, fontsize=14)),
+            fontsize=14, weight='bold', x=0, ha='left', pad=8,)
+        ax[0,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+        ax[0,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
+
+
+    ### Legend
+    handles = [
+        mpl.patches.Patch(
+            facecolor=aggcolors[i], edgecolor='none',
+            label=i.replace('Canada','imports').split('/')[-1]
+        )
+        for i in aggcolors if i in alltechs
+    ]
+    leg = ax[0,-1].legend(
+        handles=handles[::-1], loc='upper left', bbox_to_anchor=(1.0,1.0), 
+        fontsize='medium', ncol=1,  frameon=False,
+        handletextpad=0.3, handlelength=0.7, columnspacing=0.5, 
+    )
+
+    ###### Difference
+    for col, case in enumerate(cases):
+        ax[1,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+        ax[1,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
+        ax[1,col].axhline(0,c='k',ls='--',lw=0.75)
+
+        if (case not in data['data']) or (case == basecase):
+            continue
+        dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
+        #dfplot = dfplot[dfplot.index < 2046]
+        dfplot = dfplot.rename(columns=aggstack).groupby(axis=1, level='tech').sum()
+        unmapped = [c for c in dfplot if c not in aggcolors]
+        if len(unmapped):
+            raise Exception(f"Unmapped techs: {unmapped}")
+        dfplot = (
+            dfplot[[c for c in aggcolors if c in dfplot]]
+            .round(3).replace(0,np.nan).dropna(axis=1, how='all').fillna(0)
+        )
+        dfplot = dfplot.drop(columns ='Canadian imports')
+        # dfplot = (
+        #     dfplot
+        #     .round(3).replace(0,np.nan)
+        #     .dropna(axis=1, how='all')
+        # )
+        dfplot = dfplot.subtract(dfbase[slidetitle], fill_value=0)
+        # dfplot = dfplot[[c for c in aggcolors if c in dfplot]].copy()
+        # alltechs.update(dfplot.columns)
+        plots.stackbar(df=dfplot, ax=ax[1,col], colors=aggcolors, width=yearstep[case], net=True)
+
+    plots.despine(ax)
+    plt.draw()
+    plots.shorten_years(ax[1,0])
+    ### Save it
+    slide = reeds.results.add_to_pptx(
+        'Aggregated techs stack', prs=prs, width=min(figwidth, SLIDE_WIDTH))
+    if interactive:
+        plt.show()
 
 #%%### Hodgepodge: Final capacity, final generation, final transmission, runtime
 width = max(11, len(cases)*1.3)
