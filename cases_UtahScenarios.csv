@@ -17,4 +17,4 @@ plantchar_nuclear,nuclear_ATB_2024_moderate,,,,,,nuclear_ATB_2024_advanced,,,,
 incentives_suffix,,,,,,,,,,ira_updates,
 GSw_TCPhaseout_forceyear,,,,,,,,,,2032,
 GSw_TechRequirement,,,,,,,,,,,1
-GSw_TechRequirementFile,,,,,,,,,,,
+GSw_TechRequirementFile,,,,,,,,,,,UT_nuclear
