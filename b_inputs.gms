@@ -2344,6 +2344,26 @@ required_investment(pcat,st,t)$tmodel_new(t)
                       required_investment(pcat,st,tt)
                     } ;
 
+$onempty
+parameter required_tech(pcat,st,allt) "--MW-- user-specified required tech by state"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%required_tech.csv
+$offdelim
+$onlisting
+/ ;
+$offempty
+
+* need to fill in for unmodeled, gap years via tprev but
+required_tech(pcat,st,t)$tmodel_new(t)
+                  = sum{tt$[(yeart(tt)<=yeart(t)
+* this condition populates values of tt which exist between the
+* previous modeled year and the current year
+                      $(yeart(tt)>sum{ttt$tprev(t,ttt), yeart(ttt) }))
+                      ],
+                      required_tech(pcat,st,tt)
+                    } ;
 *==========================================================
 *--- Interconnection queues (Capacity deployment limit) ---
 *==========================================================

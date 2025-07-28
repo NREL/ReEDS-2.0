@@ -124,3 +124,5 @@ storage,battery_48
 storage,battery_72
 storage,battery_100
 storage,battery_li
+nuclear,Nuclear
+nuclear,Nuclear-SMR

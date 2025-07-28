@@ -156,6 +156,7 @@ EQUATION
  eq_ener_up(i,v,r,rscbin,t)               "--MW-- limit on energy upsizing"
  eq_forceprescription(pcat,r,t)           "--MW-- total investment in prescribed capacity must equal amount from exogenous prescriptions"
  eq_build_requirement(pcat,st,t)          "--MW-- investments in a state must equal the user-specified investments"
+ eq_tech_requirement(pcat,st,t)           "--MW-- investments in a particular technolgy in state must equal the user-specified investments"
  eq_refurblim(i,r,t)                      "--MW-- total refurbishments cannot exceed the amount of capacity that has reached the end of its life"
 
 * renewable supply curves
@@ -883,7 +884,26 @@ eq_build_requirement(pcat,st,t)
   
 ;
 
+* require investment in a specific technology in a state
+eq_tech_requirement(pcat,st,t)
+    $[tmodel(t)
+    $sum{tt, required_tech(pcat,st,tt) }
+    $(yeart(t) >= model_builds_start_yr)
+    $Sw_TechRequirement
+    $(not Sw_PCM)]..
 
+* Sum of investments in the state
+    sum{(i,v,r)$[prescriptivelink(pcat,i)$r_st(r,st)$valinv(i,v,r,t)], INV(i,v,r,t) }
+    
+    =e=
+
+* must equal the required amount
+    required_tech(pcat,st,t)
+
+* plus prescribed capacity
+    + sum{r$r_st(r,st),noncumulative_prescriptions(pcat,r,t)}
+  
+;
 * ---------------------------------------------------------------------------
 
 *limit the amount of refurbishments available in specific year
