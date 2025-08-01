@@ -5,13 +5,13 @@ report_bas = [
             
 static_presets = [
 
-    #Utah, Idaho, Wyoming
-    {'name': 'Generation (TWh) Utah', 'sheet_name':'gen_Utah', 'result': 'Generation BA (TWh)', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':report_bas}}},
-    {'name': 'Capacity (GW) Utah', 'sheet_name':'cap_Utah', 'result': 'Capacity BA (GW)', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':report_bas}}},
+    # Wyoming
+    {'name': 'Generation (TWh) Wyoming', 'sheet_name':'gen_Wyoming', 'result': 'Generation BA (TWh)', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':report_bas}}},
+    {'name': 'Capacity (GW) Wyoming', 'sheet_name':'cap_Wyoming', 'result': 'Capacity BA (GW)', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':report_bas}}},
     {'name': 'New Annual Capacity (GW)', 'sheet_name':'cap_new_ann', 'result': 'New Annual Capacity BA (GW) [no-index]', 'preset': 'Stacked Bars', 'config':{'filter':{'rb':report_bas}}},
-    {'name': 'Bulk System Electricity Price ($/MWh) Utah', 'sheet_name':'elec_price_Utah', 'result': 'Requirement Prices and Quantities BA', 'preset': 'Bulk System Electricity Price ($/MWh)', 'config':{'filter':{'rb':report_bas}}},
-    {'name': 'Present Value of System Cost through 2050 (Bil $) Utah', 'sheet_name':'sys_cost_Utah', 'result': 'Sys Cost Annualized BA/State (Bil $)', 'preset': 'Undiscounted by Year - BA', 'config':{'filter':{'r':report_bas}}},
-    {'name': 'CO2 Emissions (metric tons) Utah', 'sheet_name':'emissions_Utah', 'result': 'CO2 Emissions BA (metric tons)', 'preset': 'Scenario Lines Over Time', 'config':{'filter':{'rb':report_bas}}},
+    {'name': 'Bulk System Electricity Price ($/MWh) Wyoming', 'sheet_name':'elec_price_Wyoming', 'result': 'Requirement Prices and Quantities BA', 'preset': 'Bulk System Electricity Price ($/MWh)', 'config':{'filter':{'rb':report_bas}}},
+    {'name': 'Present Value of System Cost through 2050 (Bil $) Wyoming', 'sheet_name':'sys_cost_Wyoming', 'result': 'Sys Cost Annualized BA/State (Bil $)', 'preset': 'Undiscounted by Year - BA', 'config':{'filter':{'r':report_bas}}},
+    {'name': 'CO2 Emissions (metric tons) Wyoming', 'sheet_name':'emissions_Wyoming', 'result': 'CO2 Emissions BA (metric tons)', 'preset': 'Scenario Lines Over Time', 'config':{'filter':{'rb':report_bas}}},
 
 
 ]
