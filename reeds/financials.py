@@ -183,6 +183,20 @@ def import_sys_financials(
     return sys_financials
 
 
+def read_regional_cap_cost_diff(inputs_case):
+    """
+    Read file and reshape to long format.
+    Column names are |-delimited tech groups, so broadcast to individual tech groups.
+    """
+    dfin = pd.read_csv(os.path.join(inputs_case, 'regional_cap_cost_diff.csv'), index_col='r')
+    dictout = {}
+    for tech_groups in dfin:
+        for tech_group in tech_groups.split('|'):
+            dictout[tech_group] = dfin[tech_groups]
+    dfout = pd.concat(dictout, axis=1, names=('i'))
+    return dfout.stack('i').rename('reg_cap_cost_diff').reset_index()
+
+
 def import_data(
     file_root,
     file_suffix,
@@ -207,8 +221,10 @@ def import_data(
 
 
     '''
-
-    df = pd.read_csv(os.path.join(scen_settings.inputs_case, f'{file_root}.csv'))
+    if file_root == 'regional_cap_cost_diff':
+        df = read_regional_cap_cost_diff(os.path.join(scen_settings.inputs_case))
+    else:
+        df = pd.read_csv(os.path.join(scen_settings.inputs_case, f'{file_root}.csv'))
 
     # Expand tech groups, if there is an 'i' column and the argument is True
     if 'i' in df.columns and expand_tech_groups is True:
@@ -280,7 +296,7 @@ def import_data(
     return df
 
 
-def append_pvb_parameters(dfin, tech_to_copy='battery_4', column_scaler=None, pvb_types=[1, 2, 3]):
+def append_pvb_parameters(dfin, tech_to_copy='battery_li', column_scaler=None, pvb_types=[1, 2, 3]):
     """
     Copies the parameters for tech_to_copy (typically standalone batteries, except for the ITC,
     where we copy from UPV) for batteries in PV+battery systems and returns a copy of the input
@@ -290,7 +306,7 @@ def append_pvb_parameters(dfin, tech_to_copy='battery_4', column_scaler=None, pv
     ------
     dfin: Original inputs dataframe that includes standalone battery assumptions.
         Must have a column labeled i containing entries for tech_to_copy.
-    tech_to_copy: default='battery_4'. Technology from which to copy parameters for PV+battery.
+    tech_to_copy: default='battery_li'. Technology from which to copy parameters for PV+battery.
     column_scaler: None or dict. If dict, format should be {column_to_scale: scaler}.
     pvb_types: default=[1,2,3]. Set of pvb technology types.
         NOTE: If PV+B techs are added to set i "generation technologies" in b_inputs,
@@ -361,7 +377,7 @@ def import_and_mod_incentives(
     )
     ### Apply the standalone battery construction times to hybrid PV batteries
     construction_times = append_pvb_parameters(
-        dfin=construction_times, tech_to_copy='battery_{}'.format(scen_settings.sw['GSw_PVB_Dur'])
+        dfin=construction_times, tech_to_copy='battery_li'
     )
 
     construction_times['t_start_construction'] = construction_times['t_online'].astype(
@@ -393,7 +409,7 @@ def import_and_mod_incentives(
     if copy_battery:
         incentive_df = append_pvb_parameters(
             dfin=incentive_df,
-            tech_to_copy=f'battery_{scen_settings.sw["GSw_PVB_Dur"]}',
+            tech_to_copy='battery_li',
             column_scaler={'itc_frac': float(scen_settings.sw['GSw_PVB_BatteryITC'])},
         )
 

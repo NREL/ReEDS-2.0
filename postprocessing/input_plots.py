@@ -291,6 +291,69 @@ def plot_units_existing(
     return f, ax, dfunits
 
 
+def plot_regional_cost_difference(
+    case=None,
+    nicelabels={
+        'CONSUME': 'Electrolyzer, DAC, steam methane reforming',
+        'OGS': 'Oil-gas-steam',
+        'LFILL': 'Landfill gas',
+        'CSP': 'CSP',
+        'PVB': '(including in PV/battery hybrid)',
+    },
+    cmap=plt.cm.RdBu_r,
+    scale=4,
+):
+    ### Get data
+    if case is None:
+        fpath = os.path.join(
+            reeds.io.reeds_path, 'inputs', 'financials', 'reg_cap_cost_diff_default.csv',
+        )
+    else:
+        fpath = os.path.join(case, 'inputs_case', 'regional_cap_cost_diff.csv')
+    ## Convert to percent
+    dfin = pd.read_csv(fpath, index_col='r') * 100
+    ### Get shapefiles
+    dfmap = reeds.io.get_dfmap(case)
+    dfcounty = gpd.read_file(
+        os.path.join(reeds.io.reeds_path, 'inputs', 'shapefiles', 'US_county_2022')
+    ).set_index('rb')
+    dfcounty.geometry = dfcounty.intersection(dfmap['country'].geometry.squeeze()).simplify(1000)
+    dfplot = dfcounty.merge(dfin, left_index=True, right_index=True)
+    ### Set up plot
+    vlim = max(abs(dfin.min().min()), dfin.max().max())
+    nrows, ncols, coords = reeds.plots.get_coordinates(dfin.columns, ncols=3)
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(ncols*scale, nrows*scale*0.8),
+        sharex=True, sharey=True, gridspec_kw={'wspace':0},
+    )
+    for column in dfin:
+        _ax = ax[coords[column]]
+        ## Data
+        dfplot.plot(
+            ax=_ax, column=column, vmin=-vlim, vmax=vlim, cmap=cmap,
+        )
+        ## States
+        dfmap['st'].plot(ax=_ax, facecolor='none', edgecolor='k', lw=0.3)
+        ## Formatting
+        _ax.axis('off')
+        _ax.set_title(
+            '\n'.join([nicelabels.get(i, i.title()).replace('_',' ') for i in column.split('|')]),
+            y=0.92,
+        )
+    ## Colorbar
+    reeds.plots.addcolorbarhist(
+        f=f, ax0=ax[0,1], data=dfplot[column].values,
+        histcolor='w', histratio=0.01, vmin=-vlim, vmax=vlim,
+        orientation='horizontal', cbarwidth=0.05, cbarheight=0.9, cbarhoffset=10,
+        cbarbottom=-0.075, labelpad=2,
+        title='Cost difference [%]',
+        cmap=cmap,
+    )
+    return f, ax, dfplot
+
+
 #%%### Procedure
 if __name__ == '__main__':
     #%% Argument inputs
@@ -385,6 +448,13 @@ if __name__ == '__main__':
     try:
         f, ax, df = plot_units_existing(case=case)
         saveit('Existing capacity')
+    except Exception:
+        print(traceback.format_exc())
+
+    ### Regional cost differences
+    try:
+        f, ax, df = plot_regional_cost_difference(case=case)
+        saveit('Regional cost differences')
     except Exception:
         print(traceback.format_exc())
 

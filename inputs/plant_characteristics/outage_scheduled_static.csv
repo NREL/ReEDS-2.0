@@ -30,16 +30,6 @@ ocean,0.01
 distpv,0.015
 pumped-hydro,0.14
 pumped-hydro-flex,0.14
-battery_2,0.006
-battery_4,0.006
-battery_6,0.006
-battery_8,0.006
-battery_10,0.006
-battery_12,0.006
-battery_24,0.006
-battery_48,0.006
-battery_72,0.006
-battery_100,0.006
 battery_li,0.006
 CAES,0.04
 ice,0.01
@@ -58,3 +48,4 @@ smr_ccs,0
 dac,0
 dac_gas,0
 electrolyzer,0
+can-imports,0

@@ -30,7 +30,6 @@ include("models/utils.jl")
 include("utils/reeds_input_parsing.jl")
 include("utils/runchecks.jl")
 include("utils/reeds_data_parsing.jl")
-include("utils/user_descriptors_parsing.jl")
 #Main
 include("main/parse_reeds_data.jl")
 include("main/create_pras_system.jl")

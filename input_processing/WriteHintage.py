@@ -318,10 +318,8 @@ def main(reeds_path, inputs_case):
     # This is not all technologies that do not having cooling, but technologies
     # that are (or could be) in the plant database.
     'no_cooling':['upv', 'pvb', 'gas-ct', 'geohydro_allkm',
-                    'battery_2', 'battery_4', 'battery_6', 'battery_8', 
-                    'battery_10','battery_12','battery_24','battery_48',
-                    'battery_72','battery_100', 'pumped-hydro', 'pumped-hydro-flex', 'hydUD', 
-                    'hydUND', 'hydD', 'hydND', 'hydSD', 'hydSND', 'hydNPD',
+                    'battery_li', 'pumped-hydro', 'pumped-hydro-flex', 
+                    'hydUD', 'hydUND', 'hydD', 'hydND', 'hydSD', 'hydSND', 'hydNPD',
                     'hydNPND', 'hydED', 'hydEND', 'wind-ons', 'wind-ofs', 'caes'
                     ]
     }
@@ -338,17 +336,12 @@ def main(reeds_path, inputs_case):
     # Map counties to modeled regions
     indat['r'] = indat.FIPS.map(r_county)
 
-    # Include O&M of pollution control upgrades into FOM
-    indat['T_VOM'] = inflator * (indat.T_VOM + indat.TCOMB_V + indat.TSNCR_V
-                                 + indat.TSCR_V + indat.T_FFV + indat.T_DSIV
-    )
-    indat['T_FOM'] = inflator * (indat.T_FOM + indat.T_CAPAD + indat.TCOMB_F
-                                 + indat.TSNCR_F + indat.TSCR_F + indat.T_FFF
-                                 + indat.T_DSIF
-    )
-    # Include O&M of pollution control upgrades into FOM for upgrade statistics
+    # Apply inflation to VOM costs
+    indat['T_VOM'] *= inflator
     indat['T_CCSV'] = indat.T_VOM + inflator * indat.T_CCSV
 
+    # Apply inflation and add capital expenditures to FOM costs
+    indat['T_FOM'] = inflator * (indat.T_FOM + indat.T_CAPAD)
     indat['T_CCSF'] = indat.T_FOM + inflator * indat.T_CCSF
 
     # Concatenate tech names based on whether water analysis is on -or- leave them alone

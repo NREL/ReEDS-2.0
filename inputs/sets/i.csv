@@ -1,14 +1,4 @@
 ice
-battery_2
-battery_4
-battery_6
-battery_8
-battery_10
-battery_12
-battery_24
-battery_48
-battery_72
-battery_100
 battery_li
 biopower
 beccs_mod
@@ -159,6 +149,8 @@ csp4_9
 csp4_10
 csp4_11
 csp4_12
+dr_shed_1
+dr_shed_2
 evmc_storage_1
 evmc_storage_2
 evmc_storage_3
@@ -231,7 +223,7 @@ dac
 dac_gas
 * upgrade technologies
 Gas-CT_H2-CT
-Gas-CC_H2-CT
+Gas-CC_H2-CC
 CoalOldUns_CoalOldScr
 CoalOldUns_CofireOld
 CoalOldScr_CofireOld

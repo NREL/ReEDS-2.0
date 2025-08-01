@@ -107,6 +107,7 @@ def get_inputs(sw):
     tech_map.raw = tech_map.raw.map(
         lambda x: x if x.startswith('battery') else x.strip('_01234567890*')).str.lower()
     tech_map = tech_map.drop_duplicates().set_index('raw').display.str.lower()
+    tech_map['vre'] = 'vre'
 
     existinghydrotechs = [
         'hyded','hydend','hydend_hyded',
@@ -125,6 +126,7 @@ def get_inputs(sw):
         index_col='order',
     ).squeeze(1)
     tech_style.index = tech_style.index.str.lower()
+    tech_style['vre'] = mpl.colors.to_hex('C1')
     tech_style['dropped'] = '#d62728'
     for i in ['hydro_exist', 'hydro_new']:
         tech_style[i] = tech_style['hydro']
@@ -148,16 +150,17 @@ def get_inputs(sw):
     ##### Hourly dispatch by month
     ### Load and aggregate the VRE generation profiles by tech group
     try:
-        vre_gen = pd.read_hdf(
-            os.path.join(
-                sw['casedir'],'ReEDS_Augur','augur_data',f'pras_vre_gen_{sw.t}.h5'))
+        vre_gen = reeds.io.read_file(
+            os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f'pras_vre_gen_{sw.t}.h5'),
+            parse_timestamps=True,
+        )
     except FileNotFoundError:
         vre_gen = None
 
     ### Get vre_gen by tech (only resource_adequacy_years)
     vre_gen_usa = (
         vre_gen
-        .rename(columns=resources.tech)
+        .rename(columns=dict(zip(vre_gen.columns, vre_gen.columns.map(lambda x: x.split('|')[0]))))
         .groupby(axis=1, level=0).sum()
         .set_index(fulltimeindex)
     )
@@ -167,7 +170,7 @@ def get_inputs(sw):
     ### Get vre_gen summed over tech by BA (full 7 years)
     vre_gen_r = (
         vre_gen
-        .rename(columns=resources.rb.to_dict())
+        .rename(columns=dict(zip(vre_gen.columns, vre_gen.columns.map(lambda x: x.split('|')[1]))))
         .groupby(axis=1, level=0).sum()
     )
 
@@ -177,23 +180,26 @@ def get_inputs(sw):
             os.path.join(
                 sw['casedir'],'ReEDS_Augur','augur_data',f'load_{sw.t}.h5')
         )
+        load_r.index = fulltimeindex
     except FileNotFoundError:
         load_r = None
 
     ### Load PRAS load
     try:
-        pras_load = pd.read_hdf(
-            os.path.join(
-                sw['casedir'],'ReEDS_Augur','augur_data',f'pras_load_{sw.t}.h5')
+        pras_load = reeds.io.read_file(
+            os.path.join(sw['casedir'],'ReEDS_Augur','augur_data',f'pras_load_{sw.t}.h5'),
+            parse_timestamps=True,
         )
     except FileNotFoundError:
         pras_load = None
     pras_load.index = fulltimeindex
     try:
-        pras_h2dac_load = pd.read_hdf(
+        pras_h2dac_load = reeds.io.read_file(
             os.path.join(
                 sw['casedir'],'ReEDS_Augur','augur_data',
-                f"pras_h2dac_load_{sw['t']}.h5"))
+                f"pras_h2dac_load_{sw['t']}.h5"),
+            parse_timestamps=True,
+        )
     except FileNotFoundError:
         pras_h2dac_load = pd.DataFrame(columns=pras_load.columns)
     pras_h2dac_load.index = fulltimeindex
@@ -239,23 +245,26 @@ def get_inputs(sw):
 
     ###### Make combined dataframes for plotting
     ### Get top load hours by ccseason
-    hour2datetime = h_dt_szn.set_index('hour').datetime.copy()
+    datetime2ccseason = h_dt_szn.set_index('datetime').ccseason
     ### Use seasons appropriate to resolution
-    ccseasons = net_load_ccreg.index.get_level_values('ccseason').unique()
+    ccseasons = h_dt_szn.ccseason.unique()
 
     ccregs = sorted(net_load_ccreg.columns)
     peakhours = {}
     for ccseason in ccseasons:
         for ccreg in ccregs:
             peakhours[ccseason,ccreg] = (
-                net_load_ccreg.loc[ccseason][ccreg]
-                .nlargest(int(sw['GSw_PRM_CapCreditHours'])).index.get_level_values('hour'))
+                net_load_ccreg.loc[net_load_ccreg.index.map(datetime2ccseason)==ccseason][ccreg]
+                .nlargest(int(sw['GSw_PRM_CapCreditHours']))
+                .index
+            )
 
     dfpeak = (
         pd.DataFrame(peakhours)
         .stack(level=0)
         .reorder_levels([1,0], axis=0)
-        .stack().map(hour2datetime).rename('datetime').to_frame()
+        .stack()
+        .rename('datetime').to_frame()
         .assign(peak=1)
         .reset_index(level=2).rename(columns={'level_2':'ccreg'})
         .pivot(index='datetime', columns='ccreg', values='peak')
@@ -1223,7 +1232,7 @@ def main(sw, augur_plots=1):
         print('plot_dropped_load_duration() failed:', traceback.format_exc())
 
     try:
-        for level in ['r','transreg']:
+        for level in ['r', 'transgrp']:
             map_dropped_load(sw, dfs, level=level)
     except Exception:
         print('map_dropped_load() failed:', traceback.format_exc())

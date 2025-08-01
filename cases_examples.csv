@@ -1,0 +1,21 @@
+,Default Value,ERCOT_rep_days,ERCOT_rep_wek,ERCOT_full_year,ERCOT_cap_credit,USA_20_rep_days,USA_69_regions,USA_54_regions,USA_FasterSolve,NorthDakota_county,WA_OR_mixed,PA_NJ_mixed,Pacific_county_ba,Pacific_county_agg54
+ignore,1,,,,,,,,,,,,,
+endyear,,2032,2032,2032,2032,,,,,2032,2032,2032,2032,2032
+GSw_Region,,interconnect/ercot,interconnect/ercot,interconnect/ercot,interconnect/ercot,,,,,st/ND,WA_OR_mixed,PA_aggreg_NJ_county,Pacific_county_ba,Pacific_county_agg54
+GSw_RegionResolution,,,,,,,aggreg,aggreg,aggreg,county,mixed,mixed,mixed,mixed
+GSw_HierarchyFile,,,,,,,agg69,agg54,agg54,,,,,agg54
+GSw_GasCurve,,2,2,2,2,,,,,2,2,2,2,2
+GSw_HourlyType,,,wek,year,,,,,,,,,,
+GSw_OpRes,,,,0,,,,,0,,,,,
+GSw_TransSquiggliness,,,,,,,1.07,1.07,1.07,,,,,
+GSw_HourlyNumClusters,,,,,,20,,,20,,,,,
+GSw_PRM_CapCredit,,,,,1,,,,,,,,,
+GSw_StartCost,,,,,,,,,0,,,,,
+GSw_LfillGas,,,,,,,,,0,,,,,
+GSw_CSP,,,,,,,,,0,,,,,
+GSw_Geothermal,,,,,,,,,0,,,,,
+GSw_Biopower,,,,,,,,,0,,,,,
+GSw_Nuclear,,,,,,,,,0,,,,,
+GSw_HourlyChunkLengthRep,,,,,,,,,4,,,,,
+GSw_HourlyChunkLengthStress,,,,,,,,,4,,,,,
+yearset_suffix,,,,,,,,,5yr,,,,,

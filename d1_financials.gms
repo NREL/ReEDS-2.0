@@ -24,14 +24,14 @@ tc_phaseout_mult(i,v,t)$[tload(t)$(firstyear_v(i,v)>=%cur_year%)] =
 cost_cap_fin_mult(i,r,t) = ccmult(i,t) / (1.0 - tax_rate(t))
     * (1.0-tax_rate(t) * (1.0 - (itc_frac_monetized(i,t) * itc_energy_comm_bonus(i,r) * tc_phaseout_mult_t(i,t)/2.0) )
     * pv_frac_of_depreciation(i,t) - itc_frac_monetized(i,t) * tc_phaseout_mult_t(i,t))
-    * degradation_adj(i,t) * financing_risk_mult(i,t) * reg_cap_cost_mult(i,r)
+    * degradation_adj(i,t) * financing_risk_mult(i,t) * (1 + reg_cap_cost_diff(i,r))
     * eval_period_adj_mult(i,t) ;
 
 cost_cap_fin_mult_noITC(i,r,t) = ccmult(i,t) / (1.0 - tax_rate(t))
     * (1.0-tax_rate(t)*pv_frac_of_depreciation(i,t)) * degradation_adj(i,t)
-    * financing_risk_mult(i,t) * reg_cap_cost_mult(i,r) * eval_period_adj_mult(i,t) ;
+    * financing_risk_mult(i,t) * (1 + reg_cap_cost_diff(i,r)) * eval_period_adj_mult(i,t) ;
 
-cost_cap_fin_mult_no_credits(i,r,t) = ccmult(i,t) * reg_cap_cost_mult(i,r) ;
+cost_cap_fin_mult_no_credits(i,r,t) = ccmult(i,t) * (1 + reg_cap_cost_diff(i,r)) ;
 
 * Assign the PV portion of PVB the value of UPV
 cost_cap_fin_mult_pvb_p(i,r,t)$pvb(i) =
@@ -102,16 +102,15 @@ if(Sw_NukeStateBan = 2,
 rsc_fin_mult(i,r,t)$[valcap_irt(i,r,t)$rsc_i(i)] = 1 ;
 rsc_fin_mult_noITC(i,r,t)$[valcap_irt(i,r,t)$rsc_i(i)] = 1 ;
 
-* Hydro and pumped-hydro have capital costs included in the supply curve,
-* so change their multiplier to be the same as cost_cap_fin_mult
-rsc_fin_mult(i,r,t)$hydro(i) = cost_cap_fin_mult('hydro',r,t) ;
-rsc_fin_mult(i,r,t)$psh(i) = cost_cap_fin_mult(i,r,t) ;
-rsc_fin_mult_noITC(i,r,t)$hydro(i) = cost_cap_fin_mult_noITC('hydro',r,t) ;
-rsc_fin_mult_noITC(i,r,t)$psh(i) = cost_cap_fin_mult_noITC(i,r,t) ;
-
-* Apply cost reduction multipliers for geothermal hydro and offshore wind
-rsc_fin_mult(i,r,t)$[hydro(i) or psh(i)] = rsc_fin_mult(i,r,t) * hydrocapmult(t,i) ;
-rsc_fin_mult_noITC(i,r,t)$[hydro(i) or psh(i)] = rsc_fin_mult_noITC(i,r,t) * hydrocapmult(t,i) ;
+* Hydro, pumped-hydro, and dr-shed have capital costs included in the supply curve,
+* so change their multiplier to be the same as cost_cap_fin_mult adjusted by their
+* capital cost multipliers.
+rsc_fin_mult(i,r,t)$hydro(i) = cost_cap_fin_mult('hydro',r,t) * hydrocapmult(t,i) ;
+rsc_fin_mult_noITC(i,r,t)$hydro(i) = cost_cap_fin_mult_noITC('hydro',r,t) * hydrocapmult(t,i) ;
+rsc_fin_mult(i,r,t)$psh(i) = cost_cap_fin_mult(i,r,t) * hydrocapmult(t,i) ;
+rsc_fin_mult_noITC(i,r,t)$psh(i) = cost_cap_fin_mult_noITC(i,r,t) * hydrocapmult(t,i) ;
+rsc_fin_mult(i,r,t)$dr_shed(i) = cost_cap_fin_mult(i,r,t)* dr_shed_capmult(i,r,t) ;
+rsc_fin_mult_noITC(i,r,t)$dr_shed(i) = cost_cap_fin_mult_noITC(i,r,t)* dr_shed_capmult(i,r,t) ;
 
 * Create a new parameter to hold capital financing multipliers with and without ITC for OSW transmission costs inside the resource supply curve cost
 * Currently, OSW receives federal incentives in both its capital and transmission costs, hence this custom application for OSW

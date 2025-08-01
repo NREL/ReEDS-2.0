@@ -1,26 +1,23 @@
 """
-    Creates a datapath for a given year within the valid date period: 2020
-    < y <= 2050.  Used as a parameter for other functions in order to
-    access correctly dated input files.
+    Creates a datapath for a given ReEDS model year. Used as a parameter for other
+    functions in order to access correctly dated input files.
 
     Parameters
     ----------
     x : String
-        Filepath where Augur data is saved
+        Path to ReEDS case (e.g. "~/github/ReEDS-2.0/runs/name_of_reeds_case")
     y : Int
-        Year of the case being run
+        ReEDS model year
 
     Returns
     -------
     A new object with filepath and valid year parameters
 """
 struct ReEDSdatapaths
-    ReEDSfilepath::String  # The filepath where Augur data is saved
-    year::Int              # year 2020-2050
+    ReEDSfilepath::String
+    year::Int
 
     function ReEDSdatapaths(x, y)
-        msg = "Currently, build year should be in [2020-2050] for a ReEDS case."
-        (2020 <= y <= 2050) || error(msg)
         return new(x, y)
     end
 end
@@ -58,10 +55,10 @@ end
   
     Returns
     -------
-    EIA_NEMS_data : DataFrame
+    unitdata : DataFrame
         A DataFrame containing the EIA-NEMS Generator Database data.
 """
-function get_EIA_NEMS_DB(data::ReEDSdatapaths)
+function get_unitdata(data::ReEDSdatapaths)
     filepath = joinpath(data.ReEDSfilepath, "inputs_case", "unitdata.csv")
     return DataFrames.DataFrame(CSV.File(filepath))
 end
@@ -89,11 +86,10 @@ function get_load_file(data::ReEDSdatapaths)
         "augur_data",
         "pras_load_$(string(data.year)).h5",
     )
-    msg = "The year $(data.year) does not have an associated Augur load h5 "
-    "file. Are you sure ReeDS was run and Augur results saved for "
-    "$(data.year)?"
-    isfile(filepath) || error(msg)
-    return HDF5.h5read(filepath, "data")
+    columns = HDF5.h5read(filepath, "columns")
+    data = HDF5.h5read(filepath, "data")
+    df = DataFrames.DataFrame(transpose(data), columns)
+    return df
 end
 
 """
@@ -109,11 +105,6 @@ end
     Returns
     -------
     The requested ``hdf5`` as a data frame.
-
-    Raises
-    ------
-    error
-        If the year does not have an associated Augur vg h5 file.
 """
 function get_vg_cf_data(data::ReEDSdatapaths)
     filepath = joinpath(
@@ -122,11 +113,10 @@ function get_vg_cf_data(data::ReEDSdatapaths)
         "augur_data",
         "pras_vre_gen_$(string(data.year)).h5",
     )
-    msg = "The year $(data.year) does not have an associated Augur vg h5 file.
-           Are you sure ReeDS was run and Augur results saved for
-           $(data.year)?"
-    isfile(filepath) || error(msg)
-    return HDF5.h5read(filepath, "data")
+    columns = HDF5.h5read(filepath, "columns")
+    data = HDF5.h5read(filepath, "data")
+    df = DataFrames.DataFrame(transpose(data), columns)
+    return df
 end
 
 """
@@ -140,17 +130,13 @@ end
 
     Returns
     -------
-    DataFrames.DataFrame
-        Dataframe MTTR data.
+    Dictionary
+        tech => MTTR [hours]
 """
 function get_MTTR_data(data::ReEDSdatapaths)
-    filepath = joinpath(
-        data.ReEDSfilepath,
-        "ReEDS_Augur",
-        "augur_data",
-        "mttr_data_$(string(data.year)).csv",
-    )
-    return DataFrames.DataFrame(CSV.File(filepath))
+    filepath = joinpath(data.ReEDSfilepath, "inputs_case", "mttr.csv")
+    df = DataFrames.DataFrame(CSV.File(filepath))
+    return Dict(df[!, "tech"] .=> df[!, "hours"])
 end
 
 

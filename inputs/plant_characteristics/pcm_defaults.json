@@ -12,59 +12,7 @@
     "min_up_time": null,
     "start_cost_per_MW": null
   },
-  "battery_10": {
-    "avg_capacity_MW": 200.0,
-    "forced_outage_rate": 2.0,
-    "maintenance_rate": 0.55,
-    "max_capacity_MW": 1000.0,
-    "max_ramp_up_percentage": null,
-    "mean_time_to_repair": 24.0,
-    "min_capacity_MW": 0.0,
-    "min_down_time": null,
-    "min_stable_level_percentage": null,
-    "min_up_time": null,
-    "start_cost_per_MW": null
-  },
-  "battery_2": {
-    "avg_capacity_MW": 200.0,
-    "forced_outage_rate": 2.0,
-    "maintenance_rate": 0.55,
-    "max_capacity_MW": 1000.0,
-    "max_ramp_up_percentage": null,
-    "mean_time_to_repair": 24.0,
-    "min_capacity_MW": 0.0,
-    "min_down_time": null,
-    "min_stable_level_percentage": null,
-    "min_up_time": null,
-    "start_cost_per_MW": null
-  },
-  "battery_4": {
-    "avg_capacity_MW": 200.0,
-    "forced_outage_rate": 2.0,
-    "maintenance_rate": 0.55,
-    "max_capacity_MW": 1000.0,
-    "max_ramp_up_percentage": null,
-    "mean_time_to_repair": 24.0,
-    "min_capacity_MW": 0.0,
-    "min_down_time": null,
-    "min_stable_level_percentage": null,
-    "min_up_time": null,
-    "start_cost_per_MW": null
-  },
-  "battery_6": {
-    "avg_capacity_MW": 200.0,
-    "forced_outage_rate": 2.0,
-    "maintenance_rate": 0.55,
-    "max_capacity_MW": 1000.0,
-    "max_ramp_up_percentage": null,
-    "mean_time_to_repair": 24.0,
-    "min_capacity_MW": 0.0,
-    "min_down_time": null,
-    "min_stable_level_percentage": null,
-    "min_up_time": null,
-    "start_cost_per_MW": null
-  },
-  "battery_8": {
+  "battery_li": {
     "avg_capacity_MW": 200.0,
     "forced_outage_rate": 2.0,
     "maintenance_rate": 0.55,
@@ -141,6 +89,19 @@
     "min_stable_level_percentage": 1.0,
     "min_up_time": 7.0,
     "start_cost_per_MW": 5.3
+  },
+  "can-imports": {
+    "avg_capacity_MW": 20000.0,
+    "forced_outage_rate": null,
+    "maintenance_rate": null,
+    "max_capacity_MW": null,
+    "max_ramp_up_percentage": null,
+    "mean_time_to_repair": 24.0,
+    "min_capacity_MW": null,
+    "min_down_time": null,
+    "min_stable_level_percentage": null,
+    "min_up_time": null,
+    "start_cost_per_MW": null
   },
   "coal-ccs": {
     "avg_capacity_MW": 302.0,
@@ -1131,7 +1092,7 @@
     "start_cost_per_MW": 69.0
   },
   "hydd": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1144,7 +1105,7 @@
     "start_cost_per_MW": null
   },
   "hyded": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1157,7 +1118,7 @@
     "start_cost_per_MW": null
   },
   "hydend": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1170,7 +1131,7 @@
     "start_cost_per_MW": null
   },
   "hydnd": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1183,7 +1144,7 @@
     "start_cost_per_MW": null
   },
   "hydnpd": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1196,7 +1157,7 @@
     "start_cost_per_MW": null
   },
   "hydnpnd": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1209,7 +1170,7 @@
     "start_cost_per_MW": null
   },
   "hydsd": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1222,7 +1183,7 @@
     "start_cost_per_MW": null
   },
   "hydsnd": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1235,7 +1196,7 @@
     "start_cost_per_MW": null
   },
   "hydud": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1248,7 +1209,7 @@
     "start_cost_per_MW": null
   },
   "hydund": {
-    "avg_capacity_MW": null,
+    "avg_capacity_MW": 94.0,
     "forced_outage_rate": null,
     "maintenance_rate": null,
     "max_capacity_MW": null,
@@ -1311,6 +1272,19 @@
     "min_stable_level_percentage": 0.6,
     "min_up_time": 0.0,
     "start_cost_per_MW": 69.0
+  },
+  "pumped-hydro": {
+    "avg_capacity_MW": 1000.0,
+    "forced_outage_rate": null,
+    "maintenance_rate": null,
+    "max_capacity_MW": null,
+    "max_ramp_up_percentage": null,
+    "mean_time_to_repair": 24.0,
+    "min_capacity_MW": null,
+    "min_down_time": null,
+    "min_stable_level_percentage": null,
+    "min_up_time": null,
+    "start_cost_per_MW": null
   },
   "re-cc": {
     "avg_capacity_MW": 320.0,

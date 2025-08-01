@@ -39,7 +39,7 @@ eq_ObjFn_inv(t)$tmodel(t)..
                        cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INV(i,v,r,t)
                       }
 
-                  + sum{(i,v,r)$[valinv(i,v,r,t)$continuous_battery(i)],
+                  + sum{(i,v,r)$[valinv(i,v,r,t)$battery(i)],
                        cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) * INV_ENERGY(i,v,r,t) 
                       }
 
@@ -168,7 +168,7 @@ eq_Objfn_op(t)$tmodel(t)..
               + sum{(i,v,r)$[valcap(i,v,r,t)],
                    cost_fom(i,v,r,t) * CAP(i,v,r,t) }
 
-              + sum{(i,v,r)$[valcap(i,v,r,t)$continuous_battery(i)],
+              + sum{(i,v,r)$[valcap(i,v,r,t)$battery(i)],
                    cost_fom_energy(i,v,r,t) * CAP_ENERGY(i,v,r,t) }
 
 * transmission lines
@@ -200,7 +200,7 @@ eq_Objfn_op(t)$tmodel(t)..
                     * sum{tt$[(yeart(tt)<=yeart(t))$(tmodel(tt) or tfix(tt))], INV_POI(r,tt) } }
 
 * --- penalty for retiring a technology (represents friction in retirements)---
-              - sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
+              - sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)$Sw_RetirePenalty],
                    cost_fom(i,v,r,t) * retire_penalty(t) *
                    (CAP(i,v,r,t)
                     - INV(i,v,r,t)$valinv(i,v,r,t)
@@ -219,7 +219,7 @@ eq_Objfn_op(t)$tmodel(t)..
 * via the capex + opex costs of H2 production and its associated electricity demand.
               + sum{(i,v,r,h)$[valgen(i,v,r,t)$heat_rate(i,v,r,t)
                              $(not gas(i))$(not bio(i))$(not cofire(i))
-                             $((not h2_ct(i)) or h2_ct(i)$[(Sw_H2=0) or h_stress(h)])],
+                             $((not h2_combustion(i)) or h2_combustion(i)$[(Sw_H2=0) or h_stress(h)])],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN(i,v,r,h,t) }
 
 * --- startup/ramping costs

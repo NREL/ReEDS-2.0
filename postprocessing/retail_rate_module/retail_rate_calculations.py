@@ -29,7 +29,7 @@ tracelabels = {
     'op_vom_costs': 'Operation: Variable O&M',
     'op_operating_reserve_costs': 'Operation: Operating reserves',
     'op_fuelcosts_objfn': 'Operation: Fuel',
-    'op_h2ct_fuel_costs': 'Operation: H2-CT - Hydrogen',
+    'op_h2combustion_fuel_costs': 'Operation: H2-Combustion - Hydrogen',
     'op_h2_storage': 'Operation: Storage - Hydrogen',
     'op_h2_transport': 'Operation: Transport - Hydrogen',
     'op_h2_transport_intrareg': 'Operation: Intraregional Transport - Hydrogen',
@@ -1964,10 +1964,10 @@ def post_processing(dfplot):
     if 'special_costs' in dfplot:
         dfplot['op_admin'] += dfplot['special_costs']
         dfplot.drop('special_costs', axis=1, inplace=True)
-    ### Group 'op_h2ct_fuel_costs' into 'op_fuelcosts_objfn'
-    if 'op_h2ct_fuel_costs' in dfplot.columns:
-        dfplot['op_fuelcosts_objfn'] += dfplot['op_h2ct_fuel_costs']
-        dfplot.drop('op_h2ct_fuel_costs', axis=1, inplace=True)
+    ### Group 'op_h2combustion_fuel_costs' into 'op_fuelcosts_objfn'
+    if 'op_h2combustion_fuel_costs' in dfplot.columns:
+        dfplot['op_fuelcosts_objfn'] += dfplot['op_h2combustion_fuel_costs']
+        dfplot.drop('op_h2combustion_fuel_costs', axis=1, inplace=True)
     subcols = [
         'cap_{}_dep_expense', 'cap_{}_debt_interest',
         'cap_{}_equity_return', 'cap_{}_income_tax']

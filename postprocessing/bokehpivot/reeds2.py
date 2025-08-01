@@ -26,8 +26,8 @@ coststreams = ['eq_gasaccounting_regional','eq_gasaccounting_national','eq_bious
 vf_valstreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
 # valuestreams = ['eq_supply_demand_balance','eq_reserve_margin','eq_opres_requirement','eq_rec_requirement','eq_national_gen','eq_annual_cap','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min','eq_emit_accounting','eq_mingen_lb','eq_mingen_ub','eq_rps_ofswind']
 energy_valstreams = ['eq_supply_demand_balance','eq_curt_gen_balance','eq_curtailment','eq_storage_in_max','eq_storage_in_min']
-cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','pumped-hydro','pumped-hydro-flex','battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100']
-battery_techs=['battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100', 'battery_li']
+cc_techs = ['hydro','wind-ons','wind-ofs','csp','upv','pumped-hydro','pumped-hydro-flex','battery','battery_li']
+battery_techs=['battery_li']
 h2_techs = ['smr', 'smr-ccs', 'electrolyzer']
 prod_techs = h2_techs + ['dac']
 niche_techs =  ['hydro','csp','geothermal','beccs','lfill-gas','biopower']
@@ -1284,6 +1284,7 @@ columns_meta = {
         'join_in_run': True, #Get the join file from the first run folder
         'join_keep_cols': ['*r','st','cendiv','interconnect','custreg'], #Allow an arbitrary 'custreg' column if desired.
         'join_col_rename': {'*r':'rb'},
+        'join_col_lowercase': ['st'],
     },
     'ts':{
         'type':'string',
@@ -3139,7 +3140,7 @@ results_meta = collections.OrderedDict((
     ),
 
     ('H2-CT Fuel Price ($/mmBTU)',
-        {'file':'prod_h2ct_cost',
+        {'file':'prod_h2comb_cost',
         'columns': ['product', 'year', 'Price ($/mmBTU)'],
         'preprocess': [
             {'func': apply_inflation, 'args': {'column': 'Price ($/mmBTU)'}},

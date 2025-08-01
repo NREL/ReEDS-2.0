@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 from glob import glob
 import matplotlib.pyplot as plt
-import pptx
-from pptx.util import Inches, Pt
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
@@ -157,6 +155,7 @@ SLIDE_WIDTH = 13.33
 def init_pptx(
     fpath_template=os.path.join(reeds_path, 'postprocessing', 'template.pptx'),
 ):
+    import pptx
     prs = pptx.Presentation(fpath_template)
     return prs
 
@@ -173,6 +172,7 @@ def add_to_pptx(
         layout=3,
     ):
     """Add current matplotlib figure (or file if specified) to new powerpoint slide"""
+    from pptx.util import Inches
     if not file:
         image = io.BytesIO()
         plt.savefig(image, format='png')
@@ -209,6 +209,7 @@ def add_textbox(
         fontsize=14,
     ):
     """Add a textbox to the specified slide"""
+    from pptx.util import Inches, Pt
     textbox = slide.shapes.add_textbox(
         left=(None if left is None else Inches(left)),
         top=(None if top is None else Inches(top)),

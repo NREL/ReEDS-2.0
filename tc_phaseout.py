@@ -105,9 +105,9 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
     # If groups overlapped, drop the resulting duplicates
     const_times = const_times.drop_duplicates(['i', 't_online'])   
 
-    # Append pvb construction times, based on battery_4 construction times
+    # Append pvb construction times, based on battery_li construction times
     const_times = reeds.financials.append_pvb_parameters(
-        dfin=const_times, tech_to_copy='battery_4')
+        dfin=const_times, tech_to_copy='battery_li')
 
     const_times = const_times.merge(safe_harbors, on=['i', 't_online'])
     const_times['safe_harbor_max'] = const_times['safe_harbor_max'].fillna(0)

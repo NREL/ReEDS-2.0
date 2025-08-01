@@ -23,7 +23,7 @@ PIVOT_DEFS = {'standard':          {'scen_i_r_t':             {'id_columns':  ['
                                                                'csvs':        ['gen_h','reqt_quant','stor_in','opRes_supply_h','stor_level','prod_load','prod_produce'],
                                                                'operation':   ['sum','sum','load_only','sum','sum','sum','custom','sum']},
                                     'scen_t':                 {'id_columns':  ['scenario','t'],
-                                                               'csvs':        ['cap_ivrt','gen_ivrt','co2_cap','co2_price','RE_gen_price_nat','tran_mi_out','prod_h2_price','prod_h2ct_cost'],
+                                                               'csvs':        ['cap_ivrt','gen_ivrt','co2_cap','co2_price','RE_gen_price_nat','tran_mi_out','prod_h2_price','prod_h2comb_cost'],
                                                                'operation':   ['sum','sum','sum','mean','mean','sum','custom','custom']},
                                     'scen_rf_rt_trtype_t':    {'id_columns':  ['scenario','rf','rt','trtype','t'],
                                                                'csvs':        ['tran_mi_out_detail','tran_flow_rep_ann','opres_trade'],

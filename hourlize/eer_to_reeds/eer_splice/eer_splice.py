@@ -1,7 +1,7 @@
 '''
 This script develops BA-level load profiles for ReEDS (in GWh) based on EER state-level load profiles, load participation factors between states and BAs, and allows replacement of specified sectors with other data sources.
 
-EER data starts at 12am hour beginning. TEMPO data starts at 12am local time (hour beginning?). Building data starts at 1am hour ending, so no roll is needed for buidlings. Output data starts at 12am hour beginning.
+EER data starts at 12am hour beginning, EST. TEMPO data starts at 12am local time (hour beginning?). Building data starts at 1am hour ending EST, so no roll is needed for buidlings. Output data starts at 12am hour beginning EST.
 
 Requires: pandas, h5py. It previously required pyarrow as well and I made a new 'parquet' conda environment with these three packages (along with dependencies)
 '''
@@ -13,13 +13,13 @@ import datetime
 import shutil
 
 #USER INPUTS
-eer_case = 'ira_con' #ira, ira_con, central, baseline
-eer_load_path = '/projects/eerload/source_eer_load_profiles/20230604_eer_load'
-weather_years = list(range(2007,2014))
+eer_case = 'baseline' #ira, ira_con, central, baseline (IRA cons is how it is named)
+eer_load_path = '/kfs2/projects/eerload/source_eer_load_profiles/20250512_eer_download/1_post_ntps_load/20250512_eer_load'
+weather_years = list(range(2007,2014)) + list(range(2016,2024))
 model_years = [2021, 2025, 2030, 2035, 2040, 2045, 2050] #Should be df_eer_meta['YEAR'].unique() unless we reduce further
 bas = [f'p{n}' for n in range(1,135)]
 replace_sectors = False #If True, use the following parameters to remove and replace sectors
-replace_type = 'Buildings' #'Transportation' or 'Buildings'
+replace_type = 'Buildings' #Options: 'Transportation', 'Buildings', 'Data Centers'
 
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -34,9 +34,24 @@ elif replace_type == 'Buildings':
         'residential': ['residential air conditioning', 'residential furnace fans', 'residential secondary heating','residential space heating'],
     }
     years_remove = model_years
+    # this csv contains 8760 rows (1 for every hour of the year) and 134 columns (1 for every ReEDS BA, labeled 'p{BA number}')
+    # the first column is an index column, with no column name, from 0 through 8759.
+    # The csv is populated with load values in units of GWh
     replace_files = [
         '/projects/eerload/mmowers/eer_splice/agg_res_eulp_hvac_elec_GWh_upgrade0.csv',
         '/projects/eerload/mmowers/eer_splice/agg_com_eulp_hvac_elec_GWh_upgrade0.csv',
+    ]
+elif replace_type == 'Data Centers':
+    sectors_remove = {
+        'commercial': ['data center cooling', 'data center it'],
+    }
+    years_remove = model_years
+    # this csv contains 8760 rows (1 for every hour of the year) and 134 columns (1 for every ReEDS BA, labeled 'p{BA number}')
+    # The csv is populated with load values in units of MWh
+    # An example of this file is included here: hourlize\eer_to_reeds\eer_splice\dummy_agg_op_datacenters.csv
+    # Note: this csv is dummy data purely for illustrative purposes and is not representative of data center assumptions in the EER profiles. Please bring your own data to use this feature.
+    replace_files = [
+        '/kfs2/projects/eerload/challoran/eer_splice/dummy_agg_op_datacenters.csv',
     ]
 
 time = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -105,6 +120,18 @@ for weather_year in weather_years:
                 for ba in bas:
                     if ba in df_load_r:
                         df_ba_load[ba] = df_ba_load[ba] + df_load_r[ba].values
+            elif replace_type == 'Data Centers':
+                ls_df = [pd.read_csv(f, index_col=0) for f in replace_files]
+                df_load_r = pd.concat(ls_df).groupby(level=0).sum()
+                #Convert from MWh to GWh
+                df_load_r = df_load_r/1e3
+                #Duplicate the final day of Data center data for leap years, since EER data includes all hours but Data center data does not.
+                if weather_year % 4 == 0:
+                    df_load_r = pd.concat([df_load_r, df_load_r.iloc[-24:]])
+                #Adjust df_ba_load with new load
+                for ba in bas:
+                    if ba in df_load_r:
+                        df_ba_load[ba] = df_ba_load[ba] + df_load_r[ba].values           
         for ba in bas:
             df_ba_load[ba] = df_ba_load[ba].round(4)
         df_ba_load.to_csv(f'{output_dir}/{eer_case}_e{model_year}_w{weather_year}.csv', index=False)

@@ -31,17 +31,17 @@
 """
 function parse_reeds_data(
     ReEDS_data::ReEDSdatapaths,
-    weather_year::Int,
     timesteps::Int,
-    solve_year::Int,
-    user_inputs::Dict{Any, Any};
+    solve_year::Int;
     hydro_energylim = false,
+    pras_agg_ogs_lfillgas = false,
+    pras_existing_unit_size = true,
 )
     @info "Processing regions and associating load profiles..."
-    region_array = process_regions_and_load(ReEDS_data, weather_year, timesteps)
+    region_array = process_regions_and_load(ReEDS_data)
 
     @info "Processing lines and adding VSC-related regions, if applicable..."
-    lines = process_lines(ReEDS_data, get_name.(region_array), timesteps, user_inputs)
+    lines = process_lines(ReEDS_data, get_name.(region_array), timesteps)
     lines, regions = process_vsc_lines(lines, region_array)
 
     # Create Generator Objects
@@ -51,9 +51,8 @@ function parse_reeds_data(
         "splitting thermal, storage, variable and hydro generator types from installed " *
         "ReEDS capacities..."
     )
-    thermal_builds, storage, variable_gens, hydro_disp_gens, hydro_non_disp_gens =
-        split_generator_types(ReEDS_data, solve_year)
-    @debug "variable_gens: $(variable_gens)"
+    thermal_builds, storage, hydro_disp_gens, hydro_non_disp_gens =
+        split_generator_types(ReEDS_data)
 
     @info "reading in ReEDS generator-type forced outage data..."
     forced_outage_data = get_forced_outage_data(ReEDS_data)
@@ -68,11 +67,10 @@ function parse_reeds_data(
 
     @info "reading in ATB unit size data for use with disaggregation..."
     unitsize_data = get_unitsize_mapping(ReEDS_data)
-    unitsize_dict = Dict(unitsize_data[!, "tech"] .=> unitsize_data[!, "atb_capacity_MW"])
+    unitsize_dict = Dict(unitsize_data[!, "tech"] .=> unitsize_data[!, "MW"])
 
     @info "reading MTTR data"
-    mttr_df = get_MTTR_data(ReEDS_data)
-    mttr_dict = Dict(mttr_df[!, "tech"] .=> mttr_df[!, "mean_time_to_repair"])
+    mttr_dict = get_MTTR_data(ReEDS_data)
 
     @info "Processing conventional/thermal generators..."
     thermal_gens = process_thermals_with_disaggregation(
@@ -84,17 +82,13 @@ function parse_reeds_data(
         timesteps,
         solve_year,
         mttr_dict,
-        user_inputs,
+        pras_agg_ogs_lfillgas = pras_agg_ogs_lfillgas,
+        pras_existing_unit_size = pras_existing_unit_size,
     )
     @info "Processing variable generation..."
     gens_array = process_vg(
         thermal_gens,
-        variable_gens,
-        FOR_dict,
         ReEDS_data,
-        timesteps,
-        mttr_dict,
-        user_inputs,
     )
 
     @info "Processing Storages..."
@@ -105,9 +99,7 @@ function parse_reeds_data(
         unitsize_dict,
         ReEDS_data,
         timesteps,
-        solve_year,
         mttr_dict,
-        user_inputs,
     )
 
     @info "Processing hydroelectric generators..."
@@ -121,7 +113,6 @@ function parse_reeds_data(
         solve_year,
         timesteps,
         mttr_dict,
-        user_inputs,
         unitsize_dict,
         hydro_energylim = hydro_energylim,
     )

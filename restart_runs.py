@@ -5,6 +5,7 @@ import subprocess
 import argparse
 import pandas as pd
 from glob import glob
+from runbatch import submit_slurm_parallel_jobs
 
 #%% Argument inputs
 parser = argparse.ArgumentParser(description='Restart failed runs on the HPC')
@@ -96,7 +97,6 @@ if copy_srun_template:
 else:
     writelines_srun = list()
 
-
 #%%### Loop through runs, figure out when they failed, and restart
 for case in runs_failed:
     casename = os.path.basename(case)
@@ -154,19 +154,44 @@ for case in runs_failed:
         for line in writelines:
             f.writelines(line + '\n')
 
-    #%% Write the sbatch file with new header, if desired
-    if copy_srun_template:
-        writelines_srun_case = writelines_srun.copy()
-        writelines_srun_case.append(f"\n#SBATCH --job-name={casename}\n")
-        writelines_srun_case.append(f"sh {callfile}")
-        with open(sbatchfile, 'w') as f:
-            for line in writelines_srun_case:
-                f.writelines(line + '\n')
+# Check if we are going to run this in parallel or not
+hpc = True if (int(os.environ.get('REEDS_USE_SLURM',0))) else False
+if hpc and len(runs_failed) > 1:
+    # On HPC with multiple cases 
+    cases_per_node = int(input('Number of simultaneous runs per node [integer]: '))
+else:
+    cases_per_node = 1
 
-    #%% Run it
-    sbatch = f'sbatch {sbatchfile}'
-    sbatchout = subprocess.run(sbatch, capture_output=True, shell=True)
+if hpc and (cases_per_node > 1):
+    # Write the slurm scripts for parallel runs and 
+    # submit them to the HPC
+    casenames = [os.path.basename(p).split(batch_name + "_", 1)[-1] for p in runs_failed]
+    submit_slurm_parallel_jobs(
+        reeds_path=reeds_path,
+        BatchName=batch_name,
+        casenames=casenames,
+        cases_per_node=cases_per_node,
+    )
 
-    if len(sbatchout.stderr):
-        print(sbatchout.stderr.decode())
-    print(f"{casename}: {sbatchout.stdout.decode()}")
+else:
+    # Run each case individually
+    for case in runs_failed:
+        casename = os.path.basename(case)
+        callfile = os.path.join(case, f'call_{casename}.sh')
+        sbatchfile = os.path.join(case, f'{casename}.sh')
+        # It is a single case or we are not on HPC
+        if copy_srun_template:
+            writelines_srun_case = writelines_srun.copy()
+            writelines_srun_case.append(f"\n#SBATCH --job-name={casename}\n")
+            writelines_srun_case.append(f"sh {callfile}")
+            with open(sbatchfile, 'w') as f:
+                for line in writelines_srun_case:
+                    f.writelines(line + '\n')
+
+        #%% Run it
+        sbatch = f'sbatch {sbatchfile}'
+        sbatchout = subprocess.run(sbatch, capture_output=True, shell=True)
+
+        if len(sbatchout.stderr):
+            print(sbatchout.stderr.decode())
+        print(f"{casename}: {sbatchout.stdout.decode()}")
