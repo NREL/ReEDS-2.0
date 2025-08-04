@@ -29,7 +29,8 @@ positive variables
   GROWTH_BIN(gbin,i,st,t)                  "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
   INV(i,v,r,t)                             "--MW-- generation capacity additions in year t"
   INV_ENERGY(i,v,r,t)                      "--MWh-- generation energy capacity additions in year t"
-  EXTRA_PRESCRIP(pcat,r,t)                 "--MW-- builds beyond those prescribed once allowed in firstyear(pcat) - exceptions for gas-ct, wind-ons, and wind-ofs"
+  EXTRA_PRESCRIP(pcat,r,t)                 "--MW-- builds beyond those prescribed power capacity once allowed in firstyear(pcat) - exceptions for gas-ct, wind-ons, and wind-ofs"
+  EXTRA_PRESCRIP_ENERGY(pcat,r,t)          "--MWh-- builds beyond those prescribed battery energy capacity once allowed in firstyear(pcat)"
   INV_CAP_UP(i,v,r,rscbin,t)               "--MW-- upsized generation capacity addition in year t"
   INV_ENER_UP(i,v,r,rscbin,t)              "--MW-- upsized energy addition in year t using capacity factor to convert to capacity units"
   INV_REFURB(i,v,r,t)                      "--MW-- investment in refurbishments of technologies that use a resource supply curve"
@@ -149,7 +150,8 @@ EQUATION
  eq_cap_up(i,v,r,rscbin,t)                "--MW-- limit on capacity upsizing"
  eq_cap_upgrade(i,v,r,t)                  "--MW-- All purchased upgrades are greater than or equal to the sum of upgraded capacity"
  eq_ener_up(i,v,r,rscbin,t)               "--MW-- limit on energy upsizing"
- eq_forceprescription(pcat,r,t)           "--MW-- total investment in prescribed capacity must equal amount from exogenous prescriptions"
+ eq_forceprescription_power(pcat,r,t)     "--MW-- total power investment in prescribed capacity must equal amount from exogenous prescriptions"
+ eq_forceprescription_energy(pcat,r,t)    "--MWh-- total energy investment in prescribed capacity must equal amount from exogenous prescriptions"
  eq_refurblim(i,r,t)                      "--MW-- total refurbishments cannot exceed the amount of capacity that has reached the end of its life"
 
 * renewable supply curves
@@ -179,6 +181,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_curt_gen_balance(r,allh,t)                 "--MW-- net generation and curtailment must equal gross generation"
  eq_dhyd_dispatch(i,v,r,allszn,t)              "--MWh-- dispatchable hydro seasonal energy constraint (when not allowing seasonal enregy shifting)"
  eq_min_cf(i,r,t)                              "--MWh-- minimum capacity factor constraint for each generator fleet, applied to (i,r)"
+ eq_max_daily_cf(i,r,allszn,t)                 "--MWh-- maximum daily capacity factor constraint for any technology with maxdailycf(i,t) specified"
  eq_mingen_fixed(i,v,r,allh,t)                 "--MW-- Generation in each timeslice must be greater than mingen_fixed * available capacity"
  eq_mingen_lb(r,allh,allszn,t)                 "--MW-- lower bound on minimum generation level"
  eq_mingen_ub(r,allh,allszn,t)                 "--MW-- upper bound on minimum generation level"
@@ -233,7 +236,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
 
 * hydrogen supply and demand
  eq_prod_capacity_limit(i,v,r,allh,t)                 "--metric tons-- production cannot exceeds its capacity"
- eq_h2_demand(p,t)                                    "--metric tons-- production of hydrogen must meet exogenous demand plus H2-CT use"
+ eq_h2_demand(p,t)                                    "--metric tons-- production of hydrogen must meet exogenous demand plus H2-CT/CC use"
  eq_h2_demand_regional(r,allh,t)                      "--metric tons per hour-- regional hydrogen supply must equal demand net trade and storage"
  eq_h2_transport_caplimit(r,rr,allh,t)                "--metric tons per hour-- H2 flow cannot exceed cumulative pipeline investment"
  eq_h2_storage_flowlimit(h2_stor,r,allh,t)            "--metric tons per hour-- H2 storage injection or withdrawal cannot exceed cumulative storage investment"
@@ -635,11 +638,13 @@ eq_cap_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
 * ---------------------------------------------------------------------------
 
-eq_cap_energy_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$continuous_battery(i)]..
+eq_cap_energy_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$battery(i)]..
     
     sum{tt$[inv_cond(i,v,r,t,tt)$(tmodel(tt) or tfix(tt))$valcap(i,v,r,tt)],
               degrade(i,tt,t) * INV_ENERGY(i,v,r,tt)
         }
+
+    + m_capacity_exog_energy(i,v,r,t)
 
     =e=
 
@@ -776,7 +781,7 @@ eq_cap_upgrade(i,v,r,t)$[valcap(i,v,r,t)$upgrade(i)$Sw_Upgrades$tmodel(t)$(not S
               $(yeart(tt)<=yeart(t))$ivt(i,v,tt)
               $(yeart(tt)>=Sw_Upgradeyear)
               $valcap(i,v,r,tt)$(not sameas(i,'hydEND_hydED'))
-              $sum(ii$upgrade_from(i,ii),valcap(ii,vv,r,tt))],
+              $sum{ii$upgrade_from(i,ii), valcap(ii,vv,r,tt) }],
                     UPGRADES(i,vv,r,tt) * (1 - upgrade_derate(i,vv,r,tt))
             }$[Sw_Upgrades = 2]
 
@@ -823,7 +828,8 @@ eq_ener_up(i,v,r,rscbin,t)$[tmodel(t)$allow_ener_up(i,v,r,rscbin,t)$(not Sw_PCM)
 
 * ---------------------------------------------------------------------------
 
-eq_forceprescription(pcat,r,t)
+* Prescribe power capacity
+eq_forceprescription_power(pcat,r,t)
     $[tmodel(t)$force_pcat(pcat,t)$Sw_ForcePrescription
     $sum{(i,newv)$[prescriptivelink(pcat,i)], valinv(i,newv,r,t) }
     $(not Sw_PCM)]..
@@ -840,7 +846,7 @@ eq_forceprescription(pcat,r,t)
             $(tmodel(tt) or tfix(tt))],
             noncumulative_prescriptions(pcat,r,tt)}
 
-* plus any extra buildouts (no penalty here - used as free slack)
+* plus any extra power buildouts (no penalty here - used as free slack)
 * only on or after the first year the techs are available
     + EXTRA_PRESCRIP(pcat,r,t)$[yeart(t)>=firstyear_pcat(pcat)]
 
@@ -850,6 +856,31 @@ eq_forceprescription(pcat,r,t)
                                $sum{st$r_st(r,st), offshore_cap_req(st,t) }]
 ;
 
+* ---------------------------------------------------------------------------
+
+* Prescribe energy capacity
+eq_forceprescription_energy(pcat,r,t)
+    $[tmodel(t)$force_pcat(pcat,t)$Sw_ForcePrescription
+    $sum{(i,newv)$[prescriptivelink(pcat,i)], valinv(i,newv,r,t) }
+    $(not Sw_PCM)]..
+
+*energy capacity built in the current period or prior
+    sum{(i,newv,tt)$[valinv(i,newv,r,tt)$prescriptivelink(pcat,i)
+                     $(yeart(tt)<=yeart(t))$(tmodel(tt) or tfix(tt))
+                     $battery(i)],
+        INV_ENERGY(i,newv,r,tt)}
+
+    =e=
+
+*must equal the cumulative prescribed energy amount
+    sum{tt$[(yeart(tt)<=yeart(t))
+            $(tmodel(tt) or tfix(tt))],
+            noncumulative_prescriptions_energy(pcat,r,tt)}
+
+* plus any extra energy buildouts (no penalty here - used as free slack)
+* only on or after the first year the techs are available
+    + EXTRA_PRESCRIP_ENERGY(pcat,r,t)$[yeart(t)>=firstyear_pcat(pcat)]
+;
 
 * ---------------------------------------------------------------------------
 
@@ -908,10 +939,9 @@ eq_rsc_INVlim(r,i,rscbin,t)$[tmodel(t)
 *but the combination of m_rsc_con and rsc_agg allows for those investments
 *to be limited by the numeraire techs' m_rsc_dat
 
-*capacity indicated by the resource supply curve (with undiscovered geo available
-*at the "discovered" amount and hydro upgrade availability adjusted over time)
-    m_rsc_dat(r,i,rscbin,"cap") * (
-        1$[not geo_hydro(i)] + geo_discovery(i,r,t)$geo_hydro(i))
+*capacity indicated by the resource supply curve (scaled by rsc_capacity_scalar)
+    m_rsc_dat(r,i,rscbin,"cap")$[not evmc(i)] * (
+        1$[not rsc_capacity_scalar_i(i)] + rsc_capacity_scalar(i,r,t)$rsc_capacity_scalar_i(i))
 * available hydro upgrade capacity
     + hyd_add_upg_cap(r,i,rscbin,t)$(Sw_HydroCapEnerUpgradeType=1)
 * available EVMC capacity
@@ -1226,6 +1256,18 @@ eq_min_cf(i,r,t)$[minCF(i,t)$tmodel(t)$valgen_irt(i,r,t)$Sw_MinCF]..
     sum{v$valgen(i,v,r,t), CAP(i,v,r,t) } * sum{h$h_rep(h), hours(h) } * minCF(i,t)
 ;
 
+* Maximum allowed daily capacity factor
+eq_max_daily_cf(i,r,szn,t)$[maxdailycf(i,t)
+                           $sum{h$h_szn(h,szn), avail(i,r,h)}
+                           $tmodel(t)$valgen_irt(i,r,t)$Sw_MaxDailyCF]..
+
+    sum{v$valgen(i,v,r,t), CAP(i,v,r,t) } * sum{h$h_szn(h,szn), hours(h) * avail(i,r,h) } * maxdailycf(i,t)
+
+    =g=
+
+    sum{(v,h)$[valgen(i,v,r,t)$h_szn(h,szn)], hours(h) * GEN(i,v,r,h,t) }
+;
+
 * ---------------------------------------------------------------------------
 
 * Seasonal energy constraint for dispatchable hydropower
@@ -1522,7 +1564,7 @@ eq_cap_sdbin_balance(i,v,r,ccseason,t)
 
 * energy capacity must be greater than the binned value
 eq_cap_sdbin_energy_balance(i,v,r,ccseason,t)
-    $[tmodel(t)$valcap(i,v,r,t)$continuous_battery(i)$Sw_PRM_CapCredit]..
+    $[tmodel(t)$valcap(i,v,r,t)$battery(i)$Sw_PRM_CapCredit]..
 
 *total capacity in each region
     CAP_ENERGY(i,v,r,t)
@@ -1538,7 +1580,7 @@ eq_cap_sdbin_energy_balance(i,v,r,ccseason,t)
 * for each bin, binned energy capacity must equal to binned power capacity
 * times bin duration
 eq_sdbin_power_energy_link(i,v,r,ccseason,sdbin,t)
-    $[tmodel(t)$valcap(i,v,r,t)$continuous_battery(i)$Sw_PRM_CapCredit]..
+    $[tmodel(t)$valcap(i,v,r,t)$battery(i)$Sw_PRM_CapCredit]..
 
 *binned energy capacity
     CAP_SDBIN_ENERGY(i,v,r,ccseason,sdbin,t)
@@ -2632,7 +2674,7 @@ eq_gasbinlimit_nat(gb,t)$[tmodel(t)$(Sw_GasCurve=3)]..
 
 eq_gasaccounting_regional(cendiv,t)$[tmodel(t)$(Sw_GasCurve=1)]..
 
-    sum{fuelbin,VGASBINQ_REGIONAL(fuelbin,cendiv,t) }
+    sum{fuelbin, VGASBINQ_REGIONAL(fuelbin,cendiv,t) }
 
     =e=
 
@@ -2722,8 +2764,7 @@ eq_biousedlimit(bioclass,usda_region,t)$tmodel(t)..
 
 *storage use cannot exceed capacity
 *this constraint does not apply to CSP+TES or hydro pump upgrades
-eq_storage_capacity(i,v,r,h,t)
-    $[valgen(i,v,r,t)
+eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)
     $(storage_standalone(i)$(not evmc_storage(i))
         or evmc_storage(i)
             $[evmc_storage_charge_frac(i,r,h,t)$evmc_storage_discharge_frac(i,r,h,t)]
@@ -2745,7 +2786,7 @@ eq_storage_capacity(i,v,r,h,t)
 
 * [plus] Storage charging
 * excludes hybrid plant+storage and adjusting evmc_storage for time-varying charge (add back deferred EV load) availability
-    + STORAGE_IN(i,v,r,h,t)$[not storage_hybrid(i)$(not csp(i))] / (1$(not evmc_storage(i)) + evmc_storage_charge_frac(i,r,h,t)$evmc_storage(i))
+    + STORAGE_IN(i,v,r,h,t)$[not storage_hybrid(i)$(not csp(i))] / (1$(not evmc_storage(i)) + evmc_storage_charge_frac(i,r,h,t)$evmc_storage(i)) 
    
 * hybrid+storage plant: plant generation
     + STORAGE_IN_PLANT(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$dayhours(h)$Sw_HybridPlant]
@@ -2870,13 +2911,13 @@ eq_storage_duration(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)
                                $tmodel(t)]..
 
 * [plus] storage duration times storage capacity
-    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$(battery(i)$(not continuous_battery(i)) or pvb(i)))
+    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$(battery(i)$(not battery(i)) or pvb(i)))
 
 * [plus] EVMC storage has time-varying energy capacity
     + evmc_storage_energy_hours(i,r,h,t) * CAP(i,v,r,t) * (bcr(i)$evmc_storage(i))
 
-* [plus] continuous battery storage capacity
-    + CAP_ENERGY(i,v,r,t)$continuous_battery(i)
+* [plus] battery storage capacity
+    + CAP_ENERGY(i,v,r,t)$battery(i)
 
     =g=
 
@@ -2919,9 +2960,9 @@ eq_storage_in_minloading(i,v,r,h,hh,t)$[(storage_standalone(i) or hyd_add_pump(i
 ;
 
 * ---------------------------------------------------------------------------
-* for continuous batteries
+* for batteries
 * when power capacity is built, energy capacity must be greater than the minimum duration
-eq_battery_minduration(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$continuous_battery(i)]..
+eq_battery_minduration(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$battery(i)]..
 
     CAP_ENERGY(i,v,r,t)
 
@@ -3263,10 +3304,10 @@ eq_h2_demand(p,t)$[(sameas(p,"H2"))$tmodel(t)$(yeart(t)>=h2_demand_start)$(Sw_H2
 * annual demand
     h2_exogenous_demand(p,t)
 
-* assuming here that h2 production and use in H2_CT can be temporally asynchronous
-* that is, the hydrogen does not need to produced in the same hour it is consumed by h2-ct's
-    + sum{(i,v,r,h)$[valgen(i,v,r,t)$h2_ct(i)$h_rep(h)],
-            GEN(i,v,r,h,t) * hours(h) * h2_ct_intensity * heat_rate(i,v,r,t)
+* assuming here that h2 production and use in H2_COMBUSTION can be temporally asynchronous
+* that is, the hydrogen does not need to produced in the same hour it is consumed by h2-ct/cc's
+    + sum{(i,v,r,h)$[valgen(i,v,r,t)$h2_combustion(i)$h_rep(h)],
+            GEN(i,v,r,h,t) * hours(h) * h2_combustion_intensity * heat_rate(i,v,r,t)
     }
 ;
 
@@ -3294,10 +3335,10 @@ eq_h2_demand_regional(r,h,t)
 * annual demand in [metric tons/hour]
     sum{p, h2_exogenous_demand_regional(r,p,h,t) }
 
-* region-specific H2 consumption from H2-CTs
+* region-specific H2 consumption from H2-CT/CCs
 * [MW] * [metric ton/MMBtu] * [MMBtu/MWh] = [metric tons/hour]
-    + sum{(i,v)$[valgen(i,v,r,t)$h2_ct(i)],
-            GEN(i,v,r,h,t) * h2_ct_intensity * heat_rate(i,v,r,t)
+    + sum{(i,v)$[valgen(i,v,r,t)$h2_combustion(i)],
+            GEN(i,v,r,h,t) * h2_combustion_intensity * heat_rate(i,v,r,t)
        }
 ;
 
@@ -3387,8 +3428,8 @@ eq_h2_min_storage_cap(r,t)$[tmodel(t)$(Sw_H2=2)$Sw_H2_MinStorHours$(not Sw_PCM)]
     =g=
 
 * [MW] * [MMBtu/MWh] * [metric tons/MMBtu] * [hours] = [metric tons]
-    sum{(i,v)$[h2_ct(i)$valcap(i,v,r,t)],
-        CAP(i,v,r,t) * heat_rate(i,v,r,t) * h2_ct_intensity * Sw_H2_MinStorHours
+    sum{(i,v)$[h2_combustion(i)$valcap(i,v,r,t)],
+        CAP(i,v,r,t) * heat_rate(i,v,r,t) * h2_combustion_intensity * Sw_H2_MinStorHours
     }
 ;
 

@@ -13,8 +13,6 @@ beccs_reference,2010
 biopower_ATB_2024_moderate,2022
 caes_reference,2016
 ccsflex_ATB_2020,2019
-coal_ATB_2024_advanced,2022
-coal_ATB_2024_conservative,2022
 coal_ATB_2024_moderate,2022
 coal-ccs_ATB_2024_advanced,2022
 coal-ccs_ATB_2024_conservative,2022
@@ -28,8 +26,6 @@ csp_ATB_2024_moderate,2022
 csp_SunShot2030,2017
 evmc_shape_Baseline,2020
 evmc_storage_Baseline,2020
-gas_ATB_2024_advanced,2022
-gas_ATB_2024_conservative,2022
 gas_ATB_2024_moderate,2022
 gas-ccs_ATB_2024_advanced,2022
 gas-ccs_ATB_2024_conservative,2022
@@ -40,8 +36,8 @@ geo_ATB_2023_moderate,2020
 geo_ATB_2024_advanced,2021
 geo_ATB_2024_conservative,2021
 geo_ATB_2024_moderate,2021
-h2-ct_ATB_2023,2021
-h2-ct_ATB_2024,2022
+h2-combustion_ATB_2023,2021
+h2-combustion_ATB_2024,2022
 nuclear_ATB_2024_advanced,2022
 nuclear_ATB_2024_conservative,2022
 nuclear_ATB_2024_moderate,2022

@@ -23,5 +23,5 @@ biomass,beccs_mod
 biomass,beccs_max
 biomass,cofirenew
 biomass,cofireold
-h2ct,H2-CT
-h2ct,H2-CC
+h2fuel,H2-CT
+h2fuel,H2-CC

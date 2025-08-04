@@ -17,7 +17,6 @@ import ReEDS_Augur.stress_periods as stress_periods
 def run_pras(
         casedir,
         t,
-        sw,
         iteration=0,
         recordtime=True,
         repo=False,
@@ -26,12 +25,26 @@ def run_pras(
         write_flow=False,
         write_surplus=False,
         write_energy=False,
-        write_availability=False,
+        write_shortfall_samples=False,
+        write_availability_samples=False,
+        **kwargs,
     ):
     """
+    If additional keyword arguments are provided, they override values in the switches
+    dictionary generated using `reeds.io.get_switches(casedir)`.
+    Only keys in the switches dictionary are allowed, but we do not check types or
+    self-consistency for the provided values, so review the allowed choices in cases.csv
+    and use these additional arguments at your own risk.
     """
     ### Get the PRAS settings for this solve year
     print('Running ReEDS2PRAS and PRAS')
+    sw = reeds.io.get_switches(casedir)
+    ## If additional kwargs are provided, use them to override the switch values
+    for key, val in kwargs.items():
+        if key in sw:
+            sw[key] = val
+        else:
+            raise ValueError(f'Provided {key}={val} but {key} is not in switches.csv')
     scriptpath = (sw['reeds_path'] if repo else casedir)
     start_year = min(sw['resource_adequacy_years_list'])
     ## ReEDS2PRAS runs at hourly resolution
@@ -40,11 +53,12 @@ def run_pras(
         "julia",
         f"--project={sw['reeds_path']}",
         ### As of 20231113 there seems to be a problem with multithreading in julia on
-        ### mac M1 machines and Kestrel that causes multithreaded processes to hang
+        ### mac M1 machines that causes multithreaded processes to hang
         ### without resolution. So disable multithreading on those systems.
-        ('--threads=1' if (
-            (sys.platform == 'darwin') or (os.environ.get('NREL_CLUSTER') == 'kestrel')
-        ) else f"--threads={sw['threads'] if sw['threads'] > 0 else 'auto'}"),
+        (
+            '--threads=1' if (sys.platform == 'darwin')
+            else f"--threads={sw['threads'] if sw['threads'] > 0 else 'auto'}"
+        ),
         f"{os.path.join(scriptpath, 'ReEDS_Augur','run_pras.jl')}",
         f"--reeds_path={sw['reeds_path']}",
         f"--reedscase={casedir}",
@@ -55,11 +69,15 @@ def run_pras(
         f"--write_flow={int(write_flow)}",
         f"--write_surplus={int(write_surplus)}",
         f"--write_energy={int(write_energy)}",
-        f"--write_availability={int(write_availability)}",
+        f"--write_shortfall_samples={int(write_shortfall_samples)}",
+        f"--write_availability_samples={int(write_availability_samples)}",
         f"--iteration={iteration}",
         f"--samples={sw['pras_samples']}",
         f"--overwrite={int(overwrite)}",
         f"--include_samples={int(include_samples)}",
+        f"--pras_agg_ogs_lfillgas={int(sw['pras_agg_ogs_lfillgas'])}",
+        f"--pras_existing_unit_size={int(sw['pras_existing_unit_size'])}",
+        f"--pras_seed={int(sw['pras_seed'])}",
     ]
     print(' '.join(command))
     print(f'vvvvvvvvvvvvvvv run_pras.jl {t}i{iteration} vvvvvvvvvvvvvvv')
@@ -85,7 +103,7 @@ def main(t, tnext, casedir, iteration=0):
     # tnext = 2029
     # reeds_path = os.path.dirname(__file__)
     # casedir = os.path.join(
-    #     reeds_path,'runs','v20250320_prasplotsM0_WestConnectSouth')
+    #     reeds_path,'runs','v20250521_prasM0_Pacific')
     # iteration = 0
     # assert tnext >= t
     # os.chdir(casedir)
@@ -135,7 +153,7 @@ def main(t, tnext, casedir, iteration=0):
     }[int(sw['pras'])]
     if pras_this_solve_year or (not int(sw.GSw_PRM_CapCredit)):
         result = run_pras(
-            casedir, t, sw,
+            casedir, t,
             iteration=iteration,
             write_flow=(True if t == max(solveyears) else False),
             write_energy=True,

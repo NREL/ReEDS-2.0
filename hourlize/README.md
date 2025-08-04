@@ -202,8 +202,8 @@ See comments in those files for more information.
 ## EER Load Splicing
 `hourlize/eer_to_reeds/eer_splice/eer_splice.py` allows replacement of certain subsectors of EER load with other data sources.
 ### Background
-* EER load profiles are originally delivered at the state, subsector level for 7 weather years (2007-2013) and 7 model years (2021, 2025, 2030, 2035, 2040, 2045, 2050), via compressed csv.gz files.
-* These files are then processed by Grant Buster's [ntps_load](https://github.com/NREL/ntps_load) project, which creates h5 files of the same data (see `/projects/eerload/source_eer_load_profiles/` on Kestrel), as well as BA-level CSV files aggregated across sectors (see `/projects/eerload/reeds_load` on Kestrel).
+* EER load profiles are originally delivered at the state, subsector level for 15 weather years (2007-2013 + 2016-2023) and 7 model years (2021, 2025, 2030, 2035, 2040, 2045, 2050), via compressed csv.gz files, in Eastern Standard Time (hour-beginning).
+* These files are then processed by Grant Buster's [ntps_load](https://github.com/NREL/ntps_load) project, which creates h5 files of the same data (also in EST, hour-beginning) (see `/projects/eerload/source_eer_load_profiles/` on Kestrel), as well as BA-level CSV files aggregated across sectors (see `/projects/eerload/reeds_load` on Kestrel).
   * ntps_load disaggregates from state to BA via PLEXOS's nodal database and the peak load at each node.
   * These CSV files can be processed into ReEDS inputs by following the [quickstart load](#quickstart-load) instructions, starting with the `hourlize/eer_to_reeds/eer_to_reeds.py` step.
 * `hourlize/eer_to_reeds/eer_load_participation_factors/load_factors.py` utilizes these two outputs of ntps_load (state-level h5 files and BA-level CSV files) to produce load participation factors from state to BA, `hourlize/eer_to_reeds/eer_load_participation_factors/load_factors.csv`, which then allows us to develop new load trajectories directly from the h5 files along with other sources of subsector data.
@@ -212,8 +212,9 @@ See comments in those files for more information.
 ### eer_splice.py
 `hourlize/eer_to_reeds/eer_splice/eer_splice.py` utilizes the state, subsector level h5 files mentioned above, along with other sources of load data, to develop new load csv files that can be used as inputs to `hourlize/eer_to_reeds/eer_to_reeds.py`. Note that you will need to run on Kestrel, and you will need access to the `eerload` allocation on Kestrel to use this functionality. To replace sectors follow these steps:
 1. Set `replace_sectors` to `True` at the top of `eer_splice.py`.
-1. Set `replace_type` to one of the available sectors (`'Transportation'` or `'Buildings'`), or a custom sector replacement.
+1. Set `replace_type` to one of the available sectors (`'Transportation'`, `'Buildings'` or `'Data Centers'`), or a custom sector replacement.
     * Leave `replace_type` as `'Buildings'` to demo the script, as the Buildings data should all be accessible in the `eerload` allocation. Example building replacement files are also at `//nrelnas01/ReEDS/FY24-Geo-Mowers/eer_load_splice/res_com_outputs_2025-01-10-14-57-33`.
+    * An example data center replacement file is also included here: `hourlize/eer_to_reeds/eer_splice/dummy_agg_op_datacenters.csv`
 1. If using a custom sector replacement, make sure to set `sectors_remove`, `years_remove`, and add the desired replacement logic depending on your data format (see `elif replace_type == 'Buildings':` for an example).
 1. Run `python eer_splice.py`. A new output directory will be created in `hourlize/eer_to_reeds/eer_splice/`.
 1. Follow the rest of the [quickstart load](#quickstart-load) instructions, starting with the `hourlize/eer_to_reeds/eer_to_reeds.py` step.
@@ -279,7 +280,7 @@ This section provides some descriptions and typical values for the settings in t
 
 | Setting | Description | Default |   
 | :------ | :---------- | :------ |      
-|	load_default 	|	To calibrate data pre-use_default_before_yr	|	  os.path.join('..','inputs','load','demand_AEO_2023_reference.csv') 	
+|	load_default 	|	To add historical demand pre-use_default_before_yr	|	 "{reeds_path}/inputs/load/historic_full_load_hourly.h5",	
 |	ba_frac_path 	|	These are fractions of state load in each ba, unused if calibrate_path is False	|	 os.path.join(this_dir_path,'inputs','load','load_participation_factors_st_to_ba.csv') 	
 |	calibrate_path 	|	Enter path to calibration file or 'False' to leave uncalibrated	|	 os.path.join(this_dir_path,'inputs','load','EIA_loadbystate.csv') 	
 |	calibrate_type 	|	either 'one_year' or 'all_years'. Unused if calibrate_path is False. 'one_year' means to only calibrate one year to the EIA data and then apply the same scaling factor to all years. 'all_years' will calibrate all each year to the EIA data.	|	 'all_years' 	
@@ -289,7 +290,7 @@ This section provides some descriptions and typical values for the settings in t
 |	hourly_process 	|	If False, skip all hourly processing steps	|	 True 	
 |	load_source 	|	The load source file's first column should be datetime, starting at Jan 1, 12am, stepping by 1 hour, and one column for each BA. It should be a csv or a compressed csv.	|	 '//nrelnas01/ReEDS/Supply_Curve_Data/LOAD/2020_Update/plexos_to_reeds/outputs/load_hourly_ba_EST.csv' 	
 |	load_source_hr_type 	|	Use 'end' if load_source data hour-ending or 'begin' for hour-beginning. For instantaneous use 'end'. For EER load use 'begin'.	|	 'begin' 	
-|	load_source_timezone 	|	UTC would be 0, Eastern standard time would be -5	|	-5	
+|	load_source_timezone 	|	UTC would be 0, Eastern standard time would be -5	|	"Etc/GMT+5"	
 |	us_only 	|	Run only US BAs.	|	 True 	
 |	use_default_before_yr 	|	Either False or a year. If set to a year, this will pull in ReEDS default load data before that year (2012 weather year)	|	2021	
 

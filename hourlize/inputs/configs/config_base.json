@@ -32,9 +32,9 @@
   },
 
   "load": {
-    "load_default": "{reeds_path}/inputs/load/EER_IRAlow_load_hourly.h5",
+    "load_default": "{reeds_path}/inputs/load/historic_full_load_hourly.h5",
     "ba_frac_path":"{hourlize_path}/inputs/load/load_participation_factors_st_to_ba.csv",
-    "calibrate_path":"{hourlize_path}/inputs/load/EIA_loadbystate.csv",
+    "calibrate_path":"{hourlize_path}/inputs/load/EIA_loadbystate.csv", 
     "calibrate_type":"all_years",
     "calibrate_year":2010,
     "dtypeLoad":"np.float32",
@@ -43,7 +43,7 @@
     "inputfiles": ["calibrate_path", "ba_frac_path", "hierarchy_path", "load_default"],
     "load_source_hr_type":"begin",
     "load_source_timezone":"Etc/GMT+5",
-    "load_source": "C:/ReEDS/ReEDS-2.0_mm_load/hourlize/eer_to_reeds/outputs/load_hourly_ba_EST_EER_20230604_reeds_load_baseline_2025-04-14_23-27-48",
+    "load_source": "/projects/decarbsagen/ahamilto/EER_load_ingest/ReEDS-2.0/hourlize/eer_to_reeds/outputs/load_hourly_ba_EST_EER_baseline_2025-05-21_07-31-08",
     "us_only":true,
     "use_default_before_yr": 2021
   }

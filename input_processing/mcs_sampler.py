@@ -1155,8 +1155,8 @@ class MCS_Sampler:
 
         # Remove samples with no capacity. 
         # Need to do this after normalizing the recf weights
-        samples_sw = [df[df["capacity"] > 0] for df in samples_sw]
-
+        samples_sw = [df[df["capacity"] > 0].copy() for df in samples_sw]
+        
         return samples_sw
 
     def _adjust_exog_cap_samples(self, samples_sw: list, file_name: str) -> list:
@@ -1170,7 +1170,7 @@ class MCS_Sampler:
             file_name (str): Name of the file being sampled.
         """
         # Remove samples with no capacity
-        samples_sw = [df[df["capacity"] > 0] for df in samples_sw]
+        samples_sw = [df[df["capacity"] > 0].copy() for df in samples_sw]
 
         tech_mapping = {
             "upv_exog_cap.csv": ("upv", "upv_supply_curve.csv"),
@@ -1183,8 +1183,13 @@ class MCS_Sampler:
             class_sc_point_map = self.samples[Sample_ID][s][["sc_point_gid", "class"]]
             class_sc_point_map = class_sc_point_map.set_index("sc_point_gid").to_dict()["class"]
 
+            # Remove any rows from samples_sw[s] that cannot be mapped
+            # These are cases with zero supply in the region
+            valid_sc_point_gids = samples_sw[s]["sc_point_gid"].isin(class_sc_point_map.keys())
+            samples_sw[s] = samples_sw[s][valid_sc_point_gids].copy()
+
             # Create a new tech name for each sc_point_gid
-            new_tech_name = [tech_name + "_" + str(c) for c in 
+            new_tech_name = [tech_name + "_" + str(int(c)) for c in 
                 samples_sw[s]["sc_point_gid"].map(class_sc_point_map).values]
 
             samples_sw[s]["*tech"] = new_tech_name
@@ -1239,7 +1244,7 @@ class MCS_Sampler:
 
         elif file_name in MCSConstants.PRESCRIBED_BUILDS_FILES:
             # Remove samples with no capacity
-            adjusted_samples = [df[df["capacity"] > 0] for df in samples_sw]
+            adjusted_samples = [df[df["capacity"] > 0].copy() for df in samples_sw]
 
         else:
             # For all other files we can directly apply the weights
@@ -1564,9 +1569,8 @@ def main(
 
         # Record the weights of each sample group
         mcs_sampler.record_group_weights(
-            os.path.join(os.path.dirname(inputs_case))
+            os.path.join(os.path.dirname(inputs_case), 'lstfiles')
         )
-
         # Write Samples
         write_samples(sample_group, samples_dict, aux_files, run_ReEDS=run_ReEDS)
 
@@ -1581,7 +1585,7 @@ if __name__ == '__main__' and not hasattr(sys, 'ps1'):
 
     # ---- Settings for testing ----
     #reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-    #inputs_case = os.path.join(reeds_path,'runs','test_MCS_MC1','inputs_case')
+    #inputs_case = os.path.join(reeds_path,'runs','inputs_All_inputs_MC013','inputs_case')
 
     # Set up logger
     tic = datetime.datetime.now()

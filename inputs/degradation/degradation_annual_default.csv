@@ -2,16 +2,6 @@ distpv,0.007
 upv_1*upv_10,0.007
 wind-ons_1*wind-ons_10,0.0027
 ice,0
-battery_2,0
-battery_4,0
-battery_6,0
-battery_8,0
-battery_10,0
-battery_12,0
-battery_24,0
-battery_48,0
-battery_72,0
-battery_100,0
 battery_li,0
 biopower,0
 beccs_mod,0
@@ -60,5 +50,6 @@ csp4_1*csp4_12,0
 egs_allkm_1*egs_allkm_10,0
 geohydro_allkm_1*geohydro_allkm_10,0
 egs_nearfield_1*egs_nearfield_10,0
+dr_shed_1*dr_shed_2,0
 evmc_storage_1*evmc_storage_10,0
 evmc_shape_1*evmc_shape_10,0

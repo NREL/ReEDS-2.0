@@ -73,33 +73,3 @@ for trtype in infiles:
             reeds_path,'inputs','transmission',
             'transmission_distance_cost_{}.csv'.format(trtype)),
         index=False)
-
-#%%### Get adjacent zones for allowable transmission additions
-dfba = (
-    gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','US_PCA'))
-    .rename(columns={'rb':'r'}).set_index('r'))
-
-### Buffer is in meters
-buffer = 1000
-dfbuffer = dfba.copy()
-dfbuffer.geometry = dfbuffer.buffer(buffer)
-
-zones = [f'p{r+1}' for r in range(134)]
-adjacent = {}
-for r, zone in dfbuffer.geometry.items():
-    adjacent[r] = dfbuffer.loc[dfbuffer.overlaps(zone)].index.values.tolist()
-
-dfwrite = pd.concat(
-    {r: pd.Series(adjacent[r]) for r in zones},
-    sort=False,
-).reset_index(level=1, drop=True)
-dfwrite = dfwrite.reset_index().rename(columns={'index':'r',0:'rr'})
-### Sort them
-for i, row in dfwrite.iterrows():
-    if int(row.r.strip('p')) > int(row.rr.strip('p')):
-        dfwrite.loc[i,'r'], dfwrite.loc[i,'rr'] = row.rr, row.r
-dfwrite.drop_duplicates(inplace=True)
-dfwrite.rename(columns={'r':'*r'}).to_csv(
-    os.path.join(reeds_path,'inputs','transmission','routes_adjacent.csv'),
-    index=False,
-)

@@ -27,7 +27,7 @@ max_extrapolated_outage_forced = 0.4
 
 primemover2techgroup = {
     'combined_cycle': ['GAS_CC'],
-    'combustion_turbine': ['GAS_CT', 'H2_CT'],
+    'combustion_turbine': ['GAS_CT', 'H2_COMBUSTION'],
     'diesel': ['OGS'],
     'hydro_and_psh': ['HYDRO', 'PSH'],
     'nuclear': ['NUCLEAR'],
@@ -157,7 +157,7 @@ def fill_empty_techs(df_prefill, inputs_case, fillvalues_tech=None, during_quart
 
     included_techs = df_prefill.columns.get_level_values('i').unique()
     missing_techs = [
-        c for c in fillvalues_tech.loc[fillvalues_tech > 0].index
+        c for c in fillvalues_tech.index
         if ((c.lower() not in included_techs) and (c.lower() in keep_techs))
     ]
     print(f"included ({len(included_techs)}): {' '.join(sorted(included_techs))}")
@@ -546,7 +546,7 @@ if __name__ == '__main__':
 
     # #%% Settings for testing
     # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # inputs_case = os.path.join(reeds_path, 'runs', 'v20250408_tforM0_USA', 'inputs_case')
+    # inputs_case = os.path.join(reeds_path, 'runs', 'v20250508_prasM0_Pacific', 'inputs_case')
     # interactive = True
     # debug = 1
 

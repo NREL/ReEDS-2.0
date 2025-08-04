@@ -1,6 +1,6 @@
 '''This script ingests eer data, reshapes the data & outputs the data to the 
-same folder as csvs in the terminal's current directory.  The resulting csv can 
-be used in load.py.'''
+same folder as csvs in the terminal's current directory.  Input and output data are in
+Eastern Standard Time, hour-beginning. The resulting csv can be used in load.py.'''
 
 import pandas as pd
 import os
@@ -13,11 +13,11 @@ this_dir_path = os.path.dirname(os.path.realpath(__file__)) + '/'
 #USER INPUTS
 beg_year = 2021
 end_year = 2050
-weather_years = list(range(2007,2014))
+weather_years = list(range(2007,2014)) + list(range(2016,2024))
 known_years = [2021] + [x for x in range(2025, 2051, 5)]
 years = [x for x in range(beg_year, end_year+1)]
-eer_scenario = '20230604_reeds_load_baseline'
-input_file_dir = r'//nrelnas01/ReEDS/Users/ahamilto/NTPS/Demand_Analysis/6.4.23/6.4.23_load_files'
+eer_scenario = 'baseline' #Options: ira_con, central, baseline
+input_file_dir = r'/kfs2/projects/eerload/source_eer_load_profiles/20250512_eer_download/2_post_eer_splice'
 
 #Get list of load source files and create output directory
 input_file_list = os.listdir(input_file_dir)

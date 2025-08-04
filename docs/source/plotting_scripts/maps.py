@@ -7,6 +7,7 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patheffects as pe
+from tqdm import tqdm
 import geopandas as gpd
 import mapclassify
 
@@ -32,7 +33,9 @@ dfmap = reeds.io.get_dfmap()
 
 dfcounty = gpd.read_file(
     os.path.join(reeds_path, 'inputs', 'shapefiles', 'US_county_2022'),
-).simplify(1000)
+)
+dfcounty_full = dfcounty.copy()
+dfcounty.geometry = dfcounty.intersection(dfmap['country'].loc['USA','geometry']).simplify(1000)
 greatlakes = gpd.read_file(
     os.path.join(reeds_path, 'inputs', 'shapefiles', 'greatlakes.gpkg'),
 )
@@ -219,3 +222,33 @@ for level in dfmap:
         bbox_inches='tight',
     )
     plt.show()
+
+#%% Just counties
+alpha_region = 0.4
+draw_states = True
+draw_lakes = True
+
+colors = 'C' + mapclassify.greedy(dfcounty_full, strategy='smallest_last').astype(str)
+
+plt.close()
+f,ax = plt.subplots(figsize=(10,6))
+if draw_states:
+    dfmap['st'].plot(ax=ax, facecolor='none', edgecolor='k', lw=0.6, zorder=1e8)
+if draw_lakes:
+    greatlakes.plot(ax=ax, edgecolor='#2CA8E7', facecolor='#D3EFFA', lw=0.2, zorder=-1)
+dfcounty.plot(ax=ax, facecolor='none', edgecolor='C7', lw=0.3, zorder=1e6)
+for r, row in tqdm(dfcounty.iterrows(), total=len(dfcounty)):
+    dfcounty.loc[[r]].plot(ax=ax, color=colors[r], alpha=alpha_region, lw=0, zorder=1)
+
+ax.axis('off')
+savename = (
+    f"county"
+    f"-s{int(draw_states)}"
+    f"-l{int(draw_lakes)}"
+)
+plt.savefig(
+    os.path.join(savepath, savename+'.png'),
+    transparent=True,
+    bbox_inches='tight',
+)
+plt.show()

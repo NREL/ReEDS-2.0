@@ -34,10 +34,10 @@ if not len(name):
 #%% Representative periods
 if rep:
     period_szn = pd.read_csv(
-        os.path.join(case, 'inputs_case', 'period_szn.csv')
+        os.path.join(case, 'inputs_case', 'rep', 'period_szn.csv')
     )
     opres_periods = pd.read_csv(
-        os.path.join(case, 'inputs_case', 'opres_periods.csv')
+        os.path.join(case, 'inputs_case', 'rep', 'opres_periods.csv')
     ).squeeze(1)
     period_szn['opres'] = period_szn.season.map(opres_periods).fillna('')
 

@@ -74,6 +74,14 @@ def aggreg_methods(
         # are still the regions and need to be mapped to aggreg regions differently
         if row.name == 'load_hourly.h5':
             df1.columns = df1.columns.map(r2aggreg)
+        # Exception for dr_shed_hourly becuase the wide column contains tech|region
+        elif 'dr_shed_hourly' in row.name :   
+            # Separate tech and region from the 'wide' column
+            df1[['tech', 'region']] = df1['wide'].str.split('|', expand=True)
+            # Map regions to aggregated regions
+            df1['region'] = df1['region'].map(r2aggreg)
+            # Recombine tech and aggregated region into the 'wide' column
+            df1['wide'] = df1['tech'] + '|' + df1['region']   
         else:
             for c in region_cols:
                 df1[c] = df1[c].map(lambda x: r2aggreg.get(x,x))
@@ -173,6 +181,10 @@ def aggreg_methods(
         # are still the regions and need to be summed differently
         if row.name == 'load_hourly.h5':
             df1 = df1.groupby(df1.columns, axis=1).agg(aggfunc)
+        # Exception for dr_shed_hourly becuase the wide column contains tech|region
+        elif 'dr_shed_hourly' in row.name : 
+            # Group by relevant columns and aggregate values
+            df1 = df1.groupby(['datetime', 'wide', 'year'], as_index=False).sum().drop(columns=['tech', 'region'])    
         else:
             df1 = df1.groupby(row.fix_cols+region_cols).agg(aggfunc)
 
@@ -237,6 +249,25 @@ def aggreg_methods(
                 axis=1
             ).astype(np.float32)
 
+        elif row.name =='dr_shed_hourly.h5' :
+            # separate tech | region
+            rcol = df1.wide.str.split('|',expand=True)[1]
+            fracdata = disagg_data[aggfunc]
+            df1cols = (df1.columns)
+            valcol = df1cols[-1]
+            # Identify the columns to merge from the fracdata
+            fracdata_mergecols = ['PCA_REG'] + [col for col in fracdata.columns
+                                    if col not in ['PCA_REG','nonUS_PCA','FIPS','fracdata']]
+            # Identify the columns to merge from the original data
+            df1_mergecols = [rcol] + [col for col in df1cols if col in fracdata_mergecols]
+            # Merge the datasets using PCA_REG
+            df1 = pd.merge(fracdata, df1, left_on=fracdata_mergecols, right_on=df1_mergecols, how='inner')
+            # Multiply BA shed by population fraction
+            df1['new_value'] = (df1['fracdata'].multiply(df1[valcol], axis='index'))
+            # Clean up dataframe   
+            df1['wide'] = df1.wide.str.split('|',expand=True)[0] +'|' + df1['FIPS']         
+            df1 = (df1.drop(columns=[valcol,'PCA_REG','fracdata','FIPS'])
+                      .rename(columns={'new_value':valcol}))            
         else:
             # Disaggregate cap using the selected aggfunc
             fracdata = disagg_data[aggfunc]
@@ -277,6 +308,9 @@ def aggreg_methods(
         # are still the regions and need to be filtered differently
         elif row.name == 'load_hourly.h5':
             df1 = df1[[col for col in df1.columns if col in val_r_all]]
+        elif row.name =='dr_shed_hourly.h5':
+            # separate tech | region to filter
+            df1 = df1.loc[df1.wide.str.split('|',expand=True)[1].isin(val_r_all)]
         else:
             df1 = df1.loc[df1.index.get_level_values(region_col).isin(val_r_all)]
 
@@ -287,6 +321,8 @@ def aggreg_methods(
     # just needs the index reset before saving to inputs_case folder
     if row.name == 'load_hourly.h5':
         dfout = df1.reset_index()
+    elif row.name == 'dr_shed_hourly.h5':
+        dfout = df1.set_index(['datetime','year','wide']).unstack('wide')['value'].reset_index()
     elif (aggfunc == 'sc_cat') and (not row.wide):
         dfout = df1.stack().rename(row.key).reset_index()[columns]
     elif (aggfunc == 'sc_cat') and row.wide and (len(row.fix_cols) == 1):

@@ -97,7 +97,7 @@ When creating the reeds2 environment locally, you might run into an SSL error th
 
 ### GAMS Configuration
 
-Install GAMS: [https://www.gams.com/download/](https://www.gams.com/download/). NREL uses GAMS versions 45.2.0 and 34.3. Older versions might also work. A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
+Install GAMS: [https://www.gams.com/download/](https://www.gams.com/download/). NREL uses GAMS versions 49.6.0 and 45.2.0. Older versions might also work. A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
 
 Add GAMS to the "path" environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _gams.exe_ application (e.g., C:\GAMS\win64\34).
 

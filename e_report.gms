@@ -36,7 +36,7 @@ sys_costs /
   op_emissions_taxes
   op_fom_costs
   op_fuelcosts_objfn
-  op_h2ct_fuel_costs
+  op_h2combustion_fuel_costs
   op_h2_fuel_costs
   op_h2_revenue_exog
   op_h2_transport
@@ -85,7 +85,7 @@ sys_costs_op(sys_costs) /
   op_emissions_taxes
   op_fom_costs
   op_fuelcosts_objfn
-  op_h2ct_fuel_costs
+  op_h2combustion_fuel_costs
   op_h2_fuel_costs
   op_h2_revenue_exog
   op_h2_transport
@@ -245,7 +245,7 @@ lcoe_built(i,r,t)$[ [sum{(v,h)$[valinv(i,v,r,t)$INV.l(i,v,r,t)], GEN.l(i,v,r,h,t
         (crf(t) * (
          sum{v$valinv(i,v,r,t),
              INV.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap(i,t) ) }
-       + sum{v$[valinv(i,v,r,t)$continuous_battery(i)],
+       + sum{v$[valinv(i,v,r,t)$battery(i)],
              INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) ) }
        + sum{v$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades],
              UPGRADES.l(i,v,r,t) * (cost_upgrade(i,v,r,t) * cost_cap_fin_mult(i,r,t) ) }
@@ -253,7 +253,7 @@ lcoe_built(i,r,t)$[ [sum{(v,h)$[valinv(i,v,r,t)$INV.l(i,v,r,t)], GEN.l(i,v,r,h,t
              INV_RSC.l(i,v,r,rscbin,t) * m_rsc_dat(r,i,rscbin,"cost") * rsc_fin_mult(i,r,t) }
                  )
        + sum{v$valinv(i,v,r,t), cost_fom(i,v,r,t) * INV.l(i,v,r,t) }
-       + sum{v$[valinv(i,v,r,t)$continuous_battery(i)], cost_fom_energy(i,v,r,t) * INV_ENERGY.l(i,v,r,t) }
+       + sum{v$[valinv(i,v,r,t)$battery(i)], cost_fom_energy(i,v,r,t) * INV_ENERGY.l(i,v,r,t) }
        + sum{v$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades], cost_fom(i,v,r,t) * UPGRADES.l(i,v,r,t) }
        + sum{(v,h)$[valinv(i,v,r,t)$INV.l(i,v,r,t)], (cost_vom(i,v,r,t)+ heat_rate(i,v,r,t) * fuel_price(i,r,t)) * GEN.l(i,v,r,h,t) * hours(h) }
        + sum{(v,h)$[UPGRADES.l(i,v,r,t)$Sw_Upgrades], (cost_vom(i,v,r,t)+ heat_rate(i,v,r,t) * fuel_price(i,r,t)) * GEN.l(i,v,r,h,t) * hours(h) }
@@ -267,7 +267,7 @@ lcoe_built_nat(i,t)$[sum{(v,r)$valinv(i,v,r,t), INV.l(i,v,r,t) }] =
 
 lcoe_pieces("capcost",i,r,t)$tmodel_new(t) = 
           sum{v$valinv(i,v,r,t), INV.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap(i,t) ) }
-        + sum{v$[valinv(i,v,r,t)$continuous_battery(i)], INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) ) } ;
+        + sum{v$[valinv(i,v,r,t)$battery(i)], INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) ) } ;
 
 lcoe_pieces("upgradecost",i,r,t)$tmodel_new(t) =
                   sum{v$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades],
@@ -283,7 +283,7 @@ lcoe_pieces("rsccost",i,r,t)$tmodel_new(t) =
 
 lcoe_pieces("fomcost",i,r,t)$tmodel_new(t) =
                   sum{v$valinv(i,v,r,t), cost_fom(i,v,r,t) * INV.l(i,v,r,t) }
-                  + sum{v$[valinv(i,v,r,t)$continuous_battery(i)], cost_fom_energy(i,v,r,t) * INV_ENERGY.l(i,v,r,t) }
+                  + sum{v$[valinv(i,v,r,t)$battery(i)], cost_fom_energy(i,v,r,t) * INV_ENERGY.l(i,v,r,t) }
                   + sum{v$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades], cost_fom(i,v,r,t) * UPGRADES.l(i,v,r,t) } ;
 
 lcoe_pieces("vomcost",i,r,t)$tmodel_new(t) =
@@ -325,10 +325,10 @@ reqt_price('annual_cap',e,r,'ann',t)$tmodel_new(t) =
 
 * Capacity credit formulation ($/MW/rep-day)
 reqt_price('res_marg','na',r,ccseason,t)$[Sw_PRM_CapCredit$tmodel_new(t)] =
-    eq_reserve_margin.m(r,ccseason,t) * (1 / cost_scale) * (1 / pvf_onm(t));
+    eq_reserve_margin.m(r,ccseason,t) * (1 / cost_scale) * (1 / pvf_onm(t)) ;
 * Stress period formulation ($/MW/stress-timeslice)
 reqt_price('res_marg','na',r,allh,t)$[(Sw_PRM_CapCredit=0)$tmodel_new(t)$h_stress_t(allh,t)] =
-    eq_supply_demand_balance.m(r,allh,t) * (1 / cost_scale) * (1 / pvf_onm(t));
+    eq_supply_demand_balance.m(r,allh,t) * (1 / cost_scale) * (1 / pvf_onm(t)) ;
 
 reqt_price('res_marg_ann','na',r,'ann',t)$tmodel_new(t) =
 * Capacity credit formulation ($/MW-yr)
@@ -911,8 +911,8 @@ stor_energy_cap(i,v,r,t)$[tmodel_new(t)$valcap(i,v,r,t)] =
 * add PSH energy capacity to cap_energy_ivrt
 cap_energy_ivrt(i,v,r,t)$[valcap(i,v,r,t)$psh(i)] = CAP.l(i,v,r,t) * storage_duration(i) ;
 
-* continuous battery storage duration
-storage_duration_out(i,v,r,t)$[valcap(i,v,r,t)$continuous_battery(i)$CAP.l(i,v,r,t)] = 
+* battery storage duration
+storage_duration_out(i,v,r,t)$[valcap(i,v,r,t)$battery(i)$CAP.l(i,v,r,t)] = 
         CAP_ENERGY.l(i,v,r,t) / CAP.l(i,v,r,t) ;
 
 *==================================
@@ -1204,7 +1204,7 @@ systemcost_techba("inv_investment_capacity_costs",i,r,t)$tmodel_new(t) =
               sum{v$valinv(i,v,r,t),
                    INV.l(i,v,r,t) * (cost_cap_fin_mult_noITC(i,r,t) * cost_cap(i,t) ) }
 *plus investment energy costs (without the subtraction of any ITC/PTC value)
-              + sum{v$[valinv(i,v,r,t)$continuous_battery(i)],
+              + sum{v$[valinv(i,v,r,t)$battery(i)],
                    INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult_noITC(i,r,t) * cost_cap_energy(i,t) ) }
 *plus supply curve adjustment to capital cost (separated in outputs but part of m_rsc_dat(r,i,rscbin,"cost"))
               + sum{(v,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$rsc_i(i)$[not sccapcosttech(i)]$(not spur_techs(i))],
@@ -1245,7 +1245,7 @@ systemcost_techba("inv_itc_payments_negative",i,r,t)$tmodel_new(t) =
                 sum{v$valinv(i,v,r,t),
                    INV.l(i,v,r,t) * (cost_cap_fin_mult_out(i,r,t) * cost_cap(i,t) ) }
 *energy investment costs (including reduction from ITC)
-              + sum{v$[valinv(i,v,r,t)$continuous_battery(i)],
+              + sum{v$[valinv(i,v,r,t)$battery(i)],
                    INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult_out(i,r,t) * cost_cap_energy(i,t) ) }
 *plus supply curve adjustment to capital cost (separated in outputs but part of m_rsc_dat(r,i,rscbin,"cost"))
               + sum{(v,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$rsc_i(i)$[not sccapcosttech(i)]$(not spur_techs(i))],
@@ -1343,7 +1343,7 @@ systemcost_techba("op_fuelcosts_objfn",i,r,t)$tmodel_new(t)  =
 *cost of coal and nuclear fuel (except coal used for cofiring)
               + sum{(v,h)$[valgen(i,v,r,t)$heat_rate(i,v,r,t)
                          $(not gas(i))$(not bio(i))$(not cofire(i))
-                         $((not h2_ct(i)) or h2_ct(i)$[(Sw_H2=0) or h_stress(h)])],
+                         $((not h2_combustion(i)) or h2_combustion(i)$[(Sw_H2=0) or h_stress(h)])],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN.l(i,v,r,h,t) }
 
 *cofire coal consumption - cofire bio consumption already accounted for in accounting of BIOUSED
@@ -1372,17 +1372,17 @@ systemcost_techba("op_h2_fuel_costs",i,r,t)$tmodel_new(t)  =
                   hours(h) * h2_fuel_cost(i,v,r,t) * PRODUCE.l(p,i,v,r,h,t) }
 ;
 
-systemcost_techba("op_h2ct_fuel_costs",i,r,t)$[tmodel_new(t)$h2_ct(i)$Sw_H2]  =
-* fuel costs for H2-CT techs
+systemcost_techba("op_h2combustion_fuel_costs",i,r,t)$[tmodel_new(t)$h2_combustion(i)$Sw_H2]  =
+* fuel costs for H2-CT/CC techs
               + (1 / cost_scale) * (1 / pvf_onm(t))
 * when using national demand, calculate total annual demand and multiply by national average price
 * [MW] * [hours] * [MMBTU/MWh] * [metric tons/MMBTU] * [$/metric ton] = [$]
-              * ( (sum{(v,h), GEN.l(i,v,r,h,t) * hours(h) * heat_rate(i,v,r,t) * h2_ct_intensity  } 
+              * ( (sum{(v,h), GEN.l(i,v,r,h,t) * hours(h) * heat_rate(i,v,r,t) * h2_combustion_intensity  } 
                     *  eq_h2_demand.m("h2",t) 
                   )$[Sw_H2 = 1]
 * when using regional demand by hour, apply price to each hour and then sum total costs
 * [MW] * [hours] * [MMBTU/MWh] * [metric tons/MMBTU] * [$/[metric tons/hour]] / [hours] = [$]
-                + (sum{(v,h), GEN.l(i,v,r,h,t) * hours(h) * heat_rate(i,v,r,t) * h2_ct_intensity 
+                + (sum{(v,h), GEN.l(i,v,r,h,t) * hours(h) * heat_rate(i,v,r,t) * h2_combustion_intensity 
                     *  eq_h2_demand_regional.m(r,h,t) / hours(h) }
                   )$[Sw_H2 = 2] 
                 )
@@ -1593,10 +1593,10 @@ systemcost_ba("op_co2_incentive_negative",r,t)$tmodel_new(t)  =
 ;
 
 
-*If the op_h2ct_fuel_costs are included in the systemcost_ba it will lead to double-counting
+*If the op_h2combustion_fuel_costs are included in the systemcost_ba it will lead to double-counting
 *but these fuel costs are needed for the retail rate module. We therefore zero them out here.
 systemcost_ba_retailrate(sys_costs,r,t) = systemcost_ba(sys_costs,r,t) ;
-systemcost_ba("op_h2ct_fuel_costs",r,t) = 0 ;
+systemcost_ba("op_h2combustion_fuel_costs",r,t) = 0 ;
 
 *For bulk system costs present value as of model year, capital costs are unchanged,
 *while operation costs use pvf_onm_undisc
@@ -1645,7 +1645,7 @@ error_check('z') = (
         - pvf_capital(t) * sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
             bin_penalty(sdbin) * CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) }
 * minus retirement penalty
-        - pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
+        - pvf_onm(t) * sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)$Sw_RetirePenalty],
             cost_fom(i,v,r,t) * retire_penalty(t)
             * (CAP.l(i,v,r,t) - INV.l(i,v,r,t) - INV_REFURB.l(i,v,r,t)$[refurbtech(i)$Sw_Refurb] - UPGRADES.l(i,v,r,t)$[upgrade(i)$Sw_Upgrades]) }
 * minus revenue from purchases of curtailed VRE
@@ -1680,7 +1680,7 @@ error_check('z') = (
                   cost_cap(i,t) * INV.l(i,v,r,t)
                   * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
 
-            + sum{(i,v,r)$[valinv(i,v,r,t)$continuous_battery(i)],
+            + sum{(i,v,r)$[valinv(i,v,r,t)$battery(i)],
                   cost_cap_energy(i,t) * INV_ENERGY.l(i,v,r,t)
                   * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
                   
@@ -1918,11 +1918,11 @@ prod_h2_price(p,t)$[tmodel_new(t)$Sw_H2$sameas(p,"H2")] =
       )        
 ;
 
-*"--$2004/mmbtu-- marginal cost of fuels used for H2-CT combustion"
-* NB2 - h2_ct_intensity is in metric tons/mmbtu
+*"--$2004/mmbtu-- marginal cost of fuels used for H2-CT/CC combustion"
+* NB2 - h2_combustion_intensity is in metric tons/mmbtu
 *     - thus going from ($ / metric ton) * (metric tons / mmbtu) = $ / mmbtu
-prod_h2ct_cost("H2",t)$[tmodel_new(t)$Sw_H2] =
-  prod_h2_price("H2",t) * h2_ct_intensity ;
+prod_h2comb_cost("H2",t)$[tmodel_new(t)$Sw_H2] =
+  prod_h2_price("H2",t) * h2_combustion_intensity ;
 
 *"--$2004-- BA- and tech-specific investment and operation costs associated with production activities"
 *prod_syscosts(sys_costs,i,r,t)
@@ -1933,10 +1933,10 @@ prod_SMR_emit(e,r,t)$tmodel_new(t) =
   sum{(p,i,v,h)$[valcap(i,v,r,t)$smr(i)$i_p(i,p)],
       prod_emit_rate("combustion",e,i,t) * hours(h) * PRODUCE.l(p,i,v,r,h,t) } ;
 
-* calculate exogenous H2 supply and H2-CT consumption
+* calculate exogenous H2 supply and H2-CT/CC consumption
 h2_demand_by_sector("cross-sector",t) = sum{p, h2_exogenous_demand(p,t) } ;
-h2_demand_by_sector("electricity",t) = sum{(i,v,r,h)$[valgen(i,v,r,t)$h2_ct(i)],
-        GEN.l(i,v,r,h,t) * hours(h) * h2_ct_intensity * heat_rate(i,v,r,t) } ;
+h2_demand_by_sector("electricity",t) = sum{(i,v,r,h)$[valgen(i,v,r,t)$h2_combustion(i)],
+        GEN.l(i,v,r,h,t) * hours(h) * h2_combustion_intensity * heat_rate(i,v,r,t) } ;
 
 * Marginal cost of H2 production by timeslice [$/kg]
 * eq_h2_demand_regional is in [metric tons/hour], just like eq_supply_demand_balance
@@ -2027,8 +2027,8 @@ h2_trans_cap(r,rr,t)$[(ord(r) < ord(rr))$tmodel_new(t)] = sum{tt$[(yeart(tt)<=ye
 h2_usage(r,h,t)$tmodel_new(t) =
     h2_exogenous_demand_regional(r,'h2',h,t)
 * [MW] * [metric tons/MMBtu] * [MMBtu/MWh] = [metric tons/h]
-    + sum{(i,v)$[valgen(i,v,r,t)$h2_ct(i)],
-          GEN.l(i,v,r,h,t) * h2_ct_intensity * heat_rate(i,v,r,t) } ;
+    + sum{(i,v)$[valgen(i,v,r,t)$h2_combustion(i)],
+          GEN.l(i,v,r,h,t) * h2_combustion_intensity * heat_rate(i,v,r,t) } ;
 
 *========================================
 * Calculate powfrac
