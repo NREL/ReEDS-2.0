@@ -7,6 +7,7 @@
   <title>Retail rate module &mdash; ReEDS  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="_static/customtheme.css?v=299ffeb9" />
 
   
@@ -20,6 +21,7 @@
         <script src="_static/documentation_options.js?v=5929fcd5"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/design-tabs.js?v=f930bc37"></script>
         <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
         <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
@@ -37,7 +39,7 @@
           
           <a href="index.html">
             
-              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+              <img src="_static/reeds-logo-white.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -51,10 +53,10 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html">Model Switches</a></li>
-<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Analysis tools and helper scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">ReEDS publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
 </ul>
 
@@ -99,7 +101,7 @@ the past decade.</p>
 <p>Additional information about this module can be found here:
 Brown, Patrick R, Pieter J Gagnon, J Sean Corcoran, and Wesley J Cole. 2022. Retail Rate Projections for
 Long-Term Electricity System Models. Golden, CO: National Renewable Energy Laboratory. NREL/TP-6A20-78224.
-https://www.nrel.gov/docs/fy22osti/78224.pdf.</p>
+<a class="reference external" href="https://www.nrel.gov/docs/fy22osti/78224.pdf">https://www.nrel.gov/docs/fy22osti/78224.pdf</a>.</p>
 <section id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
 <ul class="simple">
@@ -186,8 +188,8 @@ depreciation expenses.</p></li>
 composed of both debt and equity. We calculate how much equity and debt are required according to the
 following equations:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">Return</span> <span class="pre">to</span> <span class="pre">equity</span></code> = <code class="docutils literal notranslate"><span class="pre">rate</span> <span class="pre">base</span></code> * <code class="docutils literal notranslate"><span class="pre">equity</span> <span class="pre">fraction</span></code> * <code class="docutils literal notranslate"><span class="pre">equity</span> <span class="pre">rate</span> <span class="pre">of</span> <span class="pre">return</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Return</span> <span class="pre">to</span> <span class="pre">debt</span></code> = <code class="docutils literal notranslate"><span class="pre">rate</span> <span class="pre">base</span></code> * <code class="docutils literal notranslate"><span class="pre">debt</span> <span class="pre">fraction</span></code> * <code class="docutils literal notranslate"><span class="pre">interest</span> <span class="pre">rate</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Return</span> <span class="pre">to</span> <span class="pre">equity</span></code> = <code class="docutils literal notranslate"><span class="pre">rate</span> <span class="pre">base</span></code> <em><code class="docutils literal notranslate"><span class="pre">equity</span> <span class="pre">fraction</span></code></em> <code class="docutils literal notranslate"><span class="pre">equity</span> <span class="pre">rate</span> <span class="pre">of</span> <span class="pre">return</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Return</span> <span class="pre">to</span> <span class="pre">debt</span></code> = <code class="docutils literal notranslate"><span class="pre">rate</span> <span class="pre">base</span></code> <em><code class="docutils literal notranslate"><span class="pre">debt</span> <span class="pre">fraction</span></code></em> <code class="docutils literal notranslate"><span class="pre">interest</span> <span class="pre">rate</span></code></p></li>
 </ul>
 </section>
 <section id="income-taxes">
@@ -285,7 +287,9 @@ not included in the rates reported here.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, NREL.</p>
+    <p>&#169; Copyright 2024, NREL.
+      <span class="lastupdated">Last updated on August 04, 2025.
+      </span></p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

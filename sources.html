@@ -7,6 +7,7 @@
   <title>Sources and Data &mdash; ReEDS  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="_static/customtheme.css?v=299ffeb9" />
 
   
@@ -20,13 +21,14 @@
         <script src="_static/documentation_options.js?v=5929fcd5"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/design-tabs.js?v=f930bc37"></script>
         <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
         <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Analysis tools and helper scripts" href="postprocessing_tools.html" />
-    <link rel="prev" title="Model Switches" href="additional_model_information.html" /> 
+    <link rel="prev" title="User guide" href="user_guide.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -39,7 +41,7 @@
           
           <a href="index.html">
             
-              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+              <img src="_static/reeds-logo-white.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -53,8 +55,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html">Model Switches</a></li>
-<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User guide</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Sources and Data</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#reeds-2-0">ReEDS 2.0</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#table-of-contents">Table of Contents</a></li>
@@ -65,6 +66,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Analysis tools and helper scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">ReEDS publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
 </ul>
 
@@ -241,33 +243,13 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/cases_hourly.csv">cases_hourly.csv</a></p>
-<ul>
-<li><p><strong>Description:</strong> This cases file contains the settings to demonstrate temporal flexibility (hourly) of ReEDS.</p></li>
-</ul>
-</li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/cases_examples.csv">cases_examples.csv</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/cases_small.csv">cases_small.csv</a></p>
 <ul>
 <li><p><strong>Description:</strong> Contains settings to run ReEDS at a smaller scale to test operability of the ReEDS model. Turns off several technologies and reduces the model size to significantly improve solve times.</p></li>
-</ul>
-</li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/cases_smaller.csv">cases_smaller.csv</a></p>
-<ul>
-<li><p><strong>Description:</strong> Another cases file which reduces the size of the model by reducing some constraints and operates at the largest spatial hierarchy to favor faster runtimes.</p></li>
-</ul>
-</li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/cases_spatialflex.csv">cases_spatialflex.csv</a></p>
-<ul>
-<li><p><strong>Description:</strong> Contains sample scenarios that use the spatial flexibility capabilities</p></li>
 </ul>
 </li>
 </ul>
@@ -328,6 +310,10 @@
 <h6><a class="reference internal" href="#hourlize/eer_to_reeds/eer_splice"><span class="xref myst">eer_splice</span></a> <a name='hourlize/eer_to_reeds/eer_splice'></a><a class="headerlink" href="#eer-splice" title="Link to this heading"></a></h6>
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/hourlize/eer_to_reeds/eer_splice/ba_timezone.csv">ba_timezone.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/hourlize/eer_to_reeds/eer_splice/dummy_agg_op_datacenters.csv">dummy_agg_op_datacenters.csv</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -1764,6 +1750,18 @@
 <section id="id20">
 <h5><a class="reference internal" href="#inputs/demand_response"><span class="xref myst">demand_response</span></a> <a name='inputs/demand_response'></a><a class="headerlink" href="#id20" title="Link to this heading"></a></h5>
 <ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/demand_response/dr_shed_avail_scalar.csv">dr_shed_avail_scalar.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/demand_response/dr_shed_capacity_scalar_demo_data_IEF_January_2025.csv">dr_shed_capacity_scalar_demo_data_IEF_January_2025.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/demand_response/dr_shed_hourly.h5">dr_shed_hourly.h5</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/demand_response/ev_load_Baseline.h5">ev_load_Baseline.h5</a></p>
 <ul>
 <li><p><strong>File Type:</strong> inputs</p></li>
@@ -1790,11 +1788,11 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/demand_response/evmc_storage_energy_Baseline.h5">evmc_storage_energy_Baseline.h5</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/demand_response/evmc_storage_increase_profile_Baseline.h5">evmc_storage_increase_profile_Baseline.h5</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/demand_response/evmc_storage_increase_profile_Baseline.h5">evmc_storage_increase_profile_Baseline.h5</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/demand_response/evmc_storage_profile_energy_Baseline.h5">evmc_storage_profile_energy_Baseline.h5</a></p></li>
 </ul>
 </section>
 <hr class="docutils" />
@@ -2107,6 +2105,10 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/financials/incentives_noira.csv">incentives_noira.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/financials/incentives_none.csv">incentives_none.csv</a></p></li>
 </ul>
 <hr class="docutils" />
@@ -2120,10 +2122,10 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/financials/reg_cap_cost_mult_default.csv">reg_cap_cost_mult_default.csv</a></p>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/financials/reg_cap_cost_diff_default.csv">reg_cap_cost_diff_default.csv</a></p>
 <ul>
 <li><p><strong>File Type:</strong> parameter</p></li>
-<li><p><strong>Description:</strong> region-specific multipliers for capital cost of all resources. Note: RE resources have values of 1 since their multipliers are incorporated in hourlize</p></li>
+<li><p><strong>Description:</strong> region-specific differences for capital cost of all resources. Add to 1 to produce a multiplier</p></li>
 <li><p><strong>Indices:</strong> i,r</p></li>
 </ul>
 </li>
@@ -2276,15 +2278,27 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/fuelprices/h2-ct_10.csv">h2-ct_10.csv</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/fuelprices/h2-combustion_10.csv">h2-combustion_10.csv</a></p>
+<ul>
+<li><p><strong>Description:</strong> price of hydrogen for combustion technologies (h2-ct and cc) at $10/MMBtu for all years</p></li>
+</ul>
+</li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/fuelprices/h2-ct_30.csv">h2-ct_30.csv</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/fuelprices/h2-combustion_30.csv">h2-combustion_30.csv</a></p>
+<ul>
+<li><p><strong>Description:</strong> price of hydrogen for combustion technologies (h2-ct and cc) at $30/MMBtu for all years</p></li>
+</ul>
+</li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/fuelprices/h2-ct_reference.csv">h2-ct_reference.csv</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/fuelprices/h2-combustion_reference.csv">h2-combustion_reference.csv</a></p>
+<ul>
+<li><p><strong>Description:</strong> price of hydrogen for combustion technologies (h2-ct and cc) at $20/MMBtu for all years</p></li>
+</ul>
+</li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -2651,7 +2665,15 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/load/EER_Baseline_AEO2022_load_hourly.h5">EER_Baseline_AEO2022_load_hourly.h5</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/load/EER_100by2050_v2023_load_hourly.h5">EER_100by2050_v2023_load_hourly.h5</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/load/EER_Baseline_AEO2022_v2023_load_hourly.h5">EER_Baseline_AEO2022_v2023_load_hourly.h5</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/load/EER_Baseline_AEO2023_load_hourly.h5">EER_Baseline_AEO2023_load_hourly.h5</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -2659,7 +2681,11 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/load/EER_IRAmoderate_load_hourly.h5">EER_IRAmoderate_load_hourly.h5</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/load/EER_IRAlow_v2023_load_hourly.h5">EER_IRAlow_v2023_load_hourly.h5</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/load/EER_IRAmoderate_v2023_load_hourly.h5">EER_IRAmoderate_v2023_load_hourly.h5</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -2720,30 +2746,6 @@
 <hr class="docutils" />
 <section id="id31">
 <h5><a class="reference internal" href="#inputs/plant_characteristics"><span class="xref myst">plant_characteristics</span></a> <a name='inputs/plant_characteristics'></a><a class="headerlink" href="#id31" title="Link to this heading"></a></h5>
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/battery_ATB_2023_advanced.csv">battery_ATB_2023_advanced.csv</a></p>
-<ul>
-<li><p><strong>Dollar year:</strong> 2020</p></li>
-</ul>
-</li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/battery_ATB_2023_conservative.csv">battery_ATB_2023_conservative.csv</a></p>
-<ul>
-<li><p><strong>Dollar year:</strong> 2020</p></li>
-</ul>
-</li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/battery_ATB_2023_moderate.csv">battery_ATB_2023_moderate.csv</a></p>
-<ul>
-<li><p><strong>Dollar year:</strong> 2020</p></li>
-</ul>
-</li>
-</ul>
-<hr class="docutils" />
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/battery_ATB_2024_advanced.csv">battery_ATB_2024_advanced.csv</a></p>
 <ul>
@@ -2821,35 +2823,7 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/coal_ATB_2024_advanced.csv">coal_ATB_2024_advanced.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/coal_ATB_2024_conservative.csv">coal_ATB_2024_conservative.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/coal_ATB_2024_moderate.csv">coal_ATB_2024_moderate.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/coal_fom_adj.csv">coal_fom_adj.csv</a></p>
-<ul>
-<li><p><strong>Dollar year:</strong> 2017</p></li>
-</ul>
-</li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/continuous_battery_ATB_2024_advanced.csv">continuous_battery_ATB_2024_advanced.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/continuous_battery_ATB_2024_conservative.csv">continuous_battery_ATB_2024_conservative.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/continuous_battery_ATB_2024_moderate.csv">continuous_battery_ATB_2024_moderate.csv</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -2901,6 +2875,18 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/dr_shed_capcost_demo_data_IEF_January_2025.csv">dr_shed_capcost_demo_data_IEF_January_2025.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/dr_shed_fom.csv">dr_shed_fom.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/dr_shed_vom.csv">dr_shed_vom.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/evmc_shape_Baseline.csv">evmc_shape_Baseline.csv</a></p></li>
 </ul>
 <hr class="docutils" />
@@ -2918,14 +2904,6 @@
 <hr class="docutils" />
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/gas-ccs_ATB_2024_moderate.csv">gas-ccs_ATB_2024_moderate.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/gas_ATB_2024_advanced.csv">gas_ATB_2024_advanced.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/gas_ATB_2024_conservative.csv">gas_ATB_2024_conservative.csv</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -2957,11 +2935,15 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/h2-ct_ATB_2023.csv">h2-ct_ATB_2023.csv</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/h2-combustion_ATB_2023.csv">h2-combustion_ATB_2023.csv</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/h2-ct_ATB_2024.csv">h2-ct_ATB_2024.csv</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/h2-combustion_ATB_2024.csv">h2-combustion_ATB_2024.csv</a></p>
+<ul>
+<li><p><strong>Description:</strong> Hydrogen CT and CC plant costs generated in preprocessing from moderate case NREL ATB 2024 data</p></li>
+</ul>
+</li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -3017,6 +2999,14 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/maxdailycf.csv">maxdailycf.csv</a></p>
+<ul>
+<li><p><strong>Description:</strong> maximum daily capacity factor–dr_shed input supply curves are based on one 4-hour event per day</p></li>
+</ul>
+</li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/min_retire_age.csv">min_retire_age.csv</a></p>
 <ul>
 <li><p><strong>Description:</strong> Minimum retirement age for given technology</p></li>
@@ -3045,6 +3035,10 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/mttr.csv">mttr.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/nuclear-smr_ATB_2024_advanced.csv">nuclear-smr_ATB_2024_advanced.csv</a></p></li>
 </ul>
 <hr class="docutils" />
@@ -3066,14 +3060,6 @@
 <hr class="docutils" />
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/nuclear_ATB_2024_moderate.csv">nuclear_ATB_2024_moderate.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/nuke_fom_adj.csv">nuke_fom_adj.csv</a></p>
-<ul>
-<li><p><strong>Dollar year:</strong> 2017</p></li>
-</ul>
-</li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -3238,7 +3224,7 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/unitsize.csv">unitsize.csv</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/plant_characteristics/unitsize_atb.csv">unitsize_atb.csv</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -3309,15 +3295,15 @@
 <section id="id32">
 <h5><a class="reference internal" href="#inputs/reserves"><span class="xref myst">reserves</span></a> <a name='inputs/reserves'></a><a class="headerlink" href="#id32" title="Link to this heading"></a></h5>
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/reserves/net_firm_transfers_nerc.csv">net_firm_transfers_nerc.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/reserves/opres_periods.csv">opres_periods.csv</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/reserves/orperc.csv">orperc.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/reserves/peak_net_imports.csv">peak_net_imports.csv</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -4139,6 +4125,14 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/supply_curve/dr_shed_cap.csv">dr_shed_cap.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/supply_curve/dr_shed_cost.csv">dr_shed_cost.csv</a></p></li>
+</ul>
+<hr class="docutils" />
+<ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/supply_curve/egs_supply_curve-reference_ba.csv">egs_supply_curve-reference_ba.csv</a></p></li>
 </ul>
 <hr class="docutils" />
@@ -4710,22 +4704,6 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/transmission/r_rr_adj_ba.csv">r_rr_adj_ba.csv</a></p>
-<ul>
-<li><p><strong>Description:</strong> Set of adjacent regions at BA resolution</p></li>
-</ul>
-</li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/transmission/r_rr_adj_county.csv">r_rr_adj_county.csv</a></p>
-<ul>
-<li><p><strong>Description:</strong> Set of adjacent regions at county resolution</p></li>
-</ul>
-</li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/transmission/rev_transmission_basecost.csv">rev_transmission_basecost.csv</a></p>
 <ul>
 <li><p><strong>File Type:</strong> inputs</p></li>
@@ -5013,7 +4991,7 @@
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/upgrades/upgradelink_water.csv">upgradelink_water.csv</a></p>
 <ul>
 <li><p><strong>File Type:</strong> Inputs</p></li>
-<li><p><strong>Description:</strong> Water techs that can be upgraded including the original technology, the technology it is upgrading to, and the delta (a H2-CT)</p></li>
+<li><p><strong>Description:</strong> Water techs that can be upgraded including the original technology, the technology it is upgrading to, and the delta</p></li>
 <li><p><strong>Indices:</strong> i</p></li>
 <li><p><strong>Dollar year:</strong> N/A</p></li>
 <li><p><strong>Citation:</strong> [(N/A)]</p></li>
@@ -5096,10 +5074,6 @@
 <h5><a class="reference internal" href="#inputs/variability"><span class="xref myst">variability</span></a> <a name='inputs/variability'></a><a class="headerlink" href="#id43" title="Link to this heading"></a></h5>
 <ul class="simple">
 <li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/variability/ccseason_dates.csv">ccseason_dates.csv</a></p></li>
-</ul>
-<hr class="docutils" />
-<ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/inputs/variability/hourly_operational_characteristics.csv">hourly_operational_characteristics.csv</a></p></li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -5711,7 +5685,11 @@
 </ul>
 <hr class="docutils" />
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/preprocessing/atb_updates_processing/input_files/h2-ct_plant_char_format.csv">h2-ct_plant_char_format.csv</a></p></li>
+<li><p><a class="reference external" href="https://github.com/NREL/ReEDS-2.0/blob/main/preprocessing/atb_updates_processing/input_files/h2-combustion_plant_char_format.csv">h2-combustion_plant_char_format.csv</a></p>
+<ul>
+<li><p><strong>Description:</strong> Plant characteristics for which the H2-CC and CT ATB estimates are made using Gas-CC and CT data in preprocessing</p></li>
+</ul>
+</li>
 </ul>
 <hr class="docutils" />
 <ul class="simple">
@@ -5927,14 +5905,16 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="additional_model_information.html" class="btn btn-neutral float-left" title="Model Switches" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="user_guide.html" class="btn btn-neutral float-left" title="User guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="postprocessing_tools.html" class="btn btn-neutral float-right" title="Analysis tools and helper scripts" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, NREL.</p>
+    <p>&#169; Copyright 2024, NREL.
+      <span class="lastupdated">Last updated on August 04, 2025.
+      </span></p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

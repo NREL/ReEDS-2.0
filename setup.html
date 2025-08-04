@@ -7,6 +7,7 @@
   <title>Getting Started &mdash; ReEDS  documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
       <link rel="stylesheet" type="text/css" href="_static/customtheme.css?v=299ffeb9" />
 
   
@@ -20,6 +21,7 @@
         <script src="_static/documentation_options.js?v=5929fcd5"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/design-tabs.js?v=f930bc37"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -37,7 +39,7 @@
           
           <a href="index.html">
             
-              <img src="_static/reeds-logo.png" class="logo" alt="Logo"/>
+              <img src="_static/reeds-logo-white.png" class="logo" alt="Logo"/>
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -76,10 +78,10 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html">Model Switches</a></li>
-<li class="toctree-l1"><a class="reference internal" href="additional_model_information.html#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
 <li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Analysis tools and helper scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">ReEDS publications</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
 </ul>
 
@@ -194,7 +196,7 @@
 </section>
 <section id="gams-configuration">
 <h3>GAMS Configuration<a class="headerlink" href="#gams-configuration" title="Link to this heading"></a></h3>
-<p>Install GAMS: <a class="reference external" href="https://www.gams.com/download/">https://www.gams.com/download/</a>. NREL uses GAMS versions 45.2.0 and 34.3. Older versions might also work. A valid GAMS license must be installed. Please refer to the <a class="reference internal" href="#Software"><span class="xref myst">Required Software</span></a> section above for more information.</p>
+<p>Install GAMS: <a class="reference external" href="https://www.gams.com/download/">https://www.gams.com/download/</a>. NREL uses GAMS versions 49.6.0 and 45.2.0. Older versions might also work. A valid GAMS license must be installed. Please refer to the <a class="reference internal" href="#Software"><span class="xref myst">Required Software</span></a> section above for more information.</p>
 <p>Add GAMS to the “path” environment variable. Follow the same instructions as for adding Python to the path in the <a class="reference internal" href="#ConfigPy"><span class="xref myst">Python Configuration</span></a> section above. Append the environment path with the directory location for the <em>gams.exe</em> application (e.g., C:\GAMS\win64\34).</p>
 <p><strong>IMPORTANT</strong> : Test the GAMS installation from the command line by typing “gams” (no quotes) in the terminal window. The GAMS program should initiate (<a class="reference internal" href="#figure-gams-test"><span class="std std-numref">Fig. 9</span></a>).</p>
 <figure class="align-default" id="figure-gams-test">
@@ -435,7 +437,9 @@
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, NREL.</p>
+    <p>&#169; Copyright 2024, NREL.
+      <span class="lastupdated">Last updated on August 04, 2025.
+      </span></p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
