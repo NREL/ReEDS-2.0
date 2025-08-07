@@ -159,7 +159,7 @@ EQUATION
  eq_build_requirement(pcat,st,t)          "--MW-- investments in a state must equal the user-specified investments"
  eq_tech_requirement(pcat,st,t)           "--MW-- investments in a particular technolgy in state must equal the user-specified investments"
  eq_refurblim(i,r,t)                      "--MW-- total refurbishments cannot exceed the amount of capacity that has reached the end of its life"
- eq_flat_load_additions(r,t)            "--MW-- flat load additions in each balancing area for the year t"
+ eq_flat_load_additions(st,t)            "--MW-- flat load additions in each balancing area for the year t"
 
 * renewable supply curves
  eq_rsc_inv_account(i,v,r,t)              "--MW-- INV for rsc techs is the sum over all bins of INV_RSC"
@@ -1448,11 +1448,11 @@ eq_option3(st,h,t)$[tmodel(t)
 * ---------------------------------------------------------------------------
 
 * Add flat blocks of load to match OPGW Generation
-eq_flat_load_additions(r,t)
+eq_flat_load_additions(st,t)
     $[tmodel(t)
     $(yeart(t) >= model_builds_start_yr)
     $Sw_FlatLoadAdd
-    $r_st(r,"UT")
+    $(annual_flat_load_additions(t,st)) 
     ]..
 
 * the flat load additions in Utah
