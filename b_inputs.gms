@@ -3062,6 +3062,19 @@ $onlisting
 ;
 $offempty
 
+$onempty
+parameter annual_flat_load_additions(allt,st) "--MWh-- annual load from flat load additions"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%annual_flat_load_additions.csv
+$offdelim
+$onlisting
+/
+;
+$offempty
+
+
 RecPerc(RPSCat,st,t) = sum{allt$att(allt,t), rps_fraction(allt,st,RPSCat) } ;
 RecPerc(RPSCat,st,t)$[(Sw_StateRPS_Carveouts = 0)$(sameas(RPSCat, "RPS_solar") or sameas(RPSCat, "RPS_Wind"))] = 0;
 RecPerc("CES",st,t) = ces_fraction(t,st) ;
