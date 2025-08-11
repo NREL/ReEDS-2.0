@@ -48,3 +48,7 @@ op_startcost,Gen & Stor O&M,Operation
 op_transmission_fom,Transmission O&M,Operation
 op_transmission_intrazone_fom,Transmission O&M,Operation
 op_vom_costs,Gen & Stor O&M,Operation
+res_marg_ann,Reserve Margin Exp. Flow,Operation
+load,Load Serving Exp. Flow,Operation
+expenditure_int,International Trade,Operation
+expenditure_rps,Interstate REC Trade,Operation

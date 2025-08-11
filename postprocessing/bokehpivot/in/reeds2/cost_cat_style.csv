@@ -11,6 +11,10 @@ Transmission Capex,#636363
 Transmission O&M,#969696
 Interconnection Capex,#bdbdbd
 Interconnection O&M,#d9d9d9
+Reserve Margin Exp. Flow,#bf02bc
+Load Serving Exp. Flow,#ff00fb
+International Trade,#8c048a
+Interstate REC Trade,#015c12
 CO2 T&S Capex,#8c564b
 CO2 T&S O&M,#c49c94
 H2 Prod Capex,#e377c2

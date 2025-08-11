@@ -197,6 +197,25 @@ def timestamp_to_month(dfin_timestamp):
     dfout_month['month'] = dfout_month['month'].astype(str).map('M{:0>2}'.format)
     return dfout_month
 
+def postprocess_outputs(case, outputs_path=None, verbose=0):
+    ## Parse inputs
+    _outputs_path = os.path.join(case, 'outputs') if outputs_path is None else outputs_path
+
+    ## System cost
+    reeds.results.calc_systemcost(case).to_csv(
+        os.path.join(_outputs_path, 'post_systemcost_annualized.csv'),
+        index=False,
+    )
+
+    ## Hydrogen prices by month
+    try:
+        dfin_timestamp = reeds.timeseries.timeslice_to_timestamp(case, 'h2_price_h')
+        dfout_month = timestamp_to_month(dfin_timestamp)
+        dfout_month.rename(columns={'Value':'$2004/kg'}).to_csv(
+            os.path.join(_outputs_path, 'h2_price_month.csv'), index=False)
+    except Exception:
+        if verbose:
+            print(traceback.format_exc())
 
 #%% Procedure
 if __name__ == '__main__':
@@ -276,6 +295,7 @@ if __name__ == '__main__':
         )
 
     #%% Special handling of particular outputs
+    postprocess_outputs(case, outputs_path=outputs_path)
     ## Hydrogen prices by month
     try:
         dfin_timestamp = reeds.timeseries.timeslice_to_timestamp(case, 'h2_price_h')

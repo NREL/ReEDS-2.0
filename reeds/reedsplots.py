@@ -116,6 +116,7 @@ def plotdiff(
         casebase_name=None, casecomp_name=None,
         onlytechs=None, titleshorten=0,
         yearmin=None, yearmax=2050, colors=None,
+        r_filter = None,
         **plot_kwds,
     ):
     """

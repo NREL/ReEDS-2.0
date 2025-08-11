@@ -46,7 +46,7 @@ battery_48,#9B214F
 battery_72,#9B334F
 battery_100,#9B454F
 battery_li,#9B574F
-dr,#B9CBF5
+dr_shed,#B9CBF5
 evmc_storage,#a55194
 evmc_shape,#ce6dbd
 storage-h2,#FF7FBB
@@ -57,3 +57,6 @@ smr,#D49E2E
 smr-ccs,#5F522D
 electrolyzer,#896F2D
 Other,#ff69b4
+interregion trade,#ff00fb
+dac,#D55E00
+gas-cc_gas-cc-ccs,#9467BD

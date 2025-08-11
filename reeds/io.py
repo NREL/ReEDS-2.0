@@ -272,7 +272,13 @@ def get_dfmap(case=None, levels=None):
 
 
 ### Read files from a ReEDS case
-def read_output(case, filename=None, valname=None, low_memory=False):
+def read_output(
+    case: str,
+    filename: str,
+    valname: str = None,
+    low_memory: bool = False,
+    r_filter: list = None,
+) -> pd.DataFrame:
     """
     Read a ReEDS output csv file or a key from outputs.h5.
     If outputs.h5 doesn't exist, falls back to outputs/{filename}.csv file.
@@ -284,6 +290,8 @@ def read_output(case, filename=None, valname=None, low_memory=False):
             If filename ends with '.csv', always read the .csv version.
             Otherwise, read the {filename} key from {case}/outputs/outputs.h5.
         valname (optional): If provided, rename 'Value' column to {valname}
+        low_memory (optional): If True, reduce memory usage by changing datatypes
+        r_filter (optional): string of regions, period delimited
 
     Returns:
         dict of pd.DataFrame's if filename is None, otherwise pd.DataFrame
@@ -328,6 +336,23 @@ def read_output(case, filename=None, valname=None, low_memory=False):
 
     if valname is not None:
         df = df.rename(columns={'Value': valname})
+
+        ## If desired, filter for specific regions
+    if r_filter is not None:
+        # Only have a r column no rr column
+        if 'r' in df.columns and 'rr' not in df.columns:
+            df = df[df.r.isin(r_filter)].reset_index(drop=True)
+
+        # Have both r and rr columns. Filter for cases
+        # where either r or rr is in the list of regions
+        elif 'r' in df.columns and 'rr' in df.columns:
+            df = df[df.r.isin(r_filter) | df.rr.isin(r_filter)].reset_index(drop=True)
+
+        else:
+            raise ValueError(
+                f"The region column was not found for {filename} file, "
+                "but a region filter was requested."
+            )
 
     return df
 

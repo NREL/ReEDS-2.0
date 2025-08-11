@@ -97,7 +97,7 @@ wind-ofs*,wind-ofs
 wind-ons*,wind-ons
 csp*,csp
 csp-ns*,csp
-dr*,dr
+dr_shed*,dr
 evmc_storage*,evmc_storage
 evmc_shape*,evmc_shape
 hyd*,hydro
@@ -1823,3 +1823,4 @@ pumped-hydro-flex_n_fg,pumped-hydro
 pumped-hydro-flex_n_sg,pumped-hydro
 pumped-hydro-flex_n_ss,pumped-hydro
 pumped-hydro-flex_n_ww,pumped-hydro
+interregional_flow,interregion trade
