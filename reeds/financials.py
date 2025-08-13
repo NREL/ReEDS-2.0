@@ -343,7 +343,7 @@ def append_pvb_parameters(dfin, tech_to_copy='battery_li', column_scaler=None, p
 
 
 def import_and_mod_incentives(
-    incentive_file_suffix, construction_times_suffix, inflation_df, scen_settings
+    incentive_file_suffix, inflation_df, scen_settings
 ):
     '''
 
@@ -367,29 +367,11 @@ def import_and_mod_incentives(
             tax burden is sufficient, or through the costs of monetizing through tax equity
 
     '''
-    # Import construction times
-    construction_times = import_data(
-        file_root='construction_times',
-        file_suffix=construction_times_suffix,
-        indices=['i', 't_online'],
-        scen_settings=scen_settings,
-        adjust_units=False,
-    )
-    ### Apply the standalone battery construction times to hybrid PV batteries
-    construction_times = append_pvb_parameters(
-        dfin=construction_times, tech_to_copy='battery_li'
-    )
-
-    construction_times['t_start_construction'] = construction_times['t_online'].astype(
-        int
-    ) - construction_times['construction_time'].astype(int)
-    construction_times = construction_times.rename(columns={'t_online': 't'})
-
-    # Import incentives, determine the year the tech would be built based on construction times
+    # Import incentives
     incentive_df = import_data(
         file_root='incentives',
         file_suffix=incentive_file_suffix,
-        indices=['i', 'country', 't'],
+        indices=['i', 'country', 't_start_construction'],
         inflation_df=inflation_df,
         scen_settings=scen_settings,
     )
@@ -422,33 +404,9 @@ def import_and_mod_incentives(
         + incentive_df.loc[incentive_df['itc_frac'] > 0, 'itc_percpt_domestic_bonus']
     )
 
-    # Merge with construction start years
-    incentive_df = incentive_df.merge(construction_times, on=['i', 't'], how='left')
-
-    # Because of changing construction durations, some incentives don't apply to any online years. Keep only the rows where the 't' column is not null.
-    incentive_df = incentive_df[incentive_df['t'].notnull()]
-
-    # If the construction period exceeds the safe harbor, assume the safe harbor would be extended
-    incentive_df['ptc_safe_harbor'] = incentive_df[['ptc_safe_harbor', 'construction_time']].max(
-        axis=1
-    )
-    incentive_df['itc_safe_harbor'] = incentive_df[['itc_safe_harbor', 'construction_time']].max(
-        axis=1
-    )
-    incentive_df['co2_capture_safe_harbor'] = incentive_df[
-        ['co2_capture_safe_harbor', 'construction_time']
-    ].max(axis=1)
-    incentive_df['h2_ptc_safe_harbor'] = incentive_df[
-        ['h2_ptc_safe_harbor', 'construction_time']
-    ].max(axis=1)
-
     # create year expander
     year_list = []
-    max_safe_harbor = np.max(
-        incentive_df[
-            ['ptc_safe_harbor', 'itc_safe_harbor', 'co2_capture_safe_harbor', 'h2_ptc_safe_harbor']
-        ].max()
-    )
+    max_safe_harbor = incentive_df['safe_harbor'].max()
     for n in np.arange(0, max_safe_harbor + 1):
         year_df = pd.DataFrame()
         year_df['safe_harbor_buffer'] = np.arange(0, n + 1)
@@ -464,32 +422,26 @@ def import_and_mod_incentives(
         [
             'i',
             'country',
-            't',
+            't_start_construction',
             'ptc_value',
             'ptc_dur',
             'ptc_tax_equity_penalty',
-            'ptc_safe_harbor',
-            'construction_time',
+            'safe_harbor',
         ]
     ].copy()
     ptc_df = ptc_df[ptc_df['ptc_value'] != 0.0]
-    ptc_df = ptc_df.merge(
-        expander.rename(columns={'safe_harbor': 'ptc_safe_harbor'}),
-        on=['ptc_safe_harbor'],
-        how='left',
-    )
-    ptc_df['t'] = ptc_df['t'] + ptc_df['safe_harbor_buffer']
+    ptc_df = ptc_df.merge(expander, on=['safe_harbor'], how='left')
+    ptc_df['t'] = ptc_df['t_start_construction'] + ptc_df['safe_harbor_buffer']
     ptc_df['value'] = ptc_df['ptc_value']
 
     itc_df = incentive_df[
         [
             'i',
             'country',
-            't',
+            't_start_construction',
             'itc_frac',
             'itc_tax_equity_penalty',
-            'itc_safe_harbor',
-            'construction_time',
+            'safe_harbor',
             'itc_energy_comm_bonus',
         ]
     ].copy()
@@ -497,54 +449,40 @@ def import_and_mod_incentives(
         1 - itc_df['itc_energy_comm_bonus']
     )
     itc_df = itc_df[itc_df['itc_frac'] != 0.0]
-    itc_df = itc_df.merge(
-        expander.rename(columns={'safe_harbor': 'itc_safe_harbor'}),
-        on=['itc_safe_harbor'],
-        how='left',
-    )
-    itc_df['t'] = itc_df['t'] + itc_df['safe_harbor_buffer']
+    itc_df = itc_df.merge(expander, on=['safe_harbor'], how='left')
+    itc_df['t'] = itc_df['t_start_construction'] + itc_df['safe_harbor_buffer']
     itc_df['value'] = itc_df['itc_frac']
 
     co2_df = incentive_df[
         [
             'i',
             'country',
-            't',
+            't_start_construction',
             'co2_capture_value',
             'co2_capture_dur',
             'co2_capture_tax_equity_penalty',
-            'co2_capture_safe_harbor',
-            'construction_time',
+            'safe_harbor',
         ]
     ].copy()
     co2_df = co2_df[co2_df['co2_capture_value'] != 0.0]
-    co2_df = co2_df.merge(
-        expander.rename(columns={'safe_harbor': 'co2_capture_safe_harbor'}),
-        on=['co2_capture_safe_harbor'],
-        how='left',
-    )
-    co2_df['t'] = co2_df['t'] + co2_df['safe_harbor_buffer']
+    co2_df = co2_df.merge(expander, on=['safe_harbor'], how='left')
+    co2_df['t'] = co2_df['t_start_construction'] + co2_df['safe_harbor_buffer']
     co2_df['value'] = co2_df['co2_capture_value']
 
     h2_df = incentive_df[
         [
             'i',
             'country',
-            't',
+            't_start_construction',
             'h2_ptc_value',
             'h2_ptc_dur',
             'h2_ptc_tax_equity_penalty',
-            'h2_ptc_safe_harbor',
-            'construction_time',
+            'safe_harbor',
         ]
     ].copy()
     h2_df = h2_df[h2_df['h2_ptc_value'] != 0.0]
-    h2_df = h2_df.merge(
-        expander.rename(columns={'safe_harbor': 'h2_ptc_safe_harbor'}),
-        on=['h2_ptc_safe_harbor'],
-        how='left',
-    )
-    h2_df['t'] = h2_df['t'] + h2_df['safe_harbor_buffer']
+    h2_df = h2_df.merge(expander, on=['safe_harbor'], how='left')
+    h2_df['t'] = h2_df['t_start_construction'] + h2_df['safe_harbor_buffer']
     h2_df['value'] = h2_df['h2_ptc_value']
 
     incentive_df = pd.concat(
@@ -554,11 +492,10 @@ def import_and_mod_incentives(
                     'i',
                     'country',
                     't',
+                    'safe_harbor',
                     'ptc_value',
                     'ptc_dur',
                     'ptc_tax_equity_penalty',
-                    'ptc_safe_harbor',
-                    'construction_time',
                     'value',
                 ]
             ],
@@ -567,10 +504,9 @@ def import_and_mod_incentives(
                     'i',
                     'country',
                     't',
+                    'safe_harbor',
                     'itc_frac',
                     'itc_tax_equity_penalty',
-                    'itc_safe_harbor',
-                    'construction_time',
                     'itc_energy_comm_bonus',
                     'value',
                 ]
@@ -580,11 +516,10 @@ def import_and_mod_incentives(
                     'i',
                     'country',
                     't',
+                    'safe_harbor',
                     'co2_capture_value',
                     'co2_capture_dur',
                     'co2_capture_tax_equity_penalty',
-                    'co2_capture_safe_harbor',
-                    'construction_time',
                     'value',
                 ]
             ],
@@ -593,11 +528,10 @@ def import_and_mod_incentives(
                     'i',
                     'country',
                     't',
+                    'safe_harbor',
                     'h2_ptc_value',
                     'h2_ptc_dur',
                     'h2_ptc_tax_equity_penalty',
-                    'h2_ptc_safe_harbor',
-                    'construction_time',
                     'value',
                 ]
             ],
@@ -642,10 +576,6 @@ def import_and_mod_incentives(
         1 - incentive_df['h2_ptc_tax_equity_penalty']
     )
 
-    incentive_df['safe_harbor_max'] = incentive_df[
-        ['ptc_safe_harbor', 'itc_safe_harbor', 'co2_capture_safe_harbor', 'h2_ptc_safe_harbor']
-    ].max(axis=1)
-
     return incentive_df[
         [
             'i',
@@ -664,7 +594,7 @@ def import_and_mod_incentives(
             'h2_ptc_value',
             'h2_ptc_value_monetized',
             'h2_ptc_dur',
-            'safe_harbor_max',
+            'safe_harbor',
             'itc_energy_comm_bonus',
         ]
     ]

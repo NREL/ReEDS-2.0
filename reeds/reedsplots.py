@@ -35,6 +35,7 @@ techmarkers = {
     'distpv': 'o',
     'csp': 'o',
     'pvb': 'o',
+    'dr_shed':'o',
 
     'wind-ons': '^',
     'wind-ofs': 'v',
@@ -2797,8 +2798,8 @@ def map_capacity_techs(
         case, year=2050,
         techs=[
             'Utility PV', 'Land-based wind', 'Offshore wind', 'Electrolyzer',
-            'Battery', 'PSH', 'H2 turbine',
-            'Nuclear', 'Gas CCS', 'Coal CCS', 'Fossil',
+            'Battery', 'PSH', 'H2 turbine', 'Nuclear',
+            'Gas CCS', 'Coal CCS', 'Gas', 'Coal',
         ],
         ncols=4,
         vmax='shared',
@@ -2813,15 +2814,14 @@ def map_capacity_techs(
         **{f'wind-ofs_{i}':'Offshore wind' for i in range(20)},
         **dict(zip(['nuclear','nuclear-smr'], ['Nuclear']*20)),
         **dict(zip(
-            ['gas-cc_re-cc','gas-ct_re-ct','re-cc','re-ct',
-             'gas-cc_h2-ct','gas-ct_h2-ct','h2-cc','h2-ct'],
+            ['h2-cc', 'h2-ct', 'gas-cc_h2-cc', 'gas-ct_h2-ct'],
             ['H2 turbine']*20)),
         **{'electrolyzer':'Electrolyzer'},
         **{'battery_li':'Battery', 'pumped-hydro':'PSH'},
         **dict(zip(
-            ['coal-igcc', 'coaloldscr', 'coalolduns', 'gas-cc', 'gas-ct', 'coal-new',
-             'o-g-s'],
-            ['Fossil']*20)),
+            ['gas-cc_gas-cc-ccs_mod','gas-cc_gas-cc-ccs_max',
+             'gas-cc-ccs_mod','gas-cc-ccs_max'],
+            ['Gas CCS']*50)),
         **dict(zip(
             ['coal-igcc_coal-ccs_mod','coal-new_coal-ccs_mod',
              'coaloldscr_coal-ccs_mod','coalolduns_coal-ccs_mod','cofirenew_coal-ccs_mod',
@@ -2830,9 +2830,15 @@ def map_capacity_techs(
              'cofirenew_coal-ccs_max','cofireold_coal-ccs_max'],
             ['Coal CCS']*50)),
         **dict(zip(
-            ['gas-cc_gas-cc-ccs_mod','gas-cc_gas-cc-ccs_max',
-             'gas-cc-ccs_mod','gas-cc-ccs_max'],
-            ['Gas CCS']*50)),
+            ['coal-igcc', 'coaloldscr', 'coalolduns', 'coal-new',
+             'gas-cc', 'gas-ct', 'o-g-s'],
+            ['Fossil']*20)),
+        **dict(zip(
+            ['coal-igcc', 'coaloldscr', 'coalolduns', 'coal-new'],
+            ['Coal']*20)),
+        **dict(zip(
+            ['gas-cc', 'gas-ct'],
+            ['Gas']*20)),
         **dict(zip(['dac','beccs_mod','beccs_max'], ['CO2 removal']*20)),
     }
     ### Get maps
@@ -2850,11 +2856,7 @@ def map_capacity_techs(
     else:
         _vmax = None
     ### Arrange the subplots
-    nrows = len(techs) // ncols
-    coords = dict(zip(
-        techs,
-        [(row,col) for row in range(nrows) for col in range(ncols)]
-    ))
+    nrows, _, coords = reeds.plots.get_coordinates(techs, ncols=ncols)
     ### Plot it
     plt.close()
     f,ax = plt.subplots(
@@ -2886,6 +2888,7 @@ def map_capacity_techs(
     ax[0,0].set_title(
         '{} ({})'.format(os.path.basename(case), year),
         x=0.1, ha='left', va='top')
+    plots.trim_subplots(ax, nrows, ncols, len(techs))
     return f, ax
 
 
@@ -5209,7 +5212,7 @@ def plot_seed_stressperiods(
 
     ### Plot it
     ncols = 3
-    nrows = len(years) // ncols + 1
+    nrows = len(years) // ncols + bool(len(years) % ncols) + 1
     loadcoords = dict(zip(years, [(row+1,col) for row in range(nrows) for col in range(ncols)]))
     minrecoords = {
         'upv': (0, 1),

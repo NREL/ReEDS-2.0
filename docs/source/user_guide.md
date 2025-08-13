@@ -27,6 +27,7 @@
       - So if you want to use the example period:szn map, just set `GSw_HourlyClusterAlgorithm=user`.
       - If you want to specify a different period:szn map, then add your mapping at the bottom of inputs/variability/period_szn_user.csv with a unique scenario name in the 'scenario' column, and set `GSw_HourlyClusterAlgorithm` to your unique scenario name, *which must contain the substring 'user'*. (For example, I could use a mapping called 'user_myname_20230130' by adding my period:szn map to inputs/variability/period_szn_user.csv with 'user_myname_20230130' in the 'scenario' column and setting `GSw_HourlyClusterAlgorithm=user_myname_20230130`.)
       - Make sure the settings for `GSw_HourlyType` and `GSw_HourlyWeatherYears` match your user-defined map. For example, if your 'user_myname_20230130' map includes 365 representative days for weather year 2012, then set `GSw_HourlyType=day` and `GSw_HourlyWeatherYears=2012`.
+      - You can feed the period:szn mapping from a completed run into the inputs folder of your repo to force ReEDS to use the same representative or stress periods. More detail can be found [here](https://pages.github.nrel.gov/ReEDS/ReEDS-2.0/postprocessing_tools.html#fix-representative-stress-periods-preprocessing-get-case-periods-py) 
 
 - `GSw_PRM_StressThreshold`: The default setting of 'transgrp_10_EUE_sum' means a threshold of "**10** ppm NEUE in each **transgrp**", with stress periods selected by the daily **sum** of **EUE** within each **transgrp**.
   - The first argument can be selected from ['country', 'interconnect', 'nercr', 'transreg', 'transgrp', 'st', 'r'] and specifies the hierarchy level within which to compare RA performance against the threshold.
@@ -102,8 +103,12 @@ Files 1 & 2 are kept separate in the repository because their state and BA level
 | Does each model year have a unique magnitude? How are the data normalized? | No, 2007-2013 are normalized to 2010 demand (3738 TWh). | Yes, EER detrended the 2016-2023 data by doing a linear regression across that span of years and then adding/subtracting the linear trend across the years. This maintains the internal weather variability while separating the load growth. EER scaled the 2007-2013 data to match the average of my detrended 2016-2023 data. |
 | Time zone of the file | Central Standard Time (CST) | Central Standard Time (CST) |
 
+### Demand Response
 
-
+Demand response is turned off by default. To enable it the following switches are needed:
+  - `GSw_DRShed`: turns on/off the demand response resource
+  - `GSw_MaxDailyCF` : turns on/off daily maximum capacity factor constraint
+  - `dr_shedscen`: scenario to define which scalars will be used for the supply curve cost and capacity
 
 ## Hydrogen inputs
 

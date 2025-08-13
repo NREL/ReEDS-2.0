@@ -46,22 +46,37 @@ write = True
 
 ###################
 #%% ARGUMENT INPUTS
-parser = argparse.ArgumentParser(description='transmission maps')
-parser.add_argument('--case', '-c', type=str,
-                    help='path to ReEDS run folder')
-parser.add_argument('--year', '-y', type=int, default=2050,
-                    help='year to plot')
+parser = argparse.ArgumentParser(
+    description='Create static maps and plots of ReEDS outputs',
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
+## Include both case_positional and --case/-c for backwards compatibility
+parser.add_argument('case_positional', type=str, help='path to ReEDS run folder', nargs='?')
+parser.add_argument('--case', '-c', type=str, help='path to ReEDS run folder')
+parser.add_argument('--year', '-y', type=int, default=0,
+                    help='year to plot, or 0 for last year')
 parser.add_argument('--routes', '-r', action='store_true',
                     help='if True, show actual transmission routes')
 
 args = parser.parse_args()
-case = args.case
+if args.case_positional and args.case:
+    err = (
+        'Provided case as both positional argument and as --case/-c; '
+        'only use one or the other, not both'
+    )
+    raise ValueError(err)
+elif args.case_positional:
+    case = args.case_positional
+elif args.case:
+    case = args.case
+else:
+    raise ValueError('Provide case path either as positional argument or as --case/-c')
 year = args.year
 routes = args.routes
 
 # #%% Inputs for testing
-# case = os.path.join(reeds_path,'runs','v20250415_prasM0_Pacific')
-# year = 2032
+# case = os.path.join(reeds_path,'runs','v20250716_mainM0_Pacific')
+# year = 0
 # routes = False
 # interactive = True
 # write = False
@@ -97,6 +112,8 @@ years = pd.read_csv(
 yearstep = years[-1] - years[-2]
 val_r = pd.read_csv(
     os.path.join(case, 'inputs_case', 'val_r.csv'), header=None).squeeze(1).tolist()
+## If year not provided, use final solve year
+year = year if year > 0 else max(years)
 
 
 #%% Transmission line map with disaggregated transmission types
@@ -247,9 +264,18 @@ except Exception:
 ### Plot with tech-specific (vmax='each') and uniform (vmax='shared') color axis
 ncols = 4
 techs = [
-    'Utility PV', 'Land-based wind', 'Offshore wind', 'Electrolyzer',
-    'Battery (4h)', 'Battery (8h)', 'PSH', 'H2 turbine',
-    'Nuclear', 'Gas CCS', 'Coal CCS', 'Fossil',
+    'Utility PV',
+    'Land-based wind',
+    'Offshore wind',
+    'Electrolyzer',
+    'Battery',
+    'PSH',
+    'H2 turbine',
+    'Nuclear',
+    'Gas CCS',
+    'Coal CCS',
+    'Gas',
+    'Coal',
 ]
 for vmax in ['each', 'shared']:
     try:

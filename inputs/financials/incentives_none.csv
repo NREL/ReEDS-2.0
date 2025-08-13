@@ -1,2 +1,2 @@
-i,country,t,ptc_value,ptc_perc_bonus,ptc_dur,ptc_tax_equity_penalty,ptc_safe_harbor,itc_frac,itc_energy_comm_bonus,itc_percpt_domestic_bonus,itc_tax_equity_penalty,itc_safe_harbor,co2_capture_value,co2_capture_dur,co2_capture_tax_equity_penalty,co2_capture_safe_harbor,h2_ptc_value,h2_ptc_dur,h2_ptc_tax_equity_penalty,h2_ptc_safe_harbor
-PV,usa,2010,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+i,country,t_start_construction,safe_harbor,t_max_online,ptc_value,ptc_perc_bonus,ptc_dur,ptc_tax_equity_penalty,itc_frac,itc_energy_comm_bonus,itc_percpt_domestic_bonus,itc_tax_equity_penalty,co2_capture_value,co2_capture_dur,co2_capture_tax_equity_penalty,h2_ptc_value,h2_ptc_dur,h2_ptc_tax_equity_penalty
+PV,usa,2010,0,2010,0,0,0,0,0,0,0,0,0,0,0,0,0,0
