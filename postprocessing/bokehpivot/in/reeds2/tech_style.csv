@@ -35,6 +35,16 @@ distpv,#FEE603
 caes,#FF4741
 pvb,#D1C202
 battery,#FF4A88
+battery_2,#FF7F9D
+battery_4,#FF6882
+battery_6,#DF5282
+battery_8,#CC015C
+battery_10,#CC015C
+battery_12,#CC015C
+battery_24,#CC015C
+battery_48,#CC015C
+battery_72,#CC015C
+battery_100,#CC015C
 battery_li,#FF4A88
 dr_shed,#B9CBF5
 evmc_storage,#a55194

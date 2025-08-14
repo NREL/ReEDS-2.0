@@ -78,6 +78,16 @@ cofire*,cofire
 gas-cc-ccs-f*,gas-cc-ccs-flex
 lfill-gas*,lfill-gas
 o-g-s*,o-g-s
+battery_2,battery_2
+battery_4,battery_4
+battery_6,battery_6
+battery_8,battery_8
+battery_10,battery_10
+battery_12,battery_12
+battery_24,battery_24
+battery_48,battery_48
+battery_72,battery_72
+battery_100,battery_100
 battery_li,battery_li
 pumped-hydro_n*,pumped-hydro
 pumped-hydro-flex*,pumped-hydro-flex
