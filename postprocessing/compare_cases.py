@@ -952,6 +952,9 @@ barwidth = 0.35
 labelpad = 0.08
 width = 1.6*len(cases) + 0.5
 aggstack = {
+    **{f'battery_{i}':'Storage' for i in [2,4,6,8,10]},
+    **{f'battery_{i}|charge':'Storage|charge' for i in [2,4,6,8,10]},
+    **{f'battery_{i}|discharge':'Storage|discharge' for i in [2,4,6,8,10]},
     'battery_li':'Storage',
     'battery_li|charge':'Storage|charge',
     'battery_li|discharge':'Storage|discharge',
@@ -1118,10 +1121,10 @@ if len(cases) <= 4:
 #%%
 ## Capacity and generation bars aggtechs
 aggstack = {
-    **{f'battery_{i}':'Storage' for i in [2,4,6,8,10]},
-    **{f'battery_{i}|charge':'Storage|charge' for i in [2,4,6,8,10]},
-    **{f'battery_{i}|discharge':'Storage|discharge' for i in [2,4,6,8,10]},
-    **{
+        **{f'battery_{i}':'Storage' for i in [2,4,6,8,10]},
+        **{f'battery_{i}|charge':'Storage|charge' for i in [2,4,6,8,10]},
+        **{f'battery_{i}|discharge':'Storage|discharge' for i in [2,4,6,8,10]},
+        **{
         'pumped-hydro':'Storage',
         'pumped-hydro|charge':'Storage|charge', 'pumped-hydro|discharge':'Storage|discharge',
 
@@ -1162,7 +1165,7 @@ aggcolors = {
 
     'Hydro': techcolors['hydro'],
     'Geothermal': techcolors['geothermal'],
-    'Canadian imports': techcolors['dr'],
+    'Canadian imports': techcolors['dr_shed'],
 
     # 'Bio/BECCS':plt.cm.tab20(4),
     # 'H2 turbine':plt.cm.tab20(5),
@@ -2286,98 +2289,50 @@ except Exception:
 
 
 #%%### Transmission maps
-if (len(cases) == 2) and (not forcemulti):
-    plt.close()
-    f,ax = reedsplots.plot_trans_diff(
-        casebase=casebase,
-        casecomp=casecomp,
-        pcalabel=False,
-        wscale=0.0004,
-        subtract_baseyear=2020,
-        yearlabel=True,
-        year=lastyear,
-        alpha=1, dpi=150,
-        titleshorten=titleshorten,
-    )
-    reeds.results.add_to_pptx(f'Transmission ({lastyear})', prs=prs)
-    if interactive:
-        plt.show()
-else:
-    ### Absolute
-    wscale = 0.0003
-    alpha = 0.8
-    for subtract_baseyear in [None, 2020]:
-        plt.close()
-        f,ax = plt.subplots(
-            nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
-            gridspec_kw={'wspace':0.0,'hspace':-0.1},
-        )
-        for case in cases:
-            ### Plot it
-            reedsplots.plot_trans_onecase(
-                case=cases[case], pcalabel=False, wscale=wscale,
-                yearlabel=False, year=lastyear, simpletypes=None,
-                alpha=alpha, scalesize=8,
-                f=f, ax=ax[coords[case]], title=False,
-                subtract_baseyear=subtract_baseyear,
-                thickborders='transreg', drawstates=False, drawzones=False, 
-                label_line_capacity=10,
-                scale=(True if case == basecase else False),
-            )
-            ax[coords[case]].set_title(case)
-        ### Formatting
-        title = (
-            f'New interzonal transmission since {subtract_baseyear}' if subtract_baseyear
-            else 'All interzonal transmission')
-        for row in range(nrows):
-            for col in range(ncols):
-                if nrows == 1:
-                    ax[col].axis('off')
-                elif ncols == 1:
-                    ax[row].axis('off')
-                else:
-                    ax[row,col].axis('off')
-        ### Save it
-        slide = reeds.results.add_to_pptx(title, prs=prs)
-        if interactive:
-            plt.show()
-
-
-    ### Difference
+tx_data = {}
+# if (len(cases) == 2) and (not forcemulti):
+#     plt.close()
+#     f,ax,tx_data[basecase] = reedsplots.plot_trans_diff(
+#         casebase=casebase,
+#         casecomp=casecomp,
+#         pcalabel=False,
+#         wscale=0.0004,
+#         subtract_baseyear=2020,
+#         yearlabel=True,
+#         year=lastyear,
+#         alpha=1, dpi=150,
+#         titleshorten=titleshorten,
+#     )
+#     reeds.results.add_to_pptx(f'Transmission ({lastyear})', prs=prs)
+#     if interactive:
+#         plt.show()
+# else:
+### Absolute
+wscale = 0.0003
+alpha = 0.8
+for subtract_baseyear in [None, 2020]:
     plt.close()
     f,ax = plt.subplots(
         nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
         gridspec_kw={'wspace':0.0,'hspace':-0.1},
     )
     for case in cases:
+        ### Plot it
+        fig,axes,tx_data[case] = reedsplots.plot_trans_onecase(
+            case=cases[case], pcalabel=False, wscale=wscale,
+            yearlabel=False, year=lastyear, simpletypes=None,
+            alpha=alpha, scalesize=8,
+            f=f, ax=ax[coords[case]], title=False,
+            subtract_baseyear=subtract_baseyear,
+            thickborders='transreg', drawstates=False, drawzones=False, 
+            label_line_capacity=10,
+            scale=(True if case == basecase else False),
+        )
         ax[coords[case]].set_title(case)
-        if case == basecase:
-            ### Plot absolute
-            reedsplots.plot_trans_onecase(
-                case=cases[case], pcalabel=False, wscale=wscale,
-                yearlabel=False, year=lastyear, simpletypes=None,
-                alpha=alpha, scalesize=8,
-                f=f, ax=ax[coords[case]], title=False,
-                subtract_baseyear=subtract_baseyear,
-                thickborders='transreg', drawstates=False, drawzones=False, 
-                label_line_capacity=10,
-                scale=(True if case == basecase else False),
-            )
-        else:
-            ### Plot the difference
-            reedsplots.plot_trans_diff(
-                casebase=cases[basecase], casecomp=cases[case],
-                pcalabel=False, wscale=wscale,
-                yearlabel=False, year=lastyear, simpletypes=None,
-                alpha=alpha,
-                f=f, ax=ax[coords[case]],
-                subtract_baseyear=subtract_baseyear,
-                thickborders='transreg', drawstates=False, drawzones=False, 
-                label_line_capacity=10,
-                scale=False,
-            )
     ### Formatting
-    title = 'Interzonal transmission difference'
+    title = (
+        f'New interzonal transmission since {subtract_baseyear}' if subtract_baseyear
+        else 'All interzonal transmission')
     for row in range(nrows):
         for col in range(ncols):
             if nrows == 1:
@@ -2390,6 +2345,70 @@ else:
     slide = reeds.results.add_to_pptx(title, prs=prs)
     if interactive:
         plt.show()
+
+# Print out transmission difference data
+tx_diff = tx_data[basecase].copy()[['r','rr','trtype','MW']].rename(columns={'MW': f'{basecase}_MW'})
+for key in tx_data.keys():
+    if key == basecase:
+        continue
+    tx_diff = pd.merge(
+        tx_diff,
+        tx_data[key][['r','rr','trtype','MW']].rename(columns={'MW': f'{key}_MW'}),
+        on=['r', 'rr', 'trtype'],
+        how='outer'
+    )
+    tx_diff[f'{basecase}-{key}'] = tx_diff[f'{basecase}_MW'] - tx_diff[f'{key}_MW']
+
+tx_diff = tx_diff.fillna(0)
+tx_diff.to_csv(os.path.join(outpath),'tx_diff.csv', index=False)
+
+### Difference
+plt.close()
+f,ax = plt.subplots(
+    nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
+    gridspec_kw={'wspace':0.0,'hspace':-0.1},
+)
+for case in cases:
+    ax[coords[case]].set_title(case)
+    if case == basecase:
+        ### Plot absolute
+        reedsplots.plot_trans_onecase(
+            case=cases[case], pcalabel=False, wscale=wscale,
+            yearlabel=False, year=lastyear, simpletypes=None,
+            alpha=alpha, scalesize=8,
+            f=f, ax=ax[coords[case]], title=False,
+            subtract_baseyear=subtract_baseyear,
+            thickborders='transreg', drawstates=False, drawzones=False, 
+            label_line_capacity=10,
+            scale=(True if case == basecase else False),
+        )
+    else:
+        ### Plot the difference
+        reedsplots.plot_trans_diff(
+            casebase=cases[basecase], casecomp=cases[case],
+            pcalabel=False, wscale=wscale,
+            yearlabel=False, year=lastyear, simpletypes=None,
+            alpha=alpha,
+            f=f, ax=ax[coords[case]],
+            subtract_baseyear=subtract_baseyear,
+            thickborders='transreg', drawstates=False, drawzones=False, 
+            label_line_capacity=10,
+            scale=False,
+        )
+### Formatting
+title = 'Interzonal transmission difference'
+for row in range(nrows):
+    for col in range(ncols):
+        if nrows == 1:
+            ax[col].axis('off')
+        elif ncols == 1:
+            ax[row].axis('off')
+        else:
+            ax[row,col].axis('off')
+### Save it
+slide = reeds.results.add_to_pptx(title, prs=prs)
+if interactive:
+    plt.show()
 
 
 #%%### RA sharing
