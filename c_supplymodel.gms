@@ -1414,8 +1414,8 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
 *    - EXCESS(r,h,t)$[(Sw_PCM=1)]
 
 * add flat load additions (only for Utah)
-    + CAP_FLAT_LOAD(r,t)$[Sw_FlatLoadAdd$r_st(r,"UT")$(yeart(t) >= model_builds_start_yr)]
-
+    + CAP_FLAT_LOAD(r,t)$Sw_FlatLoadAdd
+*    + CAP_FLAT_LOAD(r,t)$[Sw_FlatLoadAdd$r_st(r,"UT")$(yeart(t) >= model_builds_start_yr)]
     =e=
 
 * must equal demand
@@ -1497,7 +1497,7 @@ eq_flat_load_additions(st,t)
     ]..
 
 * the flat load additions in Utah
-    sum{r$r_st(r,"UT"), CAP_FLAT_LOAD(r,t)} * sum{h$h_rep(h), hours(h) }
+    sum{r$r_st(r,st), CAP_FLAT_LOAD(r,t)} * sum{h$h_rep(h), hours(h) }
 
     =g=
 
