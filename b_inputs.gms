@@ -1203,9 +1203,6 @@ alias(pcat,ppcat) ;
 * but restrict out csp techs in this calculation - since they
 * are indexed by a separate pcat (csp-ws) and have special considerations
 prescriptivelink(pcat,i)$[sameas(pcat,i)$(not sum{ppcat, prescriptivelink(ppcat,i) })$(not csp1(i))] = yes ;
-*only geo_hydro techs are considered to meet geothermal prescriptions
-prescriptivelink(pcat,i)$[geo_extra(i)] = no ;
-
 
 *upgrades have no prescriptions
 prescriptivelink(pcat,i)$[upgrade(i)] = no ;
