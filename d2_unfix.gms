@@ -11,6 +11,7 @@
     INV.lo(i,v,r,t)$tmodel(t) = 0 ;
     INV_ENERGY.lo(i,v,r,t)$tmodel(t) = 0 ;
     EXTRA_PRESCRIP.lo(pcat,r,t)$tmodel(t) = 0 ;
+    EXTRA_PRESCRIP_ENERGY.lo(pcat,r,t)$tmodel(t) = 0 ;
     INV_CAP_UP.lo(i,v,r,rscbin,t)$tmodel(t) = 0 ;
     INV_ENER_UP.lo(i,v,r,rscbin,t)$tmodel(t) = 0 ;
     INV_REFURB.lo(i,v,r,t)$tmodel(t) = 0 ;
@@ -86,6 +87,7 @@ CAP_ENERGY.up(i,v,r,t)$tmodel(t) = +inf ;
 INV.up(i,v,r,t)$tmodel(t) = +inf ;
 INV_ENERGY.up(i,v,r,t)$tmodel(t) = +inf ;
 EXTRA_PRESCRIP.up(pcat,r,t)$tmodel(t) = +inf ;
+EXTRA_PRESCRIP_ENERGY.up(pcat,r,t)$tmodel(t) = +inf ;
 INV_CAP_UP.up(i,v,r,rscbin,t)$tmodel(t) = +inf ;
 INV_ENER_UP.up(i,v,r,rscbin,t)$tmodel(t) = +inf ;
 INV_REFURB.up(i,v,r,t)$tmodel(t) = +inf ;

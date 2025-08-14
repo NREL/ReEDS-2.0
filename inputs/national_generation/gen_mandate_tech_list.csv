@@ -32,16 +32,7 @@ lfill-gas,1,1,1,0
 MHKwave,1,1,1,1
 Ocean,1,1,1,1
 ice,0,0,0,0
-battery_2,0,0,0,0
-battery_4,0,0,0,0
-battery_6,0,0,0,0
-battery_8,0,0,0,0
-battery_10,0,0,0,0
-battery_12,0,0,0,0
-battery_24,0,0,0,0
-battery_48,0,0,0,0
-battery_72,0,0,0,0
-battery_100,0,0,0,0
+battery_li,0,0,0,0
 caes,0,0,0,0
 pumped-hydro,0,0,0,0
 pumped-hydro-flex,0,0,0,0
@@ -64,3 +55,4 @@ hydEND,1,1,1,1
 egs_allkm_1*egs_allkm_10,1,1,1,1
 geohydro_allkm_1*geohydro_allkm_10,1,1,1,1
 egs_nearfield_1*egs_nearfield_10,1,1,1,1
+dr_shed_1*dr_shed_2,1,1,1,1

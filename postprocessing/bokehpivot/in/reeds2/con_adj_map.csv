@@ -35,6 +35,7 @@ eq_mingen_lb,Curtailment Caused
 eq_mingen_ub,Curtailment Caused
 eq_minloading,eq_minloading
 eq_min_cf,Variable O&M and Fuel
+eq_max_daily_cf,Variable O&M and Fuel
 eq_national_gen,National RPS
 eq_opres_requirement,Operating Reserves
 eq_orcap,eq_orcap

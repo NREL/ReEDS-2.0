@@ -1005,6 +1005,38 @@ def main(
     psh_dur_out = psh_durs[psh_durs["pshsupplycurve"] == pshsupplycurve]["duration"]
 
     #######################################################
+    #    -- Demand Response  --    #
+    #######################################################
+
+    # Use capacity and cost to add DR Shed to rsc_combined
+    # Define rsc class using tech
+    dr_shed_cap = pd.read_csv(os.path.join(inputs_case,'dr_shed_cap.csv'))
+    dr_shed_cap['class'] = dr_shed_cap['tech']
+    dr_shed_cost = pd.read_csv(os.path.join(inputs_case,'dr_shed_cost.csv'))
+    dr_shed_cost['class'] = dr_shed_cost['tech']
+
+    dr_shed_cap = (pd.melt(dr_shed_cap, id_vars=['tech','class'])
+                .set_index(['tech','class','variable'])
+                .sort_index())
+    dr_shed_cap = dr_shed_cap.reset_index()
+    dr_shed_cost = pd.melt(dr_shed_cost, id_vars=['tech','class'])
+
+    # Convert dollar year
+    dr_shed_cost[dr_shed_cost.select_dtypes(include=['number']).columns] *= deflate['dr_shed']
+
+    # Assign rsc cat
+    dr_shed_cap['var'] = 'cap'
+    dr_shed_cost['var'] = 'cost'
+
+    # Combined cost and capacity
+    dr_shed_dat = pd.concat([dr_shed_cap, dr_shed_cost])
+    dr_shed_dat['bin'] = dr_shed_dat['class'].map(lambda x: x.replace('dr_shed_','bin'))
+    dr_shed_dat['class'] = dr_shed_dat['class'].map(lambda x: x.replace('dr_shed_',''))
+
+    dr_shed_dat.rename(columns={'variable':'r','bin':'variable'}, inplace=True)
+    dr_shed_dat = dr_shed_dat[['tech','r','value','var','variable']].fillna(0)
+
+    #######################################################
     #    -- EV Managed Charging --    #
     #######################################################
     rsc_dr = {}
@@ -1074,7 +1106,7 @@ def main(
     alloutm = pd.melt(allout, id_vars=["r", "tech", "var"])
     alloutm.rename(columns={"bin":"variable"}, inplace=True)
     alloutm = alloutm.loc[alloutm.variable != "class"].copy()
-    alloutm = pd.concat([alloutm, hyddat, psh_out])
+    alloutm = pd.concat([alloutm, hyddat, psh_out,dr_shed_dat])
 
     ### Drop the (cap,cost) entries with nan cost
     alloutm = (

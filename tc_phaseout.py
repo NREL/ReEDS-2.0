@@ -66,7 +66,7 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
     # calculating the single phaseout mult with the maximum safe harbor. This is an expedient for
     # lack of time to create a phaseout for each incentive. 
     safe_harbors = pd.read_csv(
-        os.path.join(case, 'inputs_case', 'safe_harbor_max.csv')
+        os.path.join(case, 'inputs_case', 'safe_harbor.csv')
     ).rename(columns={'*i':'i', 't':'t_online'})
 
     const_times = pd.read_csv(
@@ -105,15 +105,14 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
     # If groups overlapped, drop the resulting duplicates
     const_times = const_times.drop_duplicates(['i', 't_online'])   
 
-    # Append pvb construction times, based on battery_4 construction times
+    # Append pvb construction times, based on battery_li construction times
     const_times = reeds.financials.append_pvb_parameters(
-        dfin=const_times, tech_to_copy='battery_4')
+        dfin=const_times, tech_to_copy='battery_li')
 
     const_times = const_times.merge(safe_harbors, on=['i', 't_online'])
-    const_times['safe_harbor_max'] = const_times['safe_harbor_max'].fillna(0)
+    const_times['safe_harbor'] = const_times['safe_harbor'].fillna(0)
     const_times['t_start_build'] = (
-        const_times['t_online']
-        - const_times[['construction_time', 'safe_harbor_max']].max(axis=1)
+        const_times['t_online'] - const_times['safe_harbor']
     )
 
     if year > GSw_TCPhaseout_start:

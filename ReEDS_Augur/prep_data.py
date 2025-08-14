@@ -24,16 +24,78 @@ The files used by PRAS are:
 
 #%% General imports
 import os
+import re
 import pandas as pd
 import numpy as np
 import gdxpds
-import json
 ### Local imports
 import reeds
 
 
+### Functions
+def errorcheck_reeds2pras(casedir, csvout, h5out):
+    ### In ReEDS2PRAS, two classes of technologies are handled separately:
+    ### - Technologies in pras_vre_gen:
+    ###   - Capacity is defined as the maximum of the hourly generation profile
+    ###   - Capacity is not disaggregated into units and no outages are applied
+    ### - Technologies in max_cap:
+    ###   - Capacity is taken from max_cap and disaggregated into units
+    ###   - Unit outages are applied
+    ###   - (except for batteries and dispatchable hydro, which are not disaggregated and
+    ###     for which outages are not applied)
+    ### So here, to avoid double-counting, make sure the techs in pras_vre_gen and max_cap
+    ### do not overlap
+    profile_techs = h5out['pras_vre_gen'].columns.map(lambda x: x.split('|')[0]).unique()
+    max_cap_techs = csvout['max_cap'].index.get_level_values('i').unique()
+    for check in [
+        [i for i in profile_techs if i in max_cap_techs],
+        [i for i in max_cap_techs if i in profile_techs],
+    ]:
+        if len(check):
+            raise ValueError(f'{check} overlap between pras_vre_gen and max_cap')
+
+    ### ReEDS2PRAS takes the region list from the load data, so make sure all regions
+    ### with generation/transmission capacity show up in the load data
+    load_regions = h5out['pras_load'].columns
+    profile_regions = h5out['pras_vre_gen'].columns.map(lambda x: x.split('|')[1]).unique()
+    max_cap_regions = csvout['max_cap'].index.get_level_values('r').unique()
+    tran_regions = (
+        list(csvout['tran_cap'].index.get_level_values('r').unique())
+        + list(csvout['tran_cap'].index.get_level_values('rr').unique())
+    )
+    energy_regions = csvout['energy_cap'].index.get_level_values('r').unique()
+    converter_regions = csvout['cap_converter'].index
+    for check in [
+        [r for r in profile_regions if r not in load_regions],
+        [r for r in max_cap_regions if r not in load_regions],
+        [r for r in tran_regions if r not in load_regions],
+        [r for r in energy_regions if r not in load_regions],
+        [r for r in converter_regions if r not in load_regions],
+    ]:
+        if len(check):
+            raise ValueError(f'{check} are not in pras_load')
+
+    ### Make sure disaggregated techs have unit sizes, forced outage rates, and MTTRs
+    unitsize = pd.read_csv(
+        os.path.join(casedir, 'inputs_case', 'unitsize.csv'),
+        index_col='tech',
+    )['MW']
+    mttr = pd.read_csv(os.path.join(casedir, 'inputs_case', 'mttr.csv'), index_col='tech')
+    outage_forced = reeds.io.get_outage_hourly(casedir, 'forced')
+    outage_techs = outage_forced.columns.get_level_values('i').unique()
+    ## ReEDS2PRAS does not disaggregate batteries
+    battery_techs = reeds.techs.get_tech_subset_table(casedir).loc[['BATTERY']].tolist()
+    for check, infile in [
+        ([i for i in max_cap_techs if i not in unitsize.index.tolist() + battery_techs], 'unitsize.csv'),
+        ([i for i in max_cap_techs if i not in mttr.index], 'mttr.csv'),
+        ([i for i in max_cap_techs if i not in outage_techs], 'outage_forced_hourly.h5'),
+    ]:
+        if len(check):
+            raise ValueError(f'{check} are missing from {infile}')
+
+
 #%%### Procedure
-def main(t, casedir):
+def main(t, casedir, iteration=0):
     #%%### DEBUGGING: Inputs
     # t = 2020
     # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0')
@@ -65,6 +127,13 @@ def main(t, casedir):
     )
     hmap_allyrs['szn'] = h_dt_szn['season'].copy()
 
+    hmap_myr_stress = pd.read_csv(
+        os.path.join(inputs_case, f'stress{t}i{iteration}', 'hmap_myr.csv'),
+        low_memory=False,
+        index_col='*timestamp',
+        parse_dates=True,
+    ).rename_axis('timestamp')
+
     h_dt_szn = h_dt_szn.set_index(['year', 'hour'])
     # Add explicit timestamp index
     h_dt_szn['timestamp'] = pd.to_datetime(
@@ -78,8 +147,25 @@ def main(t, casedir):
     recf.columns = pd.MultiIndex.from_tuples([tuple(x.split('|')) for x in recf.columns],
                                              names=('i','r'))
 
-    techs = gdxreeds['i_subsets'].pivot(columns='i_subtech',index='i',values='Value')
-    
+    tech_subset_table = reeds.techs.expand_GAMS_tech_groups(
+        reeds.techs.get_tech_subset_table(casedir).reset_index()
+    ).set_index('tech_group').i
+
+    techs_vre = tech_subset_table.loc[['VRE', 'CSP', 'PVB']].unique()
+    if int(sw.pras_vre_combine):
+        ## Group all into a single "vre" tech
+        techs_vre_simplify = dict(zip(
+            techs_vre,
+            ['vre']*len(techs_vre)
+        ))
+    else:
+        ## Strip the resource class but keep resource type;
+        ## e.g. "upv_5" -> "upv", "csp2_3" -> "csp"
+        techs_vre_simplify = dict(zip(
+            techs_vre,
+            [re.sub('\d?_\d+$', '', i) for i in techs_vre]
+        ))
+
     #%%### Set up the output containers and a few other inputs
     csvout, h5out = {}, {}
 
@@ -121,13 +207,22 @@ def main(t, casedir):
         gdxreeds['cap_energy_ivrt'].loc[gdxreeds['cap_energy_ivrt'].t==t].drop('t', axis=1)
         .groupby(['i','v','r'], as_index=False).Value.sum()
     )
+    ### Reset the vintages of all storage energy capacity units to 'new1' as well
+    cap_energy_ivr_devint = cap_energy_ivr.loc[
+        cap_energy_ivr.i.isin(gdxreeds['storage_standalone'].i)].copy()
+    cap_energy_ivr_devint['v'] = 'new1'
+    cap_energy_ivr_devint = (
+        cap_energy_ivr_devint.groupby(['i','v','r'], as_index=False).Value.sum())
+    cap_energy_ivr = pd.concat([
+        cap_energy_ivr.loc[~cap_energy_ivr.i.isin(gdxreeds['storage_standalone'].i)],
+        cap_energy_ivr_devint
+    ], axis=0)
 
-    #%% Remove VRE techs (i.e. techs with profiles in recf) and H2 production / DAC
+    #%% Remove VRE and demand-modifying techs (H2 production, DAC, DR)
+    demand_techs = tech_subset_table[['CONSUME', 'DR_SHED']].values
+    cap_nonloadtechs = cap_ivr.loc[~cap_ivr.i.isin(demand_techs)].copy()
+
     vretechs_i = resources.i.str.lower().unique()
-
-    h2dac = techs['CONSUME'].dropna().index
-    cap_nonh2dac = cap_ivr.loc[~cap_ivr.i.isin(h2dac)].copy()
-
     cap_vre = (
         cap_ivr.loc[cap_ivr.i.str.lower().isin(vretechs_i)]
         .set_index(['i','v','r']).Value.copy()
@@ -159,13 +254,23 @@ def main(t, casedir):
     gen_vre_r = gen_vre_r.groupby(axis=1, level='r').sum()
 
     ### Store generation by (i,r) for capacity_credit.py
-    vre_gen_exist = gen_vre_ir.reindex(resources[['i','r']], axis=1).fillna(0).clip(lower=0)
+    gen_vre_resources = gen_vre_ir.reindex(resources[['i','r']], axis=1).fillna(0).clip(lower=0)
+
+    vre_gen_exist = gen_vre_resources.copy()
     vre_gen_exist.columns = ['|'.join(c) for c in vre_gen_exist.columns]
     vre_gen_exist.index = h_dt_szn.set_index(['ccseason','year','h','hour']).index
     h5out['vre_gen_exist'] = vre_gen_exist
 
-    ### Store generation by r for PRAS
-    h5out['pras_vre_gen'] = vre_gen_exist
+    ### Store generation by (i,r) for PRAS, after aggregating i if necessary
+    pras_vre_gen = gen_vre_resources.copy()
+    pras_vre_gen.columns = pd.MultiIndex.from_arrays([
+        pras_vre_gen.columns.get_level_values('i').map(lambda x: techs_vre_simplify.get(x,x)),
+        pras_vre_gen.columns.get_level_values('r')
+    ])
+    pras_vre_gen = pras_vre_gen.groupby(['i','r'], axis=1).sum()
+
+    pras_vre_gen.columns = ['|'.join(c) for c in pras_vre_gen.columns]
+    h5out['pras_vre_gen'] = pras_vre_gen
 
 
     ###### Store marginal CF by (i,r) for capacity_credit.py
@@ -207,7 +312,21 @@ def main(t, casedir):
         .merge(h_dt_szn_load_years[['h']].reset_index(), left_on='allh', right_on='h')
         .pivot(index='timestamp', columns='r', values='Value')
         .fillna(0)
+        .reindex(h_dt_szn_load_years.index)
     )
+
+    #%%## DR Shed load
+    ### Get the DR shed load for all weather years
+    gen_h_stress = gdxreeds['gen_h_stress_filt']
+    gen_shed = gen_h_stress.loc[
+        (gen_h_stress['t'] == t)
+        & gen_h_stress['i'].isin(tech_subset_table['DR_SHED'].values)
+    ].groupby(['r','allh']).Value.sum().unstack('r')
+    ## First assign values to all timestamps in GSw_HourlyChunkLengthStress
+    gen_shed_combined = gen_shed.reindex(hmap_myr_stress.h.values)
+    gen_shed_combined.index = hmap_myr_stress.index
+    ## Now fill other hours with zero
+    gen_shed_combined = gen_shed_combined.reindex(h_dt_szn.index).fillna(0)
 
 
     #%%### Total load and net load
@@ -225,15 +344,14 @@ def main(t, casedir):
         pras_load = load_year.add(load_h2dac_all_hourly, fill_value=0)
     else:
         pras_load = load_year.copy()
-    pras_load = (
-        pras_load.merge(
-            h_dt_szn[['season', 'year', 'h', 'hour']], left_index=True, right_index=True
-        )
-        .set_index(['season', 'year', 'h', 'hour'])
-    )
+
+    ### Subtract dr-shed load
+    if int(sw.GSw_DRShed) and not gen_shed_combined.empty:
+        pras_load = pras_load.subtract(gen_shed_combined, fill_value=0).clip(lower=0)
+
     h5out['pras_load'] = pras_load
     ## Include the hourly H2/DAC load for debugging
-    h5out['pras_h2dac_load'] = load_h2dac_all_hourly.reset_index(drop=True)
+    h5out['pras_h2dac_load'] = load_h2dac_all_hourly
 
     ### Store load with the appropriate index for capacity_credit.py
     h5out['load'] = (
@@ -242,19 +360,6 @@ def main(t, casedir):
         )
         .set_index(['ccseason', 'year', 'h', 'hour'])
     )
-
-    # Get mean time to repair (mttr) data
-    with open((os.path.join(inputs_case, 'pcm_defaults.json'))) as f:
-        pcm_data_dict = json.load(f)
-
-    mttr_df = pd.Series(
-        index=pcm_data_dict.keys(),
-        data=[pcm_data_dict[tech]['mean_time_to_repair'] for tech in pcm_data_dict.keys()],
-        name='mean_time_to_repair',
-        dtype=int,
-    ).rename_axis('tech')
-
-    csvout['mttr_data'] = mttr_df
 
     #%%### Collect some csv's for ReEDS2PRAS
     csvout['cap_converter'] = (
@@ -275,8 +380,22 @@ def main(t, casedir):
             .drop(['level','levell'], axis=1)
         )
     csvout['tran_cap'] = tran_cap
+
     ### Nameplate capacity
-    max_cap = cap_nonh2dac.set_index(['i','v','r']).Value.rename('MW')
+    max_cap = cap_nonloadtechs.set_index(['i','v','r']).Value.rename('MW')
+    ## Drop VRE since it is handled through pras_vre_gen
+    max_cap = max_cap.loc[
+        ~max_cap.index.get_level_values('i').isin(
+            list(techs_vre_simplify.keys()) + list(techs_vre_simplify.values())
+        )
+    ].copy()
+    ## Aggregate geothermal
+    simplify_geo = dict(zip(
+        tech_subset_table['GEO'].values,
+        ['geothermal']*len(tech_subset_table['GEO'])
+    ))
+    max_cap = max_cap.rename(index=simplify_geo, level='i').groupby(['i','v','r']).sum()
+
     ## Storage energy capacity [MWh] = power capacity [MW] * duration [h]
     energy_cap = (
         cap_storage_devint
@@ -284,13 +403,18 @@ def main(t, casedir):
         .multiply(duration)
         .rename('MWh')
     )
-    ## Append continuous batteries energy capacity
+    ## Append batteries energy capacity
     energy_cap = pd.concat([
         energy_cap,
         cap_energy_ivr.set_index(['i','v','r'])['Value'].rename('MWh')
     ])
     energy_cap = energy_cap.round(2)
     energy_cap = energy_cap[energy_cap > 0]
+
+    # Add to max_cap any index in energy_cap that's missing, setting them to 0
+    missing_index = energy_cap.index.difference(max_cap.index)
+    max_cap = pd.concat([max_cap, pd.Series(0, index=missing_index, name=max_cap.name)])
+
     ## Drop storage with energy or power capacity below the PRAS cutoff
     too_small_storage = list(set(
         energy_cap.loc[energy_cap < sw['storcap_cutoff']].index.tolist()
@@ -298,39 +422,69 @@ def main(t, casedir):
             max_cap.loc[energy_cap.index] < sw['storcap_cutoff']].index.tolist()
         + max_cap.loc[max_cap < sw['storcap_cutoff']/2].index.tolist()
     ))
+
     csvout['energy_cap'] = energy_cap.drop(too_small_storage, errors='ignore')
     csvout['max_cap'] = max_cap.drop(too_small_storage, errors='ignore')
 
+    ### Storage efficiency
+    storage_hybrid = reeds.techs.expand_GAMS_tech_groups(
+        reeds.techs.get_tech_subset_table(casedir).loc[['STORAGE_HYBRID']].reset_index()
+    ).i
+    storage_eff = (
+        gdxreeds['storage_eff']
+        .loc[gdxreeds['storage_eff'].t==t]
+        .set_index('i')
+        .Value
+        .rename('fraction')
+        ## Only keep standalone storage
+        .drop(storage_hybrid, errors='ignore')
+    )
+    ## As in ReEDS LP, storage losses are applied to charging side (none for discharging)
+    csvout['charge_eff'] = storage_eff
+    csvout['discharge_eff'] = pd.Series(index=storage_eff.index, data=1., name='fraction')
+
     #%% Strip water tech suffixes from water-dependent technologies
-    ### NOTE: This must be done to make water runs compatible with PRAS, as PRAS is not set 
-    ###       up to ingest generation techs with water tech suffixes, as well as to ensure
-    ###       PRAS is operating the same for runs with/without GSw_WaterMain on.
+    ### and change upgrade techs to the tech they are upgraded FROM.
+    ### It would be more natural to use the tech they are upgraded TO but in most cases
+    ### (e.g. for CCS and H2) we don't have empirical outage rates for the upgraded-TO tech.
+    watertech2tech = pd.concat([
+        pd.read_csv(
+            os.path.join(casedir,'inputs_case','i_coolingtech_watersource_link.csv'),
+            usecols=['*i','ii'],
+        ),
+        pd.read_csv(
+            os.path.join(casedir,'inputs_case','i_coolingtech_watersource_upgrades_link.csv'),
+            usecols=['*i','ii'],
+        ),
+    ]).apply(lambda x: x.str.lower()).set_index('*i').squeeze(1)
 
-    # For each dataframe in csvout, check if it has an 'i' index and if it does, use 
-    # i_ctt_wst_link to remove the water suffixes
-    watertech_link = pd.read_csv(
-        os.path.join(casedir,'inputs_case','i_coolingtech_watersource_link.csv'),
-             usecols=['*i','ii']
-        )
-    waterupgrades_link = pd.read_csv(
-        os.path.join(casedir,'inputs_case','i_coolingtech_watersource_upgrades_link.csv'),
-             usecols=['*i','ii']
-        )
-    watertech_link = pd.concat([watertech_link, waterupgrades_link])
-    watertech_link = watertech_link.apply(lambda x: x.str.lower()).set_index('*i').squeeze(1)
+    upgrade2from = (
+        pd.concat([
+            pd.read_csv(
+                os.path.join(casedir, 'inputs_case', 'upgrade_link.csv')
+            ).rename(columns={'*TO':'TO'}),
+            pd.read_csv(
+                os.path.join(casedir, 'inputs_case', 'upgradelink_water.csv')
+            ).rename(columns={'*TO-WATER':'TO', 'FROM-WATER':'FROM', 'DELTA-WATER':'DELTA'}),
+        ])
+        .apply(lambda x: x.str.lower())
+        .set_index('TO').FROM
+        .map(lambda x: watertech2tech.get(x,x))
+    )
+    watertech2tech = watertech2tech.map(lambda x: upgrade2from.get(x,x))
 
-    for key in csvout.keys():
-        df = csvout[key]
-        if 'i' in df.index.names:
-            # Strip water tech suffixes from tech names
-            df.rename(index=watertech_link, level='i', inplace=True)
-            # Sum over i,v,t combination duplicates now that water techs have been stripped
-            indices = list(df.index.names)
-            df = df.groupby(df.index).sum()
-            # Reset the index names
-            df.index = pd.MultiIndex.from_tuples(df.index, names=indices)
-            # Rewrite data in csvout with updated data
-            csvout[key] = df.copy()
+    techmap = pd.concat([upgrade2from, watertech2tech])
+
+    ### Simplify all the techs in output csv files and sum the capacities
+    for key in csvout:
+        indices = csvout[key].index.names
+        if ('i' in indices) and ('cap' in key):
+            csvout[key] = csvout[key].rename(index=techmap, level='i').groupby(indices).sum()
+
+
+    #%% Check for errors before sending to ReEDS2PRAS
+    errorcheck_reeds2pras(casedir, csvout, h5out)
+
 
     #%%### Write it
     #%% .csv files
@@ -338,13 +492,20 @@ def main(t, casedir):
         csvout[key].round(int(sw['decimals'])).to_csv(
             os.path.join(casedir,'ReEDS_Augur','augur_data',f'{key}_{t}.csv'),
         )
-        
+
     #%% .h5 files
     for key in h5out:
-        h5out[key].astype(np.float32).to_hdf(
-            os.path.join(casedir,'ReEDS_Augur','augur_data',f'{key}_{t}.h5'),
-            key='data', complevel=4, mode='w',
-        )
+        if key.startswith('pras'):
+            reeds.io.write_profile_to_h5(
+                df=h5out[key].astype(np.float32),
+                filename=f'{key}_{t}.h5',
+                outfolder=os.path.join(casedir,'ReEDS_Augur','augur_data'),
+            )
+        else:
+            h5out[key].astype(np.float32).to_hdf(
+                os.path.join(casedir,'ReEDS_Augur','augur_data',f'{key}_{t}.h5'),
+                key='data', complevel=4, mode='w',
+            )
 
     #%%### Return outputs for debugging
     return csvout, h5out

@@ -10,6 +10,7 @@ import argparse
 import shutil
 import subprocess
 import yaml
+import json
 import re
 # Local Imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -235,19 +236,19 @@ def get_regions_and_agglevel(
     # Parse the GSw_Region switch. If it includes a '/' character, it has the format
     # {column of hierarchy.csv}/{period-delimited entries to keep from that column}.
     if '/' in sw['GSw_Region']:
-        GSw_RegionLevel, GSw_Region = sw['GSw_Region'].split('/')
-        GSw_Region = GSw_Region.split('.')
-        if len(GSw_Region) == 1:
-            hier_sub = hierarchy[hierarchy[GSw_RegionLevel] == GSw_Region[0]].copy()
-        else:
-            for idx in range(0,len(GSw_Region)):
-                if idx == 0:
-                    hier_sub = hierarchy[hierarchy[GSw_RegionLevel] == GSw_Region[idx]].copy()
-                else:
-                    hier_sub = pd.concat([
-                        hier_sub,
-                        hierarchy[hierarchy[GSw_RegionLevel] == GSw_Region[idx]]
-                    ])
+        hier_sub = pd.DataFrame()
+        # allow the list defined by the user to include multiple spatial resolutions
+        region_groups = sw['GSw_Region'].split('//') if '//' in sw['GSw_Region'] else [sw['GSw_Region']]
+        # separate lists associated with each spatial resolution
+        for region_group in region_groups:
+            GSw_RegionLevel, GSw_Region = region_group.split('/')
+            GSw_Region = GSw_Region.split('.')
+            
+            hier_sub_partial = pd.concat([
+                hierarchy[hierarchy[GSw_RegionLevel] == region] for region in GSw_Region
+            ])
+            
+            hier_sub = pd.concat([hier_sub, hier_sub_partial])
     # Otherwise use the modeled_regions.csv file to define the regions
     else:
         modeled_regions = pd.read_csv(
@@ -543,7 +544,7 @@ def subset_to_valid_regions(
         if filetype_in == 'h5':
             df = reeds.io.read_file(full_path)
             if filename == 'recf_distpv.h5':
-                df.columns = df.columns.str.replace('distpv|','')
+                df.columns = df.columns.str.replace('distpv|','')            
 
         elif filetype_in == 'csv':
             df = pd.read_csv(full_path, dtype={'FIPS':str, 'fips':str, 'cnty_fips':str})
@@ -585,9 +586,12 @@ def subset_to_valid_regions(
 
 
         # Transmission files need to be filtered differently to allow interfaces between BA and county resolution regions
-        transmission_files = ['transmission_capacity_init_AC_r.csv','transmission_capacity_init_nonAC.csv',
-                      'transmission_distance_cost_500kVac.csv','transmission_distance_cost_500kVdc.csv',
-                      'r_rr_adj.csv']
+        transmission_files = [
+            'transmission_capacity_init_AC_r.csv',
+            'transmission_capacity_init_nonAC.csv',
+            'transmission_distance_cost_500kVac.csv',
+            'transmission_distance_cost_500kVdc.csv',
+        ]
 
         if filename in transmission_files:
             # Filter county data to include regions being solved at both BA and county resolution
@@ -619,8 +623,7 @@ def subset_to_valid_regions(
                 df_county = df_county.groupby([tx_region_col,'rr']).mean().reset_index()
             else:
                 df_county = df_county.groupby([tx_region_col,'rr']).sum().reset_index()
-            if filename != 'r_rr_adj.csv':
-                df_county['interface'] = df_county[tx_region_col] + '||'+df_county['rr']
+            df_county['interface'] = df_county[tx_region_col] + '||'+df_county['rr']
             df_county.reset_index(drop=True,inplace=True)
 
         else:
@@ -736,7 +739,11 @@ def filter_data(
     if region_col == 'wide':
         # Check to see if the regions are listed in the columns. If they are,
         # then use those columns
-        if df.columns.isin(val_r_all).any():
+
+        # Need check for case where there are no data for val_r_all (but not because of the column headr formatting) and empty dataframe needs to be returned
+        if (len([x for x in val_r_all if x in df.columns])==0) & ( not any('|' in col for col in df.columns)) & ( not any('_' in col for col in df.columns)):
+            df = df.loc[:,df.columns.isin(fix_cols + val_r_all)]
+        elif df.columns.isin(val_r_all).any():            
             df = df.loc[:,df.columns.isin(fix_cols + val_r_all)]
         else:
             # Checks if regions are in columns as '[class]|[region]' or '[class]_[region]' (e.g. in 8760 RECF data).
@@ -744,7 +751,7 @@ def filter_data(
             # value for any regions.
             # If it can't do so, it will instead use a blank dataframe.
             try:
-                if '|' in df.columns[0]:
+                if any('|' in col for col in df.columns):
                     delim = '|'
                 elif '_' in df.columns[0]:
                     delim = '_'
@@ -755,7 +762,7 @@ def filter_data(
                                 .isin(val_r_all)
                                 .tolist()
                 )
-                df = df.loc[:,column_mask]
+                df = df.loc[:, column_mask | df.columns.isin(fix_cols)]
                 # Empty h5 files cannot be read in, causing errors in ldc_prep.py.
                 # In the case that val_r_all filters out all columns, leaving an empty dataframe,
                 # fill a single column with NaN to preserve the file index for use in ldc_prep
@@ -874,7 +881,7 @@ def write_non_region_file(filename, src_file, dir_dst, sw, regions_and_agglevel)
                 os.path.join(dir_dst,'h2_exogenous_demand.csv')
             )
 
-        elif filename == 'energy_communities.csv':
+        elif filename in ['energy_communities.csv', 'nuclear_energy_communities.csv']:
             # Map energy communities to regions and compute the percentage of energy communities
             # within each region to assign a weighted bonus.
 
@@ -1111,7 +1118,7 @@ def write_county_vre_hourly_profiles(inputs_case, reeds_path):
             os.path.join(
                 reeds_path,'inputs','variability','multi_year','file_version.csv'), index = False)
 
-
+    
 def calculate_county_fractions(df, regions_and_agglevel):
     """
     Calculates the value associated with each county as a percentage
@@ -1225,7 +1232,7 @@ def write_region_indexed_file(
                 | 'demonstration_plants.csv'
                 | 'distpvcap.csv'
                 | 'h2_ba_share.csv'
-                | 'regional_cap_cost_mult.csv'
+                | 'regional_cap_cost_diff.csv'
             ):
                 if agglevel_variables['lvl'] != 'county':
                     df = upscale_from_county_to_ba(
@@ -1289,6 +1296,32 @@ def write_region_indexed_files(
             regions_and_agglevel,
             agglevel_variables
         )
+
+
+def calculate_adjacent_routes(dfzones):
+    dfzones['r_adj'] = dfzones.apply(
+        axis=1,
+        func=lambda x: (
+            dfzones.loc[(
+                dfzones.touches(x['geometry'])
+                | dfzones.overlaps(x['geometry'])
+            )]
+            .index
+            .values
+            .tolist()
+        )
+    )
+    # Reformat so that each row represents a pair of regions
+    routes_adjacent = (
+        dfzones.drop(columns='geometry')
+        .explode('r_adj')
+        .reset_index(names=['r'])
+        .rename(columns={'r': '*r', 'r_adj': 'rr'})
+        [['*r', 'rr']]
+        .dropna()
+    )
+
+    return routes_adjacent
 
 
 def write_miscellaneous_files(
@@ -1467,18 +1500,6 @@ def write_miscellaneous_files(
         .reorder_levels(['*nercr','t']).round(4)
     ).to_csv(os.path.join(inputs_case,'prm_annual.csv'))
 
-    # Deflate nuke_fom_adj and coal_fom_adj
-    for relative_fpath in ["inputs/plant_characteristics/nuke_fom_adj.csv",
-                    "inputs/plant_characteristics/coal_fom_adj.csv"]:
-        fname = os.path.basename(relative_fpath)
-        (
-            pd.read_csv(os.path.join(reeds_path,relative_fpath),
-                        index_col='*t')
-            .mul(source_deflator_map[relative_fpath])
-            .round(0)
-            .to_csv(os.path.join(inputs_case,fname))
-        )
-
     # Add capacity deployment limits based on interconnection queue data
     cap_queue = pd.read_csv(
         os.path.join(reeds_path,'inputs','capacity_exogenous','interconnection_queues.csv'))
@@ -1575,6 +1596,36 @@ def write_miscellaneous_files(
         index=False
     )
 
+    # Determine model region adjacencies
+    dfzones = reeds.io.get_dfmap(
+        os.path.dirname(inputs_case),
+        levels=['r'],
+        exclude_water_areas=True
+    )['r']
+    routes_adjacent = calculate_adjacent_routes(dfzones)
+    routes_adjacent.to_csv(
+        os.path.join(inputs_case,'routes_adjacent.csv'),
+        index=False
+    )
+
+    ## Unit sizes for ReEDS2PRAS
+    fpath_out = os.path.join(inputs_case, 'unitsize.csv')
+    if sw['pras_unitsize_source'] == 'atb':
+        shutil.copy(
+            os.path.join(reeds_path, 'inputs', 'plant_characteristics', 'unitsize_atb.csv'),
+            fpath_out,
+        )
+    elif sw['pras_unitsize_source'] == 'r2x':
+        fpath_in = os.path.join(reeds_path, 'inputs', 'plant_characteristics', 'pcm_defaults.json')
+        with open(fpath_in) as f:
+            pcm_defaults = json.load(f)
+        unitsize = pd.Series(
+            index=pcm_defaults.keys(),
+            data=[pcm_defaults[tech]['avg_capacity_MW'] for tech in pcm_defaults.keys()],
+            name='MW',
+        ).rename_axis('tech').dropna().astype(int)
+        unitsize.to_csv(fpath_out)
+
 
 def generate_maps_gpkg(inputs_case):
     """
@@ -1611,7 +1662,7 @@ def main(reeds_path, inputs_case, NARIS=False):
     # Obtain data necessary to filter and aggregate regions
     regions_and_agglevel = get_regions_and_agglevel(reeds_path, inputs_case, NARIS=NARIS)
     # Use agglevel_variables function to obtain spatial resolution variables
-    agglevel_variables = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)
+    agglevel_variables = reeds.spatial.get_agglevel_variables(reeds_path, inputs_case)             
 
     #%% ===========================================================================
     ### --- Copying files ---
@@ -1698,5 +1749,4 @@ if __name__ == '__main__' and not hasattr(sys, 'ps1'):
 
     reeds.log.toc(tic=tic, year=0, process='input_processing/copy_files.py',
         path=os.path.join(inputs_case,'..'))
-    print('Finished copy_files.py')
-    
+    print('Finished copy_files.py')  

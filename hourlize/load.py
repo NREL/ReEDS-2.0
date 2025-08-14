@@ -85,9 +85,9 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
                                           suffixes=('', f'_{year_cal}'))
                 del df_temp
                 # Get change in original projected load from latest year
-                df_scale['GWh_diff'] = df_scale['GWh'] - df_scale['GWh_2022']
+                df_scale['GWh_diff'] = df_scale['GWh'] - df_scale['GWh_2024']
                 # Add this difference to latest year actual historical load
-                df_scale['GWh_cal_mod'] = df_scale['GWh_cal_2022'] + df_scale['GWh_diff']
+                df_scale['GWh_cal_mod'] = df_scale['GWh_cal_2024'] + df_scale['GWh_diff']
                 # Get new load projection
                 df_scale['GWh_new'] = df_scale['GWh_cal']
                 df_scale.loc[df_scale['GWh_new'].isnull(), 
@@ -198,7 +198,8 @@ if __name__== '__main__':
     
     #If load source is a directory (as it is for EER load), the csv files inside need to be labeled like w2007.csv.
     ls_df_hr = []
-    for year in list(range(2007,2014)):
+    weather_years = list(range(2007,2014)) + list(range(2016,2024))
+    for year in weather_years:
         print('processing weather year ' + str(year) + '...')
         df_hr_input = get_hourly_load(os.path.join(cf.load_source,'w'+str(year)+'.csv'), cf.us_only)
         if cf.hourly_process is False:
@@ -211,7 +212,7 @@ if __name__== '__main__':
         ls_df_hr.append(df_hr)
     df_multi = pd.concat(ls_df_hr)
     df_multi = df_multi.sort_index()
-    #Splice in default data, for which the first entry is Jan 1, 1am hour ending, which is 12am-1am, which is 12am hour beginning.
+    #Splice in default data.
     if cf.use_default_before_yr is not False:
         print('Splicing in default load before ' + str(cf.use_default_before_yr))
         df_hist = reeds.io.read_file(paths['load_default'], parse_timestamps=True)

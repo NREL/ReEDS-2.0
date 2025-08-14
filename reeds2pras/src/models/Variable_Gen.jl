@@ -1,27 +1,3 @@
-const ReEDS_VRE_TYPES = [
-    "wind-ons",
-    "wind-ofs",
-    "upv",
-    "distpv",
-    "csp",
-    "pvb",
-    "hydnd",
-    "hydsnd",
-    "hydund",
-    "hydnpnd",
-    "hydend",
-]
-
-function check_reeds_vre_type(
-    type::Union{STRING, String},
-) where {STRING <: InlineStrings.InlineString}
-    if (sum(occursin.(ReEDS_VRE_TYPES, type)) == 1)
-        return true
-    else
-        return false
-    end
-end
-
 """
     This function takes in the attributes of a variable generator (Variable_Gen)
     and returns an object containing all its information. The input
@@ -88,9 +64,6 @@ struct Variable_Gen <: Generator
         length(capacity) == timesteps ||
             error("The length of the $(name) time series data is $(length(capacity))
                    but it should be should be equal to PRAS timesteps ($(timesteps))")
-
-        check_reeds_vre_type(type) ||
-            error("$(name) has type $(type) which is not in $(ReEDS_VRE_TYPES)")
 
         legacy in ["Existing", "New"] ||
             error("$(name) has legacy $(legacy) which is not in [Existing, New]")

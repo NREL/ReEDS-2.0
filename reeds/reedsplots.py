@@ -35,19 +35,13 @@ techmarkers = {
     'distpv': 'o',
     'csp': 'o',
     'pvb': 'o',
+    'dr_shed':'o',
 
     'wind-ons': '^',
     'wind-ofs': 'v',
 
-    'battery_4': (4,1,0),
-    'battery_8': (8,1,0),
-    'battery_12': (12,1,0),
-    'battery_24': (24,1,0),
-    'battery_48': (48,1,0),
-    'battery_72': (72,1,0),
-    'battery_100': (100,1,0),
     'pumped-hydro': (8,1,0),
-    'battery': (4,1,0),
+    'battery_li': (4,1,0),
 
     'hydro': 's',
     'nuclear': 'p', # '☢️',
@@ -58,6 +52,7 @@ techmarkers = {
     'geothermal': 'h',
 
     'h2-ct': '>',
+    'h2-cc': '<',
 
     'gas-cc': '<',
     'gas-cc-ccs_mod': 'D',
@@ -1041,8 +1036,8 @@ def plotdiffmaps(val, i_plot, year, casebase, casecomp, reeds_path,
         'coal-new_coal-ccs_mod':'coal-ccs', 'coaloldscr_coal-ccs_mod':'coal-ccs',
         'coalolduns_coal-ccs_mod':'coal-ccs', 'coal-igcc_coal-ccs_mod':'coal-ccs',
         're-ct':'h2-ct', 'h2-ct_upgrade':'h2-ct',
-        're-cc':'h2-ct', 'h2-cc':'hc-ct', 'h2-cc_upgrade':'h2-ct',
-        'gas-cc_re-cc':'h2-ct', 'gas-ct_re-ct':'h2-ct', 'gas-ct_h2-ct':'h2-ct', 
+        're-cc':'h2-ct', 'h2-cc':'hc-ct',
+        'gas-cc_re-cc':'h2-ct', 'gas-ct_re-ct':'h2-ct', 'gas-cc_h2-cc':'h2-cc', 'h2-cc_upgrade':'h2-cc', 'gas-ct_h2-ct':'h2-ct', 
         ### Use if grouping onshore and offshore together
         # 'wind-ons':'wind', 'wind-ofs':'wind',
     }
@@ -2216,10 +2211,22 @@ def animate_dispatch(
         **{f'wind-ons_{i}': 'wind-ons' for i in range(1,11)},
         **{f'wind-ofs_{i}': 'wind-ofs' for i in range(1,11)},
         **{f'upv_{i}': 'pv' for i in range(1,11)},
-        **{'distpv':'pv','lfill-gas':'biopower','Nuclear':'nuclear','pumped-hydro':'pumped-hydro'},
-        **{'hydND':'hydro','hydUD':'hydro','hydUND':'hydro',
-           'hydNPND':'hydro','hydED':'hydro','hydEND':'hydro'},
-        **{'H2-CT':'h2','Gas-CT_H2-CT':'h2','Gas-CC_H2-CT':'h2'},
+        **{
+            'battery_li':'battery',
+            'distpv':'pv',
+            'lfill-gas':'biopower',
+            'Nuclear':'nuclear',
+            'pumped-hydro':'pumped-hydro',
+            'hydND':'hydro',
+            'hydUD':'hydro',
+            'hydUND':'hydro',
+            'hydNPND':'hydro',
+            'hydED':'hydro',
+            'hydEND':'hydro',
+            'H2-CT':'h2',
+            'Gas-CT_H2-CT':'h2',
+            'Gas-CC_H2-CC':'h2',
+        },
     }
     try:
         bokehcolors = pd.read_csv(
@@ -2237,16 +2244,7 @@ def animate_dispatch(
         'wind-ons': bokehcolors['wind-ons'],
         'wind-ofs': bokehcolors['wind-ofs'],
         'pv': bokehcolors['upv'],
-        'battery_2': bokehcolors['battery_2'],
-        'battery_4': bokehcolors['battery_4'],
-        'battery_6': bokehcolors['battery_6'],
-        'battery_8': bokehcolors['battery_8'],
-        'battery_10': bokehcolors['battery_10'],
-        'battery_12': bokehcolors['battery_12'],
-        'battery_24': bokehcolors['battery_24'],
-        'battery_48': bokehcolors['battery_48'],
-        'battery_72': bokehcolors['battery_72'],
-        'battery_100': bokehcolors['battery_100'],
+        'battery_li': bokehcolors['battery_li'],
         'pumped-hydro': bokehcolors['pumped-hydro'],
     }
 
@@ -2801,8 +2799,8 @@ def map_capacity_techs(
         case, year=2050,
         techs=[
             'Utility PV', 'Land-based wind', 'Offshore wind', 'Electrolyzer',
-            'Battery (4h)', 'Battery (8h)', 'PSH', 'H2 turbine',
-            'Nuclear', 'Gas CCS', 'Coal CCS', 'Fossil',
+            'Battery', 'PSH', 'H2 turbine', 'Nuclear',
+            'Gas CCS', 'Coal CCS', 'Gas', 'Coal',
         ],
         ncols=4,
         vmax='shared',
@@ -2817,15 +2815,14 @@ def map_capacity_techs(
         **{f'wind-ofs_{i}':'Offshore wind' for i in range(20)},
         **dict(zip(['nuclear','nuclear-smr'], ['Nuclear']*20)),
         **dict(zip(
-            ['gas-cc_re-cc','gas-ct_re-ct','re-cc','re-ct',
-             'gas-cc_h2-ct','gas-ct_h2-ct','h2-cc','h2-ct'],
+            ['h2-cc', 'h2-ct', 'gas-cc_h2-cc', 'gas-ct_h2-ct'],
             ['H2 turbine']*20)),
         **{'electrolyzer':'Electrolyzer'},
-        **{'battery_4':'Battery (4h)', 'battery_8':'Battery (8h)', 'pumped-hydro':'PSH'},
+        **{'battery_li':'Battery', 'pumped-hydro':'PSH'},
         **dict(zip(
-            ['coal-igcc', 'coaloldscr', 'coalolduns', 'gas-cc', 'gas-ct', 'coal-new',
-             'o-g-s'],
-            ['Fossil']*20)),
+            ['gas-cc_gas-cc-ccs_mod','gas-cc_gas-cc-ccs_max',
+             'gas-cc-ccs_mod','gas-cc-ccs_max'],
+            ['Gas CCS']*50)),
         **dict(zip(
             ['coal-igcc_coal-ccs_mod','coal-new_coal-ccs_mod',
              'coaloldscr_coal-ccs_mod','coalolduns_coal-ccs_mod','cofirenew_coal-ccs_mod',
@@ -2834,9 +2831,15 @@ def map_capacity_techs(
              'cofirenew_coal-ccs_max','cofireold_coal-ccs_max'],
             ['Coal CCS']*50)),
         **dict(zip(
-            ['gas-cc_gas-cc-ccs_mod','gas-cc_gas-cc-ccs_max',
-             'gas-cc-ccs_mod','gas-cc-ccs_max'],
-            ['Gas CCS']*50)),
+            ['coal-igcc', 'coaloldscr', 'coalolduns', 'coal-new',
+             'gas-cc', 'gas-ct', 'o-g-s'],
+            ['Fossil']*20)),
+        **dict(zip(
+            ['coal-igcc', 'coaloldscr', 'coalolduns', 'coal-new'],
+            ['Coal']*20)),
+        **dict(zip(
+            ['gas-cc', 'gas-ct'],
+            ['Gas']*20)),
         **dict(zip(['dac','beccs_mod','beccs_max'], ['CO2 removal']*20)),
     }
     ### Get maps
@@ -2854,11 +2857,7 @@ def map_capacity_techs(
     else:
         _vmax = None
     ### Arrange the subplots
-    nrows = len(techs) // ncols
-    coords = dict(zip(
-        techs,
-        [(row,col) for row in range(nrows) for col in range(ncols)]
-    ))
+    nrows, _, coords = reeds.plots.get_coordinates(techs, ncols=ncols)
     ### Plot it
     plt.close()
     f,ax = plt.subplots(
@@ -2890,6 +2889,7 @@ def map_capacity_techs(
     ax[0,0].set_title(
         '{} ({})'.format(os.path.basename(case), year),
         x=0.1, ha='left', va='top')
+    plots.trim_subplots(ax, nrows, ncols, len(techs))
     return f, ax
 
 
@@ -4384,8 +4384,10 @@ def plot_neue_bylevel(
     """Plot regional NEUE over time"""
     ### Get final iterations
     year2iteration = (
-        get_stressperiods(case)
-        .reset_index()[['year','iteration']]
+        pd.DataFrame([
+            os.path.basename(i).strip('neue_.csv').split('i')
+            for i in sorted(glob(os.path.join(case, 'outputs', 'neue_*.csv')))
+        ], columns=['year','iteration']).astype(int)
         .drop_duplicates(subset='year', keep='last')
         .set_index('year').iteration
         .loc[tmin:]
@@ -4554,7 +4556,7 @@ def map_h2_capacity(
     dfba = dfmap['r']
 
     scalars = reeds.io.get_scalars(case)
-    h2_ct_intensity = 1e6 / scalars['h2_energy_intensity'] / scalars['lb_per_tonne']
+    h2_combustion_intensity = 1e6 / scalars['h2_energy_intensity'] / scalars['lb_per_tonne']
 
     ### Load storage capacity
     h2_storage_cap_in = reeds.io.read_output(case, 'h2_storage_cap')
@@ -4577,7 +4579,7 @@ def map_h2_capacity(
     heat_rate = heat_rate_in.loc[heat_rate_in.t==year].set_index(['i','v','r']).Value
     ## capacity [MW] * heat rate [MMBtu/MWh] * [metric ton/MMBtu] / 1000 * [24h/d] = [kT per day]
     cap_h2turbine = (
-        cap_ivrt.multiply(heat_rate).dropna() * h2_ct_intensity / 1000 * 24
+        cap_ivrt.multiply(heat_rate).dropna() * h2_combustion_intensity / 1000 * 24
     ).rename('kTperday').groupby('r').sum()
     ## Merge with zone map
     cap_h2turbine = dfba.merge(cap_h2turbine, left_index=True, right_index=True)
@@ -5211,7 +5213,7 @@ def plot_seed_stressperiods(
 
     ### Plot it
     ncols = 3
-    nrows = len(years) // ncols + 1
+    nrows = len(years) // ncols + bool(len(years) % ncols) + 1
     loadcoords = dict(zip(years, [(row+1,col) for row in range(nrows) for col in range(ncols)]))
     minrecoords = {
         'upv': (0, 1),
@@ -5386,9 +5388,10 @@ def get_tech_colors_order(order='fuel_storage_vre'):
     bokehcolors['canada'] = bokehcolors['Canada']
     bokehcolors = bokehcolors.to_dict()
 
-    for i in [f'battery_{d}' for d in [2,4,6,8,10]]+['pumped-hydro']:
+    for i in [f'battery_{d}' for d in [2,4,6,8,10]]+['battery_li','pumped-hydro']:
         for j in ['charge','discharge']:
-            bokehcolors[f'{i}|{j}'] = bokehcolors[i]
+            if i in bokehcolors:
+                bokehcolors[f'{i}|{j}'] = bokehcolors[i]
 
     ### For this particular plot we put storage below VRE
     if order == 'fuel_storage_vre':
@@ -5651,6 +5654,20 @@ def stress_mix_label(case, metric):
     else:
         raise ValueError(f'Could not parse metric: {metric}')
     return xlabel
+
+
+def stress_metrics_shorten(metrics):
+    shortmetrics = (
+        (','.join(metrics))
+        .replace('rep', 'r')
+        .replace('stress', 's')
+        .replace('cap', 'c')
+        .replace('netload', 'nl')
+        .replace('load', 'l')
+        .replace('price', 'p')
+        .replace('vregen', 'vg')
+    )
+    return shortmetrics
 
 
 def plot_cap_rep_stress_mix(
@@ -6080,3 +6097,91 @@ def plot_capacity_offline(
     plots.despine(ax)
 
     return f, ax, dictout
+
+
+def map_outage_days(
+    case,
+    dates=['2008-12-16', '2009-01-15'],
+    techs=['gas-cc', 'gas-ct', 'coaloldscr', 'nuclear', 'hyded'],
+    outage_type='forced',
+    aggfunc='max',
+    cmap=cmocean.cm.rain,
+    vmin=0,
+    vmax='auto',
+    fontsize=4,
+    scale=2,
+):
+    ### Outage rates
+    if outage_type == 'both':
+        outage_hourly = reeds.io.get_outage_hourly(case, 'forced').add(
+            reeds.io.get_outage_hourly(case, 'scheduled'),
+            fill_value=0,
+        )
+    else:
+        outage_hourly = reeds.io.get_outage_hourly(case, outage_type)
+    dtype = type(outage_hourly.columns)
+
+    ### Region map
+    dfba = reeds.io.get_dfmap(case)['r']
+    outage_dates = (
+        pd.concat(
+            {date: outage_hourly.loc[date].agg(aggfunc, axis=0) for date in dates},
+            axis=1, names=('date',)
+        )
+        .loc[techs]
+        .unstack('i')
+    ## Convert to percent
+    ) * 100
+
+    ### Plot setup
+    if vmax in ['auto', 'max', 'data', 'scale']:
+        vmax = (outage_dates.max().max() if dtype == pd.MultiIndex else outage_dates.max())
+    nrows = len(techs)
+    ncols = len(dates)
+    coords = {
+        (tech, date): (row, col)
+        for col, date in enumerate(dates) for row, tech in enumerate(techs)
+    }
+    nicelabels = {
+        'gas-cc': 'Gas CC',
+        'gas-ct': 'Gas CT',
+        'coaloldscr': 'Coal',
+        'nuclear': 'Nuclear',
+        'hyded': 'Hydro',
+    }
+    ### Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(ncols*scale, nrows*scale*0.8), sharex=True, sharey=True,
+    )
+    ## Data
+    index = outage_dates.columns if dtype == pd.MultiIndex else outage_dates.index
+    for date, tech in index:
+        _ax = ax[coords[tech, date]]
+        dfplot = dfba.copy()
+        dfplot['outage_pct'] = outage_dates[date][tech]
+        dfplot.plot(ax=_ax, column='outage_pct', cmap=cmap, vmin=vmin, vmax=vmax)
+        ## Data values
+        if fontsize:
+            for r, row in dfplot.sort_values('outage_pct').iterrows():
+                _ax.annotate(
+                    f"{row.outage_pct:.0f}",
+                    [row.centroid_x, row.centroid_y],
+                    ha='center', va='center', c='k',
+                    fontsize=fontsize,
+                    path_effects=[pe.withStroke(linewidth=1.4, foreground='w', alpha=0.7)],
+                )
+        _ax.axis('off')
+        ## Formatting
+        if date == dates[0]:
+            _ax.annotate(
+                nicelabels.get(tech,tech), (0, 0.5), xycoords='axes fraction',
+                ha='right', va='center', fontsize=14, weight='bold',
+            )
+        if tech == techs[0]:
+            _ax.annotate(
+                date, (0.5, 1.0), xycoords='axes fraction',
+                ha='center', va='bottom', fontsize=14, weight='bold',
+            )
+
+    return f, ax, outage_dates

@@ -12,7 +12,10 @@ from pdb import set_trace as b
 
 print('Read hourly load and load multipliers')
 hierarchy = pd.read_csv(f'{this_dir_path}/../inputs/hierarchy.csv').rename(columns={'ba':'r'}).set_index('r')
-load_historical = reeds.io.read_file(f'{this_dir_path}/../inputs/load/historic_load_hourly.h5', parse_timestamps=True)
+load_historical_pre2015 = reeds.io.read_file(f'{this_dir_path}/../inputs/load/historic_load_hourly.h5', parse_timestamps=True)
+load_historical_post2015 = reeds.io.read_file(f'{this_dir_path}/../inputs/load/historic_post2015_load_hourly.h5', parse_timestamps=True)
+load_historical = pd.concat([load_historical_pre2015,load_historical_post2015],axis=0)
+
 load_multiplier = pd.read_csv(f'{this_dir_path}/../inputs/load/demand_AEO_2023_reference.csv')
 load_multiplier_agglevel = 'st'
 print('Map multipliers to BAs')
@@ -33,6 +36,8 @@ load_historical['load'] *= load_historical['multiplier']
 load_historical = load_historical[['year', 'datetime', 'r', 'load']]
 print('Reformat hourly load profiles')
 load_profiles = load_historical.pivot_table(index=['year', 'datetime'], columns='r', values='load')
+## the projected load profiles have an integer 'year' index. This is currently a float and needs to be set to an int format.
+load_profiles.index = load_profiles.index.set_levels([load_profiles.index.levels[0].astype(int), load_profiles.index.levels[1]], level=['year', 'datetime'])
+
 print('Write out full hourly load profiles')
 reeds.io.write_profile_to_h5(load_profiles, f'historic_full_load_hourly.h5', f'{this_dir_path}/out', compression_opts=4)
-b()

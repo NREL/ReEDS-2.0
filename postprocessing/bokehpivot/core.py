@@ -253,10 +253,10 @@ def static_report(data_type, data_source, static_presets, report_path, report_fo
             logger.info('***Building report section: ' + name + '...')
             preset = static_preset['config']
             download_full_source = False
-            if 'download_full_source' in static_preset and static_preset['download_full_source'] is True:
+            if 'download_full_source' in static_preset and (static_preset['download_full_source'] == True):
                 download_full_source = True
             preset_wdg(preset, download_full_source)
-            if 'html' in report_format and download_full_source is False:
+            if 'html' in report_format and (download_full_source == False):
                 title = bmw.Div(text='<h2 id="section-' + str(sec_i) + '">' + str(sec_i) + '. ' + name + '</h2>')
                 legend = bmw.Div(text=GL['widgets']['legend'].text)
                 display_config = bmw.Div(text=GL['widgets']['display_config'].text)
@@ -1496,7 +1496,7 @@ def create_maps(df, wdg, cols):
     filepath = this_dir_path + '/in/gis_' + reg_name + '.csv'
     region_boundaries = pd.read_csv(filepath, sep=',', dtype={'id': object, 'group': object})
     #Remove holes
-    region_boundaries = region_boundaries[region_boundaries['hole'] is False]
+    region_boundaries = region_boundaries[region_boundaries['hole'] == False]
     #keep only regions that are in df
     region_boundaries = region_boundaries[region_boundaries['id'].isin(full_rgs)]
     #Add x and y columns to region_boundaries and find x and y ranges

@@ -171,7 +171,7 @@ GSw_SpurShare,0
 GSw_StartMarkets,2022
 GSw_StateCap,1
 GSw_StateRPS,1
-GSw_Storage,3
+GSw_Storage,1
 GSw_StorageArbitrageMult,0
 GSw_Storage_in_Min,0
 GSw_TCPhaseout,1

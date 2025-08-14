@@ -26,7 +26,7 @@ static_presets = [
     {'name': 'PV Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['upv','distpv']}}},
     {'name': 'CSP Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['csp']}}},
     {'name': 'Biopower Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['biopower','lfill-gas']}}},
-    {'name': 'Battery Storage Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['battery', 'battery_2', 'battery_4', 'battery_6', 'battery_8', 'battery_10', 'battery_12', 'battery_24', 'battery_48', 'battery_72', 'battery_100', 'battery_li']}}},
+    {'name': 'Battery Storage Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['battery', 'battery_li']}}},
     {'name': 'RE Turbine Capacity (GW)', 'result': 'Capacity BA (GW)', 'preset': 'PCA Map Final by Tech','config':{'explode_group':'None','filter':{'tech':['h2-ct','h2-cc']}}},
     {'name': 'Upgraded Capacity (GW)', 'result': 'Upgraded Capacity (GW)', 'preset': 'Stacked Bars'},
 ]

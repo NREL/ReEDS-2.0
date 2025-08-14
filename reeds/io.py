@@ -75,12 +75,15 @@ def get_hierarchy(case=None, original=False, country='USA'):
     hierarchy = hierarchy.loc[hierarchy.country.str.lower() == country.lower()].copy()
     return hierarchy
 
-def get_countymap(exclude_water_areas=False):
+def get_countymap(select_counties=None, exclude_water_areas=False):
     """Get geodataframe of US counties"""
     crs = 'ESRI:102008'
     dfcounty = gpd.read_file(
         os.path.join(reeds_path, 'inputs', 'shapefiles', 'US_COUNTY_2022')
     ).to_crs(crs)
+
+    if select_counties:
+        dfcounty = dfcounty[dfcounty['rb'].isin(select_counties)]
 
     if exclude_water_areas:
         dfmap = get_dfmap(levels=['country'])
@@ -90,7 +93,7 @@ def get_countymap(exclude_water_areas=False):
     
     return dfcounty
 
-def get_zonemap(case=None):
+def get_zonemap(case=None, exclude_water_areas=False):
     """
     Get geodataframe of model zones, applying aggregation if necessary
     """
@@ -140,29 +143,21 @@ def get_zonemap(case=None):
             dfba = dfba.dissolve('rb').loc[aggreg2anchorreg.aggreg].copy()
 
         ### Get the county map
-        dfcounty = get_countymap()
-        state_fips = pd.read_csv(
-            os.path.join(reeds_path, 'inputs', 'shapefiles', "state_fips_codes.csv"),
-            names=["STATE", "STCODE", "STATEFP", "CONUS"],
-            dtype={"STATEFP": "string"},
-            header=0,
+        dfcounty = get_countymap(
+            agglevel_variables['county_regions'], exclude_water_areas
         )
-        state_fips = state_fips.loc[state_fips['CONUS'], :]
-        dfcounty = dfcounty.merge(state_fips, on="STATEFP")
-        dfcounty = dfcounty[['rb', 'NAMELSAD', 'STATE_x', 'geometry']]
+        dfcounty = dfcounty[['rb', 'NAMELSAD', 'STATE', 'geometry']]
 
         ## Use the centroid for both the transmission endpoint and centroid
         for prefix in ['', 'centroid_']:
             dfcounty[prefix + 'x'] = dfcounty.geometry.centroid.x
             dfcounty[prefix + 'y'] = dfcounty.geometry.centroid.y
 
-        dfcounty.rename(columns={'NAMELSAD': 'county', 'STCODE': 'st'}, inplace=True)
-
-        # Filter to regions being solved at county resolution
-        dfcounty = dfcounty[dfcounty['rb'].isin(agglevel_variables['county_regions'])].set_index(
-            'rb'
+        dfcounty = (
+            dfcounty.rename(columns={'NAMELSAD': 'county', 'STCODE': 'st'})
+            .set_index('rb')
+            .drop(columns=['county'])
         )
-        dfcounty = dfcounty.drop(columns=['county'])
 
         # Combine BA and County
         dfcounty = dfcounty.to_crs(dfba.crs)
@@ -194,6 +189,12 @@ def get_zonemap(case=None):
             dfba = gpd.read_file(
                 os.path.join(reeds_path, 'inputs', 'shapefiles', 'US_PCA')
             ).set_index('rb')
+
+            if 'ba_regions' in agglevel_variables:
+                dfba = dfba.loc[(
+                    dfba.index.intersection(agglevel_variables['ba_regions'])
+                )]
+
             ### Use transmission endpoints from reV
             endpoints = gpd.read_file(
                 os.path.join(reeds_path, 'inputs', 'shapefiles', 'transmission_endpoints')
@@ -213,7 +214,8 @@ def get_zonemap(case=None):
                 .set_index('r')
             )
             ### Get the county map
-            dfba = get_countymap()
+            select_counties = agglevel_variables.get('county_regions')
+            dfba = get_countymap(select_counties, exclude_water_areas)
 
             ### Add US state code and drop states outside of CONUS
             state_fips = pd.read_csv(
@@ -240,7 +242,7 @@ def get_zonemap(case=None):
     return dfba
 
 
-def get_dfmap(case=None, levels=None):
+def get_dfmap(case=None, levels=None, exclude_water_areas=False):
     """Get dictionary of maps at different hierarchy levels"""
     hierarchy = get_hierarchy(case, original=True).drop(columns=['aggreg'], errors='ignore')
     hierarchy_levels = list(hierarchy.columns)
@@ -255,7 +257,7 @@ def get_dfmap(case=None, levels=None):
             dfmap[level] = dfmap[level].set_index(dfmap[level].columns[0]).rename_axis(level)
         return dfmap
 
-    dfba = get_zonemap(case)
+    dfba = get_zonemap(case, exclude_water_areas)
 
     dfmap = {'r': dfba.dropna(subset='country').copy()}
     dfmap['r']['centroid_x'] = dfmap['r'].centroid.x

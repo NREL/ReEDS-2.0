@@ -55,6 +55,7 @@ cost_cap:
   excludesets:
   - hydro
   - psh
+  - dr_shed
 cost_cap_fin_mult:
   indexsets:
   - valinv

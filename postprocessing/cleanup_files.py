@@ -130,6 +130,11 @@ def main(caselist, level=0, dryrun=0, force=0, quiet=0, file_levels=file_levels)
         print('\nFrom these cases:')
         for c in cases:
             print(f'> {c}')
+        if level >= 1:
+            print(
+                f'WARNING: cleanup level {level} removes files used by R2X, '
+                'so do not proceed if you plan to run R2X.'
+            )
 
     if not force:
         confirm = str(input('\nProceed? y/[n]: ') or 'n')
