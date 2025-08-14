@@ -1,15 +1,5 @@
 i,years_per_step
 ice,0
-battery_2,0
-battery_4,0
-battery_6,0
-battery_8,0
-battery_10,0
-battery_12,0
-battery_24,0
-battery_48,0
-battery_72,0
-battery_100,0
 battery_li,0
 biopower,5
 beccs_mod,5
@@ -57,6 +47,7 @@ csp1_1*csp1_12,5
 csp2_1*csp2_12,5
 csp3_1*csp3_12,5
 csp4_1*csp4_12,5
+dr_shed_1*dr_shed_2,0
 evmc_storage_1*evmc_storage_10,2
 evmc_shape_1*evmc_shape_10,2
 hydD,5

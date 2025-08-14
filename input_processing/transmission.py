@@ -154,14 +154,14 @@ else:
     endyear = max(solveyears)
     allyears = range(startyear, max(endyear, limits.index.max())+1)
 
-    ## Take the max over all years for each region and drop negative values
-    net_firm_transfers_nerc = pd.read_csv(
-        os.path.join(inputs_case,'net_firm_transfers_nerc.csv'),
-        index_col=['nercr','t']
+    ## calculate the historical net_firm_import fraction for each region and drop negative values
+    peak_net_imports = pd.read_csv(
+        os.path.join(inputs_case,'peak_net_imports.csv'),
+        index_col=['nercr']
     )
     net_firm_import_frac = (
-        net_firm_transfers_nerc.MW / net_firm_transfers_nerc.MW_TotalDemand
-    ).unstack('nercr').max().clip(lower=0)
+        peak_net_imports.MW / peak_net_imports.MW_TotalDemand
+    ).clip(lower=0)
     nercrs = net_firm_import_frac.index
 
     _dfout = {}
@@ -178,6 +178,7 @@ else:
         else:
             ## Input values are percentages so convert to fractions
             _dfout[key] = pd.Series(index=nercrs, data=float(val) / 100)
+
     firm_import_limit = (
         pd.concat(_dfout, names=('t',)).unstack('nercr')
         ## Linear interpolation between values; flat projections before and after

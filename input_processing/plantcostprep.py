@@ -113,8 +113,8 @@ ccsflex = deflate_func(ccsflex, sw.ccsflexscen)
 beccs = pd.read_csv(os.path.join(inputs_case,'plantchar_beccs.csv'))
 beccs = deflate_func(beccs, sw.plantchar_beccs)
 
-h2ct = pd.read_csv(os.path.join(inputs_case,'plantchar_h2ct.csv'))
-h2ct = deflate_func(h2ct, sw.plantchar_h2ct)
+h2combustion = pd.read_csv(os.path.join(inputs_case,'plantchar_h2combustion.csv'))
+h2combustion = deflate_func(h2combustion, sw.plantchar_h2combustion)
 
 if sw.upgradescen != 'default':
     upgrade = pd.read_csv(os.path.join(inputs_case,'plantchar_upgrades.csv'))
@@ -216,14 +216,11 @@ csp_stack = csp_stack[['t','capcost','fom','vom','i']]
 #######################
 
 battery = pd.read_csv(os.path.join(inputs_case,'plantchar_battery.csv'))
-continuous_battery = pd.read_csv(os.path.join(inputs_case,'plantchar_continuous_battery.csv'))
 battery = deflate_func(battery, sw.plantchar_battery)
-continuous_battery = deflate_func(continuous_battery, sw.plantchar_battery)
 
 evmc_storage = pd.read_csv(os.path.join(inputs_case,'plantchar_evmc_storage.csv'))
 evmc_storage = deflate_func(evmc_storage, 'evmc_storage_' + sw.evmcscen)
-
-evmc_shape = pd.read_csv(os.path.join(inputs_case,'plantchar_evmc_shape.csv'))
+evmc_shape = pd.read_csv(os.path.join(inputs_case,'plantchar_evmc_shape.csv'), dtype = {'fom':float,'vom':float,'rte':float})
 evmc_shape = deflate_func(evmc_shape, 'evmc_shape_' + sw.evmcscen)
 
 caes = pd.read_csv(os.path.join(inputs_case,'plantchar_caes.csv'))
@@ -235,7 +232,7 @@ caes['i'] = 'caes'
 ###############################
 
 alldata = pd.concat([conv,upv_stack,wind_stack,geo_stack,csp_stack,battery,
-                     evmc_storage,evmc_shape,caes,beccs,ccsflex,h2ct],sort=False)
+                     evmc_storage,evmc_shape,caes,beccs,ccsflex,h2combustion],sort=False)
 
 if sw.upgradescen != 'default':
     alldata = pd.concat([alldata,upgrade])
@@ -244,10 +241,14 @@ alldata['t'] = alldata['t'].astype(int)
 
 #Convert from $/kw to $/MW
 alldata['capcost'] = alldata['capcost']*1000
+alldata['capcost_energy'] = alldata.get('capcost_energy', 0) * 1000
 alldata['fom'] = alldata['fom']*1000
+alldata['fom_energy'] = alldata.get('fom_energy', 0) * 1000
 
 alldata['capcost'] = alldata['capcost'].round(0).astype(int)
+alldata['capcost_energy'] = (alldata['capcost_energy'].fillna(0)).round(0).astype(int)
 alldata['fom'] = alldata['fom'].round(0).astype(int)
+alldata['fom_energy'] = (alldata['fom_energy'].fillna(0)).round(0).astype(int)
 alldata['vom'] = alldata['vom'].round(4)
 alldata['heatrate'] = alldata['heatrate'].round(4)
 
@@ -258,27 +259,6 @@ outdata = (
 	### Rename the columns so GAMS reads them as a comment
 	.rename(columns={'i':'*i'})
 )
-
-### Add continuous battery informaton
-#Convert from $/kw to $/MW
-continuous_battery['capcost'] = continuous_battery['capcost']*1000
-continuous_battery['capcost_energy'] = continuous_battery['capcost_energy']*1000
-continuous_battery['fom'] = continuous_battery['fom']*1000
-continuous_battery['fom_energy'] = continuous_battery['fom_energy']*1000
-#Round to nearest integer
-continuous_battery['capcost'] = continuous_battery['capcost'].round(0).astype(int)
-continuous_battery['capcost_energy'] = continuous_battery['capcost_energy'].round(0).astype(int)
-continuous_battery['fom'] = continuous_battery['fom'].round(0).astype(int)
-continuous_battery['fom_energy'] = continuous_battery['fom_energy'].round(0).astype(int)
-# Fill empty values with 0, melt to long format
-continuous_battery = (
-    continuous_battery.fillna(0)
-    .melt(id_vars=['i','t'])
-    ### Rename the columns so GAMS reads them as a comment
-    .rename(columns={'i':'*i'})
-)
-# Add to outdata
-outdata = pd.concat([outdata,continuous_battery])
 
 outdata = outdata.loc[outdata.variable.isin(['capcost', 'capcost_energy',
                                              'fom', 'fom_energy',
@@ -318,6 +298,7 @@ consume_char.loc[mask, 'value'] = consume_char[mask]['value'] + round( (elec_cos
 
 ccsflex_perf = pd.read_csv(os.path.join(inputs_case,'plantchar_ccsflex_perf.csv'),index_col=0).round(6)
 hydro = pd.read_csv(os.path.join(inputs_case,'plantchar_hydro.csv'), index_col=0).round(6)
+dr_shed = pd.read_csv(os.path.join(inputs_case,'plantchar_dr_shed.csv'), index_col=0).round(6)
 degrade = pd.read_csv(
 	os.path.join(inputs_case,'degradation_annual.csv'),
 	header=None)
@@ -337,7 +318,11 @@ pvb_bir = pd.read_csv(
     os.path.join(inputs_case, 'pvb_bir.csv'),
     header=0, names=['pvb_type','bir'], index_col='pvb_type').squeeze(1)
 # Get PV and battery $/Wac costs for PVB
-battery_USDperWac = battery.loc[battery.i==f'battery_{sw.GSw_PVB_Dur}'].set_index('t').capcost
+battery_USDperWac = (
+    battery.loc[battery.i==f'battery_li'].set_index('t').capcost
+    + float(sw.GSw_PVB_Dur)
+      * battery.loc[battery.i==f'battery_li'].set_index('t').capcost_energy
+)
 UPV_defaultILR_USDperWac = upv.capcost * scalars['ilr_utility']
 # Get cost-sharing assumptions
 pvbvalues = pd.read_csv(os.path.join(inputs_case,'plantchar_pvb.csv'), index_col='parameter')
@@ -472,6 +457,7 @@ outwindcfmult.to_csv(os.path.join(inputs_case,'windcfmult.csv'))
 ccsflex_perf.to_csv(os.path.join(inputs_case,'ccsflex_perf.csv'))
 consume_char.to_csv(os.path.join(inputs_case,'consume_char.csv'),index=False)
 hydro.to_csv(os.path.join(inputs_case,'hydrocapcostmult.csv'))
+dr_shed.to_csv(os.path.join(inputs_case,'dr_shed_capcostmult.csv'))
 ofswind_rsc_mult.to_csv(os.path.join(inputs_case,'ofswind_rsc_mult.csv'))
 degrade.to_csv(os.path.join(inputs_case,'degradation_annual.csv'),header=False)
 pvb.to_csv(os.path.join(inputs_case,'pvbcapcostmult.csv'))

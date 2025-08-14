@@ -316,9 +316,12 @@ def main(reeds_path, inputs_case):
         load_profiles = reeds.io.read_file(
             os.path.join(inputs_case,'load_hourly.h5'), parse_timestamps=True
         ).loc[solveyears]
-        ### If using EFS-style demand with only a single 2012 weather year, concat each profile
-        ### 7 times to match the 7-year VRE profiles
-        num_years = 7
+
+        ### If using EFS-style profiles with only a single 2012 weather year (ex. EPMEDIUM, Clean2035_LTS etc), 
+        # concat each profile to match the number of weather years in the VRE profiles, as determined by 
+        # the 'resource_adequacy_years' switch. Note: this does not apply to the most recent EER 
+        # load profiles, who already contain multiple weather years and will not be concatted. 
+        num_years = len(np.unique(sw['resource_adequacy_years'].split('_')))
         load_profiles_wide = load_profiles.unstack('year')
         if len(load_profiles_wide) == 8760:
             load_profiles = (

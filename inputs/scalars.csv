@@ -6,6 +6,7 @@ caa_gas_max_cf,0.40,"--fraction-- maximum cf that new gas plants (CCs or CTs) ca
 co2_capture_incentive_length,12,'--years-- length for the co2 captured incentive to be extended in d_solveoneyear if an upgrade occurs
 co2_capture_incentive_last_year_,2038,'--year-- last year the co2 captured incentive is available
 co2_emissions_2022,1539.251,"--million metric tons CO2-- 2022 emissions (used for tax credit phaseout)"
+coal_fom_adj,97.05,"--2004$/MW-year-- FOM cost annual escalation factor for coal. The product of this number and the coal plant's age is added to the plant's FOM cost. See page 17 of Assumptions to the Annual Energy Outlook 2025: Electricity Market Module."
 converter_efficiency_ac,1,"--fraction-- AC substation efficiency"
 converter_efficiency_lcc,0.993,"--fraction-- LCC AC/DC converter efficiency [https://doi.org/10.1016/j.rser.2019.04.062]"
 converter_efficiency_vsc,0.99,"--fraction-- VSC AC/DC converter efficiency [https://doi.org/10.1016/j.rser.2019.04.062]"
@@ -13,7 +14,8 @@ cost_acdc_lcc,98469,"--$ per MW-- cost for a single LCC AC/DC converter station 
 cost_acdc_vsc,127428,"--$ per MW-- cost for a single VSC AC/DC converter station (will be applied once for each VSC AC/DC converter) [MISO 2020 https://legalectric.org/f/2021/07/20200414-PSC-Item-07-Transmission-Cost-Estimation-Guide-for-MTEP-2020_DRAFT_April_clean441565.pdf]"
 cost_dropped_load,10000,"--2004$ per MWh-- cost of dropped load (only allowed in historical years)"
 cost_fom_psh,13030,"--2004$/MW-year-- FOM cost for PSH"
-cost_upgrade_gasct2h2ct,0.33,"--fraction-- Sets upgrade costs for H2-CT and H2-CC plants based relative to capital cost for H2-CT."
+cost_upgrade_gasct2h2ct,0.33,"--fraction-- Sets upgrade costs for H2-CT plants based relative to capital cost for Gas-CT."
+cost_upgrade_gascc2h2cc,0.23,"--fraction-- Sets upgrade costs for H2-CC plants based relative to capital cost for Gas-CC."
 cost_vom_psh,0.375,"--2004$/MWh-- VOM cost for PSH"
 csapr_startyr,2017,"--year-- start year for CSAPR policy"
 csp_sm_1,2.7,"--fraction-- solar multiple for csp1"
@@ -59,6 +61,8 @@ nat_beta_energy,0.1276,"--$/MMBtu per Quad-- beta value for national natural gas
 nat_beta_nonenergy,0.1352,"--$/MMBtu per Quad-- beta value for national natural gas supply curves; see documentation for how value is calculated"
 normfuelbinmax,1.4,"top cutoff for natural gas supply curve"
 normfuelbinmin,0.6,"bottom cutoff for natural gas supply curve"
+nuke_fom_adj,13261.21,"--2004$/MW-- FOM cost escalation factor for nuclear. This is added to the FOM cost of nuclear plants that are older than the scalar nuke_fom_adj_age_threshold. See page 17 of Assumptions to the Annual Energy Outlook 2025: Electricity Market Module."
+nuke_fom_adj_age_threshold,50,"Age beyond which the scalar nuke_fom_adj is added to the FOM cost of nuclear plants. See page 17 of Assumptions to the Annual Energy Outlook 2025: Electricity Market Module."
 reduced_resource_frac,0.5,"--fraction-- fraction by which to reduce resource when Sw_ReducedResource=1"
 reg_energy_frac,0.15,"--fraction-- fraction of regulating reserves that produces energy. from Page 7 (pdf page 16) of https://www.nrel.gov/docs/fy14osti/60568.pdf"
 RGGI_start_yr,2012,"--year-- RGGI start year"

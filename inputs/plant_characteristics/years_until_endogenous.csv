@@ -1,14 +1,4 @@
 tech,years_from_now
-battery_2,0
-battery_4,0
-battery_6,0
-battery_8,0
-battery_10,0
-battery_12,0
-battery_24,0
-battery_48,0
-battery_72,0
-battery_100,0
 battery_li,0
 biopower,2
 beccs_mod,4
@@ -28,6 +18,7 @@ csp1_1*csp1_12,3
 csp2_1*csp2_12,3
 csp3_1*csp3_12,3
 csp4_1*csp4_12,3
+dr_shed_1*dr_shed_2,0
 evmc_storage_1*evmc_storage_10,0
 evmc_shape_1*evmc_shape_10,0
 egs_allkm_1*egs_allkm_10,8

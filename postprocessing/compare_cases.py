@@ -129,9 +129,10 @@ techmap = {
     **dict(zip(['nuclear','nuclear-smr'], ['Nuclear']*20)),
     **dict(zip(
         ['gas-cc_re-cc','gas-ct_re-ct','re-cc','re-ct',
-         'gas-cc_h2-ct','gas-ct_h2-ct','h2-cc','h2-ct',],
+         'gas-ct_h2-ct','h2-ct','gas-cc_h2-cc','h2-cc'],
         ['H2 turbine']*20)),
-    **{f'battery_{i}':'Battery/PSH' for i in range(20)}, **{'pumped-hydro':'Battery/PSH'},
+    **{f'battery_{i}':'Battery/PSH' for i in range(20)},
+    **{'battery_li':'Battery/PSH', 'pumped-hydro':'Battery/PSH'},
     **dict(zip(
         ['coal-igcc', 'coaloldscr', 'coalolduns', 'gas-cc', 'gas-ct', 'coal-new', 'o-g-s',],
         ['Fossil']*20)),
@@ -174,7 +175,7 @@ plotdiffvals = [
     'Runtime by year (hours)',
 ]
 onlytechs = None
-i_plots = ['wind-ons','upv','battery','h2-ct','nuclear','gas-cc-ccs','coal-ccs',]
+i_plots = ['wind-ons','upv','battery','h2-ct','nuclear','gas-cc-ccs','coal-ccs']
 ## mapdiff: 'cap' or 'gen_ann'
 mapdiff = 'cap'
 
@@ -478,6 +479,7 @@ for case in tqdm(cases, desc='runtime'):
     )
 
 dictin_neue = {}
+dictin_neue_all = {}
 for case in tqdm(cases, desc='NEUE'):
     infiles = sorted(glob(os.path.join(cases[case],'outputs','neue_*.csv')))
     if not len(infiles):
@@ -485,18 +487,15 @@ for case in tqdm(cases, desc='NEUE'):
     df = {}
     for f in infiles:
         y, i = [int(s) for s in os.path.basename(f).strip('neue_.csv').split('i')]
-        df[y,i] = pd.read_csv(f)
-        df[y,i] = df[y,i].loc[
-            (df[y,i].level=='country') & (df[y,i].metric=='sum'),
-            'NEUE_ppm'
-        ].iloc[0]
-    df = (
-        pd.Series(df, name='NEUE [ppm]').rename_axis(['t','iteration'])
-        .sort_index().reset_index()
-        .drop_duplicates(subset='t', keep='last')
-        .set_index('t')['NEUE [ppm]']
+        df[y,i] = pd.read_csv(f, index_col=['level', 'metric', 'region']).squeeze(1)
+    dictin_neue_all[case] = pd.concat(df, names=('t', 'iteration'))
+    indices = ['t', 'level', 'metric', 'region']
+    dictin_neue[case] = (
+        dictin_neue_all[case]
+        .reset_index()
+        .drop_duplicates(subset=indices, keep='last').drop(columns='iteration')
+        .set_index(indices).squeeze(1)
     )
-    dictin_neue[case] = df
 
 ### Model years and discount rates
 years = {}
@@ -607,7 +606,7 @@ if detailed:
         ## Separate charge and discharge
         dictin_gen_h_stress[case].loc[dictin_gen_h_stress[case].GW < 0,'i'] += '|charge'
         dictin_gen_h_stress[case].loc[dictin_gen_h_stress[case].i.isin(
-            ['battery_4','battery_8','pumped-hydro']),'i'] += '|discharge'
+            ['battery_li','pumped-hydro']),'i'] += '|discharge'
 
     ### Stress period flows
     dictin_tran_flow_stress = {}
@@ -700,9 +699,9 @@ aggtechsplot = {
     'Offshore\nwind': ['wind-ofs'],
     # 'Wind': ['wind-ons', 'wind-ofs'],
     'Solar': ['upv', 'distpv', 'csp', 'pvb'],
-    'Battery': ['battery_{}'.format(i) for i in [2,4,6,8,10]],
+    'Battery': ['battery_{}'.format(i) for i in [2,4,6,8,10]] + ['battery_li'],
     'Pumped\nstorage\nhydro': ['pumped-hydro'],
-    # 'Storage': ['battery_{}'.format(i) for i in [2,4,6,8,10]] + ['pumped-hydro'],
+    # 'Storage': ['battery_{}'.format(i) for i in [2,4,6,8,10]] + ['battery_li', 'pumped-hydro'],
     'Hydro, geo, bio': [
         'hydro','geothermal',
         'biopower','lfill-gas','cofire','beccs_mod','beccs'
@@ -953,37 +952,45 @@ barwidth = 0.35
 labelpad = 0.08
 width = 1.6*len(cases) + 0.5
 aggstack = {
-    **{f'battery_{i}':'Storage' for i in [2,4,6,8,10]},
-    **{f'battery_{i}|charge':'Storage|charge' for i in [2,4,6,8,10]},
-    **{f'battery_{i}|discharge':'Storage|discharge' for i in [2,4,6,8,10]},
-    **{
-        'pumped-hydro':'Storage',
-        'pumped-hydro|charge':'Storage|charge', 'pumped-hydro|discharge':'Storage|discharge',
+    'battery_li':'Storage',
+    'battery_li|charge':'Storage|charge',
+    'battery_li|discharge':'Storage|discharge',
 
-        'h2-cc':'H2 turbine', 'h2-ct':'H2 turbine',
+    'pumped-hydro':'Storage',
+    'pumped-hydro|charge':'Storage|charge',
+    'pumped-hydro|discharge':'Storage|discharge',
 
-        'beccs_mod':'Bio/BECCS',
-        'biopower':'Bio/BECCS', 'lfill-gas':'Bio/BECCS', 'cofire':'Bio/BECCS',
+    'h2-cc':'H2 turbine',
+    'h2-ct':'H2 turbine',
 
-        'gas-cc-ccs_mod':'Gas+CCS',
-        'coal-ccs_mod':'Coal+CCS',
-        'gas-cc':'Gas', 'gas-ct':'Gas', 'o-g-s':'Gas',
-        'coal':'Coal',
+    'beccs_mod':'Bio/BECCS',
+    'biopower':'Bio/BECCS',
+    'lfill-gas':'Bio/BECCS',
+    'cofire':'Bio/BECCS',
 
-        'Canada':'Canadian imports', 'canada':'Canadian imports',
+    'gas-cc-ccs_mod':'Gas+CCS',
+    'coal-ccs_mod':'Coal+CCS',
+    'gas-cc':'Gas',
+    'gas-ct':'Gas',
+    'o-g-s':'Gas',
+    'coal':'Coal',
 
-        'hydro':'Hydro',
-        'geothermal':'Geothermal',
+    'Canada':'Canadian imports',
+    'canada':'Canadian imports',
 
-        'csp':'CSP',
-        'upv':'PV', 'distpv':'PV',
-        'pvb':'PVB',
+    'hydro':'Hydro',
+    'geothermal':'Geothermal',
 
-        'wind-ofs':'Offshore wind',
-        'wind-ons':'Land-based wind',
+    'csp':'CSP',
+    'upv':'PV',
+    'distpv':'PV',
+    'pvb':'PVB',
 
-        'nuclear':'Nuclear', 'nuclear-smr':'Nuclear',
-    }
+    'wind-ofs':'Offshore wind',
+    'wind-ons':'Land-based wind',
+
+    'nuclear':'Nuclear',
+    'nuclear-smr':'Nuclear',
 }
 aggcolors = {
     'Nuclear':'C3',
@@ -995,7 +1002,8 @@ aggcolors = {
 
     'Hydro': techcolors['hydro'],
     'Geothermal': techcolors['geothermal'],
-    'Canadian imports': techcolors['dr'],
+    'Canadian imports': techcolors['canada'],
+    'dr_shed': techcolors['dr_shed'],
 
     # 'Bio/BECCS':plt.cm.tab20(4),
     # 'H2 turbine':plt.cm.tab20(5),
@@ -1009,12 +1017,14 @@ aggcolors = {
     'PV':techcolors['upv'],
     'PVB':techcolors['pvb'],
 
+    'evmc_storage':techcolors['evmc_storage'],
+
     # 'Storage':plt.cm.tab20(12),
     # 'Storage|charge':plt.cm.tab20(12),
     # 'Storage|discharge':plt.cm.tab20(12),
-    'Storage':techcolors['battery_8'],
-    'Storage|charge':techcolors['battery_8'],
-    'Storage|discharge':techcolors['battery_8'],
+    'Storage':techcolors['battery_li'],
+    'Storage|charge':techcolors['battery_li'],
+    'Storage|discharge':techcolors['battery_li'],
 }
 aggtechs_disagg = aggstack.copy()
 for k,v in aggstack.items():
@@ -1570,6 +1580,7 @@ if interactive:
 
 
 #%%### SCOE, NEUE
+neue_threshold = float(sw.GSw_PRM_StressThreshold.split('_')[1])
 width = 9 + len(cases)*0.5
 plt.close()
 f,ax = plt.subplots(
@@ -1606,16 +1617,22 @@ col = 2
 dfneue = {}
 for case in cases:
     if case in dictin_neue:
-        dfneue[case] = dictin_neue[case].reindex([y for y in years[case] if y >= 2025])
+        dfneue[case] = (
+            dictin_neue[case]
+            .xs('country',0,'level')
+            .xs('sum',0,'metric')
+            .reset_index('region', drop=True)
+            .loc[2025:]
+        )
         ax[col].plot(dfneue[case].index, dfneue[case].values, label=case, color=colors[case])
 ax[col].set_ylim(0)
-if ax[col].get_ylim()[1] >= 10:
-    ax[col].axhline(10, c='C7', ls='--', lw=0.75)
-ax[col].set_ylabel('NEUE [ppm]')
+if ax[col].get_ylim()[1] >= neue_threshold:
+    ax[col].axhline(neue_threshold, c='C7', ls='--', lw=0.75)
+ax[col].set_ylabel('National NEUE [ppm]')
 ## annotate the last value
 if len(dfneue):
     dfneue = pd.concat(dfneue, axis=1)
-    plots.label_last(dfneue, ax[col], colors=colors, extend='below')
+    plots.label_last(dfneue, ax[col], colors=colors, extend='below', decimals=1)
 
 ### Spares
 col = 3
@@ -1671,6 +1688,47 @@ for col in [0,1] + ([2] if len(dictin_neue) else []):
 slide = reeds.results.add_to_pptx('Cost, reliability', prs=prs, width=width)
 if interactive:
     plt.show()
+
+
+#%% Regional NEUE
+try:
+    neue_threshold = float(sw.GSw_PRM_StressThreshold.split('_')[1])
+    dfmap = reeds.io.get_dfmap(cases[basecase])
+    level = sw.GSw_PRM_StressThreshold.split('_')[0]
+    regions = dfmap[level].loc[hierarchy[basecase][level].unique()].bounds.minx.sort_values().index
+    _nrows, _ncols, _coords = reeds.plots.get_coordinates(regions, ncols=6)
+    labelcoords = {
+        'label': (-1,0) if (_nrows > 1) and (_ncols > 1) else 0,
+        'legend': (0,-1) if (_nrows > 1) and (_ncols > 1) else -1,
+    }
+    plt.close()
+    f,ax = plt.subplots(_nrows, _ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT), sharex=True, sharey=True)
+    for case in cases:
+        df = dictin_neue[case].xs(level,0,'level').xs('sum',0,'metric').unstack('region').loc[2025:]
+        for i, region in enumerate(regions):
+            _ax = ax[_coords[region]]
+            _ax.plot(df.index, df[region].values, color=colors[case], label=case)
+    ## Formatting
+    for i, region in enumerate(regions):
+        _ax = ax[_coords[region]]
+        _ax.set_title(region, weight='bold')
+        _ax.axhline(neue_threshold, c='C7', ls='--', lw=0.75)
+    _ax.set_ylim(0)
+    _ax.xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+    _ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
+    ax[labelcoords['label']].set_ylabel('NEUE [ppm]', x=0, va='bottom')
+    ax[labelcoords['legend']].legend(
+        loc='upper left', bbox_to_anchor=(1,1), frameon=False, fontsize='large',
+    )
+    plots.despine(ax)
+    plt.draw()
+    plots.shorten_years(ax[labelcoords['label']])
+    ### Save it
+    slide = reeds.results.add_to_pptx('Resource adequacy', prs=prs, width=SLIDE_WIDTH)
+    if interactive:
+        plt.show()
+except Exception:
+    print(traceback.format_exc())
 
 
 #%% Emissions, health
@@ -1759,7 +1817,7 @@ if interactive:
 
 #%%### Generation fraction
 ycol = 'Generation (TWh)'
-stortechs = [f'battery_{i}' for i in [2,4,6,8,10]] + ['pumped-hydro']
+stortechs = [f'battery_{i}' for i in [2,4,6,8,10]] + ['battery_li', 'pumped-hydro']
 vretechs = ['upv','wind-ons','wind-ofs','distpv','csp']
 retechs = vretechs + ['hydro','geothermal','biopower']
 zctechs = vretechs + ['hydro','geothermal','nuclear','nuclear-smr']
@@ -1846,100 +1904,108 @@ if interactive:
 
 #%%### Firm capacity and capacity credit
 capcreditcases = [c for c in cases if int(dictin_sw[c].GSw_PRM_CapCredit)]
-if len(capcreditcases):
-    capcredittechs = ['wind-ons','upv','storage']
-    ccseasons = ['hot','cold']
-    cccols = len(ccseasons) + len(capcredittechs)
-    handles = {}
+if len(capcreditcases) == len(cases):
+    try:
+        capcredittechs = ['wind-ons', 'upv', 'storage']
+        ccseasons = pd.read_csv(
+            os.path.join(cases[case], 'inputs_case', 'ccseason.csv'),
+            header=None,
+        ).squeeze(1).values
 
-    plt.close()
-    f,ax = plt.subplots(
-        2, cccols, figsize=(11, SLIDE_HEIGHT), sharex='col',
-        sharey=('col' if (sharey is True) else False),
-    )
-    ### Firm capacity stack
-    dfplot = pd.concat(
-        {case:
-            dictin_cap_firm[case].loc[
-                dictin_cap_firm[case].t==lastyear
-            ].groupby(['ccseason','i']).MW.sum().rename('GW') / 1e3
-            for case in capcreditcases},
-        axis=1,
-    ).T
-    for col, ccseason in enumerate(ccseasons):
-        ax[0,col].set_ylabel(f'Firm capacity, {ccseason} [GW]', y=-0.075)
+        cccols = len(ccseasons) + len(capcredittechs)
+        handles = {}
 
-        df = dfplot[ccseason][[c for c in bokehcolors.index if c in dfplot[ccseason]]].copy()
-
-        handles[ccseason] = plot_bars_abs_stacked(
-            dfplot=df, basecase=basecase,
-            colors=techcolors,
-            ax=ax, col=col, net=False, label=False,
+        plt.close()
+        f,ax = plt.subplots(
+            2, cccols, figsize=(11, SLIDE_HEIGHT), sharex='col',
+            sharey=('col' if (sharey is True) else False),
         )
+        ### Firm capacity stack
+        dfplot = pd.concat(
+            {case:
+                dictin_cap_firm[case].loc[
+                    dictin_cap_firm[case].t==lastyear
+                ].groupby(['ccseason','i']).MW.sum().rename('GW') / 1e3
+                for case in capcreditcases},
+            axis=1,
+        ).T
+        for col, ccseason in enumerate(ccseasons):
+            ax[0,col].set_ylabel(f'Firm capacity, {ccseason} [GW]', y=-0.075)
 
-    ### Average capacity credit by technology
-    for _col, tech in enumerate(capcredittechs):
-        col = _col + len(ccseasons)
-        if tech == 'storage':
-            techs = [f'battery_{i}' for i in [2,4,6,8,10]] + ['pumped-hydro']
-        else:
-            techs = [tech]
-        for case in capcreditcases:
-            cap_firm = (
-                dictin_cap_firm[case]
-                .loc[dictin_cap_firm[case].i.isin(techs)]
-                .groupby(['ccseason','t']).MW.sum().unstack('ccseason') / 1e3
+            df = dfplot[ccseason][[c for c in bokehcolors.index if c in dfplot[ccseason]]].copy()
+
+            handles[ccseason] = plot_bars_abs_stacked(
+                dfplot=df, basecase=basecase,
+                colors=techcolors,
+                ax=ax, col=col, net=False, label=False,
             )
-            cap_total = (
-                dictin_cap[case]
-                .loc[dictin_cap[case].tech.isin(techs)]
-                .groupby('year')['Capacity (GW)'].sum().rename('GW').loc[2025:]
-            )
-            capcredit = cap_firm.divide(cap_total, axis=0).dropna()
-            # for ccseason in lss:
+
+        ### Average capacity credit by technology
+        for _col, tech in enumerate(capcredittechs):
+            col = _col + len(ccseasons)
+            if tech == 'storage':
+                techs = [f'battery_{i}' for i in [2,4,6,8,10]] + ['battery_li', 'pumped-hydro']
+            else:
+                techs = [tech]
+            for case in capcreditcases:
+                cap_firm = (
+                    dictin_cap_firm[case]
+                    .loc[dictin_cap_firm[case].i.isin(techs)]
+                    .groupby(['ccseason','t']).MW.sum().unstack('ccseason') / 1e3
+                )
+                cap_total = (
+                    dictin_cap[case]
+                    .loc[dictin_cap[case].tech.isin(techs)]
+                    .groupby('year')['Capacity (GW)'].sum().rename('GW').loc[2025:]
+                )
+                capcredit = cap_firm.divide(cap_total, axis=0).dropna()
+                # for ccseason in lss:
+                for row, ccseason in enumerate(['hot','cold']):
+                        ax[row,col].plot(
+                            capcredit.index, capcredit[ccseason].values,
+                            color=colors[case], label=case,
+                        )
+
+        ### Legend
+        leg = ax[1,len(ccseasons)].legend(
+            loc='upper left', bbox_to_anchor=(-0.3,-0.07), frameon=False, fontsize='large',
+            handletextpad=0.3, handlelength=0.7,
+        )
+        for legobj in leg.legend_handles:
+            legobj.set_linewidth(8)
+            legobj.set_solid_capstyle('butt')
+
+        ### Formatting
+        for col in range(2):
+            ax[1,col].set_xticks(range(len(capcreditcases)))
+            ax[1,col].set_xticklabels(capcreditcases, rotation=90)
+            ax[1,col].annotate('Diff', (0.03,0.03), xycoords='axes fraction', fontsize='large')
+            ax[1,col].axhline(0, c='k', ls='--', lw=0.75)
+        for _col, tech in enumerate(capcredittechs):
+            col = _col + len(ccseasons)
+            ax[0,col].set_ylabel(f'Capacity credit, {tech} [fraction]', y=-0.075)
             for row, ccseason in enumerate(['hot','cold']):
-                    ax[row,col].plot(
-                        capcredit.index, capcredit[ccseason].values,
-                        color=colors[case], label=case,
-                    )
+                ax[row,col].set_ylim(0,1)
+                ax[row,col].annotate(
+                    ccseason.title(), (0.5, 1.0), xycoords='axes fraction',
+                    fontsize='large', weight='bold', va='top', ha='center'
+                )
 
-    ### Legend
-    leg = ax[1,len(ccseasons)].legend(
-        loc='upper left', bbox_to_anchor=(-0.3,-0.07), frameon=False, fontsize='large',
-        handletextpad=0.3, handlelength=0.7,
-    )
-    for legobj in leg.legend_handles:
-        legobj.set_linewidth(8)
-        legobj.set_solid_capstyle('butt')
+        plt.tight_layout()
+        plots.despine(ax)
+        plt.draw()
+        for col in range(len(ccseasons),cccols):
+            ax[1,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+            ax[1,col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
+            plots.shorten_years(ax[1,col])
 
-    ### Formatting
-    for col in range(2):
-        ax[1,col].set_xticks(range(len(capcreditcases)))
-        ax[1,col].set_xticklabels(capcreditcases, rotation=90)
-        ax[1,col].annotate('Diff', (0.03,0.03), xycoords='axes fraction', fontsize='large')
-        ax[1,col].axhline(0, c='k', ls='--', lw=0.75)
-    for _col, tech in enumerate(capcredittechs):
-        col = _col + len(ccseasons)
-        ax[0,col].set_ylabel(f'Capacity credit, {tech} [fraction]', y=-0.075)
-        for row, ccseason in enumerate(['hot','cold']):
-            ax[row,col].set_ylim(0,1)
-            ax[row,col].annotate(
-                ccseason.title(), (0.5, 1.0), xycoords='axes fraction',
-                fontsize='large', weight='bold', va='top', ha='center'
-            )
+        ### Save it
+        slide = reeds.results.add_to_pptx('Firm capacity, capacity credit', prs=prs)
+        if interactive:
+            plt.show()
 
-    plt.tight_layout()
-    plots.despine(ax)
-    plt.draw()
-    for col in range(len(ccseasons),cccols):
-        ax[1,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
-        ax[1,col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
-        plots.shorten_years(ax[1,col])
-
-    ### Save it
-    slide = reeds.results.add_to_pptx('Firm capacity, capacity credit', prs=prs)
-    if interactive:
-        plt.show()
+    except Exception:
+        print(traceback.format_exc())
 
 
 #%%### Transmission
@@ -2512,6 +2578,8 @@ metrics = [
     'rep_mean',
     'stress_mean',
     'stress_top5_load',
+    'stress_top5_netload',
+    'stress_bottom5_vregen',
     'stress_max_load',
     'stress_max_price',
 ]
@@ -2521,7 +2589,7 @@ for figname, width, height in [
     (f'plot_dispatch-yearbymonth-1-{lastyear}', SLIDE_WIDTH, None),
 ] + [
     (
-        f"plot_techmix-transreg-{lastyear}-{units}-{','.join(metrics)}",
+        f"plot_techmix-transreg-{lastyear}-{units}-{reedsplots.stress_metrics_shorten(metrics)}",
         (SLIDE_WIDTH if wide else None),
         (None if wide else SLIDE_HEIGHT)
     )

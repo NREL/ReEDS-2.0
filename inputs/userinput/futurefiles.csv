@@ -31,7 +31,6 @@ climate_UnappWaterMultAnn.csv,.csv,0,None,wide,"wst,r",1,0,constant,0,None,done,
 climate_UnappWaterSeaAnnDistr.csv,.csv,0,None,wide,"wst,r,szn",1,0,constant,0,1,done,constant
 co2_cap.csv,.csv,0,None,*t,None,0,0,constant,0,None,"constant, linear, or saturate?",constant
 co2_tax.csv,.csv,0,None,0,None,0,None,linear_5,None,None,"constant, linear, or saturate?",linear_5
-coal_fom_adj.csv,.csv,0,None,0,None,0,None,constant,None,None,"constant, linear, or saturate?",linear_5
 consume_char_low.csv,.csv,0,None,t,"*i,parameter",0,0,constant,None,None,done,constant
 consume_char_ref.csv,.csv,0,None,t,"*i,parameter",0,0,constant,None,None,done,constant
 cost_cap_mult.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
@@ -81,7 +80,6 @@ heat_rate_penalty_spin.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,
 heat_rate.csv,.csv,0,None,t,"i,v,r",0,0,constant,0,None,done,constant
 hierarchy.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 hintage_data.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
-hourly_operational_characteristics.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 hyd_add_upg_cap.csv,.csv,0,None,wide,"r,i,rscbin",1,0,constant,0,None,done,constant
 hyd_fom.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 hydrocapcostmult.csv,.csv,0,None,Unnamed: 0,None,1,0,constant,0,None,projection?,linear_5
@@ -90,7 +88,6 @@ i_coolingtech_watersource_upgrades_link.csv,.csv,1,None,9999,None,9999,0,constan
 i_coolingtech_watersource_upgrades.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 i_coolingtech_watersource.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 ice_fom.csv,.csv,0,None,0,None,0,None,constant,0,None,projection?,linear_5
-index_hr_map.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 inflation.csv,.csv,0,None,t,None,0,0,constant,None,None,done,constant
 itc_fractions.csv,.csv,0,None,t,"i,country,itc_tax_equity_penalty",0,0,constant,None,None,done,constant
 ivt_default.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done (special case: ivt is extended in calc_financial_inputs.py since ivt is needed there),constant
@@ -101,6 +98,7 @@ load_2010.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 load_allyear.csv,.csv,0,None,t,"*r,h",0,0,linear_5,0,None,done,linear_5
 load_multiplier.csv,.csv,0,None,wide,cendiv,1,0,linear_5,0,None,done,linear_5
 maxage.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
+maxdailycf.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 methane_leakage_rate.csv,.csv,0,None,*t,None,0,0,constant,None,None,done,constant
 mex_growth_rate.csv,.csv,0,None,0,None,0,None,linear_5,0,None,done,linear_5
 min_retire_age.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
@@ -116,7 +114,6 @@ ng_demand_elec.csv,.csv,0,None,wide,Unnamed: 0,1,0,constant,0,None,done,linear_5
 ng_demand_tot.csv,.csv,0,None,wide,Unnamed: 0,1,0,constant,0,None,done,linear_5
 gasprice_ref.csv,.csv,0,None,wide,cendiv,1,0,constant,0,None,done,linear_5
 nuclear_ba_ban_list.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
-nuke_fom_adj.csv,.csv,0,None,0,None,0,None,constant,None,None,done,linear_5
 numhours.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 offshore_goal_fix.csv,.csv,0,None,wide,st,1,0,constant,0,None,done,constant
 offshore_goal_float.csv,.csv,0,None,wide,st,1,0,constant,0,None,done,constant

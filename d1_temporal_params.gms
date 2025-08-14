@@ -331,6 +331,9 @@ can_exports_h(r,h,t)$[hours(h)] = can_exports(r,t) * can_exports_h_frac(h) / hou
 
 $endif.Canada
 
+* zero Canada exports when Canada is not modeled
+can_imports_szn(r,szn,t)$[Sw_Canada=0] = 0 ;
+can_exports_h(r,h,t)$[Sw_Canada=0] = 0 ;
 
 $onempty
 parameter canmexload(r,allh) "load for canadian and mexican regions"
@@ -367,7 +370,7 @@ $onlisting
 / ;
 
 * Infer some forced outage rates from parent techs
-outage_forced_h(i,r,h)$pvb(i) = outage_forced_h("battery_%GSw_pvb_dur%",r,h) ;
+outage_forced_h(i,r,h)$pvb(i) = outage_forced_h("battery_li",r,h) ;
 outage_forced_h(i,r,h)$geo(i) = outage_forced_h("geothermal",r,h) ;
 
 outage_forced_h(i,r,h)$[i_water_cooling(i)$Sw_WaterMain] =
@@ -387,7 +390,7 @@ $onlisting
 / ;
 
 * Infer some scheduled outage rates from parent techs
-outage_scheduled_h(i,h)$pvb(i) = outage_scheduled_h("battery_%GSw_pvb_dur%",h) ;
+outage_scheduled_h(i,h)$pvb(i) = outage_scheduled_h("battery_li",h) ;
 outage_scheduled_h(i,h)$geo(i) = outage_scheduled_h("geothermal",h) ;
 
 outage_scheduled_h(i,h)$[i_water_cooling(i)$Sw_WaterMain] =
@@ -401,6 +404,26 @@ avail(i,r,allh) = 0 ;
 avail(i,r,h)$valcap_ir(i,r) = 1 ;
 
 avail(i,r,h)$[valcap_ir(i,r)] = (1 - outage_forced_h(i,r,h)) * (1 - outage_scheduled_h(i,h)) ;
+
+*=============================================
+* -- DR Shed --
+*=============================================
+* Written by hourly_writetimeseries.py
+$onempty
+parameter dr_shed_out(i,r,allh)  "--fraction-- fraction of capacity available for DR shed resources"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%%temporal_inputs%%ds%dr_shed_out.csv
+$include inputs_case%ds%stress%stress_year%%ds%dr_shed_out.csv
+$offdelim
+$onlisting
+/ ;
+$offempty
+
+* DR Shed resources are only available during stress periods
+avail(i,r,h)$[dr_shed(i)$h_rep(h)] = 0 ;
+avail(i,r,h)$[dr_shed(i)$h_stress(h)] = dr_shed_out(i,r,h) ;
 
 *upgrade plants assume the same availability of what they are upgraded to
 avail(i,r,h)$[upgrade(i)$valcap_i(i)] = sum{ii$upgrade_to(i,ii), avail(ii,r,h) } ;
@@ -850,6 +873,7 @@ szn_adj_gas(h)$frac_h_quarter_weights(h,"wint") =
 * -- Round parameters for GAMS --
 *=============================================
 avail(i,r,h)$avail(i,r,h) = round(avail(i,r,h),3) ;
+can_imports_szn(r,szn,t)$can_imports_szn(r,szn,t) = round(can_imports_szn(r,szn,t),3) ;
 can_exports_h(r,h,t)$can_exports_h(r,h,t) = round(can_exports_h(r,h,t),3) ;
 h_weight_csapr(h)$h_weight_csapr(h) = round(h_weight_csapr(h),3) ;
 load_exog(r,h,t)$load_exog(r,h,t) = round(load_exog(r,h,t),3) ;

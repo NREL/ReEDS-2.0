@@ -2,6 +2,7 @@
 import pandas as pd
 import os
 import site
+import json
 from glob import glob
 import subprocess
 ### Local imports
@@ -26,7 +27,9 @@ def submit_job(
     write_flow=False,
     write_surplus=False,
     write_energy=False,
-    write_availability=False,
+    write_shortfall_samples=False,
+    write_availability_samples=False,
+    switch_mods={},
 ):
     """
     """
@@ -61,7 +64,9 @@ def submit_job(
             + (' --flow' if write_flow else '')
             + (' --surplus' if write_surplus else '')
             + (' --energy' if write_energy else '')
-            + (' --availability' if write_availability else '')
+            + (' --shortfall' if write_shortfall_samples else '')
+            + (' --availability' if write_availability_samples else '')
+            + (f' --switch_mods={json.dumps(switch_mods)}' if len(switch_mods) else '')
         ]
     )
     ### Write the SLURM command
@@ -86,7 +91,9 @@ def main(
     write_flow=False,
     write_surplus=False,
     write_energy=False,
-    write_availability=False,
+    write_shortfall_samples=False,
+    write_availability_samples=False,
+    switch_mods={},
 ):
     """
     Run prep_data, ReEDS2PRAS, and PRAS as necessary.
@@ -146,7 +153,6 @@ def main(
     Augur.run_pras(
         case,
         t,
-        sw,
         iteration=iteration,
         recordtime=False,
         repo=repo,
@@ -155,7 +161,9 @@ def main(
         write_flow=write_flow,
         write_surplus=write_surplus,
         write_energy=write_energy,
-        write_availability=write_availability,
+        write_shortfall_samples=write_shortfall_samples,
+        write_availability_samples=write_availability_samples,
+        **switch_mods,
     )
 
 
@@ -193,8 +201,15 @@ if __name__ == '__main__':
                         help="Write hourly surplus from PRAS")
     parser.add_argument('--energy', '-e', action='store_true',
                         help="Write hourly storage energy from PRAS")
+    parser.add_argument('--shortfall', '-d', action='store_true',
+                        help="Write hourly shortfall by sample from PRAS")
     parser.add_argument('--availability', '-a', action='store_true',
                         help="Write hourly unit availability by sample from PRAS")
+    parser.add_argument('--switch_mods', '-m', type=json.loads, default=json.dumps({}),
+                        help=('Dictionary-formated string of switch arguments for '
+                        'Augur.run_pras(). Use single quotes outside the dictionary and '
+                        'double quotes for keys, as in:\n'
+                        '`-s \'{"pras_seed":0}\'`'))
 
     args = parser.parse_args()
     case = args.case
@@ -209,7 +224,9 @@ if __name__ == '__main__':
     write_flow = args.flow
     write_surplus = args.surplus
     write_energy = args.energy
-    write_availability = args.availability
+    write_shortfall_samples = args.shortfall
+    write_availability_samples = args.availability
+    switch_mods = args.switch_mods
 
     # #%% Inputs for testing
     # case = '/Users/pbrown/github2/ReEDS-2.0/runs/v20230605_ntpM1_Pacific'
@@ -222,7 +239,9 @@ if __name__ == '__main__':
     # write_flow = False
     # write_surplus = False
     # write_energy = False
-    # write_availability = False
+    # write_shortfall_samples = False
+    # write_availability_samples = False
+    # switch_mods = {}
 
     #%% Determine whether to submit SLURM job
     hpc = check_slurm(forcelocal=local)
@@ -239,7 +258,9 @@ if __name__ == '__main__':
             write_flow=write_flow,
             write_surplus=write_surplus,
             write_energy=write_energy,
-            write_availability=write_energy,
+            write_shortfall_samples=write_shortfall_samples,
+            write_availability_samples=write_availability_samples,
+            switch_mods=switch_mods,
         )
     else:
         main(
@@ -252,5 +273,7 @@ if __name__ == '__main__':
             write_flow=write_flow,
             write_surplus=write_surplus,
             write_energy=write_energy,
-            write_availability=write_availability,
+            write_shortfall_samples=write_shortfall_samples,
+            write_availability_samples=write_availability_samples,
+            switch_mods=switch_mods,
         )

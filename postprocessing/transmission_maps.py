@@ -46,22 +46,37 @@ write = True
 
 ###################
 #%% ARGUMENT INPUTS
-parser = argparse.ArgumentParser(description='transmission maps')
-parser.add_argument('--case', '-c', type=str,
-                    help='path to ReEDS run folder')
-parser.add_argument('--year', '-y', type=int, default=2050,
-                    help='year to plot')
+parser = argparse.ArgumentParser(
+    description='Create static maps and plots of ReEDS outputs',
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+)
+## Include both case_positional and --case/-c for backwards compatibility
+parser.add_argument('case_positional', type=str, help='path to ReEDS run folder', nargs='?')
+parser.add_argument('--case', '-c', type=str, help='path to ReEDS run folder')
+parser.add_argument('--year', '-y', type=int, default=0,
+                    help='year to plot, or 0 for last year')
 parser.add_argument('--routes', '-r', action='store_true',
                     help='if True, show actual transmission routes')
 
 args = parser.parse_args()
-case = args.case
+if args.case_positional and args.case:
+    err = (
+        'Provided case as both positional argument and as --case/-c; '
+        'only use one or the other, not both'
+    )
+    raise ValueError(err)
+elif args.case_positional:
+    case = args.case_positional
+elif args.case:
+    case = args.case
+else:
+    raise ValueError('Provide case path either as positional argument or as --case/-c')
 year = args.year
 routes = args.routes
 
 # #%% Inputs for testing
-# case = os.path.join(reeds_path,'runs','v20250228_hydroM0_Pacific')
-# year = 2032
+# case = os.path.join(reeds_path,'runs','v20250716_mainM0_Pacific')
+# year = 0
 # routes = False
 # interactive = True
 # write = False
@@ -97,6 +112,8 @@ years = pd.read_csv(
 yearstep = years[-1] - years[-2]
 val_r = pd.read_csv(
     os.path.join(case, 'inputs_case', 'val_r.csv'), header=None).squeeze(1).tolist()
+## If year not provided, use final solve year
+year = year if year > 0 else max(years)
 
 
 #%% Transmission line map with disaggregated transmission types
@@ -247,9 +264,18 @@ except Exception:
 ### Plot with tech-specific (vmax='each') and uniform (vmax='shared') color axis
 ncols = 4
 techs = [
-    'Utility PV', 'Land-based wind', 'Offshore wind', 'Electrolyzer',
-    'Battery (4h)', 'Battery (8h)', 'PSH', 'H2 turbine',
-    'Nuclear', 'Gas CCS', 'Coal CCS', 'Fossil',
+    'Utility PV',
+    'Land-based wind',
+    'Offshore wind',
+    'Electrolyzer',
+    'Battery',
+    'PSH',
+    'H2 turbine',
+    'Nuclear',
+    'Gas CCS',
+    'Coal CCS',
+    'Gas',
+    'Coal',
 ]
 for vmax in ['each', 'shared']:
     try:
@@ -549,8 +575,103 @@ except Exception:
     print(traceback.format_exc())
 
 
+#%% Resource adequacy
+try:
+    plt.close()
+    levels = ['country', 'interconnect', 'transreg', 'transgrp']
+    f, ax, _ = reedsplots.plot_neue_bylevel(case=case, levels=levels)
+    savename = f"plot_stressperiod_neue-{','.join(levels)}.png"
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
+    plt.close()
+    print(savename)
+except Exception:
+    print('plot_stressperiod_neue failed:')
+    print(traceback.format_exc())
+
+try:
+    level = 'transgrp'
+    iteration = 'last'
+    plt.close()
+    f, ax, df, i = reeds.prasplots.plot_pras_eue_timeseries_full(
+        case=case, year=year, level=level, iteration=iteration)
+    savename = f'plot_PRAS_EUE-{level}-{year}i{i}.png'
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
+    plt.close()
+    print(savename)
+except Exception:
+    print('plot_pras_eue_timeseries_full failed:')
+    print(traceback.format_exc())
+
+try:
+    for y in [y for y in years if y >= 2025]:
+        plt.close()
+        f, ax, neue, _iteration = reedsplots.map_neue(case=case, year=y)
+        savename = f"map_PRAS_neue-{y}i{_iteration}.png"
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+except Exception:
+    print('map_neue failed:')
+    print(traceback.format_exc())
+
+try:
+    level = 'transgrp'
+    plot_for = False
+    plottype = ('forced_outage_rate' if plot_for else 'capacity_offline')
+    plt.close()
+    f, ax, df = reedsplots.plot_capacity_offline(
+        case=case, year=year, level=level, plot_for=plot_for)
+    savename = f'plot_{plottype}-{level}-{year}.png'
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
+    plt.close()
+    print(savename)
+except Exception:
+    print('plot_capacity_offline failed:')
+    print(traceback.format_exc())
+
+try:
+    plt.close()
+    f, ax, _ = reeds.prasplots.plot_interface_flows(case=case, year=year)
+    savename = f'plot_PRAS_flows-{year}.png'
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
+    plt.close()
+    print(savename)
+except Exception:
+    print('plot_interface_flows failed:')
+    print(traceback.format_exc())
+
+try:
+    plt.close()
+    f, ax, _ = reeds.prasplots.plot_storage_soc(case=case, year=year)
+    savename = f'plot_PRAS_storage-{year}.png'
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
+    plt.close()
+    print(savename)
+except Exception:
+    print('plot_PRAS_storage failed:')
+    print(traceback.format_exc())
+
+
 #%% Stress periods
-if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
+if not int(sw.GSw_PRM_CapCredit):
     try:
         plt.close()
         f,ax = reedsplots.plot_seed_stressperiods(case=case)
@@ -611,23 +732,8 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
         print(traceback.format_exc())
 
     try:
-        plt.close()
-        levels = ['country','interconnect','transreg','transgrp']
-        f, ax, _ = reedsplots.plot_neue_bylevel(case=case, levels=levels)
-        savename = f"plot_stressperiod_neue-{','.join(levels)}.png"
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        plt.close()
-        print(savename)
-    except Exception:
-        print('plot_stressperiod_neue failed:')
-        print(traceback.format_exc())
-
-    try:
         levels = ['r','transreg']
-        periods = ['max gen','max load','min solar','min wind','min vre']
+        periods = ['max gen', 'max load', 'min solar', 'min wind', 'min vre']
         for level, period in [(level,p) for level in levels for p in periods]:
             plt.close()
             f, ax, _ = reedsplots.map_period_dispatch(
@@ -644,67 +750,6 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
         print('map_period_dispatch failed:')
 
     try:
-        plt.close()
-        f, ax, _ = reeds.prasplots.plot_interface_flows(case=case, year=year)
-        savename = f'plot_PRAS_flows-{year}.png'
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        plt.close()
-        print(savename)
-    except Exception:
-        print('plot_interface_flows failed:')
-        print(traceback.format_exc())
-
-    try:
-        plt.close()
-        f, ax, _ = reeds.prasplots.plot_storage_soc(case=case, year=year)
-        savename = f'plot_PRAS_storage-{year}.png'
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        plt.close()
-        print(savename)
-    except Exception:
-        print('plot_PRAS_storage failed:')
-        print(traceback.format_exc())
-
-    try:
-        level = 'transgrp'
-        iteration = 'last'
-        plt.close()
-        f, ax, df, i = reeds.prasplots.plot_pras_eue_timeseries_full(
-            case=case, year=year, level=level, iteration=iteration)
-        savename = f'plot_PRAS_EUE-{level}-{year}i{i}.png'
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        plt.close()
-        print(savename)
-    except Exception:
-        print('plot_pras_eue_timeseries_full failed:')
-        print(traceback.format_exc())
-
-    try:
-        for y in [y for y in years if y >= 2025]:
-            plt.close()
-            # f, ax, neue, _iteration = reedsplots.map_neue(case=case, year=y, iteration=0)
-            f, ax, neue, _iteration = reedsplots.map_neue(case=case, year=y)
-            savename = f"map_PRAS_neue-{y}i{_iteration}.png"
-            if write:
-                plt.savefig(os.path.join(savepath, savename))
-            if interactive:
-                plt.show()
-            plt.close()
-            print(savename)
-    except Exception:
-        print('map_neue failed:')
-        print(traceback.format_exc())
-
-    try:
         level = 'transreg'
         metrics = [
             'cap',
@@ -716,23 +761,14 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
             'stress_max_load',
             'stress_max_price',
         ]
-        shortmetrics = (
-            (','.join(metrics))
-            .replace('rep', 'r')
-            .replace('stress', 's')
-            .replace('cap', 'c')
-            .replace('netload', 'nl')
-            .replace('load', 'l')
-            .replace('price', 'p')
-            .replace('vregen', 'vg')
-        )
         for units in ['percent', 'GW']:
             plt.close()
             f, ax, dictout = reedsplots.plot_cap_rep_stress_mix(
                 case=case, year=year, level=level, units=units, metrics=metrics,
             )
             savename = (
-                f"plot_techmix-{level}-{year}-{units}-{shortmetrics}"
+                f"plot_techmix-{level}-{year}-{units}-"
+                f"{reedsplots.stress_metrics_shorten(metrics)}"
             )[:max_filename_length-len('.png')] + '.png'
             if write:
                 plt.savefig(os.path.join(savepath, savename))
@@ -760,24 +796,6 @@ if (not int(sw.GSw_PRM_CapCredit)) or (int(sw.pras == 2)):
             print(savename)
     except Exception:
         print('plot_stress_mix failed:')
-        print(traceback.format_exc())
-
-    try:
-        level = 'transgrp'
-        plot_for = False
-        plottype = ('forced_outage_rate' if plot_for else 'capacity_offline')
-        plt.close()
-        f, ax, df = reedsplots.plot_capacity_offline(
-            case=case, year=year, level=level, plot_for=plot_for)
-        savename = f'plot_{plottype}-{level}-{year}.png'
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        plt.close()
-        print(savename)
-    except Exception:
-        print('plot_capacity_offline failed:')
         print(traceback.format_exc())
 
 

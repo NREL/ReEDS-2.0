@@ -215,7 +215,7 @@ if GSw_ClimateHydro:
         readwrite(infile=infile)
 
 if not any([GSw_ClimateWater,GSw_ClimateHydro,GSw_ClimateDemand]):
-    print("All climate switches are off. We stopped climate change!")
+    print("All climate switches are off.")
 
 reeds.log.toc(tic=tic, year=0, process='input_processing/climateprep.py',
     path=os.path.join(inputs_case,'..'))

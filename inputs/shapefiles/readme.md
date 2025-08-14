@@ -1,1 +1,0 @@
-These shapefiles use the ESRI:102008 projection, the same used in reV: <https://spatialreference.org/ref/esri/102008/>.

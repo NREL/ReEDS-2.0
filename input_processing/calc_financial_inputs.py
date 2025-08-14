@@ -34,7 +34,7 @@ def calc_financial_inputs(inputs_case):
     - ptc_value_scaled.csv
     - pvf_onm_int.csv
     - pvf_cap.csv
-    - reg_cap_cost_mult.csv
+    - reg_cap_cost_diff.csv
     - retail_eval_period.h5
     - retail_depreciation_sch.h5
     """
@@ -80,7 +80,7 @@ def calc_financial_inputs(inputs_case):
     ### Assign the PV+battery values to values for standalone batteries
     annual_degrade = reeds.financials.append_pvb_parameters(
         dfin=annual_degrade, 
-        tech_to_copy='battery_{}'.format(scen_settings.sw['GSw_PVB_Dur']))
+        tech_to_copy='battery_li')
 
     years, modeled_years, year_map = reeds.financials.ingest_years(
         inputs_case, sw['sys_eval_years'], sw['endyear'])
@@ -119,7 +119,7 @@ def calc_financial_inputs(inputs_case):
     # Apply the values for standalone batteries to PV+B batteries
     financials_tech = reeds.financials.append_pvb_parameters(
         dfin=financials_tech, 
-        tech_to_copy='battery_{}'.format(scen_settings.sw['GSw_PVB_Dur']))
+        tech_to_copy='battery_li')
     # If the battery in PV+B gets the ITC, it gets 5-year MACRS depreciation as well
     if float(scen_settings.sw['GSw_PVB_BatteryITC']) >= 0.75:
         financials_tech.loc[
@@ -150,11 +150,10 @@ def calc_financial_inputs(inputs_case):
     
     # Import incentives, shift eligibility by safe harbor, merge incentives
     incentive_df = reeds.financials.import_and_mod_incentives(
-        incentive_file_suffix=sw['incentives_suffix'], 
-        construction_times_suffix=sw['construction_times_suffix'],
+        incentive_file_suffix=sw['incentives_suffix'],
         inflation_df=inflation_df, scen_settings=scen_settings)
     df_ivt = df_ivt.merge(incentive_df, on=['i', 't', 'country'], how='left')
-    df_ivt['safe_harbor_max'] = df_ivt['safe_harbor_max'].fillna(0.0)
+    df_ivt['safe_harbor'] = df_ivt['safe_harbor'].fillna(0.0)
     df_ivt['co2_capture_value_monetized'] = df_ivt['co2_capture_value_monetized'].fillna(0.0) * (1 / (1 - df_ivt['tax_rate']))
     df_ivt['h2_ptc_value_monetized'] = df_ivt['h2_ptc_value_monetized'].fillna(0.0) * (1 / (1 - df_ivt['tax_rate']))
     
@@ -329,35 +328,13 @@ def calc_financial_inputs(inputs_case):
     dfhydrogen_storage.rename(columns={'t':'*t'})[['*t','cap_cost_mult_storage']].round(6).to_csv(
         os.path.join(inputs_case, 'h2_storage_cap_cost_mult.csv'), index=False)
 
-    #%%
-    # Import regional capital cost multipliers, create multipliers for csp configurations
-    reg_cap_cost_mult = reeds.financials.import_data(
-        file_root='regional_cap_cost_mult', file_suffix=sw['reg_cap_cost_mult_suffix'], 
+    #%% Import regional capital cost differences
+    reg_cap_cost_diff = reeds.financials.import_data(
+        file_root='regional_cap_cost_diff', file_suffix=sw['reg_cap_cost_diff_suffix'], 
         indices=['i','r'], scen_settings=scen_settings)
-    
-    # Apply the values for standalone batteries to PV+B batteries
-    reg_cap_cost_mult = reeds.financials.append_pvb_parameters(
-        dfin=reg_cap_cost_mult, 
-        tech_to_copy=f'battery_{scen_settings.sw["GSw_PVB_Dur"]}')
 
-    # Initialize a copy of reg_cap_cost_mult that only include CSP data
-    reg_cap_cost_mult_csp = reg_cap_cost_mult[reg_cap_cost_mult['i'].str.contains('csp1_')].copy()
-    # Read in techs subset table to determine number of csp configurations
-    tech_subset_table = pd.read_csv(os.path.join(inputs_case, 'tech-subset-table.csv'))
-    csp_configs =  int(len(tech_subset_table.query('CSP == "YES" and STORAGE == "YES"')))
-    del tech_subset_table
-    # Iteratively copy and concat CSP data to reg_cap_cost_mult dataframe for each additional
-    # CSP configurations
-    for i in range(2, csp_configs + 1):
-        configuration = 'csp' + str(i)
-        mult_temp = reg_cap_cost_mult_csp.copy()
-        mult_temp['i'] = mult_temp.i.replace({'csp1':configuration}, regex=True)
-        reg_cap_cost_mult = pd.concat([reg_cap_cost_mult, mult_temp])
-        del mult_temp
-    del reg_cap_cost_mult_csp
-    
     # Trim down to just the techs in this run
-    reg_cap_cost_mult = reg_cap_cost_mult[reg_cap_cost_mult['i'].isin(list(techs['i']))]
+    reg_cap_cost_diff = reg_cap_cost_diff.loc[reg_cap_cost_diff['i'].isin(list(techs['i']))].copy()
 
 
     #%% Before writing outputs, change "x" to "newx" in [v]
@@ -402,8 +379,8 @@ def calc_financial_inputs(inputs_case):
         df_ivt, modeled_years, 'financing_risk_mult', ['i', 't'], 
         'financing_risk_mult', inputs_case) 
     reeds.financials.inv_param_exporter(
-        reg_cap_cost_mult, None, 'reg_cap_cost_mult', ['i', 'r'], 
-        'reg_cap_cost_mult', inputs_case)
+        reg_cap_cost_diff, None, 'reg_cap_cost_diff', ['i', 'r'], 
+        'reg_cap_cost_diff', inputs_case)
     
     # Write out the energy community itc bonus
     reeds.financials.param_exporter(
@@ -416,11 +393,11 @@ def calc_financial_inputs(inputs_case):
         df_ivt[['i', 't', 'eval_period_adj_mult']], 
         'eval_period_adj_mult', 'eval_period_adj_mult', inputs_case)
     
-    # Write out the maximum safe harbor window for each tech, for determining
+    # Write out the safe harbor window for each tech, for determining
     # the tax credit phaseout schedules
     reeds.financials.param_exporter(
-        df_ivt[['i', 't', 'safe_harbor_max']], 
-        'safe_harbor_max', 'safe_harbor_max', inputs_case)
+        df_ivt[['i', 't', 'safe_harbor']], 
+        'safe_harbor', 'safe_harbor', inputs_case)
     
     # Write out the carbon capture incentive values
     reeds.financials.param_exporter(

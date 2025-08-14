@@ -1,15 +1,5 @@
 i,region_type
 ice,p
-battery_2,p
-battery_4,p
-battery_6,p
-battery_8,p
-battery_10,p
-battery_12,p
-battery_24,p
-battery_48,p
-battery_72,p
-battery_100,p
 battery_li,p
 biopower,p
 beccs_mod,p
@@ -63,6 +53,7 @@ csp1_1*csp1_12,p
 csp2_1*csp2_12,p
 csp3_1*csp3_12,p
 csp4_1*csp4_12,p
+dr_shed_1*dr_shed_2,p
 evmc_storage_1*evmc_storage_10,p
 evmc_shape_1*evmc_shape_10,p
 egs_allkm_1*egs_allkm_10,p

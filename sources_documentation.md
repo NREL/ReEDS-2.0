@@ -72,20 +72,11 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Citation:** [(https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/38e6610a8c6a92291804598c95c11b707bf187b9/cases.csv)]
 ---
 
-  - [cases_hourly.csv](/cases_hourly.csv)
-    - **Description:** This cases file contains the settings to demonstrate temporal flexibility (hourly) of ReEDS.
+  - [cases_examples.csv](/cases_examples.csv)
 ---
 
   - [cases_small.csv](/cases_small.csv)
     - **Description:** Contains settings to run ReEDS at a smaller scale to test operability of the ReEDS model. Turns off several technologies and reduces the model size to significantly improve solve times.
----
-
-  - [cases_smaller.csv](/cases_smaller.csv)
-    - **Description:** Another cases file which reduces the size of the model by reducing some constraints and operates at the largest spatial hierarchy to favor faster runtimes.
----
-
-  - [cases_spatialflex.csv](/cases_spatialflex.csv)
-    - **Description:** Contains sample scenarios that use the spatial flexibility capabilities
 ---
 
   - [cases_standardscenarios.csv](/cases_standardscenarios.csv)
@@ -1450,9 +1441,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Indices:** t
 ---
 
-  - [reg_cap_cost_mult_default.csv](/inputs/financials/reg_cap_cost_mult_default.csv)
+  - [reg_cap_cost_diff_default.csv](/inputs/financials/reg_cap_cost_diff_default.csv)
     - **File Type:** parameter
-    - **Description:** region-specific multipliers for capital cost of all resources. Note: RE resources have values of 1 since their multipliers are incorporated in hourlize
+    - **Description:** region-specific differences for capital cost of all resources. Add to 1 to produce a multiplier.
     - **Indices:** i,r
 ---
 
@@ -1556,24 +1547,23 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Dollar year mapping for each fuel price scenario
 ---
 
-  - [h2-ct_10.csv](/inputs/fuelprices/h2-ct_10.csv)
+  - [h2-combustion_10.csv](/inputs/fuelprices/h2-combustion_10.csv)
 ---
 
-  - [h2-ct_30.csv](/inputs/fuelprices/h2-ct_30.csv)
+  - [h2-combustion_30.csv](/inputs/fuelprices/h2-combustion_30.csv)
 ---
 
-  - [h2-ct_reference.csv](/inputs/fuelprices/h2-ct_reference.csv)
+  - [h2-combustion_reference.csv](/inputs/fuelprices/h2-combustion_reference.csv)
 ---
 
-  - [ng_AEO_2023_HOG.csv](/inputs/fuelprices/ng_AEO_2023_HOG.csv)
+  - [ng_AEO_2025_HOG.csv](/inputs/fuelprices/ng_AEO_2025_HOG.csv)
     - **File Type:** Input
-    - **Description:** High Oil and Gas Resource and Technology scenario census division fuel price of natural gas
+    - **Description:** High Oil and Gas scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
     - **Dollar year:** 2004
 
     - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
     - **Units:** 2004$/MMBtu
-
 ---
 
   - [ng_AEO_2023_LOG.csv](/inputs/fuelprices/ng_AEO_2023_LOG.csv)
@@ -1597,6 +1587,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Units:** 2004$/MMBtu
 
 ---
+
 
   - [ng_AEO_2025_HOG.csv](/inputs/fuelprices/ng_AEO_2025_HOG.csv)
     - **File Type:** Input
@@ -1901,18 +1892,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [plant_characteristics](inputs/plant_characteristics) <a name='inputs/plant_characteristics'></a>
-  - [battery_ATB_2023_advanced.csv](/inputs/plant_characteristics/battery_ATB_2023_advanced.csv)
-    - **Dollar year:** 2020
----
-
-  - [battery_ATB_2023_conservative.csv](/inputs/plant_characteristics/battery_ATB_2023_conservative.csv)
-    - **Dollar year:** 2020
----
-
-  - [battery_ATB_2023_moderate.csv](/inputs/plant_characteristics/battery_ATB_2023_moderate.csv)
-    - **Dollar year:** 2020
----
-
   - [battery_ATB_2024_advanced.csv](/inputs/plant_characteristics/battery_ATB_2024_advanced.csv)
     - **Dollar year:** 2021
 ---
@@ -1962,26 +1941,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [coal-ccs_ATB_2024_moderate.csv](/inputs/plant_characteristics/coal-ccs_ATB_2024_moderate.csv)
 ---
 
-  - [coal_ATB_2024_advanced.csv](/inputs/plant_characteristics/coal_ATB_2024_advanced.csv)
----
-
-  - [coal_ATB_2024_conservative.csv](/inputs/plant_characteristics/coal_ATB_2024_conservative.csv)
----
-
   - [coal_ATB_2024_moderate.csv](/inputs/plant_characteristics/coal_ATB_2024_moderate.csv)
----
-
-  - [coal_fom_adj.csv](/inputs/plant_characteristics/coal_fom_adj.csv)
-    - **Dollar year:** 2017
----
-
-  - [continuous_battery_ATB_2024_advanced.csv](/inputs/plant_characteristics/continuous_battery_ATB_2024_advanced.csv)
----
-
-  - [continuous_battery_ATB_2024_conservative.csv](/inputs/plant_characteristics/continuous_battery_ATB_2024_conservative.csv)
----
-
-  - [continuous_battery_ATB_2024_moderate.csv](/inputs/plant_characteristics/continuous_battery_ATB_2024_moderate.csv)
 ---
 
   - [cost_opres_default.csv](/inputs/plant_characteristics/cost_opres_default.csv)
@@ -2031,12 +1991,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [gas-ccs_ATB_2024_moderate.csv](/inputs/plant_characteristics/gas-ccs_ATB_2024_moderate.csv)
 ---
 
-  - [gas_ATB_2024_advanced.csv](/inputs/plant_characteristics/gas_ATB_2024_advanced.csv)
----
-
-  - [gas_ATB_2024_conservative.csv](/inputs/plant_characteristics/gas_ATB_2024_conservative.csv)
----
-
   - [gas_ATB_2024_moderate.csv](/inputs/plant_characteristics/gas_ATB_2024_moderate.csv)
 ---
 
@@ -2058,10 +2012,10 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [geo_ATB_2024_moderate.csv](/inputs/plant_characteristics/geo_ATB_2024_moderate.csv)
 ---
 
-  - [h2-ct_ATB_2023.csv](/inputs/plant_characteristics/h2-ct_ATB_2023.csv)
+  - [h2-combustion_ATB_2023.csv](/inputs/plant_characteristics/h2-combustion_ATB_2023.csv)
 ---
 
-  - [h2-ct_ATB_2024.csv](/inputs/plant_characteristics/h2-ct_ATB_2024.csv)
+  - [h2-combustion_ATB_2024.csv](/inputs/plant_characteristics/h2-combustion_ATB_2024.csv)
 ---
 
   - [heat_rate_adj.csv](/inputs/plant_characteristics/heat_rate_adj.csv)
@@ -2122,10 +2076,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [nuclear_ATB_2024_moderate.csv](/inputs/plant_characteristics/nuclear_ATB_2024_moderate.csv)
----
-
-  - [nuke_fom_adj.csv](/inputs/plant_characteristics/nuke_fom_adj.csv)
-    - **Dollar year:** 2017
 ---
 
   - [ofs-wind_ATB_2023_advanced.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_advanced.csv)
@@ -2272,7 +2222,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 
 #### [reserves](inputs/reserves) <a name='inputs/reserves'></a>
-  - [net_firm_transfers_nerc.csv](/inputs/reserves/net_firm_transfers_nerc.csv)
+  - [peak_net_imports.csv](/inputs/reserves/peak_net_imports.csv)
 ---
 
   - [opres_periods.csv](/inputs/reserves/opres_periods.csv)
@@ -3121,14 +3071,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [cost_hurdle_intra.csv](/inputs/transmission/cost_hurdle_intra.csv)
 ---
 
-  - [r_rr_adj_ba.csv](/inputs/transmission/r_rr_adj_ba.csv)
-    - **Description:** Set of adjacent regions at BA resolution
----
-
-  - [r_rr_adj_county.csv](/inputs/transmission/r_rr_adj_county.csv)
-    - **Description:** Set of adjacent regions at county resolution
----
-
   - [rev_transmission_basecost.csv](/inputs/transmission/rev_transmission_basecost.csv)
     - **File Type:** inputs
     - **Description:** Unweighted average base cost across the four regions for which we have transmission cost data.
@@ -3306,7 +3248,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [upgradelink_water.csv](/inputs/upgrades/upgradelink_water.csv)
     - **File Type:** Inputs
-    - **Description:** Water techs that can be upgraded including the original technology, the technology it is upgrading to, and the delta (a H2-CT)
+    - **Description:** Water techs that can be upgraded including the original technology, the technology it is upgrading to, and the delta
     - **Indices:** i
     - **Dollar year:** N/A
 
@@ -3356,9 +3298,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 #### [variability](inputs/variability) <a name='inputs/variability'></a>
   - [ccseason_dates.csv](/inputs/variability/ccseason_dates.csv)
----
-
-  - [hourly_operational_characteristics.csv](/inputs/variability/hourly_operational_characteristics.csv)
 ---
 
   - [month2quarter.csv](/inputs/variability/month2quarter.csv)
@@ -3667,6 +3606,31 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
+###### [report-2025-06-03-11-55-40](postprocessing/bokehpivot/out/report-2025-06-03-11-55-40) <a name='postprocessing/bokehpivot/out/report-2025-06-03-11-55-40'></a>
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-03-11-55-40/report.xlsx)
+---
+
+
+###### [report-2025-06-03-11-59-51](postprocessing/bokehpivot/out/report-2025-06-03-11-59-51) <a name='postprocessing/bokehpivot/out/report-2025-06-03-11-59-51'></a>
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-03-11-59-51/report.xlsx)
+---
+
+
+###### [report-2025-06-03-12-06-11](postprocessing/bokehpivot/out/report-2025-06-03-12-06-11) <a name='postprocessing/bokehpivot/out/report-2025-06-03-12-06-11'></a>
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-03-12-06-11/report.xlsx)
+---
+
+
+###### [report-2025-06-03-12-06-21](postprocessing/bokehpivot/out/report-2025-06-03-12-06-21) <a name='postprocessing/bokehpivot/out/report-2025-06-03-12-06-21'></a>
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-03-12-06-21/report.xlsx)
+---
+
+
+###### [report-2025-06-05-12-38-18](postprocessing/bokehpivot/out/report-2025-06-05-12-38-18) <a name='postprocessing/bokehpivot/out/report-2025-06-05-12-38-18'></a>
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-05-12-38-18/report.xlsx)
+---
+
+
 ###### [view](postprocessing/bokehpivot/out/view) <a name='postprocessing/bokehpivot/out/view'></a>
   - [view.csv](/postprocessing/bokehpivot/out/view/view.csv)
 ---
@@ -3811,7 +3775,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [geo_fom_plant_char_format.csv](/preprocessing/atb_updates_processing/input_files/geo_fom_plant_char_format.csv)
 ---
 
-  - [h2-ct_plant_char_format.csv](/preprocessing/atb_updates_processing/input_files/h2-ct_plant_char_format.csv)
+  - [h2-combustion_plant_char_format.csv](/preprocessing/atb_updates_processing/input_files/h2-combustion_plant_char_format.csv)
 ---
 
   - [ofs-wind_plant_char_format.csv](/preprocessing/atb_updates_processing/input_files/ofs-wind_plant_char_format.csv)
