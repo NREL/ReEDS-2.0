@@ -881,7 +881,7 @@ def write_non_region_file(filename, src_file, dir_dst, sw, regions_and_agglevel)
                 os.path.join(dir_dst,'h2_exogenous_demand.csv')
             )
 
-        elif filename == 'energy_communities.csv':
+        elif filename in ['energy_communities.csv', 'nuclear_energy_communities.csv']:
             # Map energy communities to regions and compute the percentage of energy communities
             # within each region to assign a weighted bonus.
 

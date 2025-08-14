@@ -2896,6 +2896,20 @@ The maximum safe harbor periods are assumed to be 10 years for offshore wind, 6 
 Generators will obtain the largest credit available within their safe harbor window, meaning once a credit starts to phase down or terminate, ReEDS assumes efforts were made to start construction at the maximum length of the safe harbor window before the unit came online.
 In practice, this means ReEDS will show generators coming online and capturing the tax credits for several years beyond the nominal year in which they expired.
 
+ReEDS can also be run with the federal tax incentive changes introduced by the One Big Beautiful Bill Act (OBBBA).
+Under OBBBA, solar and wind projects must either start construction by July 4, 2026 or come online by the end of 2027 to be eligible for the PTC and ITC, and hydrogen projects must start construction by the end of 2027 to be eligible for the hydrogen PTC.
+The new law also introduces foreign entity of concern (FEOC) restrictions, which can render projects ineligible for tax credits depending on their level of involvement with prohibited foreign entities.
+ReEDS reflects these provisions through reference and conservative scenarios.
+The reference scenario updates the safe harbor periods for utility-scale PV, CSP, land-based wind, and offshore wind so that plants must come online by 2029 to be eligible for tax credits.
+This assumes that all plants starting construction before July 4, 2026 will come online by 2029 while meeting FEOC requirements.
+The conservative scenario updates the safe harbor periods for these technologies so that plants must come online by 2027 for eligibility.
+This assumes that FEOC restrictions will prevent most developers from cost-effectively using the tax credit.
+Both scenarios require hydrogen plants to come online by 2031 to be eligible for the hydrogen PTC, reflecting the notion that developers must start construction by 2027 and taking into the account the standard 4-year safe harbor period.
+OBBBA also expands eligibility for the energy community bonus to include nuclear plants placed in nuclear energy communities, or metropolitan statistical areas for which at least 0.17 percent of direct employment has been related to nuclear power at any point since 2010.
+
+```{admonition} Tax incentive settings
+- The incentive scenario (ira, obbba, obbba_conservative, etc.) is controlled by the `incentives_suffix` switch
+- The tax incentives corresponding to a given scenario are specified in the `inputs/financials/incentives_{incentives_suffix}.csv` file
 
 ### State Renewable Portfolio Standards
 

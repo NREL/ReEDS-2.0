@@ -278,6 +278,7 @@ ng_demand_tot.csv,inputs/fuelprices/ng_tot_demand_{ngscen}.csv,,,ignore,ignore,w
 noretire.csv,inputs/sets/noretire.csv,,,ignore,ignore,,,,,0,,,,noretire,,
 notvsc.csv,inputs/sets/notvsc.csv,,,ignore,ignore,,,,,0,,,,notvsc,,
 nuclear_ba_ban_list.csv,,GSw_NukeStateBan,~0,ignore,ignore,,,,,,,,,,,
+nuclear_energy_communities.csv,inputs/financials/nuclear_energy_communities.csv,,,ignore,ignore,,,,,0,,,,,,region aggregation and filtering is handled in copy_files
 nuclear_subsidies.csv,inputs/state_policies/nuclear_subsidies.csv,,,ignore,ignore,*st,year,,0,0,,,,,,
 numhours.csv,,,,ignore,ignore,,,,,0,,,,,,
 numhours_nexth.csv,,,,ignore,ignore,,,,,0,,1,,,,
