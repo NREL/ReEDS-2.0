@@ -934,7 +934,7 @@ aggcolors = {
 
     'Hydro': techcolors['hydro'],
     'Geothermal': techcolors['geothermal'],
-    'Canadian imports': techcolors['dr'],
+    'Canadian imports': techcolors['dr_shed'],
 
     # 'Bio/BECCS':plt.cm.tab20(4),
     # 'H2 turbine':plt.cm.tab20(5),

@@ -132,9 +132,13 @@ def get_zonemap(case=None, exclude_water_areas=False):
                 .set_index('r')
                 .aggreg
             )
-            aggreg2anchorreg = pd.read_csv(
+            aggreg2anchorreg = r2aggreg.reset_index().rename(columns={'aggreg': 'aggreg'})
+            aggreg2anchorreg .to_csv(
                 os.path.join(case, 'inputs_case', 'aggreg2anchorreg.csv')
             )
+            # aggreg2anchorreg = pd.read_csv(
+            #     os.path.join(case, 'inputs_case', 'aggreg2anchorreg.csv')
+            # )
             aggreg2anchorreg = aggreg2anchorreg[
                 aggreg2anchorreg['aggreg'].isin(agglevel_variables['ba_regions'])
             ]

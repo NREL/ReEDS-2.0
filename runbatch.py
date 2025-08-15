@@ -1624,13 +1624,10 @@ def write_batch_script(
             f"python {os.path.join(reeds_path,'postprocessing','Utah_filter.py')} -c {casedir}\n"
             
         )
-        if int(caseSwitches['transmission_maps']):
-            OPATH.writelines('python postprocessing/transmission_maps.py -c {} -y {}\n\n'.format(
-                f'{casedir}_isolated', (
-                    solveyears[-1]
-                    if int(caseSwitches['transmission_maps']) > int(solveyears[-1])
-                    else caseSwitches['transmission_maps'])
-            ))
+        OPATH.writelines(
+            f'python postprocessing/transmission_maps.py {casedir}_isolated --year {solveyears[-1]}\n\n'
+        )
+
 
         ### Run dispatch mode if desired
         if int(caseSwitches['pcm']):

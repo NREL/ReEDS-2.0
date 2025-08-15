@@ -2360,7 +2360,13 @@ for key in tx_data.keys():
     tx_diff[f'{basecase}-{key}'] = tx_diff[f'{basecase}_MW'] - tx_diff[f'{key}_MW']
 
 tx_diff = tx_diff.fillna(0)
-tx_diff.to_csv(os.path.join(outpath),'tx_diff.csv', index=False)
+tx_savename = os.path.join(
+    outpath,
+    (f"tx_diff-{','.join(cases.keys())}"
+     .replace(':','').replace('/','').replace(' ','').replace('\\n','').replace('\n','')
+     [:max_filename_length-len('.csv')]) + '.csv'
+)
+tx_diff.to_csv(tx_savename, index=False)
 
 ### Difference
 plt.close()
