@@ -414,14 +414,12 @@ parameter dr_shed_out(i,r,allh)  "--fraction-- fraction of capacity available fo
 /
 $offlisting
 $ondelim
-$include inputs_case%ds%%temporal_inputs%%ds%dr_cap.csv
-$include inputs_case%ds%stress%stress_year%%ds%dr_cap.csv
+$include inputs_case%ds%%temporal_inputs%%ds%dr_shed_out.csv
+$include inputs_case%ds%stress%stress_year%%ds%dr_shed_out.csv
 $offdelim
 $onlisting
 / ;
 $offempty
-
-*dr_shed_out(i,r,h) = dr_shed_out(i,r,h)$h_stress(h) ;
 
 * DR Shed resources are only available during stress periods
 avail(i,r,h)$[dr_shed(i)$h_rep(h)] = 0 ;

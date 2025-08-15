@@ -18,7 +18,7 @@ GSw_CCSFLEX_STO,0
 GSw_CCSFLEX_STO_LEVEL,1
 GSw_CCSFLEX_cap_max,90
 GSw_CCSFLEX_cost_mult,1
-GSw_CCS_NoRetire,1
+GSw_CCS_NoRetire,0
 GSw_CCS_NotRecTech,0
 GSw_CCS_Rate_New_max,0.99
 GSw_CCS_Rate_New_mod,0.95

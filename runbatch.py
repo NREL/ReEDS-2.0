@@ -1033,7 +1033,7 @@ def setupEnvironment(
             + '\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n'
         )
         overwrite = str(input('Do you want to overwrite them? y/[n]: ') or 'n')
-        if overwrite in ['y','Y','yes','Yes','YES']:
+        if overwrite.lower() in ['y', 'yes']:
             for outpath in existing_outpaths:
                 shutil.rmtree(outpath)
         else:
@@ -1054,6 +1054,17 @@ def setupEnvironment(
     df_cases.drop(
         ['Choices','Description','Default Value'],
         axis='columns', inplace=True, errors='ignore')
+
+    # User warnings
+    if (df_cases.loc['cleanup_level'].astype(int) > 0).any() and not skip_checks:
+        print(
+            '\nWARNING: At least one case uses cleanup_level ≥ 1, which removes files '
+            'used by R2X.\nIf you plan to run R2X, do not proceed; set cleanup_level '
+            'to 0 in your cases file and restart the run.'
+        )
+        confirm = str(input('\nProceed? y/[n]: ') or 'n')
+        if confirm.lower() not in ['y', 'yes']:
+            quit()
 
     print("{} cases being run:".format(len(caseList)))
     for case in casenames:
@@ -1484,18 +1495,18 @@ def write_batch_script(
         OPATH.writelines(f'python e_report_dump.py {casedir} -c\n\n')
 
         ### Run the retail rate module
-        if caseSwitches['GSw_Region'].lower() == 'usa':
-            OPATH.writelines(
-                "python"
-                + f" {os.path.join(reeds_path,'postprocessing','retail_rate_module','retail_rate_calculations.py')}"
-                + f" {batch_case} -p\n\n"
-            )
+        OPATH.writelines(
+            "python"
+            + f" {os.path.join(reeds_path,'postprocessing','retail_rate_module','retail_rate_calculations.py')}"
+            + f" {batch_case} -p\n\n"
+        )
 
         ## Run air-quality and health damages calculation script
-        if int(caseSwitches['GSw_HealthDamages']):
-            OPATH.writelines(
-                f"python {os.path.join(reeds_path,'postprocessing','air_quality','health_damage_calculations.py')} {casedir}\n\n"
-            )
+        OPATH.writelines(
+            "python "
+            f"{os.path.join(reeds_path,'postprocessing','air_quality','health_damage_calculations.py')} "
+            f"{casedir}\n\n"
+        )
 
         ### Make script to unload all data to .gdx file
         command = (
@@ -1557,13 +1568,9 @@ def write_batch_script(
             + os.path.join(reeds_path,"runs",batch_case,"outputs","reeds-report-state") + ' No\n\n')
         OPATH.writelines('python postprocessing/vizit/vizit_prep.py ' + '"{}"'.format(os.path.join(casedir,'outputs')) + '\n\n')
 
-        if int(caseSwitches['transmission_maps']):
-            OPATH.writelines('python postprocessing/transmission_maps.py -c {} -y {}\n\n'.format(
-                casedir, (
-                    solveyears[-1]
-                    if int(caseSwitches['transmission_maps']) > int(solveyears[-1])
-                    else caseSwitches['transmission_maps'])
-            ))
+        OPATH.writelines(
+            f'python postprocessing/transmission_maps.py {casedir} --year {solveyears[-1]}\n\n'
+        )
 
         ### Remove unnecessary files from case folder
         OPATH.writelines(

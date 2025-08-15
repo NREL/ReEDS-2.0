@@ -450,13 +450,13 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
             'can_exports_h_frac': ['*h','frac_weighted'],
             'can_imports_szn_frac': ['*szn','frac_weighted'],
             'period_weights': ['*szn','rep_period'],
-            'hmap_myr': ['*year','yearperiod','hour','hour0','yearhour',
-                         'periodhour','actual_period','actual_h','season','h'],
+            'hmap_myr': ['*timestamp', 'year', 'yearperiod', 'hour', 'hour0', 'yearhour',
+                        'periodhour', 'actual_period', 'actual_h', 'season', 'month', 'h'],
             'periodmap_1yr': ['*actual_period','season'],
             'canmexload': ['*r','h'],
             'outage_forced_h': ['*i','r','h'],
             'outage_scheduled_h': ['*i','h'],
-            'dr_cap': ['*i','r','h'],
+            'dr_shed_out': ['*i','r','h'],
             'evmc_baseline_load': ['r','h','t'],
             'evmc_shape_generation': ['*i','r','h'],
             'evmc_shape_load': ['*i','r','h'],
@@ -1383,7 +1383,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
         'outage_forced_h': [outage_h['forced'].round(3), False, False],
         'outage_scheduled_h': [outage_h['scheduled'].round(3), False, False],
         # DR        
-        "dr_cap": [
+        "dr_shed_out": [
             (dr_shed_avail_out.assign(h=dr_shed_avail_out.h.map(chunkmap))
              .groupby(['i','r','h'], as_index=False).cap.mean().round(5)),
             False, False],

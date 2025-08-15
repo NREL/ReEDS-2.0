@@ -1,6 +1,6 @@
 '''
 This script can be run in one of two ways:
-1. activate via GSw_HealthDamages (on by default) to call from runbatch.py as part of a ReEDS run, 
+1. called automatically from runbatch.py as part of a ReEDS run,
    in which case a single case folder is passed to the script 
 
 2. call directly to post-process a set of completed runs, with a csv file 

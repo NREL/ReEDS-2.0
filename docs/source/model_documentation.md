@@ -1701,10 +1701,16 @@ Those electricity-consuming technologies are electrolyzers, steam methane reform
 These technologies are assumed to consume electricity at the wholesale electricity price.
 ReEDS users can alter this assumption with the `GSw_RetailAdder` switch, which adds a 2004$/MWh cost adder to electricity consumed by these technologies.
 
+### Demand Response
 
-
-
-
+Demand response (DR) is turned off by default in ReEDS, but the user has the option to enable DR via load shedding.
+The demonstration data used to characterize the amount of load shedding avaiable were obtained from a workflow which includes ResStock, DR-Path, and dsgrid.
+The data reflect the technical potential for residential load shedding in 11 states (AZ, CA, CO, FL, GA, MN, MT, NM, NY, TX, WA) and were developed using the 2018 weather year.
+Through this implementation the demand response is effectively added as a new supply curve-based resource; however, the DR shed potential is only available during stress periods.
+If ReEDS chooses to dispatch DR shed, the "generation" from the resource is subtracted from the load considered in the resource adeqaucy calculations.
+The capital costs for the residential resource are derived from the installation cost for the DR-enabling technology (program implementation or procurement costs are not included).
+In addition to only allowing the shed resource to be dispatched during stress periods, a max daily capacity factor is defined.
+For the residential heating and cooling resources the max daily capacity factor is set to 4 hours per day. 
 
 ## Transmission
 
@@ -3997,5 +4003,87 @@ In addition, even the best transmission datasets we had available still had omis
 
 Finally, enhanced spatial resolution can lead to false precision, where users see model solutions at high spatial resolution and put more stock into that model solution than is warranted because of uncertainty in the data or methods used.
 For example, {cite}`mehrtashDoesChoicePower2023` shows the choice of transmission power flow representation can have a significant impact on the model solution.
+
+
+## ReEDS Model Contributors
+All NREL contributors to the ReEDS model are listed below.
+
+- Abdelrahmam Ayad
+- Jon Becker
+- Ross Beppler
+- David Bielen
+- Nate Blair
+- Max Brown
+- Patrick Brown
+- Vincent Carag
+- Yunzhi Chen
+- Stuart Cohen
+- Wesley Cole
+- Sean Corcoran
+- Paul Denholm
+- Victor Diakov
+- Victor Duraes de Faria
+- Kelly Eurek
+- Will Frazier
+- Bethany Frew
+- Rebecca Fuchs
+- Nathaniel Gates
+- Danny Greer
+- Sameera Gudladona
+- Claire Halloran
+- Maureen Hand
+- Anne Hamilton
+- Donna Heimiller
+- Jonathan Ho
+- Eduardo Ibanez
+- Paige Jadun
+- Charles Kang
+- Akash Karmakar
+- Saroj Khanal
+- Venkat Krishnan
+- Katie Lamb
+- Anthony Lopez
+- Helen Lu
+- Scott Machen
+- Madeline Macmillan
+- Trieu Mai
+- Andrew Martinez
+- Dana Max
+- Maureen McDaniel
+- Kennedy Mindermann
+- Joseph Mowers
+- Matthew Mowers
+- David Mulcahy
+- Caitlin Murphy
+- John Nangle
+- Claire Nguyen
+- Scott Nicolson
+- Kodi Obika
+- Hyungseon Oh
+- An Pham
+- Andrew Reimers
+- James Richards
+- Anna Schleifer
+- Brian Sergi
+- Louisa Serpe
+- Shashwat Sharma
+- Sophia Shi
+- Walter Short
+- Ben Sigrin
+- Travis Simpkins
+- Ramteen Sioshansi
+- Elina Spyrou
+- Ragini Sreenath
+- Dan Steinberg
+- Patrick Sullivan
+- Aaron Townsend
+- Merve Turan
+- Caroline Uriarte
+- Max Vanatta
+- Nina Vincent
+- Tibebe Woldeyesus
+- Ella Zhou
+- Owen Zinaman
+- Matt Zwerling
 
 ## Footnotes

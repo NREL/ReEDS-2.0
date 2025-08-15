@@ -123,7 +123,7 @@ def main(t, tnext, casedir, iteration=0):
     #%% Prep data for resource adequacy
     print('Preparing data for resource adequacy calculations')
     tic = datetime.datetime.now()
-    augur_csv, augur_h5 = prep_data.main(t, casedir)
+    augur_csv, augur_h5 = prep_data.main(t, casedir, iteration)
     reeds.log.toc(tic=tic, year=t, process='ReEDS_Augur/prep_data.py')
 
     #%% Calculate capacity credit if necessary; otherwise bypass

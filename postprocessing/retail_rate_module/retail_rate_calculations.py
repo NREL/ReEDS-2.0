@@ -2,6 +2,7 @@
 ### --- IMPORTS ---
 ### =====================================================================================
 import argparse
+import datetime
 import itertools
 import pandas as pd
 import numpy as np
@@ -11,6 +12,7 @@ import sys
 ### Local imports
 import ferc_distadmin
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import reeds
 from reeds import plots
 
 #########################
@@ -99,6 +101,9 @@ def interp_between_solve_years(
         first_year, last_year, region_list, region_type):
     """
     """
+    # If empty, return unchanged
+    if df.empty:
+        return df
     # Pivot for just the solve years first, so we can fill in zero-value years 
     df_pivot_solve_years = pd.DataFrame(index=modeled_years, columns=region_list)
     df_pivot_solve_years.update(df.pivot(index='t', columns=region_type, values=value_name))  
@@ -265,16 +270,10 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     mdir = os.path.dirname(os.path.abspath(__file__))
 
     # #%% Settings for testing/debugging
-    # run_dir = os.path.join('/Users','jcarag','ReEDS','RRM_Fixes','ReEDS-2.0','runs',
-    #                         'NonLUSA_usa_base_D_DAC')
-    # mdir = os.path.join('/Users','jcarag','ReEDS','RRM_Fixes','ReEDS-2.0','postprocessing',
-    #                     'retail_rate_module')
+    # run_dir = os.path.join(reeds.io.reeds_path, 'runs', 'v20250716_prM0_p6_County')
     # inputpath = 'inputs.csv'
     # write = True
-    # plots = True
     # verbose = 0
-    # plot_dollar_year = 2022
-    # startyear = 2010
 
     #%% INPUTS
     ### Inputs (Retail Rate Module) - ingest and parse from retail_rate_module/inputs.csv
@@ -587,31 +586,38 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     op_costs_pivot = op_costs.pivot_table(
         index=['t', 'state'], columns='cost_type', values='cost', fill_value=0.0).reset_index()
 
+    # Read regional emissions
+    emissions_r = (
+        pd.read_csv(os.path.join(run_dir, 'outputs', 'emit_r.csv'))
+        .rename(columns={'Value':'emissions', 'Val':'emissions'})
+    )
+    # Consider only direct emissions
+    emissions_r = emissions_r.loc[
+        (emissions_r.etype == 'combustion')
+        & (emissions_r.eall == 'CO2')
+    ].drop(columns=['etype', 'eall'])
+    # Create list of regions with emissions
+    r_list_emissions = emissions_r['r'].drop_duplicates()
+    # Interpolate emissions between solve years
+    emissions_r = interp_between_solve_years(
+        emissions_r,
+        'emissions',
+        modeled_years,
+        non_modeled_years,
+        first_year,
+        last_year,
+        r_list_emissions,
+        'r',
+    )
+    # Remove negative emissions
+    emissions_r.loc[emissions_r['emissions'] < 0, 'emissions'] = 0
+    emissions_no_negative = emissions_r.copy()
+
     ### Redistribute the DAC op costs
     # DAC has negative CO2 emissions, which allows fossil generators to continue to operate.
     # This redistribution shares the cost of the DAC with any region that is still emitting CO2.
     # In this way, states with fossil units but no DAC still incur costs for the DAC.
     if 'op_co2_transport_storage' in op_costs_pivot.columns:
-        # Read in the BA-level emissions
-        emissions_r = (
-            pd.read_csv(os.path.join(run_dir, 'outputs', 'emit_r.csv'))
-            .rename(columns={'eall':'type', 'r':'r', 't':'t', 'Value':'emissions',
-                             'Dim1':'type', 'Dim2':'r', 'Dim3':'t', 'Val':'emissions'}))
-        
-        # Consider only CO2-equivalent emissions
-        emissions_r = emissions_r[emissions_r['type']=='CO2e']
-        emissions_r.drop('type', axis=1, inplace=True)
-        
-        # Load the list of BAs with emissions
-        r_list_emissions = emissions_r['r'].drop_duplicates()
-        
-        # Interpolate the emissions in between the solve years 
-        emissions_r = interp_between_solve_years(
-            emissions_r, 'emissions', modeled_years, non_modeled_years, first_year, last_year, r_list_emissions, 'r')
-        
-        # Remove negative emissions
-        emissions_r.loc[emissions_r['emissions'] < 0, 'emissions'] = 0
-        
         # Match the BAs with the respective states
         regions_map_emissions = regions_map.copy()[['r','state']]
         regions_map_emissions = regions_map_emissions[regions_map_emissions['r'].isin(r_list_emissions)]
@@ -805,37 +811,12 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # any region that is still emitting CO2 via operation of fossil units 
     # incurs the costs of DAC 
     if 'dac' in df_capex_irt_distributed['i'].unique():
-        # Read in the BA-level emissions
-        emissions_r = pd.read_csv(os.path.join(run_dir, 'outputs', 'emit_r.csv'))
-        
-        if emissions_r.shape[1] == 4:
-            emissions_r = emissions_r.rename(
-                columns={'eall':'type', 'r':'r', 't':'t', 'Value':'emissions', 
-                         'Dim1':'type', 'Dim2':'r', 'Dim3':'t', 'Val':'emissions'})
-            emissions_r = emissions_r[emissions_r['type']=='CO2e']
-            emissions_r.drop('type', axis=1, inplace=True)
-        else:
-            emissions_r = emissions_r.rename(
-                columns={'r':'r', 't':'t', 'Value':'emissions', 
-                         'Dim1':'r', 'Dim2':'t', 'Val':'emissions'})
-        
-        # Load the list of BAs with emissions
-        r_list_emissions = emissions_r['r'].drop_duplicates()
-        
-        # Interpolate the emissions in between the solve years 
-        emissions_r = interp_between_solve_years(
-            emissions_r, 'emissions', modeled_years, non_modeled_years, first_year, 
-            last_year, r_list_emissions, 'r')
-        
-        # Remove negative emissions
-        emissions_r.loc[emissions_r['emissions'] < 0, 'emissions'] = 0
-        
         # Calculate the fraction of emissions by BA
-        emissions_r = emissions_r.pivot_table(
+        emissions_fraction = emissions_no_negative.pivot_table(
             index='t', columns='r', values='emissions').fillna(0)
-        emissions_r['Total'] = emissions_r.sum(axis=1)
-        ba_cols = [c for c in emissions_r.columns if c != 'Total']
-        emissions_r_fraction = emissions_r.copy() 
+        emissions_fraction['Total'] = emissions_fraction.sum(axis=1)
+        ba_cols = [c for c in emissions_fraction.columns if c != 'Total']
+        emissions_r_fraction = emissions_fraction.copy() 
         emissions_r_fraction[ba_cols] = (
             emissions_r_fraction[ba_cols].div(emissions_r_fraction['Total'], axis=0)
             )
@@ -1154,8 +1135,9 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
             cleanup=input_daproj['cleanup'],
             ).sort_values(['state','t']).set_index(['state','t'])
         ### NE is missing from dist_admin_costs_state, so assign it to the regional value
-        dist_admin_costs_state = pd.concat(
-            [dist_admin_costs_state, dist_admin_costs_region.loc[['NE']]]
+        if 'NE' in dist_admin_costs_region.index.get_level_values('state').unique():
+            dist_admin_costs_state = pd.concat(
+                [dist_admin_costs_state, dist_admin_costs_region.loc[['NE']]]
             )
 
     #%% Assign dist_admin_costs based on aggregation level
@@ -1168,11 +1150,12 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     elif input_daproj['aggregation'] == 'best':
         ### Start with national values
         dist_admin_costs = dist_admin_costs_nation.copy()
+        keepstates = dist_admin_costs.index.get_level_values('state').unique()
         ### Get the list of states where aggregation=='state' gives the lowest error
         best = pd.read_csv(
             os.path.join(mdir,'inputs','state-meanbiaserror_rate-aggregation.csv'),
             usecols=['index','aggregation'], index_col='index',
-            ).squeeze(1)
+        ).squeeze(1).loc[keepstates]
         replacestates = best.loc[best=='state'].index.values
         replaceregions = best.loc[best=='region'].index.values
         ### Drop these states, then add back the state/region-specific values
@@ -2381,16 +2364,8 @@ if __name__ == '__main__':
     startyear = args.startyear
 
     #%% Time the operation of this script
-    import site
-    site.addsitedir(os.path.join(mdir,os.pardir,os.pardir,'input_processing'))
-    try:
-        from ticker import toc, makelog
-        import datetime
-        tic = datetime.datetime.now()
-        #%% Set up logger
-        log = makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
-    except Exception as err:
-        print(err)
+    tic = datetime.datetime.now()
+    log = reeds.log.makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
 
     #%% Get and write the component revenues
     main(
@@ -2410,8 +2385,5 @@ if __name__ == '__main__':
     if args.plots:
         retail_plots(run_dir=run_dir, inputpath=os.path.join(mdir,'inputs.csv'))
 
-    try:
-        toc(tic=tic, year=0, process='retail_rate_calculations.py', path=run_dir)
-        print('Finished retail_rate_calculations.py')
-    except Exception as err:
-        print(err)
+    reeds.log.toc(tic=tic, year=0, process='retail_rate_calculations.py', path=run_dir)
+    print('Finished retail_rate_calculations.py')

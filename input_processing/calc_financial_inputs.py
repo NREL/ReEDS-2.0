@@ -150,11 +150,10 @@ def calc_financial_inputs(inputs_case):
     
     # Import incentives, shift eligibility by safe harbor, merge incentives
     incentive_df = reeds.financials.import_and_mod_incentives(
-        incentive_file_suffix=sw['incentives_suffix'], 
-        construction_times_suffix=sw['construction_times_suffix'],
+        incentive_file_suffix=sw['incentives_suffix'],
         inflation_df=inflation_df, scen_settings=scen_settings)
     df_ivt = df_ivt.merge(incentive_df, on=['i', 't', 'country'], how='left')
-    df_ivt['safe_harbor_max'] = df_ivt['safe_harbor_max'].fillna(0.0)
+    df_ivt['safe_harbor'] = df_ivt['safe_harbor'].fillna(0.0)
     df_ivt['co2_capture_value_monetized'] = df_ivt['co2_capture_value_monetized'].fillna(0.0) * (1 / (1 - df_ivt['tax_rate']))
     df_ivt['h2_ptc_value_monetized'] = df_ivt['h2_ptc_value_monetized'].fillna(0.0) * (1 / (1 - df_ivt['tax_rate']))
     
@@ -394,11 +393,11 @@ def calc_financial_inputs(inputs_case):
         df_ivt[['i', 't', 'eval_period_adj_mult']], 
         'eval_period_adj_mult', 'eval_period_adj_mult', inputs_case)
     
-    # Write out the maximum safe harbor window for each tech, for determining
+    # Write out the safe harbor window for each tech, for determining
     # the tax credit phaseout schedules
     reeds.financials.param_exporter(
-        df_ivt[['i', 't', 'safe_harbor_max']], 
-        'safe_harbor_max', 'safe_harbor_max', inputs_case)
+        df_ivt[['i', 't', 'safe_harbor']], 
+        'safe_harbor', 'safe_harbor', inputs_case)
     
     # Write out the carbon capture incentive values
     reeds.financials.param_exporter(
