@@ -95,7 +95,7 @@ def errorcheck_reeds2pras(casedir, csvout, h5out):
 
 
 #%%### Procedure
-def main(t, casedir):
+def main(t, casedir, iteration=0):
     #%%### DEBUGGING: Inputs
     # t = 2020
     # reeds_path = os.path.expanduser('~/github2/ReEDS-2.0')
@@ -126,6 +126,13 @@ def main(t, casedir):
         low_memory=False,
     )
     hmap_allyrs['szn'] = h_dt_szn['season'].copy()
+
+    hmap_myr_stress = pd.read_csv(
+        os.path.join(inputs_case, f'stress{t}i{iteration}', 'hmap_myr.csv'),
+        low_memory=False,
+        index_col='*timestamp',
+        parse_dates=True,
+    ).rename_axis('timestamp')
 
     h_dt_szn = h_dt_szn.set_index(['year', 'hour'])
     # Add explicit timestamp index
@@ -307,60 +314,19 @@ def main(t, casedir):
         .fillna(0)
         .reindex(h_dt_szn_load_years.index)
     )
+
     #%%## DR Shed load
-    if int(sw.GSw_DRShed):
-        # Get the DR shed load for all weather years
-        # Extract shed from gen data
-        gen = gdxreeds['gen_h_stress_filt']
-        gen_shed = gen.loc[
-            (gen['t'] == t)
-            & gen['i'].isin(tech_subset_table['DR_SHED'].values)
-        ].drop('t', axis=1)
-
-        # Pass if dr-shed not included
-        if gen_shed.shape[0] == 0:
-            gen_shed_combined = pd.DataFrame()
-        else:
-            # print out 8760 shed (not combined)
-            # and combine shed types to pass to pras
-            gen_shed_separate_types = {}
-            for dr_type in gen_shed['i'].unique():
-                # separate dr-shed types
-                gen_shed_separate_types[dr_type] = (
-                    gen_shed.loc[gen_shed['i'] == dr_type]
-                    .groupby(['r', 'allh']).Value.sum()
-                    .reset_index()
-                )
-
-                # Clean 'allh' column in gen_shed
-                gen_shed_separate_types[dr_type]['actual_h'] = (
-                    gen_shed_separate_types[dr_type]['allh'].str.replace('s','')
-                )
-
-                # map allh column to timestamp in hmap_allyrs
-                gen_shed_separate_types[dr_type] = (
-                    gen_shed_separate_types[dr_type]
-                    .merge(hmap_allyrs, on='actual_h', how='right')
-                    .fillna(0)
-                    # Reformat so regions are columns and timestamps are index
-                    .pivot(index='*timestamp', columns='r', values='Value')
-                )
-
-                gen_shed_separate_types[dr_type].index = (
-                    pd.to_datetime(gen_shed_separate_types[dr_type].index)
-                    .rename('datetime')
-                )
-                gen_shed_separate_types[dr_type] = (
-                    gen_shed_separate_types[dr_type]
-                    .loc[:, gen_shed_separate_types[dr_type].columns.str.contains('p').fillna(False)]
-                    .fillna(0)
-                )
-
-            # Combine all dr-shed types
-            gen_shed_combined = (
-                pd.concat(gen_shed_separate_types, axis=1)
-                .groupby('r', axis=1).sum()
-            )
+    ### Get the DR shed load for all weather years
+    gen_h_stress = gdxreeds['gen_h_stress_filt']
+    gen_shed = gen_h_stress.loc[
+        (gen_h_stress['t'] == t)
+        & gen_h_stress['i'].isin(tech_subset_table['DR_SHED'].values)
+    ].groupby(['r','allh']).Value.sum().unstack('r')
+    ## First assign values to all timestamps in GSw_HourlyChunkLengthStress
+    gen_shed_combined = gen_shed.reindex(hmap_myr_stress.h.values)
+    gen_shed_combined.index = hmap_myr_stress.index
+    ## Now fill other hours with zero
+    gen_shed_combined = gen_shed_combined.reindex(h_dt_szn.index).fillna(0)
 
 
     #%%### Total load and net load

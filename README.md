@@ -5,6 +5,7 @@
 > **Regional Energy Deployment System (ReEDS) Model**
 >
 > 
+> [![CI](https://github.nrel.gov/ReEDS/ReEDS-2.0/actions/workflows/python-app.yaml/badge.svg)](https://github.nrel.gov/ReEDS/ReEDS-2.0/actions/workflows/python-app.yaml)
 > [![Documentation](https://img.shields.io/badge/Documentation-view%20online-0a7f5e?logo=readthedocs&logoColor=white&labelColor=555)](https://nrel.github.io/ReEDS-2.0)
 > ![Static Badge](https://img.shields.io/badge/python-3.11-blue)
 > ![GitHub License](https://img.shields.io/github/license/NREL/ReEDS-2.0)
