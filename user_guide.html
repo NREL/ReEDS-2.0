@@ -66,6 +66,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#resources-for-more-info-about-reeds-s-load-profiles">Resources for more info about ReEDS’s load profiles</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#different-weather-years">Different weather years</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#historic-load-data">Historic Load Data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#demand-response">Demand Response</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#hydrogen-inputs">Hydrogen inputs</a><ul>
@@ -165,6 +166,7 @@
 <li><p>So if you want to use the example period:szn map, just set <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm=user</span></code>.</p></li>
 <li><p>If you want to specify a different period:szn map, then add your mapping at the bottom of inputs/variability/period_szn_user.csv with a unique scenario name in the ‘scenario’ column, and set <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm</span></code> to your unique scenario name, <em>which must contain the substring ‘user’</em>. (For example, I could use a mapping called ‘user_myname_20230130’ by adding my period:szn map to inputs/variability/period_szn_user.csv with ‘user_myname_20230130’ in the ‘scenario’ column and setting <code class="docutils literal notranslate"><span class="pre">GSw_HourlyClusterAlgorithm=user_myname_20230130</span></code>.)</p></li>
 <li><p>Make sure the settings for <code class="docutils literal notranslate"><span class="pre">GSw_HourlyType</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HourlyWeatherYears</span></code> match your user-defined map. For example, if your ‘user_myname_20230130’ map includes 365 representative days for weather year 2012, then set <code class="docutils literal notranslate"><span class="pre">GSw_HourlyType=day</span></code> and <code class="docutils literal notranslate"><span class="pre">GSw_HourlyWeatherYears=2012</span></code>.</p></li>
+<li><p>You can feed the period:szn mapping from a completed run into the inputs folder of your repo to force ReEDS to use the same representative or stress periods. More detail can be found <a class="reference external" href="https://pages.github.nrel.gov/ReEDS/ReEDS-2.0/postprocessing_tools.html#fix-representative-stress-periods-preprocessing-get-case-periods-py">here</a></p></li>
 </ul>
 </li>
 </ul>
@@ -343,6 +345,15 @@ Files 1 &amp; 2 are kept separate in the repository because their state and BA l
 </tr>
 </tbody>
 </table>
+</section>
+<section id="demand-response">
+<h3>Demand Response<a class="headerlink" href="#demand-response" title="Link to this heading"></a></h3>
+<p>Demand response is turned off by default. To enable it the following switches are needed:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_DRShed</span></code>: turns on/off the demand response resource</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_MaxDailyCF</span></code> : turns on/off daily maximum capacity factor constraint</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dr_shedscen</span></code>: scenario to define which scalars will be used for the supply curve cost and capacity</p></li>
+</ul>
 </section>
 </section>
 <section id="hydrogen-inputs">
@@ -908,7 +919,7 @@ These characteristics include:</p>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on August 04, 2025.
+      <span class="lastupdated">Last updated on August 18, 2025.
       </span></p>
   </div>
 

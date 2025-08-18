@@ -89,6 +89,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#historical-load-data-aeo-growth-factor-profiles">Historical Load Data + AEO Growth Factor Profiles</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#load-adjustment-method-for-end-use-profiles">Load Adjustment Method for End-Use Profiles</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#endogenous-load">Endogenous Load</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#demand-response">Demand Response</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#transmission">Transmission</a><ul>
@@ -157,6 +158,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#spatial-resolution-capabilities">Spatial Resolution Capabilities</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#reeds-model-contributors">ReEDS Model Contributors</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#footnotes">Footnotes</a></li>
 </ul>
 </li>
@@ -2309,6 +2311,17 @@ This methodology is based on methods developed to incorporate changes to electri
 Those electricity-consuming technologies are electrolyzers, steam methane reforming with or without CCS, and DAC.
 These technologies are assumed to consume electricity at the wholesale electricity price.
 ReEDS users can alter this assumption with the <code class="docutils literal notranslate"><span class="pre">GSw_RetailAdder</span></code> switch, which adds a 2004$/MWh cost adder to electricity consumed by these technologies.</p>
+</section>
+<section id="demand-response">
+<h3>Demand Response<a class="headerlink" href="#demand-response" title="Link to this heading"></a></h3>
+<p>Demand response (DR) is turned off by default in ReEDS, but the user has the option to enable DR via load shedding.
+The demonstration data used to characterize the amount of load shedding avaiable were obtained from a workflow which includes ResStock, DR-Path, and dsgrid.
+The data reflect the technical potential for residential load shedding in 11 states (AZ, CA, CO, FL, GA, MN, MT, NM, NY, TX, WA) and were developed using the 2018 weather year.
+Through this implementation the demand response is effectively added as a new supply curve-based resource; however, the DR shed potential is only available during stress periods.
+If ReEDS chooses to dispatch DR shed, the “generation” from the resource is subtracted from the load considered in the resource adeqaucy calculations.
+The capital costs for the residential resource are derived from the installation cost for the DR-enabling technology (program implementation or procurement costs are not included).
+In addition to only allowing the shed resource to be dispatched during stress periods, a max daily capacity factor is defined.
+For the residential heating and cooling resources the max daily capacity factor is set to 4 hours per day.</p>
 </section>
 </section>
 <section id="transmission">
@@ -5911,6 +5924,89 @@ For example, <span id="id2419">[<a class="reference internal" href="#id1642" tit
 </section>
 </section>
 </section>
+<section id="reeds-model-contributors">
+<h2>ReEDS Model Contributors<a class="headerlink" href="#reeds-model-contributors" title="Link to this heading"></a></h2>
+<p>All NREL contributors to the ReEDS model are listed below.</p>
+<ul class="simple">
+<li><p>Abdelrahmam Ayad</p></li>
+<li><p>Jon Becker</p></li>
+<li><p>Ross Beppler</p></li>
+<li><p>David Bielen</p></li>
+<li><p>Nate Blair</p></li>
+<li><p>Max Brown</p></li>
+<li><p>Patrick Brown</p></li>
+<li><p>Vincent Carag</p></li>
+<li><p>Yunzhi Chen</p></li>
+<li><p>Stuart Cohen</p></li>
+<li><p>Wesley Cole</p></li>
+<li><p>Sean Corcoran</p></li>
+<li><p>Paul Denholm</p></li>
+<li><p>Victor Diakov</p></li>
+<li><p>Victor Duraes de Faria</p></li>
+<li><p>Kelly Eurek</p></li>
+<li><p>Will Frazier</p></li>
+<li><p>Bethany Frew</p></li>
+<li><p>Rebecca Fuchs</p></li>
+<li><p>Nathaniel Gates</p></li>
+<li><p>Danny Greer</p></li>
+<li><p>Sameera Gudladona</p></li>
+<li><p>Claire Halloran</p></li>
+<li><p>Maureen Hand</p></li>
+<li><p>Anne Hamilton</p></li>
+<li><p>Donna Heimiller</p></li>
+<li><p>Jonathan Ho</p></li>
+<li><p>Eduardo Ibanez</p></li>
+<li><p>Paige Jadun</p></li>
+<li><p>Charles Kang</p></li>
+<li><p>Akash Karmakar</p></li>
+<li><p>Saroj Khanal</p></li>
+<li><p>Venkat Krishnan</p></li>
+<li><p>Katie Lamb</p></li>
+<li><p>Anthony Lopez</p></li>
+<li><p>Helen Lu</p></li>
+<li><p>Scott Machen</p></li>
+<li><p>Madeline Macmillan</p></li>
+<li><p>Trieu Mai</p></li>
+<li><p>Andrew Martinez</p></li>
+<li><p>Dana Max</p></li>
+<li><p>Maureen McDaniel</p></li>
+<li><p>Kennedy Mindermann</p></li>
+<li><p>Joseph Mowers</p></li>
+<li><p>Matthew Mowers</p></li>
+<li><p>David Mulcahy</p></li>
+<li><p>Caitlin Murphy</p></li>
+<li><p>John Nangle</p></li>
+<li><p>Claire Nguyen</p></li>
+<li><p>Scott Nicolson</p></li>
+<li><p>Kodi Obika</p></li>
+<li><p>Hyungseon Oh</p></li>
+<li><p>An Pham</p></li>
+<li><p>Andrew Reimers</p></li>
+<li><p>James Richards</p></li>
+<li><p>Anna Schleifer</p></li>
+<li><p>Brian Sergi</p></li>
+<li><p>Louisa Serpe</p></li>
+<li><p>Shashwat Sharma</p></li>
+<li><p>Sophia Shi</p></li>
+<li><p>Walter Short</p></li>
+<li><p>Ben Sigrin</p></li>
+<li><p>Travis Simpkins</p></li>
+<li><p>Ramteen Sioshansi</p></li>
+<li><p>Elina Spyrou</p></li>
+<li><p>Ragini Sreenath</p></li>
+<li><p>Dan Steinberg</p></li>
+<li><p>Patrick Sullivan</p></li>
+<li><p>Aaron Townsend</p></li>
+<li><p>Merve Turan</p></li>
+<li><p>Caroline Uriarte</p></li>
+<li><p>Max Vanatta</p></li>
+<li><p>Nina Vincent</p></li>
+<li><p>Tibebe Woldeyesus</p></li>
+<li><p>Ella Zhou</p></li>
+<li><p>Owen Zinaman</p></li>
+<li><p>Matt Zwerling</p></li>
+</ul>
+</section>
 <section id="footnotes">
 <h2>Footnotes<a class="headerlink" href="#footnotes" title="Link to this heading"></a></h2>
 <aside class="footnote-list brackets">
@@ -6142,7 +6238,7 @@ Prescribed retirements are power plant retirements that are forced into the mode
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on August 04, 2025.
+      <span class="lastupdated">Last updated on August 18, 2025.
       </span></p>
   </div>
 
