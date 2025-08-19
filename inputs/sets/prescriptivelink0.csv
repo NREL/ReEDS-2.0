@@ -113,6 +113,6 @@ egs_nearfield,egs_nearfield_7
 egs_nearfield,egs_nearfield_8
 egs_nearfield,egs_nearfield_9
 egs_nearfield,egs_nearfield_10
-storage,battery_li
+battery_li,battery_li
 nuclear,Nuclear
 nuclear,Nuclear-SMR
