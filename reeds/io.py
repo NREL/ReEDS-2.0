@@ -259,6 +259,7 @@ def get_dfmap(case=None, levels=None, exclude_water_areas=False):
         for level in ['r'] + hierarchy_levels:
             dfmap[level] = gpd.read_file(mapsfile, layer=level).rename(columns={'rb': 'r'})
             dfmap[level] = dfmap[level].set_index(dfmap[level].columns[0]).rename_axis(level)
+            dfmap[level] = dfmap[level][~dfmap[level].index.duplicated(keep='first')]
         return dfmap
 
     dfba = get_zonemap(case, exclude_water_areas)
