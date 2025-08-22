@@ -503,6 +503,7 @@ def solvestring_usrep(
         + " --reeds_case=" + batch_case
         + " s=" + os.path.join(udir,"restart",batch_case+"_"+str(cur_year))
         + " o=" + os.path.join(udir,"lst",batch_case+"_"+str(cur_year)+"_"+str(iteration)+".lst")
+        + " --ru_mimic=0"
     )
 
     return out

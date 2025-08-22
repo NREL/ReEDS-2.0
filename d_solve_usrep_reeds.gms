@@ -508,7 +508,7 @@ display "QP-elecost", elecost, loadu.l;
 display "%cur_year% - QP - %iter%", baseprc, baseload, eledelas;
 
 chkdev(t,"it%iter%",usrep_r,"QP")$tmodel(t) = LOADU.l(usrep_r,t);
-$ife %ru_runbenchmark%=1	chkdev(t,"it%iter%",usrep_r,"dev") pct(chkdev(t,"it%iter%",usrep_r,"LP"),chkdev(t,"it%iter%",usrep_r,"QP"));
+*$ife %ru_runbenchmark%=1	chkdev(t,"it%iter%",usrep_r,"dev") pct(chkdev(t,"it%iter%",usrep_r,"LP"),chkdev(t,"it%iter%",usrep_r,"QP"));
 
 option chkdev:3:3:1;
 display chkdev;
@@ -528,7 +528,7 @@ ru(usrep_r,"ele","TWh",t)$tmodel(t)
 
 *2006$(implan)/2017$(windc)
 ru(usrep_r,"ele","dolperMWh",t)$(sum(r,r_u(r,usrep_r))$tmodel(t))
-	= max(5, (1/cvt)*elecost(usrep_r,t,"total") );
+	= max(5, (1/cvt)*elecost(usrep_r,t,"energy") );
 
 * Bilateral domestic trade (TWh)
 eledtrd(usrep_r,usrep_rr,"TWh",t)$(tmodel(t)$(not sameas(usrep_r,usrep_rr)))
