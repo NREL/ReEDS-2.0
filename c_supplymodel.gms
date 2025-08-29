@@ -1572,7 +1572,7 @@ eq_flat_load_additions(st,t)
 * the flat load additions in Utah
     sum{r$r_st(r,st), CAP_FLAT_LOAD(r,t)} * sum{h$h_rep(h), hours(h) }
 
-    =g=
+    =e=
 
 * must be greater than or equal to the required flat load additions
 

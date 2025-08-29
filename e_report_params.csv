@@ -20,6 +20,7 @@ param,units,comment,reeds2x,output_rename,input
 "cap_energy_ivrt(i,v,r,t)",MWh,"undegraded energy capacity by tech, year, region, and class",1,,
 "cap_sdbin_out(i,r,ccseason,sdbin,t)",MW,binned storage capacity by year,,,
 "cap_deg_ivrt(i,v,r,t)",MW,"Degraded capacity, equal to CAP.l",,,
+"CAP_FLAT_LOAD_out(r,t)",MW,flat load capacity in each balancing area for the year t,,,
 "cap_new_ann(i,r,t)",MW/yr,new annual capacity by region,,,
 "cap_new_ann_nat(i,t)",MW/yr,new annual capacity national,,,
 "cap_new_bin_out(i,v,r,t,rscbin)",MW,capacity of built techs,,,
