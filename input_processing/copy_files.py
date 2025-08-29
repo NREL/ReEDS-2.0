@@ -547,7 +547,10 @@ def subset_to_valid_regions(
                 df.columns = df.columns.str.replace('distpv|','')            
 
         elif filetype_in == 'csv':
-            df = pd.read_csv(full_path, dtype={'FIPS':str, 'fips':str, 'cnty_fips':str})
+            df = pd.read_csv(
+                full_path, dtype={'FIPS':str, 'fips':str, 'cnty_fips':str},
+                comment='#',
+            )
 
         elif filename == 'techs_banned.csv':
             df, nuclear_ban_regions = read_banned_tech_file(

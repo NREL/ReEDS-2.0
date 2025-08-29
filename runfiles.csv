@@ -250,6 +250,7 @@ load_2010.csv,,,,sum,ignore,r,wide,,1,0,,1,,,,disaggfunc set to ignore because l
 load_allyear.csv,,,,sum,ignore,*r,"h,t",,0,0,,1,,,,disaggfunc set to ignore because load will already be in correct spatial resolution
 load_multiplier.csv,inputs/load/demand_{demandscen}.csv,,,ignore,ignore,,,,,0,,,,,,
 load_multiplier_r.csv,,,,ignore,ignore,,,,1,0,,,,,,
+loadsite_annual.csv,inputs/load/loadsite_{GSw_LoadSiteTrajectory}.csv,GSw_LoadSiteCF,~0,ignore,ignore,*loadsitereg,t,,,0,,,,,,
 maps.gpkg,,,,ignore,ignore,,,,,,,1,,,,
 maxage.csv,inputs/plant_characteristics/maxage.csv,,,ignore,ignore,,,,,0,,,,,,
 maxdailycf.csv,inputs/plant_characteristics/maxdailycf.csv,GSw_MaxDailyCF,~0,ignore,ignore,,,,,0,,,,,,

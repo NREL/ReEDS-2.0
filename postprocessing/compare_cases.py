@@ -2416,6 +2416,27 @@ slide = reeds.results.add_to_pptx(title, prs=prs)
 if interactive:
     plt.show()
 
+#%% Flexibly sited load
+if any([float(dictin_sw[c].get('GSw_LoadSiteCF', 0)) for c in cases]):
+    loadsite_cases = {
+        k:v for k,v in cases.items() if float(dictin_sw[k].get('GSw_LoadSiteCF', 0))
+    }
+    try:
+        f, ax, dictplot = reeds.reedsplots.map_output_byyear(
+            case=loadsite_cases,
+            param='loadsite_cap',
+            years=[lastyear],
+            vscale=1e-3,
+            vmin=0,
+            title='Sited demand [GW]',
+        )
+        ## Save it
+        slide = reeds.results.add_to_pptx('Flexibly sited demand', prs=prs, width=SLIDE_WIDTH)
+        if interactive:
+            plt.show()
+    except Exception:
+        print(traceback.format_exc())
+
 
 #%%### RA sharing
 if detailed:

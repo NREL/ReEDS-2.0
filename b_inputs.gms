@@ -1273,6 +1273,11 @@ r_hurdlereg(r,hurdlereg)              $sum{(nercr,transreg,transgrp,cendiv,st,in
 r_ccreg(r,ccreg)                      $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg      ) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
 
 
+* Region hierarchy level within which to site optimally sited load
+alias(%GSw_LoadSiteReg%, loadsitereg) ;
+set r_loadsitereg(r,loadsitereg) "Mapping from model zones to loadsite regions" ;
+r_loadsitereg(r,%GSw_LoadSiteReg%) = r_%GSw_LoadSiteReg%(r,%GSw_LoadSiteReg%) ;
+
 *================================
 *sets that define model boundaries
 *================================
@@ -4914,6 +4919,20 @@ $onlisting
 *=========================================
 
 $onempty
+parameter loadsite_annual(loadsitereg,allt) "--MW-- Load trajectory by loadsitereg"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%loadsite_annual.csv
+$offdelim
+$onlisting
+/ ;
+set val_loadsite(r) "Valid regions for load sites" ;
+val_loadsite(r)
+    $sum{(loadsitereg,t)$r_loadsitereg(r,loadsitereg),
+         loadsite_annual(loadsitereg,t)
+    } = yes ;
+    
 table can_growth_rate(st,allt) "growth rate for candadian demand by province"
 $offlisting
 $ondelim

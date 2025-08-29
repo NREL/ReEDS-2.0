@@ -6185,3 +6185,126 @@ def map_outage_days(
             )
 
     return f, ax, outage_dates
+
+def layout_case_year_plots(
+    cases,
+    years,
+    oneaxis='columns',
+    yearaxis='rows',
+):
+    """
+    Lay out series of cases and years into 
+    Returns:
+    tuple: (nrows, ncols, coords) [int, int, dict]
+    - coords: {(case, year): (row, col)}
+      or {(case, year): row} or {(case, year): col} if one axis
+    """
+    numcases = len(cases)
+    numyears = len(years)
+    if (len(years) == 1) or (numcases == 1):
+        if oneaxis in ['column', 'columns', 1, 'wide']:
+            nrows, ncols = 1, max(numyears, numcases)
+        else:
+            nrows, ncols = max(numyears, numcases), 1
+        plotindex = 't' if numyears > 1 else 'case'
+        nrows, ncols, coords = reeds.plots.get_coordinates(
+            [(c, years[0]) for c in cases] if plotindex == 'case'
+            else [(y, cases[0]) for y in years],
+            nrows=nrows, ncols=ncols,
+        )
+    else:
+        if yearaxis in ['row', 'rows', 0, 'long', 'tall']:
+            nrows, ncols = numyears, numcases
+            coords = {
+                (case, t): (row, col)
+                for (row, t) in enumerate(years)
+                for (col, case) in enumerate(cases)
+            }
+        else:
+            nrows, ncols = numcases, numyears
+            coords = {
+                (case, t): (row, col)
+                for (row, case) in enumerate(cases)
+                for (col, t) in enumerate(years)
+            }
+
+    return nrows, ncols, coords
+
+
+def map_output_byyear(
+    case,
+    param,
+    years=[2050],
+    oneaxis='columns',
+    yearaxis='rows',
+    mapscale=4,
+    cmap=cmocean.cm.rain,
+    vscale=1,
+    vmin=None,
+    vmax=None,
+    **kwargs,
+):
+    ### Parse inputs
+    if isinstance(case, str):
+        plotcases = [case]
+    elif isinstance(case, list):
+        plotcases = case
+        titles = [os.path.basename(c) for c in plotcases]
+    elif isinstance(case, dict):
+        plotcases = list(case.values())
+        titles = list(case.keys())
+
+    ### Get results
+    dfmap = reeds.io.get_dfmap(plotcases[0])
+    dictin = {
+        title: reeds.io.read_output(case, param).astype({'t':int})
+        for title, case in zip(titles, plotcases)
+    }
+    ## Filter to plot years and reshape to [r × t]
+    dictplot = {
+        k: v.loc[v.t.isin(years)].pivot(index='r', columns='t', values='Value') * vscale
+        for k,v in dictin.items()
+    }
+    ## Get limits
+    dfall = pd.concat(dictplot)
+    _vmin = float(dfall.min().min() if vmin is None else vmin)
+    _vmax = float(dfall.max().max() if vmax is None else vmax)
+    ## Arrange subplots
+    nrows, ncols, coords = layout_case_year_plots(
+        cases=plotcases,
+        years=years,
+        oneaxis=oneaxis,
+        yearaxis=yearaxis,
+    )
+    ## Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(ncols*mapscale, nrows*mapscale*0.8), sharex=True, sharey=True,
+        gridspec_kw={'hspace':0, 'wspace':0},
+    )
+    for title, case in zip(titles, plotcases):
+        for year in years:
+            _ax = ax[coords[case, year]]
+            ## Background
+            dfmap['country'].plot(ax=_ax, facecolor='none', edgecolor='k', lw=0.5, zorder=1e9)
+            dfmap['r'].plot(ax=_ax, facecolor='none', edgecolor='C7', lw=0.2, zorder=1e8)
+            ## Data
+            dfplot = dfmap['r'].copy()
+            dfplot['value'] = dictplot[title][year]
+            # dfplot['value'] = dfplot['value'].fillna(0)
+            dfplot.plot(
+                ax=_ax, column='value', cmap=cmap,
+                vmin=_vmin, vmax=_vmax,
+            )
+            _ax.axis('off')
+            ## Formatting
+            _ax.set_title(f'{title} {year}', y=0.95)
+            ## Colorbar
+            plots.addcolorbarhist(
+                f=f, ax0=_ax, data=dictplot[title][year].values,
+                vmin=_vmin, vmax=_vmax, cmap=cmap, nbins=21,
+                orientation='horizontal',
+                cbarheight=0.35, cbarhoffset=-0.8, cbarbottom=0.07, labelpad=3.5,
+                **kwargs,
+            )
+    return f, ax, dictplot

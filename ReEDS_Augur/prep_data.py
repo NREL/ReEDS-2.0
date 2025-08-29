@@ -328,6 +328,15 @@ def main(t, casedir, iteration=0):
     ## Now fill other hours with zero
     gen_shed_combined = gen_shed_combined.reindex(h_dt_szn.index).fillna(0)
 
+    #%% Flexibly sited load -> pd.Series with index = regions and missing values 0-filled
+    ra_cap_loadsite = (
+        gdxreeds['ra_cap_loadsite']
+        .loc[gdxreeds['ra_cap_loadsite']['t'] == t]
+        .drop(columns='t')
+        .set_index('r')
+        .squeeze(1)
+        .reindex(load.columns).fillna(0)
+    )
 
     #%%### Total load and net load
     ### Get Candian exports and add to this solve year's load
@@ -341,14 +350,28 @@ def main(t, casedir, iteration=0):
     ### PRAS doesn't yet handle flexible load, so include all H2/DAC load in the
     ### version we write for PRAS
     if int(sw['pras_include_h2dac']):
+        print(f'Added H2/DAC to PRAS load since pras_include_h2dac = {sw.pras_include_h2dac}')
         pras_load = load_year.add(load_h2dac_all_hourly, fill_value=0)
     else:
         pras_load = load_year.copy()
 
     ### Subtract dr-shed load
     if int(sw.GSw_DRShed) and not gen_shed_combined.empty:
+        print(f'Subtracted shed load from PRAS load since GSw_DRShed = {sw.GSw_DRShed}')
         pras_load = pras_load.subtract(gen_shed_combined, fill_value=0).clip(lower=0)
 
+    ### Add flexibly sited load if its profile is inflexible (GSw_LoadSiteCF = 1)
+    if (
+        np.isclose(float(sw.GSw_LoadSiteCF), 1)
+        and len(ra_cap_loadsite)
+        and int(sw.GSw_LoadSiteRA)
+    ):
+        print(
+            f'Added CAP_LOADSITE to PRAS load since GSw_LoadSiteCF = {sw.GSw_LoadSiteCF} '
+            f'and GSw_LoadSiteRA = {sw.GSw_LoadSiteRA}'
+        )
+        pras_load += ra_cap_loadsite
+        
     h5out['pras_load'] = pras_load
     ## Include the hourly H2/DAC load for debugging
     h5out['pras_h2dac_load'] = load_h2dac_all_hourly

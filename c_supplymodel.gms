@@ -18,6 +18,9 @@ positive variables
 *   PEAK_FLEX(r,ccseason,t)          "--MW-- peak busbar load adjustment based on load flexibility"
   DROPPED(r,allh,t)               "--MW-- dropped load (only allowed before Sw_StartMarkets)"
   EXCESS(r,allh,t)                "--MW-- excess load (only allowed before Sw_StartMarkets)"
+  CAP_LOADSITE(r,t)               "--MW-- capacity of flexibly sited load"
+  INV_LOADSITE(r,t)               "--MW-- capacity of flexibly sited load installed in model year"
+  OP_LOADSITE(r,allh,t)           "--MW-- operations of flexibly sited load"
 
 * capacity and investment variables
   CAP_SDBIN(i,v,r,ccseason,sdbin,t)        "--MW-- generation power capacity by storage duration bin for relevant technologies"
@@ -143,6 +146,10 @@ EQUATION
  eq_load_flex1(flex_type,r,allh,t)       "--MWh-- exogenously-specified flexible demand (load_exog_flex) must be served by flexible load (FLEX)"
  eq_load_flex2(flex_type,r,allh,t)       "--MWh-- flexible load (FLEX) can't exceed exogenously-specified flexible demand (load_exog_flex)"
 *  eq_load_flex_peak(r,allh,ccseason,t)    "--MWh-- adjust peak demand as needed based on the load flexibility (FLEX)"
+ eq_loadsite_inv(r,t)                   "--MW-- CAP_LOADSITE accumulates INV_LOADSITE"
+ eq_loadsite_cap(r,allh,t)              "--MW-- Realized load from optimally sited load must be less than optimally sited load capacity"
+ eq_loadsite_op(r,t)                    "--MW-- Realized load from optimally sited load must sum to Sw_LoadSiteCF"
+ eq_loadsite_siting(loadsitereg,t)      "--MW-- Optimally sited load capacity must sum to loadsite_annual"
 
 * capital stock constraints
  eq_cap_init_noret(i,v,r,t)               "--MW-- Existing capacity that cannot be retired is equal to exogenously-specified amount"
@@ -378,6 +385,13 @@ eq_loadcon(r,h,t)$tmodel(t)..
     + sum{rr$h2_routes(r,rr),
         h2_network_load("h2_compressor",t)
         * (( H2_FLOW(r,rr,h,t) + H2_FLOW(rr,r,h,t) ) / 2) }$Sw_H2_CompressorLoad
+
+* Operations of flexibly sited load:
+* - OP_LOADSITE is used when 0 < Sw_LoadSiteCF < 1
+* - CAP_LOADSITE is used when Sw_LoadSiteCF = 1 because OP_LOADSITE = CAP_LOADSITE
+*   (the effect is the same but avoiding the h-indexed OP_LOADSITE reduces solve time)
+    + OP_LOADSITE(r,h,t)$[Sw_LoadSiteCF$(Sw_LoadSiteCF<1)$val_loadsite(r)]
+    + CAP_LOADSITE(r,t)$[(Sw_LoadSiteCF=1)$val_loadsite(r)]
 ;
 
 * ---------------------------------------------------------------------------
@@ -405,6 +419,64 @@ eq_load_flex_day(flex_type,r,szn,t)$[tmodel(t)$Sw_EFS_flex]..
     sum{h$h_szn(h,szn), load_exog_flex(flex_type,r,h,t) * hours(h) } / numdays(szn)
 ;
 
+* CAP_LOADSITE accumulates INV_LOADSITE
+eq_loadsite_inv(r,t)
+    $[tmodel(t)
+    $Sw_LoadSiteCF
+    $val_loadsite(r)
+    $(not Sw_PCM)]..
+
+    CAP_LOADSITE(r,t)
+
+    =e=
+
+    + sum{(tt)$[(yeart(tt) <= yeart(t))$(tmodel(tt) or tfix(tt))],
+          INV_LOADSITE(r,tt) }
+;
+
+* ---------------------------------------------------------------------------
+* Realized load from optimally sited load must be less than optimally sited load capacity
+eq_loadsite_cap(r,h,t)
+    $[tmodel(t)
+    $Sw_LoadSiteCF
+    $(Sw_LoadSiteCF<1)
+    $val_loadsite(r)]..
+
+    CAP_LOADSITE(r,t)
+
+    =g=
+
+    OP_LOADSITE(r,h,t)
+;
+
+* ---------------------------------------------------------------------------
+* Realized load from optimally sited load must sum to Sw_LoadSiteCF
+eq_loadsite_op(r,t)
+    $[tmodel(t)
+    $Sw_LoadSiteCF
+    $(Sw_LoadSiteCF<1)
+    $val_loadsite(r)]..
+
+    sum{h, OP_LOADSITE(r,h,t) * hours(h) }
+
+    =g=
+
+    CAP_LOADSITE(r,t) * sum{h, hours(h) } * Sw_LoadSiteCF
+;
+
+* ---------------------------------------------------------------------------
+* Optimally sited load capacity must sum to loadsite_annual
+eq_loadsite_siting(loadsitereg,t)
+    $[tmodel(t)
+    $Sw_LoadSiteCF
+    $(not Sw_PCM)]..
+
+    sum{r$[r_loadsitereg(r,loadsitereg)$val_loadsite(r)], CAP_LOADSITE(r,t) }
+
+    =e=
+
+    loadsite_annual(loadsitereg,t)
+;
 * ---------------------------------------------------------------------------
 
 * for the "previous" flex type: the amount of exogenously-specified load in timeslice "h"
