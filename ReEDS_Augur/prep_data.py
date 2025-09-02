@@ -338,6 +338,14 @@ def main(t, casedir, iteration=0):
         .reindex(load.columns).fillna(0)
     )
 
+    ra_cap_flatload = (
+        gdxreeds['ra_cap_flatload']
+        .loc[gdxreeds['ra_cap_flatload']['t'] == t]
+        .drop(columns='t')
+        .set_index('r')
+        .squeeze(1)
+        .reindex(load.columns).fillna(0)
+    )
     #%%### Total load and net load
     ### Get Candian exports and add to this solve year's load
     can_exports = (
@@ -371,6 +379,13 @@ def main(t, casedir, iteration=0):
             f'and GSw_LoadSiteRA = {sw.GSw_LoadSiteRA}'
         )
         pras_load += ra_cap_loadsite
+
+    # Add flat load cap (old approach for Utah)
+    if sw.GSw_FlatLoadAdd and len(ra_cap_flatload):
+        print(
+            f'Added CAP_FLAT_LOAD to PRAS load since Sw_FlatLoadAdd = {sw.GSw_FlatLoadAdd}'
+        )
+        pras_load += ra_cap_flatload    
         
     h5out['pras_load'] = pras_load
     ## Include the hourly H2/DAC load for debugging

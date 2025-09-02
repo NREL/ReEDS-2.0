@@ -811,7 +811,8 @@ cap_nat(i,t)$tmodel_new(t) = sum{r, cap_out(i,r,t) } ;
 * Exogenous capacity (used by reeds_to_rev)
 cap_exog(i,v,r,t)$tmodel_new(t) = m_capacity_exog(i,v,r,t) ;
 
-CAP_FLAT_LOAD_out(r,t)$tmodel_new(t) = CAP_FLAT_LOAD.l(r,t) ;
+CAP_FLAT_LOAD_out(r,t) = CAP_FLAT_LOAD.l(r,t) ;
+
 
 *=========================
 * NEW CAPACITY

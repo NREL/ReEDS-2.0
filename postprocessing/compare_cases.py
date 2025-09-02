@@ -1125,6 +1125,7 @@ aggstack = {
         **{f'battery_{i}|charge':'Storage|charge' for i in [2,4,6,8,10]},
         **{f'battery_{i}|discharge':'Storage|discharge' for i in [2,4,6,8,10]},
         **{
+        'battery_li':'Storage',
         'pumped-hydro':'Storage',
         'pumped-hydro|charge':'Storage|charge', 'pumped-hydro|discharge':'Storage|discharge',
 

@@ -66,7 +66,8 @@ m_cf_filt(i,v,r,allh)              "--fraction-- capacity factor used in the mod
 m_cf_szn_filt(i,v,r,allszn)        "--fraction-- modelled capacity factors filtered for hydro resources to set seasonal energy constraints"
 minloadfrac_filt(r,i,allszn)       "--fraction-- modelled mingen fraction filtered for hydro resources to set mingen constraints"
 prod_filt(i,v,r,allh)              "--MW-- power consumed for PRODUCE.l"
-ra_cap_loadsite(r,t) "--MW-- capacity of flexibly sited load"
+ra_cap_loadsite(r,t)               "--MW-- capacity of flexibly sited load"
+ra_cap_flatload(r,t)               "--MW-- capacity of flat load additions"
 repbioprice_filt(r)                "--2004$/MWh-- marginal price for biofuel in region where biofuel was used"
 repgasprice_filt(r)                "--$/mmBTU-- NG prices in ReEDS filtered for the previous solve year"
 repgasprice_r(r,t)                 "--$/mmBTU-- NG prices in ReEDS, switch-dependent, at the BA level"
@@ -297,6 +298,9 @@ flex_load_opt(r,h) = sum{(flex_type,t)$tcur(t), FLEX.l(flex_type,r,h,t) } ;
 
 ra_cap_loadsite(r,t)$[Sw_LoadSiteCF$val_loadsite(r)] = CAP_LOADSITE.l(r,t) ;
 
+ra_cap_flatload(r,t)$[Sw_FlatLoadAdd] = CAP_FLAT_LOAD.l(r,t) ;
+
+
 *============================
 * Extra consumption data
 *============================
@@ -406,6 +410,7 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     rfeas
     r_cendiv
     ra_cap_loadsite
+    ra_cap_flatload
     repbioprice_filt
     repgasprice_filt
     ret

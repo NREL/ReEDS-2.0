@@ -1487,7 +1487,7 @@ eq_supply_demand_balance(r,h,t)$tmodel(t)..
 
 * add flat load additions (only for Utah)
 *    + CAP_FLAT_LOAD(r,t)$Sw_FlatLoadAdd
-    + CAP_FLAT_LOAD(r,t)$[Sw_FlatLoadAdd$r_st(r,"UT")$(yeart(t) >= model_builds_start_yr)]
+    - CAP_FLAT_LOAD(r,t)$[Sw_FlatLoadAdd$r_st(r,"UT")$(yeart(t) >= model_builds_start_yr)]
     
     =e=
 
