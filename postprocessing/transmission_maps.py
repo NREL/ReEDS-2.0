@@ -871,3 +871,25 @@ try:
 except Exception:
     print('map_hybrids failed:')
     print(traceback.format_exc())
+
+#%% Flexibly sited demand
+if float(sw.GSw_LoadSiteCF) > 0:
+
+    f, ax, dictplot = reeds.reedsplots.map_output_byyear(
+        case=case,
+        param='loadsite_cap',
+        years=[year],
+        vscale=1e-3,
+        vmin=0,
+        title='Sited demand [GW]',
+    )
+    ## Save it
+    if interactive:
+        savename = f'Flexibly sited demand-{year}.png'
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        print(savename)
+
+

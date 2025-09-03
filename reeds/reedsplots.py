@@ -6247,6 +6247,7 @@ def map_output_byyear(
     ### Parse inputs
     if isinstance(case, str):
         plotcases = [case]
+        titles = [os.path.basename(case)]
     elif isinstance(case, list):
         plotcases = case
         titles = [os.path.basename(c) for c in plotcases]
@@ -6284,7 +6285,13 @@ def map_output_byyear(
     )
     for title, case in zip(titles, plotcases):
         for year in years:
-            _ax = ax[coords[case, year]]
+            if isinstance(ax, np.ndarray):
+                if len(titles) == 1:
+                    _ax = ax.flat[0]
+                else:
+                    _ax = ax[coords[case, year]]
+            else:
+                _ax = ax
             ## Background
             dfmap['country'].plot(ax=_ax, facecolor='none', edgecolor='k', lw=0.5, zorder=1e9)
             dfmap['r'].plot(ax=_ax, facecolor='none', edgecolor='C7', lw=0.2, zorder=1e8)
