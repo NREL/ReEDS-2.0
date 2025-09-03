@@ -23,5 +23,5 @@ GSw_FlatLoadAdd,,,,,,,,,,,,,,
 debug,1,,,,,,,,,,,,,
 GSw_LoadSiteCF,0,,,,,,,,,,,,,1
 GSw_LoadSiteRA,0,,,,,,,,,,,,,1
-GSw_LoadSiteReg,st,,,,,,,,,,,,,
+GSw_LoadSiteReg,,,,,,,,,,,,,,st
 GSw_LoadSiteTrajectory,,,,,,,,,,,,,,opgw2
