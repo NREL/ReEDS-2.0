@@ -884,12 +884,11 @@ if float(sw.GSw_LoadSiteCF) > 0:
         title='Sited demand [GW]',
     )
     ## Save it
+    savename = f'Flexibly sited demand-{year}.png'
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
     if interactive:
-        savename = f'Flexibly sited demand-{year}.png'
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        print(savename)
+        plt.show()
+    print(savename)
 
 
