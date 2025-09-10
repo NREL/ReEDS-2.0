@@ -355,6 +355,8 @@ def main(reeds_path, inputs_case, agglevel, regions):
         # Load in demo data and stack it on prescribed non-RSC 
         demo = pd.read_csv(
             os.path.join(inputs_case,'demonstration_plants.csv')).drop("notes", axis=1)
+        # Filter demonstration plants to regions in function call
+        demo = demo[demo['r'].isin(regions)]
         prescribed_nonRSC = pd.concat([prescribed_nonRSC,demo],sort=False)
 
     prescribed_nonRSC = (
