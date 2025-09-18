@@ -420,11 +420,11 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 	toLogGamsString =  ' logOption=4 logFile=' + str(os.path.join(OutputDir, 'gamslog.txt')) + ' ' + 'appendLog=1 '
 
 	with open(os.path.join(OutputDir, 'compile_' + lstfile + FILE_EXTENSION), 'w') as OPATH:
-		OPATH.write("gams " + str(os.path.join("A_Inputs", "a_inputs.gms")) +\
+		OPATH.write("gams " + str(os.path.join("A_Inputs", "a_inputs_updated.gms")) +\
 					" s=" + str(os.path.join(OutputDir,"g00files","data_india")) +\
 					" o=" + str(os.path.join(OutputDir,"lstfiles","inputs.lst")) +\
 					" --TotIter=" + str(niter) +' --hourlyloadfile=' + str(hourlyloadfile) + toLogGamsString + options + ' \n')
-		OPATH.write("gams " + str(os.path.join("B_Equations","b1_model_constraints.gms")) +\
+		OPATH.write("gams " + str(os.path.join("B_Equations","b1_model_constraints_updated.gms")) +\
 					" o=" + str(os.path.join(OutputDir,"lstfiles","Supply_Model.lst")) +\
 					" r=" + str(os.path.join(OutputDir,"g00files","data_india")) + " s=" +\
 					str(os.path.join(OutputDir,"g00files","supmod")) + ' \n')
