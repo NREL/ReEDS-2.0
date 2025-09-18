@@ -35,9 +35,8 @@ $setglobal input_folder '%gams.curdir%%ds%inputs'
 
 Scalar
 Sw_MinCF                      "Switch to turn minimum CF for new capacity on [1] or off [0]"          /%GSw_MinCF%/,
-Sw_GrowthRel                  "Switch for the relative growth constraint + growth penalties"          /%GSw_GrowthRel%/,
+Sw_GrowthRel                  "Switch for the relative growth constraint"                             /%GSw_GrowthRel%/,
 Sw_GrowthAbs                  "Switch for the absolute growth constraint"                             /%GSw_GrowthAbs%/,
-Sw_GrowthInit                 "Switch for setting initial year growth limit"                          /%GSw_GrowthInit%/,
 Sw_GrowthLimTech              "Switch for setting annual growth limit on techs"                       /%GSw_GrowthLimTech%/,
 Sw_OpRes                      "Switch to turn on operating reserve constraint"                        /%GSw_OpRes%/,
 Sw_OpResTrade                 "Switch to allow trading operating reserves between regions"            /%GSw_OpResTrade%/,
@@ -54,6 +53,7 @@ Sw_Int_CC                     "Intertemporal CC method"                         
 Sw_Int_Curt                   "Intertemporal curt method"                                             /%GSw_Int_Curt%/,
 Sw_FuelSupply                 "Switch for fuel supply constraint"                                     /%GSw_FuelSupply%/,
 Sw_Prescribed                 "Switch for prescribed capacity additions"                              /%GSw_Prescribed%/,
+Sw_ForcePrescription          "Switch for forced capacity additions"                                  /%GSw_ForcePrescription%/,
 Sw_RECapMandate               "Switch for RE capacity targets"                                        /%GSw_RECapMandate%/,
 Sw_RECapFracMandate           "Switch for RE capacity fraction targets"                               /%GSw_RECapFracMandate%/,
 Sw_REGenMandate               "Switch for RE generation targets"                                      /%GSw_REGenMandate%/,
@@ -74,7 +74,8 @@ Sw_FocusRegionZeroTXCost      "Zero transmission capital cost between focus regi
 Sw_TxLimit                    "Switch to enable transmission flow limits"                             /%GSw_TxLimit%/,
 Sw_CurtLim				      "Switch to enable curtailment limit"			                          /%GSw_CurtLim%/,
 Sw_OfsWind                    "Switch to turn on/off offshore wind"                                   /%GSw_OfsWind%/,
-Sw_H2CT                       "Switch to turn on/off H2CT and H2CC techs on [1] or off [0]"           /%GSw_H2CT%/
+Sw_H2                         "Switch to turn on/off H2CT and H2CC techs on [1] or off [0]"           /%GSw_H2%/,
+Sw_BanGas                     "Ban new gas investments in India"                                      /%GSw_BanGas%/
 ;
 
 *==========================
@@ -195,6 +196,7 @@ set
   /
  ;
 
+scalar model_builds_start_yr "--integer-- Start year allowing new generators to be built";
 
 scalar
        yeart_tfirst "used for present value factor (PVF) calculation to aggregate capital and onm PVF",
@@ -242,7 +244,7 @@ $offdelim
 yeart(t) = t.val;
 year(allt) = allt.val;
 
-$if not set endyear $setglobal endyear 2070
+$if not set endyear $setglobal endyear 2050
 tmodel(t)$(yeart(t)>%endyear%)= no;
 
 *initialize boundaries on model years
@@ -262,6 +264,7 @@ r_region(r,region)$sum((state,country)$hierarchy(r,state,region,country),1) = ye
 r_country(r,country)$sum((state,region)$hierarchy(r,state,region,country),1) = yes;
 
 * initialize placeholders for PVF calcualtion
+model_builds_start_yr = 2020;
 yeart_tfirst = 0;
 yeart_tlast = 0;
 check = 0;
@@ -513,7 +516,7 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%refurbtech_set.csv
     valcap_irt(i,r,t)           "technologies that can be built in i, r, and t",
     valinv(i,v,r,t)             "i, v, r, and t combinations that are allowed for investments",
     valinv_irt(i,r,t)           "i, v, r, and t combinations that are allowed for investments",
-    valinv_tg(state,tg,t)       "valid technology groups for investments"
+    valinv_tg(state,tg,t)       "valid technology groups for investments",
     prescriptivetech(i)         "prescribed technologies to be located endogenously"
           /
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%prescriptive_tech_set.csv
@@ -522,7 +525,7 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%prescriptive_tech_set.cs
     ;
 
 parameter
-          capacity_exog(i,v,r,rs,t)        "--MW-- exogenously specified capacity", //calc from caponrsc, prescribedretirments, binned_capacity
+          capacity_exog(i,v,r,rs,t)        "--MW-- exogenously specified capacity", //calc from capnonrsc, prescribedretirments, binned_capacity
           avail_retire_exog_rsc             "--MW-- available retired rsc capacity for refurbishments",
           required_prescriptions(i, r, t)   "--MW-- prescribed RSC cap that ReEDS will decide on location", // derived with prescribedrsc
 *          required_prescriptions_state(i,state,t)    "--MW-- prescribed RSC cap that ReEDS will decide on location", // derived with prescribedrsc_state
@@ -643,20 +646,18 @@ capacity_exog(i,"prescribed",r,rs,t)$sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yea
 required_prescriptions(i,rb,t)$(prescriptivetech(i))
       = sum(tt$((yeart(t)>=yeart(tt))$(yeart(t)-yeart(tt)<maxage(i))), sum(rs, prescribedrsc(tt,i,rb,rs,"value") )) ;
 
-
 * initialize as empty sets
 valcap(i,v,r,t) = no;
 valgen(i,v,r,t) = no;
 valcap_irt(i,r,t) = no;
-valinv(i,v,r,t) = no ;
-valinv_irt(i,r,t) = no ;
+valinv(i,v,r,t) = no;
+valinv_irt(i,r,t) = no;
 
 * valinv_tg definition from US ReEDS (for growth penalty)
-valinv_tg(state,tg,t)$sum{(i,r)$[tg_i(tg,i)$state_r(state,r)], valinv_irt(i,r,t)} = yes;
+valinv_tg(state,tg,t)$sum{(i,r)$[tg_i(tg,i)$state_r(state,r)], valinv_irt(i,r,t) } = yes;
 
 * heat rate for new capacity
-heat_rate(i,v,r,t)$[CONV(i)$rb(r)] = sum(allt$att(allt,"2023"),data_conv(allt,i,'heat_rate'));
-
+heat_rate(i,v,r,t)$[CONV(i)$rb(r)] = sum(allt$att(allt,"2017"),data_conv(allt,i,'heat_rate'));
 
 * heat rate for new investments equal to average over that investment class
 * e.g. class new1 applies to investments from 2017-2022; the heat rate for new1 equals the average heat rate over this period
@@ -712,7 +713,7 @@ $offdelim
       cf_adj_hyd(i,szn,r)     "seasonal capacity factor adjustment for hydro"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%cf_adj_hydro.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%cf_adj_hydro_RMI.csv
 $offdelim
           /,
        cf_nepal_hyd(i,szn,r)     "seasonal capacity factor adjustment for nepal hydro"
@@ -1513,20 +1514,17 @@ $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%rpo_tech.csv
 
     capmandate_tech_set(i)           "technology groups that can meet RE capacity mandates"
           /
-$ondelim          
+
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%%RECapManTech_file%
-$offdelim
           /,
     genmandate_tech_set(i)           "technology groups that can meet RE generation mandates"
           /
-$ondelim          
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%%REGenManTech_file%
-$offdelim
           /,
-    gbin                            "growth bins"
+    gbin                             "growth bins"
           /
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%sets%ds%gbin_set.csv
-         /
+          /
     ;
 
 parameter
@@ -1534,8 +1532,9 @@ parameter
           co2_mass_limit(r,t)       "--million metric tons CO2-- CO2 emissions limit",
           co2_mass_limit_nat(t)     "national co2 mass limit",
           CarbonTax(t)              "national carbon tax in $ / MTCO2",
-          growth_bin_limit(gbin,state,tg,t) "--MW/yr-- size of each growth bin",
-          cost_growth(i,state,t)    "--$/MW-- cost basis for growth penalties",
+          growth_bin_limit(gbin,state,tg,t)  "--MW/yr-- size of each growth bin",
+          last_year_max_growth(state,tg,t)   "--MW-- maximum growth that could have been achieved in the prior year (actual year, not solve year)",
+          cost_growth(i,state,t)           "--$/MW-- cost basis for growth penalties",
           growth_limit_relative(tg) "--%-- growth limit for technology groups relative to existing capacity"
           /
 $ondelim
@@ -1548,12 +1547,6 @@ $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%AbsGrowLim_file%
 $offdelim
           /,
-          growth_limit_initial(r,tg) "--MW-- growth limit for technology groups in initial model year"
-          /
-$ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%InitGrowLim_file%
-$offdelim
-          /,
           growth_penalty(gbin) "--unitless-- multiplier penalty on the capital cost for growth in each bin"
           /
 $ondelim
@@ -1563,7 +1556,7 @@ $offdelim
           growth_limit_by_tech(i,t) "--MW-- growth limit for tech i in year t"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%growth_limit_by_tech.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%%GrowthLimTech_file%
 $offdelim
           /,
 *gbin_min is based on the representative plant size for a single plant in that tech group
@@ -1573,12 +1566,13 @@ $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%gbin_min.csv
 $offdelim
           /,
-          growth_bin_size_mult(gbin) "--unitless-- multiplier for each growth bin to be applied to the prior solve year's annual deployment"
+          growth_bin_size_mult(gbin) "--unitless-- multiplier for each growth bin to be applied to the prior solve year's annual deployement"
           /
 $ondelim
 $include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%growth_bin_size_mult.csv
 $offdelim
           /,
+
           state_rpo(t,rpo_tech,r) "--fraction-- state RPO tagets"
           /
 $ondelim
@@ -1594,10 +1588,8 @@ $offdelim
 ;
 
 *Initialize values for growth constraints and penalties
-growth_bin_limit(gbin,state,tg,tfirst) = gbin_min(tg);
-cost_growth(i,state,t) = 0;
-
-
+growth_bin_limit(gbin,state,tg,tfirst) = gbin_min(tg) ;
+cost_growth(i,state,t) = 0 ;
 
 *######################
 * --- calculations ---
@@ -1635,6 +1627,19 @@ m_cf(i,r,h)                    "--%-- modeled capacity factor",
 m_cf_szn(i,r,szn)            "--fraction-- modeled capacity factor, averaged by season"
 ;
 
+
+* Mark hydro technologies
+parameter isHydro(i);
+
+isHydro("HYDRO-STORAGE") = 1;
+isHydro("HYDRO-PONDAGE") = 1;
+isHydro("HYDRO-ROR")     = 1;
+
+* Move all hydro capacity into rs="sk"
+capacity_exog(i,v,r,"sk",t)$isHydro(i) = sum(rs, capacity_exog(i,v,r,rs,t));
+
+* Optional: clear out old rs values for hydro
+capacity_exog(i,v,r,rs,t)$(isHydro(i) and not sameas(rs,"sk")) = 0;
 
   m_capacity_exog(i,v,rb,t) = capacity_exog(i,v,rb,"sk",t);
   m_capacity_exog(i,v,rs,t)$(not sameas(rs,"sk")) = sum(r$r_rs(r,rs),capacity_exog(i,v,r,rs,t));
