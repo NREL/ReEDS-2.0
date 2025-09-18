@@ -713,7 +713,7 @@ $offdelim
       cf_adj_hyd(i,szn,r)     "seasonal capacity factor adjustment for hydro"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%cf_adj_hydro_RMI.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%generators%ds%cf_adj_hydro.csv
 $offdelim
           /,
        cf_nepal_hyd(i,szn,r)     "seasonal capacity factor adjustment for nepal hydro"
