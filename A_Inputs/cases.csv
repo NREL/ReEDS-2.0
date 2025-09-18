@@ -25,7 +25,7 @@ RECapManTech_file,file name of set of technologies that qualify for RE capacity 
 REGenMandate_file,file name of the RE generation mandate to be used in the scenario run,regen_mandate_2030.csv,
 REGenManTech_file,file name of set of technologies that qualify for RE generation mandate,genmandate_tech_set.csv,
 AbsGrowLim_file,file name of absolute growth limit,growth_limit_absolute.csv,
-InitGrowLim_file,file name of initial growth limit,growth_limit_init.csv,
+GrowthLimTech_file,file name of the technology growth limit,growth_limit_by_tech.csv,
 Trancap_file,file name of the exogenous transmission capacity,trancap.csv,
 InterTrancost_file,file name of the transmission cost between states,inter_transcost.csv,
 CapNonRsc_file,file name of the capacity of non-renewable resources in each state,capnonrsc.csv,
