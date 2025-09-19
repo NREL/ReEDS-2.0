@@ -248,7 +248,13 @@ def main(t, casedir, iteration=0):
     ### Multiply derated capacity by CF to get generation
     gen_vre_ir = recf.multiply(cap_vre_derated, axis=1).dropna(axis=1)
     if gen_vre_ir.shape[1] != cap_vre_derated.shape[0]:
-        raise Exception("Mismatch between VRE capacity and available CF data")
+        missing_in_gen_vre_ir = set(cap_vre_derated.index) - set(gen_vre_ir.columns)
+        missing_in_cap_vre_derated = set(gen_vre_ir.columns) - set(cap_vre_derated.index)
+        raise Exception(
+            f"Mismatch between VRE capacity and available CF data. "
+            f"Missing in gen_vre_ir: {missing_in_gen_vre_ir or 'None'}, "
+            f"Missing in cap_vre_derated: {missing_in_cap_vre_derated or 'None'}"
+        )
     ### Aggregate by model zone
     gen_vre_r = gen_vre_ir.copy()
     gen_vre_r = gen_vre_r.groupby(axis=1, level='r').sum()
