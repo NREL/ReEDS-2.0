@@ -424,7 +424,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 					" s=" + str(os.path.join(OutputDir,"g00files","data_india")) +\
 					" o=" + str(os.path.join(OutputDir,"lstfiles","inputs.lst")) +\
 					" --TotIter=" + str(niter) +' --hourlyloadfile=' + str(hourlyloadfile) + toLogGamsString + options + ' \n')
-		OPATH.write("gams " + str(os.path.join("B_Equations","b1_model_constraints_old.gms")) +\
+		OPATH.write("gams " + str(os.path.join("B_Equations","b1_model_constraints.gms")) +\
 					" o=" + str(os.path.join(OutputDir,"lstfiles","Supply_Model.lst")) +\
 					" r=" + str(os.path.join(OutputDir,"g00files","data_india")) + " s=" +\
 					str(os.path.join(OutputDir,"g00files","supmod")) + ' \n')
