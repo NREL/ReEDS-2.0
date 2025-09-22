@@ -26,22 +26,22 @@ positive variables
   CAP_SDBIN(i,v,r,szn,sdbin,t)   "--MW-- generation capacity by storage duration bin for relevant technologies"
   INV(i,v,r,t)                   "--MW-- generation capacity investment"
   INV_RSC(i,v,r,t,rscbin)        "--MW-- investment in technologies computed on a renewable supply curve"
-  INVREFURB(i,v,r,t)             "--MW-- investment in refurbishments of technologies computed on a renewable supply curve"
-  GROWTH_BIN(gbin,i,state,t)     "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
+  INVREFURB(i,v,r,t)               "--MW-- investment in refurbishments of technologies computed on a renewable supply curve"
+  GROWTH_BIN(gbin,i,state,t)        "--MW-- total new (from INV) generation capacity in each growth bin by state and technology group"
 
 * generation and storage variables
-  GEN(i,v,r,h,t)               "--MW-h-- electricity generation"
-  CURT(r,h,t)                  "--MW-h-- Curtailed energy"
-  CURT_REDUCT_TRANS(r,rr,h,t)  "--MW-- curtailment reduction in r from building new transmission in rr"
-  STORAGE_IN(i,v,r,h,src,t)    "--MW-h-- storage entering in hour h"
-  STORAGE_LEVEL(i,v,r,h,t)     "--MW-h-- storage released in hour h"
-  MINGEN(r,szn,t)              "--MW-- seasonal minimum generation level in region r"
-  SLACK_FUEL(t)                "--GJ -- slack variable for naptha use in gas cc plants"
+  GEN(i,v,r,h,t)            "--MW-h-- electricity generation"
+  CURT(r,h,t)               "--MW-h-- Curtailed energy"
+  CURT_REDUCT_TRANS(r,rr,h,t) "--MW-- curtailment reduction in r from building new transmission in rr"
+  STORAGE_IN(i,v,r,h,src,t)     "--MW-h-- storage entering in hour h"
+  STORAGE_LEVEL(i,v,r,h,t)    "--MW-h-- storage released in hour h"
+  MINGEN(r,szn,t)           "--MW-- seasonal minimum generation level in region r"
+  SLACK_FUEL(t)                               "--GJ -- slack variable for naptha use in gas cc plants"
 
 *trade variables
   FLOW(r,rr,h,t,trtype)          "--MW-h-- electricity flow"
   OPRES_FLOW(ortype,r,rr,h,t)    "--MW-- interregional trade of operating reserves by operating reserve type"
-  CURT_FLOW(r,rr,h,t)            "--MW-- interregional trade of curtailment"
+  CURT_FLOW(r,rr,h,t)          "--MW-- interregional trade of curtailment"
   PRMTRADE(r,rr,szn,t)           "--MW-- planning reserve margin capacity traded from r to rr"
 
 *operating reserve variables
@@ -72,28 +72,26 @@ EQUATION
  eq_loadcon(r,h,t)
 
 * main capacity constraints
- eq_cap_init_noret(i,v,r,t)                              "--MW-- Existing capacity that cannot be retired is equal to exogenously-specified amount (eq_cap_mo_exist_noretire)"
- eq_cap_init_retub(i,v,r,t)                  "--MW-- Existing capacity that can be retired is less than or equal to exogenously-specified amount (eq_cap_exist_retire_ub)"
- eq_cap_init_retmo(i,v,r,t)                              "--MW-- Once retired, existing cap stock cannot be built up again"
+ eq_cap_init_noret(i,v,r,t)        "--MW-- Existing capacity that cannot be retired is equal to exogenously-specified amount (eq_cap_mo_exist_noretire)"
+ eq_cap_init_retub(i,v,r,t)        "--MW-- Existing capacity that can be retired is less than or equal to exogenously-specified amount (eq_cap_exist_retire_ub)"
+ eq_cap_init_retmo(i,v,r,t)        "--MW-- Once retired, existing cap stock cannot be built up again"
  eq_cap_mo_new_noret(i,v,r,t)      "--MW-- New capacity equals investments + refurbishments when retirements are not possible"
  eq_cap_new_retub(i,v,r,t)         "--MW-- New capacity cannot exceed INV + refurb when retirements are possible"
  eq_cap_new_retmo(i,v,r,t)         "--MW-- Once retired, new cap of each class cannot be built up again"
 
 * other capacity constraints
- eq_rsc_inv_account(i,v,r,t)       "--MW-- total rsc investments in each resource region equal sum of inv_rsc across all resource bins in that region"
- eq_rsc_INVlim(r,i,rscbin)         "--MW-- total investment from each rsc bin cannot exceed the available investment"
- eq_refurblim(i,r,t)               "--MW-- total refurbishments cannot exceed the refurbishments available computed as the expired investments in capital"
- eq_growthlimit_relative(tg,t)      "--MW-- relative growth limit on technologies in growlim(i)"
- eq_growthbin_limit(gbin,state,tg,t) "--MW-- capacity limit for each growth bin"
- eq_growthlimit_absolute(r,tg,t) "--MW-- absolute growth limit on technologies in growlim(i)"
- eq_growthlimit_initial(r,tg,t)
- eq_growthlimit_by_tech(i,t)       "--MW-- yearly growth limit on technologies in growth_limit_by_tech(i,t)"
- eq_tech_phase_out(i,v,r,t)        "--MW-- mandated phase out of select technologies"
- eq_prescribedre_pre2023(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
-*eq_prescribedre_pre2024(i,r,t)    "--MW-- unprescribed economic RE investments are not allowed before 2024"
-*eq_forceprescription(i,r,t)       "--MW-- after 2024 capacity must meet prescribed targets"
- eq_re_diversity(i,r,t)            "--MW-- No single resource region can have more than 15% of total national capacity (applies to WIND and UPV)"
- eq_cap_sdbin_balance(i,v,r,szn,t) "--MW-- total binned storage capacity must be equal to total storage capacity"
+ eq_rsc_inv_account(i,v,r,t)            "--MW-- total rsc investments in each resource region equal sum of inv_rsc across all resource bins in that region"
+ eq_rsc_INVlim(r,i,rscbin)              "--MW-- total investment from each rsc bin cannot exceed the available investment"
+ eq_refurblim(i,r,t)                    "--MW-- total refurbishments cannot exceed the refurbishments available computed as the expired investments in capital"
+ eq_growthlimit_relative(tg,t)          "--MW-- relative growth limit on technologies in growlim(i)"
+ eq_growthbin_limit(gbin,state,tg,t)    "--MW-- capacity limit for each growth bin"
+ eq_growthlimit_absolute(r,tg,t)        "--MW-- absolute growth limit on technologies in growlim(i)"
+ eq_growthlimit_by_tech(i,t)            "--MW-- yearly growth limit on technologies in growth_limit_by_tech(i,t)"
+ eq_tech_phase_out(i,v,r,t)             "--MW-- mandated phase out of select technologies"
+ eq_prescribedre_pre2023(i,r,t)         "--MW-- unprescribed economic RE investments are not allowed before 2023"
+ eq_forceprescription(r,t)              "--MW-- after 2020 capacity must exceed prescribed targets (for coal)"
+ eq_re_diversity(i,r,t)                 "--MW-- No single resource region can have more than 15% of total national capacity (applies to WIND and UPV)"
+ eq_cap_sdbin_balance(i,v,r,szn,t)      "--MW-- total binned storage capacity must be equal to total storage capacity"
  eq_sdbin_limit(region,szn,sdbin,t)     "--MW-- binned storage capacity cannot exceed storage duration bin size"
 
 * operation and reliability
@@ -251,7 +249,7 @@ eq_tech_phase_out(i,v,r,t)$[tmodel(t)$rfeas(r)$valcap(i,v,r,t)$phase_out_tech(i)
 *new capacity equations
 *====================================
 
-*  New capacity equals investments + refurbishments when retirements are not possible
+* New capacity equals investments + refurbishments when retirements are not possible
 eq_cap_mo_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)
                                   $((not retiretech(i,v,r,t)) or (yeart(t)<retireyear))]..
 
@@ -322,19 +320,15 @@ eq_prescribedre_pre2023(i,r,t)$[rfeas(r)$tmodel(t)$required_prescriptions(i,r,t)
 
 ;
 
+*capacity must exceed prescribed targets.
+eq_forceprescription(r,t)$[tmodel(t)$(yeart(t) > 2020)$(yeart(t) < 2036)$Sw_ForcePrescription]..
 
-* capacity must meet prescribed targets.
-*eq_forceprescription(i,r,t)$[tmodel(t)$required_prescriptions(i,r,t)$(yeart(t) > 2022)
-*                                 $prescriptivetech(i)$Sw_Prescribed]..
-
-* sum{(v)$[valcap(i,v,r,t)], CAP(i,v,r,t) }
-
-*        =g=
-
-*must be greater than the prescribed amount
-*    m_required_prescriptions(i,r,t)
-*;
-
+    sum{i$[coal(i)], sum{(v)$[valcap(i,v,r,t)], CAP(i,v,r,t)}}
+    
+        =g=
+    
+    sum{i$[coal(i)], sum(v,m_capacity_exog(i,v,r,t))}
+;
 
 *here we limit the amount of refurbishments available in specific year
 *this is the sum of all previous year's investment that is now beyond the age
@@ -374,7 +368,7 @@ eq_rsc_inv_account(i,v,r,t)$[tmodel(t)$valinv(i,v,r,t)$vre(i)]..
 
 
 *note that the following equation only restricts inv_rsc and not inv_refurb
-*therefore, the capacity indicated by teh supply curve may be limiting
+*therefore, the capacity indicated by the supply curve may be limiting
 *but the plant can still be refurbished
 eq_rsc_INVlim(r,i,rscbin)$[vre(i)$m_rscfeas(r,i,rscbin)]..
 
@@ -389,11 +383,7 @@ eq_rsc_INVlim(r,i,rscbin)$[vre(i)$m_rscfeas(r,i,rscbin)]..
 
 
 *limit on year-on-year technology growth rate to avoid unrealistic investment growth
-eq_growthlimit_relative(tg,t)$[tmodel(t)
-                                $Sw_GrowthRel
-                                $(yeart(t)>2023)
-                                $(yeart(t)<2031)
-                                $growth_limit_relative(tg)]..
+eq_growthlimit_relative(tg,t)$[tmodel(t)$Sw_GrowthRel$(yeart(t)>2023)$(yeart(t)<2031)$growth_limit_relative(tg)]..
 
 *the relative growth rate multiplied by the existing technology group's existing capacity
     (growth_limit_relative(tg)) ** (sum{tt$[tprev(tt,t)], yeart(tt)} - yeart(t)) *
@@ -407,36 +397,18 @@ eq_growthlimit_relative(tg,t)$[tmodel(t)
         INV(i,v,r,t)}
 ;
 
-*limit on year-on-year technology growth rate to avoid unrealistic investment growth
-eq_growthlimit_initial(r,tg,t)$[tmodel(t)
-                                $Sw_GrowthInit
-                                $(yeart(t)<2025)
-                                $growth_limit_initial(r,tg)]..
-
-*the relative growth rate multiplied by the existing technology group's existing capacity
-    growth_limit_initial(r,tg)
-
-    =g=
-
-*must exceed the current periods investment
-     sum{(i,v,rr)$[tg_i(tg,i)$cap_agg(r,rr)$vre(i)],
-         CAP(i,v,rr,t)} +
-     sum{(i,v)$[tg_i(tg,i)$(not vre(i))],
-         CAP(i,v,r,t)}
-;
-
 eq_growthbin_limit(gbin,state,tg,t)$[valinv_tg(state,tg,t)
-                                    $tmodel(t)
-                                    $Sw_GrowthRel
-                                    $(yeart(t)>=2023)]..
+                                 $tmodel(t)
+                                 $Sw_GrowthRel
+                                 $(yeart(t)>=model_builds_start_yr)]..
 
 *the growth bin limit
-    growth_bin_limit(gbin,state,tg,t)
+     growth_bin_limit(gbin,state,tg,t)
 
     =g=
 
-*must exceed the value in the growth bin
-    sum{i$tg_i(tg,i), GROWTH_BIN(gbin,i,state,t)}
+* must exceed the value in the growth bin
+     sum{i$tg_i(tg,i), GROWTH_BIN(gbin,i,state,t) }
 ;
 
 *for some technologies and region, maximum amount of capacity that can be developed based on policy/environmental/resource constraints
@@ -457,19 +429,19 @@ eq_growthlimit_absolute(r,tg,t)$[growth_limit_absolute(r,tg)$tmodel(t)$Sw_Growth
 ;
 
 *for some technologies and years, the maximum amount of capacity that can be developed
-* implemented as temporary fix to restrict unreasonably large wind buildouts
+*implemented as a temporary fix to restrict unreasonably large wind and super-critical coal buildouts
 eq_growthlimit_by_tech(i,t)$[growth_limit_by_tech(i,t)$Sw_GrowthLimTech]..
 
-* the growth of tech i in year t (in MW)
-     growth_limit_by_tech(i,t)
+*the growth limit defined in the GrowthLimTech file for tech i in year t
+    growth_limit_by_tech(i,t)
 
-     =g=
+    =g=
 
-* must be less than the growth limit defined in growthlimit_by_tech.csv
+*must be greater than the total new capacity investments in that tech in year t
     sum{(v,r)$[valinv(i,v,r,t)$tmodel(t)],
         INV(i,v,r,t)}
 
-;
+; 
 
 eq_regen_mandate(t)$[tmodel(t)$Sw_REGenMandate]..
 
@@ -1022,7 +994,7 @@ eq_CAPTRANEq(r,rr,trtype,t)$[routes(r,rr,trtype,t)$tmodel(t)$rfeas(r)$rfeas(rr)]
     trancap_exog(r,rr,trtype,t)
 
 *all previous year's investment, note this can apply for both r and rr
-    + sum{(tt)$[(yeart(tt) <= yeart(t))$(tmodel(tt) or tfix(tt))$(tt.val>2023)],
+    + sum{(tt)$[(yeart(tt) <= yeart(t))$(tmodel(tt) or tfix(tt))$(tt.val>2022)],
          INVTRAN(r,rr,tt,trtype) + INVTRAN(rr,r,tt,trtype) }
 ;
 
