@@ -492,7 +492,7 @@ def runModel(caseindex,options,caseSwitches,lstfile,niter,timetype,yearfile,INPU
 				#no need to run cc curt scripts for final iteration or for one iteration
 				if i < niter and niter > 1:
 					if cc_curtchoice == 1:
-						OPATH.writelines(f"{os.getenv('PYTHON_PATH')} " + str(os.path.join("D_Augur","d00_pickle_prep.py")) + " " + hourlyloadfile + " " + lstfile +\
+						OPATH.writelines(f"{os.getenv('PYTHON_PATH')} " + str(os.path.join("D_Augur","d00_pickle_prep_v2.py")) + " " + hourlyloadfile + " " + lstfile +\
 										 " " + OutputDir + '\n')
 						
 						OPATH.writelines(f"{os.getenv('PYTHON_PATH')} " + str(os.path.join("D_Augur","augurbatch.py")) + " " + lstfile + " " + str(ccworkers) +\
