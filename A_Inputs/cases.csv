@@ -39,7 +39,7 @@ numhintage,number of  technology bins to create when grouping units with similar
 carbonpolicystartyear,First year with carbon policy,2030,
 retireyear,First year when economic retirements are allowed,2026,
 Rediversity,Maximum fraction of new VRE investments that can go in any one resource region,0.15,
-CC/Curtailment Iterations,Iterations between ReEDs and CC/Curtailment modules to calculate Capacity Value and Curtailment convergence,4,
+CC/Curtailment Iterations,Iterations between ReEDs and CC/Curtailment modules to calculate Capacity Value and Curtailment convergence,1,
 GSw_MinCF,Turn minimum CF for new capacity on [1] or off [0],0,
 GSw_GrowthRel,Turn relative growth constraint on [1] or off [0],1,
 GSw_GrowthAbs,Turn absolute growth constraint on [1] or off [0],1,
