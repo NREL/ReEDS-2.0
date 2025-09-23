@@ -21,9 +21,9 @@ def createCurtCCThreads(case,ccworkers,yearset,restartfile,startyear,endyear,tim
             cur_year = ThreadInit['cur_year']
             #call the reflow script with appropriate options
             if os.name!='posix':
-                os.system(f"start /wait cmd /c  {os.getenv('PYTHON_PATH')} " + os.path.join('D_Augur','d0_ReEDS_augur_v2.py') + " " + case + " " + str(cur_year) + " " + str(cur_year) + " " + timetype + " " + str(iteration) + " " + casepath)
+                os.system(f"start /wait cmd /c  {os.getenv('PYTHON_PATH')} " + os.path.join('D_Augur','d0_ReEDS_augur.py') + " " + case + " " + str(cur_year) + " " + str(cur_year) + " " + timetype + " " + str(iteration) + " " + casepath)
             if os.name=="posix":
-                shellscript = subprocess.Popen([f"{os.getenv('PYTHON_PATH')} " + os.path.join('D_Augur','d0_ReEDS_augur_v2.py') + " " + case + " " + str(cur_year) + " " + str(cur_year) + " " + timetype + " " + str(iteration) + " " + casepath + ' >/dev/null'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,shell=True)
+                shellscript = subprocess.Popen([f"{os.getenv('PYTHON_PATH')} " + os.path.join('D_Augur','d0_ReEDS_augur.py') + " " + case + " " + str(cur_year) + " " + str(cur_year) + " " + timetype + " " + str(iteration) + " " + casepath + ' >/dev/null'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,shell=True)
                 #wait for it to finish before killing the thread
                 shellscript.wait()
             q.task_done()
