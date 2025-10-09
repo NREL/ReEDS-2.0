@@ -16,6 +16,7 @@ from datetime import datetime
 import argparse
 import reeds
 from input_processing import mcs_sampler as mcs
+from ToApps import to_slack
 
 # Assert core programs are accessible
 CORE_PROGRAMS = ["gams"]
@@ -1953,9 +1954,12 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    print(to_slack("ReEDS runbatch.py has started"))
+
     main(
         BatchName=args.BatchName, cases_suffix=args.cases_suffix, single=args.single,
         simult_runs=args.simult_runs, forcelocal=args.forcelocal, skip_checks=args.skip_checks,
         debug=args.debug, debugnode=args.debugnode, cases_per_node=args.cases_per_node,
         dryrun=args.dryrun,
     )
+    print(to_slack("ReEDS runbatch.py has completed"))

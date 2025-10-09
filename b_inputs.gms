@@ -351,7 +351,7 @@ set
   storage_standalone(i) "stand alone storage technologies",
   storage(i)           "storage technologies",
   storage_interday(i)  "interday storage",
-  thermal_storage(i)   "thermal storage technologies",
+  tes(i)               "thermal storage technologies",
   upgrade(i)           "technologies that are upgrades from other technologies",
   upv(i)               "upv generation technologies",
   vre_distributed(i)   "distributed PV technologies",
@@ -821,6 +821,10 @@ if(Sw_Storage = 0,
 ) ;
 * 1: Keep all storage
 
+if(Sw_TES = 0,
+ ban(i)$i_subsets(i,'tes') = yes ;
+) ;
+
 * option to ban upgrades
 ban(i)$[upgrade(i)$(not Sw_Upgrades)] = yes ;
 bannew(i)$[upgrade(i)$(not Sw_Upgrades)] = yes ;
@@ -983,7 +987,7 @@ storage_hybrid(i)$(not ban(i))      = yes$i_subsets(i,'storage_hybrid') ;
 storage_interday(i)$(not ban(i))    = yes$i_subsets(i,'storage_interday') ;
 storage_standalone(i)$(not ban(i))  = yes$i_subsets(i,'storage_standalone') ;
 storage(i)$(not ban(i))             = yes$i_subsets(i,'storage') ;
-thermal_storage(i)$(not ban(i))     = yes$i_subsets(i,'thermal_storage') ;
+tes(i)$(not ban(i))                  = yes$i_subsets(i,'tes') ;
 upv(i)$(not ban(i))                 = yes$i_subsets(i,'upv') ;
 vre_distributed(i)$(not ban(i))     = yes$i_subsets(i,'vre_distributed') ;
 vre_no_csp(i)$(not ban(i))          = yes$i_subsets(i,'vre_no_csp') ;
@@ -1009,6 +1013,7 @@ tg_i('geothermal',i)$geo(i) = yes ;
 tg_i('biomass',i)$bio(i) = yes ;
 tg_i('pumped-hydro',i)$psh(i) = yes ;
 tg_i('dr_shed',i)$dr_shed(i) = yes ;
+tg_i('tes',i)$tes(i) = yes ;
 
 *Hybrid pv+battery (PVB) configurations are defined by:
 *  (1) inverter loading ratio (DC/AC) and
@@ -4294,7 +4299,7 @@ parameter cost_cap(i,t)           "--2004$/MW-- overnight capital costs",
 ;
 
 cost_cap(i,t) = plant_char0(i,t,"capcost") ;
-cost_cap_energy(i,t)$battery(i) = plant_char0(i,t,"capcost_energy") ;
+cost_cap_energy(i,t)($battery(i) or tes(i)) = plant_char0(i,t,"capcost_energy") ;
 
 * apply user-defined cost reduction to Flexible CCS uniformly in all years
 cost_cap(i,t)$ccsflex(i) = cost_cap(i,t) * %GSw_CCSFLEX_cost_mult% ;
@@ -4456,7 +4461,7 @@ parameter cost_fom(i,v,r,t)           "--2004$/MW-yr-- fixed O&M",
 
 *previous calculation (without tech binning)
 cost_fom(i,v,r,t)$[(not Sw_binOM)$valcap(i,v,r,t)] = plant_char(i,v,t,'fom') ;
-cost_fom_energy(i,v,r,t)$[(battery(i))$valcap(i,v,r,t)] = plant_char(i,v,t,'fom_energy') ;
+cost_fom_energy(i,v,r,t)$[(battery(i) or tes(i))$valcap(i,v,r,t)] = plant_char(i,v,t,'fom_energy') ;
 
 *if using binned costs, still need to assign default values to cost_fom for new plants
 cost_fom(i,newv,r,t)$[(Sw_binOM)$valcap(i,newv,r,t)] = plant_char(i,newv,t,'fom') ;

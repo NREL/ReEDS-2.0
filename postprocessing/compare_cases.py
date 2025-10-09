@@ -137,7 +137,7 @@ techmap = {
          'gas-ct_h2-ct','h2-ct','gas-cc_h2-cc','h2-cc'],
         ['H2 turbine']*20)),
     **{f'battery_{i}':'Battery/PSH' for i in range(20)},
-    **{'battery_li':'Battery/PSH', 'pumped-hydro':'Battery/PSH'},
+    **{'battery_li':'Battery/PSH', 'tes_ms':'Battery/PSH', 'pumped-hydro':'Battery/PSH'},
     **dict(zip(
         ['coal-igcc', 'coaloldscr', 'coalolduns', 'gas-cc', 'gas-ct', 'coal-new', 'o-g-s',],
         ['Fossil']*20)),
@@ -627,7 +627,7 @@ if detailed:
         ## Separate charge and discharge
         dictin_gen_h_stress[case].loc[dictin_gen_h_stress[case].GW < 0,'i'] += '|charge'
         dictin_gen_h_stress[case].loc[dictin_gen_h_stress[case].i.isin(
-            ['battery_li','pumped-hydro']),'i'] += '|discharge'
+            ['battery_li','tes_ms','pumped-hydro']),'i'] += '|discharge'
 
     ### Stress period flows
     dictin_tran_flow_stress = {}
@@ -720,7 +720,7 @@ aggtechsplot = {
     'Offshore\nwind': ['wind-ofs'],
     # 'Wind': ['wind-ons', 'wind-ofs'],
     'Solar': ['upv', 'distpv', 'csp', 'pvb'],
-    'Battery': ['battery_{}'.format(i) for i in [2,4,6,8,10]] + ['battery_li'],
+    'Battery': ['battery_{}'.format(i) for i in [2,4,6,8,10]] + ['battery_li','tes_ms'],
     'Pumped\nstorage\nhydro': ['pumped-hydro'],
     # 'Storage': ['battery_{}'.format(i) for i in [2,4,6,8,10]] + ['battery_li', 'pumped-hydro'],
     'Hydro, geo, bio': [
@@ -975,8 +975,11 @@ labelpad = 0.08
 width = 1.6*len(cases) + 0.5
 aggstack = {
     'battery_li':'Storage',
+    'tes_ms':'Storage',
     'battery_li|charge':'Storage|charge',
+    'tes_ms|charge':'Storage|charge',
     'battery_li|discharge':'Storage|discharge',
+    'tes_ms|discharge':'Storage|discharge',
 
     'pumped-hydro':'Storage',
     'pumped-hydro|charge':'Storage|charge',
@@ -1661,7 +1664,7 @@ if interactive:
 
 #%%### Generation fraction
 ycol = 'Generation (TWh)'
-stortechs = [f'battery_{i}' for i in [2,4,6,8,10]] + ['battery_li', 'pumped-hydro']
+stortechs = [f'battery_{i}' for i in [2,4,6,8,10]] + ['battery_li','tes_ms', 'pumped-hydro']
 vretechs = ['upv','wind-ons','wind-ofs','distpv','csp']
 retechs = vretechs + ['hydro','geothermal','biopower']
 zctechs = vretechs + ['hydro','geothermal','nuclear','nuclear-smr']
@@ -1788,7 +1791,7 @@ if len(capcreditcases) == len(cases):
         for _col, tech in enumerate(capcredittechs):
             col = _col + len(ccseasons)
             if tech == 'storage':
-                techs = [f'battery_{i}' for i in [2,4,6,8,10]] + ['battery_li', 'pumped-hydro']
+                techs = [f'battery_{i}' for i in [2,4,6,8,10]] + ['battery_li','tes_ms', 'pumped-hydro']
             else:
                 techs = [tech]
             for case in capcreditcases:

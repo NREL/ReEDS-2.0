@@ -698,6 +698,7 @@ function process_storages(
     ## Read {case}/inputs_case/tech-subset-table.csv
     tech_subset_table = get_technology_types(ReEDS_data)
     battery_types = DataFrames.dropmissing(tech_subset_table, :BATTERY)[:, "Column1"]
+    tes_types = DataFrames.dropmissing(tech_subset_table, :TES)[:, "Column1"]
 
     storages_array = Storage[]
     for (idx, row) in enumerate(eachrow(storage_builds))
@@ -707,7 +708,7 @@ function process_storages(
         mttr = Int64(mttr_dict[string(row.i)])
 
         storage_duration = energy_capacity_df[idx, "MWh_sum"] / row.MW
-        if string(row.i) in battery_types
+        if string(row.i) in battery_types or string(row.i) in tes_types
             push!(
                 storages_array,
                 Battery(

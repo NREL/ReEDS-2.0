@@ -79,6 +79,7 @@ gas-cc-ccs-f*,gas-cc-ccs-flex
 lfill-gas*,lfill-gas
 o-g-s*,o-g-s
 battery_li,battery_li
+tes_ms,tes_ms
 pumped-hydro_n*,pumped-hydro
 pumped-hydro-flex*,pumped-hydro-flex
 upv*,upv

@@ -714,7 +714,7 @@ eq_cap_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
 * ---------------------------------------------------------------------------
 
-eq_cap_energy_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$battery(i)]..
+eq_cap_energy_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$(battery(i) or tes(i))]..
     
     sum{tt$[inv_cond(i,v,r,t,tt)$(tmodel(tt) or tfix(tt))$valcap(i,v,r,tt)],
               degrade(i,tt,t) * INV_ENERGY(i,v,r,tt)
@@ -944,7 +944,7 @@ eq_forceprescription_energy(pcat,r,t)
 *energy capacity built in the current period or prior
     sum{(i,newv,tt)$[valinv(i,newv,r,tt)$prescriptivelink(pcat,i)
                      $(yeart(tt)<=yeart(t))$(tmodel(tt) or tfix(tt))
-                     $battery(i)],
+                     $(battery(i) or tes(i))],
         INV_ENERGY(i,newv,r,tt)}
 
     =e=
@@ -1641,7 +1641,7 @@ eq_cap_sdbin_balance(i,v,r,ccseason,t)
 
 * energy capacity must be greater than the binned value
 eq_cap_sdbin_energy_balance(i,v,r,ccseason,t)
-    $[tmodel(t)$valcap(i,v,r,t)$battery(i)$Sw_PRM_CapCredit]..
+    $[tmodel(t)$valcap(i,v,r,t)$(battery(i) or tes(i))$Sw_PRM_CapCredit]..
 
 *total capacity in each region
     CAP_ENERGY(i,v,r,t)
@@ -1657,7 +1657,7 @@ eq_cap_sdbin_energy_balance(i,v,r,ccseason,t)
 * for each bin, binned energy capacity must equal to binned power capacity
 * times bin duration
 eq_sdbin_power_energy_link(i,v,r,ccseason,sdbin,t)
-    $[tmodel(t)$valcap(i,v,r,t)$battery(i)$Sw_PRM_CapCredit]..
+    $[tmodel(t)$valcap(i,v,r,t)$(battery(i) or tes(i))$Sw_PRM_CapCredit]..
 
 *binned energy capacity
     CAP_SDBIN_ENERGY(i,v,r,ccseason,sdbin,t)
@@ -3049,17 +3049,17 @@ eq_storage_thermalres(i,v,r,h,t)
 *seas_cap_frac_delta is not applied here because we assume that the storage energy capacity is
 *constant across the year.
 eq_storage_duration(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)
-                               $(battery(i) or CSP_Storage(i) or pvb(i) or psh(i) or evmc_storage(i))
+                               $(battery(i) or tes(i) or CSP_Storage(i) or pvb(i) or psh(i) or evmc_storage(i))
                                $tmodel(t)]..
 
 * [plus] storage duration times storage capacity
-    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$(battery(i)$(not battery(i)) or pvb(i)))
+    storage_duration(i) * CAP(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$pvb(i))
 
 * [plus] EVMC storage has time-varying energy capacity
     + evmc_storage_energy_hours(i,r,h,t) * CAP(i,v,r,t) * (bcr(i)$evmc_storage(i))
 
 * [plus] battery storage capacity
-    + CAP_ENERGY(i,v,r,t)$battery(i)
+    + CAP_ENERGY(i,v,r,t)$(battery(i) or tes(i))
 
     =g=
 
@@ -3104,13 +3104,15 @@ eq_storage_in_minloading(i,v,r,h,hh,t)$[(storage_standalone(i) or hyd_add_pump(i
 * ---------------------------------------------------------------------------
 * for batteries
 * when power capacity is built, energy capacity must be greater than the minimum duration
-eq_battery_minduration(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$battery(i)]..
+eq_battery_minduration(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(battery(i) or tes(i))]..
 
     CAP_ENERGY(i,v,r,t)
 
     =g=
 
-    minbatteryduration * CAP(i,v,r,t)
+    CAP(i,v,r,t) * minbatteryduration$battery(i)
+
+    + CAP(i,v,r,t) * mintesduration$tes(i)
 ;
 
 * ---------------------------------------------------------------------------

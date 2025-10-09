@@ -317,7 +317,8 @@ plantchar_ccsflex_perf.csv,inputs/plant_characteristics/{ccsflexscen}_perf.csv,G
 plantchar_coal_ccs.csv,inputs/plant_characteristics/{plantchar_coal_ccs}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_coal.csv,inputs/plant_characteristics/{plantchar_coal}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_battery.csv,inputs/plant_characteristics/{plantchar_battery}.csv,GSw_Storage,1,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
-plantchar_csp.csv,inputs/plant_characteristics/{plantchar_csp}.csv,,,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_tes.csv,inputs/plant_characteristics/{plantchar_tes}.csv,GSw_Storage,1,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
+plantchar_csp.csv,inputs/plant_characteristics/{plantchar_csp}.csv,GSw_CSP,~0,ignore,ignore,,,,,0,,,,,,used to define plantcharout.csv
 plantchar_dr_shed.csv,inputs/plant_characteristics/dr_shed_capcost_{dr_shedscen}.csv,dr_shedscen,,mean,uniform,r,"tech,wide",,1,0,,,,,,used to define plantcharout.csv
 plantchar_dr_shed_vom.csv,inputs/plant_characteristics/dr_shed_vom.csv,,,mean,uniform,r,"tech,wide",,1,0,,,,,,used to define plantcharout.csv
 plantchar_dr_shed_fom.csv,inputs/plant_characteristics/dr_shed_fom.csv,,,mean,uniform,r,"tech,wide",,1,0,,,,,,used to define plantcharout.csv

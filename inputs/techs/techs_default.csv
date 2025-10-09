@@ -1,6 +1,7 @@
 i,region_type
 ice,p
 battery_li,p
+tes_ms,p
 biopower,p
 beccs_mod,p
 beccs_max,p

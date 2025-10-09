@@ -52,3 +52,4 @@ hydend,94,https://atb.nrel.gov/electricity/2022/hydropower
 can-imports,20000,set as an arbitrarily high number
 evmc,20000,set as an arbitrarily high number
 dr_shed,20000,set as an arbitrarily high number
+tes_ms,60,Assumed same as battery storage for unit size

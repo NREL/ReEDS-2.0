@@ -291,6 +291,12 @@ def import_data(
         df_index_check = df[indices].copy()
         if len(df_index_check) != len(df_index_check.drop_duplicates()):
             print('Error: Duplicate entries for', file_root, file_suffix, 'on indices', indices)
+            # for each column in indices, print the unique values that are duplicated
+            df_dups = df_index_check[df_index_check.duplicated(keep=False)]
+            for col in indices:
+                dups = df_dups[df_dups.duplicated(subset=[col], keep=False)]
+                if len(dups) > 0:
+                    print('Duplicate values for column', col, ':', dups[col].unique())
             sys.exit()
 
     return df

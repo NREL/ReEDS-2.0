@@ -31,6 +31,7 @@ distpv,0.015
 pumped-hydro,0.14
 pumped-hydro-flex,0.14
 battery_li,0.006
+tes_ms,0.006
 CAES,0.04
 ice,0.01
 hydD,0.02

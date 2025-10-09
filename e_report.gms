@@ -245,7 +245,7 @@ lcoe_built(i,r,t)$[ [sum{(v,h)$[valinv(i,v,r,t)$INV.l(i,v,r,t)], GEN.l(i,v,r,h,t
         (crf(t) * (
          sum{v$valinv(i,v,r,t),
              INV.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap(i,t) ) }
-       + sum{v$[valinv(i,v,r,t)$battery(i)],
+       + sum{v$[valinv(i,v,r,t)$(battery(i) or tes(i))],
              INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) ) }
        + sum{v$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades],
              UPGRADES.l(i,v,r,t) * (cost_upgrade(i,v,r,t) * cost_cap_fin_mult(i,r,t) ) }
@@ -253,7 +253,7 @@ lcoe_built(i,r,t)$[ [sum{(v,h)$[valinv(i,v,r,t)$INV.l(i,v,r,t)], GEN.l(i,v,r,h,t
              INV_RSC.l(i,v,r,rscbin,t) * m_rsc_dat(r,i,rscbin,"cost") * rsc_fin_mult(i,r,t) }
                  )
        + sum{v$valinv(i,v,r,t), cost_fom(i,v,r,t) * INV.l(i,v,r,t) }
-       + sum{v$[valinv(i,v,r,t)$battery(i)], cost_fom_energy(i,v,r,t) * INV_ENERGY.l(i,v,r,t) }
+       + sum{v$[valinv(i,v,r,t)$(battery(i) or tes(i))], cost_fom_energy(i,v,r,t) * INV_ENERGY.l(i,v,r,t) }
        + sum{v$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades], cost_fom(i,v,r,t) * UPGRADES.l(i,v,r,t) }
        + sum{(v,h)$[valinv(i,v,r,t)$INV.l(i,v,r,t)], (cost_vom(i,v,r,t)+ heat_rate(i,v,r,t) * fuel_price(i,r,t)) * GEN.l(i,v,r,h,t) * hours(h) }
        + sum{(v,h)$[UPGRADES.l(i,v,r,t)$Sw_Upgrades], (cost_vom(i,v,r,t)+ heat_rate(i,v,r,t) * fuel_price(i,r,t)) * GEN.l(i,v,r,h,t) * hours(h) }
@@ -267,7 +267,7 @@ lcoe_built_nat(i,t)$[sum{(v,r)$valinv(i,v,r,t), INV.l(i,v,r,t) }] =
 
 lcoe_pieces("capcost",i,r,t)$tmodel_new(t) = 
           sum{v$valinv(i,v,r,t), INV.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap(i,t) ) }
-        + sum{v$[valinv(i,v,r,t)$battery(i)], INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) ) } ;
+        + sum{v$[valinv(i,v,r,t)$(battery(i) or tes(i))], INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) ) } ;
 
 lcoe_pieces("upgradecost",i,r,t)$tmodel_new(t) =
                   sum{v$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades],
@@ -283,7 +283,7 @@ lcoe_pieces("rsccost",i,r,t)$tmodel_new(t) =
 
 lcoe_pieces("fomcost",i,r,t)$tmodel_new(t) =
                   sum{v$valinv(i,v,r,t), cost_fom(i,v,r,t) * INV.l(i,v,r,t) }
-                  + sum{v$[valinv(i,v,r,t)$battery(i)], cost_fom_energy(i,v,r,t) * INV_ENERGY.l(i,v,r,t) }
+                  + sum{v$[valinv(i,v,r,t)$(battery(i) or tes(i))], cost_fom_energy(i,v,r,t) * INV_ENERGY.l(i,v,r,t) }
                   + sum{v$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades], cost_fom(i,v,r,t) * UPGRADES.l(i,v,r,t) } ;
 
 lcoe_pieces("vomcost",i,r,t)$tmodel_new(t) =
@@ -906,13 +906,13 @@ cap_sdbin_out(i,r,ccseason,sdbin,t)$valcap_irt(i,r,t) = sum{v, CAP_SDBIN.l(i,v,r
 
 * energy capacity of storage
 stor_energy_cap(i,v,r,t)$[tmodel_new(t)$valcap(i,v,r,t)] =
-        storage_duration(i) * CAP.l(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$[battery(i) or storage_hybrid(i)$(not csp(i))]) ;
+        storage_duration(i) * CAP.l(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$[battery(i) or tes(i) or storage_hybrid(i)$(not csp(i))]) ;
 
 * add PSH energy capacity to cap_energy_ivrt
 cap_energy_ivrt(i,v,r,t)$[valcap(i,v,r,t)$psh(i)] = CAP.l(i,v,r,t) * storage_duration(i) ;
 
 * battery storage duration
-storage_duration_out(i,v,r,t)$[valcap(i,v,r,t)$battery(i)$CAP.l(i,v,r,t)] = 
+storage_duration_out(i,v,r,t)$[valcap(i,v,r,t)$(battery(i) or tes(i))$CAP.l(i,v,r,t)] =
         CAP_ENERGY.l(i,v,r,t) / CAP.l(i,v,r,t) ;
 
 *==================================
@@ -1206,7 +1206,7 @@ systemcost_techba("inv_investment_capacity_costs",i,r,t)$tmodel_new(t) =
               sum{v$valinv(i,v,r,t),
                    INV.l(i,v,r,t) * (cost_cap_fin_mult_noITC(i,r,t) * cost_cap(i,t) ) }
 *plus investment energy costs (without the subtraction of any ITC/PTC value)
-              + sum{v$[valinv(i,v,r,t)$battery(i)],
+              + sum{v$[valinv(i,v,r,t)$(battery(i) or tes(i))],
                    INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult_noITC(i,r,t) * cost_cap_energy(i,t) ) }
 *plus supply curve adjustment to capital cost (separated in outputs but part of m_rsc_dat(r,i,rscbin,"cost"))
               + sum{(v,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$rsc_i(i)$[not sccapcosttech(i)]$(not spur_techs(i))],
@@ -1247,7 +1247,7 @@ systemcost_techba("inv_itc_payments_negative",i,r,t)$tmodel_new(t) =
                 sum{v$valinv(i,v,r,t),
                    INV.l(i,v,r,t) * (cost_cap_fin_mult_out(i,r,t) * cost_cap(i,t) ) }
 *energy investment costs (including reduction from ITC)
-              + sum{v$[valinv(i,v,r,t)$battery(i)],
+              + sum{v$[valinv(i,v,r,t)$(battery(i) or tes(i))],
                    INV_ENERGY.l(i,v,r,t) * (cost_cap_fin_mult_out(i,r,t) * cost_cap_energy(i,t) ) }
 *plus supply curve adjustment to capital cost (separated in outputs but part of m_rsc_dat(r,i,rscbin,"cost"))
               + sum{(v,rscbin)$[m_rscfeas(r,i,rscbin)$valinv(i,v,r,t)$rsc_i(i)$[not sccapcosttech(i)]$(not spur_techs(i))],
@@ -1685,7 +1685,7 @@ error_check('z') = (
                   cost_cap(i,t) * INV.l(i,v,r,t)
                   * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
 
-            + sum{(i,v,r)$[valinv(i,v,r,t)$battery(i)],
+            + sum{(i,v,r)$[valinv(i,v,r,t)$(battery(i) or tes(i))],
                   cost_cap_energy(i,t) * INV_ENERGY.l(i,v,r,t)
                   * (cost_cap_fin_mult(i,r,t) - cost_cap_fin_mult_out(i,r,t)) }
                   
