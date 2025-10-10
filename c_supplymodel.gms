@@ -304,7 +304,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_storage_interday_max_level_start(i,v,r,allszn,t)      "--MWh-- enforce maximum SOC at first period of each partition"
  eq_storage_interday_max_level_end(i,v,r,allszn,t)        "--MWh-- enforce maximum SOC at last period of each partition"
  eq_storage_opres(i,v,r,allh,t)                   "--MWh-- there must be sufficient energy in the storage to be able to provide operating reserves"
- eq_storage_thermalres(i,v,r,allh,t)              "--MW-- thermal storage contribution to operating reserves is store_in only"
+*  eq_storage_thermalres(i,v,r,allh,t)              "--MW-- thermal storage contribution to operating reserves is store_in only"
  eq_battery_minduration(i,v,r,t)                  "--MWh-- when power capacity is built, energy capacity should have a minimum capacity"
 
 * hybrid plant equations
@@ -3030,18 +3030,18 @@ eq_storage_opres(i,v,r,h,t)
 
 * ---------------------------------------------------------------------------
 
-*storage charging must exceed OR contributions for thermal storage
-eq_storage_thermalres(i,v,r,h,t)
-    $[valgen(i,v,r,t)$Thermal_Storage(i)
-    $tmodel(t)$Sw_OpRes$opres_h(h)]..
+* *storage charging must exceed OR contributions for thermal storage
+* eq_storage_thermalres(i,v,r,h,t)
+*     $[valgen(i,v,r,t)$Thermal_Storage(i)
+*     $tmodel(t)$Sw_OpRes$opres_h(h)]..
 
-    STORAGE_IN(i,v,r,h,t)
+*     STORAGE_IN(i,v,r,h,t)
 
-    =g=
+*     =g=
 
-    sum{ortype$[opres_model(ortype)],
-        reserve_frac(i,ortype) * OPRES(ortype,i,v,r,h,t) }
-;
+*     sum{ortype$[opres_model(ortype)],
+*         reserve_frac(i,ortype) * OPRES(ortype,i,v,r,h,t) }
+* ;
 
 * ---------------------------------------------------------------------------
 

@@ -240,7 +240,7 @@ def tes(input_dir, output_dir, df_atb, atb_year, atb_first_year, dollar_yr_conv,
     col_dict = {'CAPEX':'capcost', 'Fixed O&M':'fom', 'variable':'t'}
 
     #roundtrip efficiency and variable O&M are constant right now for all tes techs and years, but may need to be changed in future.
-    tes_rte= 0.412
+    tes_rte= 0.85
     tes_vom = 0.0
 
     # Loop through each of the necessary input files for ReEDS to extract corresponding data from input files and add to dataframe

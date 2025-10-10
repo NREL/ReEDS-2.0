@@ -708,7 +708,7 @@ function process_storages(
         mttr = Int64(mttr_dict[string(row.i)])
 
         storage_duration = energy_capacity_df[idx, "MWh_sum"] / row.MW
-        if string(row.i) in battery_types or string(row.i) in tes_types
+        if string(row.i) in battery_types || string(row.i) in tes_types
             push!(
                 storages_array,
                 Battery(

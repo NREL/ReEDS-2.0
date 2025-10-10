@@ -225,7 +225,16 @@ def import_data(
         df = read_regional_cap_cost_diff(os.path.join(scen_settings.inputs_case))
     else:
         df = pd.read_csv(os.path.join(scen_settings.inputs_case, f'{file_root}.csv'))
-
+    print(1)
+    df_index_check = df[indices].copy()
+    if len(df_index_check) != len(df_index_check.drop_duplicates()):
+        print('Error: Duplicate entries for', file_root, file_suffix, 'on indices', indices)
+        # for each column in indices, print the unique values that are duplicated
+        df_dups = df_index_check[df_index_check.duplicated(keep=False)]
+        for col in indices:
+            dups = df_dups[df_dups.duplicated(subset=[col], keep=False)]
+            if len(dups) > 0:
+                print('Duplicate values for column', col, ':', dups[col].unique())
     # Expand tech groups, if there is an 'i' column and the argument is True
     if 'i' in df.columns and expand_tech_groups is True:
         for tech_group in scen_settings.tech_groups.keys():
@@ -245,6 +254,17 @@ def import_data(
     # Check if a currency_file_root file exists - it should exist if there are
     # any columns with currency data. If currency data exists, adjust the dollar
     # year of the input data to the scen_settings's dollar year
+    print(2)
+    df_index_check = df[indices].copy()
+    if len(df_index_check) != len(df_index_check.drop_duplicates()):
+        print('Error: Duplicate entries for', file_root, file_suffix, 'on indices', indices)
+        # for each column in indices, print the unique values that are duplicated
+        df_dups = df_index_check[df_index_check.duplicated(keep=False)]
+        for col in indices:
+            dups = df_dups[df_dups.duplicated(subset=[col], keep=False)]
+            if len(dups) > 0:
+                print('Duplicate values for column', col, ':', dups[col].unique())
+    
     if os.path.isfile(
         os.path.join(scen_settings.inputs_case, file_root, f'currency_{file_root}.csv')
     ) and (adjust_units is True):
@@ -285,7 +305,7 @@ def import_data(
                 inflation_adjust = 1.0
 
             df[col] = df[col] * inflation_adjust
-
+    print(3)
     # Check to see if there are any duplicate entries for the given indices
     if check_for_dups is True:
         df_index_check = df[indices].copy()

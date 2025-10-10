@@ -1,6 +1,6 @@
 ,utah
 timetype,seq
-endyear,2030
+endyear,2050
 GSw_Region,st/UT
 GSw_BatteryMandate,0
 GSw_TES,1
@@ -32,7 +32,7 @@ GSw_RGGI,0
 GSw_SkipAugurYear,2030
 GSw_StateCap,0
 GSw_StateRPS,0
-GSw_Storage,0
+GSw_Storage,1
 GSw_Upgrades,0
 ivt_suffix,small
 numhintage,1
