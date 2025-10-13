@@ -138,15 +138,19 @@ cost_vom:
 cost_vom_pvb_p:
   indexsets:
   - valgen
-  - storage_hybrid
-  excludesets:
-  - csp
+  - pvb
 cost_vom_pvb_b:
   indexsets:
   - valgen
-  - storage_hybrid
-  excludesets:
-  - csp
+  - pvb
+cost_vom_nuclear_stor_p:
+  indexsets:
+  - valgen
+  - nuclear_stor
+cost_vom_nuclear_stor_s:
+  indexsets:
+  - valgen
+  - nuclear_stor
 cost_fom:
   indexsets:
   - valcap

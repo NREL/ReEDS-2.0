@@ -47,6 +47,7 @@ techmarkers = {
     'hydro': 's',
     'nuclear': 'p', # '☢️',
     'nuclear-smr': 'p',
+    'nuclear-npr': 'p',
     'biopower': (5,1,0),
     'lfill-gas': (5,1,0),
     'beccs_mod': (5,1,180),

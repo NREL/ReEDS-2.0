@@ -71,6 +71,10 @@
   assignments_list:
     - plantchar_nuclear: [nuclear_ATB_2024_conservative, nuclear_ATB_2024_moderate, nuclear_ATB_2024_advanced]
     - plantchar_nuclear_smr: [nuclear-smr_ATB_2024_conservative, nuclear-smr_ATB_2024_moderate, nuclear-smr_ATB_2024_advanced]
+    - plantchar_nuclear_stor1: [nuclear-stor_char, nuclear-stor_char, nuclear-stor_char]
+    - plantchar_nuclear_stor2: [nuclear-stor_char, nuclear-stor_char, nuclear-stor_char]
+    - plantchar_nuclear_stor3: [nuclear-stor_char, nuclear-stor_char, nuclear-stor_char]
+    - plantchar_nuclear_stor4: [nuclear-stor_char, nuclear-stor_char, nuclear-stor_char]
   dist: dirichlet
   dist_params: [1, 1, 1]
   weight_r: country
