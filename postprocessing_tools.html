@@ -70,7 +70,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#compare-results-postprocessing-compare-cases-py">Compare results: <code class="docutils literal notranslate"><span class="pre">postprocessing/compare_cases.py</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#run-pras-postprocessing-run-reeds2pras-py">Run PRAS: <code class="docutils literal notranslate"><span class="pre">postprocessing/run_reeds2pras.py</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#run-a-dispatch-model-run-pcm-py">Run a dispatch model: <code class="docutils literal notranslate"><span class="pre">run_pcm.py</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#generate-static-plots-postprocessing-transmission-maps-py">Generate static plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/transmission_maps.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#generate-static-plots-postprocessing-single-case-plots-py">Generate static plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/single_case_plots.py</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#generate-interactive-plots-postprocessing-bokehpivot">Generate interactive plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/bokehpivot</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#calculate-hourly-prices-and-technology-value-metrics-postprocessing-revalue">Calculate hourly prices and technology value metrics: <code class="docutils literal notranslate"><span class="pre">postprocessing/reValue</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#estimate-retail-rates-postprocessing-retail-rate-module">Estimate retail rates: <code class="docutils literal notranslate"><span class="pre">postprocessing/retail_rate_module</span></code></a></li>
@@ -115,7 +115,26 @@ Most of these scripts have command-line interfaces, the details of which can be 
 <h2>Setting up new cases<a class="headerlink" href="#setting-up-new-cases" title="Link to this heading"></a></h2>
 <section id="create-a-new-cases-csv-file-preprocessing-casemaker-py">
 <h3>Create a new cases_{}.csv file: <code class="docutils literal notranslate"><span class="pre">preprocessing/casemaker.py</span></code><a class="headerlink" href="#create-a-new-cases-csv-file-preprocessing-casemaker-py" title="Link to this heading"></a></h3>
-<p>This script does not have a command-line interface, but can be edited by the user and used to create a cases_{}.csv file with a matrix of switch settings.</p>
+<p>This script facilitates the creation of a multidimensional matrix of scenarios, with “dimensions” and “casegroups” (permutations of dimensions) provided via a .yaml file.</p>
+<p>An example .yaml file is provided in <code class="docutils literal notranslate"><span class="pre">preprocessing/casematrix_example.yaml</span></code>.
+In this example, three dimensions are explored: “policy”, “demand”, and “sensitivity”.
+Each dimension specifies a dictionary of choices, and each choice specifies the switch values associated with that choice.
+Default switch values are taken from <code class="docutils literal notranslate"><span class="pre">cases.csv</span></code>; if a “shared” field is provided in the casematrix .yaml file, the switch/value pairs in the “shared” field overwrite the associated defaults from <code class="docutils literal notranslate"><span class="pre">cases.csv</span></code>.
+Cases in the resulting <code class="docutils literal notranslate"><span class="pre">cases_{batchname}.csv</span></code> file are labeled as <code class="docutils literal notranslate"><span class="pre">{policy</span> <span class="pre">choice}_{demand</span> <span class="pre">choice}_{sensitivity</span> <span class="pre">choice}</span></code>.
+For example, a case using the “IRA” policy setting, “DemMd” demand setting, and “core” sensitivity setting would be labeled as <code class="docutils literal notranslate"><span class="pre">IRA_DemMd_core</span></code>.</p>
+<p>The “casegroups” indicate which permutations of dimension values to include in the resulting <code class="docutils literal notranslate"><span class="pre">cases_{batchname}.csv</span></code> file.
+The provided example includes 3 policy scenarios, 7 demand scenarios, and 9 sensitivity cases, which would produce 3 × 7 × 9 = 189 cases if all permutations were included.
+<code class="docutils literal notranslate"><span class="pre">casegroups</span></code> is a list of <em>n</em>-element lists, where <em>n</em> is the number of dimensions specified above.
+If an element is an empty list, all options for that dimension are used;
+if an element specifies a single option or a list of options, only those options are used.
+The order of elements matches the order of dimensions.
+For example, since the dimensions are “policy”, “demand”, and “sensitivity”:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">[[],</span> <span class="pre">[],</span> <span class="pre">core]</span></code> includes all policy scenarios, all demand scenarios, and the single “core” sensitivity, for 3 × 7 × 1 = 21 cases.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[OBBBA,</span> <span class="pre">DemMd,</span> <span class="pre">[]]</span></code> includes a single policy scenario, a single demand scenario, and all sensitivity cases, for 1 × 1 × 9 = 9 cases.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[[OBBBA,</span> <span class="pre">OBBBAcon],</span> <span class="pre">DemMd,</span> <span class="pre">[GasPriceLo,</span> <span class="pre">GasPriceHi]]</span></code> includes two policy scenarios, a single demand scenario, and two sensitivity cases, for 2 × 1 × 2 = 4 cases.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[[],</span> <span class="pre">[],</span> <span class="pre">[]]</span></code> would include all 3 × 7 × 9 = 189 cases.</p></li>
+</ul>
 </section>
 <section id="fix-representative-stress-periods-preprocessing-get-case-periods-py">
 <h3>Fix representative/stress periods: <code class="docutils literal notranslate"><span class="pre">preprocessing/get_case_periods.py</span></code><a class="headerlink" href="#fix-representative-stress-periods-preprocessing-get-case-periods-py" title="Link to this heading"></a></h3>
@@ -187,9 +206,9 @@ Those tools provide more advanced and realistic features like unit commitment an
 by contrast, <code class="docutils literal notranslate"><span class="pre">run_pcm.py</span></code> simply reuses the existing ReEDS formulation at higher time resolution,
 and is subject to all the normal caveats and limitations of ReEDS (linear variables, pipe-and-bubble transmission flow, etc.).</p>
 </section>
-<section id="generate-static-plots-postprocessing-transmission-maps-py">
-<h3>Generate static plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/transmission_maps.py</span></code><a class="headerlink" href="#generate-static-plots-postprocessing-transmission-maps-py" title="Link to this heading"></a></h3>
-<p>This script runs automatically at the end of a ReEDS case and writes static maps to the {case}/outputs/maps folder as .png files.</p>
+<section id="generate-static-plots-postprocessing-single-case-plots-py">
+<h3>Generate static plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/single_case_plots.py</span></code><a class="headerlink" href="#generate-static-plots-postprocessing-single-case-plots-py" title="Link to this heading"></a></h3>
+<p>This script runs automatically at the end of a ReEDS case and writes static figures to the <code class="docutils literal notranslate"><span class="pre">{case}/outputs/figures</span></code> folder as .png files.</p>
 </section>
 <section id="generate-interactive-plots-postprocessing-bokehpivot">
 <h3>Generate interactive plots: <code class="docutils literal notranslate"><span class="pre">postprocessing/bokehpivot</span></code><a class="headerlink" href="#generate-interactive-plots-postprocessing-bokehpivot" title="Link to this heading"></a></h3>
@@ -231,7 +250,7 @@ For more information on how to use bokehpivot, see the <a class="reference inter
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on August 25, 2025.
+      <span class="lastupdated">Last updated on October 13, 2025.
       </span></p>
   </div>
 

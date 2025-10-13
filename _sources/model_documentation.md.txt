@@ -108,6 +108,7 @@ National Renewable Energy Laboratory. ({{ cite_date_last_updated }}). *Model doc
 | NVOE | net value of energy |
 | NYISO | New York Independent System Operator |
 | O&M | operations and maintenance |
+| OBBBA | One Big Beautiful Bill Act |
 | OGS | oil-gas steam |
 | OSW | offshore wind |
 | PCM | production cost model |
@@ -190,10 +191,10 @@ In 2006, a variation of WinDS was developed to analyze concentrating solar power
 In 2009, WinDS was recast as ReEDS---a generalized tool for examining the long-term deployment interactions of multiple technologies in the power sector {cite}`blairRenewableEnergyEfficiency2009`.
 In 2018, ReEDS was rewritten for greater flexibility and referred to as ReEDS 2.0.
 Throughout this documentation, we refer to the model simply as "ReEDS."
-A version of ReEDS has also been developed for India ({cite:p}`roseLeastCostPathwaysIndias2020, chernyakhovskiyEnergyStorageSouth2021, joshiImpactsRenewableEnergy2024`), but this documentation focuses on the ReEDS version for the CONUS.
+A version of ReEDS has also been developed for India ({cite:p}`roseLeastCostPathwaysIndias2020, chernyakhovskiyEnergyStorageSouth2021, joshiImpactsRenewableEnergy2024`), but this documentation focuses on the ReEDS version for the contiguous United States (CONUS).
 
 NREL uses ReEDS to publish an annual *Standard Scenarios* report, which provides a U.S. electric sector outlook under a wide range of possible futures {cite}`gagnon2023StandardScenarios2024a`.
-ReEDS has been the primary analytical tool in numerous studies, including the seminal Renewable Electricity Futures study {cite}`nrelRenewableElectricityFutures2012` and several other visionary studies of future technology adoption---Hydropower Vision {cite}`u.s.departmentofenergy2016BillionTonReport2016`, Wind Vision {cite}`doeWindVisionNew2015`, SunShot Vision {cite}`doeSunShotVisionStudy2012`, Geothermal Vision {cite}`doeGeoVisionHarnessingHeat2019`, Storage Futures {cite}`blairStorageFuturesStudy2022`, Electrification Futures {cite}`murphyElectrificationFuturesStudy2021`, Solar Futures {cite}`doeSolarFuturesStudy2021`, and Nuclear multimodel analysis {cite}`bistlineNuclearEnergyLongTerm2022`.
+ReEDS has been the primary analytical tool in numerous studies, including the seminal Renewable Electricity Futures study {cite}`nrelRenewableElectricityFutures2012` and several other visionary studies of future technology adoption---Hydropower Vision {cite}`u.s.departmentofenergy2016BillionTonReport2016`, Wind Vision {cite}`doeWindVisionNew2015`, SunShot Vision {cite}`doeSunShotVisionStudy2012`, Geothermal Vision {cite}`doeGeoVisionHarnessingHeat2019`, Storage Futures {cite}`blairStorageFuturesStudy2022`, Electrification Futures {cite}`murphyElectrificationFuturesStudy2021`, Solar Futures {cite}`doeSolarFuturesStudy2021`, and a nuclear multimodel analysis {cite}`bistlineNuclearEnergyLongTerm2022`.
 ReEDS has also been used to examine the impacts of a range of existing and proposed energy policies {cite:p}`lantzImplicationsPTCExtension2014, maiImpactFederalTax2015, gagnonImpactRetailElectricity2017, steinbergEvaluatingImpactsInflation2023a, denholmExaminingSupplySideOptions2022`.
 Transmission and grid integration studies often require scenarios of future power systems, and ReEDS has been used in such studies, e.g., the National Transmission Planning Study {cite}`doeNationalTransmissionPlanning2024`, the Atlantic Offshore Wind Transmission Study {cite}`brinkmanAtlanticOffshoreWind2024a`, and the North American Renewable Integration Study {cite}`brinkmanNorthAmericanRenewable2021a`.
 Many other studies, conducted by NREL and non-NREL researchers, use ReEDS to evaluate diverse topics relevant to the power sector.
@@ -205,12 +206,16 @@ The [ReEDS website](https://www.nrel.gov/analysis/reeds/) includes a list of pub
 Although ReEDS represents many aspects of the U.S. electricity system, it requires simplifications, as all models do.
 Following are some important limitations and caveats that result from these simplifications:
 
-- **Systemwide optimization:** ReEDS takes a systemwide, least-cost perspective that does not necessarily reflect the perspectives of individual decision makers, including specific investors, regional market participants, or corporate or individual consumers; nor does it model contractual obligations or noneconomic decisions.
+- **Systemwide optimization:** ReEDS takes a systemwide, least-cost approach that assumes perfect coordination and information sharing.
+It does not reflect the perspectives of individual decision makers, including specific investors, regional market participants, or corporate or individual consumers; nor does it model contractual obligations or noneconomic decisions.
 In addition, like other optimization models, ReEDS finds the absolute (deterministic) least-cost solution that does not fully reflect real distributions or uncertainties in the parameters; however, the heterogeneity resulting from the high spatial resolution of ReEDS mitigates this effect to some degree.
 
+- **Linear decisions:** ReEDS is a linear model and as such, there are no minimum build restrictions associated with generation, storage, and transmission investment decisions, because that would require integer variables.
+This means that ReEDS investments are not guaranteed to be aligned with cost inputs because ReEDS might add very small amounts of capacity in some regions while cost inputs are based on larger projects. This can be mitigated to some extent by using larger regions and/or larger time steps (e.g., solving every 5 years instead of annually).
+
 - **Resolution:** Although ReEDS has high spatial, temporal, and process resolution for models of its class and scope, it cannot generally represent individual units and transmission lines, and it does not have the temporal resolution to characterize detailed operating behaviors, such as ramp rates and minimum plant runtime.
-It also generally samples only representative time periods within a year rather than modeling all hours in a year because of computational challenges.
-The linkage with [PRAS](https://github.com/NREL/PRAS), which includes chronological hourly modeling for multiple years, helps ensure the ReEDS portfolios meet specified resource adequacy levels.
+By default, ReEDS samples representative time periods within a year instead of modeling all hours in a year due to the computational challenges.
+The linkage with [PRAS](https://github.com/NREL/PRAS), which includes chronological hourly modeling for multiple years, helps ensure the ReEDS electricity system portfolios meet specified resource adequacy levels.
 
 - **Foresight and behavior:** ReEDS solve years are evaluated sequentially and myopically.
 The model has limited foresight and its decision making does not account for anticipated changes to markets and policies.
@@ -219,7 +224,7 @@ In addition, ReEDS' dispatch modeling does not explicitly consider forecast erro
 
 - **Project pipeline:** The model incorporates data of planned or under-construction projects, but these data do not include *all* projects in progress.
 
-- **Manufacturing, supply chain, and siting:** The model does not explicitly simulate manufacturing, supply chain, or siting and permitting processes.
+- **Manufacturing, supply chain, permitting, and siting:** The model does not explicitly simulate manufacturing, supply chain, or siting and permitting processes.
 Potential bottlenecks or delays in project development stages for new generation or transmission are not fully reflected in the results.
 All technologies are assumed to be available at their defined capital cost in any quantity up to their technical resource potential.
 Penalties for rapid growth can be applied in ReEDS; however, these do not fully consider all potential manufacturing or deployment limits.
@@ -230,8 +235,14 @@ ReEDS cannot fully represent differences in project financing terms across marke
 
 - **Technology learning:** Future technology improvements are considered exogenously and thus are not a function of deployment in each scenario.
 
-- **Power sector:** ReEDS models only the power sector within its defined regional scope (CONUS), and it does not represent the broader U.S. or global energy economy.
+- **Power sector focus:** ReEDS models only the power sector within its defined regional scope (CONUS), and it does not represent the broader U.S. or global energy economy.
 For example, competing uses of resources (e.g., natural gas) across sectors are not dynamically represented in ReEDS, and end-use electricity demand or nonpower H<sub>2</sub> demand are exogenous inputs to ReEDS.
+Further, fuel supply (except for hydrogen) is represented through either exogenously-specified prices or using elasticities rather than through fuel supply modules.
+
+- **Bulk power system focus:** Within the power sector, ReEDS considers only the bulk power system.
+Outside of exogenously-specified distributed PV deployment, distribution system representation and impacts, end-user decision-making, and demand-side programs are outside the scope of the model. For example, non-hydrogen electricity demand in ReEDS is currently exogenous.
+
+Additional caveats for running the model at county-level resolution are provided in the section on [spatial resolution](#challenges-and-benefits-of-enhanced-spatial-resolution). Some of these limitations can be at least partially addressed through [linkages with other models](#model-linkages) that include more detail in a particular area, such as using a production cost model to study the operational behavior of a ReEDS-built system.
 
 Notwithstanding these limitations---many of which exist in other similar tools---the modeling approach considers complex interactions among numerous policies and technologies while ensuring electric system reliability requirements are maintained within the resolution and scope of the model.
 In doing so, ReEDS can comprehensively estimate the system cost and value of a wide range of technology options given a set of assumptions, and we can use the model to generate self-consistent future deployment portfolios.
@@ -319,7 +330,7 @@ The emission limit and the emission per megawatt-hour by fuel and plant type are
 Negative emissions are allowed using biomass with carbon capture and storage (BECCS) or direct air capture (DAC), and the emission constraint is based on net emissions.
 Emissions can be capped or taxed, with flexibility for applying either.
 Alternatively, emissions intensities can also be limited to certain bounds in ReEDS.
-The emissions constraints can be applied to stack emissions, or can be based on CO<sub>2</sub> equivalent emissions, with the latter including precombustion emissions and emissions from upstream methane leakage (see the [Air Pollution](#air-pollution) section).[^ref8]
+The emissions constraints can be applied to stack emissions, or can be based on CO<sub>2</sub> equivalent emissions, with the latter including upstream emissions and emissions from upstream methane leakage (see the [Air Pollution](#air-pollution) section).[^ref8]
 Methane leakage rates are input by the user.
 
 - **Renewable portfolio standards or clean electricity standards:** ReEDS can represent renewable portfolio standards (RPSs) and clean electricity standards constraints at the national and state levels.
@@ -579,12 +590,131 @@ Startup costs are found at `inputs/plant_characteristics/startcost.csv`.
 
 
 
-
-
 ## Generation and Storage Technologies
 
 This section describes the electricity generating technologies included in ReEDS.
 Cost and performance assumptions for these technologies are not included in this report but are taken directly from the 2024 Annual Technology Baseline (ATB) {cite}`nrel2024AnnualTechnology2024` for all generation and storage technologies except BECCS (see [Biopower](#biopower)).
+
+### Fossil and Nuclear Technologies
+
+ReEDS includes all major categories of fossil (coal, gas, or oil) and nuclear generation technologies within its operating fleet and investment choices.
+Coal technologies are subdivided into pulverized and gasified (IGCC) categories, with the pulverized plants further distinguished by whether SO<sub>2</sub> scrubbers are installed and whether their vintage[^ref20] is pre- or post-1995.
+Pulverized coal plants have the option of adding a second fuel feed for biomass (this option is turned off by default).
+New coal plants can be added with or without CCS technology.
+Existing coal units built after 1995 with SO<sub>2</sub> scrubbers installed also have the option of retrofitting CCS capability.
+
+[^ref20]: Although differentiating pre- and post-1995 is somewhat arbitrary, it allows the model to better represent performance differences between relatively older and newer coal technologies.
+
+Natural gas generators are categorized as combustion turbine (CT), combined cycle (CC), or gas-CC with CCS.[^ref21]
+The natural gas technologies all use the F-frame turbine cost and performance projections from the ATB, with gas-CC using the 2-on-1 configuration and the gas-CC with CCS using the 95% CCS capture projections.
+
+[^ref21]: Retrofits from gas-CC to gas-CC-CCS are also allowed.
+Additionally, gas-CT plants are allowed to be retrofitted to burn hydrogen.
+These retrofits can occur with existing gas-CT plants or with new builds.
+Within ReEDS, these plants are called H<sub>2</sub>-CT plants and have the same O&M and heat rate as gas-CT plants.
+
+There are also two types of nuclear (steam) generators: conventional and SMR. The conventional reactors draw their cost and performance from the "large" plants in the ATB and the SMRs from the "small" plants. 
+
+Finally, ReEDS includes landfill gas generators[^ref22] and oil/gas steam generators, although these two technologies are not offered as options for new construction other than those already under construction.
+The model distinguishes each fossil and nuclear technology by costs, efficiency, and operational constraints.
+
+[^ref22]: Landfill gas generators can count toward renewable portfolio standard requirements.
+
+Fossil and nuclear technologies are characterized by the following parameters:
+
+- Capital cost (\$/MW)
+
+- Fixed and variable operating costs (dollars per megawatt-hour [$/MWh])
+
+- Fuel costs ($/MMBtu)
+
+- Heat rate (MMBtu/MWh)
+
+- Construction period (years) and expenses
+
+- Equipment lifetime (years)
+
+- Financing costs (such as interest rate, loan period, debt fraction, and debt-service-coverage ratio)
+
+- Tax credits (investment or production)
+
+- Minimum turndown ratio (%)
+
+- Ramp rate (fraction per minute)
+
+- Startup cost ($/MW)
+
+- Scheduled and forced outage rates (%).
+
+Cost and performance assumptions for all new fossil and nuclear technologies are taken from the ATB {cite}`nrel2024AnnualTechnology2024` with options to use the Conservative, Moderate, or Advanced trajectories.
+Regional variations and adjustments are included and described in the [Hydrogen section](#hydrogen).
+Fixed operation and maintenance costs for coal plants increase over time with the plant's age. Fixed operation and maintenance costs for nuclear plants increase by a fixed amount after 50 years of being online. These escalation factors are taken from the Annual Energy Outlook 2025 {cite}`eiaEMMAssumptionsAnnualEnergyOutlook2025`.
+
+In addition to the performance parameters listed above, technologies are differentiated by their ability to provide operating reserves.
+In general, natural gas plants---especially combustion turbines---are better suited for ramping and reserve provision, whereas coal and large-scale nuclear plants are typically designed for steady operation.
+See [Operational Reliability](#operational-reliability) for more details.
+
+The existing fleet of generators in ReEDS is taken from the National Energy Modeling System (NEMS) unit database from AEO2023 {cite}`eiaAnnualEnergyOutlook2025`, with data supplemented from the March 2024 EIA 860M.
+In particular, ReEDS uses the net summer capacity, net winter capacity,[^ref23] location, heat rate, variable O&M (VOM), and FOM to characterize the existing fleet.
+ReEDS uses a modified "average" heat rate for any builds occurring after 2010: A technology-specific increase on the full-load heat rate is applied to accommodate units not always operating at their design point.
+The modifiers, shown in {numref}`heat-rate-adjustments`, are based on the relationship between the reported heat rate in the ATB and the actual observed heat rate, calculated on a fleetwide basis for each fuel type.
+
+[^ref23]: Net winter capacity is used to adjust the capacity available in ReEDS during winter time slices.
+It is applied as a ratio between net winter capacity and net summer capacity.
+
+```{table} Multipliers Applied to Full-Load Heat Rates to Approximate Actual Observed Heat Rates
+:name: heat-rate-adjustments
+
+| **Technology** | **Adjustment Factor** |
+|----|:--:|
+| Coal (all) | 1.066 |
+| Gas-CC | 1.076 |
+| Gas-CT | 1.039 |
+| OGS | 0.875 |
+```
+
+Emissions rates from fuel-consuming plants are a function of the fuel emission rate and the plant heat rate.
+Burner-tip emissions rates are shown in {numref}`emissions-rate-by-generator-type`.
+Because ReEDS does not differentiate coal fuel types, the coal CO<sub>2</sub> emissions rate in the model is the average of the bituminous and subbituminous emissions rates from [EIA](https://www.eia.gov/tools/faqs/faq.cfm?id=74&t=11).
+
+```{table} Emissions Rate by Generator Type in Pounds per MMBtu <sup>a</sup> <sup>b</sup>
+:name: emissions-rate-by-generator-type
+
+|  Generator  | SO<sub>2</sub> Emissions Rate | NO<sub>x</sub> Emissions Rate | CO<sub>2</sub> Emissions Rate |
+|-------------|-------------------------------|-------------------------------|-------------------------------|
+|      Gas-CT |                        0.0098 |                          0.15 |                        117.00 |
+|      Gas-CC |                        0.0033 |                          0.02 |                        117.00 |
+|  Gas-CC-CCS |                        0.0033 |                          0.02 |                         11.70 |
+| Pulverized Coal with Scrubbers (pre-1995) | 0.2 |                      0.19 |                        210.55 |
+| Pulverized Coal with Scrubbers (post-1995) | 0.1 |                     0.08 |                        210.55 |
+| Pulverized Coal without Scrubbers |    1.11 |                          0.19 |                        210.55 |
+|   IGCC Coal |                        0.0555 |                         0.085 |                        210.55 |
+|    Coal-CCS |                        0.0555 |                         0.085 |                         21.06 |
+| Oil/Gas Steam |                       0.299 |                        0.1723 |                        137.00 |
+|     Nuclear |                           0.0 |                           0.0 |                           0.0 |
+|     Nuclear SMR |                       0.0 |                           0.0 |                           0.0 |
+|    Biopower |                          0.08 |                           0.0 |                           0.0 |
+
+```
+
+<sup>a</sup> {cite}`epaEGRID2007Version1Year2008`.
+
+<sup>b</sup> The assumed CO<sub>2</sub> pollutant rate for landfill gas is zero.
+However, ReEDS can track landfill gas emissions and the associated benefits as a postprocessing calculation.
+Landfill gas is assumed to have negative effective carbon emissions because the methane gas would otherwise be flared; therefore, it produces the less potent greenhouse gas.
+
+ReEDS allows unabated gas-CC and coal plants to be retrofitted with CCS.
+For existing plants, the cost of the upgrade and the performance changes are based on values from the NEMS unit database from AEO2025 {cite}`eiaAnnualEnergyOutlook2025`.
+For new plants, the upgrade cost is the difference between the CCS and non-CCS versions of the plant, and performance of the CCS plant adopts the CCS operating costs and characteristics.[^upgrade] For all CCS plant upgrades, there is also a capacity derate for plants that add CCS to represent the parasitic load of the CCS portion of the plant.
+Upgraded capacity is allowed to operate for the number of years set by `GSw_UpgradeLifeSpan`, which may extend the lifetime of the plant beyond its regularly defined lifetime.
+Upgraded CCS units are allowed to revert to their previous state in any solve year, which allows them to adopt their previous capacity and operating costs and characteristics.
+
+[^upgrade]: To avoid degeneracy in the model associated with upgrades, we increase all upgrade costs by 1% after they have been calculated.
+This ensures building and then immediately upgrading a plant is always more expensive than simply building a greenfield plant.
+
+Not all parameter data are given in this report.
+For those values not included here, see the NREL ATB {cite}`nrel2024AnnualTechnology2024`, or see the values in the ReEDS repository---particularly those in `inputs/plant_characteristics`.
+Financing parameters and calculations are discussed in [Capital Financing, System Costs, and Economic Metrics](#capital-financing-system-costs-and-economic-metrics).
 
 
 ### Renewable Energy Resources and Technologies
@@ -603,149 +733,45 @@ The renewable potential capacity modeled in ReEDS includes exclusions in the pre
 Renewable technical potential for the United States is taken from {cite}`lopezRenewableEnergyTechnical2025`.
 
 
-#### Land-Based Wind
+#### Biopower
 
-Land-based wind cost and performance assumptions are taken directly from ATB 2024 {cite}`nrel2024AnnualTechnology2024`.
-These inputs include capital costs, fixed O&M (FOM) costs, and average capacity factor improvements over time.
-Capacity factors for wind plants coming online from 2010 through 2023 are taken from the Land-Based Wind Market report {cite}`wiserLandBasedWindMarket2023`.
+ReEDS can generate electricity from biomass either in dedicated biomass integrated gasification combined cycle (IGCC) plants or cofired with coal in facilities that have been retrofitted with an auxiliary fuel feed.
+These cofire-ready coal plants can use biomass in place of coal to supply the fuel for up to 15% of the plant’s electricity generation.
+A cofire retrofit costs \$305/kW (in 2017\$) based on EIA’s Electricity Market Module assumptions {cite}`eiaElectricityMarketModule2017a{101}`.
+Cofiring is turned off by default in ReEDS but can be enabled if desired.
 
-Available land-based wind resources and site-specific cost and performance are based on {cite}`lopezRenewableEnergyTechnical2025`, using outputs of the reV model {cite}`maclaurinRenewableEnergyPotential2021`.
-The Reference Access case includes more than 49,000 potential wind sites, totaling more than 9,400 gigawatts (GW).
-Limited Access and Open Access supply curves are also available.
-Available resource for the three access cases and associated average capacity factors are shown in {numref}`figure-supplycurve-windons`.
-In ReEDS, each wind site is characterized with a supply curve cost, which comprises transmission spur line and reinforcement upgrade costs as well as site-specific capital cost adjustments based on region, land cost, and site capacity (to account for economies of scale).
-See [Interzonal Transmission](#interzonal-transmission) for more discussion of the interconnection supply curves for accessing the wind resource.
+Dedicated and cofired plants source feedstock from the same biomass supply curves, which are derived from the Oak Ridge National Laboratory’s *2016 Billion-Ton Report* {cite}`u.s.departmentofenergy2016BillionTonReport2016`.
+Data from this report include estimates of biomass feedstock costs and total resource availability.
+Only woody biomass resources are allowed to be used for biopower plants;
+no other resource constraints are applied for nonrenewable energy technologies.
 
-The individual wind sites are grouped into 10 resource classes based on k-means-based clustering of average annual capacity factors.
-Distinct wind generation profiles are represented in ReEDS for each region and class, based on capacity-weighted averages of all sites of that region and class.
-Sites are also grouped into a flexible number of supply curve cost bins in ReEDS, with 10 bins used by default for each ReEDS region and class.
+{numref}`figure-biomass-supply-curve-regions` illustrates the resource map and total supply curve by region as derived from {cite}`u.s.departmentofenergy2016BillionTonReport2016` and used in ReEDS.
+Nationally, approximately 116 million dry tons of woody biomass are assumed to be available to the power sector.
+In addition to the supply curve price (which represents the cost of the resource in the field), ReEDS also assumes costs of \$15 per dry ton for collection and harvesting as well as an additional \$15 per dry ton for transport, based on estimates from a 2014 Idaho National Laboratory study {cite}`jacobsonFeedstockConversionSupply2014`.
+Pathways with more limited biomass model the impact of a halving of the available resource and a doubling of collection, harvesting, and transport costs (58 million dry tons and \$60 per ton), whereas the enhanced resource scenario models the opposite (doubling the available resource to 232 million dry tons and halving collection, harvesting, and transport costs to \$15 per ton).
 
-```{figure} figs/docs/supplycurve-windons.png
-:name: figure-supplycurve-windons
+```{figure} figs/docs/biomass-supply-curve-regions.png
+:name: figure-biomass-supply-curve-regions
 
-Land-based wind resource availability and capacity factor for the three siting scenarios included in ReEDS.
+Depiction of the regions used for the biomass supply curves (map, top left), based on U.S. Department of Agriculture regional divisions.
+The line plots to the right indicate the woody biomass supply curves for each region as used in ReEDS, as derived from data in {cite}`u.s.departmentofenergy2016BillionTonReport2016`.
+The bottom-left plot summarizes the total national supply curve.
 ```
 
+Because the model assumes zero life-cycle emissions for biomass, generation sources that use BECCS are assumed to have negative emissions.
+{numref}`beccs-assumptions` summarizes cost and performance assumptions for BECCS plants.
+The uncontrolled emissions rate of woody biomass fuel is assumed to be 88.5 kilograms per million British thermal units (kg/MMBtu) {cite}`bainBiopowerTechnicalAssessment2003`; after accounting for the heat rate of a BECCS plant and a 90% CCS capture rate, the negative emissions are approximately -1.22 to -1.11 tonnes/MWh of generation.
+Fuel consumed in BECCS plants is counted against the total biomass supply curve described above.
 
-#### Offshore Wind
+```{table} Cost and Performance Assumptions for BECCS
+:name: beccs-assumptions
 
-ReEDS represents two offshore wind technologies: fixed and floating.
-Base cost and performance assumptions in ReEDS for the two technologies are based on one reference fixed offshore site in New York Bight and one reference floating offshore site in Humboldt County, California, including capital costs, FOM costs, and average capacity factor improvements over time.
-
-There is substantial diversity in offshore wind generators, in distance from shore, water depth, and resource quality.
-ReEDS subdivides offshore wind potential into 10 resource classes: 5 each for fixed-bottom and floating turbine designs.
-Fixed-bottom offshore wind development is limited to resources \<60 meters \(m\) in depth using either current technology monopile foundations (0–30 m) or jacket (truss-style) foundations (30–60 m).
-Offshore wind using a floating anchorage could be developed for greater depths and are assumed to be the only feasible technology for development for resource deeper than 60 m.
-Within each category, the classes are distinguished by resource quality; supply curves then differentiate resource by cost of accessing transmission in a similar fashion as land-based wind but using five cost bins per region and class.
-
-Eligible offshore area for wind development includes open water within the U.S.-exclusive economic zone having a water depth less than 1,000 m, including the Great Lakes.
-As with land-based resource, offshore zones are filtered to remove areas considered unsuitable for development, including national marine sanctuaries, marine protected areas, wildlife refuges, shipping and towing lanes, offshore platforms, and ocean pipelines.
-The offshore technology selection is made using the Offshore Wind Cost Model, which selects the most economically feasible technology for developing a wind resource {cite}`beiterSpatialEconomicCostReductionPathway2016`.
-See also {cite}`lopezRenewableEnergyTechnical2025` for more information on the development of the resource supply curves.
-
-Resource availability varies across different siting access cases: The Reference Access case has 4,064 sites totaling 2.97 terawatts (TW), the Open Access case has 4,524 sites totaling 3.534 TW, and the Limited Access case with 3,166 sites totals 2.212 TW.
-Modeled site-level capacity factor and resource availability are shown in {numref}`figure-supplycurve-windofs`.
-Additional details regarding offshore wind resource modeling can be found in {cite}`lopezRenewableEnergyTechnical2025`.
-
-```{figure} figs/docs/supplycurve-windofs.png
-:name: figure-supplycurve-windofs
-
-Offshore wind resource availability by siting access case for the CONUS
+| BECCS | Capital Cost (\$/kW) | Variable O&M (\$/kWh) | Fixed O&M (\$/kW-yr) | Heat Rate (MMBtu/MWh) | Emissions Rate (tonnes CO<sub>2</sub>/MWh) |
+|----|:--:|:--:|:--:|:--:|:--:|
+| 2020 | 5,580 | 16.6 | 162 | 15.295 | -1.22 |
+| 2035 | 5,333 | 16.6 | 162 | 14.554 | -1.16 |
+| 2050 | 5,100 | 16.6 | 162 | 13.861 | -1.11 |
 ```
-
-Each wind site in a supply curve is characterized in ReEDS by a supply curve cost, which comprises capital adder and transmission adder costs.
-The capital adder incorporates the site-specific technology, regional differences, and economies of scale.
-Refer to {cite}`shieldsImpactsTurbinePlant2021` for details on how economies of scale impact the site capital cost.
-The transmission cost adder includes the array, export ("wet") costs, and point of interconnection (POI)/substation, spur line, and reinforcement ("dry") costs.
-The site capital cost adder is aggregated into region-bin-class to sync with the reference site "base" overnight capital cost from the ATB.
-
-{cite}`irsDefinitionEnergyProperty2023` defines the energy property and rules for investment tax credit (ITC) eligibility.
-In ReEDS, this translates into array, export cable, and substation/POI costs.
-However, for consistency in implementation with other technologies, because the components that are not eligible for the ITC (spur line and reinforcement) take up of only 22% of transmission costs, and transmission costs comprise only 30% of total cost, we decided to apply the ITC to all transmission cost components to make OSW format consistent with LBW (the extra error in applying the ITC to all transmission cost components versus to just the ITC eligible components is about 2%).
-
-State offshore wind mandates are represented in accordance with {cite}`mccoyOffshoreWindMarket2024`.
-The 2020, 2030, 2040, and 2050 state-mandated capacity can be see in {numref}`offshore-wind-capacity`.
-States not included in the table do not have any mandated offshore wind capacity.
-
-
-#### Solar Photovoltaics
-
-ReEDS differentiates among three solar PV technologies:
-
-- Large-scale utility PV (UPV)
-- Hybrid large-scale utility PV with battery (PVB)
-- Rooftop PV (distPV).
-
-Investments in UPV and PVB are evaluated directly in ReEDS, whereas rooftop PV deployment and performance are exogenously specified as inputs into ReEDS based on results from the Distributed Generation Market Demand (dGen) model.
-PV capacity is tracked in megawatts direct current (MW<sub>DC</sub>) within the model but converted to megawatts alternating current (MW<sub>AC</sub>) in reported outputs.
-
-##### Utility-scale PV
-UPV represents utility-scale, single-axis-tracking PV systems with a representative size of 100 MW<sub>DC</sub> and an array density of 43 MW<sub>DC</sub> per square kilometer (km<sup>2</sup>) {cite}`lopezRenewableEnergyTechnical2025`.
-An inverter loading ratio of 1.34 is assumed for utility-scale PV.
-Resource potential is assumed to be located on large parcels outside urban boundaries, excluding federally protected lands, inventoried roadless areas, U.S. Bureau of Land Management areas of critical environmental concern, areas of excessive slope, and other exclusions.
-ReEDS provides supply curves and profiles representing three siting exclusion scenarios: reference, limited, and open access.
-
-Hourly generation profiles are simulated using NREL’s reV model {cite}`maclaurinRenewableEnergyPotential2019,reV_web`
-at 11.5-km by 11.5-km resolution across the CONUS
-using irradiance data from the National Solar Radiation Database (NSRDB) {cite}`senguptaNationalSolarRadiation2018, NSRDB_web`.
-Modeled capacity factor and siting availability are shown in {numref}`figure-supplycurve-upv`.
-
-```{figure} figs/docs/supplycurve-upv.png
-:name: figure-supplycurve-upv
-
-UPV resource availability and DC capacity factor \[MW<sub>AC</sub><sup>available</sup>/MW<sub>DC</sub><sup>nameplate</sup>\] for the open, reference, and limited siting access scenarios.
-```
-
-Site-level costs and capacity factor profiles are compiled into supply curves for each model zone.
-Within each zone, the PV supply curve is differentiated into five resource classes based on annual capacity factor.
-Each class is further differentiated by interconnection cost (described in [Interzonal Transmission](#interzonal-transmission)) across groups of reV sites.
-
-The efficiency of installed PV capacity is assumed to degrade by 0.7%/year {cite}`nrel2024AnnualTechnology2024`.
-Additional details on the UPV configuration, siting exclusion criteria, profiles, and supply curve results are provided by {cite}`lopezRenewableEnergyTechnical2025`.
-
-```{admonition} Utility-scale PV settings
-- Siting availability (reference, limited, or open) is controlled by the `GSw_SitingUPV` switch
-- Annual degradation is specified in the `inputs/degradation/degradation_annual.csv` file
-- The UPV ILR is specified by the `ilr_utility` parameter in the `inputs/scalars.csv` file
-```
-
-##### PV + battery hybrids
-
-For hybrid systems, the default technology represents a loosely DC-coupled system in which the PV and battery technologies share a bidirectional inverter and POI, and the battery can charge from either the coupled PV or the grid.
-The PVB design characteristics can be user defined for up to three configurations, but the default configuration involves an inverter loading ratio of 2.2 (slightly higher than stand-alone PV) and a coupled battery with a preset duration, whose power-rated capacity is 50% of the inverter capacity. 
-The PVB duration default is 4 hours and can be adjusted using `GSw_PVB_Dur`.
-
-The PVB investment option leverages the existing representations of the independent component technologies, but the cost and performance characteristics differ from the simple sum of the separate (PV and battery) parts.
-For example, the capital costs associated with the fully integrated PVB hybrid system are reduced based on the cost of a shared inverter and other balance-of-system components; as a result, the percentage savings vary by PVB configuration.
-Improved performance characteristics are captured through slightly enhanced battery round-trip efficiencies and explicit time series generation profiles; the latter enables a representation of the PVB system’s ability to divert otherwise clipped energy to the coupled battery (during periods when solar output exceeds the inverter capacity) and avoid curtailment.
-
-##### Distributed PV
-
-Rooftop PV includes commercial, industrial, and residential systems.
-These systems are assumed to have an inverter loading ratio (ILR) of 1.1.
-Existing rooftop PV capacities are obtained from U.S. Energy Information Administration (EIA)-861 data spanning 2010 to 2022 {cite}`eiaAnnualElectricPower2024`.
-dGen, a consumer adoption model for the CONUS rooftop PV market, is used to develop future scenarios for rooftop PV capacity, including the capacity deployed by zone and the precurtailment energy production by that capacity {cite}`sigrinDistributedGenerationMarket2016`.
-The default dGen trajectories used in this version of ReEDS are based on the residential and commercial PV cost projections as described in the 2023 {cite}`nrel2023AnnualTechnology2023`.
-ReEDS makes available several potential trajectories for distPV adoption, governed by the `distpvscen` switch.
-These trajectories were created by running a ReEDS scenario and feeding the electricity price outputs from ReEDS back into dGen.
-The trajectories incorporate existing net metering policy as of spring 2023, and they include the ITC as discussed in the [Federal and State Tax Incentives](#federal-and-state-tax-incentives) section.
-To mitigate excessive wheeling of distributed PV generation, ReEDS assumes all power generated by rooftop PV systems is permitted to be exported to neighboring zones only when total generation in the source region exceeds the load for a given time slice.
-UPV-generated electricity, in contrast, can be exported in all time slices and regions.
-
-Assumptions for each dGen scenario are made consistent with the ReEDS scenario assumptions as much as possible.
-For example, the Tax Credit Extension scenario also includes an extension of the ITC in dGen, and the Low PV Cost scenario uses the low cost trajectory from the ATB for commercial and rooftop PV costs.
-
-reV produces hourly generation profiles for all [weather years](#weather-years) using the NSRDB point closest to the centroid of each county in the CONUS.
-The profiles represent residential and commercial systems with a 16° tilt and 180° azimuth.
-The residential profiles assume an inverter efficiency of 96%, and the commerical profiles assume an inverter efficiency of 98%.
-To create a single profile for each region, we determine the NSRDB point(s) existing in or, if none exists, closest to the region and take the average of the corresponding profiles.
-
-ReEDS assumes distributed PV generation is not allowed to be curtailed.
-
-```{admonition} Distributed PV settings
-- The distributed PV ILR is specified by the `ilr_dist` parameter in the `inputs/scalars.csv` file.
-```
-
 
 
 #### Concentrating Solar Power
@@ -795,7 +821,6 @@ Two CSP with storage configurations are available as shown in {numref}`csp-tech-
 
 For CSP with storage, plant turbine capacity factors by time slice are an output of the model---not an input---because ReEDS can dispatch collected CSP energy independent of irradiation.
 Instead, the profiles of power input from the collectors (solar field) of the CSP plants are model inputs, based on SAM simulations from weather files.
-
 
 
 #### Geothermal
@@ -949,166 +974,148 @@ Both the NPD and NSD resource assessments implicitly assume inflexible, run-of-r
 Additional site-specific analysis could allow recategorizing portions of these resources as dispatchable, but 100% nondispatchable remains the default assumption.
 
 
-#### Biopower
+#### Land-Based Wind
 
-ReEDS can generate electricity from biomass either in dedicated biomass integrated gasification combined cycle (IGCC) plants or cofired with coal in facilities that have been retrofitted with an auxiliary fuel feed.
-These cofire-ready coal plants can use biomass in place of coal to supply the fuel for up to 15% of the plant’s electricity generation.
-A cofire retrofit costs \$305/kW (in 2017\$) based on EIA’s Electricity Market Module assumptions {cite}`eiaElectricityMarketModule2017a{101}`.
-Cofiring is turned off by default in ReEDS but can be enabled if desired.
+Land-based wind cost and performance assumptions are taken directly from ATB 2024 {cite}`nrel2024AnnualTechnology2024`.
+These inputs include capital costs, fixed O&M (FOM) costs, and average capacity factor improvements over time.
+Capacity factors for wind plants coming online from 2010 through 2023 are taken from the Land-Based Wind Market report {cite}`wiserLandBasedWindMarket2023`.
 
-Dedicated and cofired plants source feedstock from the same biomass supply curves, which are derived from the Oak Ridge National Laboratory’s *2016 Billion-Ton Report* {cite}`u.s.departmentofenergy2016BillionTonReport2016`.
-Data from this report include estimates of biomass feedstock costs and total resource availability.
-Only woody biomass resources are allowed to be used for biopower plants;
-no other resource constraints are applied for nonrenewable energy technologies.
+Available land-based wind resources and site-specific cost and performance are based on {cite}`lopezRenewableEnergyTechnical2025`, using outputs of the reV model {cite}`maclaurinRenewableEnergyPotential2021`.
+The Reference Access case includes more than 49,000 potential wind sites, totaling more than 9,400 gigawatts (GW).
+Limited Access and Open Access supply curves are also available.
+Available resource for the three access cases and associated average capacity factors are shown in {numref}`figure-supplycurve-windons`.
+In ReEDS, each wind site is characterized with a supply curve cost, which comprises transmission spur line and reinforcement upgrade costs as well as site-specific capital cost adjustments based on region, land cost, and site capacity (to account for economies of scale).
+See [Interzonal Transmission](#interzonal-transmission) for more discussion of the interconnection supply curves for accessing the wind resource.
 
-{numref}`figure-biomass-supply-curve-regions` illustrates the resource map and total supply curve by region as derived from {cite}`u.s.departmentofenergy2016BillionTonReport2016` and used in ReEDS.
-Nationally, approximately 116 million dry tons of woody biomass are assumed to be available to the power sector.
-In addition to the supply curve price (which represents the cost of the resource in the field), ReEDS also assumes costs of \$15 per dry ton for collection and harvesting as well as an additional \$15 per dry ton for transport, based on estimates from a 2014 Idaho National Laboratory study {cite}`jacobsonFeedstockConversionSupply2014`.
-Pathways with more limited biomass model the impact of a halving of the available resource and a doubling of collection, harvesting, and transport costs (58 million dry tons and \$60 per ton), whereas the enhanced resource scenario models the opposite (doubling the available resource to 232 million dry tons and halving collection, harvesting, and transport costs to \$15 per ton).
+The individual wind sites are grouped into 10 resource classes based on k-means-based clustering of average annual capacity factors.
+Distinct wind generation profiles are represented in ReEDS for each region and class, based on capacity-weighted averages of all sites of that region and class.
+Sites are also grouped into a flexible number of supply curve cost bins in ReEDS, with 10 bins used by default for each ReEDS region and class.
 
-```{figure} figs/docs/biomass-supply-curve-regions.png
-:name: figure-biomass-supply-curve-regions
+```{figure} figs/docs/supplycurve-windons.png
+:name: figure-supplycurve-windons
 
-Depiction of the regions used for the biomass supply curves (map, top left), based on U.S. Department of Agriculture regional divisions.
-The line plots to the right indicate the woody biomass supply curves for each region as used in ReEDS, as derived from data in {cite}`u.s.departmentofenergy2016BillionTonReport2016`.
-The bottom-left plot summarizes the total national supply curve.
+Land-based wind resource availability and capacity factor for the three siting scenarios included in ReEDS.
 ```
 
-Because the model assumes zero life-cycle emissions for biomass, generation sources that use BECCS are assumed to have negative emissions.
-{numref}`beccs-assumptions` summarizes cost and performance assumptions for BECCS plants.
-The uncontrolled emissions rate of woody biomass fuel is assumed to be 88.5 kilograms per million British thermal units (kg/MMBtu) {cite}`bainBiopowerTechnicalAssessment2003`; after accounting for the heat rate of a BECCS plant and a 90% CCS capture rate, the negative emissions are approximately -1.22 to -1.11 tonnes/MWh of generation.
-Fuel consumed in BECCS plants is counted against the total biomass supply curve described above.
 
-```{table} Cost and Performance Assumptions for BECCS
-:name: beccs-assumptions
+#### Offshore Wind
 
-| BECCS | Capital Cost (\$/kW) | Variable O&M (\$/kWh) | Fixed O&M (\$/kW-yr) | Heat Rate (MMBtu/MWh) | Emissions Rate (tonnes CO<sub>2</sub>/MWh) |
-|----|:--:|:--:|:--:|:--:|:--:|
-| 2020 | 5,580 | 16.6 | 162 | 15.295 | -1.22 |
-| 2035 | 5,333 | 16.6 | 162 | 14.554 | -1.16 |
-| 2050 | 5,100 | 16.6 | 162 | 13.861 | -1.11 |
+ReEDS represents two offshore wind technologies: fixed and floating.
+Base cost and performance assumptions in ReEDS for the two technologies are based on one reference fixed offshore site in New York Bight and one reference floating offshore site in Humboldt County, California, including capital costs, FOM costs, and average capacity factor improvements over time.
+
+There is substantial diversity in offshore wind generators, in distance from shore, water depth, and resource quality.
+ReEDS subdivides offshore wind potential into 10 resource classes: 5 each for fixed-bottom and floating turbine designs.
+Fixed-bottom offshore wind development is limited to resources \<60 meters \(m\) in depth using either current technology monopile foundations (0–30 m) or jacket (truss-style) foundations (30–60 m).
+Offshore wind using a floating anchorage could be developed for greater depths and are assumed to be the only feasible technology for development for resource deeper than 60 m.
+Within each category, the classes are distinguished by resource quality; supply curves then differentiate resource by cost of accessing transmission in a similar fashion as land-based wind but using five cost bins per region and class.
+
+Eligible offshore area for wind development includes open water within the U.S.-exclusive economic zone having a water depth less than 1,000 m, including the Great Lakes.
+As with land-based resource, offshore zones are filtered to remove areas considered unsuitable for development, including national marine sanctuaries, marine protected areas, wildlife refuges, shipping and towing lanes, offshore platforms, and ocean pipelines.
+The offshore technology selection is made using the Offshore Wind Cost Model, which selects the most economically feasible technology for developing a wind resource {cite}`beiterSpatialEconomicCostReductionPathway2016`.
+See also {cite}`lopezRenewableEnergyTechnical2025` for more information on the development of the resource supply curves.
+
+Resource availability varies across different siting access cases: The Reference Access case has 4,064 sites totaling 2.97 terawatts (TW), the Open Access case has 4,524 sites totaling 3.534 TW, and the Limited Access case with 3,166 sites totals 2.212 TW.
+Modeled site-level capacity factor and resource availability are shown in {numref}`figure-supplycurve-windofs`.
+Additional details regarding offshore wind resource modeling can be found in {cite}`lopezRenewableEnergyTechnical2025`.
+
+```{figure} figs/docs/supplycurve-windofs.png
+:name: figure-supplycurve-windofs
+
+Offshore wind resource availability by siting access case for the CONUS
 ```
 
-### Fossil and Nuclear Technologies
+Each wind site in a supply curve is characterized in ReEDS by a supply curve cost, which comprises capital adder and transmission adder costs.
+The capital adder incorporates the site-specific technology, regional differences, and economies of scale.
+Refer to {cite}`shieldsImpactsTurbinePlant2021` for details on how economies of scale impact the site capital cost.
+The transmission cost adder includes the array, export ("wet") costs, and point of interconnection (POI)/substation, spur line, and reinforcement ("dry") costs.
+The site capital cost adder is aggregated into region-bin-class to sync with the reference site "base" overnight capital cost from the ATB.
 
-ReEDS includes all major categories of fossil (coal, gas, or oil) and nuclear generation technologies within its operating fleet and investment choices.
-Coal technologies are subdivided into pulverized and gasified (IGCC) categories, with the pulverized plants further distinguished by whether SO<sub>2</sub> scrubbers are installed and whether their vintage[^ref20] is pre- or post-1995.
-Pulverized coal plants have the option of adding a second fuel feed for biomass (this option is turned off by default).
-New coal plants can be added with or without CCS technology.
-Existing coal units built after 1995 with SO<sub>2</sub> scrubbers installed also have the option of retrofitting CCS capability.
+{cite}`irsDefinitionEnergyProperty2023` defines the energy property and rules for investment tax credit (ITC) eligibility.
+In ReEDS, this translates into array, export cable, and substation/POI costs.
+However, for consistency in implementation with other technologies, because the components that are not eligible for the ITC (spur line and reinforcement) take up of only 22% of transmission costs, and transmission costs comprise only 30% of total cost, we decided to apply the ITC to all transmission cost components to make OSW format consistent with LBW (the extra error in applying the ITC to all transmission cost components versus to just the ITC eligible components is about 2%).
 
-[^ref20]: Although differentiating pre- and post-1995 is somewhat arbitrary, it allows the model to better represent performance differences between relatively older and newer coal technologies.
+State offshore wind mandates are represented in accordance with {cite}`mccoyOffshoreWindMarket2024`.
+The 2020, 2030, 2040, and 2050 state-mandated capacity can be seen in {numref}`offshore-wind-capacity`.
+States not included in the table do not have any mandated offshore wind capacity.
 
-Natural gas generators are categorized as combustion turbine (CT), combined cycle (CC), or gas-CC with CCS.[^ref21]
-The natural gas technologies all use the F-frame turbine cost and performance projections from the ATB, with gas-CC using the 2-on-1 configuration and the gas-CC with CCS using the 95% CCS capture projections.
 
-[^ref21]: Retrofits from gas-CC to gas-CC-CCS are also allowed.
-Additionally, gas-CT plants are allowed to be retrofitted to burn hydrogen.
-These retrofits can occur with existing gas-CT plants or with new builds.
-Within ReEDS, these plants are called H<sub>2</sub>-CT plants and have the same O&M and heat rate as gas-CT plants.
+#### Solar Photovoltaics
 
-There are also two types of nuclear (steam) generators: conventional and SMR. The conventional reactors draw their cost and performance from the "large" plants in the ATB and the SMRs from the "small" plants. 
+ReEDS differentiates among three solar PV technologies:
 
-Finally, ReEDS includes landfill gas generators[^ref22] and oil/gas steam generators, although these two technologies are not offered as options for new construction other than those already under construction.
-The model distinguishes each fossil and nuclear technology by costs, efficiency, and operational constraints.
+- Large-scale utility PV (UPV)
+- Hybrid large-scale utility PV with battery (PVB)
+- Rooftop PV (distPV).
 
-[^ref22]: Landfill gas generators can count toward renewable portfolio standard requirements.
+Investments in UPV and PVB are evaluated directly in ReEDS, whereas rooftop PV deployment and performance are exogenously specified as inputs into ReEDS based on results from the Distributed Generation Market Demand (dGen) model.
+PV capacity is tracked in megawatts direct current (MW<sub>DC</sub>) within the model but converted to megawatts alternating current (MW<sub>AC</sub>) in reported outputs.
 
-Where renewable energy technologies have many unique characteristics, fossil and nuclear technologies are characterized more generally by the following parameters:
+##### Utility-scale PV
+UPV represents utility-scale, single-axis-tracking PV systems with a representative size of 100 MW<sub>DC</sub> and an array density of 43 MW<sub>DC</sub> per square kilometer (km<sup>2</sup>) {cite}`lopezRenewableEnergyTechnical2025`.
+An inverter loading ratio of 1.34 is assumed for utility-scale PV.
+Resource potential is assumed to be located on large parcels outside urban boundaries, excluding federally protected lands, inventoried roadless areas, U.S. Bureau of Land Management areas of critical environmental concern, areas of excessive slope, and other exclusions.
+ReEDS provides supply curves and profiles representing three siting exclusion scenarios: reference, limited, and open access.
 
-- Capital cost (\$/MW)
+Hourly generation profiles are simulated using NREL’s reV model {cite}`maclaurinRenewableEnergyPotential2019,reV_web`
+at 11.5-km by 11.5-km resolution across the CONUS
+using irradiance data from the National Solar Radiation Database (NSRDB) {cite}`senguptaNationalSolarRadiation2018, NSRDB_web`.
+Modeled capacity factor and siting availability are shown in {numref}`figure-supplycurve-upv`.
 
-- Fixed and variable operating costs (dollars per megawatt-hour [$/MWh])
+```{figure} figs/docs/supplycurve-upv.png
+:name: figure-supplycurve-upv
 
-- Fuel costs ($/MMBtu)
-
-- Heat rate (MMBtu/MWh)
-
-- Construction period (years) and expenses
-
-- Equipment lifetime (years)
-
-- Financing costs (such as interest rate, loan period, debt fraction, and debt-service-coverage ratio)
-
-- Tax credits (investment or production)
-
-- Minimum turndown ratio (%)
-
-- Ramp rate (fraction per minute)
-
-- Startup cost ($/MW)
-
-- Scheduled and forced outage rates (%).
-
-Cost and performance assumptions for all new fossil and nuclear technologies are taken from the ATB {cite}`nrel2024AnnualTechnology2024` with options for the Conservative, Moderate, and Advanced trajectories from the ATB.
-Regional variations and adjustments are included and described in the [Hydrogen section](#hydrogen).
-Fixed operation and maintenance costs for coal plants increase over time with the plant's age. Fixed operation and maintenance costs for nuclear plants increase by a fixed amount after 50 years of being online. These escalation factors are taken from the Annual Energy Outlook 2025 {cite}`eiaEMMAssumptionsAnnualEnergyOutlook2025`.
-
-In addition to the performance parameters listed above, technologies are differentiated by their ability to provide operating reserves.
-In general, natural gas plants---especially combustion turbines---are better suited for ramping and reserve provision, whereas coal and large-scale nuclear plants are typically designed for steady operation.
-See [Operational Reliability](#operational-reliability) for more details.
-
-The existing fleet of generators in ReEDS is taken from the National Energy Modeling System (NEMS) unit database from AEO2023 {cite}`eiaAnnualEnergyOutlook2023`, with data supplemented from the March 2024 EIA 860M.
-In particular, ReEDS uses the net summer capacity, net winter capacity,[^ref23] location, heat rate, variable O&M (VOM), and FOM to characterize the existing fleet.
-ReEDS uses a modified "average" heat rate for any builds occurring after 2010: A technology-specific increase on the full-load heat rate is applied to accommodate units not always operating at their design point.
-The modifiers, shown in {numref}`heat-rate-adjustments`, are based on the relationship between the reported heat rate in the ATB and the actual observed heat rate, calculated on a fleetwide basis for each fuel type.
-
-[^ref23]: Net winter capacity is used to adjust the capacity available in ReEDS during winter time slices.
-It is applied as a ratio between net winter capacity and net summer capacity.
-
-```{table} Multipliers Applied to Full-Load Heat Rates to Approximate Actual Observed Heat Rates
-:name: heat-rate-adjustments
-
-| **Technology** | **Adjustment Factor** |
-|----|:--:|
-| Coal (all) | 1.066 |
-| Gas-CC | 1.076 |
-| Gas-CT | 1.039 |
-| OGS | 0.875 |
+UPV resource availability and DC capacity factor \[MW<sub>AC</sub><sup>available</sup>/MW<sub>DC</sub><sup>nameplate</sup>\] for the open, reference, and limited siting access scenarios.
 ```
 
-Emissions rates from fuel-consuming plants are a function of the fuel emission rate and the plant heat rate.
-Burner-tip emissions rates are shown in {numref}`emissions-rate-by-generator-type`.
-Because ReEDS does not differentiate coal fuel types, the coal CO<sub>2</sub> emissions rate in the model is the average of the bituminous and subbituminous emissions rates from [EIA](https://www.eia.gov/tools/faqs/faq.cfm?id=74&t=11).
+Site-level costs and capacity factor profiles are compiled into supply curves for each model zone.
+Within each zone, the PV supply curve is differentiated into five resource classes based on annual capacity factor.
+Each class is further differentiated by interconnection cost (described in [Interzonal Transmission](#interzonal-transmission)) across groups of reV sites.
 
-```{table} Emissions Rate by Generator Type in Pounds per MMBtu <sup>a</sup> <sup>b</sup>
-:name: emissions-rate-by-generator-type
+The efficiency of installed PV capacity is assumed to degrade by 0.7%/year {cite}`nrel2024AnnualTechnology2024`.
+Additional details on the UPV configuration, siting exclusion criteria, profiles, and supply curve results are provided by {cite}`lopezRenewableEnergyTechnical2025`.
 
-|  Generator  | SO<sub>2</sub> Emissions Rate | NO<sub>x</sub> Emissions Rate | CO<sub>2</sub> Emissions Rate |
-|-------------|-------------------------------|-------------------------------|-------------------------------|
-|      Gas-CT |                        0.0098 |                          0.15 |                        117.00 |
-|      Gas-CC |                        0.0033 |                          0.02 |                        117.00 |
-|  Gas-CC-CCS |                        0.0033 |                          0.02 |                         11.70 |
-| Pulverized Coal with Scrubbers (pre-1995) | 0.2 |                      0.19 |                        210.55 |
-| Pulverized Coal with Scrubbers (post-1995) | 0.1 |                     0.08 |                        210.55 |
-| Pulverized Coal without Scrubbers |    1.11 |                          0.19 |                        210.55 |
-|   IGCC Coal |                        0.0555 |                         0.085 |                        210.55 |
-|    Coal-CCS |                        0.0555 |                         0.085 |                         21.06 |
-| Oil/Gas Steam |                       0.299 |                        0.1723 |                        137.00 |
-|     Nuclear |                           0.0 |                           0.0 |                           0.0 |
-|     Nuclear SMR |                       0.0 |                           0.0 |                           0.0 |
-|    Biopower |                          0.08 |                           0.0 |                           0.0 |
-
+```{admonition} Utility-scale PV settings
+- Siting availability (reference, limited, or open) is controlled by the `GSw_SitingUPV` switch
+- Annual degradation is specified in the `inputs/degradation/degradation_annual.csv` file
+- The UPV ILR is specified by the `ilr_utility` parameter in the `inputs/scalars.csv` file
 ```
 
-<sup>a</sup> {cite}`epaEGRID2007Version1Year2008`.
+##### PV + battery hybrids
 
-<sup>b</sup> The assumed CO<sub>2</sub> pollutant rate for landfill gas is zero.
-However, ReEDS can track landfill gas emissions and the associated benefits as a postprocessing calculation.
-Landfill gas is assumed to have negative effective carbon emissions because the methane gas would otherwise be flared; therefore, it produces the less potent greenhouse gas.
+For hybrid systems, the default technology represents a loosely DC-coupled system in which the PV and battery technologies share a bidirectional inverter and POI, and the battery can charge from either the coupled PV or the grid.
+The PVB design characteristics can be user defined for up to three configurations, but the default configuration involves an inverter loading ratio of 2.2 (slightly higher than stand-alone PV) and a coupled battery with a preset duration, whose power-rated capacity is 50% of the inverter capacity. 
+The PVB duration default is 4 hours and can be adjusted using `GSw_PVB_Dur`.
 
-ReEDS allows non-CCS gas-CC and coal plants to be retrofitted to add CCS.
-For existing plants, the cost of the upgrade and the performance changes are based on values from the NEMS unit database from AEO2023 {cite}`eiaAnnualEnergyOutlook2023`.
-For new plants, the upgrade cost is the difference between the CCS and non-CCS versions of the plant, and performance of the CCS plant adopts the CCS operating costs and characteristics.[^upgrade] For all CCS plant upgrades, there is also a capacity derate for plants that add CCS to represent the parasitic load of the CCS portion of the plant.
-Upgraded capacity is allowed to operate for the number of years set by `GSw_UpgradeLifeSpan`, which may extend the lifetime of the plant beyond its regularly defined lifetime.
-Upgraded CCS units are allowed to revert to their previous state in any solve year, which allows them to adopt their previous capacity and operating costs and characteristics.
+The PVB investment option leverages the existing representations of the independent component technologies, but the cost and performance characteristics differ from the simple sum of the separate (PV and battery) parts.
+For example, the capital costs associated with the fully integrated PVB hybrid system are reduced based on the cost of a shared inverter and other balance-of-system components; as a result, the percentage savings vary by PVB configuration.
+Improved performance characteristics are captured through slightly enhanced battery round-trip efficiencies and explicit time series generation profiles; the latter enables a representation of the PVB system’s ability to divert otherwise clipped energy to the coupled battery (during periods when solar output exceeds the inverter capacity) and avoid curtailment.
 
-[^upgrade]: To avoid degeneracy in the model associated with upgrades, we increase all upgrade costs by 1% after they have been calculated.
-This ensures building and then immediately upgrading a plant is always more expensive than simply building a greenfield plant.
+##### Distributed PV
 
-Not all parameter data are given in this report.
-For those values not included here, see the NREL ATB {cite}`nrel2024AnnualTechnology2024`, or see the values in the ReEDS repository---particularly those in `inputs/plant_characteristics`.
-Financing parameters and calculations are discussed in [Capital Financing, System Costs, and Economic Metrics](#capital-financing-system-costs-and-economic-metrics).
+Rooftop PV includes commercial, industrial, and residential systems.
+These systems are assumed to have an inverter loading ratio (ILR) of 1.1.
+Existing rooftop PV capacities are obtained from U.S. Energy Information Administration (EIA)-861 data spanning 2010 to 2022 {cite}`eiaAnnualElectricPower2024`.
+dGen, a consumer adoption model for the CONUS rooftop PV market, is used to develop future scenarios for rooftop PV capacity, including the capacity deployed by zone and the precurtailment energy production by that capacity {cite}`sigrinDistributedGenerationMarket2016`.
+The default dGen trajectories used in this version of ReEDS are based on the residential and commercial PV cost projections as described in the 2023 {cite}`nrel2023AnnualTechnology2023`.
+ReEDS makes available several potential trajectories for distPV adoption, governed by the `distpvscen` switch.
+These trajectories were created by running a ReEDS scenario and feeding the electricity price outputs from ReEDS back into dGen.
+The trajectories incorporate existing net metering policy as of spring 2023, and they include the ITC as discussed in the [Federal and State Tax Incentives](#federal-and-state-tax-incentives) section.
+To mitigate excessive wheeling of distributed PV generation, ReEDS assumes all power generated by rooftop PV systems is permitted to be exported to neighboring zones only when total generation in the source region exceeds the load for a given time slice.
+UPV-generated electricity, in contrast, can be exported in all time slices and regions.
+
+Assumptions for each dGen scenario are made consistent with the ReEDS scenario assumptions as much as possible.
+For example, the Tax Credit Extension scenario also includes an extension of the ITC in dGen, and the Low PV Cost scenario uses the low cost trajectory from the ATB for commercial and rooftop PV costs.
+
+reV produces hourly generation profiles for all [weather years](#weather-years) using the NSRDB point closest to the centroid of each county in the CONUS.
+The profiles represent residential and commercial systems with a 16° tilt and 180° azimuth.
+The residential profiles assume an inverter efficiency of 96%, and the commercial profiles assume an inverter efficiency of 98%.
+To create a single profile for each region, we determine the NSRDB point(s) existing in or, if none exists, closest to the region and take the average of the corresponding profiles.
+
+ReEDS assumes distributed PV generation is not allowed to be curtailed.
+
+```{admonition} Distributed PV settings
+- The distributed PV ILR is specified by the `ilr_dist` parameter in the `inputs/scalars.csv` file.
+```
 
 
 ### Storage Technologies
@@ -1318,7 +1325,7 @@ The explicit representation is turned off by default.
 ### Capital Stock
 #### Initial capital stock, prescribed builds, and restrictions
 
-Existing electricity generation capacity is taken from the EIA NEMS unit database {cite}`eiaAnnualEnergyOutlook2023` and updated using the March 2024 EIA 860M ({numref}`figure-capacity-existing`).
+Existing electricity generation capacity is taken from the EIA NEMS unit database {cite}`eiaAnnualEnergyOutlook2025` and updated using the March 2025 EIA 860M ({numref}`figure-capacity-existing`).
 Units are mapped to ReEDS technologies based on a combination of fuel source and prime mover of the generation technology.
 Units of the same technology type within a region can be aggregated or represented individually.[^ref29]
 If they are aggregated, the aggregation is done by clustering the units based on heat rates.
@@ -1330,7 +1337,7 @@ Plants can be aggregated to one plant type per region or left at their native un
 ```{figure} figs/docs/capacity-existing.png
 :name: figure-capacity-existing
 
-Existing generation and storage units in 2025, taken from the EIA NEMS database {cite}`eiaAnnualEnergyOutlook2023`.
+Existing generation and storage units in 2025, taken from the EIA NEMS database {cite}`eiaAnnualEnergyOutlook2025`.
 ```
 
 The binning structure is designed flexibly so users can choose the appropriate levels of model fidelity and computational speed for each application.
@@ -1403,7 +1410,7 @@ However, some technologies are not represented properly to be appropriately cons
 | Compressed Air Energy Storage | 100 | {cite}`abbABBVelocitySuite2018a` |
 ```
 
-Retirement of existing fossil and nuclear capacity in ReEDS is primarily a function of announced retirement dates and technology-specific estimated lifetimes, taken from the AEO2023 NEMS plant database and EIA 860M.
+Retirement of existing fossil and nuclear capacity in ReEDS is primarily a function of announced retirement dates and technology-specific estimated lifetimes, taken from the AEO 2025 NEMS plant database and EIA 860M.
 Retirement dates of coal plants are further checked and updated in case the EIA 860M does not capture the latest retirement dates.
 Retirement dates for several nuclear plants, which are not current in NEMS and EIA 860M, are manually updated (Diablo nuclear power plants in California and Palisades nuclear power plant in Michigan).
 Both existing and economically built generators have the lifetimes shown in {numref}`technology-lifetimes`.
@@ -1455,18 +1462,14 @@ These minimum growth sizes are shown in {numref}`min-growth-size-per-tech` and a
 ```
 
 #### Interconnection queues
-To incentivize near-term capacity deployments to be more aligned with the current grid interconnection capacity queues as of the end of 2023 {cite}`randQueued2024Edition2024`,
+To incentivize near-term capacity deployments to be more aligned with the current grid interconnection capacity queues as of the end of 2024 {cite}`randQueued2025Edition2025Dataset`,
 ReEDS includes a constraint that limits capacity deployment and refurbishment by technology and ReEDS region,
-starting in user-defined `interconnection_start` year (which can be specified in `inputs/scalars.csv`) and ending in 2029.
-The 2026 limits are based on plants with a signed interconnection agreement, and the 2029 limits are based on the total amount of capacity seeking interconnection (see `inputs/capacity_exogenous/interconnection_queues.csv`).
-Values between years are interpolated based on the 2026 and 2029 points.
+starting in user-defined `interconnection_start` year (which can be specified in `inputs/scalars.csv`) and ending in 2030.
+The 2026 limits are based on plants with a signed interconnection agreement, and the 2030 limits are based on the total amount of capacity seeking interconnection (see `inputs/capacity_exogenous/interconnection_queues.csv`).
+Values between years are interpolated based on the 2026 and 2030 points.
 The limits are applied regionally by technology.
 
 To avoid infeasibility, the constraint allows a technology to be built over the capacity limits with a penalty of $10,000/kW.
-
-
-
-
 
 
 ### Regional Parameter Variations and Adjustments
@@ -1485,7 +1488,7 @@ Maps of regional capital cost multipliers for the various technology types.
 <!-- plot created using /docs/source/plotting_scripts/reg_cap_cost_plot.py -->
 
 Regional capital cost multipliers for the above technologies are available at zonal resolution.
-The capital cost multipliers for PV, land-based wind, and offshore wind are incorporated upstream in the supply curves produced by reV; therefore, the mulitpliers used in ReEDS for these technologies are set to 1.0 to avoid double counting.
+The capital cost multipliers for PV, land-based wind, and offshore wind are incorporated upstream in the supply curves produced by reV; therefore, the multipliers used in ReEDS for these technologies are set to 1.0 to avoid double counting.
 
 
 
@@ -1882,7 +1885,7 @@ even though most existing lines are <230 kV {cite}`HIFLD`.
 Interfaces with large fractions of <230-kV lines are excepted to avoid unrealistic islanding of the connected zones.
 
 
-
+When running the model at a resolution that includes individual counties, the ReEDS BA interface limits are still enforced. This means that the sum of county-to-county flows across a BA interface cannot exceed the BA interface limit.
 
 
 
@@ -2086,7 +2089,7 @@ However, their sources and processing through the model vary slightly, as descri
 In addition to ensuring adequate capacity to satisfy long-term planning reserve requirements, ReEDS requires operational reliability---that is, the ability to continue operating the bulk power system in the event of a sudden disturbance {cite}`nercGlossaryTermsUsed2016`.
 In practice, ancillary reserve requirements ensure there is sufficient flexibility from supply-side and demand-side technologies to rebalance fluctuations in generation and demand.
 
-ReEDS represents three type of operating reserve products: spinning, regulation, and flexibility reserves {cite}`coleOperatingReservesLongTerm2018`.
+ReEDS represents three types of operating reserve products: spinning, regulation, and flexibility reserves {cite}`coleOperatingReservesLongTerm2018`.
 The requirement specified for each product in each time slice is a function of load, wind generation, and photovoltaic capacity (during daytime hours).[^ref47]
 Technologies providing these reserve products must be able to ramp their output within a certain amount of time.
 ReEDS can also represent a "combo" reserve product that combines the three operating reserve products into a single hybrid product.
@@ -2115,7 +2118,7 @@ however, reserve provision can be traded between zones using AC transmission cor
 Trades are allowed only within planning regions ({numref}`figure-hierarchy`) and not across planning region boundaries.
 The amount of reserves that can be traded is limited by the amount of carrying capacity of an AC transmission corridor that is not already being used for trading energy.
 
-The ability of technologies to contribute to reserves is limited by the ramping requirement for a given reserve product, the plant ramp rate, and online capacity ({numref}`generation-techs-flexability-params`).
+The ability of technologies to contribute to reserves is limited by the ramping requirement for a given reserve product, the plant ramp rate, and online capacity ({numref}`generation-techs-flexibility-params`).
 Online capacity is approximated in ReEDS as the maximum generation from all time slices within a modeled day.
 Reserves can be provided by generation and storage technologies that are turned on but not fully dispatched in a time slice.
 In addition, demand-side interruptible load can also contribute to reserve requirements, if enabled in a scenario.
@@ -2197,7 +2200,7 @@ with the following exceptions:
 Representative periods, in contrast, are weighted at 8760 hours per year (for an average of 365.25 days per year, accounting for leap years).
 This approach---with a low but nonzero weight during stress periods---provides realistic dispatch profiles during stress periods but ensures reported operational costs are dominated by the representative periods, which are selected to minimize regional errors in electricity demand and capacity factor associated with time series aggregation.
 - Hydrogen fuel is assumed to be always available during stress periods;
-stress periods are not part of the interday accounting of hydrogen storage levels shown in {numref}`figure-temporal-h2`, and endogenous electricity demand from electolyzers, steam methane reforming, and DAC is assumed to be zero during stress periods.
+stress periods are not part of the interday accounting of hydrogen storage levels shown in {numref}`figure-temporal-h2`, and endogenous electricity demand from electrolyzers, steam methane reforming, and DAC is assumed to be zero during stress periods.
 - Diurnal storage (batteries and pumped hydro) is modeled continuously over chronologically consecutive stress periods;
 for example, if both 2008-02-27 and 2008-02-28 are stress periods, the last hour of 2008-02-27 links to the first hour of 2008-02-28, and the last hour of 2008-02-28 links back to the first hour of 2008-02-27.
 If a stress period has no consecutively adjacent stress periods, it is modeled with periodic boundary conditions linking the last hour of the period to the first hour of the same period
@@ -2243,7 +2246,7 @@ to the individual units considered in PRAS,
 making the following assumptions:
 
 - Thermal generation
-  - Existing thermal generation capacity is disaggregated using unit sizes from the EIA-NEMS database of existing units ({numref}`figure-capacity-existing`) {cite}`eiaAnnualEnergyOutlook2023`.
+  - Existing thermal generation capacity is disaggregated using unit sizes from the EIA-NEMS database of existing units ({numref}`figure-capacity-existing`) {cite}`eiaAnnualEnergyOutlook2025`.
   - Unit sizes for new thermal generation capacity depend on whether the model zone hosts existing capacity of that technology type:
     - If existing units are present, the average of the existing unit sizes is used for newly added capacity.
     - If no existing units are present, the assumed unit size from {cite}`nrel2024AnnualTechnology2024` is used for newly added capacity.
@@ -2479,7 +2482,7 @@ Cooling technologies determine water withdrawal and consumption rates and affect
 Generating technologies without cooling systems are designated as having no cooling; however, these technologies can still be assigned water withdrawal and consumption rates to account for processes such as evaporation from hydropower reservoirs or cleaning PV arrays.
 All power-cooling technology combinations (including water-using technologies without cooling) are also assigned one of the following six water source types included in the model: fresh surface water that is currently appropriated, unassigned/unappropriated fresh surface water, fresh groundwater, brackish or saline groundwater, saline surface water, and wastewater treatment facility effluent.
 These water source types align with the water supply curves described in [Water Availability and Cost](#water-availability-and-cost).
-Appropiation of water refers to how water rights are assigned in the western United States, so no regions in the East have appropriated water.
+Appropriation of water refers to how water rights are assigned in the western United States, so no regions in the East have appropriated water.
 Representing both cooling technology and water source allows a high-fidelity representation of water source-sink relationships and constraints by enumerating all available power technology, cooling technology, and water source combinations within the ReEDS technology set.
 
 Cooling technology and water source of the baseline 2010 generation fleet and subsequent prescribed builds are assigned using several data sources mapped to the unit database that exogenously defines capital stock in ReEDS.
@@ -2710,7 +2713,7 @@ Additional resolution for intraannual water allocation or the potential for chan
 ## Air Pollution
 
 ### CO<sub>2</sub> and CO<sub>2</sub>e
-ReEDS includes CO<sub>2</sub> and CO<sub>2</sub>e (including CO<sub>2</sub>, CH<sub>4</sub>, and N<sub>2</sub>O) emissions for both precombustion and combustion processes.
+ReEDS includes upstream and process emissions of CO<sub>2</sub> and CO<sub>2</sub>e (including CO<sub>2</sub>, CH<sub>4</sub>, N<sub>2</sub>O, and H<sub>2</sub>).
 CO<sub>2</sub>e emission ($\text{EMIT}(\text{CO}_{2}e)$) is defined as:
 
 $$\text{EMIT}(\text{CO}_{2}e) = \sum_p^{[\text{CO}_2, \text{CH}_4, \text{N}_2\text{O}]}{\text{EMIT}(p) \times \text{GWP}(p)}$$
@@ -2735,12 +2738,13 @@ Users can add their own GWPs by adding a new column to this file and then specif
 
 ```{admonition} National emissions constraints
 The current setting options for CO<sub>2</sub>/CO<sub>2</sub>e annual emission caps in ReEDS are as follows:
-- If setting `GSw_Precombustion = 1`: CO<sub>2</sub>/CO<sub>2</sub>e emissions includes both precombustion and combustion emissions in emission constraints, only combustion emission if = 0 (model default).
+- If setting `GSw_Upstream = 1`: CO<sub>2</sub>/CO<sub>2</sub>e emissions includes both upstream and process emissions in emission constraints, only process emissions if = 0 (model default).
 This switch specifies only which type of emission is included in the emission constraints.
-The emission output files will include both precombustion and combustion emissions regardless of whether a switch is turned on.
+The emission output files will include both upstream and process emissions regardless of whether a switch is turned on.
 - If setting `GSw_AnnualCap = 0` (model default): There are no emission caps for both CO<sub>2 and CO<sub>2</sub>e.
-- If setting `GSw_AnnualCap = 1`: Only CO<sub>2</sub> emission is capped following emission trajectories defined in `inputs/emission_constraints/co2_cap.csv` (can be both precombustion + combustion or just combustion depending on `GSw_Precombustion` setting).
-- If setting `GSw_AnnualCap = 2`: CO<sub>2</sub>e emission is capped following emission trajectories defined in `inputs/emission_constraints/co2_cap.csv` (can be both precombustion + combustion or just combustion depending on `GSw_Precombustion` setting).
+- If setting `GSw_AnnualCap = 1`: Only CO<sub>2</sub> emission is capped following emission trajectories defined in `inputs/emission_constraints/co2_cap.csv` (can be both upstream + process or just process depending on `GSw_Upstream` setting).
+- If setting `GSw_AnnualCap = 2`: CO<sub>2</sub>e emission is capped following emission trajectories defined in `inputs/emission_constraints/co2_cap.csv` (can be both upstream + process or just combustion depending on `GSw_Upstream` setting).
+- If setting `GSw_AnnualCap = 3`: H<sub>2</sub> leakage from H<sub>2</sub> production, by SMR, SMR-CC and electrolyzer as well as electricity production from H<sub>2</sub> combustion plants and fuel cells, is also included in CO<sub>2</sub>e emissions, which are capped following emission trajectories defined in `inputs/emission_constraints/co2_cap.csv`.
 ```
 
 ### SO<sub>2</sub> and NO<sub>x</sub>
@@ -2896,6 +2900,21 @@ The maximum safe harbor periods are assumed to be 10 years for offshore wind, 6 
 Generators will obtain the largest credit available within their safe harbor window, meaning once a credit starts to phase down or terminate, ReEDS assumes efforts were made to start construction at the maximum length of the safe harbor window before the unit came online.
 In practice, this means ReEDS will show generators coming online and capturing the tax credits for several years beyond the nominal year in which they expired.
 
+ReEDS can also be run with the federal tax incentive changes introduced by the One Big Beautiful Bill Act (OBBBA).
+Under OBBBA, solar and wind projects must either start construction by July 4, 2026 or come online by the end of 2027 to be eligible for the PTC and ITC, and hydrogen projects must start construction by the end of 2027 to be eligible for the hydrogen PTC.
+The new law also introduces foreign entity of concern (FEOC) restrictions, which can render projects ineligible for tax credits depending on their level of involvement with prohibited foreign entities.
+ReEDS reflects these provisions through reference and conservative scenarios.
+The reference scenario updates the safe harbor periods for utility-scale PV, CSP, land-based wind, and offshore wind so that plants must come online by 2029 to be eligible for tax credits.
+This assumes that all plants starting construction before July 4, 2026 will come online by 2029 while meeting FEOC requirements.
+The conservative scenario updates the safe harbor periods for these technologies so that plants must come online by 2027 for eligibility.
+This assumes that FEOC restrictions will prevent most developers from cost-effectively using the tax credit.
+Both scenarios require hydrogen plants to come online by 2031 to be eligible for the hydrogen PTC, reflecting the notion that developers must start construction by 2027 and taking into the account the standard 4-year safe harbor period.
+OBBBA also expands eligibility for the energy community bonus to include nuclear plants placed in nuclear energy communities, or metropolitan statistical areas for which at least 0.17 percent of direct employment has been related to nuclear power at any point since 2010.
+
+```{admonition} Tax incentive settings
+- The incentive scenario (ira, obbba, obbba_conservative, etc.) is controlled by the `incentives_suffix` switch
+- The tax incentives corresponding to a given scenario are specified in the `inputs/financials/incentives_{incentives_suffix}.csv` file
+```
 
 ### State Renewable Portfolio Standards
 
@@ -3262,6 +3281,46 @@ For example, an increase in ancillary service requirements because of increased 
 Therefore, these metrics fully reflect all the model constraints related to the investment decision.
 
 
+## Uncertainty Modeling Capabilities
+
+### Monte Carlo Sampling
+
+ReEDS includes a Monte Carlo Sampling (MCS) module designed to help quantify how uncertainty in key model inputs affects capacity expansion outcomes. 
+This module supports regionalized sampling, grouped or independent treatment of input switches, and multiple distribution types. 
+For each run, the module draws input values from user-defined probability distributions, writes the corresponding input files, and executes a set of ReEDS runs. 
+Results can then be aggregated to evaluate ranges, quantiles, and other metrics derived from model outputs.
+
+For step-by-step instructions on running ReEDS with MCS, required switches,
+and how to define custom distribution groups, see the
+<a href="user_guide.html#monte-carlo-sampling-mcs">Monte Carlo Sampling (MCS)</a>
+section of the <a href="user_guide.html">User Guide</a>.
+
+
+
+
+### Modeling to Generate Alternatives
+
+ReEDS includes a simple implementation of "Modeling to Generate Alternatives" (MGA) {cite}`neumannNearoptimalFeasibleSpace2021`.
+The high-level procedure when applying MGA as implemented in ReEDS is:
+
+1. Solve the model minimizing the normal system-cost objective function
+2. Define a cost envelope around the optimized objective function value (typically in the range of 1%)
+3. Rerun the model with a different objective function (thus exploring "alternatives" to the single optimal solution, helping characterize the steepness or shallowness of the solution space)
+
+The available options for the secondary objective are:
+
+- Min/max the capacity of a given tech group (e.g., fossil, upv, wind, battery, nuclear, etc.)
+- Min/max the total MW capacity of interzonal transmission
+- Min/max the MWh of stress period flows between NERC regions ("RA sharing")
+- Min/max direct CO2 emissions
+
+Relevant model switches are described in the
+<a href="user_guide.html#modeling-to-generate-alternatives-mga">Modeling to Generate Alternatives (MGA)</a>
+section of the <a href="user_guide.html">User Guide</a>.
+
+
+
+
 ## Model Linkages
 
 ### ReEDS-PCM
@@ -3274,7 +3333,7 @@ R2X supports translations to mainstream PCMs: Sienna and PLEXOS.
 See [here](https://github.com/nrel/r2x?tab=readme-ov-file#compatibility) for the latest ReEDS model compatibility with R2X.
 
 [Sienna](https://www.nrel.gov/analysis/sienna) is an open-source NREL modeling tool for scientific energy system analysis.
-As part of its core capapilities, `Sienna\Ops` supports the simulation of system scheduling---including unit commitment and economic dispatch, automatic generation control, and nonlinear optimal power flow---along with sequential problem specifications to enable production cost modeling techniques.
+As part of its core capabilities, `Sienna\Ops` supports the simulation of system scheduling---including unit commitment and economic dispatch, automatic generation control, and nonlinear optimal power flow---along with sequential problem specifications to enable production cost modeling techniques.
 NREL has used Sienna in several analyses such as Puerto Rico 100 and the National Transmission Planning Study
 where it was used as the PCM tool for transmission planning and operational analysis for future scenarios {cite:p}`muralibagguPuertoRicoGrid2024, doeNationalTransmissionPlanning2024`.
 
@@ -3478,7 +3537,7 @@ The formula is based on {cite}`shortManualEconomicEvaluation1995` and is given b
 \text{FinancialMult} = \text{ConstCostMult} \cdot \text{FinancingMult} \frac{1 - T \cdot \text{PresentValueDepr} \cdot (1 - \frac{\text{ITC}_\text{eff}}{2}) - \text{ITC}_\text{eff}}{1 - T}
 ```
 where
-$\text{ConstCostMult}$ is the construction cost multiplier (the additionl cost to finance construction),
+$\text{ConstCostMult}$ is the construction cost multiplier (the additional cost to finance construction),
 $\text{FinancingMult}$ is the financing multiplier (adjusts required returns for diversifiable risk),
 $\text{PresentValueDepr}$ is the depreciation expense (reduces the taxable income and is itself reduced by the investment tax credit),
 $\text{ITC}_\text{eff}$ is the investment tax credit,
@@ -3839,13 +3898,14 @@ Runs that aggregate zones across state boundaries require state policies be turn
 Counties of the contiguous United States.
 ```
 
-The spatial framework built into the ReEDS model allows other spatial resolutions;
-for example, nodal datasets can be represented in the model.
+The spatial framework built into the ReEDS model allows other spatial resolutions or spatial extents;
+for example, ReEDS has been used to represent the RTS-GMLC nodal test system {cite}`karmakarNodalCapacityExpansion2024` and the zonal Indian power system {cite:p}`roseLeastCostPathwaysIndias2020, joshiImpactsRenewableEnergy2024`.
 When running with nodal data, each renewable energy resource site can be associated only with a single node, so the node assignments must be done before a model run is performed.
+And regardless of spatial extent or resolution, all decision variables will still be linear.
 
 The model also has the capability to use mixed resolutions.
 For example, California can be represented using the default model zones, whereas the rest of the United States is represented at state resolution.
-This can enable finer detail for a specific region of interest while capturing trades with neighboring regions as lower resolution but with a reasonable solution time.
+This can enable finer detail for a specific region of interest while capturing trades with neighboring regions at lower resolution but with a reasonable solution time.
 
 
 #### Data inputs and handling
@@ -3860,9 +3920,9 @@ To be able to perform runs at county-level resolution, some inputs are included 
 
 Transmission capacity between counties is based on nodal transmission network data (see {numref}`figure-nodal-transmission-network-data`) collected as part of the North American Renewable Integration Study {cite}`brinkmanNorthAmericanRenewable2021a`.
 Nodes from the dataset are spatially matched to counties using nodal coordinates and a shapefile of U.S. counties (described below).
-With this dataset, there are a few dozen counties that have no transmission nodes or capacity, which may be the result of missing data.
+With this dataset, there are a few dozen counties that have no transmission nodes or capacity, which may be the result of missing data (the quality of the nodal dataset declines for lower-voltage (less than 100 kV) transmission elements).
 To address this, nodes and lines are added to ensure every county has at least one transmission interface.
-This is done by either adding a node on existing lines that cross a county but previously had nodes in that county, or, if there are no transiting lines, adding a node to the county centroid and matching to the closest node in a neighboring county.
+This is done by either adding a node on existing lines that cross a county but previously had no nodes in that county, or, if there are no transiting lines, adding a node to the county centroid and connecting to the closest node in a neighboring county.
 
 ```{figure} figs/docs/nodal-transmission-network-data.png
 :name: figure-nodal-transmission-network-data
@@ -3881,6 +3941,13 @@ Further information on the development of county-level transmission interfaces i
 
 After the optimization, some counties have zero transfer capacity in one or both directions; these are replaced with either the transfer capacity estimated in the other direction if it is nonzero or with the thermal capacity of the line.
 To estimate metrics such as TW-mi of transfer capacity, ReEDS uses the distance between the centroids of the two counties in the interface.
+Following this adjustment, we find some counties still have a supply (and transmission import capacity) shortfall compared to their demand in historical years. 
+The source of the shortfall is likely due to a combination of demand disaggregation from BA to county scale and underestimation of county transmission due to the importance of lower voltage transmission and sub-transmission for county level connectivity.
+This shortfall will artificially reduce the resource adequacy for existing years and will also force immediate investments which only serve to bridge this gap. 
+Therefore we perform a least-cost transmission capacity expansion model across stress timeslices which allows investment in new capacity on existing transmission lines or build new lines at a premium if absolutely required.
+This opertion is being performed by the code located in the [ReEDS-2.0_Input_Processing Repository](https://github.nrel.gov/ReEDS/ReEDS-2.0_Input_Processing/tree/main/transmission/County_Transmission)
+Users should use this transmission dataset as a baseline from which to begin county level analysis rather than a perfect fidelity county-county transmission map. 
+Additional county level caveats are provided in the section on [spatial resolution](#challenges-and-benefits-of-enhanced-spatial-resolution).
 The final transmission limits calculated using this method are shown in {numref}`figure-transfer-limits`.
 
 ```{figure} figs/docs/transfer-limits.png
@@ -3901,6 +3968,7 @@ For the ReEDS zonal spatial representation, these network reinforcement costs ar
 Because the county-level resolution now explicitly represents transmission investments between counties, the network reinforcement costs from reV are not included in the transmission cost estimates of the county supply curves.
 Spur line costs, or the cost to build from the resource site to the interconnection point, are still taken from reV.
 In the future, the reV model may be adapted to produce network reinforcement costs at the county level, although they might be sufficiently small that ignoring them would be appropriate.
+POI costs are still represented at county resolution.
 
 
 #### Power plant capacity data
@@ -3908,10 +3976,9 @@ In the future, the reV model may be adapted to produce network reinforcement cos
 Capacity data in ReEDS for existing units, prescribed builds, and prescribed retirements[^ref68] are taken from the NEMS power plant database.
 The power plants in this database include latitude and longitude to give their location.
 These locations are mapped to counties to provide the county assignment for the power plants.
-In a few isolated cases, hydropower units that were on a county boundary were manually assigned to a county to better align with the jurisdiction that operates that plant.
-For example, the Columbia River serves as a boundary line for several counties, and hydropower plants on the Columbia were assigned to the county’s public utility district that owns and operates that dam rather than to the county that mapped to the specific latitude and longitude value.
+In a few isolated cases, hydropower units that were on a county boundary were manually assigned to a county to better align with the transmission infrastructure that connects the plant to the rest of the electricity system.
 
-[^ref68]: Prescribed builds are builds that are forced into the model because they have already been built or are under construction, such as the Vogtle nuclear power plant.
+[^ref68]: Prescribed builds are builds that are forced into the model because they have already been built or are under construction.
 Prescribed retirements are power plant retirements that are forced into the model based on actual retirements or retirement announcements.
 
 
@@ -3924,7 +3991,7 @@ The shapefiles are converted to the ESRI:102008 coordinate reference system, and
 
 #### Scaling datasets to county resolution
 
-All datasets besides those described above were downscaled from 134-zone resolution to county-level resolution using one of the following five methods.
+All datasets besides those described above were downscaled from 134-zone resolution to county-level resolution using one of the following three methods.
 
 **Uniform disaggregation:**
 
@@ -3951,26 +4018,13 @@ Because only one county exists in ReEDS Zone "p29," the population fraction for 
 On the other hand, two counties exist in ReEDS Zone "p30": The population fractions show 95.6% of the population of p30 lives in County p04019, whereas 4.4% of the population lives in p04023.
 To disaggregate by population, the dataset is mapped to zonal ReEDS input data and the population fraction is multiplied by the values of the zonal-level dataset.
 
-**Downscaling based on geographic size:**
-
-The geographic size disaggregation method operates similarly to the "population" disaggregation method but instead uses the fraction of a county’s geographic area with respect to its corresponding ReEDS zone as fractional multipliers for downscaling zonal input data to county level.
-Geographic area data used to create the multipliers are sourced from the 2022 TIGER/Line U.S. County Shapefile provided by the U.S. Census Bureau and found in the inputs folder of the ReEDS repository.
-
 **Downscaling based on existing hydropower capacity:**
 
 The existing hydropower disaggregation method uses the fraction of existing hydropower capacity in a given county with respect to the total hydropower capacity of the county’s corresponding ReEDS zone as fractional multipliers for downscaling zonal input data to county level.
 Existing hydropower capacity data used to calculate these fractional multipliers are sourced from the EIA-NEMS generator database included in the ReEDS inputs.
 This downscaling method is used for hydropower-specific data, such as hydropower upgrades.
 
-**Downscaling based on transmission line size:**
-
-Fractional multipliers used in the transmission line size disaggregation method represent the ratio of transmission capacity between a given U.S. county and a Canadian zone in relation to the total transmission capacity of the county’s corresponding U.S. zone.
-For example, if U.S. Zone p1 comprises 2 counties, and 300 MW of transmission capacity exists between County 1 and the Canadian zone and 100 MW of transmission capacity exists between County 2 and the Canadian zone, the ratio of 3/4 (0.75) is used to disaggregate data between County 1 and the Canadian zone whereas a ratio of 1/4 (0.25) is used to disaggregate data between County 2 and the Canadian zone.
-Transmission data used to create these multipliers are sourced from the same nodal dataset used to create the transmission interface limits described above.
-Note transmission lines found in the source data are considered bidirectional; therefore, when calculating the total transmission capacity between a U.S. zone and Canadian zone, both directions must be considered.
-This downscaling method is applied to Canadian import and export inputs.
-
-We selected one of the five downscaling methods above for each of the inputs that included a spatial dimension.
+We selected one of the three downscaling methods above for each of the inputs that included a spatial dimension and did not have a separate county-specific input file.
 The choice was made using analyst judgment.
 In the input structure of ReEDS, if an appropriate county-level dataset becomes available, it can be used in place of the downscaled dataset.
 
@@ -3992,17 +4046,48 @@ Spatial datasets are dynamic within the model itself, so the model is agnostic t
 The greater spatial resolution available in ReEDS with county-level inputs creates a variety of opportunities to apply the ReEDS model to answer questions.
 It enables specific regions of the country to be captured to greater resolution, enabling more granular outputs of power plant siting, transmission expansion, and emission impacts.
 The higher resolution can also highlight key regional boundaries or interfaces that might not have been present in a lower-resolution model run.
-Our testing has also shown county-level resolution can lead to better estimates of curtailment because there is more detail on the underlying transmission system.
+County-level resolution can lead to better estimates of curtailment because there is more detail on the underlying transmission system {cite}`serpeImportanceSpatialResolution2025`.
 
-The enhanced spatial resolution also comes with a variety of challenges.
-These include runtime, especially as the number of regions considered grows.
-Much of our testing showed a tenfold increase in the number of regions led to at least a tenfold increase in solve time, although runtime ultimately depends on the machine specifications and the model options selected for that particular run.
-Another major challenge is sourcing appropriate input data.
-If the downscaling methods described above are not suitable to answer the questions of a particular analysis, new data will need to be procured.
-In addition, even the best transmission datasets we had available still had omissions, so it is unclear whether key data will be missing for studying a particular region.
+The enhanced spatial resolution also comes with a variety of challenges and limitations.
+These include:
+- Input data: Higher resolution datasets can have gaps or limitations that might not be apparent at coarser spatial resolution.
+For example, the transmission dataset discussed above does not have complete coverage at sub-transmission voltages (below 100 kV) and does not include distribution-level data, leading to unrealistic islanding of several counties.
+- Down-scaling approaches: Downscaling coarse-resolution datasets to the county level can lead to county-level datasets that are more smooth or less accurate than they would be in reality. For example, load data that is down-scaled to counties is likely to be more smooth than actual load profiles for that county, and the population-based weighting applied will not fully capture the distribution of loads within a larger region. 
+- Linear modeling: At higher spatial resolution, the linear programming approach used by ReEDS can be insufficient.
+For example, ReEDS might choose to build a 3 MW gas plant in a county, but the ReEDS input costs are based on much larger power plants, so ReEDS would be underestimating the cost of that small plant (note that this is still an issue when using larger regions, but with larger regions small buildouts are much less common).
+- Transmission investments: ReEDS transmission investment costs are based on 500 kV transmission lines, but most counties in the U.S. are only connected at much lower voltage levels; many counties are only connected by transmission lines of less than 100 kV.
+Transmission costs increase on a per-MW basis as voltage declines, so county-level transmission costs will in general be higher than estimates based on 500 kV lines.
+Expansion of transmission lines in ReEDS represents electricity transfer bottlenecks that ReEDS sees valuable to expand rather than investments in specific transmission lines or corridors.
+- Transmission flows: ReEDS uses a pipe-and-bubble approach for transmission flows, which loses accuracy at higher spatial resolution.
+Existing interface transfer limits at the county level are calculated using a nodal DC powerflow model as described [above](#ac), and the resulting ITLs are treated as superimposable within ReEDS (i.e., the flow on one interface does not affect the flow on other interfaces).
+{cite}`brownGeneralMethodEstimating2023` shows that ITLs for larger interfaces (for example, between ISOs) tend to be smaller than the sum of ITLs of constituent interfaces.
+The sum of individual county ITLs may thus overstate coincident flow limits.
+{cite}`mehrtashDoesChoicePower2023` shows the choice of transmission power flow representation can have a significant impact on the model solution.
+- False precision: When running ReEDS at high spatial resolution, outputs will naturally be reported at that level of resolution.
+Users are cautioned against putting more stock into a particular model solution than is warranted because of uncertainty in the data or methods used.
+For example, moving new capacity from one county to a neighboring county might have almost no impact on total system cost and therefore be an equivalent solution to the one reported by ReEDS.
+- Runtime: Much of our testing showed a tenfold increase in the number of regions led to at least a tenfold increase in solve time, although runtime ultimately depends on the machine specifications and the model options selected for that particular run {cite}`serpeImportanceSpatialResolution2025`. Although national-scale runs are possible with enough simplifications, county-level resolution is typically only used to model much smaller regions.
 
-Finally, enhanced spatial resolution can lead to false precision, where users see model solutions at high spatial resolution and put more stock into that model solution than is warranted because of uncertainty in the data or methods used.
-For example, {cite}`mehrtashDoesChoicePower2023` shows the choice of transmission power flow representation can have a significant impact on the model solution.
+### Running ReEDS Beyond 2050
+By default most of the ReEDS input datasets are exogenously provided up to the year 2050, thus defining the default maximum end year for model runs.
+ReEDS can also extending its year-indexed datasets beyond 2050 using a variety of "forecasting" extrapolation methods determined by user-defined assumptions about the future behavior of the data.
+This dataset "forecasting" allows ReEDS to then be be solved to any future model year beyond 2050 at up to 10-year timesteps.
+
+#### Forecasting Methods
+Two methods can be used to extrapolate year-indexed datasets:
+the last year's data can be extended at a constant level,
+or the final years of data can be fit with linear regression and extended at a constant slope.
+
+##### Constant
+This method copies the last available year of data for all future model years up to the post-2050 model endyear. 
+
+##### Linear Regression
+This method linearly forecasts post-2050 data based on the last "x" years of available data, where "x" is a user-defined number of years to include in determining the slope for linear extrapolation.
+For now only 5-year and 10-year linear regressions are used, though any number of years can be used in regression calculations. 
+
+This method requires annual data in determining the extrapolation slope - thus, data is first interpolated to fill any missing year.
+For example, if extrapolating data beyond 2050 using a 5-year linear method then this method will interpolate any missing 2046, 2047, 2048, 2049, and 2050 data before calculating the extrapolating slope.
+Once calculated, this slope is then used to calculate data for all model years beyond 2050.
 
 
 ## ReEDS Model Contributors

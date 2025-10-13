@@ -89,6 +89,19 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#reeds2pras-and-pras">ReEDS2PRAS and PRAS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#monte-carlo-sampling-mcs">Monte Carlo Sampling (MCS)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#quick-start">Quick start</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#yaml-distribution-file-format">YAML distribution file format</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tips">Tips</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#modeling-to-generate-alternatives-mga">Modeling to Generate Alternatives (MGA)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#uncertainty-plots">Uncertainty Plots</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Quick start</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-of-input-plots">Example of input plots</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-of-output-plots">Example of output plots</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#key-areas-for-error-checking">Key Areas for Error Checking</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#re-running-a-failed-reeds-case">Re-running a Failed ReEDS Case</a></li>
@@ -779,6 +792,300 @@ if a single unit is larger than the planning reserve margin, unserved energy is 
 This approach should therefore be used with caution.</p></li>
 </ul>
 </section>
+<section id="monte-carlo-sampling-mcs">
+<h2>Monte Carlo Sampling (MCS)<a class="headerlink" href="#monte-carlo-sampling-mcs" title="Link to this heading"></a></h2>
+<p>This guide explains how to enable, configure, and run Monte Carlo simulations so you can propagate input uncertainty through ReEDS runs.</p>
+<section id="quick-start">
+<h3>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>In <code class="docutils literal notranslate"><span class="pre">cases.csv</span></code>, set <code class="docutils literal notranslate"><span class="pre">MCS_runs</span></code> to the number of samples you want. Zero disables MCS.</p></li>
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">MCS_dist</span></code> to the suffix name of a YAML file that contains the input distribution definitions.
+For example, <code class="docutils literal notranslate"><span class="pre">default</span></code> will use <code class="docutils literal notranslate"><span class="pre">inputs/userinput/mcs_distributions_default.yaml</span></code>.</p></li>
+<li><p>Set <code class="docutils literal notranslate"><span class="pre">MCS_dist_groups</span></code> to one or more YAML group names. Separate multiple groups with a dot.
+For example <code class="docutils literal notranslate"><span class="pre">tech.load_st.ng_fuel_price</span></code>.</p></li>
+<li><p>Run ReEDS as usual. Each Monte Carlo draw will create its own run using the sampled inputs.</p></li>
+</ol>
+<p>These three switches (<code class="docutils literal notranslate"><span class="pre">MCS_runs</span></code>,<code class="docutils literal notranslate"><span class="pre">MCS_dist</span></code>, and  <code class="docutils literal notranslate"><span class="pre">MCS_dist_groups</span></code>) are the only required controls.
+All other settings live in the YAML file (<code class="docutils literal notranslate"><span class="pre">inputs/userinput/mcs_distributions_{MCS_dist}.yaml</span></code>).</p>
+</section>
+<section id="yaml-distribution-file-format">
+<h3>YAML distribution file format<a class="headerlink" href="#yaml-distribution-file-format" title="Link to this heading"></a></h3>
+<p>Distribution groups live in <code class="docutils literal notranslate"><span class="pre">inputs/userinput/mcs_distributions_{MCS_dist}.yaml</span></code>.
+Each group samples one or more switches together.</p>
+<p><strong>Group field summary:</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Values</p></th>
+<th class="head"><p>Purpose</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>string</p></td>
+<td><p>any unique id</p></td>
+<td><p>Group id used by <code class="docutils literal notranslate"><span class="pre">MCS_dist_groups</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">assignments_list</span></code></p></td>
+<td><p>list of dicts</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">{switch:</span> <span class="pre">[values...]}</span></code></p></td>
+<td><p>Map each switch to candidate values.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dist</span></code></p></td>
+<td><p>string</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">dirichlet</span></code>, <code class="docutils literal notranslate"><span class="pre">discrete</span></code>, <code class="docutils literal notranslate"><span class="pre">triangular_multiplier</span></code>, <code class="docutils literal notranslate"><span class="pre">uniform_multiplier</span></code></p></td>
+<td><p>Pick the sampling distribution.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dist_params</span></code></p></td>
+<td><p>list of numbers</p></td>
+<td><p>depends on <code class="docutils literal notranslate"><span class="pre">dist</span></code></p></td>
+<td><p>Parameters for the distribution.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">weight_r</span></code></p></td>
+<td><p>string</p></td>
+<td><p>spatial hierarchy level (typically <code class="docutils literal notranslate"><span class="pre">country</span></code>, <code class="docutils literal notranslate"><span class="pre">transgrp</span></code>, <code class="docutils literal notranslate"><span class="pre">st</span></code>, or <code class="docutils literal notranslate"><span class="pre">ba</span></code>)</p></td>
+<td><p>Spatial resolution for draws.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>name</strong></p>
+<ul class="simple">
+<li><p>Unique id of the group.</p></li>
+<li><p>The id must appear in <code class="docutils literal notranslate"><span class="pre">MCS_dist_groups</span></code> to activate this group.</p></li>
+<li><p>Switches listed in the same group receive the same random draw, which creates perfect correlation inside the group.
+To force independence, place switches in different groups.</p></li>
+</ul>
+<p><strong>assignments_list</strong></p>
+<ul class="simple">
+<li><p>A list where each item is a one key dictionary.</p></li>
+<li><p>Key gives the switch name. Value lists the candidate options for that switch,
+referencing the underlying files or literal values that the sampler can draw from.</p></li>
+<li><p>Example idea: <code class="docutils literal notranslate"><span class="pre">[{switch1:</span> <span class="pre">[v1,</span> <span class="pre">v2]},</span> <span class="pre">{switch2:</span> <span class="pre">[v1,</span> <span class="pre">v2]}]</span></code>.</p></li>
+</ul>
+<p><strong>dist</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">dirichlet</span></code> uses a weighted average across options.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">discrete</span></code> selects a single option using the given weights.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">triangular_multiplier</span></code> draws a multiplier from a triangular distribution and applies it to all files in the <code class="docutils literal notranslate"><span class="pre">assignments_list</span></code> group.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uniform_multiplier</span></code> draws a uniform multiplier and applies it likewise.</p></li>
+</ul>
+<p><strong>dist_params</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">dirichlet</span></code>: <code class="docutils literal notranslate"><span class="pre">[alpha1,</span> <span class="pre">alpha2,</span> <span class="pre">...]</span></code> concentration values. Length must match the number of options for the switches in the group.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">discrete</span></code>: <code class="docutils literal notranslate"><span class="pre">[w1,</span> <span class="pre">w2,</span> <span class="pre">...]</span></code> probability weights, normalized internally. Length must match the number of options.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">triangular_multiplier</span></code>: <code class="docutils literal notranslate"><span class="pre">[low,</span> <span class="pre">center,</span> <span class="pre">high]</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uniform_multiplier</span></code>: <code class="docutils literal notranslate"><span class="pre">[low,</span> <span class="pre">high]</span></code>.</p></li>
+</ul>
+<p><strong>weight_r</strong></p>
+<ul class="simple">
+<li><p>For some files (those with regional data) we support the possibility of applying different weights to different ReEDS hierarchies.
+This field specifies the hierarchy considered.</p></li>
+<li><p>Common values are <code class="docutils literal notranslate"><span class="pre">country</span></code>, <code class="docutils literal notranslate"><span class="pre">transgrp</span></code>, <code class="docutils literal notranslate"><span class="pre">st</span></code>, or <code class="docutils literal notranslate"><span class="pre">ba</span></code>.</p></li>
+<li><p>Support depends on the switch. ATB <code class="docutils literal notranslate"><span class="pre">plantchar_*</span></code> switches currently support only <code class="docutils literal notranslate"><span class="pre">country</span></code>.</p></li>
+</ul>
+<hr class="docutils" />
+<p><strong>Example 1. Correlated technology sampling</strong></p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tech</span>
+<span class="w">  </span><span class="nt">assignments_list</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plantchar_battery</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">battery_ATB_2024_conservative</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">battery_ATB_2024_moderate</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">battery_ATB_2024_advanced</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plantchar_upv</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">upv_ATB_2024_conservative</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">upv_ATB_2024_moderate</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">upv_ATB_2024_advanced</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">plantchar_ofswind</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">ofs-wind_ATB_2024_conservative</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">ofs-wind_ATB_2024_moderate</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">ofs-wind_ATB_2024_advanced</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">dist</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dirichlet</span>
+<span class="w">  </span><span class="nt">dist_params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">weight_r</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">country</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">Sample_battery</span> <span class="pre">=</span> <span class="pre">W1*(conservative)</span> <span class="pre">+</span> <span class="pre">W2*(moderate)</span> <span class="pre">+</span> <span class="pre">W3*(advanced)</span></code><br />
+<code class="docutils literal notranslate"><span class="pre">Sample_upv</span> <span class="pre">=</span> <span class="pre">W1*(conservative)</span> <span class="pre">+</span> <span class="pre">W2*(moderate)</span> <span class="pre">+</span> <span class="pre">W3*(advanced)</span></code><br />
+with the same <code class="docutils literal notranslate"><span class="pre">W1,</span> <span class="pre">W2,</span> <span class="pre">W3</span></code> and <code class="docutils literal notranslate"><span class="pre">W1</span> <span class="pre">+</span> <span class="pre">W2</span> <span class="pre">+</span> <span class="pre">W3</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p>
+<p>In this configuration all three technologies share the same Dirichlet draw
+(so a sample with low-cost PV also has low-cost batteries and offshore wind).</p>
+<p><strong>Example 2. Sampling load forecast scenarios per state</strong></p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">load_st</span>
+<span class="w">  </span><span class="nt">assignments_list</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">GSw_EFS1_AllYearLoad</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">EER_100by2050</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">EER_IRAlow</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">dist</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dirichlet</span>
+<span class="w">  </span><span class="nt">dist_params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">weight_r</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">st</span>
+</pre></div>
+</div>
+<p>Each state receives its own weighted combination of the two load scenarios.<br />
+<code class="docutils literal notranslate"><span class="pre">Sample_load</span> <span class="pre">=</span> <span class="pre">W1*(EER_100by2050)</span> <span class="pre">+</span>&#160; <span class="pre">W2*(EER_IRAlow)</span></code> with <code class="docutils literal notranslate"><span class="pre">W1</span> <span class="pre">+</span> <span class="pre">W2</span> <span class="pre">=</span> <span class="pre">1</span></code>.</p>
+<p><strong>Example 3. Discrete siting uncertainty for wind and solar</strong></p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">wind_solar_siting_st</span>
+<span class="w">  </span><span class="nt">assignments_list</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">GSw_SitingUPV</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">limited</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">reference</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">GSw_SitingWindOfs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">limited</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">reference</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">GSw_SitingWindOns</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">limited</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">reference</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">dist</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">discrete</span>
+<span class="w">  </span><span class="nt">dist_params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">1</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">weight_r</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">st</span>
+</pre></div>
+</div>
+<p>This enables state level uncertainty in siting supply curves for wind and solar technologies through a random draw between <code class="docutils literal notranslate"><span class="pre">limited</span></code> and <code class="docutils literal notranslate"><span class="pre">reference</span></code> conditions.</p>
+</section>
+<section id="tips">
+<h3>Tips<a class="headerlink" href="#tips" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Use multiple distribution groups to sample switches independently.
+For example <code class="docutils literal notranslate"><span class="pre">tech.load_st</span></code> defines two groups that are sampled independently.</p></li>
+<li><p>Sampling of float values (e.g., transmission multipliers) is supported using <code class="docutils literal notranslate"><span class="pre">*_multiplier</span></code> distribution types.</p></li>
+<li><p>The <strong>Dirichlet</strong> distribution defines weights applied to each scenario.
+When all concentration parameters are set to one (e.g., <code class="docutils literal notranslate"><span class="pre">[1,</span> <span class="pre">1,</span> <span class="pre">1]</span></code>), the distribution is considered uninformed;
+it assigns equal expected weight to all options, though individual samples will still vary.
+These parameters can be adjusted to emphasize or de-emphasize specific scenarios.
+Since these weights are used as multiplicative factors on reference files,
+Dirichlet sampling tends to favor combinations that lean toward central scenarios when the inputs represent “low”,
+“medium”, and “high” pathways.</p></li>
+</ul>
+<p>See below examples of weights for Dirichlet distributions using different concentration parameters and an arbitrary set of
+Low, Mod, and High values (<a class="reference internal" href="#figure-mcs-three-param-dirichlet"><span class="std std-numref">Fig. 72</span></a> and <a class="reference internal" href="#figure-mcs-two-param-dirichlet"><span class="std std-numref">Fig. 73</span></a>).</p>
+<figure class="align-default" id="figure-mcs-three-param-dirichlet">
+<a class="reference internal image-reference" href="_images/mcs-three-param-dirichlet.png"><img alt="_images/mcs-three-param-dirichlet.png" src="_images/mcs-three-param-dirichlet.png" style="width: 82.4%;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 72 </span><span class="caption-text">Samples from a Dirichlet distribution with three concentration parameters applied to Low, Mod, High options</span><a class="headerlink" href="#figure-mcs-three-param-dirichlet" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="figure-mcs-two-param-dirichlet">
+<a class="reference internal image-reference" href="_images/mcs-two-param-dirichlet.png"><img alt="_images/mcs-two-param-dirichlet.png" src="_images/mcs-two-param-dirichlet.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 73 </span><span class="caption-text">Samples from a Dirichlet distribution with two concentration parameters applied to Low and High options</span><a class="headerlink" href="#figure-mcs-two-param-dirichlet" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<p>Built-in plotting funcationality for Monte Carlo runs is described under <a class="reference internal" href="#uncertainty-plots"><span class="xref myst">Uncertainty Plots</span></a>.</p>
+</section>
+</section>
+<section id="modeling-to-generate-alternatives-mga">
+<h2>Modeling to Generate Alternatives (MGA)<a class="headerlink" href="#modeling-to-generate-alternatives-mga" title="Link to this heading"></a></h2>
+<p>The following switches control the MGA functionality:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_MGA_CostDelta</span></code> (default <code class="docutils literal notranslate"><span class="pre">0</span></code>): Fraction by which to allow objective function to increase when using MGA.
+MGA is turned off if set to 0; a reasonable choice for MGA is in the range of 0.01.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_MGA_Direction</span></code> (default <code class="docutils literal notranslate"><span class="pre">min</span></code>): Directionality of the second optimization.
+Options are <code class="docutils literal notranslate"><span class="pre">min</span></code> or <code class="docutils literal notranslate"><span class="pre">max</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_MGA_Objective</span></code> (default <code class="docutils literal notranslate"><span class="pre">capacity</span></code>): Objective for MGA (uses <code class="docutils literal notranslate"><span class="pre">GSw_MGA_SubObjective</span></code> to specify technology subset if set to <code class="docutils literal notranslate"><span class="pre">capacity</span></code>).
+Options are <code class="docutils literal notranslate"><span class="pre">capacity</span></code>, <code class="docutils literal notranslate"><span class="pre">transmission</span></code>, <code class="docutils literal notranslate"><span class="pre">rasharing</span></code>, and <code class="docutils literal notranslate"><span class="pre">co2</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GSw_MGA_SubObjective</span></code> (default <code class="docutils literal notranslate"><span class="pre">fossil</span></code>): Technology subset to minimize or maximize the capacity of (only used for <code class="docutils literal notranslate"><span class="pre">GSw_MGA_Objective</span> <span class="pre">=</span> <span class="pre">capacity</span></code>).
+Options are the column names in the <code class="docutils literal notranslate"><span class="pre">inputs/tech-subset-table.csv</span></code> file.</p></li>
+</ul>
+<p>Users familiar with GAMS can add alternative objective functions to the <code class="docutils literal notranslate"><span class="pre">c_mga.gms</span></code> file and associated options to the <code class="docutils literal notranslate"><span class="pre">GSw_MGA_Objective</span></code> switch in <code class="docutils literal notranslate"><span class="pre">cases.csv</span></code>.</p>
+</section>
+<section id="uncertainty-plots">
+<h2>Uncertainty Plots<a class="headerlink" href="#uncertainty-plots" title="Link to this heading"></a></h2>
+<p>ReEDS includes plotting tools to help explore how uncertainty affects model results,
+especially in Monte Carlo or MGA-style simulations.
+By scanning a folder of ReEDS runs, the module reads input and output data and automatically generates a PowerPoint
+presentation with key trends and uncertainty ranges, along with an Excel workbook containing the raw data behind each figure.</p>
+<p>These outputs make it easier to:</p>
+<ul class="simple">
+<li><p>Visualize median trends and percentile bands across runs</p></li>
+<li><p>Examine distributions of variables across sampled scenarios</p></li>
+<li><p>Compare differences between groups of runs</p></li>
+</ul>
+<section id="id2">
+<h3>Quick start<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Go to the <code class="docutils literal notranslate"><span class="pre">postprocessing</span></code> directory.</p></li>
+<li><p>Run the command below, replacing placeholders with your paths and options.</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>uncertainty_plots.py<span class="w"> </span><span class="o">{</span>runs_folder<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-p<span class="w">  </span><span class="o">{</span>rename_options<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-hl<span class="w"> </span><span class="o">{</span>highlight_runs_option<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-t<span class="w">  </span><span class="o">{</span>plot_type_options<span class="o">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-s<span class="w">  </span><span class="o">{</span>save_dir<span class="o">}</span>
+</pre></div>
+</div>
+<p><strong>Arguments:</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head text-left"><p>Flag</p></th>
+<th class="head text-left"><p>Purpose</p></th>
+<th class="head text-left"><p>Type</p></th>
+<th class="head text-left"><p>Default</p></th>
+<th class="head text-left"><p>Example</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">runs_folder</span></code></p></td>
+<td class="text-left"><p>Folder that contains the runs to plot</p></td>
+<td class="text-left"><p>Path</p></td>
+<td class="text-left"><p>required</p></td>
+<td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">../runs</span></code></p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">-p</span></code></p></td>
+<td class="text-left"><p>Rename or select runs, pairs <code class="docutils literal notranslate"><span class="pre">old:new</span></code> or a two column file</p></td>
+<td class="text-left"><p>List or file</p></td>
+<td class="text-left"><p>all by prefix</p></td>
+<td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">-p</span> <span class="pre">caseA:HighGas</span> <span class="pre">caseB:LowGas</span></code> or <code class="docutils literal notranslate"><span class="pre">-p</span> <span class="pre">labels.csv</span></code></p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">-hl</span></code></p></td>
+<td class="text-left"><p>Highlight runs, triplets <code class="docutils literal notranslate"><span class="pre">old:new:color</span></code> or a three column file</p></td>
+<td class="text-left"><p>List or file</p></td>
+<td class="text-left"><p>none</p></td>
+<td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">-hl</span> <span class="pre">caseA:HighGas:red</span></code> or <code class="docutils literal notranslate"><span class="pre">-hl</span> <span class="pre">highlights.csv</span></code></p></td>
+</tr>
+<tr class="row-odd"><td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">-t</span></code></p></td>
+<td class="text-left"><p>Scope of plots, inputs or outputs or both</p></td>
+<td class="text-left"><p>String</p></td>
+<td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">inout</span></code></p></td>
+<td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">-t</span> <span class="pre">out</span></code></p></td>
+</tr>
+<tr class="row-even"><td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">-s</span></code></p></td>
+<td class="text-left"><p>Output directory for the PowerPoint and the Excel file</p></td>
+<td class="text-left"><p>Path</p></td>
+<td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">runs/comparisons</span></code></p></td>
+<td class="text-left"><p><code class="docutils literal notranslate"><span class="pre">-s</span> <span class="pre">../studyA/summary_plots</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="example-of-input-plots">
+<h3>Example of input plots<a class="headerlink" href="#example-of-input-plots" title="Link to this heading"></a></h3>
+<figure class="align-default" id="figure-mcs-load-sample">
+<a class="reference internal image-reference" href="_images/mcs-load-sample.png"><img alt="_images/mcs-load-sample.png" src="_images/mcs-load-sample.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 74 </span><span class="caption-text">MCS Example: Total system load trajectories across regions.</span><a class="headerlink" href="#figure-mcs-load-sample" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="figure-mcs-fuel-prices-sample">
+<a class="reference internal image-reference" href="_images/mcs-fuel-prices-sample.png"><img alt="_images/mcs-fuel-prices-sample.png" src="_images/mcs-fuel-prices-sample.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 75 </span><span class="caption-text">MCS Example: Natural gas price paths.</span><a class="headerlink" href="#figure-mcs-fuel-prices-sample" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="figure-mcs-tech-costs-sample">
+<a class="reference internal image-reference" href="_images/mcs-tech-costs-sample.png"><img alt="_images/mcs-tech-costs-sample.png" src="_images/mcs-tech-costs-sample.png" style="width: 50%;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 76 </span><span class="caption-text">MCS Example: Technology cost trajectories.</span><a class="headerlink" href="#figure-mcs-tech-costs-sample" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+<section id="example-of-output-plots">
+<h3>Example of output plots<a class="headerlink" href="#example-of-output-plots" title="Link to this heading"></a></h3>
+<p><em>Note: The simulation results shown here are for illustrative purposes only.
+They reflect specific input assumptions and policy configurations that are not detailed in this section,
+as the goal is simply to demonstrate the plotting capabilities.</em></p>
+<figure class="align-default" id="figure-mcs-capacity-growth-sample">
+<a class="reference internal image-reference" href="_images/mcs-capacity-growth-sample.png"><img alt="_images/mcs-capacity-growth-sample.png" src="_images/mcs-capacity-growth-sample.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 77 </span><span class="caption-text">MCS Example: Installed capacity by technology over time.</span><a class="headerlink" href="#figure-mcs-capacity-growth-sample" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="figure-mcs-energy-penetration">
+<a class="reference internal image-reference" href="_images/mcs-energy-penetration.png"><img alt="_images/mcs-energy-penetration.png" src="_images/mcs-energy-penetration.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 78 </span><span class="caption-text">MCS Example: Share of generation by technology.</span><a class="headerlink" href="#figure-mcs-energy-penetration" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<figure class="align-default" id="figure-mcs-transmission-buildout">
+<a class="reference internal image-reference" href="_images/mcs-transmission.png"><img alt="_images/mcs-transmission.png" src="_images/mcs-transmission.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-number">Fig. 79 </span><span class="caption-text">MCS Example: Total transmission capacity by interface.</span><a class="headerlink" href="#figure-mcs-transmission-buildout" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+</section>
+</section>
 <section id="troubleshooting">
 <h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
 <p>This section provides guidance on identifying and resolving common issues encountered during model execution. By checking the locations and files listed below, users can better pinpoint errors.</p>
@@ -919,7 +1226,7 @@ These characteristics include:</p>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on August 25, 2025.
+      <span class="lastupdated">Last updated on October 13, 2025.
       </span></p>
   </div>
 
