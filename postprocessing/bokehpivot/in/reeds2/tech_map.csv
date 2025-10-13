@@ -57,6 +57,7 @@ gas-ct,gas-ct
 geothermal,geothermal
 nuclear,nuclear
 nuclear-smr,nuclear-smr
+nuclear-stor*,nuclear-stor
 storage-h2,storage-h2
 caes,caes
 pumped-hydro,pumped-hydro

@@ -131,7 +131,7 @@ techmap = {
     **{f'upv_{i}':'Utility PV' for i in range(20)},
     **{f'wind-ons_{i}':'Land-based wind' for i in range(20)},
     **{f'wind-ofs_{i}':'Offshore wind' for i in range(20)},
-    **dict(zip(['nuclear','nuclear-smr'], ['Nuclear']*20)),
+    **dict(zip(['nuclear','nuclear-smr', 'nuclear-stor'], ['Nuclear']*20)),
     **dict(zip(
         ['gas-cc_re-cc','gas-ct_re-ct','re-cc','re-ct',
          'gas-ct_h2-ct','h2-ct','gas-cc_h2-cc','h2-cc'],
@@ -727,7 +727,7 @@ aggtechsplot = {
         'hydro','geothermal',
         'biopower','lfill-gas','cofire','beccs_mod','beccs'
     ],
-    'Nuclear': ['nuclear', 'nuclear-smr'],
+    'Nuclear': ['nuclear', 'nuclear-smr', 'nuclear-stor'],
     'Hydrogen\nturbine': ['h2-cc', 'h2-cc-upgrade', 'h2-ct', 'h2-ct-upgrade'],
     'Gas CCS': ['gas-cc-ccs_mod'],
     'Coal CCS': ['coal-ccs_mod'],
@@ -1016,6 +1016,7 @@ aggstack = {
 
     'nuclear':'Nuclear',
     'nuclear-smr':'Nuclear',
+    'nuclear-stor':'Nuclear',
 }
 aggcolors = {
     'Nuclear':'C3',
@@ -1667,9 +1668,9 @@ ycol = 'Generation (TWh)'
 stortechs = [f'battery_{i}' for i in [2,4,6,8,10]] + ['battery_li','tes_ms', 'pumped-hydro']
 vretechs = ['upv','wind-ons','wind-ofs','distpv','csp']
 retechs = vretechs + ['hydro','geothermal','biopower']
-zctechs = vretechs + ['hydro','geothermal','nuclear','nuclear-smr']
+zctechs = vretechs + ['hydro','geothermal','nuclear','nuclear-smr', 'nuclear-stor']
 fossiltechs = ['coal','coal-ccs_mod','gas-cc','gas-cc-ccs_mod','gas-ct','o-g-s','cofire']
-reccsnuctechs = retechs + ['coal-ccs_mod','gas-cc-ccs_mod','nuclear','nuclear-smr']
+reccsnuctechs = retechs + ['coal-ccs_mod','gas-cc-ccs_mod','nuclear','nuclear-smr', 'nuclear-stor']
 
 dftotal = pd.concat({
     case:
