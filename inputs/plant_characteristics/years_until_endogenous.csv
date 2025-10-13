@@ -53,6 +53,7 @@ MHKwave,2
 egs_nearfield_1*egs_nearfield_10,2
 Nuclear,8
 Nuclear-SMR,8
+Nuclear-Stor1*Nuclear-Stor4,8
 Ocean,500
 o-g-s,500
 pumped-hydro,3

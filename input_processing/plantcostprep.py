@@ -408,6 +408,52 @@ for i in sw['GSw_PVB_Types'].split('_'):
     )['pvb_cost_fraction']
 pvb = pd.concat(pvb, axis=1)
 
+#%%##################################
+#    -- Nuclear+Storage Cost Model --    #
+#####################################
+# Get nuclear+storage designs
+nuclear_bcrs = pd.read_csv(
+    os.path.join(inputs_case, 'nuclear_stor_bcr.csv'),
+    header=0, names=['nuclear_type','bcr'], index_col='nuclear_type').squeeze(1)
+nuclear_storagetech = pd.read_csv(
+    os.path.join(inputs_case, 'nuclear_stor_storagetechs.csv'),
+    header=0, names=['nuclear_type','storage_type'], index_col='nuclear_type').squeeze(1)
+# Get cost-sharing assumptions
+nuclearstoragevalues = pd.read_csv(os.path.join(inputs_case,'plantchar_nuclear_stor.csv'), index_col='parameter')
+heatpump_cost_USDperWac = (
+    nuclearstoragevalues.loc['heatpump','value']
+    * nuclearstoragevalues.loc['heatrate','value']
+    * deflator[nuclearstoragevalues.loc['heatpump','dollaryear']]
+    # Input units are in $/Wac, so convert to $/MWac to match units used in ReEDS
+    * 1000
+)
+nuclear = pd.read_csv(os.path.join(inputs_case,f'plantchar_nuclear.csv'))
+nuclear = deflate_func(nuclear, sw[f'plantchar_nuclear'])
+nuclear_default = nuclear.set_index('t').capcost
+
+# Calculate nuclear storage cost fraction for each design
+nuclearstorage = {}
+for i in sw['GSw_NuclearStor_Types'].split('_'):
+    stor_tech = nuclear_storagetech.loc['nuclear-stor{}'.format(i)]
+    nuclear_bcr = nuclear_bcrs.loc['nuclear-stor{}'.format(i)]
+    print(f"Calculating nuclear-stor{i} with storage tech {stor_tech} and BCR {nuclear_bcr}")
+    if stor_tech.startswith('battery'):
+        storage_USDperWac = battery.loc[battery.i==stor_tech].set_index('t').capcost
+        energyconversion_cost_USDperWac = 0  # battery is DC-coupled
+    elif stor_tech.startswith('tes'):
+        storage_USDperWac = tes.loc[tes.i==stor_tech].set_index('t').capcost
+        energyconversion_cost_USDperWac = heatpump_cost_USDperWac
+    elif stor_tech.startswith('caes'):
+        storage_USDperWac = caes.loc[caes.i==stor_tech].set_index('t').capcost
+        energyconversion_cost_USDperWac = 0  # CAES is coupled using the same equipment as it is to the grid
+    print('storage_USDperWac', storage_USDperWac)
+    print('energyconversion_cost_USDperWac', energyconversion_cost_USDperWac)
+    print('nuclear_default', nuclear_default)
+    nuclear_storage_cost = nuclear_default + nuclear_bcr * (storage_USDperWac - energyconversion_cost_USDperWac)
+    print('nuclear_storage_cost', nuclear_storage_cost)
+    nuclearstorage['nuclear-stor{}'.format(i)] = nuclear_storage_cost / nuclear_default
+nuclearstorage = pd.concat(nuclearstorage, axis=1)
+
 
 ## Create Electric DAC scenario output
 # For electric DAC, we assume a sorbent system: https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a

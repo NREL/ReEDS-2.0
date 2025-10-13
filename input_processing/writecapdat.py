@@ -74,7 +74,7 @@ TECH = {
     'capnonrsc': [
         'coaloldscr', 'coalolduns', 'biopower', 'coal-igcc',
         'coal-new', 'gas-cc', 'gas-ct', 'lfill-gas',
-        'nuclear', 'o-g-s', 'battery_li', 'tes_ms', 'pumped-hydro'
+        'nuclear', 'nuclear_stor', 'o-g-s', 'battery_li', 'tes_ms', 'pumped-hydro'
     ],
     'capnonrsc_energy': [
         'battery_li', 'tes_ms'
@@ -82,7 +82,7 @@ TECH = {
     'prescribed_nonRSC': [
         'coal-new', 'lfill-gas', 'gas-ct', 'o-g-s', 'gas-cc', 
         'hydED', 'hydEND', 'hydND', 'hydNPND', 'hydUD', 'hydUND',
-        'geothermal', 'biopower', 'coal-igcc', 'nuclear',
+        'geothermal', 'biopower', 'coal-igcc', 'nuclear', 'nuclear_stor',
         'battery_li','tes_ms','pumped-hydro','coaloldscr',
     ],
     'prescribed_nonRSC_energy': [
@@ -102,7 +102,7 @@ TECH = {
     'retirements': [
         'coalolduns', 'o-g-s', 'hydED', 'hydEND', 'gas-ct', 'lfill-gas',
         'coaloldscr', 'biopower', 'gas-cc', 'coal-new',
-        'battery_li','tes_ms','nuclear', 'pumped-hydro', 'coal-igcc',
+        'battery_li','tes_ms','nuclear', 'nuclear_stor', 'pumped-hydro', 'coal-igcc',
     ],
     'retirements_energy': [
         'battery_li','tes_ms'

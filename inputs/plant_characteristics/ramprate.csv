@@ -24,6 +24,7 @@ CofireOld,0.02
 CofireNew,0.02
 nuclear,0.02
 nuclear-SMR,0.02
+Nuclear-Stor1*Nuclear-Stor4,0.02
 lfill-gas,0.04
 H2-CT,0.08
 H2-CC,0.08
