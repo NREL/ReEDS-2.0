@@ -4354,21 +4354,6 @@ parameter bcr(i) "--unitless-- ratio of the battery capacity to the PV DC capaci
 bcr(pvb) = sum{pvb_config$pvb_agg(pvb_config,pvb), bir_pvb_config(pvb_config) / ilr_pvb_config(pvb_config) } ;
 bcr(i)$[storage_standalone(i) or csp_storage(i) or hyd_add_pump(i)] = 1 ;
 
-*==================================
-* --- Nuclear+Storage Configurations ---
-*==================================
-
-parameter bcr_nuclear_stor_config(i) "--unitless-- battery capacity ratio for each hybrid nuclear+storage configuration"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%nuclear_stor_bcr.csv
-$offdelim
-$onlisting
-/ ;
-
-bcr(i)$nuclear_stor(i) = bcr_nuclear_stor_config(i) ;
-
 *=========================================
 * --- Capital costs ---
 *=========================================
@@ -4402,7 +4387,8 @@ cost_cap_nuclear_stor_p(i,t)$nuclear_stor(i) = cost_cap("nuclear",t) ;
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_cap_nuclear_stor_s(i,t) "--2004$/MW-- overnight capital costs for storage portion of hybrid nuclear+storage" ;
-cost_cap_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap(i_stor,t)};
+cost_cap_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap(i_stor,t)}
+cost_cap_energy_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap_energy(i_stor,t)} ;
 
 * Written by plantcostprep.py
 table hydrocapmult(allt,i) "--unitless-- hydropower capital cost multipliers over time"
@@ -4596,8 +4582,8 @@ cost_fom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i) = plant_char("nuclear",v,t,'fom
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_fom_nuclear_stor_s(i,v,r,t) "--2004$/MW-- fixed OM for storage portion of hybrid nuclear+storage" ;
 cost_fom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char(i_stor,v,t, 'fom')};
+cost_fom_energy_nuclear_stor_s(i,v,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char(i_stor,v,t, 'fom_energy')};
 
-cost_fom(i,v,r,t)$[valcap(i,v,r,t)$nuclear_stor(i)] = cost_fom_nuclear_stor_p(i,v,r,t) + bcr(i) * cost_fom_nuclear_stor_s(i,v,r,t) ;
 
 * -- FOM adjustments for coal and nuclear plants
 * The escalation factors are taken from NEMS and are roughly based on the
@@ -5927,7 +5913,7 @@ $onlisting
 * total cost = cost(nuclear) * cap(nuclear) + cost(stor) * cap(stor)
 *            = cost(nuclear) * cap(nuclear) + cost(stor) * bcr * cap(nuclear)
 *            = [cost(nuclear) + cost(stor) * bcr ] * cap(nuclear)
-cost_cap(i,t)$nuclear_stor(i) = (cost_cap_nuclear_stor_p(i,t) + bcr(i) * cost_cap_nuclear_stor_s(i,t)) * nuclearstorcapmult(t,i) ;
+* cost_cap(i,t)$nuclear_stor(i) = (cost_cap_nuclear_stor_p(i,t) + bcr(i) * cost_cap_nuclear_stor_s(i,t)) * nuclearstorcapmult(t,i) ;
 
 * --- Storage Duration ---
 

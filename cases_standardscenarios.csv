@@ -31,6 +31,7 @@ GSw_HourlyChunkLengthRep,Length of representative-period dispatch timeslices in 
 GSw_HourlyChunkLengthStress,Length of stress-period dispatch timeslices in hours,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_NoFossilOffsetCDR,If on (=1) then CO2 removal from DAC/BECCS is only allowed to offset emissions from fossil+CCS,0,,,,,,,,,,,,,,,,,,,,,,1,,,1,,,,,,,,,,,,,,,,,,,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_NuclearSMR,Turn on [1] / off [0] Nuclear-SMR,1,,0,,,,,,,,,,,,,,,,,,,,,,,,0,,,,,,,,,,,,,,,,,,,,,0,,,,,0,,,,,,,,,,,,,,,,,,,,
+GSw_NuclearStor,Turn on [1] / off [0] Nuclear-Stor1,1,,0,,,,,,,,,,,,,,,,,,,,,,,,0,,,,,,,,,,,,,,,,,,,,,0,,,,,0,,,,,,,,,,,,,,,,,,,,
 GSw_NukeNoRetireYear,If GSw_NukeNoRetire is enabled nuclear cannot retire through the end of this year,2032,,,,,,,,,,,,,,,,2060,,,,,,,,,,,,,,,,,,,,,,,,2060,,,,,,,,,,,2060,2060,2060,2060,2060,2060,2060,2060,2060,2060,2060,2060,2060,2060,2060,2060,2060,2060,2026,,2026,2026
 GSw_Precombustion,Include both precombustion and combustion emissions in CO2 and CO2e calculation,1,,,,,,,,,,,,,,,,,,,,,1,1,,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,,1,1,,,,,,,,,,,,,,,,,,,,,,,,,,
 GSw_PRM_NetImportLimit,Turn on [1] / off [0] eq_firm_transfer_limit constraint on max firm net imports,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,0,,,,,,,,,,,,,,,,,,,,,,

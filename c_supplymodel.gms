@@ -1261,7 +1261,7 @@ eq_capacity_limit_nd(i,v,r,h,t)$[tmodel(t)$valgen(i,v,r,t)$nondispatch(i)]..
 eq_curt_gen_balance(r,h,t)$tmodel(t)..
 
 *total potential generation
-    sum{(i,v)$[valcap(i,v,r,t)$(vre(i) or storage_hybrid(i)$(not csp(i)))$(not nondispatch(i))],
+    sum{(i,v)$[valcap(i,v,r,t)$(vre(i) or storage_hybrid(i)$(not csp(i))$(not nuclear_stor(i)))$(not nondispatch(i))],
          m_cf(i,v,r,h,t) * CAP(i,v,r,t) }
 
 *[minus] curtailed generation
@@ -1286,7 +1286,9 @@ eq_mingen_fixed(i,v,r,h,t)
     $[Sw_MingenFixed$tmodel(t)$mingen_fixed(i)$valgen(i,v,r,t)
     $(yeart(t)>=Sw_StartMarkets)]..
 
-    GEN(i,v,r,h,t)
+    GEN(i,v,r,h,t)$(not nuclear_stor(i))
+
+    + GEN_PLANT(i,v,r,h,t)$nuclear_stor(i)
 
     =g=
 
@@ -1626,7 +1628,7 @@ eq_PRMTRADE_VSC(r,ccseason,t)
 * binned power capacity for capacity credit must be the greater than power capacity
 * (except for CSP, which is treated like VRE for capacity credit)
 eq_cap_sdbin_balance(i,v,r,ccseason,t)
-    $[tmodel(t)$valcap(i,v,r,t)$storage(i)$(not csp(i))$Sw_PRM_CapCredit$(not Sw_PCM)]..
+    $[tmodel(t)$valcap(i,v,r,t)$storage(i)$(not csp(i))$(not nuclear_stor(i))$Sw_PRM_CapCredit$(not Sw_PCM)]..
 
 *total capacity in each region
     bcr(i) * CAP(i,v,r,t)
@@ -1685,7 +1687,7 @@ eq_sdbin_power_limit(ccreg,ccseason,sdbin,t)$[tmodel(t)$Sw_PRM_CapCredit]..
 
 *[plus] hybrid storage capacity in each sdbin adjusted by the appropriate CC value and the hybrid derate factor
     + sum{(i,v,r)$[r_ccreg(r,ccreg)
-                 $valcap(i,v,r,t)$storage_hybrid(i)$(not csp(i))],
+                 $valcap(i,v,r,t)$storage_hybrid(i)$(not csp(i))$(not nuclear_stor(i))],
           CAP_SDBIN(i,v,r,ccseason,sdbin,t) * cc_storage(i,sdbin) * hybrid_cc_derate(i,r,ccseason,sdbin,t)
           }
 ;
@@ -2980,11 +2982,20 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$tmodel(t)]..
 *[plus] energy into hybrid plant storage
 *hybrid+storage plant: plant charging
     + storage_eff_pvb_p(i,t) * hours_daily(h)
-      * STORAGE_IN_PLANT(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$dayhours(h)$Sw_HybridPlant]
+      * STORAGE_IN_PLANT(i,v,r,h,t)$[pvb(i)$dayhours(h)$Sw_HybridPlant]
 
 *hybrid+storage plant: grid charging
     + storage_eff_pvb_g(i,t) * hours_daily(h) 
-      * STORAGE_IN_GRID(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant]
+      * STORAGE_IN_GRID(i,v,r,h,t)$[pvb(i)$Sw_HybridPlant]
+
+*[plus] energy into hybrid nuclear+storage plant storage
+*nuclear+storage plant: plant charging
+    + storage_eff_nuclear_stor_p(i,t) * hours_daily(h)
+      * STORAGE_IN_PLANT(i,v,r,h,t)$[nuclear_stor(i)$Sw_HybridPlant]
+
+*nuclear+storage plant: grid charging
+    + storage_eff_nuclear_stor_g(i,t) * hours_daily(h) 
+      * STORAGE_IN_GRID(i,v,r,h,t)$[nuclear_stor(i)$Sw_HybridPlant]
 
 *[minus] generation from stand-alone storage (discharge) and CSP
 *exclude hybrid+storage plant because GEN refers to output from both the plant and the battery
@@ -3006,16 +3017,16 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$tmodel(t)]..
 *there must be sufficient energy in storage to provide operating reserves
 eq_storage_opres(i,v,r,h,t)
     $[valgen(i,v,r,t)$tmodel(t)$Sw_OpRes$opres_h(h)
-    $(storage_standalone(i) or storage_hybrid(i)$(not csp(i)) or hyd_add_pump(i))]..
+    $(storage_standalone(i) or storage_hybrid(i)$(not thermal_storage(i)) or hyd_add_pump(i))]..
 
 *[plus] initial storage level
     STORAGE_LEVEL(i,v,r,h,t)
 
 *[minus] generation that occurs during this timeslice
-    - hours_daily(h) * GEN(i,v,r,h,t) $[not storage_hybrid(i)$(not csp(i))]
+    - hours_daily(h) * GEN(i,v,r,h,t) $[not storage_hybrid(i)$(not thermal_storage(i))]
 
 *[minus] generation that occurs during this timeslice
-    - hours_daily(h) * GEN_STORAGE(i,v,r,h,t) $[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant]
+    - hours_daily(h) * GEN_STORAGE(i,v,r,h,t) $[storage_hybrid(i)$(not thermal_storage(i))$Sw_HybridPlant]
 
 *[minus] losses from reg reserves (only half because only charging half
 *the time while providing reg reserves)
@@ -3059,7 +3070,7 @@ eq_storage_duration(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)
     + evmc_storage_energy_hours(i,r,h,t) * CAP(i,v,r,t) * (bcr(i)$evmc_storage(i))
 
 * [plus] battery storage capacity
-    + CAP_ENERGY(i,v,r,t)$(battery(i) or tes(i))
+    + CAP_ENERGY(i,v,r,t)$(battery(i) or tes(i) or nuclear_stor(i))
 
     =g=
 
@@ -3265,12 +3276,11 @@ eq_plant_total_gen(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i
 eq_hybrid_plant_energy_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i,v,r,t)$valcap(i,v,r,t)$Sw_HybridPlant]..
 
 * [plus] plant output
-    m_cf(i,v,r,h,t) * CAP(i,v,r,t)
+    m_cf(i,v,r,h,t) * CAP(i,v,r,t)$(not nuclear_stor(i))
+    
+    + CAP(i,v,r,t)$(nuclear_stor(i))
 
     =g=
-
-*[plus] charging from hybrid plant
-    + STORAGE_IN_PLANT(i,v,r,h,t)$dayhours(h)
 
 *[plus] generation from hybrid plant
     + GEN_PLANT(i,v,r,h,t)
@@ -3282,12 +3292,16 @@ eq_hybrid_plant_energy_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t
 eq_plant_capacity_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i,v,r,t)$valcap(i,v,r,t)$Sw_HybridPlant]..
 
 *[plus] inverter capacity [AC] = panel capacity [DC] / ILR [DC/AC]
-    + CAP(i,v,r,t) / ilr(i)
+    + CAP(i,v,r,t)$pvb(i) / ilr(i)
+    + CAP(i,v,r,t)$(nuclear_stor(i))
 
     =g=
 
 * [plus] Output from plant
     + GEN_PLANT(i,v,r,h,t)
+
+* [minus] energy to storage from hybrid plant
+    - STORAGE_IN_PLANT(i,v,r,h,t)
 
 * [plus] Output form storage
     + GEN_STORAGE(i,v,r,h,t)

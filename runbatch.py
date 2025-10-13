@@ -344,6 +344,22 @@ def check_compatibility(sw):
         if (all(ilr != ilr_upv for ilr in sw['GSw_PVB_ILR'].split('_'))):
             raise ValueError(f'PVB with ILR!={scalars["ilr_utility"]} does not work at county resolution.'
                              f'\nRemove any ILR!={scalars["ilr_utility"]} from GSw_PVB_ILR.')
+    
+    # for bcr in sw['GSw_NuclearStor_BCR'].split('_'):
+    #     if not (float(bcr) >= 0):
+    #         raise ValueError("Fix GSw_NuclearStor_BCR")
+
+    for nuclearstor_type in sw['GSw_NuclearStor_Types'].split('_'):
+        if not (1 <= int(nuclearstor_type) <= 3):
+            raise ValueError("Fix GSw_NuclearStor_Types")
+
+    scalars = reeds.io.get_scalars()
+    ilr_upv = scalars['ilr_utility'] * 100
+
+    valid_storage_techs = ['battery', 'tes', 'caes']
+    for tech in sw['GSw_NuclearStor_StorageTechs'].split('_'):
+        if tech.split('-')[0] not in valid_storage_techs:
+            raise ValueError(f"Invalid storage tech '{tech}' in GSw_NuclearStor. Allowed: {', '.join(valid_storage_techs)}")
 
     if sw['GSw_EFS1_AllYearLoad'] == 'historic_post2015':
         allowed_years = list(range(2016,2024))

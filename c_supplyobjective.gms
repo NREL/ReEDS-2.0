@@ -38,9 +38,18 @@ eq_ObjFn_inv(t)$tmodel(t)..
                   + sum{(i,v,r)$valinv(i,v,r,t),
                        cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INV(i,v,r,t)
                       }
+                  + sum{(i,v,r)$valinv(i,v,r,t)$nuclear_stor(i),
+                       cost_cap_fin_mult_nuclear_stor_p(i,r,t) * cost_cap_nuclear_stor_p(i,t) * INV(i,v,r,t)
+                      }
+                  + sum{(i,v,r)$valinv(i,v,r,t)$nuclear_stor(i),
+                       cost_cap_fin_mult_nuclear_stor_s(i,r,t) * cost_cap_nuclear_stor_s(i,t) * INV(i,v,r,t)
+                      }
 
                   + sum{(i,v,r)$[valinv(i,v,r,t)$(battery(i) or tes(i))],
                        cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) * INV_ENERGY(i,v,r,t) 
+                      }
+                  + sum{(i,v,r)$[valinv(i,v,r,t)$(battery(i) or tes(i))],
+                       cost_cap_fin_mult_nuclear_stor_s(i,r,t) * cost_cap_energy_nuclear_stor_s(i,t) * INV_ENERGY(i,v,r,t) 
                       }
 
 * --- penalty for exceeding interconnection queue limit  ---
@@ -110,7 +119,7 @@ eq_ObjFn_inv(t)$tmodel(t)..
 
 * --- storage capacity credit---
 *small cost penalty to incentivize solver to fill shorter-duration bins first
-                  + sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
+                  + sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$(not nuclear_stor(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
                          bin_penalty(sdbin) * CAP_SDBIN(i,v,r,ccseason,sdbin,t) }
 
 * cost of capacity upsizing
@@ -156,20 +165,34 @@ eq_Objfn_op(t)$tmodel(t)..
                    hours(h) * cost_vom(i,v,r,t) * GEN(i,v,r,h,t) }
 
 * hybrid plant (plant)
-            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_p(i,v,r,t)$storage_hybrid(i)$(not csp(i))],
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_p(i,v,r,t)$storage_hybrid(i)$(not csp(i))$(not nuclear_stor(i))],
                    hours(h) * cost_vom_pvb_p(i,v,r,t) * GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
 
 * hybrid plant (Battery)
-            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_b(i,v,r,t)$storage_hybrid(i)$(not csp(i))],
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_b(i,v,r,t)$storage_hybrid(i)$(not csp(i))$(not nuclear_stor(i))],
                    hours(h) * cost_vom_pvb_b(i,v,r,t) * GEN_STORAGE(i,v,r,h,t) }$Sw_HybridPlant
+
+* hybrid nuclear (plant)
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i)],
+                   hours(h) * cost_vom_nuclear_stor_p(i,v,r,t) * GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
+
+* hybrid nuclear (storage)
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i)],
+                   hours(h) * cost_vom_nuclear_stor_s(i,v,r,t) * GEN_STORAGE(i,v,r,h,t) }$Sw_HybridPlant
 
 * --- fixed O&M costs---
 * generation
               + sum{(i,v,r)$[valcap(i,v,r,t)],
                    cost_fom(i,v,r,t) * CAP(i,v,r,t) }
+              + sum{(i,v,r)$[valcap(i,v,r,t)],
+                   cost_fom_nuclear_stor_p(i,v,r,t) * CAP(i,v,r,t) }
+              + sum{(i,v,r)$[valcap(i,v,r,t)],
+                   cost_fom_nuclear_stor_s(i,v,r,t) * CAP(i,v,r,t) }
 
               + sum{(i,v,r)$[valcap(i,v,r,t)$(battery(i) or tes(i))],
                    cost_fom_energy(i,v,r,t) * CAP_ENERGY(i,v,r,t) }
+              + sum{(i,v,r)$[valcap(i,v,r,t)$(battery(i) or tes(i))],
+                   cost_fom_energy_nuclear_stor_s(i,v,r,t) * CAP_ENERGY(i,v,r,t) }
 
 * transmission lines
               + sum{(r,rr,trtype)$routes(r,rr,trtype,t),

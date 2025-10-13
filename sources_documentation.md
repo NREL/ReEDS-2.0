@@ -651,7 +651,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [demonstration_plants.csv](/inputs/capacity_exogenous/demonstration_plants.csv)
     - **File Type:** Prescribed capacity
-    - **Description:** Nuclear-smr demonstration plants; active when GSw_NuclearDemo=1
+    - **Description:** Nuclear demonstration plants; active when GSw_NuclearDemo=1
     - **Indices:** t,r,i,coolingwatertech,ctt,wst,value
 
     - **Citation:** [(See 'notes' column in the file and https://www.energy.gov/oced/advanced-reactor-demonstration-projects-0)]

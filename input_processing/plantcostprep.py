@@ -412,9 +412,9 @@ pvb = pd.concat(pvb, axis=1)
 #    -- Nuclear+Storage Cost Model --    #
 #####################################
 # Get nuclear+storage designs
-nuclear_bcrs = pd.read_csv(
-    os.path.join(inputs_case, 'nuclear_stor_bcr.csv'),
-    header=0, names=['nuclear_type','bcr'], index_col='nuclear_type').squeeze(1)
+# nuclear_bcrs = pd.read_csv(
+#     os.path.join(inputs_case, 'nuclear_stor_bcr.csv'),
+#     header=0, names=['nuclear_type','bcr'], index_col='nuclear_type').squeeze(1)
 nuclear_storagetech = pd.read_csv(
     os.path.join(inputs_case, 'nuclear_stor_storagetechs.csv'),
     header=0, names=['nuclear_type','storage_type'], index_col='nuclear_type').squeeze(1)

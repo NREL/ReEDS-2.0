@@ -388,7 +388,7 @@ reqt_quant('state_rps',RPSCat,r,'ann',t)$tmodel_new(t) =
 
       + ( sum{(i,v)$[valgen(i,v,r,t)$(not storage_standalone(i))], GEN.l(i,v,r,h,t)
           - (distloss * GEN.l(i,v,r,h,t))$(distpv(i))
-          - (STORAGE_IN_GRID.l(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant] }
+          - (STORAGE_IN_GRID.l(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[storage_hybrid(i)$pvb(i)$Sw_HybridPlant] }
           - can_exports_h(r,h,t)$[(Sw_Canada=1)$sameas(RPSCat,"CES")]
         )$(RecStyle(st,RPSCat)=2)
     )} ;
@@ -906,7 +906,7 @@ cap_sdbin_out(i,r,ccseason,sdbin,t)$valcap_irt(i,r,t) = sum{v, CAP_SDBIN.l(i,v,r
 
 * energy capacity of storage
 stor_energy_cap(i,v,r,t)$[tmodel_new(t)$valcap(i,v,r,t)] =
-        storage_duration(i) * CAP.l(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$[battery(i) or tes(i) or storage_hybrid(i)$(not csp(i))]) ;
+        storage_duration(i) * CAP.l(i,v,r,t) * (1$CSP_Storage(i) + 1$psh(i) + bcr(i)$[battery(i) or tes(i) or storage_hybrid(i)$(not thermal_storage(i))]) ;
 
 * add PSH energy capacity to cap_energy_ivrt
 cap_energy_ivrt(i,v,r,t)$[valcap(i,v,r,t)$psh(i)] = CAP.l(i,v,r,t) * storage_duration(i) ;
