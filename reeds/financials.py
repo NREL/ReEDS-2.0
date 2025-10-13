@@ -368,6 +368,55 @@ def append_pvb_parameters(dfin, tech_to_copy='battery_li', column_scaler=None, p
     return dfout
 
 
+def append_nuclear_stor_parameters(dfin, tech_to_copy='tes_ms', column_scaler=None, nuclear_storage_types=[1, 2, 3, 4]):
+    """
+    Copies the parameters for tech_to_copy (typically nuclear, except for the degradation where we copy from the storage) 
+    for storage in nuclear+storage systems and returns a copy of the input
+    dataframe with the nuclear+storage parameters appended.
+
+    Inputs
+    ------
+    dfin: Original inputs dataframe.
+        Must have a column labeled i containing entries for tech_to_copy.
+    tech_to_copy: default='tes_ms6'. Technology from which to copy parameters for nuclear+storage.
+    column_scaler: None or dict. If dict, format should be {column_to_scale: scaler}.
+    nuclear_storage_types: default=[1,2,3,4]. Set of nuclear storage technology types.
+        NOTE: If nuclear+storage techs are added to set i "generation technologies" in b_inputs,
+        make sure to adjust the nuclear_storage_types list here.
+
+    Outputs
+    -------
+    dfout: pd.DataFrame consisting of nuclear+storage parameters appended to input dataframe.
+    """
+    ### Get values for tech_to_copy
+    copy_params = dfin.set_index('i').loc[[tech_to_copy]].reset_index(drop=True).copy()
+    ### Create output dataframe, copying tech_to_copy assumptions for nuclear+storage
+    append_nuclear_params = (
+        pd.concat(
+            {
+                'nuclear-stor{}'.format(nuclear_stor_type): copy_params
+                for nuclear_stor_type in nuclear_storage_types
+            }
+        )
+        .reset_index(level=0)
+        .rename(columns={'level_0': 'i'})
+    )
+    ### Scale the columns in columns_scaler if necessary
+    if column_scaler is not None:
+        for col, scaler in column_scaler.items():
+            append_nuclear_params[col] = (append_nuclear_params[col] * scaler).round(5)
+    ### Check for duplicates
+    if len(append_nuclear_params) != len(append_nuclear_params.drop_duplicates()):
+        raise Exception('Duplicate entries found when appending nuclear+storage parameters. Please check the input dataframe.')
+    ### Append to the original dataframe and return
+    dfout = pd.concat([dfin, append_nuclear_params], ignore_index=True)
+    ### Check to see if we created duplicates
+    if len(dfout) != len(dfout.drop_duplicates()):
+        raise Exception('Duplicate entries found when appending nuclear+storage parameters. This may result from append_nuclear_storage_parameters being called more than once for the same file or from appending to a file that already contains the technologies')
+
+    return dfout
+
+
 def import_and_mod_incentives(
     incentive_file_suffix, inflation_df, scen_settings
 ):
