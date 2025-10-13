@@ -1310,14 +1310,13 @@ if __name__ == '__main__':
     else:
         sw['iteration'] = iteration
 
-    ### Make the plots if it's a plot year
-    if t in sw['plot_years']:
-        print('plotting intermediate Augur results...')
-        try:
-            main(sw)
-        except Exception as _err:
-            print('diagnostic_plots.py failed with the following exception:')
-            print(traceback.format_exc())
+    ### Make the plots
+    print('plotting intermediate Augur results...')
+    try:
+        main(sw)
+    except Exception as _err:
+        print('diagnostic_plots.py failed with the following exception:')
+        print(traceback.format_exc())
 
     ### Remove intermediate csv files to save drive space
     if (not int(sw['keep_augur_files'])) and (not int(sw['debug'])):

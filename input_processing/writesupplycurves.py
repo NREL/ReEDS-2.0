@@ -23,21 +23,9 @@ import os
 import sys
 import datetime
 import pandas as pd
-import site
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
-### Typically this script is run from the version copied to the run folder, but the
-### alternative path is included in case it's run from the root of ReEDS during development
-try:
-    reeds_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "..")
-    )
-    site.addsitedir(os.path.join(reeds_path))
-    from hourlize.resource import get_bin
-except ImportError:
-    reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    site.addsitedir(os.path.join(reeds_path))
-    from hourlize.resource import get_bin
+reeds_path = reeds.io.reeds_path
 
 # %%#################
 ### FIXED INPUTS ###
@@ -52,11 +40,6 @@ spur_cutoff = 1e7
 # %% ===========================================================================
 ### --- FUNCTIONS ---
 ### ===========================================================================
-
-
-def concat_sc_point_gid(x):
-    return x.astype(str).str.cat(sep=",")
-
 def wm(df):
     """Make a function to take the capacity-weighted average in a .groupby() call"""
     def _wm(x):
@@ -70,167 +53,75 @@ def wm(df):
         )
     return _wm
 
-def agg_supplycurve(scpath, inputs_case, numbins_tech,
-                    agglevel, AggregateRegions, bin_method='equal_cap_cut', 
-                    bin_col='supply_curve_cost_per_mw',spur_cutoff=1e7, 
-                    agglevel_variables=None, deflate=None,sw=None, write=False):
+
+def get_exog_cap(inputs_case, tech, dfsc):
+    """Get exogenous capacity by class, region, rscbin, and year"""
+    dfexog = (
+        pd.read_csv(os.path.join(inputs_case, f'exog_cap_{tech}.csv'))
+        .merge(
+            dfsc.explode('sc_point_gid').reset_index()[['sc_point_gid','bin']],
+            on='sc_point_gid',
+        )
+        .rename(columns={'capacity':'MW'})
+    )
+    dfexog['rscbin'] = dfexog['bin'].map('bin{}'.format)
+    dfexog = dfexog.groupby(['*tech', 'region', 'rscbin', 'year']).MW.sum()
+    return dfexog
+
+
+def agg_supplycurve(
+    scpath,
+    inputs_case,
+    numbins_tech,
+    agglevel,
+    AggregateRegions,
+    bin_method='equal_cap_cut',
+    bin_col='supply_curve_cost_per_mw',
+    spur_cutoff=1e7, 
+    agglevel_variables=None,
+    deflate=None,
+    sw=None,
+    write=False,
+):
     """
     """
     ### Get inputs
-    dfin = pd.read_csv(scpath)
-    # convert supply curve columns (temporary fix until all supply curve files are updated)
-    dfin.rename(columns={"trans_adder_per_MW": "trans_adder_per_mw", 
-                         "capital_adder_per_MW": "capital_adder_per_mw",
-                         "dist_km": "dist_spur_km",
-                         "reinforcement_dist_km": "dist_reinforcement_km",
-                         }, inplace=True)
-    
-    # Mixed resolution procedure
-    if agglevel_variables['lvl'] == 'mult' :
-        dfin_ba = dfin[dfin['region'].isin(agglevel_variables['ba_regions'])]
-        dfin_county = dfin[dfin['region'].isin(agglevel_variables['county_regions'])]
+    dfin = reeds.io.assemble_supplycurve(
+        scfile=os.path.join(scpath),
+        case=os.path.dirname(os.path.normpath(inputs_case)),
+        agg=AggregateRegions,
+    ).reset_index().drop(columns=['FIPS','cf'], errors='ignore')
+    ### Define the aggregation settings
+    ## Cost and distance are weighted averages, with capacity as the weighting factor
+    aggs = {'capacity': 'sum', 'sc_point_gid': list}
+    index_cols = ['region', 'class', 'bin']
+    aggs = {
+        col: aggs.get(col, wm(dfin)) for col in dfin
+        if col not in index_cols
+    }
+    cost_adder_cols = ['cost_total_trans_usd_per_mw', 'capital_adder_per_mw']
 
-        if 'aggreg' in agglevel :
-            ### Map to new regions if regional aggregation is larger than BA        
-            if int(AggregateRegions):
-                ### Get the ba-to-agglevel map
-                rb2agglevel = pd.read_csv(os.path.join(inputs_case,'r_ba.csv')).set_index('ba').squeeze()
-                rb2agglevel_ba = rb2agglevel[rb2agglevel.index.isin(agglevel_variables['ba_regions'])]
-                ### Map old regions to new aggregated regions
-                dfin_ba.region = dfin_ba.region.map(rb2agglevel_ba)
-        ### Assign bins
-        if dfin_ba.empty:
-            dfin_ba['bin'] = []
-        else:
-            dfin_ba = dfin_ba.groupby(['region','class'], sort=False, group_keys=True).apply(
-            get_bin, numbins_tech, bin_method, bin_col
-            ).reset_index(drop=True).sort_values('sc_point_gid')
-        if dfin_county.empty:
-            dfin_county['bin'] = []
-        else: 
-            dfin_county = dfin_county.groupby(['region','class'], sort=False, group_keys=True).apply(
-                get_bin, numbins_tech, bin_method, bin_col
-            ).reset_index(drop=True).sort_values('sc_point_gid')
-        
-        ###### Aggregate values by (region,class,bin)
-        ### Define the aggregation settings
-        cost_adder_cols_ba = [c for c in dfin_ba if c in ['trans_adder_per_mw','capital_adder_per_mw']]
-        cost_adder_cols_county = [c for c in dfin_ba if c in ['trans_adder_per_mw','capital_adder_per_mw']]
+    ### Assign bins
+    if dfin.empty:
+        dfin['bin'] = []
+    else: 
+        dfin = (
+            dfin
+            .groupby(['region','class'], sort=False, group_keys=True)
+            .apply(reeds.inputs.get_bin, numbins_tech, bin_method, bin_col)
+            .reset_index(drop=True)
+            .sort_values('sc_point_gid')
+        )
+    ### Aggregate it
+    dfout = dfin.groupby(index_cols).agg(aggs)
+    ### Clip negative costs and costs above cutoff
+    dfout.supply_curve_cost_per_mw = dfout.supply_curve_cost_per_mw.clip(lower=0, upper=spur_cutoff)
 
-        ### cost and distance are weighted averages, with capacity as the weighting factor
-        aggs = {'capacity': 'sum', 'sc_point_gid': concat_sc_point_gid}
-        index_cols = ['region', 'class', 'bin']
-        aggs_ba = {
-            col: aggs.get(col, wm(dfin_ba)) for col in dfin_ba
-            if col not in index_cols
-        }
-        aggs_county = {
-            col: aggs.get(col, wm(dfin_county)) for col in dfin_county
-            if col not in index_cols
-        }
+    # Convert dollar year
+    deflate_scen = os.path.basename(scpath).replace('.csv','')
+    cost_adder_cols = [c for c in dfout if c in ['cost_total_trans_usd_per_mw', 'capital_adder_per_mw']]
+    dfout[['supply_curve_cost_per_mw'] + cost_adder_cols] *= deflate[deflate_scen]
 
-        ### Aggregate it
-        dfout_ba = dfin_ba.groupby(index_cols).agg(aggs_ba)
-        ### Clip negative costs and costs above cutoff
-        dfout_ba.supply_curve_cost_per_mw = dfout_ba.supply_curve_cost_per_mw.clip(
-            lower=0, upper=spur_cutoff)
-        
-        dfout_county = dfin_county.groupby(index_cols).agg(aggs_county)
-
-        df_write = pd.concat([dfout_ba, dfout_county])
-        # Write out the supply curve data for use in hourly_repperiods.py
-        if (write) and (AggregateRegions):
-            filename = scpath.replace('supply_curve','sc')
-            df_write.to_csv(os.path.join(inputs_case,filename), index=True, header=True)
-        # Convert dollar year
-        if os.path.basename(scpath) == 'csp_supply_curve.csv':
-            deflate_scen = 'CSP_supply_curves_cost_2018'
-        else:
-            deflate_scen = os.path.basename(scpath).replace('.csv','')
-           
-        cost_adder_cols_ba = [c for c in dfout_ba if c in ['trans_adder_per_mw', 'capital_adder_per_mw']]
-        dfout_ba[['supply_curve_cost_per_mw'] + cost_adder_cols_ba] *= deflate[deflate_scen]
-        cost_adder_cols_county = [c for c in dfout_county if c in ['trans_adder_per_mw', 'capital_adder_per_mw']]
-        dfout_county[['supply_curve_cost_per_mw'] + cost_adder_cols_county] *= deflate[deflate_scen]
-        
-        # Subtract GSw_TransIntraCost (converted to $/MW) to avoid double-counting
-        # but only if not running at county-level (county-level does not include
-        # transmission reinforcement costs in the supply curve)
-        if os.path.basename(scpath) in [
-                'csp_supply_curve.csv', 'geohydro_supply_curve.csv', 'egs_supply_curve.csv',]:     
-            for c in ['supply_curve_cost_per_mw']:
-                dfout_ba[c] *= deflate[deflate_scen]
-                dfout_county[c] *= deflate[deflate_scen]
-                dfout_ba[c] = (dfout_ba[c] - float(sw['GSw_TransIntraCost'])*1e3).clip(lower=0)
-        
-        else:
-            for c in ['supply_curve_cost_per_mw', 'trans_adder_per_mw']:
-                dfout_ba[c] = (dfout_ba[c] - float(sw['GSw_TransIntraCost'])*1e3).clip(lower=0)
-        
-        # Combine BA an county data
-        dfin = pd.concat([dfin_ba, dfin_county])
-        dfin['bin'] = dfin['bin'].astype(int)
-        dfout = pd.concat([dfout_ba, dfout_county])
-
-
-    #Single resolution procedure
-    else:    
-        ### Map to new regions if regional aggregation is larger than BA
-        if agglevel not in ['county','ba']:
-            if int(AggregateRegions):
-                ### Get the ba-to-agglevel map
-                rb2agglevel = pd.read_csv(os.path.join(inputs_case,'r_ba.csv')).set_index('ba').squeeze()
-                ### Map old regions to new aggregated regions
-                dfin.region = dfin.region.map(rb2agglevel)
-        ### Assign bins
-        if dfin.empty:
-            dfin['bin'] = []
-        else: 
-            dfin = dfin.groupby(['region','class'], sort=False, group_keys=True).apply(
-                get_bin, numbins_tech, bin_method, bin_col
-            ).reset_index(drop=True).sort_values('sc_point_gid')
-        ###### Aggregate values by (region,class,bin)
-        ### Define the aggregation settings
-        cost_adder_cols = [c for c in dfin if c in ['trans_adder_per_mw','capital_adder_per_mw']]
-
-        ### cost and distance are weighted averages, with capacity as the weighting factor
-        aggs = {'capacity': 'sum', 'sc_point_gid': concat_sc_point_gid}
-        index_cols = ['region', 'class', 'bin']
-        aggs = {
-            col: aggs.get(col, wm(dfin)) for col in dfin
-            if col not in index_cols
-        }
-        ### Aggregate it
-        dfout = dfin.groupby(index_cols).agg(aggs)
-        ### Clip negative costs and costs above cutoff
-        dfout.supply_curve_cost_per_mw = dfout.supply_curve_cost_per_mw.clip(
-            lower=0, upper=spur_cutoff)
-
-        # Write out the supply curve data for use in hourly_repperiods.py
-        if (write) and (AggregateRegions):
-            filename = scpath.replace('supply_curve','sc')
-            dfout.to_csv(os.path.join(inputs_case,filename), index=True, header=True)
-        # Convert dollar year
-        if os.path.basename(scpath) == 'csp_supply_curve.csv':
-            deflate_scen = 'CSP_supply_curves_cost_2018'
-        else:
-            deflate_scen = os.path.basename(scpath).replace('.csv','')           
-        cost_adder_cols = [c for c in dfout if c in ['trans_adder_per_mw', 'capital_adder_per_mw']]
-        dfout[['supply_curve_cost_per_mw'] + cost_adder_cols] *= deflate[deflate_scen]
-
-        # Subtract GSw_TransIntraCost (converted to $/MW) to avoid double-counting
-        # but only if not running at county-level (county-level does not include
-        # transmission reinforcement costs in the supply curve)
-        if agglevel not in ['county']:
-            if (os.path.basename(scpath) == 'csp_supply_curve.csv' or os.path.basename(scpath) == 'geohydro_supply_curve.csv' 
-                or os.path.basename(scpath) == 'egs_supply_curve.csv'):
-                for c in ['supply_curve_cost_per_mw']:
-                    dfout[c] = (dfout[c] - float(sw['GSw_TransIntraCost'])*1e3).clip(lower=0)
-            else:
-                for c in ['supply_curve_cost_per_mw', 'trans_adder_per_mw']:
-                    dfout[c] = (dfout[c] - float(sw['GSw_TransIntraCost'])*1e3).clip(lower=0)
-    
-        
     return dfin, dfout
 
 
@@ -242,15 +133,14 @@ def agg_supplycurve(scpath, inputs_case, numbins_tech,
 def main(
     reeds_path, inputs_case, AggregateRegions=1, rsc_wsc_dat=None, write=True, **kwargs
 ):
-    print("Starting writesupplycurves.py")
-
     # #%% Settings for testing
     # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # inputs_case = os.path.join(reeds_path,'runs','Jul2_test_Western_agg','inputs_case')
-    # AggregateRegions=1
-    # rsc_wsc_dat=None
-    # write=False
-    
+    # inputs_case = os.path.join(reeds_path,'runs','v20250821_revM0_Pennsylvania','inputs_case')
+    # AggregateRegions = 1
+    # rsc_wsc_dat = None
+    # write = True
+    # kwargs = {}
+
     #%% Inputs from switches
     sw = reeds.io.get_switches(inputs_case)
     ### Overwrite switches with keyword arguments
@@ -328,7 +218,7 @@ def main(
 
     for s in ["ons", "ofs"]:
         windin[s], wind[s] = agg_supplycurve(
-            scpath=os.path.join(inputs_case,f'wind-{s}_supply_curve.csv'),
+            scpath=os.path.join(inputs_case,f'supplycurve_wind-{s}.csv'),
             inputs_case=inputs_case, 
             agglevel=agglevel, AggregateRegions=AggregateRegions, 
             numbins_tech=numbins[f'wind-{s}'], spur_cutoff=spur_cutoff,
@@ -337,7 +227,7 @@ def main(
             )
         
         cost_components_wind[s] = (
-            wind[s][["trans_adder_per_mw", "capital_adder_per_mw"]]
+            wind[s][["cost_total_trans_usd_per_mw", "capital_adder_per_mw"]]
             .round(2)
             .reset_index()
             .rename(
@@ -345,7 +235,7 @@ def main(
                     "region": "r",
                     "class": "*i",
                     "bin": "rscbin",
-                    "trans_adder_per_mw": "cost_trans",
+                    "cost_total_trans_usd_per_mw": "cost_trans",
                     "capital_adder_per_mw": "cost_cap",
                 }
             )
@@ -392,45 +282,16 @@ def main(
         .fillna(0)
         .reset_index()
     )
-    ### Write the onshore sc_point_gid-to-(region,class,bin) map for writecapdat.py
-    gid2irb_wind = (
-        wind["ons"]["sc_point_gid"]
-        .reset_index()
-        .rename(columns={"region": "r", "bin": "rscbin"})
-    )
-    gid2irb_wind["i"] = "wind-ons_" + gid2irb_wind["class"].astype(str)
-    ## Unpack the sc_point_gid's
-    out = []
-    for i, row in gid2irb_wind.iterrows():
-        for sc_point_gid in row.sc_point_gid.split(","):
-            out.append([sc_point_gid, row.i, row.r, row.rscbin])
-    gid2irb_wind = (
-        pd.DataFrame(out, columns=["sc_point_gid", "i", "r", "rscbin"])
-        .astype({"sc_point_gid": int})
-        .set_index("sc_point_gid")
-    )
 
-    # %%#########################################################
-    #    -- Onshore Wind Exogenous (pre-tstart) Capacity --    #
-    ############################################################
-
-    ### Get the site-level builds
-    dfwindexog = pd.read_csv(os.path.join(inputs_case, "wind-ons_exog_cap.csv")).rename(
-        columns={"capacity": "MW"}
-    )
-
-    ### Get the rscbin, then sum by (i,r,rscbin,t)
-    dfwindexog["rscbin"] = "bin" + dfwindexog.sc_point_gid.map(
-        gid2irb_wind.rscbin
-    ).astype(int).astype(str)
-    dfwindexog = dfwindexog.groupby(["*tech", "region", "rscbin", "year"]).MW.sum()
+    ## Get exogenous capacity
+    dfwindexog = get_exog_cap(inputs_case, tech='wind-ons', dfsc=wind['ons'])
 
     # %%###############
     #    -- PV --    #
     ##################
 
     upvin, upv = agg_supplycurve(
-        scpath=os.path.join(inputs_case, "upv_supply_curve.csv"),
+        scpath=os.path.join(inputs_case, 'supplycurve_upv.csv'),
         inputs_case=inputs_case,
         agglevel=agglevel, AggregateRegions=AggregateRegions,
         numbins_tech=numbins['upv'], spur_cutoff=spur_cutoff,
@@ -441,14 +302,14 @@ def main(
     # Similar to wind, save the trans vs cap components and then concatenate them below just
     # before outputting rsc_combined.csv
     cost_components_upv = (
-        upv[["trans_adder_per_mw", "capital_adder_per_mw"]].round(2).reset_index()
+        upv[["cost_total_trans_usd_per_mw", "capital_adder_per_mw"]].round(2).reset_index()
     )
     cost_components_upv = cost_components_upv.rename(
         columns={
             "region": "r",
             "class": "*i",
             "bin": "rscbin",
-            "trans_adder_per_mw": "cost_trans",
+            "cost_total_trans_usd_per_mw": "cost_trans",
             "capital_adder_per_mw": "cost_cap",
         }
     )
@@ -461,23 +322,8 @@ def main(
         value_name="value",
     )
 
-    ### Write the upv sc_point_gid-to-(region,class,bin) map
-    gid2irb_upv = (
-        upv["sc_point_gid"]
-        .reset_index()
-        .rename(columns={"region": "r", "bin": "rscbin"})
-    )
-    gid2irb_upv["i"] = "upv_" + gid2irb_upv["class"].astype(str)
-    ## Unpack the sc_point_gid's
-    out = []
-    for i, row in gid2irb_upv.iterrows():
-        for sc_point_gid in row.sc_point_gid.split(","):
-            out.append([sc_point_gid, row.i, row.r, row.rscbin])
-    gid2irb_upv = (
-        pd.DataFrame(out, columns=["sc_point_gid", "i", "r", "rscbin"])
-        .astype({"sc_point_gid": int})
-        .set_index("sc_point_gid")
-    )
+    ## Get exogenous capacity
+    dfupvexog = get_exog_cap(inputs_case, tech='upv', dfsc=upv)
 
     ### Normalize formatting
     upv = upv.reset_index()
@@ -497,27 +343,12 @@ def main(
         .reset_index()
     )
 
-    # %%################################################
-    #    -- UPV Exogenous (pre-tstart) Capacity --    #
-    ###################################################
-
-    ### Get the site-level builds
-    dfupvexog = pd.read_csv(os.path.join(inputs_case, "upv_exog_cap.csv")).rename(
-        columns={"capacity": "MW"}
-    )
-
-    ### Get the rscbin, then sum by (i,r,rscbin,t)
-    dfupvexog["rscbin"] = "bin" + dfupvexog.sc_point_gid.map(gid2irb_upv.rscbin).astype(
-        int
-    ).astype(str)
-    dfupvexog = dfupvexog.groupby(["*tech", "region", "rscbin", "year"]).MW.sum()
-
     # %%################
     #    -- CSP --    #
     ###################
 
     cspin, csp = agg_supplycurve(
-        scpath=os.path.join(inputs_case, "csp_supply_curve.csv"),
+        scpath=os.path.join(inputs_case, 'supplycurve_csp.csv'),
         inputs_case=inputs_case,
         agglevel=agglevel, AggregateRegions=AggregateRegions, 
         numbins_tech=numbins['csp'], spur_cutoff=spur_cutoff,
@@ -580,7 +411,7 @@ def main(
             geoin[s], geo[s] = agg_supplycurve(
                 scpath=os.path.join(
                     inputs_case,
-                    f'{s}_supply_curve.csv'),
+                    f'supplycurve_{s}.csv'),
                 numbins_tech=numbins[s], inputs_case=inputs_case,
                 agglevel=agglevel, AggregateRegions=AggregateRegions,
                 spur_cutoff=spur_cutoff,agglevel_variables=agglevel_variables, deflate=deflate,
@@ -644,105 +475,44 @@ def main(
             },
             inplace=True,
         )
-
+        ## Get exogenous capacity
         if use_geohydro_rev_sc:
-            ### Write the geohydro sc_point_gid-to-(region,class,bin) map
-            gid2irb_geohydro = (
-                geo["geohydro"]["sc_point_gid"]
-                .reset_index()
-                .rename(columns={"region": "r", "bin": "rscbin"})
-            )
-            gid2irb_geohydro["i"] = "geohydro_" + gid2irb_geohydro["class"].astype(str)
-            ## Unpack the sc_point_gid's
-            out = []
-            for i, row in gid2irb_geohydro.iterrows():
-                for sc_point_gid in row.sc_point_gid.split(","):
-                    out.append([sc_point_gid, row.i, row.r, row.rscbin])
-            gid2irb_geohydro = (
-                pd.DataFrame(out, columns=["sc_point_gid", "i", "r", "rscbin"])
-                .astype({"sc_point_gid": int})
-                .set_index("sc_point_gid")
-            )
-
-            # %% Write the geohydro exogenous (pre-tstart) capacity
-            ### Get the site-level builds
-            dfgeohydroexog = pd.read_csv(
-                os.path.join(inputs_case, "geohydro_exog_cap.csv")
-            ).rename(columns={"capacity": "MW"})
-
-            ### Get the rscbin, then sum by (i,r,rscbin,t)
-            dfgeohydroexog["rscbin"] = "bin" + dfgeohydroexog.sc_point_gid.map(
-                gid2irb_geohydro.rscbin
-            ).astype(int).astype(str)
-            dfgeohydroexog = dfgeohydroexog.groupby(
-                ["*tech", "region", "rscbin", "year"]
-            ).MW.sum()
+            dfgeohydroexog = get_exog_cap(inputs_case, tech='geohydro', dfsc=geo['geohydro'])
 
     # %% Get supply-curve data for postprocessing
+    spurcols = [
+        'i',
+        'r',
+        'rscbin',
+        'capacity',
+        'dist_spur_km',
+        'dist_reinforcement_km',
+        'supply_curve_cost_per_mw',
+    ]
     spurout_list = [
         (
             wind["ons"]
             .reset_index()
             .assign(i="wind-ons_" + wind["ons"].reset_index()["class"].astype(str))
             .assign(rscbin="bin" + wind["ons"].reset_index()["bin"].astype(str))
-            .rename(columns={"region": "r"})[
-                [
-                    "i",
-                    "r",
-                    "rscbin",
-                    "capacity",
-                    "dist_spur_km",
-                    "dist_reinforcement_km",
-                    "supply_curve_cost_per_mw",
-                ]
-            ]
+            .rename(columns={"region": "r"})[spurcols]
         ),
         (
             wind["ofs"]
             .reset_index()
             .assign(i="wind-ofs_" + wind["ofs"].reset_index()["class"].astype(str))
             .assign(rscbin="bin" + wind["ofs"].reset_index()["bin"].astype(str))
-            .rename(columns={"region": "r"})[
-                [
-                    "i",
-                    "r",
-                    "rscbin",
-                    "capacity",
-                    "dist_spur_km",
-                    "dist_reinforcement_km",
-                    "supply_curve_cost_per_mw",
-                ]
-            ]
+            .rename(columns={"region": "r"})[spurcols]
         ),
         (
             upv.assign(i="upv_" + upv["class"].astype(str).str.strip("class"))
             .assign(rscbin="bin" + upv["bin"].str.strip("upvsc"))
-            .rename(columns={"region": "r"})[
-                [
-                    "i",
-                    "r",
-                    "rscbin",
-                    "capacity",
-                    "dist_spur_km",
-                    "dist_reinforcement_km",
-                    "supply_curve_cost_per_mw",
-                ]
-            ]
+            .rename(columns={"region": "r"})[spurcols]
         ),
         (
             csp.assign(i="csp_" + csp["class"].astype(str).str.strip("class"))
             .assign(rscbin="bin" + csp["bin"].str.strip("cspsc"))
-            .rename(columns={"region": "r"})[
-                [
-                    "i",
-                    "r",
-                    "rscbin",
-                    "capacity",
-                    "dist_spur_km",
-                    "dist_reinforcement_km",
-                    "supply_curve_cost_per_mw",
-                ]
-            ]
+            .rename(columns={"region": "r"})[spurcols]
         ),
     ]
     if use_geohydro_rev_sc:
@@ -753,17 +523,7 @@ def main(
                 i="geohydro_allkm_" + geo["geohydro"].reset_index()["class"].astype(str)
             )
             .assign(rscbin="bin" + geo["geohydro"].reset_index()["bin"].astype(str))
-            .rename(columns={"region": "r"})[
-                [
-                    "i",
-                    "r",
-                    "rscbin",
-                    "capacity",
-                    "dist_spur_km",
-                    "dist_reinforcement_km",
-                    "supply_curve_cost_per_mw",
-                ]
-            ]
+            .rename(columns={"region": "r"})[spurcols]
         )
     if use_egs_rev_sc:
         spurout_list.append(
@@ -771,17 +531,7 @@ def main(
             .reset_index()
             .assign(i="egs_allkm_" + geo["egs"].reset_index()["class"].astype(str))
             .assign(rscbin="bin" + geo["egs"].reset_index()["bin"].astype(str))
-            .rename(columns={"region": "r"})[
-                [
-                    "i",
-                    "r",
-                    "rscbin",
-                    "capacity",
-                    "dist_spur_km",
-                    "dist_reinforcement_km",
-                    "supply_curve_cost_per_mw",
-                ]
-            ]
+            .rename(columns={"region": "r"})[spurcols]
         )
     spurout = pd.concat(spurout_list).round(2)
 

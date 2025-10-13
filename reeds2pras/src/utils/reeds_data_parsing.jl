@@ -845,12 +845,12 @@ function disagg_existing_capacity(
 
     remaining_capacity = built_capacity
     if tech in group_existing_techs
-        existing_capacity_total = sum(tech_ba_year_existing[!, "cap"])
+        existing_capacity_total = sum(tech_ba_year_existing[!, "summer_power_capacity_MW"])
         num_whole = Int(existing_capacity_total ÷ unitsize_dict[tech])
         remainder = existing_capacity_total % unitsize_dict[tech]
         existing_capacity = vcat(ones(num_whole) * unitsize_dict[tech], remainder)
     else
-        existing_capacity = tech_ba_year_existing[!, "cap"]
+        existing_capacity = tech_ba_year_existing[!, "summer_power_capacity_MW"]
     end
 
     if pras_existing_unit_size == true

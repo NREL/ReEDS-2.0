@@ -46,6 +46,7 @@ github_releases_url = base_url + '/releases'
 myst_enable_extensions = [
     "substitution",
     "dollarmath",
+    "html_image"
 ]
 
 myst_substitutions = {
@@ -53,7 +54,6 @@ myst_substitutions = {
     "github_releases_url": github_releases_url,
     "gamslice": gamslice_secret,
     "cite_date_last_updated": datetime.date.today().strftime("%Y, %B"),
-
 }
 
 myst_footnote_transition = False

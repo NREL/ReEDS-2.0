@@ -60,6 +60,7 @@ authors:
     family-names: Turan
   - given-names: Max
     family-names: Vanatta
+  - {}
 url: 'https://www.nrel.gov/analysis/reeds/index.html'
 abstract: >-
   The Regional Energy Deployment System (ReEDS) is

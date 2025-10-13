@@ -1,6 +1,6 @@
 * Round problematic variables  
 * Non-rounded parameters can sometimes cause numerical issues when summing over tfix in model equations  
-$ifthen.removesmall Sw_RemoveSmallNumbers == 1
+if(Sw_RemoveSmallNumbers = 1,
     CAP.l(i,v,r,tfix)$[abs(CAP.l(i,v,r,tfix)) < rhs_tolerance] = 0 ;
     UPGRADES.l(i,v,r,tfix)$[abs(UPGRADES.l(i,v,r,tfix)) < rhs_tolerance] = 0 ;
     CAP_ABOVE_LIM.l(tg,r,tfix)$[abs(CAP_ABOVE_LIM.l(tg,r,tfix)) < rhs_tolerance] = 0 ;
@@ -8,8 +8,8 @@ $ifthen.removesmall Sw_RemoveSmallNumbers == 1
     INV_RSC.l(i,v,r,rscbin,tfix)$[abs(INV_RSC.l(i,v,r,rscbin,tfix)) < rhs_tolerance] = 0 ;
     INV_POI.l(r,tfix)$[abs(INV_POI.l(r,tfix)) < rhs_tolerance] = 0 ;
     H2_STOR_INV.l(h2_stor,r,tfix)$[abs(H2_STOR_INV.l(h2_stor,r,tfix)) < rhs_tolerance] = 0 ;
-    H2_STOR_INV.l(h2_stor,r,tfix)$[abs(H2_STOR_INV.l(h2_stor,r,tfix)) < rhs_tolerance] = 0 ;
-$endif.removesmall
+    H2_TRANSPORT_INV.l(r,rr,tfix) $[abs(H2_TRANSPORT_INV.l(r,rr,tfix) ) < rhs_tolerance] = 0 ;
+);
     
 *load variable
     LOAD.fx(r,h,tfix) = LOAD.l(r,h,tfix) ;
@@ -17,6 +17,9 @@ $endif.removesmall
 *     PEAK_FLEX.fx(r,ccseason,tfix)$Sw_EFS_flex = PEAK_FLEX.l(r,ccseason,tfix) ;
     DROPPED.fx(r,h,tfix)$[(yeart(tfix)<Sw_StartMarkets)] = DROPPED.l(r,h,tfix) ;
     EXCESS.fx(r,h,tfix)$[(yeart(tfix)<Sw_StartMarkets)] = EXCESS.l(r,h,tfix) ;
+    CAP_LOADSITE.fx(r,tfix)$[Sw_LoadSiteCF$val_loadsite(r)] = CAP_LOADSITE.l(r,tfix) ;
+    INV_LOADSITE.fx(r,tfix)$[Sw_LoadSiteCF$val_loadsite(r)] = INV_LOADSITE.l(r,tfix) ;
+    OP_LOADSITE.fx(r,h,tfix)$[Sw_LoadSiteCF$(Sw_LoadSiteCF<1)$val_loadsite(r)] = OP_LOADSITE.l(r,h,tfix) ;
 
 * capacity and investment variables
     CAP.fx(i,v,r,tfix)$[valcap(i,v,r,tfix)] = CAP.l(i,v,r,tfix) ;

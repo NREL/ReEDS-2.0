@@ -7,7 +7,28 @@ Most of these scripts have command-line interfaces, the details of which can be 
 
 ### Create a new cases_{}.csv file: `preprocessing/casemaker.py`
 
-This script does not have a command-line interface, but can be edited by the user and used to create a cases_{}.csv file with a matrix of switch settings.
+This script facilitates the creation of a multidimensional matrix of scenarios, with "dimensions" and "casegroups" (permutations of dimensions) provided via a .yaml file.
+
+An example .yaml file is provided in `preprocessing/casematrix_example.yaml`.
+In this example, three dimensions are explored: "policy", "demand", and "sensitivity".
+Each dimension specifies a dictionary of choices, and each choice specifies the switch values associated with that choice.
+Default switch values are taken from `cases.csv`; if a "shared" field is provided in the casematrix .yaml file, the switch/value pairs in the "shared" field overwrite the associated defaults from `cases.csv`.
+Cases in the resulting `cases_{batchname}.csv` file are labeled as `{policy choice}_{demand choice}_{sensitivity choice}`.
+For example, a case using the "IRA" policy setting, "DemMd" demand setting, and "core" sensitivity setting would be labeled as `IRA_DemMd_core`.
+
+The "casegroups" indicate which permutations of dimension values to include in the resulting `cases_{batchname}.csv` file.
+The provided example includes 3 policy scenarios, 7 demand scenarios, and 9 sensitivity cases, which would produce 3 × 7 × 9 = 189 cases if all permutations were included.
+`casegroups` is a list of *n*-element lists, where *n* is the number of dimensions specified above.
+If an element is an empty list, all options for that dimension are used;
+if an element specifies a single option or a list of options, only those options are used.
+The order of elements matches the order of dimensions.
+For example, since the dimensions are "policy", "demand", and "sensitivity":
+
+- `[[], [], core]` includes all policy scenarios, all demand scenarios, and the single "core" sensitivity, for 3 × 7 × 1 = 21 cases.
+- `[OBBBA, DemMd, []]` includes a single policy scenario, a single demand scenario, and all sensitivity cases, for 1 × 1 × 9 = 9 cases.
+- `[[OBBBA, OBBBAcon], DemMd, [GasPriceLo, GasPriceHi]]` includes two policy scenarios, a single demand scenario, and two sensitivity cases, for 2 × 1 × 2 = 4 cases.
+- `[[], [], []]` would include all 3 × 7 × 9 = 189 cases.
+
 
 ### Fix representative/stress periods: `preprocessing/get_case_periods.py`
 
@@ -76,9 +97,9 @@ Those tools provide more advanced and realistic features like unit commitment an
 by contrast, `run_pcm.py` simply reuses the existing ReEDS formulation at higher time resolution,
 and is subject to all the normal caveats and limitations of ReEDS (linear variables, pipe-and-bubble transmission flow, etc.).
 
-### Generate static plots: `postprocessing/transmission_maps.py`
+### Generate static plots: `postprocessing/single_case_plots.py`
 
-This script runs automatically at the end of a ReEDS case and writes static maps to the {case}/outputs/maps folder as .png files.
+This script runs automatically at the end of a ReEDS case and writes static figures to the `{case}/outputs/figures` folder as .png files.
 
 ### Generate interactive plots: `postprocessing/bokehpivot`
 

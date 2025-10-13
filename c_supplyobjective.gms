@@ -277,7 +277,7 @@ eq_Objfn_op(t)$tmodel(t)..
                    cost_hurdle(r,rr,t) * FLOW(r,rr,h,t,trtype) * hours(h) }
 
 * --- taxes on emissions---
-              + sum{(e,r), (EMIT("combustion",e,r,t) + EMIT("precombustion",e,r,t)$Sw_Precombustion) * emit_tax(e,r,t) }
+              + sum{(e,r), (EMIT("process",e,r,t) + EMIT("upstream",e,r,t)$Sw_Upstream) * emit_tax(e,r,t) }
 
 * --cost of CO2 transport and storage from CCS--
               + sum{(i,v,r,h)$[valgen(i,v,r,t)],
@@ -314,8 +314,8 @@ eq_Objfn_op(t)$tmodel(t)..
 
 * -- H2 intra-regional transport investment costs, levelized per kg of H2 produced --
 * Unit conversion: [hours] * [tonnes/hour] * [$/kg] * [kg/tonne] = [$]
-               + sum{(i,v,r,h)$[valcap(i,v,r,t)$newv(v)$i_p(i,"h2")$h_rep(h)], 
-                    hours(h) * PRODUCE("h2",i,v,r,h,t) * (Sw_H2_IntraReg_Transport * 1e3)}$[Sw_H2]
+               + sum{(i,v,r,h)$[valcap(i,v,r,t)$newv(v)$i_p(i,"H2")$h_rep(h)], 
+                    hours(h) * PRODUCE("H2",i,v,r,h,t) * (Sw_H2_IntraReg_Transport * 1e3)}$[Sw_H2]
 
 * --- H2 storage fixed OM costs (compute cumulative sum of investments to get total capacity)
                + sum{(h2_stor,r)$h2_stor_r(h2_stor,r),

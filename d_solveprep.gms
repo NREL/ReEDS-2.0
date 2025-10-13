@@ -111,14 +111,6 @@ winter_cap_frac_delta(i,v,r)$winter_cap_frac_delta(i,v,r) = round(winter_cap_fra
 *================================================
 $ifthen.seq %timetype%=="seq"
 
-* Parameter tracking
-parameter
-    m_capacity_exog0(i,v,r,t) "--MW-- original value of m_capacity_exog used in d_solveoneyear to make sure upgraded capacity isnt forced into retirement"
-    z_rep(t)      "--$-- objective function value by year"
-    z_rep_inv(t)  "--$-- investment component of objective function by year"
-    z_rep_op(t)   "--$-- operation component of objective function by year"
-;
-
 * -- upgrade capacity tracking --
 m_capacity_exog0(i,v,r,t) = m_capacity_exog(i,v,r,t) ;
 

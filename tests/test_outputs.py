@@ -20,8 +20,8 @@ def test_output_files(casepath):
 
     # Include additional files in outputs folder that should be generated for each run
     expected_plots = [
-        # Static plots (transmission_maps.py)
-        os.path.join('maps', i) + '.png' for i in [
+        # Static plots (single_case_plots.py)
+        os.path.join('figures', i) + '.png' for i in [
             'bars_retirements_additions',
             'inputs_repdays',
             f'plot_dispatch-weightwidth-{lastyear}',

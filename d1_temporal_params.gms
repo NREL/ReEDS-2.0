@@ -567,7 +567,7 @@ m_cf(i,v,r,allh,t) = 0 ;
 m_cf(i,v,r,h,t)$[cf_tech(i)$valcap(i,v,r,t)$cf_rsc(i,v,r,h,t)$cf_adj_t(i,v,t)] =
     cf_rsc(i,v,r,h,t)
     * cf_adj_t(i,v,t)
-    * (avail(i,r,h)$[not pvb(i)] + 1$pvb(i)) ;
+    * (avail(i,r,h)$[not pvb(i) and not hydro(i)] + 1$(pvb(i) or hydro(i)) );
 
 * can remove capacity factors for new vintages that have not been introduced yet
 m_cf(i,newv,r,h,t)$[not sum{tt$(yeart(tt) <= yeart(t)), ivt(i,newv,tt ) }$valcap(i,newv,r,t)$m_cf(i,newv,r,h,t)] = 0 ;

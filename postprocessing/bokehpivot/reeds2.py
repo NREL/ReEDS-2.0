@@ -906,7 +906,7 @@ def pre_cf(dfs, **kw):
 def pre_duration(dfs, **kw):
     index_cols = ['tech', 'vintage', 'rb', 'year']
     dfs['duration'] =  dfs['duration'].groupby(index_cols, sort=False, as_index=False).sum()
-    df = pd.merge(left=dfs['duration'], right=dfs['cap_energy'], how='left',on=index_cols, sort=False)
+    df = pd.merge(left=dfs['duration'], right=dfs['energy_capacity_MWh'], how='left',on=index_cols, sort=False)
     return df
 
 def pre_h2_cf(dfs, **kw):
@@ -1437,7 +1437,7 @@ results_meta = collections.OrderedDict((
     ('Battery Duration (h)',
         {'sources': [
             {'name': 'duration', 'file': 'storage_duration_out', 'columns': ['tech', 'vintage', 'rb', 'year','Storage Duration (h)']},
-            {'name': 'cap_energy', 'file': 'cap_energy_ivrt', 'columns': ['tech', 'vintage', 'rb', 'year','Energy Capacity (GWh)']},
+            {'name': 'energy_capacity_MWh', 'file': 'cap_energy_ivrt', 'columns': ['tech', 'vintage', 'rb', 'year','Energy Capacity (GWh)']},
         ],
         'preprocess': [
             {'func': pre_duration, 'args': {}},

@@ -659,86 +659,43 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [geohydro_allkm_exog_cap_reference.csv](/inputs/capacity_exogenous/geohydro_allkm_exog_cap_reference.csv)
+  - [exog_cap_geohydro_allkm_reference.csv](/inputs/capacity_exogenous/exog_cap_geohydro_allkm_reference.csv)
 ---
 
-  - [geohydro_allkm_prescribed_builds_reference.csv](/inputs/capacity_exogenous/geohydro_allkm_prescribed_builds_reference.csv)
+  - [exog_cap_geohydro_reference.csv](/inputs/capacity_exogenous/exog_cap_geohydro_reference.csv)
 ---
 
-  - [geohydro_exog_cap_reference_ba.csv](/inputs/capacity_exogenous/geohydro_exog_cap_reference_ba.csv)
+  - [exog_cap_upv_limited.csv](/inputs/capacity_exogenous/exog_cap_upv_limited.csv)
 ---
 
-  - [geohydro_exog_cap_reference_county.csv](/inputs/capacity_exogenous/geohydro_exog_cap_reference_county.csv)
+  - [exog_cap_upv_open.csv](/inputs/capacity_exogenous/exog_cap_upv_open.csv)
 ---
 
-  - [geohydro_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/geohydro_prescribed_builds_reference_ba.csv)
+  - [exog_cap_upv_reference.csv](/inputs/capacity_exogenous/exog_cap_upv_reference.csv)
 ---
 
-  - [geohydro_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/geohydro_prescribed_builds_reference_county.csv)
+  - [exog_cap_wind-ons_limited.csv](/inputs/capacity_exogenous/exog_cap_wind-ons_limited.csv)
+---
+
+  - [exog_cap_wind-ons_open.csv](/inputs/capacity_exogenous/exog_cap_wind-ons_open.csv)
+---
+
+  - [exog_cap_wind-ons_reference.csv](/inputs/capacity_exogenous/exog_cap_wind-ons_reference.csv)
 ---
 
   - [interconnection_queues.csv](/inputs/capacity_exogenous/interconnection_queues.csv)
 ---
 
-  - [ReEDS_generator_database_final_EIA-NEMS.csv](/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv)
-    - **File Type:** Input
-    - **Description:** EIA-NEMS database of existing generators
+  - [prescribed_builds_geohydro_allkm_reference.csv](/inputs/capacity_exogenous/prescribed_builds_geohydro_allkm_reference.csv)
 ---
 
-  - [rsmap.csv](/inputs/capacity_exogenous/rsmap.csv)
-    - **Description:** Mapping for BAs to resource regions
-    - **Indices:** r,rs
+  - [prescribed_builds_geohydro_reference_ba.csv](/inputs/capacity_exogenous/prescribed_builds_geohydro_reference_ba.csv)
 ---
 
-  - [upv_exog_cap_limited_ba.csv](/inputs/capacity_exogenous/upv_exog_cap_limited_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with limited siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
+  - [prescribed_builds_geohydro_reference_county.csv](/inputs/capacity_exogenous/prescribed_builds_geohydro_reference_county.csv)
 ---
 
-  - [upv_exog_cap_limited_county.csv](/inputs/capacity_exogenous/upv_exog_cap_limited_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with limited siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_exog_cap_open_ba.csv](/inputs/capacity_exogenous/upv_exog_cap_open_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with open siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_exog_cap_open_county.csv](/inputs/capacity_exogenous/upv_exog_cap_open_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with open siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_exog_cap_reference_ba.csv](/inputs/capacity_exogenous/upv_exog_cap_reference_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with reference siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_exog_cap_reference_county.csv](/inputs/capacity_exogenous/upv_exog_cap_reference_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with reference siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_prescribed_builds_limited_ba.csv](/inputs/capacity_exogenous/upv_prescribed_builds_limited_ba.csv)
+  - [prescribed_builds_upv_limited_ba.csv](/inputs/capacity_exogenous/prescribed_builds_upv_limited_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with limited siting assumptions at BA resolution
     - **Indices:** r,t
@@ -746,7 +703,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_limited_county.csv](/inputs/capacity_exogenous/upv_prescribed_builds_limited_county.csv)
+  - [prescribed_builds_upv_limited_county.csv](/inputs/capacity_exogenous/prescribed_builds_upv_limited_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with limited siting assumptions at county resolution
     - **Indices:** r,t
@@ -754,7 +711,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_open_ba.csv](/inputs/capacity_exogenous/upv_prescribed_builds_open_ba.csv)
+  - [prescribed_builds_upv_open_ba.csv](/inputs/capacity_exogenous/prescribed_builds_upv_open_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with open siting assumptions at BA resolution
     - **Indices:** r,t
@@ -762,7 +719,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_open_county.csv](/inputs/capacity_exogenous/upv_prescribed_builds_open_county.csv)
+  - [prescribed_builds_upv_open_county.csv](/inputs/capacity_exogenous/prescribed_builds_upv_open_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with open siting assumptions at county resolution
     - **Indices:** r,t
@@ -770,7 +727,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/upv_prescribed_builds_reference_ba.csv)
+  - [prescribed_builds_upv_reference_ba.csv](/inputs/capacity_exogenous/prescribed_builds_upv_reference_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with reference siting assumptions at BA resolution
     - **Indices:** r,t
@@ -778,7 +735,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/upv_prescribed_builds_reference_county.csv)
+  - [prescribed_builds_upv_reference_county.csv](/inputs/capacity_exogenous/prescribed_builds_upv_reference_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with reference siting assumptions at county resolution
     - **Indices:** r,t
@@ -786,7 +743,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_limited_ba.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_limited_ba.csv)
+  - [prescribed_builds_wind-ofs_limited_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_limited_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with limited siting assumptions at BA resolution
     - **Indices:** r,t
@@ -794,7 +751,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_limited_county.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_limited_county.csv)
+  - [prescribed_builds_wind-ofs_limited_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_limited_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with limited siting assumptions at county resolution
     - **Indices:** r,t
@@ -802,7 +759,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_open_ba.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_open_ba.csv)
+  - [prescribed_builds_wind-ofs_open_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_open_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with open siting assumptions at BA resolution
     - **Indices:** r,t
@@ -810,7 +767,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_open_county.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_open_county.csv)
+  - [prescribed_builds_wind-ofs_open_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_open_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with open siting assumptions at county resolution
     - **Indices:** r,t
@@ -818,61 +775,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_reference_ba.csv)
+  - [prescribed_builds_wind-ofs_reference_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_reference_ba.csv)
 ---
 
-  - [wind-ofs_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_reference_county.csv)
+  - [prescribed_builds_wind-ofs_reference_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_reference_county.csv)
 ---
 
-  - [wind-ons_exog_cap_limited_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_limited_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_limited_county.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_limited_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_open_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_open_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with open siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_open_county.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_open_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with open siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_reference_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_reference_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_reference_county.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_reference_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_prescribed_builds_limited_ba.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_limited_ba.csv)
+  - [prescribed_builds_wind-ons_limited_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_limited_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with limited siting assumptions at BA resolution
     - **Indices:** r,t
@@ -880,7 +789,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_limited_county.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_limited_county.csv)
+  - [prescribed_builds_wind-ons_limited_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_limited_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with limited siting assumptions at county resolution
     - **Indices:** r,t
@@ -888,7 +797,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_open_ba.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_open_ba.csv)
+  - [prescribed_builds_wind-ons_open_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_open_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with open siting assumptions at BA resolution
     - **Indices:** r,t
@@ -896,7 +805,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_open_county.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_open_county.csv)
+  - [prescribed_builds_wind-ons_open_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_open_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with open siting assumptions at county resolution
     - **Indices:** r,t
@@ -904,7 +813,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_ba.csv)
+  - [prescribed_builds_wind-ons_reference_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_reference_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with reference siting assumptions at BA resolution
     - **Indices:** r,t
@@ -912,12 +821,17 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_county.csv)
+  - [prescribed_builds_wind-ons_reference_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_reference_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with reference siting assumptions at county resolution
     - **Indices:** r,t
     - **Units:** MW
 
+---
+
+  - [ReEDS_generator_database_final_EIA-NEMS.csv](/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv)
+    - **File Type:** Input
+    - **Description:** EIA-NEMS database of existing generators
 ---
 
 
@@ -1427,18 +1341,25 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [incentives_ira_45q_45v_extension.csv](/inputs/financials/incentives_ira_45q_45v_extension.csv)
 ---
 
-  - [incentives_ira_hii.csv](/inputs/financials/incentives_ira_hii.csv)
----
-
-  - [incentives_ira_lii.csv](/inputs/financials/incentives_ira_lii.csv)
+  - [incentives_noira.csv](/inputs/financials/incentives_noira.csv)
 ---
 
   - [incentives_none.csv](/inputs/financials/incentives_none.csv)
 ---
 
+  - [incentives_obbba.csv](/inputs/financials/incentives_obbba.csv)
+---
+
+  - [incentives_obbba_conservative.csv](/inputs/financials/incentives_obbba_conservative.csv)
+---
+
   - [inflation_default.csv](/inputs/financials/inflation_default.csv)
     - **Description:** Annual inflation factors from 1914 through 2200; historical values use the avg-avg values from https://www.usinflationcalculator.com/inflation/consumer-price-index-and-annual-percent-changes-from-1913-to-2008/
     - **Indices:** t
+---
+
+  - [nuclear_energy_communities.csv](/inputs/financials/nuclear_energy_communities.csv)
+    - **Description:** Counties belonging to metropolitan statistical areas for which at least 0.17 percent of direct employment has been related to nuclear power at any point since 2010.  These are determined partly by following the process described in Section 2.6 of https://home.treasury.gov/system/files/8861/EnergyCommunities_Data_Documentation.pdf and substituing in the NAICS code for nuclear electric power generation (221113) and partly by determining counties that belong to MSAs where the number of people employed by national labs engaged in nuclear research and development (PNNL, INL, ORNL, SNL, LLNL, Argonne, and LANL) has been at least 0.17 percent of the MSA's total employment at any point since 2010.
 ---
 
   - [reg_cap_cost_diff_default.csv](/inputs/financials/reg_cap_cost_diff_default.csv)
@@ -2692,30 +2613,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Dollar year:** 2015
 ---
 
-  - [csp_supply_curve-reference_ba.csv](/inputs/supply_curve/csp_supply_curve-reference_ba.csv)
-    - **Description:** CSP supply curve using reference siting assumptions at the BA resolution
----
-
-  - [csp_supply_curve-reference_county.csv](/inputs/supply_curve/csp_supply_curve-reference_county.csv)
-    - **Description:** CSP supply curve using reference siting assumptions at the county resolution
----
-
   - [dollaryear.csv](/inputs/supply_curve/dollaryear.csv)
 ---
 
-  - [egs_supply_curve-reference_ba.csv](/inputs/supply_curve/egs_supply_curve-reference_ba.csv)
+  - [dr_shed_cap.csv](/inputs/supply_curve/dr_shed_cap.csv)
 ---
 
-  - [egs_supply_curve-reference_county.csv](/inputs/supply_curve/egs_supply_curve-reference_county.csv)
----
-
-  - [geo_supply_curve_site-reference.csv](/inputs/supply_curve/geo_supply_curve_site-reference.csv)
----
-
-  - [geohydro_supply_curve-reference_ba.csv](/inputs/supply_curve/geohydro_supply_curve-reference_ba.csv)
----
-
-  - [geohydro_supply_curve-reference_county.csv](/inputs/supply_curve/geohydro_supply_curve-reference_county.csv)
+  - [dr_shed_cost.csv](/inputs/supply_curve/dr_shed_cost.csv)
 ---
 
   - [hyd_add_upg_cap.csv](/inputs/supply_curve/hyd_add_upg_cap.csv)
@@ -2725,6 +2629,12 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [hydcost.csv](/inputs/supply_curve/hydcost.csv)
+---
+
+  - [interconnection_land.h5](/inputs/supply_curve/interconnection_land.h5)
+---
+
+  - [interconnection_offshore.h5](/inputs/supply_curve/interconnection_offshore.h5)
 ---
 
   - [PSH_supply_curves_capacity_10hr_ref_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_ref_dec2022.csv)
@@ -2964,86 +2874,52 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [rev_paths.csv](/inputs/supply_curve/rev_paths.csv)
 ---
 
-  - [sitemap.csv](/inputs/supply_curve/sitemap.csv)
+  - [sc_point_gid_old2new.csv](/inputs/supply_curve/sc_point_gid_old2new.csv)
 ---
 
-  - [sitemap_offshore.csv](/inputs/supply_curve/sitemap_offshore.csv)
+  - [sitemap.h5](/inputs/supply_curve/sitemap.h5)
 ---
 
   - [spurline_cost.csv](/inputs/supply_curve/spurline_cost.csv)
 ---
 
+  - [supplycurve_csp-reference.csv](/inputs/supply_curve/supplycurve_csp-reference.csv)
+---
+
+  - [supplycurve_egs-reference.csv](/inputs/supply_curve/supplycurve_egs-reference.csv)
+---
+
+  - [supplycurve_geohydro-reference.csv](/inputs/supply_curve/supplycurve_geohydro-reference.csv)
+---
+
+  - [supplycurve_upv-limited.csv](/inputs/supply_curve/supplycurve_upv-limited.csv)
+---
+
+  - [supplycurve_upv-open.csv](/inputs/supply_curve/supplycurve_upv-open.csv)
+---
+
+  - [supplycurve_upv-reference.csv](/inputs/supply_curve/supplycurve_upv-reference.csv)
+---
+
+  - [supplycurve_wind-ofs-limited.csv](/inputs/supply_curve/supplycurve_wind-ofs-limited.csv)
+---
+
+  - [supplycurve_wind-ofs-open.csv](/inputs/supply_curve/supplycurve_wind-ofs-open.csv)
+---
+
+  - [supplycurve_wind-ofs-reference.csv](/inputs/supply_curve/supplycurve_wind-ofs-reference.csv)
+---
+
+  - [supplycurve_wind-ons-limited.csv](/inputs/supply_curve/supplycurve_wind-ons-limited.csv)
+---
+
+  - [supplycurve_wind-ons-open.csv](/inputs/supply_curve/supplycurve_wind-ons-open.csv)
+---
+
+  - [supplycurve_wind-ons-reference.csv](/inputs/supply_curve/supplycurve_wind-ons-reference.csv)
+---
+
   - [trans_intra_cost_adder.csv](/inputs/supply_curve/trans_intra_cost_adder.csv)
----
-
-  - [upv_supply_curve-limited_ba.csv](/inputs/supply_curve/upv_supply_curve-limited_ba.csv)
-    - **Description:** UPV supply curve using limited siting assumptions at the BA resolution
----
-
-  - [upv_supply_curve-limited_county.csv](/inputs/supply_curve/upv_supply_curve-limited_county.csv)
-    - **Description:** UPV supply curve using limited siting assumptions at the county resolution
----
-
-  - [upv_supply_curve-open_ba.csv](/inputs/supply_curve/upv_supply_curve-open_ba.csv)
-    - **Description:** UPV supply curve using open siting assumptions at the BA resolution
----
-
-  - [upv_supply_curve-open_county.csv](/inputs/supply_curve/upv_supply_curve-open_county.csv)
-    - **Description:** UPV supply curve using open siting assumptions at the county resolution
----
-
-  - [upv_supply_curve-reference_ba.csv](/inputs/supply_curve/upv_supply_curve-reference_ba.csv)
-    - **Description:** UPV supply curve using reference siting assumptions at the BA resolution
----
-
-  - [upv_supply_curve-reference_county.csv](/inputs/supply_curve/upv_supply_curve-reference_county.csv)
-    - **Description:** UPV supply curve using reference siting assumptions at the county resolution
----
-
-  - [wind-ofs_supply_curve-limited_ba.csv](/inputs/supply_curve/wind-ofs_supply_curve-limited_ba.csv)
-    - **Description:** wind-ofs supply curve using limited siting assumptions at the BA resolution
----
-
-  - [wind-ofs_supply_curve-limited_county.csv](/inputs/supply_curve/wind-ofs_supply_curve-limited_county.csv)
-    - **Description:** wind-ofs supply curve using limited siting assumptions at the county resolution
----
-
-  - [wind-ofs_supply_curve-open_ba.csv](/inputs/supply_curve/wind-ofs_supply_curve-open_ba.csv)
-    - **Description:** wind-ofs supply curve using open siting assumptions at the BA resolution
----
-
-  - [wind-ofs_supply_curve-open_county.csv](/inputs/supply_curve/wind-ofs_supply_curve-open_county.csv)
-    - **Description:** wind-ofs supply curve using open siting assumptions at the county resolution
----
-
-  - [wind-ofs_supply_curve-reference_ba.csv](/inputs/supply_curve/wind-ofs_supply_curve-reference_ba.csv)
----
-
-  - [wind-ofs_supply_curve-reference_county.csv](/inputs/supply_curve/wind-ofs_supply_curve-reference_county.csv)
----
-
-  - [wind-ons_supply_curve-limited_ba.csv](/inputs/supply_curve/wind-ons_supply_curve-limited_ba.csv)
-    - **Description:** wind-ons supply curve using limited siting assumptions at the BA resolution
----
-
-  - [wind-ons_supply_curve-limited_county.csv](/inputs/supply_curve/wind-ons_supply_curve-limited_county.csv)
-    - **Description:** wind-ons supply curve using limited siting assumptions at the county resolution
----
-
-  - [wind-ons_supply_curve-open_ba.csv](/inputs/supply_curve/wind-ons_supply_curve-open_ba.csv)
-    - **Description:** wind-ons supply curve using open siting assumptions at the BA resolution
----
-
-  - [wind-ons_supply_curve-open_county.csv](/inputs/supply_curve/wind-ons_supply_curve-open_county.csv)
-    - **Description:** wind-ons supply curve using open siting assumptions at the county resolution
----
-
-  - [wind-ons_supply_curve-reference_ba.csv](/inputs/supply_curve/wind-ons_supply_curve-reference_ba.csv)
-    - **Description:** wind-ons supply curve using reference siting assumptions at the BA resolution
----
-
-  - [wind-ons_supply_curve-reference_county.csv](/inputs/supply_curve/wind-ons_supply_curve-reference_county.csv)
-    - **Description:** wind-ons supply curve using reference siting assumptions at the county resolution
 ---
 
 
@@ -3304,9 +3180,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [period_szn_user.csv](/inputs/variability/period_szn_user.csv)
----
-
-  - [reeds_region_tz_map.csv](/inputs/variability/reeds_region_tz_map.csv)
 ---
 
   - [stressperiods_user.csv](/inputs/variability/stressperiods_user.csv)

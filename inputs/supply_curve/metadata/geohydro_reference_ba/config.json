@@ -1,37 +1,33 @@
 {
     "access_case": "reference",
-    "geo_aggregation_method": "lowest_lcoe",
     "bin_group_cols": [
         "region",
         "class"
     ],
     "bin_method": "equal_cap_cut",
-    "capacity_col": "capacity",
+    "capacity_col": "capacity_ac_mw",
     "casename": "geohydro_reference_ba",
     "class_bin": false,
-    "class_bin_col": "mean_cf",
+    "class_bin_col": "capacity_factor_ac",
     "class_bin_method": "kmeans",
     "class_bin_num": 10,
-    "class_path": "/Users/ssharma2/Documents/GitHub/ReEDS-2.0_A/hourlize/inputs/resource/geohydro_resource_classes.csv",
+    "class_path": "/Users/pbrown/github3/ReEDS-2.0/hourlize/inputs/resource/geohydro_resource_classes.csv",
     "compression_opts": 4,
     "copy_to_reeds": true,
     "copy_to_shared": false,
-    "cost_adder_components": [
-        "trans_cap_cost_per_mw",
-        "reinforcement_cost_per_mw"
-    ],
     "cost_out": "combined_trans",
-    "distance_cols": [
-        "dist_km",
-        "reinforcement_dist_km"
-    ],
+    "crs": "EPSG:5070",
+    "decimals": 4,
     "driver": "H5FD_CORE",
     "dtype": "np.float16",
-    "existing_sites": "{reedspath}/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv",
+    "existing_sites": "/Users/pbrown/github3/ReEDS-2.0/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv",
     "filetype": "h5",
     "filter_cols": {},
     "gather_method": "smart",
-    "hourlizepath": "/Users/ssharma2/Documents/GitHub/ReEDS-2.0_A/hourlize",
+    "geo_aggregation_method": "lowest_lcoe",
+    "geo_run_supply_curve_aggregation": true,
+    "hierarchy_path": "/Users/pbrown/github3/ReEDS-2.0/inputs/hierarchy.csv",
+    "hourlize_path": "/Users/pbrown/github3/ReEDS-2.0/hourlize",
     "hourly_out_years": [
         2007,
         2008,
@@ -39,28 +35,35 @@
         2010,
         2011,
         2012,
-        2013
+        2013,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023
     ],
     "inputfiles": [
         "reg_map_file",
         "class_path"
     ],
+    "map_supply_curve": false,
     "min_cap": 0,
-    "outpath": "/Users/ssharma2/Documents/GitHub/ReEDS-2.0_A/hourlize/out/geohydro_reference_ba",
-    "output_timezone": "local",
+    "original_sc_file": "/Volumes/ReEDS/Supply_Curve_Data/GeoHydro/2024_Update/reV/results/combined_supply-curve.csv",
+    "outpath": "/Users/pbrown/github3/ReEDS-2.0/hourlize/out/geohydro_reference_ba",
+    "output_timezone": "Etc/GMT+6",
+    "process_profiles": false,
     "profile_dir": "",
     "profile_dset": "",
     "profile_file_format": "",
     "profile_id_col": "sc_point_gid",
     "profile_weight_col": "capacity",
-    "reedspath": "/Users/ssharma2/Documents/GitHub/ReEDS-2.0_A",
-    "reg_col": "cnty_fips",
-    "reg_map_file": "/Users/ssharma2/Documents/GitHub/ReEDS-2.0_A/hourlize/inputs/resource/county_map.csv",
-    "reg_out_col": "reeds_ba",
-    "resource_source_timezone": 0,
-    "rev_id_cols": [
-        "sc_point_gid"
-    ],
+    "reeds_path": "/Users/pbrown/github3/ReEDS-2.0",
+    "reg_map_file": "/Users/pbrown/github3/ReEDS-2.0/inputs/county2zone.csv",
+    "reg_out_col": "ba",
+    "rev_case": "results",
     "rev_jsons": [
         "config_aggregation.json",
         "config_batch.json",
@@ -69,29 +72,19 @@
         "config_pipeline.json",
         "config_supply-curve.json"
     ],
-    "rev_path": "/Volumes/ReEDS/Supply_Curve_Data/GeoHydro/2024_Update/reV",
-    "rev_paths_file": "/Users/ssharma2/Documents/GitHub/ReEDS-2.0_A/inputs/supply_curve/rev_paths.csv",
-    "rev_prefix": "reV",
-    "geo_run_supply_curve_aggregation": true,
-    "sc_file": "/Volumes/ReEDS/Supply_Curve_Data/GeoHydro/2024_Update/reV/results/combined_supply-curve.csv",
+    "rev_path": "/Volumes/ReEDS/Supply_Curve_Data/GeoHydro/2024_Update/reV/results",
+    "rev_paths_file": "/Users/pbrown/github3/ReEDS-2.0/inputs/supply_curve/rev_paths.csv",
+    "sc_file": "/Users/pbrown/github3/ReEDS-2.0/hourlize/out/geohydro_reference_ba/results/geohydro_supply_curve_raw.csv",
     "sc_path": "/Volumes/ReEDS/Supply_Curve_Data/GeoHydro/2024_Update",
     "select_year": 2012,
     "single_profile": null,
-    "start_1am": true,
     "start_year": 2010,
-    "state_abbrev": "/Users/ssharma2/Documents/GitHub/ReEDS-2.0_A/hourlize/inputs/resource/state_abbrev.csv",
+    "state_abbrev": "/Users/pbrown/github3/ReEDS-2.0/hourlize/inputs/resource/state_abbrev.csv",
     "subsetvars": [
         "tech",
         "access_case"
     ],
-    "subtract_exog": true,
+    "subtract_exog": false,
     "tech": "geohydro",
-    "test_filters": {
-        "region": [
-            "p97",
-            "p98"
-        ]
-    },
-    "test_mode": false,
     "upv_type": null
 }

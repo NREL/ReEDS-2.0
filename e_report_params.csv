@@ -106,6 +106,8 @@ planned_outage(i),fraction,average scheduled outage rate (h-weighted) by technol
 "load_rt(r,t)",MWh,Annual exogenous load,,,
 "load_stress(r,allh,t)",MW,Timeslice load during stress periods,,,
 "load_frac_rt(r,t)",fraction,Fraction of LOAD in each region,,,
+"loadsite_cap(r,t)",MW,Capacity of flexibly sited load,,,
+"loadsite_op(r,allh,t)",MW,Operations of flexibly sited load,,,
 "invtran_out(r,rr,trtype,t)",MW,new transmission capacity,1,,
 "lcoe(i,v,r,t,rscbin)",$/MWh,levelized cost of electricity for all tech options,,,
 "lcoe_built(i,r,t)",$/MWh,levelized cost of electricity for technologies that were built,,,

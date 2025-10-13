@@ -38,7 +38,7 @@ def calc_financial_inputs(inputs_case):
     - retail_eval_period.h5
     - retail_depreciation_sch.h5
     """
-    print('Starting calculation of financial parameters for', inputs_case)
+    print('Starting calculation of financial parameters')
 
     # #%% Settings for testing
     # reeds_path = '/Users/pbrown/github/ReEDS-2.0/'
@@ -86,7 +86,7 @@ def calc_financial_inputs(inputs_case):
         inputs_case, sw['sys_eval_years'], sw['endyear'])
 
     df_ivt = reeds.financials.build_dfs(years, techs, vintage_definition, year_map)
-    print('df_ivt created for', inputs_case)
+    print('df_ivt created')
 
     #%% Import and merge data onto df_ivt
 
@@ -230,7 +230,7 @@ def calc_financial_inputs(inputs_case):
     depreciation_schedules = pd.read_csv(os.path.join(inputs_case,'depreciation_schedules.csv'))
 
     ### Calculate financial multipliers
-    print('Calculating financial multipliers for', inputs_case, '...')
+    print('Calculating financial multipliers...')
     df_ivt = reeds.financials.calc_financial_multipliers(
         df_ivt, construction_schedules, depreciation_schedules, sw['timetype'])
     
@@ -350,12 +350,42 @@ def calc_financial_inputs(inputs_case):
     temp_incentives['key'] = 1
     e_df = pd.merge(energy_communities, temp_incentives, on='key').drop('key', axis=1)
 
+    ## get nuclear energy communities and itc bonus 
+    nuclear_energy_communities = pd.read_csv(
+        os.path.join(inputs_case, 'nuclear_energy_communities.csv')
+    )
+    nuclear_temp_incentives = (
+        incentive_df[
+            (incentive_df['itc_energy_comm_bonus'] != 0)
+            & (incentive_df['i'].isin(scen_settings.tech_groups['NUCLEAR']))
+        ]
+        [['i','itc_energy_comm_bonus']]
+        .drop_duplicates()
+    )
+
+    nuclear_energy_communities['key'] = 1
+    nuclear_temp_incentives['key'] = 1
+    nuclear_e_df = (
+        pd.merge(nuclear_energy_communities, nuclear_temp_incentives, on='key')
+        .drop('key', axis=1)
+    )
+    e_df = pd.concat([e_df, nuclear_e_df], ignore_index=True)
+
     # Calculate the weighted energy community bonus: the 'itc_energy_comm_bonus' is initially set to 1 - the value from the incentives file.
     # To apply the bonus correctly, we reverse the adjustment, multiply it by the 'percentage_energy_communities',
     # and then adjust it back to the 1 - 'itc_energy_comm_bonus' format.
     e_df['itc_energy_comm_bonus'] = (
         1 - ((1 - e_df['itc_energy_comm_bonus']) * e_df['percentage_energy_communities'])
     ).round(4).drop(columns='percentage_energy_communities')
+
+    # There are some regions that are eligible for both the energy communities and nuclear energy communities bonus
+    # so choose the highest bonus for each region and tech (note that the bonus is formatted as 1 - 'itc_energy_comm_bonus',
+    # meaning the lowest 'itc_energy_comm_bonus' value represents the highest bonus)
+    e_df = (
+        e_df.sort_values(by='itc_energy_comm_bonus', ascending=True)
+        .drop_duplicates(subset=['r', 'i'], keep='first')
+        .reset_index(drop=True)
+    )
 
     #%% Write the scenario-specific output files
     

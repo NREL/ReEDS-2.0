@@ -482,7 +482,7 @@ def plotdiff(
 
     ## axes 0 and 1 use the same y limits
     ymax = max(ax[0].get_ylim()[1], ax[1].get_ylim()[1])
-    ymin = max(ax[0].get_ylim()[0], ax[1].get_ylim()[0])
+    ymin = min(ax[0].get_ylim()[0], ax[1].get_ylim()[0])
     for col in range(2):
         ax[col].set_ylim(ymin,ymax)
     ## axis 2 uses the same y limits as 0 and 1; axis 3 uses its own limits
@@ -703,7 +703,7 @@ def plot_trans_diff(
     return f, ax
 
 
-def _label_line(row, ax, wscale, label_line_color='k', cap='MW', sign=False):
+def _label_line(row, ax, wscale, label_line_color='k', cap='MW', sign=False, minsize=1):
     """
     * only works when line thicknesses are in points (not data units)
     """
@@ -713,7 +713,7 @@ def _label_line(row, ax, wscale, label_line_color='k', cap='MW', sign=False):
     if (90 < angle < 270) or (-90 > angle > -270):
         angle *= -1
     ### Get the font size in points
-    size = abs(row[cap]) * wscale
+    size = max(abs(row[cap]) * wscale, minsize)
     ### Get the middle of the line
     xtext = (row.r_x + row.rr_x) / 2
     ytext = (row.r_y + row.rr_y) / 2
@@ -1604,7 +1604,7 @@ def plot_max_imports(
         ax[0,col].patch.set_facecolor('none')
 
         ## Limit if required
-        if _draw_limit:
+        if _draw_limit and (region in firm_import_limit):
             ax[1,col].plot(
                 firm_import_limit.loc[region].index, firm_import_limit.loc[region].values,
                 color='k', ls='--', lw=0.75, label='_nolabel',
@@ -1617,13 +1617,14 @@ def plot_max_imports(
         for c in cases[::-1]
     ])
 
-    _leg = ax[1,-1].legend(
-        handles=handles,
-        loc='upper left', bbox_to_anchor=(-0.05,1.02),
-        fontsize='large', frameon=True, edgecolor='none', framealpha=1,
-        handletextpad=0.3, handlelength=0.7,
-        ncol=1, labelspacing=0.5,
-    )
+    if len(handles) > 1:
+        _leg = ax[1,-1].legend(
+            handles=handles,
+            loc='upper left', bbox_to_anchor=(-0.05,1.02),
+            fontsize='large', frameon=True, edgecolor='none', framealpha=1,
+            handletextpad=0.3, handlelength=0.7,
+            ncol=1, labelspacing=0.5,
+        )
 
     ## Formatting
     ax[1,0].set_ylabel(f'Max net imports during stress periods [{units}]')
@@ -3361,13 +3362,13 @@ def map_zone_capacity(
             dfcap_nat.groupby(['tech','year'], as_index=False)['Capacity (GW)'].sum())
 
         emit_nat_tech = reeds.io.read_output(case, 'emit_nat_tech', valname='ton')
-        if int(sw.get('GSw_Precombustion', 1)):
+        if int(sw.get('GSw_Upstream', 0)):
             emit_nat_tech = emit_nat_tech.groupby(['e','i','t']).ton.sum()
         else:
             emit_nat_tech = (
                 emit_nat_tech
                 .set_index(['etype','e','i','t'])
-                .loc['combustion']
+                .drop(['precombustion', 'upstream'], level='etype', errors='ignore')
                 .groupby(['e','i','t']).ton.sum()
             )
 
@@ -3675,10 +3676,7 @@ def map_hybrid_pv_wind(
     )
 
     ### Other shared inputs
-    sitemap = pd.read_csv(
-        os.path.join(reeds_path,'inputs','supply_curve','sitemap.csv'),
-        index_col='sc_point_gid'
-    )
+    sitemap = reeds.io.get_sitemap()
     sitemap.index = 'i' + sitemap.index.astype(str)
 
     dfmap = reeds.io.get_dfmap(case)
@@ -4464,15 +4462,18 @@ def plot_neue_bylevel(
 
 def map_neue(
         case, year=2050, iteration='last', samples=None, metric='sum',
-        vmax=10., cmap=cmocean.cm.rain, label=True, over_color=None,
+        vmax=10., cmap=cmocean.cm.rain, label=True,
+        over_vmax_mapcolor=None,
+        over_threshold_textcolor='C3',
+        highlight_over_threshold=True,
     ):
     """
     """
     ### Parse inputs
     assert metric in ['sum','max']
     cm = cmap.copy()
-    if over_color:
-        cm.set_over(over_color)
+    if over_vmax_mapcolor:
+        cm.set_over(over_vmax_mapcolor)
 
     ### Get data
     if iteration == 'last':
@@ -4482,6 +4483,9 @@ def map_neue(
         _iteration = iteration
     neue = reeds.io.read_output(case, f'neue_{year}i{_iteration}.csv')
     neue = neue.loc[neue.metric==metric].set_index(['level','region']).NEUE_ppm
+    sw = reeds.io.get_switches(case)
+    neue_threshold = float(sw.GSw_PRM_StressThreshold.split('_')[1])
+    neue_threshold_level = sw.GSw_PRM_StressThreshold.split('_')[0]
 
     ### Set up plot
     levels = ['interconnect','nercr','transreg','transgrp','st','r']
@@ -4497,7 +4501,7 @@ def map_neue(
     for level in levels:
         ## Background
         dfmap['country'].plot(
-            ax=ax[coords[level]], facecolor='none', edgecolor='k', lw=1.0, zorder=1e7)
+            ax=ax[coords[level]], facecolor='none', edgecolor='k', lw=0.5, zorder=1e7)
         dfmap[level].plot(
             ax=ax[coords[level]], facecolor='none', edgecolor='k', lw=0.1, zorder=1e6)
         ax[coords[level]].set_title(level, y=0.9, weight='bold')
@@ -4509,13 +4513,24 @@ def map_neue(
         # decimals = (0 if df.NEUE_ppm.max() >= 10 else 1)
         decimals = (0 if level in ['st','r'] else 1)
         for r, row in df.sort_values('NEUE_ppm').iterrows():
+            if highlight_over_threshold:
+                over_threshold = row.NEUE_ppm > neue_threshold
+            else:
+                over_threshold = False
             ax[coords[level]].annotate(
                 f"{row.NEUE_ppm:.{decimals}f}",
                 [row.centroid_x, row.centroid_y],
-                ha='center', va='center', c='k',
+                ha='center', va='center',
+                c=(over_threshold_textcolor if over_threshold else 'k'),
+                weight=('bold' if over_threshold else 'normal'),
                 fontsize={'r':5}.get(level,7),
+                zorder=1e9,
                 path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.7)],
             )
+            if over_threshold and (level == neue_threshold_level):
+                ax[coords[level]].set_title(
+                    level, y=0.9, weight='bold', color=over_threshold_textcolor,
+                )
     ### Formatting
     plots.addcolorbarhist(
         f=f, ax0=ax[coords[level]], data=df.NEUE_ppm,
@@ -5359,7 +5374,7 @@ def plot_repdays(case, cmap=cmocean.cm.phase, alpha=0.7, startfrom=200):
         ax[row].axvspan(xstart, xend, color=cmap(monthday2val[monthday]), alpha=alpha, lw=0)
         ## Date
         ax[row].annotate(
-            repday.strftime('%-m/%-d'),
+            repday.strftime('%-m/%-d' if os.name == 'posix' else '%#m/%#d'),
             (xstart+0.5, 0.5), ha='center', va='center', fontsize=8,
             path_effects=[pe.withStroke(linewidth=2.1, foreground='w', alpha=1)],
         )
@@ -5451,6 +5466,7 @@ def get_cap_rep_stress_mix(
         'stress_max_load',
         'stress_max_price',
     ],
+    order='fuel_storage_vre',
 ):
     ### Check inputs
     allowed = (
@@ -5463,7 +5479,7 @@ def get_cap_rep_stress_mix(
     ### Parse inputs
     allyears = pd.read_csv(
         os.path.join(case,'inputs_case','modeledyears.csv')).columns.astype(int).tolist()
-    if isinstance(years, int):
+    if isinstance(years, (int, np.int64)):
         years = [years]
     elif years is None:
         years = allyears
@@ -5476,7 +5492,7 @@ def get_cap_rep_stress_mix(
     keys = [key.replace('max','top1').replace('min','bottom1') for key in metrics]
 
     ### Standard inputs
-    bokehcolors, plotorder = get_tech_colors_order('fuel_storage_vre')
+    bokehcolors, plotorder = get_tech_colors_order(order)
     numhours = pd.read_csv(
         os.path.join(case,'inputs_case', 'rep', 'numhours.csv'),
     ).rename(columns={'*h':'h'}).set_index('h').squeeze(1)
@@ -5617,7 +5633,8 @@ def get_cap_rep_stress_mix(
                         dfload
                         .stack('r')
                         .reorder_levels(['t','r','h'])
-                        .loc[idhours.explode().reset_index().set_index(['t','r','h']).index]
+                        .reindex(idhours.explode().reset_index().set_index(['t','r','h']).index)
+                        .fillna(0)
                         .groupby(['t','r']).mean()
                         .unstack('r')
                     )
@@ -5825,6 +5842,10 @@ def plot_stress_mix(
     metric='stress_max_price',
     drawload=False,
     startyear=2022,
+    figwidth=1.5,
+    figheight=6,
+    order='fuel_storage_vre',
+    moreticks=False,
 ):
     ### Parse inputs
     allowed = (
@@ -5850,6 +5871,7 @@ def plot_stress_mix(
         level=level,
         units=units,
         metrics=[metric],
+        order=order,
     )
     dfout = dictout[metric].copy()
 
@@ -5876,7 +5898,7 @@ def plot_stress_mix(
     #%% Plot it
     plt.close()
     f,ax = plt.subplots(
-        2, ncols, sharex='row', sharey='row', figsize=(ncols*1.5, 6),
+        2, ncols, sharex='row', sharey='row', figsize=(ncols*figwidth, figheight),
         gridspec_kw={'hspace':0.1, 'height_ratios':[0.2,1]},
     )
     for col, r in enumerate(regions):
@@ -5902,6 +5924,11 @@ def plot_stress_mix(
         _ax.set_title(r, weight='bold')
         if col == 0:
             _ax.set_ylabel(ylabel)
+        if moreticks:
+            _ax.set_xlim(2020)
+            _ax.set_xticks(years)
+            _ax.set_xticklabels(years, rotation=45, rotation_mode='anchor', ha='right')
+            _ax.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(5))
         ### Maps at top
         _max = ax[0,col] if ncols > 1 else ax[0]
         dfmap[level].plot(ax=_max, facecolor='0.99', edgecolor='0.75', lw=0.2)
@@ -6184,3 +6211,128 @@ def map_outage_days(
             )
 
     return f, ax, outage_dates
+
+
+def layout_case_year_plots(
+    cases,
+    years,
+    oneaxis='columns',
+    yearaxis='rows',
+):
+    """
+    Lay out series of cases and years into 
+    Returns:
+    tuple: (nrows, ncols, coords) [int, int, dict]
+    - coords: {(case, year): (row, col)}
+      or {(case, year): row} or {(case, year): col} if one axis
+    """
+    numcases = len(cases)
+    numyears = len(years)
+    if (len(years) == 1) or (numcases == 1):
+        if oneaxis in ['column', 'columns', 1, 'wide']:
+            nrows, ncols = 1, max(numyears, numcases)
+        else:
+            nrows, ncols = max(numyears, numcases), 1
+        plotindex = 't' if numyears > 1 else 'case'
+        nrows, ncols, coords = reeds.plots.get_coordinates(
+            [(c, years[0]) for c in cases] if plotindex == 'case'
+            else [(y, cases[0]) for y in years],
+            nrows=nrows, ncols=ncols,
+        )
+    else:
+        if yearaxis in ['row', 'rows', 0, 'long', 'tall']:
+            nrows, ncols = numyears, numcases
+            coords = {
+                (case, t): (row, col)
+                for (row, t) in enumerate(years)
+                for (col, case) in enumerate(cases)
+            }
+        else:
+            nrows, ncols = numcases, numyears
+            coords = {
+                (case, t): (row, col)
+                for (row, case) in enumerate(cases)
+                for (col, t) in enumerate(years)
+            }
+
+    return nrows, ncols, coords
+
+
+def map_output_byyear(
+    case,
+    param,
+    years=[2050],
+    oneaxis='columns',
+    yearaxis='rows',
+    mapscale=4,
+    cmap=cmocean.cm.rain,
+    vscale=1,
+    vmin=None,
+    vmax=None,
+    **kwargs,
+):
+    ### Parse inputs
+    if isinstance(case, dict):
+        plotcases = list(case.values())
+        titles = list(case.keys())
+    else:
+        if isinstance(case, str):
+            plotcases = [case]
+        elif isinstance(case, list):
+            plotcases = case
+        titles = [os.path.basename(c) for c in plotcases]
+
+    ### Get results
+    dfmap = reeds.io.get_dfmap(plotcases[0])
+    dictin = {
+        title: reeds.io.read_output(case, param).astype({'t':int})
+        for title, case in zip(titles, plotcases)
+    }
+    ## Filter to plot years and reshape to [r × t]
+    dictplot = {
+        k: v.loc[v.t.isin(years)].pivot(index='r', columns='t', values='Value') * vscale
+        for k,v in dictin.items()
+    }
+    ## Get limits
+    dfall = pd.concat(dictplot)
+    _vmin = float(dfall.min().min() if vmin is None else vmin)
+    _vmax = float(dfall.max().max() if vmax is None else vmax)
+    ## Arrange subplots
+    nrows, ncols, coords = layout_case_year_plots(
+        cases=plotcases,
+        years=years,
+        oneaxis=oneaxis,
+        yearaxis=yearaxis,
+    )
+    ## Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(ncols*mapscale, nrows*mapscale*0.8), sharex=True, sharey=True,
+        gridspec_kw={'hspace':0, 'wspace':0},
+    )
+    for title, case in zip(titles, plotcases):
+        for year in years:
+            _ax = (ax if len(coords) == 1 else ax[coords[case, year]])
+            ## Background
+            dfmap['country'].plot(ax=_ax, facecolor='none', edgecolor='k', lw=0.5, zorder=1e9)
+            dfmap['r'].plot(ax=_ax, facecolor='none', edgecolor='C7', lw=0.2, zorder=1e8)
+            ## Data
+            dfplot = dfmap['r'].copy()
+            dfplot['value'] = dictplot[title][year]
+            # dfplot['value'] = dfplot['value'].fillna(0)
+            dfplot.plot(
+                ax=_ax, column='value', cmap=cmap,
+                vmin=_vmin, vmax=_vmax,
+            )
+            _ax.axis('off')
+            ## Formatting
+            _ax.set_title(f'{title} {year}', y=0.95)
+            ## Colorbar
+            plots.addcolorbarhist(
+                f=f, ax0=_ax, data=dictplot[title][year].values,
+                vmin=_vmin, vmax=_vmax, cmap=cmap, nbins=21,
+                orientation='horizontal',
+                cbarheight=0.35, cbarhoffset=-0.8, cbarbottom=0.07, labelpad=3.5,
+                **kwargs,
+            )
+    return f, ax, dictplot
