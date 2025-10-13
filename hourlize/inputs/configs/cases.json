@@ -2,22 +2,22 @@
     "egs_reference_ba": {
         "tech": "egs", 
         "access_case": "reference",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "egs_reference_county": {
         "tech": "egs", 
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "geohydro_reference_ba": {
         "tech": "geohydro", 
         "access_case": "reference",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "geohydro_reference_county": {
         "tech": "geohydro", 
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "upv_limited_ba": {
         "tech": "upv",
@@ -37,17 +37,17 @@
     "upv_limited_county": {
         "tech": "upv",
         "access_case": "limited",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "upv_open_county": {
         "tech": "upv",
         "access_case": "open",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "upv_reference_county": {
         "tech": "upv", 
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "wind-ofs_limited_ba": {
         "tech" : "wind-ofs",
@@ -67,17 +67,17 @@
     "wind-ofs_open_county": {
         "tech": "wind-ofs",
         "access_case": "open",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "wind-ofs_limited_county": {
         "tech" : "wind-ofs",
         "access_case": "limited",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "wind-ofs_reference_county": {
         "tech": "wind-ofs",
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "wind-ons_limited_ba": {
         "tech": "wind-ons", 
@@ -97,16 +97,16 @@
     "wind-ons_limited_county": {
         "tech": "wind-ons", 
         "access_case": "limited",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "wind-ons_open_county": {
         "tech": "wind-ons",
         "access_case": "open",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "wind-ons_reference_county": {
         "tech": "wind-ons", 
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     }    
 }

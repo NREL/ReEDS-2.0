@@ -167,8 +167,7 @@ def get_rev_paths(revswitches, caseSwitches):
 def check_compatibility(sw):
     ### Hourly resolution
     if (
-        (int(sw['endyear']) > 2050)
-        or (int(sw['startyear']) < 2010)
+        (int(sw['startyear']) < 2010)
         or int(sw['GSw_ClimateHydro'])
         or int(sw['GSw_ClimateDemand'])
         or int(sw['GSw_ClimateWater'])
@@ -446,6 +445,9 @@ def check_compatibility(sw):
             f"({', '.join(disallowed_characters)}): {', '.join(invalid_switches)}"
         )
 
+    ### Contents of user-specified files
+    reeds.checks.check_switches(sw)
+
 
 def solvestring_sequential(
         batch_case, caseSwitches,
@@ -476,14 +478,26 @@ def solvestring_sequential(
         + f" --stress_year={_stress_year}"
         + f" --temporal_inputs={temporal_inputs}"
         + ''.join([f" --{s}={caseSwitches[s]}" for s in [
-            'GSw_SkipAugurYear',
-            'GSw_HourlyType', 'GSw_HourlyWrapLevel', 'GSw_ClimateWater',
-            'GSw_Canada', 'GSw_ClimateHydro',
-            'GSw_HourlyChunkLengthRep', 'GSw_HourlyChunkLengthStress',
-            'GSw_StateCO2ImportLevel',
+            'GSw_Canada',
+            'GSw_ClimateHydro',
+            'GSw_ClimateWater',
+            'GSw_gopt',
+            'GSw_HourlyChunkLengthRep',
+            'GSw_HourlyChunkLengthStress',
+            'GSw_HourlyType',
+            'GSw_HourlyWrapLevel',
+            'GSw_MGA_CostDelta',
+            'GSw_MGA_Direction',
             'GSw_PVB_Dur',
-            'GSw_ValStr', 'GSw_gopt', 'solver',
-            'debug','startyear','diagnose','diagnose_year'
+            'GSw_SkipAugurYear',
+            'GSw_StateCO2ImportLevel',
+            'GSw_StartMarkets',
+            'GSw_ValStr',
+            'solver',
+            'debug',
+            'startyear',
+            'diagnose',
+            'diagnose_year'
         ]])
         + '\n'
     )
@@ -742,7 +756,9 @@ def setup_window(
 def setupEnvironment(
         BatchName=False, cases_suffix=False, single='', simult_runs=0,
         forcelocal=0, skip_checks=False,
-        debug=False, debugnode=False, cases_per_node=1):
+        debug=False, debugnode=False, cases_per_node=1,
+        dryrun=False,
+    ):
     # #%% Settings for testing
     # BatchName = 'v20230508_prasM0_Pacific'
     # cases_suffix = 'test'
@@ -859,63 +875,7 @@ def setupEnvironment(
         df_cases_suf.drop(['Choices','Default Value'], axis='columns',inplace=True, errors='ignore')
         df_cases = df_cases.join(df_cases_suf, how='outer')
 
-    # If doing a Monte Carlo run modify df_cases by adding new columns for each scenario run
-    # Also validate the distribution file
-    warned_about_cluster_alg = False
-    if 'MCS_runs' in df_cases.index:        
-        for c in df_cases.columns:
-            if (
-                c not in ['Description','Default Value','Choices']
-                and (df_cases.loc['MCS_runs',c] not in [np.nan,'NaN'])
-                and (int(df_cases.loc['MCS_runs',c]) > 0)
-                and (not int(df_cases.loc['ignore',c]))
-            ):
-                # Substitute df_cases.at['GSw_HourlyClusterAlgorithm', c] with "Default Value" if 
-                # it is not set by the user
-                if pd.isna(df_cases.at['GSw_HourlyClusterAlgorithm', c]):
-                    df_cases.at['GSw_HourlyClusterAlgorithm', c] = df_cases['Default Value'].at['GSw_HourlyClusterAlgorithm']
 
-                # Warn user if the hourly clustering algorithm is not fixed for Monte Carlo runs
-                if not df_cases.at['GSw_HourlyClusterAlgorithm', c].startswith('user') and not warned_about_cluster_alg:
-                    print(f"\n[Warning] Case Column: '{c}'")
-                    print(
-                        "You are attempting to run a Monte Carlo simulation with "
-                        "`GSw_HourlyClusterAlgorithm` set to a value other than 'user'.\n"
-                        "This may result in inconsistent representative days across MCS runs.\n\n"
-                        "To ensure consistency, we strongly recommend setting "
-                        "`GSw_HourlyClusterAlgorithm = user` in your switch configuration.\n"
-                        "Do you want to proceed with the current setup?"
-                    )
-                    user_input = input("Type 'yes' to proceed, or 'no' to exit: ").strip().lower()
-                    if user_input not in ['yes', 'y']:
-                        print("\nExiting. Please update the `GSw_HourlyClusterAlgorithm` switch and try again.")
-                        quit()
-                    warned_about_cluster_alg = True
-                    print()
-  
-                # Validate the distribution file
-                sw = df_cases[c].fillna(df_cases['Default Value'])
-                mcs_dist_path = os.path.join(
-                    reeds_path, 'inputs', 'userinput',
-                    'mcs_distributions_{}.yaml'.format(sw.MCS_dist)
-                )
-                mcs.general_mcs_dist_validation(reeds_path, mcs_dist_path, sw)
-
-                # c (column) is a case with monte carlo runs, replicate this column N (NumMonteCarloRuns) times
-                NumMonteCarloRuns = int(df_cases.loc['MCS_runs',c])
-                NewColumnNames = [
-                    f"{c}_MC{str(i).zfill(len(str(NumMonteCarloRuns)))}"
-                    for i in range(1, NumMonteCarloRuns + 1)
-                ]
-
-                # Each new column is a copy of the original column with name c_{MC1,MC2,...}
-                df_cases_MC = pd.DataFrame(data=np.array([df_cases[c].values]*NumMonteCarloRuns).T, index=df_cases.index, columns=NewColumnNames)
-                df_cases = pd.concat([df_cases, df_cases_MC], axis=1)
-                df_cases.drop(c, axis=1, inplace=True) #drop the original column
-
-    # Initiate the empty lists which will be filled with info from cases
-    caseList = []
-    caseSwitches = [] #list of dicts, one dict for each case
     casenames = [c for c in df_cases.columns if c not in ['Description','Default Value','Choices']]
     # Get the list of switch choices
     choices = df_cases.Choices.copy()
@@ -989,6 +949,78 @@ def setupEnvironment(
         if debug:
             df_cases.loc['debug',case] = str(debug)
 
+    # If doing a Monte Carlo run modify df_cases by adding new columns for each scenario run
+    # Also validate the distribution file
+    warned_about_cluster_alg = False
+    if 'MCS_runs' in df_cases.index:        
+        for c in df_cases.columns:
+            if (
+                c not in ['Description','Default Value','Choices']
+                and (int(df_cases.loc['MCS_runs',c]) > 0)
+                and (not int(df_cases.loc['ignore',c]))
+            ):
+                # Warn user if the hourly clustering algorithm is not fixed for Monte Carlo runs
+                if (
+                    not df_cases.at['GSw_HourlyClusterAlgorithm', c].startswith('user')
+                    and not warned_about_cluster_alg
+                ):
+                    print(f"\n[Warning] Case Column: '{c}'")
+                    print(
+                        "You are attempting to run a Monte Carlo simulation with "
+                        "`GSw_HourlyClusterAlgorithm` set to a value other than 'user'.\n"
+                        "This may result in inconsistent representative days across MCS runs.\n\n"
+                        "To ensure consistency, we strongly recommend setting "
+                        "`GSw_HourlyClusterAlgorithm = user` in your switch configuration.\n"
+                        "Do you want to proceed with the current setup?"
+                    )
+                    user_input = input("Type 'yes' to proceed, or 'no' to exit: ").strip().lower()
+                    if user_input not in ['yes', 'y']:
+                        print("\nExiting. Please update the `GSw_HourlyClusterAlgorithm` switch and try again.")
+                        quit()
+                    warned_about_cluster_alg = True
+                    print()
+  
+                # Validate the distribution file
+                sw = df_cases[c].fillna(df_cases['Default Value'])
+                mcs_dist_path = os.path.join(
+                    reeds_path, 'inputs', 'userinput',
+                    'mcs_distributions_{}.yaml'.format(sw.MCS_dist)
+                )
+                mcs.general_mcs_dist_validation(reeds_path, mcs_dist_path, sw)
+
+                # c (column) is a case with monte carlo runs, replicate this column N (NumMonteCarloRuns) times
+                NumMonteCarloRuns = int(df_cases.loc['MCS_runs',c])
+                NewColumnNames = [
+                    f"{c}_MC{i:0>4}"
+                    for i in range(1, NumMonteCarloRuns + 1)
+                ]
+
+                # Each new column is a copy of the original column with name c_{MC1,MC2,...}
+                df_cases_MC = pd.DataFrame(
+                    data=np.array([df_cases[c].values]*NumMonteCarloRuns).T,
+                    index=df_cases.index,
+                    columns=NewColumnNames,
+                )
+                df_cases = pd.concat([df_cases, df_cases_MC], axis=1)
+                df_cases.drop(c, axis=1, inplace=True) #drop the original column
+
+
+    # Initiate the empty lists which will be filled with info from cases
+    # Needs to be done after the MCS runs are processed, so that the case names are correct
+    caseList = []
+    caseSwitches = [] #list of dicts, one dict for each case
+    # Redefine casenames to include all the Monte Carlo cases, which have been expanded in df_cases.
+    casenames = [c for c in df_cases.columns if c not in ['Description','Default Value','Choices']]
+
+    for case in casenames:
+        # If --single/-s was passed, only keep those cases (regardless of ignore)
+        # otherwise, drop any case marked ignore
+        if single:
+            if case not in single.split(','):
+                continue
+        else: 
+            if int(df_cases.loc['ignore', case]) == 1:
+                continue
         # Add switch settings to list of options passed to GAMS
         shcom = ' --case=' + BatchName + "_" + case
         for i,v in df_cases[case].items():
@@ -997,6 +1029,12 @@ def setupEnvironment(
                 shcom = shcom + ' --' + i + '=' + v
         caseList.append(shcom)
         caseSwitches.append(df_cases[case].to_dict())
+
+    #%% Stop now if any switches are incompatible
+    for sw in caseSwitches:
+        check_compatibility(sw)
+    if dryrun:
+        quit()
 
     # If no --single/-s, drop the ignored cases, otherwise leave them
     if not single: 
@@ -1207,18 +1245,14 @@ def write_batch_script(
         print('Caution, case ' + batch_case + ' already exists in runs \n')
 
     #%% Set up case-specific directory structure
-    os.makedirs(os.path.join(reeds_path,'runs',batch_case), exist_ok=True)
-    os.makedirs(os.path.join(reeds_path,'runs',batch_case,'g00files'), exist_ok=True)
-    os.makedirs(os.path.join(reeds_path,'runs',batch_case,'lstfiles'), exist_ok=True)
-    os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs', 'maps'), exist_ok=True)
-    os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs','tc_phaseout_data'), exist_ok=True)
+    os.makedirs(inputs_case, exist_ok=True)
+    os.makedirs(os.path.join(casedir, 'g00files'), exist_ok=True)
+    os.makedirs(os.path.join(casedir, 'lstfiles'), exist_ok=True)
+    os.makedirs(os.path.join(casedir, 'outputs', 'figures'), exist_ok=True)
+    os.makedirs(os.path.join(casedir, 'outputs', 'tc_phaseout_data'), exist_ok=True)
 
     if int(caseSwitches['diagnose']):
-        os.makedirs(os.path.join(reeds_path,'runs',batch_case,'outputs','model_diagnose'), exist_ok=True)
-    os.makedirs(inputs_case, exist_ok=True)
-
-    #%% Stop now if any switches are incompatible
-    check_compatibility(caseSwitches)
+        os.makedirs(os.path.join(casedir, 'outputs', 'model_diagnose'), exist_ok=True)
 
     # Write the GAMS switches ('gswitches.csv')
     reeds.io.write_gswitches(pd.Series(caseSwitches), inputs_case)
@@ -1309,6 +1343,10 @@ def write_batch_script(
     caseSwitches['numclass'] = get_ivt_numclass(
         reeds_path=reeds_path, casedir=casedir, caseSwitches=caseSwitches)
     options += ' --numclass={}'.format(caseSwitches['numclass'])
+    ### Load site region level (GSw_LoadSiteReg) is embedded in GSw_LoadSiteTrajectory
+    GSw_LoadSiteReg = caseSwitches['GSw_LoadSiteTrajectory'].split('_')[0]
+    caseSwitches['GSw_LoadSiteReg'] = GSw_LoadSiteReg
+    options += f' --GSw_LoadSiteReg={GSw_LoadSiteReg}'
     ### Get numbins from the max of individual technology bins
     caseSwitches['numbins'] = max(
         int(caseSwitches['numbins_windons']),
@@ -1485,14 +1523,13 @@ def write_batch_script(
         if not LINUXORMAC:
             OPATH.writelines("endlocal\n")
         OPATH.writelines(f'python {logger}\n')
-        OPATH.writelines(f'python e_report_dump.py {casedir}\n\n')
+        OPATH.writelines(f'python e_report_dump.py {casedir} -c\n\n')
         if int(caseSwitches['diagnose']):
              OPATH.writelines(
                 "python"
                 + f" {os.path.join(reeds_path,'postprocessing','diagnose','diagnose_process.py')}"
                 + f" --casepath {casedir} \n\n"
             )
-        OPATH.writelines(f'python e_report_dump.py {casedir} -c\n\n')
 
         ### Run the retail rate module
         OPATH.writelines(
@@ -1569,7 +1606,7 @@ def write_batch_script(
         OPATH.writelines('python postprocessing/vizit/vizit_prep.py ' + '"{}"'.format(os.path.join(casedir,'outputs')) + '\n\n')
 
         OPATH.writelines(
-            f'python postprocessing/transmission_maps.py {casedir} --year {solveyears[-1]}\n\n'
+            f'python postprocessing/single_case_plots.py {casedir} --year {solveyears[-1]}\n\n'
         )
 
         ### Remove unnecessary files from case folder
@@ -1613,7 +1650,10 @@ def submit_slurm_parallel_jobs(
     num_cases = len(casenames) 
     num_nodes = int(np.ceil(num_cases / cases_per_node))
 
-    batch_folder = os.path.join(reeds_path, 'slurm_parallel_runs', BatchName)
+    batch_folder = os.path.join(
+        reeds_path, 'slurm_parallel_runs',
+        f"{BatchName}-{datetime.now().strftime('%Y%m%dT%H%M%S')}"
+    )
     if os.path.isdir(batch_folder):
         shutil.rmtree(batch_folder)
     os.makedirs(batch_folder)
@@ -1624,6 +1664,7 @@ def submit_slurm_parallel_jobs(
         casenames_print = casenames[start_case_index:stop_case_index]
         run_script_fpath = os.path.join(batch_folder, f"run_{'-'.join(casenames_print)}.sh")
         shutil.copy("srun_template.sh", run_script_fpath)
+        job_name = f"{BatchName}_({','.join(casenames_print)})"
 
         writelines = []
         with open(run_script_fpath, 'r') as SPATH:
@@ -1645,7 +1686,7 @@ def submit_slurm_parallel_jobs(
                 SPATH.write("#SBATCH --partition=debug\n")
 
             SPATH.write(f"#SBATCH --ntasks-per-node={cases_per_node}\n")
-            SPATH.write(f"#SBATCH --job-name={BatchName}\n")
+            SPATH.write(f"#SBATCH --job-name={job_name}\n")
             SPATH.write(f"#SBATCH --output={os.path.join(batch_folder, 'slurm-%j.out')}\n\n")
             SPATH.write(". $HOME/.bashrc\n\n")
 
@@ -1835,6 +1876,7 @@ def main(
         BatchName='', cases_suffix='', single='', simult_runs=0,
         forcelocal=False, skip_checks=False,
         debug=False, debugnode=False, cases_per_node=1,
+        dryrun=False,
     ):
     """
     Executes parallel solves based on cases in 'cases.csv'
@@ -1864,6 +1906,7 @@ def main(
         single=single, simult_runs=simult_runs,
         forcelocal=forcelocal, skip_checks=skip_checks,
         debug=debug, debugnode=debugnode, cases_per_node=cases_per_node,
+        dryrun=dryrun,
     )
 
     if (envVar['hpc']) and (envVar['cases_per_hpc_node'] > 1):
@@ -1905,6 +1948,8 @@ if __name__ == '__main__':
     parser.add_argument('--cases_per_node', '-p', type=int, default=None,
                         help="Number of ReEDS cases to run concurrently on a single HPC node. "
                             "If not provided, the user will be prompted to specify it.")
+    parser.add_argument('--dryrun', '-t', action='store_true',
+                        help="Check inputs but don't start runs")
 
     args = parser.parse_args()
 
@@ -1912,4 +1957,5 @@ if __name__ == '__main__':
         BatchName=args.BatchName, cases_suffix=args.cases_suffix, single=args.single,
         simult_runs=args.simult_runs, forcelocal=args.forcelocal, skip_checks=args.skip_checks,
         debug=args.debug, debugnode=args.debugnode, cases_per_node=args.cases_per_node,
+        dryrun=args.dryrun,
     )

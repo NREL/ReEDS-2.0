@@ -10,6 +10,7 @@ import geopandas as gpd
 import shapely
 import argparse
 import traceback
+import cmocean
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
@@ -22,7 +23,29 @@ plots.plotparams()
 interactive = False
 
 
+#%% Globals
+fuel_price_scenarios = {
+    'Gas': {
+        'low': 'ng_AEO_{datayear}_HOG.csv',
+        'mid': 'ng_AEO_{datayear}_reference.csv',
+        'high': 'ng_AEO_{datayear}_LOG.csv',
+    },
+    'Coal': {'mid': 'coal_AEO_{datayear}_reference.csv'},
+    'Uranium': {'mid': 'uranium_AEO_{datayear}_reference.csv'},
+}
+
+
 #%% Plotting functions
+def get_bokeh_colors():
+    bokehcolors = pd.read_csv(
+        os.path.join(
+            reeds.io.reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv',
+        ),
+        index_col='order',
+    ).squeeze(1)
+    return bokehcolors
+
+
 def plot_outage_scheduled(case, f=None, ax=None, color='C0', aspect=1):
     """Plot scheduled outage rate by month, one subplot for each tech"""
     sw = reeds.io.get_switches(case)
@@ -354,6 +377,307 @@ def plot_regional_cost_difference(
     return f, ax, dfplot
 
 
+def plot_fuel_prices(tstart=2010, tend=2050, figsize=(9, 3.75), datayear=2025, alpha=0.4):
+    dollaryear = datayear - 1
+    bokehcolors = get_bokeh_colors()
+    colors = {
+        'Gas': bokehcolors['gas-cc'],
+        'Coal': bokehcolors['coal'],
+        'Uranium': bokehcolors['nuclear'],
+    }
+    ## Get data
+    dictin = {}
+    for label in fuel_price_scenarios:
+        for scen in fuel_price_scenarios[label]:
+            dictin[label,scen] = pd.read_csv(
+                os.path.join(
+                    reeds.io.reeds_path, 'inputs', 'fuelprices',
+                    fuel_price_scenarios[label][scen].format(datayear=datayear),
+                ),
+                index_col='year',
+            ).mean(axis=1)
+
+    ## Plot it
+    plt.close()
+    f,ax = plt.subplots(1, 3, figsize=figsize, sharex=True, sharey=True)
+    for col, label in enumerate(fuel_price_scenarios.keys()):
+        _ax = ax[col]
+        scens = fuel_price_scenarios[label]
+        if 'low' in scens and 'high' in scens:
+            _ax.fill_between(
+                dictin[label,'low'].index,
+                dictin[label,'high'],
+                dictin[label,'low'],
+                lw=0, alpha=alpha, color=colors[label],
+            )
+        _ax.plot(
+            dictin[label,'mid'].index,
+            dictin[label,'mid'],
+            color=colors[label],
+        )
+        ## Formatting
+        _ax.annotate(
+            label, (0.05, 0.98), xycoords='axes fraction', ha='left', va='top',
+            weight='bold', color=colors[label], fontsize=14,
+        )
+        _ax.axvspan(tstart, datayear-1, color='0.95', zorder=-1)
+        # _ax.axvline(datayear-1, c='C7', ls='--', lw=0.75)
+    ## Formatting
+    ax[0].set_ylabel(f'Fuel price [{dollaryear}$/MMBtu]')
+    ax[0].set_ylim(0)
+    ax[0].set_xlim(tstart, tend)
+    ax[0].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+    ax[0].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
+    ax[0].yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
+    reeds.plots.despine(ax)
+    return f, ax, dictin
+
+
+def map_gas_price(
+    plotyear=2035, datayear=2025, scale=3, cmap=cmocean.cm.rain,
+    labelsize=8,
+):
+    dfmap = reeds.io.get_dfmap()
+    ## Get data
+    dictin = {}
+    for scen in fuel_price_scenarios['Gas']:
+        dictin[scen] = pd.read_csv(
+            os.path.join(
+                reeds.io.reeds_path, 'inputs', 'fuelprices',
+                fuel_price_scenarios['Gas'][scen].format(datayear=datayear),
+            ),
+            index_col='year',
+        ).loc[plotyear]
+    vmin = min([df.min() for df in dictin.values()])
+    vmax = max([df.max() for df in dictin.values()])
+
+    ## Plot it
+    plt.close()
+    f,ax = plt.subplots(
+        3, 1, figsize=(scale, scale*3*0.7), sharex=True, sharey=True,
+        gridspec_kw={'hspace':-0.05},
+    )
+    for row, scen in enumerate(['high', 'mid', 'low']):
+        _ax = ax[row]
+        df = dfmap['cendiv'].copy()
+        df['price'] = dictin[scen]
+        dfmap['country'].plot(ax=_ax, facecolor='none', edgecolor='k', lw=0.8, zorder=1e7)
+        df.plot(ax=_ax, facecolor='none', edgecolor='k', lw=0.2, zorder=1e6)
+        df.plot(ax=_ax, column='price', vmin=vmin, vmax=vmax, cmap=cmap)
+        ## Annotations
+        for r, ds in df.iterrows():
+            _ax.annotate(
+                f'{ds.price:.1f}',
+                (ds.geometry.centroid.x, ds.geometry.centroid.y),
+                ha='center', va='center',
+                fontsize=labelsize,
+                # color=('k' if ds.price < vmid else 'w'),
+                color='k',
+                path_effects=[pe.withStroke(linewidth=1.8, foreground='w', alpha=0.8)],
+                zorder=1e9,
+            )
+        _ax.annotate(
+            f'{plotyear} {scen.title()}',
+            (0.07, 0.1), xycoords='axes fraction',
+            fontsize=labelsize*1.25,
+        )
+        ## Formatting
+        _ax.axis('off')
+
+    return f, ax, dictin
+
+
+def map_supplycurves(
+    case=None,
+    tech=None,
+    access='reference',
+    cmap=cmocean.cm.rain,
+    crs=None,
+    include_techneutral_adder=True,
+    dollaryear=2023,
+    figsize=(12,9),
+    draw_lakes=True,
+    draw_stats=True,
+    dpi=None,
+    markers=False,
+):
+    """
+    Returns an iterator over supply-curve columns. Use as follows:
+        ```python
+        plot_generator = map_supplycurves()
+        while True:
+            try:
+                f, ax, df, setting = next(plot_generator)
+                plt.savefig(figpath)
+            except StopIteration:
+                break
+        ```
+
+    Inputs:
+    - case: If None, read defaults and use access; otherwise read from ReEDS case
+    - tech: If None, read tech-neutral interconnection parameters
+    - include_technuetral_adder: Adds inflation-adjusted GSw_TransIntraCost
+    - draw_lakes: Include Great Lakes
+    - draw_stats: Include supply-curve filepath and descriptive statistics
+    - markers: Scatter plot if True (faster but looks worse, especially for sub-US)
+    """
+    ### Get inputs
+    if (crs is None) and (tech is None):
+        crs = 'EPSG:5070'
+    elif (crs is None):
+        crs = 'EPSG:5070' if tech == 'wind-ofs' else 'ESRI:102008'
+    sw = reeds.io.get_switches(case)
+    dfmap = reeds.io.get_dfmap(case=case)
+    for key in dfmap:
+        if dfmap[key].crs != crs:
+            dfmap[key] = dfmap[key].to_crs(crs)
+    ## If no tech, just plot transmission
+    if tech in [None, 'land']:
+        scpath = os.path.join(
+            reeds.io.reeds_path, 'inputs', 'supply_curve',
+            'interconnection_land.h5'
+        )
+        dfsc = reeds.io.read_h5_groups(scpath)
+    elif tech == 'offshore':
+        scpath = os.path.join(
+            reeds.io.reeds_path, 'inputs', 'supply_curve',
+            'interconnection_offshore.h5'
+        )
+        dfsc = reeds.io.read_h5_groups(scpath)
+    else:
+        if case is None:
+            scpath = os.path.join(
+                reeds.io.reeds_path, 'inputs', 'supply_curve',
+                f'supplycurve_{tech}-{access}.csv'
+            )
+        else:
+            scpath = os.path.join(case, 'inputs_case', f'supplycurve_{tech}.csv')
+        dfsc = reeds.io.assemble_supplycurve(scpath, case=case, drop_extra=False)
+        if 'latitude' not in dfsc:
+            sitemap = reeds.io.get_sitemap(geo=True).to_crs(crs)
+            dfsc = gpd.GeoDataFrame(
+                dfsc.merge(sitemap, left_index=True, right_index=True, how='left'),
+                crs=crs,
+            )
+        # dfsc = reeds.plots.df2gdf(
+        #     reeds.io.assemble_supplycurve(scpath, case=case, drop_extra=False),
+        #     crs=crs,
+        # )
+    if 'geometry' not in dfsc:
+        dfsc = reeds.plots.df2gdf(dfsc, crs=crs)
+    ## Extra plot settings
+    if draw_lakes:
+        greatlakes = gpd.read_file(
+            os.path.join(reeds.io.reeds_path, 'inputs', 'shapefiles', 'greatlakes.gpkg'),
+        ).to_crs(crs)
+    if include_techneutral_adder:
+        inflatable = reeds.io.get_inflatable()
+        costadder = float(sw.GSw_TransIntraCost) * inflatable[2004, dollaryear]
+    else:
+        costadder = 0
+    ## Convert from point to polygons if desired (raster is 11.52 km but include a little extra)
+    if not markers:
+        dfsc.geometry = dfsc.buffer(11530/2, cap_style='square')
+
+    ###### Format inputs
+    ## Use 4.5 for limited access wind-ofs
+    ms = {
+        ('wind-ofs', 'open'): 4.1,
+        ('wind-ofs', 'reference'): 4.1,
+        ('wind-ofs', 'limited'): 4.5,
+    }.get((tech, access), 2.65)
+
+    defaults = {'vmin':0., 'vmax':2000., 'scale':1, 'background':True, 'nbins':101, 'costadder':0}
+    settings = {
+        'capacity': {
+            'label':'Capacity [MW]',
+            'vmax':{
+                'upv':5700., 'wind-ons':342., 'wind-ofs':530.,
+                'geohydro':700., 'egs':4000., 'csp':4900.,
+            }.get(tech, 1000.),
+            'background':False,
+            ## For onshore wind, align nbins with number of 6 MW turbines
+            'nbins': {'wind-ons':342 // 6 + 1}.get(tech, 101),
+        },
+        'capital_adder_per_mw': {'label':'Site cost adder [$/kW]', 'scale':1e-3},
+        'cf': {'label':'Capacity factor (AC) [%]', 'scale':100, 'vmax':55},
+        'class': {'label':'Resource class [.]', 'vmax':10.},
+        'cost_poi_usd_per_mw': {'label':'Substation cost [$/kW]', 'scale':1e-3},
+        'cost_reinforcement_usd_per_mw': {'label':'Reinforcement cost [$/kW]', 'scale':1e-3},
+        'cost_spur_usd_per_mw': {'label':'Spur cost [$/kW]', 'scale':1e-3},
+        'cost_total_trans_usd_per_mw': {
+            'label':'Interconnection cost [$/kW]',
+            'scale':1e-3,
+            'costadder':costadder,
+        },
+        'supply_curve_cost_per_mw': {
+            'label':'Supply-curve cost [$/kW]',
+            'scale':1e-3,
+            'costadder':costadder,
+        },
+        'dist_reinforcement_km': {'label':'Reinforcement distance [km]', 'vmax':900.},
+        'dist_spur_km': {'label':'Spur distance [km]', 'vmax':900.},
+        ## Specific to offshore
+        'cost_export_usd_per_mw': {'label':'Export cable cost [$/kW]', 'scale':1e-3},
+        'dist-export_km': {'label':'Export cable distance [km]'},
+    }
+
+    for col in settings:
+        setting = {**defaults, **settings[col]}
+        if col not in dfsc:
+            print(f"{col} is not in the supply curve table")
+            continue
+        ## Scale if necessary
+        dfplot = dfsc.copy()
+        dfplot[col] = dfplot[col] * setting['scale'] + setting['costadder']
+        ### Plot it
+        plt.close()
+        f,ax = plt.subplots(figsize=figsize, dpi=dpi)
+        ## Background
+        if setting['background']:
+            dfmap['r'].plot(ax=ax, facecolor='C7', edgecolor='none', lw=0.3, zorder=-1e6)
+        dfmap['r'].plot(ax=ax, facecolor='none', edgecolor='k', lw=0.3, zorder=1e6)
+        dfmap['st'].plot(ax=ax, facecolor='none', edgecolor='k', lw=0.5, zorder=2e6)
+        if draw_lakes:
+            greatlakes.plot(ax=ax, edgecolor='#2CA8E7', facecolor='#D3EFFA', lw=0.2, zorder=-1)
+        ## Map of data
+        dfplot.plot(
+            ax=ax,
+            column=col,
+            cmap=cmap,
+            marker=('s' if markers else None),
+            markersize=(ms if markers else None),
+            lw=0,
+            legend=False,
+            vmin=setting['vmin'],
+            vmax=setting['vmax'],
+        )
+        ## Annotation
+        if draw_stats:
+            ax.set_title(scpath, fontsize='small', y=0.97)
+            note = str(dfplot[col].describe().round(1))
+            note = note[:note.index('\nName')]
+            ax.annotate(
+                note, (0.06, 0.06), xycoords='axes fraction',
+                ha='left', va='bottom', fontsize=10, fontfamily='monospace',
+            )
+        ## Colorbar-histogram
+        plots.addcolorbarhist(
+            f=f, ax0=ax, data=dfplot[col].values,
+            title=setting['label'], cmap=cmap,
+            vmin=setting['vmin'], vmax=setting['vmax'],
+            orientation='horizontal', labelpad=2.1, cbarbottom=-0.06,
+            cbarheight=0.7, log=False,
+            nbins=setting['nbins'],
+            histratio=2,
+            ticklabel_fontsize=20, title_fontsize=24,
+            extend='neither',
+        )
+        ## Formatting
+        ax.axis('off')
+        yield f, ax, dfplot, col
+
+
 #%%### Procedure
 if __name__ == '__main__':
     #%% Argument inputs
@@ -370,14 +694,13 @@ if __name__ == '__main__':
     write = args.write
 
     # #%% Inputs for testing
-    # reeds_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..'))
-    # case = os.path.expanduser('~/github3/ReEDS-2.0/runs/v20250408_tforM0_USA')
+    # case = os.path.join(reeds.io.reeds_path, 'runs', 'v20250820_revM0_Pacific')
     # interactive = True
     # write = 'png'
 
     #%% Create output container
     if write.strip('.') == 'png':
-        savepath = os.path.join(case, 'outputs', 'maps', 'inputs')
+        savepath = os.path.join(case, 'outputs', 'figures', 'inputs')
         os.makedirs(savepath, exist_ok=True)
 
         def saveit(savename):
@@ -388,10 +711,10 @@ if __name__ == '__main__':
                 plt.show()
 
     elif write.strip('.') in ['ppt', 'pptx']:
-        savepath = os.path.join(case, 'outputs', 'maps', 'inputs.pptx')
-        prs = reeds.results.init_pptx()
+        savepath = os.path.join(case, 'outputs', 'figures', 'inputs.pptx')
+        prs = reeds.report_utils.init_pptx()
         def saveit(savename, **kwargs):
-            reeds.results.add_to_pptx(savename, prs=prs, **kwargs)
+            reeds.report_utils.add_to_pptx(savename, prs=prs, **kwargs)
             if interactive:
                 plt.show()
 
@@ -457,6 +780,39 @@ if __name__ == '__main__':
         saveit('Regional cost differences')
     except Exception:
         print(traceback.format_exc())
+
+    ### Fuel prices
+    try:
+        f, ax, df = plot_fuel_prices()
+        saveit('Fuel prices')
+    except Exception:
+        print(traceback.format_exc())
+
+    try:
+        f, ax, df = map_gas_price()
+        saveit('Gas prices')
+    except Exception:
+        print(traceback.format_exc())
+
+    ### Supply curves
+    extras = (True if 'usa' in sw.GSw_Region.lower() else False)
+    try:
+        for tech in ['upv', 'wind-ons', 'wind-ofs', 'geohydro', 'egs']:
+            plot_generator = map_supplycurves(
+                case=case,
+                tech=tech,
+                draw_lakes=extras,
+                draw_stats=extras,
+            )
+            while True:
+                try:
+                    f, ax, df, col = next(plot_generator)
+                    saveit(f"{tech} {col}")
+                except StopIteration:
+                    break
+    except Exception:
+        print(traceback.format_exc())
+
 
     #%% Save the powerpoint file if necessary
     if write.strip('.') in ['ppt', 'pptx']:

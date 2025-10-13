@@ -83,3 +83,4 @@ if __name__ == "__main__":
 
     reeds.log.toc(tic=tic, year=0, process='input_processing/writedrshift.py', 
         path=os.path.join(inputs_case,'..'))
+    print('Finished writedrshift.py')  

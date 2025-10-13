@@ -1,5 +1,6 @@
 #%% Imports
 import os
+import re
 import datetime
 import subprocess
 import argparse
@@ -20,11 +21,34 @@ include_finished = args.include_finished
 verbose = args.verbose
 
 # #%% Inputs for debugging
-# batch_name = 'v20231113_yamK0'
-# include_finished = True
-# verbose = 1
+# batch_name = 'v20250812_mcK0'
+# include_finished = False
+# verbose = 0
 
-###### Procedure
+#%%### Functions
+def parse_multiple_runs_per_node(runs_running):
+    expanded_runs = []
+    for i in runs_running:
+        ## Matches the form used for multiple runs per node: foo_(bar,baz[,etc])
+        if re.match('^\w+_\(\w+,\w+(,\w+)*\)$', i):
+            batch_ = i.split('(')[0]
+            constituents = i.split('(')[1].strip(')').split(',')
+            expanded_runs.extend([batch_+c for c in constituents])
+        ## Otherwise it's a normal run
+        else:
+            expanded_runs.append(i)
+    return sorted(expanded_runs)
+
+
+def print_log_if_verbose(fullcase, verbose=0):
+    if verbose:
+        gamslog = os.path.join(fullcase, 'gamslog.txt')
+        print('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv')
+        subprocess.run(f'tail {gamslog} -n {verbose}', shell=True)
+        print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
+
+
+#%%### Procedure
 #%% Shared parameters
 reeds_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -49,7 +73,8 @@ runs_finished = [
 runs_unfinished = [i for i in runs_all if i not in runs_finished]
 
 ### Get failed runs by identifying and excluding active runs
-runs_running = [i for i in runs_running_all if i.startswith(batch_name)]
+runs_running_unparsed = [i for i in runs_running_all if i.startswith(batch_name)]
+runs_running = parse_multiple_runs_per_node(runs_running_unparsed)
 runs_failed = [i for i in runs_unfinished if os.path.basename(i) not in runs_running]
 
 ### Store the runs
@@ -87,8 +112,18 @@ for key, runs in dictruns.items():
             else:
                 if len(lstfiles) > 1:
                     # Drop environment file
-                    lstfiles = [l for l in lstfiles if "environment.csv" not in l]
-                lastfile = lstfiles[-1]
+                    lstfiles = [
+                        line for line in lstfiles if (
+                            ('environment.csv' not in line)
+                            and ('mcs_group_weights.csv' not in line)
+                        )
+                    ]
+                try:
+                    lastfile = lstfiles[-1]
+                except IndexError:
+                    print(f"{case:<{longest}}: failed in input_processing")
+                    print_log_if_verbose(fullcase, verbose)
+                    continue
                 try:
                     # Get time since previous lst file was modified
                     penultimatefile = lstfiles[-2]
@@ -111,8 +146,4 @@ for key, runs in dictruns.items():
             else:
                 print(f"{case:<{longest}}: failed in {last_lst}")
 
-            if verbose:
-                gamslog = os.path.join(fullcase,'gamslog.txt')
-                print('vvvvvvvvvvvvvvvvvvvvvvvvvvvvvv')
-                subprocess.run(f'tail {gamslog} -n {verbose}', shell=True)
-                print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n')
+            print_log_if_verbose(fullcase, verbose)

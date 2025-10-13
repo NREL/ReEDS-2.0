@@ -1,0 +1,94 @@
+### For use with casemaker.py.
+##############
+### Shared ###
+### Shared settings are applied to all cases.
+### Any settings not specified use the defaults from cases.csv.
+shared:
+  yearset_suffix: 5yr
+
+##################
+### Dimensions ###
+### Scenario names are formatted as '{dimension1}_{dimension2}_{etc}',
+### so to avoid ambiguity, avoid the use of underscores (_) in dimension elements.
+### To use the default settings from cases.csv, provide an empty dictionary: {}.
+dimensions:
+  policy:
+    OBBBA:
+      incentives_suffix: obbba
+      GSw_TCPhaseout_forceyear: 2032
+    OBBBAcon:
+      incentives_suffix: obbba_conservative
+      GSw_TCPhaseout_forceyear: 2032
+    IRA:
+      incentives_suffix: ira
+      GSw_TCPhaseout_forceyear: 0
+  demand:
+    DemLo:
+      GSw_EFS1_AllYearLoad: EER_Baseline_AEO2023
+    DemMd:
+      GSw_EFS1_AllYearLoad: EER_IRAlow
+    DemHi:
+      GSw_EFS1_AllYearLoad: EER_100by2050
+    Dem2023Lo:
+      GSw_EFS1_AllYearLoad: EER_Baseline_AEO2022_v2023
+    Dem2023MdLo:
+      GSw_EFS1_AllYearLoad: EER_IRAlow_v2023
+    Dem2023Md:
+      GSw_EFS1_AllYearLoad: EER_IRAmoderate_v2023
+    Dem2023Hi:
+      GSw_EFS1_AllYearLoad: EER_100by2050_v2023
+  sensitivity:
+    core: {}
+    100by2045:
+      GSw_AnnualCap: 2
+      GSw_AnnualCapScen: start2024_90pct2035_100pct2045
+      GSw_NG_CRF_penalty: ramp_2045
+      GSw_GasCurve: 2
+      GSw_NoFossilOffsetCDR: 1
+      distpvscen: stscen2023_mid_case_95_by_2035
+    REbattCostLow:
+      plantchar_battery: battery_ATB_2024_advanced
+      plantchar_geo: geo_ATB_2024_advanced
+      plantchar_ofswind: ofs-wind_ATB_2024_advanced
+      plantchar_onswind: ons-wind_ATB_2024_advanced
+      plantchar_upv: upv_ATB_2024_advanced
+      plantchar_hydro: hydro_ATB_2019_low
+    NucCostLow:
+      plantchar_nuclear: nuclear_ATB_2024_advanced
+      plantchar_nuclear_smr: nuclear-smr_ATB_2024_advanced
+    ZCcostLow:
+      plantchar_battery: battery_ATB_2024_advanced
+      plantchar_geo: geo_ATB_2024_advanced
+      plantchar_ofswind: ofs-wind_ATB_2024_advanced
+      plantchar_onswind: ons-wind_ATB_2024_advanced
+      plantchar_upv: upv_ATB_2024_advanced
+      plantchar_hydro: hydro_ATB_2019_low
+      plantchar_nuclear: nuclear_ATB_2024_advanced
+      plantchar_nuclear_smr: nuclear-smr_ATB_2024_advanced
+    GasPriceHi:
+      ngscen: AEO_2025_LOG
+    GasPriceLo:
+      ngscen: AEO_2025_HOG
+    SitingLim:
+      GSw_SitingUPV: limited
+      GSw_SitingWindOns: limited
+      GSw_SitingWindOfs: limited
+    SitingOpen:
+      GSw_SitingUPV: open
+      GSw_SitingWindOns: open
+      GSw_SitingWindOfs: open
+##################
+### Casegroups ###
+### Entries must follow the same order as dimensions; i.e., if the dimensions are
+### [policy, demand, sensitivity], the casegroup entries must be in that order.
+### If an empty list is given, expand to all the options in that dimension;
+### otherwise, use only the listed elements.
+### Single elements can be provided as a length-1 list or as a string.
+### Duplicates will be filtered out in casemaker.py.
+casegroups:
+  ## (All policy scenarios) × (all demand scenarios) × (single core sensitivity)
+  - [[], [], core]
+  ## (OBBBA policy) × (mid demand) × (all sensitivity settings)
+  - [OBBBA, DemMd, []]
+  ## (2 policies) × (1 demand) × (2 sensitivity settings)
+  - [[OBBBA, OBBBAcon], DemMd, [GasPriceLo, GasPriceHi]]

@@ -6,6 +6,7 @@ import pandas as pd
 import subprocess
 from glob import glob
 import reeds
+import Augur
 
 
 #%% Main function
@@ -80,15 +81,7 @@ def run_reeds(casepath, t, onlygams=False, iteration=0):
 
     #%%### Run Augur
     if (not onlygams) and (tnext[t] > int(sw.GSw_SkipAugurYear)):
-        cmd_augur = f"python Augur.py {tnext[t]} {t} {casepath} --iteration={iteration}"
-        result = subprocess.run(cmd_augur, shell=True)
-        if result.returncode:
-            raise Exception(f'Augur.py failed with return code {result.returncode}')
-
-        # ## Check to make sure Augur ran successfully; quit otherwise
-        # cmd_errorcheck = runbatch.writeerrorcheck(
-        #     os.path.join("ReEDS_Augur", "augur_data", f"ReEDS_Augur_{t}.gdx")
-        # )
+        Augur.main(t=t, tnext=tnext[t], casedir=casepath, iteration=iteration)
 
 
 #%% Driver function

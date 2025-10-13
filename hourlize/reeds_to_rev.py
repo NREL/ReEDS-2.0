@@ -221,7 +221,7 @@ def reaggregate_supply_curve_regions(df_sc_in, run_folder):
     if sw["GSw_RegionResolution"] == "county":
         ### Map original sc regions to county
         # pylint: disable-next=consider-using-f-string
-        df_sc_in["region"] = "p" + df_sc_in.cnty_fips.astype(str).map("{:>05}".format)
+        df_sc_in["region"] = "p" + df_sc_in.FIPS.astype(str).map("{:>05}".format)
 
     elif sw["GSw_RegionResolution"] == "aggreg":
         ### Load  hierarchy file

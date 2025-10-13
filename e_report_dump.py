@@ -5,7 +5,6 @@
 import argparse
 import datetime
 import os
-import site
 import traceback
 import sys
 
@@ -15,9 +14,8 @@ import gdxpds
 
 import reeds
 
+
 #%% Generic functions
-
-
 def dfdict_to_csv(dfdict, filepath, symbol_list=None, rename=dict(), decimals=6):
     """
     Write dictionary of dataframes to individual .csv files
@@ -198,8 +196,36 @@ def timestamp_to_month(dfin_timestamp):
     return dfout_month
 
 
+def postprocess_outputs(case, outputs_path=None, verbose=0):
+    ## Parse inputs
+    _outputs_path = os.path.join(case, 'outputs') if outputs_path is None else outputs_path
+
+    ## System cost
+    reeds.output_calc.calc_systemcost(case).to_csv(
+        os.path.join(_outputs_path, 'post_systemcost_annualized.csv'),
+        index=False,
+    )
+
+    ## Reinforcement and spur-line 
+    reeds.output_calc.calc_reinforcement_spur_capacity_miles(case).to_csv(
+        os.path.join(_outputs_path, 'post_tech_transmission.csv'),
+        index=False,
+    )
+
+    ## Hydrogen prices by month
+    sw = reeds.io.get_switches(case)  
+    try:
+        dfin_timestamp = reeds.timeseries.timeslice_to_timestamp(case, 'h2_price_h')
+        dfout_month = timestamp_to_month(dfin_timestamp)
+        dfout_month.rename(columns={'Value':'$2004/kg'}).to_csv(
+            os.path.join(_outputs_path, 'h2_price_month.csv'), index=False)
+    except Exception:
+        if int(sw.GSw_H2):
+            print(traceback.format_exc())
+
+
 #%% Procedure
-if __name__ == '__main__':
+if __name__ == '__main__' and not hasattr(sys, 'ps1'):
     tic = datetime.datetime.now()
     # parse arguments
     parser = argparse.ArgumentParser(
@@ -215,16 +241,13 @@ if __name__ == '__main__':
     write_xlsx = args.xlsx
 
     # #%% Inputs for debugging
-    # case = os.path.expanduser('~/github2/ReEDS-2.0/runs/v20250302_commonM0_Pacific')
+    # case = os.path.join(reeds_path, 'runs', 'v20250312_scheduledM0_Pacific')
+    # write_csv = False
+    # write_xlsx = False
 
     #%% Set up logger
     reeds_path = os.path.abspath(os.path.dirname(__file__))
-    site.addsitedir(os.path.join(reeds_path, 'input_processing'))
-    try:
-        from reeds.log import toc, makelog
-        log = makelog(scriptname=__file__, logpath=os.path.join(case, "gamslog.txt"))
-    except ModuleNotFoundError:
-        print("reeds/log.py not found, so not logging output")
+    log = reeds.log.makelog(scriptname=__file__, logpath=os.path.join(case, "gamslog.txt"))
 
     print("Starting e_report_dump.py")
 
@@ -275,16 +298,10 @@ if __name__ == '__main__':
             rename=rename,
         )
 
+
     #%% Special handling of particular outputs
-    ## Hydrogen prices by month
-    try:
-        dfin_timestamp = reeds.timeseries.timeslice_to_timestamp(case, 'h2_price_h')
-        dfout_month = timestamp_to_month(dfin_timestamp)
-        dfout_month.rename(columns={'Value':'$2004/kg'}).to_csv(
-            os.path.join(outputs_path, 'h2_price_month.csv'), index=False)
-    except Exception:
-        if int(sw.GSw_H2):
-            print(traceback.format_exc())
+    postprocess_outputs(case, outputs_path=outputs_path)
+
 
     #%% All done
     print("Completed e_report_dump.py")

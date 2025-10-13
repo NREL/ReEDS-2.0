@@ -27,6 +27,7 @@ switch_mods_default = {
     'GSw_HourlyChunkLengthRep': 1,
     'GSw_HourlyChunkLengthStress': 1,
     'GSw_HourlyChunkAggMethod': 1,
+    'GSw_PRM_CapCredit': 0,
 }
 
 

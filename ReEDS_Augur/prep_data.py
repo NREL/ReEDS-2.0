@@ -302,10 +302,10 @@ def main(t, casedir, iteration=0):
     vre_cf_marg.index = h_dt_szn.set_index(['ccseason','year','h','hour']).index
     h5out['vre_cf_marg'] = vre_cf_marg
 
-
     h_dt_szn_load_years = h_dt_szn.loc[h_dt_szn.index.isin(load.index.get_level_values('datetime'))]
-    #%%### H2 and DAC load
-    ### First just make it all inflexible (necessary for PRAS)
+
+    #%%### Flexible load
+    ### H2 and DAC: Make it all inflexible (necessary for PRAS)
     load_h2dac_all_hourly = (
         gdxreeds['prod_filt']
         .groupby(['r', 'allh']).Value.sum().reset_index()
@@ -315,8 +315,8 @@ def main(t, casedir, iteration=0):
         .reindex(h_dt_szn_load_years.index)
     )
 
-    #%%## DR Shed load
-    ### Get the DR shed load for all weather years
+    #%% Load shedding
+    ## Get the DR shed load for all weather years
     gen_h_stress = gdxreeds['gen_h_stress_filt']
     gen_shed = gen_h_stress.loc[
         (gen_h_stress['t'] == t)
@@ -328,6 +328,15 @@ def main(t, casedir, iteration=0):
     ## Now fill other hours with zero
     gen_shed_combined = gen_shed_combined.reindex(h_dt_szn.index).fillna(0)
 
+    #%% Flexibly sited load -> pd.Series with index = regions and missing values 0-filled
+    ra_cap_loadsite = (
+        gdxreeds['ra_cap_loadsite']
+        .loc[gdxreeds['ra_cap_loadsite']['t'] == t]
+        .drop(columns='t')
+        .set_index('r')
+        .squeeze(1)
+        .reindex(load.columns).fillna(0)
+    )
 
     #%%### Total load and net load
     ### Get Candian exports and add to this solve year's load
@@ -341,13 +350,27 @@ def main(t, casedir, iteration=0):
     ### PRAS doesn't yet handle flexible load, so include all H2/DAC load in the
     ### version we write for PRAS
     if int(sw['pras_include_h2dac']):
+        print(f'Added H2/DAC to PRAS load since pras_include_h2dac = {sw.pras_include_h2dac}')
         pras_load = load_year.add(load_h2dac_all_hourly, fill_value=0)
     else:
         pras_load = load_year.copy()
 
     ### Subtract dr-shed load
     if int(sw.GSw_DRShed) and not gen_shed_combined.empty:
+        print(f'Subtracted shed load from PRAS load since GSw_DRShed = {sw.GSw_DRShed}')
         pras_load = pras_load.subtract(gen_shed_combined, fill_value=0).clip(lower=0)
+
+    ### Add flexibly sited load if its profile is inflexible (GSw_LoadSiteCF = 1)
+    if (
+        np.isclose(float(sw.GSw_LoadSiteCF), 1)
+        and len(ra_cap_loadsite)
+        and int(sw.GSw_LoadSiteRA)
+    ):
+        print(
+            f'Added CAP_LOADSITE to PRAS load since GSw_LoadSiteCF = {sw.GSw_LoadSiteCF} '
+            f'and GSw_LoadSiteRA = {sw.GSw_LoadSiteRA}'
+        )
+        pras_load += ra_cap_loadsite
 
     h5out['pras_load'] = pras_load
     ## Include the hourly H2/DAC load for debugging
@@ -385,8 +408,10 @@ def main(t, casedir, iteration=0):
     max_cap = cap_nonloadtechs.set_index(['i','v','r']).Value.rename('MW')
     ## Drop VRE since it is handled through pras_vre_gen
     max_cap = max_cap.loc[
-        ~max_cap.index.get_level_values('i').isin(
-            list(techs_vre_simplify.keys()) + list(techs_vre_simplify.values())
+        ~max_cap.index.get_level_values('i').str.startswith(
+            tuple(
+                list(techs_vre_simplify.keys()) + list(techs_vre_simplify.values())
+            )
         )
     ].copy()
     ## Aggregate geothermal
@@ -473,7 +498,7 @@ def main(t, casedir, iteration=0):
     )
     watertech2tech = watertech2tech.map(lambda x: upgrade2from.get(x,x))
 
-    techmap = pd.concat([upgrade2from, watertech2tech])
+    techmap = pd.concat([upgrade2from, watertech2tech]).to_dict()
 
     ### Simplify all the techs in output csv files and sum the capacities
     for key in csvout:

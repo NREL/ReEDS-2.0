@@ -1112,7 +1112,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
         t_set = max(t, 2030)
             
         dr_shed_avail_allyears = reeds.io.read_file(os.path.join(inputs_case, 'dr_shed_hourly.h5'), parse_timestamps=True)
-        dr_shed_avail_allyears['year'] = dr_shed_avail_allyears['year'].astype(int)
+        dr_shed_avail_allyears['year'] = round(dr_shed_avail_allyears['year'],0).astype(int)
         dr_shed_avail = dr_shed_avail_allyears.loc[dr_shed_avail_allyears['year']==t_set].copy().drop('year', axis=1)
 
         # dr_shed only has 2018 weather year data, need to populate for other RA years
@@ -1120,14 +1120,14 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
         # copy 2018 data to other weather years
         for y in sw.resource_adequacy_years_list:
             #set datetime column to match hmap_allyrs.timestamp for y 
-            dr_shed_avail_new_index = dr_shed_avail.copy()         
+            dr_shed_avail_new_index = dr_shed_avail.copy()
             dr_shed_avail_new_index.index = pd.to_datetime(hmap_allyrs[hmap_allyrs['year']==y].timestamp)
         
             dr_shed_avail_all_weatheryears = pd.concat([dr_shed_avail_all_weatheryears, dr_shed_avail_new_index])
 
         # downselect dr_shed_avail to timestamps in all weather years
         dr_shed_avail_all_weatheryears.loc[hmap_allyrs.timestamp]
-        # map dr_shed_avail index to actual period 
+        # map dr_shed_avail index to actual period
         dr_shed_avail_all_weatheryears.index = hmap_allyrs.loc[hmap_allyrs.timestamp.isin(dr_shed_avail_all_weatheryears.index)].actual_h
         # Map actual periods to rep periods
         dr_shed_avail_all_weatheryears = dr_shed_avail_all_weatheryears.loc[
@@ -1509,7 +1509,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
     #%% Map weighted average profile values and difference from full-resolution mean
     if make_plots:
         figpath = os.path.abspath(
-            os.path.join(os.path.dirname(inputs_case.rstrip(os.sep)), 'outputs', 'maps')
+            os.path.join(os.path.dirname(inputs_case.rstrip(os.sep)), 'outputs', 'figures')
         )
         try:
             import matplotlib.pyplot as plt

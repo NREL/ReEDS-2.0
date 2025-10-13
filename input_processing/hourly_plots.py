@@ -237,7 +237,6 @@ def plot_maps(sw, inputs_case, reeds_path, figpath, periodtype='rep'):
         'wind-ons':{'cf_actual':(0,0.6),'cf_rep':(0,0.6),'cf_diff':(-0.05,0.05)},
         'wind-ofs':{'cf_actual':(0,0.6),'cf_rep':(0,0.6),'cf_diff':(-0.05,0.05)},
     }
-    ms = {'upv':0.35, 'wind-ons':0.35, 'wind-ofs':0.7}
     vlimload = {'GW_diff':1, 'pct_diff':5}
     title = (
         '{}\n'
@@ -279,17 +278,12 @@ def plot_maps(sw, inputs_case, reeds_path, figpath, periodtype='rep'):
     for tech in techs:
         ### Get supply curve
         dfsc = pd.read_csv(
-            os.path.join(inputs_case, f'{tech}_supply_curve.csv')
+            os.path.join(inputs_case, f'supplycurve_{tech}.csv')
         ).rename(columns={'region':'r'})
         dfsc.r = dfsc.r.map(r2aggreg)
         dfsc['i'] = tech + '_' + dfsc['class'].astype(str)
         ### Add geographic and CF information
-        sitemap = pd.read_csv(
-            os.path.join(
-                reeds_path, 'inputs', 'supply_curve',
-                f"sitemap{'_offshore' if tech == 'wind-ofs' else ''}.csv"),
-            index_col='sc_point_gid',
-        )
+        sitemap = reeds.io.get_sitemap(offshore=(True if tech == 'wind-ofs' else False))
 
         dfsc['latitude'] = dfsc.sc_point_gid.map(sitemap.latitude)
         dfsc['longitude'] = dfsc.sc_point_gid.map(sitemap.longitude)
@@ -325,6 +319,9 @@ def plot_maps(sw, inputs_case, reeds_path, figpath, periodtype='rep'):
                 )
             dfdiffs[col]['cf_diff'] = dfdiffs[col].cf_rep - dfdiffs[col].cf_actual
 
+        ## Convert from point to polygons (raster is 11.52 km but include a little extra)
+        cfmap.geometry = cfmap.buffer(11530/2, cap_style='square')
+
         ### Plot the difference map
         nrows, ncols, coords = plots.get_coordinates([
             'cf_actual', 'cf_rep', 'cf_diff',
@@ -340,7 +337,7 @@ def plot_maps(sw, inputs_case, reeds_path, figpath, periodtype='rep'):
         for col in ['cf_actual','cf_rep','cf_diff']:
             cfmap.plot(
                 ax=ax[coords[col]], column=col, cmap=cmaps[col],
-                marker='s', markersize=ms[tech], lw=0,
+                lw=0,
                 legend=False,
                 vmin=vm[tech][col][0], vmax=vm[tech][col][1],
             )
