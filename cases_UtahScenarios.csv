@@ -1,5 +1,5 @@
 ,Default Value,Utah_bl,Utah_bl_CAA,Utah_opgw1,Utah_opgw2,Utah_opgw3,Utah_lowcostnuclear,Utah_IRP_builds,Utah_add3_DC_load,Utah_bl_TC_update,Utah_Nuclear_Req,Utah_lowcost_Nuc,Utah_IRP_all_states,Utah_opgw2_endog_load
-ignore,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+ignore,1,0,1,1,1,1,1,1,1,1,1,1,1,0
 endyear,,2050,2050,2050,2050,2050,2050,2050,2050,2050,2050,2029,2032,2029
 GSw_Region,usa,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,WECC_aggreg_UT_county,st/UT,WECC_aggreg_UT_county,WECC_aggreg_UT_county
 GSw_RegionResolution,aggreg,mixed,mixed,mixed,mixed,mixed,mixed,mixed,mixed,mixed,mixed,aggreg,mixed,mixed
@@ -23,5 +23,4 @@ GSw_FlatLoadAdd,,,,,,,,,,,,,,
 debug,1,,,,,,,,,,,,,
 GSw_LoadSiteCF,0,,,,,,,,,,,,,1
 GSw_LoadSiteRA,0,,,,,,,,,,,,,1
-GSw_LoadSiteReg,,,,,,,,,,,,,,st
-GSw_LoadSiteTrajectory,,,,,,,,,,,,,,opgw2
+GSw_LoadSiteTrajectory,,,,,,,,,,,,,,st_opgw2
