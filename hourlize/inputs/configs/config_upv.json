@@ -4,8 +4,6 @@
     "class_bin_num": 5,
     "class_bin": true,
     "class_path": null,
-    "cost_adder_components": ["trans_adder_per_mw", "capital_adder_per_mw"],
-    "distance_cols": ["dist_spur_km","dist_reinforcement_km"],
     "filter_cols": {"capacity": [">", 0]} ,
     "min_cap": 5 ,
     "profile_dir": "{access_case}_ac" ,

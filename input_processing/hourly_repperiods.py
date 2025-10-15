@@ -489,7 +489,7 @@ def main(
     techs_vre = ['upv', 'wind-ons', 'wind-ofs'] if int(sw.GSw_OfsWind) else ['upv', 'wind-ons']
 
     #%% Direct plots to outputs folder
-    figpath = os.path.join(inputs_case,'..','outputs','maps')
+    figpath = os.path.join(inputs_case,'..', 'outputs', 'figures')
     os.makedirs(figpath, exist_ok=True)
     os.makedirs(os.path.join(inputs_case, periodtype), exist_ok=True)
 
@@ -528,7 +528,7 @@ def main(
     #%% Load supply curves to use for available capacity weighting
     sc = {
         tech: pd.read_csv(
-            os.path.join(inputs_case, f'{tech}_sc.csv')
+            os.path.join(inputs_case, f'supplycurve_{tech}.csv')
         ).groupby(['region','class'], as_index=False).capacity.sum()
         for tech in techs_vre
     }
@@ -587,7 +587,7 @@ def main(
     recf_agg = recf_agg.groupby(axis=1, level=['tech','region']).sum()
 
     ### Divide by aggregated capacity to get back to CF
-    recf_agg /= sc.groupby(['tech','aggreg']).capacity.sum()
+    recf_agg /= sc.groupby(['tech','aggreg']).capacity.sum().rename_axis(['tech','region'])
 
     ### Load load data (Eastern time)
     print("Collecting 8760 load data")
@@ -942,7 +942,7 @@ if __name__ == '__main__':
     # reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # inputs_case = os.path.join(
     #     reeds_path,'runs',
-    #     'v20250522_yamM0_KS','inputs_case','')
+    #     'v20250821_revM1_Pennsylvania','inputs_case','')
     # interactive = True
 
     #%% Set up logger
@@ -950,7 +950,7 @@ if __name__ == '__main__':
         scriptname=__file__,
         logpath=os.path.join(inputs_case,'..','gamslog.txt'),
     )
-
+    print('Starting hourly_repperiods.py')
     #%% Inputs from switches
     sw = reeds.io.get_switches(inputs_case)
 
@@ -981,3 +981,4 @@ if __name__ == '__main__':
     #%% All done
     reeds.log.toc(tic=tic, year=0, process='input_processing/hourly_repperiods.py', 
         path=os.path.join(inputs_case,'..'))
+    print('Finished hourly_repperiods.py')

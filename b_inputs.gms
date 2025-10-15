@@ -79,6 +79,8 @@ Sw_Timetype("%timetype%") = 1 ;
 
 * Sw_PCM is always 0 except when running d_solvepcm.gms, where it's set to 1
 scalar Sw_PCM "Internal switch used when running PCM mode" / 0 / ;
+* Sw_MGA is always 0 except when running the optimization a second time for MGA, where it's set to 1
+scalar Sw_MGA "Internal switch used when running MGA mode" / 0 / ;
 
 *============================
 * --- Scalar Declarations ---
@@ -434,7 +436,7 @@ $include inputs_case%ds%e.csv
 $onlisting
 / ;
 
-set etype "emission types used in model (precombustion and combustion)"
+set etype "emission types used in model (upstream and process)"
 /
 $offlisting
 $include inputs_case%ds%etype.csv
@@ -460,6 +462,12 @@ transgrp "sub-FERC-1000 regions"
 /
 * written by copy_files.py
 $include inputs_case%ds%val_transgrp.csv
+/,
+
+itlgrp "ReEDS zones for additional ITL constraints when doing a run that includes county resolution"
+/
+* written by copy_files.py
+$include inputs_case%ds%val_itlgrp.csv
 /,
 
 cendiv "census divisions"
@@ -533,6 +541,7 @@ alias(cendiv,cendiv2) ;
 alias(rscbin,arscbin) ;
 alias(nercr,nercrr) ;
 alias(transgrp,transgrpp) ;
+alias(itlgrp,itlgrpp) ;
 
 parameter yeart(t) "numeric value for year",
           year(allt) "numeric year value for allt" ;
@@ -1247,7 +1256,8 @@ $onlisting
 
 
 * Mappings between r and other region sets
-set r_nercr(r,nercr)
+set r_itlgrp(r,itlgrp)
+    r_nercr(r,nercr)
     r_transreg(r,transreg)
     r_transgrp(r,transgrp)
     r_cendiv(r,cendiv)
@@ -1271,6 +1281,20 @@ r_usda(r,usda_region)                 $sum{(nercr,transreg,transgrp,cendiv,st,in
 r_h2ptcreg(r,h2ptcreg)                $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,         hurdlereg,ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
 r_hurdlereg(r,hurdlereg)              $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,          ccreg) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
 r_ccreg(r,ccreg)                      $sum{(nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg      ) $hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg),1} = yes ;
+
+set r_itlgrp(r,itlgrp) "mapping of r to itlgrp"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%hierarchy_itlgrp.csv
+$offdelim
+$onlisting
+/ ;
+
+* Region hierarchy level within which to site optimally sited load
+alias(%GSw_LoadSiteReg%, loadsitereg) ;
+set r_loadsitereg(r,loadsitereg) "Mapping from model zones to loadsite regions" ;
+r_loadsitereg(r,%GSw_LoadSiteReg%) = r_%GSw_LoadSiteReg%(r,%GSw_LoadSiteReg%) ;
 
 
 * Region hierarchy level within which to site optimally sited load
@@ -1624,7 +1648,7 @@ $onempty
 table prescribed_wind_ons(r,allt,*) "--MW-- prescribed wind capacity, created by hourlize"
 $offlisting
 $ondelim
-$include inputs_case%ds%wind-ons_prescribed_builds.csv
+$include inputs_case%ds%prescribed_builds_wind-ons.csv
 $offdelim
 $onlisting
 ;
@@ -1636,7 +1660,7 @@ $onempty
 table prescribed_wind_ofs(r,allt,*) "--MW-- prescribed wind capacity, created by hourlize"
 $offlisting
 $ondelim
-$include inputs_case%ds%wind-ofs_prescribed_builds.csv
+$include inputs_case%ds%prescribed_builds_wind-ofs.csv
 $offdelim
 $onlisting
 ;
@@ -1896,18 +1920,6 @@ $onlisting
 ;
 $offempty
 
-parameter trans_intra_cost_adder(i) "--$/kW-- Additional intra-zone network reinforcement cost for supply-curve technologies which have not already accounted for the cost in their supply curves"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%trans_intra_cost_adder.csv
-$offdelim
-$onlisting
-/ ;
-*water tech assignment necessary for when PSH and CSP is differentiated by water supply (and cooling tech)
-trans_intra_cost_adder(i)$[i_water_cooling(i)$Sw_WaterMain] =
-  sum{ii$ctt_i_ii(i,ii), trans_intra_cost_adder(ii) } ;
-
 parameter distance_spur(i,r,rscbin) "--miles-- Spur line distance"
 /
 $offlisting
@@ -1933,9 +1945,6 @@ rsc_dat("pumped-hydro",r,"cost",rscbin) = rsc_dat("pumped-hydro",r,"cost",rscbin
 
 *need to adjust units for hydro costs from $ / KW to $ / MW
 rsc_dat(i,r,"cost",rscbin)$hydro(i) = rsc_dat(i,r,"cost",rscbin) * 1000 ;
-
-*Add intra-zone network reinforcement cost adder
-rsc_dat(i,r,"cost",rscbin)$rsc_dat(i,r,"cap",rscbin) = rsc_dat(i,r,"cost",rscbin) + trans_intra_cost_adder(i) * 1000 ;
 
 *To allow pumped-hydro-flex via rscfeas and m_rscfeas, we set its supply curve capacity equal to pumped-hydro fixed.
 *Note however that they will share the same supply curve capacity (see rsc_agg).
@@ -2838,6 +2847,7 @@ $onlisting
 parameter m_watsc_dat(wst,*,r,t)   "-- million gallons per year, $ per million gallons per year -- water supply curve data with *=cap,cost" ;
 
 * UnappWaterSeaDistr - seasonal distribution factors for new unappropriated water access
+$onempty
 table watsa_temp(wst,r,quarter)   "fractional quarterly allocation of water"
 $offlisting
 $ondelim
@@ -2845,6 +2855,7 @@ $include inputs_case%ds%unapp_water_sea_distr.csv
 $offdelim
 $onlisting
 ;
+$offempty
 
 m_watsc_dat(wst,"cost",r,t)$tmodel_new(t) = wat_supply_new(wst,"cost",r) ;
 
@@ -3611,6 +3622,17 @@ $onlisting
 / ;
 $offempty
 
+$onempty
+parameter trancap_init_itlgrp(itlgrp,itlgrpp,trtype) "--MW-- initial upper limit on interface flows between itlgrps"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%trancap_init_itlgrp.csv
+$offdelim
+$onlisting
+/ ;
+$offempty
+
 parameter routes_transgroup(transgrp,transgrpp,r,rr) "collection of routes between transgroups" ;
 routes_transgroup(transgrp,transgrpp,r,rr)$[
     sum{t, routes(r,rr,"AC",t) }
@@ -3629,8 +3651,15 @@ routes_nercr(nercr,nercrr,r,rr)$[
     $(not sameas(r,rr))
 ] = yes ;
 
-
-
+parameter routes_itlgrp(itlgrp,itlgrpp,r,rr) "collection of routes between itlgrps" ;
+routes_itlgrp(itlgrp,itlgrpp,r,rr)$[
+    sum{(t,trtype), routes(r,rr,trtype,t) }
+    $r_itlgrp(r,itlgrp)
+    $r_itlgrp(rr,itlgrpp)
+    $(not sameas(itlgrp,itlgrpp))
+    $(not sameas(r,rr))
+    $[not((sameas(itlgrp,r)) AND (sameas(itlgrpp,rr)))]
+] = yes ;
 * --- transmission cost ---
 
 * Transmission line capex cost (generated from reV tables)
@@ -5139,8 +5168,8 @@ parameter rsc_fin_mult(i,r,t)       "--fraction-- financial cost multiplier for 
 * --- Emission Rate ---
 *=========================================
 
-* Emission rate by technology and etype (broken down to combustion and precombustion)
-* Note that CH4 precombustion emission rate of natural gas is 0 here 
+* Emission rate by technology and etype (broken down to process and upstream)
+* Note that CH4 upstream emission rate of natural gas is 0 here 
 * as we will use CH4 methane leakage from GSw_MethaneLeakageScen for it later)
 table emit_rate_fuel(i,etype,e)  "--metric tons per MMBtu-- emissions rate of fuel by technology and emission type"
 $offlisting
@@ -5181,31 +5210,30 @@ emit_rate_fuel(i,etype,e)$[i_water_cooling(i)$Sw_WaterMain] =
 * Exclude capture rates of BECCS, which receive full credit in a CES and were already set to 1 above in the "RPS" section.
 RPSTechMult(RPSCat,i,st)$[ccs(i)$(sameas(RPSCat,"CES") or sameas(RPSCat,"CES_Bundled"))$(not beccs(i))] = capture_rate_input(i,"CO2") ;
 
-* calculate combustion emit rate for CCS techs (except beccs techs, which are defined directly in emitrate.csv)
-emit_rate_fuel(i,"combustion",e)$[ccs(i)$(not beccs(i))] =
-  (1 - capture_rate_input(i,e)) * sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"combustion",e) } ;
+* calculate process emit rate for CCS techs (except beccs techs, which are defined directly in emitrate.csv)
+emit_rate_fuel(i,"process",e)$[ccs(i)$(not beccs(i))] =
+  (1 - capture_rate_input(i,e)) * sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"process",e) } ;
 
-* calculate precombustion emit rate for CCS techs (except beccs techs, which are defined directly in emitrate.csv)
-emit_rate_fuel(i,"precombustion",e)$[ccs(i)$(not beccs(i))] = sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"precombustion",e) } ;
+* calculate upstream emit rate for CCS techs (except beccs techs, which are defined directly in emitrate.csv)
+emit_rate_fuel(i,"upstream",e)$[ccs(i)$(not beccs(i))] = sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"upstream",e) } ;
 
-* assign flexible ccs the same combustion emission rate as the uncontrolled technology to allow variable CO2 removal (e.g., for gas-cc-ccs-f1, use gas-cc)
-emit_rate_fuel(i,"combustion",e)$[ccsflex(i)] = sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"combustion",e) } ;
+* assign flexible ccs the same process emission rate as the uncontrolled technology to allow variable CO2 removal (e.g., for gas-cc-ccs-f1, use gas-cc)
+emit_rate_fuel(i,"process",e)$[ccsflex(i)] = sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"process",e) } ;
 
-* set upgrade tech combustion emissions for non-CCS upgrades (e.g. gas-ct -> h2-ct); CCS upgrade emissions are handled above
-emit_rate_fuel(i,"combustion",e)$[upgrade(i)$(not ccs(i))] = sum{ii$upgrade_to(i,ii), emit_rate_fuel(ii,"combustion",e) } ;
+* set upgrade tech process emissions for non-CCS upgrades (e.g. gas-ct -> h2-ct); CCS upgrade emissions are handled above
+emit_rate_fuel(i,"process",e)$[upgrade(i)$(not ccs(i))] = sum{ii$upgrade_to(i,ii), emit_rate_fuel(ii,"process",e) } ;
 
-* set upgrade tech precombustion emissions for upgrades
-emit_rate_fuel(i,"precombustion",e)$[upgrade(i)] = sum{ii$upgrade_to(i,ii), emit_rate_fuel(ii,"precombustion",e) } ;
-
+* set upgrade tech upstream emissions for upgrades
+emit_rate_fuel(i,"upstream",e)$[upgrade(i)] = sum{ii$upgrade_to(i,ii), emit_rate_fuel(ii,"upstream",e) } ;
 
 * parameters for calculating captured emissions
 parameter capture_rate_fuel(i,e) "--metric tons per MMBtu-- emissions capture rate of fuel by technology type";
-capture_rate_fuel(i,e) = capture_rate_input(i,e) * sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"combustion",e) } ;
+capture_rate_fuel(i,e) = capture_rate_input(i,e) * sum{ii$ccs_link(i,ii), emit_rate_fuel(ii,"process",e) } ;
 
 * capture_rate_fuel is used to calculate how much CO2 is captured and stored;
 * for beccs, the captured CO2 is the entire negative emissions rate
 * since any uncontrolled emissions are assumed to be lifecycle net zero
-capture_rate_fuel(i,"CO2")$beccs(i) = - emit_rate_fuel(i,"combustion","CO2")
+capture_rate_fuel(i,"CO2")$beccs(i) = - emit_rate_fuel(i,"process","CO2")
 
 parameter capture_rate(e,i,v,r,t) "--metric tons per MWh-- emissions capture rate" ;
 
@@ -5221,14 +5249,24 @@ $onlisting
 
 scalar methane_tonperMMBtu "--metric tons per MMBtu-- methane content of natural gas" ;
 * [ton CO2 / MMBtu] * [ton CH4 / ton CO2]
-methane_tonperMMBtu = emit_rate_fuel("gas-CC","combustion","CO2") * molWeightCH4 / molWeightCO2 ;
+methane_tonperMMBtu = emit_rate_fuel("gas-CC","process","CO2") * molWeightCH4 / molWeightCO2 ;
+
+* H2 leakage rate by technology and etype (broken down to process and upstream)
+parameter h2_leakage_rate(i)  "--fraction-- h2 leakage rate as a fraction of total production by technology and emission type"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%h2_leakage_rate.csv
+$offdelim
+$onlisting
+/ ;
 
 parameter prod_emit_rate(etype,e,i,allt) "--metric tons emitted per metric ton product-- emissions rate per metric ton of product (e.g. tonCO2/tonH2 for SMR & SMR-CCS)" ;
-* Steam methane reformer (SMR)'s combustion emission here refers to emissions from steam methane reforming process
-prod_emit_rate("combustion","CO2","smr",t) = smr_co2_intensity ;
-prod_emit_rate("combustion","CO2","smr_ccs",t) = smr_co2_intensity * (1 - smr_capture_rate) ;
-prod_emit_rate("combustion","CO2","dac",t)$Sw_DAC = -1 ;
-prod_emit_rate("combustion","CO2","dac_gas",t)$Sw_DAC_Gas = -1 ;
+* Steam methane reformer (SMR)'s process emission here refers to emissions from steam methane reforming process
+prod_emit_rate("process","CO2","smr",t) = smr_co2_intensity ;
+prod_emit_rate("process","CO2","smr_ccs",t) = smr_co2_intensity * (1 - smr_capture_rate) ;
+prod_emit_rate("process","CO2","dac",t)$Sw_DAC = -1 ;
+prod_emit_rate("process","CO2","dac_gas",t)$Sw_DAC_Gas = -1 ;
 
 scalar smr_methane_rate  "--metric tons CH4 per metric ton H2-- methane used to produce a metric ton of H2 via SMR" ;
 * NOTE that we don't yet include the impact of CCS on methane use
@@ -5238,11 +5276,20 @@ smr_methane_rate = smr_co2_intensity * molWeightCH4 / molWeightCO2 ;
 
 * Upstream fuel emissions for SMR
 *** [ton CH4 used / ton H2] * [ton CH4 leaked / ton CH4 produced] * [ton CH4 produced / ton CH4 used]
-prod_emit_rate("precombustion",e,i,t)
+prod_emit_rate("upstream",e,i,t)
     $[sameas(e,"CH4")
     $smr(i)
     $methane_leakage_rate(t)]
     = smr_methane_rate * methane_leakage_rate(t) / (1 - methane_leakage_rate(t))
+;
+
+* Process H2 emissions for SMR, SMR-CC, and electrolyzer
+*** [ton H2 leaked / ton H2 produced] * [ton H2 produced / ton H2 used]
+prod_emit_rate("process",e,i,t)
+    $[sameas(e,"H2")
+    $h2(i) 
+    $h2_leakage_rate(i)]
+    = h2_leakage_rate(i) / (1 - h2_leakage_rate(i))
 ;
 
 parameter
@@ -5258,19 +5305,30 @@ emit_rate(etype,e,i,v,r,t)$[emit_rate_fuel(i,etype,e)$valcap(i,v,r,t)]
 emit_rate(etype,e,i,v,r,t)$[sameas(i,"cofire")$emit_rate_fuel("coal-new",etype,e)$valcap(i,v,r,t)]
   = round((1-bio_cofire_perc) * heat_rate(i,v,r,t) * emit_rate_fuel("coal-new",etype,e),10) ;
 
-* Fill in CH4 precombustion emission rate
+* Fill in CH4 upstream emission rate
 *** [MMBtu/MWh] * [ton methane used / MMBtu] * [ton methane leaked / ton methane produced]
 *** * [ton methane produced / ton methane used] = [ton methane leaked / MWh]
-emit_rate("precombustion",e,i,v,r,t)
+emit_rate("upstream",e,i,v,r,t)
     $[methane_leakage_rate(t)
     $gas(i)
     $sameas(e,"CH4")]
     = heat_rate(i,v,r,t) * methane_tonperMMBtu * methane_leakage_rate(t) / (1 - methane_leakage_rate(t))
 ;
 
+* Fill in H2 process emission rates for H2 combustion techs (h2-ct and h2-cc) (and fuel cell later)
+*** [heat rate (MMBtu/MWh)] * [h2 combustion intensity (metric ton h2 used / MMBtu)] * [h2 leakage rate (metric ton h2 leaked / ton h2 produced)]
+*** * [ton h2 produced / ton h2 used] = [ton h2 leaked / MWh]
+emit_rate("process",e,i,v,r,t)
+    $[h2_leakage_rate(i)
+    $sameas(e,"H2")]
+    = heat_rate(i,v,r,t) * h2_combustion_intensity * h2_leakage_rate(i) / (1 - h2_leakage_rate(i))
+;
+
+* set upgraded H2 tech emissions
+emit_rate("process","H2",i,v,r,t)$[upgrade(i)] = sum{ii$upgrade_to(i,ii), emit_rate("process","H2",ii,v,r,t) } ;
+
 * Global warming potential of different pollutants
 parameter gwp(e)   "--metric ton CO2-equivalents --global warming potential"
-
 /
 $ondelim
 $include inputs_case%ds%gwp.csv
@@ -5278,7 +5336,10 @@ $offdelim
 / ;
 
 * CO2(e) emissions rate (used in postprocessing only)
-emit_rate(etype,"CO2e",i,v,r,t)
+emit_rate(etype,"CO2e",i,v,r,t)$[Sw_AnnualCap=2]
+  = round(sum{e, emit_rate(etype,e,i,v,r,t) * gwp(e)$[(not sameas(e, "H2"))]},10) ;
+
+emit_rate(etype,"CO2e",i,v,r,t)$[Sw_AnnualCap<>2]
   = round(sum{e, emit_rate(etype,e,i,v,r,t) * gwp(e)},10) ;
 
 * calculate emissions capture rates (same logic as emissions calc above)
@@ -6136,7 +6197,7 @@ if(Sw_AnnualCap = 1,
     emit_cap("CO2",t) = co2_cap(t) ;
 ) ;
 
-if(Sw_AnnualCap = 2,
+if(Sw_AnnualCap > 1,
     emit_cap("CO2e",t) = co2_cap(t) ;
 ) ;
 
@@ -6187,6 +6248,13 @@ emit_modeled(e,r,t)$emit_tax(e,r,t) = yes ;
 
 * Remove years not modeled
 emit_modeled(e,r,t)$[not tmodel_new(t)] = no ;
+
+* Set of emissions that are being capped
+set emit_capped(e) "set of emissions that are included in emission cap depending on Sw_AnnualCap setting" ;
+emit_capped(e)$[Sw_AnnualCap=0] = no ;
+emit_capped("CO2")$[Sw_AnnualCap=1] = yes ;
+emit_capped(e)$[gwp(e)$(not sameas(e, "H2"))$(Sw_AnnualCap=2)] = yes ;
+emit_capped(e)$[gwp(e)$(Sw_AnnualCap=3)] = yes ;
 
 *====================================
 * --- Endogenous Retirements ---
@@ -6565,6 +6633,18 @@ cost_co2_pipeline_fom(r,rr,t) =  %GSw_CO2_CostAdj% * cost_co2_pipeline_fom(r,rr,
 cost_co2_stor_bec(cs,t) =        %GSw_CO2_CostAdj% * cost_co2_stor_bec(cs,t) ;
 cost_co2_spurline_fom(r,cs,t) =  %GSw_CO2_CostAdj% * cost_co2_spurline_fom(r,cs,t) ;
 cost_co2_spurline_cap(r,cs,t) =  %GSw_CO2_CostAdj% * cost_co2_spurline_cap(r,cs,t) ;
+
+
+* Parameter tracking for sequential solve
+parameter
+    m_capacity_exog0(i,v,r,t) "--MW-- original value of m_capacity_exog used in d_solveoneyear to make sure upgraded capacity isnt forced into retirement"
+    z_rep(t)      "--$-- objective function value by year"
+    z_rep_inv(t)  "--$-- investment component of objective function by year"
+    z_rep_op(t)   "--$-- operation component of objective function by year"
+;
+z_rep_inv(t) = 0 ;
+z_rep_op(t) = 0 ;
+
 
 *================================================================================================
 *== h- and szn-dependent sets and parameters (declared here, populated in d1_temporal_params) ===

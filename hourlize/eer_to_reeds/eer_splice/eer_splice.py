@@ -13,15 +13,21 @@ import datetime
 import shutil
 
 #USER INPUTS
-eer_case = 'baseline' #ira, ira_con, central, baseline (IRA cons is how it is named)
-eer_load_path = '/kfs2/projects/eerload/source_eer_load_profiles/20250512_eer_download/1_post_ntps_load/20250512_eer_load'
-weather_years = list(range(2007,2014)) + list(range(2016,2024))
-model_years = [2021, 2025, 2030, 2035, 2040, 2045, 2050] #Should be df_eer_meta['YEAR'].unique() unless we reduce further
+eer_case = 'ira_con' # Options: 'ira_con', 'central', 'baseline'
+eer_base_path = '/projects/eerload/source_eer_load_profiles/20250512_eer_download/shape_outputs_2025-05-12'
+weather_years = 'all' #Options: 'all' to use all weather years in eer source file; or use a list of years to subset, e.g. [2007, 2008,...]
+model_years = [2021, 2025, 2030, 2035, 2040, 2045, 2050]
 bas = [f'p{n}' for n in range(1,135)]
 replace_sectors = False #If True, use the following parameters to remove and replace sectors
 replace_type = 'Buildings' #Options: 'Transportation', 'Buildings', 'Data Centers'
 
 this_dir_path = os.path.dirname(os.path.realpath(__file__))
+
+# add handling of different IRA con case names in hourlize vs. EER data
+if eer_case == 'ira_con':
+    eer_case_meta = 'IRA cons'
+else:
+    eer_case_meta = eer_case
 
 if replace_type == 'Transportation':
     sectors_remove = {'transportation': ['buses', 'heavy duty trucks', 'light duty autos','light duty trucks', 'medium duty trucks']}
@@ -63,21 +69,33 @@ shutil.copy2(f'{this_dir_path}/ba_timezone.csv', output_dir)
 
 df_load_factors = pd.read_csv(f'{this_dir_path}/load_factors.csv')
 ba_timezone = pd.read_csv(f'{this_dir_path}/ba_timezone.csv', index_col=0)['timezone']
+
+ls_df_eer = []
+for model_year in model_years:
+    print(f'Loading eer load: {model_year}')
+    #Read csv.gz
+    df_eer = pd.read_csv(f'{eer_base_path}/{eer_case_meta}/{model_year}.csv.gz', compression='gzip')
+    #Strip out specified sectors/subsectors (allow all subsectors of a sector to be removed)
+    if replace_sectors and model_year in years_remove:
+        for sector, subsectors in sectors_remove.items():
+            remove_criteria = (df_eer['sector'] == sector)&(df_eer['subsector'].isin(subsectors))
+            df_eer = df_eer[~remove_criteria].copy()
+    #Sum over sectors, subsectors, and dispatch feeders
+    df_eer = df_eer.groupby(by=['weather_datetime'], sort=False).sum(numeric_only=True)
+    df_eer = (df_eer/1000).reset_index()  # Convert from MWh to GWh and reset index
+    df_eer['model_year'] = model_year
+    #Add to list
+    ls_df_eer.append(df_eer)
+#Concatenate
+df_eer = pd.concat(ls_df_eer, ignore_index=True)
+df_eer['weather_datetime'] = pd.to_datetime(df_eer['weather_datetime'])
+df_eer['weather_year'] = df_eer['weather_datetime'].dt.year
+if weather_years == 'all':
+    weather_years = df_eer['weather_year'].unique().tolist()
+
 for weather_year in weather_years:
     print(f'weather year: {weather_year}')
-    f_eer = h5py.File(f'{eer_load_path}_{weather_year}.h5')
-    df_eer_meta = pd.DataFrame(f_eer['meta'][:]).astype(str)
-    df_eer_load = pd.DataFrame(f_eer['load'][:])
-    f_eer.close()
-    df_eer_meta['YEAR'] = df_eer_meta['YEAR'].astype(int)
-    df_eer_meta = df_eer_meta[df_eer_meta['SCENARIO'].str.lower()==eer_case].copy()
-    if replace_sectors:
-        #Sector removal
-        for sector, subsectors in sectors_remove.items():
-            remove_criteria = (df_eer_meta['SECTOR'] == sector)&(df_eer_meta['SUBSECTOR'].isin(subsectors))&(df_eer_meta['YEAR'].isin(years_remove))
-            df_eer_removed = df_eer_meta[remove_criteria].copy()
-            df_eer_meta = df_eer_meta[~remove_criteria].copy()
-    df_eer_load = df_eer_load[df_eer_meta.index].copy()
+    df_eer_w = df_eer[df_eer['weather_year'] == weather_year].copy()
     hourly_timestamps = pd.date_range(start=f'1/1/{weather_year}  12:00:00 AM', end=f'12/31/{weather_year}  11:00:00 PM', freq='h')
     for model_year in model_years:
         print(f'model year: {model_year}')
@@ -86,14 +104,11 @@ for weather_year in weather_years:
         df_ba_load.insert(0, 'year', int(model_year))
         df_ba_zeros = pd.DataFrame(np.zeros((len(df_ba_load), len(bas))), columns=bas)
         df_ba_load = pd.concat([df_ba_load, df_ba_zeros], axis='columns')
-        df_eer_meta_yr = df_eer_meta[df_eer_meta['YEAR']==model_year].copy()
-        df_eer_load_yr = df_eer_load[df_eer_meta_yr.index].copy()
+        df_eer_wm = df_eer_w[df_eer_w['model_year'] == model_year].copy().reset_index(drop=True)
         for ba in bas:
             for idx, ba_row in df_load_factors[df_load_factors['ba'] == ba].iterrows():
-                #I really only need to iterrate through rows because of DC and p123
-                df_eer_meta_st = df_eer_meta_yr[df_eer_meta_yr['STATE'] == ba_row['state']].copy()
-                df_eer_load_st = df_eer_load_yr[df_eer_meta_st.index].sum(axis=1)
-                df_ba_load[ba] = df_ba_load[ba] + df_eer_load_st * ba_row['load_factor']
+                #I really only need to iterate through rows because of DC and p123
+                df_ba_load[ba] = df_ba_load[ba] + df_eer_wm[ba_row['state']] * ba_row['load_factor']
         if replace_sectors and model_year in years_remove:
             #Sector replacement
             if replace_type == 'Transportation':
@@ -131,7 +146,7 @@ for weather_year in weather_years:
                 #Adjust df_ba_load with new load
                 for ba in bas:
                     if ba in df_load_r:
-                        df_ba_load[ba] = df_ba_load[ba] + df_load_r[ba].values           
+                        df_ba_load[ba] = df_ba_load[ba] + df_load_r[ba].values
         for ba in bas:
             df_ba_load[ba] = df_ba_load[ba].round(4)
         df_ba_load.to_csv(f'{output_dir}/{eer_case}_e{model_year}_w{weather_year}.csv', index=False)

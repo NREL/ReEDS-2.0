@@ -308,10 +308,10 @@ def main(t, casedir, iteration=0):
     vre_cf_marg.index = h_dt_szn.set_index(['ccseason','year','h','hour']).index
     h5out['vre_cf_marg'] = vre_cf_marg
 
-
     h_dt_szn_load_years = h_dt_szn.loc[h_dt_szn.index.isin(load.index.get_level_values('datetime'))]
-    #%%### H2 and DAC load
-    ### First just make it all inflexible (necessary for PRAS)
+
+    #%%### Flexible load
+    ### H2 and DAC: Make it all inflexible (necessary for PRAS)
     load_h2dac_all_hourly = (
         gdxreeds['prod_filt']
         .groupby(['r', 'allh']).Value.sum().reset_index()
@@ -321,8 +321,8 @@ def main(t, casedir, iteration=0):
         .reindex(h_dt_szn_load_years.index)
     )
 
-    #%%## DR Shed load
-    ### Get the DR shed load for all weather years
+    #%% Load shedding
+    ## Get the DR shed load for all weather years
     gen_h_stress = gdxreeds['gen_h_stress_filt']
     gen_shed = gen_h_stress.loc[
         (gen_h_stress['t'] == t)
@@ -429,8 +429,10 @@ def main(t, casedir, iteration=0):
     max_cap = cap_nonloadtechs.set_index(['i','v','r']).Value.rename('MW')
     ## Drop VRE since it is handled through pras_vre_gen
     max_cap = max_cap.loc[
-        ~max_cap.index.get_level_values('i').isin(
-            list(techs_vre_simplify.keys()) + list(techs_vre_simplify.values())
+        ~max_cap.index.get_level_values('i').str.startswith(
+            tuple(
+                list(techs_vre_simplify.keys()) + list(techs_vre_simplify.values())
+            )
         )
     ].copy()
     ## Aggregate geothermal
@@ -517,7 +519,7 @@ def main(t, casedir, iteration=0):
     )
     watertech2tech = watertech2tech.map(lambda x: upgrade2from.get(x,x))
 
-    techmap = pd.concat([upgrade2from, watertech2tech])
+    techmap = pd.concat([upgrade2from, watertech2tech]).to_dict()
 
     ### Simplify all the techs in output csv files and sum the capacities
     for key in csvout:

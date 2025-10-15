@@ -315,7 +315,8 @@ def main(reeds_path, inputs_case):
     else:
         load_profiles = reeds.io.read_file(
             os.path.join(inputs_case,'load_hourly.h5'), parse_timestamps=True
-        ).loc[solveyears]
+        )
+        load_profiles = load_profiles.loc[load_profiles.index.get_level_values('year').isin(solveyears)]
 
         ### If using EFS-style profiles with only a single 2012 weather year (ex. EPMEDIUM, Clean2035_LTS etc), 
         # concat each profile to match the number of weather years in the VRE profiles, as determined by 

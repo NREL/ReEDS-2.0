@@ -124,7 +124,7 @@ GSw_LoadAdjust_Adoption,commercial__residential
 GSw_LoadAdjust_Profiles,commercial__residential
 GSw_Loadpoint,0
 GSw_MaxCaptureCCSTechs,0
-GSw_Precombustion,0
+GSw_Upstream,0
 GSw_MethaneLeakageScen,Alvarez2018_30by2030
 GSw_MinCF,1
 GSw_MinLoadTechs,4

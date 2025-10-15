@@ -47,7 +47,7 @@ file_levels = {
     3: [
         os.path.join('outputs', 'Augur_plots'),
         os.path.join('outputs', 'hourly'),
-        os.path.join('outputs', 'maps'),
+        os.path.join('outputs', 'figures'),
     ],
     ## Largest output files. Would need to rerun the case to regenerate.
     4: [

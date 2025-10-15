@@ -49,7 +49,7 @@ def run_pras(
     start_year = min(sw['resource_adequacy_years_list'])
     ## ReEDS2PRAS runs at hourly resolution
     timesteps = sw['num_resource_adequacy_years'] * 8760
-    command = [
+    command = ' '.join([
         "julia",
         f"--project={sw['reeds_path']}",
         ### As of 20231113 there seems to be a problem with multithreading in julia on
@@ -78,11 +78,11 @@ def run_pras(
         f"--pras_agg_ogs_lfillgas={int(sw['pras_agg_ogs_lfillgas'])}",
         f"--pras_existing_unit_size={int(sw['pras_existing_unit_size'])}",
         f"--pras_seed={int(sw['pras_seed'])}",
-    ]
-    print(' '.join(command))
+    ])
+    print(command)
     print(f'vvvvvvvvvvvvvvv run_pras.jl {t}i{iteration} vvvvvvvvvvvvvvv')
     log = open(os.path.join(casedir, 'gamslog.txt'), 'a')
-    result = subprocess.run(command, stdout=log, stderr=log, text=True)
+    result = subprocess.run(command, stdout=log, stderr=log, text=True, shell=True)
     log.close()
     print(f'^^^^^^^^^^^^^^^ run_pras.jl {t}i{iteration} ^^^^^^^^^^^^^^^')
 

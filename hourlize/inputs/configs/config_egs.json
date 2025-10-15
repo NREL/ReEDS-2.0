@@ -5,8 +5,6 @@
     "class_bin_num": 10,
     "class_bin": false,
     "class_path": "{hourlize_path}/inputs/resource/{tech}_resource_classes.csv",
-    "cost_adder_components": ["trans_adder_per_mw", "capital_adder_per_mw"],
-    "distance_cols": ["dist_spur_km","dist_reinforcement_km"],
     "filter_cols": {},
     "min_cap": 0,
     "profile_dir": "" ,
@@ -20,6 +18,5 @@
     "geo_run_supply_curve_aggregation": true,
     "geo_aggregation_method": "lowest_lcoe",
     "process_profiles": false,
-    "map_supply_curve": false,
     "existing_sites": null
 }

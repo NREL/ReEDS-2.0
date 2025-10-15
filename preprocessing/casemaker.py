@@ -1,213 +1,236 @@
-###########
-#%% IMPORTS
+#%%### Imports
 import os
+import sys
+import yaml
+import argparse
+import datetime
+import itertools
+import subprocess
 import pandas as pd
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import reeds
 
-reeds_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+reeds_path = reeds.io.reeds_path
 
 pd.options.display.max_rows = 45
 pd.options.display.max_columns = 200
 
 
-#############
-#%% PROCEDURE
-
-#%% Define switch collections for scenarios
-sw = {
-    ### Transmission
-    'transmission': {
-        'No': {'GSw_TransRestrict':'r','GSw_TransMultiLink':0},
-        'Xlim': {'GSw_TransInvMax':1.36, 'GSw_TransRestrict':'transreg'},
-        'Lim': {'GSw_TransInvMax':3.64, 'GSw_TransRestrict':'transreg'},
-        'AC': {},
-        'LCC': {'GSw_TransInterconnect':1, 'GSw_TransScen':'LCC_20220808'},
-        'VSC': {'GSw_TransInterconnect':1, 'GSw_TransScen':'VSC_all', 'GSw_VSC':1},
-    },
-    ### Demand
-    'demand': {
-        'DemHi': {},
-        'DemLo': {'GSw_EFS1_AllYearLoad':'EERbaseClip40'},
-    },
-    ### Policy
-    'policy': {
-        ### Actual phaseout
-        '100by2035': {},
-        '90by2035': {
-            'GSw_AnnualCapScen':'start2024_90pct2035_100pct2045',
-            'GSw_NG_CRF_penalty':'ramp_2045'},
-        'CurrentPol': {'GSw_AnnualCap':0, 'GSw_NG_CRF_penalty':'none'},
-        ### 2032 phaseout
-        '100by2035EarlyPhaseout': {'GSw_TCPhaseout_forceyear':2032},
-        '90by2035EarlyPhaseout': {
-            'GSw_AnnualCapScen':'start2024_90pct2035_100pct2045',
-            'GSw_NG_CRF_penalty':'ramp_2045', 'GSw_TCPhaseout_forceyear':2032},
-        'CurrentPolEarlyPhaseout': {
-            'GSw_AnnualCap':0, 'GSw_NG_CRF_penalty':'none', 'GSw_TCPhaseout_forceyear':2032},
-        ### No phaseout
-        # '100by2035NoPhaseout': {'GSw_TCPhaseout':0, 'incentives_suffix':'ira_extend'},
-        # '90by2035NoPhaseout': {
-        #     'GSw_AnnualCapScen':'start2024_90pct2035_100pct2045',
-        #     'GSw_NG_CRF_penalty':'ramp_2045', 'GSw_TCPhaseout':0,
-        #     'incentives_suffix':'ira_extend'},
-        'CurrentPolNoPhaseout': {
-            'GSw_AnnualCap':0, 'GSw_NG_CRF_penalty':'none', 'GSw_TCPhaseout':0,
-            'incentives_suffix':'ira_extend'},
-        ### No IRA
-        '100by2035NoIRA': { # secondary
-            'incentives_suffix':'biennial', 'distpvscen':'StScen2022_Mid_Case_noIRA',
-            'GSw_NukeNoRetire':0, 'GSw_TCPhaseout':0,
-        },
-        '90by2035NoIRA': { # secondary
-            'GSw_AnnualCapScen':'start2024_90pct2035_100pct2045', 'GSw_NG_CRF_penalty':'ramp_2045',
-            'incentives_suffix':'biennial', 'distpvscen':'StScen2022_Mid_Case_noIRA',
-            'GSw_NukeNoRetire':0, 'GSw_TCPhaseout':0,
-        },
-        'CurrentPolNoIRA': {
-            'GSw_AnnualCap':0, 'GSw_NG_CRF_penalty':'none',
-            'incentives_suffix':'biennial', 'distpvscen':'StScen2022_Mid_Case_noIRA',
-            'GSw_NukeNoRetire':0, 'GSw_TCPhaseout':0,
-        },
-    },
-    ### Sensitivity
-    'sensitivity': {
-        'core': {},
-        'TransCost5x': {'GSw_TransCostMult':5},
-        'DERhi': {'distpvscen':'Decarb_2021'}, # secondary
-        'SitingLim': { # high priority
-            'GSw_SitingUPV':'limited', 'GSw_SitingWindOns':'limited'},
-        'PVbattCostLo': {
-            'upvscen':'upv_ATB_2022_advanced', 'plantchar_battery':'battery_ATB_2022_advanced'},
-        'WindCostLo': {
-            'onswindscen':'ons-wind_ATB_2022_advanced',
-            'ofswindscen':'ofs-wind_ATB_2022_advanced'},
-        'CCS0Nuc0': {'GSw_CCS':0, 'GSw_Nuclear':0},
-        # 'NucCCScostHi': { # secondary
-        #     'ccs_upgrade_cost_coal':'petra_atb_declines_frac',
-        #     'ccs_upgrade_cost_gas':'petra_atb_declines_frac',
-        #     'convscen':'conv_ATB_2022_vogtle'},
-        'NSMR1DAC1': {'GSw_NuclearSMR':1, 'GSw_DAC':2},
-        'GasPriceHi': {'ngscen':'AEO_2023_LOG'},
-        'GasPriceLo': {'ngscen':'AEO_2023_HOG'},
-        'H2priceHi': {'rectfuelscen':40},
-        'H2priceLo': {'rectfuelscen':10},
-        'DemandClip80': {'GSw_EFS1_AllYearLoad':'EERhighClip80'},
-        'PRMtradeFERC': {'GSw_PRMTRADE_level':'transreg'}, # secondary
-        'NetLoadInt': {'capcredit_hierarchy_level':'interconnect'}, # secondary
-        'Climate': {
-            'GSw_ClimateHeuristics':'2025_2050_linear', 'GSw_ClimateHydro':1,
-            ## 'GSw_WaterMain':1, 'GSw_WaterCapacity':1, 'GSw_WaterUse':1, 'GSw_ClimateWater':1,
-        },
-        'AllWrong': { # high priority
-            'rectfuelscen':40, 'GSw_CCS':0, 'GSw_Nuclear':0,
-            'GSw_SitingUPV':'limited', 'GSw_SitingWindOns':'limited',
-            'GSw_ClimateHeuristics':'2025_2050_linear', 'GSw_ClimateHydro':1,
-        },
-    }
-}
-
-# print([len(v) for k,v in sw.items()])
-# print(np.cumprod(np.array([len(v) for k,v in sw.items()])))
-
-#%% Define the case name format
-def make_case(label, defaults, sw):
+#%%### Functions
+def make_case(label, defaults, dimensions):
+    """Define the case name format"""
     ### Get collections of settings
-    sensitivity = label.split('__')[-1]
-    transmission, demand, policy = label.split('__')[0].split('_')
+    dimension_names = list(dimensions.keys())
+    dimension_values = label.split('_')
+    dimension_keyvals = dict(zip(dimension_names, dimension_values))
     ### Build the new case settings
-    settings = {
-        **sw['transmission'][transmission],
-        **sw['demand'][demand],
-        **sw['policy'][policy],
-        **sw['sensitivity'][sensitivity],
-    }
+    settings = {}
+    for k,v in dimension_keyvals.items():
+        settings = {**settings, **dimensions[k][v]}
+    ### Make sure all the switches are entered properly
     for key in settings:
         if key not in defaults.index:
             raise Exception(f'{key} not in defaults')
+    ### Create series of key:value pairs
     case = pd.Series(settings, dtype='object').reindex(defaults.index).fillna('')
     return case
 
-#%% Load defaults
-defaults = pd.read_csv(
-    os.path.join(reeds_path,'cases_NTPS_defaults.csv'),
-    index_col=0,
-).squeeze(1)
 
-#%% Create the case names
-cases = (
-    ### Tier 1
-    [
-        f'{t}_{d}_{p}__core'
-        for p in sw['policy']
-        for d in sw['demand']
-        for t in sw['transmission']
-    ]
-    # ### Tier 2
-    + [
-        f'{t}_DemLo_CurrentPol__{s}'
-        for s in ['SitingLim','AllWrong']
-        for t in sw['transmission']
-    ]
-    + [
-        f'{t}_DemHi_CurrentPol__{s}'
-        for s in ['SitingLim','AllWrong']
-        for t in sw['transmission']
-    ]
-    # + [
-    #     f'{t}_DemHi_100by2035NoPhaseout__{s}'
-    #     for s in sw['sensitivity']
-    #     for t in sw['transmission']
-    # ]
-    # ### Tier 3
-    # + [
-    #     f'{t}_DemHi_90by2035NoPhaseout__{s}'
-    #     for s in sw['sensitivity']
-    #     for t in sw['transmission']
-    # ]
-    + [
-        f'{t}_DemLo_CurrentPolNoPhaseout__{s}'
-        for s in sw['sensitivity']
-        for t in sw['transmission']
-    ]
-    # ### Tier 4
-    + [
-        f'{t}_DemHi_100by2035EarlyPhaseout__{s}'
-        for s in sw['sensitivity']
-        for t in sw['transmission']
-    ]
-    ### Tier 5
-    + [
-        f'{t}_DemLo_CurrentPol__{s}'
-        for s in sw['sensitivity']
-        for t in sw['transmission']
-    ]
-    + [
-        f'{t}_DemHi_90by2035EarlyPhaseout__{s}'
-        for s in sw['sensitivity']
-        for t in sw['transmission']
-    ]
-    + [
-        f'{t}_DemLo_CurrentPolEarlyPhaseout__{s}'
-        for s in sw['sensitivity']
-        for t in sw['transmission']
-    ]
-)
+def drop_default_rows(dfcases, shared={}):
+    """Drop rows that use original defaults for every case"""
+    df = dfcases.copy()
+    drop_rows = df.loc[
+        df.drop(columns='Default Value', errors='ignore')
+        .astype(str).astype(bool).sum(axis=1) == 0
+    ].index
+    ## Keep the 'ignore' row for ease of use
+    drop_rows = [i for i in drop_rows if (i != 'ignore') and (i not in shared)]
+    return df.drop(drop_rows)
 
-#%% Create the cases dataframe
-dfcases = pd.concat({
-    **{'Default Value':defaults},
-    **{case: make_case(case, defaults, sw) for case in cases},
-}, axis=1)
 
-#%% Any special-case adjustments
-dfcases.loc[
-    'GSw_EFS1_AllYearLoad',
-    [c for c in dfcases if (('DemandClip80' in c) and ('Current' in c))]
-] = 'EERbaseClip80'
+def reassign_defaults(dfcases, threshold=0.51):
+    """If most entries use a particular value, set it to the default"""
+    df = dfcases.astype(str).copy()
+    cases = [i for i in dfcases if i != 'Default Value']
+    for switch, row in df.iterrows():
+        value_counts = row.drop(columns='Default Value').value_counts()
+        value_fraction = value_counts / value_counts.sum()
+        top = value_fraction.nlargest(1)
+        top_value, top_fraction = [(k,v) for (k,v) in top.items()][0]
+        if (top_value != '') and (top_fraction >= threshold):
+            new_default = top_value
+            df.loc[switch, 'Default Value'] = new_default
+            df.loc[switch, cases] = df.loc[switch, cases].replace(new_default, '')
+    return df
 
-#%% Drop duplicates and take a look
-dfcases = dfcases.T.drop_duplicates().T
-print(dfcases.shape[1]-1,'cases')
-# display(dfcases)
 
-#%% Write it
-dfcases.to_csv(os.path.join(reeds_path,'cases_NTPS_all.csv'))
+def validate_casematrix(casematrix):
+    """Make sure casematrix is formatted correctly"""
+    ## Dimensions
+    dimensions = casematrix['dimensions']
+    if not isinstance(dimensions, dict):
+        err = f"dimensions has type {type(dimensions)} but should be a dictionary"
+        raise TypeError(err)
+
+    disallowed = ['_', ' ', '.', '&', '/']
+    for dimension, elements in dimensions.items():
+        for i, item in enumerate(list(elements.keys())):
+            if any([i in item for i in disallowed]):
+                err = (
+                    f'Element #{i} of the "{dimension}" dimension ({item}) uses one or '
+                    f'more of the following disallowed characters: {disallowed}'
+                )
+                raise ValueError(err)
+
+    ## Casegroups
+    casegroups = casematrix['casegroups']
+    if not isinstance(casegroups, list):
+        err = f"casegroups has type {type(casegroups)} but should be a list"
+        raise TypeError(err)
+
+    num_dimensions = len(dimensions)
+    for i, casegroup in enumerate(casegroups):
+        if len(casegroup) != num_dimensions:
+            err = (
+                f"There are {num_dimensions} dimensions ({list(dimensions.keys())}) but "
+                f"casegroup #{i} has {len(casegroup)} elements: {casegroup}"
+            )
+            raise ValueError(err)
+
+
+def parse_casegroups(casegroups, dimensions):
+    """Expand list of casegroups into list of case names"""
+    dimension_names = list(dimensions.keys())
+    caselist = []
+    for casegroup in casegroups:
+        case_generator = []
+        for i, dimension in enumerate(casegroup):
+            dimension_name = dimension_names[i]
+            if isinstance(dimension, str):
+                dimension_values = [dimension]
+            elif isinstance(dimension, list):
+                ## If not empty, use the provided values
+                if len(dimension):
+                    dimension_values = dimension
+                ## Otherwise, if empty, use all values
+                else:
+                    dimension_values = list(dimensions[dimension_name].keys())
+            else:
+                raise TypeError(dimension)
+            ### Create list of lists of dimension values
+            case_generator.append(dimension_values)
+        ### Combine list of lists combinatorially
+        case_elements = list(itertools.product(*case_generator))
+        cases = ['_'.join(i) for i in case_elements]
+        caselist.extend(cases)
+    return caselist
+
+
+def main(casematrix_path=None, batchname=None):
+    ### Parse inputs
+    if batchname in [None, '']:
+        _batchname = datetime.datetime.now().strftime("%Y%m%d")
+    else:
+        _batchname = batchname
+
+    if casematrix_path in [None, '']:
+        _casematrix_path = os.path.join(
+            reeds_path, 'preprocessing', 'casematrix_example.yaml',
+        )
+    elif os.path.isfile(casematrix_path):
+        _casematrix_path = casematrix_path
+    else:
+        _casematrix_path = os.path.join(
+            reeds_path, 'preprocessing', f'casematrix_{casematrix_path}.yaml',
+        )
+    if not os.path.isfile(_casematrix_path):
+        raise FileNotFoundError(_casematrix_path)
+
+    ### Read from YAML
+    with open(_casematrix_path, 'r') as f:
+        casematrix = yaml.safe_load(f)
+
+    ### Validate formatting
+    validate_casematrix(casematrix)
+
+    ### Define switch collections for scenarios
+    shared = casematrix.get('shared', {})
+    dimensions = casematrix['dimensions']
+    casegroups = casematrix['casegroups']
+
+    ### Load defaults and apply shared settings
+    defaults = pd.read_csv(
+        os.path.join(reeds_path,'cases.csv'),
+        index_col=0,
+    )['Default Value']
+    for key, val in shared.items():
+        defaults[key] = val
+
+    ### Create the case names
+    cases = parse_casegroups(casegroups, dimensions)
+
+    ### Create the cases dataframe
+    dfcases = pd.concat({
+        **{'Default Value':defaults},
+        **{case: make_case(case, defaults, dimensions) for case in cases},
+    }, axis=1)
+
+    ### Clean it up
+    dfcases = drop_default_rows(dfcases, shared)
+    reassign_defaults(dfcases)
+    dfcases = dfcases.T.drop_duplicates().T
+
+    ### Print the resulting cases
+    numcases = dfcases.shape[1]-1
+    msg = f'{numcases} cases:'
+    print(
+        f"{msg}\n{'-'*len(msg)}\n"
+        + '\n'.join([i for i in dfcases.columns if i != 'Default Value'])
+    )
+
+    ### Write it
+    dfcases.to_csv(os.path.join(reeds_path,f'cases_{_batchname}.csv'))
+
+    ### Make sure the switch names and values pass the checks in runbatch.py
+    sep = ';' if os.name == 'posix' else '&&'
+    cmd = f"cd {reeds_path} {sep} python runbatch.py -b test -c {_batchname} -r 4 -p 1 --dryrun"
+    result = subprocess.run(cmd, shell=True, capture_output=True)
+    err = result.stderr.decode()
+    if len(err):
+        raise ValueError(err)
+
+    return dfcases
+
+
+#%%### Procedure
+if __name__ == '__main__':
+    #%% Argument inputs
+    parser = argparse.ArgumentParser(
+        description='Create cases .csv file from casematrix .yaml file',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        'casematrix_path', type=str, nargs='?',
+        help=(
+            'Path to casematrix_{suffix}.yaml file, '
+            'or just {suffix} if file is in the preprocessing folder. '
+            'If empty, uses preprocessing/casematrix_example.yaml.'
+        )
+    )
+    parser.add_argument(
+        '--batchname', '-b', type=str, default='',
+        help=(
+            'Filename to use in output cases_{batchname}.csv file. '
+            "If empty, uses today's date in YYYYMMDD format."
+        )
+    )
+    args = parser.parse_args()
+    casematrix_path = args.casematrix_path
+    batchname = args.batchname
+
+    # #%% Inputs for testing
+    # casematrix_path = None
+    # batchname = ''
+
+    #%% Run it
+    main(casematrix_path=casematrix_path, batchname=batchname)

@@ -239,6 +239,7 @@ $include inputs_case%ds%diagnose.gms
 $endif.diagnose_2
 $endif.diagnose
 
+
 * ------------------------------
 * Solve the Model
 * ------------------------------
@@ -259,6 +260,20 @@ tsolved(t)$tmodel(t) = yes ;
 z_rep(t)$tmodel(t) = Z.l ;
 z_rep_inv(t)$tmodel(t) = Z_inv.l(t) ;
 z_rep_op(t)$tmodel(t) = Z_op.l(t) ;
+
+
+* ---------------------------------
+* Modeling to Generate Alternatives
+* ---------------------------------
+$ifthene.mga %GSw_MGA_CostDelta%>0
+$ifthene.mga1 %cur_year%>=%GSw_StartMarkets%
+*## Activate MGA mode
+Sw_MGA = 1 ;
+solve ReEDSmodel %GSw_MGA_Direction%imizing MGA_OBJ using lp ;
+*## Deactivate MGA mode
+Sw_MGA = 0 ;
+$endif.mga1
+$endif.mga
 
 
 *** Adjust some parameters based on the solution for this solve year

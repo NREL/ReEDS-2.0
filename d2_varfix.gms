@@ -9,7 +9,7 @@ if(Sw_RemoveSmallNumbers = 1,
     INV_POI.l(r,tfix)$[abs(INV_POI.l(r,tfix)) < rhs_tolerance] = 0 ;
     H2_STOR_INV.l(h2_stor,r,tfix)$[abs(H2_STOR_INV.l(h2_stor,r,tfix)) < rhs_tolerance] = 0 ;
     H2_TRANSPORT_INV.l(r,rr,tfix) $[abs(H2_TRANSPORT_INV.l(r,rr,tfix) ) < rhs_tolerance] = 0 ;
-) ;
+);
     
 *load variable
     LOAD.fx(r,h,tfix) = LOAD.l(r,h,tfix) ;

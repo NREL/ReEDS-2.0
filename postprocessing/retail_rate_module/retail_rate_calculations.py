@@ -593,7 +593,7 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     )
     # Consider only direct emissions
     emissions_r = emissions_r.loc[
-        (emissions_r.etype == 'combustion')
+        (emissions_r.etype == 'process')
         & (emissions_r.eall == 'CO2')
     ].drop(columns=['etype', 'eall'])
     # Create list of regions with emissions

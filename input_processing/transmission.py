@@ -58,7 +58,7 @@ trans_init_year = int(networksource[-4:])
 
 
 valid_regions = {}
-for level in ['r','transgrp']:
+for level in ['r','itlgrp','transgrp']:
     valid_regions[level] = pd.read_csv(
         os.path.join(inputs_case, f'val_{level}.csv'), header=None).squeeze(1).tolist()    
 #%% Process some inputs
@@ -87,12 +87,21 @@ def get_trancap_init(valid_regions, networksource='NARIS2024', level='r'):
             inputs_case,f'transmission_capacity_init_AC_{level}.csv'))
     trancap_init_ac['trtype'] = 'AC'
 
+    # adjusting level for the ITLGRP constraints
+    if level == 'itlgrp':
+        trancap_init_ac= trancap_init_ac.rename(columns={'r':'itlgrp','rr':'itlgrpp'})
+
     ## DC capacity is only defined in one direction, so duplicate it for the opposite direction
-    if level == 'r':
+    if level in ['r','itlgrp']:
         trancap_init_nonac_undup = pd.read_csv(
             os.path.join(inputs_case,'transmission_capacity_init_nonAC.csv'))
+        if level == 'itlgrp':
+            trancap_init_nonac_undup = pd.read_csv(
+                os.path.join(inputs_case,'transmission_capacity_init_nonAC.csv')
+            ).rename(columns = {'r':'itlgrp','rr':'itlgrpp'})
+
         trancap_init_nonac = pd.concat(
-            [trancap_init_nonac_undup, trancap_init_nonac_undup.rename(columns={'r':'rr', 'rr':'r'})],
+            [trancap_init_nonac_undup, trancap_init_nonac_undup.rename(columns={level:levell, levell:level})],
             axis=0
         )
         ### SPECIAL CASE: p19 is islanded with NARIS transmission data, so connect it manually
@@ -108,7 +117,7 @@ def get_trancap_init(valid_regions, networksource='NARIS2024', level='r'):
             ], ignore_index=True)
     else:
         trancap_init_nonac = pd.DataFrame(
-            columns=[level, levell, 'trtype', 'MW', 'Proect(s)', 'Notes'])
+            columns=[level, levell, 'trtype', 'MW', 'Project(s)', 'Notes'])
 
     ### Initial trading limit, using contingency levels specified by contingency level
     ### (but assuming full capacity of DC is available for both energy and capcity)
@@ -130,7 +139,13 @@ def get_trancap_init(valid_regions, networksource='NARIS2024', level='r'):
             .groupby([level,levell,'trtype']).sum().reset_index())
         for n in [0,1]
     }
-
+    
+    if level in ['itlgrp']:
+        hierarchy = pd.read_csv(os.path.join(inputs_case, 'hierarchy_itlgrp.csv'))
+        itl_d = dict(zip(hierarchy['*r'],hierarchy['itlgrp'])) 
+        for n in [0,1]:
+            for r in [level, levell]:
+                trancap_init[n][r] = trancap_init[n][r].map(lambda x: itl_d.get(x,x))
     return trancap_init
 
 
@@ -225,6 +240,7 @@ nlevel = {
     'energy': int(scalars['trans_contingency_level_energy']),
     'prm': int(scalars['trans_contingency_level_prm']),
     'transgroup': int(scalars['trans_contingency_level_transgroup']),
+    'itlgrp': int(scalars['trans_contingency_level_itlgrp']),
 }
 
 #%% Put some in dicts for easier access
@@ -323,6 +339,7 @@ for captype, level in [
     ('energy', 'r'),
     ('prm', 'r'),
     ('transgroup', 'transgrp'),
+    ('itlgrp','itlgrp'),
 ]:
     trancap_init = get_trancap_init(
         valid_regions=valid_regions, networksource=networksource, level=level)

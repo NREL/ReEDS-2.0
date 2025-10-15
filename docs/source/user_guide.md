@@ -418,8 +418,254 @@ if a single unit is larger than the planning reserve margin, unserved energy is 
 This approach should therefore be used with caution.
 
 
+## Monte Carlo Sampling (MCS)
+
+This guide explains how to enable, configure, and run Monte Carlo simulations so you can propagate input uncertainty through ReEDS runs.
+
+### Quick start
+
+1. In `cases.csv`, set `MCS_runs` to the number of samples you want. Zero disables MCS.
+
+2. Set `MCS_dist` to the suffix name of a YAML file that contains the input distribution definitions. 
+For example, `default` will use `inputs/userinput/mcs_distributions_default.yaml`.
+
+3. Set `MCS_dist_groups` to one or more YAML group names. Separate multiple groups with a dot.
+   For example `tech.load_st.ng_fuel_price`.
+
+4. Run ReEDS as usual. Each Monte Carlo draw will create its own run using the sampled inputs.
+
+These three switches (`MCS_runs`,`MCS_dist`, and  `MCS_dist_groups`) are the only required controls.
+All other settings live in the YAML file (`inputs/userinput/mcs_distributions_{MCS_dist}.yaml`).
+
+### YAML distribution file format
+Distribution groups live in `inputs/userinput/mcs_distributions_{MCS_dist}.yaml`.
+Each group samples one or more switches together.
+
+**Group field summary:**
+
+| Field              | Type            | Values                                                                   | Purpose                              |
+|--------------------|-----------------|--------------------------------------------------------------------------|--------------------------------------|
+| `name`             | string          | any unique id                                                            | Group id used by `MCS_dist_groups`.  |
+| `assignments_list` | list of dicts   | `{switch: [values...]}`                                                  | Map each switch to candidate values. |
+| `dist`             | string          | `dirichlet`, `discrete`, `triangular_multiplier`, `uniform_multiplier`   | Pick the sampling distribution.      |
+| `dist_params`      | list of numbers | depends on `dist`                                                        | Parameters for the distribution.     |
+| `weight_r`         | string          | spatial hierarchy level (typically `country`, `transgrp`, `st`, or `ba`) | Spatial resolution for draws.        |
 
 
+**name**
+
+- Unique id of the group.
+- The id must appear in `MCS_dist_groups` to activate this group.
+- Switches listed in the same group receive the same random draw, which creates perfect correlation inside the group.
+To force independence, place switches in different groups.
+
+**assignments\_list**
+
+- A list where each item is a one key dictionary.
+- Key gives the switch name. Value lists the candidate options for that switch,
+referencing the underlying files or literal values that the sampler can draw from.
+- Example idea: `[{switch1: [v1, v2]}, {switch2: [v1, v2]}]`.
+
+**dist**
+
+- `dirichlet` uses a weighted average across options.
+- `discrete` selects a single option using the given weights.
+- `triangular_multiplier` draws a multiplier from a triangular distribution and applies it to all files in the `assignments_list` group.
+- `uniform_multiplier` draws a uniform multiplier and applies it likewise.
+
+**dist\_params**
+
+- `dirichlet`: `[alpha1, alpha2, ...]` concentration values. Length must match the number of options for the switches in the group.
+- `discrete`: `[w1, w2, ...]` probability weights, normalized internally. Length must match the number of options.
+- `triangular_multiplier`: `[low, center, high]`.
+- `uniform_multiplier`: `[low, high]`.
+
+**weight\_r**
+
+- For some files (those with regional data) we support the possibility of applying different weights to different ReEDS hierarchies.
+This field specifies the hierarchy considered.
+- Common values are `country`, `transgrp`, `st`, or `ba`. 
+- Support depends on the switch. ATB `plantchar_*` switches currently support only `country`.
+
+---
+
+**Example 1. Correlated technology sampling**
+
+```yaml
+- name: tech
+  assignments_list:
+    - plantchar_battery: [battery_ATB_2024_conservative, battery_ATB_2024_moderate, battery_ATB_2024_advanced]
+    - plantchar_upv: [upv_ATB_2024_conservative, upv_ATB_2024_moderate, upv_ATB_2024_advanced]
+    - plantchar_ofswind: [ofs-wind_ATB_2024_conservative, ofs-wind_ATB_2024_moderate, ofs-wind_ATB_2024_advanced]
+  dist: dirichlet
+  dist_params: [1, 1, 1]
+  weight_r: country
+```
+
+`Sample_battery = W1*(conservative) + W2*(moderate) + W3*(advanced)`\
+`Sample_upv = W1*(conservative) + W2*(moderate) + W3*(advanced)`\
+with the same `W1, W2, W3` and `W1 + W2 + W3 = 1`.
+
+In this configuration all three technologies share the same Dirichlet draw
+(so a sample with low-cost PV also has low-cost batteries and offshore wind).
+
+**Example 2. Sampling load forecast scenarios per state**
+
+```yaml
+- name: load_st
+  assignments_list:
+    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAlow]
+  dist: dirichlet
+  dist_params: [1, 1]
+  weight_r: st
+```
+
+Each state receives its own weighted combination of the two load scenarios.\
+`Sample_load = W1*(EER_100by2050) +  W2*(EER_IRAlow)` with `W1 + W2 = 1`.
+
+**Example 3. Discrete siting uncertainty for wind and solar**
+
+```yaml
+- name: wind_solar_siting_st
+  assignments_list:
+    - GSw_SitingUPV: [limited, reference]
+    - GSw_SitingWindOfs: [limited, reference]
+    - GSw_SitingWindOns: [limited, reference]
+  dist: discrete
+  dist_params: [1, 1]
+  weight_r: st
+```
+
+This enables state level uncertainty in siting supply curves for wind and solar technologies through a random draw between `limited` and `reference` conditions.
+
+### Tips
+
+- Use multiple distribution groups to sample switches independently.
+For example `tech.load_st` defines two groups that are sampled independently.
+- Sampling of float values (e.g., transmission multipliers) is supported using `*_multiplier` distribution types.
+- The **Dirichlet** distribution defines weights applied to each scenario. 
+When all concentration parameters are set to one (e.g., `[1, 1, 1]`), the distribution is considered uninformed;
+it assigns equal expected weight to all options, though individual samples will still vary. 
+These parameters can be adjusted to emphasize or de-emphasize specific scenarios.
+Since these weights are used as multiplicative factors on reference files,
+Dirichlet sampling tends to favor combinations that lean toward central scenarios when the inputs represent "low",
+"medium", and "high" pathways.
+
+See below examples of weights for Dirichlet distributions using different concentration parameters and an arbitrary set of
+Low, Mod, and High values ({numref}`figure-mcs-three-param-dirichlet` and {numref}`figure-mcs-two-param-dirichlet`).
+
+```{figure} figs/docs/mcs-three-param-dirichlet.png
+:name: figure-mcs-three-param-dirichlet
+:width: 82.4%
+Samples from a Dirichlet distribution with three concentration parameters applied to Low, Mod, High options
+```
+
+```{figure} figs/docs/mcs-two-param-dirichlet.png
+:name: figure-mcs-two-param-dirichlet
+:width: 80%
+Samples from a Dirichlet distribution with two concentration parameters applied to Low and High options
+```
+
+Built-in plotting funcationality for Monte Carlo runs is described under [Uncertainty Plots](#uncertainty-plots).
+
+
+
+## Modeling to Generate Alternatives (MGA)
+
+The following switches control the MGA functionality:
+
+- `GSw_MGA_CostDelta` (default `0`): Fraction by which to allow objective function to increase when using MGA.
+MGA is turned off if set to 0; a reasonable choice for MGA is in the range of 0.01.
+- `GSw_MGA_Direction` (default `min`): Directionality of the second optimization.
+Options are `min` or `max`.
+- `GSw_MGA_Objective` (default `capacity`): Objective for MGA (uses `GSw_MGA_SubObjective` to specify technology subset if set to `capacity`).
+Options are `capacity`, `transmission`, `rasharing`, and `co2`.
+- `GSw_MGA_SubObjective` (default `fossil`): Technology subset to minimize or maximize the capacity of (only used for `GSw_MGA_Objective = capacity`).
+Options are the column names in the `inputs/tech-subset-table.csv` file.
+
+Users familiar with GAMS can add alternative objective functions to the `c_mga.gms` file and associated options to the `GSw_MGA_Objective` switch in `cases.csv`.
+
+
+
+
+## Uncertainty Plots
+
+ReEDS includes plotting tools to help explore how uncertainty affects model results,
+especially in Monte Carlo or MGA-style simulations. 
+By scanning a folder of ReEDS runs, the module reads input and output data and automatically generates a PowerPoint
+presentation with key trends and uncertainty ranges, along with an Excel workbook containing the raw data behind each figure.
+
+These outputs make it easier to:
+- Visualize median trends and percentile bands across runs 
+- Examine distributions of variables across sampled scenarios 
+- Compare differences between groups of runs 
+
+
+### Quick start
+1. Go to the `postprocessing` directory.  
+2. Run the command below, replacing placeholders with your paths and options.
+
+```bash
+python uncertainty_plots.py {runs_folder} \
+    -p  {rename_options} \
+    -hl {highlight_runs_option} \
+    -t  {plot_type_options} \
+    -s  {save_dir}
+```
+
+**Arguments:**
+
+| Flag          | Purpose                                                         | Type            | Default            | Example                                                                 |
+| :------------ | :--------------------------------------------------------------- | :-------------- | :----------------- | :---------------------------------------------------------------------- |
+| `runs_folder` | Folder that contains the runs to plot                            | Path            | required           | `../runs`                                                               |
+| `-p`          | Rename or select runs, pairs `old:new` or a two column file     | List or file    | all by prefix      | `-p caseA:HighGas caseB:LowGas` or `-p labels.csv`                      |
+| `-hl`         | Highlight runs, triplets `old:new:color` or a three column file | List or file    | none               | `-hl caseA:HighGas:red` or `-hl highlights.csv`                         |
+| `-t`          | Scope of plots, inputs or outputs or both                       | String          | `inout`            | `-t out`                                                                |
+| `-s`          | Output directory for the PowerPoint and the Excel file          | Path            | `runs/comparisons` | `-s ../studyA/summary_plots`                                            |
+
+
+### Example of input plots
+
+```{figure} figs/docs/mcs-load-sample.png
+:name: figure-mcs-load-sample
+:width: 80%
+MCS Example: Total system load trajectories across regions.
+```
+
+```{figure} figs/docs/mcs-fuel-prices-sample.png
+:name: figure-mcs-fuel-prices-sample
+:width: 80%
+MCS Example: Natural gas price paths.
+```
+
+
+```{figure} figs/docs/mcs-tech-costs-sample.png
+:name: figure-mcs-tech-costs-sample
+:width: 50%
+MCS Example: Technology cost trajectories.
+```
+### Example of output plots
+*Note: The simulation results shown here are for illustrative purposes only.
+They reflect specific input assumptions and policy configurations that are not detailed in this section,
+as the goal is simply to demonstrate the plotting capabilities.*
+
+```{figure} figs/docs/mcs-capacity-growth-sample.png
+:name: figure-mcs-capacity-growth-sample
+:width: 80%
+MCS Example: Installed capacity by technology over time.
+```
+
+```{figure} figs/docs/mcs-energy-penetration.png
+:name: figure-mcs-energy-penetration
+:width: 80%
+MCS Example: Share of generation by technology.
+```
+
+```{figure} figs/docs/mcs-transmission.png
+:name: figure-mcs-transmission-buildout
+:width: 80%
+MCS Example: Total transmission capacity by interface.
+```
 
 
 ## Troubleshooting

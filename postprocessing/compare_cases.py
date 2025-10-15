@@ -18,7 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
 from reeds import plots
 from reeds import reedsplots
-from reeds.results import SLIDE_HEIGHT, SLIDE_WIDTH
+from reeds.report_utils import SLIDE_HEIGHT, SLIDE_WIDTH
 from bokehpivot.defaults import DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -56,6 +56,9 @@ parser.add_argument(
     '--bpreport', '-r', type=str, default='standard_report_reduced',
     help='which bokehpivot report to generate')
 parser.add_argument(
+    '--gdxdiff', '-g', action='store_true',
+    help='generate gdx diff report between inputs.gdx when comparing 2 cases')
+parser.add_argument(
     '--detailed', '-d', action='store_true',
     help='Include more detailed plots')
 parser.add_argument(
@@ -80,6 +83,7 @@ startyear = args.startyear
 sharey = True if args.sharey else 'row'
 bpreport = args.bpreport
 skipbp = args.skipbp
+gdxdiff = args.gdxdiff
 detailed = args.detailed
 forcemulti = args.forcemulti
 lesslabels = args.lesslabels
@@ -95,6 +99,7 @@ interactive = False
 # sharey = 'row'
 # basecase_in = ''
 # skipbp = True
+# gdxdiff = False
 # bpreport = 'standard_report_reduced'
 # interactive = True
 # forcemulti = False
@@ -223,7 +228,7 @@ def plot_bars_abs_stacked(
 
 #%%### Procedure
 #%% Parse arguments
-cases, colors, basecase, basemap = reeds.results.parse_caselist(
+cases, colors, basecase, basemap = reeds.report_utils.parse_caselist(
     caselist,
     casenames,
     basecase_in,
@@ -268,6 +273,23 @@ if not skipbp:
         f'{add_diff} "{basecase}" "{report_path}" "html,excel" one "{bp_outpath}" {auto_open}'
     )
     sp.Popen(call_str, shell=True)
+
+
+#%% Create gdx diff report
+if gdxdiff and len(cases) == 2:
+    case0, case1 = list(cases.values())
+    gdxname = os.path.join(
+        outpath,
+        f'diff_inputs-{os.path.basename(case0)}-{os.path.basename(case1)}.gdx'
+    )
+    command = (
+        "gdxdiff "
+        f"{os.path.join(case0, 'inputs_case', 'inputs.gdx')} "
+        f"{os.path.join(case1, 'inputs_case', 'inputs.gdx')} "
+        f"{gdxname}"
+    )
+    sp.run(command, shell=True)
+
 
 #%%### Load data
 #%% Shared
@@ -432,13 +454,13 @@ for case in tqdm(cases, desc='national emissions'):
     dictin_emissions[case] = (
         reeds.io.read_output(cases[case], 'emit_nat', valname='ton')
     )
-    if int(dictin_sw[case].get('GSw_Precombustion', 1)):
+    if int(dictin_sw[case].get('GSw_Upstream', 0)):
         dictin_emissions[case] = dictin_emissions[case].groupby(['e','t']).ton.sum().unstack('e')
     else:
         dictin_emissions[case] = (
             dictin_emissions[case]
             .set_index(['etype','e','t'])
-            .loc['combustion']
+            .drop(['precombustion', 'upstream'], level='etype', errors='ignore')
             .groupby(['e','t']).ton.sum()
             .unstack('e')
         )
@@ -639,7 +661,7 @@ if detailed:
 
 #%%### Plots ######
 ### Set up powerpoint file
-prs = reeds.results.init_pptx()
+prs = reeds.report_utils.init_pptx()
 
 
 #%%### System cost error
@@ -687,7 +709,7 @@ plots.despine(ax)
 
 ### Save it
 title = 'Error check'
-slide = reeds.results.add_to_pptx(title, prs=prs, width=None, height=SLIDE_HEIGHT)
+slide = reeds.report_utils.add_to_pptx(title, prs=prs, width=None, height=SLIDE_HEIGHT)
 if interactive:
     plt.show()
 
@@ -815,8 +837,8 @@ plots.despine(ax)
 plt.draw()
 plots.shorten_years(ax[1,0])
 ### Save it
-slide = reeds.results.add_to_pptx('Capacity', prs=prs)
-reeds.results.add_textbox(printstring, slide)
+slide = reeds.report_utils.add_to_pptx('Capacity', prs=prs)
+reeds.report_utils.add_textbox(printstring, slide)
 if interactive:
     print(printstring)
     plt.show()
@@ -836,7 +858,7 @@ if (len(cases) == 2) and (not forcemulti):
                 yearmin=(2025 if 'NEUE' in val else startyear), yearmax=lastyear,
                 # plot_kwds={'figsize':(4,4), 'gridspec_kw':{'wspace':0.7}},
             )
-            slide = reeds.results.add_to_pptx(val, prs=prs, verbose=0)
+            slide = reeds.report_utils.add_to_pptx(val, prs=prs, verbose=0)
             textbox = slide.shapes.add_textbox(
                 left=Inches(0), top=Inches(7),
                 width=Inches(SLIDE_WIDTH), height=Inches(0.5))
@@ -942,7 +964,7 @@ else:
         plt.draw()
         plots.shorten_years(ax[1,0])
         ### Save it
-        slide = reeds.results.add_to_pptx(
+        slide = reeds.report_utils.add_to_pptx(
             slidetitle+' stack', prs=prs, width=min(figwidth, SLIDE_WIDTH))
         if interactive:
             plt.show()
@@ -1114,7 +1136,7 @@ if len(cases) <= 4:
     plots.despine(ax)
     plt.draw()
     ### Save it
-    slide = reeds.results.add_to_pptx('Capacity stacks', prs=prs, width=width)
+    slide = reeds.report_utils.add_to_pptx('Capacity stacks', prs=prs, width=width)
     if interactive:
         plt.show()
 
@@ -1385,7 +1407,7 @@ plt.tight_layout()
 plots.despine(ax)
 plt.draw()
 ### Save it
-slide = reeds.results.add_to_pptx(
+slide = reeds.report_utils.add_to_pptx(
     'Capacity, generation, transmission, runtime', prs=prs, width=width)
 if interactive:
     plt.show()
@@ -1400,7 +1422,7 @@ for col, datum in enumerate(handles):
         handletextpad=0.3, handlelength=0.7, columnspacing=0.5, 
     )
     ax[col].axis('off')
-reeds.results.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
+reeds.report_utils.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
 
 
 #%% Costs: NPV of system cost, NPV of climate + health costs
@@ -1477,7 +1499,7 @@ plt.tight_layout()
 plots.despine(ax)
 plt.draw()
 ### Save it
-slide = reeds.results.add_to_pptx('NPV of system, climate, health costs', width=width)
+slide = reeds.report_utils.add_to_pptx('NPV of system, climate, health costs', width=width)
 if interactive:
     plt.show()
 
@@ -1492,7 +1514,7 @@ for col, datum in enumerate(handles):
     )
 for col in range(4):
     ax[col].axis('off')
-reeds.results.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
+reeds.report_utils.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
 
 
 #%% Simplifed NPV
@@ -1577,7 +1599,7 @@ plt.tight_layout()
 plots.despine(ax)
 
 ### Save it
-slide = reeds.results.add_to_pptx(
+slide = reeds.report_utils.add_to_pptx(
     'NPV of system, climate, health costs', prs=prs, width=min(width, SLIDE_WIDTH))
 if interactive:
     plt.show()
@@ -1625,6 +1647,7 @@ for case in cases:
             dictin_neue[case]
             .xs('country',0,'level')
             .xs('sum',0,'metric')
+            .dropna()
             .reset_index('region', drop=True)
             .loc[2025:]
         )
@@ -1689,7 +1712,7 @@ for col in [0,1] + ([2] if len(dictin_neue) else []):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = reeds.results.add_to_pptx('Cost, reliability', prs=prs, width=width)
+slide = reeds.report_utils.add_to_pptx('Cost, reliability', prs=prs, width=width)
 if interactive:
     plt.show()
 
@@ -1717,7 +1740,7 @@ try:
         _ax = ax[_coords[region]]
         _ax.set_title(region, weight='bold')
         _ax.axhline(neue_threshold, c='C7', ls='--', lw=0.75)
-    _ax.set_ylim(0)
+    _ax.set_ylim(0, max(_ax.get_ylim()[1], 10))
     _ax.xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
     _ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     ax[labelcoords['label']].set_ylabel('NEUE [ppm]', x=0, va='bottom')
@@ -1728,7 +1751,7 @@ try:
     plt.draw()
     plots.shorten_years(ax[labelcoords['label']])
     ### Save it
-    slide = reeds.results.add_to_pptx('Resource adequacy', prs=prs, width=SLIDE_WIDTH)
+    slide = reeds.report_utils.add_to_pptx('Resource adequacy', prs=prs, width=SLIDE_WIDTH)
     if interactive:
         plt.show()
 except Exception:
@@ -1814,7 +1837,7 @@ for col in range(4):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = reeds.results.add_to_pptx('Emissions', prs=prs, width=width)
+slide = reeds.report_utils.add_to_pptx('Emissions', prs=prs, width=width)
 if interactive:
     plt.show()
 
@@ -1901,7 +1924,7 @@ for col in range(len(dfplot)):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = reeds.results.add_to_pptx('Generation share', prs=prs)
+slide = reeds.report_utils.add_to_pptx('Generation share', prs=prs)
 if interactive:
     plt.show()
 
@@ -2004,7 +2027,7 @@ if len(capcreditcases) == len(cases):
             plots.shorten_years(ax[1,col])
 
         ### Save it
-        slide = reeds.results.add_to_pptx('Firm capacity, capacity credit', prs=prs)
+        slide = reeds.report_utils.add_to_pptx('Firm capacity, capacity credit', prs=prs)
         if interactive:
             plt.show()
 
@@ -2145,7 +2168,7 @@ for interzonal_only in [False, True]:
         ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
         plots.shorten_years(ax[col])
     ### Save it
-    slide = reeds.results.add_to_pptx(
+    slide = reeds.report_utils.add_to_pptx(
         'Interzonal transmission' if interzonal_only else 'Transmission (all types)',
         prs=prs,
     )
@@ -2239,7 +2262,7 @@ for col in [0,1,2,3]:
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = reeds.results.add_to_pptx('Transmission at different resolutions', prs=prs)
+slide = reeds.report_utils.add_to_pptx('Transmission at different resolutions', prs=prs)
 if interactive:
     plt.show()
 
@@ -2254,7 +2277,7 @@ try:
         ymax=None,
     )
     ### Save it
-    slide = reeds.results.add_to_pptx(
+    slide = reeds.report_utils.add_to_pptx(
         'Interregional transmission / peak demand',
         prs=prs,
         height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
@@ -2276,7 +2299,7 @@ try:
         level='nercr', tstart=startyear,
     )
     ### Save it
-    slide = reeds.results.add_to_pptx(
+    slide = reeds.report_utils.add_to_pptx(
         'Max net stress imports / peak demand',
         prs=prs,
         height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
@@ -2290,28 +2313,64 @@ except Exception:
 
 
 #%%### Transmission maps
-tx_data = {}
-# if (len(cases) == 2) and (not forcemulti):
-#     plt.close()
-#     f,ax,tx_data[basecase] = reedsplots.plot_trans_diff(
-#         casebase=casebase,
-#         casecomp=casecomp,
-#         pcalabel=False,
-#         wscale=0.0004,
-#         subtract_baseyear=2020,
-#         yearlabel=True,
-#         year=lastyear,
-#         alpha=1, dpi=150,
-#         titleshorten=titleshorten,
-#     )
-#     reeds.results.add_to_pptx(f'Transmission ({lastyear})', prs=prs)
-#     if interactive:
-#         plt.show()
-# else:
-### Absolute
-wscale = 0.0003
-alpha = 0.8
-for subtract_baseyear in [None, 2020]:
+if (len(cases) == 2) and (not forcemulti):
+    plt.close()
+    f,ax = reedsplots.plot_trans_diff(
+        casebase=casebase,
+        casecomp=casecomp,
+        pcalabel=False,
+        wscale=0.0004,
+        subtract_baseyear=2020,
+        yearlabel=True,
+        year=lastyear,
+        alpha=1, dpi=150,
+        titleshorten=titleshorten,
+    )
+    reeds.report_utils.add_to_pptx(f'Transmission ({lastyear})', prs=prs)
+    if interactive:
+        plt.show()
+else:
+    ### Absolute
+    wscale = 0.0003
+    alpha = 0.8
+    for subtract_baseyear in [None, 2020]:
+        plt.close()
+        f,ax = plt.subplots(
+            nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
+            gridspec_kw={'wspace':0.0,'hspace':-0.1},
+        )
+        for case in cases:
+            ### Plot it
+            reedsplots.plot_trans_onecase(
+                case=cases[case], pcalabel=False, wscale=wscale,
+                yearlabel=False, year=lastyear, simpletypes=None,
+                alpha=alpha, scalesize=8,
+                f=f, ax=ax[coords[case]], title=False,
+                subtract_baseyear=subtract_baseyear,
+                thickborders='transreg', drawstates=False, drawzones=False, 
+                label_line_capacity=10,
+                scale=(True if case == basecase else False),
+            )
+            ax[coords[case]].set_title(case)
+        ### Formatting
+        title = (
+            f'New interzonal transmission since {subtract_baseyear}' if subtract_baseyear
+            else 'All interzonal transmission')
+        for row in range(nrows):
+            for col in range(ncols):
+                if nrows == 1:
+                    ax[col].axis('off')
+                elif ncols == 1:
+                    ax[row].axis('off')
+                else:
+                    ax[row,col].axis('off')
+        ### Save it
+        slide = reeds.report_utils.add_to_pptx(title, prs=prs)
+        if interactive:
+            plt.show()
+
+
+    ### Difference
     plt.close()
     f,ax = plt.subplots(
         nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
@@ -2343,7 +2402,7 @@ for subtract_baseyear in [None, 2020]:
             else:
                 ax[row,col].axis('off')
     ### Save it
-    slide = reeds.results.add_to_pptx(title, prs=prs)
+    slide = reeds.report_utils.add_to_pptx(title, prs=prs)
     if interactive:
         plt.show()
 
@@ -2416,6 +2475,28 @@ for row in range(nrows):
 slide = reeds.results.add_to_pptx(title, prs=prs)
 if interactive:
     plt.show()
+
+#%% Flexibly sited load
+if any([float(dictin_sw[c].get('GSw_LoadSiteCF', 0)) for c in cases]):
+    loadsite_cases = {
+        k:v for k,v in cases.items() if float(dictin_sw[k].get('GSw_LoadSiteCF', 0))
+    }
+    try:
+        f, ax, dictplot = reeds.reedsplots.map_output_byyear(
+            case=loadsite_cases,
+            param='loadsite_cap',
+            years=[lastyear],
+            vscale=1e-3,
+            vmin=0,
+            title='Sited demand [GW]',
+        )
+        ## Save it
+        slide = reeds.results.add_to_pptx('Flexibly sited demand', prs=prs, width=SLIDE_WIDTH)
+        if interactive:
+            plt.show()
+    except Exception:
+        print(traceback.format_exc())
+
 
 #%% Flexibly sited load
 if any([float(dictin_sw[c].get('GSw_LoadSiteCF', 0)) for c in cases]):
@@ -2612,7 +2693,7 @@ if detailed:
 
         ### Save it
         title = f'{ralevel} {label} RA flows'
-        slide = reeds.results.add_to_pptx(title, prs=prs)
+        slide = reeds.report_utils.add_to_pptx(title, prs=prs)
         if interactive:
             plt.show()
 
@@ -2644,14 +2725,14 @@ for figname, width, height in [
 ]:
     for case in cases:
         try:
-            slide = reeds.results.add_to_pptx(
+            slide = reeds.report_utils.add_to_pptx(
                 case,
                 prs=prs,
-                file=os.path.join(cases[case], 'outputs', 'maps', f'{figname}.png'),
+                file=os.path.join(cases[case], 'outputs', 'figures', f'{figname}.png'),
                 width=width, height=height,
             )
         except FileNotFoundError:
-            print(f'No outputs/maps/{figname}.png for {os.path.basename(cases[case])}')
+            print(f'No outputs/figures/{figname}.png for {os.path.basename(cases[case])}')
 
 
 #%%### Generation capacity maps
@@ -2700,7 +2781,7 @@ if (len(cases) == 2) and (not forcemulti):
                 casebase_name),
             (0.1,1), xycoords='axes fraction', fontsize=10)
 
-        reeds.results.add_to_pptx(f'{i_plot} capacity {lastyear} [GW]', prs=prs)
+        reeds.report_utils.add_to_pptx(f'{i_plot} capacity {lastyear} [GW]', prs=prs)
         if interactive:
             plt.show()
 else:
@@ -2776,7 +2857,7 @@ else:
                 else:
                     ax[row,col].axis('off')
         ### Save it
-        slide = reeds.results.add_to_pptx(f'{tech} capacity {lastyear} [GW]', prs=prs)
+        slide = reeds.report_utils.add_to_pptx(f'{tech} capacity {lastyear} [GW]', prs=prs)
         if interactive:
             plt.show()
 
@@ -2859,7 +2940,7 @@ else:
                 else:
                     ax[row,col].axis('off')
         ### Save it
-        slide = reeds.results.add_to_pptx(f'Difference: {tech} capacity {lastyear} [GW]', prs=prs)
+        slide = reeds.report_utils.add_to_pptx(f'Difference: {tech} capacity {lastyear} [GW]', prs=prs)
         if interactive:
             plt.show()
 

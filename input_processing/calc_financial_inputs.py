@@ -38,7 +38,7 @@ def calc_financial_inputs(inputs_case):
     - retail_eval_period.h5
     - retail_depreciation_sch.h5
     """
-    print('Starting calculation of financial parameters for', inputs_case)
+    print('Starting calculation of financial parameters')
 
     # #%% Settings for testing
     # reeds_path = '/Users/pbrown/github/ReEDS-2.0/'
@@ -86,7 +86,7 @@ def calc_financial_inputs(inputs_case):
         inputs_case, sw['sys_eval_years'], sw['endyear'])
 
     df_ivt = reeds.financials.build_dfs(years, techs, vintage_definition, year_map)
-    print('df_ivt created for', inputs_case)
+    print('df_ivt created')
 
     #%% Import and merge data onto df_ivt
 
@@ -230,7 +230,7 @@ def calc_financial_inputs(inputs_case):
     depreciation_schedules = pd.read_csv(os.path.join(inputs_case,'depreciation_schedules.csv'))
 
     ### Calculate financial multipliers
-    print('Calculating financial multipliers for', inputs_case, '...')
+    print('Calculating financial multipliers...')
     df_ivt = reeds.financials.calc_financial_multipliers(
         df_ivt, construction_schedules, depreciation_schedules, sw['timetype'])
     

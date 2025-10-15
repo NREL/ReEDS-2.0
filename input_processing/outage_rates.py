@@ -309,9 +309,6 @@ def calc_outage_forced(
         forcedoutage_pm = pd.DataFrame()
 
     else:
-        ### Load temperatures
-        print('Load temperatures')
-        temperatures = reeds.io.get_temperatures(inputs_case)
         fits_forcedoutage_in = pd.read_csv(
             os.path.join(inputs_case, 'outage_forced_temperature.csv'),
             comment='#',
@@ -555,7 +552,7 @@ if __name__ == '__main__':
         scriptname=__file__,
         logpath=os.path.join(inputs_case,'..','gamslog.txt'),
     )
-
+    print('Starting outage_rates.py')  
     #%% Run it
     main(reeds_path=reeds_path, inputs_case=inputs_case)
 
@@ -564,3 +561,4 @@ if __name__ == '__main__':
         tic=tic, year=0, process='input_processing/outage_rates.py', 
         path=os.path.join(inputs_case,'..'),
     )
+    print('Finished outage_rates.py')

@@ -126,45 +126,37 @@ RelativeFilePath,RelativeFolderPath,FileName_new,FileExtension,Description_new,I
 /inputs/capacity_exogenous/cappayments.csv,/inputs/capacity_exogenous,cappayments,.csv,,,,,,
 /inputs/capacity_exogenous/cappayments_ba.csv,/inputs/capacity_exogenous,cappayments_ba,.csv,,,,,,
 /inputs/capacity_exogenous/demonstration_plants.csv,/inputs/capacity_exogenous,demonstration_plants,.csv,Nuclear-smr demonstration plants; active when GSw_NuclearDemo=1,"t,r,i,coolingwatertech,ctt,wst,value",,See 'notes' column in the file and https://www.energy.gov/oced/advanced-reactor-demonstration-projects-0,Prescribed capacity,MW
-/inputs/capacity_exogenous/geohydro_allkm_exog_cap_reference.csv,/inputs/capacity_exogenous,geohydro_allkm_exog_cap_reference,.csv,,,,,,
-/inputs/capacity_exogenous/geohydro_allkm_prescribed_builds_reference.csv,/inputs/capacity_exogenous,geohydro_allkm_prescribed_builds_reference,.csv,,,,,,
-/inputs/capacity_exogenous/geohydro_exog_cap_reference_ba.csv,/inputs/capacity_exogenous,geohydro_exog_cap_reference_ba,.csv,,,,,,
-/inputs/capacity_exogenous/geohydro_exog_cap_reference_county.csv,/inputs/capacity_exogenous,geohydro_exog_cap_reference_county,.csv,,,,,,
-/inputs/capacity_exogenous/geohydro_prescribed_builds_reference_ba.csv,/inputs/capacity_exogenous,geohydro_prescribed_builds_reference_ba,.csv,,,,,,
-/inputs/capacity_exogenous/geohydro_prescribed_builds_reference_county.csv,/inputs/capacity_exogenous,geohydro_prescribed_builds_reference_county,.csv,,,,,,
+/inputs/capacity_exogenous/exog_cap_geohydro_allkm_reference.csv,/inputs/capacity_exogenous,exog_cap_geohydro_allkm_reference,.csv,,,,,,
+/inputs/capacity_exogenous/exog_cap_geohydro_reference.csv,/inputs/capacity_exogenous,exog_cap_geohydro_reference,.csv,,,,,,
+/inputs/capacity_exogenous/exog_cap_upv_limited.csv,/inputs/capacity_exogenous,exog_cap_upv_limited,.csv,,,,,,
+/inputs/capacity_exogenous/exog_cap_upv_open.csv,/inputs/capacity_exogenous,exog_cap_upv_open,.csv,,,,,,
+/inputs/capacity_exogenous/exog_cap_upv_reference.csv,/inputs/capacity_exogenous,exog_cap_upv_reference,.csv,,,,,,
+/inputs/capacity_exogenous/exog_cap_wind-ons_limited.csv,/inputs/capacity_exogenous,exog_cap_wind-ons_limited,.csv,,,,,,
+/inputs/capacity_exogenous/exog_cap_wind-ons_open.csv,/inputs/capacity_exogenous,exog_cap_wind-ons_open,.csv,,,,,,
+/inputs/capacity_exogenous/exog_cap_wind-ons_reference.csv,/inputs/capacity_exogenous,exog_cap_wind-ons_reference,.csv,,,,,,
 /inputs/capacity_exogenous/interconnection_queues.csv,/inputs/capacity_exogenous,interconnection_queues,.csv,,,,,,
+/inputs/capacity_exogenous/prescribed_builds_geohydro_allkm_reference.csv,/inputs/capacity_exogenous,prescribed_builds_geohydro_allkm_reference,.csv,,,,,,
+/inputs/capacity_exogenous/prescribed_builds_geohydro_reference_ba.csv,/inputs/capacity_exogenous,prescribed_builds_geohydro_reference_ba,.csv,,,,,,
+/inputs/capacity_exogenous/prescribed_builds_geohydro_reference_county.csv,/inputs/capacity_exogenous,prescribed_builds_geohydro_reference_county,.csv,,,,,,
+/inputs/capacity_exogenous/prescribed_builds_upv_limited_ba.csv,/inputs/capacity_exogenous,prescribed_builds_upv_limited_ba,.csv,UPV prescribed builds with limited siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_upv_limited_county.csv,/inputs/capacity_exogenous,prescribed_builds_upv_limited_county,.csv,UPV prescribed builds with limited siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_upv_open_ba.csv,/inputs/capacity_exogenous,prescribed_builds_upv_open_ba,.csv,UPV prescribed builds with open siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_upv_open_county.csv,/inputs/capacity_exogenous,prescribed_builds_upv_open_county,.csv,UPV prescribed builds with open siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_upv_reference_ba.csv,/inputs/capacity_exogenous,prescribed_builds_upv_reference_ba,.csv,UPV prescribed builds with reference siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_upv_reference_county.csv,/inputs/capacity_exogenous,prescribed_builds_upv_reference_county,.csv,UPV prescribed builds with reference siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ofs_limited_ba.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ofs_limited_ba,.csv,wind-ofs prescribed builds with limited siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ofs_limited_county.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ofs_limited_county,.csv,wind-ofs prescribed builds with limited siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ofs_open_ba.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ofs_open_ba,.csv,wind-ofs prescribed builds with open siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ofs_open_county.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ofs_open_county,.csv,wind-ofs prescribed builds with open siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ofs_reference_ba.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ofs_reference_ba,.csv,,,,,,
+/inputs/capacity_exogenous/prescribed_builds_wind-ofs_reference_county.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ofs_reference_county,.csv,,,,,,
+/inputs/capacity_exogenous/prescribed_builds_wind-ons_limited_ba.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ons_limited_ba,.csv,wind-ons prescribed builds with limited siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ons_limited_county.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ons_limited_county,.csv,wind-ons prescribed builds with limited siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ons_open_ba.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ons_open_ba,.csv,wind-ons prescribed builds with open siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ons_open_county.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ons_open_county,.csv,wind-ons prescribed builds with open siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ons_reference_ba.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ons_reference_ba,.csv,wind-ons prescribed builds with reference siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
+/inputs/capacity_exogenous/prescribed_builds_wind-ons_reference_county.csv,/inputs/capacity_exogenous,prescribed_builds_wind-ons_reference_county,.csv,wind-ons prescribed builds with reference siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
 /inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv,/inputs/capacity_exogenous,ReEDS_generator_database_final_EIA-NEMS,.csv,EIA-NEMS database of existing generators,,,,Input,
-/inputs/capacity_exogenous/rsmap.csv,/inputs/capacity_exogenous,rsmap,.csv,Mapping for BAs to resource regions,"r,rs",,,,
-/inputs/capacity_exogenous/upv_exog_cap_limited_ba.csv,/inputs/capacity_exogenous,upv_exog_cap_limited_ba,.csv,Exogenous (pre-2010) UPV capacity with limited siting assumptions at BA resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/upv_exog_cap_limited_county.csv,/inputs/capacity_exogenous,upv_exog_cap_limited_county,.csv,Exogenous (pre-2010) UPV capacity with limited siting assumptions at county resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/upv_exog_cap_open_ba.csv,/inputs/capacity_exogenous,upv_exog_cap_open_ba,.csv,Exogenous (pre-2010) UPV capacity with open siting assumptions at BA resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/upv_exog_cap_open_county.csv,/inputs/capacity_exogenous,upv_exog_cap_open_county,.csv,Exogenous (pre-2010) UPV capacity with open siting assumptions at county resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/upv_exog_cap_reference_ba.csv,/inputs/capacity_exogenous,upv_exog_cap_reference_ba,.csv,Exogenous (pre-2010) UPV capacity with reference siting assumptions at BA resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/upv_exog_cap_reference_county.csv,/inputs/capacity_exogenous,upv_exog_cap_reference_county,.csv,Exogenous (pre-2010) UPV capacity with reference siting assumptions at county resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/upv_prescribed_builds_limited_ba.csv,/inputs/capacity_exogenous,upv_prescribed_builds_limited_ba,.csv,UPV prescribed builds with limited siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/upv_prescribed_builds_limited_county.csv,/inputs/capacity_exogenous,upv_prescribed_builds_limited_county,.csv,UPV prescribed builds with limited siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/upv_prescribed_builds_open_ba.csv,/inputs/capacity_exogenous,upv_prescribed_builds_open_ba,.csv,UPV prescribed builds with open siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/upv_prescribed_builds_open_county.csv,/inputs/capacity_exogenous,upv_prescribed_builds_open_county,.csv,UPV prescribed builds with open siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/upv_prescribed_builds_reference_ba.csv,/inputs/capacity_exogenous,upv_prescribed_builds_reference_ba,.csv,UPV prescribed builds with reference siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/upv_prescribed_builds_reference_county.csv,/inputs/capacity_exogenous,upv_prescribed_builds_reference_county,.csv,UPV prescribed builds with reference siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ofs_prescribed_builds_limited_ba.csv,/inputs/capacity_exogenous,wind-ofs_prescribed_builds_limited_ba,.csv,wind-ofs prescribed builds with limited siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ofs_prescribed_builds_limited_county.csv,/inputs/capacity_exogenous,wind-ofs_prescribed_builds_limited_county,.csv,wind-ofs prescribed builds with limited siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ofs_prescribed_builds_open_ba.csv,/inputs/capacity_exogenous,wind-ofs_prescribed_builds_open_ba,.csv,wind-ofs prescribed builds with open siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ofs_prescribed_builds_open_county.csv,/inputs/capacity_exogenous,wind-ofs_prescribed_builds_open_county,.csv,wind-ofs prescribed builds with open siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ofs_prescribed_builds_reference_ba.csv,/inputs/capacity_exogenous,wind-ofs_prescribed_builds_reference_ba,.csv,,,,,,
-/inputs/capacity_exogenous/wind-ofs_prescribed_builds_reference_county.csv,/inputs/capacity_exogenous,wind-ofs_prescribed_builds_reference_county,.csv,,,,,,
-/inputs/capacity_exogenous/wind-ons_exog_cap_limited_ba.csv,/inputs/capacity_exogenous,wind-ons_exog_cap_limited_ba,.csv,Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at BA resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/wind-ons_exog_cap_limited_county.csv,/inputs/capacity_exogenous,wind-ons_exog_cap_limited_county,.csv,Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at county resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/wind-ons_exog_cap_open_ba.csv,/inputs/capacity_exogenous,wind-ons_exog_cap_open_ba,.csv,Exogenous (pre-2010) wind-ons capacity with open siting assumptions at BA resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/wind-ons_exog_cap_open_county.csv,/inputs/capacity_exogenous,wind-ons_exog_cap_open_county,.csv,Exogenous (pre-2010) wind-ons capacity with open siting assumptions at county resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/wind-ons_exog_cap_reference_ba.csv,/inputs/capacity_exogenous,wind-ons_exog_cap_reference_ba,.csv,Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at BA resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/wind-ons_exog_cap_reference_county.csv,/inputs/capacity_exogenous,wind-ons_exog_cap_reference_county,.csv,Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at county resolution,"tech,r,sc_point_grid,t",,,Exogenous capacity,MW
-/inputs/capacity_exogenous/wind-ons_prescribed_builds_limited_ba.csv,/inputs/capacity_exogenous,wind-ons_prescribed_builds_limited_ba,.csv,wind-ons prescribed builds with limited siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ons_prescribed_builds_limited_county.csv,/inputs/capacity_exogenous,wind-ons_prescribed_builds_limited_county,.csv,wind-ons prescribed builds with limited siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ons_prescribed_builds_open_ba.csv,/inputs/capacity_exogenous,wind-ons_prescribed_builds_open_ba,.csv,wind-ons prescribed builds with open siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ons_prescribed_builds_open_county.csv,/inputs/capacity_exogenous,wind-ons_prescribed_builds_open_county,.csv,wind-ons prescribed builds with open siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_ba.csv,/inputs/capacity_exogenous,wind-ons_prescribed_builds_reference_ba,.csv,wind-ons prescribed builds with reference siting assumptions at BA resolution,"r,t",,,Prescribed capacity,MW
-/inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_county.csv,/inputs/capacity_exogenous,wind-ons_prescribed_builds_reference_county,.csv,wind-ons prescribed builds with reference siting assumptions at county resolution,"r,t",,,Prescribed capacity,MW
 /inputs/climate/climate_heuristics_finalyear.csv,/inputs/climate,climate_heuristics_finalyear,.csv,,,,,,
 /inputs/climate/climate_heuristics_yearfrac.csv,/inputs/climate,climate_heuristics_yearfrac,.csv,,,,,,
 /inputs/climate/CoolSlopes.csv,/inputs/climate,CoolSlopes,.csv,,,,,,
@@ -277,10 +269,12 @@ RelativeFilePath,RelativeFolderPath,FileName_new,FileExtension,Description_new,I
 /inputs/financials/incentives_biennial.csv,/inputs/financials,incentives_biennial,.csv,,,,,,
 /inputs/financials/incentives_ira.csv,/inputs/financials,incentives_ira,.csv,,,,,,
 /inputs/financials/incentives_ira_45q_45v_extension.csv,/inputs/financials,incentives_ira_45q_45v_extension,.csv,,,,,,
-/inputs/financials/incentives_ira_hii.csv,/inputs/financials,incentives_ira_hii,.csv,,,,,,
-/inputs/financials/incentives_ira_lii.csv,/inputs/financials,incentives_ira_lii,.csv,,,,,,
+/inputs/financials/incentives_noira.csv,/inputs/financials,incentives_noira,.csv,,,,,,
 /inputs/financials/incentives_none.csv,/inputs/financials,incentives_none,.csv,,,,,,
+/inputs/financials/incentives_obbba.csv,/inputs/financials,incentives_obbba,.csv,,,,,,
+/inputs/financials/incentives_obbba_conservative.csv,/inputs/financials,incentives_obbba_conservative,.csv,,,,,,
 /inputs/financials/inflation_default.csv,/inputs/financials,inflation_default,.csv,Annual inflation factors from 1914 through 2200; historical values use the avg-avg values from https://www.usinflationcalculator.com/inflation/consumer-price-index-and-annual-percent-changes-from-1913-to-2008/,t,,,,
+/inputs/financials/nuclear_energy_communities.csv,/inputs/financials,nuclear_energy_communities,.csv,Counties belonging to metropolitan statistical areas (MSAs) for which at least 0.17 percent of direct employment has been related to nuclear power at any point since 2010. These are determined partly by following the process described in Section 2.6 of https://home.treasury.gov/system/files/8861/EnergyCommunities_Data_Documentation.pdf and substituing in the NAICS code for nuclear electric power generation (221113) and partly by determining counties that belong to MSAs where the number of people employed by national labs engaged in nuclear research and development (PNNL, INL, ORNL, SNL, LLNL, Argonne, and LANL) has been at least 0.17 percent of the MSA's total employment at any point since 2010.,,,,,
 /inputs/financials/reg_cap_cost_diff_default.csv,/inputs/financials,reg_cap_cost_diff_default,.csv,region-specific differences for capital cost of all resources. Add to 1 to produce a multiplier,"i,r",,,parameter,
 /inputs/financials/retire_penalty.csv,/inputs/financials,retire_penalty,.csv,,,,,,
 /inputs/financials/supply_chain_adjust.csv,/inputs/financials,supply_chain_adjust,.csv,,,,,,
@@ -560,17 +554,14 @@ RelativeFilePath,RelativeFolderPath,FileName_new,FileExtension,Description_new,I
 /inputs/storage/storage_duration_pshdata.csv,/inputs/storage,storage_duration_pshdata,.csv,,,,,,
 /inputs/storage/storinmaxfrac.csv,/inputs/storage,storinmaxfrac,.csv,,,,,,
 /inputs/supply_curve/bio_supplycurve.csv,/inputs/supply_curve,bio_supplycurve,.csv,Regional biomass supply and costs by resource class,,2015,,,
-/inputs/supply_curve/csp_supply_curve-reference_ba.csv,/inputs/supply_curve,csp_supply_curve-reference_ba,.csv,CSP supply curve using reference siting assumptions at the BA resolution,,,,,
-/inputs/supply_curve/csp_supply_curve-reference_county.csv,/inputs/supply_curve,csp_supply_curve-reference_county,.csv,CSP supply curve using reference siting assumptions at the county resolution,,,,,
 /inputs/supply_curve/dollaryear.csv,/inputs/supply_curve,dollaryear,.csv,,,,,,
-/inputs/supply_curve/egs_supply_curve-reference_ba.csv,/inputs/supply_curve,egs_supply_curve-reference_ba,.csv,,,,,,
-/inputs/supply_curve/egs_supply_curve-reference_county.csv,/inputs/supply_curve,egs_supply_curve-reference_county,.csv,,,,,,
-/inputs/supply_curve/geo_supply_curve_site-reference.csv,/inputs/supply_curve,geo_supply_curve_site-reference,.csv,,,,,,
-/inputs/supply_curve/geohydro_supply_curve-reference_ba.csv,/inputs/supply_curve,geohydro_supply_curve-reference_ba,.csv,,,,,,
-/inputs/supply_curve/geohydro_supply_curve-reference_county.csv,/inputs/supply_curve,geohydro_supply_curve-reference_county,.csv,,,,,,
+/inputs/supply_curve/dr_shed_cap.csv,/inputs/supply_curve,dr_shed_cap,.csv,,,,,,
+/inputs/supply_curve/dr_shed_cost.csv,/inputs/supply_curve,dr_shed_cost,.csv,,,,,,
 /inputs/supply_curve/hyd_add_upg_cap.csv,/inputs/supply_curve,hyd_add_upg_cap,.csv,,,,,,
 /inputs/supply_curve/hydcap.csv,/inputs/supply_curve,hydcap,.csv,,,,,,
 /inputs/supply_curve/hydcost.csv,/inputs/supply_curve,hydcost,.csv,,,,,,
+/inputs/supply_curve/interconnection_land.h5,/inputs/supply_curve,interconnection_land,.h5,,,,,,
+/inputs/supply_curve/interconnection_offshore.h5,/inputs/supply_curve,interconnection_offshore,.h5,,,,,,
 /inputs/supply_curve/PSH_supply_curves_capacity_10hr_ref_dec2022.csv,/inputs/supply_curve,PSH_supply_curves_capacity_10hr_ref_dec2022,.csv,PSH supply curve capacity assuming 10 hour duration and reference exclusions as used in 2023 Annual Technology Baseline,,,https://www.nrel.gov/gis/psh-supply-curves.html,,
 /inputs/supply_curve/PSH_supply_curves_capacity_10hr_ref_mar2024.csv,/inputs/supply_curve,PSH_supply_curves_capacity_10hr_ref_mar2024,.csv,PSH supply curve capacity assuming 10 hour duration and reference exclusions as used in 2024 Annual Technology Baseline,,,https://www.nrel.gov/gis/psh-supply-curves.html,,
 /inputs/supply_curve/PSH_supply_curves_capacity_10hr_wEphemeral_dec2022.csv,/inputs/supply_curve,PSH_supply_curves_capacity_10hr_wEphemeral_dec2022,.csv,PSH supply curve capacity assuming 10 hour duration and allowing sites on ephemeral streams as used in 2023 Annual Technology Baseline,,,https://www.nrel.gov/gis/psh-supply-curves.html,,
@@ -608,28 +599,22 @@ RelativeFilePath,RelativeFolderPath,FileName_new,FileExtension,Description_new,I
 /inputs/supply_curve/PSH_supply_curves_cost_8hr_wExist_mar2024.csv,/inputs/supply_curve,PSH_supply_curves_cost_8hr_wExist_mar2024,.csv,PSH supply curve cost assuming 8 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline,,2004,https://www.nrel.gov/gis/psh-supply-curves.html,,
 /inputs/supply_curve/PSH_supply_curves_cost_8hr_wExist_wEph_mar2024.csv,/inputs/supply_curve,PSH_supply_curves_cost_8hr_wExist_wEph_mar2024,.csv,PSH supply curve cost assuming 8 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline,,2004,https://www.nrel.gov/gis/psh-supply-curves.html,,
 /inputs/supply_curve/rev_paths.csv,/inputs/supply_curve,rev_paths,.csv,,,,,,
-/inputs/supply_curve/sitemap.csv,/inputs/supply_curve,sitemap,.csv,,,,,,
-/inputs/supply_curve/sitemap_offshore.csv,/inputs/supply_curve,sitemap_offshore,.csv,,,,,,
+/inputs/supply_curve/sc_point_gid_old2new.csv,/inputs/supply_curve,sc_point_gid_old2new,.csv,,,,,,
+/inputs/supply_curve/sitemap.h5,/inputs/supply_curve,sitemap,.h5,,,,,,
 /inputs/supply_curve/spurline_cost.csv,/inputs/supply_curve,spurline_cost,.csv,,,,,,
+/inputs/supply_curve/supplycurve_csp-reference.csv,/inputs/supply_curve,supplycurve_csp-reference,.csv,,,,,,
+/inputs/supply_curve/supplycurve_egs-reference.csv,/inputs/supply_curve,supplycurve_egs-reference,.csv,,,,,,
+/inputs/supply_curve/supplycurve_geohydro-reference.csv,/inputs/supply_curve,supplycurve_geohydro-reference,.csv,,,,,,
+/inputs/supply_curve/supplycurve_upv-limited.csv,/inputs/supply_curve,supplycurve_upv-limited,.csv,,,,,,
+/inputs/supply_curve/supplycurve_upv-open.csv,/inputs/supply_curve,supplycurve_upv-open,.csv,,,,,,
+/inputs/supply_curve/supplycurve_upv-reference.csv,/inputs/supply_curve,supplycurve_upv-reference,.csv,,,,,,
+/inputs/supply_curve/supplycurve_wind-ofs-limited.csv,/inputs/supply_curve,supplycurve_wind-ofs-limited,.csv,,,,,,
+/inputs/supply_curve/supplycurve_wind-ofs-open.csv,/inputs/supply_curve,supplycurve_wind-ofs-open,.csv,,,,,,
+/inputs/supply_curve/supplycurve_wind-ofs-reference.csv,/inputs/supply_curve,supplycurve_wind-ofs-reference,.csv,,,,,,
+/inputs/supply_curve/supplycurve_wind-ons-limited.csv,/inputs/supply_curve,supplycurve_wind-ons-limited,.csv,,,,,,
+/inputs/supply_curve/supplycurve_wind-ons-open.csv,/inputs/supply_curve,supplycurve_wind-ons-open,.csv,,,,,,
+/inputs/supply_curve/supplycurve_wind-ons-reference.csv,/inputs/supply_curve,supplycurve_wind-ons-reference,.csv,,,,,,
 /inputs/supply_curve/trans_intra_cost_adder.csv,/inputs/supply_curve,trans_intra_cost_adder,.csv,,,,,,
-/inputs/supply_curve/upv_supply_curve-limited_ba.csv,/inputs/supply_curve,upv_supply_curve-limited_ba,.csv,UPV supply curve using limited siting assumptions at the BA resolution,,,,,
-/inputs/supply_curve/upv_supply_curve-limited_county.csv,/inputs/supply_curve,upv_supply_curve-limited_county,.csv,UPV supply curve using limited siting assumptions at the county resolution,,,,,
-/inputs/supply_curve/upv_supply_curve-open_ba.csv,/inputs/supply_curve,upv_supply_curve-open_ba,.csv,UPV supply curve using open siting assumptions at the BA resolution,,,,,
-/inputs/supply_curve/upv_supply_curve-open_county.csv,/inputs/supply_curve,upv_supply_curve-open_county,.csv,UPV supply curve using open siting assumptions at the county resolution,,,,,
-/inputs/supply_curve/upv_supply_curve-reference_ba.csv,/inputs/supply_curve,upv_supply_curve-reference_ba,.csv,UPV supply curve using reference siting assumptions at the BA resolution,,,,,
-/inputs/supply_curve/upv_supply_curve-reference_county.csv,/inputs/supply_curve,upv_supply_curve-reference_county,.csv,UPV supply curve using reference siting assumptions at the county resolution,,,,,
-/inputs/supply_curve/wind-ofs_supply_curve-limited_ba.csv,/inputs/supply_curve,wind-ofs_supply_curve-limited_ba,.csv,wind-ofs supply curve using limited siting assumptions at the BA resolution,,,,,
-/inputs/supply_curve/wind-ofs_supply_curve-limited_county.csv,/inputs/supply_curve,wind-ofs_supply_curve-limited_county,.csv,wind-ofs supply curve using limited siting assumptions at the county resolution,,,,,
-/inputs/supply_curve/wind-ofs_supply_curve-open_ba.csv,/inputs/supply_curve,wind-ofs_supply_curve-open_ba,.csv,wind-ofs supply curve using open siting assumptions at the BA resolution,,,,,
-/inputs/supply_curve/wind-ofs_supply_curve-open_county.csv,/inputs/supply_curve,wind-ofs_supply_curve-open_county,.csv,wind-ofs supply curve using open siting assumptions at the county resolution,,,,,
-/inputs/supply_curve/wind-ofs_supply_curve-reference_ba.csv,/inputs/supply_curve,wind-ofs_supply_curve-reference_ba,.csv,,,,,,
-/inputs/supply_curve/wind-ofs_supply_curve-reference_county.csv,/inputs/supply_curve,wind-ofs_supply_curve-reference_county,.csv,,,,,,
-/inputs/supply_curve/wind-ons_supply_curve-limited_ba.csv,/inputs/supply_curve,wind-ons_supply_curve-limited_ba,.csv,wind-ons supply curve using limited siting assumptions at the BA resolution,,,,,
-/inputs/supply_curve/wind-ons_supply_curve-limited_county.csv,/inputs/supply_curve,wind-ons_supply_curve-limited_county,.csv,wind-ons supply curve using limited siting assumptions at the county resolution,,,,,
-/inputs/supply_curve/wind-ons_supply_curve-open_ba.csv,/inputs/supply_curve,wind-ons_supply_curve-open_ba,.csv,wind-ons supply curve using open siting assumptions at the BA resolution,,,,,
-/inputs/supply_curve/wind-ons_supply_curve-open_county.csv,/inputs/supply_curve,wind-ons_supply_curve-open_county,.csv,wind-ons supply curve using open siting assumptions at the county resolution,,,,,
-/inputs/supply_curve/wind-ons_supply_curve-reference_ba.csv,/inputs/supply_curve,wind-ons_supply_curve-reference_ba,.csv,wind-ons supply curve using reference siting assumptions at the BA resolution,,,,,
-/inputs/supply_curve/wind-ons_supply_curve-reference_county.csv,/inputs/supply_curve,wind-ons_supply_curve-reference_county,.csv,wind-ons supply curve using reference siting assumptions at the county resolution,,,,,
 /inputs/tech-subset-table.csv,/inputs,tech-subset-table,.csv,Maps all technologies to specific subsets of technologies,,,,,
 /inputs/techs/tech_resourceclass.csv,/inputs/techs,tech_resourceclass,.csv,,,,,,
 /inputs/techs/techs_default.csv,/inputs/techs,techs_default,.csv,List of technologies to be used in the model,,,,,
@@ -650,7 +635,8 @@ RelativeFilePath,RelativeFolderPath,FileName_new,FileExtension,Description_new,I
 /inputs/transmission/transmission_capacity_future_LCC_1000miles_demand1_wind1_subferc_20230629.csv,/inputs/transmission,transmission_capacity_future_LCC_1000miles_demand1_wind1_subferc_20230629,.csv,Future transmission capacity additions for the LCC_1000miles_demand1_wind1_subferc_20230629 case at BA resolution,"r,rr",,,inputs,
 /inputs/transmission/transmission_capacity_init_AC_ba_NARIS2024.csv,/inputs/transmission,transmission_capacity_init_AC_ba_NARIS2024,.csv,"Initial AC transmission capacity from the NARIS 2024 system at the BA resolution - 'NARIS2024' is a better starting point for future-oriented studies, but it becomes increasingly inaccurate for years earlier than 2024",,,,,
 /inputs/transmission/transmission_capacity_init_AC_ba_REFS2009.csv,/inputs/transmission,transmission_capacity_init_AC_ba_REFS2009,.csv,Initial AC transmission capacity from the 2009 transmission system for ReEDS at the BA resolution - 'REFS2009' does not inclue direction-dependent capacities or differentiated capacities for energy and PRM trading but it better represents historical additions between 2010-2024,,,,,
-/inputs/transmission/transmission_capacity_init_AC_county_NARIS2024.csv,/inputs/transmission,transmission_capacity_init_AC_county_NARIS2024,.csv,Initial AC transmission capacity from the NARIS 2024 system at the county resolution,,,,,
+/inputs/transmission/transmission_capacity_init_AC_county_NARIS2024_base.csv,/inputs/transmission,transmission_capacity_init_AC_county_NARIS2024_base,.csv,Initial AC transmission capacity from the NARIS 2024 system at the county resolution,,,,,
+/inputs/transmission/transmission_capacity_init_AC_county_NARIS2024.csv,/inputs/transmission,transmission_capacity_init_AC_county_NARIS2024,.csv,Initial AC transmission capacity modified from the NARIS 2024 file to eliminate most supply (with county transmission) demand mismatches for the 2024 solve year,,,,,
 /inputs/transmission/transmission_capacity_init_AC_transgrp_NARIS2024.csv,/inputs/transmission,transmission_capacity_init_AC_transgrp_NARIS2024,.csv,Initial AC transmission capacity from the NARIS 2024 system at the transgrp resolution,,,,,
 /inputs/transmission/transmission_capacity_init_nonAC_ba.csv,/inputs/transmission,transmission_capacity_init_nonAC_ba,.csv,Initial non-AC transmission capacity at the BA resolution,,,,,
 /inputs/transmission/transmission_capacity_init_nonAC_county.csv,/inputs/transmission,transmission_capacity_init_nonAC_county,.csv,Initial non-AC transmission capacity at the county resolution,,,,,
@@ -694,7 +680,6 @@ RelativeFilePath,RelativeFolderPath,FileName_new,FileExtension,Description_new,I
 /inputs/variability/multi_year/wind-ons-open_ba.h5,/inputs/variability/multi_year,wind-ons-open_ba,.h5,Land-based wind resource supply curve using Open access assumptions. Data is a capacity factor i.e. a fraction.,"v,r,t",N/A,N/A,Resource supply curve,
 /inputs/variability/multi_year/wind-ons-reference_ba.h5,/inputs/variability/multi_year,wind-ons-reference_ba,.h5,Land-based wind resource supply curve using Reference access assumptions. Data is a capacity factor i.e. a fraction.,"v,r,t",N/A,N/A,Resource supply curve,
 /inputs/variability/period_szn_user.csv,/inputs/variability,period_szn_user,.csv,,,,,,
-/inputs/variability/reeds_region_tz_map.csv,/inputs/variability,reeds_region_tz_map,.csv,,,,,,
 /inputs/variability/stressperiods_user.csv,/inputs/variability,stressperiods_user,.csv,,,,,,
 /inputs/waterclimate/cost_cap_mult.csv,/inputs/waterclimate,cost_cap_mult,.csv,,,,,,
 /inputs/waterclimate/cost_vom_mult.csv,/inputs/waterclimate,cost_vom_mult,.csv,,,,,,

@@ -352,7 +352,7 @@ def main(reeds_path, inputs_case):
         indat['tech'] = indat.coolingwatertech
 
     ### NOTE: New addition for columns AO:AR, AW:AX in the plant file
-    ad = indat[["tech", "r", "ctt", "resource_region", "cap", "TC_WIN", retscen,
+    ad = indat[["tech", "r", "ctt", "resource_region", "summer_power_capacity_MW", "TC_WIN", retscen,
                 "StartYear", "IsExistUnit", "HeatRate", "T_VOM", "T_FOM",
                 "T_CCSROV", "T_CCSF", "T_CCSV", "T_CCSHR", "T_CCSCAPA", "T_CCSLOC"]].copy() 
 
@@ -362,7 +362,7 @@ def main(reeds_path, inputs_case):
         'r'      : 'r',
         'ctt'    : 'ctt',
         'resource_region' : 'resource.region',
-        'cap'    : 'Summer.capacity',
+        'summer_power_capacity_MW'    : 'Summer.capacity',
         'TC_WIN' : 'Winter.capacity',
         retscen  : 'RetireYear',
         'StartYear' : 'onlineyear',

@@ -7,6 +7,6 @@
     "egs_reference_county": {
         "tech": "egs", 
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     }
 }

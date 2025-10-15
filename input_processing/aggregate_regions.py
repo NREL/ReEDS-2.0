@@ -289,12 +289,6 @@ def aggreg_methods(
             df1 = df1.set_index(new_index.to_list())
             df1 = refilter_regions(df1, region_cols,region_col, val_r_all)
 
-    elif aggfunc == 'special':
-        if (row.name == 'county2zone.csv') and (agglevel == 'county'):
-            for r in region_cols:
-                df1[r] = 'p' + df1['FIPS'].map(lambda x: f"{x:0>5}")
-            df1 = df1.set_index(region_cols)
-
     else:
         raise ValueError(f'Invalid choice of aggfunc: {aggfunc} for {row.name}')
 
@@ -589,7 +583,7 @@ def agg_disagg(filepath, r2aggreg_glob, r_ba_glob, runfiles_row):
         except pd.errors.EmptyDataError:
             return
     elif filetype == 'h5':
-        dfin = reeds.io.read_file(os.path.join(inputs_case, filepath))
+        dfin = reeds.io.read_file(os.path.join(inputs_case, filepath)).copy()
         if header == 'keepindex':
             indexnames = (dfin.index.names)
             if (len(indexnames) == 1) and (not indexnames[0]):
@@ -599,7 +593,7 @@ def agg_disagg(filepath, r2aggreg_glob, r_ba_glob, runfiles_row):
             if (filepath == 'recf_csp.h5') and (indexnames[0] == 'hour'):
                 dfin.index.name = 'index'
                 indexnames = ['index']
-            dfin.reset_index(inplace=True)
+            dfin = dfin.reset_index()
     elif filetype == 'gdx':
         ### Read in the full gdx file, but only change the 'key' parameter
         ### given in runfiles. That's wasteful, but there are currently no
