@@ -110,7 +110,7 @@ eq_ObjFn_inv(t)$tmodel(t)..
 
 * --- storage capacity credit---
 *small cost penalty to incentivize solver to fill shorter-duration bins first
-                  + sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not csp(i))$(not nuclear_stor(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
+                  + sum{(i,v,r,ccseason,sdbin)$[valcap(i,v,r,t)$(storage(i) or hyd_add_pump(i))$(not thermal_storage(i))$Sw_PRM_CapCredit$Sw_StorageBinPenalty],
                          bin_penalty(sdbin) * CAP_SDBIN(i,v,r,ccseason,sdbin,t) }
 
 * cost of capacity upsizing

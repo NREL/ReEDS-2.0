@@ -948,7 +948,7 @@ cap_firm(i,r,ccseason,t)$[valcap_irt(i,r,t)$[not consume(i)]$tmodel_new(t)$Sw_PR
     + sum{v$[hydro_d(i)$valcap(i,v,r,t)],
          CAP.l(i,v,r,t) * cap_hyd_ccseason_adj(i,ccseason,r) * (1 + hydro_capcredit_delta(i,t)) }
     + sum{(v,sdbin)$[valcap(i,v,r,t)$(storage_standalone(i) or hyd_add_pump(i))], CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) * cc_storage(i,sdbin) }
-    + sum{(v,sdbin)$[valcap(i,v,r,t)$storage_hybrid(i)$(not nuclear_stor(i))], CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) * cc_storage(i,sdbin) * hybrid_cc_derate(i,r,ccseason,sdbin,t) } ;
+    + sum{(v,sdbin)$[valcap(i,v,r,t)$storage_hybrid(i)], CAP_SDBIN.l(i,v,r,ccseason,sdbin,t) * cc_storage(i,sdbin) * hybrid_cc_derate(i,r,ccseason,sdbin,t) } ;
 
 * Capacity trading to meet PRM
 captrade(r,rr,trtype,ccseason,t)$[routes(r,rr,trtype,t)$routes_prm(r,rr)$tmodel_new(t)] = PRMTRADE.l(r,rr,trtype,ccseason,t) ;

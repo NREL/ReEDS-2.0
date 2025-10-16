@@ -1,6 +1,6 @@
 ,utah
 timetype,seq
-endyear,2038
+endyear,2035
 GSw_HourlyChunkLengthRep,3
 GSw_Region,st/UT
 GSw_BatteryMandate,0
@@ -12,7 +12,7 @@ GSw_NuclearStor,1
 GSw_NuclearStor_Types,1_2_3
 GSw_NuclearStor_StorageTechs,tes-ms_tes-ms_battery-li
 GSw_NuclearStor_BCR,0.45_0.45_0.45
-GSw_NuclearDemo,0
+GSw_NuclearDemo,1
 GSw_Biopower,0
 GSw_CCS,0
 GSw_CoalIGCC,0

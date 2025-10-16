@@ -1732,7 +1732,7 @@ eq_reserve_margin(r,ccseason,t)
           cc_storage(i,sdbin) * CAP_SDBIN(i,v,r,ccseason,sdbin,t)
          }
 *hybrid PV+battery
-    + sum{(i,v,sdbin)$[storage_hybrid(i)$(not csp(i))$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
+    + sum{(i,v,sdbin)$[pvb(i)$valcap(i,v,r,t)$(not forced_retire(i,r,t))],
           cc_storage(i,sdbin) * hybrid_cc_derate(i,r,ccseason,sdbin,t) * CAP_SDBIN(i,v,r,ccseason,sdbin,t)
          }
 
@@ -2516,7 +2516,7 @@ eq_REC_Generation(RPSCat,i,st,t)$[stfeas(st)$(not tfirst(t))$tmodel(t)
           RPSTechMult(RPSCat,i,st) * hours(h)
           * (GEN(i,v,r,h,t) 
           - CREDIT_H2PTC(i,v,r,h,t)$[valgen_h2ptc(i,v,r,t)$Sw_H2_PTC] 
-          - (STORAGE_IN_GRID(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant] )
+          - (STORAGE_IN_GRID(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[pvb(i)$Sw_HybridPlant] )
          }
 
      =g=
@@ -2590,7 +2590,7 @@ eq_REC_Requirement(RPSCat,st,t)$[RecPerc(RPSCat,st,t)$(not tfirst(t))
 *subtract out its grid charging (see eq_REC_Generation above).
       + ( sum{(i,v)$[valgen(i,v,r,t)$(not storage_standalone(i))], GEN(i,v,r,h,t)
           - (distloss * GEN(i,v,r,h,t))$(distpv(i))
-          - (STORAGE_IN_GRID(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant] }
+          - (STORAGE_IN_GRID(i,v,r,h,t) * storage_eff_pvb_g(i,t))$[pvb(i)$Sw_HybridPlant] }
           - can_exports_h(r,h,t)$[(Sw_Canada=1)$sameas(RPSCat,"CES")]
         )$(RecStyle(st,RPSCat)=2)
     )}

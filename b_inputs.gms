@@ -1099,7 +1099,6 @@ loop(i$nuclear_stor(i),
 set nuclear_stor_with_tes(i) "hybrid nuclear+storage technologies whose storage tech is TES" ;
 nuclear_stor_with_tes(i)$(sum(i_stor$ (nuclear_stor_stortech(i,i_stor) and i_subsets(i_stor,'tes')),1) = 1) = yes ;
 
-tes(i)$nuclear_stor_with_tes(i) = yes ;
 thermal_storage(i)$nuclear_stor_with_tes(i) = yes ;
 
 *add non-numeraire CSPs in index i of already defined set tg_i(tg,i)
