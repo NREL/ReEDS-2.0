@@ -56,6 +56,15 @@ cost_cap:
   - hydro
   - psh
   - dr_shed
+  - nuclear_stor
+cost_cap_nuclear_stor_p:
+  indexsets:
+  - valinv
+  - nuclear_stor
+cost_cap_nuclear_stor_s:
+  indexsets:
+  - valinv
+  - nuclear_stor
 cost_cap_fin_mult:
   indexsets:
   - valinv
@@ -143,10 +152,6 @@ cost_vom_pvb_b:
   indexsets:
   - valgen
   - pvb
-cost_vom_nuclear_stor_p:
-  indexsets:
-  - valgen
-  - nuclear_stor
 cost_vom_nuclear_stor_s:
   indexsets:
   - valgen
@@ -157,6 +162,15 @@ cost_fom:
   excludesets:
   - canada
   - distpv
+  - nuclear_stor
+cost_fom_nuclear_stor_p:
+  indexsets:
+  - valcap
+  - nuclear_stor
+cost_fom_nuclear_stor_s:
+  indexsets:
+  - valcap
+  - nuclear_stor
 transmission_line_fom:
   indexsets:
   - routes

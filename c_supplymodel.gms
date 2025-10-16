@@ -714,7 +714,7 @@ eq_cap_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(not upgrade(i))
 
 * ---------------------------------------------------------------------------
 
-eq_cap_energy_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$(battery(i) or tes(i))]..
+eq_cap_energy_new_noret(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$(battery(i) or tes(i) or storage_hybrid(i))]..
     
     sum{tt$[inv_cond(i,v,r,t,tt)$(tmodel(tt) or tfix(tt))$valcap(i,v,r,tt)],
               degrade(i,tt,t) * INV_ENERGY(i,v,r,tt)
@@ -1292,7 +1292,9 @@ eq_mingen_fixed(i,v,r,h,t)
 
     =g=
 
-    mingen_fixed(i) * avail(i,r,h) *  CAP(i,v,r,t)
+    mingen_fixed(i) * avail(i,r,h) *  CAP(i,v,r,t)$(not nuclear_stor(i))
+
+    + mingen_fixed(i) * avail(i,r,h)  * CAP(i,v,r,t)$nuclear_stor(i)
 ;
 
 * ---------------------------------------------------------------------------
@@ -2918,7 +2920,10 @@ eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)
 * [plus] Capacity of all storage technologies
     (CAP(i,v,r,t) * bcr(i) * avail(i,r,h)
        * (1 + sum{szn, h_szn(h,szn) * seas_cap_frac_delta(i,v,r,szn,t)})
-    )$valcap(i,v,r,t)
+    )$[valcap(i,v,r,t)$(not nuclear_stor(i))]
+
+    + (CAP(i,v,r,t) * bcr(i)
+    )$[valcap(i,v,r,t)$nuclear_stor(i)]
 
     =g=
 
@@ -3023,10 +3028,10 @@ eq_storage_opres(i,v,r,h,t)
     STORAGE_LEVEL(i,v,r,h,t)
 
 *[minus] generation that occurs during this timeslice
-    - hours_daily(h) * GEN(i,v,r,h,t) $[not storage_hybrid(i)$(not thermal_storage(i))]
+    - hours_daily(h) * GEN(i,v,r,h,t) $[not storage_hybrid(i)$(not csp(i))]
 
 *[minus] generation that occurs during this timeslice
-    - hours_daily(h) * GEN_STORAGE(i,v,r,h,t) $[storage_hybrid(i)$(not thermal_storage(i))$Sw_HybridPlant]
+    - hours_daily(h) * GEN_STORAGE(i,v,r,h,t) $[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant]
 
 *[minus] losses from reg reserves (only half because only charging half
 *the time while providing reg reserves)
@@ -3115,7 +3120,7 @@ eq_storage_in_minloading(i,v,r,h,hh,t)$[(storage_standalone(i) or hyd_add_pump(i
 * ---------------------------------------------------------------------------
 * for batteries
 * when power capacity is built, energy capacity must be greater than the minimum duration
-eq_battery_minduration(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(battery(i) or tes(i))]..
+eq_battery_minduration(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(battery(i) or tes(i) or nuclear_stor(i))]..
 
     CAP_ENERGY(i,v,r,t)
 
@@ -3124,6 +3129,8 @@ eq_battery_minduration(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(battery(i) o
     CAP(i,v,r,t) * minbatteryduration$battery(i)
 
     + CAP(i,v,r,t) * mintesduration$tes(i)
+
+    + CAP(i,v,r,t) * minnuclear_storduration$nuclear_stor(i)
 ;
 
 * ---------------------------------------------------------------------------
@@ -3269,8 +3276,6 @@ eq_plant_total_gen(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i
     GEN(i,v,r,h,t)
 ;
 
-* ---------------------------------------------------------------------------
-
 *Energy to storage from hybrid storage palnt + hybrid storage plant generation <= hybrid storage plant maximum production for a resource
 *capacity factor is adjusted to include inverter losses, clipping losses, and low voltage losses
 eq_hybrid_plant_energy_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i,v,r,t)$valcap(i,v,r,t)$Sw_HybridPlant]..
@@ -3287,13 +3292,12 @@ eq_hybrid_plant_energy_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t
 ;
 
 * ---------------------------------------------------------------------------
-
 *Energy moving through the inverter cannot exceed the inverter capacity
 eq_plant_capacity_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i,v,r,t)$valcap(i,v,r,t)$Sw_HybridPlant]..
 
 *[plus] inverter capacity [AC] = panel capacity [DC] / ILR [DC/AC]
     + CAP(i,v,r,t)$pvb(i) / ilr(i)
-    + CAP(i,v,r,t)$(nuclear_stor(i))
+    + CAP(i,v,r,t)$(nuclear_stor(i))*(1 + bcr(i))
 
     =g=
 

@@ -76,7 +76,6 @@ cost_vom(i,v,r,t)$cost_vom(i,v,r,t) = round(cost_vom(i,v,r,t),2) ;
 cost_vom_pvb_b(i,v,r,t)$cost_vom_pvb_b(i,v,r,t) = round(cost_vom_pvb_b(i,v,r,t),2) ;
 cost_vom_pvb_p(i,v,r,t)$cost_vom_pvb_p(i,v,r,t) = round(cost_vom_pvb_p(i,v,r,t),2) ;
 cost_vom_nuclear_stor_s(i,v,r,t)$cost_vom_nuclear_stor_s(i,v,r,t) = round(cost_vom_nuclear_stor_s(i,v,r,t),2) ;
-cost_vom_nuclear_stor_p(i,v,r,t)$cost_vom_nuclear_stor_p(i,v,r,t) = round(cost_vom_nuclear_stor_p(i,v,r,t),2) ;
 degrade(i,tt,t)$degrade(i,tt,t) = round(degrade(i,tt,t),3) ;
 derate_geo_vintage(i,v)$derate_geo_vintage(i,v) = round(derate_geo_vintage(i,v),3) ;
 distance(r,rr,trtype)$distance(r,rr,trtype) = round(distance(r,rr,trtype),3) ;

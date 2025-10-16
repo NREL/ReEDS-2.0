@@ -38,18 +38,9 @@ eq_ObjFn_inv(t)$tmodel(t)..
                   + sum{(i,v,r)$valinv(i,v,r,t),
                        cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INV(i,v,r,t)
                       }
-                  + sum{(i,v,r)$valinv(i,v,r,t)$nuclear_stor(i),
-                       cost_cap_fin_mult_nuclear_stor_p(i,r,t) * cost_cap_nuclear_stor_p(i,t) * INV(i,v,r,t)
-                      }
-                  + sum{(i,v,r)$valinv(i,v,r,t)$nuclear_stor(i),
-                       cost_cap_fin_mult_nuclear_stor_s(i,r,t) * cost_cap_nuclear_stor_s(i,t) * INV(i,v,r,t)
-                      }
 
                   + sum{(i,v,r)$[valinv(i,v,r,t)$(battery(i) or tes(i))],
                        cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) * INV_ENERGY(i,v,r,t) 
-                      }
-                  + sum{(i,v,r)$[valinv(i,v,r,t)$(battery(i) or tes(i))],
-                       cost_cap_fin_mult_nuclear_stor_s(i,r,t) * cost_cap_energy_nuclear_stor_s(i,t) * INV_ENERGY(i,v,r,t) 
                       }
 
 * --- penalty for exceeding interconnection queue limit  ---
@@ -161,20 +152,20 @@ eq_Objfn_op(t)$tmodel(t)..
 
 * --- variable O&M costs---
 * all technologies except hybrid plant and DAC
-              sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom(i,v,r,t)$(not storage_hybrid(i)$(not csp(i)))],
+              sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom(i,v,r,t)$(not pvb(i))],
                    hours(h) * cost_vom(i,v,r,t) * GEN(i,v,r,h,t) }
 
 * hybrid plant (plant)
-            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_p(i,v,r,t)$storage_hybrid(i)$(not csp(i))$(not nuclear_stor(i))],
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_p(i,v,r,t)$pvb(i)],
                    hours(h) * cost_vom_pvb_p(i,v,r,t) * GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
 
 * hybrid plant (Battery)
-            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_b(i,v,r,t)$storage_hybrid(i)$(not csp(i))$(not nuclear_stor(i))],
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_b(i,v,r,t)$pvb(i)],
                    hours(h) * cost_vom_pvb_b(i,v,r,t) * GEN_STORAGE(i,v,r,h,t) }$Sw_HybridPlant
 
-* hybrid nuclear (plant)
-            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i)],
-                   hours(h) * cost_vom_nuclear_stor_p(i,v,r,t) * GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
+* * hybrid nuclear (plant)
+*             + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i)],
+*                    hours(h) * cost_vom_nuclear_stor_p(i,v,r,t) * GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
 
 * hybrid nuclear (storage)
             + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i)],
@@ -184,15 +175,9 @@ eq_Objfn_op(t)$tmodel(t)..
 * generation
               + sum{(i,v,r)$[valcap(i,v,r,t)],
                    cost_fom(i,v,r,t) * CAP(i,v,r,t) }
-              + sum{(i,v,r)$[valcap(i,v,r,t)],
-                   cost_fom_nuclear_stor_p(i,v,r,t) * CAP(i,v,r,t) }
-              + sum{(i,v,r)$[valcap(i,v,r,t)],
-                   cost_fom_nuclear_stor_s(i,v,r,t) * CAP(i,v,r,t) }
 
               + sum{(i,v,r)$[valcap(i,v,r,t)$(battery(i) or tes(i))],
                    cost_fom_energy(i,v,r,t) * CAP_ENERGY(i,v,r,t) }
-              + sum{(i,v,r)$[valcap(i,v,r,t)$(battery(i) or tes(i))],
-                   cost_fom_energy_nuclear_stor_s(i,v,r,t) * CAP_ENERGY(i,v,r,t) }
 
 * transmission lines
               + sum{(r,rr,trtype)$routes(r,rr,trtype,t),

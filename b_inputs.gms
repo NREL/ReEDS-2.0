@@ -357,6 +357,7 @@ set
   storage(i)           "storage technologies",
   storage_interday(i)  "interday storage",
   tes(i)               "thermal storage technologies",
+  thermal_storage(i)   "thermal storage technologies",
   upgrade(i)           "technologies that are upgrades from other technologies",
   upv(i)               "upv generation technologies",
   vre_distributed(i)   "distributed PV technologies",
@@ -1022,7 +1023,7 @@ storage_hybrid(i)$(not ban(i))      = yes$i_subsets(i,'storage_hybrid') ;
 storage_interday(i)$(not ban(i))    = yes$i_subsets(i,'storage_interday') ;
 storage_standalone(i)$(not ban(i))  = yes$i_subsets(i,'storage_standalone') ;
 storage(i)$(not ban(i))             = yes$i_subsets(i,'storage') ;
-tes(i)$(not ban(i))                  = yes$i_subsets(i,'tes') ;
+tes(i)$(not ban(i))                 = yes$i_subsets(i,'tes') ;
 upv(i)$(not ban(i))                 = yes$i_subsets(i,'upv') ;
 vre_distributed(i)$(not ban(i))     = yes$i_subsets(i,'vre_distributed') ;
 vre_no_csp(i)$(not ban(i))          = yes$i_subsets(i,'vre_no_csp') ;
@@ -1040,7 +1041,6 @@ tg_i('pv',i)$[(pv(i) or pvb(i))$(not distpv(i))] = yes ;
 tg_i('csp',i)$csp(i) = yes ;
 tg_i('gas',i)$gas(i) = yes ;
 tg_i('coal',i)$coal(i) = yes ;
-tg_i('nuclear',i)$nuclear(i) = yes ;
 tg_i('nuclear',i)$[(nuclear(i) or nuclear_stor(i))] = yes ;
 tg_i('battery',i)$battery(i) = yes ;
 tg_i('hydro',i)$hydro(i) = yes ;
@@ -1095,10 +1095,9 @@ loop(i$nuclear_stor(i),
     "nuclear_stor_stortech mapping must have exactly one storage tech for composite tech", i ;
 );
 
-* If storage tech used by nuclear+storage config is TES, then add it to tes and thermal_storage sets
+* If storage tech used by nuclear+storage config is in i_subsets(i, 'TES'), then add it to tes and thermal_storage sets
 set nuclear_stor_with_tes(i) "hybrid nuclear+storage technologies whose storage tech is TES" ;
-nuclear_stor_with_tes(i)$[nuclear_stor(i)
-                          $sum{i_stor$[nuclear_stor_stortech(i,i_stor)$tes(i_stor)],1}] = yes ;
+nuclear_stor_with_tes(i)$(sum(i_stor$ (nuclear_stor_stortech(i,i_stor) and i_subsets(i_stor,'tes')),1) = 1) = yes ;
 
 tes(i)$nuclear_stor_with_tes(i) = yes ;
 thermal_storage(i)$nuclear_stor_with_tes(i) = yes ;
@@ -4354,6 +4353,21 @@ parameter bcr(i) "--unitless-- ratio of the battery capacity to the PV DC capaci
 bcr(pvb) = sum{pvb_config$pvb_agg(pvb_config,pvb), bir_pvb_config(pvb_config) / ilr_pvb_config(pvb_config) } ;
 bcr(i)$[storage_standalone(i) or csp_storage(i) or hyd_add_pump(i)] = 1 ;
 
+*==================================
+* --- Nuclear+Storage Configurations ---
+*==================================
+
+parameter bcr_nuclear_stor_config(i) "--unitless-- battery capacity ratio for each hybrid nuclear+storage configuration"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%nuclear_stor_bcr.csv
+$offdelim
+$onlisting
+/ ;
+
+bcr(i)$nuclear_stor(i) = bcr_nuclear_stor_config(i) ;
+
 *=========================================
 * --- Capital costs ---
 *=========================================
@@ -4387,8 +4401,10 @@ cost_cap_nuclear_stor_p(i,t)$nuclear_stor(i) = cost_cap("nuclear",t) ;
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_cap_nuclear_stor_s(i,t) "--2004$/MW-- overnight capital costs for storage portion of hybrid nuclear+storage" ;
-cost_cap_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap(i_stor,t)}
-cost_cap_energy_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap_energy(i_stor,t)} ;
+cost_cap_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap(i_stor,t)};
+
+* Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
+cost_cap_energy(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap_energy(i_stor,t)} ;
 
 * Written by plantcostprep.py
 table hydrocapmult(allt,i) "--unitless-- hydropower capital cost multipliers over time"
@@ -4506,13 +4522,13 @@ parameter cost_vom_hybrid_storage(i,v,r,t) "--2004$/MWh-- variable OM for the st
 cost_vom_hybrid_storage(i,v,r,t)$[storage_hybrid(i)$(not csp(i))] = cost_vom("battery_li",v,r,t) ;
 
 * Assign hybrid nuclear+storage plant to have the same value as nuclear
-parameter cost_vom_nuclear_stor_p(i,v,r,t) "--2004$/MWh-- variable OM for nuclear portion of hybrid nuclear+storage" ;
-cost_vom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i) = plant_char('nuclear',v,t,'vom');
+* parameter cost_vom_nuclear_stor_p(i,v,r,t) "--2004$/MWh-- variable OM for the nuclear portion of hybrid nuclear+storage" ;
+cost_vom(i,v,r,t)$nuclear_stor(i) = plant_char('nuclear',v,t,'vom');
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_vom_nuclear_stor_s(i,v,r,t) "--2004$/MWh-- variable OM for storage portion of hybrid nuclear+storage" ;
 cost_vom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i) = sum{i_stor$nuclear_stor_stortech(i,i_stor), plant_char(i_stor,v,t,'vom')} ;
-cost_vom_nuclear_stor_s(i,v,r,t)$[nuclear_stor(i)$(not cost_vom(i,v,r,t))] = storage_vom_min ;
+cost_vom_nuclear_stor_s(i,v,r,t)$[nuclear_stor(i)$(not cost_vom_nuclear_stor_s(i,v,r,t))] = storage_vom_min ;
 
 *upgrade vom costs for initial classes are the vom costs for that tech
 *plus the delta between upgrade_to and upgrade_from for the initial year
@@ -4582,7 +4598,10 @@ cost_fom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i) = plant_char("nuclear",v,t,'fom
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_fom_nuclear_stor_s(i,v,r,t) "--2004$/MW-- fixed OM for storage portion of hybrid nuclear+storage" ;
 cost_fom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char(i_stor,v,t, 'fom')};
-cost_fom_energy_nuclear_stor_s(i,v,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char(i_stor,v,t, 'fom_energy')};
+
+cost_fom(i,v,r,t)$nuclear_stor(i) = cost_fom_nuclear_stor_p(i,v,r,t) + cost_fom_nuclear_stor_s(i,v,r,t) ;
+
+cost_fom_energy(i,v,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char(i_stor,v,t, 'fom_energy')};
 
 
 * -- FOM adjustments for coal and nuclear plants
@@ -5192,7 +5211,7 @@ parameter cost_cap_fin_mult_nuclear_stor_p(i,r,t)            "capital cost multi
           cost_cap_fin_mult_nuclear_stor_p_no_credits(i,r,t) "capital cost multiplier for the nuclear portion of hybrid Nuclear+Storage, excluding ITC/PTC/Depreciation"
 ;
 
-* Hybrid PV+Battery: Battery portion
+* Hybrid Nuclear+Storage: Storage portion
 parameter cost_cap_fin_mult_nuclear_stor_s(i,r,t)            "capital cost multiplier for the storage portion of hybrid Nuclear+Storage"
           cost_cap_fin_mult_nuclear_stor_s_noITC(i,r,t)      "capital cost multiplier for the storage portion of hybrid Nuclear+Storage, excluding ITC"
           cost_cap_fin_mult_nuclear_stor_s_no_credits(i,r,t) "capital cost multiplier for the storage portion of hybrid Nuclear+Storage, excluding ITC/PTC/Depreciation"
@@ -5809,7 +5828,7 @@ storage_eff("ICE",t) = 1 ;
 storage_eff(i,t)$[storage(i)$plant_char0(i,t,'rte')] = plant_char0(i,t,'rte') ;
 storage_eff(i,t)$[evmc_storage(i)$plant_char0(i,t,'rte')] = plant_char0(i,t,'rte') ;
 storage_eff(i,t)$pvb(i) = storage_eff("battery_li",t) ;
-storage_eff(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), storage_eff(i_stor,t)};
+storage_eff(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'rte')};
 
 parameter storage_eff_pvb_p(i,t) "--fraction-- efficiency of hybrid PV+battery when charging from the coupled PV"
           storage_eff_pvb_g(i,t) "--fraction-- efficiency of hybrid PV+battery when charging from the grid" ;
@@ -5823,10 +5842,11 @@ parameter storage_eff_nuclear_stor_p(i,t) "--fraction-- efficiency of hybrid nuc
           storage_eff_nuclear_stor_g(i,t) "--fraction-- efficiency of hybrid nuclear+storage when charging from the grid" ;
 
 *when charging from nuclear the nuclear_stor system will have a higher efficiency if the storage tech is tes
-storage_eff_nuclear_stor_p(i,t)$nuclear_stor(i) = sum{i_stor$[nuclear_stor_stortech(i,i_stor)$battery(i_stor)], storage_eff(i_stor,t)} + sum{i_stor$[nuclear_stor_stortech(i,i_stor)$tes(i_stor)], 1};
-*when charging from the grid the efficiency will be the same as standalone storage
-storage_eff_nuclear_stor_g(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), storage_eff(i_stor,t)};
+storage_eff_nuclear_stor_p(i,t)$[nuclear_stor(i)$(not nuclear_stor_with_tes(i))] = sum{i_stor$nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'rte')};
+storage_eff_nuclear_stor_p(i,t)$nuclear_stor_with_tes(i) = 0.95;
 
+*when charging from the grid the efficiency will be the same as standalone storage
+storage_eff_nuclear_stor_g(i,t)$nuclear_stor(i) = sum{i_stor$nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'rte')};
 
 *upgrade plants assume the same as what theyre upgraded to
 storage_eff(i,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), storage_eff(ii,t) } ;
@@ -5913,7 +5933,7 @@ $onlisting
 * total cost = cost(nuclear) * cap(nuclear) + cost(stor) * cap(stor)
 *            = cost(nuclear) * cap(nuclear) + cost(stor) * bcr * cap(nuclear)
 *            = [cost(nuclear) + cost(stor) * bcr ] * cap(nuclear)
-* cost_cap(i,t)$nuclear_stor(i) = (cost_cap_nuclear_stor_p(i,t) + bcr(i) * cost_cap_nuclear_stor_s(i,t)) * nuclearstorcapmult(t,i) ;
+cost_cap(i,t)$nuclear_stor(i) = (cost_cap_nuclear_stor_p(i,t) + bcr(i) * cost_cap_nuclear_stor_s(i,t)) * nuclearstorcapmult(t,i) ;
 
 * --- Storage Duration ---
 

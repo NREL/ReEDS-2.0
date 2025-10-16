@@ -378,7 +378,7 @@ def append_nuclear_stor_parameters(dfin, tech_to_copy='tes_ms', column_scaler=No
     ------
     dfin: Original inputs dataframe.
         Must have a column labeled i containing entries for tech_to_copy.
-    tech_to_copy: default='tes_ms6'. Technology from which to copy parameters for nuclear+storage.
+    tech_to_copy: default='tes_ms'. Technology from which to copy parameters for nuclear+storage.
     column_scaler: None or dict. If dict, format should be {column_to_scale: scaler}.
     nuclear_storage_types: default=[1,2,3,4]. Set of nuclear storage technology types.
         NOTE: If nuclear+storage techs are added to set i "generation technologies" in b_inputs,

@@ -412,9 +412,9 @@ pvb = pd.concat(pvb, axis=1)
 #    -- Nuclear+Storage Cost Model --    #
 #####################################
 # Get nuclear+storage designs
-# nuclear_bcrs = pd.read_csv(
-#     os.path.join(inputs_case, 'nuclear_stor_bcr.csv'),
-#     header=0, names=['nuclear_type','bcr'], index_col='nuclear_type').squeeze(1)
+nuclear_bcrs = pd.read_csv(
+    os.path.join(inputs_case, 'nuclear_stor_bcr.csv'),
+    header=0, names=['nuclear_type','bcr'], index_col='nuclear_type').squeeze(1)
 nuclear_storagetech = pd.read_csv(
     os.path.join(inputs_case, 'nuclear_stor_storagetechs.csv'),
     header=0, names=['nuclear_type','storage_type'], index_col='nuclear_type').squeeze(1)
@@ -510,6 +510,7 @@ dr_shed.to_csv(os.path.join(inputs_case,'dr_shed_capcostmult.csv'))
 ofswind_rsc_mult.to_csv(os.path.join(inputs_case,'ofswind_rsc_mult.csv'))
 degrade.to_csv(os.path.join(inputs_case,'degradation_annual.csv'),header=False)
 pvb.to_csv(os.path.join(inputs_case,'pvbcapcostmult.csv'))
+nuclearstorage.to_csv(os.path.join(inputs_case,'nuclearstorcapcostmult.csv'))
 upgrade_mult.round(4).to_csv(os.path.join(inputs_case,'upgrade_mult_final.csv'), index=False)
 outdac_elec.to_csv(os.path.join(inputs_case,'consumechardac.csv'), index=False)
 dac_gas.to_csv(os.path.join(inputs_case,'dac_gas.csv'), index=False)
