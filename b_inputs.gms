@@ -752,10 +752,7 @@ if(Sw_NuclearSMR = 0,
 ) ;
 
 if(Sw_NuclearStor = 0,
-  ban("Nuclear-Stor1") = yes ;
-  ban("Nuclear-Stor2") = yes ;
-  ban("Nuclear-Stor3") = yes ;
-  ban("Nuclear-Stor4") = yes ;
+  ban("Nuclear-Stor") = yes ;
 ) ;
 
 if(Sw_OfsWind = 0,
@@ -5842,7 +5839,7 @@ parameter storage_eff_nuclear_stor_p(i,t) "--fraction-- efficiency of hybrid nuc
 
 *when charging from nuclear the nuclear_stor system will have a higher efficiency if the storage tech is tes
 storage_eff_nuclear_stor_p(i,t)$[nuclear_stor(i)$(not nuclear_stor_with_tes(i))] = sum{i_stor$nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'rte')};
-storage_eff_nuclear_stor_p(i,t)$nuclear_stor_with_tes(i) = 0.95;
+storage_eff_nuclear_stor_p(i,t)$nuclear_stor_with_tes(i) = 1;
 
 *when charging from the grid the efficiency will be the same as standalone storage
 storage_eff_nuclear_stor_g(i,t)$nuclear_stor(i) = sum{i_stor$nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'rte')};

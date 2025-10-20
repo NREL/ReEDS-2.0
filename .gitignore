@@ -14,9 +14,6 @@ inout/gdxfiles/*.gdx
 # temporary GAMS files
 *.~gm
 225*/
-ToApps.py
-z_ethan/
-.env
 
 # pyc files
 *.pyc

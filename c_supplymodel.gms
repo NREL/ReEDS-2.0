@@ -311,6 +311,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_plant_total_gen(i,v,r,allh,t)           "--MW-- generation post curtailment = generation from pv (post curtailment) + generation from battery - charging from PV"
  eq_hybrid_plant_energy_limit(i,v,r,allh,t) "--MW-- PV energy to storage (no curtailment recovery) + PV energy to inverter <= PV resource"
  eq_plant_capacity_limit(i,v,r,allh,t)      "--MW-- energy moving through the inverter cannot exceed the inverter capacity"
+ eq_hybrid_plant_storage_limit(i,v,r,allh,t)  "--MW-- storage charging from the plant cannot exceed plant generation"
  eq_pvb_itc_charge_reqt(i,v,r,t)            "--MWh-- total energy charged from local PV >= ITC qualification fraction * total energy charged"
 
 * Canadian imports balance
@@ -3044,20 +3045,6 @@ eq_storage_opres(i,v,r,h,t)
     + hours_daily(h) * sum{ortype$opres_model(ortype), OPRES(ortype,i,v,r,h,t) }
 ;
 
-* ---------------------------------------------------------------------------
-
-* *storage charging must exceed OR contributions for thermal storage
-* eq_storage_thermalres(i,v,r,h,t)
-*     $[valgen(i,v,r,t)$Thermal_Storage(i)
-*     $tmodel(t)$Sw_OpRes$opres_h(h)]..
-
-*     STORAGE_IN(i,v,r,h,t)
-
-*     =g=
-
-*     sum{ortype$[opres_model(ortype)],
-*         reserve_frac(i,ortype) * OPRES(ortype,i,v,r,h,t) }
-* ;
 
 * ---------------------------------------------------------------------------
 
@@ -3065,7 +3052,7 @@ eq_storage_opres(i,v,r,h,t)
 *seas_cap_frac_delta is not applied here because we assume that the storage energy capacity is
 *constant across the year.
 eq_storage_duration(i,v,r,h,t)$[valgen(i,v,r,t)$valcap(i,v,r,t)
-                               $(battery(i) or tes(i) or CSP_Storage(i) or pvb(i) or psh(i) or evmc_storage(i))
+                               $(battery(i) or tes(i) or CSP_Storage(i) or storage_hybrid(i) or psh(i) or evmc_storage(i))
                                $tmodel(t)]..
 
 * [plus] storage duration times storage capacity
@@ -3129,8 +3116,6 @@ eq_battery_minduration(i,v,r,t)$[valcap(i,v,r,t)$tmodel(t)$newv(v)$(battery(i) o
     CAP(i,v,r,t) * minbatteryduration$battery(i)
 
     + CAP(i,v,r,t) * mintesduration$tes(i)
-
-    + CAP(i,v,r,t) * minnuclear_storduration$nuclear_stor(i)
 ;
 
 * ---------------------------------------------------------------------------
@@ -3289,6 +3274,16 @@ eq_hybrid_plant_energy_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t
 
 *[plus] generation from hybrid plant
     + GEN_PLANT(i,v,r,h,t)
+;
+
+*storage_in_plant must be less than gen_plant
+eq_hybrid_plant_storage_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i,v,r,t)$valcap(i,v,r,t)$Sw_HybridPlant]..
+
+    GEN_PLANT(i,v,r,h,t)
+
+    =g=
+
+    STORAGE_IN_PLANT(i,v,r,h,t)
 ;
 
 * ---------------------------------------------------------------------------
