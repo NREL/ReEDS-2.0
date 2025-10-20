@@ -418,6 +418,7 @@ RelativeFilePath,RelativeFolderPath,FileName_new,FileExtension,Description_new,I
 /inputs/plant_characteristics/nuclear_ATB_2024_advanced.csv,/inputs/plant_characteristics,nuclear_ATB_2024_advanced,.csv,,,,,,
 /inputs/plant_characteristics/nuclear_ATB_2024_conservative.csv,/inputs/plant_characteristics,nuclear_ATB_2024_conservative,.csv,,,,,,
 /inputs/plant_characteristics/nuclear_ATB_2024_moderate.csv,/inputs/plant_characteristics,nuclear_ATB_2024_moderate,.csv,,,,,,
+/inputs/plant_characteristics/nuclear_ATB_2024_natrium.csv,/inputs/plant_characteristics,nuclear_ATB_2024_natrium,.csv,,,,,,
 /inputs/plant_characteristics/nuclear_stor_chars.csv,/inputs/plant_characteristics,nuclear_stor_chars,.csv,,,,,,
 /inputs/plant_characteristics/ofs-wind_ATB_2023_advanced.csv,/inputs/plant_characteristics,ofs-wind_ATB_2023_advanced,.csv,"2023 advanced ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year ",,2004,,Inputs file,
 /inputs/plant_characteristics/ofs-wind_ATB_2023_conservative.csv,/inputs/plant_characteristics,ofs-wind_ATB_2023_conservative,.csv,"2023 conservative ofs-wind capital, fixed O&M, var O&M costs and rsc_mult (SC cost reduction mult) by class and year ",,2004,,Inputs file,
