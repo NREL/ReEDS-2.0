@@ -752,7 +752,8 @@ if(Sw_NuclearSMR = 0,
 ) ;
 
 if(Sw_NuclearStor = 0,
-  ban("Nuclear-Stor") = yes ;
+  ban(i)$i_subsets(i,'nuclear-stor') = yes ;
+  bannew(i)$i_subsets(i,'nuclear-stor') = yes ;
 ) ;
 
 if(Sw_OfsWind = 0,

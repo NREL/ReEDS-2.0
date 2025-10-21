@@ -1293,9 +1293,7 @@ eq_mingen_fixed(i,v,r,h,t)
 
     =g=
 
-    mingen_fixed(i) * avail(i,r,h) *  CAP(i,v,r,t)$(not nuclear_stor(i))
-
-    + mingen_fixed(i) * avail(i,r,h)  * CAP(i,v,r,t)$nuclear_stor(i)
+    mingen_fixed(i) * avail(i,r,h) *  CAP(i,v,r,t)
 ;
 
 * ---------------------------------------------------------------------------
@@ -3044,7 +3042,6 @@ eq_storage_opres(i,v,r,h,t)
 *[plus] energy reserved for operating reserves
     + hours_daily(h) * sum{ortype$opres_model(ortype), OPRES(ortype,i,v,r,h,t) }
 ;
-
 
 * ---------------------------------------------------------------------------
 
