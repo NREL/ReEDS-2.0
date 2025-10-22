@@ -311,7 +311,7 @@ GSw_TCPhaseout_ref_year,The reference year used to determine whether the trigger
 GSw_TCPhaseout_schedule,The schedule by which the tax credits phase out. This assumes that the phaseout schedule starts on the year after the threshold is met. The phaseout may still have a period of full credit after the trigger has been met depending on the policy definition.,ira2022,ira2022,
 GSw_TCPhaseout_start,Earliest allowed Applicable Year for the tax credit phaseout. The tax credit phaseout schedule starts on the year following this year; or later if the emission threshold is not met by this year,N/A,2032,
 GSw_TCPhaseout_trigger_f,The fraction of emissions from the ref year used to determine whether the trigger for the tax credit phaseout has been hit,float,0.25,
-GSw_TES,Turn on/off thermal energy storage,0; 1,1,
+GSw_TES,Turn on/off thermal energy storage,0; 1,0,
 GSw_TransCapMaxEachType,[GW] maximum transmission capacity allowed across each individual BA-BA interface for each trtype (constraint is off if set to 0; must be 0 or >= existing capacity (26.13 for AC)),N/A,0,
 GSw_TransCapMaxAllTypes,[GW] maximum transmission capacity allowed across each individual BA-BA interface for all trtypes together (constraint is off if set to 0; must be 0 or >= existing capacity (26.13 for AC)),N/A,0,
 GSw_TransCapMaxTypes,Transmission types to limit according to GSw_TransCapMaxEachType and GSw_TransCapMaxAllTypes [0 = none; 1 = all; 2 = VSC; 3 = all DC],0; 1; 2; 3,1,
