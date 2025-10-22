@@ -6,8 +6,7 @@ GSw_Region,st/UT
 GSw_BatteryMandate,0
 GSw_TES,0
 plantchar_tes,tes_ATB_2024_moderate
-plantchar_nuclear,nuclear_ATB_2024_natrium
-plantchar_nuclear_stor,nuclear_stor_chars
+plantchar_nuclear_stor,nuclear_ATB_2024_natrium
 GSw_Nuclear,1
 GSw_NuclearStor,1
 GSw_NuclearStor_Types,1_2_3

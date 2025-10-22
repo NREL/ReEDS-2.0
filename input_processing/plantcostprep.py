@@ -231,11 +231,21 @@ caes = deflate_func(caes,caesscen)
 caes['i'] = 'caes'
 
 #%%############################
+#    -- Nuclear Storage --    #
+###############################
+
+nuclear_stor = pd.read_csv(os.path.join(inputs_case,'plantchar_nuclear_stor.csv'))
+nuclear_stor = deflate_func(nuclear_stor, sw.plantchar_nuclear_stor)
+# temporary until nuclear-stor is modified to be hybrid-storage where any generation tech can pair with storage
+# and this will be replaced with a loop iterating through all hybrid-storage types.
+nuclear_stor['i'] = 'Nuclear-Stor1'
+
+#%%############################
 #    -- Concat all data --    #
 ###############################
 
 alldata = pd.concat([conv,upv_stack,wind_stack,geo_stack,csp_stack,battery,tes,
-                     evmc_storage,evmc_shape,caes,beccs,ccsflex,h2combustion],sort=False)
+                     evmc_storage,evmc_shape,caes,nuclear_stor,beccs,ccsflex,h2combustion],sort=False)
 
 if sw.upgradescen != 'default':
     alldata = pd.concat([alldata,upgrade])
@@ -419,17 +429,16 @@ nuclear_storagetech = pd.read_csv(
     os.path.join(inputs_case, 'nuclear_stor_storagetechs.csv'),
     header=0, names=['nuclear_type','storage_type'], index_col='nuclear_type').squeeze(1)
 # Get cost-sharing assumptions
-nuclearstoragevalues = pd.read_csv(os.path.join(inputs_case,'plantchar_nuclear_stor.csv'), index_col='parameter')
+mstesvalues = pd.read_csv(os.path.join(inputs_case,'mstes_values.csv'), index_col='parameter')
 heatpump_cost_USDperWac = (
-    nuclearstoragevalues.loc['heatpump','value']
-    * nuclearstoragevalues.loc['heatrate','value']
-    * deflator[nuclearstoragevalues.loc['heatpump','dollaryear']]
+    mstesvalues.loc['heatpump','value']
+    * mstesvalues.loc['heatrate','value']
+    * deflator[mstesvalues.loc['heatpump','dollaryear']]
     # Input units are in $/Wac, so convert to $/MWac to match units used in ReEDS
     * 1000
 )
-nuclear = pd.read_csv(os.path.join(inputs_case,f'plantchar_nuclear.csv'))
-nuclear = deflate_func(nuclear, sw[f'plantchar_nuclear'])
-nuclear_default = nuclear.set_index('t').capcost
+
+nuclear_default = nuclear_stor.set_index('t').capcost
 
 # Calculate nuclear storage cost fraction for each design
 nuclearstorage = {}

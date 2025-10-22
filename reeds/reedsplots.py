@@ -3990,7 +3990,7 @@ def plot_dispatch_weightwidth(
 
 def plot_storage_hybrid_dispatch_yearbymonth(
     case, t=2050, periodtype='rep',
-    techs=None, region=None,
+    techs=None, region=None, highlight_rep_periods=1,
     f=None, ax=None, figsize=(12, 6), legend=False,
     ):
     """
@@ -4095,7 +4095,7 @@ def plot_storage_hybrid_dispatch_yearbymonth(
 
     # Concatenate horizontally (columns are unique due to prefix)
     dfyear = pd.concat(series_list, axis=1).fillna(0)
-    print(1, dfyear)
+
     # Optionally subset to provided techs (techs here treated as column name fragments)
     if techs is not None:
         if isinstance(techs, list):
@@ -4103,8 +4103,7 @@ def plot_storage_hybrid_dispatch_yearbymonth(
         else:
             cols = [c for c in dfyear.columns if techs in c]
         dfyear = dfyear[cols]
-    print(1.5, dfyear)
-    print(7, hmap_myr)
+
     # Save base entries for color mapping before adding _neg/_pos/_off
     base_entries = list(dfyear.columns)
 
@@ -4118,9 +4117,7 @@ def plot_storage_hybrid_dispatch_yearbymonth(
         )
     else:
         dffull = dfyear.copy()
-    # with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
-    #     print(2)
-    #     print(dffull)
+
     # Convert index to timestamps
     dffull.index = dffull.index.map(reeds.timeseries.h2timestamp)
 
@@ -4142,7 +4139,7 @@ def plot_storage_hybrid_dispatch_yearbymonth(
         df[[c for c in plotorder if c in df]].cumsum(axis=1)
         [[c for c in plotorder[::-1] if c in df]]
     )
-    print(3, dfplot)
+
     # print(dfplot)
     # Build color list: one color per original entry column (not the generated _neg/_pos/_off names)
     # Use plots.rainbowmapper so entries get distinct, stable colors.
@@ -4154,6 +4151,20 @@ def plot_storage_hybrid_dispatch_yearbymonth(
         if base.endswith('_neg') or base.endswith('_pos') or base.endswith('_off'):
             base = base.rsplit('_', 1)[0]
         colors.append(color_map.get(base, 'k'))
+    
+    ### Read rep periods if necessary
+    if highlight_rep_periods:
+        period_szn = pd.read_csv(os.path.join(inputs_path, 'period_szn.csv'))
+        period_szn['timestamp'] = (
+            (period_szn.actual_period + 'h001')
+            .map(reeds.timeseries.h2timestamp)
+        )
+        period_szn['rep'] = (period_szn.rep_period == period_szn.actual_period)
+        repnum = dict(zip(
+            sorted(period_szn.rep_period.unique()),
+            range(1, len(period_szn.rep_period.unique())+1)
+        ))
+        period_szn['repnum'] = period_szn.rep_period.map(repnum)
 
     # Plot
     plt.close()
@@ -4162,6 +4173,37 @@ def plot_storage_hybrid_dispatch_yearbymonth(
         colors=colors,
         lwforline=0, f=f, ax=ax, figsize=figsize,
     )
+
+    if highlight_rep_periods:
+        width = pd.Timedelta('5D') if sw['GSw_HourlyType'] == 'wek' else pd.Timedelta('1D')
+        ylim = ax[0].get_ylim()
+        for i, row in period_szn.iterrows():
+            plottime = pd.Timestamp(2001, 1, row.timestamp.day)
+            if row.rep:
+                ## Draw an outline
+                box = mpl.patches.Rectangle(
+                    xy=(plottime, ylim[0]),
+                    width=width, height=(ylim[1]-ylim[0]),
+                    lw=0.75, edgecolor='k', facecolor='none', ls=':',
+                    clip_on=False, zorder=2e6
+                )
+            else:
+                ## Wash out the dispatch
+                box = mpl.patches.Rectangle(
+                    xy=(plottime, ylim[0]),
+                    width=width, height=(ylim[1]-ylim[0]),
+                    lw=0.75, edgecolor='none', facecolor='w', alpha=0.4,
+                    clip_on=False, zorder=1e6
+                )
+            ax[row.timestamp.month-1].add_patch(box)
+            ## Note the rep period
+            ax[row.timestamp.month-1].annotate(
+                row.repnum,
+                (plottime+pd.Timedelta('30m'), ylim[1]*0.95),
+                va='top', size=5, zorder=1e7,
+                color=('k' if row.rep else 'C7'),
+                weight=('normal' if row.rep else 'normal'),
+            )
     
     if legend:
         # Legend (base techs only)

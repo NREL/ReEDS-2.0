@@ -752,8 +752,8 @@ if(Sw_NuclearSMR = 0,
 ) ;
 
 if(Sw_NuclearStor = 0,
-  ban(i)$i_subsets(i,'nuclear-stor') = yes ;
-  bannew(i)$i_subsets(i,'nuclear-stor') = yes ;
+  ban(i)$i_subsets(i,'Nuclear-Stor') = yes ;
+  bannew(i)$i_subsets(i,'Nuclear-Stor') = yes ;
 ) ;
 
 if(Sw_OfsWind = 0,
@@ -4394,14 +4394,14 @@ cost_cap_pvb_b(i,t)$pvb(i) = cost_cap("battery_li",t) + %GSw_PVB_Dur% * cost_cap
 
 * Assign hybrid nuclear+storage plant to have the same value as nuclear
 parameter cost_cap_nuclear_stor_p(i,t) "--2004$/MW-- overnight capital costs for nuclear portion of hybrid nuclear+storage" ;
-cost_cap_nuclear_stor_p(i,t)$nuclear_stor(i) = cost_cap("nuclear",t) ;
+cost_cap_nuclear_stor_p(i,t)$nuclear_stor(i) = plant_char0('Nuclear-Stor1',t,'capcost') ;
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_cap_nuclear_stor_s(i,t) "--2004$/MW-- overnight capital costs for storage portion of hybrid nuclear+storage" ;
-cost_cap_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap(i_stor,t)};
+cost_cap_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'capcost') } ;
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
-cost_cap_energy(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap_energy(i_stor,t)} ;
+cost_cap_energy(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'capcost_energy') } ;
 
 * Written by plantcostprep.py
 table hydrocapmult(allt,i) "--unitless-- hydropower capital cost multipliers over time"
@@ -4520,7 +4520,7 @@ cost_vom_hybrid_storage(i,v,r,t)$[storage_hybrid(i)$(not csp(i))] = cost_vom("ba
 
 * Assign hybrid nuclear+storage plant to have the same value as nuclear
 * parameter cost_vom_nuclear_stor_p(i,v,r,t) "--2004$/MWh-- variable OM for the nuclear portion of hybrid nuclear+storage" ;
-cost_vom(i,v,r,t)$nuclear_stor(i) = plant_char('nuclear',v,t,'vom');
+cost_vom(i,v,r,t)$nuclear_stor(i) = plant_char('Nuclear-Stor1',v,t,'vom');
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_vom_nuclear_stor_s(i,v,r,t) "--2004$/MWh-- variable OM for storage portion of hybrid nuclear+storage" ;
@@ -4590,7 +4590,7 @@ cost_fom(i,v,r,t)$[valcap(i,v,r,t)$pvb(i)] = cost_fom_pvb_p(i,v,r,t) + bcr(i) * 
 
 * Assign hybrid nuclear+storage plant to have the same value as nuclear
 parameter cost_fom_nuclear_stor_p(i,v,r,t) "--2004$/MW-- fixed OM for nuclear portion of hybrid nuclear+storage" ;
-cost_fom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i) = plant_char("nuclear",v,t,'fom') ;
+cost_fom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i) = plant_char("Nuclear-Stor1",v,t,'fom') ;
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_fom_nuclear_stor_s(i,v,r,t) "--2004$/MW-- fixed OM for storage portion of hybrid nuclear+storage" ;
