@@ -620,11 +620,16 @@ bioshare_techba(i,r,t)$[(cofire(i) or bio(i))$tmodel_new(t)] =
 gen_h(i,r,h,t)$[tmodel_new(t)$valgen_irt(i,r,t)] =
   sum{v$valgen(i,v,r,t), GEN.l(i,v,r,h,t)
 * less storage charging
-  - STORAGE_IN.l(i,v,r,h,t)$[storage_standalone(i) or hyd_add_pump(i)]}
+  - STORAGE_IN.l(i,v,r,h,t)$[storage_standalone(i) or hyd_add_pump(i)]
+* less storage charging for hybrid storage
+  - STORAGE_IN_GRID.l(i,v,r,h,t)$storage_hybrid(i)}
 * less load from hydrogen production
   - sum{(v,p)$[consume(i)$valcap(i,v,r,t)$i_p(i,p)], PRODUCE.l(p,i,v,r,h,t) / prod_conversion_rate(i,v,r,t)}$Sw_Prod
 ;
 gen_plant_h(i,r,h,t)$[tmodel_new(t)$valgen_irt(i,r,t)$storage_hybrid(i)] = sum{v$valgen(i,v,r,t), GEN_PLANT.l(i,v,r,h,t)} ;
+gen_storage_h(i,r,h,t)$[tmodel_new(t)$valgen_irt(i,r,t)$storage_hybrid(i)] = sum{v$valgen(i,v,r,t), GEN_STORAGE.l(i,v,r,h,t)} ;
+storage_in_plant_h(i,r,h,t)$[tmodel_new(t)$valgen_irt(i,r,t)$storage_hybrid(i)] = sum{v$valgen(i,v,r,t), -STORAGE_IN_PLANT.l(i,v,r,h,t)} ;
+storage_in_grid_h(i,r,h,t)$[tmodel_new(t)$valgen_irt(i,r,t)$storage_hybrid(i)] = sum{v$valgen(i,v,r,t), -STORAGE_IN_GRID.l(i,v,r,h,t)} ;
 * A small amount of upv capacity is actually csp-ns, so convert it back now.
 * UPV capacity is already in MWac at this point (matching csp-ns),
 * so don't need to account for ILR.

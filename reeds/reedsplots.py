@@ -3747,6 +3747,7 @@ def plot_dispatch_yearbymonth(
         case, t=2050, plottype='gen', periodtype='rep',
         techs=None, region=None,
         f=None, ax=None, figsize=(12,6), highlight_rep_periods=1,
+        legend=False,
     ):
     """
     Full year dispatch for final year with rep days mapped to actual days
@@ -3784,12 +3785,11 @@ def plot_dispatch_yearbymonth(
 
     if plottype.lower() in ['soc', 'stateofcharge', 'energy_level', 'stor_level']:
         dfin = reeds.io.read_output(output_path, 'stor_level')
-        dfin.i = dfin.i.str.lower().map(lambda x: tech_map.get(x,x))
     else:
         dfin = reeds.io.read_output(output_path, 'gen_h')
-        dfin.i = dfin.i.map(
-            lambda x: x if x.startswith('battery') or x.startswith('tes') else x.strip('_01234567890*')
-        ).str.lower().map(lambda x: tech_map.get(x,x))
+    dfin.i = dfin.i.map(
+        lambda x: x if x.startswith('battery') or x.startswith('tes') else x.strip('_01234567890*')
+    ).str.lower().map(lambda x: tech_map.get(x,x))
 
     if region is not None:
         err = (
@@ -3815,6 +3815,7 @@ def plot_dispatch_yearbymonth(
         .unstack('i').fillna(0)
         / 1e3
     )
+
     if techs is not None:
         if isinstance(techs, list):
             dfyear = dfyear[[c for c in techs if c in dfyear]].copy()
@@ -3910,6 +3911,29 @@ def plot_dispatch_yearbymonth(
                 color=('k' if row.rep else 'C7'),
                 weight=('normal' if row.rep else 'normal'),
             )
+    
+    if legend:
+        ### Legend (base techs only)
+        try:
+            anchor_ax = ax[0]
+        except Exception:
+            anchor_ax = ax
+        legend_techs = [
+            c for c in tech_style.index
+            if (c in dfyear.columns) and (dfyear[c].abs().sum() > 0)
+            ]
+        if legend_techs:
+            handles = [
+                mpl.patches.Patch(facecolor=tech_style.get(t, 'k'), edgecolor='none', label=t)
+                for t in legend_techs[::-1]
+                ]
+        ncol = 2 if len(legend_techs) > 12 else 1
+        anchor_ax.legend(
+            handles=handles,
+            loc='upper left', bbox_to_anchor=(1.02, 1.0),
+            frameon=False, ncol=ncol,
+            handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
+        )
 
     return f, ax, dfplot
 
@@ -3962,6 +3986,209 @@ def plot_dispatch_weightwidth(
     ax[0].set_ylabel('Generation [GW]')
 
     return f, ax
+
+
+def plot_storage_hybrid_dispatch_yearbymonth(
+    case, t=2050, periodtype='rep',
+    techs=None, region=None,
+    f=None, ax=None, figsize=(12, 6), legend=False,
+    ):
+    """
+    Full year storage_hybrid dispatch for final year with rep days mapped to actual days
+    Inputs. gen_plant, gen_storage, storage_in_plant and storage_in_grid are stacked to the
+    sum generation for storage_hybrid techs in gen_h.
+    ------
+    techs: None to plot all storage_hybrid techs, or list of subset techs, or single tech string
+    """
+    if (periodtype != 'rep') and not (periodtype.startswith('pcm')):
+        raise ValueError("periodtype must be 'rep' or start with 'pcm'.")
+    inputs_path = os.path.join(case, 'inputs_case', periodtype)
+
+    tech_map = pd.read_csv(
+        os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'))
+    tech_map.raw = tech_map.raw.map(
+        lambda x: x if x.startswith('battery') or x.startswith('tes') else x.strip('_01234567890*'))
+    tech_map = tech_map.drop_duplicates().set_index('raw').display
+
+    sw = reeds.io.get_switches(case)
+    hmap_myr = pd.read_csv(os.path.join(inputs_path, 'hmap_myr.csv'))
+    hierarchy = reeds.io.get_hierarchy(case)
+    output_path = (
+        case if periodtype == 'rep'
+        else os.path.join(case, 'outputs', f'{periodtype}_{t}', 'outputs.h5')
+    )
+
+    # Region filtering
+    keep_r = None
+    if region is not None:
+        err = (
+            f"region = {region} but must be formatted as "
+            + "{hierarchy level}/{.-delimited list of regions at that level}"
+        )
+        if (
+            ('/' not in region)
+            or (region.split('/')[0] not in hierarchy.columns.tolist() + ['r'])
+        ):
+            raise ValueError(err)
+        level = region.split('/')[0]
+        regions = region.split('/')[1].split('.')
+        if level == 'r':
+            keep_r = regions
+        else:
+            keep_r = hierarchy.loc[hierarchy[level].isin(regions)].index
+
+    # Read outputs (some may not exist; treat missing as empty frames)
+    def _safe_read(name):
+        try:
+            df = reeds.io.read_output(output_path, name)
+            df.i = df.i.map(
+                lambda x: x if x.startswith('battery') or x.startswith('tes') else x.strip('_01234567890*')
+                ).str.lower().map(lambda x: tech_map.get(x,x))
+            return df
+        except Exception:
+            return pd.DataFrame(columns=['i', 'r', 'h', 't', 'Value'])
+    
+
+    gen_plant_h = _safe_read('gen_plant_h')
+    gen_storage_h = _safe_read('gen_storage_h')
+    storage_in_plant_h = _safe_read('storage_in_plant_h')
+    storage_in_grid_h = _safe_read('storage_in_grid_h')
+
+    datasets = {
+        'gen_plant': gen_plant_h,
+        'gen_storage': gen_storage_h,
+        'storage_in_plant': storage_in_plant_h,
+        'storage_in_grid': storage_in_grid_h,
+    }
+
+    # For each dataset produce a DataFrame indexed by h with columns per entry (i).
+    series_list = []
+    for dsname, df in datasets.items():
+        if df.empty:
+            continue
+        df = df.copy()
+        # Standardize column names if necessary
+        if 'Value' not in df.columns and 'GW' in df.columns:
+            df = df.rename(columns={'GW': 'Value'})
+        # Filter year and region
+        # tolerate t being int/str
+        if 't' in df.columns:
+            df = df.loc[df.t == t].copy()
+        else:
+            df = df.copy()
+        if keep_r is not None and 'r' in df.columns:
+            df = df.loc[df.r.isin(keep_r)].copy()
+        # Group by h and i, sum values across r
+        if {'h', 'i'}.issubset(df.columns):
+            grouped = df.groupby(['h', 'i']).Value.sum().unstack('i').fillna(0)
+            # prefix columns with dataset to ensure uniqueness
+            grouped.columns = [f'{dsname}|{c}' for c in grouped.columns]
+            series_list.append(grouped)
+        else:
+            # if unexpected format, skip
+            continue
+
+    if not series_list:
+        # Nothing to plot
+        print(f"No storage-hybrid data found for t={t} in case {case}")
+        return None, None, None
+
+    # Concatenate horizontally (columns are unique due to prefix)
+    dfyear = pd.concat(series_list, axis=1).fillna(0)
+    print(1, dfyear)
+    # Optionally subset to provided techs (techs here treated as column name fragments)
+    if techs is not None:
+        if isinstance(techs, list):
+            cols = [c for c in dfyear.columns if any(s in c for s in techs)]
+        else:
+            cols = [c for c in dfyear.columns if techs in c]
+        dfyear = dfyear[cols]
+    print(1.5, dfyear)
+    print(7, hmap_myr)
+    # Save base entries for color mapping before adding _neg/_pos/_off
+    base_entries = list(dfyear.columns)
+
+    # Broadcast representative days to actual days using hmap_myr (same logic as plot_dispatch_yearbymonth)
+    if len(dfyear) != len(hmap_myr):
+        dffull = (
+            hmap_myr[['actual_h', 'h']]
+            .merge(dfyear, left_on='h', right_index=True, how='left')
+            .fillna(0)
+            .sort_values('actual_h').set_index('actual_h').drop('h', axis=1)
+        )
+    else:
+        dffull = dfyear.copy()
+    # with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
+    #     print(2)
+    #     print(dffull)
+    # Convert index to timestamps
+    dffull.index = dffull.index.map(reeds.timeseries.h2timestamp)
+
+    # Handle negative columns (put negative portion on bottom)
+    goes_negative = list(dffull.columns[(dffull < 0).any()])
+    print(goes_negative)
+    df = dffull.copy()
+    for col in goes_negative:
+        df[col + '_neg'] = df[col].clip(upper=0)
+        df[col + '_off'] = df[col].clip(upper=0).abs()
+        df[col + '_pos'] = df[col].clip(lower=0)
+    df.drop(goes_negative, axis=1, inplace=True)
+
+    negcols = [c + '_neg' for c in goes_negative]
+    offsetcols = [c + '_off' for c in goes_negative]
+    poscols = [c + '_pos' for c in goes_negative]
+    plotorder = negcols + offsetcols + base_entries + poscols
+    dfplot = (
+        df[[c for c in plotorder if c in df]].cumsum(axis=1)
+        [[c for c in plotorder[::-1] if c in df]]
+    )
+    print(3, dfplot)
+    # print(dfplot)
+    # Build color list: one color per original entry column (not the generated _neg/_pos/_off names)
+    # Use plots.rainbowmapper so entries get distinct, stable colors.
+    color_map = plots.rainbowmapper(base_entries)
+    colors = []
+    for col in dfplot.columns:
+        # derive base name (strip suffixes)
+        base = col
+        if base.endswith('_neg') or base.endswith('_pos') or base.endswith('_off'):
+            base = base.rsplit('_', 1)[0]
+        colors.append(color_map.get(base, 'k'))
+
+    # Plot
+    plt.close()
+    f, ax = plots.plotyearbymonth(
+        dfplot,
+        colors=colors,
+        lwforline=0, f=f, ax=ax, figsize=figsize,
+    )
+    
+    if legend:
+        # Legend (base techs only)
+        try:
+            anchor_ax = ax[0]
+        except Exception:
+            anchor_ax = ax
+        legend_techs = [
+            c for c in base_entries
+            if (c in dfyear.columns) and (dfyear[c].abs().sum() > 0)
+        ]
+        if legend_techs:
+            handles = [
+                mpl.patches.Patch(
+                    facecolor=color_map.get(t, 'k'), edgecolor='none', label=t
+                )
+                for t in legend_techs[::-1]
+            ]
+        ncol = 2 if len(legend_techs) > 12 else 1
+        anchor_ax.legend(
+            handles=handles,
+            loc='upper left', bbox_to_anchor=(1.02, 1.0),
+            frameon=False, ncol=ncol,
+            handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
+        )
+
+    return f, ax, dfplot
 
 
 def plot_interday_soc(
@@ -6344,3 +6571,139 @@ def map_output_byyear(
                 **kwargs,
             )
     return f, ax, dictplot
+
+
+def plot_bytech_annual(
+        case, t=2050, plottype='gen', periodtype='rep',
+        techs=None, region=None,
+        f=None, ax=None, figsize=(12,6), highlight_rep_periods=1,
+    ):
+    """
+    Plot the sum of the variable defined by plottype as a function of years
+    ------
+    techs: None to plot all techs, or list of subset techs, or single tech string
+    plottype: 'soc' for storage state of charge, anything else for dispatch
+    """
+    if (periodtype != 'rep') and not (periodtype.startswith('pcm')):
+        raise ValueError(
+            f"periodtype={periodtype}: must be 'rep' or start with 'pcm'. "
+            "If it starts with 'pcm' it should be formatted as '{pcm}_{label}_{t} and "
+            "match a folder of the same name in {case}/outputs."
+        )
+    inputs_path = os.path.join(case, 'inputs_case', periodtype)
+    ### Load bokeh tech map and colors
+    tech_map = pd.read_csv(
+        os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'))
+    tech_map.raw = tech_map.raw.map(
+        lambda x: x if x.startswith('battery') or x.startswith('tes') else x.strip('_01234567890*'))
+    tech_map = tech_map.drop_duplicates().set_index('raw').display
+
+    tech_style = pd.read_csv(
+        os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
+        index_col='order').squeeze(1)
+
+    ### Load run files
+    sw = reeds.io.get_switches(case)
+    hmap_myr = pd.read_csv(os.path.join(inputs_path, 'hmap_myr.csv'))
+    hierarchy = reeds.io.get_hierarchy(case)
+    output_path = (
+        case if periodtype == 'rep'
+        else os.path.join(case, 'outputs', f'{periodtype}_{t}', 'outputs.h5')
+    )
+    dfin = reeds.io.read_output(output_path, f'{plottype}_ivrt')
+
+    dfin.i = dfin.i.map(
+        lambda x: x if x.startswith('battery') or x.startswith('tes') else x.strip('_01234567890*')
+    ).str.lower().map(lambda x: tech_map.get(x,x))
+
+    # Optionally filter by region (same syntax as other functions: "level/region1.region2")
+    if region is not None:
+        err = (
+            f"region = {region} but must be formatted as "
+            + "{hierarchy level}/{.-delimited list of regions at that level}"
+        )
+        if (
+            ('/' not in region)
+            or (region.split('/')[0] not in hierarchy.columns.tolist() + ['r'])
+        ):
+            raise ValueError(err)
+        level = region.split('/')[0]
+        regions = region.split('/')[1].split('.')
+        if level == 'r':
+            keep_r = regions
+        else:
+            keep_r = hierarchy.loc[hierarchy[level].isin(regions)].index
+        dfin = dfin.loc[dfin.r.isin(keep_r)].copy()
+
+    # Ensure t column is integer-like for plotting
+    try:
+        dfin['t'] = dfin['t'].astype(int)
+    except Exception:
+        pass
+
+    # Aggregate Value by year (t) and technology (i)
+    dfagg = dfin.groupby(['t', 'i']).Value.sum().unstack('i').fillna(0)
+
+    if dfagg.empty:
+        print("No data to plot")
+        return None, None, dfagg
+
+    # Order columns according to tech_style if possible
+    cols = [c for c in tech_style.index if c in dfagg.columns]
+    # Append any remaining columns not in tech_style
+    cols += [c for c in dfagg.columns if c not in cols]
+    dfplot = dfagg[cols]
+
+    # Prepare colors (one color per tech column)
+    colors = [tech_style.get(c, 'k') for c in dfplot.columns]
+
+    # Plot stacked bar chart
+    plt.close()
+    fig, ax = plt.subplots(figsize=figsize if 'figsize' in locals() else (12,6))
+    yearstep = int(pd.Series(dfplot.index).diff().dropna().max()) if len(dfplot.index) > 1 else 1
+    plots.stackbar(
+        df=dfplot,
+        ax=ax,
+        colors=dict(zip(dfplot.columns, colors)),
+        width=yearstep * 0.9,
+        net=False,
+    )
+
+    # Formatting
+    ax.set_xlabel('Year')
+    ax.set_ylabel(f'{plottype} [{("GW" if plottype!="soc" else "GW")}]' if 'Value' in dfin.columns else plottype)
+    ax.set_title(f'{plottype} by technology')
+    ax.legend(loc='upper left', bbox_to_anchor=(1.0, 1.0), frameon=False)
+    plots.despine(ax)
+    plt.tight_layout()
+
+    return fig, ax, dfplot
+    
+
+
+if __name__ == '__main__':
+    try:
+        case_dir = input("Enter the path to the ReEDS case directory: ").strip().strip('"').strip("'")
+        if not case_dir:
+            print("No case provided. Exiting.")
+            sys.exit(1)
+        if not os.path.isdir(case_dir):
+            print(f"Case directory not found: {case_dir}")
+            sys.exit(1)
+        
+        year = input("Enter the year to plot (default 2050): ").strip()
+        year = int(year) if year else 2050
+
+        fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
+            case=case_dir, t=year, legend=True)
+        
+        plt.show()
+
+        # fig, ax, _ = plot_dispatch_yearbymonth(
+        #     case=case_dir, t=year, plottype='soc', highlight_rep_periods=0)
+        # plt.show()
+    except KeyboardInterrupt:
+        print("\nCancelled by user.")
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
