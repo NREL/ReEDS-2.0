@@ -367,7 +367,7 @@ r_county.csv,,,,ignore,ignore,,,,,,,,,,,
 r_cs.csv,inputs/ctus/r_cs.csv,,,first,uniform,*r,cs,,0,0,,,,,,
 r_cs_distance_mi.csv,inputs/ctus/r_cs_distance_mi.csv,,,mean,uniform,*r,cs,,0,0,,,,,,may need special handling given subset on both r and cs for now should work
 routes_adjacent.csv,,,,trans_lookup,ignore,"*r,rr",,,0,0,,1,,,,disaggfunc set to ignore because the spatial aggregation level of this file is controlled by the agglevel switch
-ramprate.csv,inputs/plant_characteristics/{ramprate}.csv,GSw_OpRes,~0,ignore,ignore,,,,,0,,,,,,
+ramprate.csv,inputs/plant_characteristics/ramprate.csv,GSw_OpRes,~0,ignore,ignore,,,,,0,,,,,,
 ramptime.csv,inputs/reserves/ramptime.csv,GSw_OpRes,~0,ignore,ignore,,,,,0,,,,,,
 rb.csv,,,,first,ignore,0,,,0,,,1,,,,disaggfunc set to ignore because this file is specifically a collection of all valid BA regions
 rb_aggreg.csv,,,,ignore,ignore,,,,,,,,,,,

@@ -93,6 +93,7 @@ dr_shed*,dr_shed
 evmc_storage*,evmc_storage
 evmc_shape*,evmc_shape
 hyd*,hydro
+hyded,hydro
 egs_allkm_*,geothermal
 geohydro_allkm_*,geothermal
 egs_nearfield_*,geothermal

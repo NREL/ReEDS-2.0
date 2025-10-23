@@ -4233,6 +4233,149 @@ def plot_storage_hybrid_dispatch_yearbymonth(
     return f, ax, dfplot
 
 
+def plot_storage_hybrid_dispatch_weightwidth(
+    case,
+    t=2050,
+    periodtype='rep',
+    figsize=(13, 4),
+):
+    """
+    Rep-period storage-hybrid dispatch with panel widths proportional to period weights.
+    Stacks the four storage-hybrid components:
+        - gen_plant_h
+        - gen_storage_h
+        - storage_in_plant_h
+        - storage_in_grid_h
+    """
+    # Inputs and mappings
+    inputs_path = os.path.join(case, 'inputs_case', periodtype)
+    sw = reeds.io.get_switches(case)
+    try:
+        hmap_myr = pd.read_csv(os.path.join(inputs_path, 'hmap_myr.csv'))
+    except FileNotFoundError:
+        raise FileNotFoundError(f"hmap_myr.csv not found at {inputs_path}")
+
+    tech_map = pd.read_csv(
+        os.path.join(reeds_path, 'postprocessing', 'bokehpivot', 'in', 'reeds2', 'tech_map.csv')
+    )
+    tech_map.raw = tech_map.raw.map(
+        lambda x: x if x.startswith('battery') or x.startswith('tes') else x.strip('_01234567890*')
+    )
+    tech_map = tech_map.drop_duplicates().set_index('raw').display
+
+    def _safe_read(name):
+        try:
+            df = reeds.io.read_output(
+                case if periodtype == 'rep' else os.path.join(case, 'outputs', f'{periodtype}_{t}', 'outputs.h5'),
+                name
+            )
+            if ('Value' not in df.columns) and ('GW' in df.columns):
+                df = df.rename(columns={'GW': 'Value'})
+            if 'i' in df.columns:
+                df['i'] = (
+                    df['i']
+                    .map(lambda x: x if x.startswith('battery') or x.startswith('tes') else x.strip('_01234567890*'))
+                    .str.lower()
+                    .map(lambda x: tech_map.get(x, x))
+                )
+            return df
+        except Exception:
+            return pd.DataFrame(columns=['i', 'r', 'h', 't', 'Value'])
+
+    datasets = {
+        'gen_plant': _safe_read('gen_plant_h'),
+        'gen_storage': _safe_read('gen_storage_h'),
+        'storage_in_plant': _safe_read('storage_in_plant_h'),
+        'storage_in_grid': _safe_read('storage_in_grid_h'),
+    }
+
+    # Build a timeslice x entry dataframe, columns are "{dataset}|{tech}"
+    frames = []
+    for name, df in datasets.items():
+        if df.empty:
+            continue
+        if 't' in df.columns:
+            df = df.loc[df['t'] == t].copy()
+        if df.empty:
+            continue
+        # aggregate across regions to single stack per timeslice
+        grp = (
+            df.groupby(['h', 'i']).Value.sum()
+            .unstack('i')
+            .fillna(0.0)
+        )
+        grp.columns = [f'{name}|{c}' for c in grp.columns]
+        frames.append(grp)
+
+    if not frames:
+        print(f'No storage-hybrid data to plot for t={t}')
+        return None, None, None
+
+    dispatch = pd.concat(frames, axis=1).fillna(0.0)
+    # Column colors
+    colors = plots.rainbowmapper(dispatch.columns.tolist())
+
+    # Determine period weights (how often each representative period occurs)
+    hourly_type = str(sw.get('GSw_HourlyType', 'day')).lower()
+    per_hours = {'day': 24, 'wek': 120, 'year': 24}[hourly_type]
+    if hourly_type == 'year':
+        # Count by actual rep periods (y...d...) if modeling whole year
+        weights = (hmap_myr['actual_period'].value_counts().sort_index() // per_hours)
+        period_labels = weights.index.tolist()
+    else:
+        # Use season column (s... strings) for rep periods
+        weights = (hmap_myr['season'].value_counts() // per_hours)
+        # ensure deterministic ordered labels based on dispatch index prefixes
+        period_labels = sorted(dispatch.index.map(lambda x: str(x).split('h')[0]).unique())
+        # align weights to the plot order; if some are missing, assume zero
+        weights = weights.reindex(period_labels).fillna(0).astype(int)
+
+    # Prepare plot area
+    if (weights <= 0).all():
+        # fallback to equal widths if weights missing
+        width_ratios = [1 for _ in period_labels]
+    else:
+        width_ratios = [max(int(w), 1) for w in weights.loc[period_labels].tolist()]
+
+    plt.close()
+    cols = len(period_labels)
+    f, ax = plt.subplots(
+        1, cols,
+        figsize=figsize,
+        sharex=True, sharey=True,
+        gridspec_kw={'wspace': 0.0, 'width_ratios': width_ratios},
+    )
+
+    if cols == 1:
+        ax = [ax]
+
+    # Per-period stacks
+    for idx, p in enumerate(period_labels):
+        dfp = dispatch.loc[dispatch.index.map(lambda h: str(h).startswith(p))]
+        # strip the 's...h...' to numeric x positions for align='edge'
+        plots.stackbar(df=dfp, ax=ax[idx], colors=colors, align='edge', net=False)
+        ax[idx].axhline(0, color='k', lw=0.75, ls=':')
+        # light separators between periods
+        ax[idx].axvline(0, color='w', lw=0.25)
+        # title: show date of the representative season start if available
+        try:
+            label = reeds.timeseries.h2timestamp(p + 'h01').strftime('%Y-%m-%d')
+        except Exception:
+            label = p
+        ax[idx].set_title(label, y=0.92, fontsize=9)
+
+    # X limits: number of chunks per period
+    try:
+        chunks = per_hours // int(sw.get('GSw_HourlyChunkLengthRep', 1))
+    except Exception:
+        chunks = per_hours
+    ax[0].set_xlim(0, chunks)
+    plots.despine(ax[0], bottom=False)
+    ax[0].set_xticks([])
+
+    return f, ax, dispatch
+
+
 def plot_interday_soc(
         case, t=2050, ba=None, tech=None, f=None, axes=None, figsize=(10,4)):
     tech_map = pd.read_csv(
@@ -6720,32 +6863,35 @@ def plot_bytech_annual(
     plt.tight_layout()
 
     return fig, ax, dfplot
-    
 
 
 if __name__ == '__main__':
-    try:
-        case_dir = input("Enter the path to the ReEDS case directory: ").strip().strip('"').strip("'")
-        if not case_dir:
-            print("No case provided. Exiting.")
-            sys.exit(1)
-        if not os.path.isdir(case_dir):
-            print(f"Case directory not found: {case_dir}")
-            sys.exit(1)
-        
-        year = input("Enter the year to plot (default 2050): ").strip()
-        year = int(year) if year else 2050
 
-        fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
-            case=case_dir, t=year, highlight_rep_periods=0, legend=True)
-        
-        plt.show()
-
-        fig, ax, _ = plot_dispatch_yearbymonth(
-            case=case_dir, t=year, plottype='soc', highlight_rep_periods=0)
-        plt.show()
-    except KeyboardInterrupt:
-        print("\nCancelled by user.")
-    except Exception as e:
-        print(f"Error: {e}")
+    case_dir = input("Enter the path to the ReEDS case directory: ").strip().strip('"').strip("'")
+    if not case_dir:
+        print("No case provided. Exiting.")
         sys.exit(1)
+    if not os.path.isdir(case_dir):
+        print(f"Case directory not found: {case_dir}")
+        sys.exit(1)
+    
+    year = input("Enter the year to plot (default 2050): ").strip()
+    year = int(year) if year else 2050
+
+    # fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
+    #     case=case_dir, t=year, highlight_rep_periods=0, legend=True)
+    
+    # plt.show()
+
+    # fig, ax, _ = plot_dispatch_yearbymonth(
+    #     case=case_dir, t=year, plottype='soc', highlight_rep_periods=0)
+    # plt.show()
+
+    # fig, ax, _ = plot_bytech_annual(
+    #     case=case_dir, plottype='gen', periodtype='rep',
+    #     figsize=(12,6))
+    # plt.show()
+
+    fig, ax, _ = plot_storage_hybrid_dispatch_weightwidth(
+        case=case_dir, t=year)
+    plt.show()
