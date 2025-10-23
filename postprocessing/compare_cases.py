@@ -1316,7 +1316,7 @@ for slidetitle, data in toplot.items():
     plt.draw()
     plots.shorten_years(ax[1,0])
     ### Save it
-    slide = reeds.results.add_to_pptx(
+    slide = reeds.report_utils.add_to_pptx(
         'Aggregated techs stack', prs=prs, width=min(figwidth, SLIDE_WIDTH))
     if interactive:
         plt.show()
@@ -2472,7 +2472,7 @@ for row in range(nrows):
         else:
             ax[row,col].axis('off')
 ### Save it
-slide = reeds.results.add_to_pptx(title, prs=prs)
+slide = reeds.report_utils.add_to_pptx(title, prs=prs)
 if interactive:
     plt.show()
 
@@ -2491,7 +2491,7 @@ if any([float(dictin_sw[c].get('GSw_LoadSiteCF', 0)) for c in cases]):
             title='Sited demand [GW]',
         )
         ## Save it
-        slide = reeds.results.add_to_pptx('Flexibly sited demand', prs=prs, width=SLIDE_WIDTH)
+        slide = reeds.report_utils.add_to_pptx('Flexibly sited demand', prs=prs, width=SLIDE_WIDTH)
         if interactive:
             plt.show()
     except Exception:
@@ -2513,7 +2513,7 @@ if any([float(dictin_sw[c].get('GSw_LoadSiteCF', 0)) for c in cases]):
             title='Sited demand [GW]',
         )
         ## Save it
-        slide = reeds.results.add_to_pptx('Flexibly sited demand', prs=prs, width=SLIDE_WIDTH)
+        slide = reeds.report_utils.add_to_pptx('Flexibly sited demand', prs=prs, width=SLIDE_WIDTH)
         if interactive:
             plt.show()
     except Exception:
