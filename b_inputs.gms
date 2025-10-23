@@ -4870,6 +4870,10 @@ ramprate(i)$geo(i) = ramprate("geothermal") ;
 
 *if running with flexible nuclear, set ramp rate of nuclear to that of coal
 ramprate(i)$[nuclear(i)$Sw_NukeFlex] = ramprate("coal-new") ;
+ramprate(i)$[nuclear_stor(i)] = ramprate("nuclear") ;
+
+parameter ramprate_nuclear_stor(i) "--fraction/min-- storage ramp rate of hybrid nuclear+storage plants" ;
+ramprate_nuclear_stor(i)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), ramprate(i_stor)};
 
 ramprate(i)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), ramprate(ii) } ;

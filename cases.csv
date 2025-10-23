@@ -299,6 +299,7 @@ GSw_SpurScen,Spur-line scenario: 0 to include in resource supply curve; 1 to mod
 GSw_SpurShare,Indicate whether wind-ons and upv are allowed to share spur line capacity,0; 1,0,
 GSw_StartMarkets,Indicate year in which load-balance and operating-reserve constraints start to be enforced,N/A,2025,
 GSw_StartCost,Technologies with startup costs (0=none; 1=nuclear; 2=nuclear/coal/ccs; 3=coal/ccs; 4=all fuel-based except nuclear; 5=all fuel-based) (default is to leave out nuclear since it's always committed with GSw_MingenFixed=1),0; 1; 2; 3; 4; 5,3,
+GSw_RampLimit,Turn on/off ramping constraints,0; 1,0,
 GSw_StateCap,Turn on/off state cap and trade constraints,0; 1,1,
 GSw_StateRPS,Turn on/off state RPS requirements,0; 1,1,
 GSw_StateRPS_Carveouts,Turn wind and solar carveouts off/on,0;1,0,

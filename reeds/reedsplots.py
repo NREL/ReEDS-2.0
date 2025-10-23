@@ -6737,13 +6737,13 @@ if __name__ == '__main__':
         year = int(year) if year else 2050
 
         fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
-            case=case_dir, t=year, legend=True)
+            case=case_dir, t=year, highlight_rep_periods=0, legend=True)
         
         plt.show()
 
-        # fig, ax, _ = plot_dispatch_yearbymonth(
-        #     case=case_dir, t=year, plottype='soc', highlight_rep_periods=0)
-        # plt.show()
+        fig, ax, _ = plot_dispatch_yearbymonth(
+            case=case_dir, t=year, plottype='soc', highlight_rep_periods=0)
+        plt.show()
     except KeyboardInterrupt:
         print("\nCancelled by user.")
     except Exception as e:

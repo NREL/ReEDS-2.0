@@ -58,6 +58,7 @@ if(Sw_RemoveSmallNumbers = 1,
     STORAGE_INTERDAY_LEVEL_MIN_DAY.fx(i,v,r,allszn,tfix)$[valgen(i,v,r,tfix)$storage_interday(i)] = STORAGE_INTERDAY_LEVEL_MIN_DAY.l(i,v,r,allszn,tfix) ;
     AVAIL_SITE.fx(x,h,tfix)$[Sw_SpurScen$xfeas(x)] = AVAIL_SITE.l(x,h,tfix) ;
     RAMPUP.fx(i,r,h,hh,tfix)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,tfix)] = RAMPUP.l(i,r,h,hh,tfix) ;
+    RAMPUP_STORAGE.fx(i,r,h,hh,tfix)$[storage_hybrid(i)$(not csp(i))$Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,tfix)] = RAMPUP_STORAGE.l(i,r,h,hh,tfix) ;
 
 * flexible CCS variables
     CCSFLEX_POW.fx(i,v,r,h,tfix)$[ccsflex(i)$valgen(i,v,r,tfix)$(Sw_CCSFLEX_BYP OR Sw_CCSFLEX_STO OR Sw_CCSFLEX_DAC)] = CCSFLEX_POW.l(i,v,r,h,tfix) ;

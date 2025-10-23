@@ -55,6 +55,7 @@ positive variables
   STORAGE_LEVEL(i,v,r,allh,t)            "--MWh-- storage level in hour h"
   STORAGE_INTERDAY_LEVEL(i,v,r,allszn,t) "--MWh-- storage level at hour 0 of the partition"
   RAMPUP(i,r,allh,allhh,t)               "--MW-- upward change in generation from h to hh"
+  RAMPUP_STORAGE(i,r,allh,allhh,t)     "--MW-- upward change in storage discharge from h to hh"
 
 * flexible CCS variables
   CCSFLEX_POW(i,v,r,allh,t)                "--avg MW-- average power consumed for CCS system"
@@ -195,6 +196,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_mingen_ub(r,allh,allszn,t)                 "--MW-- upper bound on minimum generation level"
  eq_minloading(i,v,r,allh,allhh,t)             "--MW-- minimum loading across same-season hours"
  eq_ramping(i,r,allh,allhh,t)                  "--MW-- definition of RAMPUP"
+ eq_ramp_limit(i,r,allh,allhh,t)               "--MW-- ramping limits based on ramprate"
  eq_reserve_margin(r,ccseason,t)               "--MW-- planning reserve margin requirement"
  eq_supply_demand_balance(r,allh,t)            "--MW-- supply demand balance"
  eq_vsc_flow(r,allh,t)                         "--MW-- DC power flow"
@@ -308,11 +310,13 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_battery_minduration(i,v,r,t)                  "--MWh-- when power capacity is built, energy capacity should have a minimum capacity"
 
 * hybrid plant equations
- eq_plant_total_gen(i,v,r,allh,t)           "--MW-- generation post curtailment = generation from pv (post curtailment) + generation from battery - charging from PV"
- eq_hybrid_plant_energy_limit(i,v,r,allh,t) "--MW-- PV energy to storage (no curtailment recovery) + PV energy to inverter <= PV resource"
- eq_plant_capacity_limit(i,v,r,allh,t)      "--MW-- energy moving through the inverter cannot exceed the inverter capacity"
- eq_hybrid_plant_storage_limit(i,v,r,allh,t)  "--MW-- storage charging from the plant cannot exceed plant generation"
- eq_pvb_itc_charge_reqt(i,v,r,t)            "--MWh-- total energy charged from local PV >= ITC qualification fraction * total energy charged"
+ eq_plant_total_gen(i,v,r,allh,t)                "--MW-- generation post curtailment = generation from pv (post curtailment) + generation from battery - charging from PV"
+ eq_hybrid_plant_energy_limit(i,v,r,allh,t)      "--MW-- PV energy to storage (no curtailment recovery) + PV energy to inverter <= PV resource"
+ eq_plant_capacity_limit(i,v,r,allh,t)           "--MW-- energy moving through the inverter cannot exceed the inverter capacity"
+ eq_hybrid_plant_storage_limit(i,v,r,allh,t)     "--MW-- storage charging from the plant cannot exceed plant generation"
+ eq_hybrid_storage_ramping(i,r,allh,allhh,t)     "--MW-- definition of RAMPUP for hybrid storage"
+ eq_hybrid_storage_ramp_limit(i,r,allh,allhh,t)  "--MW-- hybrid storage ramping limits based on ramprate"
+ eq_pvb_itc_charge_reqt(i,v,r,t)                 "--MWh-- total energy charged from local PV >= ITC qualification fraction * total energy charged"
 
 * Canadian imports balance
  eq_Canadian_Imports(r,allszn,t)          "--MWh-- Balance of Canadian imports by season"
@@ -1485,6 +1489,8 @@ eq_minloading(i,v,r,h,hh,t)$[valgen(i,v,r,t)$minloadfrac(r,i,hh)
     GEN(i,v,r,hh,t) * minloadfrac(r,i,hh)
 ;
 
+* ---------------------------------------------------------------------------
+
 * RAMPUP is used in the calculation of startup/ramping costs
 * Because RAMPUP has a positive cost, RAMPUP will always either be 0
 * when the RHS is negative, or will be exactly equal to the RHS when 
@@ -1496,7 +1502,21 @@ eq_ramping(i,r,h,hh,t)
 
     =g=
     
-    sum{v$valgen(i,v,r,t), GEN(i,v,r,hh,t) - GEN(i,v,r,h,t) }
+    sum{v$valgen(i,v,r,t), GEN(i,v,r,hh,t) - GEN(i,v,r,h,t) }$(not nuclear_stor(i))
+
+    + sum{v$valgen(i,v,r,t), GEN_PLANT(i,v,r,hh,t) - GEN_PLANT(i,v,r,h,t) }$nuclear_stor(i)
+;
+
+* ---------------------------------------------------------------------------
+
+eq_ramp_limit(i,r,h,hh,t)
+    $[Sw_RampLimit$tmodel(t)$ramprate(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t)]..
+
+    ramprate(i) * hours_daily(h) * sum{v$valgen(i,v,r,t), CAP(i,v,r,t) }
+
+    =g=
+
+    RAMPUP(i,r,h,hh,t)
 ;
 
 *=======================================
@@ -3309,6 +3329,29 @@ eq_plant_capacity_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$val
     + sum{ortype$[Sw_OpRes$opres_h(h)$opres_model(ortype)], OPRES(ortype,i,v,r,h,t) }
 ;
 
+* ---------------------------------------------------------------------------
+
+eq_hybrid_storage_ramping(i,r,h,hh,t)
+    $[Sw_StartCost$tmodel(t)$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t)$nuclear_stor(i)]..
+
+    RAMPUP_STORAGE(i,r,h,hh,t)
+
+    =g=
+
+    sum{v$valgen(i,v,r,t), GEN_STORAGE(i,v,r,hh,t) - GEN_STORAGE(i,v,r,h,t) }
+;
+
+* ---------------------------------------------------------------------------
+
+eq_hybrid_storage_ramp_limit(i,r,h,hh,t)
+    $[Sw_RampLimit$tmodel(t)$ramprate(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t)$nuclear_stor(i)]..
+
+    ramprate_nuclear_stor(i) * bcr(i) * hours_daily(h) * sum{v$valgen(i,v,r,t), CAP(i,v,r,t) }
+
+    =g=
+
+    RAMPUP_STORAGE(i,r,h,hh,t)
+;
 * ---------------------------------------------------------------------------
 
 *Total energy charged from local PV >= ITC qualification fraction * total energy charged

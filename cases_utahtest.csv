@@ -4,9 +4,9 @@ endyear,2035
 GSw_HourlyChunkLengthRep,3
 GSw_Region,st/UT
 GSw_BatteryMandate,0
+GSw_StartCost,5
+GSw_RampLimit,1
 GSw_TES,0
-plantchar_tes,tes_ATB_2024_moderate
-plantchar_nuclear_stor,nuclear_ATB_2024_natrium
 GSw_Nuclear,1
 GSw_NuclearStor,1
 GSw_NuclearStor_Types,1_2_3
