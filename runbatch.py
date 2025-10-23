@@ -1968,8 +1968,8 @@ if __name__ == '__main__':
                         help="Check inputs but don't start runs")
 
     args = parser.parse_args()
-    from ToApps import to_slack
-    print(to_slack("ReEDS runbatch.py has started"))
+    # from ToApps import to_slack
+    # print(to_slack("ReEDS runbatch.py has started"))
 
     main(
         BatchName=args.BatchName, cases_suffix=args.cases_suffix, single=args.single,
@@ -1977,4 +1977,4 @@ if __name__ == '__main__':
         debug=args.debug, debugnode=args.debugnode, cases_per_node=args.cases_per_node,
         dryrun=args.dryrun,
     )
-    print(to_slack("ReEDS runbatch.py has completed"))
+    # print(to_slack("ReEDS runbatch.py has completed"))

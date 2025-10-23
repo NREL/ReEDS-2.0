@@ -312,6 +312,7 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_plant_total_gen(i,v,r,allh,t)                "--MW-- generation post curtailment = generation from pv (post curtailment) + generation from battery - charging from PV"
  eq_hybrid_plant_energy_limit(i,v,r,allh,t)      "--MW-- PV energy to storage (no curtailment recovery) + PV energy to inverter <= PV resource"
  eq_plant_capacity_limit(i,v,r,allh,t)           "--MW-- energy moving through the inverter cannot exceed the inverter capacity"
+ eq_hybrid_storage_capacity_limit(i,v,r,allh,t)  "--MW-- storage charging/discharging cannot exceed storage capacity"
  eq_hybrid_plant_storage_limit(i,v,r,allh,t)     "--MW-- storage charging from the plant cannot exceed plant generation"
  eq_hybrid_storage_ramping(i,r,allh,allhh,t)     "--MW-- definition of RAMPUP for hybrid storage"
  eq_pvb_itc_charge_reqt(i,v,r,t)                 "--MWh-- total energy charged from local PV >= ITC qualification fraction * total energy charged"
@@ -3316,10 +3317,10 @@ eq_plant_capacity_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$val
     + sum{ortype$[Sw_OpRes$opres_h(h)$opres_model(ortype)], OPRES(ortype,i,v,r,h,t) }
 ;
 
-eq_hybrid_storage_capacity_limit$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i,v,r,t)$valcap(i,v,r,t)$Sw_HybridPlant]..
+eq_hybrid_storage_capacity_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i,v,r,t)$valcap(i,v,r,t)$Sw_HybridPlant]..
 
 *[plus] storage capacity
-    + CAP(i,v,r,t) * bcr(i)
+    + CAP(i,v,r,t) * bcr(i)$nuclear_stor(i)
 
     =g=
 
@@ -3331,7 +3332,7 @@ eq_hybrid_storage_capacity_limit$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valge
     
 * [plus] storage charging from grid
     + STORAGE_IN_GRID(i,v,r,h,t)
-
+;
 * ---------------------------------------------------------------------------
 
 eq_hybrid_storage_ramping(i,r,h,hh,t)

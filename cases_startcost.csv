@@ -4,7 +4,8 @@ endyear,2035,2035,2035
 MCS_runs,25,15,15
 MCS_dist,nuclearstorage,nuclearstorage,nuclearstorage
 MCS_dist_groups,startcost,nuclear,tes
-GSw_HourlyChunkLengthRep,3,3,3
+GSw_HourlyChunkLengthRep,3,3,
+GSw_HourlyClusterAlgorithm,user,user,user
 GSw_Region,st/UT,st/UT,st/UT
 GSw_BatteryMandate,0,0,0
 GSw_StartCost,5,5,5

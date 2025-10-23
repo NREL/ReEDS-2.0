@@ -16,7 +16,7 @@
 
 - name: startcost
   assignments_list:
-    - startcost: [startcost_low_nuclear, startcost_high_nuclear, startcost_low_storage, startcost_high_storage]
+    - startcost: [startcost_lpls, startcost_hpls, startcost_lphs, startcost_hphs]
   dist: dirichlet
   dist_params: [1, 1, 1, 1]
   weight_r: country
