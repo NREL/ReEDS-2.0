@@ -2378,7 +2378,7 @@ else:
     )
     for case in cases:
         ### Plot it
-        fig,axes,tx_data[case] = reedsplots.plot_trans_onecase(
+        fig,axes,dfplot= reedsplots.plot_trans_onecase(
             case=cases[case], pcalabel=False, wscale=wscale,
             yearlabel=False, year=lastyear, simpletypes=None,
             alpha=alpha, scalesize=8,
@@ -2406,75 +2406,54 @@ else:
     if interactive:
         plt.show()
 
-# Print out transmission difference data
-tx_diff = tx_data[basecase].copy()[['r','rr','trtype','MW']].rename(columns={'MW': f'{basecase}_MW'})
-for key in tx_data.keys():
-    if key == basecase:
-        continue
-    tx_diff = pd.merge(
-        tx_diff,
-        tx_data[key][['r','rr','trtype','MW']].rename(columns={'MW': f'{key}_MW'}),
-        on=['r', 'rr', 'trtype'],
-        how='outer'
+
+    ### Difference
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
+        gridspec_kw={'wspace':0.0,'hspace':-0.1},
     )
-    tx_diff[f'{basecase}-{key}'] = tx_diff[f'{basecase}_MW'] - tx_diff[f'{key}_MW']
-
-tx_diff = tx_diff.fillna(0)
-tx_savename = os.path.join(
-    outpath,
-    (f"tx_diff-{','.join(cases.keys())}"
-     .replace(':','').replace('/','').replace(' ','').replace('\\n','').replace('\n','')
-     [:max_filename_length-len('.csv')]) + '.csv'
-)
-tx_diff.to_csv(tx_savename, index=False)
-
-### Difference
-plt.close()
-f,ax = plt.subplots(
-    nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
-    gridspec_kw={'wspace':0.0,'hspace':-0.1},
-)
-for case in cases:
-    ax[coords[case]].set_title(case)
-    if case == basecase:
-        ### Plot absolute
-        reedsplots.plot_trans_onecase(
-            case=cases[case], pcalabel=False, wscale=wscale,
-            yearlabel=False, year=lastyear, simpletypes=None,
-            alpha=alpha, scalesize=8,
-            f=f, ax=ax[coords[case]], title=False,
-            subtract_baseyear=subtract_baseyear,
-            thickborders='transreg', drawstates=False, drawzones=False, 
-            label_line_capacity=10,
-            scale=(True if case == basecase else False),
-        )
-    else:
-        ### Plot the difference
-        reedsplots.plot_trans_diff(
-            casebase=cases[basecase], casecomp=cases[case],
-            pcalabel=False, wscale=wscale,
-            yearlabel=False, year=lastyear, simpletypes=None,
-            alpha=alpha,
-            f=f, ax=ax[coords[case]],
-            subtract_baseyear=subtract_baseyear,
-            thickborders='transreg', drawstates=False, drawzones=False, 
-            label_line_capacity=10,
-            scale=False,
-        )
-### Formatting
-title = 'Interzonal transmission difference'
-for row in range(nrows):
-    for col in range(ncols):
-        if nrows == 1:
-            ax[col].axis('off')
-        elif ncols == 1:
-            ax[row].axis('off')
+    for case in cases:
+        ax[coords[case]].set_title(case)
+        if case == basecase:
+            ### Plot absolute
+            reedsplots.plot_trans_onecase(
+                case=cases[case], pcalabel=False, wscale=wscale,
+                yearlabel=False, year=lastyear, simpletypes=None,
+                alpha=alpha, scalesize=8,
+                f=f, ax=ax[coords[case]], title=False,
+                subtract_baseyear=subtract_baseyear,
+                thickborders='transreg', drawstates=False, drawzones=False, 
+                label_line_capacity=10,
+                scale=(True if case == basecase else False),
+            )
         else:
-            ax[row,col].axis('off')
-### Save it
-slide = reeds.report_utils.add_to_pptx(title, prs=prs)
-if interactive:
-    plt.show()
+            ### Plot the difference
+            reedsplots.plot_trans_diff(
+                casebase=cases[basecase], casecomp=cases[case],
+                pcalabel=False, wscale=wscale,
+                yearlabel=False, year=lastyear, simpletypes=None,
+                alpha=alpha,
+                f=f, ax=ax[coords[case]],
+                subtract_baseyear=subtract_baseyear,
+                thickborders='transreg', drawstates=False, drawzones=False, 
+                label_line_capacity=10,
+                scale=False,
+            )
+    ### Formatting
+    title = 'Interzonal transmission difference'
+    for row in range(nrows):
+        for col in range(ncols):
+            if nrows == 1:
+                ax[col].axis('off')
+            elif ncols == 1:
+                ax[row].axis('off')
+            else:
+                ax[row,col].axis('off')
+    ### Save it
+    slide = reeds.report_utils.add_to_pptx(title, prs=prs)
+    if interactive:
+        plt.show()
 
 #%% Flexibly sited load
 if any([float(dictin_sw[c].get('GSw_LoadSiteCF', 0)) for c in cases]):
