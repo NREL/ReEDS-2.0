@@ -170,7 +170,7 @@ $endif.hydup2
     ss
   / ;
 
-alias(i,ii,iii,i_stor) ;
+alias(i,ii,iii,ii) ;
 
 set i_water_nocooling(i) "technologies that use water, but are not differentiated by cooling tech and water source"
 /
@@ -1078,7 +1078,7 @@ $include inputs_case%ds%nuclear_stor_config.csv
 $onlisting
 / ;
 
-set nuclear_stor_stortech(i,i_stor) "storage tech used by each nuclear+storage config"
+set nuclear_stor_stortech(i,ii) "storage tech used by each nuclear+storage config"
 / 
 $offlisting
 $ondelim
@@ -1087,15 +1087,10 @@ $offdelim
 $onlisting
 / ;
 
-* Sanity check: each nuclear_stor must map to exactly one storage tech
-loop(i$nuclear_stor(i),
-  abort$(sum(i_stor$ nuclear_stor_stortech(i,i_stor),1) <> 1)
-    "nuclear_stor_stortech mapping must have exactly one storage tech for composite tech", i ;
-);
 
 * If storage tech used by nuclear+storage config is in i_subsets(i, 'TES'), then add it to tes and thermal_storage sets
 set nuclear_stor_with_tes(i) "hybrid nuclear+storage technologies whose storage tech is TES" ;
-nuclear_stor_with_tes(i)$(sum(i_stor$ (nuclear_stor_stortech(i,i_stor) and i_subsets(i_stor,'tes')),1) = 1) = yes ;
+nuclear_stor_with_tes(i)$(sum(ii$ (nuclear_stor_stortech(i,ii) and i_subsets(ii,'tes')),1) = 1) = yes ;
 
 thermal_storage(i)$nuclear_stor_with_tes(i) = yes ;
 
@@ -4398,10 +4393,10 @@ cost_cap_nuclear_stor_p(i,t)$nuclear_stor(i) = plant_char0('Nuclear-Stor1',t,'ca
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_cap_nuclear_stor_s(i,t) "--2004$/MW-- overnight capital costs for storage portion of hybrid nuclear+storage" ;
-cost_cap_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'capcost') } ;
+cost_cap_nuclear_stor_s(i,t)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), plant_char0(ii,t,'capcost') } ;
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
-cost_cap_energy(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'capcost_energy') } ;
+cost_cap_energy(i,t)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), plant_char0(ii,t,'capcost_energy') } ;
 
 * Written by plantcostprep.py
 table hydrocapmult(allt,i) "--unitless-- hydropower capital cost multipliers over time"
@@ -4524,7 +4519,7 @@ cost_vom(i,v,r,t)$nuclear_stor(i) = plant_char('Nuclear-Stor1',v,t,'vom');
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_vom_nuclear_stor_s(i,v,r,t) "--2004$/MWh-- variable OM for storage portion of hybrid nuclear+storage" ;
-cost_vom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i) = sum{i_stor$nuclear_stor_stortech(i,i_stor), plant_char(i_stor,v,t,'vom')} ;
+cost_vom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i) = sum{ii$nuclear_stor_stortech(i,ii), plant_char(ii,v,t,'vom')} ;
 cost_vom_nuclear_stor_s(i,v,r,t)$[nuclear_stor(i)$(not cost_vom_nuclear_stor_s(i,v,r,t))] = storage_vom_min ;
 
 *upgrade vom costs for initial classes are the vom costs for that tech
@@ -4594,11 +4589,11 @@ cost_fom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i) = plant_char("Nuclear-Stor1",v,
 
 * Assign hybrid nuclear+storage storage to have the same value as the storage technology in stortech_nuclear_stor_config
 parameter cost_fom_nuclear_stor_s(i,v,r,t) "--2004$/MW-- fixed OM for storage portion of hybrid nuclear+storage" ;
-cost_fom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char(i_stor,v,t, 'fom')};
+cost_fom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), plant_char(ii,v,t, 'fom')};
 
 cost_fom(i,v,r,t)$nuclear_stor(i) = cost_fom_nuclear_stor_p(i,v,r,t) + cost_fom_nuclear_stor_s(i,v,r,t) ;
 
-cost_fom_energy(i,v,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char(i_stor,v,t, 'fom_energy')};
+cost_fom_energy(i,v,r,t)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), plant_char(ii,v,t, 'fom_energy')};
 
 
 * -- FOM adjustments for coal and nuclear plants
@@ -4873,7 +4868,7 @@ ramprate(i)$[nuclear(i)$Sw_NukeFlex] = ramprate("coal-new") ;
 ramprate(i)$[nuclear_stor(i)] = ramprate("nuclear") ;
 
 parameter ramprate_nuclear_stor(i) "--fraction/min-- storage ramp rate of hybrid nuclear+storage plants" ;
-ramprate_nuclear_stor(i)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), ramprate(i_stor)};
+ramprate_nuclear_stor(i)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), ramprate(ii)};
 
 ramprate(i)$[i_water_cooling(i)$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), ramprate(ii) } ;
@@ -4906,7 +4901,7 @@ cost_opres(i,ortype,t)$geo(i) = cost_opres("geothermal",ortype,t) ;
 cost_opres(i,ortype,t)$pvb(i) = cost_opres("battery_li",ortype,t) ;
 
 * Assign hybrid nuclear+storage the same value as storage tech
-cost_opres(i,ortype,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_opres(i_stor,ortype,t)};
+cost_opres(i,ortype,t)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), cost_opres(ii,ortype,t)};
 
 * add heat rate penalty for providing reserves (currently only applied to spin)
 * input data calculated based on heat rates in the PLEXOS EI database as of Dec. 2020
@@ -5829,7 +5824,7 @@ storage_eff("ICE",t) = 1 ;
 storage_eff(i,t)$[storage(i)$plant_char0(i,t,'rte')] = plant_char0(i,t,'rte') ;
 storage_eff(i,t)$[evmc_storage(i)$plant_char0(i,t,'rte')] = plant_char0(i,t,'rte') ;
 storage_eff(i,t)$pvb(i) = storage_eff("battery_li",t) ;
-storage_eff(i,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'rte')};
+storage_eff(i,t)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), plant_char0(ii,t,'rte')};
 
 parameter storage_eff_pvb_p(i,t) "--fraction-- efficiency of hybrid PV+battery when charging from the coupled PV"
           storage_eff_pvb_g(i,t) "--fraction-- efficiency of hybrid PV+battery when charging from the grid" ;
@@ -5843,11 +5838,11 @@ parameter storage_eff_nuclear_stor_p(i,t) "--fraction-- efficiency of hybrid nuc
           storage_eff_nuclear_stor_g(i,t) "--fraction-- efficiency of hybrid nuclear+storage when charging from the grid" ;
 
 *when charging from nuclear the nuclear_stor system will have a higher efficiency if the storage tech is tes
-storage_eff_nuclear_stor_p(i,t)$[nuclear_stor(i)$(not nuclear_stor_with_tes(i))] = sum{i_stor$nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'rte')};
+storage_eff_nuclear_stor_p(i,t)$[nuclear_stor(i)$(not nuclear_stor_with_tes(i))] = sum{ii$nuclear_stor_stortech(i,ii), plant_char0(ii,t,'rte')};
 storage_eff_nuclear_stor_p(i,t)$nuclear_stor_with_tes(i) = 1;
 
 *when charging from the grid the efficiency will be the same as standalone storage
-storage_eff_nuclear_stor_g(i,t)$nuclear_stor(i) = sum{i_stor$nuclear_stor_stortech(i,i_stor), plant_char0(i_stor,t,'rte')};
+storage_eff_nuclear_stor_g(i,t)$nuclear_stor(i) = sum{ii$nuclear_stor_stortech(i,ii), plant_char0(ii,t,'rte')};
 
 *upgrade plants assume the same as what theyre upgraded to
 storage_eff(i,t)$upgrade(i) = sum{ii$upgrade_to(i,ii), storage_eff(ii,t) } ;

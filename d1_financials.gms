@@ -185,8 +185,8 @@ cost_cap_fin_mult_nuclear_stor_p_no_credits(i,r,t)$nuclear_stor(i) =
     cost_cap_fin_mult_no_credits('nuclear',r,t) ;
 
 * Assign the storage portion of nuclear_stor the storage tech multiplier
-cost_cap_fin_mult_nuclear_stor_s(i,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap_fin_mult(i_stor,r,t)};
-cost_cap_fin_mult_nuclear_stor_s_noITC(i,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap_fin_mult_noITC(i_stor,r,t)} ;
-cost_cap_fin_mult_nuclear_stor_s_no_credits(i,r,t)$nuclear_stor(i) = sum{i_stor$ nuclear_stor_stortech(i,i_stor), cost_cap_fin_mult_no_credits(i_stor,r,t)} ;
+cost_cap_fin_mult_nuclear_stor_s(i,r,t)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), cost_cap_fin_mult(ii,r,t)};
+cost_cap_fin_mult_nuclear_stor_s_noITC(i,r,t)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), cost_cap_fin_mult_noITC(ii,r,t)} ;
+cost_cap_fin_mult_nuclear_stor_s_no_credits(i,r,t)$nuclear_stor(i) = sum{ii$ nuclear_stor_stortech(i,ii), cost_cap_fin_mult_no_credits(ii,r,t)} ;
 
 * --- End calculations of cost_cap_fin_mult family of parameters --- *
