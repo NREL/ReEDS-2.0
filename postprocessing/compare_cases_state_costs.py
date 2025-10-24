@@ -18,8 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
 from reeds import plots
 from reeds import reedsplots
-from reeds import results
-from reeds.results import SLIDE_HEIGHT, SLIDE_WIDTH
+from reeds.report_utils import SLIDE_HEIGHT, SLIDE_WIDTH
 from bokehpivot.defaults import DEFAULT_DOLLAR_YEAR, DEFAULT_PV_YEAR, DEFAULT_DISCOUNT_RATE
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -238,7 +237,7 @@ def plot_bars_abs_stacked(
 
 #%%### Procedure
 #%% Parse arguments
-cases, colors, basecase, basemap = reeds.results.parse_caselist(
+cases, colors, basecase, basemap = reeds.report_utils.parse_caselist(
     caselist,
     casenames,
     basecase_in,
@@ -457,13 +456,13 @@ costcat_rename = {
 }
 dictin_npv = {}
 for case in tqdm(cases, desc='NPV of system cost'):
-    temp = results.calc_systemcost(cases[case], r_subset = val_r_subset[case], st_subset = val_st_subset).rename(columns = {'i':'tech','t':'year'})
+    temp = reeds.output_calc.calc_systemcost(cases[case], r_subset = val_r_subset[case], st_subset = val_st_subset).rename(columns = {'i':'tech','t':'year'})
     temp = pd.pivot_table(data = temp, index = 'cost_cat',values = 'Discounted Cost (Bil $)', aggfunc = 'sum')
     dictin_npv[case] = temp['Discounted Cost (Bil $)']
 
 dictin_npv2 = {}
 for case in tqdm(cases, desc='Annualized system costs'):
-    temp = results.calc_systemcost(cases[case], r_subset = val_r_subset[case],rename_as_bokeh = True, st_subset = val_st_subset).rename(columns = {'i':'tech','t':'year'})
+    temp = reeds.output_calc.calc_systemcost(cases[case], r_subset = val_r_subset[case],rename_as_bokeh = True, st_subset = val_st_subset).rename(columns = {'i':'tech','t':'year'})
     temp = pd.pivot_table(data = temp, index = ['cost_cat','year'],values = 'Discounted Cost (Bil $)', aggfunc = 'sum')
     dictin_npv2[case] = temp.reset_index(drop = False)
 
@@ -478,7 +477,7 @@ for case in tqdm(cases, desc='Annual electricity costs'):
     temp = (reeds.io.read_output(cases[case],'load_rt',r_filter = val_r_subset[case])
         .rename(columns = {'Value':'Load (MWh)','t':'year'}))
     temp = pd.pivot_table(data = temp, index = ['year'],values = 'Load (MWh)', aggfunc = 'sum').reset_index(drop = False)
-    temp_values = results.calc_systemcost(cases[case], r_subset = val_r_subset[case],rename_as_bokeh = True, st_subset = val_st_subset, discount_rate = 0.00001
+    temp_values = reeds.output_calc.calc_systemcost(cases[case], r_subset = val_r_subset[case],rename_as_bokeh = True, st_subset = val_st_subset, discount_rate = 0.00001
         ).rename(columns = {'i':'tech','t':'year'}) # discount rate set marginally small to annulaize flat across years
     temp_values = pd.pivot_table(data = temp_values, index = ['cost_cat','year'],values = 'Discounted Cost (Bil $)', aggfunc = 'sum')
     temp = pd.merge(left = temp_values.reset_index(drop = False), right = temp, on = 'year')
@@ -609,6 +608,7 @@ for case in cases:
     years[case] = [y for y in years[case] if y >= startyear]
     yearstep[case] = years[case][-1] - years[case][-2]
 lastyear = max(years[case])
+
 ## Years for which to add data notes
 startyear_sums = 2023
 allyears = range(startyear_sums,lastyear+1)
@@ -743,7 +743,7 @@ if detailed:
 
 #%%### Plots ######
 ### Set up powerpoint file
-prs = reeds.results.init_pptx()
+prs = reeds.report_utils.init_pptx()
 
 
 #%%### System cost error
@@ -791,7 +791,7 @@ plots.despine(ax)
 
 ### Save it
 title = 'Error check'
-slide = reeds.results.add_to_pptx(title, prs=prs, width=None, height=SLIDE_HEIGHT)
+slide = reeds.report_utils.add_to_pptx(title, prs=prs, width=None, height=SLIDE_HEIGHT)
 if interactive:
     plt.show()
 
@@ -920,185 +920,189 @@ plots.despine(ax)
 plt.draw()
 plots.shorten_years(ax[1,0])
 ### Save it
-slide = reeds.results.add_to_pptx('Capacity', prs=prs)
-reeds.results.add_textbox(printstring, slide)
+slide = reeds.report_utils.add_to_pptx('Capacity', prs=prs)
+reeds.report_utils.add_textbox(printstring, slide)
 if interactive:
     print(printstring)
     plt.show()
 ImportColors = {'imports':'grey'}
 
 #%%### Capacity and generation bars
-if (len(cases) == 2) and (not forcemulti):
-    casebase, casecomp = list(cases.values())
-    casebase_name, casecomp_name = list(cases.keys())
-    for val in plotdiffvals:
-        try:
-            plt.close()
-            f, ax, leg, dfdiff, printstring = reedsplots.plotdiff(
-                val, casebase=casebase, casecomp=casecomp,
-                casebase_name=casebase_name, casecomp_name=casecomp_name,
-                onlytechs=onlytechs, titleshorten=titleshorten,
-                yearmin=(2025 if 'NEUE' in val else startyear), yearmax=lastyear,
-                r_filter = args.subregion,
-                # plot_kwds={'figsize':(4,4), 'gridspec_kw':{'wspace':0.7}},
-            )
-            slide = reeds.results.add_to_pptx(val, prs=prs, verbose=0)
-            textbox = slide.shapes.add_textbox(
-                left=Inches(0), top=Inches(7),
-                width=Inches(SLIDE_WIDTH), height=Inches(0.5))
-            textbox.text_frame.text = printstring
-            if interactive:
-                plt.show()
-        except Exception as err:
-            print(err)
-else:
-    toplot = {
-        'Capacity': {
-            'data': dictin_cap,
-            'colors':techcolors,
-            'columns':'tech',
-            'values':'Capacity (GW)',
-            'label':'Capacity [GW]'
-        },
-        'Generation': {
-            'data': dictin_gen,
-            'colors':techcolors,
-            'columns':'tech',
-            'values':'Generation (TWh)',
-            'label':'Generation [TWh]'
-        },
-        'Runtime': {
-            'data': dictin_runtime,
-            'colors':colors_time.to_dict(),
-            'columns':'process',
-            'values':'processtime',
-            'label':'Runtime [hours]'
-        },
-        'Annualized System Cost': {
-            'data': dictin_npv2,
-            'colors':bokehcostcolors,
-            'columns':'cost_cat',
-            'values':'Discounted Cost (Bil $)',
-            'label':'Discounted Cost (Bil $)'
-        },
-        'Annual Electricity Price': {
-            'data': dictin_prices,
-            'colors':bokehcostcolors,
-            'columns':'cost_cat',
-            'values':'Electricity Price ($/MWh)',
-            'label':'Electricity Price ($/MWh)'
-        },
-        
+# if (len(cases) == 2) and (not forcemulti):
+#     casebase, casecomp = list(cases.values())
+#     casebase_name, casecomp_name = list(cases.keys())
+#     for val in plotdiffvals:
+#         try:
+#             plt.close()
+#             f, ax, leg, dfdiff, printstring = reedsplots.plotdiff(
+#                 val, casebase=casebase, casecomp=casecomp,
+#                 casebase_name=casebase_name, casecomp_name=casecomp_name,
+#                 onlytechs=onlytechs, titleshorten=titleshorten,
+#                 yearmin=(2025 if 'NEUE' in val else startyear), yearmax=lastyear,
+#                 r_filter = args.subregion,
+#                 # plot_kwds={'figsize':(4,4), 'gridspec_kw':{'wspace':0.7}},
+#             )
+#             slide = reeds.report_utils.add_to_pptx(val, prs=prs, verbose=0)
+#             textbox = slide.shapes.add_textbox(
+#                 left=Inches(0), top=Inches(7),
+#                 width=Inches(SLIDE_WIDTH), height=Inches(0.5))
+#             textbox.text_frame.text = printstring
+#             if interactive:
+#                 plt.show()
+#         except Exception as err:
+#             print(err)
+# else:
+toplot = {
+    'Capacity': {
+        'data': dictin_cap,
+        'colors':techcolors,
+        'columns':'tech',
+        'values':'Capacity (GW)',
+        'label':'Capacity [GW]'
+    },
+    'Generation': {
+        'data': dictin_gen,
+        'colors':techcolors,
+        'columns':'tech',
+        'values':'Generation (TWh)',
+        'label':'Generation [TWh]'
+    },
+    'Runtime': {
+        'data': dictin_runtime,
+        'colors':colors_time.to_dict(),
+        'columns':'process',
+        'values':'processtime',
+        'label':'Runtime [hours]'
+    },
+    'Annualized System Cost': {
+        'data': dictin_npv2,
+        'colors':bokehcostcolors,
+        'columns':'cost_cat',
+        'values':'Discounted Cost (Bil $)',
+        'label':'Discounted Cost (Bil $)'
+    },
+    'Annual Electricity Price': {
+        'data': dictin_prices,
+        'colors':bokehcostcolors,
+        'columns':'cost_cat',
+        'values':'Electricity Price ($/MWh)',
+        'label':'Electricity Price ($/MWh)'
+    },
+    
 
+}
+if args.subregion is not None:
+    toplot['Net Regional Imports'] = {
+        'data': dictin_flow,
+        'colors':ImportColors,
+        'columns':'imports',
+        'values':'Net Import (TWh)',
+        'label':'Net Import (TWh)'
     }
-    if args.subregion is not None:
-        toplot['Net Regional Imports'] = {
-            'data': dictin_flow,
-            'colors':ImportColors,
-            'columns':'imports',
-            'values':'Net Import (TWh)',
-            'label':'Net Import (TWh)'
-        }
-    plotwidth = 3.0
-    figwidth = plotwidth * len(cases)
-    dfbase = {}
-    for slidetitle, data in toplot.items():
-        print(data['columns'])
-        plt.close()
-        f,ax = plt.subplots(
-            2, len(cases), figsize=(figwidth, 6.8),
-            sharex=True, sharey=sharey, dpi=None,
-        )
-        ax[0,0].set_ylabel(data['label'], y=-0.075)
-        ax[0,0].set_xlim(2017.5, lastyear+2.5)
-        ax[1,0].annotate(
-            f'Diff\nfrom\n{basecase}', (0.03,0.03), xycoords='axes fraction',
-            fontsize='x-large', weight='bold')
-        ###### Absolute
-        alltechs = set()
-        for col, case in enumerate(cases):
-            if case not in data['data']:
-                continue
-            dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
-            if data['columns'] != 'cost_cat':
-                dfplot = (
-                    dfplot[[c for c in data['colors'] if c in dfplot]]
-                    .round(3).replace(0,np.nan)
-                    .dropna(axis=1, how='all')
-                )
-                net_val = False
-            else:
-                dfplot = dfplot.loc[years[case]]
-                net_val = True
-            if case == basecase:
-                dfbase[slidetitle] = dfplot.copy()
-            if slidetitle == 'Generation':
-                net_val = True
-            alltechs.update(dfplot.columns)
-            
-            plots.stackbar(df=dfplot, ax=ax[0,col], colors=data['colors'], width=yearstep[case]*0.95, net=net_val)           
-            ax[0,col].set_title(
-                (case if nowrap else plots.wraptext(case, width=plotwidth*0.9, fontsize=14)),
-                fontsize=14, weight='bold', x=0, ha='left', pad=8,)
-            ax[0,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
-            ax[0,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
-
-        ### Legend
-        if data['columns'] == 'cost_cat':
-            dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
-            
-            data['colors'] = dict(zip(data['colors'].index.tolist(),data['colors'].tolist()))
-            handles = [
-                mpl.patches.Patch(
-                    facecolor=data['colors'][i], edgecolor='none',
-                    label=i
-                )
-                for i in data['colors'] if i in dfplot.columns
-            ]
+plotwidth = 3.0
+figwidth = plotwidth * len(cases)
+dfbase = {}
+for slidetitle, data in toplot.items():
+    print(data['columns'])
+    plt.close()
+    f,ax = plt.subplots(
+        2, len(cases), figsize=(figwidth, 6.8),
+        sharex=True, sharey=sharey, dpi=None,
+    )
+    ax[0,0].set_ylabel(data['label'], y=-0.075)
+    ax[0,0].set_xlim(2017.5, lastyear+2.5)
+    ax[1,0].annotate(
+        f'Diff\nfrom\n{basecase}', (0.03,0.03), xycoords='axes fraction',
+        fontsize='x-large', weight='bold')
+    ###### Absolute
+    alltechs = set()
+    for col, case in enumerate(cases):
+        if case not in data['data']:
+            continue
+        dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
+        if data['columns'] != 'cost_cat':
+            dfplot = (
+                dfplot[[c for c in data['colors'] if c in dfplot]]
+                .round(3).replace(0,np.nan)
+                .dropna(axis=1, how='all')
+            )
+            net_val = False
+        elif data['columns'] == 'cost_cat':            
+            net_val = True
         else:
-            handles = [
-                mpl.patches.Patch(
-                    facecolor=data['colors'][i], edgecolor='none',
-                    label=i.replace('Canada','imports').split('/')[-1]
-                )
-                for i in data['colors'] if i in alltechs
-            ]
-        leg = ax[0,-1].legend(
-            handles=handles[::-1], loc='upper left', bbox_to_anchor=(1.0,1.0), 
-            fontsize='medium', ncol=1,  frameon=False,
-            handletextpad=0.3, handlelength=0.7, columnspacing=0.5, 
-        )
+            dfplot = dfplot.loc[years[case]]
+            net_val = True
+        if case == basecase:
+            dfbase[slidetitle] = dfplot.copy()
+        if slidetitle == 'Generation':
+            net_val = True
+        alltechs.update(dfplot.columns)
+        
+        plots.stackbar(df=dfplot, ax=ax[0,col], colors=data['colors'], width=yearstep[case]*0.95, net=net_val)           
+        ax[0,col].set_title(
+            (case if nowrap else plots.wraptext(case, width=plotwidth*0.9, fontsize=14)),
+            fontsize=14, weight='bold', x=0, ha='left', pad=8,)
+        ax[0,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+        ax[0,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
 
-        ###### Difference
-        for col, case in enumerate(cases):
-            ax[1,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
-            ax[1,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
-            ax[1,col].axhline(0,c='k',ls='--',lw=0.75)
-            if (case not in data['data']) or (case == basecase):
-                continue
-            dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
-            if data['columns'] != 'cost_cat':
-                dfplot = (
-                    dfplot
-                    .round(3).replace(0,np.nan)
-                    .dropna(axis=1, how='all')
-                )
-            else:
-                dfplot = dfplot.loc[years[case]]
-            dfplot = dfplot.subtract(dfbase[slidetitle], fill_value=0)
-            dfplot = dfplot[[c for c in data['colors'] if c in dfplot]].copy()
-            alltechs.update(dfplot.columns)
-            plots.stackbar(df=dfplot, ax=ax[1,col], colors=data['colors'], width=yearstep[case]*0.95, net=True)
+    ### Legend
+    if data['columns'] == 'cost_cat':
+        dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
+        
+        data['colors'] = dict(zip(data['colors'].index.tolist(),data['colors'].tolist()))
+        handles = [
+            mpl.patches.Patch(
+                facecolor=data['colors'][i], edgecolor='none',
+                label=i
+            )
+            for i in data['colors'] if i in dfplot.columns
+        ]
+    else:
+        handles = [
+            mpl.patches.Patch(
+                facecolor=data['colors'][i], edgecolor='none',
+                label=i.replace('Canada','imports').split('/')[-1]
+            )
+            for i in data['colors'] if i in alltechs
+        ]
+    leg = ax[0,-1].legend(
+        handles=handles[::-1], loc='upper left', bbox_to_anchor=(1.0,1.0), 
+        fontsize='medium', ncol=1,  frameon=False,
+        handletextpad=0.3, handlelength=0.7, columnspacing=0.5, 
+    )
 
-        plots.despine(ax)
-        plt.draw()
-        plots.shorten_years(ax[1,0])
-        #f.set_tight_layout(True)
-        ### Save it
-        slide = reeds.results.add_to_pptx(
-            slidetitle+' stack', prs=prs, width=min(figwidth, SLIDE_WIDTH))
-        if interactive:
-            plt.show()
+    ###### Difference
+    for col, case in enumerate(cases):
+        ax[1,col].xaxis.set_major_locator(mpl.ticker.MultipleLocator(10))
+        ax[1,col].xaxis.set_minor_locator(mpl.ticker.MultipleLocator(5))
+        ax[1,col].axhline(0,c='k',ls='--',lw=0.75)
+        if (case not in data['data']) or (case == basecase):
+            continue
+        dfplot = data['data'][case].pivot(index='year', columns=data['columns'], values=data['values'])
+        if data['columns'] != 'cost_cat':
+            dfplot = (
+                dfplot
+                .round(3).replace(0,np.nan)
+                .dropna(axis=1, how='all')
+            )
+        elif data['columns'] == 'cost_cat':            
+            net_val = True
+        else:
+            dfplot = dfplot.loc[years[case]]
+        dfplot = dfplot.subtract(dfbase[slidetitle], fill_value=0)
+        dfplot = dfplot[[c for c in data['colors'] if c in dfplot]].copy()
+        alltechs.update(dfplot.columns)
+        plots.stackbar(df=dfplot, ax=ax[1,col], colors=data['colors'], width=yearstep[case]*0.95, net=True)
+
+    plots.despine(ax)
+    plt.draw()
+    plots.shorten_years(ax[1,0])
+    #f.set_tight_layout(True)
+    ### Save it
+    slide = reeds.report_utils.add_to_pptx(
+        slidetitle+' stack', prs=prs, width=min(figwidth, SLIDE_WIDTH))
+    if interactive:
+        plt.show()
 
 if args.four is not None:
     toplot = {
@@ -1304,7 +1308,7 @@ if args.four is not None:
         ax[2,1].set_xlabel("Year")
         #f.set_tight_layout(True)
         ### Save it
-        slide = reeds.results.add_to_pptx(
+        slide = reeds.report_utils.add_to_pptx(
             slidetitle+' compares', prs=prs) #, height=SLIDE_HEIGHT, width = fig_width*ratio)
 
 #%% Alternate view: Stacks with bars labeled
@@ -1474,7 +1478,7 @@ if len(cases) <= 4:
     plots.despine(ax)
     plt.draw()
     ### Save it
-    slide = reeds.results.add_to_pptx('Capacity stacks', prs=prs, width=width)
+    slide = reeds.report_utils.add_to_pptx('Capacity stacks', prs=prs, width=width)
     if interactive:
         plt.show()
 
@@ -1580,7 +1584,7 @@ plt.tight_layout()
 plots.despine(ax)
 plt.draw()
 ### Save it
-slide = reeds.results.add_to_pptx(
+slide = reeds.report_utils.add_to_pptx(
     'Capacity, generation, transmission, npv, runtime', prs=prs, width=width)
 if interactive:
     plt.show()
@@ -1596,7 +1600,7 @@ for col, datum in enumerate(handles):
     )
     ax[col].axis('off')
 f.set_tight_layout(True)
-reeds.results.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
+reeds.report_utils.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
 
 
 #%% Costs: NPV of system cost, NPV of climate + health costs
@@ -1673,7 +1677,7 @@ plt.tight_layout()
 plots.despine(ax)
 plt.draw()
 ### Save it
-slide = reeds.results.add_to_pptx('NPV of system, climate, health costs', width=width)
+slide = reeds.report_utils.add_to_pptx('NPV of system, climate, health costs', width=width)
 if interactive:
     plt.show()
 
@@ -1689,7 +1693,7 @@ for col, datum in enumerate(handles):
 for col in range(4):
     ax[col].axis('off')
 
-reeds.results.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
+reeds.report_utils.add_to_pptx(slide=slide, prs=prs, width=width, top=7.5)
 
 
 #%% Simplifed NPV
@@ -1774,7 +1778,7 @@ plt.tight_layout()
 plots.despine(ax)
 
 ### Save it
-slide = reeds.results.add_to_pptx(
+slide = reeds.report_utils.add_to_pptx(
     'NPV of system, climate, health costs', prs=prs, width=min(width, SLIDE_WIDTH))
 if interactive:
     plt.show()
@@ -1886,7 +1890,7 @@ for col in [0,1] + ([2] if len(dictin_neue) else []):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = reeds.results.add_to_pptx('Cost, reliability', prs=prs, width=width)
+slide = reeds.report_utils.add_to_pptx('Cost, reliability', prs=prs, width=width)
 if interactive:
     plt.show()
 
@@ -1925,7 +1929,7 @@ try:
     plt.draw()
     plots.shorten_years(ax[labelcoords['label']])
     ### Save it
-    slide = reeds.results.add_to_pptx('Resource adequacy', prs=prs, width=SLIDE_WIDTH)
+    slide = reeds.report_utils.add_to_pptx('Resource adequacy', prs=prs, width=SLIDE_WIDTH)
     if interactive:
         plt.show()
 except Exception:
@@ -2011,7 +2015,7 @@ for col in range(4):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = reeds.results.add_to_pptx('Emissions', prs=prs, width=width)
+slide = reeds.report_utils.add_to_pptx('Emissions', prs=prs, width=width)
 if interactive:
     plt.show()
 
@@ -2098,7 +2102,7 @@ for col in range(len(dfplot)):
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     plots.shorten_years(ax[col])
 ### Save it
-slide = reeds.results.add_to_pptx('Generation share', prs=prs)
+slide = reeds.report_utils.add_to_pptx('Generation share', prs=prs)
 if interactive:
     plt.show()
 
@@ -2201,7 +2205,7 @@ if len(capcreditcases) == len(cases):
             plots.shorten_years(ax[1,col])
 
         ### Save it
-        slide = reeds.results.add_to_pptx('Firm capacity, capacity credit', prs=prs)
+        slide = reeds.report_utils.add_to_pptx('Firm capacity, capacity credit', prs=prs)
         if interactive:
             plt.show()
 
@@ -2341,7 +2345,7 @@ for interzonal_only in [False, True]:
         ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
         plots.shorten_years(ax[col])
     ### Save it
-    slide = reeds.results.add_to_pptx(
+    slide = reeds.report_utils.add_to_pptx(
         'Interzonal transmission' if interzonal_only else 'Transmission (all types)',
         prs=prs,
     )
@@ -2435,7 +2439,7 @@ for col in [0,1,2,3]:
     ax[col].xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(2))
     #plots.shorten_years(ax[col])
 ### Save it
-slide = reeds.results.add_to_pptx('Transmission at different resolutions', prs=prs)
+slide = reeds.report_utils.add_to_pptx('Transmission at different resolutions', prs=prs)
 if interactive:
     plt.show()
 
@@ -2450,7 +2454,7 @@ try:
         ymax=None,
     )
     ### Save it
-    slide = reeds.results.add_to_pptx(
+    slide = reeds.report_utils.add_to_pptx(
         'Interregional transmission / peak demand',
         prs=prs,
         height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
@@ -2472,7 +2476,7 @@ try:
         level='nercr', tstart=startyear,
     )
     ### Save it
-    slide = reeds.results.add_to_pptx(
+    slide = reeds.report_utils.add_to_pptx(
         'Max net stress imports / peak demand',
         prs=prs,
         height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
@@ -2499,7 +2503,7 @@ except Exception:
 #         alpha=1, dpi=150,
 #         titleshorten=titleshorten,
 #     )
-#     reeds.results.add_to_pptx(f'Transmission ({lastyear})', prs=prs)
+#     reeds.report_utils.add_to_pptx(f'Transmission ({lastyear})', prs=prs)
 #     if interactive:
 #         plt.show()
 # else:
@@ -2538,7 +2542,7 @@ except Exception:
 #                 else:
 #                     ax[row,col].axis('off')
 #         ### Save it
-#         slide = reeds.results.add_to_pptx(title, prs=prs)
+#         slide = reeds.report_utils.add_to_pptx(title, prs=prs)
 #         if interactive:
 #             plt.show()
 
@@ -2587,7 +2591,7 @@ except Exception:
 #             else:
 #                 ax[row,col].axis('off')
 #     ### Save it
-#     slide = reeds.results.add_to_pptx(title, prs=prs)
+#     slide = reeds.report_utils.add_to_pptx(title, prs=prs)
 #     if interactive:
 #         plt.show()
 
@@ -2765,7 +2769,7 @@ if detailed:
 
         ### Save it
         title = f'{ralevel} {label} RA flows'
-        slide = reeds.results.add_to_pptx(title, prs=prs)
+        slide = reeds.report_utils.add_to_pptx(title, prs=prs)
         if interactive:
             plt.show()
 
@@ -2797,7 +2801,7 @@ if detailed:
 # ]:
 #     for case in cases:
 #         try:
-#             slide = reeds.results.add_to_pptx(
+#             slide = reeds.report_utils.add_to_pptx(
 #                 case,
 #                 prs=prs,
 #                 file=os.path.join(cases[case], 'outputs', 'maps', f'{figname}.png'),
@@ -2859,7 +2863,7 @@ if (len(cases) == 2) and (not forcemulti):
                 casebase_name),
             (0.1,1), xycoords='axes fraction', fontsize=10)
 
-        reeds.results.add_to_pptx(f'{i_plot} capacity {lastyear} [GW]', prs=prs)
+        reeds.report_utils.add_to_pptx(f'{i_plot} capacity {lastyear} [GW]', prs=prs)
         if interactive:
             plt.show()
 else:
@@ -2935,7 +2939,7 @@ else:
                 else:
                     ax[row,col].axis('off')
         ### Save it
-        slide = reeds.results.add_to_pptx(f'{tech} capacity {lastyear} [GW]', prs=prs)
+        slide = reeds.report_utils.add_to_pptx(f'{tech} capacity {lastyear} [GW]', prs=prs)
         if interactive:
             plt.show()
 
@@ -3018,7 +3022,7 @@ else:
                 else:
                     ax[row,col].axis('off')
         ### Save it
-        slide = reeds.results.add_to_pptx(f'Difference: {tech} capacity {lastyear} [GW]', prs=prs)
+        slide = reeds.report_utils.add_to_pptx(f'Difference: {tech} capacity {lastyear} [GW]', prs=prs)
         if interactive:
             plt.show()
 
