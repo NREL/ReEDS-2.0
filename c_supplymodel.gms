@@ -1265,7 +1265,7 @@ eq_capacity_limit_nd(i,v,r,h,t)$[tmodel(t)$valgen(i,v,r,t)$nondispatch(i)]..
 eq_curt_gen_balance(r,h,t)$tmodel(t)..
 
 *total potential generation
-    sum{(i,v)$[valcap(i,v,r,t)$(vre(i) or storage_hybrid(i)$(not csp(i))$(not nuclear_stor(i)))$(not nondispatch(i))],
+    sum{(i,v)$[valcap(i,v,r,t)$(vre(i) or pvb(i))$(not nondispatch(i))],
          m_cf(i,v,r,h,t) * CAP(i,v,r,t) }
 
 *[minus] curtailed generation
@@ -1277,7 +1277,7 @@ eq_curt_gen_balance(r,h,t)$tmodel(t)..
     sum{(i,v)$[valgen(i,v,r,t)$vre(i)$(not nondispatch(i))], GEN(i,v,r,h,t) }
 
 *[plus] realized generation from hybrid plant
-  + sum{(i,v)$[valgen(i,v,r,t)$storage_hybrid(i)$(not csp(i))$(not nondispatch(i))], GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
+  + sum{(i,v)$[valgen(i,v,r,t)$pvb(i)], GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
 
 *[plus] sum of operating reserves by type
     + sum{(ortype,i,v)$[Sw_OpRes$reserve_frac(i,ortype)$opres_h(h)$valgen(i,v,r,t)$vre(i)$(not nondispatch(i))$opres_model(ortype)],

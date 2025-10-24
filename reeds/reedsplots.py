@@ -6865,6 +6865,20 @@ def plot_bytech_annual(
     return fig, ax, dfplot
 
 
+def plot_bytech_timeslice(
+        case, t=2050, plottype='gen', periodtype='rep',
+        techs=None, region=None,
+        f=None, ax=None, figsize=(12,6), highlight_rep_periods=1,
+    ):
+    """
+    Plot the sum of the variable defined by plottype as a function of years
+    ------
+    techs: None to plot all techs, or list of subset techs, or single tech string
+    plottype: 'soc' for storage state of charge, anything else for dispatch
+    """
+    raise NotImplementedError("plot_bytech_timeslice is not yet implemented.")
+
+
 if __name__ == '__main__':
 
     case_dir = input("Enter the path to the ReEDS case directory: ").strip().strip('"').strip("'")
@@ -6878,10 +6892,10 @@ if __name__ == '__main__':
     year = input("Enter the year to plot (default 2050): ").strip()
     year = int(year) if year else 2050
 
-    # fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
-    #     case=case_dir, t=year, highlight_rep_periods=0, legend=True)
+    fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
+        case=case_dir, t=year, periodtype='pcm_d1h', highlight_rep_periods=0, legend=True)
     
-    # plt.show()
+    plt.show()
 
     # fig, ax, _ = plot_dispatch_yearbymonth(
     #     case=case_dir, t=year, plottype='soc', highlight_rep_periods=0)

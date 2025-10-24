@@ -1,7 +1,8 @@
 ,utah
 timetype,seq
 endyear,2035
-GSw_HourlyChunkLengthRep,3
+GSw_HourlyChunkLengthRep,1
+pcm,1
 GSw_Region,st/UT
 GSw_BatteryMandate,0
 GSw_StartCost,5
