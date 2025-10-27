@@ -3745,7 +3745,7 @@ def map_hybrid_pv_wind(
 
 def plot_dispatch_yearbymonth(
         case, t=2050, plottype='gen', periodtype='rep',
-        techs=None, region=None,
+        techs=None, region=None, net=False,
         f=None, ax=None, figsize=(12,6), highlight_rep_periods=1,
         legend=False,
     ):
@@ -3876,6 +3876,7 @@ def plot_dispatch_yearbymonth(
     plt.close()
     f, ax = plots.plotyearbymonth(
         dfplot,
+        net=net,
         colors=[
             tech_style[i.replace('_pos','').replace('_neg','').replace('_off','')]
             for i in dfplot],
@@ -3927,6 +3928,10 @@ def plot_dispatch_yearbymonth(
                 mpl.patches.Patch(facecolor=tech_style.get(t, 'k'), edgecolor='none', label=t)
                 for t in legend_techs[::-1]
                 ]
+        if net:
+            handles = handles if 'handles' in locals() else []
+            handles.append(mpl.lines.Line2D([], [], color='k', lw=1, label='Net Generation'))
+
         ncol = 2 if len(legend_techs) > 12 else 1
         anchor_ax.legend(
             handles=handles,
@@ -3989,7 +3994,7 @@ def plot_dispatch_weightwidth(
 
 
 def plot_storage_hybrid_dispatch_yearbymonth(
-    case, t=2050, periodtype='rep',
+    case, t=2050, periodtype='rep', net=False,
     techs=None, region=None, highlight_rep_periods=1,
     f=None, ax=None, figsize=(12, 6), legend=False,
     ):
@@ -4139,8 +4144,8 @@ def plot_storage_hybrid_dispatch_yearbymonth(
         df[[c for c in plotorder if c in df]].cumsum(axis=1)
         [[c for c in plotorder[::-1] if c in df]]
     )
-
-    # print(dfplot)
+    print(dfplot.columns)
+    print(dfplot)
     # Build color list: one color per original entry column (not the generated _neg/_pos/_off names)
     # Use plots.rainbowmapper so entries get distinct, stable colors.
     color_map = plots.rainbowmapper(base_entries)
@@ -4170,9 +4175,11 @@ def plot_storage_hybrid_dispatch_yearbymonth(
     plt.close()
     f, ax = plots.plotyearbymonth(
         dfplot,
+        net=net,
         colors=colors,
         lwforline=0, f=f, ax=ax, figsize=figsize,
     )
+
 
     if highlight_rep_periods:
         width = pd.Timedelta('5D') if sw['GSw_HourlyType'] == 'wek' else pd.Timedelta('1D')
@@ -4222,6 +4229,10 @@ def plot_storage_hybrid_dispatch_yearbymonth(
                 )
                 for t in legend_techs[::-1]
             ]
+        # Include black net generation line in legend
+        if net:
+            handles = handles if 'handles' in locals() else []
+            handles.append(mpl.lines.Line2D([], [], color='k', lw=1, label='Net Generation'))
         ncol = 2 if len(legend_techs) > 12 else 1
         anchor_ax.legend(
             handles=handles,
@@ -4229,6 +4240,7 @@ def plot_storage_hybrid_dispatch_yearbymonth(
             frameon=False, ncol=ncol,
             handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
         )
+        plt.grid()
 
     return f, ax, dfplot
 
@@ -6892,13 +6904,17 @@ if __name__ == '__main__':
     year = input("Enter the year to plot (default 2050): ").strip()
     year = int(year) if year else 2050
 
-    fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
-        case=case_dir, t=year, periodtype='pcm_d1h', highlight_rep_periods=0, legend=True)
+    # fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
+    #     case=case_dir, t=year, periodtype='pcm_d1h', net=True, highlight_rep_periods=0, legend=True)
     
-    plt.show()
+    # plt.show()
 
     # fig, ax, _ = plot_dispatch_yearbymonth(
-    #     case=case_dir, t=year, plottype='soc', highlight_rep_periods=0)
+    #     case=case_dir, t=year, plottype='soc', techs='nuclear-stor', highlight_rep_periods=0)
+    # plt.show()
+
+    # fig, ax, _ = plot_dispatch_yearbymonth(
+    #     case=case_dir, t=year, plottype='gen', net=True, highlight_rep_periods=0, legend=True)
     # plt.show()
 
     # fig, ax, _ = plot_bytech_annual(
@@ -6906,6 +6922,10 @@ if __name__ == '__main__':
     #     figsize=(12,6))
     # plt.show()
 
-    fig, ax, _ = plot_storage_hybrid_dispatch_weightwidth(
-        case=case_dir, t=year)
+    # fig, ax, _ = plot_storage_hybrid_dispatch_weightwidth(
+    #     case=case_dir, t=year)
+    # plt.show()
+
+    fig, ax, = plot_dispatch_weightwidth(
+        case=case_dir)
     plt.show()

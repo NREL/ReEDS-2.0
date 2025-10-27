@@ -152,7 +152,7 @@ eq_Objfn_op(t)$tmodel(t)..
 
 * --- variable O&M costs---
 * all technologies except hybrid plant and DAC
-              sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom(i,v,r,t)$(not pvb(i))],
+              sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom(i,v,r,t)$(not storage_hybrid(i))],
                    hours(h) * cost_vom(i,v,r,t) * GEN(i,v,r,h,t) }
 
 * hybrid plant (plant)
@@ -163,9 +163,9 @@ eq_Objfn_op(t)$tmodel(t)..
             + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_pvb_b(i,v,r,t)$pvb(i)],
                    hours(h) * cost_vom_pvb_b(i,v,r,t) * GEN_STORAGE(i,v,r,h,t) }$Sw_HybridPlant
 
-* * hybrid nuclear (plant)
-*             + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_nuclear_stor_p(i,v,r,t)$nuclear_stor(i)],
-*                    hours(h) * cost_vom_nuclear_stor_p(i,v,r,t) * GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
+* hybrid nuclear (plant)
+            + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom(i,v,r,t)$nuclear_stor(i)],
+                   hours(h) * cost_vom(i,v,r,t) * GEN_PLANT(i,v,r,h,t) }$Sw_HybridPlant
 
 * hybrid nuclear (storage)
             + sum{(i,v,r,h)$[valgen(i,v,r,t)$cost_vom_nuclear_stor_s(i,v,r,t)$nuclear_stor(i)],

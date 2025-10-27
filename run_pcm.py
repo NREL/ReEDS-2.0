@@ -379,6 +379,9 @@ if __name__ == '__main__':
     # overwrite = False
     # bigmem = True
 
+    # %% Set up logger
+    log = reeds.log.makelog(scriptname=__file__, logpath=os.path.join(casepath, "gamslog.txt"))
+
     # %% Determine whether to submit slurm job
     hpc = check_slurm(forcelocal=forcelocal)
     print(f'Running pcm {"on HPC" if hpc else "locally"}')

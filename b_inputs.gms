@@ -5839,7 +5839,8 @@ parameter storage_eff_nuclear_stor_p(i,t) "--fraction-- efficiency of hybrid nuc
 
 *when charging from nuclear the nuclear_stor system will have a higher efficiency if the storage tech is tes
 storage_eff_nuclear_stor_p(i,t)$[nuclear_stor(i)$(not nuclear_stor_with_tes(i))] = sum{ii$nuclear_stor_stortech(i,ii), plant_char0(ii,t,'rte')};
-storage_eff_nuclear_stor_p(i,t)$nuclear_stor_with_tes(i) = 1;
+*set efficiency to 0.99 if the storage tech is tes to prevent degeneracy with dispatching from the plant
+storage_eff_nuclear_stor_p(i,t)$nuclear_stor_with_tes(i) = 0.99;
 
 *when charging from the grid the efficiency will be the same as standalone storage
 storage_eff_nuclear_stor_g(i,t)$nuclear_stor(i) = sum{ii$nuclear_stor_stortech(i,ii), plant_char0(ii,t,'rte')};
