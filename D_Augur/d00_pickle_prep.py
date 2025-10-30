@@ -79,12 +79,10 @@ if __name__ == '__main__':
 
     # get recf and resources
     
+    resources = pd.read_pickle(os.path.join(path_static,'India_8760_resources.pkl'))
     #recf = pd.read_pickle(os.path.join(path_static,'India_8760_recf.pkl'))
-    #resources = pd.read_pickle(os.path.join(path_static,'India_8760_resources.pkl'))
     recf_file = f'India_8760_recf_{weather_year}.pkl'
-    resources_file = f'India_8760_resources_{weather_year}.pkl'
     recf = pd.read_pickle(os.path.join(path_static, recf_file))
-    resources = pd.read_pickle(os.path.join(path_static, resources_file))
 
     # ------- Performin load modifications -------
     
