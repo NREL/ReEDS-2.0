@@ -16,6 +16,9 @@ import gdxpds
 import pandas as pd
 import numpy as np
 
+# Set the weather_year (2014 - 2024)
+weather_year = 2014
+
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description="""Create run-specific pickle files for the ReEDS-2.0 CC script""")
@@ -73,9 +76,15 @@ if __name__ == '__main__':
     # get load profiles
 
     load_profiles = pd.read_pickle(os.path.join(path_static,'{}_load.pkl'.format(load_input)))
-    recf = pd.read_pickle(os.path.join(path_static,'India_8760_recf.pkl'))
-    resources = pd.read_pickle(os.path.join(path_static,'India_8760_resources.pkl'))
 
+    # get recf and resources
+    
+    #recf = pd.read_pickle(os.path.join(path_static,'India_8760_recf.pkl'))
+    #resources = pd.read_pickle(os.path.join(path_static,'India_8760_resources.pkl'))
+    recf_file = f'India_8760_recf_{weather_year}.pkl'
+    resources_file = f'India_8760_resources_{weather_year}.pkl'
+    recf = pd.read_pickle(os.path.join(path_static, recf_file))
+    resources = pd.read_pickle(os.path.join(path_static, resources_file))
 
     # ------- Performin load modifications -------
     
