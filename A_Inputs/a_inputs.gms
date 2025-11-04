@@ -836,7 +836,7 @@ $offdelim
     trancost(r,tranvar,vc)          "transmission substation supply curve by voltage class"
           /
 $ondelim
-$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%transmission%ds%trancost.csv
+$include %gams.curdir%%ds%A_Inputs%ds%inputs%ds%transmission%ds%%Trancost_file%
 $offdelim
           /,
 
