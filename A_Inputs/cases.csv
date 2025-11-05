@@ -24,7 +24,7 @@ RECapFracMandate_file,file name of the non-fossil fractional capacity mandate to
 RECapManTech_file,file name of set of technologies that qualify for RE capacity mandate,capmandate_tech_set.csv,,,,,,,,,,,,
 REGenMandate_file,file name of the RE generation mandate to be used in the scenario run,regen_mandate.csv,,,,,,,,,,,,
 REGenManTech_file,file name of set of technologies that qualify for RE generation mandate,genmandate_tech_set.csv,,,,,,,,,,,,
-AbsGrowLim_file,file name of absolute growth limit,growth_limit_absolute.csv,,,,,,,,,,,,
+AbsGrowLim_file,file name of absolute growth limit,growth_limit_absolute.csv,,,,,,,,,,,,growth_limit_absolute_nuclear.csv
 GrowthLimTech_file,file name of the technology growth limit,growth_limit_by_tech.csv,,,,,,,,,,,,
 Trancap_file,file name of the exogenous transmission capacity,trancap.csv,,,,,,,,,,,,
 Trancost_file,file name of the maximum transmission capacities and costs for each state,trancost.csv,,,,,,,,,,,,trancost_expansion.csv
