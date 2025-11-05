@@ -32,7 +32,7 @@ InterTrancost_file,file name of the transmission cost between states,inter_trans
 CapNonRsc_file,file name of the capacity of non-renewable resources in each state,capnonrsc.csv,,,,,,,,,,,,
 CapRsc_file,file name of the capacity of hydropower in each state,caprsc.csv,,,,,,,,,,,,
 PrescribedNonRsc_file,file name of the prescribed additions of nonrenewable capacity in each state,prescribednonrsc.csv,,,,,,,,,,,,prescribednonrsc_nuclear.csv
-PrescribedRsc_file,file name of the prescribed additions of renewable capacity in each state,prescribedrsc.csv,,,,,,,,,,,,prescribedrsc_osw.csv
+PrescribedRsc_file,file name of the prescribed additions of renewable capacity in each state,prescribedrsc.csv,,,,,,,,,,,,prescribedrsc_osw-dpv.csv
 CfOut_file,file name of the capacity factors of solar and wind in each resource region and in each season,cfout_2014.csv,,cfout_2015.csv,cfout_2016.csv,cfout_2017.csv,cfout_2018.csv,cfout_2019.csv,cfout_2020.csv,cfout_2021.csv,cfout_2022.csv,cfout_2023.csv,cfout_2024.csv,cfout_2015.csv
 RscDat_file,file name of the technical potential capacity of renewable resources (wind and solar) in each state,rsc_dat_2014.csv,,rsc_dat_2015.csv,rsc_dat_2016.csv,rsc_dat_2017.csv,rsc_dat_2018.csv,rsc_dat_2019.csv,rsc_dat_2020.csv,rsc_dat_2021.csv,rsc_dat_2022.csv,rsc_dat_2023.csv,rsc_dat_2024.csv,rsc_dat_2015.csv
 numclass,maximum number of technology classes,4,,,,,,,,,,,,
