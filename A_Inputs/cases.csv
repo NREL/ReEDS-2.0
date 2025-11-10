@@ -11,8 +11,8 @@ Maxage_file,file name of maximum generator age file,maxage.csv,,,,,,,,,,,,,,,,,,
 PRMregion_file,file name of the PRM by region,prm_region.csv,,,,,,,,,,,,,,,,,,,,,
 PRMstate_file,file name of PRM by state,prm_state.csv,,,,,,,,,,,,,,,,,,,,,
 FuelLimit_file,file name of the fuel limit file to be used in scenario run,fuel_limit.csv,,,,,,,,,,,,,,,,,,,,,
-FuelPrice_file,file name of the fuel price file to be used in scenario run,fprice.csv,,,,,,,,,,,,,,,,,,,,,
-TechCost_file,file name of the technology cost to be used in the scenario run,tech_costs_itc22_RMI.csv,,,,,,,,,,,,tech_costs_itc22_RMI_osw_h2.csv,tech_costs_itc22_RMI_osw_h2.csv,tech_costs_itc22_RMI_osw_h2.csv,tech_costs_itc22_RMI_osw_h2.csv,tech_costs_itc22_RMI_osw_h2.csv,tech_costs_itc22_RMI_osw_h2.csv,tech_costs_itc22_RMI_osw_h2.csv,tech_costs_itc22_RMI_osw_h2.csv,tech_costs_itc22_RMI_osw_h2.csv,tech_costs_itc22_RMI_osw_h2.csv
+FuelPrice_file,file name of the fuel price file to be used in scenario run,fprice.csv,,,,,,,,,,,,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv
+TechCost_file,file name of the technology cost to be used in the scenario run,tech_costs_itc22_RMI.csv,,,,,,,,,,,,tech_costs_itc22_low_osw_h2_RMI.csv,tech_costs_itc22_low_osw_h2_RMI.csv,tech_costs_itc22_low_osw_h2_RMI.csv,tech_costs_itc22_low_osw_h2_RMI.csv,tech_costs_itc22_low_osw_h2_RMI.csv,tech_costs_itc22_low_osw_h2_RMI.csv,tech_costs_itc22_low_osw_h2_RMI.csv,tech_costs_itc22_low_osw_h2_RMI.csv,tech_costs_itc22_low_osw_h2_RMI.csv,tech_costs_itc22_low_osw_h2_RMI.csv
 MinLoad_file,file name of the min loading limits to be used in the scenario run,minloadfrac0.csv,,,,,,,,,,,,,,,,,,,,,
 Hours_file,file name of the hours in each time block to be used in the scenario run,hours_NREL_India_Baseline.csv,,,,,,,,,,,,,,,,,,,,,
 Load_file,file name of the load in each time block to be used in the scenario run,load_NREL_India_Baseline.csv,,,,,,,,,,,,,,,,,,,,,
