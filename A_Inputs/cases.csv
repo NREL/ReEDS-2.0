@@ -27,7 +27,7 @@ REGenManTech_file,file name of set of technologies that qualify for RE generatio
 AbsGrowLim_file,file name of absolute growth limit,growth_limit_absolute.csv,,,,,,,,,,,,,growth_limit_absolute_nuclear.csv,growth_limit_absolute_nuclear.csv,growth_limit_absolute_nuclear.csv,growth_limit_absolute_nuclear.csv,growth_limit_absolute_nuclear.csv,growth_limit_absolute_nuclear.csv,growth_limit_absolute_nuclear.csv,growth_limit_absolute_nuclear.csv,growth_limit_absolute_nuclear.csv
 GrowthLimTech_file,file name of the technology growth limit,growth_limit_by_tech.csv,,,,,,,,,,,,,,,,,,,,,
 Trancap_file,file name of the exogenous transmission capacity,trancap.csv,,,,,,,,,,,,,,,,,,,,,
-Trancost_file,file name of the maximum transmission capacities and costs for each state,trancost.csv,,,,,,,,,,,,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv
+Trancost_file,file name of the maximum transmission capacities and costs for each state,trancost.csv,,,,,,,,,,,,,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv,trancost_expansion.csv
 InterTrancost_file,file name of the transmission cost between states,inter_transcost.csv,,,,,,,,,,,,,,,,,,,,,
 CapNonRsc_file,file name of the capacity of non-renewable resources in each state,capnonrsc.csv,,,,,,,,,,,,,,,,,,,,,
 CapRsc_file,file name of the capacity of hydropower in each state,caprsc.csv,,,,,,,,,,,,,,,,,,,,,
