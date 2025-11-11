@@ -5932,7 +5932,7 @@ $onlisting
 *            = [cost(nuclear) + cost(stor) * bcr ] * cap(nuclear)
 cost_cap(i,t)$nuclear_stor(i) = (cost_cap_nuclear_stor_p(i,t) - turbine_generator_cost - electrical_cost 
                                  + bcr(i) * (cost_cap_nuclear_stor_s(i,t)-tes_ms_power_cycle)
-                                 +(1 + bcr(i)) * (turbine_generator_cost + electrical_cost)) * nuclearstorcapmult(t,i) ;
+                                 +(1 + bcr(i)) * (turbine_generator_cost + electrical_cost));
 
 * --- Storage Duration ---
 

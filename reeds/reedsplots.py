@@ -6904,27 +6904,27 @@ if __name__ == '__main__':
     year = input("Enter the year to plot (default 2050): ").strip()
     year = int(year) if year else 2050
 
-    # fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
-    #     case=case_dir, t=year, periodtype='pcm_d1h', net=True, highlight_rep_periods=0, legend=True)
+    fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
+        case=case_dir, t=year, periodtype='pcm_d1h', net=True, highlight_rep_periods=0, legend=True)
     
-    # plt.show()
+    plt.show()
 
-    # fig, ax, _ = plot_dispatch_yearbymonth(
-    #     case=case_dir, t=year, plottype='soc', techs='nuclear-stor', highlight_rep_periods=0)
-    # plt.show()
+    fig, ax, _ = plot_dispatch_yearbymonth(
+        case=case_dir, t=year, plottype='soc', techs='nuclear-stor', highlight_rep_periods=0)
+    plt.show()
 
-    # fig, ax, _ = plot_dispatch_yearbymonth(
-    #     case=case_dir, t=year, plottype='gen', net=True, highlight_rep_periods=0, legend=True)
-    # plt.show()
+    fig, ax, _ = plot_dispatch_yearbymonth(
+        case=case_dir, t=year, plottype='gen', net=True, highlight_rep_periods=0, legend=True)
+    plt.show()
 
-    # fig, ax, _ = plot_bytech_annual(
-    #     case=case_dir, plottype='gen', periodtype='rep',
-    #     figsize=(12,6))
-    # plt.show()
+    fig, ax, _ = plot_bytech_annual(
+        case=case_dir, plottype='gen', periodtype='rep',
+        figsize=(12,6))
+    plt.show()
 
-    # fig, ax, _ = plot_storage_hybrid_dispatch_weightwidth(
-    #     case=case_dir, t=year)
-    # plt.show()
+    fig, ax, _ = plot_storage_hybrid_dispatch_weightwidth(
+        case=case_dir, t=year)
+    plt.show()
 
     fig, ax, = plot_dispatch_weightwidth(
         case=case_dir)
