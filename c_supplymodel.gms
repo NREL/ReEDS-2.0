@@ -55,7 +55,7 @@ positive variables
   STORAGE_LEVEL(i,v,r,allh,t)            "--MWh-- storage level in hour h"
   STORAGE_INTERDAY_LEVEL(i,v,r,allszn,t) "--MWh-- storage level at hour 0 of the partition"
   RAMPUP(i,r,allh,allhh,t)               "--MW-- upward change in generation from h to hh"
-  RAMPUP_STORAGE(i,r,allh,allhh,t)     "--MW-- upward change in storage discharge from h to hh"
+  RAMPUP_PLANT(i,r,allh,allhh,t)         "--MW-- upward change in plant generation from h to hh for hybrid plants"
 
 * flexible CCS variables
   CCSFLEX_POW(i,v,r,allh,t)                "--avg MW-- average power consumed for CCS system"
@@ -1501,9 +1501,7 @@ eq_ramping(i,r,h,hh,t)
 
     =g=
     
-    sum{v$valgen(i,v,r,t), GEN(i,v,r,hh,t) - GEN(i,v,r,h,t) }$(not nuclear_stor(i))
-
-    + sum{v$valgen(i,v,r,t), GEN_PLANT(i,v,r,hh,t) - GEN_PLANT(i,v,r,h,t) }$nuclear_stor(i)
+    sum{v$valgen(i,v,r,t), GEN(i,v,r,hh,t) - GEN(i,v,r,h,t) }
 ;
 
 
@@ -3338,11 +3336,11 @@ eq_hybrid_storage_capacity_limit(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmod
 eq_hybrid_storage_ramping(i,r,h,hh,t)
     $[Sw_StartCost$tmodel(t)$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t)$nuclear_stor(i)]..
 
-    RAMPUP_STORAGE(i,r,h,hh,t)
+    RAMPUP_PLANT(i,r,h,hh,t)
 
     =g=
 
-    sum{v$valgen(i,v,r,t), GEN_STORAGE(i,v,r,hh,t) - GEN_STORAGE(i,v,r,h,t) }
+    sum{v$valgen(i,v,r,t), GEN_PLANT(i,v,r,hh,t) - GEN_PLANT(i,v,r,h,t) }
 ;
 
 * ---------------------------------------------------------------------------
