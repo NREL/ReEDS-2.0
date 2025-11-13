@@ -234,10 +234,6 @@ eq_Objfn_op(t)$tmodel(t)..
               + sum{(i,r,h,hh)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t)],
                     startcost(i) * numhours_nexth(h,hh) * RAMPUP(i,r,h,hh,t) }
 
-* --- startup/ramping costs for storage part of hybrid plants
-              + sum{(i,r,h,hh)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t)$nuclear_stor(i)],
-                    startcost_plant_nuc_stor * numhours_nexth(h,hh) * RAMPUP_PLANT(i,r,h,hh,t) }
-
 * --cofire coal consumption---
 * cofire bio consumption already accounted for in accounting of BIOUSED
               + sum{(i,v,r,h)$[valgen(i,v,r,t)$cofire(i)$heat_rate(i,v,r,t)],

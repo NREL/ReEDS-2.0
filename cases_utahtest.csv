@@ -5,7 +5,6 @@ GSw_HourlyChunkLengthRep,1,1,1,1,1,1,1,1
 pcm,1,1,1,1,1,1,1,1
 GSw_Region,st/UT,st/UT,st/UT,st/UT,st/UT,st/UT,st/UT,st/UT
 GSw_BatteryMandate,0,0,0,0,0,0,0,0
-GSw_StartCost,5,5,5,5,5,5,5,5
 GSw_TES,0,0,0,0,0,0,0,0
 GSw_Nuclear,1,1,1,1,1,1,1,1
 GSw_NuclearStor,1,1,1,1,1,1,1,1

@@ -31,8 +31,6 @@ AVAIL_SITE.lo(x,h,t_unfix)$[Sw_SpurScen$xfeas(x)] = 0 ;
 AVAIL_SITE.up(x,h,t_unfix)$[Sw_SpurScen$xfeas(x)] = +inf ;
 RAMPUP.lo(i,r,h,hh,t_unfix)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t_unfix)] = 0 ;
 RAMPUP.up(i,r,h,hh,t_unfix)$[Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t_unfix)] = +inf ;
-RAMPUP_PLANT.lo(i,r,h,hh,t_unfix)$[storage_hybrid(i)$(not csp(i))$Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t_unfix)] = 0 ;
-RAMPUP_PLANT.up(i,r,h,hh,t_unfix)$[storage_hybrid(i)$(not csp(i))$Sw_StartCost$startcost(i)$numhours_nexth(h,hh)$valgen_irt(i,r,t_unfix)] = +inf ;
 
 * flexible CCS
 CCSFLEX_POW.lo(i,v,r,h,t_unfix)$[ccsflex(i)$valgen(i,v,r,t_unfix)$(Sw_CCSFLEX_BYP OR Sw_CCSFLEX_STO OR Sw_CCSFLEX_DAC)] = 0 ;
