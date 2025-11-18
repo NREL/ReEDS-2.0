@@ -6,13 +6,13 @@ yearset,Set of years that are modeled,yearset_2070.csv,,,,,,,,,,,,,,,,,,,,,
 endyear,Last year to be modeled,2070,,,,,,,,,,,,,,,,,,,,,
 HourlyLoadFile,Load scenario name for capacity value and curtailment load duration curve data,NREL_India_Baseline_8760,,,,,,,,,,,,,,,,,,,,,
 WeatherYear,Weather year being used,2014,,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024
-Binnedcap_file,"file name of binned non-RE capacity by BA, year, and VO&M bin",binned_capacity_extendcoal.csv,,,,,,,,,,,,,,,,,,,,,
+Binnedcap_file,"file name of binned non-RE capacity by BA, year, and VO&M bin",binned_capacity.csv,,,,,,,,,,,,,,,,,,,,,
 Maxage_file,file name of maximum generator age file,maxage.csv,,,,,,,,,,,,,,,,,,,,,
 PRMregion_file,file name of the PRM by region,prm_region.csv,,,,,,,,,,,,,,,,,,,,,
 PRMstate_file,file name of PRM by state,prm_state.csv,,,,,,,,,,,,,,,,,,,,,
 FuelLimit_file,file name of the fuel limit file to be used in scenario run,fuel_limit.csv,,,,,,,,,,,,,,,,,,,,,
 FuelPrice_file,file name of the fuel price file to be used in scenario run,fprice.csv,,,,,,,,,,,,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv,fprice_low_h2.csv
-TechCost_file,file name of the technology cost to be used in the scenario run,tech_costs_itc22_RMI.csv,,,,,,,,,,,,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2_RMI.csv
+TechCost_file,file name of the technology cost to be used in the scenario run,tech_costs_itc22.csv,,,,,,,,,,,,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv,tech_costs_itc22_low_bess_distpv_upv_wind_osw_h2.csv
 MinLoad_file,file name of the min loading limits to be used in the scenario run,minloadfrac0.csv,,,,,,,,,,,,,,,,,,,,,
 Hours_file,file name of the hours in each time block to be used in the scenario run,hours_NREL_India_Baseline.csv,,,,,,,,,,,,,,,,,,,,,
 Load_file,file name of the load in each time block to be used in the scenario run,load_NREL_India_Baseline.csv,,,,,,,,,,,,,,,,,,,,,
