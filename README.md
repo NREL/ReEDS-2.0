@@ -2,11 +2,11 @@
 
 ![Image of NREL Logo](images/nrel-logo.png)
 
-## Welcome to the Regional Energy Deployment System (ReEDS) Model!
+## Welcome to the Regional Energy Deployment System (ReEDS) India Model!
 
 This GitHub repository contains the source code for NREL&#39;s ReEDS India model. This version was adapted from the ReEDS model developed for North America. [Table 2](#Tab2) summarizes differences in model design and capabilities between the two versions. 
 
-Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS India Version 2019 source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS India model can be downloaded or cloned from [https://github.com/NREL/ReEDS\_OpenAccess](https://github.com/NREL/ReEDS_OpenAccess). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
+Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS India source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS India model can be downloaded or cloned from [https://github.com/NREL/ReEDS\_OpenAccess](https://github.com/NREL/ReEDS-2.0), referring to the 'India' branch. New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
 
 ## Contents
 
@@ -42,7 +42,7 @@ ReEDS uses high spatial resolution and high-fidelity modeling. Though it covers 
 <a name="Software"></a>
 # Required Software
  
- The ReEDS model is written primarily in GAMS with auxiliary modules written in Python and R. At present, NREL uses the following software versions: GAMS 24.7.4; Python 3.6.5; R 3.4.4;. Other versions of these software may be compatible with ReEDS, but NREL has not tested other versions at this time.
+The ReEDS model is written primarily in GAMS with auxiliary modules written in Python and R. At present, NREL uses the following software versions: GAMS 24.7.4; Python 3.6.5; R 3.4.4;. Other versions of these software may be compatible with ReEDS, but NREL has not tested other versions at this time.
 
 GAMS is a mathematical programming software from the GAMS Development Corporation. &quot;The use of GAMS beyond the limits of the free demo system requires the presence of a valid GAMS license file.&quot; [[1](https://www.gams.com/latest/docs/UG_License.html)] The ReEDS model requires the GAMS Base Module and a linear programming (LP) solver (e.g., CPLEX). The LP solver should be connected to GAMS with either a GAMS/Solver license or a GAMS/Solver-Link license. &quot;A GAMS/Solver connects the GAMS Base module to a particular solver and includes a license for this solver to be used through GAMS. It is not necessary to install additional software. A GAMS/Solver-Link connects the GAMS Base Module to a particular solver, but does not include a license for the solver. It may be necessary to install additional software before the solver can be used.&quot; [[2](https://www.gams.com/products/buy-gams/)]
 
@@ -81,10 +81,11 @@ While these installation instructions are specific to Windows 10, this version o
 <a name="ConfigRepo"></a>
 ## ReEDS India Repository Configuration
 
-The ReEDS India source code is hosted on GitHub: https://github.com/NREL/ReEDS\_OpenAccess
+The ReEDS India source code is hosted on GitHub: https://github.com/NREL/ReEDS-2.0
 
 1. Request access to the ReEDS GitHub repository at [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
-3. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
+2. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
+3. Checkout the 'India' branch of the ReEDS-2.0 repository.
 
 <a name="Fig4"></a>
 ![Image of GitHub Download](images/github-download.png)
