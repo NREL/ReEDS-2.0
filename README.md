@@ -408,29 +408,28 @@ If you have comments and/or questions, please contacts the ReEDS team:
 # Appendix
 
 <a name="Switches"></a>
-## ReEDS India Model Switches
+## Select ReEDS India Model Switches
 | Switch | Input Type | Description | Defaut Value |
 | --- | --- | --- | --- | 
 | **Model horizon**  |
 | <ul><li>*timetype*</li><ul> | string | Define how the model portrays foresight. This version only includes the intertemporal setting (int) that assumes full foresight of all modeled years | int |
-| <ul><li>*yearset*</li><ul> | string | File pointer to specify the years to model | A_Inputs\inputs\sets\year_set.csv |
+| <ul><li>*yearset*</li><ul> | string | File name of the years to model | year_set_2070.csv |
 | <ul><li>*endyear*</li><ul> | integer | Last year to be modeled | 2070 |
 | **Scenario inputs** |
-| <ul><li>*FuelLimit_file*</li><ul> | string | File pointer for the gas fuel limit inputs | fuel_limit.csv |
-| <ul><li>*TechCost_file*</li><ul> | string | File pointer for the technology cost (units: INR/MW) and heat rate (units: kBtu/kWh) inputs | tech_costs_atb22.csv |
+| <ul><li>*FuelLimit_file*</li><ul> | string | File name of the gas fuel limit inputs | fuel_limit.csv |
+| <ul><li>*TechCost_file*</li><ul> | string | File name of the technology cost (units: INR/MW) and heat rate (units: kBtu/kWh) inputs | tech_costs_itc22.csv |
 | <ul><li>*MinLoad_file*</li><ul> | string | File name of the min loading limit inputs | minloadfrac0.csv |
-| <ul><li>*Hours_file*</li><ul> | string | File name of the hours in each time block | hours.csv |
-| <ul><li>*Load_file*</li><ul> | string | File name of the load in each time block | load.csv |
-| <ul><li>*PeakDemRegion_file*</li><ul> | string | File name of the peak demand by region | peakdem_region.csv |
+| <ul><li>*Hours_file*</li><ul> | string | File name of the hours in each time block | hours_NREL_India_Baseline.csv |
+| <ul><li>*Load_file*</li><ul> | string | File name of the load in each time block | load_NREL_India_Baseline.csv |
+| <ul><li>*PeakDemRegion_file*</li><ul> | string | File name of the peak demand by region | peakdem_region_NREL_India_Baseline.csv |
 | **Generator class definitions** |
 | <ul><li>*numclass*</li><ul> | integer | Maximum number of technology classes | 4 |
 | <ul><li>*numhintage*</li><ul> | integer | Number of technology bins to create when grouping units with similar performance characteristics | 7 |
 | **Capacity Credit and Curtailment** |
-| <ul><li>*HourlyStaticFile*</li><ul> | string | File pointer for hourly data used for capacity credit calculations  | India_8760 |
 | <ul><li>*CC/Curtailment Iterations*</li><ul> | integer | Number of iterations between ReEDS LP and CC/Curtailment modules | 4 |
 | <ul><li>*GSw_CCcurtAvg*</li><ul> | integer | Select method for average CC/curt calculations | 2 |
 | **Capacity growth** |
-| <ul><li>*retireyear*</li><ul> | integer | First year when economic capacity retirements are allowed | 2023 |
+| <ul><li>*retireyear*</li><ul> | integer | First year when economic capacity retirements are allowed | 2026 |
 | <ul><li>*REdiversity*</li><ul> | scalar | Maximum fraction of new VRE investments that can go in any one  | 0.15 |
 | <ul><li>*GSw_GrowthRel*</li><ul> | binary | Turn relative growth constraint on [1] or off [0] | 1 |
 | <ul><li>*GSw_GrowthAbs*</li><ul> | binary | Turn absoluate growth constraint on [1] or off [0] | 1 |
