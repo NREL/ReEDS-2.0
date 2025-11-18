@@ -213,7 +213,7 @@ The execution of the ReEDS India model can be accomplished by using a command-li
 
 A ReEDS India scenario (also referred to as a &quot;run&quot;, &quot;case&quot; or &quot;instance&quot;) is executed through a python-based case batching program called &quot;runmodel.py&quot;. The user can execute a single case or a batch of cases using this program.
 
-**Step 1** : Specify the ReEDS scenario name(s) and configuration(s) in the case configuration file.([Figure 12](#Fig12)). 
+**Step 1** : Specify the ReEDS scenario name(s) and configuration(s) in the case configuration file. ([Figure 12](#Fig12)). 
 
 The scenario configuration file name is called &quot;cases.csv&quot; in the &quot;A_Inputs&quot; folder. Within &quot;cases.csv&quot;, the data in Column A are the model &quot;switches&quot; (also referred to as &quot;options&quot;). Column B provides brief descriptions of the switches. The data in Column C are the default values of the switches. Every subsequent column represents an individual model scenario, beginning with Column D. The scenario name is specified in Row 1. The value for each switch is specified beginning in Row 2. If a switch value is left blank, the default value from Column C is used. Users can tailor the default scenarios in two ways: 1.) adjust the default switch values for an existing scenario or 2.) create a new scenario by adding a new column with a scenario name in Row 1 and desired switch values beginning in Row 2.
 
@@ -277,11 +277,7 @@ Enter each selected number separated by a comma (i.e. 1, 3)
 
 > Run model? (0=no / 1=yes, default 1): 1
 
-9.	Finally, choose to compile an R Markdown html file after model completion, with sophisticated visualizations comparing your model results across several temporal and geospatial plots. This requires a proper installation of R available in the system path, along with the 'pacman' R package installed.
-
-> Generate R Markdown for visualization after scenario run? (0=no / 1=yes, default 1): 1
-
-10.	Once all responses are received, the batching program will execute the scenario(s) specified. Each scenario selected to run now has a folder in &quotE_Outputs/runs/&quot; containing two .bat files:
+9.	Once all responses are received, the batching program will execute the scenario(s) specified. Each scenario selected to run now has a folder in &quotE_Outputs/runs/&quot; containing two .bat files:
 	* &quot;compile_{runname}_{scenarioname}.bat&quot;
 	* &quot;run_{runname}_{scenarioname}.bat&quot;
 
@@ -323,7 +319,7 @@ GAMS will produced files unique to each case that can help the user with error d
 
 This model is based on the ReEDS Version 2018 created for the United States. All input parameters have been updated to reflect the India context including electricity demand, technology cost and performance, data on existing and planned infrastructure, resource data, and operating and policy constraints. The ReEDS Version 2018 Documentation on which the ReEDS India model is based is available at no cost from the National Renewable Energy Laboratory: [https://www.nrel.gov/docs/fy19osti/72023.pdf](https://www.nrel.gov/docs/fy19osti/72023.pdf)
 
-[Table 2](#Tab2) summarizes difference between model design and capabilities in US ReEDS Version 2019 and ReEDS India.
+[Table 2](#Tab2) summarizes difference between model design and capabilities in US ReEDS Version 2019 and ReEDS India. This list is not exhaustive. 
 
 <a name="Tab2"></a>
 *Table 2. Differences between US ReEDS Version 2019 and ReEDS India.*
@@ -339,10 +335,10 @@ This model is based on the ReEDS Version 2018 created for the United States. All
 | Load from EVs | Included | Not included |
 | Clean energy policies | Policies for generation, capacity, emissions, and tax incentives  | National and state capacity targets for wind and solar |
 | Operating reserves | Spinning, Regulation, and Flexibility reserve requirements defined for each BA | Spinning reserve requirement for entire country |
-| Planning reserve margin | Planning reserve margin set at NERC reference levels for all years, except ERCOT in 2018 and 2019 is set to actual values because the actuals were lower than the NERC reference levels | Seasonal planning reserve margin requirement of 15% peak demand defined for each interconnected region  |
+| Planning reserve margin | Planning reserve margin set at NERC reference levels for all years, except ERCOT in 2018 and 2019 is set to actual values because the actuals were lower than the NERC reference levels | Seasonal planning reserve margin requirement of 7% peak demand defined for each interconnected region (i.e., state or union territory)  |
 | Technology performance bins | Units binned according to costs and heat rates | Units binned according to reported variable costs which internalize variations in fuel cost and heat rates |
-| Absolute growth constraint | Not included | Absolute growth constraint applied for biomass and hydropower technologies |
-| Technology Phase Out | Not included | Forced phase out of select technologies including diesel and subcritical coal |
+| Absolute growth constraint | Not included | Absolute growth constraint applied to certain technologies such as biomass, hydropower, and nuclear |
+| Technology phase out | Not included | Forced phase out of select technologies including diesel and subcritical coal |
 | RE diversity constraint | Not included | Mandate that no more than 15% of new wind and solar additions can be located in any one resource region  |
 | Coal cost adder | Not included | State wise variable cost adder for coal based on rail transport charges |
 
@@ -417,8 +413,8 @@ If you have comments and/or questions, please contacts the ReEDS team:
 | --- | --- | --- | --- | 
 | **Model horizon**  |
 | <ul><li>*timetype*</li><ul> | string | Define how the model portrays foresight. This version only includes the intertemporal setting (int) that assumes full foresight of all modeled years | int |
-| <ul><li>*yearset*</li><ul> | string | File pointer to specify the years to model | A_Inputs\inputs\sets\modeledyears_set_all.csv |
-| <ul><li>*endyear*</li><ul> | integer | Last year to be modeled | 2047 |
+| <ul><li>*yearset*</li><ul> | string | File pointer to specify the years to model | A_Inputs\inputs\sets\year_set.csv |
+| <ul><li>*endyear*</li><ul> | integer | Last year to be modeled | 2070 |
 | **Scenario inputs** |
 | <ul><li>*FuelLimit_file*</li><ul> | string | File pointer for the gas fuel limit inputs | fuel_limit.csv |
 | <ul><li>*TechCost_file*</li><ul> | string | File pointer for the technology cost (units: INR/MW) and heat rate (units: kBtu/kWh) inputs | tech_costs_atb22.csv |
