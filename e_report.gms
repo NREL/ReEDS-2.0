@@ -23,8 +23,9 @@ sys_costs /
   inv_itc_payments_negative
   inv_itc_payments_negative_refurbishments
   inv_spurline_investment
+  inv_transmission_interzone_ac_investment
+  inv_transmission_interzone_dc_investment
   inv_transmission_intrazone_investment
-  inv_transmission_line_investment
   op_acp_compliance_costs
   op_co2_incentive_negative
   op_co2_network_fom_pipe
@@ -69,8 +70,9 @@ sys_costs_inv(sys_costs) /
   inv_itc_payments_negative
   inv_itc_payments_negative_refurbishments
   inv_spurline_investment
+  inv_transmission_interzone_ac_investment
+  inv_transmission_interzone_dc_investment
   inv_transmission_intrazone_investment
-  inv_transmission_line_investment
 /,
 
 sys_costs_op(sys_costs) /
@@ -1448,12 +1450,34 @@ systemcost_ba(sys_costs,r,t) = sum{i,systemcost_techba(sys_costs,i,r,t)} ;
 
 * REPLICATION OF THE OBJECTIVE FUNCTION
 
-systemcost_ba("inv_transmission_line_investment",r,t)$tmodel_new(t)  =
-*costs of transmission lines
-              sum{(rr,trtype)$[routes(r,rr,trtype,t)$routes_inv(r,rr,trtype,t)],
-                    trans_cost_cap_fin_mult(t) * transmission_line_capcost(r,rr,trtype)
-                    * (INVTRAN.l(r,rr,trtype,t) + trancap_fut(r,rr,"certain",trtype,t))  }
+* Interzonal transmission: Split costs between the two connected zones
+* DC: INVTRAN is defined (and is equal) in both directions, so just include (r,rr) and divide by 2
+systemcost_ba("inv_transmission_interzone_dc_investment",r,t)$tmodel_new(t) =
+    sum{(rr,trtype)$[routes_inv(r,rr,trtype,t)$(not aclike(trtype))],
+        trans_cost_cap_fin_mult(t)
+        * transmission_cost_nonac(r,rr,trtype)
+        * INVTRAN.l(r,rr,trtype,t)
+        / 2 }
 ;
+
+* AC: TRAN_CAPEX_BINS is only defined for r < rr, so add (r,rr) + (rr,r) and divide by 2
+* First get the cumulative investment cost, split across zones
+parameter capex_transmission_interzone_ac(r,t) "Cumulative interzonal AC transmission capex" ;
+capex_transmission_interzone_ac(r,t)$tmodel_new(t) =
+    sum{(rr,tscbin)$[routes_inv(r,rr,"AC",t)$tsc_binwidth(r,rr,tscbin)],
+        trans_cost_cap_fin_mult(t) * TRAN_CAPEX_BINS.l(r,rr,tscbin,t) / 2 }
+    + sum{(rr,tscbin)$[routes_inv(rr,r,"AC",t)$tsc_binwidth(rr,r,tscbin)],
+        trans_cost_cap_fin_mult(t) * TRAN_CAPEX_BINS.l(rr,r,tscbin,t) / 2 }
+;
+* Loop over each year and keep the capex difference to get model-year investment
+loop(t$[tmodel_new(t)$(not tfirst(t))],
+    systemcost_ba("inv_transmission_interzone_ac_investment",r,t)
+    =
+    capex_transmission_interzone_ac(r,t)
+    - sum{tt$tprev(t, tt),
+        capex_transmission_interzone_ac(r,tt)
+    } ;
+) ;
 
 systemcost_ba("inv_transmission_intrazone_investment",r,t)$[tmodel_new(t)$Sw_TransIntraCost] =
 * cost of intra-zone network reinforcement
@@ -1478,9 +1502,10 @@ systemcost_ba("op_transmission_intrazone_fom",r,t)$[tmodel_new(t)$Sw_TransIntraC
 ;
 
 systemcost_ba("inv_converter_costs",r,t)$tmodel_new(t)  =
-* LCC and B2B AC/DC converter stations (each interface has two, one on either side of the interface)
+* LCC and B2B AC/DC converter stations: each interface has two, one on either side of the interface,
+* but each interface shows up in both INVTRAN(r,rr) and INVTRAN(rr,r) so don't multiply by 2
               sum{(rr,trtype)$[lcclike(trtype)$routes_inv(r,rr,trtype,t)],
-                  trans_cost_cap_fin_mult(t) * cost_acdc_lcc * 2 * INVTRAN.l(r,rr,trtype,t) }
+                  trans_cost_cap_fin_mult(t) * cost_acdc_lcc * INVTRAN.l(r,rr,trtype,t) }
 * VSC AC/DC converter stations
               + trans_cost_cap_fin_mult(t) * cost_acdc_vsc * INV_CONVERTER.l(r,t)
 ;
@@ -1633,7 +1658,7 @@ raw_op_cost(t) = sum{sys_costs_op, systemcost(sys_costs_op,t) } ;
 *======================
 * Error Check
 *======================
-
+* Objective function cost - reported system cost, adjusted for intentional differences
 error_check('z') = (
     z.l
     - sum{t$tmodel(t),
@@ -1678,6 +1703,12 @@ error_check('z') = (
             cost_fom_energy(i,v,r,t) * CAP_ENERGY.l(i,v,r,t)
             - sum{(tt)$[inv_cond(i,v,r,t,tt)$(not retiretech(i,v,r,tt))],
                 INV_ENERGY.l(i,v,r,tt) * cost_fom_energy(i,v,r,tt) * ilr(i) } }
+* Objective function uses cumulative interzonal transmission capex but we report
+* model-year investment, so subtract the difference between the two
+        - (
+            sum{r, systemcost_ba("inv_transmission_interzone_ac_investment",r,t) }
+            - sum{r, capex_transmission_interzone_ac(r,t) }
+        )
 * Account for difference in capital costs of objective, which use cost_cap_fin_mult,
 * and outputs, which use cost_cap_fin_mult_out
         + pvf_capital(t) * (

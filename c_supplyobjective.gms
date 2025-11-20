@@ -95,16 +95,24 @@ eq_ObjFn_inv(t)$tmodel(t)..
                       cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INV_REFURB(i,v,r,t)
                       }
 
-* --- cost of transmission---
-*costs of transmission lines
-                  + sum{(r,rr,trtype)$routes_inv(r,rr,trtype,t),
-                        trans_cost_cap_fin_mult(t) * transmission_line_capcost(r,rr,trtype) * INVTRAN(r,rr,trtype,t) }
+* --- cost of interzonal AC transmission---
+                  + sum{(r,rr,tscbin)$[routes_inv(r,rr,"AC",t)$tsc_binwidth(r,rr,tscbin)],
+                        trans_cost_cap_fin_mult(t) * TRAN_CAPEX_BINS(r,rr,tscbin,t) }
 
-* LCC and B2B AC/DC converter stations (each interface has two, one on either side of the interface)
+* --- cost of interzonal HVDC transmission---
+* transmission lines: 1 MW adds 1 MW to both INVTRAN(r,rr) and INVTRAN(rr,r) so divide by 2
+                  + sum{(r,rr,trtype)$[routes_inv(r,rr,trtype,t)$(not aclike(trtype))],
+                        trans_cost_cap_fin_mult(t)
+                        * transmission_cost_nonac(r,rr,trtype)
+                        * INVTRAN(r,rr,trtype,t)
+                        / 2 }
+
+* LCC and B2B AC/DC converter stations: each interface has two, one on either side of the interface,
+* but each interface shows up in both INVTRAN(r,rr) and INVTRAN(rr,r) so don't multiply by 2
                   + sum{(r,rr,trtype)$[lcclike(trtype)$routes_inv(r,rr,trtype,t)],
-                        trans_cost_cap_fin_mult(t) * cost_acdc_lcc * 2 * INVTRAN(r,rr,trtype,t) }
+                        trans_cost_cap_fin_mult(t) * cost_acdc_lcc * INVTRAN(r,rr,trtype,t) }
 
-*cost of VSC AC/DC converter stations
+* VSC AC/DC converter stations
                   + sum{r,
                         trans_cost_cap_fin_mult(t) * cost_acdc_vsc * INV_CONVERTER(r,t) }
 
