@@ -3744,26 +3744,26 @@ def map_hybrid_pv_wind(
 
 
 def plot_dispatch_yearbymonth(
-        case, t=2050, plottype='gen', periodtype='rep',
-        techs=None, region=None, net=False,
-        f=None, ax=None, figsize=(12,6), highlight_rep_periods=1,
-        legend=False,
-    ):
+    case, t=2050, plottype='gen', periodtype='rep',
+    techs=None, region=None, net=False,
+    price=False, price_color='k',
+    f=None, ax=None, figsize=(12,6), highlight_rep_periods=1,
+    legend=False,
+):
     """
-    Full year dispatch for final year with rep days mapped to actual days
-    Inputs
-    ------
-    techs: None to plot all techs, or list of subset techs, or single tech string
-    plottype: 'soc' for storage state of charge, anything else for dispatch
+    Full year dispatch for final year with rep days mapped to actual days.
+    techs: None (all) | list | single tech
+    plottype: 'soc' for storage state of charge else generation
+    price: overlay average marginal price (res_marg)
     """
-    if (periodtype != 'rep') and not (periodtype.startswith('pcm')):
+    if (periodtype != 'rep') and not periodtype.startswith('pcm'):
         raise ValueError(
             f"periodtype={periodtype}: must be 'rep' or start with 'pcm'. "
-            "If it starts with 'pcm' it should be formatted as '{pcm}_{label}_{t} and "
-            "match a folder of the same name in {case}/outputs."
+            "Format pcm periods as '{pcm}_{label}_{t}' matching a folder in outputs."
         )
+
     inputs_path = os.path.join(case, 'inputs_case', periodtype)
-    ### Load bokeh tech map and colors
+
     tech_map = pd.read_csv(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'))
     tech_map.raw = tech_map.raw.map(
@@ -3774,7 +3774,6 @@ def plot_dispatch_yearbymonth(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_style.csv'),
         index_col='order').squeeze(1)
 
-    ### Load run files
     sw = reeds.io.get_switches(case)
     hmap_myr = pd.read_csv(os.path.join(inputs_path, 'hmap_myr.csv'))
     hierarchy = reeds.io.get_hierarchy(case)
@@ -3783,23 +3782,25 @@ def plot_dispatch_yearbymonth(
         else os.path.join(case, 'outputs', f'{periodtype}_{t}', 'outputs.h5')
     )
 
-    if plottype.lower() in ['soc', 'stateofcharge', 'energy_level', 'stor_level']:
+    # Load core data
+    if plottype.lower() in ['soc','stateofcharge','energy_level','stor_level']:
         dfin = reeds.io.read_output(output_path, 'stor_level')
     else:
         dfin = reeds.io.read_output(output_path, 'gen_h')
-    dfin.i = dfin.i.map(
-        lambda x: x if x.startswith('battery') or x.startswith('tes') else x.strip('_01234567890*')
-    ).str.lower().map(lambda x: tech_map.get(x,x))
 
+    # Standardize tech names
+    dfin.i = (
+        dfin.i.map(lambda x: x if x.startswith('battery') or x.startswith('tes')
+                   else x.strip('_01234567890*'))
+        .str.lower()
+        .map(lambda x: tech_map.get(x, x))
+    )
+
+    # Region filtering
+    keep_r = None
     if region is not None:
-        err = (
-                f"region = {region} but must be formatted as "
-                + "{hierarchy level}/{.-delimited list of regions at that level}"
-            )
-        if (
-            ('/' not in region)
-            or (region.split('/')[0] not in hierarchy.columns.tolist() + ['r'])
-        ):
+        err = ("region must be formatted as level/region1.region2")
+        if ('/' not in region) or (region.split('/')[0] not in hierarchy.columns.tolist()+['r']):
             raise ValueError(err)
         level = region.split('/')[0]
         regions = region.split('/')[1].split('.')
@@ -3809,24 +3810,29 @@ def plot_dispatch_yearbymonth(
             keep_r = hierarchy.loc[hierarchy[level].isin(regions)].index
         dfin = dfin.loc[dfin.r.isin(keep_r)].copy()
 
-    dfyear = (
-        dfin.loc[dfin.t==t]
-        .groupby(['i','h']).Value.sum().round(3)
-        .unstack('i').fillna(0)
-        / 1e3
-    )
-
-    if techs is not None:
-        if isinstance(techs, list):
-            dfyear = dfyear[[c for c in techs if c in dfyear]].copy()
-        else:
-            dfyear = dfyear[[techs]].copy()
-
-    if dfyear.empty:
-        print(f"No values to plot for t={t}, region={region}, plottype={plottype}")
+    # Aggregate year
+    dfin = dfin.loc[dfin.t == t]
+    if dfin.empty:
+        print(f"No values to plot for t={t}")
         return None, None, None
 
-    ### Broadcast representative days to actual days
+    dfyear = (
+        dfin.groupby(['i','h']).Value.sum().round(3)
+        .unstack('i').fillna(0) / 1e3
+    )
+
+    # Tech subset
+    if techs is not None:
+        if isinstance(techs, list):
+            dfyear = dfyear[[c for c in techs if c in dfyear]]
+        else:
+            dfyear = dfyear[[techs]] if techs in dfyear else dfyear.iloc[:, :0]
+
+    if dfyear.empty:
+        print(f"No matching techs to plot for t={t}")
+        return None, None, None
+
+    # Broadcast representative -> actual
     if len(dfyear) != len(hmap_myr):
         dffull = (
             hmap_myr[['actual_h','h']]
@@ -3839,108 +3845,172 @@ def plot_dispatch_yearbymonth(
 
     dffull.index = dffull.index.map(reeds.timeseries.h2timestamp)
 
-    ### Put negative parts of columns that go negative on bottom
+    # Split neg values for stacked visual separation
     goes_negative = list(dffull.columns[(dffull < 0).any()])
     df = dffull.copy()
     for col in goes_negative:
-        df[col+'_neg'] = df[col].clip(upper=0)
-        df[col+'_off'] = df[col].clip(upper=0).abs()
-        df[col+'_pos'] = df[col].clip(lower=0)
+        df[col+'_neg']  = df[col].clip(upper=0)
+        df[col+'_off']  = df[col].clip(upper=0).abs()
+        df[col+'_pos']  = df[col].clip(lower=0)
     df.drop(goes_negative, axis=1, inplace=True)
 
-    negcols = [c+'_neg' for c in goes_negative]
+    negcols    = [c+'_neg' for c in goes_negative]
     offsetcols = [c+'_off' for c in goes_negative]
-    poscols = [c+'_pos' for c in goes_negative]
-    plotorder = negcols + offsetcols + list(tech_style.index) + poscols
-    dfplot = (
-        df
-        [[c for c in plotorder if c in df]].cumsum(axis=1)
-        [[c for c in plotorder[::-1] if c in df]]
-    )
+    poscols    = [c+'_pos' for c in goes_negative]
+    plotorder  = negcols + offsetcols + list(tech_style.index) + poscols
 
-    ### Read rep periods if necessary
+    dfplot = df[[c for c in plotorder if c in df]].cumsum(axis=1)
+    dfplot = dfplot[[c for c in plotorder[::-1] if c in dfplot]]
+
+    # Highlight representative periods
+    period_szn = None
     if highlight_rep_periods:
-        period_szn = pd.read_csv(os.path.join(inputs_path, 'period_szn.csv'))
-        period_szn['timestamp'] = (
-            (period_szn.actual_period + 'h001')
-            .map(reeds.timeseries.h2timestamp)
-        )
-        period_szn['rep'] = (period_szn.rep_period == period_szn.actual_period)
-        repnum = dict(zip(
-            sorted(period_szn.rep_period.unique()),
-            range(1, len(period_szn.rep_period.unique())+1)
-        ))
-        period_szn['repnum'] = period_szn.rep_period.map(repnum)
+        try:
+            period_szn = pd.read_csv(os.path.join(inputs_path, 'period_szn.csv'))
+            period_szn['timestamp'] = (
+                (period_szn.actual_period + 'h001')
+                .map(reeds.timeseries.h2timestamp)
+            )
+            period_szn['rep'] = (period_szn.rep_period == period_szn.actual_period)
+            repnum = dict(zip(
+                sorted(period_szn.rep_period.unique()),
+                range(1, len(period_szn.rep_period.unique())+1)
+            ))
+            period_szn['repnum'] = period_szn.rep_period.map(repnum)
+        except Exception as e:
+            print(f"Representative period annotation failed: {e}")
+            highlight_rep_periods = 0
 
-    ### Plot it
+    # Price overlay
+    price_full = None
+    if price:
+        try:
+            reqt_price = reeds.io.read_output(output_path, 'reqt_price')
+            reqt_price = reqt_price.loc[
+                (reqt_price.t == t) & (reqt_price['*'] == 'res_marg')
+            ].copy()
+            # Standardize hour column
+            if '*.2' in reqt_price.columns:
+                reqt_price['h'] = reqt_price['*.2']
+            # Region filter
+            if keep_r is not None:
+                reqt_price = reqt_price.loc[reqt_price.r.isin(keep_r)]
+            price_hour = reqt_price.groupby('h').Value.mean()
+            # Broadcast to full year
+            price_full = (
+                hmap_myr[['actual_h','h']]
+                .merge(price_hour.rename('price'), left_on='h', right_index=True, how='left')
+                .fillna(0)
+                .sort_values('actual_h').set_index('actual_h').price
+            )
+            price_full.index = price_full.index.map(reeds.timeseries.h2timestamp)
+        except Exception as e:
+            print(f"Price overlay failed: {e}")
+            price = False
+
+    # Plot dispatch
     plt.close()
     f, ax = plots.plotyearbymonth(
         dfplot,
         net=net,
         colors=[
-            tech_style[i.replace('_pos','').replace('_neg','').replace('_off','')]
-            for i in dfplot],
-        lwforline=0, f=f, ax=ax, figsize=figsize)
+            tech_style.get(c.replace('_pos','').replace('_neg','').replace('_off',''), 'k')
+            for c in dfplot.columns
+        ],
+        lwforline=0, f=f, ax=ax, figsize=figsize,
+    )
 
-    if highlight_rep_periods:
+    # Representative period shading
+    if highlight_rep_periods and (period_szn is not None):
         width = pd.Timedelta('5D') if sw['GSw_HourlyType'] == 'wek' else pd.Timedelta('1D')
         ylim = ax[0].get_ylim()
-        for i, row in period_szn.iterrows():
+        for _, row in period_szn.iterrows():
             plottime = pd.Timestamp(2001, 1, row.timestamp.day)
+            box_kw = dict(
+                xy=(plottime, ylim[0]),
+                width=width, height=(ylim[1]-ylim[0]),
+                clip_on=False
+            )
             if row.rep:
-                ## Draw an outline
-                box = mpl.patches.Rectangle(
-                    xy=(plottime, ylim[0]),
-                    width=width, height=(ylim[1]-ylim[0]),
-                    lw=0.75, edgecolor='k', facecolor='none', ls=':',
-                    clip_on=False, zorder=2e6
-                )
+                rect = mpl.patches.Rectangle(
+                    edgecolor='k', facecolor='none', ls=':', lw=0.75, zorder=2e6, **box_kw)
             else:
-                ## Wash out the dispatch
-                box = mpl.patches.Rectangle(
-                    xy=(plottime, ylim[0]),
-                    width=width, height=(ylim[1]-ylim[0]),
-                    lw=0.75, edgecolor='none', facecolor='w', alpha=0.4,
-                    clip_on=False, zorder=1e6
-                )
-            ax[row.timestamp.month-1].add_patch(box)
-            ## Note the rep period
+                rect = mpl.patches.Rectangle(
+                    edgecolor='none', facecolor='w', alpha=0.4, lw=0, zorder=1e6, **box_kw)
+            ax[row.timestamp.month-1].add_patch(rect)
             ax[row.timestamp.month-1].annotate(
                 row.repnum,
-                (plottime+pd.Timedelta('30m'), ylim[1]*0.95),
+                (plottime + pd.Timedelta('30m'), ylim[1]*0.95),
                 va='top', size=5, zorder=1e7,
                 color=('k' if row.rep else 'C7'),
-                weight=('normal' if row.rep else 'normal'),
             )
-    
+
+    # Helper to align timestamps to synthetic plot year (2001)
+    def _to_plot_year(dt):
+        # Avoid Feb 29 issues
+        day = 28 if (dt.month == 2 and dt.day == 29) else dt.day
+        return pd.Timestamp(2001, dt.month, day, dt.hour)
+
+    # Price plotting (per month axis)
+    if price and (price_full is not None):
+        # Precompute min/max for consistent y scaling if desired
+        price_min = price_full.groupby(price_full.index.month).min()
+        price_max = price_full.groupby(price_full.index.month).max()
+        for m in range(1,13):
+            month_ax = ax[m-1]
+            par = month_ax.twinx()
+            par.set_frame_on(False)
+            par.patch.set_alpha(0.0)
+            month_series = price_full[price_full.index.month == m]
+            if month_series.empty:
+                continue
+            xtime = month_series.index.map(_to_plot_year)
+            # Draw price line above stack
+            par.plot(
+                xtime, month_series.values,
+                color=price_color, lw=1.1, label='_price', zorder=10,
+            )
+            # Y limits (avoid zero span)
+            ymin = price_min.get(m, month_series.min())
+            ymax = price_max.get(m, month_series.max())
+            if ymin == ymax:
+                ymax = ymin + 1
+            pad = (ymax - ymin) * 0.05
+            par.set_ylim(ymin - pad, ymax + pad)
+            par.tick_params(labelsize=7, colors=price_color)
+            if m == 12:
+                par.set_ylabel('Price [$ / MWh]', fontsize=7, color=price_color)
+            # Put twin axis on top visually
+            par.set_zorder(20)
+
+    # Legend
     if legend:
-        ### Legend (base techs only)
-        try:
-            anchor_ax = ax[0]
-        except Exception:
-            anchor_ax = ax
+        anchor_ax = ax[0]
         legend_techs = [
             c for c in tech_style.index
             if (c in dfyear.columns) and (dfyear[c].abs().sum() > 0)
-            ]
+        ]
+        handles = []
         if legend_techs:
-            handles = [
-                mpl.patches.Patch(facecolor=tech_style.get(t, 'k'), edgecolor='none', label=t)
+            handles.extend([
+                mpl.patches.Patch(facecolor=tech_style.get(t,'k'), edgecolor='none', label=t)
                 for t in legend_techs[::-1]
-                ]
+            ])
         if net:
-            handles = handles if 'handles' in locals() else []
             handles.append(mpl.lines.Line2D([], [], color='k', lw=1, label='Net Generation'))
-
+        if price and (price_full is not None):
+            handles.append(mpl.lines.Line2D([], [], color=price_color, lw=1.1, label='Price'))
         ncol = 2 if len(legend_techs) > 12 else 1
-        anchor_ax.legend(
-            handles=handles,
-            loc='upper left', bbox_to_anchor=(1.02, 1.0),
-            frameon=False, ncol=ncol,
-            handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
-        )
+        if handles:
+            anchor_ax.legend(
+                handles=handles,
+                loc='upper left', bbox_to_anchor=(1.02,1.0),
+                frameon=False, ncol=ncol,
+                handletextpad=0.3, handlelength=0.7, columnspacing=0.5,
+            )
 
     return f, ax, dfplot
+
 
 
 def plot_dispatch_weightwidth(
@@ -6909,23 +6979,24 @@ if __name__ == '__main__':
     
     plt.show()
 
-    fig, ax, _ = plot_dispatch_yearbymonth(
-        case=case_dir, t=year, plottype='soc', techs='nuclear-stor', highlight_rep_periods=0)
-    plt.show()
+    # fig, ax, _ = plot_dispatch_yearbymonth(
+    #     case=case_dir, t=year, plottype='soc', techs='nuclear-stor', highlight_rep_periods=0)
+    # plt.show()
 
     fig, ax, _ = plot_dispatch_yearbymonth(
         case=case_dir, t=year, plottype='gen', net=True, highlight_rep_periods=0, legend=True)
     plt.show()
 
-    fig, ax, _ = plot_bytech_annual(
-        case=case_dir, plottype='gen', periodtype='rep',
-        figsize=(12,6))
-    plt.show()
+    # fig, ax, _ = plot_bytech_annual(
+    #     case=case_dir, plottype='gen', periodtype='rep',
+    #     figsize=(12,6))
+    # plt.show()
 
-    fig, ax, _ = plot_storage_hybrid_dispatch_weightwidth(
-        case=case_dir, t=year)
-    plt.show()
+    # fig, ax, _ = plot_storage_hybrid_dispatch_weightwidth(
+    #     case=case_dir, t=year)
+    # plt.show()
 
     fig, ax, = plot_dispatch_weightwidth(
         case=case_dir)
     plt.show()
+# %%
