@@ -313,7 +313,6 @@ eq_interconnection_queues(tg,r,t)         "--MW-- capacity deployment limit base
  eq_plant_capacity_limit(i,v,r,allh,t)           "--MW-- energy moving through the inverter cannot exceed the inverter capacity"
  eq_hybrid_storage_capacity_limit(i,v,r,allh,t)  "--MW-- storage charging/discharging cannot exceed storage capacity"
  eq_hybrid_plant_storage_limit(i,v,r,allh,t)     "--MW-- storage charging from the plant cannot exceed plant generation"
- eq_hybrid_storage_ramping(i,r,allh,allhh,t)     "--MW-- definition of RAMPUP for hybrid storage"
  eq_pvb_itc_charge_reqt(i,v,r,t)                 "--MWh-- total energy charged from local PV >= ITC qualification fraction * total energy charged"
 
 * Canadian imports balance
@@ -2742,7 +2741,7 @@ eq_batterymandate(st,t)
 
 * ---------------------------------------------------------------------------
 
-eq_national_gen(t)$[tmodel(t)$national_gen_frac(t)$Sw_GenMandate]..
+eq_national_gen(t)$[tmodel(t)$national_gen_frac(t)$Sw_GenMandate$(yeart(t)>=Sw_StartMarkets)]..
 
 *generation from renewables (already post-curtailment)
     sum{(i,v,r,h)$[nat_gen_tech_frac(i)$valgen(i,v,r,t)$h_rep(h)],

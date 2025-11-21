@@ -1,7 +1,8 @@
-,natriumstordirtcheap,medstordirtcheap,bigstordirtcheap,nostordirtcheap,natriumstorutah,medstorutah,bigstorutah,nostorutah
+,natriumstorutah,medstorutah,bigstorutah,nostorutah,natriumstordirtcheap,medstordirtcheap,bigstordirtcheap,nostordirtcheap
 timetype,seq,seq,seq,seq,seq,seq,seq,seq
 endyear,2050,2050,2050,2050,2050,2050,2050,2050
 GSw_HourlyChunkLengthRep,1,1,1,1,1,1,1,1
+GSw_HourlyClusterAlgorithm,user,user,user,user,user,user,user,user
 pcm,1,1,1,1,1,1,1,1
 GSw_Region,st/UT,st/UT,st/UT,st/UT,st/UT,st/UT,st/UT,st/UT
 GSw_BatteryMandate,0,0,0,0,0,0,0,0
@@ -12,8 +13,8 @@ GSw_NuclearStor_Types,1,1,1,1,1,1,1,1
 GSw_NuclearStor_StorageTechs,tes-ms,tes-ms,tes-ms,tes-ms,tes-ms,tes-ms,tes-ms,tes-ms
 GSw_NuclearStor_BCR,0.45,0.75,1.0,0.0,0.45,0.75,1.0,0.0
 GSw_NuclearDemo,1,1,1,1,0,0,0,0
-plantchar_nuclear_stor,nuclear_ATB_2024_dirtcheap,nuclear_ATB_2024_dirtcheap,nuclear_ATB_2024_dirtcheap,nuclear_ATB_2024_dirtcheap,nuclear_ATB_2024_natrium,nuclear_ATB_2024_natrium,nuclear_ATB_2024_natrium,nuclear_ATB_2024_natrium
-plantchar_tes,tes_ATB_2024_dirtcheap,tes_ATB_2024_dirtcheap,tes_ATB_2024_dirtcheap,tes_ATB_2024_dirtcheap,tes_ATB_2024_moderate,tes_ATB_2024_moderate,tes_ATB_2024_moderate,tes_ATB_2024_moderate
+plantchar_nuclear_stor,nuclear_ATB_2024_natrium,nuclear_ATB_2024_natrium,nuclear_ATB_2024_natrium,nuclear_ATB_2024_natrium,nuclear_ATB_2024_dirtcheap,nuclear_ATB_2024_dirtcheap,nuclear_ATB_2024_dirtcheap,nuclear_ATB_2024_dirtcheap
+plantchar_tes,tes_ATB_2024_moderate,tes_ATB_2024_moderate,tes_ATB_2024_moderate,tes_ATB_2024_moderate,tes_ATB_2024_dirtcheap,tes_ATB_2024_dirtcheap,tes_ATB_2024_dirtcheap,tes_ATB_2024_dirtcheap
 GSw_Biopower,0,0,0,0,0,0,0,0
 GSw_CCS,0,0,0,0,0,0,0,0
 GSw_CoalIGCC,0,0,0,0,0,0,0,0

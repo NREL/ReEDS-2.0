@@ -6906,26 +6906,29 @@ if __name__ == '__main__':
 
     fig, ax, _ = plot_storage_hybrid_dispatch_yearbymonth(
         case=case_dir, t=year, periodtype='pcm_d1h', net=True, highlight_rep_periods=0, legend=True)
-    
+    fig.savefig(f"dispatch_yearbymonth_{year}.png", dpi=1000, bbox_inches='tight')
     plt.show()
 
-    fig, ax, _ = plot_dispatch_yearbymonth(
-        case=case_dir, t=year, plottype='soc', techs='nuclear-stor', highlight_rep_periods=0)
-    plt.show()
+    # fig, ax, _ = plot_dispatch_yearbymonth(
+    #     case=case_dir, t=year, plottype='soc', techs='nuclear-stor', highlight_rep_periods=0)
+    
+    # plt.show()
 
     fig, ax, _ = plot_dispatch_yearbymonth(
         case=case_dir, t=year, plottype='gen', net=True, highlight_rep_periods=0, legend=True)
+    fig.savefig(f"dispatch_yearbymonth_gen_{year}.png", dpi=1000, bbox_inches='tight')
     plt.show()
 
     fig, ax, _ = plot_bytech_annual(
         case=case_dir, plottype='gen', periodtype='rep',
         figsize=(12,6))
+    fig.savefig(f"bytech_annual_gen_{year}.png", dpi=1000, bbox_inches='tight')
     plt.show()
 
-    fig, ax, _ = plot_storage_hybrid_dispatch_weightwidth(
-        case=case_dir, t=year)
-    plt.show()
+    # fig, ax, _ = plot_storage_hybrid_dispatch_weightwidth(
+    #     case=case_dir, t=year)
+    # plt.show()
 
-    fig, ax, = plot_dispatch_weightwidth(
-        case=case_dir)
-    plt.show()
+    # fig, ax, = plot_dispatch_weightwidth(
+    #     case=case_dir)
+    # plt.show()
