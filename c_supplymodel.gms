@@ -2941,7 +2941,7 @@ eq_storage_capacity(i,v,r,h,t)$[valgen(i,v,r,t)
     + STORAGE_IN(i,v,r,h,t)$[not storage_hybrid(i)$(not csp(i))] / (1$(not evmc_storage(i)) + evmc_storage_charge_frac(i,r,h,t)$evmc_storage(i)) 
    
 * hybrid+storage plant: plant generation
-    + STORAGE_IN_PLANT(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$dayhours(h)$Sw_HybridPlant]
+    + STORAGE_IN_PLANT(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant]
 * hybrid+storage plant: Grid generation
     + STORAGE_IN_GRID(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$Sw_HybridPlant]
 
@@ -2990,7 +2990,7 @@ eq_storage_level(i,v,r,h,t)$[valgen(i,v,r,t)$storage(i)$tmodel(t)]..
 *[plus] energy into hybrid plant storage
 *hybrid+storage plant: plant charging
     + storage_eff_pvb_p(i,t) * hours_daily(h)
-      * STORAGE_IN_PLANT(i,v,r,h,t)$[pvb(i)$dayhours(h)$Sw_HybridPlant]
+      * STORAGE_IN_PLANT(i,v,r,h,t)$[pvb(i)$Sw_HybridPlant]
 
 *hybrid+storage plant: grid charging
     + storage_eff_pvb_g(i,t) * hours_daily(h) 
@@ -3255,7 +3255,7 @@ eq_plant_total_gen(i,v,r,h,t)$[storage_hybrid(i)$(not csp(i))$tmodel(t)$valgen(i
     + GEN_STORAGE(i,v,r,h,t)
 
 *[minus] charging from hybrid storage plant
-    - STORAGE_IN_PLANT(i,v,r,h,t)$dayhours(h)
+    - STORAGE_IN_PLANT(i,v,r,h,t)
 
     =e=
 
