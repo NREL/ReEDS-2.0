@@ -247,6 +247,10 @@ def check_compatibility(sw):
             f"GSw_Region={sw['GSw_Region']}, GSw_GasCurve={sw['GSw_GasCurve']}"
         )
 
+    if (sw['GSw_RegionResolution'] in ['county','mixed']) and int(sw['GSw_OffshoreZones']):
+        err = 'GSw_OffshoreZones=1 is not implemented for county/mixed resolution'
+        raise NotImplementedError(err)
+
     ### Aggregation
     if (sw['GSw_RegionResolution'] != 'aggreg') and (int(sw['GSw_NumCSPclasses']) != 12):
         raise NotImplementedError(
@@ -345,21 +349,8 @@ def check_compatibility(sw):
             raise ValueError(f'PVB with ILR!={scalars["ilr_utility"]} does not work at county resolution.'
                              f'\nRemove any ILR!={scalars["ilr_utility"]} from GSw_PVB_ILR.')
 
-    if sw['GSw_EFS1_AllYearLoad'] == 'historic_post2015':
-        allowed_years = list(range(2016,2024))
-        allowed_years_string = (
-            f"{','.join([str(year) for year in allowed_years])}"
-            f" if GSw_EFS1_AllYearLoad is set to '{sw['GSw_EFS1_AllYearLoad']}'"
-        )
-    elif sw['GSw_EFS1_AllYearLoad'] == 'historic':
-        allowed_years = list(range(2007,2014))
-        allowed_years_string = (
-            f"{','.join([str(year) for year in allowed_years])}"
-            f" if GSw_EFS1_AllYearLoad is set to '{sw['GSw_EFS1_AllYearLoad']}'"
-        )
-    else:
-        allowed_years = list(range(2007,2014)) + list(range(2016,2024))
-        allowed_years_string = ','.join([str(year) for year in allowed_years])
+    allowed_years = list(range(2007,2014)) + list(range(2016,2024))
+    allowed_years_string = ','.join([str(year) for year in allowed_years])
 
     resource_adequacy_years = [int(y) for y in sw['resource_adequacy_years'].split('_')]
     for year in resource_adequacy_years:
@@ -412,7 +403,7 @@ def check_compatibility(sw):
             raise ValueError("No column in modeled_regions.csv matching GSw_Region")
 
     ### Compatible switch combinations
-    if sw['GSw_EFS1_AllYearLoad'] in ['historic', 'historic_post2015']:
+    if sw['GSw_EFS1_AllYearLoad'] == 'historic':
         if ('demand_' + sw['demandscen'] +'.csv') not in os.listdir(os.path.join(reeds_path, 'inputs','load')) :
             raise ValueError("The demand file specified by the demandscen switch is not in the inputs/load folder")
 
@@ -1254,9 +1245,6 @@ def write_batch_script(
     if int(caseSwitches['diagnose']):
         os.makedirs(os.path.join(casedir, 'outputs', 'model_diagnose'), exist_ok=True)
 
-    # Write the GAMS switches ('gswitches.csv')
-    reeds.io.write_gswitches(pd.Series(caseSwitches), inputs_case)
-
     #%% Information on reV supply curves associated with this run
     shutil.copytree(os.path.join(reeds_path,'inputs','supply_curve','metadata'),
                     os.path.join(inputs_case,'supplycurve_metadata'), dirs_exist_ok=True)
@@ -1336,27 +1324,40 @@ def write_batch_script(
     ### Copy over the cases file
     shutil.copy2(os.path.join(reeds_path, cases_filename), casedir)
 
-    ### Get hpc setting (used in Augur)
+    ### Switches with values derived from other switches
+    caseSwitches['GSw_itlgrpConstraint'] = int(
+        caseSwitches['GSw_RegionResolution'] in ['county', 'mixed']
+    )
+    caseSwitches['GSw_OffshoreFiles'] = (
+        'meshed' if int(caseSwitches['GSw_OffshoreZones']) else 'radial'
+    )
+    ## Get hpc setting (used in Augur)
     caseSwitches['hpc'] = int(hpc)
-    options += f' --hpc={int(hpc)}'
-    ### Get numclass from the max value in ivt
+    ## Get numclass from the max value in ivt
     caseSwitches['numclass'] = get_ivt_numclass(
         reeds_path=reeds_path, casedir=casedir, caseSwitches=caseSwitches)
-    options += ' --numclass={}'.format(caseSwitches['numclass'])
-    ### Load site region level (GSw_LoadSiteReg) is embedded in GSw_LoadSiteTrajectory
-    GSw_LoadSiteReg = caseSwitches['GSw_LoadSiteTrajectory'].split('_')[0]
-    caseSwitches['GSw_LoadSiteReg'] = GSw_LoadSiteReg
-    options += f' --GSw_LoadSiteReg={GSw_LoadSiteReg}'
-    ### Get numbins from the max of individual technology bins
+    ## Load site region level (GSw_LoadSiteReg) is embedded in GSw_LoadSiteTrajectory
+    caseSwitches['GSw_LoadSiteReg'] = caseSwitches['GSw_LoadSiteTrajectory'].split('_')[0]
+    ## Get numbins from the max of individual technology bins
     caseSwitches['numbins'] = max(
         int(caseSwitches['numbins_windons']),
         int(caseSwitches['numbins_windofs']),
         int(caseSwitches['numbins_upv']),
         15)
-    options += ' --numbins={}'.format(caseSwitches['numbins'])
+    for switchname in [
+        'GSw_itlgrpConstraint',
+        'GSw_OffshoreFiles',
+        'hpc',
+        'numclass',
+        'numbins',
+        'GSw_LoadSiteReg',
+    ]:
+        options += f" --{switchname}={caseSwitches[switchname]}"
     options += f' --reeds_path={reeds_path}{os.sep} --casedir={casedir}'
 
     #%% Record the switches for this run
+    reeds.io.write_gswitches(pd.Series(caseSwitches), inputs_case)
+
     pd.Series(caseSwitches).to_csv(
         os.path.join(inputs_case,'switches.csv'), header=False)
 
@@ -1456,7 +1457,16 @@ def write_batch_script(
                 f"python {os.path.join(casedir,'input_processing',s)}.py {reeds_path} {inputs_case}\n")
             OPATH.writelines(writescripterrorcheck(s)+'\n')
 
+        OPATH.writelines(
+            f"python {os.path.join(reeds_path, 'postprocessing', 'cleanup_files.py')} "
+            f"{casedir} --force --quiet\n"
+        )
+
         if int(caseSwitches['input_processing_only']):
+            OPATH.writelines(
+                f"python {os.path.join(reeds_path, 'postprocessing', 'cleanup_files.py')} "
+                f"{casedir} --force --quiet --level {caseSwitches['cleanup_level']}\n"
+            )
             OPATH.writelines('\n' + ('exit' if LINUXORMAC else 'goto:eof') + '\n\n')
 
         big_comment('Compile model', OPATH)
@@ -1611,8 +1621,8 @@ def write_batch_script(
 
         ### Remove unnecessary files from case folder
         OPATH.writelines(
-            f"python postprocessing/cleanup_files.py {casedir} --force --quiet "
-            f"--level {caseSwitches['cleanup_level']}\n"
+            f"python {os.path.join(reeds_path, 'postprocessing', 'cleanup_files.py')} "
+            f"{casedir} --force --quiet --level {caseSwitches['cleanup_level']}\n"
         )
 
         ### Run R2X if using debug mode
