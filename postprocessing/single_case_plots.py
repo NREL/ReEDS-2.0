@@ -293,19 +293,18 @@ except Exception:
 
 #%% Macrogrid map
 try:
-    if int(sw.GSw_VSC):
-        plt.close()
-        f,ax = reedsplots.plot_trans_vsc(
-            case=case, year=year, wscale=wscale_straight*1e3,
-            alpha=1.0, miles=300,
-        )
-        savename = f'map_translines_vsc-{year}.png'
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        plt.close()
-        print(savename)
+    plt.close()
+    f,ax = reedsplots.plot_trans_vsc(
+        case=case, year=year, wscale=wscale_straight*1e3,
+        alpha=1.0, miles=300,
+    )
+    savename = f'map_translines_vsc-{year}.png'
+    if write:
+        plt.savefig(os.path.join(savepath, savename))
+    if interactive:
+        plt.show()
+    plt.close()
+    print(savename)
 except Exception:
     print('map_translines_vsc failed:')
     print(traceback.format_exc())
@@ -351,7 +350,7 @@ try:
         case, year, crs=crs, cm=gen_cmap,
         routes=False, wscale=wscale_straight, show_overlap=False,
         subtract_baseyear=None, show_transmission=False,
-        alpha=transalpha, colors=transcolor, ms=ms,
+        alpha=transalpha, colors=transcolor,
     )
     savename = f'map_VREsites-{year}.png'
     if write:
@@ -373,7 +372,7 @@ try:
         routes=routes, show_overlap=False,
         wscale=wscale_routes,
         subtract_baseyear=None, show_transmission=True,
-        alpha=transalpha, colors=transcolor, ms=ms,
+        alpha=transalpha, colors=transcolor,
     )
     savename = f'map_VREsites-translines-{year}.png'
     if write:

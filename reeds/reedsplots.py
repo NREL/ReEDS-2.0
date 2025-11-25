@@ -1644,7 +1644,7 @@ def plot_vresites_transmission(
         case, year=2050, crs='ESRI:102008',
         routes=True, wscale=1.5, show_overlap=False,
         subtract_baseyear=None,
-        alpha=0.25, colors='k', ms=1.15,
+        alpha=0.25, colors='k',
         techs=['upv','wind-ons','wind-ofs'],
         cm={'wind-ons':plt.cm.Blues, 'upv':plt.cm.Reds, 'wind-ofs':plt.cm.Purples},
         zorder={'wind-ons':-20002,'upv':-20001,'wind-ofs':-20000},
@@ -1682,6 +1682,8 @@ def plot_vresites_transmission(
                 lambda row: shapely.geometry.Point(row.longitude, row.latitude),
                 axis=1)
             cap[tech] = gpd.GeoDataFrame(cap[tech]).set_crs('EPSG:4326').to_crs(crs)
+            ## Convert from point to polygons (raster is 11.52 km but include a little extra)
+            cap[tech]['geometry'] = cap[tech].buffer(11530/2, cap_style='square')
 
         except FileNotFoundError as err:
             print(err)
@@ -1708,7 +1710,7 @@ def plot_vresites_transmission(
 
         dfplot.plot(
             ax=ax, column='GW', cmap=cm[tech],
-            marker='s', markersize=ms, lw=0,
+            lw=0,
             legend=False, legend_kwds=legend_kwds,
             vmin=0, vmax=vmax[tech], zorder=zorder[tech],
         )
@@ -4459,7 +4461,10 @@ def plot_storage_hybrid_dispatch_weightwidth(
 
 
 def plot_interday_soc(
-        case, t=2050, ba=None, tech=None, f=None, axes=None, figsize=(10,4)):
+        case, t=2050, ba=None, tech=None, f=None, axes=None, figsize=(16,7), debug=False):
+    """
+    Plot inter-day storage state of charge.
+    """
     tech_map = pd.read_csv(
         os.path.join(reeds_path,'postprocessing','bokehpivot','in','reeds2','tech_map.csv'))
     tech_map.raw = tech_map.raw.map(
@@ -4470,91 +4475,123 @@ def plot_interday_soc(
         index_col='order').squeeze(1)
     sw = pd.read_csv(
         os.path.join(case,'inputs_case','switches.csv'), header=None, index_col=0).squeeze(1)
-    
+   
+    # Read all necessary CSV files
     stor_interday_level = pd.read_csv(
         os.path.join(case,'outputs','stor_interday_level.csv'))
     stor_interday_dispatch = pd.read_csv(
         os.path.join(case,'outputs','stor_interday_dispatch.csv'))
     h_actualszn = pd.read_csv(
-        os.path.join(case,'inputs_case','h_actualszn.csv'))
+        os.path.join(case,'inputs_case','rep','h_actualszn.csv'))
     numpartitions = pd.read_csv(
-        os.path.join(case,'inputs_case','numpartitions.csv'))
+        os.path.join(case,'inputs_case','rep','numpartitions.csv'))
     timestamps = pd.read_csv(
-        os.path.join(case,'inputs_case','timestamps.csv'))
-    
+        os.path.join(case,'inputs_case','rep','timestamps.csv'))
+   
     # Rename columns
     rename_rules = {
-        'actual_period': 'allszn', '*h': 'allh', '*actual_period': 'allszn', 'partition_count': 'Value', 'Value': 'Level'
+        'actual_period': 'allszn', '*h': 'allh', '*actual_period': 'allszn',
+        'partition_count': 'Value', 'Value': 'Level'
     }
     for df in [stor_interday_level, stor_interday_dispatch, h_actualszn, numpartitions]:
         df.rename(columns={k: v for k, v in rename_rules.items() if k in df.columns}, inplace=True)
-
+ 
+    # Create actualszn dataframe
     actualszn = h_actualszn[['allszn']].drop_duplicates()
     actualszn = actualszn.sort_values(by='allszn')
     actualszn = actualszn.reset_index(drop=True)
     data_dict = {}
-
-    # Loop through all combinations of i, v, r, and t, and sum the inter-day absolute storage level 
-    # and the intra-day relative storage level to obtain the combined hourly storage level time series.
+ 
+    # Loop through all combinations of i, v, r, and t
     for idx, (i, r, t, v) in enumerate(stor_interday_level[['i', 'r', 't', 'v']].drop_duplicates().itertuples(index=False)):
         filtered_INTERDAY = stor_interday_level.query('r == @r & t == @t & i == @i & v == @v').reset_index(drop=True)
         filtered_DISPATCH = stor_interday_dispatch.query('r == @r & t == @t & i == @i & v == @v').reset_index(drop=True)
-        # stor_interday_dispatch is in MW and we need to multiply by the hourly chunk length to get MWh
+       
+        # Convert dispatch from MW to MWh
         GSw_HourlyChunkLength = int(sw.GSw_HourlyChunkLengthRep)
         filtered_DISPATCH['Level'] = filtered_DISPATCH['Level'] * GSw_HourlyChunkLength
-        # Merge the data to create a actual hourly time series of storage level data
+       
+        # Merge the data to create actual hourly time series
         data = (actualszn.merge(filtered_INTERDAY, on='allszn', how='left')
                         .merge(numpartitions, on='allszn', how='left')
                         .merge(h_actualszn, on='allszn', how='left')
                         .merge(filtered_DISPATCH, on='allh', how='left'))
+       
+        # Create timestamp and merge with h_of_year
         data['timestamp'] = data["allszn"] + "h" + data["allh"].str.extract(r'h(\d{3})')[0]
         data = data.merge(timestamps[['h_of_year', 'timestamp']], on='timestamp', how='left')
-        # Since inter-day daily soc is absolute value and intra-day hourly soc is relative value,
-        # we need to combine and cumsum them to get the absolute hourly soc
+       
+        # Rename columns for clarity
         data.rename(columns={'Level_x': 'interday_level', 'Level_y': 'net_day_change', 'Value': 'partition'}, inplace=True)
-        data['interday_level'] = data['interday_level'].fillna(0)
-        data['storage_level'] = data['interday_level'].iloc[0] + (data['net_day_change'].fillna(0)).cumsum()
+       
+        # Fill missing values
+        data['interday_level'] = data['interday_level'].fillna(method='ffill').fillna(0)
+        data['net_day_change'] = data['net_day_change'].fillna(0)
+       
+        # Sort by time to ensure proper ordering
+        data = data.sort_values(['allszn', 'h_of_year']).reset_index(drop=True)
+       
+        # Calculate storage level using cumulative sum
+        data['storage_level'] = data['interday_level'].iloc[0] + data['net_day_change'].cumsum()
+       
         # Cleanup data frame
-        data.drop(['i_x', 'v_x', 'r_x', 't_x'], axis=1, inplace=True)
+        data.drop(['i_x', 'v_x', 'r_x', 't_x'], axis=1, inplace=True, errors='ignore')
         data.rename(columns={'i_y': 'i', 'v_y': 'v', 'r_y': 'r', 't_y': 't'}, inplace=True)
         data[['i', 'v', 'r', 't']] = data[['i', 'v', 'r', 't']].ffill().bfill()
+       
         # Append data to dictionary
         data_dict[idx] = data
+   
     # Convert dictionary to data frame
     all_data = pd.concat(data_dict.values(), ignore_index=True)
-
+ 
+    # Apply filters if specified
     if ba is not None:
         all_data = all_data[all_data['r'] == ba]
-    
+   
     if tech is not None:
         all_data = all_data[all_data['i'] == tech]
-
+ 
     # Aggregate all region storage levels
     all_data = all_data.groupby(['h_of_year', 'i', 'v', 't', 'allszn', 'allh']).agg({
-        'storage_level': 'sum', 
+        'storage_level': 'sum',
         'interday_level': 'sum',  
         'net_day_change': 'sum'  
     }).reset_index()
-
+ 
     # Assign year to plot
     t = int(all_data['t'].max())
     all_data = all_data[all_data['t'] == t]
-
+   
+    if debug:
+        # Save the processed data for debugging
+        all_data.to_csv(os.path.join(case, 'outputs', f'stor_interday_soc_{t}.csv'), index=False)
+ 
     # Assign colors based on technology
     all_data_simplified_techs = simplify_techs(all_data['i'])
     all_data['color'] = all_data_simplified_techs.map(tech_style)
-
-    # Convert 'h_of_year' to datetime
+ 
+    # Convert 'h_of_year' to datetime for plotting
     start_date = f"{t}-01-01"
     all_data['datetime'] = pd.to_datetime(start_date) + pd.to_timedelta(all_data['h_of_year'], unit='h')
 
+    # Aggregate and sum over 'v' if multiple storage units of same tech exist
+    all_data = all_data.groupby(['datetime', 'h_of_year', 'i']).agg({
+        'storage_level': 'sum',
+        'color': 'first'
+    }).reset_index()
+ 
+    # Create the plot
     fig, ax = plt.subplots(figsize=figsize)
-    
-    for key, grp in all_data.groupby(['i']):
-        label = key[0] if isinstance(key, tuple) and len(key) == 1 else str(key)
-        ax.plot(grp['h_of_year'] / 24, grp['storage_level'], label=label, color=grp['color'].iloc[0])
-
-    # Set datetime index
+   
+    for tech in all_data['i'].unique():
+        tech_data = all_data[all_data['i'] == tech]
+        ax.plot(
+            tech_data['datetime'], tech_data['storage_level'],
+            label=tech, color=tech_data['color'].iloc[0], linewidth=0.5
+        )
+ 
+    # Set datetime formatting for x-axis
     ax.xaxis.set_major_locator(mdates.MonthLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
     ax.set_ylabel('Storage Level (MWh)')
@@ -4562,7 +4599,7 @@ def plot_interday_soc(
     ax.grid(True)
     ax.legend()
     plt.tight_layout()
-
+ 
     return fig, ax, all_data
 
 

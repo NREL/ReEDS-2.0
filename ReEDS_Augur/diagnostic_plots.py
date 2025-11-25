@@ -906,6 +906,125 @@ def plot_pras_unitnumber(sw, dfs, level='country'):
     plt.close()
 
 
+def plot_pras_load_units(sw, dfs):
+    """Histogram of net load and sorted unit sizes by model zone"""
+    savename = f"PRAS-load_hist-units-{sw['t']}.png"
+    ### Get inputs
+    ## Capacity
+    cap = (
+        pd.concat([
+            dfs['pras_system']['gencap'],
+            dfs['pras_system']['storcap'],
+            dfs['pras_system']['genstorcap'],
+        ], axis=1)
+        .max().rename('MW').reset_index()
+    )
+    ## Net demand
+    vre_gen = dfs['vre_gen'].copy()
+    vre_gen.columns = pd.MultiIndex.from_tuples(
+        vre_gen.columns.map(lambda x: tuple(x.split('|'))),
+        names=['i','r'],
+    )
+    net_demand = (dfs['pras_system']['load'] - vre_gen.groupby('r', axis=1).sum()) / 1e3
+    ## Remaining unit capacity
+    units = group_techs(
+        cap.loc[
+            ~cap.i.isin(vre_gen.columns.get_level_values('i').unique())
+            & (cap.MW > 0)
+        ],
+        dfs
+    )
+    ## Get the colors
+    tech_map = dfs['tech_map'].copy()
+    tech_map.index = tech_map.index.str.lower()
+    tech_map = tech_map.str.lower()
+    tech_style = dfs['tech_style'].copy()
+    toadd = tech_style.loc[tech_style.index.str.endswith('_mod')]
+    toadd.index = toadd.index.str.replace('_mod','')
+    tech_style = pd.concat([tech_style,toadd])
+
+    ## Only keep the 10 regions with highest neue
+    regions = (
+        dfs['pras'][[c for c in dfs['pras'] if c.endswith('_EUE') and not c.startswith('USA')]]
+        .sum()
+        .nlargest(10)
+    ).index.map(lambda x: x[:-len('_EUE')])
+
+    ## Maps
+    dfmap = reeds.io.get_dfmap(sw['casedir'])
+
+    ### Plot it
+    ncols = len(regions)
+    nrows = 3
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(ncols*1.25, 6),
+        gridspec_kw={'height_ratios':[1,1,3], 'hspace':0.3},
+    )
+    for col, r in enumerate(regions):
+        ## Net load
+        ax[1,col].hist(net_demand[r], bins=101, color='C3')
+        ## Units
+        df = units.loc[units.r==r].sort_values('MW')
+        df['GW'] = df.MW / 1e3
+        df['GW_cumsum'] = df.GW.cumsum()
+        df['left'] = df['GW_cumsum'].shift(1).fillna(0)
+        ## Do it twice to get darker lines around the edges
+        ax[-1,col].bar(
+            x=df['left'],
+            height=df['MW'],
+            width=df['GW'],
+            align='edge',
+            color=df.i.map(lambda x: tech_style.get(x,'#000000')),
+            alpha=0.7,
+        )
+        ax[-1,col].bar(
+            x=df['left'],
+            height=df['MW'],
+            width=df['GW'],
+            align='edge',
+            color='none',
+            edgecolor='k', lw=0.15,
+        )
+        ## Peak
+        peak = net_demand[r].max()
+        for row in [1, 2]:
+            ax[row,col].axvline(peak, c='C3', lw=0.75, ls=':')
+        ## Formatting
+        reeds.plots.despine(ax[1,col], left=False)
+        ax[1,col].set_yticks([])
+        ax[1,col].set_xticklabels([])
+        ## Ignore battery and hydro for the y limit since they're not disaggregated
+        ax[-1,col].set_ylim(0, units.loc[~units.i.str.startswith(('battery','hydro')), 'MW'].max())
+        if col > 0:
+            ax[-1,col].set_yticklabels([])
+        ## Share x axis for histograms
+        xmax = max(ax[1,col].get_xlim()[1], ax[2,col].get_xlim()[1])
+        for row in [1, 2]:
+            ax[row,col].set_xlim(0, xmax)
+        ## Maps
+        dfmap['r'].loc[[r]].plot(ax=ax[0,col], facecolor='k', edgecolor='none', zorder=3)
+        bounds = dfmap['r'].loc[[r]].bounds.squeeze()
+        ax[0,col].set_xlim(bounds.minx-50e3, bounds.maxx+50e3)
+        ax[0,col].set_ylim(bounds.miny-50e3, bounds.maxy+50e3)
+        dfmap['st'].plot(ax=ax[0,col], facecolor='none', edgecolor='k', lw=0.5, zorder=2)
+        dfmap['r'].plot(ax=ax[0,col], facecolor='0.9', edgecolor='w', lw=0.5, zorder=1)
+        ax[0,col].axis('off')
+        ax[1,col].set_title(r)
+    ## Formatting
+    ax[-1,0].set_xlabel('GW')
+    ax[1,0].set_xlabel('Net load [GW]', x=0, ha='left', color='C3')
+    ax[-1,0].set_ylabel('Unit size [MW]')
+    ax[-1,0].set_xlabel('Installed capacity [GW]', x=0, ha='left')
+    reeds.plots.despine(ax)
+    ## Save it
+    if savefig:
+        plt.savefig(os.path.join(sw['savepath'],savename))
+    if interactive:
+        plt.show()
+    plt.close()
+
+
 def plot_pras_augur_load(sw, dfs):
     """PRAS load against Augur load"""
     dfpras = dfs['pras_system']['load'].sum(axis=1).rename('PRAS')
@@ -1189,6 +1308,11 @@ def main(sw, augur_plots=1):
             plot_pras_ICAP_regional(sw, dfs)
         except Exception:
             print('plot_pras_ICAP_regional() failed:', traceback.format_exc())
+
+        try:
+            plot_pras_load_units(sw, dfs)
+        except Exception:
+            print('plot_pras_load_units() failed:', traceback.format_exc())
 
         try:
             plot_pras_unitsize_distribution(sw, dfs)

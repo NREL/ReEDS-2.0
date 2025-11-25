@@ -98,6 +98,140 @@ $include inputs_case%ds%scalars.txt
 * --- Set Declarations ---
 *==========================
 
+*## Spatial sets (define first so case stays consistent)
+* written by copy_files.py
+$onOrder
+set r "regions"
+/
+$offlisting
+$include inputs_case%ds%val_r.csv
+$onlisting
+/ ;
+$offOrder
+
+$onempty
+set offshore(r) "offshore zones"
+/
+$offlisting
+$include inputs_case%ds%offshore.csv
+$onlisting
+/ ;
+$offempty
+
+set land(r) "land-based (not offshore) zones" ;
+land(r)$[not offshore(r)] = yes ;
+
+* written by copy_files.py
+$onempty
+set cs(*) "carbon storage sites"
+/
+$offlisting
+$include inputs_case%ds%val_cs.csv
+$onlisting
+/ ;
+$offempty
+
+* created in and mapped to hierarchy in ldc_prep.py
+set ccreg "capacity credit regions"
+/
+$offlisting
+$include inputs_case%ds%ccreg.csv
+$onlisting
+/ ;
+
+set eall "emission categories used in reporting"
+/
+$offlisting
+$include inputs_case%ds%eall.csv
+$onlisting
+/ ;
+
+set e(eall) "emission categories used in model"
+/
+$offlisting
+$include inputs_case%ds%e.csv
+$onlisting
+/ ;
+
+set etype "emission types used in model (upstream and process)"
+/
+$offlisting
+$include inputs_case%ds%etype.csv
+$onlisting
+/ ;
+
+Sets
+nercr "NERC regions"
+* https://www.nerc.com/pa/RAPA/ra/Reliability%20Assessments%20DL/NERC_LTRA_2021.pdf
+/
+* written by copy_files.py
+$include inputs_case%ds%val_nercr.csv
+/
+
+transreg "Transmission Planning Regions from FERC order 1000"
+* (https://www.ferc.gov/sites/default/files/industries/electric/indus-act/trans-plan/trans-plan-map.pdf)
+/
+* written by copy_files.py
+$include inputs_case%ds%val_transreg.csv
+/,
+
+transgrp "sub-FERC-1000 regions"
+/
+* written by copy_files.py
+$include inputs_case%ds%val_transgrp.csv
+/,
+
+itlgrp "ReEDS zones for additional ITL constraints when doing a run that includes county resolution"
+/
+* written by copy_files.py
+$include inputs_case%ds%val_itlgrp.csv
+/,
+
+cendiv "census divisions"
+/
+* written by copy_files.py
+$include inputs_case%ds%val_cendiv.csv
+/,
+
+interconnect "interconnection regions"
+/
+* written by copy_files.py
+$include inputs_case%ds%val_interconnect.csv
+/,
+
+country "country regions"
+/
+* written by copy_files.py
+$include inputs_case%ds%val_country.csv
+/,
+
+st "US, Mexico, and/or Canadian States/Provinces"
+/
+* written by copy_files.py
+$include inputs_case%ds%val_st.csv
+/,
+
+* biomass supply curves defined by USDA region
+usda_region "Biomass supply curve regions"
+/
+* written by copy_files.py
+$include inputs_case%ds%val_usda_region.csv
+/,
+
+h2ptcreg "Regions which enforce the H2 production incentive regulations, for the US these are the National Transmission Needs Study regions"
+* https://www.energy.gov/sites/default/files/2023-12/National%20Transmission%20Needs%20Study%20Supplemental%20Material%20-%20Final_2023.12.1.pdf
+/
+* written by copy_files.py
+$include inputs_case%ds%val_h2ptcreg.csv
+/
+
+* Hurdle rate regions
+hurdlereg "Hurdle regions"
+/
+$include inputs_case%ds%val_hurdlereg.csv
+/
+;
+
 * Written by copy_files.py
 $include b_sets.gms
 
@@ -397,132 +531,6 @@ $include inputs_case%ds%p.csv
 $onlisting
 / ;
 
-
-*================================
-* --- Spatial / Temporal Sets ---
-*================================
-
-* written by copy_files.py
-set r "regions"
-/
-$offlisting
-$include inputs_case%ds%val_r.csv
-$onlisting
-/ ;
-
-* written by copy_files.py
-$onempty
-set cs(*) "carbon storage sites"
-/
-$offlisting
-$include inputs_case%ds%val_cs.csv
-$onlisting
-/ ;
-$offempty
-
-* created in and mapped to hierarchy in ldc_prep.py
-set ccreg "capacity credit regions"
-/
-$offlisting
-$include inputs_case%ds%ccreg.csv
-$onlisting
-/ ;
-
-set eall "emission categories used in reporting"
-/
-$offlisting
-$include inputs_case%ds%eall.csv
-$onlisting
-/ ;
-
-set e(eall) "emission categories used in model"
-/
-$offlisting
-$include inputs_case%ds%e.csv
-$onlisting
-/ ;
-
-set etype "emission types used in model (upstream and process)"
-/
-$offlisting
-$include inputs_case%ds%etype.csv
-$onlisting
-/ ;
-
-Sets
-nercr "NERC regions"
-* https://www.nerc.com/pa/RAPA/ra/Reliability%20Assessments%20DL/NERC_LTRA_2021.pdf
-/
-* written by copy_files.py
-$include inputs_case%ds%val_nercr.csv
-/
-
-transreg "Transmission Planning Regions from FERC order 1000"
-* (https://www.ferc.gov/sites/default/files/industries/electric/indus-act/trans-plan/trans-plan-map.pdf)
-/
-* written by copy_files.py
-$include inputs_case%ds%val_transreg.csv
-/,
-
-transgrp "sub-FERC-1000 regions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_transgrp.csv
-/,
-
-itlgrp "ReEDS zones for additional ITL constraints when doing a run that includes county resolution"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_itlgrp.csv
-/,
-
-cendiv "census divisions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_cendiv.csv
-/,
-
-interconnect "interconnection regions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_interconnect.csv
-/,
-
-country "country regions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_country.csv
-/,
-
-st "US, Mexico, and/or Canadian States/Provinces"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_st.csv
-/,
-
-
-* biomass supply curves defined by USDA region
-usda_region "Biomass supply curve regions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_usda_region.csv
-/,
-
-h2ptcreg "Regions which enforce the H2 production incentive regulations, for the US these are the National Transmission Needs Study regions"
-* https://www.energy.gov/sites/default/files/2023-12/National%20Transmission%20Needs%20Study%20Supplemental%20Material%20-%20Final_2023.12.1.pdf
-/
-* written by copy_files.py
-$include inputs_case%ds%val_h2ptcreg.csv
-/
-
-* Hurdle rate regions
-hurdlereg "Hurdle regions"
-/
-$include inputs_case%ds%val_hurdlereg.csv
-/,
-
-tg_i(tg,i) "technologies that belong in tech group tg"
-;
 
 hyd_add_pump('hydED_pumped-hydro') = yes ;
 hyd_add_pump('hydED_pumped-hydro-flex') = yes ;
@@ -1033,6 +1041,7 @@ set coal_noccs(i) "technologies that use coal and do not have CCS, aka unabated 
 coal_noccs(i)$[coal(i)$(not ccs(i))] = yes ; 
 
 * Create mapping of technology groups to technologies
+set tg_i(tg,i) "technologies that belong in tech group tg" ;
 tg_i('wind-ons',i)$onswind(i) = yes ;
 tg_i('wind-ofs',i)$ofswind(i) = yes ;
 tg_i('pv',i)$[(pv(i) or pvb(i))$(not distpv(i))] = yes ;
@@ -1175,7 +1184,7 @@ set dispatchtech(i)                 "technologies that are dispatchable",
 noret_upgrade_tech(i)$hyd_add_pump(i) = yes ;
 noret_upgrade_tech(i)$[(coal_ccs(i) or gas_cc_ccs(i))$upgrade(i)$Sw_CCS_NoRetire] = yes ;
 dispatchtech(i)$[not(vre(i) or hydro_nd(i) or ban(i))] = yes ;
-sccapcosttech(i)$[geo(i) or hydro(i) or psh(i) or dr_shed(i)] = yes ;
+sccapcosttech(i)$[hydro(i) or psh(i) or dr_shed(i)] = yes ;
 
 *initialize sets to "no"
 retiretech(i,v,r,t) = no ;
@@ -2118,7 +2127,7 @@ parameter exog_geohydro_allkm_rsc(i,r,rscbin,allt) "exogenous (pre-tfirst) geohy
 /
 $offlisting
 $ondelim
-$ifthen.readgeohydrorevexog %geohydrosupplycurve% == 'reV'
+$ifthene.readgeohydrorevexog ((%GSw_Geothermal%<>0)and(sameas(%geohydrosupplycurve%,reV)))
 $include inputs_case%ds%exog_geohydro_allkm_rsc.csv
 $endif.readgeohydrorevexog
 $offdelim
@@ -2683,6 +2692,9 @@ valcap(i,v,r,t)$[(not sum{tt$[tmodel_new(tt)], ivt(i,v,tt) })$newv(v)] = no ;
 * remove considerations for upgrades if the upgrade-from tech is invalid
 valcap(i,v,r,t)$[upgrade(i)$(not sum{ii$upgrade_from(i,ii),valcap(ii,v,r,t) })] = no ;
 
+* Remove non-offshore resources from offshore zones
+valcap(i,v,r,t)$[offshore(r)$(not ofswind(i))] = no ;
+
 * Add aggregations of valcap
 valcap_irt(i,r,t) = sum{v, valcap(i,v,r,t) } ;
 valcap_iv(i,v)$sum{(r,t)$tmodel_new(t), valcap(i,v,r,t) } = yes ;
@@ -2852,6 +2864,7 @@ parameter wat_supply_init(wst,r) "-- million gallons per year -- water supply al
 
 *WatAccessAvail - water access available (Mgal/year)
 *WatAccessCost - cost of water access (2004$/Mgal)
+$onempty
 parameter wat_supply_new(wst,*,r)   "-- million gallons per year , $ per million gallons per year -- water supply curve for post-2010 capacity with *=cap,cost"
 /
 $offlisting
@@ -2860,6 +2873,7 @@ $include inputs_case%ds%wat_access_cap_cost.csv
 $offdelim
 $onlisting
 / ;
+$offempty
 
 parameter m_watsc_dat(wst,*,r,t)   "-- million gallons per year, $ per million gallons per year -- water supply curve data with *=cap,cost" ;
 
@@ -3437,23 +3451,12 @@ $onlisting
 / ;
 
 set routes(r,rr,trtype,t)     "final conditional on transmission feasibility"
-    routes_inv(r,rr,trtype,t) "routes where new transmission investment is allowed (only defined for r<rr)"
+    routes_inv(r,rr,trtype,t) "routes where new transmission investment is allowed"
     routes_prm(r,rr)          "routes where PRM trading is allowed"
     opres_routes(r,rr,t)      "final conditional on operating reserve flow feasibility"
 ;
 
 alias(trtype,intype,outtype) ;
-
-* trnew maps from initial vintages to new investment vintages, and is used below in the
-* definition of routes_inv. (By default we allow investments in new transmission vintages
-* along corridors with initial transmission vintages.)
-set trnew(intype,outtype) "Initial transmission vintages (first index) and corresponding investment vintages (second index)" ;
-* We assume that new investment along corridors currently served by B2B interties
-* (which are [AC line]---[two-sided converter]---[AC line])
-* is added as B2B. If you'd rather assume that interconnect-crossing capacity is added
-* as LCC (which is [converter]---[DC line]---[converter]), change the line below to:
-* trnew('B2B','LCC') = yes ;
-trnew('B2B','B2B') = yes ;
 
 * Specify the transmission types that are limited by Sw_TransCapMax and Sw_TransCapMaxTotal
 set trtypemax(trtype) "trtypes to limit" ;
@@ -3509,22 +3512,18 @@ invtran_exog(r,rr,trtype,t)$trancap_fut(r,rr,"certain",trtype,t) = trancap_fut(r
 
 *transmission routes are enabled if:
 * (1) there is transmission capacity between the two regions
-routes(r,rr,trtype,t)$(trancap_init_energy(r,rr,trtype) or trancap_init_energy(rr,r,trtype)) = yes ;
-routes(r,rr,trtype,t)$(trancap_init_prm(r,rr,trtype) or trancap_init_prm(rr,r,trtype)) = yes ;
-routes(r,rr,trtype,t)$(invtran_exog(r,rr,trtype,t) or invtran_exog(rr,r,trtype,t)) = yes ;
+routes(r,rr,trtype,t)$[
+    trancap_init_energy(r,rr,trtype) or trancap_init_energy(rr,r,trtype)
+    or trancap_init_prm(r,rr,trtype) or trancap_init_prm(rr,r,trtype)
+    or invtran_exog(r,rr,trtype,t) or invtran_exog(rr,r,trtype,t)
+] = yes ;
 * (2) there is future capacity available between the two regions
-routes(r,rr,outtype,t)$sum{intype$trnew(intype, outtype),
-                           (trancap_init_energy(r,rr,intype) or trancap_init_energy(rr,r,intype)) } = yes ;
-routes(r,rr,outtype,t)$sum{intype$trnew(intype, outtype),
-                           (trancap_init_prm(r,rr,intype) or trancap_init_prm(rr,r,intype)) } = yes ;
-routes(r,rr,outtype,t)$sum{intype$trnew(intype, outtype),
-                           (invtran_exog(r,rr,intype,t) or invtran_exog(rr,r,intype,t)) } = yes ;
 routes(r,rr,trtype,t)$[sum{(tt,trancap_fut_cat)$(yeart(tt)<=yeart(t)),
                            trancap_fut(r,rr,trancap_fut_cat,trtype,tt) }] = yes ;
-routes(r,rr,outtype,t)$[sum{(tt,trancap_fut_cat,intype)$[(yeart(tt)<=yeart(t))$trnew(intype, outtype)],
-                            trancap_fut(r,rr,trancap_fut_cat,intype,tt) }] = yes ;
 * (3) there exists a route (r,rr) that is in the opposite direction as (rr,r)
 routes(rr,r,trtype,t)$(routes(r,rr,trtype,t)) = yes ;
+* (4) the year is modeled
+routes(r,rr,trtype,t)$(not tmodel_new(t)) = no ;
 
 * disable AC routes that cross interconnect boundaries (only happens if aggregating regions across interconnects)
 routes(r,rr,trtype,t)
@@ -3533,18 +3532,22 @@ routes(r,rr,trtype,t)
     $[(not sum{interconnect$[r_interconnect(r,interconnect)$r_interconnect(rr,interconnect)], 1 })]
     ] = no ;
 
+* Disable links between offshore zones if specified
+routes(r,rr,trtype,t)$[(not Sw_OffshoreBackbone)$offshore(r)$offshore(rr)] = no ;
+
+* If any routes use VSC, activate the VSC constraints and variables
+scalar Sw_VSC "Activate VSC constraints and variables" ;
+Sw_VSC = sum{routes(r,rr,trtype,t)$sameas(trtype,'VSC'), 1} ;
+
 * initialize all investment routes to no
 routes_inv(r,rr,trtype,t) = no ;
 * allow new investment along existing routes
-routes_inv(r,rr,trtype,t)$[sameas(trtype,'AC')$routes(r,rr,'AC',t)] = yes ;
-routes_inv(r,rr,trtype,t)$[sameas(trtype,'LCC')$routes(r,rr,'LCC',t)] = yes ;
-routes_inv(r,rr,trtype,t)$[trnew('B2B',trtype)$routes(r,rr,'B2B',t)] = yes ;
-
-*Do not allow transmission expansion on most corridors until firstyear_trans_nearterm
+routes_inv(r,rr,trtype,t)$[notvsc(trtype)$routes(r,rr,trtype,t)] = yes ;
+* Do not allow transmission expansion on most interfaces until firstyear_trans_nearterm
 routes_inv(r,rr,trtype,t)$[yeart(t)<firstyear_trans_nearterm] = no ;
-*If not allowing near-term transmission, turn those off until firstyear_trans_longterm
+* If not allowing near-term transmission, turn those off until firstyear_trans_longterm
 routes_inv(r,rr,trtype,t)$[(not Sw_TransInvNearTerm)$(yeart(t)<firstyear_trans_longterm)] = no ;
-*Do allow "possible" corridors to be expanded
+* Do allow "possible" interfaces to be expanded
 routes_inv(r,rr,trtype,t)
     $[sum{tt$[(yeart(tt)<=yeart(t))],
           trancap_fut(r,rr,"possible",trtype,tt) + trancap_fut(rr,r,"possible",trtype,tt) }
@@ -3563,9 +3566,6 @@ $else.transrestrict
     = no ;
 $endif.transrestrict
 
-* Only keep routes with r < rr for investment
-routes_inv(r,rr,trtype,t)$(ord(rr)<ord(r)) = no ;
-
 * Restrict PRM trading to the level indicated by Sw_PRMTRADE_level
 routes_prm(r,rr)$sum{(trtype,t), routes(r,rr,trtype,t) } = yes ;
 $ifthen.prmtradelevel %GSw_PRMTRADE_level% == 'r'
@@ -3578,6 +3578,10 @@ $else.prmtradelevel
         $routes_prm(r,rr)]
     = no ;
 $endif.prmtradelevel
+
+* Create list of expandable AC interfaces (r < rr) for error-checking
+set interfaces_inv(r,rr) "expandable AC transmission interfaces, which are defined only for r < rr" ;
+interfaces_inv(r,rr)$[sum{t, routes_inv(r,rr,"AC",t)}$(ord(r) < ord(rr))] = yes ;
 
 * operating reserve flows only allowed over AC lines
 opres_routes(r,rr,t)$sum{trtype$aclike(trtype), routes(r,rr,trtype,t) } = yes ;
@@ -3657,17 +3661,47 @@ routes_itlgrp(itlgrp,itlgrpp,r,rr)$[
 * Transmission line capex cost (generated from reV tables)
 * Written by transmission.py
 $onempty
-parameter transmission_line_capcost(r,rr,trtype) "--$/MW-- cost of transmission line capacity"
+parameter tsc_binwidth(r,rr,tscbin) "--$-- investment bin widths for transmission interfaces"
 /
 $offlisting
 $ondelim
-$include inputs_case%ds%transmission_line_capcost.csv
+$include inputs_case%ds%tsc_binwidth.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter tsc_forward(r,rr,tscbin) "--$/MW-- transmission upgrade cost for forward direction"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%tsc_forward.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter tsc_reverse(r,rr,tscbin) "--$/MW-- transmission upgrade cost for reverse direction"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%tsc_reverse.csv
+$offdelim
+$onlisting
+/ ;
+
+parameter transmission_cost_nonac(r,rr,trtype) "--$/MW-- expansion cost for DC interfaces (only lines; converters handled separately)"
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%transmission_cost_nonac.csv
 $offdelim
 $onlisting
 / ;
 
 * Scale transmission line costs by Sw_TransCostMult (for sensitivity analysis)
-transmission_line_capcost(r,rr,trtype) = transmission_line_capcost(r,rr,trtype) * Sw_TransCostMult ;
+tsc_binwidth(r,rr,tscbin) = tsc_binwidth(r,rr,tscbin) * Sw_TransCostMult ;
+tsc_forward(r,rr,tscbin) = tsc_forward(r,rr,tscbin) * Sw_TransCostMult ;
+tsc_reverse(r,rr,tscbin) = tsc_reverse(r,rr,tscbin) * Sw_TransCostMult ;
+transmission_cost_nonac(r,rr,trtype) = transmission_cost_nonac(r,rr,trtype) * Sw_TransCostMult ;
 
 * Transmission line FOM cost
 * Written by transmission.py
@@ -3771,7 +3805,7 @@ cost_hurdle(r,rr,t)$[sum{trtype, routes(r,rr,trtype,t) }] = max{cost_hurdle_regi
 
 * --- transmission distance ---
 
-* The distance for a transmission corridor is calculated in reV using the same "least-cost-path"
+* The distance for a transmission interface is calculated in reV using the same "least-cost-path"
 * algorithm and cost tables as for wind and solar spur lines.
 * Distances are more representative of new greenfield lines than existing lines.
 * Written by transmission.py
@@ -3780,7 +3814,7 @@ parameter distance(r,rr,trtype) "--miles-- distance between BAs by line type"
 /
 $offlisting
 $ondelim
-$include inputs_case%ds%transmission_distance.csv
+$include inputs_case%ds%transmission_miles.csv
 $offdelim
 $onlisting
 / ;
@@ -3800,21 +3834,15 @@ $offempty
 
 
 * --- VSC HVDC macrogrid ---
-set
-val_converter(r,t) "BAs where VSC converter investment is allowed"
-;
+set val_converter(r,t) "BAs where VSC converter investment is allowed" ;
 val_converter(r,t) = no ;
 
-$ifthen.vsc %GSw_VSC% == 1
-* VSC converters are allowed in BAs on either end of a valid VSC corridor
+* VSC converters are allowed in BAs on either side of a valid VSC interface
 val_converter(r,t)$[sum{rr, routes_inv(r,rr,"VSC",t) }] = yes ;
 val_converter(r,t)$[sum{rr, routes_inv(rr,r,"VSC",t) }] = yes ;
 
 * Use LCC DC per-MW costs for VSC (converters are handled separately)
-transmission_line_capcost(r,rr,"VSC")$sum{t, routes(r,rr,"VSC",t) } = transmission_line_capcost(r,rr,"LCC") ;
 transmission_line_fom(r,rr,"VSC")$sum{t, routes(r,rr,"VSC",t) } = transmission_line_fom(r,rr,"LCC") ;
-
-$endif.vsc
 
 
 * --- Transmission switches ---
@@ -3946,7 +3974,7 @@ ccseason_cap_frac_delta(i,v,r,ccseason,t)$[conv(i)$sameas(ccseason,'hot')] =
 *============================================
 
 $onempty
-set routes_adjacent(r,rr) "all pairs of adjacent BAs"
+set routes_adjacent(r,rr) "all pairs of adjacent land-based BAs"
 /
 $offlisting
 $ondelim
@@ -3955,6 +3983,8 @@ $offdelim
 $onlisting
 / ;
 $offempty
+* Remove offshore zones
+routes_adjacent(r,rr)$(offshore(r) or offshore(rr)) = no ;
 
 set h2_routes(r,rr)       "set of feasible pipeline corridors for hydrogen"
     h2_routes_inv(r,rr)   "set of feasible investment pipeline corridors for hydrogen"
@@ -4199,7 +4229,7 @@ $onlisting
 / ;
 
 $onempty
-parameter pipeline_cost_mult(r,rr) "--fraction-- route-dependent cost multiplier for pipelines"
+parameter pipeline_cost_mult(r,rr) "--fraction-- cost multiplier for H2 pipelines (will be added to 1)"
 /
 $offlisting
 $ondelim
@@ -4214,13 +4244,13 @@ $offempty
 * note that pipeline distance is between BA centroids
 cost_h2_transport_cap(r,rr,allt)$h2_routes_inv(r,rr) =
         h2_cost_inputs("h2_pipeline",allt,"cost_cap") * h2_cap_cost_mult_pipeline(allt)
-        * pipeline_distance(r,rr) * pipeline_cost_mult(r,rr)
+        * pipeline_distance(r,rr) * (1 + pipeline_cost_mult(r,rr))
         + h2_cost_inputs("h2_compressor",allt,"cost_cap") * h2_cap_cost_mult_compressor(allt)
 ;
 
 cost_h2_transport_fom(r,rr,allt)$h2_routes_inv(r,rr) =
         h2_cost_inputs("h2_pipeline",allt,"fom")
-        * pipeline_distance(r,rr) * pipeline_cost_mult(r,rr)
+        * pipeline_distance(r,rr) * (1 + pipeline_cost_mult(r,rr))
         + h2_cost_inputs("h2_compressor",allt,"fom")
 ;
 
@@ -5948,12 +5978,16 @@ $offdelim
 $onlisting
 / ;
 
+$onempty
 scalar psh_sc_duration "--hours-- PSH storage duration corresponding to selected supply curve"
 /
 $offlisting
+$ifthene.readpshscduration %GSw_Storage%<>0
 $include inputs_case%ds%psh_sc_duration.csv
+$endif.readpshscduration
 $onlisting
 / ;
+$offempty
 
 * Note that this PSH duration overwrites what is contained in storage_duration.csv
 storage_duration(i)$psh(i) = psh_sc_duration ;

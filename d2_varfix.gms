@@ -2,6 +2,7 @@
 * Non-rounded parameters can sometimes cause numerical issues when summing over tfix in model equations  
 if(Sw_RemoveSmallNumbers = 1,
     CAP.l(i,v,r,tfix)$[abs(CAP.l(i,v,r,tfix)) < rhs_tolerance] = 0 ;
+    CAP_ENERGY.l(i,v,r,tfix)$[abs(CAP_ENERGY.l(i,v,r,tfix)) < rhs_tolerance] = 0 ;
     UPGRADES.l(i,v,r,tfix)$[abs(UPGRADES.l(i,v,r,tfix)) < rhs_tolerance] = 0 ;
     CAP_ABOVE_LIM.l(tg,r,tfix)$[abs(CAP_ABOVE_LIM.l(tg,r,tfix)) < rhs_tolerance] = 0 ;
     INV.l(i,v,r,tfix)$[abs(INV.l(i,v,r,tfix)) < rhs_tolerance] = 0 ;
@@ -89,6 +90,7 @@ if(Sw_RemoveSmallNumbers = 1,
     CAPTRAN_PRM.fx(r,rr,trtype,tfix)$[routes(r,rr,trtype,tfix)$routes_prm(r,rr)] = CAPTRAN_PRM.l(r,rr,trtype,tfix) ;
     CAPTRAN_GRP.fx(transgrp,transgrpp,tfix)$trancap_init_transgroup(transgrp,transgrpp,"AC") = CAPTRAN_GRP.l(transgrp,transgrpp,tfix) ;
     INVTRAN.fx(r,rr,trtype,tfix)$routes_inv(r,rr,trtype,tfix) = INVTRAN.l(r,rr,trtype,tfix) ;
+    INVTRAN_AC.fx(r,rr,tscbin,tfix)$routes_inv(r,rr,"AC",tfix) = INVTRAN_AC.l(r,rr,tscbin,tfix) ;
     INV_CONVERTER.fx(r,tfix)$Sw_VSC = INV_CONVERTER.l(r,tfix) ;
     CAP_CONVERTER.fx(r,tfix)$Sw_VSC = CAP_CONVERTER.l(r,tfix) ;
     CONVERSION.fx(r,h,intype,outtype,tfix)$Sw_VSC = CONVERSION.l(r,h,intype,outtype,tfix) ;
@@ -96,6 +98,7 @@ if(Sw_RemoveSmallNumbers = 1,
     CAP_SPUR.fx(x,tfix)$[Sw_SpurScen$xfeas(x)] = CAP_SPUR.l(x,tfix) ;
     INV_SPUR.fx(x,tfix)$[Sw_SpurScen$xfeas(x)] = INV_SPUR.l(x,tfix) ;
     INV_POI.fx(r,tfix)$Sw_TransIntraCost = INV_POI.l(r,tfix) ;
+    TRAN_CAPEX_BINS.fx(r,rr,tscbin,tfix)$[routes_inv(r,rr,"AC",tfix)$tsc_binwidth(r,rr,tscbin)] = TRAN_CAPEX_BINS.l(r,rr,tscbin,tfix) ;
 
 * water climate variables
     WATCAP.fx(i,v,r,tfix)$[valcap(i,v,r,tfix)$Sw_WaterMain$Sw_WaterCapacity] = WATCAP.l(i,v,r,tfix) ;
