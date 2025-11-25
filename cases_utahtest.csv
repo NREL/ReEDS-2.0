@@ -2,6 +2,7 @@ natriumstorutah,medstorutah,bigstorutah,nostorutah,natriumstordirtcheap,medstord
 timetype,seq,seq,seq,seq,seq,seq,seq,seq
 endyear,2050,2050,2050,2050,2050,2050,2050,2050
 GSw_HourlyChunkLengthRep,1,1,1,1,1,1,1,1
+GSw_HourlyClusterAlgorithm,user,user,user,user,user,user,user,user
 pcm,1,1,1,1,1,1,1,1
 GSw_Region,st/UT,st/UT,st/UT,st/UT,st/UT,st/UT,st/UT,st/UT
 GSw_BatteryMandate,0,0,0,0,0,0,0,0

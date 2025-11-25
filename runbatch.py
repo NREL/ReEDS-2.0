@@ -354,7 +354,7 @@ def check_compatibility(sw):
     #         raise ValueError("Fix GSw_NuclearStor_BCR")
 
     for nuclearstor_type in sw['GSw_NuclearStor_Types'].split('_'):
-        if not (1 <= int(nuclearstor_type) <= 3):
+        if not (1 <= int(nuclearstor_type) <= 4):
             raise ValueError("Fix GSw_NuclearStor_Types")
 
     scalars = reeds.io.get_scalars()
@@ -1827,6 +1827,9 @@ def launch_single_case_run(
     ### Inferred inputs
     batch_case = f'{BatchName}_{case}'
     casedir = os.path.join(reeds_path,'runs',batch_case)
+    
+    from ToApps import to_slack
+    to_slack(f"Launching single case run for case {batch_case}...\n")
 
     write_batch_script(
         options,

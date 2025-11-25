@@ -2851,7 +2851,7 @@ eq_batterymandate(st,t)
 
 * ---------------------------------------------------------------------------
 
-eq_national_gen(t)$[tmodel(t)$national_gen_frac(t)$Sw_GenMandate]..
+eq_national_gen(t)$[tmodel(t)$national_gen_frac(t)$Sw_GenMandate$(yeart(t)>=Sw_StartMarkets)]..
 
 *generation from renewables (already post-curtailment)
     sum{(i,v,r,h)$[nat_gen_tech_frac(i)$valgen(i,v,r,t)$h_rep(h)],
