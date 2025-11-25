@@ -25,7 +25,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Model Documentation" href="model_documentation.html" />
+    <link rel="next" title="Developer Resources" href="developer_best_practices.html" />
     <link rel="prev" title="Welcome to ReEDS’s documentation!" href="index.html" /> 
 </head>
 
@@ -72,11 +72,15 @@
 <li class="toctree-l3"><a class="reference internal" href="#understanding-the-cases-csv-file">Understanding the cases.csv file</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#calling-runbatch-py-to-run-reeds">Calling runbatch.py to run ReEDS</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#prompts-for-user-input-during-runbatch-py">Prompts for user input during runbatch.py</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#checking-the-outputs">Checking the outputs</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#special-case-setup-requirements">Special Case Setup Requirements</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#nrel-specific-setup">NREL Specific Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#additional-resources">Additional Resources</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="developer_best_practices.html">Developer Resources</a></li>
 <li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="user_guide.html">User guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
@@ -418,11 +422,48 @@
 <li><p><strong>WARNING! Be mindful about the amount of CPU and RAM usage needed for each case</strong></p></li>
 </ul>
 </section>
+<section id="checking-the-outputs">
+<h3>Checking the outputs<a class="headerlink" href="#checking-the-outputs" title="Link to this heading"></a></h3>
+<p>To check if a run was successful, you can look in the following two places:</p>
+<ul class="simple">
+<li><p>The ‘runs/[batchname_scenario]/outputs’ folder should have csv files, if it doesn’t, something went wrong.</p></li>
+<li><p>There should be a ‘reeds-report’ and reeds-report-reduced’ folder in the outputs folder for a specific run.</p></li>
+</ul>
+</section>
 <section id="special-case-setup-requirements">
 <h3>Special Case Setup Requirements<a class="headerlink" href="#special-case-setup-requirements" title="Link to this heading"></a></h3>
 <p>For non-NREL users, some additional data is required to run the ReEDS model at the ‘county’ spatial resolution. This is currently considered a special case and some data was required to be kept outside the ReEDS repository because the data is simply too large. The hourly renewable capacity factor data is now available to all at : <a class="reference external" href="https://data.openei.org/submissions/5986">https://data.openei.org/submissions/5986</a>.</p>
 <p>If you would like to run the model at county resolution, you are requested to download the files available from the link provided, unzip each folder, and place the files obtained into inputs/variability/multi-year in your locally cloned ReEDS repository. The input_processing scripts have also been updated to check for these files for any county-level runs. The ‘cases_spatialflex.csv’ file provides examples of specific switch settings to run ReEDS at county-level.</p>
 </section>
+</section>
+<section id="nrel-specific-setup">
+<h2>NREL Specific Setup<a class="headerlink" href="#nrel-specific-setup" title="Link to this heading"></a></h2>
+<p>For more information on NREL specific setup, refer to the <a class="reference external" href="https://nrel.sharepoint.com/:w:/s/ReEDS/Efathg8KjjtCkxW44vZpWQQBA2KsU3RadSsVauBMskEfUA?e=YaSIqc">Internal ReEDS Documentation</a>. You can find information there on Yampa and HPC setup, as well as the onboarding guide.</p>
+</section>
+<section id="additional-resources">
+<h2>Additional Resources<a class="headerlink" href="#additional-resources" title="Link to this heading"></a></h2>
+<p>NREL has a YouTube channel that contains tutorial videos for ReEDS. The following are recommended videos for getting started with ReEDS:</p>
+<ul class="simple">
+<li><p>Overview of ReEDS</p>
+<ul>
+<li><p><a class="reference external" href="https://www.youtube.com/watch?v=6SNxMWoBVr0&amp;amp;list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&amp;amp;index=11">Introduction to the ReEDS Model: 2023 Version</a></p></li>
+<li><p><a class="reference external" href="https://www.youtube.com/watch?v=qLHdWh3uoHk">Powered by ReEDS</a></p></li>
+</ul>
+</li>
+<li><p>Getting started with ReEDS: <a class="reference external" href="https://www.youtube.com/watch?v=tDLwqH6YZ_E&amp;amp;list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&amp;amp;index=12">2023 ReEDS Training for User Group Meeting</a></p></li>
+<li><p>How to change inputs: <a class="reference external" href="https://www.youtube.com/watch?v=QxwEs0ZC5ns&amp;amp;list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&amp;amp;index=9">Training on Changing and Adding Inputs</a></p></li>
+<li><p>Debugging of ReEDS: <a class="reference external" href="https://www.youtube.com/watch?v=4I0V5F8fzDU&amp;amp;list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC&amp;amp;index=8">Training on Debugging ReEDS</a></p></li>
+</ul>
+<p>If you’d like practice with running a specific ReEDS scenario, you can walk through the <a class="reference internal" href="reeds_training_homework.html"><span class="doc std std-doc">ReEDS Training Homework</span></a>.</p>
+<p>Additional resources and learning:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.nrel.gov/analysis/reeds/">General information on ReEDS</a></p></li>
+<li><p><a class="reference external" href="https://nrel.sharepoint.com/:w:/s/ReEDS/ES6GQTyzXo1DnnCPlnAhg5QB8cPY--_01HkQkiOnrPskxw?e=flEAtY">ReEDS POC list</a></p></li>
+<li><p><a class="reference external" href="https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/main/README.md">GitHub README</a></p></li>
+<li><p><a class="reference external" href="https://www.youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC">YouTube tutorials</a></p></li>
+<li><p><a class="reference external" href="https://www.gams.com/latest/docs/UG_MAIN.html#UG_Language_Environment">GAMS language information</a></p></li>
+<li><p><a class="reference external" href="https://nrel-my.sharepoint.com/:p:/r/personal/ssundar_nrel_gov/Documents/Microsoft%20Teams%20Chat%20Files/02062024_what_the_shell.pptx?d=wa7aea3514f814d51924bf2dfa737d414&amp;amp;csf=1&amp;amp;web=1&amp;amp;e=qr1YuP">Tips and tricks for the bash shell</a></p></li>
+</ul>
 </section>
 </section>
 
@@ -431,14 +472,14 @@
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="index.html" class="btn btn-neutral float-left" title="Welcome to ReEDS’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="model_documentation.html" class="btn btn-neutral float-right" title="Model Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="developer_best_practices.html" class="btn btn-neutral float-right" title="Developer Resources" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
     <p>&#169; Copyright 2024, NREL.
-      <span class="lastupdated">Last updated on October 13, 2025.
+      <span class="lastupdated">Last updated on November 25, 2025.
       </span></p>
   </div>
 

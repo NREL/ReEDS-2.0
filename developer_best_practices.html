@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Developer Resources &mdash; ReEDS  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+      <link rel="stylesheet" type="text/css" href="_static/customtheme.css?v=299ffeb9" />
+
+  
+    <link rel="shortcut icon" href="_static/reeds-icon.png"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script src="_static/design-tabs.js?v=f930bc37"></script>
+        <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Model Documentation" href="model_documentation.html" />
+    <link rel="prev" title="Getting Started" href="setup.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/reeds-logo-white.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="setup.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Developer Resources</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#coding-standards-and-conventions">Coding Standards and Conventions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#naming-rounding-and-coding-conventions">Naming, Rounding, and Coding Conventions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#input-conventions-and-data-handling">Input Conventions and Data Handling</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#version-control-and-testing">Version Control and Testing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#reeds-versioning-releases">ReEDS Versioning &amp; Releases</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#testing-guidelines">Testing Guidelines</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#documentation-guidelines">Documentation Guidelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#how-to-use-sources-documentation">How to Use Sources Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#updating-the-reeds-documentation">Updating the ReEDS Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#viewing-the-documentation-locally">Viewing the Documentation Locally</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#adding-citations-in-the-documentation">Adding Citations in the Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#style-guide">Style guide</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#pull-request-best-practices">Pull Request Best Practices</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#best-practices-for-creating-prs">Best Practices for Creating PRs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#resolving-merge-conflicts">Resolving Merge Conflicts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tips-and-best-practices-for-pr-reviews">Tips and Best Practices for PR Reviews</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#reeds-development-tips">ReEDS Development Tips</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#debugging-python-code">Debugging Python Code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#debugging-gams-code">Debugging GAMS Code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#additional-development-tips">Additional Development Tips</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model_documentation.html">Model Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">User guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sources.html">Sources and Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="postprocessing_tools.html">Analysis tools and helper scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">ReEDS publications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ReEDS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Developer Resources</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/developer_best_practices.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="developer-resources">
+<h1>Developer Resources<a class="headerlink" href="#developer-resources" title="Link to this heading"></a></h1>
+<section id="coding-standards-and-conventions">
+<h2>Coding Standards and Conventions<a class="headerlink" href="#coding-standards-and-conventions" title="Link to this heading"></a></h2>
+<p>The following are naming, rounding, and coding conventions that should be followed when making changes to ReEDS. All new code contributed to the repo should follow these conventions.</p>
+<p><strong>Note:</strong> Because these conventions were not written until after the model development began, you will notice that some of these conventions are violated in the current code base. The conventions are far from comprehensive. Our hope is that this light approach can help bring consistency to the model code without being burdensome to those writing the code.</p>
+<p>In an effort to improve code quality, using the Ruff python linter is recommended. To get started with Ruff, see the guide on <a class="reference external" href="https://docs.astral.sh/ruff/installation/">Installing Ruff</a>. Once installed, you can check for errors using the following command from the base ReEDS-2.0 directory: <code class="docutils literal notranslate"><span class="pre">ruff</span> <span class="pre">check</span></code>. If you need more information on a specific error, see the <a class="reference external" href="https://docs.astral.sh/ruff/rules/">Ruff Rules</a>.</p>
+<section id="naming-rounding-and-coding-conventions">
+<h3>Naming, Rounding, and Coding Conventions<a class="headerlink" href="#naming-rounding-and-coding-conventions" title="Link to this heading"></a></h3>
+<section id="naming-conventions">
+<h4>Naming Conventions<a class="headerlink" href="#naming-conventions" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>File names (GAMS files, input files, output files)</p>
+<ul>
+<li><p>Folders are lower case</p></li>
+<li><p>Files are lower case with underscores separating words (atb_mid_wind_2018.csv)</p></li>
+<li><p>GAMS files are preceded by a letter and underscore, with each letter representing a file category and letters in alpha-order of file execution whenever possible (a_write_data.gms). When there are multiple GAMS files in the same category, they should be numbered to show the order in which they are called (a1_write_data, a2_inputs, a3_inputs_demand)</p></li>
+<li><p>Output files start with a noun indicator for the general output category to make it easier to find (curt_marg rather than marg_curt, gen_ann rather than ann_gen)</p></li>
+</ul>
+</li>
+<li><p>Parameters</p>
+<ul>
+<li><p>Use lower case with underscores separating words</p></li>
+<li><p>Like the output files, the first word of parameters should be a noun indicator of the parameter type (curt_marg rather than marg_curt)</p></li>
+<li><p>Cost parameters should generally start with “cost” (e.g., cost_fom, cost_cap)</p></li>
+</ul>
+</li>
+<li><p>Variables</p>
+<ul>
+<li><p>Use capital letters (example: INV)</p></li>
+<li><p>Where possible, use the same naming for related variables (e.g., INV; INV_TRANS)</p></li>
+<li><p>The first indicator in a variable name should be a noun or noun abbreviation for the variable type or category</p></li>
+</ul>
+</li>
+<li><p>equations (model constraints)</p>
+<ul>
+<li><p>Begin with the prefix “eq_”</p></li>
+<li><p>Use all lower-case letters with underscores separating words (example: eq_reserve_margin)</p></li>
+</ul>
+</li>
+<li><p>switches</p>
+<ul>
+<li><p>Switches used in GAMS begin with the prefix “GSw_” in cases.csv; within GAMS, “GSw_”-labeled switches with numeric values are turned into scalars beginning with “Sw_”</p></li>
+<li><p>Use descriptive names with upper camel case (e.g., Sw_ReserveMargin)</p></li>
+<li><p>For on/off switches, “OFF” = 0 and “ON” =1</p></li>
+<li><p>Do not use “|” or “~” in switch values</p></li>
+</ul>
+</li>
+<li><p>indices/sets</p>
+<ul>
+<li><p>Use lower case</p></li>
+<li><p>Use short rather than descriptive (e.g., “i” instead of “tech”) – preference for one or two letter names.</p></li>
+</ul>
+</li>
+<li><p>aliases</p>
+<ul>
+<li><p>Use the same alpha character as the original set followed by a number (example: alias(r,r2))</p></li>
+</ul>
+</li>
+<li><p>subsets</p>
+<ul>
+<li><p>Use lowercase</p></li>
+<li><p>Use short but descriptive text</p></li>
+<li><p>example: conv(i) is the subset of technologies that are “conventional”</p></li>
+</ul>
+</li>
+<li><p>crosswalk sets</p>
+<ul>
+<li><p>Use the set names and separated by an underscore</p></li>
+<li><p>example: r_st(r,st) is the crosswalk between region “r” and state “st”</p></li>
+</ul>
+</li>
+<li><p>Choosing names for parameters and variables</p>
+<ul>
+<li><p>Names should be descriptive (e.g., “curt_marg” rather than “cm”)</p></li>
+<li><p>Shorter names are generally preferred (e.g., “curt_marg” rather than “curtailment_marginal”)</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="rounding-conventions">
+<h4>Rounding Conventions<a class="headerlink" href="#rounding-conventions" title="Link to this heading"></a></h4>
+<p>As a general rule, costs or prices should be rounded to two decimal places. All other parameters should be rounded to no more than 3 decimal places.</p>
+<p><strong>Note:</strong> Some exceptions to this might exist due to number scaling (e.g., emission rates)</p>
+</section>
+<section id="coding-conventions">
+<h4>Coding Conventions<a class="headerlink" href="#coding-conventions" title="Link to this heading"></a></h4>
+<ul>
+<li><p>Generally, each line in GAMS should be no longer than a standard page width (255 characters)</p></li>
+<li><p>Declarations</p>
+<ul class="simple">
+<li><p>Blocks of declarations are preferred to individual line declarations</p></li>
+<li><p>Comments are required for each declaration</p>
+<ul>
+<li><p>Units should always be defined first (even if they are unitless) enclosed in “–”</p></li>
+<li><p>Example: cap_out(i,r,t)         “–MW– capacity by region”</p></li>
+</ul>
+</li>
+<li><p>Comments need not be comprehensive</p>
+<ul>
+<li><p>CAP(i,v,r,t) “–MW– capacity by technology i of vintage v in region r in year t”</p></li>
+<li><p>CAP(i,v,r,t) “–MW– capacity by technology”</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Ordering of indices</p>
+<ul class="simple">
+<li><p>The following indices should always appear first in the following order: (1)ortype (2)i (3)v (4)r (5)h</p></li>
+<li><p>The t (year) index should always be last</p></li>
+<li><p>Other sets should generally be ordered alphabetically, respecting the two conventions above</p></li>
+</ul>
+</li>
+<li><p>Qualifiers</p>
+<ul class="simple">
+<li><p>Enclosed with brackets “[]”</p></li>
+<li><p>No space between qualifiers</p></li>
+<li><p>example: <span class="math notranslate nohighlight">\([qual1\)</span>qual2]</p></li>
+<li><p>Parenthesis should be used to make order of operations explicit</p>
+<ul>
+<li><p>Incorrect: <span class="math notranslate nohighlight">\([not qual1 \)</span>not qual2]</p></li>
+<li><p>Correct: <span class="math notranslate nohighlight">\([(not qual1)\)</span>(not qual2)]</p></li>
+</ul>
+</li>
+<li><p>Operators “and”, “not”, and “or” should be lower case</p></li>
+</ul>
+</li>
+<li><p>Equations (this applies to pre- and post-processing; model constraints)</p>
+<ul>
+<li><p>Each term should begin with a plus (+) or minus (-) sign, even the first term</p></li>
+<li><p>Summations</p>
+<ul class="simple">
+<li><p>Summation arguments should be bookended with braces “{}” sum{…}</p></li>
+<li><p>The summation will generally be separated into three parts that will appear on three different lines, with the closing } lining up with the opening {</p></li>
+</ul>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>[+/-] sum{ ([indices]) $ [qualifiers] ,
+                  [parameter] * [variable]
+                }
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>+ sum{(i,c,r,t)$[Qual1$Qual2 … $Qual3], 
+      cv_avg(i,r,t) * CAP(i,c,r,t)
+    }
+</pre></div>
+</div>
+</li>
+<li><p>For equations, sums should generally be split with terms on multiple lines. In some cases it will be more readable to leave the sum on one line (e.g., a short sum inside of a long sum).</p></li>
+<li><p>Each term of an equation should be separated by a new line; white space should be inserted between terms</p></li>
+<li><p>When reasonable, only one parameter should be multiplied by one variable</p>
+<ul class="simple">
+<li><p>for example, “heatrate [MBtu/MWh] <em>emissions rate of fuel [tons CO2/MBtu]</em> GENERATION [MWh]” should be “emissions rate of plant [tons CO2/MWh] * GENERATION [MWh]”</p></li>
+<li><p>this will help us limit numerical issues that result from the multiplication of two small numbers</p></li>
+</ul>
+</li>
+<li><p>When multiplying parameters and variables, parameters should appear on the left and variables on the right</p></li>
+<li><p>Keep one space on either end of a mathematical operator (<em>, /, +, -). example: “curt_marg * GEN” rather than “curt_marg</em>GEN”</p></li>
+</ul>
+</li>
+<li><p>Do not use recursive calculations; new parameters should be created</p>
+<ul class="simple">
+<li><p>Example: “load = load <em>1.053” should be written as “busbarload = enduseload</em> 1.053”</p></li>
+<li><p>This will create consistency between the units specified in the parameter declaration and the use of the parameter</p></li>
+</ul>
+</li>
+<li><p>Comments</p>
+<ul>
+<li><p>Do not use inline comments (comments preceded by //). This helps to make it easier to find comments</p></li>
+<li><p>Do not use <span class="math notranslate nohighlight">\(ontext/\)</span>offtext except for headers at the beginning of files</p></li>
+<li><p>Include a space after the “*” to start a comment</p></li>
+<li><p>Do not use a comment to note an issue.  Use the Issues feature in GitHub to document and suggest revisions, instead.</p></li>
+<li><p>Example: Don’t do this:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>*!!!! this will need to be updated to the tophrs designation after the 8760 cv/curt method is implemented   
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+<li><p>Other</p>
+<ul>
+<li><p>GAMS functions such as sum, max, smax, etc. should use {}; Example: avg_outage(i) = sum{h,hours(h)*outage(i,h)} / 8760 ;</p></li>
+<li><p>When including the semicolon on the end of a line there should be a space between the semicolon and the last character of the line (see previous example)</p></li>
+<li><p>When using <code class="docutils literal notranslate"><span class="pre">/</span> <span class="pre">/</span></code> for a parameter declaration, place the closing semicolon on the same line as the final slash: <code class="docutils literal notranslate"><span class="pre">/</span> <span class="pre">;</span></code></p></li>
+<li><p>Sums outside of equations (e.g., in e_reports) need not be split over multiple lines if they do not exceed the line limit</p></li>
+<li><p>Do not use hard-coded numbers in equations or calculations. Values should be assigned to an appropriate parameter name that is subsequently used in the code.</p></li>
+<li><p>Large input data tables should be loaded from individual data files for each table, preferably in *.csv format. Large data tables should not be manually written into the code but can be written dynamically by scripts or inserted with a $include statement.</p></li>
+<li><p>Compile-time conditionals should always use a tag (period + tag name) to clearly define the relationships between compile-time conditional statements. Failure to do so hurts readability sometimes leads to compilation errors. Example:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ifthen.switch1 Sw_One==A
+  Do Something
+$elseif.switch1 Sw_One==B
+  Do Something
+$else.switch1 Sw_One==C
+  Do Something
+$endif.switch1
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<section id="input-conventions-and-data-handling">
+<h3>Input Conventions and Data Handling<a class="headerlink" href="#input-conventions-and-data-handling" title="Link to this heading"></a></h3>
+<section id="input-conventions">
+<h4>Input Conventions<a class="headerlink" href="#input-conventions" title="Link to this heading"></a></h4>
+<ul>
+<li><p>Data read into b_inputs should already be filtered. E.g., if you are running ERCOT, only data for ERCOT should be included.</p>
+<ul class="simple">
+<li><p>We did not structure things this way when we first built ReEDS, and it might not be possible to always meet this recommendation without a large amount of work. This recommendation represents the vision we are working toward rather than a requirement.</p></li>
+<li><p>The same applies to scenarios. If there are multiple scenario options in a single file (e.g. inputs/carbonconstraints/co2_cap.csv), only the single scenario used in a model run should be copied to inputs_case and loaded in b_inputs.gms.</p></li>
+</ul>
+</li>
+<li><p>Input csv files that are written to inputs_case should have the same name as the GAMS parameter that reads that csv file.</p>
+<ul class="simple">
+<li><p>Example: trancap_init(r,rr,trtype) reads in trancap_init.csv</p></li>
+</ul>
+</li>
+<li><p>Parameters read into b_inputs should also include a header that has the set names and then units for the values.  An asterisk is required to keep GAMS from reading the header and throwing an error.</p></li>
+<li><p>Parameters read into b_inputs should be surrounded by <span class="math notranslate nohighlight">\(offlisting and \)</span>onlisting so that they are not written to the .lst files.</p>
+<ul>
+<li><p>Example:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>parameter ev_static_demand(r,allh,allt) &quot;--MW-- static electricity load from EV charging by timeslice&quot;
+/
+$offlisting
+$ondelim
+$include inputs_case%ds%ev_static_demand.csv
+$offdelim
+$onlisting
+/ ;
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+<li><p>When a file read into b_inputs was created by an upstream script within the repository, include a note indicating which script created the file.</p>
+<ul class="simple">
+<li><p>Example: “* Written by writecapdat.py”</p></li>
+</ul>
+</li>
+<li><p>In general, parameter declarations (which are in long format) are preferred to table declarations.  Table declarations are acceptable when the table format can significantly reduce the files size or when the format of the native data better matches the table format.</p></li>
+<li><p>Files used as inputs for the repository are always placed in an appropriate location within the “inputs” folder.  Input files are grouped topically.</p></li>
+<li><p>When there are multiple input options for a given input, the input file name should be “{file}_{option}”.  For example:</p>
+<ul class="simple">
+<li><p>battery_ATB_2022_moderate</p></li>
+<li><p>battery_ATB_2022_conservative</p></li>
+</ul>
+</li>
+<li><p>If preprocessing is needed to create the input file that is placed in the ReEDS repository, the preprocessing scripts or workbooks should be included in the ReEDS-2.0_Input_Processing  repository (<a class="reference external" href="https://github.nrel.gov/ReEDS/ReEDS-2.0_Input_Processing">https://github.nrel.gov/ReEDS/ReEDS-2.0_Input_Processing</a>).  Raw data files should be placed in that repository if their file size permits.  Otherwise, raw data files should be placed in \nrelnas01\ReEDS\ _ReEDS Documentation.</p></li>
+<li><p>Any scripts that preprocess data after a ReEDS run is started should be placed in the input_processing folder.</p>
+<ul class="simple">
+<li><p>Input processing scripts should start with a block of descriptive comments describing the purpose and methodology, and internal functions should use docstrings and liberal comments on functionality and assumptions.</p></li>
+</ul>
+</li>
+<li><p>Any costs read into b_inputs should already be in 2004$.  Cost adjustments in preprocessing scripts should rely on the deflator.csv file rather than have hard-coded conversions.</p></li>
+<li><p>In general, if inputs require calculations before they are ingested into b_inputs, those calculations should be done in Python rather than in GAMS. GAMS can be used for calculations where the GAMS syntax simplifies the calculation or where upstream dependencies make it challenging for the calculations to happen in Python preprocessing scripts.</p></li>
+<li><p>In Python, file paths should be added using os.path.join() rather than writing out the filepath with slashes.</p></li>
+<li><p>Data column headers should use the ReEDS set names when practical.  For example, data that include regions should use “r” for the column name rather than “ba,” “reeds_ba,” or “region.”</p></li>
+<li><p>Preprocessing scripts in input_processing should not change the working directory or use relative filepaths; absolute filepaths should be used wherever possible.</p></li>
+<li><p>When feasible, inputs used in the objective function (c_supplyobjective.gms) should be included in tests/objective_function_params.yaml. Inputs included in this .yaml file will be checked for missing values using input_processing/check_inputs.py.</p></li>
+</ul>
+</section>
+<section id="input-data">
+<h4>Input Data<a class="headerlink" href="#input-data" title="Link to this heading"></a></h4>
+<ul class="simple">
+<li><p>In general, all inputs less than ~10 MB should be in .csv format.</p>
+<ul>
+<li><p>If the csv file would be larger than ~10 MB, then write it as a h5 file unless accessibility is especially important (e.g., the ReEDS_generator_database file needs to be easily accessible, so is kept as a csv file).</p></li>
+<li><p>In some cases .txt files may be used as inputs if their format is especially convenient for the application.</p></li>
+</ul>
+</li>
+<li><p>Input files should be included in the repository when possible.</p>
+<ul>
+<li><p>Files too large to include in the repository or unnecessary for the repository (e.g., files used only for special circumstances, such as individual sites for wind and solar) should be included in the appropriate folder on nrelnas and can be copied to the local repository in the preprocessing steps.</p></li>
+<li><p>Files stored on nrelnas should have unique names that identify the version of the file and data.  For example, you would use “special_input_data_2022_11_28” rather than “special_input_data.”</p></li>
+</ul>
+</li>
+<li><p>Add units to raw data files</p>
+<ul>
+<li><p>When adding a new raw data file, include units in the column name to avoid confusion</p></li>
+<li><p>As an example, look at ‘/inputs/plant_characteristics/conv_ATB_2023.csv’</p>
+<ul>
+<li><p>The data in the “capcost” column are in unit of k<span class="math notranslate nohighlight">\(/MW or \)</span>/kW, although the units are not labeled</p></li>
+<li><p>As a best practice, “capcost” should be named “capcost_usd.per.kw” to make units clear</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Add comments to raw data files that represent GAMS subsets</p>
+<ul>
+<li><p>When adding a new raw data file that represents a GAMS subset, include column headers representing the GAMS set that each column’s entries belong to, with the first column header being prepended by an asterisk (this allows GAMS to parse the first row of the .csv file as a comment)</p></li>
+<li><p>For an example, see ‘/inputs/sets/fuel2tech.csv’</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+</section>
+<section id="version-control-and-testing">
+<h2>Version Control and Testing<a class="headerlink" href="#version-control-and-testing" title="Link to this heading"></a></h2>
+<section id="reeds-versioning-releases">
+<h3>ReEDS Versioning &amp; Releases<a class="headerlink" href="#reeds-versioning-releases" title="Link to this heading"></a></h3>
+<p>This section outlines the current ReEDS approach to versioning. You can find current and past ReEDS versions here: <a class="reference external" href="https://github.com/NREL/ReEDS-2.0/releases">ReEDS-2.0 Releases</a></p>
+<section id="versioning-overview">
+<h4>Versioning overview<a class="headerlink" href="#versioning-overview" title="Link to this heading"></a></h4>
+<p>GitHub Releases are used to create ReEDS versions on a monthly cadence after a suite of tests are performed. More on ReEDS testing can be found <a class="reference internal" href="#./Testing"><span class="xref myst">here</span></a>. More information on GitHub Releases can be found in the <a class="reference external" href="https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases">GitHub Doc</a>.</p>
+<p>Releases are based on Git tags, and the proposed versioning scheme is <code class="docutils literal notranslate"><span class="pre">EPOCH.RELEASE.PATCH</span></code>. The components are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">EPOCH</span></code>: The current year, this will be incremented in January of each year (e.g., 2023)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">RELEASE</span></code>: Restarts from 0 when EPOCH is increased, then increased by 1 each month when the newest version is created</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PATCH</span></code>: Typically will just be 0, but could increment if an important update or bug fix needs to be merged in prior to the next monthly release.</p></li>
+</ul>
+</section>
+<section id="tagging-versions">
+<h4>Tagging versions<a class="headerlink" href="#tagging-versions" title="Link to this heading"></a></h4>
+<p>Tagging with GitHub releases is not done manually with each pull request. After a new release has been created, a tag will be generated.</p>
+<p>How to use tags:</p>
+<ul class="simple">
+<li><p>You can check them out like any other commit: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">tags/2023.1.0</span></code></p>
+<ul>
+<li><p>You may need to fetch tags to your machine first: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">fetch</span> <span class="pre">--tags</span></code></p></li>
+<li><p>If you plan to develop from an older tag (i.e., you’re not checking out main on the most recent tag and you plan to commit new changes), you’ll also want to specify a branch or create a new one: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">-b</span> <span class="pre">&lt;new</span> <span class="pre">branch</span> <span class="pre">name&gt;</span> <span class="pre">&lt;tag</span> <span class="pre">name&gt;</span></code></p></li>
+</ul>
+</li>
+<li><p>ReEDS2X tool versions should reference the last ReEDS version they’re known to work for in their tag text or README</p>
+<ul>
+<li><p>Each ReEDS run produces a meta.csv file with information on the branch, commit, and version of that run which can be used to determine the vintage of any given ReEDS run.</p></li>
+</ul>
+</li>
+<li><p>If you’re using ReEDS2X for a side project and would like to tag versions for them to refer to, the suggested format is: <code class="docutils literal notranslate"><span class="pre">EPOCH.RELEASE.PATCH.PROJECTNAME</span></code>, where <code class="docutils literal notranslate"><span class="pre">EPOCH.RELEASE.PATCH</span></code> refers to the last version of main that has been merged into your project branch.</p>
+<ul>
+<li><p>The same format can be used to tag specific versions of the model that are used for published analyses that are not merged into main, e.g. 2023.4.0.hybrids.</p></li>
+<li><p>In general, please add custom components to the tail of the version number instead of the beginning to keep them easy to sort.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<section id="testing-guidelines">
+<h3>Testing Guidelines<a class="headerlink" href="#testing-guidelines" title="Link to this heading"></a></h3>
+<p>This section outlines the recommended testing that should be performed on ReEDS prior to creating a pull request or a new version.</p>
+<section id="post-process-test">
+<h4>Post-process Test<a class="headerlink" href="#post-process-test" title="Link to this heading"></a></h4>
+<p><strong>This testing should be performed when a change is made that does not change model code or data that might impact model outputs. Ex: changing the color styles in bokeh output plot, or adjusting a post-processing script such as runstatus.py</strong></p>
+<ol class="arabic simple">
+<li><p>Ensure the post-processing capabilities operate correctly on outputs from the most recent version of main</p>
+<ul class="simple">
+<li><p>A demonstration of this should be included in the pull request</p></li>
+</ul>
+</li>
+<li><p>Verify that the GitHub runner tests pass</p></li>
+</ol>
+</section>
+<section id="light-test-pacific-region">
+<h4>Light Test (Pacific Region)<a class="headerlink" href="#light-test-pacific-region" title="Link to this heading"></a></h4>
+<p><strong>This testing should be performed for changes to model code that are not expected to have any meaningful impact on the model solution. Examples include:</strong></p>
+<ul class="simple">
+<li><p><strong>Rounding an input parameter</strong></p></li>
+<li><p><strong>Changing the name of a column or model parameter</strong></p></li>
+<li><p><strong>Updating code within an if statement where the if statement does not apply under default settings (e.g., “if int(sw.GSw_calc_powfrac):” where the default value of sw.GSw_calc_powfrac is 0)</strong></p></li>
+<li><p><strong>Adding a missing entry to runfiles.csv</strong></p></li>
+</ul>
+<ol class="arabic simple">
+<li><p>Do a comparison run of the default test case (cases_test.csv) against a test run from main and produce a comparison report.</p>
+<ul class="simple">
+<li><p>The report should be examined for any unexpected outputs and included in the pull request for review</p></li>
+</ul>
+</li>
+<li><p>Verify that the GitHub runner tests pass</p></li>
+</ol>
+</section>
+<section id="regular-test-full-u-s-runs">
+<h4>Regular Test (Full U.S. Runs)<a class="headerlink" href="#regular-test-full-u-s-runs" title="Link to this heading"></a></h4>
+<p><strong>This testing should be performed for all other cases not covered by the post-process or light test</strong></p>
+<ol class="arabic simple">
+<li><p>Do a comparison run of either USA_defaults or Mid_Case and a comparison of USA_decarb in cases_test.csv against equivalent runs from main.</p>
+<ul class="simple">
+<li><p>You should be able to reasonably explain changes in capacity, generation, transmission capacity, bulk system electricity price, system cost, and runtime</p></li>
+<li><p>The comparison report should be included in the pull request</p></li>
+<li><p>In most cases, you should run both the Mid_Case and USA_decarb.  Some simpler changes might only need a single scenario to provide enough confidence that the changes are operating as planned.  If you are unsure, just ask.</p></li>
+</ul>
+</li>
+<li><p>Verify that the GitHub runner tests pass</p></li>
+</ol>
+</section>
+<section id="new-version-test">
+<h4>New Version Test<a class="headerlink" href="#new-version-test" title="Link to this heading"></a></h4>
+<p><strong>This testing is required for a new tagged and released version</strong></p>
+<p>The full set of scenarios in <code class="docutils literal notranslate"><span class="pre">cases_test.csv</span></code> is run on HPC and Yampa (tests are also run locally on Mac or Windows). Any failing cases from cases_test.csv will be listed in the release notes.</p>
+<p>For any error in the output processing scripts, a new GitHub issue should be created. Additionally, the issue should be noted in the release notes for the new version.</p>
+<p>Lastly, comparison reports are created for the USA and USA_decarb scenarios to compare the current version with the previous released version. Those comparison reports should be attached to the release notes for reference.</p>
+</section>
+</section>
+</section>
+<section id="documentation-guidelines">
+<h2>Documentation Guidelines<a class="headerlink" href="#documentation-guidelines" title="Link to this heading"></a></h2>
+<p>When making changes to ReEDS, you should generate and update the sources.csv and sources_documentation.md files before merging.</p>
+<section id="how-to-use-sources-documentation">
+<h3>How to Use Sources Documentation<a class="headerlink" href="#how-to-use-sources-documentation" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Before running the .bat script, please ensure the sources.csv file is closed. If open, the script will be unable to replace the file and will throw an error.</p></li>
+<li><p>Run <strong>generate_sources_md_file.bat</strong> script (for Mac and Linux users <strong>generate_sources_md_file.sh</strong>)located within the documentation_tools folder (ReEDS-2.0/docs/source/documentation_tools). You will need navigate to that directory prior to running.</p></li>
+<li><p>This will run the first script <strong>generate_new_sources.py</strong>. generating a new <strong>sources.csv</strong> file at the top directory of the repository, please note,the existing sources.csv in your Repository root will be renamed to sources_{timestamp}.csv format. This can be deleted manually if no longer required; or can be held on to if required for comparison. Tree change files are generated in the documentations_tools folder to indicate files not included in the prior sources file (<strong>sources_files_added.csv</strong>), files removed from the prior sources file (<strong>sources_files_deleted.csv</strong>), and files not included in the sources file because they aren’t committed (<strong>sources_untracked_files.csv</strong>). These change files should not be committed and can be deleted when no longer needed.</p></li>
+<li><p>Once this has finished running, please proceed to update relevant fields in the <em>sources.csv</em> file</p></li>
+<li><p>Once relevant fields have been updated, please save sources.csv and close it.</p></li>
+<li><p>Run <strong>generate_markdown.bat</strong> (for Mac and Linux users <strong>generate_markdown.sh</strong>)located within the documentation_tools folder. This will generate a README file <em>sources_documentation.md</em> with all the Source files and their details for the Repository by running the script <strong>generate_markdown.py</strong>. The markdown file will be generated in the ReEDS-2.0/docs/source/ location.</p></li>
+<li><p>Commit and push the updated <strong>sources.csv</strong> and <strong>sources_documenation.md</strong> files.</p></li>
+</ol>
+<hr class="docutils" />
+<section id="how-to-update-relevant-fields-in-sources-csv">
+<h4>How to Update Relevant Fields in sources.csv<a class="headerlink" href="#how-to-update-relevant-fields-in-sources-csv" title="Link to this heading"></a></h4>
+<ol class="arabic simple">
+<li><p>Once prompted by the .bat script, open <strong>sources.csv</strong> (found at the Repository root).</p></li>
+<li><p>Using the Added Files List, <strong>sources_files_added.csv</strong> (found within the documentation_tools folder) which displays all the input files added by the user, enter relevant details in corresponding columns of <strong>sources.csv</strong>. Fields that do not apply can be left blank. Do not add new columns to sources.csv without also updating the scripts to support the expanded fields.</p></li>
+<li><p>Save the sources.csv and close the file.</p></li>
+</ol>
+</section>
+</section>
+<section id="updating-the-reeds-documentation">
+<h3>Updating the ReEDS Documentation<a class="headerlink" href="#updating-the-reeds-documentation" title="Link to this heading"></a></h3>
+<p>The ReEDS documentation lives in the “docs/source” folder within the repo. Depending on the changes you’re making to the model, please update the documentation here accordingly. See the <a class="reference internal" href="markdown_cheat_sheet.html"><span class="std std-doc">Getting Started with Markdown in VSCode</span></a> if you’re unfamiliar with markdown.</p>
+<p>To edit the ReEDS documentation:</p>
+<ol class="arabic simple">
+<li><p>Find the markdown file you would like to modify under the “docs/source” folder</p></li>
+<li><p>Make any necessary changes and save the file</p></li>
+<li><p>Commit and push your changes as you normally would.</p>
+<ul class="simple">
+<li><p><strong>When your pull request gets merged into main, there is a github action that will automatically recompile the documentation with your changes and publish the updated site.</strong></p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="viewing-the-documentation-locally">
+<h3>Viewing the Documentation Locally<a class="headerlink" href="#viewing-the-documentation-locally" title="Link to this heading"></a></h3>
+<p>If you would like to see what the documentation will look like when developing locally, there are two approaches:</p>
+<section id="approach-1-use-the-built-in-markdown-preview-in-vscode">
+<h4>Approach 1: Use the built-in markdown preview in VSCode<a class="headerlink" href="#approach-1-use-the-built-in-markdown-preview-in-vscode" title="Link to this heading"></a></h4>
+<ol class="arabic simple">
+<li><p>Right click on the markdown file you want to view. Select “Open Preview”.</p>
+<ul class="simple">
+<li><p><strong>Note:</strong> because the documentation gets compiled using Sphinx, some things won’t display properly in this view (i.e. tables, figures, and citations)</p></li>
+<li><p>To view footnotes in the preview correctly, you’ll need to install the “Markdown Footnotes” VSCode extension</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="approach-2-build-the-documentation-locally">
+<h4>Approach 2: Build the documentation locally<a class="headerlink" href="#approach-2-build-the-documentation-locally" title="Link to this heading"></a></h4>
+<ol class="arabic simple">
+<li><p>Navigate to the “docs/” folder</p></li>
+<li><p>Run the command <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code> to build the documentation locally</p>
+<ul class="simple">
+<li><p>Ensure you have the ‘reeds2’ environment activated</p></li>
+</ul>
+</li>
+<li><p>From Finder/File Explorer, open the folder “/ReEDS-2.0/docs/build/html” then click on “index.html”</p>
+<ul class="simple">
+<li><p>This will launch the documentation in a new internet window</p></li>
+<li><p>If you make changes and wish to see how they are reflected in the documentation, you can run the <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code> command again and refresh the window you already have open</p></li>
+</ul>
+</li>
+<li><p>If you would like to remove the generated files, you can run the command <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">clean</span></code> from the “docs/” folder</p></li>
+</ol>
+</section>
+</section>
+<section id="adding-citations-in-the-documentation">
+<h3>Adding Citations in the Documentation<a class="headerlink" href="#adding-citations-in-the-documentation" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Download Zotero: <a class="reference external" href="https://www.zotero.org/">https://www.zotero.org/</a>
+a. Install the “Better BibTeX for Zotero” plugin: <a class="reference external" href="https://retorque.re/zotero-better-bibtex/">https://retorque.re/zotero-better-bibtex/</a>
+b. Turn on “Automatic export” under (Better BibTeX preferences)/(Automatic export) and adjust the filepath to {your filepath}
+c. Under (Better BibTeX preferences)/Export/BibTeX or Edit-&gt;Preferences-&gt;Better BibTex, set “Add URLs to BibTeX export” to “in the ‘url’ field”
+d. Under (Better BibTeX preferences)/Export/Fields or Edit-&gt;Preferences-&gt;Better BibTex, enter the following in “Fields to omit from export (comma-separated)”: <code class="docutils literal notranslate"><span class="pre">file,keywords</span></code></p></li>
+<li><p>Request access to the ReEDS Zotero library from Jonathan, Brian, Patrick, Wesley, or Pieter</p></li>
+<li><p>If you add any new references to the ReEDS Zotero library and cite them in the ReEDS docs, you’ll need to:
+a. Replace the contents of ReEDS-2.0/docs/source/references.bib with the contents of the .bib file at {your path}. Make sure to export your .bib file in a “Better BibTex” format.</p></li>
+</ol>
+<p>To add an in-text citation, find the citation key of the citation you would like to add in Zotero.</p>
+<figure class="align-default" id="id2">
+<img alt="_images/zotero_citation_example.png" src="_images/zotero_citation_example.png" />
+<figcaption>
+<p><span class="caption-number">Fig. 16 </span><span class="caption-text">Example of citation key in Zotero</span><a class="headerlink" href="#id2" title="Link to this image"></a></p>
+</figcaption>
+</figure>
+<section id="citation-format">
+<h4>Citation format<a class="headerlink" href="#citation-format" title="Link to this heading"></a></h4>
+<table class="docutils align-default" id="id3">
+<caption><span class="caption-number">Table 1 </span><span class="caption-text">Citation formats in markdown</span><a class="headerlink" href="#id3" title="Link to this table"></a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p><strong>Markdown Syntax</strong></p></th>
+<th class="head"><p><strong>Output</strong></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">{cite}`cole2020StandardScenarios2020`</span></code></p></td>
+<td><p>[Cole <em>et al.</em>, 2020]</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">{cite:t}`cole2020StandardScenarios2020`</span></code></p></td>
+<td><p>Cole <em>et al.</em>, [2020]</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">{cite:year}`cole2020StandardScenarios2020`</span></code></p></td>
+<td><p>2020</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">{cite:p}`cole2020StandardScenarios2020,</span> <span class="pre">nrelRenewableElectricityFutures2012`</span></code></p></td>
+<td><p>[Cole <em>et al.</em>, 2020, NREL, 2012]</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">{cite:p}`{see}cole2020StandardScenarios2020{pg.</span> <span class="pre">2}`</span></code></p></td>
+<td><p>[see Cole <em>et al.</em>, 2020, pg. 2]</p></td>
+</tr>
+</tbody>
+</table>
+<p>Alternatively, you can use the “Zotero Citation Picker” VS Code extension for finding/adding references to the documentation. This extension requires Zotero to be installed, as well as Better BibTex for Zotero (the Better BibTex for Zotero installation guide can be found <a class="reference external" href="https://retorque.re/zotero-better-bibtex/installation/">here</a>).</p>
+</section>
+<section id="adding-new-citations-to-zotero">
+<h4>Adding new citations to Zotero<a class="headerlink" href="#adding-new-citations-to-zotero" title="Link to this heading"></a></h4>
+<p>If you’re looking to add a new citation to the ReEDS Zotero library, you can do so manually, or you can use the Zotero Connector. You can download it <a class="reference external" href="https://www.zotero.org/download/connectors">here</a>.</p>
+<p>After installing the extension, you’ll need to enable it in your browser of choice. To create and save a new citation, open it in Firefox (or whatever browser you have the extension enabled), and click ‘Zotero Connector’ to run the extension and create a new Zotero citation.</p>
+<figure class="align-default">
+<img alt="_images/zotero_connector.png" src="_images/zotero_connector.png" />
+</figure>
+</section>
+</section>
+<section id="style-guide">
+<h3>Style guide<a class="headerlink" href="#style-guide" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>To facilitate version control, use a line break at least after every sentence,
+or more often for long sentences
+(commas, colons, and semicolons can be good locations for line breaks).
+Double line breaks separate paragraphs in compiled markdown, but single line breaks do not.</p></li>
+<li><p>The documentation describes the current state of the model and is updated as the model changes.
+As such, do not use words or phrases like “currently” or “at this time”, as these qualifiers are understood to apply to the whole document.</p>
+<ul>
+<li><p>Describe the current capabilities of the model as accurately as possible.
+If a feature is removed from ReEDS, or if it does not work and does not have a near-term rehabilitation plan, remove it from the documentation.</p></li>
+</ul>
+</li>
+<li><p>When mentioning a switch in <code class="docutils literal notranslate"><span class="pre">cases.csv</span></code>, a variable or parameter name used within the code, or an explicit filepath within the ReEDS repo
+(i.e., anything that only relates to someone who interacts with the ReEDS code and data directly),
+do so within an “admonition” block in <code class="docutils literal notranslate"><span class="pre">model_documentation.md</span></code>. Admonition blocks are not required in <code class="docutils literal notranslate"><span class="pre">user_guide.md</span></code> or in <code class="docutils literal notranslate"><span class="pre">README.md</span></code> files.</p></li>
+</ul>
+<div class="admonition-something-for-users-and-developers admonition">
+<p class="admonition-title">Something for users and developers</p>
+<p>This is an example of an “admonition” block containing content that only pertains to users and developers.
+Encase switch names (e.g., <code class="docutils literal notranslate"><span class="pre">GSw_Region</span></code>), variable/parameter names (e.g., <code class="docutils literal notranslate"><span class="pre">CAPTRAN_ENERGY</span></code>), and filepaths (e.g., <code class="docutils literal notranslate"><span class="pre">inputs/scalars.csv</span></code>) in backticks.
+Filepaths should start from the root of the ReEDS repo.</p>
+</div>
+<ul class="simple">
+<li><p>Don’t copy figures from non-NREL authors, as permission would need to be requested to reproduce them.
+Just cite the original publication.</p></li>
+<li><p>Because the documentation is periodically released as a technical report, it should be written like other technical reports;
+to avoid plagiarism, text should not be copied and pasted from other sources (even if you wrote it).
+If a figure is reproduced from an NREL paper, cite the source;
+if you use a figure from the documentation in another paper, note that it’s reproduced from the documentation and cite the documentation.</p></li>
+<li><p>Save figures at a sufficiently high resolution to avoid fuzziness,
+but try to keep figure file sizes below 1 MB.
+When possible, add the scripts used to make documentation figures to <code class="docutils literal notranslate"><span class="pre">docs/source/plotting_scripts/</span></code>.</p></li>
+<li><p>For math and symbols, use <a class="reference external" href="https://myst-parser.readthedocs.io/en/latest/syntax/math.html#math-role-and-directive">LaTeX format</a> instead of figures or html.</p>
+<ul>
+<li><p>For example, for inline symbols, use <span class="math notranslate nohighlight">\(\beta_r\)</span> (<code class="docutils literal notranslate"><span class="pre">$\beta_r$</span></code>) instead of <em>β<sub>r</sub></em> (<code class="docutils literal notranslate"><span class="pre">*β&lt;sub&gt;r&lt;/sub&gt;*</span></code>).</p></li>
+<li><p>In equations and symbols, words and abbreviations should be encased in <code class="docutils literal notranslate"><span class="pre">\text{}</span></code>: For example, use <span class="math notranslate nohighlight">\(\beta_{\text{national}}\)</span> (<code class="docutils literal notranslate"><span class="pre">$\beta_{\text{national}}$</span></code>) instead of <span class="math notranslate nohighlight">\(\beta_{national}\)</span> (<code class="docutils literal notranslate"><span class="pre">$\beta_{national}$</span></code>).</p></li>
+<li><p>For equations (the same as for figures and tables), always use automatic cross-references instead of hard-coding numbers. Figures and tables are referenced using <code class="docutils literal notranslate"><span class="pre">{numref}`name`</span></code>; equations use <code class="docutils literal notranslate"><span class="pre">{eq}`name`</span></code>.</p></li>
+</ul>
+</li>
+<li><p>Use citations or hyperlinks instead of footnotes whenever possible.</p></li>
+<li><p>Footnotes<a class="footnote-reference brackets" href="#example" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> are rendered at the bottom of the compiled html document in the order they’re referenced,
+regardless of where the footnote text is placed.
+For readability within the markdown file,
+add footnote text after the paragraph in which the footnote is referenced,
+and use descriptive footnote names instead of numbers.</p></li>
+<li><p>Use hyphens (-) for unordered lists instead of asterisks (*).</p></li>
+<li><p>Use two spaces for indentation.</p></li>
+<li><p>If you use VS Code you can optionally use the <a class="reference external" href="https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint">markdownlint</a> extension to manage formatting.</p></li>
+</ul>
+<div class="admonition-markdownlint-configuration admonition">
+<p class="admonition-title">markdownlint configuration</p>
+<p>If you use markdownlint, add the following settings in your <code class="docutils literal notranslate"><span class="pre">.markdownlint.json</span></code> file
+(which can be accessed from the VS Code command palette)
+to ignore issues for
+line length, which we don’t enforce;
+multiple blank lines, which are used before section breaks;
+and inline HTML, which is used for superscripts and subscripts:
+<code class="docutils literal notranslate"><span class="pre">{&quot;MD013&quot;:</span> <span class="pre">false,</span> <span class="pre">&quot;MD012&quot;:</span> <span class="pre">false,</span> <span class="pre">&quot;MD033&quot;:</span> <span class="pre">false}</span></code></p>
+</div>
+</section>
+</section>
+<section id="pull-request-best-practices">
+<h2>Pull Request Best Practices<a class="headerlink" href="#pull-request-best-practices" title="Link to this heading"></a></h2>
+<section id="best-practices-for-creating-prs">
+<h3>Best Practices for Creating PRs<a class="headerlink" href="#best-practices-for-creating-prs" title="Link to this heading"></a></h3>
+<p>To ensure a smooth process and maintain quality of the ReEDS model, the following are best practices that should be followed when creating a pull request:</p>
+<ul class="simple">
+<li><p>Prior to creating a pull request, perform the appropriate level of testing on your branch</p>
+<ul>
+<li><p>The national Mid_Case and USA_decarb in cases_test.csv are typically used</p></li>
+<li><p>For more information on testing, see the <a class="reference internal" href="#testing-guidelines"><span class="xref myst">Testing Guidelines section</span></a></p></li>
+</ul>
+</li>
+<li><p>Ensure the title of your pull request is both descriptive and concise</p>
+<ul>
+<li><p>This is crucial, as the title of your pull request will be used in the summary of changes for each new version of ReEDS</p></li>
+</ul>
+</li>
+<li><p>Fill out the pull request template in detail</p>
+<ul>
+<li><p>The description should be clear enough for someone not directly involved in your work to grasp the changes being proposed</p></li>
+<li><p>Assign and contact reviewers</p>
+<ul>
+<li><p>Best practice is to have 2 reviewers from the ReEDS team</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Keep your pull request in draft mode until it is ready to be merged into the main branch, indicating to reviewers that it is still a work in progress</p></li>
+<li><p>Provide a charge code to your reviewers for their time spent reviewing</p></li>
+<li><p>Create smaller pull requests more frequently when possible</p>
+<ul>
+<li><p>This helps avoid merge conflicts and simplifies the review process, making it more manageable for reviewers</p></li>
+</ul>
+</li>
+<li><p>After creating the pull request, monitor the status of the automated tests</p>
+<ul>
+<li><p>This runs the R2X test and other checks automatically</p></li>
+</ul>
+</li>
+<li><p>Prior to merging your pull request, make sure to update the relevant documentation to reflect your changes. There are two places that should be updated (more information on this can be found in the <a class="reference internal" href="#documentation-guidelines"><span class="xref myst">documentation guidelines</span></a>):</p>
+<ol class="arabic simple">
+<li><p>Sources_documentation</p></li>
+<li><p>The ‘docs/’ folder within the repository</p></li>
+</ol>
+</li>
+</ul>
+</section>
+<section id="resolving-merge-conflicts">
+<h3>Resolving Merge Conflicts<a class="headerlink" href="#resolving-merge-conflicts" title="Link to this heading"></a></h3>
+<p>Sometimes you might run into merge conflicts when trying to merge your branch into another branch. Merge conflicts happen when there are competing commits that Git needs you to help decide which changes should be kept in the final merge.</p>
+<p>Merge conflicts must be resolved prior to merging a pull request and there are different ways to handle merge conflicts:</p>
+<ul class="simple">
+<li><p>Simple merge conflicts can be resolved on GitHub. To learn more about how to do this, refer to GitHub’s documentation on <a class="reference external" href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/addressing-merge-conflicts/resolving-a-merge-conflict-on-github">Resolving merge conflicts on GitHub</a></p></li>
+<li><p>Larger or more complex merge conflicts will need to be resolved using the command line and a text editor (e.g., VSCode). To learn more about how to do this, refer to GitHub’s documentation on <a class="reference external" href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/addressing-merge-conflicts/resolving-a-merge-conflict-using-the-command-line">Resolving merge conflicts using the command line</a></p></li>
+</ul>
+</section>
+<section id="tips-and-best-practices-for-pr-reviews">
+<h3>Tips and Best Practices for PR Reviews<a class="headerlink" href="#tips-and-best-practices-for-pr-reviews" title="Link to this heading"></a></h3>
+<p>The following are best practices that should be considered when reviewing pull requests:</p>
+<ol class="arabic simple">
+<li><p>Understand the context of the pull request</p>
+<ul class="simple">
+<li><p>Prior to reviewing any code changes, read the PR thoroughly</p>
+<ul>
+<li><p>Is the title descriptive?</p></li>
+<li><p>Does the summary accurately state what the PR is trying to accomplish?</p></li>
+<li><p>Is there sufficient information in the pull request to accurately convey the changes being made? Because the PR is documenting the change, part of your review entails ensuring that the model changes are properly reflected in the PR text.</p></li>
+<li><p>What is the high-level impact of this PR? Can you summarize the change on the run results in 1-2 sentences?</p></li>
+</ul>
+</li>
+<li><p>Look at any linked issues or pull requests and understand what is being fixed in this pull request and which issues or incompatibilities are not being addressed.</p></li>
+</ul>
+</li>
+<li><p>Look at the compare report and any other figures included in the PR</p>
+<ul class="simple">
+<li><p>Do you understand why these code/file changes resulted in these results?</p></li>
+<li><p>What is the high-level impact of this PR? Can you summarize the change on the run results in 1-2 sentences?</p></li>
+<li><p>Are these changes explainable/justifiable to both our internal and external audiences?</p></li>
+</ul>
+</li>
+<li><p>Review the code</p>
+<ul class="simple">
+<li><p>Look at each file that has changed</p>
+<ul>
+<li><p>Do code changes or new code added make sense?</p></li>
+<li><p>Ensure newly added code is documented (even if it’s just a single-line comment)</p></li>
+<li><p>Flag any instances where you notice that the code does not follow the <a class="reference internal" href="#coding-conventions"><span class="xref myst">Coding Conventions</span></a></p></li>
+<li><p>Identify if/how these code changes could cause problems later.</p>
+<ul>
+<li><p>What other parts of the model do these changes interact with? Is that interaction broken or no longer an accurate representation with these changes?</p></li>
+<li><p>What could break if we ran different scenarios with these changes? We typically look at the impact of our changes on “main” or “Standard Scenarios Mid-Case” type runs but also consider the potential impact on decarbonization scenarios, county level runs, smaller region runs, scenarios with hydrogen enabled, etc. We want to foresee any possible impacts this might have. If you have a concern or are curious about how this change might impact a certain type of run, ask the PR author, they might have looked at similar scenarios.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Look at any input files that have changed</p>
+<ul class="simple">
+<li><p>Reviewing the commit history can sometimes be helpful in determining what has changed</p></li>
+<li><p>Do the input changes make sense? Are they consistent with the PR descriptions?</p></li>
+<li><p>There are a couple tools that help with comparing two different csv files:</p>
+<ul>
+<li><p><a class="reference external" href="https://vscode.one/diff-vscode/">VSCode diff panel</a></p></li>
+<li><p><a class="reference external" href="https://pypi.org/project/csvdiff/#:~:text=csvdiff%20allows%20you%20to%20compare,look%20at%20just%20what's%20changed.">csvdiff</a></p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Check out the branch locally (optional)</p>
+<ul class="simple">
+<li><p>You should check the branch out locally and run the test scenario(cases_test.csv) to ensure there are no issues</p></li>
+<li><p>If there are a large amount of changes to one of the scripts or code files (ex. input_processing scripts or GAMS files), it could be helpful to run just that script and walk through it line by line with a debugging tool (ex. <a class="reference external" href="https://docs.python.org/3/library/pdb.html">pdb</a>) to more deeply understand how the revised script functions and any issues we might face with the way that script is now written.</p></li>
+</ul>
+</li>
+</ol>
+<p><strong>A few notes on reviewing pull requests:</strong></p>
+<ul class="simple">
+<li><p>When reviewing PRs, be sure to provide constructive feedback and highlight positive aspects as well. Reviewing PRs is an opportunity to learn from one another and support each other’s development as developers!</p></li>
+<li><p>Ask clarifying questions if something is unclear</p>
+<ul>
+<li><p>Reviewing PRs can be daunting if you are new to the team or to the code development process. Remember that this is an opportunity for you to learn more about the model as much as it is about getting the code changes integrated into the model. Even experienced developers make errors, hence the importance of getting a second set of eyes on the code changes. Your input and insights are valuable.</p></li>
+<li><p>If you don’t understand what is going on with a code change, chances are high that others won’t understand either, so ask for clarification, including asking for more comments or explanation in the PR text.</p></li>
+<li><p>If there is a section of the PR that you don’t feel comfortable reviewing, you should request a review from another team member</p></li>
+</ul>
+</li>
+<li><p>Request changes as necessary and explain your reasoning</p></li>
+<li><p>Remember that the PR submitter is ultimately responsible for the changes in the PR, not you, so give the PR review a good effort, but don’t agonize over every detail.</p>
+<ul>
+<li><p>If reviewing a PR becomes too large of a chore, feel free to reach out to others on the team to be able to tackle the PR review jointly</p></li>
+</ul>
+</li>
+<li><p>If necessary, make sure the <a class="reference external" href="https://pages.github.nrel.gov/ReEDS/ReEDS-2.0/index.html">ReEDS documentation</a> was updated to reflect the code changes</p>
+<ul>
+<li><p>Instructions for how to update the documentation can be found <a class="reference internal" href="#updating-the-reeds-documentation"><span class="xref myst">here</span></a></p></li>
+</ul>
+</li>
+</ul>
+</section>
+</section>
+<section id="reeds-development-tips">
+<h2>ReEDS Development Tips<a class="headerlink" href="#reeds-development-tips" title="Link to this heading"></a></h2>
+<section id="debugging-python-code">
+<h3>Debugging Python Code<a class="headerlink" href="#debugging-python-code" title="Link to this heading"></a></h3>
+<p>When working with python code, there are a couple of useful methods for debugging. The first is using the Python Interactive Window.</p>
+<p>Cells are denoted by <code class="docutils literal notranslate"><span class="pre">#%%</span></code>, and you can run the code in a given file by cells in the interactive window. This allows you to view data and variables, as well as create graphs and visuals. This can be very helpful in stepping through a script to see what is happening in your code.</p>
+<p>For more information, see the <a class="reference external" href="https://code.visualstudio.com/docs/python/jupyter-support-py#:~:text=For%20the%20whole%20notebook%2C%20open,the%20code%20in%20that%20cell.">Python Interactive Window documentation</a>.</p>
+<p>Another way to debug is to use the Python Debugger Extension in VS Code. For more information on how to set up and use the python debugger, see <a class="reference external" href="https://code.visualstudio.com/docs/python/debugging">Python debugging in VS Code</a>.</p>
+<p>When using the python debugger, you will need to set a configuration. Here’s an example of what that might look like (<code class="docutils literal notranslate"><span class="pre">launch.json</span></code> file):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    &quot;version&quot;: &quot;0.2.0&quot;,
+    &quot;configurations&quot;: [
+        {
+            &quot;name&quot;: &quot;Python Debugger: calc_financial_inputs.py with arguments&quot;,
+            &quot;type&quot;: &quot;debugpy&quot;,
+            &quot;request&quot;: &quot;launch&quot;,
+            &quot;program&quot;: &quot;${file}&quot;,
+            &quot;console&quot;: &quot;integratedTerminal&quot;,
+            &quot;args&quot;: [
+                &quot;/Users/kminderm/ReEDS-2.0&quot;,
+                &quot;/Users/kminderm/ReEDS-2.0/runs/main_Pacific/inputs_case&quot;
+            ],
+            &quot;purpose&quot;: [&quot;debug-in-terminal&quot;]
+        },
+
+    ]
+}
+</pre></div>
+</div>
+<p>For more on debugging, you can watch the following video: <a class="reference external" href="https://nrel.sharepoint.com/:v:/s/6A90-GridPlanningandAnalysisCenterGPAC/ERsyIuWezH1Mix2ZoGiGJk4B3S8u0KNqsIDG6QVbPQK3rw?e=FhUWGx&amp;amp;nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJTdHJlYW1XZWJBcHAiLCJyZWZlcnJhbFZpZXciOiJTaGFyZURpYWxvZy1MaW5rIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXcifX0%3D">GPAC’s WEI Tips and Tricks Series: Introduction to Debugging</a></p>
+</section>
+<section id="debugging-gams-code">
+<h3>Debugging GAMS Code<a class="headerlink" href="#debugging-gams-code" title="Link to this heading"></a></h3>
+<p>When making changes to the GAMS code, something that can be helpful when debugging an issue is to compare the data before and after your change. You can do that by inserting an ‘execute unload’ statement into the gams code. Example of what this looks like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">execute_unload</span> <span class="s1">&#39;before.gdx&#39;</span> <span class="p">;</span>
+</pre></div>
+</div>
+<p>If you’re interested in only a specific variable, you can specify it like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">execute_unload</span> <span class="s1">&#39;before.gdx&#39;</span> <span class="n">valcap</span> <span class="p">;</span> 
+</pre></div>
+</div>
+<p>Additionally, if you want to re-run a given scenario without having to run all of the input processing again, you can open the <code class="docutils literal notranslate"><span class="pre">call_{batch</span> <span class="pre">name}_{case}.bat/.sh</span></code> file, delete all of the lines you don’t want to run again, and then run that file from the command line. <strong>Note: be sure to edit/run the <code class="docutils literal notranslate"><span class="pre">call_{batch</span> <span class="pre">name}_{case}.bat/.sh</span></code> file from within the specific run folder</strong></p>
+</section>
+<section id="additional-development-tips">
+<h3>Additional Development Tips<a class="headerlink" href="#additional-development-tips" title="Link to this heading"></a></h3>
+<ul>
+<li><p>To avoid the prompts when kicking off a run, you can use the command line arguments:</p>
+<ul class="simple">
+<li><p>The following example runs the scenarios in cases_test.csv with the batch name ‘20240717_test’. The ‘-r -1’ means that all cases will run simultaneously.</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">runbatch</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">c</span> <span class="n">test</span> <span class="o">-</span><span class="n">b</span> <span class="mi">20240717</span><span class="n">_test</span> <span class="o">-</span><span class="n">r</span> <span class="o">-</span><span class="mi">1</span>
+</pre></div>
+</div>
+<ul>
+<li><p>All options for command line arguments that can be used:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Flag</p></th>
+<th class="head"><p></p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--BatchName</span></code> / <code class="docutils literal notranslate"><span class="pre">-b</span></code></p></td>
+<td><p>Name for batch of runs</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--cases_suffix</span></code> / <code class="docutils literal notranslate"><span class="pre">-c</span></code></p></td>
+<td><p>Suffix for cases CSV file</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--single</span></code> / <code class="docutils literal notranslate"><span class="pre">-s</span></code></p></td>
+<td><p>Name of a single case to run (or comma-delimited list)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--simult_runs</span></code> / <code class="docutils literal notranslate"><span class="pre">-r</span></code></p></td>
+<td><p>Number of simultaneous runs. If negative, run all simultaneously</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--forcelocal</span></code> / <code class="docutils literal notranslate"><span class="pre">-l</span></code></p></td>
+<td><p>Force model to run locally instead of submitting a slurm job</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--restart</span></code> / <code class="docutils literal notranslate"><span class="pre">-r</span></code></p></td>
+<td><p>Switch to restart existing ReEDS runs</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--skip_checks</span></code> / <code class="docutils literal notranslate"><span class="pre">-f</span></code></p></td>
+<td><p>Force run, skipping checks on conda environment and switches</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--debug</span></code> / <code class="docutils literal notranslate"><span class="pre">-d</span></code></p></td>
+<td><p>Run in debug mode (same behavior as debug switch in cases.csv)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--debugnode</span></code> / <code class="docutils literal notranslate"><span class="pre">-n</span></code></p></td>
+<td><p>Run using debug specifications for slurm on an hpc system</p></td>
+</tr>
+</tbody>
+</table>
+</li>
+</ul>
+</li>
+<li><p>If you’re on Mac and would like to have the terminal always show what branch you’re on, you can set up Git Bash for Mac with the following: <a class="reference external" href="https://github.com/fabriziocucci/git-bash-for-mac">Git Bash for Mac</a></p></li>
+<li><p>Using the following run name format keeps your runs folder organized: ‘vYYYYMMDD’</p></li>
+</ul>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="example" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>The footnote text.</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="setup.html" class="btn btn-neutral float-left" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="model_documentation.html" class="btn btn-neutral float-right" title="Model Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, NREL.
+      <span class="lastupdated">Last updated on November 25, 2025.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
