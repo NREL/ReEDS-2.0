@@ -2,11 +2,11 @@
 
 ![Image of NREL Logo](images/nrel-logo.png)
 
-## Welcome to the Regional Energy Deployment System (ReEDS) India Model!
+## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
 This GitHub repository contains the source code for NREL&#39;s ReEDS India model. This version was adapted from the ReEDS model developed for North America. [Table 2](#Tab2) summarizes differences in model design and capabilities between the two versions. 
 
-Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS India source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS India model can be downloaded or cloned from [https://github.com/NREL/ReEDS\_OpenAccess](https://github.com/NREL/ReEDS-2.0), referring to the 'India' branch. New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
+Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS India Version 2019 source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS India model can be downloaded or cloned from [https://github.com/NREL/ReEDS\_OpenAccess](https://github.com/NREL/ReEDS_OpenAccess) (Branch: India). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
 
 ## Contents
 
@@ -81,11 +81,10 @@ While these installation instructions are specific to Windows 10, this version o
 <a name="ConfigRepo"></a>
 ## ReEDS India Repository Configuration
 
-The ReEDS India source code is hosted on GitHub: https://github.com/NREL/ReEDS-2.0
+The ReEDS India source code is hosted on GitHub: https://github.com/NREL/ReEDS\_OpenAccess
 
 1. Request access to the ReEDS GitHub repository at [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
-2. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
-3. Checkout the 'India' branch of the ReEDS-2.0 repository.
+3. Clone the ReEDS-2.0 repository on your desktop and use the repository with GitHub Desktop. Alternatively, download a ZIP from GitHub ([Figure 4](#Fig4)).
 
 <a name="Fig4"></a>
 ![Image of GitHub Download](images/github-download.png)
@@ -191,13 +190,13 @@ The ReEDS India repository is organized into six (6) folders. In the main folder
 | <ul><li>*d1_prep_data.py*</li><ul> | prepare data for Osprey and package it into a single gdx file |
 | <ul><li>*d2_osprey.gms*</li><ul> | optimize generation, transmission, and storage with hourly time resolution |
 | <ul><li>*d3_gdx_dump.gms*</li><ul> | output raw data from Osprey as .csv files |
-| <ul><li>*d4_process_osprey_results.py*</li><ul> | standardize generator results and aggregate transmission flows to region level  |
+| <ul><li>*d4_process_osprey_results.py*</li><ul> | standardize generator results and aggregate transmission flows to a regional level  |
 | <ul><li>*d5_existing_curtailment.gms*</li><ul> | compute the curtailment of existing resources based on results from Osprey |
 | <ul><li>*d6_marginal_curtailment.gms*</li><ul> | compute the curtailment of marginal variable generation based on results from Osprey |
 | <ul><li>*d7_condor.R*</li><ul> | calculate the energy arbitrage revenue for marginal storage additions |
 | <ul><li>*d8_capacity_credit.R*</li><ul> | calculate capacity credit of existing and marginal variable generation |
 | **E_Outputs**    | **Generates gdx files with model results** |
-| <ul><li>*e1_create_report.gms*</li><ul> | format results and write them to gdx file |
+| <ul><li>*e1_create_report.gms*</li><ul> | format results and write them to a gdx file |
 | <ul><li>*e2_process_outputs.py*</li><ul> | process ReEDS model results from gams and save key results in Excel format |
 | <ul><li>*runs* folder</li><ul> | solution folders for each model scenario saved with the name “{runname}_{scenarioname}” |
 | **F_Analysis**   | **Create html and figures of model outputs** |
@@ -213,7 +212,7 @@ The execution of the ReEDS India model can be accomplished by using a command-li
 
 A ReEDS India scenario (also referred to as a &quot;run&quot;, &quot;case&quot; or &quot;instance&quot;) is executed through a python-based case batching program called &quot;runmodel.py&quot;. The user can execute a single case or a batch of cases using this program.
 
-**Step 1** : Specify the ReEDS scenario name(s) and configuration(s) in the case configuration file. ([Figure 12](#Fig12)). 
+**Step 1** : Specify the ReEDS scenario name(s) and configuration(s) in the case configuration file.([Figure 12](#Fig12)). 
 
 The scenario configuration file name is called &quot;cases.csv&quot; in the &quot;A_Inputs&quot; folder. Within &quot;cases.csv&quot;, the data in Column A are the model &quot;switches&quot; (also referred to as &quot;options&quot;). Column B provides brief descriptions of the switches. The data in Column C are the default values of the switches. Every subsequent column represents an individual model scenario, beginning with Column D. The scenario name is specified in Row 1. The value for each switch is specified beginning in Row 2. If a switch value is left blank, the default value from Column C is used. Users can tailor the default scenarios in two ways: 1.) adjust the default switch values for an existing scenario or 2.) create a new scenario by adding a new column with a scenario name in Row 1 and desired switch values beginning in Row 2.
 
@@ -239,7 +238,7 @@ in the command line and press &quot;Enter/Return&quot; to initiate the ReEDS Ind
 	
 	> Run Name (default is a timestamp): testrun
 
-5.	Next, you will be asked which scenario you would like to run. This list is generated from the column headers in &quot;cases.csv&quot;. By default, the following options are available. 
+5.	Next, you will be asked which scenario you would like to run. This list is generated from the column headers in &quot;cases.csv&quot;. The following options are shown as examples. 
 Please select which scenarios you would like to run
 Enter each selected number separated by a comma (i.e. 1, 3)
 
@@ -290,11 +289,8 @@ compile the model (evaluate A_Inputs and B_Equations)
 
 solve the model, requires that a model has already been compiled
 
-
 **Step 3** : Wait for each case to finish, check for successful completion, and view outputs. 
 Following a successful run, a .gdx file with all model results will be stored in &quot;E_Outputs/gdxfiles/output_{runname}_{scenarioname}.gdx&quot;. If R is correctly installed, a standard .html visualization report will automatically open and is also stored in &quot;F_Analysis&quot;
-
-
 
 <a name="Debug"></a>
 # Debugging Tips
@@ -319,7 +315,7 @@ GAMS will produced files unique to each case that can help the user with error d
 
 This model is based on the ReEDS Version 2018 created for the United States. All input parameters have been updated to reflect the India context including electricity demand, technology cost and performance, data on existing and planned infrastructure, resource data, and operating and policy constraints. The ReEDS Version 2018 Documentation on which the ReEDS India model is based is available at no cost from the National Renewable Energy Laboratory: [https://www.nrel.gov/docs/fy19osti/72023.pdf](https://www.nrel.gov/docs/fy19osti/72023.pdf)
 
-[Table 2](#Tab2) summarizes difference between model design and capabilities in US ReEDS Version 2019 and ReEDS India. This list is not exhaustive. 
+[Table 2](#Tab2) summarizes difference between model design and capabilities in US ReEDS Version 2019 and ReEDS India.
 
 <a name="Tab2"></a>
 *Table 2. Differences between US ReEDS Version 2019 and ReEDS India.*
@@ -335,13 +331,12 @@ This model is based on the ReEDS Version 2018 created for the United States. All
 | Load from EVs | Included | Not included |
 | Clean energy policies | Policies for generation, capacity, emissions, and tax incentives  | National and state capacity targets for wind and solar |
 | Operating reserves | Spinning, Regulation, and Flexibility reserve requirements defined for each BA | Spinning reserve requirement for entire country |
-| Planning reserve margin | Planning reserve margin set at NERC reference levels for all years, except ERCOT in 2018 and 2019 is set to actual values because the actuals were lower than the NERC reference levels | Seasonal planning reserve margin requirement of 7% peak demand defined for each interconnected region (i.e., state or union territory)  |
+| Planning reserve margin | Planning reserve margin set at NERC reference levels for all years, except ERCOT in 2018 and 2019 is set to actual values because the actuals were lower than the NERC reference levels | Seasonal planning reserve margin requirement of 7% peak demand defined for each interconnected balancing area (i.e., states and union territories)  |
 | Technology performance bins | Units binned according to costs and heat rates | Units binned according to reported variable costs which internalize variations in fuel cost and heat rates |
-| Absolute growth constraint | Not included | Absolute growth constraint applied to certain technologies such as biomass, hydropower, and nuclear |
-| Technology phase out | Not included | Forced phase out of select technologies including diesel and subcritical coal |
+| Absolute growth constraint | Not included | Absolute growth constraint applied for select technologies, which can be specified in "growth_limit_absolute.csv" |
+| Technology Phase Out | Not included | Forced phase out of select technologies, which can be specified in "tech_phase_out_schedule.csv" |
 | RE diversity constraint | Not included | Mandate that no more than 15% of new wind and solar additions can be located in any one resource region  |
 | Coal cost adder | Not included | State wise variable cost adder for coal based on rail transport charges |
-
 
 <a name="FAQ"></a>
 # Frequently Asked Questions
@@ -408,55 +403,101 @@ If you have comments and/or questions, please contacts the ReEDS team:
 # Appendix
 
 <a name="Switches"></a>
-## Select ReEDS India Model Switches
+## ReEDS India Model Switches
 | Switch | Input Type | Description | Defaut Value |
 | --- | --- | --- | --- | 
-| **Model horizon**  |
+| **Model Settings: General**  |
 | <ul><li>*timetype*</li><ul> | string | Define how the model portrays foresight. This version only includes the intertemporal setting (int) that assumes full foresight of all modeled years | int |
-| <ul><li>*yearset*</li><ul> | string | File name of the years to model | year_set_2070.csv |
+| <ul><li>*solver*</li><ul> | string | Solver for GAMS to use | CPLEX |
+| <ul><li>*augur_workers*</li><ul> | integer | Number of windows for augur module runs | 36 |
+| <ul><li>*yearset*</li><ul> | string | File pointer to specify the years to model | yearset_2070.csv |
 | <ul><li>*endyear*</li><ul> | integer | Last year to be modeled | 2070 |
-| **Scenario inputs** |
-| <ul><li>*FuelLimit_file*</li><ul> | string | File name of the gas fuel limit inputs | fuel_limit.csv |
-| <ul><li>*TechCost_file*</li><ul> | string | File name of the technology cost (units: INR/MW) and heat rate (units: kBtu/kWh) inputs | tech_costs_itc22.csv |
-| <ul><li>*MinLoad_file*</li><ul> | string | File name of the min loading limit inputs | minloadfrac0.csv |
-| <ul><li>*Hours_file*</li><ul> | string | File name of the hours in each time block | hours_NREL_India_Baseline.csv |
-| <ul><li>*Load_file*</li><ul> | string | File name of the load in each time block | load_NREL_India_Baseline.csv |
-| <ul><li>*PeakDemRegion_file*</li><ul> | string | File name of the peak demand by region | peakdem_region_NREL_India_Baseline.csv |
-| **Generator class definitions** |
+| <ul><li>*WeatherYear*</li><ul> | integer | Weather year being used | 2014 |
+| **Scenario Inputs: Demand** 
+| <ul><li>*HourlyLoadFile*</li><ul> | string | Load scenario name for capacity value and curtailment load duration curve data | NREL_India_Baseline_8760 |
+| <ul><li>*Load_file*</li><ul> | string | File name of the load in each time block to be used in the scenario run | load_NREL_India_Baseline.csv |
+| <ul><li>*PeakDemRegion_file*</li><ul> | string | File name of the peak demand by region to be used in the scenario run | peakdem_region_NREL_India_Baseline.csv |
+| <ul><li>*PeakDemState_file*</li><ul> | string | File name of the peak demand by state to be used in the scenario run | peakdem_state_NREL_India_Baseline.csv |
+| <ul><li>*Hours_file*</li><ul> | string | File name of the hours in each time block to be used in the scenario run | hours_NREL_India_Baseline.csv |
+| **Scenario Inputs: Generation** 
+| <ul><li>*Binnedcap_file*</li><ul> | string | File name of binned non-RE capacity by BA, year, and VO&M bin | binned_capacity.csv |
+| <ul><li>*Maxage_file*</li><ul> | string | File name of maximum generator age file | maxage.csv |
+| <ul><li>*PRMregion_file*</li><ul> | string | File name of the PRM (planning reserve margin) by region | prm_region.csv |
+| <ul><li>*PRMstate_file*</li><ul> | string | File name of PRM (planning reserve margin) by state | prm_state.csv |
+| <ul><li>*FuelLimit_file*</li><ul> | string | File name of the fuel limit file to be used in scenario run | fuel_limit.csv |
+| <ul><li>*FuelPrice_file*</li><ul> | string | File name of the fuel prices to be used in scenario run | fprice.csv |
+| <ul><li>*TechCost_file*</li><ul> | string | File name for the technology cost (units: INR/MW) and heat rate (units: kBtu/kWh) inputs | tech_costs_itc22.csv |
+| <ul><li>*MinLoad_file*</li><ul> | string | File name of the minimum loading limits to be used in the scenario run | minloadfrac0.csv |
+| <ul><li>*IVT_file*</li><ul> | string | File name of the technology, vintage and year combinations file used in the scenario run | ivt.csv |
+| <ul><li>*RECapMandate_file*</li><ul> | string | File name of the RE capacity mandate to be used in the scenario run | recap_mandate.csv |
+| <ul><li>*RECapFracMandate_file*</li><ul> | string | File name of the non-fossil fractional capacity mandate to be used in the scenario run | recapfrac_mandate.csv |
+| <ul><li>*RECapManTech_file*</li><ul> | string | File name of set of technologies that qualify for RE capacity mandate | capmandate_tech_set.csv |
+| <ul><li>*REGenMandate_file*</li><ul> | string | File name of the RE generation mandate to be used in the scenario run | regen_mandate.csv |
+| <ul><li>*REGenManTech_file*</li><ul> | string | File name of set of technologies that qualify for RE generation mandate | genmandate_tech_set.csv |
+| <ul><li>*AbsGrowLim_file*</li><ul> | string | File name of the absolute growth limits for different technologies and states | growth_limit_absolute.csv |
+| <ul><li>*GrowthLimTech_file*</li><ul> | string | File name of the technology growth limits for different technologies | growth_limit_by_tech.csv |
+| <ul><li>*CapNonRsc_file*</li><ul> | string | File name of the capacity of non-renewable resources in each state | capnonrsc.csv |
+| <ul><li>*CapRsc_file*</li><ul> | string | File name of the capacity of hydropower in each state | caprsc.csv |
+| <ul><li>*PrescribedNonRsc_file*</li><ul> | string | File name of the prescribed additions of nonrenewable capacity in each state | prescribednonrsc.csv |
+| <ul><li>*PrescribedRsc_file*</li><ul> | string | File name of the prescribed additions of renewable capacity in each state | prescribedrsc.csv |
+| <ul><li>*CfOut_file*</li><ul> | string | File name of the capacity factors of solar and wind in each resource region and in each season | cfout_2014.csv |
+| <ul><li>*RscDat_file*</li><ul> | string | File name of the technical potential capacity of renewable resources (wind and solar) in each state | rsc_dat_2014.csv |
+| **Scenario Inputs: Transmission** 
+| <ul><li>*Trancap_file*</li><ul> | string | File name of the exogenous transmission capacity | trancap.csv |
+| <ul><li>*Trancost_file*</li><ul> | string | File name of the maximum transmission capacities and costs for each state | trancost.csv |
+| <ul><li>*InterTrancost_file*</li><ul> | string | File name of the transmission cost between states | inter_transcost.csv |
+| **Model Settings: Generation** |
 | <ul><li>*numclass*</li><ul> | integer | Maximum number of technology classes | 4 |
 | <ul><li>*numhintage*</li><ul> | integer | Number of technology bins to create when grouping units with similar performance characteristics | 7 |
-| **Capacity Credit and Curtailment** |
-| <ul><li>*CC/Curtailment Iterations*</li><ul> | integer | Number of iterations between ReEDS LP and CC/Curtailment modules | 4 |
-| <ul><li>*GSw_CCcurtAvg*</li><ul> | integer | Select method for average CC/curt calculations | 2 |
-| **Capacity growth** |
 | <ul><li>*retireyear*</li><ul> | integer | First year when economic capacity retirements are allowed | 2026 |
-| <ul><li>*REdiversity*</li><ul> | scalar | Maximum fraction of new VRE investments that can go in any one  | 0.15 |
+| <ul><li>*REdiversity*</li><ul> | scalar | Maximum fraction of new VRE investments that can go in any one | 0.15 |
 | <ul><li>*GSw_GrowthRel*</li><ul> | binary | Turn relative growth constraint on [1] or off [0] | 1 |
 | <ul><li>*GSw_GrowthAbs*</li><ul> | binary | Turn absoluate growth constraint on [1] or off [0] | 1 |
+| <ul><li>*GSw_GrowthLimTech*</li><ul> | binary | Turn annual growth limit for techs on [1] or off [0] | 1 |
 | <ul><li>*GSw_Refurb*</li><ul> | binary | Turn refurbishments on [1] or off [0] | 1 |
 | <ul><li>*GSw_Storage*</li><ul> | binary | Turn all storage on [1] or off [0] | 1 |
 | <ul><li>*GSw_CurtStorage*</li><ul> | scalar | Fraction of storage that counts toward reducing curtailment | 1 |
+| <ul><li>*GSw_StorCC*</li><ul> | scalar | Turn storage contribution to reserve margin on [1] or off [0] | 1 |
+| <ul><li>*GSw_StorOpres*</li><ul> | scalar | Turn storage contribution to operating reserve on [1] or off [0] | 1 |
 | <ul><li>*GSw_Prescribed*</li><ul> | binary | Turn prescribed capacity additions on [1] or off [0] | 1 |
+| <ul><li>*GSw_ForcePrescription*</li><ul> | binary | Turn forced prescribed capacity additions on [1] or off [0] | 0 |
 | <ul><li>*GSw_Retire*</li><ul> | binary | Turn endogenous retirements on [1] or off [0] | 1 |
 | <ul><li>*GSw_REdiveresity*</li><ul> | binary | Turn geographic diversity constraint for RE additions on [1] or off [0] | 1 |
-| **Reserves** |
+| <ul><li>*GSw_SolarPlusStorage*</li><ul> | binary | Mandate UPV (utility-scale solar PV) investment to include storage: yes [1] or no [0] | 0 |
+| <ul><li>*GSw_H2*</li><ul> | binary | Turn H2-CT (hydrogen combustion turbine) and H2-CC (hydrogen combined cycle) technologies on [1] or off [0] | 1 |
+| <ul><li>*GSw_OfsWind*</li><ul> | binary | Turn offshore wind technology on [1] or off [0] | 1 |
+| <ul><li>*GSw_BanGas*</li><ul> | binary | Ban new gas investments in India: on [1] or off [0] | 0 |
+| **Model Settings: Capacity Credit and Curtailment** |
+| <ul><li>*CC/Curtailment Iterations*</li><ul> | integer | Number of iterations between ReEDS LP and CC/Curtailment modules | 4 |
+| <ul><li>*GSw_CCcurtAvg*</li><ul> | integer | Select method for average CC/curt calculations | 2 |
+| <ul><li>*GSw_CurtFlow*</li><ul> | binary | Turn curtailment trading on [1] or off [0] | 0 |
+| <ul><li>*GSw_Int_CC*</li><ul> | integer | Select intertemporal capacity credit method (0 = average undifferentiated, 1 = average differentiated, 2 = marginal differentiated) | 0 |
+| <ul><li>*GSw_Int_Curt*</li><ul> | integer | Select intertemporal curtailment method (0=average undifferentiated, 1=average differentiated , 2=marginal undifferentiated, 3=marginal differentiated) | 0 |
+| <ul><li>*GSw_CurtLim*</li><ul> | binary | Turn curtailment limits on [1] or off [0] | 0 |
+| **Model Settings: Reserves** |
+| <ul><li>*GSw_MinCF*</li><ul> | binary | Turn minimum CF (capacity factors) for new capacity on [1] or off [0] | 1 |
 | <ul><li>*GSw_OpRes*</li><ul> | binary | Turn operating reserve constraints on [1] or off [0] | 1 |
 | <ul><li>*GSw_OpResTrade*</li><ul> | binary | Tun operating reserve trading between regions on [1] or off [0] | 0 |
-| <ul><li>*GSw_PRM*</li><ul> | binary | Turn planning reserve margin on [1] or off [0] | 1 |
+| <ul><li>*GSw_PRMregion*</li><ul> | binary | Turn regional planning reserve margin on [1] or off [0] | 0 |
+| <ul><li>*GSw_PRMstate*</li><ul> | binary | Turn state planning reserve margin on [1] or off [0] | 1 |
 | <ul><li>*GSw_PRMTrade*</li><ul> | binary | Turn planning reserve margin trading between regions on [1] or off [0] | 1 |
-| **System operations** |
+| **Model Settings: System Operations** |
 | <ul><li>*GSw_FuelSupply*</li><ul> | binary | Turn fuel supply constraints on [1] or off [0] | 1 |
 | <ul><li>*GSw_MinGen*</li><ul> | binary | Turn min loading constraint on [1] or off [0] | 1 |
-| **Policy** |
-| <ul><li>*GSw_RECapMandate*</li><ul> | binary | Turn RE capacity targets on [1] or off [0] | 0 |
+| <ul><li>*GSw_SAsia_Trade*</li><ul> | binary | Turn South Asia trade on [1] or off [0] | 1 |
+| <ul><li>*GSw_SAsia_PRM*</li><ul> | binary | Importing countries able to contribute to India's PRM: yes [1] or no [0] | 0 |
+| <ul><li>*GSw_StorHAV*</li><ul> | binary | Turn HAV (Hourly Arbitrage Value) for storage on [1] or off [0] | 1 |
+| <ul><li>*GSw_FocusRegionZeroTXCost*</li><ul> | binary | Zero transmission capital cost between focus regions: yes [1] or no [0] | 0 |
+| <ul><li>*GSw_TxLimit*</li><ul> | binary | Turn transmission flow limits on [1] or off [0] | 1 |
+| **Model Settings: Policy** |
+| <ul><li>*GSw_RECapMandate*</li><ul> | binary | Turn RE capacity targets on [1] or off [0] | 1 |
+| <ul><li>*GSw_RECapFracMandate*</li><ul> | binary | Turn fractional non-fossil capacity target on [1] or off [0] | 0 |
 | <ul><li>*GSw_REGenMandate*</li><ul> | binary | Turn RE generation target on [1] or off [0] | 0 |
 | <ul><li>*GSw_TechPhaseOut*</li><ul> | binary | Turn forced phase out of select technologies on [1] or off [0] | 1 |
 | <ul><li>*GSw_CarbonTax*</li><ul> | binary | Turn CO2 tax on [1] or off [0] | 0 |
 | <ul><li>*GSw_CO2Limit*</li><ul> | binary | Turn national CO2 emissions limit on [1] or off [0] | 0 |
 | <ul><li>*carbonpolicystartyear*</li><ul> | integer | First year with carbon policy | 2030 |
-| **Linear Program** |
+| **Model Settings: Linear Program** |
 | <ul><li>*GSw_ValStr*</li><ul> | binary | Turn value streams on [1] or off [0] | 0 |
 | <ul><li>*GSw_Loadpoint*</li><ul> | binary | Use [1] or disable [0] a loadpoint for the intertemporal solve after the first iteration | 1 |
 | <ul><li>*GSw_gopt*</li><ul> | integer | Select solver option file to be used | 4 |
-
-
