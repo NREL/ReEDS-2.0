@@ -9,7 +9,7 @@ import platform
 import cmocean
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
-from reeds.results import SLIDE_HEIGHT
+from reeds.report_utils import SLIDE_HEIGHT
 
 reeds_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 reeds.plots.plotparams()
@@ -65,7 +65,7 @@ interactive = False
 
 
 #%% Parse arguments
-cases, colors, basecase, basemap = reeds.results.parse_caselist(
+cases, colors, basecase, basemap = reeds.report_utils.parse_caselist(
     caselist,
     casenames,
     basecase_in,
@@ -83,7 +83,7 @@ if not plotyear:
 nrows, ncols, coords = reeds.plots.get_coordinates(cases, aspect=2)
 
 ### Set up powerpoint file
-prs = reeds.results.init_pptx()
+prs = reeds.report_utils.init_pptx()
 
 
 #%% Create output folder
@@ -132,7 +132,7 @@ ax.set_xticklabels(cases.keys(), rotation=45, rotation_mode='anchor', ha='right'
 reeds.plots.despine(ax)
 ## Save it
 title = 'Total dropped load'
-slide = reeds.results.add_to_pptx(title, prs=prs, width=None, height=SLIDE_HEIGHT)
+slide = reeds.report_utils.add_to_pptx(title, prs=prs, width=None, height=SLIDE_HEIGHT)
 if interactive:
     plt.show()
 
@@ -171,7 +171,7 @@ for case in cases:
 reeds.plots.trim_subplots(ax, nrows, ncols, len(cases))
 ## Save it
 title = 'Dropped load'
-slide = reeds.results.add_to_pptx(title, prs=prs)
+slide = reeds.report_utils.add_to_pptx(title, prs=prs)
 if interactive:
     plt.show()
 
@@ -196,7 +196,7 @@ for case in dfdropped.loc[dfdropped > 0].index:
     # ax[0].set_title(case, fontsize=14)
     ## Save it
     title = f'Dropped load ({case})'
-    slide = reeds.results.add_to_pptx(title, prs=prs)
+    slide = reeds.report_utils.add_to_pptx(title, prs=prs)
     if interactive:
         plt.show()
 
@@ -270,7 +270,7 @@ for r in plot_regions:
                 annotation_clip=False,
             )
         ## Save it
-        slide = reeds.results.add_to_pptx(title, prs=prs)
+        slide = reeds.report_utils.add_to_pptx(title, prs=prs)
         if interactive:
             plt.show()
 

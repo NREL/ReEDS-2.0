@@ -1,6 +1,14 @@
-# ReEDS 2.0
+## ReEDS 2.0
+**Regional Energy Deployment System (ReEDS) Model**
 
-## Welcome to the Regional Energy Deployment System (ReEDS) Model
+ 
+[![Documentation](https://img.shields.io/badge/Documentation-view%20online-0a7f5e?logo=readthedocs&logoColor=white&labelColor=555)](https://nrel.github.io/ReEDS-2.0)
+![Static Badge](https://img.shields.io/badge/python-3.11-blue)
+![GitHub License](https://img.shields.io/github/license/NREL/ReEDS-2.0)
+[![DOI](https://zenodo.org/badge/189060033.svg)](https://doi.org/10.5281/zenodo.16943302)
+
+</br>
+</br>
 
 This GitHub repository contains the source code for NREL's ReEDS model.
 The ReEDS model source code is available at no cost from the National Renewable Energy Laboratory.

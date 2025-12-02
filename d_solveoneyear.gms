@@ -198,17 +198,22 @@ $ifthene %cur_year%==%startyear%
 CAP.l(i,v,r,"%startyear%")$[m_capacity_exog(i,v,r,"%startyear%")] = m_capacity_exog(i,v,r,"%startyear%") ;
 $endif
 
+$ifthene %cur_year%==%startyear%
+*initialize CAP_ENERGY.l for 2010 because it has not been defined yet
+CAP_ENERGY.l(i,v,r,"%startyear%")$[m_capacity_exog_energy(i,v,r,"%startyear%")] = m_capacity_exog_energy(i,v,r,"%startyear%") ;
+$endif
+
 * Now that cost_cap_fin_mult is done, calculate cost_growth, which is
 * the minimum cost of that technology within a state
 if(Sw_GrowthPenalties > 0,
-*rsc_fin_mult holds the multipliers for hydro, psh, and geo techs, so don't include them here
-    cost_growth(i,st,t)$[tmodel(t)$sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)$(not (geo(i) or hydro(i) or psh(i)))] = 
-        smin{r$[valinv_irt(i,r,t)$r_st(r,st)$cost_cap_fin_mult(i,r,t)$cost_cap(i,t)],
+*rsc_fin_mult holds the multipliers for sccapcosttech, so don't include them here
+    cost_growth(i,st,t)$[tmodel(t)$sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)$(not sccapcosttech(i))] = 
+        smin{r$[valinv_irt(i,r,t)$r_st(r,st)$cost_cap_fin_mult(i,r,t)],
             cost_cap_fin_mult(i,r,t) * cost_cap(i,t) } ;
 
-*rsc_fin_mult holds the multipliers for hydro, psh, and geo techs
-    cost_growth(i,st,t)$[tmodel(t)$sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)$(geo(i) or hydro(i) or psh(i))] = 
-        smin{(r,rscbin)$[valinv_irt(i,r,t)$r_st(r,st)$rsc_fin_mult(i,r,t)$m_rsc_dat(r,i,rscbin,"cost")],
+*rsc_fin_mult holds the capital costs for sccapcosttech
+    cost_growth(i,st,t)$[tmodel(t)$sum{r$[r_st(r,st)], valinv_irt(i,r,t) }$stfeas(st)$sccapcosttech(i)] = 
+        smin{(r,rscbin)$[valinv_irt(i,r,t)$r_st(r,st)$rsc_fin_mult(i,r,t)],
             rsc_fin_mult(i,r,t) * m_rsc_dat(r,i,rscbin,"cost") } ;
 
     cost_growth(i,st,t)$cost_growth(i,st,t) = round(cost_growth(i,st,t),3) ;
@@ -234,6 +239,7 @@ $include inputs_case%ds%diagnose.gms
 $endif.diagnose_2
 $endif.diagnose
 
+
 * ------------------------------
 * Solve the Model
 * ------------------------------
@@ -254,6 +260,20 @@ tsolved(t)$tmodel(t) = yes ;
 z_rep(t)$tmodel(t) = Z.l ;
 z_rep_inv(t)$tmodel(t) = Z_inv.l(t) ;
 z_rep_op(t)$tmodel(t) = Z_op.l(t) ;
+
+
+* ---------------------------------
+* Modeling to Generate Alternatives
+* ---------------------------------
+$ifthene.mga %GSw_MGA_CostDelta%>0
+$ifthene.mga1 %cur_year%>=%GSw_StartMarkets%
+*## Activate MGA mode
+Sw_MGA = 1 ;
+solve ReEDSmodel %GSw_MGA_Direction%imizing MGA_OBJ using lp ;
+*## Deactivate MGA mode
+Sw_MGA = 0 ;
+$endif.mga1
+$endif.mga
 
 
 *** Adjust some parameters based on the solution for this solve year

@@ -28,6 +28,7 @@ import sys
 import datetime
 from glob import glob
 from warnings import warn
+import h5py
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
 ## Time the operation of this script
@@ -74,6 +75,14 @@ def aggreg_methods(
         # are still the regions and need to be mapped to aggreg regions differently
         if row.name == 'load_hourly.h5':
             df1.columns = df1.columns.map(r2aggreg)
+        # Exception for dr_shed_hourly becuase the wide column contains tech|region
+        elif 'dr_shed_hourly' in row.name :   
+            # Separate tech and region from the 'wide' column
+            df1[['tech', 'region']] = df1['wide'].str.split('|', expand=True)
+            # Map regions to aggregated regions
+            df1['region'] = df1['region'].map(r2aggreg)
+            # Recombine tech and aggregated region into the 'wide' column
+            df1['wide'] = df1['tech'] + '|' + df1['region']   
         else:
             for c in region_cols:
                 df1[c] = df1[c].map(lambda x: r2aggreg.get(x,x))
@@ -173,6 +182,10 @@ def aggreg_methods(
         # are still the regions and need to be summed differently
         if row.name == 'load_hourly.h5':
             df1 = df1.groupby(df1.columns, axis=1).agg(aggfunc)
+        # Exception for dr_shed_hourly becuase the wide column contains tech|region
+        elif 'dr_shed_hourly' in row.name : 
+            # Group by relevant columns and aggregate values
+            df1 = df1.groupby(['datetime', 'wide', 'year'], as_index=False).sum().drop(columns=['tech', 'region'])    
         else:
             df1 = df1.groupby(row.fix_cols+region_cols).agg(aggfunc)
 
@@ -237,6 +250,25 @@ def aggreg_methods(
                 axis=1
             ).astype(np.float32)
 
+        elif row.name =='dr_shed_hourly.h5' :
+            # separate tech | region
+            rcol = df1.wide.str.split('|',expand=True)[1]
+            fracdata = disagg_data[aggfunc]
+            df1cols = (df1.columns)
+            valcol = df1cols[-1]
+            # Identify the columns to merge from the fracdata
+            fracdata_mergecols = ['PCA_REG'] + [col for col in fracdata.columns
+                                    if col not in ['PCA_REG','nonUS_PCA','FIPS','fracdata']]
+            # Identify the columns to merge from the original data
+            df1_mergecols = [rcol] + [col for col in df1cols if col in fracdata_mergecols]
+            # Merge the datasets using PCA_REG
+            df1 = pd.merge(fracdata, df1, left_on=fracdata_mergecols, right_on=df1_mergecols, how='inner')
+            # Multiply BA shed by population fraction
+            df1['new_value'] = (df1['fracdata'].multiply(df1[valcol], axis='index'))
+            # Clean up dataframe   
+            df1['wide'] = df1.wide.str.split('|',expand=True)[0] +'|' + df1['FIPS']         
+            df1 = (df1.drop(columns=[valcol,'PCA_REG','fracdata','FIPS'])
+                      .rename(columns={'new_value':valcol}))            
         else:
             # Disaggregate cap using the selected aggfunc
             fracdata = disagg_data[aggfunc]
@@ -258,12 +290,6 @@ def aggreg_methods(
             df1 = df1.set_index(new_index.to_list())
             df1 = refilter_regions(df1, region_cols,region_col, val_r_all)
 
-    elif aggfunc == 'special':
-        if (row.name == 'county2zone.csv') and (agglevel == 'county'):
-            for r in region_cols:
-                df1[r] = 'p' + df1['FIPS'].map(lambda x: f"{x:0>5}")
-            df1 = df1.set_index(region_cols)
-
     else:
         raise ValueError(f'Invalid choice of aggfunc: {aggfunc} for {row.name}')
 
@@ -277,6 +303,9 @@ def aggreg_methods(
         # are still the regions and need to be filtered differently
         elif row.name == 'load_hourly.h5':
             df1 = df1[[col for col in df1.columns if col in val_r_all]]
+        elif row.name =='dr_shed_hourly.h5':
+            # separate tech | region to filter
+            df1 = df1.loc[df1.wide.str.split('|',expand=True)[1].isin(val_r_all)]
         else:
             df1 = df1.loc[df1.index.get_level_values(region_col).isin(val_r_all)]
 
@@ -287,6 +316,8 @@ def aggreg_methods(
     # just needs the index reset before saving to inputs_case folder
     if row.name == 'load_hourly.h5':
         dfout = df1.reset_index()
+    elif row.name == 'dr_shed_hourly.h5':
+        dfout = df1.set_index(['datetime','year','wide']).unstack('wide')['value'].reset_index()
     elif (aggfunc == 'sc_cat') and (not row.wide):
         dfout = df1.stack().rename(row.key).reset_index()[columns]
     elif (aggfunc == 'sc_cat') and row.wide and (len(row.fix_cols) == 1):
@@ -553,7 +584,12 @@ def agg_disagg(filepath, r2aggreg_glob, r_ba_glob, runfiles_row):
         except pd.errors.EmptyDataError:
             return
     elif filetype == 'h5':
-        dfin = reeds.io.read_file(os.path.join(inputs_case, filepath))
+        # Skip empty files
+        with h5py.File(os.path.join(inputs_case, filepath), 'r') as f:
+            if len(f.keys()) == 0:
+                return
+
+        dfin = reeds.io.read_file(os.path.join(inputs_case, filepath)).copy()
         if header == 'keepindex':
             indexnames = (dfin.index.names)
             if (len(indexnames) == 1) and (not indexnames[0]):
@@ -563,7 +599,7 @@ def agg_disagg(filepath, r2aggreg_glob, r_ba_glob, runfiles_row):
             if (filepath == 'recf_csp.h5') and (indexnames[0] == 'hour'):
                 dfin.index.name = 'index'
                 indexnames = ['index']
-            dfin.reset_index(inplace=True)
+            dfin = dfin.reset_index()
     elif filetype == 'gdx':
         ### Read in the full gdx file, but only change the 'key' parameter
         ### given in runfiles. That's wasteful, but there are currently no
@@ -1005,8 +1041,7 @@ if 'aggreg' in agglevel:
         aggreg2anchorreg = load.groupby('aggreg').idxmax()['MW'].rename('rb')
     elif anchortype in ['size','km2','area']:
         ### Take the "anchor" zone as the zone with the largest area [km2]
-        import geopandas as gpd
-        dfba = gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','US_PCA')).set_index('rb')
+        dfba = reeds.io.get_zonemap(os.path.dirname(inputs_case))
         dfba['km2'] = dfba.area / 1e6
         ## Add column for new regions
         dfba['aggreg'] = dfba.index.map(r_ba)
@@ -1135,11 +1170,11 @@ if any(missingfiles):
 mapsfile = os.path.join(inputs_case, 'maps.gpkg')
 if os.path.exists(mapsfile):
     os.remove(mapsfile)
-dfmap = reeds.io.get_dfmap(os.path.join(inputs_case,'..'))
+dfmap = reeds.io.get_dfmap(os.path.dirname(inputs_case))
 for level in dfmap:
     dfmap[level].rename_axis(level).to_file(mapsfile, layer=level)
 
-dfmap = reeds.io.get_dfmap(os.path.join(inputs_case,'..'))
+dfmap = reeds.io.get_dfmap(os.path.dirname(inputs_case))
 
 ### Aggregate or disaggregate the 'r' map; none of the rest should change
 # Mixed resolution maps are patched together in the get_zonemap() function

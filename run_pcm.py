@@ -27,6 +27,7 @@ switch_mods_default = {
     'GSw_HourlyChunkLengthRep': 1,
     'GSw_HourlyChunkLengthStress': 1,
     'GSw_HourlyChunkAggMethod': 1,
+    'GSw_PRM_CapCredit': 0,
 }
 
 
@@ -196,7 +197,6 @@ def main(casepath, t, switch_mods=switch_mods_default, label='', overwrite=False
             inputs_case=os.path.join(casepath, 'inputs_case'),
             periodtype=f'pcm_{label}',
             minimal=1,
-            make_plots=0,
         )
         hourly_writetimeseries.main(
             sw=sw_pcm,

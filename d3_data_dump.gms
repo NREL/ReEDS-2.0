@@ -56,6 +56,7 @@ energy_price(r,allh)               "--2004$/MWh-- energy price from the previous
 flex_load_opt(r,allh)              "--MW-- model results for optimizing flexible load"
 flex_load(r,allh)                  "--MW-- total exogenously defined flexible load"
 fuel_price_filt(i,r)               "--$/mmBTU-- fuel prices filtered for the previous solve year and existing capacity"
+gen_h_stress_filt(i,r,allh,t)      "--MW-- generation by stress timeslice with charge and production load as negative generation"
 heat_rate_filt(i,v,r)              "--MMBtu/MWh-- heat rate"
 h2_usage_regional(r,allh,t)        "--metric tons-- H2 usage by region"
 inv_cond_filt(i,v,t)               "--set-- vintage-year mapping for investments by technology"
@@ -65,6 +66,7 @@ m_cf_filt(i,v,r,allh)              "--fraction-- capacity factor used in the mod
 m_cf_szn_filt(i,v,r,allszn)        "--fraction-- modelled capacity factors filtered for hydro resources to set seasonal energy constraints"
 minloadfrac_filt(r,i,allszn)       "--fraction-- modelled mingen fraction filtered for hydro resources to set mingen constraints"
 prod_filt(i,v,r,allh)              "--MW-- power consumed for PRODUCE.l"
+ra_cap_loadsite(r,t)               "--MW-- capacity of flexibly sited load"
 repbioprice_filt(r)                "--2004$/MWh-- marginal price for biofuel in region where biofuel was used"
 repgasprice_filt(r)                "--$/mmBTU-- NG prices in ReEDS filtered for the previous solve year"
 repgasprice_r(r,t)                 "--$/mmBTU-- NG prices in ReEDS, switch-dependent, at the BA level"
@@ -123,7 +125,7 @@ cap_exist_iv(i,v)$valcap_iv_filt(i,v) = sum{r, cap_exist(i,v,r) } ;
 cap_exist_i(i)$valcap_i_filt(i) = sum{(r,v), cap_exist(i,v,r) } ;
 
 cap_ivrt(i,v,r,t)$([not (upv(i) or wind(i))]$valcap(i,v,r,t)$trange(t)) = CAP.l(i,v,r,t) ;
-cap_energy_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)$continuous_battery(i)] = CAP_ENERGY.l(i,v,r,t) ;
+cap_energy_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)$battery(i)] = CAP_ENERGY.l(i,v,r,t) ;
 cap_ivrt(i,v,r,t)$([upv(i) or wind(i)]$valcap(i,v,r,t)) =
     m_capacity_exog(i,v,r,t)$trange(t)
     + sum{tt$[inv_cond(i,v,r,t,tt)$trange(tt)],
@@ -131,7 +133,7 @@ cap_ivrt(i,v,r,t)$([upv(i) or wind(i)]$valcap(i,v,r,t)) =
 cap_init(i,v,r)$([not distpv(i)]$valcap_ivr(i,v,r)) = sum{t$tcur(t), cap_ivrt(i,v,r,t)$initv(v) } ;
 cap_init(i,v,r)$(distpv(i)$valcap_ivr(i,v,r)) = sum{t$tfirst(t), cap_ivrt(i,v,r,t) } ;
 inv_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)] = [INV.l(i,v,r,t) + INV_REFURB.l(i,v,r,t)]$valinv(i,v,r,t) + UPGRADES.l(i,v,r,t)$[upgrade(i)$valcap(i,v,r,t)$Sw_Upgrades] ;
-inv_energy_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)$continuous_battery(i)] = INV_ENERGY.l(i,v,r,t);
+inv_energy_ivrt(i,v,r,t)$[valcap(i,v,r,t)$trange(t)$battery(i)] = INV_ENERGY.l(i,v,r,t);
 inv_ivrt("distpv",v,r,t)$([trange(t)$(not tfirst(t))]$valcap("distpv",v,r,t)) = cap_ivrt("distpv",v,r,t) - sum{tt$tprev(t,tt), cap_ivrt("distpv",v,r,tt) } ;
 inv_ivrt("distpv","init-1",r,"%next_year%") = inv_distpv(r,"%next_year%") ;
 
@@ -142,29 +144,32 @@ ret(i,v,r)$valcap_ivr(i,v,r) = sum{t, ret_ivrt(i,v,r,t) } ;
 
 cap_exog_filt(i,v,r)$([not canada(i)]$valcap_ivr(i,v,r)) = sum{t$tnext(t), m_capacity_exog(i,v,r,t) } ;
 
+gen_h_stress_filt(i,r,allh,t)$[tcur(t)$valgen_irt(i,r,t)$h_stress_t(allh,t)] =
+  sum{v$valgen(i,v,r,t), GEN.l(i,v,r,allh,t)}
+;
 *============================
 * Fuel prices
 *============================
 
 fuel_price_filt(i,r)$cap_exist_ir(i,r) = sum{t$tcur(t), fuel_price(i,r,t) } ;
 
-* populate the fuel price for H2-CT techs as the marginal off the
+* populate the fuel price for H2-CT/CC techs as the marginal off the
 * hydrogen demand constraint (in $/[metric tons/hour]) divided by hours and 
-* times h2_ct_intensity (metric tons / mmbtu) to get $ / mmbtu -- note there should
-* always be a positive value here since if an H2-CT is built it consumes hydrogen 
+* times h2_combustion_intensity (metric tons / mmbtu) to get $ / mmbtu -- note there should
+* always be a positive value here since if an H2-CT/CC is built it consumes hydrogen 
 * the equation from which we extract the marginal depends on whether
 * we have the national (Sw_H2 = 1) or regional (Sw_H2 = 2) constraint
 h2_usage_regional(r,h,t)$tcur(t) =
     hours(h) * ( 
         h2_exogenous_demand_regional(r,'h2',h,t)
-        + sum{(i,v)$[valgen(i,v,r,t)$h2_ct(i)],
-            GEN.l(i,v,r,h,t) * h2_ct_intensity * heat_rate(i,v,r,t)}
+        + sum{(i,v)$[valgen(i,v,r,t)$h2_combustion(i)],
+            GEN.l(i,v,r,h,t) * h2_combustion_intensity * heat_rate(i,v,r,t)}
     )
 ;
 
-fuel_price_filt(i,r)$[Sw_H2$h2_ct(i)$(sum{t$tcur(t),yeart(t) } >= h2_demand_start)$cap_exist_ir(i,r)] = 
+fuel_price_filt(i,r)$[Sw_H2$h2_combustion(i)$(sum{t$tcur(t),yeart(t) } >= h2_demand_start)$cap_exist_ir(i,r)] = 
     sum{t$tcur(t),
-        (1 / cost_scale) * (1 / pvf_onm(t)) * h2_ct_intensity * (
+        (1 / cost_scale) * (1 / pvf_onm(t)) * h2_combustion_intensity * (
             eq_h2_demand.m('h2',t)$[Sw_H2=1]
 * regional demand is now by hour, so calculate annual price as the weighted average of demand across hours
             + (sum{h, eq_h2_demand_regional.m(r,h,t) / hours(h) * h2_usage_regional(r,h,t) }
@@ -290,6 +295,8 @@ flex_load(r,h) = sum{(flex_type,t)$tcur(t), load_exog_flex(flex_type,r,h,t) } ;
 
 flex_load_opt(r,h) = sum{(flex_type,t)$tcur(t), FLEX.l(flex_type,r,h,t) } ;
 
+ra_cap_loadsite(r,t)$[Sw_LoadSiteCF$val_loadsite(r)] = CAP_LOADSITE.l(r,t) ;
+
 *============================
 * Extra consumption data
 *============================
@@ -369,6 +376,7 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     flex_load_opt
     fuel_price_filt
     fuel2tech
+    gen_h_stress_filt
     geo
     h_szn
     heat_rate_filt
@@ -397,6 +405,7 @@ execute_unload 'ReEDS_Augur%ds%augur_data%ds%reeds_data_%cur_year%.gdx'
     r
     rfeas
     r_cendiv
+    ra_cap_loadsite
     repbioprice_filt
     repgasprice_filt
     ret

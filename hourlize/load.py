@@ -11,7 +11,6 @@ See README for setup and details.
 
 import argparse
 import datetime
-import h5py
 import json
 import numpy as np
 import os
@@ -85,9 +84,9 @@ def process_hourly(df_hr_input, load_source_timezone, paths, hourly_out_years, s
                                           suffixes=('', f'_{year_cal}'))
                 del df_temp
                 # Get change in original projected load from latest year
-                df_scale['GWh_diff'] = df_scale['GWh'] - df_scale['GWh_2022']
+                df_scale['GWh_diff'] = df_scale['GWh'] - df_scale['GWh_2024']
                 # Add this difference to latest year actual historical load
-                df_scale['GWh_cal_mod'] = df_scale['GWh_cal_2022'] + df_scale['GWh_diff']
+                df_scale['GWh_cal_mod'] = df_scale['GWh_cal_2024'] + df_scale['GWh_diff']
                 # Get new load projection
                 df_scale['GWh_new'] = df_scale['GWh_cal']
                 df_scale.loc[df_scale['GWh_new'].isnull(), 
@@ -164,6 +163,52 @@ def roll_hourly_data(df_hr, source_timezone, output_timezone, load_source_hr_typ
             df_hr[ba] = np.roll(df_hr[ba], shift)
     return df_hr
 
+def apply_multipliers_to_historical_load(
+    load_historical,
+    load_multiplier,
+    hierarchy,
+    solveyears=None
+):
+    # Multipliers from AEO 2022 and older are at Census Division level, while
+    # multipliers from AEO 2023 are at state level.
+    if all(r in hierarchy['cendiv'] for r in load_multiplier['r']):
+        load_multiplier_agglevel = 'cendiv'
+    else:
+        load_multiplier_agglevel = 'st'
+    # Map multipliers to BAs
+    r2ba = hierarchy.reset_index(drop=False)[['r', load_multiplier_agglevel]]
+    load_multiplier = load_multiplier.rename(columns={'r': load_multiplier_agglevel})
+    load_multiplier = (
+        load_multiplier.merge(r2ba, on=[load_multiplier_agglevel], how='outer')
+        .dropna(axis=0, how='any')
+    )
+    if solveyears is not None:
+        # Subset load multipliers for solve years only 
+        load_multiplier = load_multiplier[load_multiplier['year'].isin(solveyears)
+                                            ][['year', 'r', 'multiplier']]
+    # Reformat hourly load profiles to merge with load multipliers
+    load_historical.reset_index(drop=False, inplace=True)
+    load_historical = pd.melt(load_historical, id_vars=['datetime'], 
+                                var_name='r', value_name='load')
+    # Merge load multipliers into hourly load profiles 
+    load_historical = load_historical.merge(load_multiplier, on=['r'], how='outer')
+    load_historical.sort_values(by=['r', 'year'], ascending=True, inplace=True)
+    load_historical['load'] *= load_historical['multiplier']
+    load_historical = load_historical[['year', 'datetime', 'r', 'load']]
+    # Reformat hourly load profiles for GAMS
+    load_profiles = load_historical.pivot_table(
+        index=['year', 'datetime'], columns='r', values='load')
+    # Convert 'year' index to integers
+    load_profiles.index = (
+        load_profiles.index
+        .set_levels(
+            [load_profiles.index.levels[0].astype(int), load_profiles.index.levels[1]],
+            level=['year', 'datetime']
+        )
+    )
+    
+    return load_profiles
+
 #%% ===========================================================================
 ### --- PROCEDURE ---
 ### ===========================================================================
@@ -194,11 +239,13 @@ if __name__== '__main__':
              'ba_frac_path':cf.ba_frac_path,
              'hierarchy_path':cf.hierarchy_path,
              'load_default':cf.load_default,
+             'load_multiplier': cf.load_multiplier,
             }
     
     #If load source is a directory (as it is for EER load), the csv files inside need to be labeled like w2007.csv.
     ls_df_hr = []
-    for year in list(range(2007,2014)):
+    weather_years = list(range(2007,2014)) + list(range(2016,2024))
+    for year in weather_years:
         print('processing weather year ' + str(year) + '...')
         df_hr_input = get_hourly_load(os.path.join(cf.load_source,'w'+str(year)+'.csv'), cf.us_only)
         if cf.hourly_process is False:
@@ -211,11 +258,18 @@ if __name__== '__main__':
         ls_df_hr.append(df_hr)
     df_multi = pd.concat(ls_df_hr)
     df_multi = df_multi.sort_index()
-    #Splice in default data, for which the first entry is Jan 1, 1am hour ending, which is 12am-1am, which is 12am hour beginning.
+    #Splice in default data.
     if cf.use_default_before_yr is not False:
         print('Splicing in default load before ' + str(cf.use_default_before_yr))
         df_hist = reeds.io.read_file(paths['load_default'], parse_timestamps=True)
-        df_hist = df_hist[df_hist.index.get_level_values('year') < cf.use_default_before_yr].copy()
+        load_multiplier = pd.read_csv(paths['load_multiplier'])
+        df_hier = pd.read_csv(paths['hierarchy_path']).rename(columns={'ba': 'r'})
+        df_hist = apply_multipliers_to_historical_load(
+            df_hist,
+            load_multiplier,
+            df_hier,
+            solveyears=range(cf.use_default_before_yr)
+        )
         df_multi = pd.concat([df_hist,df_multi])
         print('Done splicing in default load')
     #Save output

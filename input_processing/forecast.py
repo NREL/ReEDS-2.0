@@ -38,17 +38,36 @@ decimals = 6
 ### --- FUNCTIONS ---
 ### ===========================================================================
 
-the_unnamer = {'Unnamed: {}'.format(i) : '' for i in range(1000)}
+the_unnamer = {f'Unnamed: {i}' : '' for i in range(1000)}
 
-def interpolate_missing_years(df, method='linear'):
+def interpolate_missing_years(df, forecast_fit, method='linear'):
     """
+    Interpolates data for only the years required to perform the given file's forecast_fit.
+    e.g. if forecast_fit == 'linear_5', then interpolate any missing years' data for the 
+    5 years leading up to the last model year.
+    
     Inputs
     ------
-    df : pd.DataFrame with columns as integer years
+    df     : pd.DataFrame with columns as integer years
     method : interpolation method [default = 'linear']
     """
+    # Extract the number of years prior to last data year required for interpolation from 
+    # forecast_fit string
+    fitlength = int(forecast_fit.split('_')[-1])
+    
+    ### Gather a list of all years greater than the interpolation startyear up to the last
+    ### data year, and also include the column of the closest year <= interpolation startyear
+    interp_startyr = df.columns.max()-fitlength
+    g_yrs = df.columns[df.columns > (interp_startyr)]
+    l_eq_yrs = df.columns[df.columns <= (interp_startyr)]
+    if not l_eq_yrs.empty:
+        c_yr = l_eq_yrs.max()
+        interp_yrs = [c_yr] + list(g_yrs)
+        keep_yrs = l_eq_yrs[:-1]
+    
     dfinterp = (
-        df
+        ### Use only years required for interpolation
+        df[interp_yrs]
         ### Switch column names from integer years to timestamps
         .rename(columns={c: pd.Timestamp(str(c)) for c in df.columns})
         ### Add empty columns at year-starts between existing data 
@@ -59,7 +78,11 @@ def interpolate_missing_years(df, method='linear'):
         .T.interpolate(method).T
     )
     ### Switch back to integer-year column names
-    dfout = dfinterp.rename(columns={c: c.year for c in dfinterp.columns})
+    dfadd = dfinterp.rename(columns={c: c.year for c in dfinterp.columns})
+    ### Remove any column in df that is in dfadd
+    dfout = df[keep_yrs].copy()
+    ### Add interpolated columns to dfout 
+    dfout = pd.concat([dfout,dfadd], axis=1)
     
     return dfout
 
@@ -83,11 +106,13 @@ def forecast(
         ### Get the number of years to fit from the futurefiles entry
         fitlength = int(forecast_fit.split('_')[1])
         fityears = list(range(lastdatayear-fitlength, lastdatayear+1))
-        ### Fit each row individually
-        slope, intercept = {}, {}
-        for row in dfo.index:
-            slope[row], intercept[row] = np.polyfit(
-                x=fityears, y=dfo.loc[row, fityears].values, deg=1)
+        ### Get linear fits for all rows in parallel
+        x = np.vstack([fityears, np.ones_like(fityears)]).T
+        y = dfo[fityears].values
+        coefs, _, _, _ = np.linalg.lstsq(x, y.T, rcond=None)
+        # Extract slope and intercept data from result of least squares fit
+        slope = dict(zip(dfo.index, coefs[0]))
+        intercept = dict(zip(dfo.index, coefs[1]))
         ### Apply the row-specific fits
         for addyear in addyears:
             ### Clip if desired, otherwise just project the fit
@@ -193,13 +218,16 @@ if __name__ == '__main__':
         os.path.join(inputs_case,'futurefiles.csv'),
         dtype={
             'header':'category', 'ignore':int, 'wide':int,
-            'year_col':str, 'fix_cols':str, 'clip_min':str, 'clip_max':str,
+            'year_col':str, 'fix_cols':str, 'header':str, 'clip_min':str, 'clip_max':str,
         }
     )
     ### Fill in the missing parts of filenames
     futurefiles.filename = futurefiles.filename.map(
         lambda x: x.format(casename=casename, distpvscen=distpvscen)
     )
+    ### Fix issue where columns with "None" entries are read in as NaN
+    for col in ['key','fix_cols','header','clip_min','clip_max']:
+        futurefiles[col] = futurefiles[col].fillna('None')
     ### If any files are missing, stop and alert the user
     inputfiles = [os.path.basename(f) for f in glob(os.path.join(inputs_case,'*'))]
     missingfiles = [
@@ -226,6 +254,15 @@ if __name__ == '__main__':
     #%% Loop it
     for i in futurefiles.index:
         filename = futurefiles.loc[i,'filename']
+        print(f'{filename}', end='')
+        
+        ### If the file isn't in inputs_case, skip it and continue to the next file
+        if filename not in inputfiles:
+            if verbose > 1:
+                print('  -> skipped since not in inputs_case')
+            continue
+        
+        ### if ignore == 0, continue with forecasting procedures
         if futurefiles.loc[i,'ignore'] == 0:
             pass
         ### if ignore == 1, just copy the file to outpath and skip the rest
@@ -233,7 +270,7 @@ if __name__ == '__main__':
             if debug:
                 shutil.copy(os.path.join(inputs_case,filename), os.path.join(outpath,filename))
             if verbose > 1:
-                print('ignored: {}'.format(filename), flush=True)
+                print('  -> ignored: "ignore" == 1 in futurefiles.csv', flush=True)
             continue
         ### if ignore == 2, need to project for EFS or copy otherwise
         elif futurefiles.loc[i,'ignore'] == 2:
@@ -247,14 +284,10 @@ if __name__ == '__main__':
                 if debug:
                     shutil.copy(os.path.join(inputs_case,filename), os.path.join(outpath,filename))
                 if verbose > 1:
-                    print('EFS special case: {}'.format(filename), flush=True)
+                    print('  -> EFS special case: {}'.format(filename), flush=True)
                 continue
 
-        ### If the file isn't in inputs_case, skip it
-        if filename not in inputfiles:
-            if verbose > 1:
-                print('skipped since not in inputs_case: {}'.format(filename))
-            continue
+
 
         #%% Settings
         ### header: 0 if file has column labels, otherwise 'None'
@@ -290,22 +323,28 @@ if __name__ == '__main__':
         if filetype in ['.csv','.csv.gz']:
             dfin = pd.read_csv(os.path.join(inputs_case,filename), header=header,)
         elif filetype == '.h5':
-            ### Currently load.h5 is the only h5 file we need to project forward, so the
-            ### procedure is currently specific to that file
-            dfin = pd.read_hdf(os.path.join(inputs_case,filename))
+            ### Currently load.h5 and dr_shed_hourly.h5 are the only h5 files we need to 
+            ### project forward, so the procedure is currently specific to these files
+            dfin = reeds.io.read_file(
+                os.path.join(inputs_case,filename),
+                parse_timestamps=True,
+            )
+            # dfin = pd.read_hdf(os.path.join(inputs_case,filename))
             if header == 'keepindex':
                 indexnames = list(dfin.index.names)
-                dfin.reset_index(inplace=True)
+                dfin = dfin.reset_index()
+                # Make a copy of dfin to prevent "PerformanceWarning: DataFrame is highly fragmented." error
+                dfin = dfin.copy()
             ### We only need to do the projection for load.h5 if we're using EFS load,
             ### which has a (year,hour) multiindex (which we reset above to columns). 
-            ### If dfin doesn't have 'year' and 'hour' columns, we can therefore skip this file.
-            if (('year' in dfin.columns) and ('hour' in dfin.columns)):
+            ### If dfin doesn't have 'year' and 'datetime' columns, we can skip this file.
+            if (('year' in dfin.columns) and ('datetime' in dfin.columns)):
                 efs = True
             else:
                 if debug:
                     shutil.copy(os.path.join(inputs_case,filename), os.path.join(outpath,filename))
                 if verbose > 1:
-                    print('ignored: {}'.format(filename), flush=True)
+                    print(f'  -> ignored: {filename}', flush=True)
                 continue
         elif filetype == '.txt':
             dfin = pd.read_csv(os.path.join(inputs_case, filename), header=header, sep=' ')
@@ -334,6 +373,17 @@ if __name__ == '__main__':
 
         dfin.rename(columns={c:str(c) for c in dfin.columns}, inplace=True)
         columns = dfin.columns.tolist()
+        
+        if dfin.empty:
+            if verbose > 1:
+                print('  -> Empty dataframe: Skipping...')
+            continue
+        if (('year' in dfin.columns) and ('datetime' in dfin.columns)):
+            dfcheck = dfin.set_index(['datetime','year'])
+            if dfcheck.empty:
+                if verbose > 1:
+                    print('  -> Empty dataframe: Skipping...')
+                continue
 
         #%% Reshape to wide format with year as column
         if (len(fix_cols) == 0) and (wide == 0):
@@ -373,12 +423,16 @@ if __name__ == '__main__':
             df = df[valuename].copy()
         else:
             raise Exception('Unknown data type for {}'.format(filename))
-
+            
         #%% All columns should now be years
         df.rename(columns={c: int(c) for c in df.columns}, inplace=True)
         lastdatayear = max([int(c) for c in df.columns])
-        ### Interpolate to make sure we have data at yearly frequency
-        df = interpolate_missing_years(df)
+        ### Create list of non-interpolated years (for filtering out interpolated year data later)
+        years_orig = df.columns.tolist()
+        ### Interpolate only required years for linear forecasting. Skip if forecast_fit 
+        ### is 'constant'
+        if 'linear' in forecast_fit:
+            df = interpolate_missing_years(df, forecast_fit)
         ### Get indices for projection
         addyears = list(range(lastdatayear+1, endyear+1))
         ### If file is for EFS hourlyload, only project for years in tmodel_new to save time
@@ -389,10 +443,8 @@ if __name__ == '__main__':
         df = forecast(
             dfi=df, lastdatayear=lastdatayear, addyears=addyears, 
             forecast_fit=forecast_fit, clip_min=clip_min, clip_max=clip_max)
-
-        ## #%% Would be nice to keep only the years in tmodel_new, but
-        ## #%% createmodel breaks when the following line is active (not sure why)
-        ## df.drop([y for y in df.columns if y not in tmodel_new], axis=1, inplace=True)
+        ### Remove years used for interpolation - keep only original and forecasted years
+        df = df[years_orig + addyears]
 
         #%% Put back in original format
         if (len(fix_cols) == 0) and (wide == 0):
@@ -404,7 +456,7 @@ if __name__ == '__main__':
         elif (wide) and (year_col != 'wide') and (len(fix_cols) > 0):
             dfout = df.stack().unstack('variable').reset_index()[columns]
         elif (len(fix_cols) > 0) and (year_col != 'wide') and (not wide):
-            dfout = df.stack().rename(valuename).dropna().reset_index()
+            dfout = df.stack().rename(valuename).dropna().reset_index()[columns]
 
         ### Unname any unnamed columns
         dfout.rename(columns=the_unnamer, inplace=True)
@@ -422,7 +474,11 @@ if __name__ == '__main__':
                 dfwrite.columns.name = None
             else:
                 dfwrite = dfout
-            dfwrite.round(decimals).to_hdf(os.path.join(outpath, filename), key='data', complevel=4)
+            ### Special Case: ensure year col for dr_shed_hourly.h5 is same dtype as data
+            ### to prevent errors in write_profile_to_h5
+            if filename == 'dr_shed_hourly.h5':
+                dfwrite[year_col] = dfwrite[year_col].astype(np.float32)
+            reeds.io.write_profile_to_h5(dfwrite.round(decimals),filename,outpath)
         elif filetype == '.txt':
             dfwrite = dfout.sort_index(axis=1)
             ### Make the GAMS-readable index
@@ -449,7 +505,7 @@ if __name__ == '__main__':
 
         if verbose > 1:
             print(
-                'projected from {} to {}: {}'.format(lastdatayear, endyear, filename), 
+                f'  -> Projected from {lastdatayear} to {endyear}', 
                 flush=True)
 
     reeds.log.toc(tic=tic, year=0, process='input_processing/forecast.py', 

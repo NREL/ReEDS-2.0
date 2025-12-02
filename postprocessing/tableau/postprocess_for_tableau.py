@@ -459,13 +459,13 @@ def main(raw_args=None):
                 elif this_csv == 'prod_load':
                     this_df['i'] = 'Production Load'
                     this_col_list = [ x for x in this_df.columns if x not in pivot_info['id_columns'] ]
-                elif this_csv in ['prod_h2_price','prod_h2ct_cost']:
+                elif this_csv in ['prod_h2_price','prod_h2comb_cost']:
                     this_df = this_df.pivot_table(index=pivot_info['id_columns'], columns='p', aggfunc=np.sum).droplevel(0,axis=1).reset_index()
                     if this_csv == 'prod_h2_price':
                         this_col_list = {'DAC':'Direct Air CO2 Capture Price (2004 $/metric ton)',
                                         'H2_blue':'Blue Hydrogen Price (2004 $/metric ton)',
                                         'H2_green':'Green Hydrogen Price (2004 $/metric ton)'}
-                    elif this_csv == 'prod_h2ct_cost':
+                    elif this_csv == 'prod_h2comb_cost':
                         this_col_list = {'H2_blue':'Blue Hydrogen Fuel Price (2004 $/MMBtu)',
                                         'H2_green':'Green Hydrogen Fuel Price (2004 $/MMBtu)'}
                     this_df = this_df.rename(columns=this_col_list)                

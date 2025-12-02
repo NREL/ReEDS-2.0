@@ -85,6 +85,7 @@ fuel_price(i,r,t)$fuel_price(i,r,t) = round(fuel_price(i,r,t),2) ;
 gasmultterm(cendiv,t)$gasmultterm(cendiv,t) = round(gasmultterm(cendiv,t),3) ;
 heat_rate(i,v,r,t)$heat_rate(i,v,r,t) = round(heat_rate(i,v,r,t),2) ;
 m_capacity_exog(i,v,r,t)$[valcap(i,v,r,t)$(not sameas(i,"smr"))] = round(m_capacity_exog(i,v,r,t),3) ;
+m_capacity_exog_energy(i,v,r,t)$[valcap(i,v,r,t)] = round(m_capacity_exog_energy(i,v,r,t),3) ;
 m_rsc_dat(r,i,rscbin,"cap")$m_rsc_dat(r,i,rscbin,"cap") = round(m_rsc_dat(r,i,rscbin,"cap"),3) ;
 m_rsc_dat(r,i,rscbin,"cost")$m_rsc_dat(r,i,rscbin,"cost") = round(m_rsc_dat(r,i,rscbin,"cost"),2) ;
 m_rsc_dat(r,i,rscbin,"cost_trans")$m_rsc_dat(r,i,rscbin,"cost_trans") = round(m_rsc_dat(r,i,rscbin,"cost_trans"),2) ;
@@ -97,7 +98,10 @@ state_cap(st,t)$state_cap(st,t) = round(state_cap(st,t),0) ;
 storage_eff_pvb_g(i,t)$storage_eff_pvb_g(i,t) = round(storage_eff_pvb_g(i,t),3) ;
 storage_eff_pvb_p(i,t)$storage_eff_pvb_p(i,t) = round(storage_eff_pvb_p(i,t),3) ;
 tranloss(r,rr,trtype)$tranloss(r,rr,trtype) = round(tranloss(r,rr,trtype),3) ;
-transmission_line_capcost(r,rr,trtype)$transmission_line_capcost(r,rr,trtype) = round(transmission_line_capcost(r,rr,trtype),2) ;
+tsc_binwidth(r,rr,tscbin)$tsc_binwidth(r,rr,tscbin) = round(tsc_binwidth(r,rr,tscbin),2) ;
+tsc_forward(r,rr,tscbin)$tsc_forward(r,rr,tscbin) = round(tsc_forward(r,rr,tscbin),2) ;
+tsc_reverse(r,rr,tscbin)$tsc_reverse(r,rr,tscbin) = round(tsc_reverse(r,rr,tscbin),2) ;
+transmission_cost_nonac(r,rr,trtype)$transmission_cost_nonac(r,rr,trtype) = round(transmission_cost_nonac(r,rr,trtype),2) ;
 transmission_line_fom(r,rr,trtype)$transmission_line_fom(r,rr,trtype) = round(transmission_line_fom(r,rr,trtype),3) ;
 trans_cost_cap_fin_mult(t) = round(trans_cost_cap_fin_mult(t),3) ;
 trans_cost_cap_fin_mult_noITC(t) = round(trans_cost_cap_fin_mult_noITC(t),3) ;
@@ -109,14 +113,6 @@ winter_cap_frac_delta(i,v,r)$winter_cap_frac_delta(i,v,r) = round(winter_cap_fra
 * --- SEQUENTIAL SETUP ---
 *================================================
 $ifthen.seq %timetype%=="seq"
-
-* Parameter tracking
-parameter
-    m_capacity_exog0(i,v,r,t) "--MW-- original value of m_capacity_exog used in d_solveoneyear to make sure upgraded capacity isnt forced into retirement"
-    z_rep(t)      "--$-- objective function value by year"
-    z_rep_inv(t)  "--$-- investment component of objective function by year"
-    z_rep_op(t)   "--$-- operation component of objective function by year"
-;
 
 * -- upgrade capacity tracking --
 m_capacity_exog0(i,v,r,t) = m_capacity_exog(i,v,r,t) ;

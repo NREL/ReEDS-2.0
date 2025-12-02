@@ -6,13 +6,12 @@ import pandas as pd
 from datetime import datetime
 import numpy as np
 
-shared_drive = '//nrelnas01/reeds/FY22-DSGrid-JRM/dsgrid-data-for-reeds/'
-input_file = 'all_sector_electricity_MWh_2010_2050_projections_rev2.parquet'
+input_file = '//nrelnas01/reeds/FY22-DSGrid-JRM/dsgrid-data-for-reeds/all_sector_electricity_MWh_2010_2050_projections_rev2.parquet'
 
 startTime = datetime.now()
 
 # Read dsgrid parquet file in as df 
-df = pd.read_parquet(shared_drive + input_file)
+df = pd.read_parquet(input_file)
 print('Done reading .parquet: '+ str(datetime.now() - startTime))
 
 # change 'model_year' from type categorical to integer and 
@@ -38,9 +37,9 @@ print('Done with pivot: '+ str(datetime.now() - startTime))
 df = df.reset_index()
 print('Done with reset index: '+ str(datetime.now() - startTime))
 
-# Convert 'timestamp' column from UTC to CST & then strip timezone off
+# Convert 'timestamp' column from UTC to EST & then strip timezone off
 df['timestamp'] = (df['timestamp'].dt.tz_localize("UTC")
-                                  .dt.tz_convert("CST")
+                                  .dt.tz_convert("EST")
                                   .dt.tz_localize(None))
 print('Done changing timestamp: '+ str(datetime.now() - startTime))
 

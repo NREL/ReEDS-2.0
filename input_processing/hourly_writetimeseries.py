@@ -450,12 +450,13 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
             'can_exports_h_frac': ['*h','frac_weighted'],
             'can_imports_szn_frac': ['*szn','frac_weighted'],
             'period_weights': ['*szn','rep_period'],
-            'hmap_myr': ['*year','yearperiod','hour','hour0','yearhour',
-                         'periodhour','actual_period','actual_h','season','h'],
+            'hmap_myr': ['*timestamp', 'year', 'yearperiod', 'hour', 'hour0', 'yearhour',
+                        'periodhour', 'actual_period', 'actual_h', 'season', 'month', 'h'],
             'periodmap_1yr': ['*actual_period','season'],
             'canmexload': ['*r','h'],
             'outage_forced_h': ['*i','r','h'],
             'outage_scheduled_h': ['*i','h'],
+            'dr_shed_out': ['*i','r','h'],
             'evmc_baseline_load': ['r','h','t'],
             'evmc_shape_generation': ['*i','r','h'],
             'evmc_shape_load': ['*i','r','h'],
@@ -1018,7 +1019,14 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
         header=0,
     ).rename(columns={"value": "cf_month"})
     ## Filter for modeled years
-    buildyears = [y for y in np.arange(2010, 2021)] + [y for y in years if y > 2020]
+    ## Get last data year (year used to forward-fill data) by removing all duplicated data
+    lastdatayr = (
+        cf_hyd.pivot_table(index='t', columns=['*i','month','r'], values='cf_month')
+        ## remove all duplicated data, leaving the last data year
+        .drop_duplicates()
+        .index.max()
+    )
+    buildyears = np.arange(2010, lastdatayr+1).tolist() + [y for y in years if y > lastdatayr]
     cf_hyd = cf_hyd.loc[cf_hyd["t"].isin(buildyears)]
     ## Calculate the month-weighted-average capacity factor by season
     cf_hyd_out = szn_month_weights.merge(cf_hyd, on="month", how="outer")
@@ -1095,6 +1103,60 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
             .reset_index()
         )
 
+
+    #%%
+    #############################
+    # -- DR shed -- #
+    #############################
+    if int(sw.GSw_DRShed) and periodtype.startswith('stress'):
+        # Only available in stress periods
+  
+        # identify year      
+        t = int(periodtype[6:10])
+
+        # each year (2030-2050) has a different dr shed profile
+        # prior years assume 2030 data
+        t_set = max(t, 2030)
+            
+        dr_shed_avail_allyears = reeds.io.read_file(os.path.join(inputs_case, 'dr_shed_hourly.h5'), parse_timestamps=True)
+        dr_shed_avail_allyears['year'] = round(dr_shed_avail_allyears['year'],0).astype(int)
+        dr_shed_avail = dr_shed_avail_allyears.loc[dr_shed_avail_allyears['year']==t_set].copy().drop('year', axis=1)
+
+        # dr_shed only has 2018 weather year data, need to populate for other RA years
+        dr_shed_avail_all_weatheryears = pd.DataFrame()
+        # copy 2018 data to other weather years
+        for y in sw.resource_adequacy_years_list:
+            #set datetime column to match hmap_allyrs.timestamp for y 
+            dr_shed_avail_new_index = dr_shed_avail.copy()
+            dr_shed_avail_new_index.index = pd.to_datetime(hmap_allyrs[hmap_allyrs['year']==y].timestamp)
+        
+            dr_shed_avail_all_weatheryears = pd.concat([dr_shed_avail_all_weatheryears, dr_shed_avail_new_index])
+
+        # downselect dr_shed_avail to timestamps in all weather years
+        dr_shed_avail_all_weatheryears.loc[hmap_allyrs.timestamp]
+        # map dr_shed_avail index to actual period
+        dr_shed_avail_all_weatheryears.index = hmap_allyrs.loc[hmap_allyrs.timestamp.isin(dr_shed_avail_all_weatheryears.index)].actual_h
+        # Map actual periods to rep periods
+        dr_shed_avail_all_weatheryears = dr_shed_avail_all_weatheryears.loc[
+                                            dr_shed_avail_all_weatheryears.index.map(lambda x: any([x.startswith(i) for i in rep_periods]))]
+        #Need to convert avail to a fraction - use max in each column as base
+        # Normalize dr_shed_avail by values specified in inputs/demand_response/dr_shed_avail_scalar.csv
+        dr_shed_avail_scalar = pd.read_csv(os.path.join(inputs_case,'dr_shed_avail_scalar.csv'))
+        dr_shed_avail_scalar = dr_shed_avail_scalar[dr_shed_avail_scalar['t']==t_set]['Value'].item()
+        dr_shed_avail_all_weatheryears  = (dr_shed_avail_all_weatheryears
+                                           .div(dr_shed_avail_all_weatheryears .max()))*dr_shed_avail_scalar                                                 
+                                          
+                                                                                           
+        # Reformat to be indexed by i,r,h 
+        dr_shed_avail_out = dr_shed_avail_all_weatheryears.rename_axis('h').copy()
+        i = dr_shed_avail_all_weatheryears.columns.map(lambda x: x.split('|')[0])
+        r = dr_shed_avail_all_weatheryears.columns.map(lambda x: x.split('|')[1])
+        dr_shed_avail_out.columns = pd.MultiIndex.from_arrays([i,r], names=['i','r'])
+        dr_shed_avail_out = dr_shed_avail_out.stack(['i','r']).reorder_levels(['i','r','h']).rename('cap').reset_index()
+
+    else:
+        # populate empty dataframe
+        dr_shed_avail_out = pd.DataFrame(columns=['i','r','h','cap'])
 
     #############################
     # -- EV Managed Charging -- #
@@ -1327,6 +1389,11 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
         ## Outage rates
         'outage_forced_h': [outage_h['forced'].round(3), False, False],
         'outage_scheduled_h': [outage_h['scheduled'].round(3), False, False],
+        # DR        
+        "dr_shed_out": [
+            (dr_shed_avail_out.assign(h=dr_shed_avail_out.h.map(chunkmap))
+             .groupby(['i','r','h'], as_index=False).cap.mean().round(5)),
+            False, False],
         ## EVMC
         "evmc_baseline_load": [
             (
@@ -1449,7 +1516,7 @@ def main(sw, reeds_path, inputs_case, periodtype='rep', make_plots=1):
     #%% Map weighted average profile values and difference from full-resolution mean
     if make_plots:
         figpath = os.path.abspath(
-            os.path.join(os.path.dirname(inputs_case.rstrip(os.sep)), 'outputs', 'maps')
+            os.path.join(os.path.dirname(inputs_case.rstrip(os.sep)), 'outputs', 'figures')
         )
         try:
             import matplotlib.pyplot as plt

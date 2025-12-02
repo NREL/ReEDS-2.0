@@ -41,7 +41,6 @@
 # These distributions apply independently to each technology
 - name: gas
   assignments_list:
-    - plantchar_gas: [gas_ATB_2024_conservative, gas_ATB_2024_moderate, gas_ATB_2024_advanced]
     - plantchar_gas_ccs: [gas-ccs_ATB_2024_conservative, gas-ccs_ATB_2024_moderate, gas-ccs_ATB_2024_advanced]
   dist: dirichlet
   dist_params: [1, 1, 1]
@@ -49,7 +48,6 @@
 
 - name: coal
   assignments_list:
-    - plantchar_coal: [coal_ATB_2024_conservative, coal_ATB_2024_moderate, coal_ATB_2024_advanced]
     - plantchar_coal_ccs: [coal-ccs_ATB_2024_conservative, coal-ccs_ATB_2024_moderate, coal-ccs_ATB_2024_advanced]
   dist: dirichlet
   dist_params: [1, 1, 1]
@@ -57,7 +55,7 @@
 
 - name: geo
   assignments_list:
-    - plantchar_geo: [geo_ATB_2023_conservative, geo_ATB_2023_moderate, geo_ATB_2023_advanced]
+    - plantchar_geo: [geo_ATB_2024_conservative, geo_ATB_2024_moderate, geo_ATB_2024_advanced]
   dist: dirichlet
   dist_params: [1, 1, 1]
   weight_r: country
@@ -121,7 +119,7 @@
     - plantchar_csp: [csp_ATB_2024_conservative, csp_ATB_2024_moderate, csp_ATB_2024_advanced]
     - plantchar_ofswind: [ofs-wind_ATB_2024_conservative, ofs-wind_ATB_2024_moderate, ofs-wind_ATB_2024_advanced]
     - plantchar_onswind: [ons-wind_ATB_2024_conservative, ons-wind_ATB_2024_moderate, ons-wind_ATB_2024_advanced]
-    - plantchar_geo: [geo_ATB_2023_conservative, geo_ATB_2023_moderate, geo_ATB_2023_advanced]
+    - plantchar_geo: [geo_ATB_2024_conservative, geo_ATB_2024_moderate, geo_ATB_2024_advanced]
   dist: dirichlet
   dist_params: [1, 1, 1]
   weight_r: country
@@ -133,7 +131,7 @@
     - plantchar_csp: [csp_ATB_2024_conservative, csp_ATB_2024_moderate, csp_ATB_2024_advanced]
     - plantchar_ofswind: [ofs-wind_ATB_2024_conservative, ofs-wind_ATB_2024_moderate, ofs-wind_ATB_2024_advanced]
     - plantchar_onswind: [ons-wind_ATB_2024_conservative, ons-wind_ATB_2024_moderate, ons-wind_ATB_2024_advanced]
-    - plantchar_geo: [geo_ATB_2023_conservative, geo_ATB_2023_moderate, geo_ATB_2023_advanced]
+    - plantchar_geo: [geo_ATB_2024_conservative, geo_ATB_2024_moderate, geo_ATB_2024_advanced]
   dist: discrete
   dist_params: [1, 1, 1]
   weight_r: country
@@ -144,7 +142,7 @@
 ### ---------------------------------------------------###
 - name: ng_fuel_price
   assignments_list:
-    - ngscen: [AEO_2023_LOG, AEO_2023_reference, AEO_2023_HOG]
+    - ngscen: [AEO_2025_LOG, AEO_2025_reference, AEO_2025_HOG]
   dist: dirichlet
   dist_params: [1, 1, 1]
   weight_r: country
@@ -155,30 +153,30 @@
 ### ---------------------------------------------------###
 - name: load_country
   assignments_list: 
-    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAmoderate, EER_IRAlow]
+    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAlow]
   dist: dirichlet
-  dist_params: [1, 1, 1]
+  dist_params: [1, 1]
   weight_r: country
 
 - name: load_st
   assignments_list: 
-    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAmoderate, EER_IRAlow]
+    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAlow]
   dist: dirichlet
-  dist_params: [1, 1, 1]
+  dist_params: [1, 1]
   weight_r: st
 
 - name: load_ba
   assignments_list: 
-    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAmoderate, EER_IRAlow]
+    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAlow]
   dist: dirichlet
-  dist_params: [1, 1, 1]
+  dist_params: [1, 1]
   weight_r: ba
 
 - name: load_discrete_st
   assignments_list: 
-    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAmoderate, EER_IRAlow]
+    - GSw_EFS1_AllYearLoad: [EER_100by2050, EER_IRAlow]
   dist: discrete
-  dist_params: [1, 1, 1]
+  dist_params: [1, 1]
   weight_r: st
 
 

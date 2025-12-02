@@ -39,7 +39,7 @@ eq_ObjFn_inv(t)$tmodel(t)..
                        cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INV(i,v,r,t)
                       }
 
-                  + sum{(i,v,r)$[valinv(i,v,r,t)$continuous_battery(i)],
+                  + sum{(i,v,r)$[valinv(i,v,r,t)$battery(i)],
                        cost_cap_fin_mult(i,r,t) * cost_cap_energy(i,t) * INV_ENERGY(i,v,r,t) 
                       }
 
@@ -95,16 +95,24 @@ eq_ObjFn_inv(t)$tmodel(t)..
                       cost_cap_fin_mult(i,r,t) * cost_cap(i,t) * INV_REFURB(i,v,r,t)
                       }
 
-* --- cost of transmission---
-*costs of transmission lines
-                  + sum{(r,rr,trtype)$routes_inv(r,rr,trtype,t),
-                        trans_cost_cap_fin_mult(t) * transmission_line_capcost(r,rr,trtype) * INVTRAN(r,rr,trtype,t) }
+* --- cost of interzonal AC transmission---
+                  + sum{(r,rr,tscbin)$[routes_inv(r,rr,"AC",t)$tsc_binwidth(r,rr,tscbin)],
+                        trans_cost_cap_fin_mult(t) * TRAN_CAPEX_BINS(r,rr,tscbin,t) }
 
-* LCC and B2B AC/DC converter stations (each interface has two, one on either side of the interface)
+* --- cost of interzonal HVDC transmission---
+* transmission lines: 1 MW adds 1 MW to both INVTRAN(r,rr) and INVTRAN(rr,r) so divide by 2
+                  + sum{(r,rr,trtype)$[routes_inv(r,rr,trtype,t)$(not aclike(trtype))],
+                        trans_cost_cap_fin_mult(t)
+                        * transmission_cost_nonac(r,rr,trtype)
+                        * INVTRAN(r,rr,trtype,t)
+                        / 2 }
+
+* LCC and B2B AC/DC converter stations: each interface has two, one on either side of the interface,
+* but each interface shows up in both INVTRAN(r,rr) and INVTRAN(rr,r) so don't multiply by 2
                   + sum{(r,rr,trtype)$[lcclike(trtype)$routes_inv(r,rr,trtype,t)],
-                        trans_cost_cap_fin_mult(t) * cost_acdc_lcc * 2 * INVTRAN(r,rr,trtype,t) }
+                        trans_cost_cap_fin_mult(t) * cost_acdc_lcc * INVTRAN(r,rr,trtype,t) }
 
-*cost of VSC AC/DC converter stations
+* VSC AC/DC converter stations
                   + sum{r,
                         trans_cost_cap_fin_mult(t) * cost_acdc_vsc * INV_CONVERTER(r,t) }
 
@@ -168,7 +176,7 @@ eq_Objfn_op(t)$tmodel(t)..
               + sum{(i,v,r)$[valcap(i,v,r,t)],
                    cost_fom(i,v,r,t) * CAP(i,v,r,t) }
 
-              + sum{(i,v,r)$[valcap(i,v,r,t)$continuous_battery(i)],
+              + sum{(i,v,r)$[valcap(i,v,r,t)$battery(i)],
                    cost_fom_energy(i,v,r,t) * CAP_ENERGY(i,v,r,t) }
 
 * transmission lines
@@ -200,7 +208,7 @@ eq_Objfn_op(t)$tmodel(t)..
                     * sum{tt$[(yeart(tt)<=yeart(t))$(tmodel(tt) or tfix(tt))], INV_POI(r,tt) } }
 
 * --- penalty for retiring a technology (represents friction in retirements)---
-              - sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)],
+              - sum{(i,v,r)$[valcap(i,v,r,t)$retiretech(i,v,r,t)$Sw_RetirePenalty],
                    cost_fom(i,v,r,t) * retire_penalty(t) *
                    (CAP(i,v,r,t)
                     - INV(i,v,r,t)$valinv(i,v,r,t)
@@ -219,7 +227,7 @@ eq_Objfn_op(t)$tmodel(t)..
 * via the capex + opex costs of H2 production and its associated electricity demand.
               + sum{(i,v,r,h)$[valgen(i,v,r,t)$heat_rate(i,v,r,t)
                              $(not gas(i))$(not bio(i))$(not cofire(i))
-                             $((not h2_ct(i)) or h2_ct(i)$[(Sw_H2=0) or h_stress(h)])],
+                             $((not h2_combustion(i)) or h2_combustion(i)$[(Sw_H2=0) or h_stress(h)])],
                    hours(h) * heat_rate(i,v,r,t) * fuel_price(i,r,t) * GEN(i,v,r,h,t) }
 
 * --- startup/ramping costs
@@ -277,7 +285,7 @@ eq_Objfn_op(t)$tmodel(t)..
                    cost_hurdle(r,rr,t) * FLOW(r,rr,h,t,trtype) * hours(h) }
 
 * --- taxes on emissions---
-              + sum{(e,r), (EMIT("combustion",e,r,t) + EMIT("precombustion",e,r,t)$Sw_Precombustion) * emit_tax(e,r,t) }
+              + sum{(e,r), (EMIT("process",e,r,t) + EMIT("upstream",e,r,t)$Sw_Upstream) * emit_tax(e,r,t) }
 
 * --cost of CO2 transport and storage from CCS--
               + sum{(i,v,r,h)$[valgen(i,v,r,t)],
@@ -314,8 +322,8 @@ eq_Objfn_op(t)$tmodel(t)..
 
 * -- H2 intra-regional transport investment costs, levelized per kg of H2 produced --
 * Unit conversion: [hours] * [tonnes/hour] * [$/kg] * [kg/tonne] = [$]
-               + sum{(i,v,r,h)$[valcap(i,v,r,t)$newv(v)$i_p(i,"h2")$h_rep(h)], 
-                    hours(h) * PRODUCE("h2",i,v,r,h,t) * (Sw_H2_IntraReg_Transport * 1e3)}$[Sw_H2]
+               + sum{(i,v,r,h)$[valcap(i,v,r,t)$newv(v)$i_p(i,"H2")$h_rep(h)], 
+                    hours(h) * PRODUCE("H2",i,v,r,h,t) * (Sw_H2_IntraReg_Transport * 1e3)}$[Sw_H2]
 
 * --- H2 storage fixed OM costs (compute cumulative sum of investments to get total capacity)
                + sum{(h2_stor,r)$h2_stor_r(h2_stor,r),

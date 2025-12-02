@@ -2,22 +2,22 @@
     "egs_reference_ba": {
         "tech": "egs", 
         "access_case": "reference",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "egs_reference_county": {
         "tech": "egs", 
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "geohydro_reference_ba": {
         "tech": "geohydro", 
         "access_case": "reference",
-        "reg_out_col": "reeds_ba"
+        "reg_out_col": "ba"
     },
     "geohydro_reference_county": {
         "tech": "geohydro", 
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "upv_limited_ba": {
         "tech": "upv",
@@ -37,47 +37,65 @@
     "upv_limited_county": {
         "tech": "upv",
         "access_case": "limited",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "upv_open_county": {
         "tech": "upv",
         "access_case": "open",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "upv_reference_county": {
         "tech": "upv", 
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
-    "wind-ofs_limited_ba": {
+    "wind-ofs_radial_limited_ba": {
         "tech" : "wind-ofs",
         "access_case": "limited",
         "reg_out_col": "ba"
     },
-    "wind-ofs_open_ba": {
+    "wind-ofs_radial_open_ba": {
         "tech": "wind-ofs",
         "access_case": "open",
         "reg_out_col": "ba"
     },
-    "wind-ofs_reference_ba": {
+    "wind-ofs_radial_reference_ba": {
         "tech": "wind-ofs",
         "access_case": "reference",
         "reg_out_col": "ba"
     },
-    "wind-ofs_open_county": {
+    "wind-ofs_radial_open_county": {
         "tech": "wind-ofs",
         "access_case": "open",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
-    "wind-ofs_limited_county": {
+    "wind-ofs_radial_limited_county": {
         "tech" : "wind-ofs",
         "access_case": "limited",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
-    "wind-ofs_reference_county": {
+    "wind-ofs_radial_reference_county": {
         "tech": "wind-ofs",
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
+    },
+    "wind-ofs_meshed_limited_ba": {
+        "tech" : "wind-ofs",
+        "access_case": "limited",
+        "reg_out_col": "ba",
+        "offshore_meshed": true
+    },
+    "wind-ofs_meshed_open_ba": {
+        "tech": "wind-ofs",
+        "access_case": "open",
+        "reg_out_col": "ba",
+        "offshore_meshed": true
+    },
+    "wind-ofs_meshed_reference_ba": {
+        "tech": "wind-ofs",
+        "access_case": "reference",
+        "reg_out_col": "ba",
+        "offshore_meshed": true
     },
     "wind-ons_limited_ba": {
         "tech": "wind-ons", 
@@ -97,16 +115,16 @@
     "wind-ons_limited_county": {
         "tech": "wind-ons", 
         "access_case": "limited",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "wind-ons_open_county": {
         "tech": "wind-ons",
         "access_case": "open",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     },
     "wind-ons_reference_county": {
         "tech": "wind-ons", 
         "access_case": "reference",
-        "reg_out_col": "cnty_fips"
+        "reg_out_col": "FIPS"
     }    
 }

@@ -17,23 +17,13 @@
         A list of Region objects containing the load data for the specified
         weather year and number of time steps.
 """
-function process_regions_and_load(ReEDS_data, weather_year::Int, timesteps::Int)
-    load_info = get_load_file(ReEDS_data)
-    load_data = load_info["block0_values"]
-    regions = load_info["block0_items"]
-    # **TODO: can get a bug/error here if ReEDS case lacks multiple load years
-    # slices based on input weather year
-    slicer = findfirst(isequal(weather_year), load_info["axis1_level1"])
-
-    # Julia indexes from 1 we need -1 here
-    indices = findall(i -> (i == (slicer - 1)), load_info["axis1_label1"])
-    slice_reqd = first(indices):(first(indices) + timesteps - 1)
-
-    load_timesteps = load_data[:, slice_reqd]
+function process_regions_and_load(ReEDS_data)
+    load_data = get_load_file(ReEDS_data)
+    regions = names(load_data)
 
     return [
-        Region(r, timesteps, floor.(Int, load_timesteps[idx, :])) for
-        (idx, r) in enumerate(regions)
+        Region(r, size(load_data, 1), Int.(round.(load_data[!, r])))
+        for r in regions
     ]
 end
 
@@ -66,7 +56,6 @@ function process_lines(
     ReEDS_data,
     regions::Vector{<:AbstractString},
     timesteps::Int,
-    user_inputs::Dict{Any, Any},
 )
     #it is assumed this has prm line capacity data
     line_base_cap_data = get_line_capacity_data(ReEDS_data)
@@ -132,8 +121,9 @@ function process_lines(
                     forward_cap = forward_cap,
                     backward_cap = backward_cap,
                     legacy = "Existing",
+                    # We do not model outages for lines so just use filler values
                     FOR = 0.0,
-                    MTTR = user_inputs["MTTR"],
+                    MTTR = 24,
                 ),
             )
         else
@@ -148,8 +138,9 @@ function process_lines(
                     forward_cap = forward_cap,
                     backward_cap = backward_cap,
                     legacy = "Existing",
+                    # We do not model outages for lines so just use filler values
                     FOR = 0.0,
-                    MTTR = user_inputs["MTTR"],
+                    MTTR = 24,
                     VSC = true,
                     converter_capacity = Dict(
                         row.r => converter_capacity_dict[string(row.r)],
@@ -176,9 +167,9 @@ end
     Returns
     -------
     DataFrames
-        Thermal capacity, Storage capacity, Variable Generation capacity
+        (thermal, storage, dispatchable hydro, nondispatchable hydro) capacity
 """
-function split_generator_types(ReEDS_data::ReEDSdatapaths, year::Int64)
+function split_generator_types(ReEDS_data::ReEDSdatapaths)
     ## Read {case}/inputs_case/tech-subset-table.csv
     tech_subset_table = get_technology_types(ReEDS_data)
     @debug "tech_subset_table is $(tech_subset_table)"
@@ -188,6 +179,7 @@ function split_generator_types(ReEDS_data::ReEDSdatapaths, year::Int64)
     resources = get_valid_resources(ReEDS_data)
     @debug "resources is $(resources)"
     vg_types = unique(resources.i)
+    push!(vg_types, "vre")
     @debug "vg_types is $(vg_types)"
 
     hyd_disp_types =
@@ -207,7 +199,6 @@ function split_generator_types(ReEDS_data::ReEDSdatapaths, year::Int64)
     @debug "vg_types is $(vg_types)"
     clean_names!(storage_types)
 
-    vg_capacity = filter(x -> x.i in vg_types, capacity_data)
     storage_capacity = filter(x -> x.i in storage_types, capacity_data)
 
     hyd_disp_capacity = filter(x -> x.i in hyd_disp_types, capacity_data)
@@ -221,7 +212,6 @@ function split_generator_types(ReEDS_data::ReEDSdatapaths, year::Int64)
     @debug "thermal_capacity is $(thermal_capacity)"
     return thermal_capacity,
     storage_capacity,
-    vg_capacity,
     hyd_disp_capacity,
     hyd_non_disp_capacity
 end
@@ -256,36 +246,29 @@ function process_thermals_with_disaggregation(
     unitsize_dict::Dict,
     timesteps::Int,
     year::Int,
-    mttr_dict::Dict,
-    user_inputs::Dict{Any, Any};
-    all_generators = Generator[],
+    mttr_dict::Dict;
+    pras_agg_ogs_lfillgas = false,
+    pras_existing_unit_size = true,
+    pras_max_unitsize_prm = true,
 )
+    all_generators = Generator[]
     # csp-ns is not a thermal; just drop in for now
     thermal_builds = thermal_builds[(thermal_builds.i .!= "csp-ns"), :]
     # split-apply-combine to handle differently vintaged entries
     thermal_builds =
         DataFrames.combine(DataFrames.groupby(thermal_builds, ["i", "r"]), :MW => sum)
-    EIA_db = get_EIA_NEMS_DB(ReEDS_data)
+    unitdata = get_unitdata(ReEDS_data)
 
-    filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
-    upgrades = DataFrames.DataFrame(CSV.File(filepath))
-    upgrade_dict = Dict(lowercase(row["*TO"]) => lowercase(row["FROM"]) for row in eachrow(upgrades))
-    filler_forced_outage_rate = 0.0
+    # Get the PRM [MW] in case we use it to set the max unit size
+    if pras_max_unitsize_prm
+        max_unitsize = get_max_unitsize(ReEDS_data)
+    end
 
-    # this loop gets the FOR for each build/tech
+    # Get the FOR for each build/tech
     for row in eachrow(thermal_builds)
-        # Check to see if the 'i' tech is an upgrade tech. If so, use the 'upgraded-to' 
-        # tech to determine FOR
-        if haskey(upgrade_dict, row.i)
-            tech = upgrade_dict[row.i]   
-            @info(
-                "$(row.i) ($(row.r)) is an upgrade tech so using $tech to determine outage rate"
-            )
-        else
-            tech = row.i
-        end
-
+        tech = row.i
         i_r = "$tech|$(row.r)"
+
         if (i_r in DataFrames.names(forcedoutage_hourly))
             gen_for = forcedoutage_hourly[!, i_r]
         elseif lowercase(tech) in keys(FOR_dict)
@@ -295,32 +278,27 @@ function process_thermals_with_disaggregation(
                 "static value of $(FOR_dict[tech]) from outage_forced_static.csv"
             )
         else
-            gen_for = fill(Float32(filler_forced_outage_rate), timesteps)
-            @info(
-                "$(tech) ($(row.r)) was not found in outage_forced_static.csv so using " *
-                "static value of $filler_forced_outage_rate"
+            @error(
+                "$(tech) ($(row.r)) was not found in forcedoutage_hourly or outage_forced_static.csv"
             )
         end
 
-        # get MTTR values if available
-        if tech in keys(mttr_dict)
-            mttr = Int64(mttr_dict[tech])
-        else
-            mttr = user_inputs["MTTR"]
-        end
+        mttr = Int64(mttr_dict[tech])
 
         generator_array = disagg_existing_capacity(
-            ReEDS_data,
-            EIA_db,
+            unitdata,
             unitsize_dict,
-            floor(Int, row.MW_sum),
+            Int(round(row.MW_sum)),
             String(row.i),
             String(row.r),
             gen_for,
             timesteps,
             year,
             mttr,
-            user_inputs,
+            pras_agg_ogs_lfillgas = pras_agg_ogs_lfillgas,
+            pras_existing_unit_size = pras_existing_unit_size,
+            # Use PRM MW if pras_max_unitsize_prm switch is on; otherwise ignore by setting to 0
+            max_unit_mw = (pras_max_unitsize_prm ? max_unitsize[row.r] : 0),
         )
         append!(all_generators, generator_array)
     end
@@ -362,32 +340,17 @@ function process_hd_as_generator!(
     timesteps::Int,
     year::Int,
     mttr_dict::Dict,
-    user_inputs::Dict{Any, Any};
 )
 
     # split-apply-combine to handle differently vintaged entries
     hd_builds = DataFrames.combine(DataFrames.groupby(hd_builds, ["i", "r"]), :MW => sum)
-    EIA_db = get_EIA_NEMS_DB(ReEDS_data)
+    unitdata = get_unitdata(ReEDS_data)
 
-    filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
-    upgrades = DataFrames.DataFrame(CSV.File(filepath))
-    upgrade_dict = Dict(lowercase(row["*TO"]) => lowercase(row["DELTA"]) for row in eachrow(upgrades))
-    filler_forced_outage_rate = 0.0
-
-    # this loop gets the FOR for each build/tech
+    # Get the FOR for each build/tech
     for row in eachrow(hd_builds)
-        # Check to see if the 'i' tech is an upgrade tech. If so, use the 'upgraded-to' 
-        # tech to determine FOR
-        if haskey(upgrade_dict, row.i)
-            tech = upgrade_dict[row.i]   
-            @info(
-                "$(row.i) ($(row.r)) is an upgrade tech so using $tech to determine outage rate"
-            )
-        else
-            tech = row.i
-        end
-
+        tech = row.i
         i_r = "$tech|$(row.r)"
+
         if (i_r in DataFrames.names(forcedoutage_hourly))
             gen_for = forcedoutage_hourly[!, i_r]
         elseif lowercase(tech) in keys(FOR_dict)
@@ -397,59 +360,40 @@ function process_hd_as_generator!(
                 "static value of $(FOR_dict[tech]) from outage_forced_static.csv"
             )
         else
-            gen_for = fill(Float32(filler_forced_outage_rate), timesteps)
-            @info(
-                "$(tech) ($(row.r)) was not found in outage_forced_static.csv so using " *
-                "static value of $filler_forced_outage_rate"
+            @error(
+                "$(tech) ($(row.r)) was not found in forcedoutage_hourly or outage_forced_static.csv"
             )
         end
 
-        # get MTTR values if available
-        if tech in keys(mttr_dict)
-            mttr = Int64(mttr_dict[tech])
-        else
-            mttr = user_inputs["MTTR"]
-        end
+        mttr = Int64(mttr_dict[tech])
 
         generator_array = disagg_existing_capacity(
-            ReEDS_data,
-            EIA_db,
+            unitdata,
             unitsize_dict,
-            floor(Int, row.MW_sum),
+            Int(round(row.MW_sum)),
             String(row.i),
             String(row.r),
             gen_for,
             timesteps,
             year,
             mttr,
-            user_inputs,
         )
         append!(all_generators, generator_array)
     end
 end
 
 """
-    This function is used to process variable generation (VG) builds, taking
-    into account different vintages.
+    Add generators for each tech/region in pras_vre_gen_{year}.h5.
+    Capacity is taken as the maximum of the hourly generation profile.
+    VRE outages are already included in VRE profiles, so we do not disaggregate
+    VRE or apply outages in PRAS.
 
     Parameters
     ----------
     generators_array : Vector{<:ReEDS2PRAS.Generator}
         Vector of ReEDS Generators
-    vg_builds : DataFrames.DataFrame
-        A dataframe containing VG builds
-    FOR_dict : Dict
-        A dictionary of Forced Outage Rate (FOR) for each technology type
     ReEDS_data : DataFrames.DataFrame
         A dataset from the ReEDS Program
-    year : Int
-        The current year
-    weather_year : Int
-        The weather year (when the heat rate variation data was collected)
-    timesteps : Int
-        Number of time steps
-    min_year : Int
-        The start year of the data set
 
     Returns
     -------
@@ -458,40 +402,14 @@ end
 """
 function process_vg(
     generators_array::Vector{<:ReEDS2PRAS.Generator},
-    vg_builds::DataFrames.DataFrame,
-    FOR_dict::Dict,
     ReEDS_data,
-    timesteps::Int,
-    mttr_dict::Dict,
-    user_inputs::Dict{Any, Any};
 )
-    cf_info = get_vg_cf_data(ReEDS_data)
-    vg_profiles = cf_info["block0_values"]
+    vg_profiles = get_vg_cf_data(ReEDS_data)
+    timesteps = size(vg_profiles, 1)
 
-    # split-apply-combine to handle differently vintaged entries
-    vg_builds = DataFrames.combine(DataFrames.groupby(vg_builds, ["i", "r"]), :MW => sum)
-    for row in eachrow(vg_builds)
-        category = string(row.i)
-        name = "$(category)|$(string(row.r))"
-        region = string(row.r)
-
-        profile_index = findfirst.(isequal.(name), (cf_info["axis0"],))[1]
-        profile = vg_profiles[profile_index, 1:timesteps]
-
-        if category in keys(FOR_dict)
-            gen_for = FOR_dict[category]
-        else
-            gen_for = 0.00 # make this 0 for vg if no match
-        end
-        name = "$(name)_"
-
-        # get MTTR values if available
-        if category in keys(mttr_dict)
-            mttr = Int64(mttr_dict[category])
-        else
-            mttr = user_inputs["MTTR"]
-        end      
-
+    for name in names(vg_profiles)
+        tech, region = split(name, "|")
+        profile = vg_profiles[!, name]
         push!(
             generators_array,
             Variable_Gen(
@@ -500,10 +418,10 @@ function process_vg(
                 region_name = region,
                 installed_capacity = maximum(profile),
                 capacity = profile,
-                type = category,
+                type = tech,
                 legacy = "New",
-                FOR = gen_for,
-                MTTR = mttr,
+                FOR = 0.,
+                MTTR = 24,
             ),
         )
     end
@@ -530,8 +448,6 @@ end
         number of timesteps
     year : Int64
         ReEDS target simulation year
-    user_inputs : Dict{Any, Any}
-        a dictionary with user inputs
     hydro_energylim : Bool
         a flag which allows users to choose whether to model HD 
         devices as flat generators, or as variable generator for 
@@ -559,7 +475,6 @@ function process_hydro(
     year::Int64,
     timesteps::Int,
     mttr_dict::Dict,
-    user_inputs::Dict{Any, Any},
     unitsize_dict;
     hydro_energylim = false,
 )
@@ -578,7 +493,6 @@ function process_hydro(
             timesteps,
             year,
             mttr_dict,
-            user_inputs;
         )
 
         process_hd_as_generator!(
@@ -591,7 +505,6 @@ function process_hydro(
             timesteps,
             year,
             mttr_dict,
-            user_inputs;
         )
         genstor_array = Gen_Storage[]
 
@@ -658,18 +571,7 @@ function process_hydro(
         name = "$(category)_$(string(row.r))"
         region = string(row.r)
 
-        if category in keys(FOR_dict)
-            gen_for = FOR_dict[category]
-        else
-            gen_for = 0.00 # make this 0 for vg if no match
-        end
-
-        # get MTTR values if available
-        if category in keys(mttr_dict)
-            mttr = Int64(mttr_dict[category])
-        else
-            mttr = user_inputs["MTTR"]
-        end 
+        mttr = Int64(mttr_dict[category])
         
         # - Charging to genstore is limited by charge_capacity whether from grid or from 
         # inflows. So, that charge_capacity should be equal to the genflow timeseries.
@@ -728,19 +630,7 @@ function process_hydro(
         category = string(row.i)
         name = "$(category)_$(string(row.r))"
         region = string(row.r)
-
-        if category in keys(FOR_dict)
-            gen_for = FOR_dict[category]
-        else
-            gen_for = 0.00 # make this 0 for vg if no match
-        end
-
-        # get MTTR values if available
-        if category in keys(mttr_dict)
-            mttr = Int64(mttr_dict[category])
-        else
-            mttr = user_inputs["MTTR"]
-        end 
+        mttr = Int64(mttr_dict[category])
 
         push!(
             generators_array,
@@ -789,9 +679,7 @@ function process_storages(
     unitsize_dict::Dict,
     ReEDS_data,
     timesteps::Int,
-    year::Int64,
     mttr_dict::Dict,
-    user_inputs::Dict{Any, Any};
 )
     storage_energy_capacity_data = get_storage_energy_capacity_data(ReEDS_data)
     @debug "storage_energy_capacity_data is $(storage_energy_capacity_data)"
@@ -801,6 +689,20 @@ function process_storages(
         :MWh => sum,
     )
 
+    efficiency_in = Dict(
+        polarity => DataFrames.DataFrame(CSV.File(joinpath(
+            ReEDS_data.ReEDSfilepath,
+            "ReEDS_Augur",
+            "augur_data",
+            "$(polarity)_eff_$(ReEDS_data.year).csv"
+        )))
+        for polarity in ["charge", "discharge"]
+    )
+    efficiency = Dict(
+        polarity => Dict(zip(efficiency_in[polarity][!,"i"], efficiency_in[polarity][!,"fraction"]))
+        for polarity in keys(efficiency_in)
+    )
+
     ## Read {case}/inputs_case/tech-subset-table.csv
     tech_subset_table = get_technology_types(ReEDS_data)
     battery_types = DataFrames.dropmissing(tech_subset_table, :BATTERY)[:, "Column1"]
@@ -808,28 +710,11 @@ function process_storages(
     storages_array = Storage[]
     for (idx, row) in enumerate(eachrow(storage_builds))
         name = "$(string(row.i))|$(string(row.r))"
-        if string(row.i) in keys(FOR_dict)
-            gen_for = FOR_dict[string(row.i)]
-        else
-            gen_for = 0.0
-            @info "STORAGE: did not find FOR for storage $name $(row.r)
-                   $(row.i), so setting FOR to default value $gen_for"
-        end
+        gen_for = FOR_dict[string(row.i)]
         name = "$(name)|"#append for later matching
+        mttr = Int64(mttr_dict[string(row.i)])
 
-        #we need to know if the storage is battery or not
-        #batteries will be deflated...
-
-        # get MTTR values if available
-        if string(row.i) in keys(mttr_dict)
-            mttr = Int64(mttr_dict[string(row.i)])
-        else
-            mttr = user_inputs["MTTR"]
-        end 
-
-        # as per discussion w/ patrick, find duration of storage, then make
-        # energy capacity on that duration?
-        int_duration = round(energy_capacity_df[idx, "MWh_sum"] / row.MW)
+        storage_duration = energy_capacity_df[idx, "MWh_sum"] / row.MW
         if string(row.i) in battery_types
             push!(
                 storages_array,
@@ -840,10 +725,11 @@ function process_storages(
                     type = string(row.i),
                     charge_cap = row.MW,
                     discharge_cap = row.MW,
-                    energy_cap = round(Int, row.MW) * int_duration * (1 - gen_for),
+                    ## Battery FOR is applied to energy capacity, not power capacity
+                    energy_cap = round(Int, row.MW) * storage_duration * (1 - gen_for),
                     legacy = "New",
-                    charge_eff = 1.0,
-                    discharge_eff = 1.0,
+                    charge_eff = efficiency["charge"][string(row.i)],
+                    discharge_eff = efficiency["discharge"][string(row.i)],
                     carryover_eff = 1.0,
                     FOR = 0.0,
                     MTTR = mttr,
@@ -851,18 +737,17 @@ function process_storages(
             )
         else
             add_new_capacity!(
-                ReEDS_data,
                 storages_array,
                 round(Int, row.MW),
-                round(Int, int_duration),
-                0,
-                0,
-                unitsize_dict,
+                storage_duration,
+                efficiency["charge"][string(row.i)],
+                efficiency["discharge"][string(row.i)],
+                # Always use the characteristic unit size
+                unitsize_dict[row.i],
                 row.i,
                 row.r,
                 gen_for,
                 timesteps,
-                year,
                 mttr,
             )
         end
@@ -877,8 +762,10 @@ end
 
     Parameters
     ----------
-    eia_df : DataFrames.DataFrame
+    unitdata : DataFrames.DataFrame
         DataFrame containing Expected Information Administration (EIA) data.
+    unitsize_dict: Dict
+        Map from techs to characteristic unit size [MW]
     built_capacity : int
         The current built capacity for the thermal generator.
     tech : str
@@ -893,6 +780,15 @@ end
         The year.
     mttr : int
         mean time to repaire (mttr)
+    pras_agg_ogs_lfillgas : bool
+        If true, aggregate existing o-g-s and landfill gas using size for new units.
+        Applies to existing o-g-s and landfill gas capaity, so does not interact with
+        pras_existing_unit_size, which only affects new capacity.
+    pras_existing_unit_size : bool
+        If true, use average existing unit size by (tech,region) when disaggregating new
+        capacity. Applies to new capacity so does not interact with pras_agg_ogs_lfillgas.
+    max_unit_mw: int
+        If nonzero, caps the upper bound of disaggregated unit size
 
     Returns
     -------
@@ -901,8 +797,7 @@ end
         disaggregated existing capacities.
 """
 function disagg_existing_capacity(
-    ReEDS_data::ReEDSdatapaths,
-    eia_df::DataFrames.DataFrame,
+    unitdata::DataFrames.DataFrame,
     unitsize_dict::Dict,
     built_capacity::Int,
     tech::String,
@@ -910,36 +805,43 @@ function disagg_existing_capacity(
     gen_for::Vector{Float32},
     timesteps::Int,
     year::Int,
-    mttr::Int,
-    user_inputs::Dict{Any, Any},
+    mttr::Int;
+    pras_agg_ogs_lfillgas = false,
+    pras_existing_unit_size = true,
+    max_unit_mw = 0,
 )
+    if pras_agg_ogs_lfillgas == true
+        group_existing_techs = ["lfill-gas", "o-g-s"]
+    else
+        group_existing_techs = []
+    end
+
     tech_ba_year_existing = DataFrames.subset(
-        eia_df,
+        unitdata,
         :tech => DataFrames.ByRow(==(tech)),
         :reeds_ba => DataFrames.ByRow(==(pca)),
-        :RetireYear => DataFrames.ByRow(>=(year)),
+        :RetireYear => DataFrames.ByRow(>(year)),
         :StartYear => DataFrames.ByRow(<=(year)),
     )
 
     generators_array = []
-    if DataFrames.nrow(tech_ba_year_existing) == 0 && gen_for != 0.0
+    # If there is no existing capacity, use the characteristic unit size
+    if size(tech_ba_year_existing, 1) == 0 && gen_for != 0.0
         add_new_capacity!(
-            ReEDS_data,
             generators_array,
             built_capacity,
-            0,
-            0,
-            unitsize_dict,
+            # If max_unit_mw is provided and is smaller than the characteristic unit size,
+            # use max_unit_mw; otherwise use the characteristic unit size from unitsize_dict
+            ((max_unit_mw > 0) ? min(max_unit_mw, unitsize_dict[tech]) : unitsize_dict[tech]),
             tech,
             pca,
             gen_for,
             timesteps,
-            year,
             mttr,
         )
         return generators_array
-    elseif DataFrames.nrow(tech_ba_year_existing) == 0 && gen_for == 0.0
-        #not necessary to disagg if generator never fails
+    # If the FOR is zero, no need to disaggregate, so put all capacity in one unit
+    elseif size(tech_ba_year_existing, 1) == 0 && gen_for == 0.0
         return [
             Thermal_Gen(
                 name = "$(tech)|$(pca)|1",
@@ -955,14 +857,30 @@ function disagg_existing_capacity(
     end
 
     remaining_capacity = built_capacity
-    existing_capacity = tech_ba_year_existing[!, "cap"]
+    if tech in group_existing_techs
+        existing_capacity_total = sum(tech_ba_year_existing[!, "summer_power_capacity_MW"])
+        num_whole = Int(existing_capacity_total ÷ unitsize_dict[tech])
+        remainder = existing_capacity_total % unitsize_dict[tech]
+        existing_capacity = vcat(ones(num_whole) * unitsize_dict[tech], remainder)
+    else
+        existing_capacity = tech_ba_year_existing[!, "summer_power_capacity_MW"]
+    end
 
-    tech_len = length(existing_capacity)
-    max_cap = maximum(existing_capacity)
-    avg_cap = Statistics.mean(existing_capacity)
+    if pras_existing_unit_size == true
+        # If the average integer unit size rounds to 0 MW, use 1 MW
+        unit_capacity = max(Int(round(Statistics.mean(existing_capacity))), 1)
+        # If max_unit_mw is provided and is smaller than the mean, use max_unit_mw instead
+        if max_unit_mw > 0
+            unit_capacity = min(unit_capacity, max_unit_mw)
+        end
+    else
+        unit_capacity = 0
+    end
+
+    @info "$tech $pca: unit capacity = $unit_capacity MW"
 
     for (idx, built_cap) in enumerate(existing_capacity)
-        int_built_cap = floor(Int, built_cap)
+        int_built_cap = Int(round(built_cap))
         if int_built_cap < remaining_capacity
             gen_cap = int_built_cap
             remaining_capacity -= int_built_cap
@@ -986,17 +904,13 @@ function disagg_existing_capacity(
     #whatever remains, we want to build as new capacity
     if remaining_capacity > 0
         add_new_capacity!(
-            ReEDS_data,
             generators_array,
             remaining_capacity,
-            floor.(Int, avg_cap),
-            floor.(Int, max_cap),
-            unitsize_dict,
+            (if (unit_capacity > 0) unit_capacity else unitsize_dict[tech] end),
             tech,
             pca,
             gen_for,
             timesteps,
-            year,
             mttr,
         )
     end
@@ -1006,10 +920,10 @@ end
 
 """
     This function adds new capacity to an existing list of generators. The
-    avg_unit_cap parameter is used to determine how many generators
+    unit_capacity parameter is used to determine how many generators
     must be constructed to create the total new_capacity. If there are no
     existing units, a single generator is built with all of the new_capacity.
-    For fixed avg_unit_cap values, the remaining capacity is divided
+    For fixed unit_capacity values, the remaining capacity is divided
     evenly among the new generators, adding additional capacity to each one,
     then a small remainder may be created and added as a separate generator to
     get the desired total new_capacity. The output of this function is the
@@ -1021,10 +935,8 @@ end
         a vector or list of existing generators
     new_capacity : int
         specified new capacity to be added
-    avg_unit_cap : int
-        average capacity for the existing units
-    max : int
-        maximum capacity for the existing units
+    unit_capacity : int
+        target capacity for the units to be added
     tech : string
         type of technology used for the generator unit
     pca : string
@@ -1033,8 +945,6 @@ end
         generation forecast
     timesteps : Int
         number of timesteps
-    year : int
-        year in which the generator is operating
     MTTR : int
         mean time to repair for the generator unit
 
@@ -1044,72 +954,16 @@ end
         updated vector or list of generators containing the new capacity
 """
 function add_new_capacity!(
-    ReEDS_data::ReEDSdatapaths,
     generators_array::Vector{<:Any},
     new_capacity::Int,
-    avg_unit_cap::Int,
-    max::Int,
-    unitsize_dict::Dict,
+    unit_capacity::Int,
     tech::AbstractString,
     pca::AbstractString,
     gen_for::Vector{Float32},
     timesteps::Int,
-    year::Int,
     MTTR::Int,
 )
-    # if there are no existing units to determine size of new unit(s),
-    # use ATB
-    if avg_unit_cap == 0
-        try
-            # use conventional name first (no water, no tech)
-            avg_unit_cap = unitsize_dict[tech]
-        catch
-            # if no match, then check if it's an upgraded tech without water suffixes
-            # e.g. gas-cc_gas-cc-ccs_mod or gas-cc_H2-CT
-            
-            # Import and concat upgrade_link.csv and upgradelink_water.csv from inputs_case
-            # to make the following dictionary:
-            filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
-            df1 = DataFrames.DataFrame(CSV.File(filepath))
-            filepath2 = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgradelink_water.csv")
-            df2 = DataFrames.DataFrame(CSV.File(filepath2))
-
-            DataFrames.rename!(df2, "*TO-WATER" => "*TO", "FROM-WATER" => "FROM", "DELTA-WATER" => "DELTA")
-
-            df_combined = vcat(df1,df2)
-
-            df3 = df_combined[:, ["*TO", "DELTA"]]
-            df3_dict = Dict(lowercase(row["*TO"]) => lowercase(row["DELTA"]) for row in eachrow(df3))
-            
-            try
-                avg_unit_cap = unitsize_dict[df3_dict[tech]]
-            catch
-                # if still no match, it might be an upgraded tech with water suffixes
-                # e.g. gas-cc_r_fg_gas-cc-ccs_mod_r_fg 
-                try
-                    avg_unit_cap = unitsize_dict[rsplit(df3_dict[tech], "_"; limit = 3)[1]]
-                catch
-                    # if still no match, then likely a non-upgraded tech with water suffixes
-                    # e.g. gas-cc_r_fg
-                    try
-                        avg_unit_cap = unitsize_dict[rsplit(tech, "_"; limit = 3)[1]]
-                    catch   
-                        # if still no match, try dropping trailing digits
-                        # e.g. wind-ons_1
-                        try
-                            avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
-                        catch
-                            # Finally, if still no match, tech is likely "csp{CSP_Type}_{class}"
-                            avg_unit_cap = unitsize_dict[match(r"(.+)\d_\d", tech)[1]]
-                            # will fail if this last thing doesn't work!
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    n_gens = floor(Int, new_capacity / avg_unit_cap)
+    n_gens = floor(Int, new_capacity / unit_capacity)
     if n_gens == 0
         return push!(
             generators_array,
@@ -1133,7 +987,7 @@ function add_new_capacity!(
                 name = "$(tech)|$(pca)|new|$(i)",
                 timesteps = timesteps,
                 region_name = pca,
-                capacity = avg_unit_cap,
+                capacity = unit_capacity,
                 fuel = tech,
                 legacy = "New",
                 FOR = gen_for,
@@ -1142,7 +996,7 @@ function add_new_capacity!(
         )
     end
 
-    remainder = new_capacity - (n_gens * avg_unit_cap)
+    remainder = new_capacity - (n_gens * unit_capacity)
     if remainder > 0
         # integer remainder is made into a tiny gen
         push!(
@@ -1170,73 +1024,19 @@ end
 """
 
 function add_new_capacity!(
-    ReEDS_data::ReEDSdatapaths,
     generators_array::Vector{<:Any},
     new_capacity::Int,
-    new_duration::Int,
-    avg_unit_cap::Int,
-    max::Int,
-    unitsize_dict::Dict,
+    new_duration::Float64,
+    charge_eff::Float64,
+    discharge_eff::Float64,
+    unit_capacity::Int,
     tech::AbstractString,
     pca::AbstractString,
     gen_for::Float64,
     timesteps::Int,
-    year::Int,
     MTTR::Int,
 )
-    # if there are no existing units to determine size of new unit(s),
-    # use ATB
-    if avg_unit_cap == 0
-        try
-            # use conventional name first (no water, no tech)
-            avg_unit_cap = unitsize_dict[tech]
-        catch
-            # if no match, then check if it's an upgraded tech without water suffixes
-            # e.g. gas-cc_gas-cc-ccs_mod or gas-cc_H2-CT
-            
-            # Import and concat upgrade_link.csv and upgradelink_water.csv from inputs_case
-            # to make the following dictionary:
-            filepath = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgrade_link.csv")
-            df1 = DataFrames.DataFrame(CSV.File(filepath))
-            filepath2 = joinpath(ReEDS_data.ReEDSfilepath, "inputs_case", "upgradelink_water.csv")
-            df2 = DataFrames.DataFrame(CSV.File(filepath2))
-
-            DataFrames.rename!(df2, "*TO-WATER" => "*TO", "FROM-WATER" => "FROM", "DELTA-WATER" => "DELTA")
-
-            df_combined = vcat(df1,df2)
-
-            df3 = df_combined[:, ["*TO", "DELTA"]]
-            df3_dict = Dict(lowercase(row["*TO"]) => lowercase(row["DELTA"]) for row in eachrow(df3))
-            
-            try
-                avg_unit_cap = unitsize_dict[df3_dict[tech]]
-            catch
-                # if still no match, it might be an upgraded tech with water suffixes
-                # e.g. gas-cc_r_fg_gas-cc-ccs_mod_r_fg 
-                try
-                    avg_unit_cap = unitsize_dict[rsplit(df3_dict[tech], "_"; limit = 3)[1]]
-                catch
-                    # if still no match, then likely a non-upgraded tech with water suffixes
-                    # e.g. gas-cc_r_fg
-                    try
-                        avg_unit_cap = unitsize_dict[rsplit(tech, "_"; limit = 3)[1]]
-                    catch   
-                        # if still no match, try dropping trailing digits
-                        # e.g. wind-ons_1
-                        try
-                            avg_unit_cap = unitsize_dict[match(r"(.+)_\d+", tech)[1]]
-                        catch
-                            # Finally, if still no match, tech is likely "csp{CSP_Type}_{class}"
-                            avg_unit_cap = unitsize_dict[match(r"(.+)\d_\d", tech)[1]]
-                            # will fail if this last thing doesn't work!
-                        end
-                    end
-                end
-            end
-        end
-    end
-
-    n_gens = floor(Int, new_capacity / avg_unit_cap)
+    n_gens = floor(Int, new_capacity / unit_capacity)
     if n_gens == 0
         return push!(
             generators_array,
@@ -1249,8 +1049,8 @@ function add_new_capacity!(
                 discharge_cap = new_capacity,
                 energy_cap = round(Int, new_capacity) * new_duration,
                 legacy = "New",
-                charge_eff = 1.0,
-                discharge_eff = 1.0,
+                charge_eff = charge_eff,
+                discharge_eff = discharge_eff,
                 carryover_eff = 1.0,
                 FOR = gen_for,
                 MTTR = MTTR,
@@ -1266,12 +1066,12 @@ function add_new_capacity!(
                 timesteps = timesteps,
                 region_name = pca,
                 type = tech,
-                charge_cap = avg_unit_cap,
-                discharge_cap = avg_unit_cap,
-                energy_cap = round(Int, avg_unit_cap) * new_duration,
+                charge_cap = unit_capacity,
+                discharge_cap = unit_capacity,
+                energy_cap = round(Int, unit_capacity) * new_duration,
                 legacy = "New",
-                charge_eff = 1.0,
-                discharge_eff = 1.0,
+                charge_eff = charge_eff,
+                discharge_eff = discharge_eff,
                 carryover_eff = 1.0,
                 FOR = gen_for,
                 MTTR = MTTR,
@@ -1279,7 +1079,7 @@ function add_new_capacity!(
         )
     end
 
-    remainder = new_capacity - (n_gens * avg_unit_cap)
+    remainder = new_capacity - (n_gens * unit_capacity)
     if remainder > 0
         # integer remainder is made into a tiny gen
         push!(
@@ -1293,8 +1093,8 @@ function add_new_capacity!(
                 discharge_cap = remainder,
                 energy_cap = round(Int, remainder) * new_duration,
                 legacy = "New",
-                charge_eff = 1.0,
-                discharge_eff = 1.0,
+                charge_eff = charge_eff,
+                discharge_eff = discharge_eff,
                 carryover_eff = 1.0,
                 FOR = gen_for,
                 MTTR = MTTR,

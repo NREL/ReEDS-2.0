@@ -1,6 +1,6 @@
 '''
 This script can be run in one of two ways:
-1. activate via GSw_HealthDamages (on by default) to call from runbatch.py as part of a ReEDS run, 
+1. called automatically from runbatch.py as part of a ReEDS run,
    in which case a single case folder is passed to the script 
 
 2. call directly to post-process a set of completed runs, with a csv file 
@@ -74,36 +74,7 @@ def get_marginal_damage_rates(casepath):
     mds = mds.loc[mds['season'] == "annual"].copy()
 
     ### Map from counties to ReEDS BAs
-    county2zone = (
-        pd.read_csv(
-            os.path.join(casepath, 'inputs_case', 'county2zone.csv'),
-            dtype={'FIPS':str},
-        )
-        .rename(columns={'FIPS':'fips'}).set_index('fips').ba
-    )
-
-    ## Keep county resolution if using it in this ReEDS run
-    agglevel_variables = reeds.spatial.get_agglevel_variables(
-        reeds_path,
-        os.path.join(casepath,'inputs_case'),
-    )
-    if 'county' in agglevel_variables['agglevel']: 
-        # For mixed resolution runs county2zone will include county-county and county-BA mapping
-        if agglevel_variables['lvl'] == 'mult':
-            # BA, Aggreg resolution map
-            county2zone_ba = county2zone[county2zone.isin(agglevel_variables['ba_regions'])]
-            # County resolution map 
-            county2zone_county = county2zone[county2zone.isin(agglevel_variables['county_regions2ba'])]
-            county2zone_county.loc[:] = 'p'+county2zone_county.index.astype(str).values
-            # Combine to create mixed resolution map
-            county2zone = pd.concat([county2zone_ba,county2zone_county])
-        
-        # Pure county resolution runs
-        else:
-            county2zone.loc[:] = 'p'+county2zone.index.astype(str).values
-    else:
-        pass
-
+    county2zone = reeds.inputs.get_county2zone(casepath)
     mds_mapped = (
         mds
         .assign(ba=mds.fips.map(county2zone))
@@ -184,7 +155,7 @@ for casename, casepath in casepaths.items():
             reeds.io.read_output(casepath, 'emit_r', valname='tons')
             .rename(columns={'e':'pollutant', 'etype':'type', 'r':'ba', 't':'year'})
         )
-        emit = emit[emit['type']=='combustion']
+        emit = emit[emit['type']=='process']
         # inner join with marginal damages to capture only pollutants that
         # have marginal damages and only marginal damages where there are emissions
         damages = emit.merge(mds, how="inner", on=['ba', 'pollutant'])

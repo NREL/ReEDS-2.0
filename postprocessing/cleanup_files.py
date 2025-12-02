@@ -47,7 +47,7 @@ file_levels = {
     3: [
         os.path.join('outputs', 'Augur_plots'),
         os.path.join('outputs', 'hourly'),
-        os.path.join('outputs', 'maps'),
+        os.path.join('outputs', 'figures'),
     ],
     ## Largest output files. Would need to rerun the case to regenerate.
     4: [
@@ -130,6 +130,11 @@ def main(caselist, level=0, dryrun=0, force=0, quiet=0, file_levels=file_levels)
         print('\nFrom these cases:')
         for c in cases:
             print(f'> {c}')
+        if level >= 1:
+            print(
+                f'WARNING: cleanup level {level} removes files used by R2X, '
+                'so do not proceed if you plan to run R2X.'
+            )
 
     if not force:
         confirm = str(input('\nProceed? y/[n]: ') or 'n')

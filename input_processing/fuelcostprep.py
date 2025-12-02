@@ -3,7 +3,7 @@ The purpose of this script is to write out fuel costs for the following fuels at
 census division level:
     - coal
     - uranium
-    - H2 (for H2-CT tech)
+    - H2 (for H2-CT/CC tech)
     - natural gas
 Additionally, this script also writes out natural gas demand (total NG demand as 
 well as NG demand for electricity generation) and natural gas alphas
@@ -92,20 +92,20 @@ uranium = pd.concat([uranium.assign(r=i) for i in val_r], ignore_index=True)
 uranium = uranium[['year','r','cost']].rename(columns={'year':'t','cost':'uranium'})
 uranium.uranium = uranium.uranium.round(6)
 
-#####################
-#    -- H2-CT --    #
-#####################
+#############################
+#    -- H2-Combustion --    #
+#############################
 # note that these fuel inputs are not used when H2 production is run endogenously in ReEDS (GSw_H2 > 0)
-h2ct = pd.read_csv(os.path.join(inputs_case, 'hydrogen_price.csv'), index_col='year')
+h2fuel = pd.read_csv(os.path.join(inputs_case, 'hydrogen_price.csv'), index_col='year')
 
 #Adjust prices to 2004$
-deflate = dollaryear.loc[dollaryear['Scenario'] == sw.h2ctfuelscen,'Deflator'].squeeze()
-h2ct['cost'] = h2ct['cost'] * deflate
+deflate = dollaryear.loc[dollaryear['Scenario'] == sw.h2combustionfuelscen,'Deflator'].squeeze()
+h2fuel['cost'] = h2fuel['cost'] * deflate
 # Reshape from [:,[t,cost]] to [:,[t,r,cost]]
-h2ct = (
-    pd.concat({r:h2ct for r in val_r}, axis=0, names=['r'])
-    .reset_index().rename(columns={'year':'t','cost':'h2ct'})
-    [['t','r','h2ct']]
+h2fuel = (
+    pd.concat({r:h2fuel for r in val_r}, axis=0, names=['r'])
+    .reset_index().rename(columns={'year':'t','cost':'h2fuel'})
+    [['t','r','h2fuel']]
     .round(6)
 )
 
@@ -126,7 +126,7 @@ ngprice_cendiv = ngprice.copy()
 ngprice_cendiv = ngprice_cendiv.pivot_table(index='cendiv',columns='year',values='value')
 ngprice_cendiv = ngprice_cendiv.round(6)
 
-# Map cenus regions to model regions
+# Map census regions to model regions
 ngprice = ngprice.merge(r_cendiv,on='cendiv',how='left')
 ngprice = ngprice.drop('cendiv', axis=1)
 ngprice = ngprice[['year','r','value']].rename(columns={'year':'t','value':'naturalgas'})
@@ -135,7 +135,7 @@ ngprice.naturalgas = ngprice.naturalgas.round(6)
 # Combine all fuel data
 fuel = coal.merge(uranium,on=['t','r'],how='left')
 fuel = fuel.merge(ngprice,on=['t','r'],how='left')
-fuel = fuel.merge(h2ct,on=['t','r'],how='left')
+fuel = fuel.merge(h2fuel,on=['t','r'],how='left')
 fuel = fuel.sort_values(['t','r'])
 
 #%%#################################### 

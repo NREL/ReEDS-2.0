@@ -18,7 +18,7 @@ GSw_CCSFLEX_STO,0
 GSw_CCSFLEX_STO_LEVEL,1
 GSw_CCSFLEX_cap_max,90
 GSw_CCSFLEX_cost_mult,1
-GSw_CCS_NoRetire,1
+GSw_CCS_NoRetire,0
 GSw_CCS_NotRecTech,0
 GSw_CCS_Rate_New_max,0.99
 GSw_CCS_Rate_New_mod,0.95
@@ -70,9 +70,9 @@ GSw_GrowthAbsCon,0
 GSw_GrowthConLastYear,2034
 GSw_GrowthPenalties,0
 GSw_H2,2
-GSw_H2CT,1
-GSw_H2CT_NoRetire,0
-GSw_H2CTupgrade,1
+GSw_H2Combustion,1
+GSw_H2Combustion_NoRetire,0
+GSw_H2Combustionupgrade,1
 GSw_H2_CompressorLoad,0
 GSw_H2_Demand_Case,none
 GSw_H2_Inputs,ref
@@ -126,7 +126,7 @@ GSw_LoadAdjust_Adoption,commercial__residential
 GSw_LoadAdjust_Profiles,commercial__residential
 GSw_Loadpoint,0
 GSw_MaxCaptureCCSTechs,0
-GSw_Precombustion,0
+GSw_Upstream,0
 GSw_MethaneLeakageScen,Alvarez2018_30by2030
 GSw_MinCF,1
 GSw_MinLoadTechs,4
@@ -206,7 +206,7 @@ GSw_StartMarkets,2025
 GSw_StateCO2ImportLevel,interconnect
 GSw_StateCap,1
 GSw_StateRPS,1
-GSw_Storage,3
+GSw_Storage,1
 GSw_TCPhaseout,1
 GSw_TCPhaseout_forceyear,0
 GSw_TCPhaseout_ref_year,2022
@@ -294,8 +294,8 @@ financials_trans_suffix,default
 geodiscov,ALL
 geohydrosupplycurve,reV
 plantchar_geo,geo_ATB_2024_advanced
-h2ctfuelscen,reference
-plantchar_h2ct,h2-ct_ATB_2024
+h2combustionfuelscen,reference
+plantchar_h2combustion,h2-combustion_ATB_2024
 hourly_cluster_plots,1
 plantchar_hydro,hydro_ATB_2019_mid
 ignore,0

@@ -1,125 +1,162 @@
-# ReEDS 2.0
-
 ## Table of Contents
 
 
-  - ### [](#) 
-    - #### [hourlize](#hourlize) 
-      - ##### [eer_to_reeds](#hourlize/eer_to_reeds) 
-      - ##### [inputs](#hourlize/inputs) 
-      - ##### [plexos_to_reeds](#hourlize/plexos_to_reeds) 
-      - ##### [tests](#hourlize/tests) 
-    - #### [inputs](#inputs) 
-      - ##### [canada_imports](#inputs/canada_imports) 
-      - ##### [capacity_exogenous](#inputs/capacity_exogenous) 
-      - ##### [climate](#inputs/climate) 
-      - ##### [consume](#inputs/consume) 
-      - ##### [ctus](#inputs/ctus) 
-      - ##### [degradation](#inputs/degradation) 
-      - ##### [demand_response](#inputs/demand_response) 
-      - ##### [dgen_model_inputs](#inputs/dgen_model_inputs) 
-      - ##### [disaggregation](#inputs/disaggregation) 
-      - ##### [emission_constraints](#inputs/emission_constraints) 
-      - ##### [financials](#inputs/financials) 
-      - ##### [fuelprices](#inputs/fuelprices) 
-      - ##### [geothermal](#inputs/geothermal) 
-      - ##### [growth_constraints](#inputs/growth_constraints) 
-      - ##### [hydro](#inputs/hydro) 
-      - ##### [load](#inputs/load) 
-      - ##### [national_generation](#inputs/national_generation) 
-      - ##### [plant_characteristics](#inputs/plant_characteristics) 
-      - ##### [reserves](#inputs/reserves) 
-      - ##### [sets](#inputs/sets) 
-      - ##### [shapefiles](#inputs/shapefiles) 
-      - ##### [state_policies](#inputs/state_policies) 
-      - ##### [storage](#inputs/storage) 
-      - ##### [supply_curve](#inputs/supply_curve) 
-      - ##### [techs](#inputs/techs) 
-      - ##### [transmission](#inputs/transmission) 
-      - ##### [upgrades](#inputs/upgrades) 
-      - ##### [userinput](#inputs/userinput) 
-      - ##### [valuestreams](#inputs/valuestreams) 
-      - ##### [variability](#inputs/variability) 
-      - ##### [waterclimate](#inputs/waterclimate) 
-    - #### [postprocessing](#postprocessing) 
-      - ##### [air_quality](#postprocessing/air_quality) 
-      - ##### [bokehpivot](#postprocessing/bokehpivot) 
-      - ##### [combine_runs](#postprocessing/combine_runs) 
-      - ##### [land_use](#postprocessing/land_use) 
-      - ##### [plots](#postprocessing/plots) 
-      - ##### [retail_rate_module](#postprocessing/retail_rate_module) 
-      - ##### [reValue](#postprocessing/reValue) 
-      - ##### [tableau](#postprocessing/tableau) 
-    - #### [preprocessing](#preprocessing) 
-      - ##### [atb_updates_processing](#preprocessing/atb_updates_processing) 
-    - #### [reeds2pras](#reeds2pras) 
-      - ##### [test](#reeds2pras/test) 
-    - #### [ReEDS_Augur](#ReEDS_Augur) 
-    - #### [tests](#tests) 
-      - ##### [data](#tests/data) 
+  - [hourlize](#hourlize)
+    - [eer_to_reeds](#hourlize-eer-to-reeds)
+      - [eer_load_participation_factors](#hourlize-eer-to-reeds-eer-load-participation-factors)
+      - [eer_splice](#hourlize-eer-to-reeds-eer-splice)
+    - [inputs](#hourlize-inputs)
+      - [load](#hourlize-inputs-load)
+      - [resource](#hourlize-inputs-resource)
+    - [plexos_to_reeds](#hourlize-plexos-to-reeds)
+      - [inputs](#hourlize-plexos-to-reeds-inputs)
+    - [tests](#hourlize-tests)
+      - [data](#hourlize-tests-data)
+        - [r2r_expanded](#hourlize-tests-data-r2r-expanded)
+        - [r2r_from_config](#hourlize-tests-data-r2r-from-config)
+        - [r2r_integration](#hourlize-tests-data-r2r-integration)
+        - [r2r_integration_geothermal](#hourlize-tests-data-r2r-integration-geothermal)
+  - [inputs](#inputs)
+    - [canada_imports](#inputs-canada-imports)
+    - [capacity_exogenous](#inputs-capacity-exogenous)
+    - [climate](#inputs-climate)
+      - [GFDL-ESM2M_RCP4p5_WM](#inputs-climate-gfdl-esm2m-rcp4p5-wm)
+      - [HadGEM2-ES_RCP2p6](#inputs-climate-hadgem2-es-rcp2p6)
+      - [HadGEM2-ES_rcp45_AT](#inputs-climate-hadgem2-es-rcp45-at)
+      - [HadGEM2-ES_RCP4p5](#inputs-climate-hadgem2-es-rcp4p5)
+      - [HadGEM2-ES_rcp85_AT](#inputs-climate-hadgem2-es-rcp85-at)
+      - [HadGEM2-ES_RCP8p5](#inputs-climate-hadgem2-es-rcp8p5)
+      - [IPSL-CM5A-LR_RCP8p5_WM](#inputs-climate-ipsl-cm5a-lr-rcp8p5-wm)
+    - [consume](#inputs-consume)
+    - [ctus](#inputs-ctus)
+    - [degradation](#inputs-degradation)
+    - [demand_response](#inputs-demand-response)
+    - [dgen_model_inputs](#inputs-dgen-model-inputs)
+      - [stscen2023_electrification](#inputs-dgen-model-inputs-stscen2023-electrification)
+      - [stscen2023_highng](#inputs-dgen-model-inputs-stscen2023-highng)
+      - [stscen2023_highre](#inputs-dgen-model-inputs-stscen2023-highre)
+      - [stscen2023_lowng](#inputs-dgen-model-inputs-stscen2023-lowng)
+      - [stscen2023_lowre](#inputs-dgen-model-inputs-stscen2023-lowre)
+      - [stscen2023_mid_case](#inputs-dgen-model-inputs-stscen2023-mid-case)
+      - [stscen2023_mid_case_95_by_2035](#inputs-dgen-model-inputs-stscen2023-mid-case-95-by-2035)
+      - [stscen2023_mid_case_95_by_2050](#inputs-dgen-model-inputs-stscen2023-mid-case-95-by-2050)
+      - [stscen2023_taxcredit_extended2050](#inputs-dgen-model-inputs-stscen2023-taxcredit-extended2050)
+    - [disaggregation](#inputs-disaggregation)
+    - [emission_constraints](#inputs-emission-constraints)
+    - [financials](#inputs-financials)
+    - [fuelprices](#inputs-fuelprices)
+    - [geothermal](#inputs-geothermal)
+    - [growth_constraints](#inputs-growth-constraints)
+    - [hydro](#inputs-hydro)
+    - [load](#inputs-load)
+    - [national_generation](#inputs-national-generation)
+    - [plant_characteristics](#inputs-plant-characteristics)
+    - [reserves](#inputs-reserves)
+    - [sets](#inputs-sets)
+    - [shapefiles](#inputs-shapefiles)
+      - [WKT_csvs](#inputs-shapefiles-wkt-csvs)
+    - [state_policies](#inputs-state-policies)
+    - [storage](#inputs-storage)
+    - [supply_curve](#inputs-supply-curve)
+    - [techs](#inputs-techs)
+    - [transmission](#inputs-transmission)
+    - [upgrades](#inputs-upgrades)
+    - [userinput](#inputs-userinput)
+    - [valuestreams](#inputs-valuestreams)
+    - [variability](#inputs-variability)
+      - [multi_year](#inputs-variability-multi-year)
+    - [waterclimate](#inputs-waterclimate)
+  - [postprocessing](#postprocessing)
+    - [air_quality](#postprocessing-air-quality)
+      - [rcm_data](#postprocessing-air-quality-rcm-data)
+    - [bokehpivot](#postprocessing-bokehpivot)
+      - [in](#postprocessing-bokehpivot-in)
+        - [reeds2](#postprocessing-bokehpivot-in-reeds2)
+      - [out](#postprocessing-bokehpivot-out)
+        - [report-2025-03-21-13-05-27](#postprocessing-bokehpivot-out-report-2025-03-21-13-05-27)
+        - [report-2025-06-03-11-55-40](#postprocessing-bokehpivot-out-report-2025-06-03-11-55-40)
+        - [report-2025-06-03-11-59-51](#postprocessing-bokehpivot-out-report-2025-06-03-11-59-51)
+        - [report-2025-06-03-12-06-11](#postprocessing-bokehpivot-out-report-2025-06-03-12-06-11)
+        - [report-2025-06-03-12-06-21](#postprocessing-bokehpivot-out-report-2025-06-03-12-06-21)
+        - [report-2025-06-05-12-38-18](#postprocessing-bokehpivot-out-report-2025-06-05-12-38-18)
+        - [view](#postprocessing-bokehpivot-out-view)
+    - [combine_runs](#postprocessing-combine-runs)
+    - [land_use](#postprocessing-land-use)
+      - [inputs](#postprocessing-land-use-inputs)
+    - [plots](#postprocessing-plots)
+    - [retail_rate_module](#postprocessing-retail-rate-module)
+      - [inputs](#postprocessing-retail-rate-module-inputs)
+    - [reValue](#postprocessing-revalue)
+    - [tableau](#postprocessing-tableau)
+  - [preprocessing](#preprocessing)
+    - [atb_updates_processing](#preprocessing-atb-updates-processing)
+      - [input_files](#preprocessing-atb-updates-processing-input-files)
+  - [reeds2pras](#reeds2pras)
+    - [test](#reeds2pras-test)
+      - [reeds_cases](#reeds2pras-test-reeds-cases)
+        - [Pacific](#reeds2pras-test-reeds-cases-pacific)
+        - [USA_VSC_2035](#reeds2pras-test-reeds-cases-usa-vsc-2035)
+  - [ReEDS_Augur](#reeds-augur)
+  - [tests](#tests)
+    - [data](#tests-data)
+      - [county](#tests-data-county)
 
 
 ## Input Files
-Note: If you see a '#' before a header it means there may be further subdirectories within it but the Markdown file is only capable of showing 6 levels, so the header sizes are capped to that level and they cannot be any smaller to visually reflect the further subdirectory hierarchy.
-
-
-## []() <a name=''></a>
-  - [cases.csv](/cases.csv)
-    - **File Type:** Switches file
-    - **Description:** Contains the configuration settings for the ReEDS run(s).
-    - **Dollar year:** 2004
-
-    - **Citation:** [(https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/38e6610a8c6a92291804598c95c11b707bf187b9/cases.csv)]
+- [cases.csv](/cases.csv)
+  - **File Type:** Switches file
+  - **Description:** Contains the configuration settings for the ReEDS run(s).
+  - **Dollar year:** 2004
+  - **Citation:** [https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/38e6610a8c6a92291804598c95c11b707bf187b9/cases.csv](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/38e6610a8c6a92291804598c95c11b707bf187b9/cases.csv)
 ---
 
-  - [cases_hourly.csv](/cases_hourly.csv)
-    - **Description:** This cases file contains the settings to demonstrate temporal flexibility (hourly) of ReEDS.
+- [cases_examples.csv](/cases_examples.csv)
 ---
 
-  - [cases_small.csv](/cases_small.csv)
-    - **Description:** Contains settings to run ReEDS at a smaller scale to test operability of the ReEDS model. Turns off several technologies and reduces the model size to significantly improve solve times.
+- [cases_small.csv](/cases_small.csv)
+  - **Description:** Contains settings to run ReEDS at a smaller scale to test operability of the ReEDS model. Turns off several technologies and reduces the model size to significantly improve solve times.
 ---
 
-  - [cases_smaller.csv](/cases_smaller.csv)
-    - **Description:** Another cases file which reduces the size of the model by reducing some constraints and operates at the largest spatial hierarchy to favor faster runtimes.
+- [cases_standardscenarios.csv](/cases_standardscenarios.csv)
+  - **File Type:** StdScen Cases file
+  - **Description:** Contains the configuration settings for the Standard Scenarios ReEDS runs.
 ---
 
-  - [cases_spatialflex.csv](/cases_spatialflex.csv)
-    - **Description:** Contains sample scenarios that use the spatial flexibility capabilities
+- [cases_test.csv](/cases_test.csv)
+  - **Description:** Contains the configuration settings for doing test runs including the default Pacific census division test case.
 ---
 
-  - [cases_standardscenarios.csv](/cases_standardscenarios.csv)
-    - **File Type:** StdScen Cases file
-    - **Description:** Contains the configuration settings for the Standard Scenarios ReEDS runs.
+- [e_report_params.csv](/e_report_params.csv)
+  - **Description:** Contains a parameter list used in the model along with descriptions of what they are and units used.
 ---
 
-  - [cases_test.csv](/cases_test.csv)
-    - **Description:** Contains the configuration settings for doing test runs including the default Pacific census division test case.
+- [runfiles.csv](/runfiles.csv)
+  - **Description:** Contains the locations of input data that is copied from the repository into the runs folder for each respective case.
 ---
 
-  - [e_report_params.csv](/e_report_params.csv)
-    - **Description:** Contains a parameter list used in the model along with descriptions of what they are and units used.
----
-
-  - [runfiles.csv](/runfiles.csv)
-    - **Description:** Contains the locations of input data that is copied from the repository into the runs folder for each respective case.
----
-
-  - [sources.csv](/sources.csv)
-    - **Description:** CSV file containing a list of all input files (csv, h5, csv.gz)
+- [sources.csv](/sources.csv)
+  - **Description:** CSV file containing a list of all input files (csv, h5, csv.gz)
 ---
 
 
-### [hourlize](hourlize) <a name='hourlize'></a>
+<a id='hourlize'></a>
+### hourlize
 
-#### [eer_to_reeds](hourlize/eer_to_reeds) <a name='hourlize/eer_to_reeds'></a>
 
-##### [eer_load_participation_factors](hourlize/eer_to_reeds/eer_load_participation_factors) <a name='hourlize/eer_to_reeds/eer_load_participation_factors'></a>
+<a id='hourlize-eer-to-reeds'></a>
+#### hourlize/eer_to_reeds
+
+
+<a id='hourlize-eer-to-reeds-eer-load-participation-factors'></a>
+##### hourlize/eer_to_reeds/eer_load_participation_factors
+
   - [ba_state_map.csv](/hourlize/eer_to_reeds/eer_load_participation_factors/ba_state_map.csv)
 ---
 
 
-##### [eer_splice](hourlize/eer_to_reeds/eer_splice) <a name='hourlize/eer_to_reeds/eer_splice'></a>
+<a id='hourlize-eer-to-reeds-eer-splice'></a>
+##### hourlize/eer_to_reeds/eer_splice
+
   - [ba_timezone.csv](/hourlize/eer_to_reeds/eer_splice/ba_timezone.csv)
 ---
 
@@ -127,9 +164,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [inputs](hourlize/inputs) <a name='hourlize/inputs'></a>
+<a id='hourlize-inputs'></a>
+#### hourlize/inputs
 
-##### [load](hourlize/inputs/load) <a name='hourlize/inputs/load'></a>
+
+<a id='hourlize-inputs-load'></a>
+##### hourlize/inputs/load
+
   - [ba_timezone.csv](/hourlize/inputs/load/ba_timezone.csv)
     - **Description:** Contains timezone information for BAs with respect to GMT.
     - **Indices:** r
@@ -151,14 +192,15 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [resource](hourlize/inputs/resource) <a name='hourlize/inputs/resource'></a>
+<a id='hourlize-inputs-resource'></a>
+##### hourlize/inputs/resource
+
   - [egs_resource_classes.csv](/hourlize/inputs/resource/egs_resource_classes.csv)
 ---
 
   - [fair_market_value.csv](/hourlize/inputs/resource/fair_market_value.csv)
     - **Description:** Contains estimates of fair market land value in $ per hectare for each reV supply curve site
-
-    - **Citation:** [(Provided by Anthony Lopez in June 2023)]
+    - **Citation:** Provided by Anthony Lopez in June 2023
 ---
 
   - [geohydro_resource_classes.csv](/hourlize/inputs/resource/geohydro_resource_classes.csv)
@@ -186,9 +228,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [plexos_to_reeds](hourlize/plexos_to_reeds) <a name='hourlize/plexos_to_reeds'></a>
+<a id='hourlize-plexos-to-reeds'></a>
+#### hourlize/plexos_to_reeds
 
-##### [inputs](hourlize/plexos_to_reeds/inputs) <a name='hourlize/plexos_to_reeds/inputs'></a>
+
+<a id='hourlize-plexos-to-reeds-inputs'></a>
+##### hourlize/plexos_to_reeds/inputs
+
   - [month_to_season.csv](/hourlize/plexos_to_reeds/inputs/month_to_season.csv)
     - **Description:** Maps the season to month in a year
 ---
@@ -206,22 +252,36 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [tests](hourlize/tests) <a name='hourlize/tests'></a>
+<a id='hourlize-tests'></a>
+#### hourlize/tests
 
-##### [data](hourlize/tests/data) <a name='hourlize/tests/data'></a>
 
-###### [r2r_expanded](hourlize/tests/data/r2r_expanded) <a name='hourlize/tests/data/r2r_expanded'></a>
+<a id='hourlize-tests-data'></a>
+##### hourlize/tests/data
 
-####### [upv_case_1](hourlize/tests/data/r2r_expanded/upv_case_1) <a name='hourlize/tests/data/r2r_expanded/upv_case_1'></a>
 
-####### [expected_results](hourlize/tests/data/r2r_expanded/upv_case_1/expected_results) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/expected_results'></a>
+<a id='hourlize-tests-data-r2r-expanded'></a>
+###### hourlize/tests/data/r2r_expanded
+
+
+<a id='hourlize-tests-data-r2r-expanded-upv-case-1'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_1
+
+
+<a id='hourlize-tests-data-r2r-expanded-upv-case-1-expected-results'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_1/expected_results
+
   - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/expected_results/df_sc_out_upv_reduced.csv)
 ---
 
 
-####### [reeds](hourlize/tests/data/r2r_expanded/upv_case_1/reeds) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/reeds'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-1-reeds'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_1/reeds
 
-####### [inputs_case](hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case'></a>
+
+<a id='hourlize-tests-data-r2r-expanded-upv-case-1-reeds-inputs-case'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case
+
   - [hierarchy_original.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/inputs_case/hierarchy_original.csv)
 ---
 
@@ -238,7 +298,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [outputs](hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-1-reeds-outputs'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs
+
   - [cap.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/reeds/outputs/cap.csv)
 ---
 
@@ -255,21 +317,31 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [supply_curves](hourlize/tests/data/r2r_expanded/upv_case_1/supply_curves) <a name='hourlize/tests/data/r2r_expanded/upv_case_1/supply_curves'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-1-supply-curves'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_1/supply_curves
+
   - [upv_supply_curve_raw_unpacked.csv](/hourlize/tests/data/r2r_expanded/upv_case_1/supply_curves/upv_supply_curve_raw_unpacked.csv)
 ---
 
 
-####### [upv_case_2](hourlize/tests/data/r2r_expanded/upv_case_2) <a name='hourlize/tests/data/r2r_expanded/upv_case_2'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-2'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_2
 
-####### [expected_results](hourlize/tests/data/r2r_expanded/upv_case_2/expected_results) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/expected_results'></a>
+
+<a id='hourlize-tests-data-r2r-expanded-upv-case-2-expected-results'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_2/expected_results
+
   - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/expected_results/df_sc_out_upv_reduced.csv)
 ---
 
 
-####### [reeds](hourlize/tests/data/r2r_expanded/upv_case_2/reeds) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/reeds'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-2-reeds'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_2/reeds
 
-####### [inputs_case](hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case'></a>
+
+<a id='hourlize-tests-data-r2r-expanded-upv-case-2-reeds-inputs-case'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case
+
   - [hierarchy_original.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/inputs_case/hierarchy_original.csv)
 ---
 
@@ -286,7 +358,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [outputs](hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-2-reeds-outputs'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs
+
   - [cap.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/reeds/outputs/cap.csv)
 ---
 
@@ -303,21 +377,31 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [supply_curves](hourlize/tests/data/r2r_expanded/upv_case_2/supply_curves) <a name='hourlize/tests/data/r2r_expanded/upv_case_2/supply_curves'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-2-supply-curves'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_2/supply_curves
+
   - [upv_supply_curve_raw_unpacked.csv](/hourlize/tests/data/r2r_expanded/upv_case_2/supply_curves/upv_supply_curve_raw_unpacked.csv)
 ---
 
 
-####### [upv_case_3](hourlize/tests/data/r2r_expanded/upv_case_3) <a name='hourlize/tests/data/r2r_expanded/upv_case_3'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-3'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_3
 
-####### [expected_results](hourlize/tests/data/r2r_expanded/upv_case_3/expected_results) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/expected_results'></a>
+
+<a id='hourlize-tests-data-r2r-expanded-upv-case-3-expected-results'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_3/expected_results
+
   - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/expected_results/df_sc_out_upv_reduced.csv)
 ---
 
 
-####### [reeds](hourlize/tests/data/r2r_expanded/upv_case_3/reeds) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/reeds'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-3-reeds'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_3/reeds
 
-####### [inputs_case](hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case'></a>
+
+<a id='hourlize-tests-data-r2r-expanded-upv-case-3-reeds-inputs-case'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case
+
   - [hierarchy_original.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/inputs_case/hierarchy_original.csv)
 ---
 
@@ -334,7 +418,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [outputs](hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-3-reeds-outputs'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs
+
   - [cap.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/reeds/outputs/cap.csv)
 ---
 
@@ -351,21 +437,31 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [supply_curves](hourlize/tests/data/r2r_expanded/upv_case_3/supply_curves) <a name='hourlize/tests/data/r2r_expanded/upv_case_3/supply_curves'></a>
+<a id='hourlize-tests-data-r2r-expanded-upv-case-3-supply-curves'></a>
+###### hourlize/tests/data/r2r_expanded/upv_case_3/supply_curves
+
   - [upv_supply_curve_raw_unpacked.csv](/hourlize/tests/data/r2r_expanded/upv_case_3/supply_curves/upv_supply_curve_raw_unpacked.csv)
 ---
 
 
-####### [wind-ons_case_1](hourlize/tests/data/r2r_expanded/wind-ons_case_1) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1'></a>
+<a id='hourlize-tests-data-r2r-expanded-wind-ons-case-1'></a>
+###### hourlize/tests/data/r2r_expanded/wind-ons_case_1
 
-####### [expected_results](hourlize/tests/data/r2r_expanded/wind-ons_case_1/expected_results) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/expected_results'></a>
+
+<a id='hourlize-tests-data-r2r-expanded-wind-ons-case-1-expected-results'></a>
+###### hourlize/tests/data/r2r_expanded/wind-ons_case_1/expected_results
+
   - [df_sc_out_wind-ons_reduced.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/expected_results/df_sc_out_wind-ons_reduced.csv)
 ---
 
 
-####### [reeds](hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds'></a>
+<a id='hourlize-tests-data-r2r-expanded-wind-ons-case-1-reeds'></a>
+###### hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds
 
-####### [inputs_case](hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case'></a>
+
+<a id='hourlize-tests-data-r2r-expanded-wind-ons-case-1-reeds-inputs-case'></a>
+###### hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case
+
   - [hierarchy_original.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/hierarchy_original.csv)
 ---
 
@@ -382,12 +478,16 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [supplycurve_metadata](hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/supplycurve_metadata) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/supplycurve_metadata'></a>
+<a id='hourlize-tests-data-r2r-expanded-wind-ons-case-1-reeds-inputs-case-supplycurve-metadata'></a>
+###### hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/supplycurve_metadata
+
   - [rev_supply_curves.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/inputs_case/supplycurve_metadata/rev_supply_curves.csv)
 ---
 
 
-####### [outputs](hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs'></a>
+<a id='hourlize-tests-data-r2r-expanded-wind-ons-case-1-reeds-outputs'></a>
+###### hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs
+
   - [cap.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/reeds/outputs/cap.csv)
 ---
 
@@ -404,16 +504,24 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [supply_curves](hourlize/tests/data/r2r_expanded/wind-ons_case_1/supply_curves) <a name='hourlize/tests/data/r2r_expanded/wind-ons_case_1/supply_curves'></a>
+<a id='hourlize-tests-data-r2r-expanded-wind-ons-case-1-supply-curves'></a>
+###### hourlize/tests/data/r2r_expanded/wind-ons_case_1/supply_curves
+
   - [wind-ons_supply_curve_raw.csv](/hourlize/tests/data/r2r_expanded/wind-ons_case_1/supply_curves/wind-ons_supply_curve_raw.csv)
 ---
 
 
-###### [r2r_from_config](hourlize/tests/data/r2r_from_config) <a name='hourlize/tests/data/r2r_from_config'></a>
+<a id='hourlize-tests-data-r2r-from-config'></a>
+###### hourlize/tests/data/r2r_from_config
 
-####### [expected_results](hourlize/tests/data/r2r_from_config/expected_results) <a name='hourlize/tests/data/r2r_from_config/expected_results'></a>
 
-####### [multiple_priority_inputs](hourlize/tests/data/r2r_from_config/expected_results/multiple_priority_inputs) <a name='hourlize/tests/data/r2r_from_config/expected_results/multiple_priority_inputs'></a>
+<a id='hourlize-tests-data-r2r-from-config-expected-results'></a>
+###### hourlize/tests/data/r2r_from_config/expected_results
+
+
+<a id='hourlize-tests-data-r2r-from-config-expected-results-multiple-priority-inputs'></a>
+###### hourlize/tests/data/r2r_from_config/expected_results/multiple_priority_inputs
+
   - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/multiple_priority_inputs/df_sc_out_upv_reduced.csv)
 ---
 
@@ -424,7 +532,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [no_bin_constraint](hourlize/tests/data/r2r_from_config/expected_results/no_bin_constraint) <a name='hourlize/tests/data/r2r_from_config/expected_results/no_bin_constraint'></a>
+<a id='hourlize-tests-data-r2r-from-config-expected-results-no-bin-constraint'></a>
+###### hourlize/tests/data/r2r_from_config/expected_results/no_bin_constraint
+
   - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/no_bin_constraint/df_sc_out_upv_reduced.csv)
 ---
 
@@ -435,7 +545,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [priority_inputs](hourlize/tests/data/r2r_from_config/expected_results/priority_inputs) <a name='hourlize/tests/data/r2r_from_config/expected_results/priority_inputs'></a>
+<a id='hourlize-tests-data-r2r-from-config-expected-results-priority-inputs'></a>
+###### hourlize/tests/data/r2r_from_config/expected_results/priority_inputs
+
   - [df_sc_out_upv_reduced.csv](/hourlize/tests/data/r2r_from_config/expected_results/priority_inputs/df_sc_out_upv_reduced.csv)
 ---
 
@@ -446,9 +558,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-###### [r2r_integration](hourlize/tests/data/r2r_integration) <a name='hourlize/tests/data/r2r_integration'></a>
+<a id='hourlize-tests-data-r2r-integration'></a>
+###### hourlize/tests/data/r2r_integration
 
-####### [expected_results](hourlize/tests/data/r2r_integration/expected_results) <a name='hourlize/tests/data/r2r_integration/expected_results'></a>
+
+<a id='hourlize-tests-data-r2r-integration-expected-results'></a>
+###### hourlize/tests/data/r2r_integration/expected_results
+
   - [df_sc_out_upv.csv](/hourlize/tests/data/r2r_integration/expected_results/df_sc_out_upv.csv)
 ---
 
@@ -471,9 +587,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [reeds](hourlize/tests/data/r2r_integration/reeds) <a name='hourlize/tests/data/r2r_integration/reeds'></a>
+<a id='hourlize-tests-data-r2r-integration-reeds'></a>
+###### hourlize/tests/data/r2r_integration/reeds
 
-####### [inputs_case](hourlize/tests/data/r2r_integration/reeds/inputs_case) <a name='hourlize/tests/data/r2r_integration/reeds/inputs_case'></a>
+
+<a id='hourlize-tests-data-r2r-integration-reeds-inputs-case'></a>
+###### hourlize/tests/data/r2r_integration/reeds/inputs_case
+
   - [hierarchy_original.csv](/hourlize/tests/data/r2r_integration/reeds/inputs_case/hierarchy_original.csv)
 ---
 
@@ -490,7 +610,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [outputs](hourlize/tests/data/r2r_integration/reeds/outputs) <a name='hourlize/tests/data/r2r_integration/reeds/outputs'></a>
+<a id='hourlize-tests-data-r2r-integration-reeds-outputs'></a>
+###### hourlize/tests/data/r2r_integration/reeds/outputs
+
   - [cap.csv](/hourlize/tests/data/r2r_integration/reeds/outputs/cap.csv)
 ---
 
@@ -507,32 +629,50 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [supply_curves](hourlize/tests/data/r2r_integration/supply_curves) <a name='hourlize/tests/data/r2r_integration/supply_curves'></a>
+<a id='hourlize-tests-data-r2r-integration-supply-curves'></a>
+###### hourlize/tests/data/r2r_integration/supply_curves
 
-####### [upv_reference](hourlize/tests/data/r2r_integration/supply_curves/upv_reference) <a name='hourlize/tests/data/r2r_integration/supply_curves/upv_reference'></a>
 
-####### [results](hourlize/tests/data/r2r_integration/supply_curves/upv_reference/results) <a name='hourlize/tests/data/r2r_integration/supply_curves/upv_reference/results'></a>
+<a id='hourlize-tests-data-r2r-integration-supply-curves-upv-reference'></a>
+###### hourlize/tests/data/r2r_integration/supply_curves/upv_reference
+
+
+<a id='hourlize-tests-data-r2r-integration-supply-curves-upv-reference-results'></a>
+###### hourlize/tests/data/r2r_integration/supply_curves/upv_reference/results
+
   - [upv_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration/supply_curves/upv_reference/results/upv_supply_curve_raw.csv)
 ---
 
 
-####### [wind-ofs_0_open_moderate](hourlize/tests/data/r2r_integration/supply_curves/wind-ofs_0_open_moderate) <a name='hourlize/tests/data/r2r_integration/supply_curves/wind-ofs_0_open_moderate'></a>
+<a id='hourlize-tests-data-r2r-integration-supply-curves-wind-ofs-0-open-moderate'></a>
+###### hourlize/tests/data/r2r_integration/supply_curves/wind-ofs_0_open_moderate
 
-####### [results](hourlize/tests/data/r2r_integration/supply_curves/wind-ofs_0_open_moderate/results) <a name='hourlize/tests/data/r2r_integration/supply_curves/wind-ofs_0_open_moderate/results'></a>
+
+<a id='hourlize-tests-data-r2r-integration-supply-curves-wind-ofs-0-open-moderate-results'></a>
+###### hourlize/tests/data/r2r_integration/supply_curves/wind-ofs_0_open_moderate/results
+
   - [wind-ofs_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration/supply_curves/wind-ofs_0_open_moderate/results/wind-ofs_supply_curve_raw.csv)
 ---
 
 
-####### [wind-ons_reference](hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference) <a name='hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference'></a>
+<a id='hourlize-tests-data-r2r-integration-supply-curves-wind-ons-reference'></a>
+###### hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference
 
-####### [results](hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference/results) <a name='hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference/results'></a>
+
+<a id='hourlize-tests-data-r2r-integration-supply-curves-wind-ons-reference-results'></a>
+###### hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference/results
+
   - [wind-ons_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration/supply_curves/wind-ons_reference/results/wind-ons_supply_curve_raw.csv)
 ---
 
 
-###### [r2r_integration_geothermal](hourlize/tests/data/r2r_integration_geothermal) <a name='hourlize/tests/data/r2r_integration_geothermal'></a>
+<a id='hourlize-tests-data-r2r-integration-geothermal'></a>
+###### hourlize/tests/data/r2r_integration_geothermal
 
-####### [expected_results](hourlize/tests/data/r2r_integration_geothermal/expected_results) <a name='hourlize/tests/data/r2r_integration_geothermal/expected_results'></a>
+
+<a id='hourlize-tests-data-r2r-integration-geothermal-expected-results'></a>
+###### hourlize/tests/data/r2r_integration_geothermal/expected_results
+
   - [df_sc_out_egs_allkm.csv](/hourlize/tests/data/r2r_integration_geothermal/expected_results/df_sc_out_egs_allkm.csv)
 ---
 
@@ -546,9 +686,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [reeds](hourlize/tests/data/r2r_integration_geothermal/reeds) <a name='hourlize/tests/data/r2r_integration_geothermal/reeds'></a>
+<a id='hourlize-tests-data-r2r-integration-geothermal-reeds'></a>
+###### hourlize/tests/data/r2r_integration_geothermal/reeds
 
-####### [inputs_case](hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case) <a name='hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case'></a>
+
+<a id='hourlize-tests-data-r2r-integration-geothermal-reeds-inputs-case'></a>
+###### hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case
+
   - [hierarchy_original.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/inputs_case/hierarchy_original.csv)
 ---
 
@@ -565,7 +709,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [outputs](hourlize/tests/data/r2r_integration_geothermal/reeds/outputs) <a name='hourlize/tests/data/r2r_integration_geothermal/reeds/outputs'></a>
+<a id='hourlize-tests-data-r2r-integration-geothermal-reeds-outputs'></a>
+###### hourlize/tests/data/r2r_integration_geothermal/reeds/outputs
+
   - [cap.csv](/hourlize/tests/data/r2r_integration_geothermal/reeds/outputs/cap.csv)
 ---
 
@@ -582,7 +728,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [supply_curves](hourlize/tests/data/r2r_integration_geothermal/supply_curves) <a name='hourlize/tests/data/r2r_integration_geothermal/supply_curves'></a>
+<a id='hourlize-tests-data-r2r-integration-geothermal-supply-curves'></a>
+###### hourlize/tests/data/r2r_integration_geothermal/supply_curves
+
   - [egs_supply_curve_raw.csv](/hourlize/tests/data/r2r_integration_geothermal/supply_curves/egs_supply_curve_raw.csv)
 ---
 
@@ -590,7 +738,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-### [inputs](inputs) <a name='inputs'></a>
+<a id='inputs'></a>
+### inputs
+
   - [county2zone.csv](/inputs/county2zone.csv)
 ---
 
@@ -617,7 +767,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [canada_imports](inputs/canada_imports) <a name='inputs/canada_imports'></a>
+<a id='inputs-canada-imports'></a>
+#### inputs/canada_imports
+
   - [can_exports.csv](/inputs/canada_imports/can_exports.csv)
     - **File Type:** Input
     - **Description:** Annual exports to Canada by BA
@@ -651,7 +803,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [capacity_exogenous](inputs/capacity_exogenous) <a name='inputs/capacity_exogenous'></a>
+<a id='inputs-capacity-exogenous'></a>
+#### inputs/capacity_exogenous
+
   - [cappayments.csv](/inputs/capacity_exogenous/cappayments.csv)
 ---
 
@@ -662,92 +816,48 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Prescribed capacity
     - **Description:** Nuclear-smr demonstration plants; active when GSw_NuclearDemo=1
     - **Indices:** t,r,i,coolingwatertech,ctt,wst,value
-
-    - **Citation:** [(See 'notes' column in the file and https://www.energy.gov/oced/advanced-reactor-demonstration-projects-0)]
+    - **Citation:** See 'notes' column in the file and https://www.energy.gov/oced/advanced-reactor-demonstration-projects-0
     - **Units:** MW
 
 ---
 
-  - [geohydro_allkm_exog_cap_reference.csv](/inputs/capacity_exogenous/geohydro_allkm_exog_cap_reference.csv)
+  - [exog_cap_geohydro_allkm_reference.csv](/inputs/capacity_exogenous/exog_cap_geohydro_allkm_reference.csv)
 ---
 
-  - [geohydro_allkm_prescribed_builds_reference.csv](/inputs/capacity_exogenous/geohydro_allkm_prescribed_builds_reference.csv)
+  - [exog_cap_geohydro_reference.csv](/inputs/capacity_exogenous/exog_cap_geohydro_reference.csv)
 ---
 
-  - [geohydro_exog_cap_reference_ba.csv](/inputs/capacity_exogenous/geohydro_exog_cap_reference_ba.csv)
+  - [exog_cap_upv_limited.csv](/inputs/capacity_exogenous/exog_cap_upv_limited.csv)
 ---
 
-  - [geohydro_exog_cap_reference_county.csv](/inputs/capacity_exogenous/geohydro_exog_cap_reference_county.csv)
+  - [exog_cap_upv_open.csv](/inputs/capacity_exogenous/exog_cap_upv_open.csv)
 ---
 
-  - [geohydro_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/geohydro_prescribed_builds_reference_ba.csv)
+  - [exog_cap_upv_reference.csv](/inputs/capacity_exogenous/exog_cap_upv_reference.csv)
 ---
 
-  - [geohydro_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/geohydro_prescribed_builds_reference_county.csv)
+  - [exog_cap_wind-ons_limited.csv](/inputs/capacity_exogenous/exog_cap_wind-ons_limited.csv)
+---
+
+  - [exog_cap_wind-ons_open.csv](/inputs/capacity_exogenous/exog_cap_wind-ons_open.csv)
+---
+
+  - [exog_cap_wind-ons_reference.csv](/inputs/capacity_exogenous/exog_cap_wind-ons_reference.csv)
 ---
 
   - [interconnection_queues.csv](/inputs/capacity_exogenous/interconnection_queues.csv)
 ---
 
-  - [ReEDS_generator_database_final_EIA-NEMS.csv](/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv)
-    - **File Type:** Input
-    - **Description:** EIA-NEMS database of existing generators
+  - [prescribed_builds_geohydro_allkm_reference.csv](/inputs/capacity_exogenous/prescribed_builds_geohydro_allkm_reference.csv)
 ---
 
-  - [rsmap.csv](/inputs/capacity_exogenous/rsmap.csv)
-    - **Description:** Mapping for BAs to resource regions
-    - **Indices:** r,rs
+  - [prescribed_builds_geohydro_reference_ba.csv](/inputs/capacity_exogenous/prescribed_builds_geohydro_reference_ba.csv)
 ---
 
-  - [upv_exog_cap_limited_ba.csv](/inputs/capacity_exogenous/upv_exog_cap_limited_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with limited siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
+  - [prescribed_builds_geohydro_reference_county.csv](/inputs/capacity_exogenous/prescribed_builds_geohydro_reference_county.csv)
 ---
 
-  - [upv_exog_cap_limited_county.csv](/inputs/capacity_exogenous/upv_exog_cap_limited_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with limited siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_exog_cap_open_ba.csv](/inputs/capacity_exogenous/upv_exog_cap_open_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with open siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_exog_cap_open_county.csv](/inputs/capacity_exogenous/upv_exog_cap_open_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with open siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_exog_cap_reference_ba.csv](/inputs/capacity_exogenous/upv_exog_cap_reference_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with reference siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_exog_cap_reference_county.csv](/inputs/capacity_exogenous/upv_exog_cap_reference_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) UPV capacity with reference siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [upv_prescribed_builds_limited_ba.csv](/inputs/capacity_exogenous/upv_prescribed_builds_limited_ba.csv)
+  - [prescribed_builds_upv_limited_ba.csv](/inputs/capacity_exogenous/prescribed_builds_upv_limited_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with limited siting assumptions at BA resolution
     - **Indices:** r,t
@@ -755,7 +865,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_limited_county.csv](/inputs/capacity_exogenous/upv_prescribed_builds_limited_county.csv)
+  - [prescribed_builds_upv_limited_county.csv](/inputs/capacity_exogenous/prescribed_builds_upv_limited_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with limited siting assumptions at county resolution
     - **Indices:** r,t
@@ -763,7 +873,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_open_ba.csv](/inputs/capacity_exogenous/upv_prescribed_builds_open_ba.csv)
+  - [prescribed_builds_upv_open_ba.csv](/inputs/capacity_exogenous/prescribed_builds_upv_open_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with open siting assumptions at BA resolution
     - **Indices:** r,t
@@ -771,7 +881,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_open_county.csv](/inputs/capacity_exogenous/upv_prescribed_builds_open_county.csv)
+  - [prescribed_builds_upv_open_county.csv](/inputs/capacity_exogenous/prescribed_builds_upv_open_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with open siting assumptions at county resolution
     - **Indices:** r,t
@@ -779,7 +889,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/upv_prescribed_builds_reference_ba.csv)
+  - [prescribed_builds_upv_reference_ba.csv](/inputs/capacity_exogenous/prescribed_builds_upv_reference_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with reference siting assumptions at BA resolution
     - **Indices:** r,t
@@ -787,7 +897,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [upv_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/upv_prescribed_builds_reference_county.csv)
+  - [prescribed_builds_upv_reference_county.csv](/inputs/capacity_exogenous/prescribed_builds_upv_reference_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** UPV prescribed builds with reference siting assumptions at county resolution
     - **Indices:** r,t
@@ -795,7 +905,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_limited_ba.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_limited_ba.csv)
+  - [prescribed_builds_wind-ofs_limited_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_limited_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with limited siting assumptions at BA resolution
     - **Indices:** r,t
@@ -803,7 +913,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_limited_county.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_limited_county.csv)
+  - [prescribed_builds_wind-ofs_limited_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_limited_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with limited siting assumptions at county resolution
     - **Indices:** r,t
@@ -811,7 +921,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_open_ba.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_open_ba.csv)
+  - [prescribed_builds_wind-ofs_open_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_open_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with open siting assumptions at BA resolution
     - **Indices:** r,t
@@ -819,7 +929,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_open_county.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_open_county.csv)
+  - [prescribed_builds_wind-ofs_open_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_open_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ofs prescribed builds with open siting assumptions at county resolution
     - **Indices:** r,t
@@ -827,61 +937,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ofs_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_reference_ba.csv)
+  - [prescribed_builds_wind-ofs_reference_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_reference_ba.csv)
 ---
 
-  - [wind-ofs_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/wind-ofs_prescribed_builds_reference_county.csv)
+  - [prescribed_builds_wind-ofs_reference_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ofs_reference_county.csv)
 ---
 
-  - [wind-ons_exog_cap_limited_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_limited_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_limited_county.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_limited_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with limited siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_open_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_open_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with open siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_open_county.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_open_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with open siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_reference_ba.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_reference_ba.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at BA resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_exog_cap_reference_county.csv](/inputs/capacity_exogenous/wind-ons_exog_cap_reference_county.csv)
-    - **File Type:** Exogenous capacity
-    - **Description:** Exogenous (pre-2010) wind-ons capacity with reference siting assumptions at county resolution
-    - **Indices:** tech,r,sc_point_grid,t
-    - **Units:** MW
-
----
-
-  - [wind-ons_prescribed_builds_limited_ba.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_limited_ba.csv)
+  - [prescribed_builds_wind-ons_limited_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_limited_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with limited siting assumptions at BA resolution
     - **Indices:** r,t
@@ -889,7 +951,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_limited_county.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_limited_county.csv)
+  - [prescribed_builds_wind-ons_limited_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_limited_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with limited siting assumptions at county resolution
     - **Indices:** r,t
@@ -897,7 +959,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_open_ba.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_open_ba.csv)
+  - [prescribed_builds_wind-ons_open_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_open_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with open siting assumptions at BA resolution
     - **Indices:** r,t
@@ -905,7 +967,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_open_county.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_open_county.csv)
+  - [prescribed_builds_wind-ons_open_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_open_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with open siting assumptions at county resolution
     - **Indices:** r,t
@@ -913,7 +975,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_reference_ba.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_ba.csv)
+  - [prescribed_builds_wind-ons_reference_ba.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_reference_ba.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with reference siting assumptions at BA resolution
     - **Indices:** r,t
@@ -921,7 +983,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
-  - [wind-ons_prescribed_builds_reference_county.csv](/inputs/capacity_exogenous/wind-ons_prescribed_builds_reference_county.csv)
+  - [prescribed_builds_wind-ons_reference_county.csv](/inputs/capacity_exogenous/prescribed_builds_wind-ons_reference_county.csv)
     - **File Type:** Prescribed capacity
     - **Description:** wind-ons prescribed builds with reference siting assumptions at county resolution
     - **Indices:** r,t
@@ -929,8 +991,15 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
 ---
 
+  - [ReEDS_generator_database_final_EIA-NEMS.csv](/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv)
+    - **File Type:** Input
+    - **Description:** EIA-NEMS database of existing generators
+---
 
-#### [climate](inputs/climate) <a name='inputs/climate'></a>
+
+<a id='inputs-climate'></a>
+#### inputs/climate
+
   - [climate_heuristics_finalyear.csv](/inputs/climate/climate_heuristics_finalyear.csv)
 ---
 
@@ -944,7 +1013,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [GFDL-ESM2M_RCP4p5_WM](inputs/climate/GFDL-ESM2M_RCP4p5_WM) <a name='inputs/climate/GFDL-ESM2M_RCP4p5_WM'></a>
+<a id='inputs-climate-gfdl-esm2m-rcp4p5-wm'></a>
+##### inputs/climate/GFDL-ESM2M_RCP4p5_WM
+
   - [HDDCDD.csv](/inputs/climate/GFDL-ESM2M_RCP4p5_WM/HDDCDD.csv)
 ---
 
@@ -964,7 +1035,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [HadGEM2-ES_RCP2p6](inputs/climate/HadGEM2-ES_RCP2p6) <a name='inputs/climate/HadGEM2-ES_RCP2p6'></a>
+<a id='inputs-climate-hadgem2-es-rcp2p6'></a>
+##### inputs/climate/HadGEM2-ES_RCP2p6
+
   - [HDDCDD.csv](/inputs/climate/HadGEM2-ES_RCP2p6/HDDCDD.csv)
 ---
 
@@ -978,7 +1051,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [HadGEM2-ES_rcp45_AT](inputs/climate/HadGEM2-ES_rcp45_AT) <a name='inputs/climate/HadGEM2-ES_rcp45_AT'></a>
+<a id='inputs-climate-hadgem2-es-rcp45-at'></a>
+##### inputs/climate/HadGEM2-ES_rcp45_AT
+
   - [HDDCDD.csv](/inputs/climate/HadGEM2-ES_rcp45_AT/HDDCDD.csv)
 ---
 
@@ -998,7 +1073,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [HadGEM2-ES_RCP4p5](inputs/climate/HadGEM2-ES_RCP4p5) <a name='inputs/climate/HadGEM2-ES_RCP4p5'></a>
+<a id='inputs-climate-hadgem2-es-rcp4p5'></a>
+##### inputs/climate/HadGEM2-ES_RCP4p5
+
   - [HDDCDD.csv](/inputs/climate/HadGEM2-ES_RCP4p5/HDDCDD.csv)
 ---
 
@@ -1012,7 +1089,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [HadGEM2-ES_rcp85_AT](inputs/climate/HadGEM2-ES_rcp85_AT) <a name='inputs/climate/HadGEM2-ES_rcp85_AT'></a>
+<a id='inputs-climate-hadgem2-es-rcp85-at'></a>
+##### inputs/climate/HadGEM2-ES_rcp85_AT
+
   - [HDDCDD.csv](/inputs/climate/HadGEM2-ES_rcp85_AT/HDDCDD.csv)
 ---
 
@@ -1032,7 +1111,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [HadGEM2-ES_RCP8p5](inputs/climate/HadGEM2-ES_RCP8p5) <a name='inputs/climate/HadGEM2-ES_RCP8p5'></a>
+<a id='inputs-climate-hadgem2-es-rcp8p5'></a>
+##### inputs/climate/HadGEM2-ES_RCP8p5
+
   - [HDDCDD.csv](/inputs/climate/HadGEM2-ES_RCP8p5/HDDCDD.csv)
 ---
 
@@ -1046,7 +1127,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [IPSL-CM5A-LR_RCP8p5_WM](inputs/climate/IPSL-CM5A-LR_RCP8p5_WM) <a name='inputs/climate/IPSL-CM5A-LR_RCP8p5_WM'></a>
+<a id='inputs-climate-ipsl-cm5a-lr-rcp8p5-wm'></a>
+##### inputs/climate/IPSL-CM5A-LR_RCP8p5_WM
+
   - [HDDCDD.csv](/inputs/climate/IPSL-CM5A-LR_RCP8p5_WM/HDDCDD.csv)
 ---
 
@@ -1066,14 +1149,15 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [consume](inputs/consume) <a name='inputs/consume'></a>
+<a id='inputs-consume'></a>
+#### inputs/consume
+
   - [consume_char_low.csv](/inputs/consume/consume_char_low.csv)
     - **File Type:** Inputs
     - **Description:** Cost (capex, FOM, VOM) and efficiency (gas and electrical) as well as storage and transmission adder (stortran_adder) inputs for various H2 producing technologies, under Conservative assumptions.
     - **Indices:** i,t
     - **Dollar year:** Units vary based on the parameter - see commented text in b_inputs.gms.
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [consume_char_ref.csv](/inputs/consume/consume_char_ref.csv)
@@ -1081,8 +1165,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Cost (capex, FOM, VOM) and efficiency (gas and electrical) as well as storage and transmission adder (stortran_adder) inputs for various H2 producing technologies, under Reference assumptions.
     - **Indices:** i,t
     - **Dollar year:** Units vary based on the parameter - see commented text in b_inputs.gms.
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [dac_elec_BVRE_2021_high.csv](/inputs/consume/dac_elec_BVRE_2021_high.csv)
@@ -1090,8 +1173,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using High assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
-
-    - **Citation:** [(https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)]
+    - **Citation:** [https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a](https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)
 ---
 
   - [dac_elec_BVRE_2021_low.csv](/inputs/consume/dac_elec_BVRE_2021_low.csv)
@@ -1099,8 +1181,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Low assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
-
-    - **Citation:** [(https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)]
+    - **Citation:** [https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a](https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)
 ---
 
   - [dac_elec_BVRE_2021_mid.csv](/inputs/consume/dac_elec_BVRE_2021_mid.csv)
@@ -1108,8 +1189,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Mid assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
-
-    - **Citation:** [(https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)]
+    - **Citation:** [https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a](https://www.netl.doe.gov/energy-analysis/details?id=d5860604-fbc7-44bb-a756-76db47d8b85a)
 ---
 
   - [dac_gas_BVRE_2021_high.csv](/inputs/consume/dac_gas_BVRE_2021_high.csv)
@@ -1117,8 +1197,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using High assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
-
-    - **Citation:** [(https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)]
+    - **Citation:** [https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987](https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)
 ---
 
   - [dac_gas_BVRE_2021_low.csv](/inputs/consume/dac_gas_BVRE_2021_low.csv)
@@ -1126,8 +1205,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Low assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
-
-    - **Citation:** [(https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)]
+    - **Citation:** [https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987](https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)
 ---
 
   - [dac_gas_BVRE_2021_mid.csv](/inputs/consume/dac_gas_BVRE_2021_mid.csv)
@@ -1135,8 +1213,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** DAC costs (capex [$/(metric ton CO2/hr)], FOM [$/(metric ton CO2/hr)/yr], VOM [$/metric ton CO2]) and conversion rate, over time, using Mid assumptions.
     - **Indices:** i,t
     - **Dollar year:** As specified in inputs/consume/dollaryear
-
-    - **Citation:** [(https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)]
+    - **Citation:** [https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987](https://netl.doe.gov/energy-analysis/details?id=36385f18-3eaa-4f96-9983-6e2b607f6987)
 ---
 
   - [dollaryear.csv](/inputs/consume/dollaryear.csv)
@@ -1144,8 +1221,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Dollar year for various Beyond VRE scenarios. 
     - **Indices:** N/A
     - **Dollar year:** Stated in document.
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [h2_demand_county_share.csv](/inputs/consume/h2_demand_county_share.csv)
@@ -1153,8 +1229,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** The fraction of national hydrogen demand in that year that corresponds to each county. Demand estimates come from https://data.openei.org/submissions/5655. 2021 demand shares correspond to the "Reference" scenario with light-duty vehicles / biofuels / methanol demand removed and 2050 shares correspond to the "Low Cost Electrolysis" scenario.
     - **Indices:** r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [h2_exogenous_demand.csv](/inputs/consume/h2_exogenous_demand.csv)
@@ -1162,8 +1237,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Exogenous hydrogen demand by industries other than the power sector per year
     - **Indices:** t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [h2_storage_ba.csv](/inputs/consume/h2_storage_ba.csv)
@@ -1171,8 +1245,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Cheapest H2 storage type that exists in each ReEDS BA. Storage locations come from https://www.sciencedirect.com/science/article/pii/S0360319914021223.
     - **Indices:** r
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [h2_storage_county.csv](/inputs/consume/h2_storage_county.csv)
@@ -1180,8 +1253,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Cheapest H2 storage type that exists in each county. Storage locations come from https://www.sciencedirect.com/science/article/pii/S0360319914021223.
     - **Indices:** r
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [h2_transport_and_storage_costs.csv](/inputs/consume/h2_transport_and_storage_costs.csv)
@@ -1189,12 +1261,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Transport and storage costs of hydrogen per year
     - **Indices:** t
     - **Dollar year:** 2004
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
 
-#### [ctus](inputs/ctus) <a name='inputs/ctus'></a>
+<a id='inputs-ctus'></a>
+#### inputs/ctus
+
   - [co2_site_char.csv](/inputs/ctus/co2_site_char.csv)
     - **Dollar year:** 2018
 ---
@@ -1209,12 +1282,16 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [degradation](inputs/degradation) <a name='inputs/degradation'></a>
+<a id='inputs-degradation'></a>
+#### inputs/degradation
+
   - [degradation_annual_default.csv](/inputs/degradation/degradation_annual_default.csv)
 ---
 
 
-#### [demand_response](inputs/demand_response) <a name='inputs/demand_response'></a>
+<a id='inputs-demand-response'></a>
+#### inputs/demand_response
+
   - [ev_load_Baseline.h5](/inputs/demand_response/ev_load_Baseline.h5)
     - **File Type:** inputs
     - **Description:** Baseline electricity load from EV charging by timeslice h and year t
@@ -1241,66 +1318,88 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [dgen_model_inputs](inputs/dgen_model_inputs) <a name='inputs/dgen_model_inputs'></a>
+<a id='inputs-dgen-model-inputs'></a>
+#### inputs/dgen_model_inputs
 
-##### [stscen2023_electrification](inputs/dgen_model_inputs/stscen2023_electrification) <a name='inputs/dgen_model_inputs/stscen2023_electrification'></a>
+
+<a id='inputs-dgen-model-inputs-stscen2023-electrification'></a>
+##### inputs/dgen_model_inputs/stscen2023_electrification
+
   - [distpvcap_stscen2023_electrification.csv](/inputs/dgen_model_inputs/stscen2023_electrification/distpvcap_stscen2023_electrification.csv)
 ---
 
 
-##### [stscen2023_highng](inputs/dgen_model_inputs/stscen2023_highng) <a name='inputs/dgen_model_inputs/stscen2023_highng'></a>
+<a id='inputs-dgen-model-inputs-stscen2023-highng'></a>
+##### inputs/dgen_model_inputs/stscen2023_highng
+
   - [distpvcap_stscen2023_highng.csv](/inputs/dgen_model_inputs/stscen2023_highng/distpvcap_stscen2023_highng.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with high NG (including distpv) costs
 ---
 
 
-##### [stscen2023_highre](inputs/dgen_model_inputs/stscen2023_highre) <a name='inputs/dgen_model_inputs/stscen2023_highre'></a>
+<a id='inputs-dgen-model-inputs-stscen2023-highre'></a>
+##### inputs/dgen_model_inputs/stscen2023_highre
+
   - [distpvcap_stscen2023_highre.csv](/inputs/dgen_model_inputs/stscen2023_highre/distpvcap_stscen2023_highre.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with high RE (including distpv) costs
 ---
 
 
-##### [stscen2023_lowng](inputs/dgen_model_inputs/stscen2023_lowng) <a name='inputs/dgen_model_inputs/stscen2023_lowng'></a>
+<a id='inputs-dgen-model-inputs-stscen2023-lowng'></a>
+##### inputs/dgen_model_inputs/stscen2023_lowng
+
   - [distpvcap_stscen2023_lowng.csv](/inputs/dgen_model_inputs/stscen2023_lowng/distpvcap_stscen2023_lowng.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with low NG (including distpv) costs
 ---
 
 
-##### [stscen2023_lowre](inputs/dgen_model_inputs/stscen2023_lowre) <a name='inputs/dgen_model_inputs/stscen2023_lowre'></a>
+<a id='inputs-dgen-model-inputs-stscen2023-lowre'></a>
+##### inputs/dgen_model_inputs/stscen2023_lowre
+
   - [distpvcap_stscen2023_lowre.csv](/inputs/dgen_model_inputs/stscen2023_lowre/distpvcap_stscen2023_lowre.csv)
     - **File Type:** distribution PV inputs 
     - **Description:** Setting for distpv scenario capacity - from standard scenarios 2023 with low RE (including distpv) costs
 ---
 
 
-##### [stscen2023_mid_case](inputs/dgen_model_inputs/stscen2023_mid_case) <a name='inputs/dgen_model_inputs/stscen2023_mid_case'></a>
+<a id='inputs-dgen-model-inputs-stscen2023-mid-case'></a>
+##### inputs/dgen_model_inputs/stscen2023_mid_case
+
   - [distpvcap_stscen2023_mid_case.csv](/inputs/dgen_model_inputs/stscen2023_mid_case/distpvcap_stscen2023_mid_case.csv)
     - **File Type:** distribution PV inputs 
 ---
 
 
-##### [stscen2023_mid_case_95_by_2035](inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035) <a name='inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035'></a>
+<a id='inputs-dgen-model-inputs-stscen2023-mid-case-95-by-2035'></a>
+##### inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035
+
   - [distpvcap_stscen2023_mid_case_95_by_2035.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2035/distpvcap_stscen2023_mid_case_95_by_2035.csv)
     - **File Type:** distribution PV inputs 
 ---
 
 
-##### [stscen2023_mid_case_95_by_2050](inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050) <a name='inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050'></a>
+<a id='inputs-dgen-model-inputs-stscen2023-mid-case-95-by-2050'></a>
+##### inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050
+
   - [distpvcap_stscen2023_mid_case_95_by_2050.csv](/inputs/dgen_model_inputs/stscen2023_mid_case_95_by_2050/distpvcap_stscen2023_mid_case_95_by_2050.csv)
     - **File Type:** distribution PV inputs 
 ---
 
 
-##### [stscen2023_taxcredit_extended2050](inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050) <a name='inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050'></a>
+<a id='inputs-dgen-model-inputs-stscen2023-taxcredit-extended2050'></a>
+##### inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050
+
   - [distpvcap_stscen2023_taxcredit_extended2050.csv](/inputs/dgen_model_inputs/stscen2023_taxcredit_extended2050/distpvcap_stscen2023_taxcredit_extended2050.csv)
     - **File Type:** distribution PV inputs 
 ---
 
 
-#### [disaggregation](inputs/disaggregation) <a name='inputs/disaggregation'></a>
+<a id='inputs-disaggregation'></a>
+#### inputs/disaggregation
+
   - [county_population.csv](/inputs/disaggregation/county_population.csv)
     - **Description:** The population of each county, relative values are used as multipliers for downselecting data. Data come from the U.S. Census Bureau 2021 county population estimates (https://www.census.gov/data/tables/time-series/demo/popest/2020s-counties-total.html).
     - **Indices:** FIPS
@@ -1312,7 +1411,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [emission_constraints](inputs/emission_constraints) <a name='inputs/emission_constraints'></a>
+<a id='inputs-emission-constraints'></a>
+#### inputs/emission_constraints
+
   - [ccs_link.csv](/inputs/emission_constraints/ccs_link.csv)
 ---
 
@@ -1355,29 +1456,28 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Cost adjustment for NG techs in scenarios with national decarbonization targets
     - **Indices:** allt
     - **Dollar year:** N/A
-
-    - **Citation:** [(https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220)]
+    - **Citation:** [https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220](https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220)
     - **Units:** rate (unitless)
 
 ---
 
   - [rggi_states.csv](/inputs/emission_constraints/rggi_states.csv)
     - **Description:** Participating RGGI states
-
-    - **Citation:** [(https://www.rggi.org/program-overview-and-design/elements)]
+    - **Citation:** [https://www.rggi.org/program-overview-and-design/elements](https://www.rggi.org/program-overview-and-design/elements)
 ---
 
   - [rggicon.csv](/inputs/emission_constraints/rggicon.csv)
     - **Description:** CO2 caps for RGGI states in metric tons
-
-    - **Citation:** [(https://www.rggi.org/allowance-tracking/allowance-distribution)]
+    - **Citation:** [https://www.rggi.org/allowance-tracking/allowance-distribution](https://www.rggi.org/allowance-tracking/allowance-distribution)
 ---
 
   - [state_cap.csv](/inputs/emission_constraints/state_cap.csv)
 ---
 
 
-#### [financials](inputs/financials) <a name='inputs/financials'></a>
+<a id='inputs-financials'></a>
+#### inputs/financials
+
   - [cap_penalty.csv](/inputs/financials/cap_penalty.csv)
 ---
 
@@ -1436,13 +1536,16 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [incentives_ira_45q_45v_extension.csv](/inputs/financials/incentives_ira_45q_45v_extension.csv)
 ---
 
-  - [incentives_ira_hii.csv](/inputs/financials/incentives_ira_hii.csv)
----
-
-  - [incentives_ira_lii.csv](/inputs/financials/incentives_ira_lii.csv)
+  - [incentives_noira.csv](/inputs/financials/incentives_noira.csv)
 ---
 
   - [incentives_none.csv](/inputs/financials/incentives_none.csv)
+---
+
+  - [incentives_obbba.csv](/inputs/financials/incentives_obbba.csv)
+---
+
+  - [incentives_obbba_conservative.csv](/inputs/financials/incentives_obbba_conservative.csv)
 ---
 
   - [inflation_default.csv](/inputs/financials/inflation_default.csv)
@@ -1450,9 +1553,19 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Indices:** t
 ---
 
-  - [reg_cap_cost_mult_default.csv](/inputs/financials/reg_cap_cost_mult_default.csv)
+  - [nuclear_energy_communities.csv](/inputs/financials/nuclear_energy_communities.csv)
+    - **File Type:**  LLNL
+    - **Description:** Counties belonging to metropolitan statistical areas (MSAs) for which at least 0.17 percent of direct employment has been related to nuclear power at any point since 2010. These are determined partly by following the process described in Section 2.6 of https://home.treasury.gov/system/files/8861/EnergyCommunities_Data_Documentation.pdf and substituing in the NAICS code for nuclear electric power generation (221113) and partly by determining counties that belong to MSAs where the number of people employed by national labs engaged in nuclear research and development (PNNL
+    - **Indices:**  INL
+    - **Dollar year:**  ORNL
+    - **Citation:**  SNL
+    - **Units:**  Argonne
+
+---
+
+  - [reg_cap_cost_diff_default.csv](/inputs/financials/reg_cap_cost_diff_default.csv)
     - **File Type:** parameter
-    - **Description:** region-specific multipliers for capital cost of all resources. Note: RE resources have values of 1 since their multipliers are incorporated in hourlize
+    - **Description:** region-specific differences for capital cost of all resources. Add to 1 to produce a multiplier
     - **Indices:** i,r
 ---
 
@@ -1466,14 +1579,15 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [fuelprices](inputs/fuelprices) <a name='inputs/fuelprices'></a>
+<a id='inputs-fuelprices'></a>
+#### inputs/fuelprices
+
   - [alpha_AEO_2023_HOG.csv](/inputs/fuelprices/alpha_AEO_2023_HOG.csv)
     - **File Type:** Input
     - **Description:** High Oil and Gas Resource and Technology scenario census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO 2023)]
+    - **Citation:** AEO 2023
 ---
 
   - [alpha_AEO_2023_LOG.csv](/inputs/fuelprices/alpha_AEO_2023_LOG.csv)
@@ -1481,8 +1595,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Low Oil and Gas Resource and Technology scenario census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO 2023)]
+    - **Citation:** AEO 2023
 ---
 
   - [alpha_AEO_2023_reference.csv](/inputs/fuelprices/alpha_AEO_2023_reference.csv)
@@ -1490,8 +1603,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** reference census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO 2023)]
+    - **Citation:** AEO 2023
 ---
 
   - [alpha_AEO_2025_HOG.csv](/inputs/fuelprices/alpha_AEO_2025_HOG.csv)
@@ -1499,8 +1611,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** High Oil and Gas Resource and Technology scenario census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO 2025)]
+    - **Citation:** AEO 2025
 ---
 
   - [alpha_AEO_2025_LOG.csv](/inputs/fuelprices/alpha_AEO_2025_LOG.csv)
@@ -1508,8 +1619,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Low Oil and Gas Resource and Technology scenario census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO 2025)]
+    - **Citation:** AEO 2025
 ---
 
   - [alpha_AEO_2025_reference.csv](/inputs/fuelprices/alpha_AEO_2025_reference.csv)
@@ -1517,8 +1627,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** reference census division alpha values, used in the calculation of natural gas demand curves
     - **Indices:** allt,cendiv
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO 2025)]
+    - **Citation:** AEO 2025
 ---
 
   - [cd_beta0.csv](/inputs/fuelprices/cd_beta0.csv)
@@ -1556,13 +1665,16 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Dollar year mapping for each fuel price scenario
 ---
 
-  - [h2-ct_10.csv](/inputs/fuelprices/h2-ct_10.csv)
+  - [h2-combustion_10.csv](/inputs/fuelprices/h2-combustion_10.csv)
+    - **Description:** price of hydrogen for combustion technologies (h2-ct and cc) at $10/MMBtu for all years
 ---
 
-  - [h2-ct_30.csv](/inputs/fuelprices/h2-ct_30.csv)
+  - [h2-combustion_30.csv](/inputs/fuelprices/h2-combustion_30.csv)
+    - **Description:** price of hydrogen for combustion technologies (h2-ct and cc) at $30/MMBtu for all years
 ---
 
-  - [h2-ct_reference.csv](/inputs/fuelprices/h2-ct_reference.csv)
+  - [h2-combustion_reference.csv](/inputs/fuelprices/h2-combustion_reference.csv)
+    - **Description:** price of hydrogen for combustion technologies (h2-ct and cc) at $20/MMBtu for all years
 ---
 
   - [ng_AEO_2023_HOG.csv](/inputs/fuelprices/ng_AEO_2023_HOG.csv)
@@ -1570,8 +1682,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** High Oil and Gas Resource and Technology scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2023: https://www.eia.gov/outlooks/aeo/
     - **Units:** 2004$/MMBtu
 
 ---
@@ -1581,8 +1692,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Low Oil and Gas Resource and Technology scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2023: https://www.eia.gov/outlooks/aeo/
     - **Units:** 2004$/MMBtu
 
 ---
@@ -1592,8 +1702,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Reference scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2023: https://www.eia.gov/outlooks/aeo/
     - **Units:** 2004$/MMBtu
 
 ---
@@ -1603,8 +1712,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** High Oil and Gas Resource and Technology scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2025: https://www.eia.gov/outlooks/aeo/
     - **Units:** 2004$/MMBtu
 
 ---
@@ -1614,8 +1722,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Low Oil and Gas Resource and Technology scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2025: https://www.eia.gov/outlooks/aeo/
     - **Units:** 2004$/MMBtu
 
 ---
@@ -1625,8 +1732,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Reference scenario census division fuel price of natural gas
     - **Indices:** cendiv,t
     - **Dollar year:** 2004
-
-    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2025: https://www.eia.gov/outlooks/aeo/
     - **Units:** 2004$/MMBtu
 
 ---
@@ -1635,8 +1741,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** High Oil and Gas Resource and Technology census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2023: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1645,8 +1750,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** Low Oil and Gas Resource and Technology census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2023: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1655,8 +1759,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** Reference census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2023: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1665,8 +1768,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** High Oil and Gas Resource and Technology census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2025: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1675,8 +1777,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** Low Oil and Gas Resource and Technology census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2025: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1685,8 +1786,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** Reference census division natural gas demand for the electric sector, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2025: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1695,8 +1795,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** High Oil and Gas Resource and Technology census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2023: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1705,8 +1804,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** Low Oil and Gas Resource and Technology census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2023: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1715,8 +1813,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** Reference census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2023: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2023: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1725,8 +1822,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** High Oil and Gas Resource and Technology census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2025: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1735,8 +1831,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** Low Oil and Gas Resource and Technology census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2025: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1745,8 +1840,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **File Type:** Input
     - **Description:** Reference census division natural gas demand across all sectors, used in the calculation of natural gas demand curves
     - **Indices:** cendiv,t
-
-    - **Citation:** [(AEO2025: https://www.eia.gov/outlooks/aeo/)]
+    - **Citation:** AEO2025: https://www.eia.gov/outlooks/aeo/
     - **Units:** Quads
 
 ---
@@ -1758,7 +1852,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [geothermal](inputs/geothermal) <a name='inputs/geothermal'></a>
+<a id='inputs-geothermal'></a>
+#### inputs/geothermal
+
   - [geo_discovery_BAU.csv](/inputs/geothermal/geo_discovery_BAU.csv)
 ---
 
@@ -1775,7 +1871,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [growth_constraints](inputs/growth_constraints) <a name='inputs/growth_constraints'></a>
+<a id='inputs-growth-constraints'></a>
+#### inputs/growth_constraints
+
   - [gbin_min.csv](/inputs/growth_constraints/gbin_min.csv)
 ---
 
@@ -1792,7 +1890,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [hydro](inputs/hydro) <a name='inputs/hydro'></a>
+<a id='inputs-hydro'></a>
+#### inputs/hydro
+
   - [hyd_fom.csv](/inputs/hydro/hyd_fom.csv)
     - **Description:** Regional FOM costs for hydro
 ---
@@ -1810,7 +1910,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [load](inputs/load) <a name='inputs/load'></a>
+<a id='inputs-load'></a>
+#### inputs/load
+
   - [Adoption_Trajectories_Commercial.csv](/inputs/load/Adoption_Trajectories_Commercial.csv)
 ---
 
@@ -1878,9 +1980,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [historic_load_hourly.h5](/inputs/load/historic_load_hourly.h5)
 ---
 
-  - [historic_post2015_load_hourly.h5](/inputs/load/historic_post2015_load_hourly.h5)
----
-
   - [mex_growth_rate.csv](/inputs/load/mex_growth_rate.csv)
     - **Description:** Mexico load growth multiplier
 ---
@@ -1889,7 +1988,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [national_generation](inputs/national_generation) <a name='inputs/national_generation'></a>
+<a id='inputs-national-generation'></a>
+#### inputs/national_generation
+
   - [gen_mandate_tech_list.csv](/inputs/national_generation/gen_mandate_tech_list.csv)
 ---
 
@@ -1900,18 +2001,8 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [plant_characteristics](inputs/plant_characteristics) <a name='inputs/plant_characteristics'></a>
-  - [battery_ATB_2023_advanced.csv](/inputs/plant_characteristics/battery_ATB_2023_advanced.csv)
-    - **Dollar year:** 2020
----
-
-  - [battery_ATB_2023_conservative.csv](/inputs/plant_characteristics/battery_ATB_2023_conservative.csv)
-    - **Dollar year:** 2020
----
-
-  - [battery_ATB_2023_moderate.csv](/inputs/plant_characteristics/battery_ATB_2023_moderate.csv)
-    - **Dollar year:** 2020
----
+<a id='inputs-plant-characteristics'></a>
+#### inputs/plant_characteristics
 
   - [battery_ATB_2024_advanced.csv](/inputs/plant_characteristics/battery_ATB_2024_advanced.csv)
     - **Dollar year:** 2021
@@ -1962,26 +2053,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [coal-ccs_ATB_2024_moderate.csv](/inputs/plant_characteristics/coal-ccs_ATB_2024_moderate.csv)
 ---
 
-  - [coal_ATB_2024_advanced.csv](/inputs/plant_characteristics/coal_ATB_2024_advanced.csv)
----
-
-  - [coal_ATB_2024_conservative.csv](/inputs/plant_characteristics/coal_ATB_2024_conservative.csv)
----
-
   - [coal_ATB_2024_moderate.csv](/inputs/plant_characteristics/coal_ATB_2024_moderate.csv)
----
-
-  - [coal_fom_adj.csv](/inputs/plant_characteristics/coal_fom_adj.csv)
-    - **Dollar year:** 2017
----
-
-  - [continuous_battery_ATB_2024_advanced.csv](/inputs/plant_characteristics/continuous_battery_ATB_2024_advanced.csv)
----
-
-  - [continuous_battery_ATB_2024_conservative.csv](/inputs/plant_characteristics/continuous_battery_ATB_2024_conservative.csv)
----
-
-  - [continuous_battery_ATB_2024_moderate.csv](/inputs/plant_characteristics/continuous_battery_ATB_2024_moderate.csv)
 ---
 
   - [cost_opres_default.csv](/inputs/plant_characteristics/cost_opres_default.csv)
@@ -2031,12 +2103,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [gas-ccs_ATB_2024_moderate.csv](/inputs/plant_characteristics/gas-ccs_ATB_2024_moderate.csv)
 ---
 
-  - [gas_ATB_2024_advanced.csv](/inputs/plant_characteristics/gas_ATB_2024_advanced.csv)
----
-
-  - [gas_ATB_2024_conservative.csv](/inputs/plant_characteristics/gas_ATB_2024_conservative.csv)
----
-
   - [gas_ATB_2024_moderate.csv](/inputs/plant_characteristics/gas_ATB_2024_moderate.csv)
 ---
 
@@ -2058,10 +2124,8 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [geo_ATB_2024_moderate.csv](/inputs/plant_characteristics/geo_ATB_2024_moderate.csv)
 ---
 
-  - [h2-ct_ATB_2023.csv](/inputs/plant_characteristics/h2-ct_ATB_2023.csv)
----
-
-  - [h2-ct_ATB_2024.csv](/inputs/plant_characteristics/h2-ct_ATB_2024.csv)
+  - [h2-combustion_ATB_2024.csv](/inputs/plant_characteristics/h2-combustion_ATB_2024.csv)
+    - **Description:** Hydrogen CT and CC plant costs generated in preprocessing from moderate case NREL ATB 2024 data
 ---
 
   - [heat_rate_adj.csv](/inputs/plant_characteristics/heat_rate_adj.csv)
@@ -2089,6 +2153,10 @@ Note: If you see a '#' before a header it means there may be further subdirector
 
   - [maxage.csv](/inputs/plant_characteristics/maxage.csv)
     - **Description:** Maximum age allowed for each technology
+---
+
+  - [maxdailycf.csv](/inputs/plant_characteristics/maxdailycf.csv)
+    - **Description:** maximum daily capacity factor--dr_shed input supply curves are based on one 4-hour event per day
 ---
 
   - [min_retire_age.csv](/inputs/plant_characteristics/min_retire_age.csv)
@@ -2122,10 +2190,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [nuclear_ATB_2024_moderate.csv](/inputs/plant_characteristics/nuclear_ATB_2024_moderate.csv)
----
-
-  - [nuke_fom_adj.csv](/inputs/plant_characteristics/nuke_fom_adj.csv)
-    - **Dollar year:** 2017
 ---
 
   - [ofs-wind_ATB_2023_advanced.csv](/inputs/plant_characteristics/ofs-wind_ATB_2023_advanced.csv)
@@ -2271,14 +2335,16 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [reserves](inputs/reserves) <a name='inputs/reserves'></a>
-  - [net_firm_transfers_nerc.csv](/inputs/reserves/net_firm_transfers_nerc.csv)
----
+<a id='inputs-reserves'></a>
+#### inputs/reserves
 
   - [opres_periods.csv](/inputs/reserves/opres_periods.csv)
 ---
 
   - [orperc.csv](/inputs/reserves/orperc.csv)
+---
+
+  - [peak_net_imports.csv](/inputs/reserves/peak_net_imports.csv)
 ---
 
   - [prm_annual.csv](/inputs/reserves/prm_annual.csv)
@@ -2289,7 +2355,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [sets](inputs/sets) <a name='inputs/sets'></a>
+<a id='inputs-sets'></a>
+#### inputs/sets
+
   - [aclike.csv](/inputs/sets/aclike.csv)
     - **File Type:** GAMS set
     - **Description:** set of AC transmission capacity types
@@ -2590,7 +2658,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [shapefiles](inputs/shapefiles) <a name='inputs/shapefiles'></a>
+<a id='inputs-shapefiles'></a>
+#### inputs/shapefiles
+
   - [ctus_cs_polygons_BVRE.csv](/inputs/shapefiles/ctus_cs_polygons_BVRE.csv)
 ---
 
@@ -2611,7 +2681,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [WKT_csvs](inputs/shapefiles/WKT_csvs) <a name='inputs/shapefiles/WKT_csvs'></a>
+<a id='inputs-shapefiles-wkt-csvs'></a>
+##### inputs/shapefiles/WKT_csvs
+
   - [cendiv_WKT.csv](/inputs/shapefiles/WKT_csvs/cendiv_WKT.csv)
 ---
 
@@ -2643,7 +2715,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [state_policies](inputs/state_policies) <a name='inputs/state_policies'></a>
+<a id='inputs-state-policies'></a>
+#### inputs/state_policies
+
   - [acp_disallowed.csv](/inputs/state_policies/acp_disallowed.csv)
     - **Description:** List of states which do not allow alternative compliance payments in place of meeting RPS or CES requirements 
 ---
@@ -2667,8 +2741,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Cost adjustment for NG techs in states where all NG techs must be retired by a certain year
     - **Indices:** allt,st
     - **Dollar year:** N/A
-
-    - **Citation:** [(https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220)]
+    - **Citation:** [https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220](https://github.nrel.gov/ReEDS/ReEDS-2.0/pull/1220)
     - **Units:** rate (unitless)
 
 ---
@@ -2722,7 +2795,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [storage](inputs/storage) <a name='inputs/storage'></a>
+<a id='inputs-storage'></a>
+#### inputs/storage
+
   - [PSH_supply_curves_durations.csv](/inputs/storage/PSH_supply_curves_durations.csv)
 ---
 
@@ -2736,36 +2811,21 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [supply_curve](inputs/supply_curve) <a name='inputs/supply_curve'></a>
+<a id='inputs-supply-curve'></a>
+#### inputs/supply_curve
+
   - [bio_supplycurve.csv](/inputs/supply_curve/bio_supplycurve.csv)
     - **Description:** Regional biomass supply and costs by resource class
     - **Dollar year:** 2015
 ---
 
-  - [csp_supply_curve-reference_ba.csv](/inputs/supply_curve/csp_supply_curve-reference_ba.csv)
-    - **Description:** CSP supply curve using reference siting assumptions at the BA resolution
----
-
-  - [csp_supply_curve-reference_county.csv](/inputs/supply_curve/csp_supply_curve-reference_county.csv)
-    - **Description:** CSP supply curve using reference siting assumptions at the county resolution
----
-
   - [dollaryear.csv](/inputs/supply_curve/dollaryear.csv)
 ---
 
-  - [egs_supply_curve-reference_ba.csv](/inputs/supply_curve/egs_supply_curve-reference_ba.csv)
+  - [dr_shed_cap.csv](/inputs/supply_curve/dr_shed_cap.csv)
 ---
 
-  - [egs_supply_curve-reference_county.csv](/inputs/supply_curve/egs_supply_curve-reference_county.csv)
----
-
-  - [geo_supply_curve_site-reference.csv](/inputs/supply_curve/geo_supply_curve_site-reference.csv)
----
-
-  - [geohydro_supply_curve-reference_ba.csv](/inputs/supply_curve/geohydro_supply_curve-reference_ba.csv)
----
-
-  - [geohydro_supply_curve-reference_county.csv](/inputs/supply_curve/geohydro_supply_curve-reference_county.csv)
+  - [dr_shed_cost.csv](/inputs/supply_curve/dr_shed_cost.csv)
 ---
 
   - [hyd_add_upg_cap.csv](/inputs/supply_curve/hyd_add_upg_cap.csv)
@@ -2777,327 +2837,265 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [hydcost.csv](/inputs/supply_curve/hydcost.csv)
 ---
 
+  - [interconnection_land.h5](/inputs/supply_curve/interconnection_land.h5)
+---
+
+  - [interconnection_offshore.h5](/inputs/supply_curve/interconnection_offshore.h5)
+---
+
   - [PSH_supply_curves_capacity_10hr_ref_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_ref_dec2022.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and reference exclusions as used in 2023 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_10hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_ref_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_10hr_wEphemeral_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wEphemeral_dec2022.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and allowing sites on ephemeral streams as used in 2023 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_10hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_10hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_10hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_10hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 10 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_ref_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_ref_dec2022.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and reference exclusions as used in 2023 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_ref_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_wEphemeral_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wEphemeral_dec2022.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and allowing sites on ephemeral streams as used in 2023 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_12hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_12hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 12 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_ref_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_ref_dec2022.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and reference exclusions as used in 2023 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_ref_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_wEphemeral_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wEphemeral_dec2022.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and allowing sites on ephemeral streams as used in 2023 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_capacity_8hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_capacity_8hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve capacity assuming 8 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_ref_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_ref_dec2022.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and reference exclusions as used in 2023 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_ref_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_wEphemeral_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wEphemeral_dec2022.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and allowing sites on ephemeral streams as used in 2023 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_10hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_10hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 10 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_ref_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_ref_dec2022.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and reference exclusions as used in 2023 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_ref_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_wEphemeral_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wEphemeral_dec2022.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and allowing sites on ephemeral streams as used in 2023 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_12hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_12hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 12 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_ref_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_ref_dec2022.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and reference exclusions as used in 2023 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_ref_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_ref_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and reference exclusions as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_wEphemeral_dec2022.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wEphemeral_dec2022.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and allowing sites on ephemeral streams as used in 2023 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_wEphemeral_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wEphemeral_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and allowing sites on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_wExist_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wExist_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and allowing sites using existing reservoirs as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [PSH_supply_curves_cost_8hr_wExist_wEph_mar2024.csv](/inputs/supply_curve/PSH_supply_curves_cost_8hr_wExist_wEph_mar2024.csv)
     - **Description:** PSH supply curve cost assuming 8 hour duration and allowing sites  using existing reservoirs and on ephemeral streams as used in 2024 Annual Technology Baseline
     - **Dollar year:** 2004
-
-    - **Citation:** [(https://www.nrel.gov/gis/psh-supply-curves.html)]
+    - **Citation:** [https://www.nrel.gov/gis/psh-supply-curves.html](https://www.nrel.gov/gis/psh-supply-curves.html)
 ---
 
   - [rev_paths.csv](/inputs/supply_curve/rev_paths.csv)
 ---
 
-  - [sitemap.csv](/inputs/supply_curve/sitemap.csv)
+  - [sc_point_gid_old2new.csv](/inputs/supply_curve/sc_point_gid_old2new.csv)
 ---
 
-  - [sitemap_offshore.csv](/inputs/supply_curve/sitemap_offshore.csv)
+  - [sitemap.h5](/inputs/supply_curve/sitemap.h5)
 ---
 
   - [spurline_cost.csv](/inputs/supply_curve/spurline_cost.csv)
 ---
 
+  - [supplycurve_csp-reference.csv](/inputs/supply_curve/supplycurve_csp-reference.csv)
+---
+
+  - [supplycurve_egs-reference.csv](/inputs/supply_curve/supplycurve_egs-reference.csv)
+---
+
+  - [supplycurve_geohydro-reference.csv](/inputs/supply_curve/supplycurve_geohydro-reference.csv)
+---
+
+  - [supplycurve_upv-limited.csv](/inputs/supply_curve/supplycurve_upv-limited.csv)
+---
+
+  - [supplycurve_upv-open.csv](/inputs/supply_curve/supplycurve_upv-open.csv)
+---
+
+  - [supplycurve_upv-reference.csv](/inputs/supply_curve/supplycurve_upv-reference.csv)
+---
+
+  - [supplycurve_wind-ofs-limited.csv](/inputs/supply_curve/supplycurve_wind-ofs-limited.csv)
+---
+
+  - [supplycurve_wind-ofs-open.csv](/inputs/supply_curve/supplycurve_wind-ofs-open.csv)
+---
+
+  - [supplycurve_wind-ofs-reference.csv](/inputs/supply_curve/supplycurve_wind-ofs-reference.csv)
+---
+
+  - [supplycurve_wind-ons-limited.csv](/inputs/supply_curve/supplycurve_wind-ons-limited.csv)
+---
+
+  - [supplycurve_wind-ons-open.csv](/inputs/supply_curve/supplycurve_wind-ons-open.csv)
+---
+
+  - [supplycurve_wind-ons-reference.csv](/inputs/supply_curve/supplycurve_wind-ons-reference.csv)
+---
+
   - [trans_intra_cost_adder.csv](/inputs/supply_curve/trans_intra_cost_adder.csv)
 ---
 
-  - [upv_supply_curve-limited_ba.csv](/inputs/supply_curve/upv_supply_curve-limited_ba.csv)
-    - **Description:** UPV supply curve using limited siting assumptions at the BA resolution
----
 
-  - [upv_supply_curve-limited_county.csv](/inputs/supply_curve/upv_supply_curve-limited_county.csv)
-    - **Description:** UPV supply curve using limited siting assumptions at the county resolution
----
+<a id='inputs-techs'></a>
+#### inputs/techs
 
-  - [upv_supply_curve-open_ba.csv](/inputs/supply_curve/upv_supply_curve-open_ba.csv)
-    - **Description:** UPV supply curve using open siting assumptions at the BA resolution
----
-
-  - [upv_supply_curve-open_county.csv](/inputs/supply_curve/upv_supply_curve-open_county.csv)
-    - **Description:** UPV supply curve using open siting assumptions at the county resolution
----
-
-  - [upv_supply_curve-reference_ba.csv](/inputs/supply_curve/upv_supply_curve-reference_ba.csv)
-    - **Description:** UPV supply curve using reference siting assumptions at the BA resolution
----
-
-  - [upv_supply_curve-reference_county.csv](/inputs/supply_curve/upv_supply_curve-reference_county.csv)
-    - **Description:** UPV supply curve using reference siting assumptions at the county resolution
----
-
-  - [wind-ofs_supply_curve-limited_ba.csv](/inputs/supply_curve/wind-ofs_supply_curve-limited_ba.csv)
-    - **Description:** wind-ofs supply curve using limited siting assumptions at the BA resolution
----
-
-  - [wind-ofs_supply_curve-limited_county.csv](/inputs/supply_curve/wind-ofs_supply_curve-limited_county.csv)
-    - **Description:** wind-ofs supply curve using limited siting assumptions at the county resolution
----
-
-  - [wind-ofs_supply_curve-open_ba.csv](/inputs/supply_curve/wind-ofs_supply_curve-open_ba.csv)
-    - **Description:** wind-ofs supply curve using open siting assumptions at the BA resolution
----
-
-  - [wind-ofs_supply_curve-open_county.csv](/inputs/supply_curve/wind-ofs_supply_curve-open_county.csv)
-    - **Description:** wind-ofs supply curve using open siting assumptions at the county resolution
----
-
-  - [wind-ofs_supply_curve-reference_ba.csv](/inputs/supply_curve/wind-ofs_supply_curve-reference_ba.csv)
----
-
-  - [wind-ofs_supply_curve-reference_county.csv](/inputs/supply_curve/wind-ofs_supply_curve-reference_county.csv)
----
-
-  - [wind-ons_supply_curve-limited_ba.csv](/inputs/supply_curve/wind-ons_supply_curve-limited_ba.csv)
-    - **Description:** wind-ons supply curve using limited siting assumptions at the BA resolution
----
-
-  - [wind-ons_supply_curve-limited_county.csv](/inputs/supply_curve/wind-ons_supply_curve-limited_county.csv)
-    - **Description:** wind-ons supply curve using limited siting assumptions at the county resolution
----
-
-  - [wind-ons_supply_curve-open_ba.csv](/inputs/supply_curve/wind-ons_supply_curve-open_ba.csv)
-    - **Description:** wind-ons supply curve using open siting assumptions at the BA resolution
----
-
-  - [wind-ons_supply_curve-open_county.csv](/inputs/supply_curve/wind-ons_supply_curve-open_county.csv)
-    - **Description:** wind-ons supply curve using open siting assumptions at the county resolution
----
-
-  - [wind-ons_supply_curve-reference_ba.csv](/inputs/supply_curve/wind-ons_supply_curve-reference_ba.csv)
-    - **Description:** wind-ons supply curve using reference siting assumptions at the BA resolution
----
-
-  - [wind-ons_supply_curve-reference_county.csv](/inputs/supply_curve/wind-ons_supply_curve-reference_county.csv)
-    - **Description:** wind-ons supply curve using reference siting assumptions at the county resolution
----
-
-
-#### [techs](inputs/techs) <a name='inputs/techs'></a>
   - [tech_resourceclass.csv](/inputs/techs/tech_resourceclass.csv)
 ---
 
@@ -3110,7 +3108,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [transmission](inputs/transmission) <a name='inputs/transmission'></a>
+<a id='inputs-transmission'></a>
+#### inputs/transmission
+
   - [cost_hurdle_country.csv](/inputs/transmission/cost_hurdle_country.csv)
     - **File Type:** GAMS set
     - **Description:** Cost for transmission hurdle rate by country
@@ -3119,14 +3119,6 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [cost_hurdle_intra.csv](/inputs/transmission/cost_hurdle_intra.csv)
----
-
-  - [r_rr_adj_ba.csv](/inputs/transmission/r_rr_adj_ba.csv)
-    - **Description:** Set of adjacent regions at BA resolution
----
-
-  - [r_rr_adj_county.csv](/inputs/transmission/r_rr_adj_county.csv)
-    - **Description:** Set of adjacent regions at county resolution
 ---
 
   - [rev_transmission_basecost.csv](/inputs/transmission/rev_transmission_basecost.csv)
@@ -3211,6 +3203,10 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
   - [transmission_capacity_init_AC_county_NARIS2024.csv](/inputs/transmission/transmission_capacity_init_AC_county_NARIS2024.csv)
+    - **Description:** Initial AC transmission capacity modified from the NARIS 2024 file to eliminate most supply (with county transmission) demand mismatches for the 2024 solve year
+---
+
+  - [transmission_capacity_init_AC_county_NARIS2024_base.csv](/inputs/transmission/transmission_capacity_init_AC_county_NARIS2024_base.csv)
     - **Description:** Initial AC transmission capacity from the NARIS 2024 system at the county resolution
 ---
 
@@ -3226,31 +3222,40 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Initial non-AC transmission capacity at the county resolution
 ---
 
-  - [transmission_distance_cost_500kVac_ba.csv](/inputs/transmission/transmission_distance_cost_500kVac_ba.csv)
-    - **Description:** Transmission distance and costs for 500 kV AC at BA resolution
+  - [transmission_cost_ac_500kv_ba.h5](/inputs/transmission/transmission_cost_ac_500kv_ba.h5)
+    - **Description:** Transmission costs for new 500 kV AC at BA resolution
 ---
 
-  - [transmission_distance_cost_500kVac_county.csv](/inputs/transmission/transmission_distance_cost_500kVac_county.csv)
-    - **Description:** Transmission distance and costs for 500 kV AC at county resolution
+  - [transmission_cost_ac_500kv_county.h5](/inputs/transmission/transmission_cost_ac_500kv_county.h5)
+    - **Description:** Transmission costs for new 500 kV AC at county resolution
 ---
 
-  - [transmission_distance_cost_500kVdc_ba.csv](/inputs/transmission/transmission_distance_cost_500kVdc_ba.csv)
-    - **Description:** Transmission distance and costs for 500 kV DC at BA resolution
+  - [transmission_cost_dc_ba.csv](/inputs/transmission/transmission_cost_dc_ba.csv)
+    - **Description:** Transmission costs for new 500 kV DC at BA resolution
 ---
 
-  - [transmission_distance_cost_500kVdc_county.csv](/inputs/transmission/transmission_distance_cost_500kVdc_county.csv)
-    - **Description:** Transmission distance and costs for 500 kV DC at county resolution
+  - [transmission_cost_dc_county.csv](/inputs/transmission/transmission_cost_dc_county.csv)
+    - **Description:** Transmission costs for new 500 kV DC at county resolution
+---
+
+  - [transmission_distance_ba.h5](/inputs/transmission/transmission_distance_ba.h5)
+    - **Description:** Length of least-cost transmission paths between zones at BA resolution
+---
+
+  - [transmission_distance_county.h5](/inputs/transmission/transmission_distance_county.h5)
+    - **Description:** Length of least-cost transmission paths between zones at county resolution
 ---
 
 
-#### [upgrades](inputs/upgrades) <a name='inputs/upgrades'></a>
+<a id='inputs-upgrades'></a>
+#### inputs/upgrades
+
   - [i_coolingtech_watersource_upgrades.csv](/inputs/upgrades/i_coolingtech_watersource_upgrades.csv)
     - **File Type:** Inputs
     - **Description:** List of cooling technologies for water sources that can be upgraded.
     - **Indices:** i
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [i_coolingtech_watersource_upgrades_link.csv](/inputs/upgrades/i_coolingtech_watersource_upgrades_link.csv)
@@ -3258,8 +3263,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** List of cooling technologies for water sources that can be upgraded + their to, from, ctt (cooling technology type) and wst (water source type)
     - **Indices:** i, ctt, wst
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [upgrade_costs_ccs_coal.csv](/inputs/upgrades/upgrade_costs_ccs_coal.csv)
@@ -3273,8 +3277,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Techs that can be upgraded including the original technology, the technology it is upgrading to, and the delta.
     - **Indices:** i
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [upgrade_mult_atb23_ccs_adv.csv](/inputs/upgrades/upgrade_mult_atb23_ccs_adv.csv)
@@ -3282,8 +3285,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Cost adjustment (advanced) over various years for upgrade technologies
     - **Indices:** i,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [upgrade_mult_atb23_ccs_con.csv](/inputs/upgrades/upgrade_mult_atb23_ccs_con.csv)
@@ -3291,8 +3293,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Cost adjustment (conservative) over various years for upgrade technologies
     - **Indices:** i,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [upgrade_mult_atb23_ccs_mid.csv](/inputs/upgrades/upgrade_mult_atb23_ccs_mid.csv)
@@ -3300,21 +3301,21 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Cost adjustment (Mid) over various years for upgrade technologies
     - **Indices:** i,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [upgradelink_water.csv](/inputs/upgrades/upgradelink_water.csv)
     - **File Type:** Inputs
-    - **Description:** Water techs that can be upgraded including the original technology, the technology it is upgrading to, and the delta (a H2-CT)
+    - **Description:** Water techs that can be upgraded including the original technology, the technology it is upgrading to, and the delta
     - **Indices:** i
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
 
-#### [userinput](inputs/userinput) <a name='inputs/userinput'></a>
+<a id='inputs-userinput'></a>
+#### inputs/userinput
+
   - [futurefiles.csv](/inputs/userinput/futurefiles.csv)
 ---
 
@@ -3349,16 +3350,17 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [valuestreams](inputs/valuestreams) <a name='inputs/valuestreams'></a>
+<a id='inputs-valuestreams'></a>
+#### inputs/valuestreams
+
   - [var_map.csv](/inputs/valuestreams/var_map.csv)
 ---
 
 
-#### [variability](inputs/variability) <a name='inputs/variability'></a>
-  - [ccseason_dates.csv](/inputs/variability/ccseason_dates.csv)
----
+<a id='inputs-variability'></a>
+#### inputs/variability
 
-  - [hourly_operational_characteristics.csv](/inputs/variability/hourly_operational_characteristics.csv)
+  - [ccseason_dates.csv](/inputs/variability/ccseason_dates.csv)
 ---
 
   - [month2quarter.csv](/inputs/variability/month2quarter.csv)
@@ -3367,14 +3369,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [period_szn_user.csv](/inputs/variability/period_szn_user.csv)
 ---
 
-  - [reeds_region_tz_map.csv](/inputs/variability/reeds_region_tz_map.csv)
----
-
   - [stressperiods_user.csv](/inputs/variability/stressperiods_user.csv)
 ---
 
 
-##### [multi_year](inputs/variability/multi_year) <a name='inputs/variability/multi_year'></a>
+<a id='inputs-variability-multi-year'></a>
+##### inputs/variability/multi_year
+
   - [csp-none_ba.h5](/inputs/variability/multi_year/csp-none_ba.h5)
     - **Description:** Concentrated Solar Power resource supply curve. Data is a capacity factor i.e. a fraction.
 ---
@@ -3384,8 +3385,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Distributed photovoltaics resource supply curve. Data is a capacity factor i.e. a fraction.
     - **Indices:** r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [temperature_celsius-ba.h5](/inputs/variability/multi_year/temperature_celsius-ba.h5)
@@ -3396,8 +3396,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Utility scale photovoltaics resource supply curve using Limited access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [upv-open_ba.h5](/inputs/variability/multi_year/upv-open_ba.h5)
@@ -3405,8 +3404,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Utility scale photovoltaics resource supply curve using Open access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [upv-reference_ba.h5](/inputs/variability/multi_year/upv-reference_ba.h5)
@@ -3414,8 +3412,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Utility scale photovoltaics resource supply curve using Reference access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [upv_140AC-reference_ba.h5](/inputs/variability/multi_year/upv_140AC-reference_ba.h5)
@@ -3423,8 +3420,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Utility scale photovoltaics resource supply curve (AC, using a 1.40 Inverter Load Ratio) using Reference access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [upv_220AC-reference_ba.h5](/inputs/variability/multi_year/upv_220AC-reference_ba.h5)
@@ -3432,8 +3428,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Utility scale photovoltaics resource supply curve (AC, using a 2.20 Inverter Load Ratio) using Reference access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [wind-ofs-limited_ba.h5](/inputs/variability/multi_year/wind-ofs-limited_ba.h5)
@@ -3441,8 +3436,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Offshore wind resource supply curve using Limited access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [wind-ofs-open_ba.h5](/inputs/variability/multi_year/wind-ofs-open_ba.h5)
@@ -3450,8 +3444,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Offshore wind resource supply curve using Open access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [wind-ofs-reference_ba.h5](/inputs/variability/multi_year/wind-ofs-reference_ba.h5)
@@ -3462,8 +3455,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Land-based wind resource supply curve using Limited access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [wind-ons-open_ba.h5](/inputs/variability/multi_year/wind-ons-open_ba.h5)
@@ -3471,8 +3463,7 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Land-based wind resource supply curve using Open access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
   - [wind-ons-reference_ba.h5](/inputs/variability/multi_year/wind-ons-reference_ba.h5)
@@ -3480,12 +3471,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
     - **Description:** Land-based wind resource supply curve using Reference access assumptions. Data is a capacity factor i.e. a fraction.
     - **Indices:** v,r,t
     - **Dollar year:** N/A
-
-    - **Citation:** [(N/A)]
+    - **Citation:** N/A
 ---
 
 
-#### [waterclimate](inputs/waterclimate) <a name='inputs/waterclimate'></a>
+<a id='inputs-waterclimate'></a>
+#### inputs/waterclimate
+
   - [cost_cap_mult.csv](/inputs/waterclimate/cost_cap_mult.csv)
 ---
 
@@ -3517,17 +3509,23 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-### [postprocessing](postprocessing) <a name='postprocessing'></a>
+<a id='postprocessing'></a>
+### postprocessing
+
   - [example.csv](/postprocessing/example.csv)
 ---
 
 
-#### [air_quality](postprocessing/air_quality) <a name='postprocessing/air_quality'></a>
+<a id='postprocessing-air-quality'></a>
+#### postprocessing/air_quality
+
   - [scenarios.csv](/postprocessing/air_quality/scenarios.csv)
 ---
 
 
-##### [rcm_data](postprocessing/air_quality/rcm_data) <a name='postprocessing/air_quality/rcm_data'></a>
+<a id='postprocessing-air-quality-rcm-data'></a>
+##### postprocessing/air_quality/rcm_data
+
   - [counties_ACS_high_stack_2017.csv](/postprocessing/air_quality/rcm_data/counties_ACS_high_stack_2017.csv)
 ---
 
@@ -3541,13 +3539,17 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [bokehpivot](postprocessing/bokehpivot) <a name='postprocessing/bokehpivot'></a>
+<a id='postprocessing-bokehpivot'></a>
+#### postprocessing/bokehpivot
+
   - [reeds_scenarios.csv](/postprocessing/bokehpivot/reeds_scenarios.csv)
     - **Description:** Example data for ReEDS scenarios, each scenario with a custom style 
 ---
 
 
-##### [in](postprocessing/bokehpivot/in) <a name='postprocessing/bokehpivot/in'></a>
+<a id='postprocessing-bokehpivot-in'></a>
+##### postprocessing/bokehpivot/in
+
   - [example_custom_styles.csv](/postprocessing/bokehpivot/in/example_custom_styles.csv)
     - **Description:** Examples of custom styles used for bokehpivot
 ---
@@ -3582,7 +3584,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-###### [reeds2](postprocessing/bokehpivot/in/reeds2) <a name='postprocessing/bokehpivot/in/reeds2'></a>
+<a id='postprocessing-bokehpivot-in-reeds2'></a>
+###### postprocessing/bokehpivot/in/reeds2
+
   - [class_map.csv](/postprocessing/bokehpivot/in/reeds2/class_map.csv)
     - **Description:** Class mapping for bokehpivot postprocessing
 ---
@@ -3648,7 +3652,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [out](postprocessing/bokehpivot/out) <a name='postprocessing/bokehpivot/out'></a>
+<a id='postprocessing-bokehpivot-out'></a>
+##### postprocessing/bokehpivot/out
+
   - [main vs PR diff.csv](/postprocessing/bokehpivot/out/main%20vs%20PR%20diff.csv)
 ---
 
@@ -3662,17 +3668,58 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-###### [report-2025-03-21-13-05-27](postprocessing/bokehpivot/out/report-2025-03-21-13-05-27) <a name='postprocessing/bokehpivot/out/report-2025-03-21-13-05-27'></a>
+<a id='postprocessing-bokehpivot-out-report-2025-03-21-13-05-27'></a>
+###### postprocessing/bokehpivot/out/report-2025-03-21-13-05-27
+
   - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-03-21-13-05-27/report.xlsx)
 ---
 
 
-###### [view](postprocessing/bokehpivot/out/view) <a name='postprocessing/bokehpivot/out/view'></a>
+<a id='postprocessing-bokehpivot-out-report-2025-06-03-11-55-40'></a>
+###### postprocessing/bokehpivot/out/report-2025-06-03-11-55-40
+
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-03-11-55-40/report.xlsx)
+---
+
+
+<a id='postprocessing-bokehpivot-out-report-2025-06-03-11-59-51'></a>
+###### postprocessing/bokehpivot/out/report-2025-06-03-11-59-51
+
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-03-11-59-51/report.xlsx)
+---
+
+
+<a id='postprocessing-bokehpivot-out-report-2025-06-03-12-06-11'></a>
+###### postprocessing/bokehpivot/out/report-2025-06-03-12-06-11
+
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-03-12-06-11/report.xlsx)
+---
+
+
+<a id='postprocessing-bokehpivot-out-report-2025-06-03-12-06-21'></a>
+###### postprocessing/bokehpivot/out/report-2025-06-03-12-06-21
+
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-03-12-06-21/report.xlsx)
+---
+
+
+<a id='postprocessing-bokehpivot-out-report-2025-06-05-12-38-18'></a>
+###### postprocessing/bokehpivot/out/report-2025-06-05-12-38-18
+
+  - [report.xlsx](/postprocessing/bokehpivot/out/report-2025-06-05-12-38-18/report.xlsx)
+---
+
+
+<a id='postprocessing-bokehpivot-out-view'></a>
+###### postprocessing/bokehpivot/out/view
+
   - [view.csv](/postprocessing/bokehpivot/out/view/view.csv)
 ---
 
 
-#### [combine_runs](postprocessing/combine_runs) <a name='postprocessing/combine_runs'></a>
+<a id='postprocessing-combine-runs'></a>
+#### postprocessing/combine_runs
+
   - [combinefiles.csv](/postprocessing/combine_runs/combinefiles.csv)
 ---
 
@@ -3680,9 +3727,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [land_use](postprocessing/land_use) <a name='postprocessing/land_use'></a>
+<a id='postprocessing-land-use'></a>
+#### postprocessing/land_use
 
-##### [inputs](postprocessing/land_use/inputs) <a name='postprocessing/land_use/inputs'></a>
+
+<a id='postprocessing-land-use-inputs'></a>
+##### postprocessing/land_use/inputs
+
   - [federal_land_categories.csv](/postprocessing/land_use/inputs/federal_land_categories.csv)
 ---
 
@@ -3702,7 +3753,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [plots](postprocessing/plots) <a name='postprocessing/plots'></a>
+<a id='postprocessing-plots'></a>
+#### postprocessing/plots
+
   - [scghg_annual.csv](/postprocessing/plots/scghg_annual.csv)
 ---
 
@@ -3710,7 +3763,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [retail_rate_module](postprocessing/retail_rate_module) <a name='postprocessing/retail_rate_module'></a>
+<a id='postprocessing-retail-rate-module'></a>
+#### postprocessing/retail_rate_module
+
   - [capital_financing_assumptions.csv](/postprocessing/retail_rate_module/capital_financing_assumptions.csv)
 ---
 
@@ -3735,27 +3790,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-##### [calc_historical_capex](postprocessing/retail_rate_module/calc_historical_capex) <a name='postprocessing/retail_rate_module/calc_historical_capex'></a>
-  - [cap_cost_mult_for_historical.csv](/postprocessing/retail_rate_module/calc_historical_capex/cap_cost_mult_for_historical.csv)
----
+<a id='postprocessing-retail-rate-module-inputs'></a>
+##### postprocessing/retail_rate_module/inputs
 
-  - [cost_cap_for_historical.csv](/postprocessing/retail_rate_module/calc_historical_capex/cost_cap_for_historical.csv)
----
-
-  - [df_capex_init.csv](/postprocessing/retail_rate_module/calc_historical_capex/df_capex_init.csv)
----
-
-  - [geo_cap_cost_for_historical.csv](/postprocessing/retail_rate_module/calc_historical_capex/geo_cap_cost_for_historical.csv)
----
-
-  - [regions_for_historical.csv](/postprocessing/retail_rate_module/calc_historical_capex/regions_for_historical.csv)
----
-
-  - [rsc_dat_for_historical.csv](/postprocessing/retail_rate_module/calc_historical_capex/rsc_dat_for_historical.csv)
----
-
-
-##### [inputs](postprocessing/retail_rate_module/inputs) <a name='postprocessing/retail_rate_module/inputs'></a>
   - [Electric O & M Expenses-IOU-1993-2019.csv](/postprocessing/retail_rate_module/inputs/Electric%20O%20&%20M%20Expenses-IOU-1993-2019.csv)
 ---
 
@@ -3784,21 +3821,31 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-#### [reValue](postprocessing/reValue) <a name='postprocessing/reValue'></a>
+<a id='postprocessing-revalue'></a>
+#### postprocessing/reValue
+
   - [scenarios.csv](/postprocessing/reValue/scenarios.csv)
 ---
 
 
-#### [tableau](postprocessing/tableau) <a name='postprocessing/tableau'></a>
+<a id='postprocessing-tableau'></a>
+#### postprocessing/tableau
+
   - [tables_to_aggregate.csv](/postprocessing/tableau/tables_to_aggregate.csv)
 ---
 
 
-### [preprocessing](preprocessing) <a name='preprocessing'></a>
+<a id='preprocessing'></a>
+### preprocessing
 
-#### [atb_updates_processing](preprocessing/atb_updates_processing) <a name='preprocessing/atb_updates_processing'></a>
 
-##### [input_files](preprocessing/atb_updates_processing/input_files) <a name='preprocessing/atb_updates_processing/input_files'></a>
+<a id='preprocessing-atb-updates-processing'></a>
+#### preprocessing/atb_updates_processing
+
+
+<a id='preprocessing-atb-updates-processing-input-files'></a>
+##### preprocessing/atb_updates_processing/input_files
+
   - [batt_plant_char_format.csv](/preprocessing/atb_updates_processing/input_files/batt_plant_char_format.csv)
 ---
 
@@ -3811,7 +3858,8 @@ Note: If you see a '#' before a header it means there may be further subdirector
   - [geo_fom_plant_char_format.csv](/preprocessing/atb_updates_processing/input_files/geo_fom_plant_char_format.csv)
 ---
 
-  - [h2-ct_plant_char_format.csv](/preprocessing/atb_updates_processing/input_files/h2-ct_plant_char_format.csv)
+  - [h2-combustion_plant_char_format.csv](/preprocessing/atb_updates_processing/input_files/h2-combustion_plant_char_format.csv)
+    - **Description:** Plant characteristics for which the H2-CC and CT ATB estimates are made using Gas-CC and CT data in preprocessing
 ---
 
   - [ofs-wind_plant_char_format.csv](/preprocessing/atb_updates_processing/input_files/ofs-wind_plant_char_format.csv)
@@ -3827,15 +3875,25 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-### [reeds2pras](reeds2pras) <a name='reeds2pras'></a>
+<a id='reeds2pras'></a>
+### reeds2pras
 
-#### [test](reeds2pras/test) <a name='reeds2pras/test'></a>
 
-##### [reeds_cases](reeds2pras/test/reeds_cases) <a name='reeds2pras/test/reeds_cases'></a>
+<a id='reeds2pras-test'></a>
+#### reeds2pras/test
 
-###### [Pacific](reeds2pras/test/reeds_cases/Pacific) <a name='reeds2pras/test/reeds_cases/Pacific'></a>
 
-####### [inputs_case](reeds2pras/test/reeds_cases/Pacific/inputs_case) <a name='reeds2pras/test/reeds_cases/Pacific/inputs_case'></a>
+<a id='reeds2pras-test-reeds-cases'></a>
+##### reeds2pras/test/reeds_cases
+
+
+<a id='reeds2pras-test-reeds-cases-pacific'></a>
+###### reeds2pras/test/reeds_cases/Pacific
+
+
+<a id='reeds2pras-test-reeds-cases-pacific-inputs-case'></a>
+###### reeds2pras/test/reeds_cases/Pacific/inputs_case
+
   - [hydcf.csv](/reeds2pras/test/reeds_cases/Pacific/inputs_case/hydcf.csv)
 ---
 
@@ -3867,9 +3925,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [ReEDS_Augur](reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur) <a name='reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur'></a>
+<a id='reeds2pras-test-reeds-cases-pacific-reeds-augur'></a>
+###### reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur
 
-####### [augur_data](reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data) <a name='reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data'></a>
+
+<a id='reeds2pras-test-reeds-cases-pacific-reeds-augur-augur-data'></a>
+###### reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data
+
   - [cap_converter_2032.csv](/reeds2pras/test/reeds_cases/Pacific/ReEDS_Augur/augur_data/cap_converter_2032.csv)
 ---
 
@@ -3889,7 +3951,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-###### [USA_VSC_2035](reeds2pras/test/reeds_cases/USA_VSC_2035) <a name='reeds2pras/test/reeds_cases/USA_VSC_2035'></a>
+<a id='reeds2pras-test-reeds-cases-usa-vsc-2035'></a>
+###### reeds2pras/test/reeds_cases/USA_VSC_2035
+
   - [cases_USA_VSC_2035.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/cases_USA_VSC_2035.csv)
 ---
 
@@ -3897,7 +3961,9 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [inputs_case](reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case) <a name='reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case'></a>
+<a id='reeds2pras-test-reeds-cases-usa-vsc-2035-inputs-case'></a>
+###### reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case
+
   - [forcedoutage_hourly.h5](/reeds2pras/test/reeds_cases/USA_VSC_2035/inputs_case/forcedoutage_hourly.h5)
 ---
 
@@ -3923,9 +3989,13 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-####### [ReEDS_Augur](reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur) <a name='reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur'></a>
+<a id='reeds2pras-test-reeds-cases-usa-vsc-2035-reeds-augur'></a>
+###### reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur
 
-####### [augur_data](reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur/augur_data) <a name='reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur/augur_data'></a>
+
+<a id='reeds2pras-test-reeds-cases-usa-vsc-2035-reeds-augur-augur-data'></a>
+###### reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur/augur_data
+
   - [cap_converter_2035.csv](/reeds2pras/test/reeds_cases/USA_VSC_2035/ReEDS_Augur/augur_data/cap_converter_2035.csv)
 ---
 
@@ -3945,28 +4015,79 @@ Note: If you see a '#' before a header it means there may be further subdirector
 ---
 
 
-### [ReEDS_Augur](ReEDS_Augur) <a name='ReEDS_Augur'></a>
+<a id='reeds-augur'></a>
+### ReEDS_Augur
+
   - [augur_switches.csv](/ReEDS_Augur/augur_switches.csv)
 ---
 
 
-### [tests](tests) <a name='tests'></a>
+<a id='tests'></a>
+### tests
 
-#### [data](tests/data) <a name='tests/data'></a>
 
-##### [county](tests/data/county) <a name='tests/data/county'></a>
+<a id='tests-data'></a>
+#### tests/data
+
+
+<a id='tests-data-county'></a>
+##### tests/data/county
+
   - [csp.h5](/tests/data/county/csp.h5)
+    - **Description:** Subset of county-level data for the github runner county test
 ---
 
   - [distpv.h5](/tests/data/county/distpv.h5)
+    - **Description:** Subset of county-level data for the github runner county test
 ---
 
   - [upv.h5](/tests/data/county/upv.h5)
+    - **Description:** Subset of county-level data for the github runner county test
 ---
 
   - [wind-ofs.h5](/tests/data/county/wind-ofs.h5)
+    - **Description:** Subset of county-level data for the github runner county test
 ---
 
   - [wind-ons.h5](/tests/data/county/wind-ons.h5)
+    - **Description:** Subset of county-level data for the github runner county test
+---
+
+
+## Files 
+
+- [cases.csv](/cases.csv)
+  - **File Type:** Switches file
+  - **Description:** Contains the configuration settings for the ReEDS run(s).
+  - **Dollar year:** 2004
+  - **Citation:** [https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/38e6610a8c6a92291804598c95c11b707bf187b9/cases.csv](https://github.nrel.gov/ReEDS/ReEDS-2.0/blob/38e6610a8c6a92291804598c95c11b707bf187b9/cases.csv)
+---
+
+- [cases_examples.csv](/cases_examples.csv)
+---
+
+- [cases_small.csv](/cases_small.csv)
+  - **Description:** Contains settings to run ReEDS at a smaller scale to test operability of the ReEDS model. Turns off several technologies and reduces the model size to significantly improve solve times.
+---
+
+- [cases_standardscenarios.csv](/cases_standardscenarios.csv)
+  - **File Type:** StdScen Cases file
+  - **Description:** Contains the configuration settings for the Standard Scenarios ReEDS runs.
+---
+
+- [cases_test.csv](/cases_test.csv)
+  - **Description:** Contains the configuration settings for doing test runs including the default Pacific census division test case.
+---
+
+- [e_report_params.csv](/e_report_params.csv)
+  - **Description:** Contains a parameter list used in the model along with descriptions of what they are and units used.
+---
+
+- [runfiles.csv](/runfiles.csv)
+  - **Description:** Contains the locations of input data that is copied from the repository into the runs folder for each respective case.
+---
+
+- [sources.csv](/sources.csv)
+  - **Description:** CSV file containing a list of all input files (csv, h5, csv.gz)
 ---
 

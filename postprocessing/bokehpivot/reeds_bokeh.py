@@ -394,6 +394,8 @@ def process_reeds_data(topwdg, custom_sorts, custom_colors, result_dfs):
                 df_join = df_join[keep_cols].copy()
             if col in reeds.columns_meta and 'join_col_rename' in reeds.columns_meta[col]:
                 df_join = df_join.rename(columns=reeds.columns_meta[col]['join_col_rename'], errors='ignore')
+            if col in reeds.columns_meta and 'join_col_lowercase' in reeds.columns_meta[col]:
+                df_join[reeds.columns_meta[col]['join_col_lowercase']] = df_join[reeds.columns_meta[col]['join_col_lowercase']].apply(lambda x: x.str.lower())
             #remove duplicate rows. Note that we will have issues when the mapping is
             #many to many instead of many to one. For example, if the source data regionality is state, texas will be
             #assigned to just one rto after removing duplicates, even though it is truly part of multiple rtos.

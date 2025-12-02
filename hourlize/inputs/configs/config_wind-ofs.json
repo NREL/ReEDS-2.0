@@ -5,8 +5,6 @@
     "class_bin_num": 5,
     "class_bin": true,
     "class_path": "{hourlize_path}/inputs/resource/{tech}_resource_classes.csv",
-    "cost_adder_components": ["trans_adder_per_mw", "capital_adder_per_mw"],
-    "distance_cols": ["dist_spur_km","dist_export_km","dist_reinforcement_km"] ,
     "filter_cols": {"capacity_ac_mw": [">", 0], "offshore": [":",1], "mean_depth": [">",-1300]},
     "min_cap": 15,
     "profile_dir": "",

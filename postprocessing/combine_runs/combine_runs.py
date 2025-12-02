@@ -263,7 +263,7 @@ def run_combine_case(scen, reeds_path, output_path):
             ax.axis('off')
 
             ## Save map
-            map_path = os.path.join(output_path,'outputs','maps')
+            map_path = os.path.join(output_path, 'outputs', 'figures')
             if not os.path.exists(map_path):
                 os.makedirs(map_path)
             

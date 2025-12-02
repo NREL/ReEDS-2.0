@@ -2,6 +2,7 @@
 ### --- IMPORTS ---
 ### =====================================================================================
 import argparse
+import datetime
 import itertools
 import pandas as pd
 import numpy as np
@@ -10,7 +11,9 @@ import os
 import sys
 ### Local imports
 import ferc_distadmin
+import calculate_historical_capex
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import reeds
 from reeds import plots
 
 #########################
@@ -29,7 +32,7 @@ tracelabels = {
     'op_vom_costs': 'Operation: Variable O&M',
     'op_operating_reserve_costs': 'Operation: Operating reserves',
     'op_fuelcosts_objfn': 'Operation: Fuel',
-    'op_h2ct_fuel_costs': 'Operation: H2-CT - Hydrogen',
+    'op_h2combustion_fuel_costs': 'Operation: H2-Combustion - Hydrogen',
     'op_h2_storage': 'Operation: Storage - Hydrogen',
     'op_h2_transport': 'Operation: Transport - Hydrogen',
     'op_h2_transport_intrareg': 'Operation: Intraregional Transport - Hydrogen',
@@ -99,6 +102,9 @@ def interp_between_solve_years(
         first_year, last_year, region_list, region_type):
     """
     """
+    # If empty, return unchanged
+    if df.empty:
+        return df
     # Pivot for just the solve years first, so we can fill in zero-value years 
     df_pivot_solve_years = pd.DataFrame(index=modeled_years, columns=region_list)
     df_pivot_solve_years.update(df.pivot(index='t', columns=region_type, values=value_name))  
@@ -260,21 +266,18 @@ def read_file(filename):
 def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     """
     """
-    # Get module directory for relative paths
     print('Starting retail_rate_calculations.py')
+    # Run historical capex calculation
+    calculate_historical_capex.main(run_dir)
+
+    # Get module directory for relative paths
     mdir = os.path.dirname(os.path.abspath(__file__))
 
     # #%% Settings for testing/debugging
-    # run_dir = os.path.join('/Users','jcarag','ReEDS','RRM_Fixes','ReEDS-2.0','runs',
-    #                         'NonLUSA_usa_base_D_DAC')
-    # mdir = os.path.join('/Users','jcarag','ReEDS','RRM_Fixes','ReEDS-2.0','postprocessing',
-    #                     'retail_rate_module')
+    # run_dir = os.path.join(reeds.io.reeds_path, 'runs', 'v20250806_tscM2_Pacific')
     # inputpath = 'inputs.csv'
     # write = True
-    # plots = True
     # verbose = 0
-    # plot_dollar_year = 2022
-    # startyear = 2010
 
     #%% INPUTS
     ### Inputs (Retail Rate Module) - ingest and parse from retail_rate_module/inputs.csv
@@ -587,31 +590,38 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     op_costs_pivot = op_costs.pivot_table(
         index=['t', 'state'], columns='cost_type', values='cost', fill_value=0.0).reset_index()
 
+    # Read regional emissions
+    emissions_r = (
+        pd.read_csv(os.path.join(run_dir, 'outputs', 'emit_r.csv'))
+        .rename(columns={'Value':'emissions', 'Val':'emissions'})
+    )
+    # Consider only direct emissions
+    emissions_r = emissions_r.loc[
+        (emissions_r.etype == 'process')
+        & (emissions_r.eall == 'CO2')
+    ].drop(columns=['etype', 'eall'])
+    # Create list of regions with emissions
+    r_list_emissions = emissions_r['r'].drop_duplicates()
+    # Interpolate emissions between solve years
+    emissions_r = interp_between_solve_years(
+        emissions_r,
+        'emissions',
+        modeled_years,
+        non_modeled_years,
+        first_year,
+        last_year,
+        r_list_emissions,
+        'r',
+    )
+    # Remove negative emissions
+    emissions_r.loc[emissions_r['emissions'] < 0, 'emissions'] = 0
+    emissions_no_negative = emissions_r.copy()
+
     ### Redistribute the DAC op costs
     # DAC has negative CO2 emissions, which allows fossil generators to continue to operate.
     # This redistribution shares the cost of the DAC with any region that is still emitting CO2.
     # In this way, states with fossil units but no DAC still incur costs for the DAC.
     if 'op_co2_transport_storage' in op_costs_pivot.columns:
-        # Read in the BA-level emissions
-        emissions_r = (
-            pd.read_csv(os.path.join(run_dir, 'outputs', 'emit_r.csv'))
-            .rename(columns={'eall':'type', 'r':'r', 't':'t', 'Value':'emissions',
-                             'Dim1':'type', 'Dim2':'r', 'Dim3':'t', 'Val':'emissions'}))
-        
-        # Consider only CO2-equivalent emissions
-        emissions_r = emissions_r[emissions_r['type']=='CO2e']
-        emissions_r.drop('type', axis=1, inplace=True)
-        
-        # Load the list of BAs with emissions
-        r_list_emissions = emissions_r['r'].drop_duplicates()
-        
-        # Interpolate the emissions in between the solve years 
-        emissions_r = interp_between_solve_years(
-            emissions_r, 'emissions', modeled_years, non_modeled_years, first_year, last_year, r_list_emissions, 'r')
-        
-        # Remove negative emissions
-        emissions_r.loc[emissions_r['emissions'] < 0, 'emissions'] = 0
-        
         # Match the BAs with the respective states
         regions_map_emissions = regions_map.copy()[['r','state']]
         regions_map_emissions = regions_map_emissions[regions_map_emissions['r'].isin(r_list_emissions)]
@@ -805,37 +815,12 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # any region that is still emitting CO2 via operation of fossil units 
     # incurs the costs of DAC 
     if 'dac' in df_capex_irt_distributed['i'].unique():
-        # Read in the BA-level emissions
-        emissions_r = pd.read_csv(os.path.join(run_dir, 'outputs', 'emit_r.csv'))
-        
-        if emissions_r.shape[1] == 4:
-            emissions_r = emissions_r.rename(
-                columns={'eall':'type', 'r':'r', 't':'t', 'Value':'emissions', 
-                         'Dim1':'type', 'Dim2':'r', 'Dim3':'t', 'Val':'emissions'})
-            emissions_r = emissions_r[emissions_r['type']=='CO2e']
-            emissions_r.drop('type', axis=1, inplace=True)
-        else:
-            emissions_r = emissions_r.rename(
-                columns={'r':'r', 't':'t', 'Value':'emissions', 
-                         'Dim1':'r', 'Dim2':'t', 'Val':'emissions'})
-        
-        # Load the list of BAs with emissions
-        r_list_emissions = emissions_r['r'].drop_duplicates()
-        
-        # Interpolate the emissions in between the solve years 
-        emissions_r = interp_between_solve_years(
-            emissions_r, 'emissions', modeled_years, non_modeled_years, first_year, 
-            last_year, r_list_emissions, 'r')
-        
-        # Remove negative emissions
-        emissions_r.loc[emissions_r['emissions'] < 0, 'emissions'] = 0
-        
         # Calculate the fraction of emissions by BA
-        emissions_r = emissions_r.pivot_table(
+        emissions_fraction = emissions_no_negative.pivot_table(
             index='t', columns='r', values='emissions').fillna(0)
-        emissions_r['Total'] = emissions_r.sum(axis=1)
-        ba_cols = [c for c in emissions_r.columns if c != 'Total']
-        emissions_r_fraction = emissions_r.copy() 
+        emissions_fraction['Total'] = emissions_fraction.sum(axis=1)
+        ba_cols = [c for c in emissions_fraction.columns if c != 'Total']
+        emissions_r_fraction = emissions_fraction.copy() 
         emissions_r_fraction[ba_cols] = (
             emissions_r_fraction[ba_cols].div(emissions_r_fraction['Total'], axis=0)
             )
@@ -911,13 +896,13 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # This should also apply to upgrades only
     df_gen_capex['depreciation_sch'].fillna('20', inplace=True)
     
-#%% # For pre-2010 capital expenditures, we use a pre-calculated result. 
+#%% # For historical capital expenditures, we use a pre-calculated result.
     #   The expenditures are based on a EIA-NEMS database of historical capacity 
-    #   builds, using the 2010 capital costs from the 2019 version of ReEDS. 
+    #   builds, using the earliest capital costs from the provided ReEDS run. 
     #   The values in this file are in 2004 dollars. This file is generated by 
-    #   calc_historical_capex.py
+    #   calculate_historical_capex.py
     df_gen_capex_init = pd.read_csv(
-        os.path.join(mdir, 'calc_historical_capex', 'df_capex_init.csv'))
+        os.path.join(run_dir, 'inputs_case', 'df_capex_init.csv'))
     df_gen_capex_init = df_gen_capex_init[df_gen_capex_init['t']<=first_year]
     df_gen_capex_init = df_gen_capex_init[df_gen_capex_init['t']>=first_hist_year]
     # Convert s regions to p regions
@@ -984,27 +969,33 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # These could be wrapped into various other cost types (intra-BA transmission,
     # distribution and transmission infrastructure, etc).
     
-    # Combine inv_transmission_intrazone_investment with inv_transmission_line_investment
+    # Combine intrazone and interzone transmission
     system_costs.loc[system_costs['cost_type']=='inv_transmission_intrazone_investment', 
-                     'cost_type'] = 'inv_transmission_line_investment'
+                     'cost_type'] = 'inv_transmission_interzone_ac_investment'
     system_costs = system_costs.copy().groupby(
         by=['cost_type', 'region', 't', 'state'], as_index=False).agg({'cost':'sum'})
     
     nongen_inv_eval_periods = pd.DataFrame(
         columns=['cost_type', 'eval_period'],
-        data=[[x,input_eval_periods[x]] for x in 
-              ['inv_investment_spurline_costs_rsc_technologies',
-               'inv_transmission_line_investment',
-               # 'inv_transmission_intrazone_investment', 
-               'inv_converter_costs']]
-        )
+        data=[
+            [x,input_eval_periods[x]]
+            for x in [
+                'inv_investment_spurline_costs_rsc_technologies',
+                'inv_transmission_line_investment',
+                'inv_transmission_interzone_ac_investment',
+                'inv_transmission_interzone_dc_investment',
+                'inv_converter_costs',
+            ]
+        ]
+    )
 
     # Define and merge on the cost categories for these capital expenditures
     nongen_cost_cats = pd.DataFrame(
         columns=['i', 'cost_cat'],
         data = [['inv_investment_spurline_costs_rsc_technologies', 'cap_spurline'],
                 ['inv_transmission_line_investment', 'cap_transmission'],
-                # ['inv_transmission_intrazone_investment', 'cap_transmission_intrazone'],
+                ['inv_transmission_interzone_ac_investment', 'cap_transmission'],
+                ['inv_transmission_interzone_dc_investment', 'cap_transmission'],
                 ['inv_converter_costs', 'cap_converter']]
         )
 
@@ -1029,78 +1020,33 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     # Add to the main df_capex
     df_capex = pd.concat([df_capex, nongen_capex_distributed], sort=False).reset_index(drop=True)
 
-    #%% Estimate historical capital expenditures for existing transmission capacity, 
-    ### allocate to states, and add to df_capex
-
-    trans_cap_init = pd.read_csv(
-        os.path.join(run_dir, 'inputs_case', 'trancap_init_energy.csv'),
-        index_col=['*r','rr','trtype'])[['MW']]
-    trans_cap_init.index.names = ['r','rr','trtype']
-
-    trans_dist = pd.read_csv(
-        os.path.join(run_dir, 'inputs_case', 'transmission_distance.csv')
-        ).rename(columns={'*r':'r'}).set_index(['r','rr','trtype']).miles
-
-    trans_cap_init['MWmile'] = (trans_cap_init['MW'] * trans_dist).reindex(trans_cap_init.index)
-
-    transmission_line_capcost = (
-        pd.read_csv(os.path.join(run_dir,'inputs_case','transmission_line_capcost.csv'))
-        .rename(columns={'*r':'r','USD{}perMW'.format(inputs['dollar_year']):'USDperMW'})
-        .set_index(['r','rr','trtype']))
-    transmission_line_capcost['USDperMWmile'] = (
-        transmission_line_capcost.USDperMW / trans_dist
-        ).reindex(transmission_line_capcost.index)
-
-    ### To get the cost of the initial collection of transmission lines, we apply the
-    ### $/MW-mile cost of new lines to the MW-mile capacity of initial lines.
-    ### That isn't exactly right, because initial lines follow different paths from
-    ### new lines and thus would have different terrain multipliers. But it should be
-    ### a closer approximation than just using the base cost.
-    transmission_line_capcost_init = (
-        pd.concat([
-            transmission_line_capcost.reset_index(),
-            transmission_line_capcost.xs(
-                'AC',axis=0,level='trtype').reset_index().assign(trtype='B2B'),]
-            ).set_index(['r','rr','trtype']).USDperMWmile
-        )
-
+    #%% Estimate historical capital expenditures for existing transmission capacity
+    ### by state and add to df_capex
     ### Note that we're leaving out the cost of converters for LCC and B2B lines
-    init_trans_capex_lump = (trans_cap_init['MWmile'] * transmission_line_capcost_init).dropna()
-
-    init_trans_capex_lump_by_r = (
-        ((init_trans_capex_lump.groupby(level='r').sum().reindex(r_list.values).fillna(0) 
-          + init_trans_capex_lump.groupby(level='rr').sum().reindex(r_list.values).fillna(0)) 
-         # Divide by 2 since any given line is listed in both r and rr 
-         / 2)
-        .rename('init_trans_capex')
-        .reset_index()
-        .assign(i='inv_transmission_line_investment')
-        )
-      
+    inflatable = reeds.io.get_inflatable()
+    existing_transmission_cost_bystate = pd.read_csv(
+        os.path.join(
+            mdir, 'calc_historical_capex',
+            'existing_transmission_cost_bystate_USD2024.csv'),
+        index_col='state',
+    ).squeeze(1).rename('init_trans_capex') * inflatable[2024, 2004]
     # This approach assumes the existing transmission capacity was built evently 
     # over the trans_timeframe years prior to 2010
-    trans_f_expand_df = pd.DataFrame()
-    trans_f_expand_df['t'] = np.arange(first_year - inputs['trans_timeframe'], first_year)
-    trans_f_expand_df['i'] = 'inv_transmission_line_investment'
-    trans_f_expand_df['capex_f'] = 1 / inputs['trans_timeframe']
-
-    init_trans_capex = init_trans_capex_lump_by_r[['init_trans_capex', 'i', 'r']].merge(
-        trans_f_expand_df[['t', 'capex_f', 'i']], on='i', how='left')
-
-    init_trans_capex['capex'] = init_trans_capex['init_trans_capex'] * init_trans_capex['capex_f']
-
-    init_trans_capex = init_trans_capex.rename(columns={'r':'region'})
-
+    init_trans_capex = pd.concat(
+        {t: existing_transmission_cost_bystate
+         for t in np.arange(first_year - inputs['trans_timeframe'], first_year)},
+         names='t',
+    ).reset_index()
+    init_trans_capex['i'] = 'inv_transmission_interzone_ac_investment'
+    init_trans_capex['capex'] = init_trans_capex['init_trans_capex'] / inputs['trans_timeframe']
     init_trans_capex['eval_period'] = input_eval_periods['init_trans_capex']
     init_trans_capex['depreciation_sch'] = input_depreciation_schedules['init_trans_capex']
     init_trans_capex['cost_cat'] = 'cap_transmission'
-    init_trans_capex = init_trans_capex.merge(
-        stacked_regions_map[['region', 'state']], on=['region'], how='left')
 
     df_capex = pd.concat(
         [df_capex, 
          init_trans_capex[
-             ['i', 'state', 'region', 't', 'capex', 
+             ['i', 'state', 't', 'capex', 
               'eval_period', 'depreciation_sch', 'cost_cat']]], 
         sort=False).reset_index(drop=True)
 
@@ -1154,8 +1100,9 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
             cleanup=input_daproj['cleanup'],
             ).sort_values(['state','t']).set_index(['state','t'])
         ### NE is missing from dist_admin_costs_state, so assign it to the regional value
-        dist_admin_costs_state = pd.concat(
-            [dist_admin_costs_state, dist_admin_costs_region.loc[['NE']]]
+        if 'NE' in dist_admin_costs_region.index.get_level_values('state').unique():
+            dist_admin_costs_state = pd.concat(
+                [dist_admin_costs_state, dist_admin_costs_region.loc[['NE']]]
             )
 
     #%% Assign dist_admin_costs based on aggregation level
@@ -1168,11 +1115,12 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
     elif input_daproj['aggregation'] == 'best':
         ### Start with national values
         dist_admin_costs = dist_admin_costs_nation.copy()
+        keepstates = dist_admin_costs.index.get_level_values('state').unique()
         ### Get the list of states where aggregation=='state' gives the lowest error
         best = pd.read_csv(
             os.path.join(mdir,'inputs','state-meanbiaserror_rate-aggregation.csv'),
             usecols=['index','aggregation'], index_col='index',
-            ).squeeze(1)
+        ).squeeze(1).loc[keepstates]
         replacestates = best.loc[best=='state'].index.values
         replaceregions = best.loc[best=='region'].index.values
         ### Drop these states, then add back the state/region-specific values
@@ -1459,6 +1407,10 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
             ).set_index(['r','rr','trtype','t'])
     trans_cap['state1'] = trans_cap.index.get_level_values('r').map(reedsregion2state)
     trans_cap['state2'] = trans_cap.index.get_level_values('rr').map(reedsregion2state)
+
+    trans_dist = pd.read_csv(
+        os.path.join(run_dir, 'inputs_case', 'transmission_distance.csv')
+    ).rename(columns={'*r':'r'}).set_index(['r','rr']).miles
 
     trans_cap['MWmile'] = (trans_cap['tran_cap'] * trans_dist).reindex(trans_cap.index)
     ### Check for nulls
@@ -1786,7 +1738,10 @@ def main(run_dir, inputpath='inputs.csv', write=True, verbose=0):
         trans_itc_value = pd.DataFrame(columns=['t','state','itc_trans'])
     else:
         trans_itc_value = (
-            nongen_capex.loc[nongen_capex.i=='inv_transmission_line_investment']
+            nongen_capex.loc[nongen_capex.i.isin([
+                'inv_transmission_interzone_ac_investment',
+                'inv_transmission_interzone_dc_investment',
+            ])]
             [['t','state','eval_period','capex']]
             .merge(trans_itc, on='t', how='left')
             .rename(columns={'t':'t_online'})
@@ -1964,10 +1919,10 @@ def post_processing(dfplot):
     if 'special_costs' in dfplot:
         dfplot['op_admin'] += dfplot['special_costs']
         dfplot.drop('special_costs', axis=1, inplace=True)
-    ### Group 'op_h2ct_fuel_costs' into 'op_fuelcosts_objfn'
-    if 'op_h2ct_fuel_costs' in dfplot.columns:
-        dfplot['op_fuelcosts_objfn'] += dfplot['op_h2ct_fuel_costs']
-        dfplot.drop('op_h2ct_fuel_costs', axis=1, inplace=True)
+    ### Group 'op_h2combustion_fuel_costs' into 'op_fuelcosts_objfn'
+    if 'op_h2combustion_fuel_costs' in dfplot.columns:
+        dfplot['op_fuelcosts_objfn'] += dfplot['op_h2combustion_fuel_costs']
+        dfplot.drop('op_h2combustion_fuel_costs', axis=1, inplace=True)
     subcols = [
         'cap_{}_dep_expense', 'cap_{}_debt_interest',
         'cap_{}_equity_return', 'cap_{}_income_tax']
@@ -2381,16 +2336,8 @@ if __name__ == '__main__':
     startyear = args.startyear
 
     #%% Time the operation of this script
-    import site
-    site.addsitedir(os.path.join(mdir,os.pardir,os.pardir,'input_processing'))
-    try:
-        from ticker import toc, makelog
-        import datetime
-        tic = datetime.datetime.now()
-        #%% Set up logger
-        log = makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
-    except Exception as err:
-        print(err)
+    tic = datetime.datetime.now()
+    log = reeds.log.makelog(scriptname=__file__, logpath=os.path.join(run_dir,'gamslog.txt'))
 
     #%% Get and write the component revenues
     main(
@@ -2410,8 +2357,5 @@ if __name__ == '__main__':
     if args.plots:
         retail_plots(run_dir=run_dir, inputpath=os.path.join(mdir,'inputs.csv'))
 
-    try:
-        toc(tic=tic, year=0, process='retail_rate_calculations.py', path=run_dir)
-        print('Finished retail_rate_calculations.py')
-    except Exception as err:
-        print(err)
+    reeds.log.toc(tic=tic, year=0, process='retail_rate_calculations.py', path=run_dir)
+    print('Finished retail_rate_calculations.py')

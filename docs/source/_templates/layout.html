@@ -1,0 +1,10 @@
+{%- extends "!layout.html" -%}
+
+{%- block body_top -%}
+  {{ super() }}
+  {%- if last_updated %}
+    <div class="last-updated" style="font-size:0.9em; margin-bottom:1em;">
+      Last updated on: {{ last_updated }}
+    </div>
+  {%- endif %}
+{%- endblock body_top -%}

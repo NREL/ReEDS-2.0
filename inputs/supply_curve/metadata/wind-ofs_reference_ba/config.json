@@ -11,24 +11,16 @@
     "class_bin_col": "ncf_2035",
     "class_bin_method": "kmeans",
     "class_bin_num": 5,
-    "class_path": "/kfs2/projects/atm/clnguyen/ReEDS-2.0/hourlize/inputs/resource/wind-ofs_resource_classes.csv",
+    "class_path": "/Users/pbrown/github2/ReEDS-2.0/hourlize/inputs/resource/wind-ofs_resource_classes.csv",
     "compression_opts": 4,
     "copy_to_reeds": true,
     "copy_to_shared": false,
-    "cost_adder_components": [
-        "trans_adder_per_mw",
-        "capital_adder_per_mw"
-    ],
     "cost_out": "combined_off_ons_trans",
+    "crs": "EPSG:5070",
     "decimals": 4,
-    "distance_cols": [
-        "dist_spur_km",
-        "dist_export_km",
-        "dist_reinforcement_km"
-    ],
     "driver": "H5FD_CORE",
     "dtype": "np.float16",
-    "existing_sites": "/kfs2/projects/atm/clnguyen/ReEDS-2.0/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv",
+    "existing_sites": "/Users/pbrown/github2/ReEDS-2.0/inputs/capacity_exogenous/ReEDS_generator_database_final_EIA-NEMS.csv",
     "filetype": "h5",
     "filter_cols": {
         "capacity_ac_mw": [
@@ -45,8 +37,8 @@
         ]
     },
     "gather_method": "smart",
-    "hierarchy_path": "/kfs2/projects/atm/clnguyen/ReEDS-2.0/inputs/hierarchy.csv",
-    "hourlize_path": "/kfs2/projects/atm/clnguyen/ReEDS-2.0/hourlize",
+    "hierarchy_path": "/Users/pbrown/github2/ReEDS-2.0/inputs/hierarchy.csv",
+    "hourlize_path": "/Users/pbrown/github2/ReEDS-2.0/hourlize",
     "hourly_out_years": [
         2007,
         2008,
@@ -68,10 +60,10 @@
         "reg_map_file",
         "class_path"
     ],
-    "map_supply_curve": true,
     "min_cap": 15,
-    "original_sc_file": "/kfs2/shared-projects/reeds/Supply_Curve_Data/OFFSHORE/2024_09_17_Standard_Scenarios_newwthryrs/reV/reference/reference_supply-curve_post_proc.csv",
-    "outpath": "/kfs2/projects/atm/clnguyen/ReEDS-2.0/hourlize/out/wind-ofs_reference_ba",
+    "offshore_meshed": true,
+    "original_sc_file": "/Volumes/ReEDS/Supply_Curve_Data/OFFSHORE/2025_08_11_NewSites/reV/reference/reference_supply-curve_post_proc.csv",
+    "outpath": "/Users/pbrown/github2/ReEDS-2.0/hourlize/out/wind-ofs_reference_ba",
     "output_timezone": "Etc/GMT+6",
     "process_profiles": true,
     "profile_dir": "",
@@ -79,18 +71,18 @@
     "profile_file_format": "reference_rep-profiles",
     "profile_id_col": "sc_point_gid",
     "profile_weight_col": "capacity",
-    "reeds_path": "/kfs2/projects/atm/clnguyen/ReEDS-2.0",
-    "reg_map_file": "/kfs2/projects/atm/clnguyen/ReEDS-2.0/inputs/county2zone.csv",
+    "reeds_path": "/Users/pbrown/github2/ReEDS-2.0",
+    "reg_map_file": "/Users/pbrown/github2/ReEDS-2.0/inputs/county2zone.csv",
     "reg_out_col": "ba",
     "rev_case": "reference",
-    "rev_path": "/kfs2/shared-projects/reeds/Supply_Curve_Data/OFFSHORE/2024_09_17_Standard_Scenarios_newwthryrs/reV/reference",
-    "rev_paths_file": "/kfs2/projects/atm/clnguyen/ReEDS-2.0/inputs/supply_curve/rev_paths.csv",
-    "sc_file": "/kfs2/projects/atm/clnguyen/ReEDS-2.0/hourlize/out/wind-ofs_reference_ba/results/wind-ofs_supply_curve_raw.csv",
-    "sc_path": "/kfs2/shared-projects/reeds/Supply_Curve_Data/OFFSHORE/2024_09_17_Standard_Scenarios_newwthryrs",
+    "rev_path": "/Volumes/ReEDS/Supply_Curve_Data/OFFSHORE/2025_08_11_NewSites/reV/reference",
+    "rev_paths_file": "/Users/pbrown/github2/ReEDS-2.0/inputs/supply_curve/rev_paths.csv",
+    "sc_file": "/Users/pbrown/github2/ReEDS-2.0/hourlize/out/wind-ofs_reference_ba/results/wind-ofs_supply_curve_raw.csv",
+    "sc_path": "/Volumes/ReEDS/Supply_Curve_Data/OFFSHORE/2025_08_11_NewSites",
     "select_year": 2012,
     "single_profile": false,
     "start_year": 2010,
-    "state_abbrev": "/kfs2/projects/atm/clnguyen/ReEDS-2.0/hourlize/inputs/resource/state_abbrev.csv",
+    "state_abbrev": "/Users/pbrown/github2/ReEDS-2.0/hourlize/inputs/resource/state_abbrev.csv",
     "subsetvars": [
         "tech",
         "access_case"

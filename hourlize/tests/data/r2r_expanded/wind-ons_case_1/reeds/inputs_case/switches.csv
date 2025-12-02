@@ -66,14 +66,14 @@ GSw_Geothermal,1
 GSw_GrowthAbsCon,0
 GSw_GrowthRelCon,0
 GSw_H2,0
-GSw_H2CT,1
-GSw_H2CTupgrade,1
+GSw_H2Combustion,1
+GSw_H2Combustionupgrade,1
 GSw_H2_CompressorLoad,0
 GSw_H2_Demand_Case,None
 GSw_H2_Demand_Start,2028
 GSw_H2_Inputs,ref
 GSw_H2_MinStorHours,0
-GSw_H2_SMR,1
+GSw_H2_SMR,0
 GSw_H2_StorTimestep,1
 GSw_H2_Transport,0
 GSw_H2_TransportLevel,cendiv
@@ -188,7 +188,7 @@ GSw_StartMarkets,2024
 GSw_StateCO2ImportLevel,interconnect
 GSw_StateCap,1
 GSw_StateRPS,1
-GSw_Storage,3
+GSw_Storage,1
 GSw_TCPhaseout,1
 GSw_TCPhaseout_forceyear,0
 GSw_TCPhaseout_ref_year,2022
@@ -268,8 +268,8 @@ financials_trans_suffix,default
 geodiscov,BAU
 plantchar_geo,geo_ATB_2022_moderate
 geosupplycurve,ATB_2022
-h2ctfuelscen,reference
-plantchar_h2ct,h2-ct_ATB_2023
+h2combustionfuelscen,reference
+plantchar_h2combustion,h2-combustion_ATB_2023
 hourly_cluster_plots,1
 plantchar_hydro,hydro_ATB_2019_mid
 ignore,0

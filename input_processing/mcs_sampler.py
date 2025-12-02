@@ -34,7 +34,7 @@ class MCSConstants:
     ### --- Synonyms
     TECH_DESCRIPTOR = ['i', 'type', 'Tech', 'Geo class', 'Depth', 'Turbine', 'tech', '*tech', 'class']
     YEAR_SYNONYMS = ['t', 'Year', 'year']
-    REGION_SYNONYMS = ['r', 'region', 'cendiv', 'sc_point_gid']
+    REGION_SYNONYMS = ['r', 'region', 'cendiv', 'sc_point_gid', 'FIPS']
 
     ### --- Fixed columns that should not be modified in most cases
     OTHER_INDICES = ['columns', 'p', '*p'] # 'p' is used in h2_exog_cap.csv
@@ -43,10 +43,12 @@ class MCSConstants:
 
     ### --- Files that require special treatment
     SUPPLY_CURVE_FILES = [
-        "upv_supply_curve.csv", "wind-ofs_supply_curve.csv", "wind-ons_supply_curve.csv"
+        "supplycurve_upv.csv",
+        "supplycurve_wind-ofs.csv",
+        "supplycurve_wind-ons.csv",
     ]
-    EXOG_CAP_FILES = ["upv_exog_cap.csv", "wind-ons_exog_cap.csv"]
-    PRESCRIBED_BUILDS_FILES = ["wind-ofs_prescribed_builds.csv", "wind-ons_prescribed_builds.csv"]
+    EXOG_CAP_FILES = ["exog_cap_upv.csv", "exog_cap_wind-ons.csv"]
+    PRESCRIBED_BUILDS_FILES = ["prescribed_builds_wind-ofs.csv", "prescribed_builds_wind-ons.csv"]
     RECF_FILES = ["recf_wind-ons.h5", "recf_wind-ofs.h5", "recf_upv.h5"]
 
     ### --- Switch-File(s) combinations hardcoded in copy_files.py
@@ -166,6 +168,7 @@ def read_csv_h5_file(sw_runfiles_csv, aux_files, reeds_path, inputs_case) -> pd.
             aux_files['agglevel_variables'],
             aux_files['regions_and_agglevel'],
             inputs_case,
+            agg=False,
         )
 
     elif file_name in nonregion_files['filename'].values:
@@ -287,6 +290,18 @@ def mcs_find_copy_paths(
                 reeds_path, 'runs', 'Sample_{sample_n}', file_name
             )
         save_path_list.append(dest_path)
+    
+    # Supply curve files are used in other distributions, so they need to be first in the list.
+    # This should be cleaned up.
+    if any([os.path.basename(i).startswith('supplycurve') for i in save_path_list]):
+        supplycurve_index = [
+            i for (i,f) in enumerate(save_path_list)
+            if os.path.basename(f).startswith('supplycurve')
+        ][0]
+        other_indices = [i for i in range(len(save_path_list)) if i != supplycurve_index]
+        index_order = [supplycurve_index] + other_indices
+        save_path_list = [save_path_list[i] for i in index_order]
+        runfile_instructions = runfile_instructions.loc[index_order].reset_index(drop=True)
 
     return save_path_list, runfile_instructions
 
@@ -587,6 +602,7 @@ class WeightCalculator:
         n_samples: int = 1,
     ):
         self.sample_group = sample_group
+        self.aux_files = aux_files
         self.distribution = sample_group['dist']
         self.dist_params = sample_group['dist_params']
         self.sample_hierarchy_lvl = sample_group['weight_r'].lower()
@@ -596,6 +612,15 @@ class WeightCalculator:
         # Get all general region weights
         self.r_weights = get_all_region_weights(
             self.distribution, self.dist_params, self.hierarchy_file, self.sample_hierarchy_lvl)
+        ## Include aggregated region weights
+        if aux_files['sw']['GSw_RegionResolution'] == 'aggreg':
+            self.r_weights = {
+                **self.r_weights,
+                **{
+                    aux_files['hierarchy_file'].set_index('ba').aggreg.get(k,k): v
+                    for k,v in self.r_weights.items()
+                },
+            }
 
         # Store the weights for the recf files (CF files)
         # Those are computed during the the supply curve file sampling 
@@ -1001,7 +1026,12 @@ class MCS_Sampler:
         self.weight_calc = WeightCalculator(sample_group, aux_files, n_samples)
 
     @staticmethod
-    def prepare_ref_data(dist_files: list, file_name: str, sw_name: str | list) -> Tuple[list, list, dict]:
+    def prepare_ref_data(
+        dist_files: list,
+        file_name: str,
+        sw_name: str | list,
+        aux_files,
+    ) -> Tuple[list, list, dict]:
         """
         This function prepares the reference dataframes for the Monte Carlo sampling.
         For some files like those related to supply curves we need to expand/modify
@@ -1155,8 +1185,8 @@ class MCS_Sampler:
 
         # Remove samples with no capacity. 
         # Need to do this after normalizing the recf weights
-        samples_sw = [df[df["capacity"] > 0] for df in samples_sw]
-
+        samples_sw = [df[df["capacity"] > 0].copy() for df in samples_sw]
+        
         return samples_sw
 
     def _adjust_exog_cap_samples(self, samples_sw: list, file_name: str) -> list:
@@ -1170,11 +1200,11 @@ class MCS_Sampler:
             file_name (str): Name of the file being sampled.
         """
         # Remove samples with no capacity
-        samples_sw = [df[df["capacity"] > 0] for df in samples_sw]
+        samples_sw = [df[df["capacity"] > 0].copy() for df in samples_sw]
 
         tech_mapping = {
-            "upv_exog_cap.csv": ("upv", "upv_supply_curve.csv"),
-            "wind-ons_exog_cap.csv": ("wind-ons", "wind-ons_supply_curve.csv"),
+            "exog_cap_upv.csv": ("upv", "supplycurve_upv.csv"),
+            "exog_cap_wind-ons.csv": ("wind-ons", "supplycurve_wind-ons.csv"),
         }
         tech_name, Sample_ID = tech_mapping[file_name]
 
@@ -1183,8 +1213,13 @@ class MCS_Sampler:
             class_sc_point_map = self.samples[Sample_ID][s][["sc_point_gid", "class"]]
             class_sc_point_map = class_sc_point_map.set_index("sc_point_gid").to_dict()["class"]
 
+            # Remove any rows from samples_sw[s] that cannot be mapped
+            # These are cases with zero supply in the region
+            valid_sc_point_gids = samples_sw[s]["sc_point_gid"].isin(class_sc_point_map.keys())
+            samples_sw[s] = samples_sw[s][valid_sc_point_gids].copy()
+
             # Create a new tech name for each sc_point_gid
-            new_tech_name = [tech_name + "_" + str(c) for c in 
+            new_tech_name = [tech_name + "_" + str(int(c)) for c in 
                 samples_sw[s]["sc_point_gid"].map(class_sc_point_map).values]
 
             samples_sw[s]["*tech"] = new_tech_name
@@ -1239,7 +1274,7 @@ class MCS_Sampler:
 
         elif file_name in MCSConstants.PRESCRIBED_BUILDS_FILES:
             # Remove samples with no capacity
-            adjusted_samples = [df[df["capacity"] > 0] for df in samples_sw]
+            adjusted_samples = [df[df["capacity"] > 0].copy() for df in samples_sw]
 
         else:
             # For all other files we can directly apply the weights
@@ -1407,7 +1442,7 @@ class MCS_Sampler:
             weight_record_df.to_csv(save_path, mode='w', index=False, header=True)
     # ----------------------- End of Weight Application Helpers -----------------------
 
-    def get_samples(self):
+    def get_samples(self, aux_files):
         """
         Generates Monte Carlo samples for each switch and applies the appropriate weight assignment.
 
@@ -1427,7 +1462,9 @@ class MCS_Sampler:
                 continue
 
             # Extend/modify dist_files if necessary (e.g supply curve related data)
-            dist_files, modifiable_columns, n_decimals = self.prepare_ref_data(dist_files, file_name, sw_name)
+            dist_files, modifiable_columns, n_decimals = self.prepare_ref_data(
+                dist_files, file_name, sw_name, aux_files,
+            )
 
             # Get weights we will apply to the reference files
             dict_df_weights = self.weight_calc.get_df_weights(dist_files, modifiable_columns, sw_name, file_name)
@@ -1560,15 +1597,15 @@ def main(
         print(f"Sampling for switch(es): {unique_switches}")
         # Create Samples
         mcs_sampler = MCS_Sampler(sample_group, aux_files, n_samples)
-        samples_dict = mcs_sampler.get_samples()
+        samples_dict = mcs_sampler.get_samples(aux_files)
 
         # Record the weights of each sample group
         mcs_sampler.record_group_weights(
-            os.path.join(os.path.dirname(inputs_case))
+            os.path.join(os.path.dirname(inputs_case), 'lstfiles')
         )
-
         # Write Samples
         write_samples(sample_group, samples_dict, aux_files, run_ReEDS=run_ReEDS)
+
 
 if __name__ == '__main__' and not hasattr(sys, 'ps1'):
     parser = argparse.ArgumentParser(description='Copy files needed for this run')
@@ -1580,8 +1617,11 @@ if __name__ == '__main__' and not hasattr(sys, 'ps1'):
     inputs_case = os.path.abspath(args.inputs_case)
 
     # ---- Settings for testing ----
-    #reeds_path = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
-    #inputs_case = os.path.join(reeds_path,'runs','test_MCS_MC1','inputs_case')
+    # reeds_path = reeds.io.reeds_path
+    # inputs_case = os.path.join(reeds_path,'runs','v20250825_revM2_MonteCarlo_MC1','inputs_case')
+    # n_samples = 1
+    # seed = 0
+    # run_ReEDS = True
 
     # Set up logger
     tic = datetime.datetime.now()

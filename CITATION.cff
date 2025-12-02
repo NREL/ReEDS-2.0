@@ -10,62 +10,56 @@ message: >-
   metadata from this file.
 type: software
 authors:
-  - given-names: Wesley
-    family-names: Cole
-    email: wesley.cole@nrel.gov
-    orcid: 'https://orcid.org/0000-0002-9194-065X'
-  - given-names: Maxwell
-    family-names: Brown
-    email: maxwell.brown@nrel.gov
   - given-names: Patrick
     family-names: Brown
     email: patrick.brown@nrel.gov
     orcid: 'https://orcid.org/0000-0001-7388-2815'
-  - given-names: Will
-    family-names: Frazier
-  - given-names: Matt
-    family-names: Mowers
-  - given-names: Brian
-    family-names: Sergi
-    orcid: 'https://orcid.org/0000-0002-3453-9878'
-  - given-names: Daniel
-    family-names: Greer
-  - given-names: Jonathan
-    family-names: Ho
-  - given-names: Kelly
-    family-names: Eurek
-  - given-names: Pieter
-    family-names: Gagnon
-  - given-names: Scott
-    family-names: Machen
+  - given-names: Vincent
+    family-names: Carag
+  - given-names: Yunzhi
+    family-names: Chen
+  - given-names: Ilya
+    family-names: Chernyakhovskiy
   - given-names: Stuart
     family-names: Cohen
     orcid: 'https://orcid.org/0000-0001-8389-6516'
-  - given-names: Saroj
-    family-names: Khanal
-  - given-names: Sean
-    family-names: Corcoran
-  - given-names: Brady
-    family-names: Cowiestoll
-  - given-names: Nathaniel
-    family-names: Gates
+  - given-names: Wesley
+    family-names: Cole
+    email: wesley.cole@nrel.gov
+    orcid: 'https://orcid.org/0000-0002-9194-065X'
+  - given-names: Victor
+    family-names: Duraes de Faria
+  - given-names: Pieter
+    family-names: Gagnon
+  - given-names: Claire
+    family-names: Halloran
+  - given-names: Anne
+    family-names: Hamilton
+  - given-names: Jonathan
+    family-names: Ho
+  - given-names: Kennedy
+    family-names: Mindermann
+  - given-names: Joe
+    family-names: Mowers
   - given-names: Matt
-    family-names: Irish
-    email: matthew.irish@nrel.gov
-    orcid:'https://orcid.org/0000-0002-5320-175X'
-  - given-names: Yinong
-    family-names: Sun
-  - given-names: Nina
-    family-names: Vincent
-  - given-names: Pattanun
-    family-names: Chanpiwat
-  - given-names: Madeline
-    family-names: Macmillan
-  - given-names: David
-    family-names: Bielen
+    family-names: Mowers
+  - given-names: Kodi
+    family-names: Obika
+  - given-names: An
+    family-names: Pham
   - given-names: Anna
     family-names: Schleifer
-  - {}
+  - given-names: Brian
+    family-names: Sergi
+    orcid: 'https://orcid.org/0000-0002-3453-9878'
+  - given-names: Louisa
+    family-names: Serpe
+  - given-names: Shashwat
+    family-names: Sharma
+  - given-names: Merve
+    family-names: Turan
+  - given-names: Max
+    family-names: Vanatta
 url: 'https://www.nrel.gov/analysis/reeds/index.html'
 abstract: >-
   The Regional Energy Deployment System (ReEDS) is
@@ -79,5 +73,3 @@ keywords:
   - power system planning
   - electricity sector
   - renewable energy
-version: v2021.1
-date-released: '2021-11-29'

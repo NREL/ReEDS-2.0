@@ -13,10 +13,12 @@
 :hidden:
 
 setup
+developer_best_practices
 model_documentation
-additional_model_information
+user_guide
 sources
 postprocessing_tools
+publications
 faq
 ```
 

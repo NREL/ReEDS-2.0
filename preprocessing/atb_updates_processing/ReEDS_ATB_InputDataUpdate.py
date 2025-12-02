@@ -18,7 +18,7 @@ How to use this script.
     5. ofs-wind_ATB_2021_moderate.csv
     6. ofs-wind_ATB_2021_moderate_rsc_mult.csv
     7. ons-wind_ATB_2021_moderate.csv
-    8. h2-ct_ATB_2021.csv
+    8. h2-combustion_ATB_2021.csv
     9. upv_ATB_2021_moderate.csv
 
 4. Review and update the `updates_setup()` function to ensure it points to the latest ATB csv file and that the ATB year and other assumptions are correct. This is a flat csv file from the ATB team. It is **NOT** the atb xslx file.  
@@ -180,7 +180,9 @@ def batteries(input_dir, output_dir, df_atb, atb_year, atb_first_year, dollar_yr
             df = pd.concat([df, atb_subset_pivot], sort=False, ignore_index=True)
         
         #clean up the dataframes to align with ReEDS input file convention and add historic data
-        df = df[['i', 't', 'capcost', 'fom', 'vom', 'rte']].copy()
+        df = df[['i', 't', 'capcost', 'capcost_energy',
+                 'fom', 'fom_energy',
+                 'vom', 'rte']].copy()
         df = pd.concat([hist_df, df], sort=False, ignore_index=True)
         
         #df.sort_values(by=["i", "t"], key=natsort_keygen())
@@ -801,53 +803,53 @@ def h2_combustion(hist_df_conv, df_conv, input_dir, output_dir, atb_year, atb_fi
             None
     """    
    
-    #read in h2ct PV technology format types
-    h2ct_char_format = pd.read_csv(os.path.join(input_dir,'h2-ct_plant_char_format.csv'))
+    #read in h2fuel PV technology format types
+    h2combustion_char_format = pd.read_csv(os.path.join(input_dir,'h2-combustion_plant_char_format.csv'))
 
     #dictionary of technololgy in column names to map from conventional generation technologies to H2-CT technologies
     tech_dict = {'Gas-CT': 'H2-CT', 'Gas-CC': 'H2-CC'}
     
     #copy the conventional generation technologies and fiter
-    df_h2ct = df_conv.copy(deep=True)
-    df_h2ct = df_h2ct[df_h2ct['i'].isin(['Gas-CT', 'Gas-CC'])]
+    df_h2combustion = df_conv.copy(deep=True)
+    df_h2combustion = df_h2combustion[df_h2combustion['i'].isin(['Gas-CT', 'Gas-CC'])]
     
     """
     This commented out code is pulling historic h2-ct reeds input data; however, this causes a disconnect as previously historic data was pulled from gas and then converted. to maintain consistency this approach is used here instead, below.
-    h2ct_hist = pd.read_csv(os.path.join(input_dir, 'h2-ct_ATB_2021.csv'))
-    hist_df = h2ct_hist[h2ct_hist['t']<atb_first_year]
+    h2combustion_hist = pd.read_csv(os.path.join(input_dir, 'h2-combustion_ATB_2021.csv'))
+    hist_df = h2combustion_hist[h2combustion_hist['t']<atb_first_year]
     hist_df = hist_df[hist_df['i'].isin(['H2-CT', 'H2-CC'])]
-    hist_df.loc[hist_df['i']=='H2-CC','fom'] = df_h2ct.loc[(df_h2ct['t'] < atb_first_year) & (df_h2ct['i'] =='Gas-CC'),'fom'].values
+    hist_df.loc[hist_df['i']=='H2-CC','fom'] = df_h2combustion.loc[(df_h2combustion['t'] < atb_first_year) & (df_h2combustion['i'] =='Gas-CC'),'fom'].values
     """
     
     #read in historic data
     atb_prev_year = atb_year -1
-    h2ct_hist = pd.read_csv(os.path.join(input_dir, 'h2-ct_ATB_%s.csv' %atb_prev_year))
+    h2combustion_hist = pd.read_csv(os.path.join(input_dir, 'h2-combustion_ATB_%s.csv' %atb_prev_year))
 
     #fiter historic data for data prior to the first year of ATB
-    hist_df = h2ct_hist[h2ct_hist['t']<atb_first_year]
+    hist_df = h2combustion_hist[h2combustion_hist['t']<atb_first_year]
     
     #dollar year conversion is not needed as we swap it out later for conventional generation historic data.
 
     #copy the conventional generation technologies and fiter
     hist_df = hist_df[hist_df['i'].isin(['H2-CT', 'H2-CC'])]
-    hist_df.loc[hist_df['i']=='H2-CC','fom'] = df_h2ct.loc[(df_h2ct['t'] < atb_first_year) & (df_h2ct['i'] =='Gas-CC'),'fom'].values
+    hist_df.loc[hist_df['i']=='H2-CC','fom'] = df_h2combustion.loc[(df_h2combustion['t'] < atb_first_year) & (df_h2combustion['i'] =='Gas-CC'),'fom'].values
 
     #determine historic multipliers for H2-CT And H2-CC from natural gas AVG CF CT and AVG CF CC technologies.
-    df_h2ct = df_h2ct[df_h2ct['t']>=atb_first_year]
-    df_h2ct['capcost'] = df_h2ct['capcost'].astype('float64')
+    df_h2combustion = df_h2combustion[df_h2combustion['t']>=atb_first_year]
+    df_h2combustion['capcost'] = df_h2combustion['capcost'].astype('float64')
 
-    #determine the multipliers to convert from conventional generation costs to h2ct generation costs
-    h2ct_mult = hist_df[(hist_df['t'] == 2019) & (hist_df['i'] =='H2-CT')]['capcost'].iloc[0] / hist_df_conv[(hist_df_conv['t'] == 2019) & (hist_df_conv['i'] =='Gas-CT')]['capcost'].iloc[0]
+    #determine the multipliers to convert from conventional generation costs to h2fuel generation costs
+    h2combustion_mult = hist_df[(hist_df['t'] == 2019) & (hist_df['i'] =='H2-CT')]['capcost'].iloc[0] / hist_df_conv[(hist_df_conv['t'] == 2019) & (hist_df_conv['i'] =='Gas-CT')]['capcost'].iloc[0]
     h2cc_mult = hist_df[(hist_df['t'] == 2019) & (hist_df['i'] =='H2-CC')]['capcost'].iloc[0] / hist_df_conv[(hist_df_conv['t'] == 2019) & (hist_df_conv['i'] =='Gas-CC')]['capcost'].iloc[0]
     
-    #swap historic h2ct for historic conventional (already in updated dollar year from conventional technologies)
+    #swap historic h2fuel for historic conventional (already in updated dollar year from conventional technologies)
     hist_df2 = hist_df_conv[hist_df_conv['t']<atb_first_year]
     hist_df2 = hist_df_conv[hist_df_conv['i'].isin(['Gas-CT', 'Gas-CC'])]
 
-    df = pd.concat([hist_df2, df_h2ct], sort=False, ignore_index=True)
+    df = pd.concat([hist_df2, df_h2combustion], sort=False, ignore_index=True)
     df['capcost'] = df['capcost'].astype('float64')
 
-    df.loc[df['i']=='Gas-CT','capcost'] *= h2ct_mult
+    df.loc[df['i']=='Gas-CT','capcost'] *= h2combustion_mult
     df.loc[df['i']=='Gas-CC','capcost'] *= h2cc_mult
 
     #clean up the dataframes to align with ReEDS input file convention 
@@ -855,11 +857,11 @@ def h2_combustion(hist_df_conv, df_conv, input_dir, output_dir, atb_year, atb_fi
     df.reset_index(drop=True, inplace=True)
     df.sort_values(by = ['i', 't'], ascending = [False, True], inplace=True)
     df['t'] = df['t'].astype('int')
-    file = h2ct_char_format['file'].drop_duplicates()[0]
+    file = h2combustion_char_format['file'].drop_duplicates()[0]
     
     #write csv to output dir  
     df.to_csv(os.path.join(output_dir, '%s.csv' % file), index=False)
-# end h2ct tech
+# end h2fuel tech
 
 
 def offshore_wind_rsc_mult(input_dir, output_dir, df_atb, atb_year, atb_first_year, atb_filters):

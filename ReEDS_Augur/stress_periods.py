@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from glob import glob
 import re
+import matplotlib.pyplot as plt
 ### Local imports
 import reeds
 
@@ -138,7 +139,7 @@ def get_stress_periods(
         )
     elif stress_metric.upper() == 'NEUE':
         ### Get load at hierarchy_level
-        dfload = pd.read_hdf(
+        dfload = reeds.io.read_h5py_file(
             os.path.join(
                 sw['casedir'],'ReEDS_Augur','augur_data',f'pras_load_{t}.h5')
         ).rename(columns=rmap).groupby(level=0, axis=1).sum()
@@ -190,7 +191,7 @@ def get_annual_neue(sw, t, iteration=0):
     dfeue = get_pras_eue(sw=sw, t=t, iteration=iteration)
 
     ### Get load (for calculating NEUE)
-    dfload = pd.read_hdf(
+    dfload = reeds.io.read_h5py_file(
         os.path.join(
             sw['casedir'],'ReEDS_Augur','augur_data',f'pras_load_{t}.h5')
     )
@@ -440,6 +441,34 @@ def main(sw, t, iteration=0):
         new_stress_periods.round(2).rename(columns={'EUE':'EUE_MWh','NEUE':'NEUE_ppm'}).to_csv(
             os.path.join(sw.casedir, 'inputs_case', newstresspath, 'new_stress_periods.csv')
         )
+
+        ### Plot some diagnostics for the added stress periods
+        try:
+            dates = (
+                pd.concat(high_eue_periods)
+                .reset_index().actual_period.map(reeds.timeseries.h2timestamp)
+                .dt.strftime('%Y-%m-%d')
+                .tolist()
+            )
+            vmax = {'forced': 40, 'scheduled': 25, 'both': 50}
+            aggfunc = 'max'
+            for outage_type in vmax:
+                savename = f'map-outage_{outage_type}_{aggfunc}-{t}i{iteration}.png'
+                plt.close()
+                f, ax, _ = reeds.reedsplots.map_outage_days(
+                    sw.casedir,
+                    dates=dates,
+                    outage_type=outage_type,
+                    aggfunc=aggfunc,
+                    vmax=vmax[outage_type],
+                )
+                plt.savefig(
+                    os.path.join(sw.casedir, 'outputs', 'Augur_plots', savename)
+                )
+                plt.close()
+        except Exception as err:
+            print(err)
+
 
     #%% Done
     return eue_sorted_periods

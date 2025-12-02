@@ -64,7 +64,12 @@ function parse_commandline()
             arg_type = Int
             default = 0
             required = false
-        "--write_availability"
+        "--write_shortfall_samples"
+            help = "Write the sample-level shortfall"
+            arg_type = Int
+            default = 0
+            required = false
+        "--write_availability_samples"
             help = "Write the sample-level generator and storage availability"
             arg_type = Int
             default = 0
@@ -83,6 +88,26 @@ function parse_commandline()
             help = "Include the number of samples in the output .csv filename"
             arg_type = Int
             default = 0
+            required = false
+        "--pras_agg_ogs_lfillgas"
+            help = "Aggregate existing o-g-s and landfill gas using size for new units"
+            arg_type = Int
+            default = 0
+            required = false
+        "--pras_existing_unit_size"
+            help = "Use average existing unit size by (tech,region) when disaggregating new units"
+            arg_type = Int
+            default = 1
+            required = false
+        "--pras_max_unitsize_prm"
+            help = "Cap the upper bound of disaggregated unit size by zone at the zonal PRM in MW"
+            arg_type = Int
+            default = 1
+            required = false
+        "--pras_seed"
+            help = "Random seed for PRAS (positive integer; ignored and set randomly if 0)"
+            arg_type = Int
+            default = 1
             required = false
         "--debug"
             help = "Log debug-level messages"
@@ -152,7 +177,10 @@ function run_pras(pras_system_path::String, args::Dict)
     if args["write_energy"] == 1
         resultspec["energy"] = PRAS.StorageEnergy()
     end
-    if args["write_availability"] == 1
+    if args["write_shortfall_samples"] == 1
+        resultspec["short_samples"] = PRAS.ShortfallSamples()
+    end
+    if args["write_availability_samples"] == 1
         resultspec["avail_gen"] = PRAS.GeneratorAvailability()
         resultspec["avail_stor"] = PRAS.StorageAvailability()
         resultspec["avail_genstor"] = PRAS.GeneratorStorageAvailability()
@@ -160,12 +188,14 @@ function run_pras(pras_system_path::String, args::Dict)
     end
 
     #%% Run PRAS
-    results_tuple = PRAS.assess(
-        sys,
-        PRAS.SequentialMonteCarlo(
-            samples=args["samples"], threaded=true, verbose=true, seed=1),
-        values(resultspec)...
-    )
+    if args["pras_seed"] > 0
+        method = PRAS.SequentialMonteCarlo(
+            samples=args["samples"], threaded=true, verbose=true, seed=args["pras_seed"])
+    else
+        method = PRAS.SequentialMonteCarlo(
+            samples=args["samples"], threaded=true, verbose=true)
+    end
+    results_tuple = PRAS.assess(sys, method, values(resultspec)...)
     results = Dict{String,Any}(zip(keys(resultspec), results_tuple))
 
     #%% Print some results for the entire modeled region to show it worked
@@ -173,8 +203,11 @@ function run_pras(pras_system_path::String, args::Dict)
     @info "$(PRAS.EUE(results["short"])) MWh"
     @info "NEUE = $(1e6 * PRAS.EUE(results["short"]).eue.estimate / sum(sys.regions.load)) ppm"
 
+    ## Filter out DC regions used for VSC HVDC transmission
+    regions = [r for r in sys.regions.names if !(occursin("|", r))]
+
     #%% Print some more detailed results if debugging
-    for (i, reg) in enumerate(sys.regions.names)
+    for (i, reg) in enumerate(regions)
         @debug "$reg: $(round(PRAS.LOLE(results["short"],reg).lole.estimate)) event-h"
         @debug "$reg: $(round(PRAS.EUE(results["short"],reg).eue.estimate)) MWh"
         @debug "$reg: NEUE = $(round(
@@ -194,7 +227,7 @@ function run_pras(pras_system_path::String, args::Dict)
         USA_EUE=[PRAS.EUE(results["short"],h).eue.estimate for h in sys.timestamps],
     )
     ## Now for each constituent region
-    for (i,r) in enumerate(sys.regions.names)
+    for (i,r) in enumerate(regions)
         dfout[!, "$(r)_LOLE"] = [PRAS.LOLE(results["short"],r,h).lole.estimate for h in sys.timestamps]
         dfout[!, "$(r)_EUE"] = [PRAS.EUE(results["short"],r,h).eue.estimate for h in sys.timestamps]
     end
@@ -233,7 +266,7 @@ function run_pras(pras_system_path::String, args::Dict)
     ### Surplus
     if args["write_surplus"] == 1
         dfsurplus = DF.DataFrame()
-        for r in sys.regions.names
+        for r in regions
             ## Surplus results are tuples of (mean, standard deviation). Keep the mean.
             dfsurplus[!, "$(r)"] = [results["surplus"][r,h][1] for h in sys.timestamps]
         end
@@ -263,8 +296,31 @@ function run_pras(pras_system_path::String, args::Dict)
         @info("Wrote PRAS storage energy to $(energyfile)")
     end
 
+    ### Sample-level shortfall
+    if args["write_shortfall_samples"] == 1
+        dictshort = Dict(s => DF.DataFrame() for s = 1:args["samples"])
+        for s in range(1, args["samples"])
+            dictshort[s] = DF.DataFrame(
+                transpose(getindex.(results["short_samples"][:, :], s)),
+                regions
+            )
+        end
+        ## Write it
+        shortfile = replace(outfile, ".h5"=>"-shortfall_samples.h5")
+        HDF5.h5open(shortfile, "w") do f
+            ## Create a group for each sample. Within each group, write an array for each region.
+            for s in range(1, args["samples"])
+                HDF5.create_group(f, "$s")
+                for column in DF._names(dictshort[s])
+                    f["$s"]["$column", compress=4] = convert(Array, dictshort[s][!, column])
+                end
+            end
+        end
+        @info("Wrote PRAS shortfall by sample to $(shortfile)")
+    end
+
     ### Sample-level generator and storage availability
-    if args["write_availability"] == 1
+    if args["write_availability_samples"] == 1
         dictavail = Dict(s => DF.DataFrame() for s = 1:args["samples"])
         for s in range(1, args["samples"])
             dictavail[s] = hcat(
@@ -333,6 +389,8 @@ function main(args::Dict)
 
     #%% Set up the logger
     setup_logger(pras_system_path, args)
+    @info "Julia version: $(VERSION)"
+    @info "Julia executable: $(joinpath(Sys.BINDIR, "julia"))"
     @info "Running ReEDS2PRAS with the following inputs:"
     for (arg, val) in args
         @info "$arg  =>  $val"
@@ -348,7 +406,11 @@ function main(args::Dict)
                 args["solve_year"],
                 args["timesteps"],
                 args["weather_year"],
-                args["hydro_energylim"] == 1, # convert from integer to boolean
+                # Boolean switches: == to convert from integer to boolean
+                args["hydro_energylim"] == 1,
+                args["pras_agg_ogs_lfillgas"] == 1,
+                args["pras_existing_unit_size"] == 1,
+                args["pras_max_unitsize_prm"] == 1,
             ),
             pras_system_path,
             verbose=true,
@@ -384,10 +446,15 @@ if abspath(PROGRAM_FILE) == @__FILE__
     #     "write_flow" => 1,
     #     "write_surplus" => 1,
     #     "write_energy" => 1,
-    #     "write_availability" => 1,
+    #     "write_shortfall_samples" => 1,
+    #     "write_availability_samples" => 0,
     #     "overwrite" => 1,
     #     "debug" => 0,
     #     "include_samples" => 0,
+    #     "pras_agg_ogs_lfillgas" => 0,
+    #     "pras_existing_unit_size" => 1,
+    #     "pras_max_unitsize_prm" => 1,
+    #     "pras_seed" => 1,
     # )
     # reedscase = args["reedscase"]
     # solve_year = args["solve_year"]

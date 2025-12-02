@@ -13,5 +13,4 @@ decimals,3,int,number of decimals to round results to for ReEDS
 flex_consume_techs,"dac,electrolyzer",list,list of consume techs that are flexible
 keepfiles,"dropped_load,cf",list,list of temporary files to keep
 marg_vre_steps,2,int,Number of previous solve years to consider when evaluating the marginal VRE step size (default: 2). Must be at least 1; a value of 2 can help reduce oscillations. Augur will automatically drop from consideration solves that are more than 5 years from the previous solve.
-plot_years,"2020,2022,2023,2029,2030,2035,2036,2040,2041,2045,2050",list,indicate years for which to make plots of intermediate Augur results
 storcap_cutoff,1,float,[MW and MWh] Minimum storage capacity to send to ReEDS2PRAS (applies to both power and energy capacity)
