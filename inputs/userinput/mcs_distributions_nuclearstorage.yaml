@@ -13,10 +13,3 @@
   dist: dirichlet
   dist_params: [1, 1, 1]
   weight_r: country
-
-- name: startcost
-  assignments_list:
-    - startcost: [startcost_lpls, startcost_hpls, startcost_lphs, startcost_hphs]
-  dist: dirichlet
-  dist_params: [1, 1, 1, 1]
-  weight_r: country
