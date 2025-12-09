@@ -1,7 +1,5 @@
 # ReEDS India
 
-![Image of NREL Logo](images/nrel-logo.png)
-
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
 This GitHub repository contains the source code for NLR&#39;s ReEDS India model. This version was adapted from the ReEDS model developed for North America. [Table 2](#Tab2) summarizes differences in model design and capabilities between the two versions. 
