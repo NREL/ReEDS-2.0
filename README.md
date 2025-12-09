@@ -4,7 +4,7 @@
 
 ## Welcome to the Regional Energy Deployment System (ReEDS) Model!
 
-This GitHub repository contains the source code for NREL&#39;s ReEDS India model. This version was adapted from the ReEDS model developed for North America. [Table 2](#Tab2) summarizes differences in model design and capabilities between the two versions. 
+This GitHub repository contains the source code for NLR&#39;s ReEDS India model. This version was adapted from the ReEDS model developed for North America. [Table 2](#Tab2) summarizes differences in model design and capabilities between the two versions. 
 
 Users of this source code agree to the ReEDS licensing agreement [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html). The ReEDS India Version 2019 source code is available at no cost from the National Renewable Energy Laboratory. The ReEDS India model can be downloaded or cloned from [https://github.com/NREL/ReEDS\_OpenAccess](https://github.com/NREL/ReEDS_OpenAccess) (Branch: India). New users must request access to the ReEDS repository through [https://nrel.gov/analysis/reeds/request-access.html](https://nrel.gov/analysis/reeds/request-access.html).
 
@@ -35,20 +35,20 @@ Users of this source code agree to the ReEDS licensing agreement [https://nrel.g
 
 The Regional Energy Deployment System (ReEDS) India model is a capacity planning and dispatch model for the Indian electricity system.
 
-As NREL&#39;s flagship long-term power sector model, ReEDS has served as the primary analytic tool for many studies ([https://www.nrel.gov/analysis/reeds/publications.html](https://www.nrel.gov/analysis/reeds/publications.html)) of important energy sector research questions, including clean energy policy, renewable grid integration, technology innovation, and forward-looking issues of the generation and transmission infrastructure. The ReEDS India model extends this capability to investigate critical power sector question for India.
+As NLR&#39;s flagship long-term power sector model, ReEDS has served as the primary analytic tool for many studies ([https://www.nrel.gov/analysis/reeds/publications.html](https://www.nrel.gov/analysis/reeds/publications.html)) of important energy sector research questions, including clean energy policy, renewable grid integration, technology innovation, and forward-looking issues of the generation and transmission infrastructure. The ReEDS India model extends this capability to investigate critical power sector question for India.
 
-ReEDS uses high spatial resolution and high-fidelity modeling. Though it covers a broad geographic and technological scope, ReEDS is designed to reflect the regional attributes of energy production and consumption. Unique among long-term capacity expansion models, ReEDS possesses advanced algorithms and data to represent the cost and value of variable renewable energy; the full suite of other major generation technologies, including fossil and nuclear; and transmission and storage expansion options. Used in combination with other NREL tools, data, and expertise, ReEDS can provide objective and comprehensive electricity system futures.
+ReEDS uses high spatial resolution and high-fidelity modeling. Though it covers a broad geographic and technological scope, ReEDS is designed to reflect the regional attributes of energy production and consumption. Unique among long-term capacity expansion models, ReEDS possesses advanced algorithms and data to represent the cost and value of variable renewable energy; the full suite of other major generation technologies, including fossil and nuclear; and transmission and storage expansion options. Used in combination with other NLR tools, data, and expertise, ReEDS can provide objective and comprehensive electricity system futures.
 
 <a name="Software"></a>
 # Required Software
  
-The ReEDS model is written primarily in GAMS with auxiliary modules written in Python and R. At present, NREL uses the following software versions: GAMS 24.7.4; Python 3.6.5; R 3.4.4;. Other versions of these software may be compatible with ReEDS, but NREL has not tested other versions at this time.
+The ReEDS model is written primarily in GAMS with auxiliary modules written in Python and R. At present, NLR uses the following software versions: GAMS 24.7.4; Python 3.6.5; R 3.4.4;. Other versions of these software may be compatible with ReEDS, but NLR has not tested other versions at this time.
 
 GAMS is a mathematical programming software from the GAMS Development Corporation. &quot;The use of GAMS beyond the limits of the free demo system requires the presence of a valid GAMS license file.&quot; [[1](https://www.gams.com/latest/docs/UG_License.html)] The ReEDS model requires the GAMS Base Module and a linear programming (LP) solver (e.g., CPLEX). The LP solver should be connected to GAMS with either a GAMS/Solver license or a GAMS/Solver-Link license. &quot;A GAMS/Solver connects the GAMS Base module to a particular solver and includes a license for this solver to be used through GAMS. It is not necessary to install additional software. A GAMS/Solver-Link connects the GAMS Base Module to a particular solver, but does not include a license for the solver. It may be necessary to install additional software before the solver can be used.&quot; [[2](https://www.gams.com/products/buy-gams/)]
 
-NREL subscribes to the GAMS/CPLEX license for the LP solver, but open-source and free, internet-based services are also available. The [_COIN-OR Optimization Suite_](https://www.coin-or.org/downloading/) includes open-source solvers that can be linked with GAMS through the GAMS Base Module. NREL has not tested the performance of these open-source solvers for ReEDS. The [_NEOS Server_](https://neos-server.org/neos/) is a free, internet-based service for solving numerical optimization problems. Links with NEOS can be made through [_KESTREL_](https://www.gams.com/latest/docs/S_KESTREL.html) which is included in GAMS Base Module. In its current form, ReEDS cannot be solved using NEOS due to the 16 MB limit on submissions to the server. However, modifications _could_ be made to ReEDS to _potentially_ reduce the data below to the required submission size.
+NLR subscribes to the GAMS/CPLEX license for the LP solver, but open-source and free, internet-based services are also available. The [_COIN-OR Optimization Suite_](https://www.coin-or.org/downloading/) includes open-source solvers that can be linked with GAMS through the GAMS Base Module. NLR has not tested the performance of these open-source solvers for ReEDS. The [_NEOS Server_](https://neos-server.org/neos/) is a free, internet-based service for solving numerical optimization problems. Links with NEOS can be made through [_KESTREL_](https://www.gams.com/latest/docs/S_KESTREL.html) which is included in GAMS Base Module. In its current form, ReEDS cannot be solved using NEOS due to the 16 MB limit on submissions to the server. However, modifications _could_ be made to ReEDS to _potentially_ reduce the data below to the required submission size.
 
-Python is &quot;an object-oriented programming language, comparable to Perl, Ruby, Scheme, or Java.&quot; [[3](https://wiki.python.org/moin/BeginnersGuide/Overview)] &quot; Python is developed under an OSI-approved open source license, making it freely usable and distributable, even for commercial use. Python&#39;s license is administered by the Python Software Foundation.&quot; [[4](https://www.python.org/about/)]. NREL uses Conda to build the python environment necessary for ReEDS. Conda is a &quot;package, dependency and environment management for any language.&quot; [[5](https://docs.conda.io/en/latest/)]
+Python is &quot;an object-oriented programming language, comparable to Perl, Ruby, Scheme, or Java.&quot; [[3](https://wiki.python.org/moin/BeginnersGuide/Overview)] &quot; Python is developed under an OSI-approved open source license, making it freely usable and distributable, even for commercial use. Python&#39;s license is administered by the Python Software Foundation.&quot; [[4](https://www.python.org/about/)]. NLR uses Conda to build the python environment necessary for ReEDS. Conda is a &quot;package, dependency and environment management for any language.&quot; [[5](https://docs.conda.io/en/latest/)]
 
 &quot;R is a language and environment for statistical computing and graphics…R is available as Free Software under the terms of the Free Software Foundation&#39;s GNU General Public License in source code form.&quot; [[6](https://www.r-project.org/about.html)]
 
@@ -94,7 +94,7 @@ The ReEDS India source code is hosted on GitHub: https://github.com/NREL/ReEDS\_
 <a name="ConfigPy"></a>
 ## Python Configuration
 
-Install Anaconda: [https://www.anaconda.com/distribution/#download-section](https://www.anaconda.com/distribution/#download-section). NREL recommends Python 3.7, but has also used Python 3.6.5 and 3.7.1 successfully.
+Install Anaconda: [https://www.anaconda.com/distribution/#download-section](https://www.anaconda.com/distribution/#download-section). NLR recommends Python 3.7, but has also used Python 3.6.5 and 3.7.1 successfully.
 
 **IMPORTANT** : Be sure to download the correct version of the installer for your operating system.
 
@@ -137,7 +137,7 @@ Install the gdxpds package from the command line by typing &quot;pip install gdx
 <a name="ConfigGAMS"></a>
 ## GAMS Configuration
 
-Install GAMS: [https://www.gams.com/download-old/](https://www.gams.com/download-old/). NREL uses GAMS version 24.7 but has not tested the compatibility of ReEDS with newer versions of GAMS. A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
+Install GAMS: [https://www.gams.com/download-old/](https://www.gams.com/download-old/). NLR uses GAMS version 24.7 but has not tested the compatibility of ReEDS with newer versions of GAMS. A valid GAMS license must be installed. Please refer to the [Required Software](#Software) section above for more information.
 
 Add GAMS to the &quot;path&quot; environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _gams.exe_ application (e.g., C:\GAMS\win64\24.7).
 
@@ -151,7 +151,7 @@ Add GAMS to the &quot;path&quot; environment variable. Follow the same instructi
 <a name="ConfigR"></a>
 ## R Configuration
 
-Install R 3.4.4: [https://cran.r-project.org/bin/windows/base/old/3.4.4/](https://cran.r-project.org/bin/windows/base/old/3.4.4/). NREL has observed compatibility issues with other versions of R. NREL has not tested R versions more recent than 3.4.4. Optionally, install RStudio: [https://www.rstudio.com/products/rstudio/download/#download](https://www.rstudio.com/products/rstudio/download/#download).
+Install R 3.4.4: [https://cran.r-project.org/bin/windows/base/old/3.4.4/](https://cran.r-project.org/bin/windows/base/old/3.4.4/). NLR has observed compatibility issues with other versions of R. NLR has not tested R versions more recent than 3.4.4. Optionally, install RStudio: [https://www.rstudio.com/products/rstudio/download/#download](https://www.rstudio.com/products/rstudio/download/#download).
 
 Add R to the &quot;path&quot; environment variable. Follow the same instructions as for adding Python to the path in the [Python Configuration](#ConfigPy) section above. Append the environment path with the directory location for the _R.exe_ and _Rscript.exe_ applications (e.g., C:\Program Files\R\R-3.4.4\bin\).
 
@@ -376,12 +376,12 @@ You _may_ be able to request a temporary evaluation licenses of the GAMS base mo
 <a name="Hardware"></a>
 ## What computer hardware is necessary to run ReEDS?
 
-NREL uses Windows servers to execute the ReEDS model. These servers have Intel(R) Xeon(R) CPUs at 2-2.4GHz and 10-14 cores with 160-320GB of RAM. These servers can execute multiple ReEDS cases in parallel.
+NLR uses Windows servers to execute the ReEDS model. These servers have Intel(R) Xeon(R) CPUs at 2-2.4GHz and 10-14 cores with 160-320GB of RAM. These servers can execute multiple ReEDS cases in parallel.
 
 [Table 5](#Tab5) summarizes RAM usage and total clock time necessary to execute the default ReEDS configuration for the three different solve structures (sequential, window, and intertemporal) using one of these servers.
 
 <a name="Tab5"></a>
-*Table 5. Ballpark RAM usage and clock time for select model configurations executed on NREL servers.*
+*Table 5. Ballpark RAM usage and clock time for select model configurations executed on NLR servers.*
 
 | Solve Structure | Solve Steps | Approximate LP size <br> per instance (after presolve) | Threads | RAM(GB per instance) | Total Clock Time (minutes) |
 | --- | --- | --- | --- | --- | --- |
@@ -414,11 +414,11 @@ If you have comments and/or questions, please contacts the ReEDS team:
 | <ul><li>*endyear*</li><ul> | integer | Last year to be modeled | 2070 |
 | <ul><li>*WeatherYear*</li><ul> | integer | Weather year being used | 2014 |
 | **Scenario Inputs: Demand** 
-| <ul><li>*HourlyLoadFile*</li><ul> | string | Load scenario name for capacity value and curtailment load duration curve data | NREL_India_Baseline_8760 |
-| <ul><li>*Load_file*</li><ul> | string | File name of the load in each time block to be used in the scenario run | load_NREL_India_Baseline.csv |
-| <ul><li>*PeakDemRegion_file*</li><ul> | string | File name of the peak demand by region to be used in the scenario run | peakdem_region_NREL_India_Baseline.csv |
-| <ul><li>*PeakDemState_file*</li><ul> | string | File name of the peak demand by state to be used in the scenario run | peakdem_state_NREL_India_Baseline.csv |
-| <ul><li>*Hours_file*</li><ul> | string | File name of the hours in each time block to be used in the scenario run | hours_NREL_India_Baseline.csv |
+| <ul><li>*HourlyLoadFile*</li><ul> | string | Load scenario name for capacity value and curtailment load duration curve data | NLR_India_Baseline_8760 |
+| <ul><li>*Load_file*</li><ul> | string | File name of the load in each time block to be used in the scenario run | load_NLR_India_Baseline.csv |
+| <ul><li>*PeakDemRegion_file*</li><ul> | string | File name of the peak demand by region to be used in the scenario run | peakdem_region_NLR_India_Baseline.csv |
+| <ul><li>*PeakDemState_file*</li><ul> | string | File name of the peak demand by state to be used in the scenario run | peakdem_state_NLR_India_Baseline.csv |
+| <ul><li>*Hours_file*</li><ul> | string | File name of the hours in each time block to be used in the scenario run | hours_NLR_India_Baseline.csv |
 | **Scenario Inputs: Generation** 
 | <ul><li>*Binnedcap_file*</li><ul> | string | File name of binned non-RE capacity by BA, year, and VO&M bin | binned_capacity.csv |
 | <ul><li>*Maxage_file*</li><ul> | string | File name of maximum generator age file | maxage.csv |
