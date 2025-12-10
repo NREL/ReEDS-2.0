@@ -1,4 +1,4 @@
-Case,Description,Default Value,BaseCase2014,BaseCase2015,BaseCase2016,BaseCase2017,BaseCase2018,BaseCase2019,BaseCase2020,BaseCase2021,BaseCase2022,BaseCase2023,BaseCase2024,Supply2015,Supply2016,Supply2017,Supply2018,Supply2019,Supply2020,Supply2021,Supply2022,Supply2023,Supply2024
+case,Description,Default Value,BaseCase2014,BaseCase2015,BaseCase2016,BaseCase2017,BaseCase2018,BaseCase2019,BaseCase2020,BaseCase2021,BaseCase2022,BaseCase2023,BaseCase2024,Supply2015,Supply2016,Supply2017,Supply2018,Supply2019,Supply2020,Supply2021,Supply2022,Supply2023,Supply2024
 timetype,Sequential or Intertemporal,int,,,,,,,,,,,,,,,,,,,,,
 solver,Solver for GAMS to use,CPLEX,,,,,,,,,,,,,,,,,,,,,
 augur_workers,Number of windows for Augur module runs,36,,,,,,,,,,,,,,,,,,,,,
