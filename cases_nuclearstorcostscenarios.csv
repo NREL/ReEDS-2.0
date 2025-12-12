@@ -14,6 +14,6 @@ GSw_HierarchyFile,,agg54,,,,,,,,
 GSw_TransInvMaxLongTerm,[TW-mile/year] maximum transmission capacity investment per year IN/AFTER firstyear_trans_longterm (constraint is OFF if set to 0 meaning unlimited trans investment; annual max since 2009 is ~3.64),0,1.07,,,,,,,
 GSw_TransRestrict,hierarchy level within which to allow new transmission lines,country,transreg,,,,,,,
 GSw_CarbTax,Turn on/off CO2 tax,0,0,1,1,1,1,0,0,0
-GSw_CarbTaxOption,Choose the co2_tax input csv file (see inputs\emission_constraints),default,default,t50_2050,t100_2050,t150_2050,t200_2050,default,default,default
+GSw_CarbTaxOption,Choose the co2_tax input csv file (see inputs\emission_constraints),default,default,t050_2050,t100_2050,t150_2050,t200_2050,default,default,default
 GSw_AnnualCap,CO2/CO2e emission cap. Turn off cap (0) or turn on CO2 only cap (1) or turn on CO2e cap (2) or include H2 leakage in CO2e cap (3) ,0,,,,,,1,1,1
 GSw_AnnualCapScen,Scenario for CO2 cap pathway (see inputs\emission_constraints\co2_cap.csv),default,,,,,,2050_linear,95_by_2050,90_by_2050
