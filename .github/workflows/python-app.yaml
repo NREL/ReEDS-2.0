@@ -53,7 +53,7 @@ jobs:
       - name: Define Scenarios
         id: scenarios
         run: |
-          echo 'scenarios=["p6_County_CC", "Pacific", "Everything"]' >> "$GITHUB_OUTPUT"
+          echo 'scenarios=["Pacific"]' >> "$GITHUB_OUTPUT"
 
   run-ReEDS:
     runs-on: ubuntu-latest
